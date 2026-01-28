@@ -23,7 +23,7 @@ test("parseXml parses a simple card", async (t) => {
 });
 
 test("parseXml tracks location (line numbers)", async (t) => {
-  const xml = `<root>
+  const xml = `<root version="1.0.0">
   <child>content</child>
 </root>`;
 
@@ -39,7 +39,7 @@ test("parseXml tracks location (line numbers)", async (t) => {
 });
 
 test("parseXml applies dedent to text content", async (t) => {
-  const xml = `<root>
+  const xml = `<root version="1.0.0">
   <content>
     Line one
     Line two
@@ -54,7 +54,7 @@ test("parseXml applies dedent to text content", async (t) => {
 });
 
 test("parseXml preserves comments", async (t) => {
-  const xml = `<root>
+  const xml = `<root version="1.0.0">
   <!-- Before comment -->
   <child>content</child>
   <!-- After comment -->
@@ -68,7 +68,7 @@ test("parseXml preserves comments", async (t) => {
 });
 
 test("parseXml handles attributes", async (t) => {
-  const xml = `<element attr1="value1" attr2="value2">text</element>`;
+  const xml = `<element version="1.0.0" attr1="value1" attr2="value2">text</element>`;
 
   const result = await parseXml(xml, "test.card");
 
@@ -77,7 +77,7 @@ test("parseXml handles attributes", async (t) => {
 });
 
 test("parseXml handles nested children", async (t) => {
-  const xml = `<root>
+  const xml = `<root version="1.0.0">
   <parent>
     <child1>one</child1>
     <child2>two</child2>
@@ -104,8 +104,30 @@ test("parseXml throws on malformed XML", async (t) => {
   });
 });
 
+test("parseXml throws on missing version", async (t) => {
+  const xml = `<card><title>No version</title></card>`;
+
+  await t.rejects(
+    async () => {
+      await parseXml(xml, "test.card");
+    },
+    { message: /missing required "version" attribute/ }
+  );
+});
+
+test("parseXml throws on invalid version format", async (t) => {
+  const xml = `<card version="1.0"><title>Bad version</title></card>`;
+
+  await t.rejects(
+    async () => {
+      await parseXml(xml, "test.card");
+    },
+    { message: /Invalid version.*must be in X\.Y\.Z format/ }
+  );
+});
+
 test("parseXml handles empty elements", async (t) => {
-  const xml = `<root><empty/></root>`;
+  const xml = `<root version="1.0.0"><empty/></root>`;
 
   const result = await parseXml(xml, "test.card");
 
@@ -116,7 +138,7 @@ test("parseXml handles empty elements", async (t) => {
 });
 
 test("parseXml handles mixed content (text and children)", async (t) => {
-  const xml = `<root>Some text <child>nested</child> more text</root>`;
+  const xml = `<root version="1.0.0">Some text <child>nested</child> more text</root>`;
 
   const result = await parseXml(xml, "test.card");
 
@@ -127,7 +149,7 @@ test("parseXml handles mixed content (text and children)", async (t) => {
 });
 
 test("parseXml sets dirty flag to false initially", async (t) => {
-  const xml = `<root><child>content</child></root>`;
+  const xml = `<root version="1.0.0"><child>content</child></root>`;
 
   const result = await parseXml(xml, "test.card");
 

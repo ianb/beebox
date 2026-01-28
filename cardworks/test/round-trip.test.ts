@@ -18,7 +18,7 @@ test("round-trip: simple element", async (t) => {
 });
 
 test("round-trip: multiple attributes", async (t) => {
-  const xml = `<element attr1="value1" attr2="value2" attr3="value3"/>`;
+  const xml = `<element version="1.0.0" attr1="value1" attr2="value2" attr3="value3"/>`;
 
   const parsed = await parseXml(xml, "test.card");
   const serialized = serialize(parsed);
@@ -30,7 +30,7 @@ test("round-trip: multiple attributes", async (t) => {
 });
 
 test("round-trip: nested elements", async (t) => {
-  const xml = `<root>
+  const xml = `<root version="1.0.0">
   <level1>
     <level2>
       <level3>deep content</level3>
@@ -51,7 +51,7 @@ test("round-trip: nested elements", async (t) => {
 });
 
 test("round-trip: text with special characters", async (t) => {
-  const xml = `<element>Text with &lt;brackets&gt; and &amp; ampersand</element>`;
+  const xml = `<element version="1.0.0">Text with &lt;brackets&gt; and &amp; ampersand</element>`;
 
   const parsed = await parseXml(xml, "test.card");
   const serialized = serialize(parsed);
@@ -61,7 +61,7 @@ test("round-trip: text with special characters", async (t) => {
 });
 
 test("round-trip: preserves comments", async (t) => {
-  const xml = `<root>
+  const xml = `<root version="1.0.0">
   <!-- Comment before -->
   <child>content</child>
   <!-- Comment after -->
@@ -76,7 +76,7 @@ test("round-trip: preserves comments", async (t) => {
 });
 
 test("round-trip: empty elements", async (t) => {
-  const xml = `<root><empty/></root>`;
+  const xml = `<root version="1.0.0"><empty/></root>`;
 
   const parsed = await parseXml(xml, "test.card");
   const serialized = serialize(parsed);
@@ -88,7 +88,7 @@ test("round-trip: empty elements", async (t) => {
 });
 
 test("round-trip: multiline text content", async (t) => {
-  const xml = `<content>
+  const xml = `<content version="1.0.0">
     Line one
     Line two
     Line three
@@ -102,7 +102,7 @@ test("round-trip: multiline text content", async (t) => {
 });
 
 test("round-trip: mixed content", async (t) => {
-  const xml = `<paragraph>Some text <link>here</link> and more</paragraph>`;
+  const xml = `<paragraph version="1.0.0">Some text <link>here</link> and more</paragraph>`;
 
   const parsed = await parseXml(xml, "test.card");
   const serialized = serialize(parsed);
@@ -114,7 +114,7 @@ test("round-trip: mixed content", async (t) => {
 });
 
 test("serialize: configurable indentation", async (t) => {
-  const xml = `<root><child>content</child></root>`;
+  const xml = `<root version="1.0.0"><child>content</child></root>`;
 
   const parsed = await parseXml(xml, "test.card");
 
@@ -126,7 +126,7 @@ test("serialize: configurable indentation", async (t) => {
 });
 
 test("serialize: attribute escaping", async (t) => {
-  const xml = `<element attr="value with &quot;quotes&quot;"/>`;
+  const xml = `<element version="1.0.0" attr="value with &quot;quotes&quot;"/>`;
 
   const parsed = await parseXml(xml, "test.card");
   const serialized = serialize(parsed);
