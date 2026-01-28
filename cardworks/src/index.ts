@@ -21,12 +21,14 @@ export {
   element,
   ElementNodeSchema,
   type ElementConfig,
+  type ElementSchema,
 } from "./schema/element.js";
 export {
   CommentsSchema,
   LocationSchema,
   TextSegmentSchema,
 } from "./schema/base.js";
+export { SchemaRegistry } from "./schema/registry.js";
 
 // Serializer
 export { serialize, type SerializeOptions } from "./serialize/serialize.js";
@@ -44,5 +46,8 @@ export {
 export {
   CardLoader,
   MemoryCardLoader,
+  ValidationError,
   type ICardLoader,
+  type CardLoaderOptions,
+  type MemoryCardLoaderOptions,
 } from "./loader/loader.js";

@@ -5,6 +5,32 @@ import { serialize } from "../serialize/serialize.js";
 import { resolveRef, type ResolvedRef } from "../refs/resolve.js";
 import { NodeFileSystem } from "../fs/node-fs.js";
 import { MemoryFileSystem } from "../fs/memory-fs.js";
+import { SchemaRegistry } from "../schema/registry.js";
+import type { ElementSchema } from "../schema/element.js";
+import type { ZodError } from "zod";
+
+/**
+ * Options for creating a card loader.
+ */
+export interface CardLoaderOptions {
+  /** Schema registry or array of schemas for validation */
+  schemas?: SchemaRegistry | ElementSchema[];
+}
+
+/**
+ * Error thrown when card validation fails.
+ */
+export class ValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly path: string,
+    public readonly tagName: string,
+    public readonly zodError: ZodError
+  ) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
 
 /**
  * Interface for card loaders.
@@ -51,18 +77,30 @@ export interface ICardLoader {
  */
 abstract class BaseCardLoader implements ICardLoader {
   private cache = new Map<string, ElementNode>();
+  protected readonly schemas: SchemaRegistry;
 
   constructor(
     protected readonly fs: FileSystem,
-    protected readonly projectRoot: string
-  ) {}
+    protected readonly projectRoot: string,
+    options: CardLoaderOptions = {}
+  ) {
+    if (options.schemas instanceof SchemaRegistry) {
+      this.schemas = options.schemas;
+    } else if (Array.isArray(options.schemas)) {
+      this.schemas = new SchemaRegistry(options.schemas);
+    } else {
+      this.schemas = new SchemaRegistry();
+    }
+  }
 
   /**
    * Load a card from a file path.
    * Results are cached for subsequent loads.
+   * If a schema is registered for the card's tag name, the card is validated.
    *
    * @param path - The absolute path to the card file
    * @returns The parsed ElementNode tree
+   * @throws ValidationError if validation fails
    */
   async load(path: string): Promise<ElementNode> {
     // Check cache first
@@ -74,6 +112,20 @@ abstract class BaseCardLoader implements ICardLoader {
     // Read and parse
     const content = await this.fs.read(path);
     const node = await parseXml(content, path);
+
+    // Validate against schema if registered
+    const schema = this.schemas.get(node.tagName);
+    if (schema) {
+      const result = schema.safeParse(node);
+      if (!result.success) {
+        throw new ValidationError(
+          `${path}: Validation failed for <${node.tagName}>: ${result.error.message}`,
+          path,
+          node.tagName,
+          result.error
+        );
+      }
+    }
 
     // Cache the result
     this.cache.set(path, node);
@@ -151,14 +203,24 @@ abstract class BaseCardLoader implements ICardLoader {
  *
  * @example
  * ```typescript
- * const loader = new CardLoader("/path/to/project");
+ * const loader = new CardLoader("/path/to/project", {
+ *   schemas: [RecipeSchema, IngredientSchema],
+ * });
  * const card = await loader.load("/path/to/project/cards/Recipe.card");
  * ```
  */
 export class CardLoader extends BaseCardLoader {
-  constructor(projectRoot: string) {
-    super(new NodeFileSystem(), projectRoot);
+  constructor(projectRoot: string, options: CardLoaderOptions = {}) {
+    super(new NodeFileSystem(), projectRoot, options);
   }
+}
+
+/**
+ * Options for MemoryCardLoader.
+ */
+export interface MemoryCardLoaderOptions extends CardLoaderOptions {
+  /** Initial files to populate the memory filesystem */
+  files?: Record<string, string>;
 }
 
 /**
@@ -167,7 +229,10 @@ export class CardLoader extends BaseCardLoader {
  * @example
  * ```typescript
  * const loader = new MemoryCardLoader("/project", {
- *   "/project/cards/Recipe.card": `<recipe version="1.0.0">...</recipe>`,
+ *   files: {
+ *     "/project/cards/Recipe.card": `<recipe version="1.0.0">...</recipe>`,
+ *   },
+ *   schemas: [RecipeSchema],
  * });
  * const card = await loader.load("/project/cards/Recipe.card");
  * ```
@@ -175,9 +240,9 @@ export class CardLoader extends BaseCardLoader {
 export class MemoryCardLoader extends BaseCardLoader {
   private memoryFs: MemoryFileSystem;
 
-  constructor(projectRoot: string, files: Record<string, string> = {}) {
-    const memoryFs = new MemoryFileSystem(files);
-    super(memoryFs, projectRoot);
+  constructor(projectRoot: string, options: MemoryCardLoaderOptions = {}) {
+    const memoryFs = new MemoryFileSystem(options.files ?? {});
+    super(memoryFs, projectRoot, options);
     this.memoryFs = memoryFs;
   }
 

@@ -1,12 +1,16 @@
 import { test } from "tap";
-import { MemoryCardLoader } from "../src/loader/loader.js";
+import { MemoryCardLoader, ValidationError } from "../src/loader/loader.js";
+import { element } from "../src/schema/element.js";
+import { z } from "zod";
 
 test("MemoryCardLoader.load: loads a simple card", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Simple.card": `<card version="1.0.0">
+    files: {
+      "/project/cards/Simple.card": `<card version="1.0.0">
   <title>Simple Card</title>
   <description>A test card</description>
 </card>`,
+    },
   });
 
   const card = await loader.load("/project/cards/Simple.card");
@@ -18,7 +22,7 @@ test("MemoryCardLoader.load: loads a simple card", async (t) => {
 });
 
 test("MemoryCardLoader.load: throws on non-existent file", async (t) => {
-  const loader = new MemoryCardLoader("/project", {});
+  const loader = new MemoryCardLoader("/project");
 
   await t.rejects(async () => {
     await loader.load("/project/cards/Missing.card");
@@ -27,7 +31,9 @@ test("MemoryCardLoader.load: throws on non-existent file", async (t) => {
 
 test("MemoryCardLoader.save: saves a card", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Existing.card": `<card version="1.0.0"><title>Original</title></card>`,
+    files: {
+      "/project/cards/Existing.card": `<card version="1.0.0"><title>Original</title></card>`,
+    },
   });
 
   // Load, modify, save
@@ -45,10 +51,12 @@ test("MemoryCardLoader.save: saves a card", async (t) => {
 
 test("MemoryCardLoader.resolveRef: resolves cross-card reference", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Main.card": `<card version="1.0.0"><title>Main</title></card>`,
-    "/project/cards/Other.card": `<card version="1.0.0">
+    files: {
+      "/project/cards/Main.card": `<card version="1.0.0"><title>Main</title></card>`,
+      "/project/cards/Other.card": `<card version="1.0.0">
   <section id="intro">Introduction</section>
 </card>`,
+    },
   });
 
   const result = await loader.resolveRef(
@@ -63,8 +71,10 @@ test("MemoryCardLoader.resolveRef: resolves cross-card reference", async (t) => 
 
 test("MemoryCardLoader.resolveRef: detects version mismatch", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Main.card": `<card version="1.0.0"><title>Main</title></card>`,
-    "/project/cards/Other.card": `<card version="2.0.0"><title>Other</title></card>`,
+    files: {
+      "/project/cards/Main.card": `<card version="1.0.0"><title>Main</title></card>`,
+      "/project/cards/Other.card": `<card version="2.0.0"><title>Other</title></card>`,
+    },
   });
 
   const result = await loader.resolveRef(
@@ -80,11 +90,12 @@ test("MemoryCardLoader.resolveRef: detects version mismatch", async (t) => {
 
 test("MemoryCardLoader: full workflow with fixture files", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Audience.card": `<audience version="1.0.0">
+    files: {
+      "/project/cards/Audience.card": `<audience version="1.0.0">
   <selection-text>Test audience</selection-text>
   <short-description>A simple test card</short-description>
 </audience>`,
-    "/project/cards/Technique.card": `<technique version="1.0.0">
+      "/project/cards/Technique.card": `<technique version="1.0.0">
   <purpose>Test technique</purpose>
   <guidance>First guidance</guidance>
   <prompts title="Test">
@@ -92,12 +103,13 @@ test("MemoryCardLoader: full workflow with fixture files", async (t) => {
   </prompts>
   <guidance match="special">Second guidance</guidance>
 </technique>`,
-    "/project/cards/Tutorial.card": `<tutorial version="1.0.0">
+      "/project/cards/Tutorial.card": `<tutorial version="1.0.0">
   <content>
     See [other card](ref:./Audience.card@1.0.0#section).
   </content>
   <source ref="./Technique.card@1.0.0">Reference explanation</source>
 </tutorial>`,
+    },
   });
 
   // Load all cards
@@ -124,7 +136,9 @@ test("MemoryCardLoader: full workflow with fixture files", async (t) => {
 
 test("MemoryCardLoader: caches loaded cards", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Cached.card": `<card version="1.0.0"><title>Original</title></card>`,
+    files: {
+      "/project/cards/Cached.card": `<card version="1.0.0"><title>Original</title></card>`,
+    },
   });
 
   // Load the card
@@ -144,7 +158,9 @@ test("MemoryCardLoader: caches loaded cards", async (t) => {
 
 test("MemoryCardLoader: clearCache forces reload", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Reload.card": `<card version="1.0.0"><title>Original</title></card>`,
+    files: {
+      "/project/cards/Reload.card": `<card version="1.0.0"><title>Original</title></card>`,
+    },
   });
 
   // Load the card
@@ -165,8 +181,10 @@ test("MemoryCardLoader: clearCache forces reload", async (t) => {
 
 test("MemoryCardLoader: invalidate removes specific file from cache", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/A.card": `<card version="1.0.0"><title>A Original</title></card>`,
-    "/project/cards/B.card": `<card version="1.0.0"><title>B Original</title></card>`,
+    files: {
+      "/project/cards/A.card": `<card version="1.0.0"><title>A Original</title></card>`,
+      "/project/cards/B.card": `<card version="1.0.0"><title>B Original</title></card>`,
+    },
   });
 
   // Load both cards
@@ -196,7 +214,9 @@ test("MemoryCardLoader: invalidate removes specific file from cache", async (t) 
 
 test("MemoryCardLoader.exists: checks if card file exists", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/Exists.card": `<card version="1.0.0"><title>Exists</title></card>`,
+    files: {
+      "/project/cards/Exists.card": `<card version="1.0.0"><title>Exists</title></card>`,
+    },
   });
 
   t.equal(await loader.exists("/project/cards/Exists.card"), true);
@@ -205,8 +225,10 @@ test("MemoryCardLoader.exists: checks if card file exists", async (t) => {
 
 test("MemoryCardLoader: handles absolute project-relative refs", async (t) => {
   const loader = new MemoryCardLoader("/project", {
-    "/project/cards/sub/Deep.card": `<card version="1.0.0"><title>Deep</title></card>`,
-    "/project/other/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+    files: {
+      "/project/cards/sub/Deep.card": `<card version="1.0.0"><title>Deep</title></card>`,
+      "/project/other/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+    },
   });
 
   const result = await loader.resolveRef(
@@ -219,7 +241,71 @@ test("MemoryCardLoader: handles absolute project-relative refs", async (t) => {
 });
 
 test("MemoryCardLoader.getProjectRoot: returns project root", (t) => {
-  const loader = new MemoryCardLoader("/my/project", {});
+  const loader = new MemoryCardLoader("/my/project");
   t.equal(loader.getProjectRoot(), "/my/project");
   t.end();
+});
+
+// Schema validation tests
+
+const CardSchema = element("card", {
+  children: z.array(
+    z.union([
+      element("title", { text: z.string() }),
+      element("description", { text: z.string() }),
+    ])
+  ),
+});
+
+test("MemoryCardLoader: validates against registered schema", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/Valid.card": `<card version="1.0.0">
+  <title>Valid Card</title>
+</card>`,
+    },
+    schemas: [CardSchema],
+  });
+
+  const card = await loader.load("/project/cards/Valid.card");
+  t.equal(card.tagName, "card");
+  t.equal(card.children[0]?.text, "Valid Card");
+});
+
+test("MemoryCardLoader: throws ValidationError on schema mismatch", async (t) => {
+  const StrictSchema = element("card", {
+    children: z.array(element("title", { text: z.string().min(10) })),
+  });
+
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/Invalid.card": `<card version="1.0.0">
+  <title>Short</title>
+</card>`,
+    },
+    schemas: [StrictSchema],
+  });
+
+  await t.rejects(
+    async () => {
+      await loader.load("/project/cards/Invalid.card");
+    },
+    ValidationError,
+    "Should throw ValidationError"
+  );
+});
+
+test("MemoryCardLoader: skips validation for unregistered tag names", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/Unknown.card": `<unknown version="1.0.0">
+  <anything>goes</anything>
+</unknown>`,
+    },
+    schemas: [CardSchema], // Only CardSchema registered, not "unknown"
+  });
+
+  // Should load without error since "unknown" has no registered schema
+  const card = await loader.load("/project/cards/Unknown.card");
+  t.equal(card.tagName, "unknown");
 });

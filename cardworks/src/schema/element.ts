@@ -2,6 +2,13 @@ import { z, type ZodType, type ZodObject, type ZodRawShape } from "zod";
 import { CommentsSchema, LocationSchema, TextSegmentSchema } from "./base.js";
 
 /**
+ * A Zod schema for an element with an attached tagName property.
+ */
+export interface ElementSchema<T = unknown> extends ZodType<T> {
+  tagName: string;
+}
+
+/**
  * Base schema for any ElementNode without tag-specific validation.
  */
 export const ElementNodeSchema: ZodType<{
@@ -64,8 +71,8 @@ export function element<
   TText extends ZodType,
 >(
   tagName: TTag,
-  config: ElementConfig<TAttrs, TChildren, TText>
-): ZodType<{
+  config: ElementConfig<TAttrs, TChildren, TText> = {} as ElementConfig<TAttrs, TChildren, TText>
+): ElementSchema<{
   tagName: TTag;
   attrs: TAttrs extends ZodRawShape ? z.infer<ZodObject<TAttrs>> : Record<string, string>;
   comments: { start?: string | undefined; end?: string | undefined };
@@ -106,9 +113,8 @@ export function element<
     dirty: z.boolean(),
   });
 
-  // We need to use passthrough to allow for optional properties that might not be present
-  // and to handle the type casting properly
-  return schema.passthrough() as unknown as ZodType<{
+  // Attach tagName to the schema for registry lookup
+  const schemaWithTag = schema.passthrough() as unknown as ElementSchema<{
     tagName: TTag;
     attrs: TAttrs extends ZodRawShape ? z.infer<ZodObject<TAttrs>> : Record<string, string>;
     comments: { start?: string | undefined; end?: string | undefined };
@@ -124,4 +130,7 @@ export function element<
     };
     dirty: boolean;
   }>;
+  schemaWithTag.tagName = tagName;
+
+  return schemaWithTag;
 }
