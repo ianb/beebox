@@ -1,16 +1,14 @@
 import { test } from "tap";
-import { CardLoader } from "../src/loader/loader.js";
-import { MemoryFileSystem } from "../src/fs/memory-fs.js";
+import { MemoryCardLoader } from "../src/loader/loader.js";
 
-test("CardLoader.load: loads a simple card", async (t) => {
-  const fs = new MemoryFileSystem({
+test("MemoryCardLoader.load: loads a simple card", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
     "/project/cards/Simple.card": `<card version="1.0.0">
   <title>Simple Card</title>
   <description>A test card</description>
 </card>`,
   });
 
-  const loader = new CardLoader(fs, "/project");
   const card = await loader.load("/project/cards/Simple.card");
 
   t.equal(card.tagName, "card");
@@ -19,22 +17,18 @@ test("CardLoader.load: loads a simple card", async (t) => {
   t.equal(card.children[0]?.text, "Simple Card");
 });
 
-test("CardLoader.load: throws on non-existent file", async (t) => {
-  const fs = new MemoryFileSystem({});
-
-  const loader = new CardLoader(fs, "/project");
+test("MemoryCardLoader.load: throws on non-existent file", async (t) => {
+  const loader = new MemoryCardLoader("/project", {});
 
   await t.rejects(async () => {
     await loader.load("/project/cards/Missing.card");
   });
 });
 
-test("CardLoader.save: saves a card", async (t) => {
-  const fs = new MemoryFileSystem({
+test("MemoryCardLoader.save: saves a card", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
     "/project/cards/Existing.card": `<card version="1.0.0"><title>Original</title></card>`,
   });
-
-  const loader = new CardLoader(fs, "/project");
 
   // Load, modify, save
   const card = await loader.load("/project/cards/Existing.card");
@@ -43,20 +37,20 @@ test("CardLoader.save: saves a card", async (t) => {
 
   await loader.save("/project/cards/Existing.card", card);
 
-  // Reload and verify
+  // Clear cache and reload to verify persistence
+  loader.clearCache();
   const reloaded = await loader.load("/project/cards/Existing.card");
   t.equal(reloaded.children[0]?.text, "Modified");
 });
 
-test("CardLoader.resolveRef: resolves cross-card reference", async (t) => {
-  const fs = new MemoryFileSystem({
+test("MemoryCardLoader.resolveRef: resolves cross-card reference", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
     "/project/cards/Main.card": `<card version="1.0.0"><title>Main</title></card>`,
     "/project/cards/Other.card": `<card version="1.0.0">
   <section id="intro">Introduction</section>
 </card>`,
   });
 
-  const loader = new CardLoader(fs, "/project");
   const result = await loader.resolveRef(
     "./Other.card#intro",
     "/project/cards/Main.card"
@@ -67,13 +61,12 @@ test("CardLoader.resolveRef: resolves cross-card reference", async (t) => {
   t.equal(result.fragment?.attrs["id"], "intro");
 });
 
-test("CardLoader.resolveRef: detects version mismatch", async (t) => {
-  const fs = new MemoryFileSystem({
+test("MemoryCardLoader.resolveRef: detects version mismatch", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
     "/project/cards/Main.card": `<card version="1.0.0"><title>Main</title></card>`,
     "/project/cards/Other.card": `<card version="2.0.0"><title>Other</title></card>`,
   });
 
-  const loader = new CardLoader(fs, "/project");
   const result = await loader.resolveRef(
     "./Other.card@1.0.0",
     "/project/cards/Main.card"
@@ -85,8 +78,8 @@ test("CardLoader.resolveRef: detects version mismatch", async (t) => {
   t.equal(result.actualVersion, "2.0.0");
 });
 
-test("CardLoader: full workflow with fixture files", async (t) => {
-  const fs = new MemoryFileSystem({
+test("MemoryCardLoader: full workflow with fixture files", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
     "/project/cards/Audience.card": `<audience version="1.0.0">
   <selection-text>Test audience</selection-text>
   <short-description>A simple test card</short-description>
@@ -106,8 +99,6 @@ test("CardLoader: full workflow with fixture files", async (t) => {
   <source ref="./Technique.card@1.0.0">Reference explanation</source>
 </tutorial>`,
   });
-
-  const loader = new CardLoader(fs, "/project");
 
   // Load all cards
   const audience = await loader.load("/project/cards/Audience.card");
@@ -131,70 +122,93 @@ test("CardLoader: full workflow with fixture files", async (t) => {
   t.equal(techRef.versionMismatch, false);
 });
 
-test("CardLoader: caches loaded cards", async (t) => {
-  let readCount = 0;
-  const fs = new MemoryFileSystem({
-    "/project/cards/Cached.card": `<card version="1.0.0"><title>Cached</title></card>`,
+test("MemoryCardLoader: caches loaded cards", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    "/project/cards/Cached.card": `<card version="1.0.0"><title>Original</title></card>`,
   });
 
-  // Wrap read to count calls
-  const originalRead = fs.read.bind(fs);
-  fs.read = async (path: string): Promise<string> => {
-    readCount++;
-    return originalRead(path);
-  };
+  // Load the card
+  const first = await loader.load("/project/cards/Cached.card");
+  t.equal(first.children[0]?.text, "Original");
 
-  const loader = new CardLoader(fs, "/project");
+  // Modify the underlying file
+  loader.setFile(
+    "/project/cards/Cached.card",
+    `<card version="1.0.0"><title>Modified</title></card>`
+  );
 
-  // Load same card twice
-  await loader.load("/project/cards/Cached.card");
-  await loader.load("/project/cards/Cached.card");
-
-  // Should only have read once (cached)
-  t.equal(readCount, 1);
+  // Load again - should return cached version
+  const second = await loader.load("/project/cards/Cached.card");
+  t.equal(second.children[0]?.text, "Original", "Should return cached version");
 });
 
-test("CardLoader: clearCache forces reload", async (t) => {
-  let readCount = 0;
-  const fs = new MemoryFileSystem({
+test("MemoryCardLoader: clearCache forces reload", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
     "/project/cards/Reload.card": `<card version="1.0.0"><title>Original</title></card>`,
   });
 
-  const originalRead = fs.read.bind(fs);
-  fs.read = async (path: string): Promise<string> => {
-    readCount++;
-    return originalRead(path);
-  };
+  // Load the card
+  const first = await loader.load("/project/cards/Reload.card");
+  t.equal(first.children[0]?.text, "Original");
 
-  const loader = new CardLoader(fs, "/project");
+  // Modify the underlying file
+  loader.setFile(
+    "/project/cards/Reload.card",
+    `<card version="1.0.0"><title>Modified</title></card>`
+  );
 
-  // Load, clear cache, load again
-  await loader.load("/project/cards/Reload.card");
+  // Clear cache and load again
   loader.clearCache();
-  await loader.load("/project/cards/Reload.card");
-
-  // Should have read twice
-  t.equal(readCount, 2);
+  const second = await loader.load("/project/cards/Reload.card");
+  t.equal(second.children[0]?.text, "Modified", "Should return new version after cache clear");
 });
 
-test("CardLoader.exists: checks if card file exists", async (t) => {
-  const fs = new MemoryFileSystem({
-    "/project/cards/Exists.card": `<card version="1.0.0"><title>Exists</title></card>`,
+test("MemoryCardLoader: invalidate removes specific file from cache", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    "/project/cards/A.card": `<card version="1.0.0"><title>A Original</title></card>`,
+    "/project/cards/B.card": `<card version="1.0.0"><title>B Original</title></card>`,
   });
 
-  const loader = new CardLoader(fs, "/project");
+  // Load both cards
+  await loader.load("/project/cards/A.card");
+  await loader.load("/project/cards/B.card");
+
+  // Modify both files
+  loader.setFile(
+    "/project/cards/A.card",
+    `<card version="1.0.0"><title>A Modified</title></card>`
+  );
+  loader.setFile(
+    "/project/cards/B.card",
+    `<card version="1.0.0"><title>B Modified</title></card>`
+  );
+
+  // Invalidate only A
+  loader.invalidate("/project/cards/A.card");
+
+  // A should be reloaded, B should still be cached
+  const a = await loader.load("/project/cards/A.card");
+  const b = await loader.load("/project/cards/B.card");
+
+  t.equal(a.children[0]?.text, "A Modified", "A should be reloaded");
+  t.equal(b.children[0]?.text, "B Original", "B should still be cached");
+});
+
+test("MemoryCardLoader.exists: checks if card file exists", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    "/project/cards/Exists.card": `<card version="1.0.0"><title>Exists</title></card>`,
+  });
 
   t.equal(await loader.exists("/project/cards/Exists.card"), true);
   t.equal(await loader.exists("/project/cards/Missing.card"), false);
 });
 
-test("CardLoader: handles absolute project-relative refs", async (t) => {
-  const fs = new MemoryFileSystem({
+test("MemoryCardLoader: handles absolute project-relative refs", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
     "/project/cards/sub/Deep.card": `<card version="1.0.0"><title>Deep</title></card>`,
     "/project/other/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
   });
 
-  const loader = new CardLoader(fs, "/project");
   const result = await loader.resolveRef(
     "/other/Target.card",
     "/project/cards/sub/Deep.card"
@@ -202,4 +216,9 @@ test("CardLoader: handles absolute project-relative refs", async (t) => {
 
   t.equal(result.exists, true);
   t.equal(result.resolvedPath, "/project/other/Target.card");
+});
+
+test("MemoryCardLoader.getProjectRoot: returns project root", (t) => {
+  const loader = new MemoryCardLoader("/my/project", {});
+  t.equal(loader.getProjectRoot(), "/my/project");
 });

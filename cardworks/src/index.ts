@@ -41,4 +41,8 @@ export {
 } from "./refs/types.js";
 
 // Loader
-export { CardLoader } from "./loader/loader.js";
+export {
+  CardLoader,
+  MemoryCardLoader,
+  type ICardLoader,
+} from "./loader/loader.js";

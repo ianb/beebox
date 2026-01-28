@@ -21,12 +21,11 @@ npm install cardworks
 ## Quick Start
 
 ```typescript
-import { CardLoader, NodeFileSystem, element } from "cardworks";
+import { CardLoader, element } from "cardworks";
 import { z } from "zod";
 
 // Create a loader for your project
-const fs = new NodeFileSystem();
-const loader = new CardLoader(fs, "/path/to/project");
+const loader = new CardLoader("/path/to/project");
 
 // Load a card
 const card = await loader.load("/path/to/project/cards/Recipe.card");
@@ -301,9 +300,9 @@ console.log(ref.isAbsolute);     // false
 ### Resolving References
 
 ```typescript
-import { CardLoader, NodeFileSystem } from "cardworks";
+import { CardLoader } from "cardworks";
 
-const loader = new CardLoader(new NodeFileSystem(), "/project");
+const loader = new CardLoader("/project");
 
 // From within PastaAlfredo.recipe.card, resolve a reference
 const result = await loader.resolveRef(
@@ -419,10 +418,9 @@ The `CardLoader` provides high-level card management with caching.
 ### Creating a Loader
 
 ```typescript
-import { CardLoader, NodeFileSystem } from "cardworks";
+import { CardLoader } from "cardworks";
 
-const fs = new NodeFileSystem();
-const loader = new CardLoader(fs, "/path/to/project");
+const loader = new CardLoader("/path/to/project");
 ```
 
 ### Loading Cards
@@ -465,13 +463,38 @@ if (await loader.exists("/project/cards/Recipe.card")) {
 
 ---
 
+## Testing with MemoryCardLoader
+
+For testing, use `MemoryCardLoader` which stores files in memory:
+
+```typescript
+import { MemoryCardLoader } from "cardworks";
+
+const loader = new MemoryCardLoader("/project", {
+  "/project/cards/Recipe.card": `<recipe version="1.0.0">
+    <title>Test Recipe</title>
+  </recipe>`,
+  "/project/cards/Ingredient.card": `<ingredient version="1.0.0">
+    <name>Butter</name>
+  </ingredient>`,
+});
+
+// Use it just like CardLoader
+const card = await loader.load("/project/cards/Recipe.card");
+
+// You can also modify files dynamically
+loader.setFile("/project/cards/Recipe.card", `<recipe version="1.0.0">
+  <title>Updated Recipe</title>
+</recipe>`);
+```
+
 ## Filesystem Abstraction
 
-Cardworks uses a filesystem interface for portability.
+Cardworks uses a filesystem interface internally. The `CardLoader` and `MemoryCardLoader` handle this automatically, but you can access the underlying filesystem classes directly if needed.
 
 ### NodeFileSystem
 
-For real filesystem access:
+For direct filesystem access:
 
 ```typescript
 import { NodeFileSystem } from "cardworks";
@@ -482,7 +505,7 @@ const content = await fs.read("/path/to/file.card");
 
 ### MemoryFileSystem
 
-For testing or in-memory operations:
+For in-memory operations:
 
 ```typescript
 import { MemoryFileSystem } from "cardworks";
@@ -572,11 +595,10 @@ Here's a complete example putting it all together:
 ### Application Code
 
 ```typescript
-import { CardLoader, NodeFileSystem } from "cardworks";
+import { CardLoader } from "cardworks";
 
 // Initialize loader
-const fs = new NodeFileSystem();
-const loader = new CardLoader(fs, "/project");
+const loader = new CardLoader("/project");
 
 // Load and process a recipe
 async function displayRecipe(recipePath: string) {
@@ -703,6 +725,13 @@ Steps:
 | `exists(path)` | Check if card file exists |
 | `clearCache()` | Clear all cached cards |
 | `invalidate(path)` | Remove specific card from cache |
+
+### Loaders
+
+| Class | Description |
+|-------|-------------|
+| `CardLoader` | File-based card loader for production use |
+| `MemoryCardLoader` | In-memory card loader for testing |
 
 ### Filesystem
 
