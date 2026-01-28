@@ -212,9 +212,6 @@ const StepSchema = element("step", {
 
 // Define the full recipe schema
 const RecipeSchema = element("recipe", {
-  attrs: {
-    version: z.string().regex(/^\d+\.\d+\.\d+$/),
-  },
   children: z.array(
     z.union([
       element("title", { text: z.string() }),
@@ -240,7 +237,7 @@ const result = RecipeSchema.safeParse(card);
 if (result.success) {
   // TypeScript knows the shape of result.data
   const recipe = result.data;
-  console.log(recipe.attrs.version);
+  console.log(recipe.tagName); // "recipe"
 } else {
   console.error("Validation failed:", result.error);
 }
