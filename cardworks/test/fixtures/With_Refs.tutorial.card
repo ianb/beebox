@@ -1,0 +1,6 @@
+<tutorial version="1.0.0">
+  <content>
+    See [other card](ref:./Other.card@1.0.0#section).
+  </content>
+  <source ref="./Source.research.card@1.0.0">Reference explanation</source>
+</tutorial>

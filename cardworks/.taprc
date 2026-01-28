@@ -1,0 +1,4 @@
+include:
+  - test/**/*.test.ts
+timeout: 30
+reporter: spec

@@ -1,0 +1,44 @@
+// Cardworks - TypeScript library for managing structured XML content
+
+// Filesystem
+export { type FileSystem } from "./fs/types.js";
+export { NodeFileSystem } from "./fs/node-fs.js";
+export { MemoryFileSystem } from "./fs/memory-fs.js";
+
+// Parser
+export { parseXml, parseXmlFile, ParseError } from "./parser/parse.js";
+export {
+  type ElementNode,
+  type Provenance,
+  type Comments,
+  type TextSegment,
+  emptyProvenance,
+} from "./parser/provenance.js";
+export { dedent } from "./parser/dom-to-object.js";
+
+// Schema
+export {
+  element,
+  ElementNodeSchema,
+  type ElementConfig,
+} from "./schema/element.js";
+export {
+  CommentsSchema,
+  ProvenanceSchema,
+  TextSegmentSchema,
+} from "./schema/base.js";
+
+// Serializer
+export { serialize, type SerializeOptions } from "./serialize/serialize.js";
+
+// References
+export { parseRef } from "./refs/parse-ref.js";
+export { resolveRef, type RefResolver } from "./refs/resolve.js";
+export {
+  type ParsedRef,
+  type RefFragment,
+  type ResolvedRef,
+} from "./refs/types.js";
+
+// Loader
+export { CardLoader } from "./loader/loader.js";
