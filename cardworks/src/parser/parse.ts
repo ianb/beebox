@@ -21,7 +21,7 @@ export class ParseError extends Error {
  * Parse XML content into an ElementNode tree.
  *
  * @param xml - The XML string to parse
- * @param source - Source identifier for provenance tracking
+ * @param source - Source identifier for location tracking
  * @returns The parsed ElementNode tree
  * @throws ParseError if the XML is malformed
  */
@@ -59,7 +59,7 @@ export function parseXml(xml: string, source: string): Promise<ElementNode> {
     return Promise.reject(new ParseError("No root element found", source));
   }
 
-  // Create line tracker for provenance
+  // Create line tracker for location
   const tracker = createLineTracker(xml, source);
 
   // Transform to our object model

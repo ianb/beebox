@@ -1,12 +1,12 @@
 import type {
   ElementNode,
-  Provenance,
+  Location,
   Comments,
   TextSegment,
 } from "./provenance.js";
 
 /**
- * Line tracking for provenance calculation.
+ * Line tracking for location calculation.
  */
 interface LineTracker {
   lines: string[];
@@ -65,13 +65,13 @@ export function dedent(text: string): string {
 }
 
 /**
- * Extract provenance from a DOM node using its position in the source.
+ * Extract location from a DOM node using its position in the source.
  */
-function getNodeProvenance(
+function getNodeLocation(
   node: Node,
   tracker: LineTracker,
   _xml: string
-): Provenance {
+): Location {
   // xmldom provides lineNumber and columnNumber on nodes
   const nodeWithPos = node as Node & {
     lineNumber?: number;
@@ -167,7 +167,7 @@ export function domToObject(
       }
     } else if (isElement(child)) {
       const childNode = domToObject(child, tracker, xml, pendingComment);
-      childNode.provenance = getNodeProvenance(child, tracker, xml);
+      childNode.location = getNodeLocation(child, tracker, xml);
       children.push(childNode);
       position++;
       pendingComment = undefined;
@@ -189,7 +189,7 @@ export function domToObject(
     attrs,
     comments,
     children,
-    provenance: getNodeProvenance(element, tracker, xml),
+    location: getNodeLocation(element, tracker, xml),
     dirty: false,
   };
 

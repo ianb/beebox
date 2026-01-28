@@ -1,5 +1,5 @@
 import { z, type ZodType, type ZodObject, type ZodRawShape } from "zod";
-import { CommentsSchema, ProvenanceSchema, TextSegmentSchema } from "./base.js";
+import { CommentsSchema, LocationSchema, TextSegmentSchema } from "./base.js";
 
 /**
  * Base schema for any ElementNode without tag-specific validation.
@@ -11,7 +11,7 @@ export const ElementNodeSchema: ZodType<{
   text?: string | undefined;
   textSegments?: Array<{ text: string; position: number }> | undefined;
   children: unknown[];
-  provenance: {
+  location: {
     source: string;
     startLine: number;
     startColumn: number;
@@ -27,7 +27,7 @@ export const ElementNodeSchema: ZodType<{
     text: z.string().optional(),
     textSegments: z.array(TextSegmentSchema).optional(),
     children: z.array(ElementNodeSchema),
-    provenance: ProvenanceSchema,
+    location: LocationSchema,
     dirty: z.boolean(),
   })
 );
@@ -72,7 +72,7 @@ export function element<
   text?: TText extends ZodType ? z.infer<TText> : string | undefined;
   textSegments?: Array<{ text: string; position: number }> | undefined;
   children: TChildren extends ZodType ? z.infer<TChildren> : unknown[];
-  provenance: {
+  location: {
     source: string;
     startLine: number;
     startColumn: number;
@@ -102,7 +102,7 @@ export function element<
       ? z.array(TextSegmentSchema).optional()
       : z.array(TextSegmentSchema).optional(),
     children: childrenSchema,
-    provenance: ProvenanceSchema,
+    location: LocationSchema,
     dirty: z.boolean(),
   });
 
@@ -115,7 +115,7 @@ export function element<
     text?: TText extends ZodType ? z.infer<TText> : string | undefined;
     textSegments?: Array<{ text: string; position: number }> | undefined;
     children: TChildren extends ZodType ? z.infer<TChildren> : unknown[];
-    provenance: {
+    location: {
       source: string;
       startLine: number;
       startColumn: number;

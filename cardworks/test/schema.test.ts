@@ -2,14 +2,14 @@ import { test } from "tap";
 import { z } from "zod";
 import { element, ElementNodeSchema } from "../src/schema/element.js";
 import type { ElementNode } from "../src/parser/provenance.js";
-import { emptyProvenance } from "../src/parser/provenance.js";
+import { emptyLocation } from "../src/parser/provenance.js";
 
 function makeNode(partial: Partial<ElementNode> & { tagName: string }): ElementNode {
   return {
     attrs: {},
     comments: {},
     children: [],
-    provenance: emptyProvenance("test"),
+    location: emptyLocation("test"),
     dirty: false,
     ...partial,
   };
@@ -160,7 +160,7 @@ test("element() returns type-inferred schema", (t) => {
     attrs: { version: "1.0.0" },
     comments: {},
     children: [],
-    provenance: emptyProvenance("test"),
+    location: emptyLocation("test"),
     dirty: false,
   };
 

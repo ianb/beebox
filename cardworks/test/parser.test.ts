@@ -22,20 +22,20 @@ test("parseXml parses a simple card", async (t) => {
   t.equal(shortDesc?.text, "A simple test card");
 });
 
-test("parseXml tracks provenance (line numbers)", async (t) => {
+test("parseXml tracks location (line numbers)", async (t) => {
   const xml = `<root>
   <child>content</child>
 </root>`;
 
   const result = await parseXml(xml, "test.card");
 
-  t.ok(result.provenance);
-  t.equal(result.provenance.source, "test.card");
-  t.equal(result.provenance.startLine, 1);
+  t.ok(result.location);
+  t.equal(result.location.source, "test.card");
+  t.equal(result.location.startLine, 1);
 
   const child = result.children[0];
-  t.ok(child?.provenance);
-  t.equal(child?.provenance.startLine, 2);
+  t.ok(child?.location);
+  t.equal(child?.location.startLine, 2);
 });
 
 test("parseXml applies dedent to text content", async (t) => {

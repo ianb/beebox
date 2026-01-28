@@ -9,10 +9,10 @@ export { MemoryFileSystem } from "./fs/memory-fs.js";
 export { parseXml, parseXmlFile, ParseError } from "./parser/parse.js";
 export {
   type ElementNode,
-  type Provenance,
+  type Location,
   type Comments,
   type TextSegment,
-  emptyProvenance,
+  emptyLocation,
 } from "./parser/provenance.js";
 export { dedent } from "./parser/dom-to-object.js";
 
@@ -24,7 +24,7 @@ export {
 } from "./schema/element.js";
 export {
   CommentsSchema,
-  ProvenanceSchema,
+  LocationSchema,
   TextSegmentSchema,
 } from "./schema/base.js";
 

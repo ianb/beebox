@@ -2,9 +2,9 @@ export { element, ElementNodeSchema } from "./element.js";
 export type { ElementConfig } from "./element.js";
 export {
   CommentsSchema,
-  ProvenanceSchema,
+  LocationSchema,
   TextSegmentSchema,
   type Comments,
-  type Provenance,
+  type Location,
   type TextSegment,
 } from "./base.js";

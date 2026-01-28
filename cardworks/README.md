@@ -88,17 +88,17 @@ interface ElementNode {
     start?: string;                   // Comment at start of element
     end?: string;                     // Comment at end of element
   };
-  provenance: Provenance;             // Source location
+  location: Location;                 // Source location
   dirty: boolean;                     // Modified since parse?
 }
 ```
 
-### Provenance
+### Location
 
 Every node tracks its source location for error reporting:
 
 ```typescript
-interface Provenance {
+interface Location {
   source: string;      // File path or identifier
   startLine: number;   // 1-based line number
   startColumn: number; // 1-based column

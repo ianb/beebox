@@ -1,7 +1,7 @@
 /**
- * Provenance information for tracking source locations.
+ * Location information for tracking source positions.
  */
-export interface Provenance {
+export interface Location {
   /** Source file or identifier */
   source: string;
   /** Starting line number (1-based) */
@@ -51,15 +51,15 @@ export interface ElementNode {
   /** Child element nodes */
   children: ElementNode[];
   /** Source location information */
-  provenance: Provenance;
+  location: Location;
   /** Whether this node has been modified since parsing */
   dirty: boolean;
 }
 
 /**
- * Create an empty provenance object.
+ * Create an empty location object.
  */
-export function emptyProvenance(source: string): Provenance {
+export function emptyLocation(source: string): Location {
   return {
     source,
     startLine: 0,

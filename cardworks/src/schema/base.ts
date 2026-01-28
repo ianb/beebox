@@ -11,9 +11,9 @@ export const CommentsSchema = z.object({
 export type Comments = z.infer<typeof CommentsSchema>;
 
 /**
- * Schema for provenance (source location) information.
+ * Schema for source location information.
  */
-export const ProvenanceSchema = z.object({
+export const LocationSchema = z.object({
   source: z.string(),
   startLine: z.number(),
   startColumn: z.number(),
@@ -21,7 +21,7 @@ export const ProvenanceSchema = z.object({
   endColumn: z.number(),
 });
 
-export type Provenance = z.infer<typeof ProvenanceSchema>;
+export type Location = z.infer<typeof LocationSchema>;
 
 /**
  * Schema for text segments in mixed content.

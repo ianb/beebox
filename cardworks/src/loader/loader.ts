@@ -92,7 +92,7 @@ abstract class BaseCardLoader implements ICardLoader {
     await this.fs.write(path, content);
 
     // Update cache with the saved version
-    // Re-parse to get clean provenance
+    // Re-parse to get clean location
     const reparsed = await parseXml(content, path);
     this.cache.set(path, reparsed);
   }
