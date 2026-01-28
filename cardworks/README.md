@@ -161,8 +161,8 @@ const xml = `<recipe version="1.0.0">
 const card = await parseXml(xml, "test");
 const title = card.children[0];
 
-console.log(title.comments.start);  // " This is the main title "
-console.log(title.comments.end);    // " Author's note: adjust salt to taste "
+console.log(title.comments.start);  // "This is the main title"
+console.log(title.comments.end);    // "Author's note: adjust salt to taste"
 ```
 
 ### Error Handling

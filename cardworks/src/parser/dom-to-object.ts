@@ -153,7 +153,7 @@ export function domToObject(
       // Save comment for next element or as trailing
       // textContent can be null in DOM spec
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      const commentText = child.textContent ?? "";
+      const commentText = dedent(child.textContent ?? "");
       if (children.length === 0 && textSegments.length === 0) {
         // This is a leading comment for the first child
         pendingComment = commentText;
