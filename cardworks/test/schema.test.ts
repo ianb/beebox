@@ -191,19 +191,14 @@ test("ElementNodeSchema validates basic element structure", (t) => {
 
 test("element() with mixed content", (t) => {
   const schema = element("paragraph", {
-    mixed: true,
     children: z.array(element("link", {})).optional(),
   });
 
+  const linkNode = makeNode({ tagName: "link" });
   const validNode = makeNode({
     tagName: "paragraph",
-    textSegments: [
-      { text: "Some ", position: 0 },
-      { text: " text", position: 2 },
-    ],
-    children: [
-      makeNode({ tagName: "link" }),
-    ],
+    mixed: ["Some ", linkNode, " text"],
+    children: [linkNode],
   });
 
   t.ok(schema.safeParse(validNode).success, "accepts mixed content");

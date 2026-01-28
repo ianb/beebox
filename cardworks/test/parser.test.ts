@@ -142,10 +142,27 @@ test("parseXml handles mixed content (text and children)", async (t) => {
 
   const result = await parseXml(xml, "test.card");
 
-  // Should have both text segments and child
-  t.ok(result.textSegments);
+  // Should have mixed content array and children
+  t.ok(result.mixed);
+  t.equal(result.mixed?.length, 3);
+  t.equal(result.mixed?.[0], "Some text ");
+  t.equal(typeof result.mixed?.[1], "object"); // The child element
+  t.equal(result.mixed?.[2], " more text");
   t.equal(result.children.length, 1);
   t.equal(result.children[0]?.tagName, "child");
+});
+
+test("parseXml handles mixed content with comments", async (t) => {
+  const xml = `<root version="1.0.0">Some text <!-- inline comment --> more text</root>`;
+
+  const result = await parseXml(xml, "test.card");
+
+  // Should have mixed content array with comment
+  t.ok(result.mixed);
+  t.equal(result.mixed?.length, 3);
+  t.equal(result.mixed?.[0], "Some text ");
+  t.same(result.mixed?.[1], { comment: "inline comment" });
+  t.equal(result.mixed?.[2], " more text");
 });
 
 test("parseXml sets dirty flag to false initially", async (t) => {

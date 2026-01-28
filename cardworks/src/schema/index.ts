@@ -4,8 +4,6 @@ export { SchemaRegistry } from "./registry.js";
 export {
   CommentsSchema,
   LocationSchema,
-  TextSegmentSchema,
   type Comments,
   type Location,
-  type TextSegment,
 } from "./base.js";

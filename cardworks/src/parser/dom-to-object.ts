@@ -1,9 +1,4 @@
-import type {
-  ElementNode,
-  Location,
-  Comments,
-  TextSegment,
-} from "./provenance.js";
+import type { ElementNode, Location, Comments, MixedContent } from "./provenance.js";
 
 /**
  * Line tracking for location calculation.
@@ -137,9 +132,10 @@ export function domToObject(
   }
 
   const children: ElementNode[] = [];
-  const textSegments: TextSegment[] = [];
-  let position = 0;
+  const mixedContent: MixedContent[] = [];
   let pendingComment: string | undefined;
+  let hasNonWhitespaceText = false;
+  let hasComments = false;
 
   // Process child nodes
   const childNodes = element.childNodes;
@@ -150,15 +146,20 @@ export function domToObject(
     if (child === null) continue;
 
     if (isComment(child)) {
-      // Save comment for next element or as trailing
       // textContent can be null in DOM spec
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const commentText = dedent(child.textContent ?? "");
-      if (children.length === 0 && textSegments.length === 0) {
+      hasComments = true;
+
+      // Add to mixed content
+      mixedContent.push({ comment: commentText });
+
+      // Also track for structured comments on adjacent elements
+      if (children.length === 0 && !hasNonWhitespaceText) {
         // This is a leading comment for the first child
         pendingComment = commentText;
       } else {
-        // Assign to previous element as end comment, or save as trailing
+        // Assign to previous element as end comment
         const lastChild = children[children.length - 1];
         if (lastChild) {
           lastChild.comments.end = commentText;
@@ -169,17 +170,18 @@ export function domToObject(
       const childNode = domToObject(child, tracker, xml, pendingComment);
       childNode.location = getNodeLocation(child, tracker, xml);
       children.push(childNode);
-      position++;
+      mixedContent.push(childNode);
       pendingComment = undefined;
     } else if (isText(child)) {
       // textContent can be null in DOM spec
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const text = child.textContent ?? "";
-      // Only add non-whitespace text segments
+      // Track if there's any non-whitespace text
       if (text.trim().length > 0) {
-        textSegments.push({ text, position });
-        position++;
+        hasNonWhitespaceText = true;
       }
+      // Add all text to mixed content (raw, no trimming)
+      mixedContent.push(text);
     }
   }
 
@@ -194,15 +196,13 @@ export function domToObject(
   };
 
   // Handle text content
-  if (textSegments.length > 0 && children.length === 0) {
+  if (hasNonWhitespaceText && children.length === 0 && !hasComments) {
     // Simple text content - dedent it
-    result.text = dedent(textSegments.map((s) => s.text).join(""));
-  } else if (textSegments.length > 0) {
-    // Mixed content - keep text segments
-    result.textSegments = textSegments.map((s) => ({
-      text: s.text.trim(),
-      position: s.position,
-    }));
+    const allText = mixedContent.filter((item): item is string => typeof item === "string").join("");
+    result.text = dedent(allText);
+  } else if (hasNonWhitespaceText || hasComments) {
+    // Mixed content - keep raw interleaved text, elements, and comments
+    result.mixed = mixedContent;
   }
 
   return result;

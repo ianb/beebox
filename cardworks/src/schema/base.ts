@@ -24,11 +24,11 @@ export const LocationSchema = z.object({
 export type Location = z.infer<typeof LocationSchema>;
 
 /**
- * Schema for text segments in mixed content.
+ * Schema for a comment in mixed content.
  */
-export const TextSegmentSchema = z.object({
-  text: z.string(),
-  position: z.number(),
+export const MixedCommentSchema = z.object({
+  comment: z.string(),
 });
 
-export type TextSegment = z.infer<typeof TextSegmentSchema>;
+export type MixedComment = z.infer<typeof MixedCommentSchema>;
+

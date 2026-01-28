@@ -23,9 +23,26 @@ export interface FileSystem {
   exists(path: string): Promise<boolean>;
 
   /**
-   * List files in a directory.
+   * List immediate entries in a directory (files and subdirectories).
    */
   list(path: string): Promise<string[]>;
+
+  /**
+   * Find all files matching a glob pattern.
+   * Pattern supports * (any chars) and ** (any path segments).
+   * Returns absolute paths.
+   *
+   * @example
+   * fs.glob("/project", "**\/*.card")  // all .card files
+   * fs.glob("/project", "*.card")       // .card files in root only
+   * fs.glob("/project", "cards/**\/*")   // all files under cards/
+   */
+  glob(basePath: string, pattern: string): Promise<string[]>;
+
+  /**
+   * Move/rename a file.
+   */
+  move(from: string, to: string): Promise<void>;
 
   /**
    * Resolve a relative path against a base path.

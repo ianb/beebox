@@ -1,4 +1,4 @@
-import type { ElementNode, TextSegment } from "../parser/provenance.js";
+import type { ElementNode, MixedContent, MixedComment } from "../parser/provenance.js";
 
 /**
  * Options for XML serialization.
@@ -77,8 +77,7 @@ function serializeNode(
   // Determine content type
   const hasChildren = node.children.length > 0;
   const hasText = node.text !== undefined && node.text.length > 0;
-  const hasMixedContent =
-    node.textSegments !== undefined && node.textSegments.length > 0;
+  const hasMixedContent = node.mixed !== undefined && node.mixed.length > 0;
 
   if (!hasChildren && !hasText && !hasMixedContent) {
     // Self-closing tag
@@ -96,13 +95,8 @@ function serializeNode(
       lines.push(`${padding}${tagOpen}>${escapeText(textContent)}</${node.tagName}>`);
     }
   } else if (hasMixedContent) {
-    // Mixed content - text interspersed with elements
-    const mixedContent = serializeMixedContent(
-      node.textSegments ?? [],
-      node.children,
-      depth,
-      indent
-    );
+    // Mixed content - interleaved text and elements
+    const mixedContent = serializeMixedContent(node.mixed ?? []);
     lines.push(`${padding}${tagOpen}>${mixedContent}</${node.tagName}>`);
   } else {
     // Element with children
@@ -148,55 +142,44 @@ function serializeTextContent(
 }
 
 /**
- * Serialize mixed content (text segments interspersed with elements).
+ * Check if an item is a MixedComment.
  */
-function serializeMixedContent(
-  textSegments: TextSegment[],
-  children: ElementNode[],
-  _depth: number,
-  _indent: string
-): string {
-  // Create a combined list of items by position
-  const items: Array<{ type: "text" | "element"; content: string; position: number }> =
-    [];
+function isMixedComment(item: MixedContent): item is MixedComment {
+  return typeof item === "object" && "comment" in item;
+}
 
-  for (const segment of textSegments) {
-    items.push({
-      type: "text",
-      content: escapeText(segment.text),
-      position: segment.position,
-    });
-  }
+/**
+ * Serialize mixed content (interleaved text, elements, and comments).
+ */
+function serializeMixedContent(mixed: MixedContent[]): string {
+  const parts: string[] = [];
 
-  // For children in mixed content, we serialize inline
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
-    if (!child) continue;
-
-    // Find the position - it should be between text segments
-    const positionIndex = textSegments.findIndex((s) => s.position > i);
-    const childPosition = (positionIndex === -1 ? i : positionIndex - 0.5) + i;
-
-    const attrs = serializeAttrs(child.attrs);
-    const tagOpen = attrs ? `<${child.tagName} ${attrs}` : `<${child.tagName}`;
-
-    if (child.text) {
-      items.push({
-        type: "element",
-        content: `${tagOpen}>${escapeText(child.text)}</${child.tagName}>`,
-        position: childPosition,
-      });
+  for (const item of mixed) {
+    if (typeof item === "string") {
+      // Raw text - escape but don't trim
+      parts.push(escapeText(item));
+    } else if (isMixedComment(item)) {
+      // Comment
+      parts.push(`<!-- ${item.comment} -->`);
     } else {
-      items.push({
-        type: "element",
-        content: `${tagOpen}/>`,
-        position: childPosition,
-      });
+      // Element node - serialize inline
+      const attrs = serializeAttrs(item.attrs);
+      const tagOpen = attrs ? `<${item.tagName} ${attrs}` : `<${item.tagName}`;
+
+      if (item.text) {
+        parts.push(`${tagOpen}>${escapeText(item.text)}</${item.tagName}>`);
+      } else if (item.children.length > 0) {
+        // Nested children in mixed content - serialize recursively inline
+        const childLines: string[] = [];
+        for (const child of item.children) {
+          serializeNode(child, childLines, 0, "");
+        }
+        parts.push(`${tagOpen}>${childLines.join("")}</${item.tagName}>`);
+      } else {
+        parts.push(`${tagOpen}/>`);
+      }
     }
   }
 
-  // Sort by position and join
-  items.sort((a, b) => a.position - b.position);
-
-  return items.map((item) => item.content).join("");
+  return parts.join("");
 }

@@ -11,7 +11,8 @@ export {
   type ElementNode,
   type Location,
   type Comments,
-  type TextSegment,
+  type MixedContent,
+  type MixedComment,
   emptyLocation,
 } from "./parser/provenance.js";
 export { dedent } from "./parser/dom-to-object.js";
@@ -23,11 +24,7 @@ export {
   type ElementConfig,
   type ElementSchema,
 } from "./schema/element.js";
-export {
-  CommentsSchema,
-  LocationSchema,
-  TextSegmentSchema,
-} from "./schema/base.js";
+export { CommentsSchema, LocationSchema } from "./schema/base.js";
 export { SchemaRegistry } from "./schema/registry.js";
 
 // Serializer
@@ -50,4 +47,20 @@ export {
   type ICardLoader,
   type CardLoaderOptions,
   type MemoryCardLoaderOptions,
+  type MoveResult,
 } from "./loader/loader.js";
+
+// Lint
+export {
+  lintCard,
+  lintCards,
+  lintAll,
+  formatLintResult,
+  formatLintResults,
+  formatLintResultsJson,
+  type LintIssue,
+  type LintResult,
+  type LintSummary,
+  type LintOptions,
+  type FormatOptions,
+} from "./lint/index.js";

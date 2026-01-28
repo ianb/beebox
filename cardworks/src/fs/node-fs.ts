@@ -39,6 +39,74 @@ export class NodeFileSystem implements FileSystem {
     }
   }
 
+  async glob(basePath: string, pattern: string): Promise<string[]> {
+    const results: string[] = [];
+
+    // Convert glob pattern to regex using placeholders
+    let regexPattern = pattern;
+
+    // First, protect ** and * with placeholders (using unlikely strings)
+    regexPattern = regexPattern.replace(/\*\*\//g, "<<GLOBSTARSLASH>>");
+    regexPattern = regexPattern.replace(/\*\*/g, "<<GLOBSTAR>>");
+    regexPattern = regexPattern.replace(/\*/g, "<<STAR>>");
+    regexPattern = regexPattern.replace(/\?/g, "<<QUESTION>>");
+
+    // Escape regex special chars
+    regexPattern = regexPattern.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+
+    // Replace placeholders with regex equivalents
+    regexPattern = regexPattern.replace(/<<GLOBSTARSLASH>>/g, "(.*/)?");
+    regexPattern = regexPattern.replace(/<<GLOBSTAR>>/g, ".*");
+    regexPattern = regexPattern.replace(/<<STAR>>/g, "[^/]*");
+    regexPattern = regexPattern.replace(/<<QUESTION>>/g, "[^/]");
+
+    const regex = new RegExp(`^${regexPattern}$`);
+
+    // Recursively walk the directory
+    await this.walkDir(basePath, basePath, regex, results);
+
+    return results.sort();
+  }
+
+  private async walkDir(
+    basePath: string,
+    currentPath: string,
+    pattern: RegExp,
+    results: string[]
+  ): Promise<void> {
+    let entries: string[];
+    try {
+      entries = await fs.readdir(currentPath);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentPath, entry);
+      const relativePath = path.relative(basePath, fullPath);
+
+      try {
+        const stat = await fs.stat(fullPath);
+        if (stat.isDirectory()) {
+          await this.walkDir(basePath, fullPath, pattern, results);
+        } else if (stat.isFile()) {
+          if (pattern.test(relativePath)) {
+            results.push(fullPath);
+          }
+        }
+      } catch {
+        // Skip files we can't stat
+      }
+    }
+  }
+
+  async move(from: string, to: string): Promise<void> {
+    // Ensure target directory exists
+    const dir = path.dirname(to);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.rename(from, to);
+  }
+
   resolve(base: string, relative: string): string {
     if (path.isAbsolute(relative)) {
       return relative;

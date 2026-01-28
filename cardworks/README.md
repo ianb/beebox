@@ -82,7 +82,7 @@ interface ElementNode {
   tagName: string;                    // Element tag name
   attrs: Record<string, string>;      // Attributes
   text?: string;                      // Text content (dedented)
-  textSegments?: TextSegment[];       // For mixed content
+  mixed?: MixedContent[];             // Mixed content (raw text, elements, comments)
   children: ElementNode[];            // Child elements
   comments: {
     start?: string;                   // Comment at start of element
@@ -91,6 +91,8 @@ interface ElementNode {
   location: Location;                 // Source location
   dirty: boolean;                     // Modified since parse?
 }
+
+// MixedContent is: string | ElementNode | { comment: string }
 ```
 
 ### Location
@@ -146,6 +148,30 @@ console.log(node.text);
 // Then add salt generously.
 // Finally, add the pasta.
 ```
+
+### Mixed Content
+
+When an element contains interleaved text, child elements, or comments, the `mixed` property contains the raw sequence:
+
+```typescript
+const xml = `<p version="1.0.0">Some text <b>bold</b> more <!-- note --> text</p>`;
+
+const node = await parseXml(xml, "test");
+
+console.log(node.mixed);
+// [
+//   "Some text ",
+//   { tagName: "b", text: "bold", ... },
+//   " more ",
+//   { comment: "note" },
+//   " text"
+// ]
+
+// Children are also available separately
+console.log(node.children[0].tagName);  // "b"
+```
+
+Mixed content preserves raw whitespace (no dedenting) to maintain exact formatting. Comments appear as `{ comment: string }` objects.
 
 ### Comment Preservation
 
@@ -227,21 +253,29 @@ const RecipeSchema = element("recipe", {
 });
 ```
 
-### Validating Cards
+### Validating Cards on Load
+
+When you pass schemas to a `CardLoader`, cards are validated automatically on load:
 
 ```typescript
-const card = await parseXml(recipeXml, "Recipe.card");
+import { CardLoader, ValidationError } from "cardworks";
 
-const result = RecipeSchema.safeParse(card);
+// Create loader with schemas
+const loader = new CardLoader("/project", {
+  schemas: [RecipeSchema, IngredientRefSchema, StepSchema],
+});
 
-if (result.success) {
-  // TypeScript knows the shape of result.data
-  const recipe = result.data;
-  console.log(recipe.tagName); // "recipe"
-} else {
-  console.error("Validation failed:", result.error);
+try {
+  // Cards are validated against matching schemas automatically
+  const recipe = await loader.load("/project/cards/Recipe.card");
+} catch (e) {
+  if (e instanceof ValidationError) {
+    console.error(`Validation failed for <${e.tagName}>:`, e.zodError);
+  }
 }
 ```
+
+Cards are matched to schemas by tag name - a `<recipe>` element is validated against `RecipeSchema` (which was defined with `element("recipe", ...)`). Cards with no matching schema are loaded without validation.
 
 ### Type Inference
 
@@ -417,17 +451,19 @@ The `CardLoader` provides high-level card management with caching.
 ```typescript
 import { CardLoader } from "cardworks";
 
+// Basic loader (no validation)
 const loader = new CardLoader("/path/to/project");
+
+// Loader with schema validation
+const validatingLoader = new CardLoader("/path/to/project", {
+  schemas: [RecipeSchema, IngredientSchema, TechniqueSchema],
+});
 ```
 
 ### Loading Cards
 
 ```typescript
-// Cards are cached automatically
 const recipe = await loader.load("/project/cards/Recipe.card");
-
-// Second load returns cached version
-const same = await loader.load("/project/cards/Recipe.card");
 ```
 
 ### Saving Cards
@@ -440,22 +476,116 @@ recipe.children[0].text = "New Title";
 await loader.save("/project/cards/Recipe.card", recipe);
 ```
 
-### Cache Management
-
-```typescript
-// Clear entire cache
-loader.clearCache();
-
-// Invalidate specific file
-loader.invalidate("/project/cards/Recipe.card");
-```
-
 ### Checking Existence
 
 ```typescript
 if (await loader.exists("/project/cards/Recipe.card")) {
   const card = await loader.load("/project/cards/Recipe.card");
 }
+```
+
+### Iterating Over All Cards
+
+```typescript
+// List all card files in the project
+const cardPaths = await loader.listCards();
+
+for (const path of cardPaths) {
+  const card = await loader.load(path);
+  console.log(card.tagName, path);
+}
+```
+
+### Moving/Renaming Cards
+
+```typescript
+// Move a card and update all references to it
+const result = await loader.move(
+  "/project/cards/OldName.card",
+  "/project/cards/NewName.card"
+);
+
+console.log("Moved files:", result.movedFiles);
+console.log("Updated references in:", result.updatedCards);
+```
+
+The move function:
+- Moves the card file and any related files with the same basename (e.g., `Recipe.card`, `Recipe.png`)
+- Updates all `ref` attributes in other cards that pointed to the old path
+- Preserves version and fragment in references
+- Returns a summary of what was changed
+
+---
+
+## Linting
+
+Cardworks provides lint functions to check your cards for errors. This is useful for CI/CD pipelines or editor integrations.
+
+### Creating a Lint Script
+
+```typescript
+import { CardLoader, lintAll, formatLintResults } from "cardworks";
+import { RecipeSchema, IngredientSchema } from "./schemas.js";
+
+const loader = new CardLoader("/path/to/project", {
+  schemas: [RecipeSchema, IngredientSchema],
+});
+
+const summary = await lintAll(loader);
+console.log(formatLintResults(summary, { basePath: "/path/to/project/" }));
+
+process.exit(summary.totalErrors > 0 ? 1 : 0);
+```
+
+### What Gets Checked
+
+- **Parse errors** - Malformed XML syntax
+- **Validation errors** - Schema mismatches (for cards with registered schemas)
+- **Reference errors** - Broken `ref` attributes pointing to non-existent files
+- **Reference warnings** - Version mismatches in refs (requested vs actual)
+
+### Lint Functions
+
+```typescript
+import { lintCard, lintCards, lintAll } from "cardworks";
+
+// Lint a single card
+const result = await lintCard(loader, "/project/Recipe.card");
+// Returns: { path, errors: LintIssue[], warnings: LintIssue[] }
+
+// Lint specific cards
+const summary = await lintCards(loader, [path1, path2]);
+
+// Lint all cards in the project
+const summary = await lintAll(loader);
+// Returns: { results, totalErrors, totalWarnings, filesChecked, filesWithErrors }
+```
+
+### Formatting Results
+
+```typescript
+import { formatLintResults, formatLintResultsJson } from "cardworks";
+
+// Human-readable output with colors
+console.log(formatLintResults(summary));
+
+// Customize formatting
+console.log(formatLintResults(summary, {
+  colors: false,           // Disable ANSI colors
+  onlyIssues: true,        // Only show files with problems
+  basePath: "/project/",   // Strip prefix from paths
+}));
+
+// JSON output (for tooling integration)
+console.log(formatLintResultsJson(summary));
+```
+
+### Disabling Reference Checks
+
+If you only want to check parsing and validation:
+
+```typescript
+const summary = await lintAll(loader, { checkRefs: false });
 ```
 
 ---
@@ -468,12 +598,16 @@ For testing, use `MemoryCardLoader` which stores files in memory:
 import { MemoryCardLoader } from "cardworks";
 
 const loader = new MemoryCardLoader("/project", {
-  "/project/cards/Recipe.card": `<recipe version="1.0.0">
-    <title>Test Recipe</title>
-  </recipe>`,
-  "/project/cards/Ingredient.card": `<ingredient version="1.0.0">
-    <name>Butter</name>
-  </ingredient>`,
+  files: {
+    "/project/cards/Recipe.card": `<recipe version="1.0.0">
+      <title>Test Recipe</title>
+    </recipe>`,
+    "/project/cards/Ingredient.card": `<ingredient version="1.0.0">
+      <name>Butter</name>
+    </ingredient>`,
+  },
+  // Optional: provide schemas for validation
+  schemas: [RecipeSchema],
 });
 
 // Use it just like CardLoader
@@ -516,6 +650,31 @@ const fs = new MemoryFileSystem({
 const content = await fs.read("/project/cards/Recipe.card");
 ```
 
+### Finding Files with Glob
+
+The filesystem provides a `glob` method for finding files:
+
+```typescript
+import { NodeFileSystem } from "cardworks";
+
+const fs = new NodeFileSystem();
+
+// Find all card files
+const cards = await fs.glob("/project", "**/*.card");
+
+// Find cards in a specific directory
+const recipes = await fs.glob("/project", "recipes/*.card");
+
+// Find all files
+const allFiles = await fs.glob("/project", "**/*");
+```
+
+Glob patterns:
+- `*` - matches any characters except `/`
+- `**` - matches any characters including `/`
+- `**/` - matches zero or more directories
+- `?` - matches a single character
+
 ### FileSystem Interface
 
 Implement your own filesystem:
@@ -529,6 +688,8 @@ class MyFileSystem implements FileSystem {
   async write(path: string, content: string): Promise<void> { /* ... */ }
   async exists(path: string): Promise<boolean> { /* ... */ }
   async list(path: string): Promise<string[]> { /* ... */ }
+  async glob(basePath: string, pattern: string): Promise<string[]> { /* ... */ }
+  async move(from: string, to: string): Promise<void> { /* ... */ }
   resolve(base: string, relative: string): string { /* ... */ }
 }
 ```
@@ -716,12 +877,22 @@ Steps:
 
 | Method | Description |
 |--------|-------------|
-| `load(path)` | Load and cache a card |
+| `load(path)` | Load a card |
 | `save(path, card)` | Save card to file |
 | `resolveRef(ref, fromPath)` | Resolve reference from context |
 | `exists(path)` | Check if card file exists |
-| `clearCache()` | Clear all cached cards |
-| `invalidate(path)` | Remove specific card from cache |
+| `move(from, to)` | Move/rename card and update refs |
+| `listCards()` | List all card files in project |
+
+### Linting
+
+| Function | Description |
+|----------|-------------|
+| `lintCard(loader, path, options?)` | Lint a single card |
+| `lintCards(loader, paths, options?)` | Lint specific cards |
+| `lintAll(loader, options?)` | Lint all cards in project |
+| `formatLintResults(summary, options?)` | Format results for display |
+| `formatLintResultsJson(summary)` | Format results as JSON |
 
 ### Loaders
 

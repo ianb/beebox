@@ -3,11 +3,86 @@ import type { ElementNode } from "../parser/provenance.js";
 import { parseXml } from "../parser/parse.js";
 import { serialize } from "../serialize/serialize.js";
 import { resolveRef, type ResolvedRef } from "../refs/resolve.js";
+import { parseRef } from "../refs/parse-ref.js";
 import { NodeFileSystem } from "../fs/node-fs.js";
 import { MemoryFileSystem } from "../fs/memory-fs.js";
 import { SchemaRegistry } from "../schema/registry.js";
 import type { ElementSchema } from "../schema/element.js";
 import type { ZodError } from "zod";
+
+/**
+ * Result of a move operation.
+ */
+export interface MoveResult {
+  /** Files that were moved (from -> to) */
+  movedFiles: Array<{ from: string; to: string }>;
+  /** Cards that had references updated */
+  updatedCards: Array<{ path: string; refsUpdated: number }>;
+}
+
+/**
+ * Get the directory portion of a path.
+ */
+function dirname(path: string): string {
+  const lastSlash = path.lastIndexOf("/");
+  return lastSlash === -1 ? "." : path.slice(0, lastSlash);
+}
+
+/**
+ * Get the filename portion of a path.
+ */
+function basename(path: string): string {
+  const lastSlash = path.lastIndexOf("/");
+  return lastSlash === -1 ? path : path.slice(lastSlash + 1);
+}
+
+/**
+ * Get the extension of a filename (including the dot).
+ */
+function extname(filename: string): string {
+  const lastDot = filename.lastIndexOf(".");
+  return lastDot === -1 ? "" : filename.slice(lastDot);
+}
+
+/**
+ * Get the basename without extension.
+ */
+function basenameWithoutExt(filename: string): string {
+  const ext = extname(filename);
+  return ext ? filename.slice(0, -ext.length) : filename;
+}
+
+/**
+ * Compute relative path from one file to another.
+ */
+function relativePath(from: string, to: string): string {
+  const fromParts = dirname(from).split("/").filter(Boolean);
+  const toParts = to.split("/").filter(Boolean);
+  const toFilename = toParts.pop() ?? "";
+
+  // Find common prefix
+  let commonLength = 0;
+  while (
+    commonLength < fromParts.length &&
+    commonLength < toParts.length &&
+    fromParts[commonLength] === toParts[commonLength]
+  ) {
+    commonLength++;
+  }
+
+  // Build relative path
+  const upCount = fromParts.length - commonLength;
+  const downParts = toParts.slice(commonLength);
+
+  const parts: string[] = [];
+  for (let i = 0; i < upCount; i++) {
+    parts.push("..");
+  }
+  parts.push(...downParts, toFilename);
+
+  const result = parts.join("/");
+  return result.startsWith(".") ? result : "./" + result;
+}
 
 /**
  * Options for creating a card loader.
@@ -57,26 +132,25 @@ export interface ICardLoader {
   exists(path: string): Promise<boolean>;
 
   /**
-   * Clear the cache.
-   */
-  clearCache(): void;
-
-  /**
-   * Remove a specific path from the cache.
-   */
-  invalidate(path: string): void;
-
-  /**
    * Get the project root directory.
    */
   getProjectRoot(): string;
+
+  /**
+   * Move/rename a card and update all references.
+   */
+  move(from: string, to: string): Promise<MoveResult>;
+
+  /**
+   * List all card files in the project.
+   */
+  listCards(): Promise<string[]>;
 }
 
 /**
- * Base implementation of card loader with caching and reference resolution.
+ * Base implementation of card loader with reference resolution.
  */
 abstract class BaseCardLoader implements ICardLoader {
-  private cache = new Map<string, ElementNode>();
   protected readonly schemas: SchemaRegistry;
 
   constructor(
@@ -95,7 +169,6 @@ abstract class BaseCardLoader implements ICardLoader {
 
   /**
    * Load a card from a file path.
-   * Results are cached for subsequent loads.
    * If a schema is registered for the card's tag name, the card is validated.
    *
    * @param path - The absolute path to the card file
@@ -103,13 +176,6 @@ abstract class BaseCardLoader implements ICardLoader {
    * @throws ValidationError if validation fails
    */
   async load(path: string): Promise<ElementNode> {
-    // Check cache first
-    const cached = this.cache.get(path);
-    if (cached) {
-      return cached;
-    }
-
-    // Read and parse
     const content = await this.fs.read(path);
     const node = await parseXml(content, path);
 
@@ -127,9 +193,6 @@ abstract class BaseCardLoader implements ICardLoader {
       }
     }
 
-    // Cache the result
-    this.cache.set(path, node);
-
     return node;
   }
 
@@ -142,11 +205,6 @@ abstract class BaseCardLoader implements ICardLoader {
   async save(path: string, card: ElementNode): Promise<void> {
     const content = serialize(card);
     await this.fs.write(path, content);
-
-    // Update cache with the saved version
-    // Re-parse to get clean location
-    const reparsed = await parseXml(content, path);
-    this.cache.set(path, reparsed);
   }
 
   /**
@@ -175,26 +233,142 @@ abstract class BaseCardLoader implements ICardLoader {
   }
 
   /**
-   * Clear the cache, forcing subsequent loads to read from disk.
-   */
-  clearCache(): void {
-    this.cache.clear();
-  }
-
-  /**
-   * Remove a specific path from the cache.
-   *
-   * @param path - The path to remove from cache
-   */
-  invalidate(path: string): void {
-    this.cache.delete(path);
-  }
-
-  /**
    * Get the project root directory.
    */
   getProjectRoot(): string {
     return this.projectRoot;
+  }
+
+  /**
+   * Move/rename a card and update all references to it.
+   *
+   * @param from - The current absolute path of the card
+   * @param to - The new absolute path for the card
+   * @returns Information about moved files and updated references
+   * @throws Error if extension changes or file doesn't exist
+   */
+  async move(from: string, to: string): Promise<MoveResult> {
+    // Validate extension hasn't changed
+    const fromExt = extname(basename(from));
+    const toExt = extname(basename(to));
+    if (fromExt !== toExt) {
+      throw new Error(`Cannot change extension from "${fromExt}" to "${toExt}"`);
+    }
+
+    // Validate source exists
+    if (!(await this.fs.exists(from))) {
+      throw new Error(`Source file does not exist: ${from}`);
+    }
+
+    const result: MoveResult = {
+      movedFiles: [],
+      updatedCards: [],
+    };
+
+    // Find related files with same basename (e.g., Recipe.card, Recipe.png)
+    const fromDir = dirname(from);
+    const toDir = dirname(to);
+    const fromBasename = basenameWithoutExt(basename(from));
+    const toBasename = basenameWithoutExt(basename(to));
+
+    const filesInDir = await this.fs.list(fromDir);
+    const relatedFiles: Array<{ from: string; to: string }> = [];
+
+    for (const filename of filesInDir) {
+      const fileBasename = basenameWithoutExt(filename);
+      if (fileBasename === fromBasename) {
+        const fileExt = extname(filename);
+        const fromPath = `${fromDir}/${filename}`;
+        const toPath = `${toDir}/${toBasename}${fileExt}`;
+        relatedFiles.push({ from: fromPath, to: toPath });
+      }
+    }
+
+    // Find all card files and update references
+    const cardFiles = await this.listCards();
+
+    for (const cardPath of cardFiles) {
+      // Skip the card being moved (we'll move it, not update refs in it)
+      if (cardPath === from) continue;
+
+      const content = await this.fs.read(cardPath);
+      const node = await parseXml(content, cardPath);
+
+      const refsUpdated = await this.updateRefsInNode(node, cardPath, from, to);
+
+      if (refsUpdated > 0) {
+        await this.fs.write(cardPath, serialize(node));
+        result.updatedCards.push({ path: cardPath, refsUpdated });
+      }
+    }
+
+    // Now move all the related files
+    for (const file of relatedFiles) {
+      await this.fs.move(file.from, file.to);
+      result.movedFiles.push(file);
+    }
+
+    return result;
+  }
+
+  /**
+   * List all card files in the project.
+   */
+  async listCards(): Promise<string[]> {
+    return this.fs.glob(this.projectRoot, "**/*.card");
+  }
+
+  /**
+   * Update refs in a node tree that point to the moved file.
+   * Returns the number of refs updated.
+   */
+  private async updateRefsInNode(
+    node: ElementNode,
+    cardPath: string,
+    oldPath: string,
+    newPath: string
+  ): Promise<number> {
+    let updated = 0;
+
+    // Check this node's ref attribute
+    const refAttr = node.attrs["ref"];
+    if (refAttr) {
+      const parsed = parseRef(refAttr);
+      const resolved = await resolveRef(refAttr, {
+        fs: this.fs,
+        projectRoot: this.projectRoot,
+        currentFile: cardPath,
+      });
+
+      // Check if this ref points to the file being moved
+      if (resolved.resolvedPath === oldPath) {
+        // Compute new relative path
+        const newRelPath = relativePath(cardPath, newPath);
+
+        // Rebuild the ref with version and fragment preserved
+        let newRef = newRelPath;
+        if (parsed.version) {
+          newRef += `@${parsed.version}`;
+        }
+        if (parsed.fragment) {
+          if (parsed.fragment.type === "query") {
+            newRef += `#query(${parsed.fragment.value})`;
+          } else {
+            newRef += `#${parsed.fragment.value}`;
+          }
+        }
+
+        node.attrs["ref"] = newRef;
+        updated++;
+      }
+    }
+
+    // Recursively check children
+    for (const child of node.children) {
+      updated += await this.updateRefsInNode(child, cardPath, oldPath, newPath);
+    }
+
+    return updated;
   }
 }
 

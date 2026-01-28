@@ -1,5 +1,5 @@
 import { z, type ZodType, type ZodObject, type ZodRawShape } from "zod";
-import { CommentsSchema, LocationSchema, TextSegmentSchema } from "./base.js";
+import { CommentsSchema, LocationSchema, MixedCommentSchema } from "./base.js";
 
 /**
  * A Zod schema for an element with an attached tagName property.
@@ -16,7 +16,7 @@ export const ElementNodeSchema: ZodType<{
   attrs: Record<string, string>;
   comments: { start?: string | undefined; end?: string | undefined };
   text?: string | undefined;
-  textSegments?: Array<{ text: string; position: number }> | undefined;
+  mixed?: unknown[] | undefined;
   children: unknown[];
   location: {
     source: string;
@@ -32,7 +32,9 @@ export const ElementNodeSchema: ZodType<{
     attrs: z.record(z.string(), z.string()),
     comments: CommentsSchema,
     text: z.string().optional(),
-    textSegments: z.array(TextSegmentSchema).optional(),
+    mixed: z
+      .array(z.union([z.string(), MixedCommentSchema, z.lazy(() => ElementNodeSchema)]))
+      .optional(),
     children: z.array(ElementNodeSchema),
     location: LocationSchema,
     dirty: z.boolean(),
@@ -53,8 +55,6 @@ export interface ElementConfig<
   children?: TChildren;
   /** Text content schema */
   text?: TText;
-  /** Whether this element can contain mixed content (text + elements) */
-  mixed?: boolean;
 }
 
 /**
@@ -77,7 +77,7 @@ export function element<
   attrs: TAttrs extends ZodRawShape ? z.infer<ZodObject<TAttrs>> : Record<string, string>;
   comments: { start?: string | undefined; end?: string | undefined };
   text?: TText extends ZodType ? z.infer<TText> : string | undefined;
-  textSegments?: Array<{ text: string; position: number }> | undefined;
+  mixed?: unknown[] | undefined;
   children: TChildren extends ZodType ? z.infer<TChildren> : unknown[];
   location: {
     source: string;
@@ -105,9 +105,7 @@ export function element<
     attrs: attrsSchema,
     comments: CommentsSchema,
     text: textSchema,
-    textSegments: config.mixed
-      ? z.array(TextSegmentSchema).optional()
-      : z.array(TextSegmentSchema).optional(),
+    mixed: z.array(z.union([z.string(), MixedCommentSchema, ElementNodeSchema])).optional(),
     children: childrenSchema,
     location: LocationSchema,
     dirty: z.boolean(),
@@ -119,7 +117,7 @@ export function element<
     attrs: TAttrs extends ZodRawShape ? z.infer<ZodObject<TAttrs>> : Record<string, string>;
     comments: { start?: string | undefined; end?: string | undefined };
     text?: TText extends ZodType ? z.infer<TText> : string | undefined;
-    textSegments?: Array<{ text: string; position: number }> | undefined;
+    mixed?: unknown[] | undefined;
     children: TChildren extends ZodType ? z.infer<TChildren> : unknown[];
     location: {
       source: string;

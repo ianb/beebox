@@ -110,7 +110,8 @@ test("round-trip: mixed content", async (t) => {
 
   t.equal(reparsed.children.length, 1);
   t.equal(reparsed.children[0]?.tagName, "link");
-  t.ok(reparsed.textSegments);
+  t.ok(reparsed.mixed);
+  t.equal(reparsed.mixed?.length, 3);
 });
 
 test("serialize: configurable indentation", async (t) => {

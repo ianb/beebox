@@ -25,14 +25,16 @@ export interface Comments {
 }
 
 /**
- * A text segment in mixed content (text interspersed with elements).
+ * A comment node in mixed content.
  */
-export interface TextSegment {
-  /** The text content */
-  text: string;
-  /** Position in the original node order (for serialization) */
-  position: number;
+export interface MixedComment {
+  comment: string;
 }
+
+/**
+ * Items that can appear in mixed content.
+ */
+export type MixedContent = string | ElementNode | MixedComment;
 
 /**
  * An element node in the parsed XML structure.
@@ -44,10 +46,10 @@ export interface ElementNode {
   attrs: Record<string, string>;
   /** Comments associated with this element */
   comments: Comments;
-  /** Text content (for leaf nodes or dedented content) */
+  /** Text content (for leaf nodes, dedented) */
   text?: string;
-  /** Text segments for mixed content */
-  textSegments?: TextSegment[];
+  /** Mixed content: interleaved raw text, child elements, and comments */
+  mixed?: MixedContent[];
   /** Child element nodes */
   children: ElementNode[];
   /** Source location information */

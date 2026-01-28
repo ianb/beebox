@@ -43,8 +43,7 @@ test("MemoryCardLoader.save: saves a card", async (t) => {
 
   await loader.save("/project/cards/Existing.card", card);
 
-  // Clear cache and reload to verify persistence
-  loader.clearCache();
+  // Reload to verify persistence
   const reloaded = await loader.load("/project/cards/Existing.card");
   t.equal(reloaded.children[0]?.text, "Modified");
 });
@@ -132,84 +131,6 @@ test("MemoryCardLoader: full workflow with fixture files", async (t) => {
   );
   t.equal(techRef.exists, true);
   t.equal(techRef.versionMismatch, false);
-});
-
-test("MemoryCardLoader: caches loaded cards", async (t) => {
-  const loader = new MemoryCardLoader("/project", {
-    files: {
-      "/project/cards/Cached.card": `<card version="1.0.0"><title>Original</title></card>`,
-    },
-  });
-
-  // Load the card
-  const first = await loader.load("/project/cards/Cached.card");
-  t.equal(first.children[0]?.text, "Original");
-
-  // Modify the underlying file
-  loader.setFile(
-    "/project/cards/Cached.card",
-    `<card version="1.0.0"><title>Modified</title></card>`
-  );
-
-  // Load again - should return cached version
-  const second = await loader.load("/project/cards/Cached.card");
-  t.equal(second.children[0]?.text, "Original", "Should return cached version");
-});
-
-test("MemoryCardLoader: clearCache forces reload", async (t) => {
-  const loader = new MemoryCardLoader("/project", {
-    files: {
-      "/project/cards/Reload.card": `<card version="1.0.0"><title>Original</title></card>`,
-    },
-  });
-
-  // Load the card
-  const first = await loader.load("/project/cards/Reload.card");
-  t.equal(first.children[0]?.text, "Original");
-
-  // Modify the underlying file
-  loader.setFile(
-    "/project/cards/Reload.card",
-    `<card version="1.0.0"><title>Modified</title></card>`
-  );
-
-  // Clear cache and load again
-  loader.clearCache();
-  const second = await loader.load("/project/cards/Reload.card");
-  t.equal(second.children[0]?.text, "Modified", "Should return new version after cache clear");
-});
-
-test("MemoryCardLoader: invalidate removes specific file from cache", async (t) => {
-  const loader = new MemoryCardLoader("/project", {
-    files: {
-      "/project/cards/A.card": `<card version="1.0.0"><title>A Original</title></card>`,
-      "/project/cards/B.card": `<card version="1.0.0"><title>B Original</title></card>`,
-    },
-  });
-
-  // Load both cards
-  await loader.load("/project/cards/A.card");
-  await loader.load("/project/cards/B.card");
-
-  // Modify both files
-  loader.setFile(
-    "/project/cards/A.card",
-    `<card version="1.0.0"><title>A Modified</title></card>`
-  );
-  loader.setFile(
-    "/project/cards/B.card",
-    `<card version="1.0.0"><title>B Modified</title></card>`
-  );
-
-  // Invalidate only A
-  loader.invalidate("/project/cards/A.card");
-
-  // A should be reloaded, B should still be cached
-  const a = await loader.load("/project/cards/A.card");
-  const b = await loader.load("/project/cards/B.card");
-
-  t.equal(a.children[0]?.text, "A Modified", "A should be reloaded");
-  t.equal(b.children[0]?.text, "B Original", "B should still be cached");
 });
 
 test("MemoryCardLoader.exists: checks if card file exists", async (t) => {
@@ -308,4 +229,135 @@ test("MemoryCardLoader: skips validation for unregistered tag names", async (t) 
   // Should load without error since "unknown" has no registered schema
   const card = await loader.load("/project/cards/Unknown.card");
   t.equal(card.tagName, "unknown");
+});
+
+// Move tests
+
+test("MemoryCardLoader.move: moves a card file", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/OldName.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+  });
+
+  const result = await loader.move(
+    "/project/cards/OldName.card",
+    "/project/cards/NewName.card"
+  );
+
+  t.equal(result.movedFiles.length, 1);
+  t.equal(result.movedFiles[0]?.from, "/project/cards/OldName.card");
+  t.equal(result.movedFiles[0]?.to, "/project/cards/NewName.card");
+
+  // Old path should not exist
+  t.equal(await loader.exists("/project/cards/OldName.card"), false);
+
+  // New path should exist
+  const card = await loader.load("/project/cards/NewName.card");
+  t.equal(card.tagName, "card");
+});
+
+test("MemoryCardLoader.move: moves related files with same basename", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/Recipe.card": `<card version="1.0.0"><title>Recipe</title></card>`,
+      "/project/cards/Recipe.png": "image data",
+      "/project/cards/Recipe.json": '{"meta": true}',
+      "/project/cards/Other.card": `<card version="1.0.0"><title>Other</title></card>`,
+    },
+  });
+
+  const result = await loader.move(
+    "/project/cards/Recipe.card",
+    "/project/cards/Pasta.card"
+  );
+
+  // Should move all Recipe.* files
+  t.equal(result.movedFiles.length, 3);
+
+  const movedPaths = result.movedFiles.map((f) => f.to).sort();
+  t.same(movedPaths, [
+    "/project/cards/Pasta.card",
+    "/project/cards/Pasta.json",
+    "/project/cards/Pasta.png",
+  ]);
+
+  // Other.card should still exist
+  t.equal(await loader.exists("/project/cards/Other.card"), true);
+});
+
+test("MemoryCardLoader.move: updates references in other cards", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/Main.card": `<card version="1.0.0">
+  <ref ref="./Target.card"/>
+  <ref ref="./Target.card@1.0.0"/>
+  <ref ref="./Target.card#section"/>
+</card>`,
+      "/project/cards/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+    },
+  });
+
+  const result = await loader.move(
+    "/project/cards/Target.card",
+    "/project/cards/sub/Moved.card"
+  );
+
+  t.equal(result.updatedCards.length, 1);
+  t.equal(result.updatedCards[0]?.path, "/project/cards/Main.card");
+  t.equal(result.updatedCards[0]?.refsUpdated, 3);
+
+  // Check the updated refs
+  const main = await loader.load("/project/cards/Main.card");
+  t.equal(main.children[0]?.attrs["ref"], "./sub/Moved.card");
+  t.equal(main.children[1]?.attrs["ref"], "./sub/Moved.card@1.0.0");
+  t.equal(main.children[2]?.attrs["ref"], "./sub/Moved.card#section");
+});
+
+test("MemoryCardLoader.move: throws if extension changes", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+  });
+
+  await t.rejects(
+    async () => {
+      await loader.move("/project/cards/Test.card", "/project/cards/Test.xml");
+    },
+    /Cannot change extension/
+  );
+});
+
+test("MemoryCardLoader.move: throws if source doesn't exist", async (t) => {
+  const loader = new MemoryCardLoader("/project");
+
+  await t.rejects(
+    async () => {
+      await loader.move("/project/cards/Missing.card", "/project/cards/New.card");
+    },
+    /Source file does not exist/
+  );
+});
+
+test("MemoryCardLoader.move: handles move to different directory", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/cards/recipes/Pasta.card": `<card version="1.0.0"><title>Pasta</title></card>`,
+      "/project/cards/Main.card": `<card version="1.0.0">
+  <ref ref="./recipes/Pasta.card"/>
+</card>`,
+    },
+  });
+
+  const result = await loader.move(
+    "/project/cards/recipes/Pasta.card",
+    "/project/cards/archive/OldPasta.card"
+  );
+
+  t.equal(result.movedFiles.length, 1);
+  t.equal(result.updatedCards.length, 1);
+
+  const main = await loader.load("/project/cards/Main.card");
+  t.equal(main.children[0]?.attrs["ref"], "./archive/OldPasta.card");
 });
