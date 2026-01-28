@@ -176,8 +176,10 @@ try {
   await parseXml("<broken><unclosed></broken>", "test.card");
 } catch (e) {
   if (e instanceof ParseError) {
-    console.log(e.source);  // "test.card"
-    console.log(e.message); // Details about the error
+    console.log(e.message);              // "Opening and ending tag mismatch: \"unclosed\" != \"broken\""
+    console.log(e.location.source);      // "test.card"
+    console.log(e.location.startLine);   // 1
+    console.log(e.location.startColumn); // 9
   }
 }
 ```

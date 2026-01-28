@@ -1,19 +1,28 @@
 import { DOMParser } from "@xmldom/xmldom";
-import type { ElementNode } from "./provenance.js";
+import type { ElementNode, Location } from "./provenance.js";
 import { domToObject, createLineTracker } from "./dom-to-object.js";
 
 /**
  * Error thrown when XML parsing fails.
  */
 export class ParseError extends Error {
+  public readonly location: Location;
+
   constructor(
     message: string,
-    public readonly source: string,
-    public readonly line?: number,
-    public readonly column?: number
+    source: string,
+    line?: number,
+    column?: number
   ) {
     super(message);
     this.name = "ParseError";
+    this.location = {
+      source,
+      startLine: line ?? 0,
+      startColumn: column ?? 0,
+      endLine: line ?? 0,
+      endColumn: column ?? 0,
+    };
   }
 }
 
@@ -38,9 +47,23 @@ export function parseXml(xml: string, source: string): Promise<ElementNode> {
     },
   });
 
-  const doc = parser.parseFromString(xml, "text/xml");
+  let doc;
+  try {
+    doc = parser.parseFromString(xml, "text/xml");
+  } catch (e) {
+    // xmldom throws directly for fatal errors
+    const err = e as Error & { locator?: { lineNumber?: number; columnNumber?: number } };
+    return Promise.reject(
+      new ParseError(
+        err.message,
+        source,
+        err.locator?.lineNumber,
+        err.locator?.columnNumber
+      )
+    );
+  }
 
-  // Check for parsing errors
+  // Check for parsing errors collected by onError
   if (errors.length > 0) {
     const firstError = errors[0];
     return Promise.reject(
