@@ -361,3 +361,127 @@ test("MemoryCardLoader.move: handles move to different directory", async (t) => 
   const main = await loader.load("/project/cards/Main.card");
   t.equal(main.children[0]?.attrs["ref"], "./archive/OldPasta.card");
 });
+
+// Tests for findIncomingRefs and findOutgoingRefs
+
+test("MemoryCardLoader.findIncomingRefs: finds cards that reference target", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+      "/project/RefA.card": `<card version="1.0.0">
+  <source ref="./Target.card"/>
+</card>`,
+      "/project/RefB.card": `<card version="1.0.0">
+  <link ref="./Target.card@1.0.0#section"/>
+</card>`,
+      "/project/NoRef.card": `<card version="1.0.0"><title>No refs</title></card>`,
+    },
+  });
+
+  const refs = await loader.findIncomingRefs("/project/Target.card");
+
+  t.equal(refs.length, 2);
+  t.ok(refs.some((r) => r.fromPath === "/project/RefA.card"));
+  t.ok(refs.some((r) => r.fromPath === "/project/RefB.card"));
+});
+
+test("MemoryCardLoader.findIncomingRefs: includes ref details", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+      "/project/Source.card": `<card version="1.0.0">
+  <source ref="./Target.card@1.0.0#intro">Explanation</source>
+</card>`,
+    },
+  });
+
+  const refs = await loader.findIncomingRefs("/project/Target.card");
+
+  t.equal(refs.length, 1);
+  t.equal(refs[0]?.elementTagName, "source");
+  t.equal(refs[0]?.attributeName, "ref");
+  t.equal(refs[0]?.version, "1.0.0");
+  t.equal(refs[0]?.fragment, "intro");
+});
+
+test("MemoryCardLoader.findIncomingRefs: finds refs from refs attribute", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+      "/project/Other.card": `<card version="1.0.0"><title>Other</title></card>`,
+      "/project/Source.card": `<card version="1.0.0">
+  <derived refs="./Target.card ./Other.card"/>
+</card>`,
+    },
+  });
+
+  const refs = await loader.findIncomingRefs("/project/Target.card");
+
+  t.equal(refs.length, 1);
+  t.equal(refs[0]?.attributeName, "refs");
+  t.equal(refs[0]?.elementTagName, "derived");
+});
+
+test("MemoryCardLoader.findOutgoingRefs: finds all references from a card", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Source.card": `<card version="1.0.0">
+  <source ref="./A.card"/>
+  <related refs="./B.card ./C.card"/>
+</card>`,
+      "/project/A.card": `<card version="1.0.0"><title>A</title></card>`,
+      "/project/B.card": `<card version="1.0.0"><title>B</title></card>`,
+      "/project/C.card": `<card version="1.0.0"><title>C</title></card>`,
+    },
+  });
+
+  const refs = await loader.findOutgoingRefs("/project/Source.card");
+
+  t.equal(refs.length, 3);
+  t.ok(refs.some((r) => r.toPath === "/project/A.card" && r.attributeName === "ref"));
+  t.ok(refs.some((r) => r.toPath === "/project/B.card" && r.attributeName === "refs"));
+  t.ok(refs.some((r) => r.toPath === "/project/C.card" && r.attributeName === "refs"));
+});
+
+test("MemoryCardLoader.findOutgoingRefs: handles nested elements", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Source.card": `<card version="1.0.0">
+  <content>
+    <section>
+      <link ref="./Deep.card"/>
+    </section>
+  </content>
+</card>`,
+      "/project/Deep.card": `<card version="1.0.0"><title>Deep</title></card>`,
+    },
+  });
+
+  const refs = await loader.findOutgoingRefs("/project/Source.card");
+
+  t.equal(refs.length, 1);
+  t.equal(refs[0]?.toPath, "/project/Deep.card");
+  t.equal(refs[0]?.elementTagName, "link");
+});
+
+test("MemoryCardLoader.move: updates refs attribute", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+      "/project/Other.card": `<card version="1.0.0"><title>Other</title></card>`,
+      "/project/Source.card": `<card version="1.0.0">
+  <derived refs="./Target.card ./Other.card"/>
+</card>`,
+    },
+  });
+
+  const result = await loader.move("/project/Target.card", "/project/Renamed.card");
+
+  t.equal(result.updatedCards.length, 1);
+  t.equal(result.updatedCards[0]?.refsUpdated, 1);
+
+  const source = await loader.load("/project/Source.card");
+  const refsAttr = source.children[0]?.attrs["refs"];
+  t.ok(refsAttr?.includes("./Renamed.card"));
+  t.ok(refsAttr?.includes("./Other.card"));
+});

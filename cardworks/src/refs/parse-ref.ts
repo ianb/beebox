@@ -16,6 +16,21 @@ import type { ParsedRef, RefFragment } from "./types.js";
  * @param ref - The reference string to parse
  * @returns The parsed reference structure
  */
+/**
+ * Parse a whitespace-separated list of references.
+ *
+ * Used for the `refs` attribute which can contain multiple references.
+ *
+ * @param refs - The refs string (whitespace-separated references)
+ * @returns Array of parsed references
+ */
+export function parseRefs(refs: string): ParsedRef[] {
+  return refs
+    .split(/\s+/)
+    .filter((s) => s.length > 0)
+    .map((ref) => parseRef(ref));
+}
+
 export function parseRef(ref: string): ParsedRef {
   let remaining = ref;
   let fragment: RefFragment | undefined;
@@ -57,6 +72,14 @@ export function parseRef(ref: string): ParsedRef {
  * Parse a fragment string into its structure.
  */
 function parseFragment(fragmentStr: string): RefFragment {
+  // Check for query-all(...) syntax (must check before query())
+  if (fragmentStr.startsWith("query-all(") && fragmentStr.endsWith(")")) {
+    return {
+      type: "query-all",
+      value: fragmentStr.slice(10, -1), // Extract content between query-all( and )
+    };
+  }
+
   // Check for query(...) syntax
   if (fragmentStr.startsWith("query(") && fragmentStr.endsWith(")")) {
     return {

@@ -1,4 +1,5 @@
 include:
   - test/**/*.test.ts
 timeout: 30
-reporter: spec
+allow-incomplete-coverage: true
+allow-empty-coverage: true

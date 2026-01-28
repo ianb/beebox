@@ -303,15 +303,20 @@ path[@version][#fragment]
 
 - **path** - Relative (`./Other.card`) or absolute (`/cards/Other.card`)
 - **version** - Optional version specifier (`@1.0.0`)
-- **fragment** - Optional fragment (`#section` or `#query(//xpath)`)
+- **fragment** - Optional fragment selector:
+  - `#id` - Select element by ID attribute
+  - `#query(xpath)` - Select single element via XPath (warns if multiple match)
+  - `#query-all(xpath)` - Select multiple elements via XPath
 
 ### Examples
 
 ```
-./Pasta.ingredient.card              # Relative path
-./Pasta.ingredient.card@1.0.0        # With version
-./Pasta.ingredient.card#nutrition    # With fragment (by id)
-/cards/Butter.ingredient.card        # Absolute (from project root)
+./Pasta.ingredient.card                  # Relative path
+./Pasta.ingredient.card@1.0.0            # With version
+./Pasta.ingredient.card#nutrition        # By id attribute
+./Recipe.card#query(//step[@id='first']) # XPath for single element
+./Recipe.card#query-all(//step)          # XPath for multiple elements
+/cards/Butter.ingredient.card            # Absolute (from project root)
 ```
 
 ### Parsing References
@@ -356,6 +361,94 @@ if (result.exists) {
     // Fragment was resolved to an element
     console.log(result.fragment.tagName);
   }
+}
+```
+
+### XPath Queries
+
+Use `#query(xpath)` to select a single element or `#query-all(xpath)` to select multiple:
+
+```typescript
+// Select a single element - warns if multiple match
+const result = await loader.resolveRef(
+  "./Recipe.card#query(//step[@type='prep'])",
+  currentPath
+);
+
+if (result.fragment) {
+  console.log(result.fragment.text);  // The matched element
+}
+
+if (result.fragmentWarning) {
+  // e.g., "XPath query matched 3 elements, expected 1"
+  console.warn(result.fragmentWarning);
+}
+
+// Select multiple elements
+const allSteps = await loader.resolveRef(
+  "./Recipe.card#query-all(//step)",
+  currentPath
+);
+
+if (allSteps.fragments) {
+  for (const step of allSteps.fragments) {
+    console.log(step.text);
+  }
+}
+
+if (allSteps.fragmentWarning) {
+  // Warns if no elements matched
+  console.warn(allSteps.fragmentWarning);
+}
+```
+
+XPath queries use the full XPath 1.0 syntax. Common patterns:
+- `//element` - All elements with tag name
+- `//element[@attr='value']` - Elements with specific attribute
+- `/root/child/grandchild` - Absolute path from root
+- `//parent/child` - Child elements of matching parents
+
+### Multiple References
+
+Use the `refs` attribute (with an 's') for multiple whitespace-separated references:
+
+```xml
+<card version="1.0.0">
+  <derived refs="./SourceA.card@1.0.0 ./SourceB.card ./SourceC.card#section"/>
+</card>
+```
+
+```typescript
+// Resolve all refs at once
+const results = await loader.resolveRefs(
+  "./SourceA.card@1.0.0 ./SourceB.card",
+  currentPath
+);
+
+for (const result of results) {
+  console.log(result.resolvedPath, result.exists);
+}
+```
+
+### Bidirectional Link Tracking
+
+Find what cards reference a given card ("what links here?"):
+
+```typescript
+// Find all cards that reference Recipe.card
+const incomingRefs = await loader.findIncomingRefs("/project/cards/Recipe.card");
+
+for (const ref of incomingRefs) {
+  console.log(`${ref.fromPath} references via <${ref.elementTagName}>`);
+  console.log(`  ref string: ${ref.refString}`);
+  console.log(`  attribute: ${ref.attributeName}`);  // "ref" or "refs"
+}
+
+// Find all references from a card
+const outgoingRefs = await loader.findOutgoingRefs("/project/cards/Recipe.card");
+
+for (const ref of outgoingRefs) {
+  console.log(`References ${ref.toPath}`);
 }
 ```
 
@@ -871,7 +964,9 @@ Steps:
 | Function | Description |
 |----------|-------------|
 | `parseRef(ref)` | Parse reference string to ParsedRef |
+| `parseRefs(refs)` | Parse whitespace-separated refs (for `refs` attribute) |
 | `resolveRef(ref, resolver)` | Resolve reference to target |
+| `resolveRefs(refs, resolver)` | Resolve multiple whitespace-separated refs |
 
 ### CardLoader
 
@@ -880,9 +975,12 @@ Steps:
 | `load(path)` | Load a card |
 | `save(path, card)` | Save card to file |
 | `resolveRef(ref, fromPath)` | Resolve reference from context |
+| `resolveRefs(refs, fromPath)` | Resolve multiple whitespace-separated refs |
 | `exists(path)` | Check if card file exists |
 | `move(from, to)` | Move/rename card and update refs |
 | `listCards()` | List all card files in project |
+| `findIncomingRefs(path)` | Find all cards that reference this card |
+| `findOutgoingRefs(path)` | Find all references from this card |
 
 ### Linting
 

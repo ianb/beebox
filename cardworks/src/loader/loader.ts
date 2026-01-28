@@ -2,7 +2,7 @@ import type { FileSystem } from "../fs/types.js";
 import type { ElementNode } from "../parser/provenance.js";
 import { parseXml } from "../parser/parse.js";
 import { serialize } from "../serialize/serialize.js";
-import { resolveRef, type ResolvedRef } from "../refs/resolve.js";
+import { resolveRef, resolveRefs, type ResolvedRef } from "../refs/resolve.js";
 import { parseRef } from "../refs/parse-ref.js";
 import { NodeFileSystem } from "../fs/node-fs.js";
 import { MemoryFileSystem } from "../fs/memory-fs.js";
@@ -18,6 +18,26 @@ export interface MoveResult {
   movedFiles: Array<{ from: string; to: string }>;
   /** Cards that had references updated */
   updatedCards: Array<{ path: string; refsUpdated: number }>;
+}
+
+/**
+ * A reference from one card to another.
+ */
+export interface CardReference {
+  /** Path of the card containing the reference */
+  fromPath: string;
+  /** Path of the referenced card */
+  toPath: string;
+  /** The original reference string as written */
+  refString: string;
+  /** The tag name of the element containing the reference */
+  elementTagName: string;
+  /** Whether this came from a `ref` or `refs` attribute */
+  attributeName: "ref" | "refs";
+  /** Version specified in the reference (if any) */
+  version?: string;
+  /** Fragment specified in the reference (if any) */
+  fragment?: string;
 }
 
 /**
@@ -127,6 +147,11 @@ export interface ICardLoader {
   resolveRef(ref: string, fromPath: string): Promise<ResolvedRef>;
 
   /**
+   * Resolve multiple references from a refs attribute value.
+   */
+  resolveRefs(refs: string, fromPath: string): Promise<ResolvedRef[]>;
+
+  /**
    * Check if a card file exists.
    */
   exists(path: string): Promise<boolean>;
@@ -145,6 +170,16 @@ export interface ICardLoader {
    * List all card files in the project.
    */
   listCards(): Promise<string[]>;
+
+  /**
+   * Find all references pointing to a given card (incoming links / backlinks).
+   */
+  findIncomingRefs(targetPath: string): Promise<CardReference[]>;
+
+  /**
+   * Find all references from a given card (outgoing links).
+   */
+  findOutgoingRefs(sourcePath: string): Promise<CardReference[]>;
 }
 
 /**
@@ -216,6 +251,21 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   async resolveRef(ref: string, fromPath: string): Promise<ResolvedRef> {
     return resolveRef(ref, {
+      fs: this.fs,
+      projectRoot: this.projectRoot,
+      currentFile: fromPath,
+    });
+  }
+
+  /**
+   * Resolve multiple references from a refs attribute value.
+   *
+   * @param refs - Whitespace-separated reference strings
+   * @param fromPath - The path of the file containing the references
+   * @returns Array of resolved reference results
+   */
+  async resolveRefs(refs: string, fromPath: string): Promise<ResolvedRef[]> {
+    return resolveRefs(refs, {
       fs: this.fs,
       projectRoot: this.projectRoot,
       currentFile: fromPath,
@@ -319,6 +369,136 @@ abstract class BaseCardLoader implements ICardLoader {
   }
 
   /**
+   * Find all references pointing to a given card (incoming links / backlinks).
+   *
+   * @param targetPath - The absolute path of the card to find references to
+   * @returns Array of references from other cards to the target
+   */
+  async findIncomingRefs(targetPath: string): Promise<CardReference[]> {
+    const results: CardReference[] = [];
+    const cardFiles = await this.listCards();
+
+    for (const cardPath of cardFiles) {
+      // Skip the target card itself
+      if (cardPath === targetPath) continue;
+
+      try {
+        const content = await this.fs.read(cardPath);
+        const node = await parseXml(content, cardPath);
+        const refs = await this.collectRefsFromNode(node, cardPath);
+
+        // Filter to refs that point to the target
+        for (const ref of refs) {
+          if (ref.toPath === targetPath) {
+            results.push(ref);
+          }
+        }
+      } catch {
+        // Skip cards that can't be parsed
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Find all references from a given card (outgoing links).
+   *
+   * @param sourcePath - The absolute path of the card to find references from
+   * @returns Array of references from this card to other cards
+   */
+  async findOutgoingRefs(sourcePath: string): Promise<CardReference[]> {
+    const content = await this.fs.read(sourcePath);
+    const node = await parseXml(content, sourcePath);
+    return this.collectRefsFromNode(node, sourcePath);
+  }
+
+  /**
+   * Collect all references from a node tree.
+   */
+  private async collectRefsFromNode(
+    node: ElementNode,
+    cardPath: string
+  ): Promise<CardReference[]> {
+    const results: CardReference[] = [];
+
+    // Check ref attribute (single reference)
+    const refAttr = node.attrs["ref"];
+    if (refAttr) {
+      const ref = await this.makeCardReference(refAttr, cardPath, node.tagName, "ref");
+      if (ref) {
+        results.push(ref);
+      }
+    }
+
+    // Check refs attribute (multiple references)
+    const refsAttr = node.attrs["refs"];
+    if (refsAttr) {
+      const refStrings = refsAttr.split(/\s+/).filter((s) => s.length > 0);
+      for (const refStr of refStrings) {
+        const ref = await this.makeCardReference(refStr, cardPath, node.tagName, "refs");
+        if (ref) {
+          results.push(ref);
+        }
+      }
+    }
+
+    // Recursively collect from children
+    for (const child of node.children) {
+      const childRefs = await this.collectRefsFromNode(child, cardPath);
+      results.push(...childRefs);
+    }
+
+    return results;
+  }
+
+  /**
+   * Create a CardReference from a reference string.
+   */
+  private async makeCardReference(
+    refStr: string,
+    fromPath: string,
+    elementTagName: string,
+    attributeName: "ref" | "refs"
+  ): Promise<CardReference | undefined> {
+    try {
+      const parsed = parseRef(refStr);
+      const resolved = await resolveRef(refStr, {
+        fs: this.fs,
+        projectRoot: this.projectRoot,
+        currentFile: fromPath,
+      });
+
+      // Build the reference object
+      const ref: CardReference = {
+        fromPath,
+        toPath: resolved.resolvedPath,
+        refString: refStr,
+        elementTagName,
+        attributeName,
+      };
+
+      // Add optional properties only if defined
+      if (parsed.version !== undefined) {
+        ref.version = parsed.version;
+      }
+
+      if (parsed.fragment) {
+        if (parsed.fragment.type === "query") {
+          ref.fragment = `query(${parsed.fragment.value})`;
+        } else {
+          ref.fragment = parsed.fragment.value;
+        }
+      }
+
+      return ref;
+    } catch {
+      // Skip invalid references
+      return undefined;
+    }
+  }
+
+  /**
    * Update refs in a node tree that point to the moved file.
    * Returns the number of refs updated.
    */
@@ -330,36 +510,34 @@ abstract class BaseCardLoader implements ICardLoader {
   ): Promise<number> {
     let updated = 0;
 
-    // Check this node's ref attribute
+    // Check this node's ref attribute (single reference)
     const refAttr = node.attrs["ref"];
     if (refAttr) {
-      const parsed = parseRef(refAttr);
-      const resolved = await resolveRef(refAttr, {
-        fs: this.fs,
-        projectRoot: this.projectRoot,
-        currentFile: cardPath,
-      });
-
-      // Check if this ref points to the file being moved
-      if (resolved.resolvedPath === oldPath) {
-        // Compute new relative path
-        const newRelPath = relativePath(cardPath, newPath);
-
-        // Rebuild the ref with version and fragment preserved
-        let newRef = newRelPath;
-        if (parsed.version) {
-          newRef += `@${parsed.version}`;
-        }
-        if (parsed.fragment) {
-          if (parsed.fragment.type === "query") {
-            newRef += `#query(${parsed.fragment.value})`;
-          } else {
-            newRef += `#${parsed.fragment.value}`;
-          }
-        }
-
+      const newRef = await this.updateSingleRef(refAttr, cardPath, oldPath, newPath);
+      if (newRef !== refAttr) {
         node.attrs["ref"] = newRef;
         updated++;
+      }
+    }
+
+    // Check this node's refs attribute (multiple references)
+    const refsAttr = node.attrs["refs"];
+    if (refsAttr) {
+      const refStrings = refsAttr.split(/\s+/).filter((s) => s.length > 0);
+      const updatedRefs: string[] = [];
+      let anyUpdated = false;
+
+      for (const refStr of refStrings) {
+        const newRef = await this.updateSingleRef(refStr, cardPath, oldPath, newPath);
+        updatedRefs.push(newRef);
+        if (newRef !== refStr) {
+          anyUpdated = true;
+          updated++;
+        }
+      }
+
+      if (anyUpdated) {
+        node.attrs["refs"] = updatedRefs.join(" ");
       }
     }
 
@@ -369,6 +547,47 @@ abstract class BaseCardLoader implements ICardLoader {
     }
 
     return updated;
+  }
+
+  /**
+   * Update a single reference if it points to the moved file.
+   * Returns the updated reference string (or original if not updated).
+   */
+  private async updateSingleRef(
+    refStr: string,
+    cardPath: string,
+    oldPath: string,
+    newPath: string
+  ): Promise<string> {
+    const parsed = parseRef(refStr);
+    const resolved = await resolveRef(refStr, {
+      fs: this.fs,
+      projectRoot: this.projectRoot,
+      currentFile: cardPath,
+    });
+
+    // Check if this ref points to the file being moved
+    if (resolved.resolvedPath === oldPath) {
+      // Compute new relative path
+      const newRelPath = relativePath(cardPath, newPath);
+
+      // Rebuild the ref with version and fragment preserved
+      let newRef = newRelPath;
+      if (parsed.version) {
+        newRef += `@${parsed.version}`;
+      }
+      if (parsed.fragment) {
+        if (parsed.fragment.type === "query") {
+          newRef += `#query(${parsed.fragment.value})`;
+        } else {
+          newRef += `#${parsed.fragment.value}`;
+        }
+      }
+
+      return newRef;
+    }
+
+    return refStr;
   }
 }
 

@@ -4,8 +4,8 @@ import type { ElementNode } from "../parser/provenance.js";
  * Fragment specifier in a reference.
  */
 export interface RefFragment {
-  /** Type of fragment: 'id' for #elementId, 'query' for #query(...) */
-  type: "id" | "query";
+  /** Type of fragment: 'id' for #elementId, 'query' for #query(...), 'query-all' for #query-all(...) */
+  type: "id" | "query" | "query-all";
   /** The fragment value (ID or XPath query) */
   value: string;
 }
@@ -40,10 +40,14 @@ export interface ResolvedRef {
   exists: boolean;
   /** Error message if file doesn't exist */
   error?: string | undefined;
-  /** The resolved fragment element (if fragment specified and found) */
+  /** The resolved fragment element (for #id or #query()) */
   fragment?: ElementNode | undefined;
+  /** The resolved fragment elements (for #query-all()) */
+  fragments?: ElementNode[] | undefined;
   /** Error if fragment was specified but not found */
   fragmentError?: string | undefined;
+  /** Warning about fragment resolution (e.g., multiple matches for #query) */
+  fragmentWarning?: string | undefined;
   /** Version specified in the reference */
   requestedVersion?: string | undefined;
   /** Actual version found in the target file */

@@ -31,8 +31,8 @@ export { SchemaRegistry } from "./schema/registry.js";
 export { serialize, type SerializeOptions } from "./serialize/serialize.js";
 
 // References
-export { parseRef } from "./refs/parse-ref.js";
-export { resolveRef, type RefResolver } from "./refs/resolve.js";
+export { parseRef, parseRefs } from "./refs/parse-ref.js";
+export { resolveRef, resolveRefs, type RefResolver } from "./refs/resolve.js";
 export {
   type ParsedRef,
   type RefFragment,
@@ -48,6 +48,7 @@ export {
   type CardLoaderOptions,
   type MemoryCardLoaderOptions,
   type MoveResult,
+  type CardReference,
 } from "./loader/loader.js";
 
 // Lint

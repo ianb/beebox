@@ -300,29 +300,15 @@ The version in a reference records what was current when the reference was writt
 ```xml
 <tutorial version="2.0.0">
   <content>
-    See the [installation guide](ref:./Install.guide.card@1.0.0#steps) for setup.
+    See the installation guide for setup.
   </content>
+  <source ref="./Install.guide.card@1.0.0#steps">Installation steps</source>
 </tutorial>
 ```
 
 If `./Install.guide.card` is now at version `1.1.0`, tooling flags this reference as potentially stale - the tutorial was written against 1.0.0 and may need updating to reflect changes in the installation guide.
 
 This is dependency tracking: content that references other content knows when its dependencies have changed.
-
-#### References in Markdown
-
-Within Markdown content, use the `ref:` prefix:
-
-```markdown
-See the [installation guide](ref:./install#steps) for details.
-Check [version 1.0](ref:./install@1.0.0) for the original.
-```
-
-Reference features:
-- Resolution against project root filesystem
-- Broken link detection
-- Bidirectional link tracking (what links here?)
-- Version staleness detection
 
 ### Content Versioning
 
@@ -646,20 +632,6 @@ File: `Lead_With_Values.technique.card`
 </technique>
 ```
 
-### Inline References in Markdown
-
-Within text content, use `ref:` prefix for card references:
-
-```xml
-<tutorial version="1.0.0">
-  <content>
-    See the [installation guide](ref:./Install.guide.card@1.0.0#steps) for setup.
-
-    You can also check the [Card interface](ref:./Card.reference.card#interface) docs.
-  </content>
-</tutorial>
-```
-
 ### Mixed Content (when needed)
 
 For inline markup within text:
@@ -734,7 +706,6 @@ Now proceed with the upgrade...
   - `text` only, `text` + `children`, `children` only, `mixed`
 - **References**: Path-based `path@version#fragment` syntax
   - `ref` attribute for single, `refs` for multiple (whitespace-separated)
-  - `ref:` prefix in Markdown links
 - **Inspiration**: DITA's topic model, but much simpler
 - **Organization**: Filesystem hierarchy, one card per file
 - **XML style**: Standard escaping, strict parsing, early errors
@@ -764,7 +735,6 @@ Now proceed with the upgrade...
    - Absolute (from project root) and relative paths
    - `ref=""` for single, `refs=""` (whitespace-separated) for multiple
    - Always attributes, so refs can attach anywhere
-   - `ref:` prefix in Markdown
 
 3. **Subsection references** - ✓ Designed
    - `#id` for ID references (expects exactly one)

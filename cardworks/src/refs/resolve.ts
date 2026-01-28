@@ -1,8 +1,31 @@
 import type { FileSystem } from "../fs/types.js";
 import type { ElementNode } from "../parser/provenance.js";
 import { parseXml } from "../parser/parse.js";
-import { parseRef } from "./parse-ref.js";
-import type { ResolvedRef, ParsedRef } from "./types.js";
+import { parseRef, parseRefs } from "./parse-ref.js";
+import { executeXPath } from "./xpath.js";
+import type { ResolvedRef, ParsedRef, RefFragment } from "./types.js";
+
+/**
+ * Resolve multiple references from a whitespace-separated refs string.
+ *
+ * @param refs - The refs attribute value (whitespace-separated references)
+ * @param resolver - The resolver context
+ * @returns Array of resolved references
+ */
+export async function resolveRefs(
+  refs: string,
+  resolver: RefResolver
+): Promise<ResolvedRef[]> {
+  const parsedRefs = parseRefs(refs);
+  const results: ResolvedRef[] = [];
+
+  for (const parsed of parsedRefs) {
+    const resolved = await resolveRef(parsed.original, resolver);
+    results.push(resolved);
+  }
+
+  return results;
+}
 
 /**
  * Context for resolving references.
@@ -73,28 +96,72 @@ export async function resolveRef(
 
   // Resolve fragment if specified
   let fragment: ElementNode | undefined;
+  let fragments: ElementNode[] | undefined;
   let fragmentError: string | undefined;
+  let fragmentWarning: string | undefined;
 
   if (parsed.fragment) {
     const fragmentResult = resolveFragment(parsed.fragment, targetNode);
-    if (fragmentResult) {
-      fragment = fragmentResult;
+
+    if (fragmentResult.error) {
+      fragmentError = fragmentResult.error;
+    } else if (fragmentResult.warning) {
+      fragmentWarning = fragmentResult.warning;
+    }
+
+    if (parsed.fragment.type === "query-all") {
+      fragments = fragmentResult.nodes;
+      if (fragments.length === 0 && !fragmentError) {
+        fragmentWarning = `No elements matched query-all: #query-all(${parsed.fragment.value})`;
+      }
     } else {
-      fragmentError = `Fragment not found: ${parsed.fragment.type === "id" ? "#" + parsed.fragment.value : "#query(" + parsed.fragment.value + ")"}`;
+      // id or query - expect single result
+      fragment = fragmentResult.nodes[0];
+      if (!fragment && !fragmentError) {
+        fragmentError = `Fragment not found: ${formatFragment(parsed.fragment)}`;
+      }
     }
   }
 
-  return {
+  const result: ResolvedRef = {
     original: ref,
     parsed,
     resolvedPath,
     exists: true,
-    fragment,
-    fragmentError,
     requestedVersion: parsed.version,
     actualVersion,
     versionMismatch,
   };
+
+  // Add optional fields only if defined
+  if (fragment !== undefined) {
+    result.fragment = fragment;
+  }
+  if (fragments !== undefined) {
+    result.fragments = fragments;
+  }
+  if (fragmentError !== undefined) {
+    result.fragmentError = fragmentError;
+  }
+  if (fragmentWarning !== undefined) {
+    result.fragmentWarning = fragmentWarning;
+  }
+
+  return result;
+}
+
+/**
+ * Format a fragment for error messages.
+ */
+function formatFragment(fragment: RefFragment): string {
+  switch (fragment.type) {
+    case "id":
+      return `#${fragment.value}`;
+    case "query":
+      return `#query(${fragment.value})`;
+    case "query-all":
+      return `#query-all(${fragment.value})`;
+  }
 }
 
 /**
@@ -111,19 +178,35 @@ function resolvePath(parsed: ParsedRef, resolver: RefResolver): string {
 }
 
 /**
+ * Result of resolving a fragment.
+ */
+interface FragmentResult {
+  nodes: ElementNode[];
+  error?: string;
+  warning?: string;
+}
+
+/**
  * Resolve a fragment within a parsed document.
  */
-function resolveFragment(
-  fragment: { type: "id" | "query"; value: string },
-  root: ElementNode
-): ElementNode | undefined {
+function resolveFragment(fragment: RefFragment, root: ElementNode): FragmentResult {
   if (fragment.type === "id") {
-    return findById(root, fragment.value);
+    const node = findById(root, fragment.value);
+    return { nodes: node ? [node] : [] };
   }
 
-  // Query fragments would use XPath - for now just return undefined
-  // Full XPath support can be added later
-  return undefined;
+  // XPath query
+  const expectOne = fragment.type === "query";
+  const xpathResult = executeXPath(fragment.value, root, expectOne);
+
+  const result: FragmentResult = { nodes: xpathResult.nodes };
+  if (xpathResult.error !== undefined) {
+    result.error = xpathResult.error;
+  }
+  if (xpathResult.warning !== undefined) {
+    result.warning = xpathResult.warning;
+  }
+  return result;
 }
 
 /**

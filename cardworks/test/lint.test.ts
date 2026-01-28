@@ -181,3 +181,99 @@ test("formatLintResults: basePath shortens paths", async (t) => {
   const firstLine = output.split("\n")[0] ?? "";
   t.notOk(firstLine.includes("/project/"));
 });
+
+test("lintCard: duplicate IDs are reported as warning", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/DupIds.card": `<card version="1.0.0">
+  <section id="intro">Intro</section>
+  <section id="body">Body</section>
+  <section id="intro">Duplicate!</section>
+</card>`,
+    },
+  });
+
+  const result = await lintCard(loader, "/project/DupIds.card");
+
+  t.equal(result.errors.length, 0);
+  t.equal(result.warnings.length, 1);
+  t.equal(result.warnings[0]?.type, "id");
+  t.ok(result.warnings[0]?.message.includes('Duplicate id "intro"'));
+});
+
+test("lintCard: multiple duplicate IDs are all reported", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/MultiDup.card": `<card version="1.0.0">
+  <section id="foo">First foo</section>
+  <section id="bar">First bar</section>
+  <section id="foo">Second foo</section>
+  <section id="bar">Second bar</section>
+  <section id="foo">Third foo</section>
+</card>`,
+    },
+  });
+
+  const result = await lintCard(loader, "/project/MultiDup.card");
+
+  // 3 duplicates: second foo, second bar, third foo
+  t.equal(result.warnings.length, 3);
+  t.ok(result.warnings.every((w) => w.type === "id"));
+});
+
+test("lintCard: refs attribute checks multiple references", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Main.card": `<card version="1.0.0">
+  <derived refs="./Target.card ./Missing.card ./Also.card"/>
+</card>`,
+      "/project/Target.card": `<card version="1.0.0"><title>Target</title></card>`,
+      "/project/Also.card": `<card version="1.0.0"><title>Also</title></card>`,
+    },
+  });
+
+  const result = await lintCard(loader, "/project/Main.card");
+
+  // Should have 1 error for the missing file
+  t.equal(result.errors.length, 1);
+  t.equal(result.errors[0]?.type, "reference");
+  t.ok(result.errors[0]?.message.includes("Missing.card"));
+});
+
+test("lintCard: refs attribute reports version mismatches", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Main.card": `<card version="1.0.0">
+  <sources refs="./A.card@1.0.0 ./B.card@2.0.0"/>
+</card>`,
+      "/project/A.card": `<card version="1.0.0"><title>A</title></card>`,
+      "/project/B.card": `<card version="3.0.0"><title>B</title></card>`,
+    },
+  });
+
+  const result = await lintCard(loader, "/project/Main.card");
+
+  t.equal(result.errors.length, 0);
+  // B.card has version mismatch (requested 2.0.0, found 3.0.0)
+  t.equal(result.warnings.length, 1);
+  t.ok(result.warnings[0]?.message.includes("Version mismatch"));
+});
+
+test("lintCard: fragment errors are reported", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Main.card": `<card version="1.0.0">
+  <link ref="./Target.card#nonexistent"/>
+</card>`,
+      "/project/Target.card": `<card version="1.0.0">
+  <section id="exists">Content</section>
+</card>`,
+    },
+  });
+
+  const result = await lintCard(loader, "/project/Main.card");
+
+  t.equal(result.errors.length, 1);
+  t.equal(result.errors[0]?.type, "reference");
+  t.ok(result.errors[0]?.message.includes("Fragment not found"));
+});
