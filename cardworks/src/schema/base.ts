@@ -4,8 +4,8 @@ import { z } from "zod";
  * Schema for comment information attached to an element.
  */
 export const CommentsSchema = z.object({
-  before: z.string().optional(),
-  after: z.string().optional(),
+  start: z.string().optional(),
+  end: z.string().optional(),
 });
 
 export type Comments = z.infer<typeof CommentsSchema>;

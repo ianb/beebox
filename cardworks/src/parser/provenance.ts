@@ -18,10 +18,10 @@ export interface Provenance {
  * Comment information attached to an element.
  */
 export interface Comments {
-  /** Comment text appearing before the element */
-  before?: string;
-  /** Comment text appearing after the element */
-  after?: string;
+  /** Comment text at the start of the element (before first child) */
+  start?: string;
+  /** Comment text at the end of the element (after last child) */
+  end?: string;
 }
 
 /**

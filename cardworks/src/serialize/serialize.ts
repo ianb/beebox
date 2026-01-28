@@ -65,9 +65,9 @@ function serializeNode(
 ): void {
   const padding = indent.repeat(depth);
 
-  // Add comment before if present
-  if (node.comments.before) {
-    lines.push(`${padding}<!-- ${node.comments.before.trim()} -->`);
+  // Add comment at start if present
+  if (node.comments.start) {
+    lines.push(`${padding}<!-- ${node.comments.start.trim()} -->`);
   }
 
   // Build opening tag
@@ -113,9 +113,9 @@ function serializeNode(
     lines.push(`${padding}</${node.tagName}>`);
   }
 
-  // Add comment after if present
-  if (node.comments.after) {
-    lines.push(`${padding}<!-- ${node.comments.after.trim()} -->`);
+  // Add comment at end if present
+  if (node.comments.end) {
+    lines.push(`${padding}<!-- ${node.comments.end.trim()} -->`);
   }
 }
 

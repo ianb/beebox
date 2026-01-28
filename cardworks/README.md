@@ -85,8 +85,8 @@ interface ElementNode {
   textSegments?: TextSegment[];       // For mixed content
   children: ElementNode[];            // Child elements
   comments: {
-    before?: string;                  // Comment before element
-    after?: string;                   // Comment after element
+    start?: string;                   // Comment at start of element
+    end?: string;                     // Comment at end of element
   };
   provenance: Provenance;             // Source location
   dirty: boolean;                     // Modified since parse?
@@ -161,8 +161,8 @@ const xml = `<recipe version="1.0.0">
 const card = await parseXml(xml, "test");
 const title = card.children[0];
 
-console.log(title.comments.before);  // " This is the main title "
-console.log(title.comments.after);   // " Author's note: adjust salt to taste "
+console.log(title.comments.start);  // " This is the main title "
+console.log(title.comments.end);    // " Author's note: adjust salt to taste "
 ```
 
 ### Error Handling

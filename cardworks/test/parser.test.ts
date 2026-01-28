@@ -63,8 +63,8 @@ test("parseXml preserves comments", async (t) => {
   const result = await parseXml(xml, "test.card");
   const child = result.children[0];
 
-  t.equal(child?.comments.before?.trim(), "Before comment");
-  t.equal(child?.comments.after?.trim(), "After comment");
+  t.equal(child?.comments.start?.trim(), "Before comment");
+  t.equal(child?.comments.end?.trim(), "After comment");
 });
 
 test("parseXml handles attributes", async (t) => {

@@ -221,4 +221,5 @@ test("MemoryCardLoader: handles absolute project-relative refs", async (t) => {
 test("MemoryCardLoader.getProjectRoot: returns project root", (t) => {
   const loader = new MemoryCardLoader("/my/project", {});
   t.equal(loader.getProjectRoot(), "/my/project");
+  t.end();
 });

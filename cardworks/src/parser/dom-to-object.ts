@@ -133,7 +133,7 @@ export function domToObject(
 
   const comments: Comments = {};
   if (precedingComment !== undefined) {
-    comments.before = precedingComment;
+    comments.start = precedingComment;
   }
 
   const children: ElementNode[] = [];
@@ -158,10 +158,10 @@ export function domToObject(
         // This is a leading comment for the first child
         pendingComment = commentText;
       } else {
-        // Assign to previous element as after comment, or save as trailing
+        // Assign to previous element as end comment, or save as trailing
         const lastChild = children[children.length - 1];
         if (lastChild) {
-          lastChild.comments.after = commentText;
+          lastChild.comments.end = commentText;
         }
         pendingComment = commentText;
       }

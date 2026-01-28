@@ -7,7 +7,7 @@ import { CommentsSchema, ProvenanceSchema, TextSegmentSchema } from "./base.js";
 export const ElementNodeSchema: ZodType<{
   tagName: string;
   attrs: Record<string, string>;
-  comments: { before?: string | undefined; after?: string | undefined };
+  comments: { start?: string | undefined; end?: string | undefined };
   text?: string | undefined;
   textSegments?: Array<{ text: string; position: number }> | undefined;
   children: unknown[];
@@ -68,7 +68,7 @@ export function element<
 ): ZodType<{
   tagName: TTag;
   attrs: TAttrs extends ZodRawShape ? z.infer<ZodObject<TAttrs>> : Record<string, string>;
-  comments: { before?: string | undefined; after?: string | undefined };
+  comments: { start?: string | undefined; end?: string | undefined };
   text?: TText extends ZodType ? z.infer<TText> : string | undefined;
   textSegments?: Array<{ text: string; position: number }> | undefined;
   children: TChildren extends ZodType ? z.infer<TChildren> : unknown[];
@@ -111,7 +111,7 @@ export function element<
   return schema.passthrough() as unknown as ZodType<{
     tagName: TTag;
     attrs: TAttrs extends ZodRawShape ? z.infer<ZodObject<TAttrs>> : Record<string, string>;
-    comments: { before?: string | undefined; after?: string | undefined };
+    comments: { start?: string | undefined; end?: string | undefined };
     text?: TText extends ZodType ? z.infer<TText> : string | undefined;
     textSegments?: Array<{ text: string; position: number }> | undefined;
     children: TChildren extends ZodType ? z.infer<TChildren> : unknown[];
