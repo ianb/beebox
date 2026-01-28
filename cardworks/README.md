@@ -10,7 +10,7 @@ Cardworks provides a complete toolkit for working with XML-based card documents:
 - **Validate** content structure using Zod schemas
 - **Reference** other cards with versioned links and fragment selectors
 - **Serialize** back to XML while preserving formatting and comments
-- **Load** cards through a caching loader with cross-reference resolution
+- **Load** cards through a loader with cross-reference resolution
 
 ## Installation
 
@@ -129,6 +129,19 @@ console.log(card.tagName);           // "recipe"
 console.log(card.attrs.version);     // "1.0.0"
 console.log(card.children[0].text);  // "Pasta Alfredo"
 ```
+
+### Version Requirement
+
+Every card's root element must have a `version` attribute in semantic version format (X.Y.Z):
+
+```xml
+<recipe version="1.0.0">  <!-- Valid -->
+<recipe version="2.1.0">  <!-- Valid -->
+<recipe version="1.0">    <!-- Error: must be X.Y.Z -->
+<recipe>                  <!-- Error: version required -->
+```
+
+The version enables staleness detection when cards reference each other.
 
 ### Text Dedenting
 
@@ -537,7 +550,7 @@ const output = serialize(card);
 
 ## CardLoader
 
-The `CardLoader` provides high-level card management with caching.
+The `CardLoader` provides high-level card management.
 
 ### Creating a Loader
 
@@ -604,7 +617,7 @@ console.log("Updated references in:", result.updatedCards);
 
 The move function:
 - Moves the card file and any related files with the same basename (e.g., `Recipe.card`, `Recipe.png`)
-- Updates all `ref` attributes in other cards that pointed to the old path
+- Updates all `ref` and `refs` attributes in other cards that pointed to the old path
 - Preserves version and fragment in references
 - Returns a summary of what was changed
 
@@ -634,8 +647,11 @@ process.exit(summary.totalErrors > 0 ? 1 : 0);
 
 - **Parse errors** - Malformed XML syntax
 - **Validation errors** - Schema mismatches (for cards with registered schemas)
-- **Reference errors** - Broken `ref` attributes pointing to non-existent files
+- **Reference errors** - Broken `ref`/`refs` attributes pointing to non-existent files
+- **Fragment errors** - Broken `#id` or `#query()` fragments that don't match any element
 - **Reference warnings** - Version mismatches in refs (requested vs actual)
+- **Fragment warnings** - Multiple matches for `#query()`, no matches for `#query-all()`
+- **ID warnings** - Duplicate `id` attributes within a card
 
 ### Lint Functions
 
