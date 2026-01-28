@@ -14,7 +14,8 @@ export class ParseError extends Error {
     line?: number,
     column?: number
   ) {
-    super(message);
+    const loc = line ? `${source}:${String(line)}:${String(column ?? 1)}` : source;
+    super(`${loc}: ${message}`);
     this.name = "ParseError";
     this.location = {
       source,
