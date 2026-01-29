@@ -15,10 +15,13 @@ test("MemoryCardLoader.load: loads a simple card", async (t) => {
 
   const card = await loader.load("/project/cards/Simple.card");
 
-  t.equal(card.tagName, "card");
-  t.equal(card.attrs["version"], "1.0.0");
-  t.equal(card.children.length, 2);
-  t.equal(card.children[0]?.text, "Simple Card");
+  t.equal(card.path, "/project/cards/Simple.card");
+  t.equal(card.element.tagName, "card");
+  t.equal(card.element.attrs["version"], "1.0.0");
+  t.equal(card.version, "1.0.0");
+  t.equal(card.element.children.length, 2);
+  t.equal(card.element.children[0]?.text, "Simple Card");
+  t.ok(card.loadedAt instanceof Date);
 });
 
 test("MemoryCardLoader.load: throws on non-existent file", async (t) => {
@@ -38,14 +41,14 @@ test("MemoryCardLoader.save: saves a card", async (t) => {
 
   // Load, modify, save
   const card = await loader.load("/project/cards/Existing.card");
-  card.children[0]!.text = "Modified";
-  card.dirty = true;
+  card.element.children[0]!.text = "Modified";
+  card.element.dirty = true;
 
-  await loader.save("/project/cards/Existing.card", card);
+  await loader.save(card);
 
   // Reload to verify persistence
   const reloaded = await loader.load("/project/cards/Existing.card");
-  t.equal(reloaded.children[0]?.text, "Modified");
+  t.equal(reloaded.element.children[0]?.text, "Modified");
 });
 
 test("MemoryCardLoader.resolveRef: resolves cross-card reference", async (t) => {
@@ -116,13 +119,13 @@ test("MemoryCardLoader: full workflow with fixture files", async (t) => {
   const technique = await loader.load("/project/cards/Technique.card");
   const tutorial = await loader.load("/project/cards/Tutorial.card");
 
-  t.equal(audience.tagName, "audience");
-  t.equal(technique.tagName, "technique");
-  t.equal(tutorial.tagName, "tutorial");
+  t.equal(audience.element.tagName, "audience");
+  t.equal(technique.element.tagName, "technique");
+  t.equal(tutorial.element.tagName, "tutorial");
 
   // Verify structure
-  t.equal(technique.children.length, 4);
-  t.equal(technique.children[2]?.tagName, "prompts");
+  t.equal(technique.element.children.length, 4);
+  t.equal(technique.element.children[2]?.tagName, "prompts");
 
   // Resolve reference from tutorial
   const techRef = await loader.resolveRef(
@@ -189,8 +192,8 @@ test("MemoryCardLoader: validates against registered schema", async (t) => {
   });
 
   const card = await loader.load("/project/cards/Valid.card");
-  t.equal(card.tagName, "card");
-  t.equal(card.children[0]?.text, "Valid Card");
+  t.equal(card.element.tagName, "card");
+  t.equal(card.element.children[0]?.text, "Valid Card");
 });
 
 test("MemoryCardLoader: throws ValidationError on schema mismatch", async (t) => {
@@ -228,7 +231,7 @@ test("MemoryCardLoader: skips validation for unregistered tag names", async (t) 
 
   // Should load without error since "unknown" has no registered schema
   const card = await loader.load("/project/cards/Unknown.card");
-  t.equal(card.tagName, "unknown");
+  t.equal(card.element.tagName, "unknown");
 });
 
 // Move tests
@@ -240,8 +243,9 @@ test("MemoryCardLoader.move: moves a card file", async (t) => {
     },
   });
 
-  const result = await loader.move(
-    "/project/cards/OldName.card",
+  const card = await loader.load("/project/cards/OldName.card");
+  const { card: movedCard, result } = await loader.move(
+    card,
     "/project/cards/NewName.card"
   );
 
@@ -249,12 +253,15 @@ test("MemoryCardLoader.move: moves a card file", async (t) => {
   t.equal(result.movedFiles[0]?.from, "/project/cards/OldName.card");
   t.equal(result.movedFiles[0]?.to, "/project/cards/NewName.card");
 
+  // Moved card has new path
+  t.equal(movedCard.path, "/project/cards/NewName.card");
+
   // Old path should not exist
   t.equal(await loader.exists("/project/cards/OldName.card"), false);
 
   // New path should exist
-  const card = await loader.load("/project/cards/NewName.card");
-  t.equal(card.tagName, "card");
+  const reloaded = await loader.load("/project/cards/NewName.card");
+  t.equal(reloaded.element.tagName, "card");
 });
 
 test("MemoryCardLoader.move: moves related files with same basename", async (t) => {
@@ -267,10 +274,8 @@ test("MemoryCardLoader.move: moves related files with same basename", async (t) 
     },
   });
 
-  const result = await loader.move(
-    "/project/cards/Recipe.card",
-    "/project/cards/Pasta.card"
-  );
+  const card = await loader.load("/project/cards/Recipe.card");
+  const { result } = await loader.move(card, "/project/cards/Pasta.card");
 
   // Should move all Recipe.* files
   t.equal(result.movedFiles.length, 3);
@@ -298,10 +303,8 @@ test("MemoryCardLoader.move: updates references in other cards", async (t) => {
     },
   });
 
-  const result = await loader.move(
-    "/project/cards/Target.card",
-    "/project/cards/sub/Moved.card"
-  );
+  const targetCard = await loader.load("/project/cards/Target.card");
+  const { result } = await loader.move(targetCard, "/project/cards/sub/Moved.card");
 
   t.equal(result.updatedCards.length, 1);
   t.equal(result.updatedCards[0]?.path, "/project/cards/Main.card");
@@ -309,9 +312,9 @@ test("MemoryCardLoader.move: updates references in other cards", async (t) => {
 
   // Check the updated refs
   const main = await loader.load("/project/cards/Main.card");
-  t.equal(main.children[0]?.attrs["ref"], "./sub/Moved.card");
-  t.equal(main.children[1]?.attrs["ref"], "./sub/Moved.card@1.0.0");
-  t.equal(main.children[2]?.attrs["ref"], "./sub/Moved.card#section");
+  t.equal(main.element.children[0]?.attrs["ref"], "./sub/Moved.card");
+  t.equal(main.element.children[1]?.attrs["ref"], "./sub/Moved.card@1.0.0");
+  t.equal(main.element.children[2]?.attrs["ref"], "./sub/Moved.card#section");
 });
 
 test("MemoryCardLoader.move: throws if extension changes", async (t) => {
@@ -321,22 +324,12 @@ test("MemoryCardLoader.move: throws if extension changes", async (t) => {
     },
   });
 
+  const card = await loader.load("/project/cards/Test.card");
   await t.rejects(
     async () => {
-      await loader.move("/project/cards/Test.card", "/project/cards/Test.xml");
+      await loader.move(card, "/project/cards/Test.xml");
     },
     /Cannot change extension/
-  );
-});
-
-test("MemoryCardLoader.move: throws if source doesn't exist", async (t) => {
-  const loader = new MemoryCardLoader("/project");
-
-  await t.rejects(
-    async () => {
-      await loader.move("/project/cards/Missing.card", "/project/cards/New.card");
-    },
-    /Source file does not exist/
   );
 });
 
@@ -350,16 +343,14 @@ test("MemoryCardLoader.move: handles move to different directory", async (t) => 
     },
   });
 
-  const result = await loader.move(
-    "/project/cards/recipes/Pasta.card",
-    "/project/cards/archive/OldPasta.card"
-  );
+  const card = await loader.load("/project/cards/recipes/Pasta.card");
+  const { result } = await loader.move(card, "/project/cards/archive/OldPasta.card");
 
   t.equal(result.movedFiles.length, 1);
   t.equal(result.updatedCards.length, 1);
 
   const main = await loader.load("/project/cards/Main.card");
-  t.equal(main.children[0]?.attrs["ref"], "./archive/OldPasta.card");
+  t.equal(main.element.children[0]?.attrs["ref"], "./archive/OldPasta.card");
 });
 
 // Tests for findIncomingRefs and findOutgoingRefs
@@ -475,13 +466,132 @@ test("MemoryCardLoader.move: updates refs attribute", async (t) => {
     },
   });
 
-  const result = await loader.move("/project/Target.card", "/project/Renamed.card");
+  const targetCard = await loader.load("/project/Target.card");
+  const { result } = await loader.move(targetCard, "/project/Renamed.card");
 
   t.equal(result.updatedCards.length, 1);
   t.equal(result.updatedCards[0]?.refsUpdated, 1);
 
   const source = await loader.load("/project/Source.card");
-  const refsAttr = source.children[0]?.attrs["refs"];
+  const refsAttr = source.element.children[0]?.attrs["refs"];
   t.ok(refsAttr?.includes("./Renamed.card"));
   t.ok(refsAttr?.includes("./Other.card"));
+});
+
+// Card interface tests
+
+test("Card.isDirty: returns false for unmodified card", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+  });
+
+  const card = await loader.load("/project/Test.card");
+  t.equal(card.isDirty(), false);
+});
+
+test("Card.isDirty: returns true after modification", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+  });
+
+  const card = await loader.load("/project/Test.card");
+  card.element.children[0]!.text = "Modified";
+
+  t.equal(card.isDirty(), true);
+});
+
+test("Card.isStale: returns false immediately after load", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+  });
+
+  const card = await loader.load("/project/Test.card");
+  t.equal(await card.isStale(), false);
+});
+
+test("Card.isStale: returns true after file is modified", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+  });
+
+  const card = await loader.load("/project/Test.card");
+
+  // Simulate external modification by updating mtime
+  // We need to access the internal memoryFs - let's use setFile which updates mtime
+  await new Promise((r) => setTimeout(r, 10)); // Small delay to ensure different mtime
+  loader.setFile("/project/Test.card", `<card version="1.0.0"><title>Changed</title></card>`);
+
+  t.equal(await card.isStale(), true);
+});
+
+test("Card.version: returns version from root element", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="2.5.3"><title>Test</title></card>`,
+    },
+  });
+
+  const card = await loader.load("/project/Test.card");
+  t.equal(card.version, "2.5.3");
+});
+
+test("Card.getMedia: finds accompanying media files", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Recipe.card": `<card version="1.0.0"><title>Recipe</title></card>`,
+      "/project/Recipe.png": "image data",
+      "/project/Recipe.m4a": "audio data",
+      "/project/Other.png": "other image",
+    },
+  });
+
+  const card = await loader.load("/project/Recipe.card");
+  const media = await card.getMedia();
+
+  t.equal(media["png"], "/project/Recipe.png");
+  t.equal(media["m4a"], "/project/Recipe.m4a");
+  t.notOk(media["card"]); // Should not include the card file itself
+  t.notOk(media["Other"]); // Should not include files with different basename
+});
+
+test("Card.getMedia: returns empty object when no media files", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+  });
+
+  const card = await loader.load("/project/Test.card");
+  const media = await card.getMedia();
+
+  t.same(media, {});
+});
+
+test("MemoryCardLoader.saveAs: creates new card at different path", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Original.card": `<card version="1.0.0"><title>Original</title></card>`,
+    },
+  });
+
+  const original = await loader.load("/project/Original.card");
+  const copy = await loader.saveAs(original, "/project/Copy.card");
+
+  // Original still exists
+  t.equal(await loader.exists("/project/Original.card"), true);
+
+  // Copy exists with new path
+  t.equal(copy.path, "/project/Copy.card");
+  t.equal(await loader.exists("/project/Copy.card"), true);
+
+  // Copy has same content
+  t.equal(copy.element.children[0]?.text, "Original");
 });

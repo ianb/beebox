@@ -1,5 +1,8 @@
 // Cardworks - TypeScript library for managing structured XML content
 
+// Card
+export { type Card, createCard } from "./card/index.js";
+
 // Filesystem
 export { type FileSystem } from "./fs/types.js";
 export { NodeFileSystem } from "./fs/node-fs.js";

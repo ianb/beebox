@@ -29,12 +29,18 @@ const loader = new CardLoader("/path/to/project");
 
 // Load a card
 const card = await loader.load("/path/to/project/cards/Recipe.card");
-console.log(card.tagName);        // "recipe"
-console.log(card.attrs.version);  // "1.0.0"
+console.log(card.path);              // "/path/to/project/cards/Recipe.card"
+console.log(card.version);           // "1.0.0"
+console.log(card.element.tagName);   // "recipe"
 
-// Access children
-for (const child of card.children) {
+// Access children through the element property
+for (const child of card.element.children) {
   console.log(child.tagName, child.text);
+}
+
+// Check if the card has been modified
+if (card.isDirty()) {
+  await loader.save(card);
 }
 ```
 
@@ -73,6 +79,22 @@ Here's our first recipe card (`cards/recipes/PastaAlfredo.recipe.card`):
 
 ## Core Concepts
 
+### Card
+
+The `Card` is the top-level abstraction representing a loaded `.card` file:
+
+```typescript
+interface Card {
+  path: string;                       // File path this card was loaded from
+  element: ElementNode;               // The root XML element
+  version: string;                    // Version from root element
+  loadedAt: Date;                     // When the card was loaded
+  getMedia(): Promise<Record<string, string>>;  // Accompanying media files
+  isDirty(): boolean;                 // In-memory state differs from disk?
+  isStale(): Promise<boolean>;        // Disk file changed since load?
+}
+```
+
 ### ElementNode
 
 The `ElementNode` is the core data structure representing a parsed XML element:
@@ -94,6 +116,8 @@ interface ElementNode {
 
 // MixedContent is: string | ElementNode | { comment: string }
 ```
+
+Each ElementNode has a non-enumerable `card` property that references back to its containing Card.
 
 ### Location
 
@@ -503,17 +527,24 @@ Convert `ElementNode` trees back to XML strings.
 ### Basic Serialization
 
 ```typescript
-import { parseXml, serialize } from "cardworks";
+import { CardLoader, serialize } from "cardworks";
 
-const card = await parseXml(xml, "test.card");
+const loader = new CardLoader("/project");
+const card = await loader.load("/project/Recipe.card");
 
 // Modify the card
-card.children[0].text = "Updated Title";
-card.dirty = true;
+card.element.children[0].text = "Updated Title";
+card.element.dirty = true;
 
-// Serialize back to XML
-const output = serialize(card);
-console.log(output);
+// Check if modified
+if (card.isDirty()) {
+  // Serialize back to XML
+  const output = serialize(card.element);
+  console.log(output);
+
+  // Or save directly
+  await loader.save(card);
+}
 ```
 
 ### Serialization Options
@@ -569,17 +600,52 @@ const validatingLoader = new CardLoader("/path/to/project", {
 ### Loading Cards
 
 ```typescript
-const recipe = await loader.load("/project/cards/Recipe.card");
+const card = await loader.load("/project/cards/Recipe.card");
+console.log(card.path);     // "/project/cards/Recipe.card"
+console.log(card.version);  // "1.0.0"
+console.log(card.element.tagName);  // "recipe"
 ```
 
 ### Saving Cards
 
 ```typescript
 // Modify a card
-recipe.children[0].text = "New Title";
+card.element.children[0].text = "New Title";
 
-// Save it back
-await loader.save("/project/cards/Recipe.card", recipe);
+// Save to its original path
+await loader.save(card);
+
+// Or save to a different path (creates a copy)
+const newCard = await loader.saveAs(card, "/project/cards/RecipeCopy.card");
+```
+
+### Checking for Changes
+
+```typescript
+// Check if in-memory content differs from what was loaded
+if (card.isDirty()) {
+  await loader.save(card);
+}
+
+// Check if file on disk changed since we loaded it
+if (await card.isStale()) {
+  // Reload to get fresh content
+  const fresh = await loader.load(card.path);
+}
+```
+
+### Accessing Media Files
+
+Cards can have associated media files (same basename, different extensions):
+
+```typescript
+const card = await loader.load("/project/cards/Recipe.card");
+const media = await card.getMedia();
+// media = { png: "/project/cards/Recipe.png", m4a: "/project/cards/Recipe.m4a" }
+
+if (media.png) {
+  console.log("Has image:", media.png);
+}
 ```
 
 ### Checking Existence
@@ -605,12 +671,16 @@ for (const path of cardPaths) {
 ### Moving/Renaming Cards
 
 ```typescript
-// Move a card and update all references to it
-const result = await loader.move(
-  "/project/cards/OldName.card",
+// Load the card to move
+const card = await loader.load("/project/cards/OldName.card");
+
+// Move and update all references to it
+const { card: movedCard, result } = await loader.move(
+  card,
   "/project/cards/NewName.card"
 );
 
+console.log("New path:", movedCard.path);  // "/project/cards/NewName.card"
 console.log("Moved files:", result.movedFiles);
 console.log("Updated references in:", result.updatedCards);
 ```
@@ -619,7 +689,7 @@ The move function:
 - Moves the card file and any related files with the same basename (e.g., `Recipe.card`, `Recipe.png`)
 - Updates all `ref` and `refs` attributes in other cards that pointed to the old path
 - Preserves version and fragment in references
-- Returns a summary of what was changed
+- Returns a new Card with the updated path and a summary of what was changed
 
 ---
 
@@ -984,16 +1054,29 @@ Steps:
 | `resolveRef(ref, resolver)` | Resolve reference to target |
 | `resolveRefs(refs, resolver)` | Resolve multiple whitespace-separated refs |
 
+### Card
+
+| Property/Method | Description |
+|-----------------|-------------|
+| `path` | File path this card was loaded from |
+| `element` | Root ElementNode |
+| `version` | Version from root element |
+| `loadedAt` | When the card was loaded |
+| `getMedia()` | Get accompanying media files as `{ ext: path }` |
+| `isDirty()` | Check if in-memory content differs from disk |
+| `isStale()` | Check if disk file changed since load |
+
 ### CardLoader
 
 | Method | Description |
 |--------|-------------|
-| `load(path)` | Load a card |
-| `save(path, card)` | Save card to file |
+| `load(path)` | Load a card, returns Card |
+| `save(card)` | Save card to its file path |
+| `saveAs(card, path)` | Save card to new path, returns new Card |
 | `resolveRef(ref, fromPath)` | Resolve reference from context |
 | `resolveRefs(refs, fromPath)` | Resolve multiple whitespace-separated refs |
 | `exists(path)` | Check if card file exists |
-| `move(from, to)` | Move/rename card and update refs |
+| `move(card, toPath)` | Move/rename card and update refs, returns new Card |
 | `listCards()` | List all card files in project |
 | `findIncomingRefs(path)` | Find all cards that reference this card |
 | `findOutgoingRefs(path)` | Find all references from this card |

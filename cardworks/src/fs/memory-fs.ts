@@ -1,16 +1,30 @@
 import type { FileSystem } from "./types.js";
 
 /**
+ * File metadata for in-memory files.
+ */
+interface FileMeta {
+  mtime: Date;
+  size: number;
+}
+
+/**
  * In-memory filesystem implementation for testing.
  */
 export class MemoryFileSystem implements FileSystem {
   private files = new Map<string, string>();
   private binaryFiles = new Map<string, Uint8Array>();
+  private fileMeta = new Map<string, FileMeta>();
 
   constructor(initialFiles?: Record<string, string>) {
     if (initialFiles) {
       for (const [path, content] of Object.entries(initialFiles)) {
-        this.files.set(this.normalizePath(path), content);
+        const normalized = this.normalizePath(path);
+        this.files.set(normalized, content);
+        this.fileMeta.set(normalized, {
+          mtime: new Date(),
+          size: new TextEncoder().encode(content).length,
+        });
       }
     }
   }
@@ -46,12 +60,20 @@ export class MemoryFileSystem implements FileSystem {
   write(path: string, content: string): Promise<void> {
     const normalized = this.normalizePath(path);
     this.files.set(normalized, content);
+    this.fileMeta.set(normalized, {
+      mtime: new Date(),
+      size: new TextEncoder().encode(content).length,
+    });
     return Promise.resolve();
   }
 
   writeBinary(path: string, content: Uint8Array): Promise<void> {
     const normalized = this.normalizePath(path);
     this.binaryFiles.set(normalized, content);
+    this.fileMeta.set(normalized, {
+      mtime: new Date(),
+      size: content.length,
+    });
     return Promise.resolve();
   }
 
@@ -127,16 +149,26 @@ export class MemoryFileSystem implements FileSystem {
     // Check text files
     const textContent = this.files.get(normalizedFrom);
     if (textContent !== undefined) {
+      const meta = this.fileMeta.get(normalizedFrom);
       this.files.delete(normalizedFrom);
+      this.fileMeta.delete(normalizedFrom);
       this.files.set(normalizedTo, textContent);
+      if (meta) {
+        this.fileMeta.set(normalizedTo, { ...meta, mtime: new Date() });
+      }
       return Promise.resolve();
     }
 
     // Check binary files
     const binaryContent = this.binaryFiles.get(normalizedFrom);
     if (binaryContent !== undefined) {
+      const meta = this.fileMeta.get(normalizedFrom);
       this.binaryFiles.delete(normalizedFrom);
+      this.fileMeta.delete(normalizedFrom);
       this.binaryFiles.set(normalizedTo, binaryContent);
+      if (meta) {
+        this.fileMeta.set(normalizedTo, { ...meta, mtime: new Date() });
+      }
       return Promise.resolve();
     }
 
@@ -163,11 +195,36 @@ export class MemoryFileSystem implements FileSystem {
     return baseParts.join("/");
   }
 
+  stat(path: string): Promise<{ mtime: Date; size: number }> {
+    const normalized = this.normalizePath(path);
+    const meta = this.fileMeta.get(normalized);
+    if (meta) {
+      return Promise.resolve({ mtime: meta.mtime, size: meta.size });
+    }
+    return Promise.reject(new Error(`File not found: ${path}`));
+  }
+
   /**
    * Set a file's content directly (useful for testing).
    */
   setFile(path: string, content: string): void {
-    this.files.set(this.normalizePath(path), content);
+    const normalized = this.normalizePath(path);
+    this.files.set(normalized, content);
+    this.fileMeta.set(normalized, {
+      mtime: new Date(),
+      size: new TextEncoder().encode(content).length,
+    });
+  }
+
+  /**
+   * Set a file's modification time (useful for testing staleness).
+   */
+  setMtime(path: string, mtime: Date): void {
+    const normalized = this.normalizePath(path);
+    const meta = this.fileMeta.get(normalized);
+    if (meta) {
+      this.fileMeta.set(normalized, { ...meta, mtime });
+    }
   }
 
   /**
@@ -176,5 +233,6 @@ export class MemoryFileSystem implements FileSystem {
   clear(): void {
     this.files.clear();
     this.binaryFiles.clear();
+    this.fileMeta.clear();
   }
 }

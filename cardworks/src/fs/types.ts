@@ -48,4 +48,9 @@ export interface FileSystem {
    * Resolve a relative path against a base path.
    */
   resolve(base: string, relative: string): string;
+
+  /**
+   * Get file metadata including modification time.
+   */
+  stat(path: string): Promise<{ mtime: Date; size: number }>;
 }

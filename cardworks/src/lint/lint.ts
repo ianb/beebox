@@ -54,14 +54,14 @@ export async function lintCard(
 
   try {
     // Load will parse and validate against schema
-    const node = await loader.load(path);
+    const card = await loader.load(path);
 
     // Check for duplicate IDs
-    checkDuplicateIds(node, warnings);
+    checkDuplicateIds(card.element, warnings);
 
     // Check references if enabled
     if (checkRefs) {
-      await checkRefsInNode(node, path, loader, errors, warnings);
+      await checkRefsInNode(card.element, path, loader, errors, warnings);
     }
   } catch (e) {
     if (e instanceof Error) {

@@ -114,4 +114,12 @@ export class NodeFileSystem implements FileSystem {
     const baseDir = path.dirname(base);
     return path.resolve(baseDir, relative);
   }
+
+  async stat(filePath: string): Promise<{ mtime: Date; size: number }> {
+    const stats = await fs.stat(filePath);
+    return {
+      mtime: stats.mtime,
+      size: stats.size,
+    };
+  }
 }

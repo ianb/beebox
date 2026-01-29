@@ -9,6 +9,7 @@ import { MemoryFileSystem } from "../fs/memory-fs.js";
 import { SchemaRegistry } from "../schema/registry.js";
 import type { ElementSchema } from "../schema/element.js";
 import type { ZodError } from "zod";
+import { type Card, createCard } from "../card/card.js";
 
 /**
  * Result of a move operation.
@@ -134,12 +135,17 @@ export interface ICardLoader {
   /**
    * Load a card from a file path.
    */
-  load(path: string): Promise<ElementNode>;
+  load(path: string): Promise<Card>;
 
   /**
-   * Save a card to a file path.
+   * Save a card to its file path.
    */
-  save(path: string, card: ElementNode): Promise<void>;
+  save(card: Card): Promise<void>;
+
+  /**
+   * Save a card to a different path, returning a new Card.
+   */
+  saveAs(card: Card, newPath: string): Promise<Card>;
 
   /**
    * Resolve a reference from a given source file.
@@ -164,7 +170,7 @@ export interface ICardLoader {
   /**
    * Move/rename a card and update all references.
    */
-  move(from: string, to: string): Promise<MoveResult>;
+  move(card: Card, toPath: string): Promise<{ card: Card; result: MoveResult }>;
 
   /**
    * List all card files in the project.
@@ -207,10 +213,10 @@ abstract class BaseCardLoader implements ICardLoader {
    * If a schema is registered for the card's tag name, the card is validated.
    *
    * @param path - The absolute path to the card file
-   * @returns The parsed ElementNode tree
+   * @returns The loaded Card
    * @throws ValidationError if validation fails
    */
-  async load(path: string): Promise<ElementNode> {
+  async load(path: string): Promise<Card> {
     const content = await this.fs.read(path);
     const node = await parseXml(content, path);
 
@@ -228,18 +234,32 @@ abstract class BaseCardLoader implements ICardLoader {
       }
     }
 
-    return node;
+    // Use serialized content as snapshot for consistent dirty comparison
+    const snapshot = serialize(node);
+    return createCard(path, node, this.fs, snapshot);
   }
 
   /**
-   * Save a card to a file path.
+   * Save a card to its file path.
    *
-   * @param path - The absolute path to write to
-   * @param card - The ElementNode to serialize and write
+   * @param card - The Card to serialize and write
    */
-  async save(path: string, card: ElementNode): Promise<void> {
-    const content = serialize(card);
-    await this.fs.write(path, content);
+  async save(card: Card): Promise<void> {
+    const content = serialize(card.element);
+    await this.fs.write(card.path, content);
+  }
+
+  /**
+   * Save a card to a different path, returning a new Card.
+   *
+   * @param card - The Card to save
+   * @param newPath - The new path to save to
+   * @returns A new Card instance with the new path
+   */
+  async saveAs(card: Card, newPath: string): Promise<Card> {
+    const content = serialize(card.element);
+    await this.fs.write(newPath, content);
+    return createCard(newPath, card.element, this.fs, content);
   }
 
   /**
@@ -292,22 +312,19 @@ abstract class BaseCardLoader implements ICardLoader {
   /**
    * Move/rename a card and update all references to it.
    *
-   * @param from - The current absolute path of the card
+   * @param card - The Card to move
    * @param to - The new absolute path for the card
-   * @returns Information about moved files and updated references
-   * @throws Error if extension changes or file doesn't exist
+   * @returns The updated Card and information about moved files and updated references
+   * @throws Error if extension changes
    */
-  async move(from: string, to: string): Promise<MoveResult> {
+  async move(card: Card, to: string): Promise<{ card: Card; result: MoveResult }> {
+    const from = card.path;
+
     // Validate extension hasn't changed
     const fromExt = extname(basename(from));
     const toExt = extname(basename(to));
     if (fromExt !== toExt) {
       throw new Error(`Cannot change extension from "${fromExt}" to "${toExt}"`);
-    }
-
-    // Validate source exists
-    if (!(await this.fs.exists(from))) {
-      throw new Error(`Source file does not exist: ${from}`);
     }
 
     const result: MoveResult = {
@@ -358,7 +375,11 @@ abstract class BaseCardLoader implements ICardLoader {
       result.movedFiles.push(file);
     }
 
-    return result;
+    // Return a new Card with the updated path
+    const content = serialize(card.element);
+    const newCard = createCard(to, card.element, this.fs, content);
+
+    return { card: newCard, result };
   }
 
   /**
