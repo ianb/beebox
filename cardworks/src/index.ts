@@ -68,3 +68,18 @@ export {
   type LintOptions,
   type FormatOptions,
 } from "./lint/index.js";
+
+// JSX
+export {
+  createElement,
+  defineCardJSX,
+  JSXValidationError,
+} from "./jsx/index.js";
+export type {
+  InferJSXProps,
+  InferJSXElements,
+  CardJSXFactory,
+  JSXProps,
+  JSXChild,
+  CreateCardOptions,
+} from "./jsx/index.js";

@@ -7,7 +7,7 @@ import { serialize } from "../serialize/serialize.js";
  * Cards wrap ElementNodes with file path, version, media files, and dirty tracking.
  */
 export interface Card {
-  /** The file path this card was loaded from */
+  /** The file path this card was loaded from (or will be saved to) */
   readonly path: string;
 
   /** The root element content */
@@ -16,16 +16,19 @@ export interface Card {
   /** Version from root element (getter for element.attrs["version"]) */
   readonly version: string;
 
-  /** When loaded from disk */
-  readonly loadedAt: Date;
+  /** When loaded from disk (undefined for new cards that haven't been saved) */
+  readonly loadedAt: Date | undefined;
+
+  /** True if this card was created programmatically and has never been saved */
+  readonly isNew: boolean;
 
   /** Get accompanying media files as { extension: path } */
   getMedia(): Promise<Record<string, string>>;
 
-  /** Check if in-memory state differs from what was loaded */
+  /** Check if in-memory state differs from what was loaded (always true for new cards) */
   isDirty(): boolean;
 
-  /** Check if disk file has changed since load (by mtime) */
+  /** Check if disk file has changed since load (always false for new cards) */
   isStale(): Promise<boolean>;
 }
 
@@ -62,11 +65,12 @@ function basenameWithoutExt(filename: string): string {
 }
 
 /**
- * Internal implementation of Card.
+ * Internal implementation of Card for cards loaded from disk.
  */
 export class CardImpl implements Card {
   private readonly snapshot: string;
   private readonly fs: FileSystem;
+  readonly isNew = false;
 
   constructor(
     public readonly path: string,
@@ -113,6 +117,68 @@ export class CardImpl implements Card {
         // Match files with same basename but different extension
         if (entryBasename === cardBasename && entryExt !== cardExt) {
           // Use extension without the dot as key
+          const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
+          result[extKey] = `${dir}/${entry}`;
+        }
+      }
+    } catch {
+      // Directory may not exist or be unreadable
+    }
+
+    return result;
+  }
+}
+
+/**
+ * Internal implementation of Card for new cards created programmatically.
+ * These cards have never been saved to disk.
+ */
+export class NewCardImpl implements Card {
+  readonly loadedAt = undefined;
+  readonly isNew = true;
+  private readonly fs: FileSystem | undefined;
+
+  constructor(
+    public readonly path: string,
+    public readonly element: ElementNode,
+    fs?: FileSystem
+  ) {
+    this.fs = fs;
+    attachCardToElements(element, this);
+  }
+
+  get version(): string {
+    return this.element.attrs["version"] ?? "";
+  }
+
+  isDirty(): boolean {
+    // New cards are always dirty (never saved)
+    return true;
+  }
+
+  isStale(): Promise<boolean> {
+    // New cards can't be stale (no disk version to compare)
+    return Promise.resolve(false);
+  }
+
+  async getMedia(): Promise<Record<string, string>> {
+    // New cards don't have media files yet
+    if (!this.fs) {
+      return {};
+    }
+
+    const result: Record<string, string> = {};
+    const dir = dirname(this.path);
+    const cardBasename = basenameWithoutExt(basename(this.path));
+    const cardExt = extname(basename(this.path));
+
+    try {
+      const entries = await this.fs.list(dir);
+      for (const entry of entries) {
+        const entryBasename = basenameWithoutExt(entry);
+        const entryExt = extname(entry);
+
+        if (entryBasename === cardBasename && entryExt !== cardExt) {
           const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
           result[extKey] = `${dir}/${entry}`;
         }
