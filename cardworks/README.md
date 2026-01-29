@@ -798,6 +798,186 @@ loader.setFile("/project/cards/Recipe.card", `<recipe version="1.0.0">
 </recipe>`);
 ```
 
+---
+
+## JSX-Style Card Creation
+
+Create cards programmatically using JSX syntax with full TypeScript type checking.
+
+### Setting Up JSX
+
+First, define your schemas and create a JSX factory:
+
+```typescript
+// src/card-jsx/schemas.ts
+import { defineCardJSX, element } from "cardworks";
+import { z } from "zod";
+
+// Define your element schemas
+const schemas = {
+  recipe: element("recipe", {
+    attrs: { servings: z.string().optional() },
+  }),
+  title: element("title", { text: z.string() }),
+  step: element("step", {
+    attrs: { technique: z.string().optional() },
+    text: z.string(),
+  }),
+} as const;
+
+// Create the JSX factory functions
+export const { jsx, jsxs, Fragment, createCard } = defineCardJSX(schemas);
+```
+
+Create a JSX runtime module that TypeScript can use:
+
+```typescript
+// src/card-jsx/jsx-runtime.ts
+export { jsx, jsxs, Fragment } from "./schemas.js";
+```
+
+### Using JSX in TSX Files
+
+```tsx
+/** @jsxImportSource ./card-jsx */
+import { createCard } from "./card-jsx/schemas.js";
+import { CardLoader } from "cardworks";
+
+// Create elements using JSX syntax
+const recipe = (
+  <recipe version="1.0.0" servings="4">
+    <title>Pasta Alfredo</title>
+    <step>Boil water</step>
+    <step technique="./techniques/Saute.card">Cook garlic in butter</step>
+    <step>Toss pasta with sauce</step>
+  </recipe>
+);
+
+// Wrap in a Card for saving
+const card = createCard("/project/cards/PastaAlfredo.card", recipe);
+
+// Save via loader
+const loader = new CardLoader("/project");
+await loader.save(card);
+```
+
+### JSX Factory Functions
+
+`defineCardJSX(schemas)` returns:
+
+| Function | Description |
+|----------|-------------|
+| `jsx` | Creates element with 0 or 1 child (used by JSX transform) |
+| `jsxs` | Creates element with multiple children (used by JSX transform) |
+| `Fragment` | Groups multiple elements: `<><a/><b/></>` returns `[a, b]` |
+| `createCard` | Validates element and wraps as Card |
+
+### Direct Element Creation
+
+You can also use `createElement` directly without JSX:
+
+```typescript
+import { createElement, defineCardJSX } from "cardworks";
+
+const { createCard } = defineCardJSX(schemas);
+
+// Create elements programmatically
+const title = createElement("title", { children: "Pasta Alfredo" });
+const step1 = createElement("step", { children: "Boil water" });
+const step2 = createElement("step", {
+  technique: "./Saute.card",
+  children: "Cook garlic"
+});
+
+const recipe = createElement("recipe", {
+  version: "1.0.0",
+  servings: "4",
+  children: [title, step1, step2],
+});
+
+const card = createCard("/project/Recipe.card", recipe);
+```
+
+### New Card Behavior
+
+Cards created via JSX are "new" cards that have never been saved:
+
+```typescript
+const card = createCard("/project/Recipe.card", recipe);
+
+card.isNew;      // true - never been saved
+card.loadedAt;   // undefined - not loaded from disk
+card.isDirty();  // true - always dirty until saved
+card.isStale();  // false - can't be stale (no disk version)
+
+// After saving and reloading:
+await loader.save(card);
+const reloaded = await loader.load("/project/Recipe.card");
+reloaded.isNew;     // false
+reloaded.loadedAt;  // Date when loaded
+```
+
+### Schema Validation
+
+`createCard` validates the element against registered schemas:
+
+```typescript
+import { JSXValidationError } from "cardworks";
+
+const strictSchemas = {
+  title: element("title", { text: z.string().min(5) }),
+};
+const { jsx, createCard } = defineCardJSX(strictSchemas);
+
+const title = jsx("title", { children: "Hi" }); // Too short!
+
+try {
+  createCard("/project/Title.card", title);
+} catch (e) {
+  if (e instanceof JSXValidationError) {
+    console.error(e.tagName);   // "title"
+    console.error(e.zodError);  // Zod validation error
+  }
+}
+```
+
+Elements with no matching schema are created without validation.
+
+### Default Version
+
+If the root element doesn't have a `version` attribute, `createCard` adds `version="1.0.0"`:
+
+```typescript
+const recipe = jsx("recipe", { children: title });
+const card = createCard("/project/Recipe.card", recipe);
+card.version;  // "1.0.0" (added automatically)
+```
+
+### TypeScript Types for JSX
+
+For full type checking in TSX files, create a type declaration:
+
+```typescript
+// src/card-jsx/jsx-runtime.d.ts
+import type { ElementNode, InferJSXElements } from "cardworks";
+import { schemas } from "./schemas.js";
+
+type MyElements = InferJSXElements<typeof schemas>;
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements extends MyElements {}
+    interface Element extends ElementNode {}
+  }
+}
+
+export {};
+```
+
+This enables TypeScript to check attribute names and types in your JSX.
+
+---
+
 ## Filesystem Abstraction
 
 Cardworks uses a filesystem interface internally. The `CardLoader` and `MemoryCardLoader` handle this automatically, but you can access the underlying filesystem classes directly if needed.
@@ -1097,6 +1277,19 @@ Steps:
 |-------|-------------|
 | `CardLoader` | File-based card loader for production use |
 | `MemoryCardLoader` | In-memory card loader for testing |
+
+### JSX
+
+| Function | Description |
+|----------|-------------|
+| `createElement(tag, props)` | Create ElementNode programmatically |
+| `defineCardJSX(schemas)` | Create schema-bound JSX factory |
+| `JSXValidationError` | Error thrown when createCard validation fails |
+
+| Type | Description |
+|------|-------------|
+| `InferJSXProps<S>` | Extract JSX props from ElementSchema |
+| `InferJSXElements<T>` | Map schema record to IntrinsicElements |
 
 ### Filesystem
 
