@@ -175,15 +175,17 @@ test("defineCardJSX: createCard creates new card", (t) => {
   t.end();
 });
 
-test("defineCardJSX: createCard adds default version", (t) => {
+test("defineCardJSX: createCard does not add version", (t) => {
   const { jsx, createCard } = defineCardJSX(schemas);
   const title = jsx("title", { children: "Test" });
   const recipe = jsx("recipe", { children: title });
 
   const card = createCard("/project/Recipe.card", recipe);
 
-  t.equal(card.version, "1.0.0");
-  t.equal(card.element.attrs["version"], "1.0.0");
+  // JSX createCard does NOT add version - that happens during serialization
+  // via the loader if requireVersion is true
+  t.equal(card.version, "");
+  t.equal(card.element.attrs["version"], undefined);
   t.end();
 });
 

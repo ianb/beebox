@@ -111,6 +111,18 @@ function relativePath(from: string, to: string): string {
 export interface CardLoaderOptions {
   /** Schema registry or array of schemas for validation */
   schemas?: SchemaRegistry | ElementSchema[];
+  /**
+   * Whether to require and add version attributes.
+   * - true (default): Add version="1.0.0" on save if missing
+   * - false: Don't add version, but preserve if present
+   */
+  requireVersion?: boolean;
+  /**
+   * Whether to indent serialized XML.
+   * - true (default): Indent with 2 spaces
+   * - false: No indentation (compact output)
+   */
+  indent?: boolean;
 }
 
 /**
@@ -193,6 +205,8 @@ export interface ICardLoader {
  */
 abstract class BaseCardLoader implements ICardLoader {
   protected readonly schemas: SchemaRegistry;
+  protected readonly requireVersion: boolean;
+  protected readonly indent: boolean;
 
   constructor(
     protected readonly fs: FileSystem,
@@ -206,6 +220,30 @@ abstract class BaseCardLoader implements ICardLoader {
     } else {
       this.schemas = new SchemaRegistry();
     }
+    this.requireVersion = options.requireVersion ?? false;
+    this.indent = options.indent ?? false;
+  }
+
+  /**
+   * Get serialization options based on loader configuration.
+   */
+  protected getSerializeOptions(): { indent: string } {
+    return { indent: this.indent ? "  " : "" };
+  }
+
+  /**
+   * Prepare element for serialization, adding version if required.
+   * Returns a shallow copy if modification is needed.
+   */
+  protected prepareForSave(element: ElementNode): ElementNode {
+    if (this.requireVersion && !element.attrs["version"]) {
+      // Create shallow copy with version added
+      return {
+        ...element,
+        attrs: { version: "1.0.0", ...element.attrs },
+      };
+    }
+    return element;
   }
 
   /**
@@ -235,6 +273,8 @@ abstract class BaseCardLoader implements ICardLoader {
     }
 
     // Use serialized content as snapshot for consistent dirty comparison
+    // Note: uses default serialize options (not loader options) since Card.isDirty()
+    // compares against serialize() with default options
     const snapshot = serialize(node);
     return createCard(path, node, this.fs, snapshot);
   }
@@ -245,7 +285,8 @@ abstract class BaseCardLoader implements ICardLoader {
    * @param card - The Card to serialize and write
    */
   async save(card: Card): Promise<void> {
-    const content = serialize(card.element);
+    const element = this.prepareForSave(card.element);
+    const content = serialize(element, this.getSerializeOptions());
     await this.fs.write(card.path, content);
   }
 
@@ -257,7 +298,8 @@ abstract class BaseCardLoader implements ICardLoader {
    * @returns A new Card instance with the new path
    */
   async saveAs(card: Card, newPath: string): Promise<Card> {
-    const content = serialize(card.element);
+    const element = this.prepareForSave(card.element);
+    const content = serialize(element, this.getSerializeOptions());
     await this.fs.write(newPath, content);
     return createCard(newPath, card.element, this.fs, content);
   }
@@ -364,7 +406,7 @@ abstract class BaseCardLoader implements ICardLoader {
       const refsUpdated = await this.updateRefsInNode(node, cardPath, from, to);
 
       if (refsUpdated > 0) {
-        await this.fs.write(cardPath, serialize(node));
+        await this.fs.write(cardPath, serialize(node, this.getSerializeOptions()));
         result.updatedCards.push({ path: cardPath, refsUpdated });
       }
     }
@@ -376,7 +418,8 @@ abstract class BaseCardLoader implements ICardLoader {
     }
 
     // Return a new Card with the updated path
-    const content = serialize(card.element);
+    const element = this.prepareForSave(card.element);
+    const content = serialize(element, this.getSerializeOptions());
     const newCard = createCard(to, card.element, this.fs, content);
 
     return { card: newCard, result };

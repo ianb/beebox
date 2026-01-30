@@ -8,11 +8,6 @@ import { NewCardImpl } from "../card/card.js";
 import type { ZodError } from "zod";
 
 /**
- * Default version for JSX-created elements without explicit version.
- */
-const DEFAULT_VERSION = "1.0.0";
-
-/**
  * Error thrown when JSX card creation fails validation.
  */
 export class JSXValidationError extends Error {
@@ -103,13 +98,10 @@ export function defineCardJSX<T extends Record<string, ElementSchema>>(
   /**
    * Create a Card from a JSX-created ElementNode.
    * Validates against the schema if one is registered for the tag name.
+   * Note: Version is NOT added here - it's added during serialization
+   * by the loader if requireVersion is true.
    */
   function createCard(path: string, element: ElementNode): Card {
-    // Add default version if not present
-    if (!element.attrs["version"]) {
-      element.attrs["version"] = DEFAULT_VERSION;
-    }
-
     // Validate against schema if registered
     const schema = schemas[element.tagName as keyof T];
     if (schema) {

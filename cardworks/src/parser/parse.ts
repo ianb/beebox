@@ -89,29 +89,20 @@ export function parseXml(xml: string, source: string): Promise<ElementNode> {
   // Transform to our object model
   const result = domToObject(root as unknown as Element, tracker, xml);
 
-  // Validate version attribute on root element
+  // Validate version format if present (version itself is optional)
   const version = result.attrs["version"];
-  if (!version) {
-    return Promise.reject(
-      new ParseError(
-        `Root element <${result.tagName}> missing required "version" attribute`,
-        source,
-        result.location.startLine,
-        result.location.startColumn
-      )
-    );
-  }
-
-  const versionPattern = /^\d+\.\d+\.\d+$/;
-  if (!versionPattern.test(version)) {
-    return Promise.reject(
-      new ParseError(
-        `Invalid version "${version}" - must be in X.Y.Z format (e.g., "1.0.0")`,
-        source,
-        result.location.startLine,
-        result.location.startColumn
-      )
-    );
+  if (version) {
+    const versionPattern = /^\d+\.\d+\.\d+$/;
+    if (!versionPattern.test(version)) {
+      return Promise.reject(
+        new ParseError(
+          `Invalid version "${version}" - must be in X.Y.Z format (e.g., "1.0.0")`,
+          source,
+          result.location.startLine,
+          result.location.startColumn
+        )
+      );
+    }
   }
 
   return Promise.resolve(result);

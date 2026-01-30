@@ -104,15 +104,12 @@ test("parseXml throws on malformed XML", async (t) => {
   });
 });
 
-test("parseXml throws on missing version", async (t) => {
+test("parseXml allows missing version", async (t) => {
   const xml = `<card><title>No version</title></card>`;
 
-  await t.rejects(
-    async () => {
-      await parseXml(xml, "test.card");
-    },
-    { message: /missing required "version" attribute/ }
-  );
+  const node = await parseXml(xml, "test.card");
+  t.equal(node.tagName, "card");
+  t.equal(node.attrs["version"], undefined);
 });
 
 test("parseXml throws on invalid version format", async (t) => {

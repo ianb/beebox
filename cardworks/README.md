@@ -154,18 +154,18 @@ console.log(card.attrs.version);     // "1.0.0"
 console.log(card.children[0].text);  // "Pasta Alfredo"
 ```
 
-### Version Requirement
+### Version Attribute
 
-Every card's root element must have a `version` attribute in semantic version format (X.Y.Z):
+Cards can optionally have a `version` attribute on the root element in semantic version format (X.Y.Z):
 
 ```xml
 <recipe version="1.0.0">  <!-- Valid -->
 <recipe version="2.1.0">  <!-- Valid -->
-<recipe version="1.0">    <!-- Error: must be X.Y.Z -->
-<recipe>                  <!-- Error: version required -->
+<recipe version="1.0">    <!-- Error: must be X.Y.Z format if present -->
+<recipe>                  <!-- Valid: version is optional -->
 ```
 
-The version enables staleness detection when cards reference each other.
+The version enables staleness detection when cards reference each other. You can configure the loader to automatically add versions on save (see [Loader Options](#loader-options)).
 
 ### Text Dedenting
 
@@ -597,6 +597,27 @@ const validatingLoader = new CardLoader("/path/to/project", {
 });
 ```
 
+### Loader Options
+
+```typescript
+const loader = new CardLoader("/path/to/project", {
+  // Schema validation (optional)
+  schemas: [RecipeSchema],
+
+  // Add version="1.0.0" on save if missing (default: false)
+  requireVersion: true,
+
+  // Indent XML output with 2 spaces (default: false = compact)
+  indent: true,
+});
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `schemas` | `[]` | Array of schemas for validation on load |
+| `requireVersion` | `false` | Add `version="1.0.0"` when saving cards without a version |
+| `indent` | `false` | Indent serialized XML (2 spaces) vs compact output |
+
 ### Loading Cards
 
 ```typescript
@@ -943,14 +964,18 @@ try {
 
 Elements with no matching schema are created without validation.
 
-### Default Version
+### Version Handling
 
-If the root element doesn't have a `version` attribute, `createCard` adds `version="1.0.0"`:
+JSX `createCard` does NOT add a version attribute - that's handled by the loader during save if `requireVersion: true`:
 
 ```typescript
 const recipe = jsx("recipe", { children: title });
 const card = createCard("/project/Recipe.card", recipe);
-card.version;  // "1.0.0" (added automatically)
+card.version;  // "" (no version yet)
+
+// Save with a loader that requires versions
+const loader = new CardLoader("/project", { requireVersion: true });
+await loader.save(card);  // Adds version="1.0.0" to output
 ```
 
 ### TypeScript Types for JSX
