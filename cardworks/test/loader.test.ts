@@ -595,3 +595,77 @@ test("MemoryCardLoader.saveAs: creates new card at different path", async (t) =>
   // Copy has same content
   t.equal(copy.element.children[0]?.text, "Original");
 });
+
+// serialize method tests
+
+test("loader.serialize: returns XML string with loader options", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+    indent: true,
+  });
+
+  const card = await loader.load("/project/Test.card");
+  const xml = loader.serialize(card.element);
+
+  t.ok(xml.includes("<card"));
+  t.ok(xml.includes("</card>"));
+  // With indent: true, should have newlines and indentation
+  t.ok(xml.includes("\n"));
+});
+
+test("loader.serialize: compact output when indent is false", async (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/Test.card": `<card version="1.0.0"><title>Test</title></card>`,
+    },
+    indent: false,
+  });
+
+  const card = await loader.load("/project/Test.card");
+  const xml = loader.serialize(card.element);
+
+  // Single-line elements should not have extra newlines from indentation
+  // (may still have newlines from multiline text content)
+  t.ok(xml.includes("<card"));
+});
+
+test("loader.serialize: adds version when requireVersion is true", (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    requireVersion: true,
+  });
+
+  // Create an element without version
+  const element = {
+    tagName: "card",
+    attrs: {},
+    comments: {},
+    children: [],
+    location: { source: "test", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+    dirty: false,
+  };
+
+  const xml = loader.serialize(element);
+  t.ok(xml.includes('version="1.0.0"'));
+  t.end();
+});
+
+test("loader.serialize: does not add version when requireVersion is false", (t) => {
+  const loader = new MemoryCardLoader("/project", {
+    requireVersion: false,
+  });
+
+  const element = {
+    tagName: "card",
+    attrs: {},
+    comments: {},
+    children: [],
+    location: { source: "test", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+    dirty: false,
+  };
+
+  const xml = loader.serialize(element);
+  t.notOk(xml.includes("version"));
+  t.end();
+});

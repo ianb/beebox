@@ -1,7 +1,7 @@
 import type { FileSystem } from "../fs/types.js";
 import type { ElementNode } from "../parser/provenance.js";
 import { parseXml } from "../parser/parse.js";
-import { serialize } from "../serialize/serialize.js";
+import { serialize as serializeElement } from "../serialize/serialize.js";
 import { resolveRef, resolveRefs, type ResolvedRef } from "../refs/resolve.js";
 import { parseRef } from "../refs/parse-ref.js";
 import { NodeFileSystem } from "../fs/node-fs.js";
@@ -160,6 +160,11 @@ export interface ICardLoader {
   saveAs(card: Card, newPath: string): Promise<Card>;
 
   /**
+   * Serialize an element to XML string using the loader's options.
+   */
+  serialize(element: ElementNode): string;
+
+  /**
    * Resolve a reference from a given source file.
    */
   resolveRef(ref: string, fromPath: string): Promise<ResolvedRef>;
@@ -247,6 +252,19 @@ abstract class BaseCardLoader implements ICardLoader {
   }
 
   /**
+   * Serialize an element to XML string using the loader's options.
+   * Adds version if requireVersion is true and element has no version.
+   * Uses indent setting to format output.
+   *
+   * @param element - The ElementNode to serialize
+   * @returns The XML string
+   */
+  serialize(element: ElementNode): string {
+    const prepared = this.prepareForSave(element);
+    return serializeElement(prepared, this.getSerializeOptions());
+  }
+
+  /**
    * Load a card from a file path.
    * If a schema is registered for the card's tag name, the card is validated.
    *
@@ -274,8 +292,8 @@ abstract class BaseCardLoader implements ICardLoader {
 
     // Use serialized content as snapshot for consistent dirty comparison
     // Note: uses default serialize options (not loader options) since Card.isDirty()
-    // compares against serialize() with default options
-    const snapshot = serialize(node);
+    // compares against serializeElement() with default options
+    const snapshot = serializeElement(node);
     return createCard(path, node, this.fs, snapshot);
   }
 
@@ -286,7 +304,7 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   async save(card: Card): Promise<void> {
     const element = this.prepareForSave(card.element);
-    const content = serialize(element, this.getSerializeOptions());
+    const content = serializeElement(element, this.getSerializeOptions());
     await this.fs.write(card.path, content);
   }
 
@@ -299,7 +317,7 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   async saveAs(card: Card, newPath: string): Promise<Card> {
     const element = this.prepareForSave(card.element);
-    const content = serialize(element, this.getSerializeOptions());
+    const content = serializeElement(element, this.getSerializeOptions());
     await this.fs.write(newPath, content);
     return createCard(newPath, card.element, this.fs, content);
   }
@@ -406,7 +424,7 @@ abstract class BaseCardLoader implements ICardLoader {
       const refsUpdated = await this.updateRefsInNode(node, cardPath, from, to);
 
       if (refsUpdated > 0) {
-        await this.fs.write(cardPath, serialize(node, this.getSerializeOptions()));
+        await this.fs.write(cardPath, serializeElement(node, this.getSerializeOptions()));
         result.updatedCards.push({ path: cardPath, refsUpdated });
       }
     }
@@ -419,7 +437,7 @@ abstract class BaseCardLoader implements ICardLoader {
 
     // Return a new Card with the updated path
     const element = this.prepareForSave(card.element);
-    const content = serialize(element, this.getSerializeOptions());
+    const content = serializeElement(element, this.getSerializeOptions());
     const newCard = createCard(to, card.element, this.fs, content);
 
     return { card: newCard, result };

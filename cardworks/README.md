@@ -640,6 +640,17 @@ await loader.save(card);
 const newCard = await loader.saveAs(card, "/project/cards/RecipeCopy.card");
 ```
 
+### Serializing to String
+
+Get the XML string without saving to a file:
+
+```typescript
+// Serialize using loader's options (indent, requireVersion)
+const xml = loader.serialize(card.element);
+
+// This applies the same formatting as save() would use
+```
+
 ### Checking for Changes
 
 ```typescript
@@ -1278,6 +1289,7 @@ Steps:
 | `load(path)` | Load a card, returns Card |
 | `save(card)` | Save card to its file path |
 | `saveAs(card, path)` | Save card to new path, returns new Card |
+| `serialize(element)` | Serialize element to XML string with loader options |
 | `resolveRef(ref, fromPath)` | Resolve reference from context |
 | `resolveRefs(refs, fromPath)` | Resolve multiple whitespace-separated refs |
 | `exists(path)` | Check if card file exists |
