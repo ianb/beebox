@@ -1,0 +1,35 @@
+{
+  "name": "callback-box",
+  "version": "0.1.0",
+  "description": "A Claude Code wrapper system for file-based processing",
+  "type": "module",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "cb": "./bin/cb"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "start": "node dist/webapp/server.js",
+    "cli": "node dist/cli/index.js"
+  },
+  "keywords": [
+    "claude",
+    "automation",
+    "inbox",
+    "workflow"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "cardworks": "file:../cardworks",
+    "commander": "^13.0.0",
+    "zod": "^3.24.0"
+  }
+}
