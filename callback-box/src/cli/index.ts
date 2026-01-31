@@ -16,6 +16,7 @@ import {
   serveCommand,
   wakeupCommand,
   answerCommand,
+  pullCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -37,6 +38,7 @@ program.addCommand(contextCommand);
 program.addCommand(serveCommand);
 program.addCommand(wakeupCommand);
 program.addCommand(answerCommand);
+program.addCommand(pullCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)
@@ -51,15 +53,6 @@ program
     console.log("Not yet implemented");
   });
 
-program
-  .command("pull")
-  .description("Pull external state from connectors")
-  .argument("[connector]", "Connector to pull from")
-  .option("--all", "Pull from all connectors")
-  .action((connector: string | undefined, options: { all?: boolean }) => {
-    console.log(`cb pull: would pull from ${connector ?? (options.all ? "all connectors" : "nothing specified")}`);
-    console.log("Not yet implemented");
-  });
 
 program
   .command("do")

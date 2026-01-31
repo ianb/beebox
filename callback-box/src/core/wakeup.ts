@@ -9,6 +9,11 @@ import { getSystemState, generateContext } from "./state.js";
 import { stageAll, commit, hasCommits, getStatus } from "../cli/lib/git.js";
 import { createLoader } from "../cli/lib/loader.js";
 import { runPreActions } from "./preactions/index.js";
+import {
+  runAgent,
+  buildInboxProcessingPrompt,
+  buildItemProcessingPrompt,
+} from "./agent.js";
 
 export interface WakeupOptions {
   dryRun?: boolean | undefined;
@@ -67,7 +72,7 @@ export async function runWakeup(
       onLog("  (dry run - skipping)");
       results.push({ name: "check-inbox", skipped: true });
     } else {
-      const inboxResult = await checkInboxPhase(state, onLog);
+      const inboxResult = await checkInboxPhase(boxRoot, state, onLog);
       results.push({ name: "check-inbox", ...inboxResult });
     }
     onLog("");
@@ -188,22 +193,83 @@ async function runPreActionsPhase(
 }
 
 /**
- * Check inbox phase - simulated for now.
+ * Check inbox phase - invokes agent to process inbox items.
  */
 async function checkInboxPhase(
+  boxRoot: string,
   state: Awaited<ReturnType<typeof getSystemState>>,
   onLog: (msg: string) => void
 ): Promise<Omit<PhaseResult, "name">> {
-  if (state.inbox.length === 0) {
-    onLog("  No items in inbox");
-    return { message: "No items in inbox" };
+  // Filter to only new items
+  const newItems = state.inbox.filter((item) => item.status === "new");
+
+  if (newItems.length === 0) {
+    onLog("  No new items in inbox");
+    return { message: "No new items in inbox" };
   }
 
-  for (const item of state.inbox) {
-    onLog(`  Would process: ${item.relativePath}`);
+  // Limit batch size to avoid expensive agent runs
+  const BATCH_SIZE = 10;
+  const itemsToProcess = newItems.slice(0, BATCH_SIZE);
+  const remaining = newItems.length - itemsToProcess.length;
+
+  if (remaining > 0) {
+    onLog(`  Processing ${itemsToProcess.length} of ${newItems.length} new item(s) (${remaining} remaining for next run)`);
+  } else {
+    onLog(`  Processing ${itemsToProcess.length} new item(s) with agent...`);
   }
 
-  return { message: `${state.inbox.length} item(s) in inbox (processing not yet implemented)` };
+  const systemPrompt = buildInboxProcessingPrompt(boxRoot);
+  const itemPaths = itemsToProcess.map((item) => item.relativePath);
+  const userPrompt = buildItemProcessingPrompt(itemPaths);
+
+  try {
+    const result = await runAgent({
+      boxRoot,
+      systemPrompt,
+      prompt: userPrompt,
+      onOutput: (text) => {
+        // Stream output to log
+        for (const line of text.split("\n")) {
+          if (line.trim()) {
+            onLog(`  > ${line}`);
+          }
+        }
+      },
+    });
+
+    if (!result.success) {
+      onLog(`  Agent error: ${result.error}`);
+      return {
+        message: `Agent failed: ${result.error}`,
+        error: result.error,
+      };
+    }
+
+    // Commit any changes made by the agent
+    const status = await getStatus(boxRoot);
+    if (!status.clean) {
+      await stageAll(boxRoot);
+      await commit(boxRoot, {
+        message: `Process ${itemsToProcess.length} inbox item(s)`,
+        trailers: {
+          "Triggered-By": "cb wakeup",
+          Phase: "check-inbox",
+          "Items-Processed": String(itemsToProcess.length),
+        },
+      });
+      onLog("  Agent changes committed");
+    }
+
+    const msg = remaining > 0
+      ? `Processed ${itemsToProcess.length} item(s), ${remaining} remaining`
+      : `Processed ${itemsToProcess.length} item(s)`;
+    return { message: msg };
+  } catch (error) {
+    const errMsg = (error as Error).message;
+    onLog(`  Error running agent: ${errMsg}`);
+    return { message: `Agent error: ${errMsg}`, error: errMsg };
+  }
 }
 
 /**

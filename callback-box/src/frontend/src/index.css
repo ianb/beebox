@@ -58,3 +58,21 @@ body {
 .status-processed {
   @apply bg-gray-100 text-gray-800;
 }
+
+/* Highlight.js XML customizations - dim the angle brackets */
+.hljs-tag {
+  color: #ccc;
+}
+
+.hljs-name {
+  color: #22863a;
+  font-weight: 500;
+}
+
+.hljs-attr {
+  color: #6f42c1;
+}
+
+.hljs-string {
+  color: #032f62;
+}

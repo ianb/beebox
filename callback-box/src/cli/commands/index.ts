@@ -12,3 +12,4 @@ export { contextCommand } from "./context.js";
 export { serveCommand } from "./serve.js";
 export { wakeupCommand } from "./wakeup.js";
 export { answerCommand } from "./answer.js";
+export { pullCommand } from "./pull.js";

@@ -11,6 +11,10 @@ import {
   createCliContext,
   getTemplateNames,
 } from "../../core/commands/index.js";
+import {
+  getAllTemplates,
+  describeTemplateArgs,
+} from "../../schemas/index.js";
 
 interface CreateOptions {
   template?: string;
@@ -24,7 +28,7 @@ interface CreateOptions {
 
 export const createCommand = new Command("create")
   .description("Create a new card from template")
-  .argument("<path>", "Path for new card (relative to box root or absolute)")
+  .argument("[path]", "Path for new card (relative to box root or absolute)")
   .option(
     "-t, --template <name>",
     "Override template (usually inferred from card type in filename)"
@@ -38,7 +42,35 @@ export const createCommand = new Command("create")
   )
   .option("--commit", "Commit the new card")
   .option("-a, --attachment <path>", "Path to an attachment file")
-  .action(async (targetPath: string, options: CreateOptions) => {
+  .option("--list-templates", "List all available templates")
+  .option("--describe-template <name>", "Show details about a specific template")
+  .action(async (targetPath: string | undefined, options: CreateOptions & { listTemplates?: boolean; describeTemplate?: string }) => {
+    // Handle --list-templates
+    if (options.listTemplates) {
+      console.log("Available templates:\n");
+      for (const template of getAllTemplates()) {
+        console.log(`  ${template.name}`);
+        console.log(`    ${template.description}`);
+        console.log(`    Card types: ${template.cardTypes.join(", ")}`);
+        console.log();
+      }
+      return;
+    }
+
+    // Handle --describe-template
+    if (options.describeTemplate) {
+      console.log(describeTemplateArgs(options.describeTemplate));
+      return;
+    }
+
+    // Require path for actual card creation
+    if (!targetPath) {
+      console.error("Error: path argument is required for card creation");
+      console.error("Use --list-templates to see available templates");
+      console.error("Use --describe-template <name> to see template arguments");
+      process.exit(1);
+    }
+
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);

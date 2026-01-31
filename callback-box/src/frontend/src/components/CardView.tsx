@@ -2,8 +2,31 @@
  * View for displaying a card's content.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getCard, type CardResponse } from "../api";
+import hljs from "highlight.js/lib/core";
+import xml from "highlight.js/lib/languages/xml";
+import "highlight.js/styles/github.css";
+
+// Register XML language
+hljs.registerLanguage("xml", xml);
+
+function HighlightedXml({ xml: xmlContent }: { xml: string }) {
+  const highlighted = useMemo(() => {
+    return hljs.highlight(xmlContent, { language: "xml" }).value;
+  }, [xmlContent]);
+
+  return (
+    <div className="bg-gray-100 rounded p-4 overflow-auto">
+      <pre className="text-sm whitespace-pre-wrap font-mono">
+        <code
+          className="hljs"
+          dangerouslySetInnerHTML={{ __html: highlighted }}
+        />
+      </pre>
+    </div>
+  );
+}
 
 interface CardViewProps {
   path: string;
@@ -61,11 +84,7 @@ export function CardView({ path }: CardViewProps) {
         </div>
       </div>
 
-      <div className="bg-gray-100 rounded p-4 overflow-auto">
-        <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono">
-          {card.xml}
-        </pre>
-      </div>
+      <HighlightedXml xml={card.xml} />
     </div>
   );
 }
