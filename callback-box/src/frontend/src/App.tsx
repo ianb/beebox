@@ -8,8 +8,7 @@ import { CardList } from "./components/CardList";
 import { CardView } from "./components/CardView";
 import { QuestionForm } from "./components/QuestionForm";
 import { ActivityLog } from "./components/ActivityLog";
-import { CreateMemo } from "./components/CreateMemo";
-import { VoiceRecorder } from "./components/VoiceRecorder";
+import { NewMemo, buildCreateCommandLabel, type MemoCommandArgs } from "./components/NewMemo";
 import { CommandRunner } from "./components/CommandRunner";
 import { useSSE } from "./hooks/useSSE";
 import {
@@ -30,6 +29,7 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showCreateMemo, setShowCreateMemo] = useState(false);
   const [showWakeup, setShowWakeup] = useState(false);
+  const [createMemoArgs, setCreateMemoArgs] = useState<MemoCommandArgs | null>(null);
 
   // SSE connection for live updates
   const { connected } = useSSE("/api/events", {
@@ -83,9 +83,20 @@ export default function App() {
     refresh();
   };
 
-  // Handle memo created
-  const handleMemoCreated = () => {
+  // Handle memo form submitted - transition to showing command runner
+  const handleMemoSubmit = (args: MemoCommandArgs) => {
+    setCreateMemoArgs(args);
+  };
+
+  // Handle create command complete
+  const handleCreateComplete = () => {
+    refresh();
+  };
+
+  // Close create memo view
+  const handleCreateClose = () => {
     setShowCreateMemo(false);
+    setCreateMemoArgs(null);
     setActiveTab("inbox");
     refresh();
   };
@@ -148,7 +159,12 @@ export default function App() {
             ) : (
               <CardList
                 items={getTabItems()}
-                onSelect={setSelectedCard}
+                onSelect={(card) => {
+                  setSelectedCard(card);
+                  setShowCreateMemo(false);
+                  setShowWakeup(false);
+                  setCreateMemoArgs(null);
+                }}
                 selectedPath={selectedCard?.path}
                 emptyMessage={`No ${activeTab}`}
               />
@@ -160,6 +176,7 @@ export default function App() {
             <button
               onClick={() => {
                 setShowCreateMemo(true);
+                setCreateMemoArgs(null);
                 setShowWakeup(false);
                 setSelectedCard(null);
               }}
@@ -192,18 +209,26 @@ export default function App() {
                 className="flex-1"
               />
             </div>
+          ) : showCreateMemo && createMemoArgs ? (
+            // Show CommandRunner after form submission
+            <div className="p-4 h-full flex flex-col max-w-3xl">
+              <CommandRunner
+                command="create"
+                args={createMemoArgs as unknown as Record<string, unknown>}
+                label={buildCreateCommandLabel(createMemoArgs)}
+                onComplete={handleCreateComplete}
+                onClose={handleCreateClose}
+                autoRun
+                className="flex-1"
+              />
+            </div>
           ) : showCreateMemo ? (
-            <div className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
-                <CreateMemo onCreated={handleMemoCreated} />
-                <VoiceRecorder onCreated={handleMemoCreated} />
-              </div>
-              <button
-                onClick={() => setShowCreateMemo(false)}
-                className="mt-4 text-gray-500 hover:text-gray-700"
-              >
-                Cancel
-              </button>
+            // Show form for input
+            <div className="p-4 h-full">
+              <NewMemo
+                onSubmit={handleMemoSubmit}
+                onClose={() => setShowCreateMemo(false)}
+              />
             </div>
           ) : selectedCard ? (
             <div className="p-4">

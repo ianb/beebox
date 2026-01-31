@@ -33,12 +33,14 @@ export function CardList({
             selectedPath === item.path ? "bg-blue-50" : ""
           }`}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium text-gray-900">{item.name}</div>
-              <div className="text-sm text-gray-500">{item.relativePath}</div>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-gray-900 truncate">{item.name}</div>
+              {item.prompt && (
+                <div className="text-sm text-gray-600 truncate">{item.prompt}</div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <span className="text-xs text-gray-400">{item.type}</span>
               {item.status && (
                 <span className={`status-badge status-${item.status}`}>
@@ -47,11 +49,6 @@ export function CardList({
               )}
             </div>
           </div>
-          {item.prompt && (
-            <div className="mt-1 text-sm text-gray-600 truncate">
-              {item.prompt}
-            </div>
-          )}
         </button>
       ))}
     </div>

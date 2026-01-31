@@ -35,7 +35,37 @@ export const serveCommand = new Command("serve")
       const child = spawn("npx", ["tsx", ...args], {
         stdio: "inherit",
         cwd: process.cwd(),
+        detached: true, // Create new process group so we can kill the tree
       });
+
+      // Kill child process tree on exit
+      const cleanup = () => {
+        if (child.pid && !child.killed) {
+          try {
+            // Kill the process group (negative PID kills the group)
+            process.kill(-child.pid, "SIGTERM");
+          } catch {
+            // Process may already be dead, try direct kill
+            try {
+              child.kill("SIGTERM");
+            } catch {
+              // Already dead
+            }
+          }
+        }
+      };
+
+      process.on("SIGINT", () => {
+        cleanup();
+        process.exit(0);
+      });
+
+      process.on("SIGTERM", () => {
+        cleanup();
+        process.exit(0);
+      });
+
+      process.on("exit", cleanup);
 
       child.on("error", (err) => {
         console.error("Failed to start dev server:", err.message);
