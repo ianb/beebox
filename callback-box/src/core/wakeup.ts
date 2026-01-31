@@ -1,0 +1,262 @@
+/**
+ * Wakeup processing logic.
+ *
+ * This module contains the core wakeup logic that can be called
+ * from both the CLI and the web API.
+ */
+
+import { getSystemState, generateContext } from "./state.js";
+import { stageAll, commit, hasCommits, getStatus } from "../cli/lib/git.js";
+import { createLoader } from "../cli/lib/loader.js";
+import { runPreActions } from "./preactions/index.js";
+
+export interface WakeupOptions {
+  dryRun?: boolean | undefined;
+  onLog?: ((message: string) => void) | undefined;
+}
+
+export interface WakeupResult {
+  success: boolean;
+  phases: PhaseResult[];
+  error?: string;
+}
+
+export interface PhaseResult {
+  name: string;
+  skipped?: boolean | undefined;
+  message?: string | undefined;
+  error?: string | undefined;
+}
+
+/**
+ * Run the wakeup processing cycle.
+ */
+export async function runWakeup(
+  boxRoot: string,
+  options: WakeupOptions = {}
+): Promise<WakeupResult> {
+  const { dryRun = false, onLog = console.log } = options;
+  const results: PhaseResult[] = [];
+
+  try {
+    // Get current state
+    const state = await getSystemState(boxRoot);
+    const context = await generateContext(boxRoot);
+
+    onLog("Current state:");
+    onLog(`  Inbox: ${state.inbox.length} item(s)`);
+    onLog(`  Questions: ${state.questions.length} (${context.pendingQuestions.length} pending)`);
+    onLog(`  Commands: ${state.commands.length}`);
+    onLog(`  Git: ${state.git.clean ? "clean" : "uncommitted changes"}`);
+    onLog("");
+
+    // Phase 1: Run pre-actions
+    onLog("[Run pre-actions]");
+    if (dryRun) {
+      onLog("  (dry run - skipping)");
+      results.push({ name: "pre-actions", skipped: true });
+    } else {
+      const preActionResult = await runPreActionsPhase(boxRoot, state, onLog);
+      results.push({ name: "pre-actions", ...preActionResult });
+    }
+    onLog("");
+
+    // Phase 2: Check inbox
+    onLog("[Check inbox]");
+    if (dryRun) {
+      onLog("  (dry run - skipping)");
+      results.push({ name: "check-inbox", skipped: true });
+    } else {
+      const inboxResult = await checkInboxPhase(state, onLog);
+      results.push({ name: "check-inbox", ...inboxResult });
+    }
+    onLog("");
+
+    // Phase 3: Process pending questions
+    onLog("[Process pending questions]");
+    if (dryRun) {
+      onLog("  (dry run - skipping)");
+      results.push({ name: "process-questions", skipped: true });
+    } else {
+      const questionsResult = await processQuestionsPhase(context, onLog);
+      results.push({ name: "process-questions", ...questionsResult });
+    }
+    onLog("");
+
+    // Phase 4: Execute ready commands
+    onLog("[Execute ready commands]");
+    if (dryRun) {
+      onLog("  (dry run - skipping)");
+      results.push({ name: "execute-commands", skipped: true });
+    } else {
+      const commandsResult = await executeCommandsPhase(state, onLog);
+      results.push({ name: "execute-commands", ...commandsResult });
+    }
+    onLog("");
+
+    // Phase 5: Run tailing phase
+    onLog("[Run tailing phase]");
+    if (dryRun) {
+      onLog("  (dry run - skipping)");
+      results.push({ name: "tailing", skipped: true });
+    } else {
+      const tailingResult = await runTailingPhase(onLog);
+      results.push({ name: "tailing", ...tailingResult });
+    }
+    onLog("");
+
+    // Commit any remaining changes
+    if (!dryRun) {
+      const status = await getStatus(boxRoot);
+      if (!status.clean && (await hasCommits(boxRoot))) {
+        onLog("[Committing changes]");
+        await stageAll(boxRoot);
+        await commit(boxRoot, {
+          message: "Wakeup processing cycle",
+          trailers: {
+            "Triggered-By": "cb wakeup",
+          },
+        });
+        onLog("  Changes committed");
+      }
+    }
+
+    return { success: true, phases: results };
+  } catch (error) {
+    return {
+      success: false,
+      phases: results,
+      error: (error as Error).message,
+    };
+  }
+}
+
+/**
+ * Run pre-actions phase.
+ */
+async function runPreActionsPhase(
+  boxRoot: string,
+  state: Awaited<ReturnType<typeof getSystemState>>,
+  onLog: (msg: string) => void
+): Promise<Omit<PhaseResult, "name">> {
+  if (state.inbox.length === 0) {
+    onLog("  No items to prepare");
+    return { message: "No items to prepare" };
+  }
+
+  const loader = createLoader(boxRoot);
+  let actionsRun = 0;
+
+  for (const item of state.inbox) {
+    try {
+      const card = await loader.load(item.path);
+      const results = await runPreActions({
+        boxRoot,
+        loader,
+        card,
+        cardPath: item.path,
+      });
+
+      if (results.length > 0) {
+        actionsRun += results.length;
+      }
+    } catch (error) {
+      onLog(`  Error processing ${item.relativePath}: ${(error as Error).message}`);
+    }
+  }
+
+  if (actionsRun === 0) {
+    onLog("  No pre-actions needed");
+    return { message: "No pre-actions needed" };
+  }
+
+  // Commit pre-action changes
+  const status = await getStatus(boxRoot);
+  if (!status.clean) {
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
+      message: "Pre-action processing",
+      trailers: {
+        "Triggered-By": "cb wakeup",
+        Phase: "pre-actions",
+      },
+    });
+    onLog("  Pre-action changes committed");
+  }
+
+  return { message: `Ran ${actionsRun} pre-action(s)` };
+}
+
+/**
+ * Check inbox phase - simulated for now.
+ */
+async function checkInboxPhase(
+  state: Awaited<ReturnType<typeof getSystemState>>,
+  onLog: (msg: string) => void
+): Promise<Omit<PhaseResult, "name">> {
+  if (state.inbox.length === 0) {
+    onLog("  No items in inbox");
+    return { message: "No items in inbox" };
+  }
+
+  for (const item of state.inbox) {
+    onLog(`  Would process: ${item.relativePath}`);
+  }
+
+  return { message: `${state.inbox.length} item(s) in inbox (processing not yet implemented)` };
+}
+
+/**
+ * Process questions phase - simulated for now.
+ */
+async function processQuestionsPhase(
+  context: Awaited<ReturnType<typeof generateContext>>,
+  onLog: (msg: string) => void
+): Promise<Omit<PhaseResult, "name">> {
+  if (context.pendingQuestions.length === 0) {
+    onLog("  No pending questions");
+    return { message: "No pending questions" };
+  }
+
+  for (const q of context.pendingQuestions) {
+    onLog(`  Waiting for answer: ${q.path}`);
+    onLog(`    "${q.prompt}"`);
+  }
+
+  return { message: `${context.pendingQuestions.length} pending question(s)` };
+}
+
+/**
+ * Execute commands phase - simulated for now.
+ */
+async function executeCommandsPhase(
+  state: Awaited<ReturnType<typeof getSystemState>>,
+  onLog: (msg: string) => void
+): Promise<Omit<PhaseResult, "name">> {
+  const ready = state.commands.filter((c) => c.status === "ready");
+
+  if (ready.length === 0) {
+    onLog("  No ready commands");
+    return { message: "No ready commands" };
+  }
+
+  for (const cmd of ready) {
+    onLog(`  Would execute: ${cmd.relativePath}`);
+  }
+
+  return { message: `${ready.length} command(s) ready (execution not yet implemented)` };
+}
+
+/**
+ * Run tailing phase - simulated for now.
+ */
+async function runTailingPhase(
+  onLog: (msg: string) => void
+): Promise<Omit<PhaseResult, "name">> {
+  onLog("  Would run tailing phase:");
+  onLog("    - Update indexes");
+  onLog("    - Schedule next wakeup");
+  onLog("    - Clean up old archives");
+
+  return { message: "Tailing phase not yet implemented" };
+}

@@ -1,0 +1,4 @@
+node-arg:
+  - --import=tsx
+include:
+  - test/**/*.test.ts

@@ -9,11 +9,19 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:frontend": "cd src/frontend && npm run build",
+    "build:all": "npm run build && npm run build:frontend",
     "dev": "tsc --watch",
+    "dev:frontend": "cd src/frontend && npm run dev",
+    "dev:server": "npm run build && node dist/cli/index.js serve",
     "typecheck": "tsc --noEmit",
+    "typecheck:frontend": "cd src/frontend && npm run typecheck",
+    "typecheck:all": "npm run typecheck && npm run typecheck:frontend",
     "lint": "tsc --noEmit",
     "start": "node dist/webapp/server.js",
-    "cli": "node dist/cli/index.js"
+    "cli": "node dist/cli/index.js",
+    "test": "tap",
+    "test:watch": "tap --watch"
   },
   "keywords": [
     "claude",
@@ -24,12 +32,19 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/chokidar": "^1.7.5",
     "@types/node": "^22.0.0",
+    "tap": "^21.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0"
   },
   "dependencies": {
+    "@fastify/multipart": "^9.4.0",
+    "@fastify/static": "^9.0.0",
     "cardworks": "file:../cardworks",
+    "chokidar": "^5.0.0",
     "commander": "^13.0.0",
+    "fastify": "^5.7.2",
     "zod": "^3.24.0"
   }
 }

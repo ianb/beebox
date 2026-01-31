@@ -1,6 +1,22 @@
 #!/usr/bin/env node
 
+/**
+ * Callback Box CLI
+ *
+ * The CLI is the universal interface - humans, agents, and tests all use it.
+ */
+
 import { Command } from "commander";
+import {
+  initCommand,
+  statusCommand,
+  validateCommand,
+  createCommand,
+  contextCommand,
+  serveCommand,
+  wakeupCommand,
+  answerCommand,
+} from "./commands/index.js";
 
 const program = new Command();
 
@@ -9,30 +25,22 @@ program
   .description("Callback Box - file-based processing system")
   .version("0.1.0");
 
-program
-  .command("init")
-  .description("Initialize a new callback box")
-  .argument("[path]", "Path to initialize", ".")
-  .action((path: string) => {
-    console.log(`cb init: would initialize at ${path}`);
-    console.log("Not yet implemented");
-  });
+// ============================================
+// Implemented commands
+// ============================================
 
-program
-  .command("wakeup")
-  .description("Wake up and process pending items")
-  .action(() => {
-    console.log("cb wakeup: would process pending items");
-    console.log("Not yet implemented");
-  });
+program.addCommand(initCommand);
+program.addCommand(statusCommand);
+program.addCommand(validateCommand);
+program.addCommand(createCommand);
+program.addCommand(contextCommand);
+program.addCommand(serveCommand);
+program.addCommand(wakeupCommand);
+program.addCommand(answerCommand);
 
-program
-  .command("context")
-  .description("Show current context for agents")
-  .action(() => {
-    console.log("cb context: would show current state");
-    console.log("Not yet implemented");
-  });
+// ============================================
+// Placeholder commands (to be implemented)
+// ============================================
 
 program
   .command("commit")
@@ -40,16 +48,6 @@ program
   .option("-m, --message <message>", "Commit message")
   .action((options: { message?: string }) => {
     console.log(`cb commit: would commit with message "${options.message ?? "(no message)"}"`);
-    console.log("Not yet implemented");
-  });
-
-program
-  .command("validate")
-  .description("Validate cards against schemas")
-  .argument("[path]", "Path to validate")
-  .option("--all", "Validate all cards")
-  .action((path: string | undefined, options: { all?: boolean }) => {
-    console.log(`cb validate: would validate ${path ?? (options.all ? "all" : "nothing specified")}`);
     console.log("Not yet implemented");
   });
 
@@ -93,19 +91,6 @@ program
   });
 
 program
-  .command("create")
-  .description("Create a new card from template")
-  .argument("<path>", "Path for new card")
-  .argument("[args...]", "Template arguments (key=value)")
-  .action((path: string, args: string[]) => {
-    console.log(`cb create: would create ${path}`);
-    if (args.length > 0) {
-      console.log(`  with args: ${args.join(", ")}`);
-    }
-    console.log("Not yet implemented");
-  });
-
-program
   .command("tail")
   .description("Run tailing phase (indexing, scheduling)")
   .action(() => {
@@ -124,14 +109,6 @@ program
 // ============================================
 // Inspection commands
 // ============================================
-
-program
-  .command("status")
-  .description("Show current state summary")
-  .action(() => {
-    console.log("cb status: would show pending items, commands, questions");
-    console.log("Not yet implemented");
-  });
 
 program
   .command("show")
@@ -175,16 +152,6 @@ program
   .action((type: string, options: { from?: string; subject?: string; body?: string }) => {
     console.log(`cb inject: would create fake ${type}`);
     console.log(`  options: ${JSON.stringify(options)}`);
-    console.log("Not yet implemented");
-  });
-
-program
-  .command("fake-answer")
-  .description("Answer a pending question from CLI")
-  .argument("<question>", "Question card path")
-  .argument("<answer>", "Answer (option ID or text)")
-  .action((question: string, answer: string) => {
-    console.log(`cb fake-answer: would answer ${question} with "${answer}"`);
     console.log("Not yet implemented");
   });
 

@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow p-4 mb-4;
+}
+
+.btn {
+  @apply px-4 py-2 rounded font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+}
+
+.btn-success {
+  @apply bg-green-600 text-white hover:bg-green-700;
+}
+
+.input {
+  @apply border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500;
+}
+
+.status-badge {
+  @apply inline-block px-2 py-1 text-xs rounded font-medium;
+}
+
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-answered {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-new {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.status-processing {
+  @apply bg-purple-100 text-purple-800;
+}
+
+.status-processed {
+  @apply bg-gray-100 text-gray-800;
+}

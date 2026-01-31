@@ -215,3 +215,5 @@ When you create a new document in `docs/`:
 3. Link it from relevant sections of other docs if appropriate
 
 Keep docs focused. One topic per document. Cross-reference rather than duplicate.
+
+@THINKING_CLAUDE.md
