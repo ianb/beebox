@@ -12,6 +12,9 @@ export {
   QuestionSchema,
   NewsItemSchema,
   NewsSummarySchema,
+  NewsEditionSchema,
+  NewsGuideSchema,
+  FeedbackSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -19,6 +22,9 @@ export type { Memo, MemoStatus } from "./memo.js";
 export type { Question, QuestionStatus, QuestionInputType } from "./question.js";
 export type { NewsItem, NewsItemStatus } from "./news-item.js";
 export type { NewsSummary, NewsSummaryStatus } from "./news-summary.js";
+export type { NewsEdition, NewsEditionStatus } from "./news-edition.js";
+export type { NewsGuide } from "./news-guide.js";
+export type { Feedback } from "./feedback.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";

@@ -12,6 +12,7 @@ import { NewsItemSchema } from "./news-item.js";
 import { NewsSummarySchema } from "./news-summary.js";
 import { NewsEditionSchema } from "./news-edition.js";
 import { NewsGuideSchema } from "./news-guide.js";
+import { FeedbackSchema } from "./feedback.js";
 
 /**
  * All registered card schemas.
@@ -23,6 +24,7 @@ export const schemas: ElementSchema[] = [
   NewsSummarySchema,
   NewsEditionSchema,
   NewsGuideSchema,
+  FeedbackSchema,
 ];
 
 /**
@@ -57,3 +59,4 @@ export { NewsItemSchema } from "./news-item.js";
 export { NewsSummarySchema } from "./news-summary.js";
 export { NewsEditionSchema } from "./news-edition.js";
 export { NewsGuideSchema } from "./news-guide.js";
+export { FeedbackSchema } from "./feedback.js";

@@ -175,8 +175,7 @@ export async function registerEditionRoutes(
     );
 
     const feedbackContent = `<feedback type="edition">
-  <edition-path>${editionPath}</edition-path>
-  <target-id>${targetId}</target-id>
+  <target ref="${editionPath}#${targetId}" />
   <comment>${comment}</comment>
   <timestamp>${new Date().toISOString()}</timestamp>
 </feedback>
@@ -212,8 +211,7 @@ export async function registerEditionRoutes(
     );
 
     const responseContent = `<feedback type="query-response">
-  <edition-path>${editionPath}</edition-path>
-  <query-id>${queryId}</query-id>
+  <target ref="${editionPath}#${queryId}" />
   <response>${response}</response>
   <timestamp>${new Date().toISOString()}</timestamp>
 </feedback>
