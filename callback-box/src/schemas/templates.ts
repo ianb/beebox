@@ -20,6 +20,7 @@ import {
 } from "./question.js";
 import { createNewsItemTemplate } from "./news-item.js";
 import { createNewsSummaryTemplate } from "./news-summary.js";
+import { createInitialGuideTemplate } from "./news-guide.js";
 
 /**
  * Template definition with typed arguments.
@@ -252,4 +253,20 @@ registerTemplate({
       sources: args.sources,
       status: args.status,
     }),
+});
+
+registerTemplate({
+  name: "news-guide",
+  description: "User guide for news curation - captures interests, preferences, and experiments",
+  cardTypes: ["news-guide"],
+  argsSchema: z.object({
+    feedTitles: z
+      .array(z.string())
+      .optional()
+      .describe("Feed titles to infer initial interests from"),
+  }),
+  generate: (args) =>
+    createInitialGuideTemplate(
+      args.feedTitles ? { feedTitles: args.feedTitles } : {}
+    ),
 });

@@ -162,6 +162,86 @@ export const Sources = element("sources", {
 });
 
 /**
+ * Reference to an interest from the guide that influenced this edition.
+ */
+export const InterestRef = element("interest", {
+  attrs: {
+    /** How this interest was applied */
+    application: z.enum(["featured", "included", "tested"]).optional(),
+  },
+  /** The interest topic from the guide */
+  text: z.string(),
+});
+
+/**
+ * Reference to an experiment being tested in this edition.
+ */
+export const ExperimentRef = element("experiment-ref", {
+  attrs: {
+    /** ID of the experiment in the guide */
+    id: z.string(),
+  },
+  /** Brief note on how the experiment was applied */
+  text: z.string().optional(),
+});
+
+/**
+ * A hypothesis being tested in this edition.
+ * These are specific testable claims that feedback can confirm or deny.
+ */
+export const EditionHypothesis = element("hypothesis", {
+  attrs: {
+    /** Unique ID for referencing in feedback */
+    id: z.string(),
+    /** Related experiment ID if any */
+    "experiment-ref": z.string().optional(),
+  },
+  /** The hypothesis statement */
+  text: z.string(),
+});
+
+/**
+ * Curation metadata - how the guide influenced this edition.
+ *
+ * This enables learning from feedback by tracking what decisions
+ * were made and why, so we can update the guide based on results.
+ *
+ * Example:
+ * ```xml
+ * <curation guide-version="2026-02-01T10:00:00Z">
+ *   <interest application="featured">AI safety</interest>
+ *   <interest application="tested">retro computing</interest>
+ *   <experiment-ref id="exp-retro">Testing if retro content is engaging</experiment-ref>
+ *   <hypothesis id="h1" experiment-ref="exp-retro">
+ *     User will engage with Amiga Unix content as a change of pace
+ *   </hypothesis>
+ *   <hypothesis id="h2">
+ *     Technical depth on AI security will be appreciated
+ *   </hypothesis>
+ *   <rationale>
+ *     Combined AI security (high-confidence interest) with retro computing
+ *     (hypothesis to test) as an experiment in tonal contrast.
+ *   </rationale>
+ * </curation>
+ * ```
+ */
+export const Curation = element("curation", {
+  attrs: {
+    /** Timestamp of the guide version used */
+    "guide-version": z.string().datetime({ offset: true }).optional(),
+  },
+  children: z.array(
+    z.union([
+      InterestRef,
+      ExperimentRef,
+      EditionHypothesis,
+      /** Explanation of editorial decisions */
+      element("rationale", { text: z.string() }),
+    ])
+  ).optional(),
+});
+
+/**
  * News edition card schema.
  *
  * Example:
@@ -210,6 +290,7 @@ export const NewsEditionSchema = element("news-edition", {
       EditionByline,
       EditionContent,
       Sources,
+      Curation,
     ])
   ),
 });
@@ -242,6 +323,23 @@ export interface ParsedNewsEdition {
     title: string;
     usage: "primary" | "supporting" | "mentioned" | undefined;
   }>;
+  curation: {
+    guideVersion: string | undefined;
+    interests: Array<{
+      topic: string;
+      application: "featured" | "included" | "tested" | undefined;
+    }>;
+    experimentRefs: Array<{
+      id: string;
+      note: string | undefined;
+    }>;
+    hypotheses: Array<{
+      id: string;
+      experimentRef: string | undefined;
+      text: string;
+    }>;
+    rationale: string | undefined;
+  } | undefined;
 }
 
 /**
@@ -311,6 +409,34 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
     usage: s.attrs.usage as "primary" | "supporting" | "mentioned" | undefined,
   }));
 
+  // Parse curation
+  const curationEl = getChild(children, "curation");
+  let curation: ParsedNewsEdition["curation"] = undefined;
+  if (curationEl) {
+    const curationChildren = (curationEl.children ?? []) as ElementNode[];
+    const interests = getChildren(curationChildren, "interest").map((i) => ({
+      topic: i.text ?? "",
+      application: i.attrs.application as "featured" | "included" | "tested" | undefined,
+    }));
+    const experimentRefs = getChildren(curationChildren, "experiment-ref").map((e) => ({
+      id: e.attrs.id as string,
+      note: e.text,
+    }));
+    const hypotheses = getChildren(curationChildren, "hypothesis").map((h) => ({
+      id: h.attrs.id as string,
+      experimentRef: h.attrs["experiment-ref"] as string | undefined,
+      text: h.text ?? "",
+    }));
+    const rationaleEl = getChild(curationChildren, "rationale");
+    curation = {
+      guideVersion: curationEl.attrs["guide-version"] as string | undefined,
+      interests,
+      experimentRefs,
+      hypotheses,
+      rationale: rationaleEl?.text,
+    };
+  }
+
   return {
     status: edition.attrs.status as NewsEditionStatus,
     title: titleEl?.text ?? "Untitled",
@@ -324,6 +450,7 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
       queries: topQueries,
     },
     sources,
+    curation,
   };
 }
 

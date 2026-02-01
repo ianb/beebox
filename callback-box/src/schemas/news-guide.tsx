@@ -1,0 +1,482 @@
+/**
+ * News guide schema - the theory of user for news curation.
+ *
+ * This is a living document that captures:
+ * - What we know about the user's interests (with confidence levels)
+ * - Hypotheses to test through editions
+ * - Experiments (directions to try)
+ * - Evidence from feedback
+ *
+ * The guide influences how editions are created and evolves based on
+ * user feedback on those editions.
+ */
+
+import { element, serialize, type ElementNode } from "cardworks";
+import { z } from "zod";
+
+/**
+ * Confidence levels for beliefs about the user.
+ */
+export const ConfidenceLevel = z.enum([
+  "confirmed",    // User explicitly stated or strongly confirmed
+  "high",         // Strong evidence from multiple interactions
+  "medium",       // Some evidence, reasonable inference
+  "low",          // Weak inference, needs testing
+  "hypothesis",   // Untested theory
+]);
+export type ConfidenceLevel = z.infer<typeof ConfidenceLevel>;
+
+/**
+ * Source of a belief - how we came to believe this.
+ */
+export const BeliefSource = z.enum([
+  "user-stated",  // User explicitly told us
+  "feedback",     // Inferred from feedback on editions
+  "inferred",     // Inferred from news sources or behavior
+  "default",      // Reasonable default assumption
+]);
+export type BeliefSource = z.infer<typeof BeliefSource>;
+
+/**
+ * A topic or theme the user is interested in.
+ */
+export const InterestTopic = element("topic", {
+  attrs: {
+    /** How confident we are in this interest */
+    confidence: ConfidenceLevel.default("low"),
+    /** How we learned about this interest */
+    source: BeliefSource.default("inferred"),
+    /** Reference to evidence (edition path, feedback, etc.) */
+    evidence: z.string().optional(),
+  },
+  /** The topic name */
+  text: z.string(),
+});
+
+/**
+ * Container for interest topics.
+ */
+export const Interests = element("interests", {
+  children: z.array(InterestTopic),
+});
+
+/**
+ * A preference about how content should be presented.
+ */
+export const Preference = element("preference", {
+  attrs: {
+    /** What aspect this preference affects */
+    aspect: z.enum([
+      "depth",        // How deep to go (surface vs detailed)
+      "tone",         // Casual, academic, etc.
+      "frequency",    // How often to cover topic
+      "format",       // Expandos, queries, length, etc.
+      "sources",      // Preferred source types
+      "other",
+    ]),
+    confidence: ConfidenceLevel.default("low"),
+    source: BeliefSource.default("inferred"),
+    evidence: z.string().optional(),
+  },
+  /** Description of the preference */
+  text: z.string(),
+});
+
+/**
+ * Container for preferences.
+ */
+export const Preferences = element("preferences", {
+  children: z.array(Preference),
+});
+
+/**
+ * An anti-interest - something the user doesn't want.
+ */
+export const Disinterest = element("disinterest", {
+  attrs: {
+    confidence: ConfidenceLevel.default("low"),
+    source: BeliefSource.default("inferred"),
+    evidence: z.string().optional(),
+  },
+  /** What the user isn't interested in */
+  text: z.string(),
+});
+
+/**
+ * Container for anti-interests.
+ */
+export const Disinterests = element("disinterests", {
+  children: z.array(Disinterest),
+});
+
+/**
+ * Experiment status.
+ */
+export const ExperimentStatus = z.enum([
+  "proposed",     // Idea, not yet tried
+  "active",       // Currently being tested
+  "successful",   // Worked well, should continue
+  "unsuccessful", // Didn't work, should stop
+  "inconclusive", // Tried but unclear results
+]);
+export type ExperimentStatus = z.infer<typeof ExperimentStatus>;
+
+/**
+ * An experiment - a direction to try in editions.
+ *
+ * Experiments are ways to explore the user's interests or try
+ * new approaches. They have outcomes that inform future behavior.
+ */
+export const Experiment = element("experiment", {
+  attrs: {
+    /** Unique ID for referencing from editions */
+    id: z.string(),
+    /** Current status */
+    status: ExperimentStatus.default("proposed"),
+    /** When this experiment was created */
+    "created-at": z.string().datetime({ offset: true }).optional(),
+    /** When status last changed */
+    "updated-at": z.string().datetime({ offset: true }).optional(),
+  },
+  children: z.array(
+    z.union([
+      /** What we're trying */
+      element("hypothesis", { text: z.string() }),
+      /** How we'll test it */
+      element("approach", { text: z.string() }),
+      /** What we observed */
+      element("observation", {
+        attrs: {
+          /** Reference to edition or feedback */
+          ref: z.string().optional(),
+          date: z.string().optional(),
+        },
+        text: z.string(),
+      }),
+      /** Conclusion drawn */
+      element("conclusion", { text: z.string() }),
+    ])
+  ),
+});
+
+/**
+ * Container for experiments.
+ */
+export const Experiments = element("experiments", {
+  children: z.array(Experiment),
+});
+
+/**
+ * A note about context that might affect curation.
+ * E.g., "User is starting a new job in ML" or "Conference season".
+ */
+export const ContextNote = element("context", {
+  attrs: {
+    /** When this context applies (ongoing, temporary, etc.) */
+    duration: z.enum(["ongoing", "temporary", "past"]).default("ongoing"),
+    /** When added */
+    "added-at": z.string().datetime({ offset: true }).optional(),
+  },
+  text: z.string(),
+});
+
+/**
+ * Container for context notes.
+ */
+export const ContextNotes = element("context-notes", {
+  children: z.array(ContextNote),
+});
+
+/**
+ * The news guide schema.
+ *
+ * Example:
+ * ```xml
+ * <news-guide version="1">
+ *   <updated-at>2026-02-01T12:00:00Z</updated-at>
+ *
+ *   <interests>
+ *     <topic confidence="high" source="feedback" evidence="edition:2026-01-28">
+ *       AI safety and alignment
+ *     </topic>
+ *     <topic confidence="medium" source="inferred">
+ *       Systems programming
+ *     </topic>
+ *     <topic confidence="hypothesis" source="inferred">
+ *       Retro computing
+ *     </topic>
+ *   </interests>
+ *
+ *   <disinterests>
+ *     <disinterest confidence="confirmed" source="user-stated">
+ *       Cryptocurrency price news
+ *     </disinterest>
+ *   </disinterests>
+ *
+ *   <preferences>
+ *     <preference aspect="depth" confidence="medium" source="feedback">
+ *       Prefers technical depth over surface summaries
+ *     </preference>
+ *     <preference aspect="tone" confidence="low" source="inferred">
+ *       Appreciates dry humor and contrarian takes
+ *     </preference>
+ *   </preferences>
+ *
+ *   <context-notes>
+ *     <context duration="temporary" added-at="2026-01-15T00:00:00Z">
+ *       Following EU AI Act developments closely
+ *     </context>
+ *   </context-notes>
+ *
+ *   <experiments>
+ *     <experiment id="exp-retro" status="active" created-at="2026-01-30T00:00:00Z">
+ *       <hypothesis>User enjoys retro computing content as a change of pace</hypothesis>
+ *       <approach>Include one retro computing piece per edition when available</approach>
+ *       <observation ref="edition:2026-02-01" date="2026-02-01">
+ *         Amiga Unix piece was included, awaiting feedback
+ *       </observation>
+ *     </experiment>
+ *     <experiment id="exp-queries" status="inconclusive" created-at="2026-01-20T00:00:00Z">
+ *       <hypothesis>Interactive queries increase engagement</hypothesis>
+ *       <approach>Add 1-2 queries per edition asking about interests</approach>
+ *       <observation date="2026-01-25">Queries rarely answered</observation>
+ *       <conclusion>Queries may be ignored; try less frequently</conclusion>
+ *     </experiment>
+ *   </experiments>
+ * </news-guide>
+ * ```
+ */
+export const NewsGuideSchema = element("news-guide", {
+  attrs: {
+    /** Schema version for migrations */
+    version: z.string().default("1"),
+  },
+  children: z.array(
+    z.union([
+      /** When this guide was last updated */
+      element("updated-at", { text: z.string().datetime({ offset: true }) }),
+      Interests,
+      Disinterests,
+      Preferences,
+      ContextNotes,
+      Experiments,
+    ])
+  ),
+});
+
+export type NewsGuide = z.infer<typeof NewsGuideSchema>;
+
+/**
+ * Parsed guide with typed accessors.
+ */
+export interface ParsedNewsGuide {
+  version: string;
+  updatedAt: string | undefined;
+  interests: Array<{
+    topic: string;
+    confidence: ConfidenceLevel;
+    source: BeliefSource;
+    evidence: string | undefined;
+  }>;
+  disinterests: Array<{
+    topic: string;
+    confidence: ConfidenceLevel;
+    source: BeliefSource;
+    evidence: string | undefined;
+  }>;
+  preferences: Array<{
+    aspect: string;
+    description: string;
+    confidence: ConfidenceLevel;
+    source: BeliefSource;
+    evidence: string | undefined;
+  }>;
+  contextNotes: Array<{
+    text: string;
+    duration: "ongoing" | "temporary" | "past";
+    addedAt: string | undefined;
+  }>;
+  experiments: Array<{
+    id: string;
+    status: ExperimentStatus;
+    createdAt: string | undefined;
+    updatedAt: string | undefined;
+    hypothesis: string | undefined;
+    approach: string | undefined;
+    observations: Array<{
+      text: string;
+      ref: string | undefined;
+      date: string | undefined;
+    }>;
+    conclusion: string | undefined;
+  }>;
+}
+
+/**
+ * Helper to extract child element by tag name.
+ */
+function getChild(children: ElementNode[], tagName: string): ElementNode | undefined {
+  return children.find((c) => c.tagName === tagName);
+}
+
+/**
+ * Helper to extract all children by tag name.
+ */
+function getChildren(children: ElementNode[], tagName: string): ElementNode[] {
+  return children.filter((c) => c.tagName === tagName);
+}
+
+/**
+ * Parse a news guide element into a typed structure.
+ */
+export function parseNewsGuide(guide: NewsGuide): ParsedNewsGuide {
+  const children = guide.children as ElementNode[];
+
+  const updatedAtEl = getChild(children, "updated-at");
+  const interestsEl = getChild(children, "interests");
+  const disinterestsEl = getChild(children, "disinterests");
+  const preferencesEl = getChild(children, "preferences");
+  const contextNotesEl = getChild(children, "context-notes");
+  const experimentsEl = getChild(children, "experiments");
+
+  // Parse interests
+  const interestChildren = (interestsEl?.children ?? []) as ElementNode[];
+  const interests = getChildren(interestChildren, "topic").map((t) => ({
+    topic: t.text ?? "",
+    confidence: (t.attrs.confidence ?? "low") as ConfidenceLevel,
+    source: (t.attrs.source ?? "inferred") as BeliefSource,
+    evidence: t.attrs.evidence as string | undefined,
+  }));
+
+  // Parse disinterests
+  const disinterestChildren = (disinterestsEl?.children ?? []) as ElementNode[];
+  const disinterests = getChildren(disinterestChildren, "disinterest").map((d) => ({
+    topic: d.text ?? "",
+    confidence: (d.attrs.confidence ?? "low") as ConfidenceLevel,
+    source: (d.attrs.source ?? "inferred") as BeliefSource,
+    evidence: d.attrs.evidence as string | undefined,
+  }));
+
+  // Parse preferences
+  const preferenceChildren = (preferencesEl?.children ?? []) as ElementNode[];
+  const preferences = getChildren(preferenceChildren, "preference").map((p) => ({
+    aspect: (p.attrs.aspect ?? "other") as string,
+    description: p.text ?? "",
+    confidence: (p.attrs.confidence ?? "low") as ConfidenceLevel,
+    source: (p.attrs.source ?? "inferred") as BeliefSource,
+    evidence: p.attrs.evidence as string | undefined,
+  }));
+
+  // Parse context notes
+  const contextChildren = (contextNotesEl?.children ?? []) as ElementNode[];
+  const contextNotes = getChildren(contextChildren, "context").map((c) => ({
+    text: c.text ?? "",
+    duration: (c.attrs.duration ?? "ongoing") as "ongoing" | "temporary" | "past",
+    addedAt: c.attrs["added-at"] as string | undefined,
+  }));
+
+  // Parse experiments
+  const experimentChildren = (experimentsEl?.children ?? []) as ElementNode[];
+  const experiments = getChildren(experimentChildren, "experiment").map((e) => {
+    const expChildren = (e.children ?? []) as ElementNode[];
+    const hypothesisEl = getChild(expChildren, "hypothesis");
+    const approachEl = getChild(expChildren, "approach");
+    const conclusionEl = getChild(expChildren, "conclusion");
+    const observationEls = getChildren(expChildren, "observation");
+
+    return {
+      id: e.attrs.id as string,
+      status: (e.attrs.status ?? "proposed") as ExperimentStatus,
+      createdAt: e.attrs["created-at"] as string | undefined,
+      updatedAt: e.attrs["updated-at"] as string | undefined,
+      hypothesis: hypothesisEl?.text,
+      approach: approachEl?.text,
+      observations: observationEls.map((o) => ({
+        text: o.text ?? "",
+        ref: o.attrs.ref as string | undefined,
+        date: o.attrs.date as string | undefined,
+      })),
+      conclusion: conclusionEl?.text,
+    };
+  });
+
+  return {
+    version: guide.attrs.version as string,
+    updatedAt: updatedAtEl?.text,
+    interests,
+    disinterests,
+    preferences,
+    contextNotes,
+    experiments,
+  };
+}
+
+/**
+ * Options for creating an initial guide.
+ */
+export interface InitialGuideOptions {
+  /** RSS feed URLs to infer interests from */
+  feedUrls?: string[];
+  /** Feed titles to infer interests from */
+  feedTitles?: string[];
+}
+
+/**
+ * Create an initial guide template.
+ *
+ * This creates a starting guide with low-confidence inferences
+ * based on the configured RSS feeds.
+ */
+export function createInitialGuideTemplate(options: InitialGuideOptions = {}): string {
+  const now = new Date().toISOString();
+
+  // Infer interests from feed titles if provided
+  const inferredTopics: string[] = [];
+  for (const title of options.feedTitles ?? []) {
+    // Simple heuristics - could be smarter
+    const lower = title.toLowerCase();
+    if (lower.includes("hacker") || lower.includes("tech")) {
+      if (!inferredTopics.includes("Technology news")) {
+        inferredTopics.push("Technology news");
+      }
+    }
+    if (lower.includes("programming") || lower.includes("dev")) {
+      if (!inferredTopics.includes("Software development")) {
+        inferredTopics.push("Software development");
+      }
+    }
+  }
+
+  // Default inferences if no feeds
+  if (inferredTopics.length === 0) {
+    inferredTopics.push("Technology news");
+  }
+
+  const interests = inferredTopics.map((topic) => (
+    <topic confidence="hypothesis" source="inferred">
+      {topic}
+    </topic>
+  ));
+
+  const guide = (
+    <news-guide version="1">
+      <updated-at>{now}</updated-at>
+      <interests>{interests}</interests>
+      <disinterests />
+      <preferences>
+        <preference aspect="depth" confidence="hypothesis" source="default">
+          Balance between surface coverage and technical depth
+        </preference>
+      </preferences>
+      <context-notes />
+      <experiments>
+        <experiment id="exp-initial" status="proposed" created-at={now}>
+          <hypothesis>Initial guide needs calibration through feedback</hypothesis>
+          <approach>Pay attention to which topics get engagement vs skipped</approach>
+        </experiment>
+      </experiments>
+    </news-guide>
+  );
+
+  return serialize(guide as ElementNode) + "\n";
+}
