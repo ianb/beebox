@@ -10,6 +10,7 @@ import "./wakeup.js";
 import "./answer.js";
 import "./pull.js";
 import "./trash.js";
+import "./move.js";
 import "./fetch-news.js";
 import "./process-news.js";
 
