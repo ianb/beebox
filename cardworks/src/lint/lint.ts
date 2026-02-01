@@ -1,12 +1,13 @@
 import type { ICardLoader } from "../loader/loader.js";
 import type { ElementNode, Location } from "../parser/provenance.js";
 import { parseRef, parseRefs } from "../refs/parse-ref.js";
+import { parseXml } from "../parser/parse.js";
 
 /**
  * A lint issue (error or warning).
  */
 export interface LintIssue {
-  type: "parse" | "validation" | "reference" | "id";
+  type: "parse" | "validation" | "reference" | "id" | "schema";
   severity: "error" | "warning";
   message: string;
   location?: Location;
@@ -55,6 +56,16 @@ export async function lintCard(
   try {
     // Load will parse and validate against schema
     const card = await loader.load(path);
+
+    // Check if schema exists for this tag
+    if (!loader.hasSchema(card.element.tagName)) {
+      warnings.push({
+        type: "schema",
+        severity: "warning",
+        message: `Unknown root tag <${card.element.tagName}> (no schema registered)`,
+        location: card.element.location,
+      });
+    }
 
     // Check for duplicate IDs
     checkDuplicateIds(card.element, warnings);

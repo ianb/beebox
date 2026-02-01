@@ -203,6 +203,11 @@ export interface ICardLoader {
    * Find all references from a given card (outgoing links).
    */
   findOutgoingRefs(sourcePath: string): Promise<CardReference[]>;
+
+  /**
+   * Check if a schema is registered for a given tag name.
+   */
+  hasSchema(tagName: string): boolean;
 }
 
 /**
@@ -367,6 +372,13 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   getProjectRoot(): string {
     return this.projectRoot;
+  }
+
+  /**
+   * Check if a schema is registered for a given tag name.
+   */
+  hasSchema(tagName: string): boolean {
+    return this.schemas.has(tagName);
   }
 
   /**
