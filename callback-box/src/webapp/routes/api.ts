@@ -8,6 +8,46 @@ import * as path from "node:path";
 import { getSystemState, generateContext, type CardInfo } from "../../core/state.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { getLog } from "../../cli/lib/git.js";
+import type { ElementNode } from "cardworks";
+
+/**
+ * JSON-safe element node for the frontend.
+ */
+interface JsonElement {
+  tagName: string;
+  attrs: Record<string, string>;
+  text?: string;
+  children?: JsonElement[];
+}
+
+/**
+ * Convert an ElementNode to a JSON-safe structure.
+ */
+function sanitizeElement(el: ElementNode): JsonElement {
+  const result: JsonElement = {
+    tagName: el.tagName,
+    attrs: {},
+  };
+
+  // Copy string attributes only
+  for (const [key, value] of Object.entries(el.attrs)) {
+    if (typeof value === "string") {
+      result.attrs[key] = value;
+    }
+  }
+
+  // Include text if present
+  if (el.text !== undefined && el.text !== null) {
+    result.text = String(el.text).trim();
+  }
+
+  // Recursively process children
+  if (el.children && Array.isArray(el.children) && el.children.length > 0) {
+    result.children = el.children.map((child) => sanitizeElement(child as ElementNode));
+  }
+
+  return result;
+}
 
 /**
  * Count news items in a directory.
@@ -83,33 +123,40 @@ export async function registerApiRoutes(
   });
 
   // GET /api/card/:path - Get a single card's content
-  server.get<{ Params: { "*": string } }>("/api/card/*", async (request, reply) => {
-    const cardPath = request.params["*"];
-    if (!cardPath) {
-      return reply.status(400).send({ error: "Card path required" });
+  server.get<{ Params: { "*": string }; Querystring: { format?: string } }>(
+    "/api/card/*",
+    async (request, reply) => {
+      const cardPath = request.params["*"];
+      if (!cardPath) {
+        return reply.status(400).send({ error: "Card path required" });
+      }
+
+      const fullPath = path.join(boxRoot, cardPath);
+      const loader = createLoader(boxRoot);
+
+      try {
+        const card = await loader.load(fullPath);
+        const xml = loader.serialize(card.element);
+
+        // Include element tree for tree view rendering
+        const element = sanitizeElement(card.element);
+
+        return {
+          path: cardPath,
+          tagName: card.element.tagName,
+          status: card.element.attrs["status"],
+          version: card.version,
+          xml,
+          element,
+        };
+      } catch (error) {
+        return reply.status(404).send({
+          error: `Card not found: ${cardPath}`,
+          details: (error as Error).message,
+        });
+      }
     }
-
-    const fullPath = path.join(boxRoot, cardPath);
-    const loader = createLoader(boxRoot);
-
-    try {
-      const card = await loader.load(fullPath);
-      const xml = loader.serialize(card.element);
-
-      return {
-        path: cardPath,
-        tagName: card.element.tagName,
-        status: card.element.attrs["status"],
-        version: card.version,
-        xml,
-      };
-    } catch (error) {
-      return reply.status(404).send({
-        error: `Card not found: ${cardPath}`,
-        details: (error as Error).message,
-      });
-    }
-  });
+  );
 
   // GET /api/log - Recent git commits
   server.get<{ Querystring: { count?: string } }>("/api/log", async (request) => {

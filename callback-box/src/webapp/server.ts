@@ -74,9 +74,14 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
 
     // SPA fallback - serve index.html for non-API, non-asset routes
     server.setNotFoundHandler(async (request, reply) => {
-      // Don't serve index.html for API routes or asset files
+      // Don't serve index.html for API routes or static asset files
       const url = request.url;
-      if (url.startsWith("/api/") || url.startsWith("/assets/") || url.includes(".")) {
+      if (url.startsWith("/api/") || url.startsWith("/assets/")) {
+        return reply.status(404).send({ error: "Not found" });
+      }
+      // Check for actual asset file extensions (not .card paths which are SPA routes)
+      const assetExtensions = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
+      if (assetExtensions.test(url)) {
         return reply.status(404).send({ error: "Not found" });
       }
       return reply.sendFile("index.html");

@@ -399,12 +399,39 @@ function Dashboard() {
 }
 
 /**
+ * Card viewer page wrapper.
+ */
+function CardViewPage() {
+  const { "*": cardPath } = useParams();
+
+  if (!cardPath) {
+    return <div className="p-8 text-gray-500">No card path specified</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto py-8">
+        <div className="mb-4">
+          <Link to="/" className="text-blue-600 hover:text-blue-800">
+            ← Back to Dashboard
+          </Link>
+        </div>
+        <div className="bg-white rounded-lg shadow">
+          <CardView path={cardPath} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Main App with routing.
  */
 export default function App() {
   return (
     <Routes>
       <Route path="/news/*" element={<NewsPageWrapper />} />
+      <Route path="/card/*" element={<CardViewPage />} />
       <Route path="*" element={<Dashboard />} />
     </Routes>
   );

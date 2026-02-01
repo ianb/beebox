@@ -39,12 +39,23 @@ export interface ListResponse {
   items: CardInfo[];
 }
 
+/**
+ * Element node structure from parsed XML.
+ */
+export interface ElementNode {
+  tagName: string;
+  attrs: Record<string, string>;
+  text?: string;
+  children?: ElementNode[];
+}
+
 export interface CardResponse {
   path: string;
   tagName: string;
   status?: string;
   version: string;
   xml: string;
+  element?: ElementNode;
 }
 
 export interface LogEntry {
