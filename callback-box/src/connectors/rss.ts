@@ -254,11 +254,14 @@ class RssConnector implements Connector {
         const seenGuids = state.seenGuids[feed.url] || [];
         const newItems = items.filter((item) => !seenGuids.includes(item.guid));
 
-        // Create cards for new items
+        // Create cards for new items in inbox/news/
+        const newsDir = path.join(this.boxRoot, "box/inbox/news");
+        await fs.mkdir(newsDir, { recursive: true });
+
         for (const item of newItems) {
           const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
           const filename = `${safeFilename(item.title)}_${timestamp}.news-item.card`;
-          const cardPath = path.join(this.boxRoot, "box/inbox", filename);
+          const cardPath = path.join(newsDir, filename);
 
           const templateOptions: Parameters<typeof createNewsItemTemplate>[0] = {
             title: item.title,

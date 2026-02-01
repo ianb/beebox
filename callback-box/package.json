@@ -14,6 +14,7 @@
     "dev": "tsc --watch",
     "dev:frontend": "cd src/frontend && npm run dev",
     "dev:server": "npm run build && node dist/cli/index.js serve",
+    "cb": "node --import ./tsx-preload.mjs --require ./node_modules/tsx/dist/preflight.cjs --import ./node_modules/tsx/dist/loader.mjs ./src/cli/index.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:frontend": "cd src/frontend && npm run typecheck",
     "typecheck:all": "npm run typecheck && npm run typecheck:frontend",
@@ -42,10 +43,15 @@
   "dependencies": {
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
+    "@parcel/markdown-ansi": "^2.16.3",
+    "@types/turndown": "^5.0.6",
+    "ansi-to-html": "^0.7.2",
     "cardworks": "file:../cardworks",
+    "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
     "commander": "^13.0.0",
     "fastify": "^5.7.2",
+    "turndown": "^7.2.2",
     "xml2js": "^0.6.2",
     "zod": "^3.24.0"
   }

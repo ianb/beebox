@@ -13,3 +13,6 @@ export { serveCommand } from "./serve.js";
 export { wakeupCommand } from "./wakeup.js";
 export { answerCommand } from "./answer.js";
 export { pullCommand } from "./pull.js";
+export { trashCommand } from "./trash.js";
+export { fetchNewsCommand } from "./fetch-news.js";
+export { processNewsCommand } from "./process-news.js";

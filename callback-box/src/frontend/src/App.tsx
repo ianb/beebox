@@ -9,6 +9,7 @@ import { CardView } from "./components/CardView";
 import { QuestionForm } from "./components/QuestionForm";
 import { ActivityLog } from "./components/ActivityLog";
 import { NewMemo, buildCreateCommandLabel, type MemoCommandArgs } from "./components/NewMemo";
+import { ProcessNewsForm, buildProcessNewsLabel, type ProcessNewsArgs } from "./components/ProcessNewsForm";
 import { CommandRunner } from "./components/CommandRunner";
 import { useSSE } from "./hooks/useSSE";
 import {
@@ -29,7 +30,10 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showCreateMemo, setShowCreateMemo] = useState(false);
   const [showWakeup, setShowWakeup] = useState(false);
+  const [showPull, setShowPull] = useState(false);
+  const [showProcessNews, setShowProcessNews] = useState(false);
   const [createMemoArgs, setCreateMemoArgs] = useState<MemoCommandArgs | null>(null);
+  const [processNewsArgs, setProcessNewsArgs] = useState<ProcessNewsArgs | null>(null);
 
   // SSE connection for live updates
   const { connected } = useSSE("/api/events", {
@@ -72,8 +76,8 @@ export default function App() {
     fetchData();
   }, [fetchData]);
 
-  // Handle wakeup complete
-  const handleWakeupComplete = () => {
+  // Handle wakeup/pull complete
+  const handleCommandComplete = () => {
     refresh();
   };
 
@@ -86,6 +90,11 @@ export default function App() {
   // Handle memo form submitted - transition to showing command runner
   const handleMemoSubmit = (args: MemoCommandArgs) => {
     setCreateMemoArgs(args);
+  };
+
+  // Handle process-news form submitted
+  const handleProcessNewsSubmit = (args: ProcessNewsArgs) => {
+    setProcessNewsArgs(args);
   };
 
   // Handle create command complete
@@ -122,14 +131,14 @@ export default function App() {
       : null;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Status bar */}
       <StatusBar connected={connected} onRefresh={refresh} />
 
       {/* Main content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-h-0">
         {/* Sidebar */}
-        <div className="w-80 bg-white border-r flex flex-col">
+        <div className="w-80 bg-white border-r flex flex-col min-h-0">
           {/* Tabs */}
           <div className="flex border-b">
             {(["inbox", "questions", "commands", "activity"] as Tab[]).map((tab) => {
@@ -161,7 +170,7 @@ export default function App() {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto min-h-0">
             {activeTab === "activity" ? (
               <ActivityLog refreshKey={refreshKey} />
             ) : (
@@ -171,7 +180,10 @@ export default function App() {
                   setSelectedCard(card);
                   setShowCreateMemo(false);
                   setShowWakeup(false);
+                  setShowPull(false);
+                  setShowProcessNews(false);
                   setCreateMemoArgs(null);
+                  setProcessNewsArgs(null);
                 }}
                 selectedPath={selectedCard?.path}
                 emptyMessage={`No ${activeTab}`}
@@ -180,38 +192,125 @@ export default function App() {
           </div>
 
           {/* Actions */}
-          <div className="border-t p-4 space-y-2">
+          <div className="border-t p-4 space-y-2 flex-shrink-0">
             <button
               onClick={() => {
                 setShowCreateMemo(true);
                 setCreateMemoArgs(null);
                 setShowWakeup(false);
+                setShowPull(false);
+                setShowProcessNews(false);
                 setSelectedCard(null);
               }}
               className="btn btn-success w-full"
             >
               + New Memo
             </button>
-            <button
-              onClick={() => {
-                setShowWakeup(true);
-                setShowCreateMemo(false);
-                setSelectedCard(null);
-              }}
-              className="btn btn-secondary w-full font-mono text-sm"
-            >
-              cb wakeup
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowPull(true);
+                  setShowWakeup(false);
+                  setShowCreateMemo(false);
+                  setShowProcessNews(false);
+                  setSelectedCard(null);
+                }}
+                className="btn btn-secondary flex-1 font-mono text-sm"
+              >
+                cb pull
+              </button>
+              <button
+                onClick={() => {
+                  setShowWakeup(true);
+                  setShowCreateMemo(false);
+                  setShowPull(false);
+                  setShowProcessNews(false);
+                  setSelectedCard(null);
+                }}
+                className="btn btn-secondary flex-1 font-mono text-sm"
+              >
+                cb wakeup
+              </button>
+            </div>
+            {/* Show process-news button if there are any news items to process */}
+            {(() => {
+              const newsItems = inbox.filter((i) => i.type === "news-item");
+              const newCount = newsItems.filter((i) => i.status === "new").length;
+              const interestingCount = newsItems.filter((i) => i.status === "interesting").length;
+              const fetchedCount = newsItems.filter((i) => i.status === "fetched").length;
+              const totalProcessable = newCount + interestingCount + fetchedCount;
+              if (totalProcessable === 0) return null;
+              return (
+                <button
+                  onClick={() => {
+                    setShowProcessNews(true);
+                    setProcessNewsArgs(null);
+                    setShowWakeup(false);
+                    setShowCreateMemo(false);
+                    setShowPull(false);
+                    setSelectedCard(null);
+                  }}
+                  className="btn btn-primary w-full font-mono text-sm"
+                >
+                  cb process-news
+                  {newCount > 0 && (
+                    <span className="ml-2 bg-blue-200 text-blue-800 text-xs px-1.5 rounded">
+                      {newCount} new
+                    </span>
+                  )}
+                  {interestingCount > 0 && (
+                    <span className="ml-1 bg-yellow-200 text-yellow-800 text-xs px-1.5 rounded">
+                      {interestingCount} ready
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
           </div>
         </div>
 
         {/* Main panel */}
         <div className="flex-1 bg-gray-50 overflow-auto">
-          {showWakeup ? (
+          {showProcessNews && processNewsArgs ? (
+            <div className="p-4 h-full flex flex-col max-w-3xl">
+              <CommandRunner
+                command="process-news"
+                args={processNewsArgs as unknown as Record<string, unknown>}
+                label={buildProcessNewsLabel(processNewsArgs)}
+                onComplete={handleCommandComplete}
+                onClose={() => {
+                  setShowProcessNews(false);
+                  setProcessNewsArgs(null);
+                }}
+                autoRun
+                className="flex-1"
+              />
+            </div>
+          ) : showProcessNews ? (
+            <div className="p-4 h-full">
+              <ProcessNewsForm
+                onSubmit={handleProcessNewsSubmit}
+                onClose={() => setShowProcessNews(false)}
+                newCount={inbox.filter((i) => i.type === "news-item" && i.status === "new").length}
+                interestingCount={inbox.filter((i) => i.type === "news-item" && i.status === "interesting").length}
+                fetchedCount={inbox.filter((i) => i.type === "news-item" && i.status === "fetched").length}
+              />
+            </div>
+          ) : showPull ? (
+            <div className="p-4 h-full flex flex-col max-w-3xl">
+              <CommandRunner
+                command="pull"
+                onComplete={handleCommandComplete}
+                onClose={() => setShowPull(false)}
+                autoRun
+                className="flex-1"
+              />
+            </div>
+          ) : showWakeup ? (
             <div className="p-4 h-full flex flex-col max-w-3xl">
               <CommandRunner
                 command="wakeup"
-                onComplete={handleWakeupComplete}
+                onComplete={handleCommandComplete}
                 onClose={() => setShowWakeup(false)}
                 autoRun
                 className="flex-1"

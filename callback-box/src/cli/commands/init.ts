@@ -29,6 +29,7 @@ export const initCommand = new Command("init")
       console.log("  box/questions/   - Pending questions");
       console.log("  box/resources/   - Synced external state");
       console.log("  store/archive/   - Processed items");
+      console.log("  store/trash/     - Soft-deleted items");
       console.log("  config/          - Configuration");
       console.log("  .claude/         - Agent configuration");
       console.log("\nRun 'cb status' to see the current state.");

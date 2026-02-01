@@ -32,10 +32,18 @@ export const serveCommand = new Command("serve")
 
       console.log(`Starting dev server with auto-reload on http://${options.host}:${port}`);
 
+      // Set TSX_TSCONFIG_PATH so tsx finds the correct tsconfig.json
+      // regardless of the current working directory
+      const tsconfigPath = path.resolve(import.meta.dirname, "../../../tsconfig.json");
+
       const child = spawn("npx", ["tsx", ...args], {
         stdio: "inherit",
         cwd: process.cwd(),
         detached: true, // Create new process group so we can kill the tree
+        env: {
+          ...process.env,
+          TSX_TSCONFIG_PATH: tsconfigPath,
+        },
       });
 
       // Kill child process tree on exit

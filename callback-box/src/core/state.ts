@@ -20,6 +20,8 @@ export interface CardInfo {
   type: string;
   tagName: string;
   status?: string | undefined;
+  /** Subdirectory within the parent dir (e.g., "news" for inbox/news/) */
+  subdir?: string | undefined;
 }
 
 export interface SystemState {
@@ -47,28 +49,38 @@ export interface ContextOutput {
 }
 
 /**
- * Scan a directory for card files.
+ * Scan a directory for card files, including subdirectories.
  *
  * @param dir - Directory to scan
  * @param boxRoot - Box root for relative paths
+ * @param subdir - Current subdirectory (for recursive calls)
  * @returns Array of card info
  */
-async function scanCards(dir: string, boxRoot: string): Promise<CardInfo[]> {
+async function scanCards(dir: string, boxRoot: string, subdir?: string): Promise<CardInfo[]> {
   const cards: CardInfo[] = [];
   const loader = createLoader(boxRoot);
 
-  let entries: string[];
+  let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
-    entries = await fs.readdir(dir);
+    entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
     return cards;
   }
 
   for (const entry of entries) {
-    if (!entry.endsWith(".card")) continue;
+    const name = entry.name;
+    const fullPath = path.join(dir, name);
 
-    const fullPath = path.join(dir, entry);
-    const parsed = parseCardName(entry);
+    // Recurse into subdirectories
+    if (entry.isDirectory() && !name.startsWith(".")) {
+      const subdirCards = await scanCards(fullPath, boxRoot, name);
+      cards.push(...subdirCards);
+      continue;
+    }
+
+    if (!name.endsWith(".card")) continue;
+
+    const parsed = parseCardName(name);
     if (!parsed) continue;
 
     try {
@@ -82,6 +94,7 @@ async function scanCards(dir: string, boxRoot: string): Promise<CardInfo[]> {
         type: parsed.type,
         tagName: element.tagName,
         status: element.attrs["status"],
+        subdir,
       });
     } catch {
       // Skip invalid cards
@@ -92,6 +105,7 @@ async function scanCards(dir: string, boxRoot: string): Promise<CardInfo[]> {
         type: parsed.type,
         tagName: "unknown",
         status: undefined,
+        subdir,
       });
     }
   }

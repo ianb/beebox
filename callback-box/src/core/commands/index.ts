@@ -8,6 +8,10 @@
 import "./create.js";
 import "./wakeup.js";
 import "./answer.js";
+import "./pull.js";
+import "./trash.js";
+import "./fetch-news.js";
+import "./process-news.js";
 
 // Re-export for convenience
 export {

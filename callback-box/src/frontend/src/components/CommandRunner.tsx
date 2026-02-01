@@ -6,7 +6,32 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import AnsiToHtml from "ansi-to-html";
 import { executeCommand, type CommandResult } from "../api";
+
+// Create a singleton converter with dark theme colors
+const ansiConverter = new AnsiToHtml({
+  fg: "#e5e7eb", // gray-200
+  bg: "#111827", // gray-900
+  colors: {
+    0: "#374151",  // black -> gray-700
+    1: "#ef4444",  // red
+    2: "#22c55e",  // green
+    3: "#eab308",  // yellow
+    4: "#3b82f6",  // blue
+    5: "#a855f7",  // magenta
+    6: "#06b6d4",  // cyan
+    7: "#e5e7eb",  // white -> gray-200
+    8: "#6b7280",  // bright black -> gray-500
+    9: "#f87171",  // bright red
+    10: "#4ade80", // bright green
+    11: "#facc15", // bright yellow
+    12: "#60a5fa", // bright blue
+    13: "#c084fc", // bright magenta
+    14: "#22d3ee", // bright cyan
+    15: "#f9fafb", // bright white -> gray-50
+  },
+});
 
 interface CommandRunnerProps {
   /** The command to run (e.g., "wakeup", "create") */
@@ -27,6 +52,21 @@ interface CommandRunnerProps {
 
 type RunState = "idle" | "running" | "success" | "error";
 
+/**
+ * Format args object into CLI-style string for display.
+ */
+function formatArgsForDisplay(args: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(args)) {
+    if (value === true) {
+      parts.push(`--${key}`);
+    } else if (value !== false && value !== undefined && value !== null) {
+      parts.push(`--${key}=${JSON.stringify(value)}`);
+    }
+  }
+  return parts.join(" ");
+}
+
 export function CommandRunner({
   command,
   args = {},
@@ -42,6 +82,8 @@ export function CommandRunner({
   const outputRef = useRef<HTMLPreElement>(null);
 
   const commandLabel = label ?? `cb ${command}`;
+  const argsString = formatArgsForDisplay(args);
+  const fullCommand = argsString ? `cb ${command} ${argsString}` : `cb ${command}`;
 
   // Auto-scroll output
   useEffect(() => {
@@ -158,10 +200,14 @@ export function CommandRunner({
       {(output.length > 0 || error) && (
         <pre
           ref={outputRef}
-          className="flex-1 p-3 text-xs font-mono overflow-auto min-h-[200px] bg-gray-900 text-gray-100"
+          data-debug-context={fullCommand}
+          className="flex-1 p-3 text-xs font-mono overflow-auto min-h-[200px] bg-gray-900 text-gray-100 whitespace-pre-wrap break-words"
         >
           {output.map((line, i) => (
-            <div key={i}>{line}</div>
+            <div
+              key={i}
+              dangerouslySetInnerHTML={{ __html: ansiConverter.toHtml(line) }}
+            />
           ))}
           {error && <div className="text-red-400">Error: {error}</div>}
         </pre>

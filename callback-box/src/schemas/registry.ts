@@ -9,6 +9,7 @@ import { SchemaRegistry, type ElementSchema } from "cardworks";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { NewsItemSchema } from "./news-item.js";
+import { NewsSummarySchema } from "./news-summary.js";
 
 /**
  * All registered card schemas.
@@ -17,6 +18,7 @@ export const schemas: ElementSchema[] = [
   MemoSchema,
   QuestionSchema,
   NewsItemSchema,
+  NewsSummarySchema,
 ];
 
 /**
@@ -48,3 +50,4 @@ export function isKnownCardType(type: string): boolean {
 export { MemoSchema } from "./memo.js";
 export { QuestionSchema } from "./question.js";
 export { NewsItemSchema } from "./news-item.js";
+export { NewsSummarySchema } from "./news-summary.js";

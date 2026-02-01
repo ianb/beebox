@@ -11,12 +11,14 @@ export {
   MemoSchema,
   QuestionSchema,
   NewsItemSchema,
+  NewsSummarySchema,
 } from "./registry.js";
 
 // Re-export individual schema types
 export type { Memo, MemoStatus } from "./memo.js";
 export type { Question, QuestionStatus, QuestionInputType } from "./question.js";
 export type { NewsItem, NewsItemStatus } from "./news-item.js";
+export type { NewsSummary, NewsSummaryStatus } from "./news-summary.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -26,6 +28,7 @@ export {
   createConfirmQuestionTemplate,
 } from "./question.js";
 export { createNewsItemTemplate } from "./news-item.js";
+export { createNewsSummaryTemplate } from "./news-summary.js";
 
 // Re-export template registry
 export {

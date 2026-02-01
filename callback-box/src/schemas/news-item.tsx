@@ -10,8 +10,25 @@ import { z } from "zod";
 
 /**
  * Valid news item statuses.
+ *
+ * Lifecycle:
+ * - new: Just fetched from RSS, not yet triaged
+ * - possibly-interesting: Initial triage suggests it might be worth reading
+ * - interesting: Confirmed interesting, ready to fetch full content
+ * - fetched: Full article content has been fetched
+ * - fetch-failed: Failed to fetch article content
+ * - summarized: Included in a news summary
+ * - skipped: Triaged as not interesting (will be trashed)
  */
-export const NewsItemStatus = z.enum(["new", "processing", "processed", "skipped"]);
+export const NewsItemStatus = z.enum([
+  "new",
+  "possibly-interesting",
+  "interesting",
+  "fetched",
+  "fetch-failed",
+  "summarized",
+  "skipped",
+]);
 export type NewsItemStatus = z.infer<typeof NewsItemStatus>;
 
 /**
@@ -67,6 +84,36 @@ export const NewsGuid = element("guid", {
 });
 
 /**
+ * Child element for the full article content (markdown).
+ * Added after fetching the article.
+ */
+export const NewsContent = element("content", {
+  attrs: {
+    format: z.literal("markdown").default("markdown"),
+    /** Original URL that was fetched (may differ from link due to redirects) */
+    "fetched-url": z.string().url().optional(),
+    /** When the content was fetched */
+    "fetched-at": z.string().datetime({ offset: true }).optional(),
+  },
+  text: z.string(),
+});
+
+/**
+ * Child element for fetch error details.
+ * Added when fetching fails.
+ */
+export const NewsFetchError = element("fetch-error", {
+  attrs: {
+    /** When the fetch was attempted */
+    "attempted-at": z.string().datetime({ offset: true }),
+    /** HTTP status code if applicable */
+    "status-code": z.number().optional(),
+  },
+  /** Error message */
+  text: z.string(),
+});
+
+/**
  * News item card schema.
  *
  * Example:
@@ -95,6 +142,8 @@ export const NewsItemSchema = element("news-item", {
       NewsSummary,
       NewsAuthor,
       NewsGuid,
+      NewsContent,
+      NewsFetchError,
     ])
   ),
 });

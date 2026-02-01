@@ -31,6 +31,8 @@ export interface CardInfo {
   status?: string;
   prompt?: string;
   options?: string[];
+  /** Subdirectory within the parent dir (e.g., "news" for inbox/news/) */
+  subdir?: string;
 }
 
 export interface ListResponse {

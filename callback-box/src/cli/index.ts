@@ -6,6 +6,9 @@
  * The CLI is the universal interface - humans, agents, and tests all use it.
  */
 
+// MUST be first import - sets TSX_TSCONFIG_PATH before any JSX modules load
+import "./bootstrap.js";
+
 import { Command } from "commander";
 import {
   initCommand,
@@ -17,6 +20,9 @@ import {
   wakeupCommand,
   answerCommand,
   pullCommand,
+  trashCommand,
+  fetchNewsCommand,
+  processNewsCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -39,6 +45,9 @@ program.addCommand(serveCommand);
 program.addCommand(wakeupCommand);
 program.addCommand(answerCommand);
 program.addCommand(pullCommand);
+program.addCommand(trashCommand);
+program.addCommand(fetchNewsCommand);
+program.addCommand(processNewsCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

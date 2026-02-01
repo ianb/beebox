@@ -19,6 +19,7 @@ import {
   createConfirmQuestionTemplate,
 } from "./question.js";
 import { createNewsItemTemplate } from "./news-item.js";
+import { createNewsSummaryTemplate } from "./news-summary.js";
 
 /**
  * Template definition with typed arguments.
@@ -223,4 +224,32 @@ registerTemplate({
     if (args.author) templateArgs.author = args.author;
     return createNewsItemTemplate(templateArgs);
   },
+});
+
+registerTemplate({
+  name: "news-summary",
+  description: "A compiled summary of news items",
+  cardTypes: ["news-summary"],
+  argsSchema: z.object({
+    periodFrom: z.string().datetime({ offset: true }).describe("Start of period covered (ISO 8601)"),
+    periodTo: z.string().datetime({ offset: true }).describe("End of period covered (ISO 8601)"),
+    content: z.string().describe("Markdown summary content"),
+    sources: z
+      .array(
+        z.object({
+          path: z.string().describe("Path to source news-item card"),
+          title: z.string().describe("Title of the source article"),
+        })
+      )
+      .describe("Source news items referenced in the summary"),
+    status: z.enum(["draft", "final"]).optional().default("draft").describe("Summary status"),
+  }),
+  generate: (args) =>
+    createNewsSummaryTemplate({
+      periodFrom: args.periodFrom,
+      periodTo: args.periodTo,
+      content: args.content,
+      sources: args.sources,
+      status: args.status,
+    }),
 });

@@ -136,7 +136,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
       // If we have audio, use voice-memo template; otherwise memo
       const cardType = hasAudio ? "voice-memo" : "memo";
       const name = hasAudio ? `Voice_Memo_${timestamp}` : `Memo_${timestamp}`;
-      const cardPath = `box/inbox/${name}.${cardType}.card`;
+      const cardPath = `box/inbox/memos/${name}.${cardType}.card`;
 
       const args: MemoCommandArgs = {
         path: cardPath,

@@ -7,6 +7,62 @@
 
 import { spawn } from "node:child_process";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { fmt } from "../cli/lib/format.js";
+
+// Get the path to the cb wrapper script so we can add it to PATH
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const binDir = path.resolve(__dirname, "../../bin");
+
+/**
+ * Format command line for display, with special handling for prompts.
+ * Returns multiple lines: the command itself, then system prompt, then user prompt.
+ */
+function formatCommandLine(cmd: string, args: string[]): string {
+  const lines: string[] = [];
+  const cmdParts: string[] = [cmd];
+
+  let systemPrompt: string | null = null;
+  let userPrompt: string | null = null;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+
+    if (arg === "--append-system-prompt" && i + 1 < args.length) {
+      systemPrompt = args[i + 1]!;
+      cmdParts.push(arg, "<system-prompt>");
+      i++; // skip the next arg
+    } else if (i === args.length - 1 && !arg.startsWith("-")) {
+      // Last non-flag arg is likely the user prompt
+      userPrompt = arg;
+      cmdParts.push("<prompt>");
+    } else {
+      cmdParts.push(arg);
+    }
+  }
+
+  lines.push(fmt.dim("$ ") + fmt.cmd(cmdParts.join(" ")));
+
+  if (systemPrompt) {
+    lines.push("");
+    lines.push(fmt.dim("System prompt:"));
+    lines.push(fmt.dim("─".repeat(40)));
+    lines.push(systemPrompt);
+    lines.push(fmt.dim("─".repeat(40)));
+  }
+
+  if (userPrompt) {
+    lines.push("");
+    lines.push(fmt.dim("User prompt:"));
+    lines.push(fmt.dim("─".repeat(40)));
+    lines.push(userPrompt);
+    lines.push(fmt.dim("─".repeat(40)));
+  }
+
+  lines.push("");
+
+  return lines.join("\n");
+}
 
 export interface AgentOptions {
   /** Box root directory */
@@ -48,6 +104,7 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
   return new Promise((resolve) => {
     const args = [
       "--print",
+      "--verbose",
       "--dangerously-skip-permissions",
       "--max-turns", "20",
     ];
@@ -69,12 +126,19 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
       return;
     }
 
+    // Show the command being run
+    const cmdLine = formatCommandLine("claude", args);
+    onOutput?.(cmdLine);
+
+    // Add callback-box bin directory to PATH so cb commands are available
+    const env = {
+      ...process.env,
+      PATH: `${binDir}:${process.env.PATH ?? ""}`,
+    };
+
     const child = spawn("claude", args, {
       cwd: boxRoot,
-      env: {
-        ...process.env,
-        // Could add cost budget as env var if Claude Code supports it
-      },
+      env,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -84,18 +148,13 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     child.stdout.on("data", (data) => {
       const text = data.toString();
       stdout += text;
-      if (onOutput) {
-        onOutput(text);
-      }
+      onOutput?.(text);
     });
 
     child.stderr.on("data", (data) => {
       const text = data.toString();
       stderr += text;
-      // Also send stderr to output callback
-      if (onOutput) {
-        onOutput(text);
-      }
+      onOutput?.(text);
     });
 
     child.on("error", (err) => {
