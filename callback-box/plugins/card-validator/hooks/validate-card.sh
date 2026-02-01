@@ -18,6 +18,17 @@ if [ ! -f "$file_path" ]; then
   exit 0
 fi
 
+# Find the box root by looking for a .git directory (callback boxes are git repos)
+box_root=$(dirname "$file_path")
+while [ "$box_root" != "/" ] && [ ! -d "$box_root/.git" ]; do
+  box_root=$(dirname "$box_root")
+done
+
+# If we found a git repo, cd there before running validation
+if [ -d "$box_root/.git" ]; then
+  cd "$box_root" || exit 0
+fi
+
 # Run validation
 output=$(cb validate "$file_path" 2>&1)
 exit_code=$?
