@@ -28,6 +28,19 @@ export const QuestionMemo = element("memo", {
 });
 
 /**
+ * Child element for referencing related cards.
+ * Allows the agent to include context about what prompted the question.
+ */
+export const QuestionContext = element("context", {
+  attrs: {
+    /** Reference to related card (e.g., feedback or edition) */
+    ref: z.string(),
+  },
+  /** Optional description of how this context relates */
+  text: z.string().optional(),
+});
+
+/**
  * Child element for the prompt text.
  */
 export const QuestionPrompt = element("prompt", {
@@ -83,7 +96,7 @@ export const QuestionAnsweredVia = element("answered-via", {
  *
  * Pending example:
  * ```xml
- * <question status="pending">
+ * <question status="pending" answered-by="news-curation">
  *   <memo>Context about what's being asked</memo>
  *   <prompt>What should I do?</prompt>
  *   <input type="select">
@@ -95,7 +108,7 @@ export const QuestionAnsweredVia = element("answered-via", {
  *
  * Answered example:
  * ```xml
- * <question status="answered">
+ * <question status="answered" answered-by="news-curation">
  *   <memo>Context about what's being asked</memo>
  *   <prompt>What should I do?</prompt>
  *   <input type="select">
@@ -111,11 +124,18 @@ export const QuestionAnsweredVia = element("answered-via", {
 export const QuestionSchema = element("question", {
   attrs: {
     status: QuestionStatus.default("pending"),
+    /**
+     * Which agent should process this question's answer.
+     * When the user answers, the system routes the answered question
+     * to this agent for processing.
+     */
+    "answered-by": z.string().optional(),
   },
   // Note: We use a loose children schema to allow both pending and answered states
   // Proper validation happens at the application layer
   children: z.array(z.union([
     QuestionMemo,
+    QuestionContext,
     QuestionPrompt,
     QuestionInput,
     QuestionAnswer,
