@@ -313,3 +313,76 @@ export async function listCommands(): Promise<{ commands: CommandInfo[] }> {
 export async function getCommandInfo(name: string): Promise<CommandInfo> {
   return fetchJson(`${API_BASE}/commands/${name}`);
 }
+
+/**
+ * Submit feedback on a news edition (text or voice).
+ */
+export async function submitEditionFeedback(
+  editionPath: string,
+  targetId: string,
+  comment?: string,
+  audioBlob?: Blob
+): Promise<{ success: boolean; path: string; isVoice: boolean }> {
+  let audioData: string | undefined;
+  let audioMimeType: string | undefined;
+
+  if (audioBlob) {
+    audioData = await blobToBase64(audioBlob);
+    audioMimeType = audioBlob.type;
+  }
+
+  return fetchJson(`${API_BASE}/edition/feedback`, {
+    method: "POST",
+    body: JSON.stringify({
+      editionPath,
+      targetId,
+      comment,
+      audioData,
+      audioMimeType,
+    }),
+  });
+}
+
+/**
+ * Submit a query response on a news edition (text or voice).
+ */
+export async function submitQueryResponse(
+  editionPath: string,
+  queryId: string,
+  response?: string,
+  audioBlob?: Blob
+): Promise<{ success: boolean; path: string; isVoice: boolean }> {
+  let audioData: string | undefined;
+  let audioMimeType: string | undefined;
+
+  if (audioBlob) {
+    audioData = await blobToBase64(audioBlob);
+    audioMimeType = audioBlob.type;
+  }
+
+  return fetchJson(`${API_BASE}/edition/query-response`, {
+    method: "POST",
+    body: JSON.stringify({
+      editionPath,
+      queryId,
+      response,
+      audioData,
+      audioMimeType,
+    }),
+  });
+}
+
+/**
+ * Convert a Blob to base64 string.
+ */
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}

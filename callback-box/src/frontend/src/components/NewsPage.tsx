@@ -2,12 +2,13 @@
  * NewsPage - Full news reading experience.
  *
  * Shows a sidebar with edition index and main area with the selected edition.
- * Supports comments, query responses, and voice memos.
+ * Supports comments, query responses (text and voice).
  */
 
 import { useState, useEffect, useCallback } from "react";
 import { NewsIndex } from "./NewsIndex";
 import { NewsEditionView, type NewsEditionData } from "./NewsEditionView";
+import { submitEditionFeedback, submitQueryResponse } from "../api";
 
 /**
  * Edition metadata from the index.
@@ -18,7 +19,6 @@ interface EditionSummary {
   title: string;
   date: string;
   byline: string;
-  status: string;
 }
 
 /**
@@ -31,34 +31,6 @@ async function fetchEdition(path: string): Promise<NewsEditionData> {
   }
   const data = await response.json();
   return data.edition;
-}
-
-/**
- * Submit feedback for an edition.
- */
-async function submitFeedback(editionPath: string, targetId: string, comment: string): Promise<void> {
-  const response = await fetch("/api/edition/feedback", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ editionPath, targetId, comment }),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to submit feedback");
-  }
-}
-
-/**
- * Submit a query response.
- */
-async function submitQueryResponse(editionPath: string, queryId: string, response: string): Promise<void> {
-  const resp = await fetch("/api/edition/query-response", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ editionPath, queryId, response }),
-  });
-  if (!resp.ok) {
-    throw new Error("Failed to submit query response");
-  }
 }
 
 interface NewsPageProps {
@@ -89,7 +61,6 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
             title: data.title,
             date: data.date,
             byline: data.byline,
-            status: data.status,
           });
           setLoading(false);
         })
@@ -101,50 +72,91 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
   }, [initialPath]);
 
   // Handle edition selection
-  const handleSelect = useCallback((summary: EditionSummary) => {
-    setSelectedSummary(summary);
-    setLoading(true);
-    setError(null);
+  const handleSelect = useCallback(
+    (summary: EditionSummary) => {
+      setSelectedSummary(summary);
+      setLoading(true);
+      setError(null);
 
-    // Notify parent of navigation
-    onNavigate?.(summary.relativePath);
+      // Notify parent of navigation
+      onNavigate?.(summary.relativePath);
 
-    fetchEdition(summary.relativePath)
-      .then((data) => {
-        setEdition(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [onNavigate]);
+      fetchEdition(summary.relativePath)
+        .then((data) => {
+          setEdition(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message);
+          setLoading(false);
+        });
+    },
+    [onNavigate]
+  );
 
-  // Handle comment submission
-  const handleComment = useCallback((targetId: string, comment: string) => {
-    if (!selectedSummary) return;
+  // Handle text comment submission
+  const handleComment = useCallback(
+    (targetId: string, comment: string) => {
+      if (!selectedSummary) return;
 
-    submitFeedback(selectedSummary.relativePath, targetId, comment)
-      .then(() => {
-        console.log("Feedback submitted:", targetId, comment);
-      })
-      .catch((err) => {
-        console.error("Failed to submit feedback:", err);
-      });
-  }, [selectedSummary]);
+      submitEditionFeedback(selectedSummary.relativePath, targetId, comment)
+        .then(() => {
+          console.log("Feedback submitted:", targetId);
+        })
+        .catch((err) => {
+          console.error("Failed to submit feedback:", err);
+        });
+    },
+    [selectedSummary]
+  );
 
-  // Handle query response
-  const handleQueryResponse = useCallback((queryId: string, response: string) => {
-    if (!selectedSummary) return;
+  // Handle voice comment submission
+  const handleVoiceComment = useCallback(
+    async (targetId: string, audioBlob: Blob) => {
+      if (!selectedSummary) return;
 
-    submitQueryResponse(selectedSummary.relativePath, queryId, response)
-      .then(() => {
-        console.log("Query response submitted:", queryId, response);
-      })
-      .catch((err) => {
-        console.error("Failed to submit query response:", err);
-      });
-  }, [selectedSummary]);
+      await submitEditionFeedback(
+        selectedSummary.relativePath,
+        targetId,
+        undefined,
+        audioBlob
+      );
+      console.log("Voice feedback submitted:", targetId);
+    },
+    [selectedSummary]
+  );
+
+  // Handle text query response
+  const handleQueryResponse = useCallback(
+    (queryId: string, response: string) => {
+      if (!selectedSummary) return;
+
+      submitQueryResponse(selectedSummary.relativePath, queryId, response)
+        .then(() => {
+          console.log("Query response submitted:", queryId);
+        })
+        .catch((err) => {
+          console.error("Failed to submit query response:", err);
+        });
+    },
+    [selectedSummary]
+  );
+
+  // Handle voice query response
+  const handleVoiceQueryResponse = useCallback(
+    async (queryId: string, audioBlob: Blob) => {
+      if (!selectedSummary) return;
+
+      await submitQueryResponse(
+        selectedSummary.relativePath,
+        queryId,
+        undefined,
+        audioBlob
+      );
+      console.log("Voice query response submitted:", queryId);
+    },
+    [selectedSummary]
+  );
 
   return (
     <div className="h-screen flex">
@@ -154,10 +166,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
           <h1 className="text-lg font-semibold text-gray-800">News Editions</h1>
         </div>
         <div className="flex-1 overflow-auto">
-          <NewsIndex
-            onSelect={handleSelect}
-            selectedPath={selectedSummary?.path}
-          />
+          <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} />
         </div>
       </div>
 
@@ -175,7 +184,9 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
           <NewsEditionView
             edition={edition}
             onComment={handleComment}
+            onVoiceComment={handleVoiceComment}
             onQueryResponse={handleQueryResponse}
+            onVoiceQueryResponse={handleVoiceQueryResponse}
             onSourceClick={onSourceClick}
           />
         ) : (

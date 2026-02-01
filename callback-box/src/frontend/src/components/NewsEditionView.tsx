@@ -4,14 +4,21 @@
  * Supports:
  * - Markdown content rendering
  * - Expandable sections (expandos)
- * - Query prompts for user input
- * - Paragraph-level comment affordances
+ * - Query prompts for user input (text or voice)
+ * - Paragraph-level comment affordances (text or voice)
  * - Source references
  */
 
 import { useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useVoiceRecorder, type VoiceRecordingResult } from "../hooks/useVoiceRecorder";
+import {
+  MicrophoneIcon,
+  StopIcon,
+  RecordingIndicator,
+  UploadingIndicator,
+} from "./VoiceRecorder";
 
 /**
  * Parsed expando structure.
@@ -55,7 +62,6 @@ interface SourceRef {
  * Parsed news edition for the view.
  */
 export interface NewsEditionData {
-  status: string;
   title: string;
   date: string;
   byline: string;
@@ -71,27 +77,117 @@ export interface NewsEditionData {
 
 interface NewsEditionViewProps {
   edition: NewsEditionData;
-  /** Called when user submits a comment */
+  /** Called when user submits a comment (text) */
   onComment?: (targetId: string, comment: string) => void;
-  /** Called when user responds to a query */
+  /** Called when user submits a voice comment */
+  onVoiceComment?: (targetId: string, audioBlob: Blob) => Promise<void>;
+  /** Called when user responds to a query (text) */
   onQueryResponse?: (queryId: string, response: string) => void;
+  /** Called when user responds to a query (voice) */
+  onVoiceQueryResponse?: (queryId: string, audioBlob: Blob) => Promise<void>;
   /** Called when user clicks a source */
   onSourceClick?: (sourcePath: string) => void;
 }
 
 /**
+ * Compact voice recorder for inline use in feedback areas.
+ */
+function InlineVoiceRecorder({
+  onComplete,
+  onCancel,
+}: {
+  onComplete: (blob: Blob) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const handleComplete = useCallback(
+    async (result: VoiceRecordingResult) => {
+      await onComplete(result.blob);
+    },
+    [onComplete]
+  );
+
+  const { state, error, duration, startRecording, stopRecording, formatDuration } =
+    useVoiceRecorder({ onComplete: handleComplete });
+
+  if (state === "uploading") {
+    return (
+      <div className="flex items-center gap-2 py-2">
+        <UploadingIndicator />
+      </div>
+    );
+  }
+
+  if (state === "recording") {
+    return (
+      <div className="flex items-center gap-3 py-2">
+        <RecordingIndicator />
+        <span className="font-mono text-sm">{formatDuration(duration)}</span>
+        <button
+          onClick={stopRecording}
+          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex items-center gap-1"
+        >
+          <StopIcon className="w-4 h-4" />
+          Stop
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 py-2">
+      <button
+        onClick={startRecording}
+        className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+      >
+        <MicrophoneIcon className="w-4 h-4" />
+        Record Voice
+      </button>
+      <button onClick={onCancel} className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800">
+        Cancel
+      </button>
+      {error && <span className="text-red-600 text-xs">{error}</span>}
+    </div>
+  );
+}
+
+/**
  * Expando component - collapsible content section.
  */
-function ExpandoSection({ expando, onComment }: { expando: Expando; onComment?: (id: string, comment: string) => void }) {
+function ExpandoSection({
+  expando,
+  onComment,
+  onVoiceComment,
+}: {
+  expando: Expando;
+  onComment?: (id: string, comment: string) => void;
+  onVoiceComment?: (id: string, audioBlob: Blob) => Promise<void>;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [showComment, setShowComment] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
   const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmitComment = () => {
     if (comment.trim() && onComment && expando.id) {
       onComment(expando.id, comment);
       setComment("");
       setShowComment(false);
+      setSubmitted(true);
+    }
+  };
+
+  const handleVoiceComplete = async (blob: Blob) => {
+    if (onVoiceComment && expando.id) {
+      await onVoiceComment(expando.id, blob);
+      setShowVoice(false);
+      setSubmitted(true);
     }
   };
 
@@ -111,7 +207,14 @@ function ExpandoSection({ expando, onComment }: { expando: Expando; onComment?: 
           </div>
           {/* Comment affordance */}
           <div className="mt-4 pt-4 border-t border-blue-200">
-            {showComment ? (
+            {submitted ? (
+              <p className="text-green-700 text-sm">Thanks for your feedback!</p>
+            ) : showVoice ? (
+              <InlineVoiceRecorder
+                onComplete={handleVoiceComplete}
+                onCancel={() => setShowVoice(false)}
+              />
+            ) : showComment ? (
               <div className="space-y-2">
                 <textarea
                   value={comment}
@@ -127,6 +230,18 @@ function ExpandoSection({ expando, onComment }: { expando: Expando; onComment?: 
                   >
                     Comment
                   </button>
+                  {onVoiceComment && (
+                    <button
+                      onClick={() => {
+                        setShowComment(false);
+                        setShowVoice(true);
+                      }}
+                      className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50 flex items-center gap-1"
+                    >
+                      <MicrophoneIcon className="w-4 h-4" />
+                      Voice
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowComment(false)}
                     className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800"
@@ -136,12 +251,23 @@ function ExpandoSection({ expando, onComment }: { expando: Expando; onComment?: 
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setShowComment(true)}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                + Add comment
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowComment(true)}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  + Add comment
+                </button>
+                {onVoiceComment && (
+                  <button
+                    onClick={() => setShowVoice(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <MicrophoneIcon className="w-4 h-4" />
+                    Voice
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -153,13 +279,30 @@ function ExpandoSection({ expando, onComment }: { expando: Expando; onComment?: 
 /**
  * Query component - prompts for user input.
  */
-function QueryPrompt({ query, onResponse }: { query: Query; onResponse?: (id: string, response: string) => void }) {
+function QueryPrompt({
+  query,
+  onResponse,
+  onVoiceResponse,
+}: {
+  query: Query;
+  onResponse?: (id: string, response: string) => void;
+  onVoiceResponse?: (id: string, audioBlob: Blob) => Promise<void>;
+}) {
   const [response, setResponse] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
 
   const handleSubmit = () => {
     if (response.trim() && onResponse && query.id) {
       onResponse(query.id, response);
+      setSubmitted(true);
+    }
+  };
+
+  const handleVoiceComplete = async (blob: Blob) => {
+    if (onVoiceResponse && query.id) {
+      await onVoiceResponse(query.id, blob);
+      setShowVoice(false);
       setSubmitted(true);
     }
   };
@@ -175,25 +318,41 @@ function QueryPrompt({ query, onResponse }: { query: Query; onResponse?: (id: st
   return (
     <div className="my-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
       <p className="font-medium text-amber-900 mb-2">{query.prompt}</p>
-      {query.text && (
-        <p className="text-sm text-amber-700 mb-3">{query.text}</p>
-      )}
-      <div className="space-y-2">
-        <textarea
-          value={response}
-          onChange={(e) => setResponse(e.target.value)}
-          placeholder="Your response..."
-          className="w-full p-2 text-sm border border-amber-300 rounded resize-none bg-white"
-          rows={3}
+      {query.text && <p className="text-sm text-amber-700 mb-3">{query.text}</p>}
+      {showVoice ? (
+        <InlineVoiceRecorder
+          onComplete={handleVoiceComplete}
+          onCancel={() => setShowVoice(false)}
         />
-        <button
-          onClick={handleSubmit}
-          disabled={!response.trim()}
-          className="px-4 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Submit
-        </button>
-      </div>
+      ) : (
+        <div className="space-y-2">
+          <textarea
+            value={response}
+            onChange={(e) => setResponse(e.target.value)}
+            placeholder="Your response..."
+            className="w-full p-2 text-sm border border-amber-300 rounded resize-none bg-white"
+            rows={3}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={!response.trim()}
+              className="px-4 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Submit
+            </button>
+            {onVoiceResponse && (
+              <button
+                onClick={() => setShowVoice(true)}
+                className="px-4 py-2 border border-amber-300 text-amber-800 text-sm rounded hover:bg-amber-100 flex items-center gap-1"
+              >
+                <MicrophoneIcon className="w-4 h-4" />
+                Voice Response
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -201,10 +360,18 @@ function QueryPrompt({ query, onResponse }: { query: Query; onResponse?: (id: st
 /**
  * Section component - major content division.
  */
-function ContentSection({ section, onComment, onQueryResponse }: {
+function ContentSection({
+  section,
+  onComment,
+  onVoiceComment,
+  onQueryResponse,
+  onVoiceQueryResponse,
+}: {
   section: Section;
   onComment?: (id: string, comment: string) => void;
+  onVoiceComment?: (id: string, audioBlob: Blob) => Promise<void>;
   onQueryResponse?: (id: string, response: string) => void;
+  onVoiceQueryResponse?: (id: string, audioBlob: Blob) => Promise<void>;
 }) {
   return (
     <div className="mb-8" data-section-id={section.id}>
@@ -219,10 +386,20 @@ function ContentSection({ section, onComment, onQueryResponse }: {
         </div>
       )}
       {section.expandos.map((expando, i) => (
-        <ExpandoSection key={expando.id ?? i} expando={expando} onComment={onComment} />
+        <ExpandoSection
+          key={expando.id ?? i}
+          expando={expando}
+          onComment={onComment}
+          onVoiceComment={onVoiceComment}
+        />
       ))}
       {section.queries.map((query, i) => (
-        <QueryPrompt key={query.id ?? i} query={query} onResponse={onQueryResponse} />
+        <QueryPrompt
+          key={query.id ?? i}
+          query={query}
+          onResponse={onQueryResponse}
+          onVoiceResponse={onVoiceQueryResponse}
+        />
       ))}
     </div>
   );
@@ -231,7 +408,13 @@ function ContentSection({ section, onComment, onQueryResponse }: {
 /**
  * Source list component.
  */
-function SourceList({ sources, onSourceClick }: { sources: SourceRef[]; onSourceClick?: (path: string) => void }) {
+function SourceList({
+  sources,
+  onSourceClick,
+}: {
+  sources: SourceRef[];
+  onSourceClick?: (path: string) => void;
+}) {
   if (sources.length === 0) return null;
 
   const grouped = {
@@ -308,19 +491,35 @@ function SourceList({ sources, onSourceClick }: { sources: SourceRef[]; onSource
 export function NewsEditionView({
   edition,
   onComment,
+  onVoiceComment,
   onQueryResponse,
+  onVoiceQueryResponse,
   onSourceClick,
 }: NewsEditionViewProps) {
   const [showGlobalComment, setShowGlobalComment] = useState(false);
+  const [showGlobalVoice, setShowGlobalVoice] = useState(false);
   const [globalComment, setGlobalComment] = useState("");
+  const [globalSubmitted, setGlobalSubmitted] = useState(false);
 
   const handleGlobalComment = useCallback(() => {
     if (globalComment.trim() && onComment) {
       onComment("global", globalComment);
       setGlobalComment("");
       setShowGlobalComment(false);
+      setGlobalSubmitted(true);
     }
   }, [globalComment, onComment]);
+
+  const handleGlobalVoice = useCallback(
+    async (blob: Blob) => {
+      if (onVoiceComment) {
+        await onVoiceComment("global", blob);
+        setShowGlobalVoice(false);
+        setGlobalSubmitted(true);
+      }
+    },
+    [onVoiceComment]
+  );
 
   return (
     <article className="max-w-3xl mx-auto px-4 py-8">
@@ -334,28 +533,15 @@ export function NewsEditionView({
             day: "numeric",
           })}
         </time>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">
-          {edition.title}
-        </h1>
-        {edition.byline && (
-          <p className="text-lg text-gray-600 italic">
-            {edition.byline}
-          </p>
-        )}
-        {edition.status === "draft" && (
-          <span className="inline-block mt-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">
-            Draft
-          </span>
-        )}
+        <h1 className="text-3xl font-bold text-gray-900 mb-3">{edition.title}</h1>
+        {edition.byline && <p className="text-lg text-gray-600 italic">{edition.byline}</p>}
       </header>
 
       {/* Main content */}
       <div className="prose prose-lg max-w-none mb-8">
         {/* Top-level markdown content */}
         {edition.content.text && (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {edition.content.text}
-          </ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{edition.content.text}</ReactMarkdown>
         )}
 
         {/* Sections */}
@@ -364,18 +550,30 @@ export function NewsEditionView({
             key={section.id ?? i}
             section={section}
             onComment={onComment}
+            onVoiceComment={onVoiceComment}
             onQueryResponse={onQueryResponse}
+            onVoiceQueryResponse={onVoiceQueryResponse}
           />
         ))}
 
         {/* Top-level expandos */}
         {edition.content.expandos.map((expando, i) => (
-          <ExpandoSection key={expando.id ?? i} expando={expando} onComment={onComment} />
+          <ExpandoSection
+            key={expando.id ?? i}
+            expando={expando}
+            onComment={onComment}
+            onVoiceComment={onVoiceComment}
+          />
         ))}
 
         {/* Top-level queries */}
         {edition.content.queries.map((query, i) => (
-          <QueryPrompt key={query.id ?? i} query={query} onResponse={onQueryResponse} />
+          <QueryPrompt
+            key={query.id ?? i}
+            query={query}
+            onResponse={onQueryResponse}
+            onVoiceResponse={onVoiceQueryResponse}
+          />
         ))}
       </div>
 
@@ -387,7 +585,14 @@ export function NewsEditionView({
         <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
           Feedback
         </h3>
-        {showGlobalComment ? (
+        {globalSubmitted ? (
+          <p className="text-green-700">Thanks for your feedback!</p>
+        ) : showGlobalVoice ? (
+          <InlineVoiceRecorder
+            onComplete={handleGlobalVoice}
+            onCancel={() => setShowGlobalVoice(false)}
+          />
+        ) : showGlobalComment ? (
           <div className="space-y-3">
             <textarea
               value={globalComment}
@@ -403,6 +608,18 @@ export function NewsEditionView({
               >
                 Submit Feedback
               </button>
+              {onVoiceComment && (
+                <button
+                  onClick={() => {
+                    setShowGlobalComment(false);
+                    setShowGlobalVoice(true);
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-1"
+                >
+                  <MicrophoneIcon className="w-4 h-4" />
+                  Voice Feedback
+                </button>
+              )}
               <button
                 onClick={() => setShowGlobalComment(false)}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
@@ -412,12 +629,23 @@ export function NewsEditionView({
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setShowGlobalComment(true)}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-          >
-            Share your thoughts on this edition
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowGlobalComment(true)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Share your thoughts on this edition
+            </button>
+            {onVoiceComment && (
+              <button
+                onClick={() => setShowGlobalVoice(true)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+              >
+                <MicrophoneIcon className="w-4 h-4" />
+                Voice Feedback
+              </button>
+            )}
+          </div>
         )}
       </div>
     </article>
