@@ -5,3 +5,4 @@ dist/
 .claude/
 .thinking/
 .thinking/local/
+.tap/
