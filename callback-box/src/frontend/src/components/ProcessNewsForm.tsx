@@ -1,5 +1,10 @@
 /**
  * ProcessNewsForm - Controls for running the news processing agent.
+ *
+ * The news processing pipeline has three phases:
+ * 1. Triage: Review items in inbox/news/, trash uninteresting ones
+ * 2. Analyze: Fetch content & add analysis, move to pool/news/
+ * 3. Edition: Create edition from pool items, archive used ones
  */
 
 import { useState } from "react";
@@ -7,34 +12,34 @@ import { useState } from "react";
 export interface ProcessNewsArgs {
   batchSize: number;
   triageOnly: boolean;
-  fetchOnly: boolean;
-  summarizeOnly: boolean;
+  analyzeOnly: boolean;
+  editionOnly: boolean;
 }
 
 interface ProcessNewsFormProps {
   onSubmit: (args: ProcessNewsArgs) => void;
   onClose: () => void;
-  newCount: number;
-  interestingCount: number;
-  fetchedCount: number;
+  /** Items in box/inbox/news/ awaiting triage */
+  inboxCount: number;
+  /** Items in box/pool/news/ ready for edition */
+  poolCount: number;
 }
 
 export function ProcessNewsForm({
   onSubmit,
   onClose,
-  newCount,
-  interestingCount,
-  fetchedCount,
+  inboxCount,
+  poolCount,
 }: ProcessNewsFormProps) {
-  const [batchSize, setBatchSize] = useState(5);
-  const [phase, setPhase] = useState<"all" | "triage" | "fetch" | "summarize">("all");
+  const [batchSize, setBatchSize] = useState(10);
+  const [phase, setPhase] = useState<"all" | "triage" | "analyze" | "edition">("all");
 
   const handleSubmit = () => {
     onSubmit({
       batchSize,
       triageOnly: phase === "triage",
-      fetchOnly: phase === "fetch",
-      summarizeOnly: phase === "summarize",
+      analyzeOnly: phase === "analyze",
+      editionOnly: phase === "edition",
     });
   };
 
@@ -54,19 +59,15 @@ export function ProcessNewsForm({
 
       {/* Status summary */}
       <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-        <div className="text-sm text-gray-600 mb-2">Current Status:</div>
+        <div className="text-sm text-gray-600 mb-2">Pipeline Status:</div>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-            <span>{newCount} new</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-            <span>{interestingCount} interesting</span>
+            <span>{inboxCount} in inbox</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-green-500"></span>
-            <span>{fetchedCount} fetched</span>
+            <span>{poolCount} in pool</span>
           </div>
         </div>
       </div>
@@ -79,9 +80,9 @@ export function ProcessNewsForm({
         <input
           type="number"
           min={1}
-          max={20}
+          max={50}
           value={batchSize}
-          onChange={(e) => setBatchSize(parseInt(e.target.value) || 5)}
+          onChange={(e) => setBatchSize(parseInt(e.target.value) || 10)}
           className="input w-24"
         />
         <span className="text-sm text-gray-500 ml-2">items per phase</span>
@@ -102,7 +103,7 @@ export function ProcessNewsForm({
               onChange={() => setPhase("all")}
               className="text-blue-600"
             />
-            <span className="text-sm">All phases (triage → fetch → summarize)</span>
+            <span className="text-sm">All phases (triage → analyze → edition)</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -112,38 +113,38 @@ export function ProcessNewsForm({
               checked={phase === "triage"}
               onChange={() => setPhase("triage")}
               className="text-blue-600"
-              disabled={newCount === 0}
+              disabled={inboxCount === 0}
             />
-            <span className={`text-sm ${newCount === 0 ? "text-gray-400" : ""}`}>
-              Triage only ({newCount} new items)
+            <span className={`text-sm ${inboxCount === 0 ? "text-gray-400" : ""}`}>
+              Triage only ({inboxCount} inbox items)
             </span>
           </label>
           <label className="flex items-center gap-2">
             <input
               type="radio"
               name="phase"
-              value="fetch"
-              checked={phase === "fetch"}
-              onChange={() => setPhase("fetch")}
+              value="analyze"
+              checked={phase === "analyze"}
+              onChange={() => setPhase("analyze")}
               className="text-blue-600"
-              disabled={interestingCount === 0}
+              disabled={inboxCount === 0}
             />
-            <span className={`text-sm ${interestingCount === 0 ? "text-gray-400" : ""}`}>
-              Fetch only ({interestingCount} interesting items)
+            <span className={`text-sm ${inboxCount === 0 ? "text-gray-400" : ""}`}>
+              Analyze only ({inboxCount} inbox items)
             </span>
           </label>
           <label className="flex items-center gap-2">
             <input
               type="radio"
               name="phase"
-              value="summarize"
-              checked={phase === "summarize"}
-              onChange={() => setPhase("summarize")}
+              value="edition"
+              checked={phase === "edition"}
+              onChange={() => setPhase("edition")}
               className="text-blue-600"
-              disabled={fetchedCount === 0}
+              disabled={poolCount === 0}
             />
-            <span className={`text-sm ${fetchedCount === 0 ? "text-gray-400" : ""}`}>
-              Summarize only ({fetchedCount} fetched items)
+            <span className={`text-sm ${poolCount === 0 ? "text-gray-400" : ""}`}>
+              Create edition ({poolCount} pool items)
             </span>
           </label>
         </div>
@@ -157,8 +158,8 @@ export function ProcessNewsForm({
         >
           cb process-news
           {phase === "triage" && " --triage-only"}
-          {phase === "fetch" && " --fetch-only"}
-          {phase === "summarize" && " --summarize-only"}
+          {phase === "analyze" && " --analyze-only"}
+          {phase === "edition" && " --edition-only"}
         </button>
         <button onClick={onClose} className="btn btn-secondary">
           Cancel
@@ -178,7 +179,7 @@ export function ProcessNewsForm({
 export function buildProcessNewsLabel(args: ProcessNewsArgs): string {
   const parts = ["cb process-news", `--batch-size ${args.batchSize}`];
   if (args.triageOnly) parts.push("--triage-only");
-  if (args.fetchOnly) parts.push("--fetch-only");
-  if (args.summarizeOnly) parts.push("--summarize-only");
+  if (args.analyzeOnly) parts.push("--analyze-only");
+  if (args.editionOnly) parts.push("--edition-only");
   return parts.join(" ");
 }

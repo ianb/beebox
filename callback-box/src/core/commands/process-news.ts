@@ -1,20 +1,36 @@
 /**
  * Process-news command - Run the news processing agent.
  *
- * This command invokes Claude Code to:
- * 1. Triage news items (mark interesting vs skipped)
- * 2. Fetch content for interesting items
- * 3. Create a summary of the batch
+ * This command invokes Claude Code to process news through three phases:
  *
- * The agent runs in a constrained manner with explicit batch sizing.
+ * 1. TRIAGE: Review items in box/inbox/news/
+ *    - Move uninteresting items to store/trash/news/
+ *    - Keep interesting items for analysis
+ *
+ * 2. ANALYZE: For items that passed triage
+ *    - Fetch full article content
+ *    - Create analysis (topics, type, thesis, how to use it)
+ *    - Move to box/pool/news/
+ *
+ * 3. CREATE EDITION: From items in box/pool/news/
+ *    - Identify themes and notable items
+ *    - Create a news-edition card with narrative structure
+ *    - Move used items to store/archive/news/
+ *
+ * Status is expressed by LOCATION, not by attribute:
+ * - box/inbox/news/     → New, awaiting triage
+ * - box/pool/news/      → Analyzed, ready for edition
+ * - store/archive/news/ → Used in an edition
+ * - store/trash/news/   → Skipped as uninteresting
  */
 
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import {
   registerCommand,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { getSystemState, type CardInfo } from "../state.js";
 import { runAgent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { stageAll, commit, getStatus } from "../../cli/lib/git.js";
@@ -26,16 +42,39 @@ import { fmt } from "../../cli/lib/format.js";
 export interface ProcessNewsArgs {
   /** Maximum number of items to process in this run */
   batchSize?: number;
-  /** Only do triage phase (no fetching or summarizing) */
+  /** Only do triage phase */
   triageOnly?: boolean;
-  /** Only do fetch phase (for items already triaged as interesting) */
-  fetchOnly?: boolean;
-  /** Only do summary phase (for items already fetched) */
-  summarizeOnly?: boolean;
+  /** Only do analyze phase (for items already triaged) */
+  analyzeOnly?: boolean;
+  /** Only do edition creation phase (for items already analyzed) */
+  editionOnly?: boolean;
   /** Show what would happen without doing it */
   dryRun?: boolean;
   /** Force even if another process is running */
   force?: boolean;
+}
+
+/**
+ * Get news items from a specific directory.
+ */
+async function getNewsFromDir(boxRoot: string, relativeDir: string): Promise<string[]> {
+  const dir = path.join(boxRoot, relativeDir);
+  try {
+    const files = await fs.readdir(dir);
+    return files
+      .filter((f) => f.endsWith(".news-item.card"))
+      .map((f) => path.join(relativeDir, f));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Ensure a directory exists.
+ */
+async function ensureDir(boxRoot: string, relativeDir: string): Promise<void> {
+  const dir = path.join(boxRoot, relativeDir);
+  await fs.mkdir(dir, { recursive: true });
 }
 
 /**
@@ -47,110 +86,216 @@ function buildTriagePrompt(boxRoot: string, batchSize: number): string {
 WORKING DIRECTORY: ${boxRoot}
 
 YOUR TASK:
-Review news items and decide which are interesting enough to read in full.
+Review news items in box/inbox/news/ and decide which are worth reading in full.
 
-BATCH SIZE: You should process up to ${batchSize} items in this run.
+BATCH SIZE: Process up to ${batchSize} items in this run.
 
 FOR EACH NEWS ITEM:
 1. Read the title and summary from the card
 2. Decide: Is this likely interesting based on the title/summary?
-3. Update the card's status attribute:
-   - status="interesting" - Worth fetching and reading the full article
-   - status="possibly-interesting" - Uncertain, keep for later review
-   - status="skipped" - Not interesting, will be trashed
+3. Take action based on your decision:
+
+   INTERESTING → Keep the file where it is (we'll analyze it next)
+
+   NOT INTERESTING → Move to trash:
+   \`\`\`
+   cb trash <path> --reason "Not interesting: [brief reason]"
+   \`\`\`
 
 CRITERIA FOR "INTERESTING":
 - Technical content (programming, systems, architecture)
 - Novel ideas or approaches
 - Significant news in tech/science
 - Things that would be educational or useful
+- Opinion pieces with substantive arguments
 
-NOT INTERESTING (skip):
+NOT INTERESTING (trash):
 - Marketing/promotional content
 - Listicles without substance
 - Repetitive news already covered elsewhere
 - Entertainment gossip
+- Job postings, hiring announcements
+- Press releases without substance
 
-HOW TO UPDATE STATUS:
-Use the Edit tool to change status="new" to status="interesting" (or skipped, etc.)
+IMPORTANT: Status is expressed by location, not attributes. Don't modify the status attribute.
+Items stay in inbox/news/ if interesting, or get trashed if not.
 
-For skipped items, also run: cb trash <path> --commit --reason "Not interesting: [brief reason]"
-
-When done, briefly summarize what you triaged.`;
+When done, briefly state how many you kept vs trashed.`;
 }
 
 /**
- * Build the system prompt for content fetching.
+ * Build the system prompt for content analysis.
  */
-function buildFetchPrompt(boxRoot: string): string {
-  return `You are fetching full article content for interesting news items.
+function buildAnalyzePrompt(boxRoot: string): string {
+  return `You are analyzing news articles in a Callback Box.
 
 WORKING DIRECTORY: ${boxRoot}
 
 YOUR TASK:
-For each news item with status="interesting", fetch the full article content.
+For each news item in box/inbox/news/ that passed triage:
+1. Fetch the full article content
+2. Create an analysis of how this article fits into the "mental space"
+3. Move the analyzed item to box/pool/news/
 
-HOW TO FETCH:
-Run the command: cb fetch-news <path> --commit
+STEP 1 - FETCH CONTENT:
+Run: cb fetch-news <path>
 
-This will:
-- Fetch the article HTML
-- Convert to markdown
-- Update the card with the content
-- Set status to "fetched" (or "fetch-failed")
+This fetches the article and adds <content> to the card.
 
-For each item:
-1. Run cb fetch-news <path> --commit
-2. Note if it succeeded or failed
+STEP 2 - ADD ANALYSIS:
+Edit the card to add an <analysis> element. This is NOT a summary of the content
+(the content is already there). Instead, analyze:
 
-When done, summarize what was fetched.`;
+- Topics: What themes/subjects does it cover?
+- Type: Is it news, opinion, tutorial, announcement, research, etc.?
+- Thesis: If opinion/analysis, what's the main argument?
+- Tone: Measured, urgent, casual, academic, promotional?
+- Timeliness: Is it breaking news, timely, or evergreen?
+- Notes: How might this be used in an edition? What pairs well with it?
+- Questions: Any open questions this raises?
+
+Example analysis element:
+\`\`\`xml
+<analysis analyzed-at="${new Date().toISOString()}">
+  <topics>
+    <topic>AI safety</topic>
+    <topic>regulation</topic>
+  </topics>
+  <type>opinion</type>
+  <thesis>AI regulation should focus on outcomes rather than methods</thesis>
+  <tone>measured, academic</tone>
+  <timeliness>evergreen</timeliness>
+  <notes>Could pair well with EU AI Act coverage. Author is respected in the field.</notes>
+  <questions>
+    <question>How does this compare to the Anthropic safety approach?</question>
+  </questions>
+</analysis>
+\`\`\`
+
+STEP 3 - MOVE TO POOL:
+After adding the analysis, move the file:
+\`\`\`
+mkdir -p box/pool/news
+mv <inbox-path> box/pool/news/
+git add box/pool/news/<filename>
+\`\`\`
+
+Then commit all changes.
+
+When done, state what was analyzed and any notable themes emerging.`;
 }
 
 /**
- * Build the system prompt for news summarization.
+ * Build the system prompt for edition creation.
  */
-function buildSummaryPrompt(boxRoot: string): string {
-  return `You are creating a news summary from fetched articles.
+function buildEditionPrompt(boxRoot: string): string {
+  return `You are creating a news edition in a Callback Box.
 
 WORKING DIRECTORY: ${boxRoot}
 
 YOUR TASK:
-1. Read news items with status="fetched"
-2. Read their full content (in the <content> element)
-3. Create a news summary card
-4. Mark summarized items with status="summarized"
+Create a news-edition card from items in box/pool/news/. This is a narrative publication,
+not just a list of summaries.
 
-SUMMARY FORMAT:
-Create a news-summary card using:
+STEP 1 - SURVEY THE POOL:
+Read all items in box/pool/news/ with their <analysis> elements.
+Look for:
+- Common themes that connect multiple articles
+- Timely items that should be featured today
+- Interesting contrasts or tensions between pieces
+- A narrative arc that could make this edition compelling
 
-cb create box/inbox/summaries/Daily_Summary_[YYYY-MM-DD].news-summary.card \\
-  --commit
+Optionally, read recent editions in store/archive/editions/ to:
+- Avoid repeating themes too soon
+- Build on ongoing stories
+- Reference previous coverage
 
-Then edit the created card to add the summary content.
+STEP 2 - PLAN THE EDITION:
+Before writing, decide:
+- What's the headline/angle for this edition?
+- What 2-3 themes or sections will structure it?
+- Which articles are primary (drive the narrative)?
+- Which are supporting (add depth)?
+- What expandos would enhance without cluttering?
+- Are there questions to pose to the reader?
 
-SUMMARY CONTENT GUIDELINES:
-- Group by theme/topic when possible
-- Include 1-2 sentence highlights for each article
-- Link back to sources
-- Focus on what's actionable or notable
+STEP 3 - CREATE THE EDITION:
+Create the edition file:
+\`\`\`
+cb create box/inbox/editions/<date>_<slug>.news-edition.card
+\`\`\`
 
-After creating the summary, mark each source item:
-- Use Edit to change status="fetched" to status="summarized"
+Then edit it with this structure:
 
-When done, state what was summarized.`;
-}
+\`\`\`xml
+<news-edition status="draft">
+  <title>Compelling headline that captures the theme</title>
+  <date>${new Date().toISOString().slice(0, 10)}</date>
+  <byline>One sentence teaser of what's inside</byline>
 
-/**
- * Get news items by status.
- */
-async function getNewsByStatus(
-  boxRoot: string,
-  statuses: string[]
-): Promise<CardInfo[]> {
-  const state = await getSystemState(boxRoot);
-  return state.inbox.filter(
-    (item) => item.type === "news-item" && statuses.includes(item.status ?? "")
-  );
+  <content format="markdown">
+The opening paragraph sets up the theme. What connects today's stories?
+What makes this moment interesting?
+
+<section id="s1" heading="First Theme">
+
+The narrative for this theme. Don't just list articles—tell a story about
+what's happening in this space.
+
+<expando title="Deep dive: Technical details" id="exp1">
+More detailed content that interested readers can explore.
+Quote directly from sources when relevant.
+
+> "Direct quotes add credibility and voice" — Source
+</expando>
+
+<expando title="Background: Why this matters" id="exp2">
+Context that helps readers understand significance.
+</expando>
+
+</section>
+
+<section id="s2" heading="Second Theme">
+
+Another narrative thread...
+
+<query id="q1" prompt="What aspects of this interest you most?">
+Understanding your interests helps focus future coverage.
+</query>
+
+</section>
+
+Closing thoughts that tie things together or look ahead.
+  </content>
+
+  <sources>
+    <source path="box/pool/news/Article_One.news-item.card" usage="primary">Article Title</source>
+    <source path="box/pool/news/Article_Two.news-item.card" usage="supporting">Article Title</source>
+  </sources>
+</news-edition>
+\`\`\`
+
+GUIDELINES:
+- BE LIBERAL with expandos - long is fine if it's expandable
+- The main narrative should be scannable (1-2 paragraphs per section)
+- Use expandos for: technical details, background, quotes, tangents
+- Use queries to invite reader engagement (but sparingly)
+- Quote sources directly when they say it better
+- Link themes across articles, don't just list them
+
+STEP 4 - ARCHIVE USED ITEMS:
+After creating the edition, move used items to archive:
+\`\`\`
+mkdir -p store/archive/news
+mv box/pool/news/<used-file> store/archive/news/
+git add store/archive/news/<used-file>
+\`\`\`
+
+Leave items in pool that weren't used—they'll be available for future editions.
+
+Commit all changes with a message like "Create news edition: [title]"
+
+When done, state the edition title and what was included.`;
 }
 
 /**
@@ -161,13 +306,13 @@ async function executeProcessNews(
   args: Record<string, unknown>
 ): Promise<CommandResult> {
   const processArgs = args as ProcessNewsArgs;
-  const batchSize = processArgs.batchSize ?? 5;
+  const batchSize = processArgs.batchSize ?? 10;
   const dryRun = processArgs.dryRun ?? false;
 
   // Determine which phases to run
-  const runTriage = !processArgs.fetchOnly && !processArgs.summarizeOnly;
-  const runFetch = !processArgs.triageOnly && !processArgs.summarizeOnly;
-  const runSummarize = !processArgs.triageOnly && !processArgs.fetchOnly;
+  const runTriage = !processArgs.analyzeOnly && !processArgs.editionOnly;
+  const runAnalyze = !processArgs.triageOnly && !processArgs.editionOnly;
+  const runEdition = !processArgs.triageOnly && !processArgs.analyzeOnly;
 
   // Check for existing lock
   if (!processArgs.force) {
@@ -189,48 +334,50 @@ async function executeProcessNews(
     };
   }
 
+  // Ensure directories exist
+  await ensureDir(ctx.boxRoot, "box/inbox/news");
+  await ensureDir(ctx.boxRoot, "box/pool/news");
+  await ensureDir(ctx.boxRoot, "box/inbox/editions");
+  await ensureDir(ctx.boxRoot, "store/archive/news");
+  await ensureDir(ctx.boxRoot, "store/archive/editions");
+  await ensureDir(ctx.boxRoot, "store/trash/news");
+
   const results: { phase: string; success: boolean; message: string }[] = [];
 
   try {
     // Phase 1: Triage
     if (runTriage) {
       ctx.writeLine(fmt.phase("Phase 1: Triage"));
-      const newItems = await getNewsByStatus(ctx.boxRoot, ["new"]);
+      const inboxItems = await getNewsFromDir(ctx.boxRoot, "box/inbox/news");
 
-      if (newItems.length === 0) {
-        ctx.writeLine(fmt.dim("No new items to triage."));
+      if (inboxItems.length === 0) {
+        ctx.writeLine(fmt.dim("No items in inbox to triage."));
         results.push({ phase: "triage", success: true, message: "No items" });
       } else {
-        const itemsToProcess = newItems.slice(0, batchSize);
-        ctx.writeLine(fmt.progress(itemsToProcess.length, newItems.length, "items to triage"));
+        const itemsToProcess = inboxItems.slice(0, batchSize);
+        ctx.writeLine(fmt.progress(itemsToProcess.length, inboxItems.length, "items to triage"));
 
         if (dryRun) {
           ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
           results.push({ phase: "triage", success: true, message: "Dry run" });
         } else {
-          const paths = itemsToProcess.map((i) => i.relativePath).join("\n  - ");
+          const paths = itemsToProcess.join("\n  - ");
           ctx.writeLine(fmt.info("Starting Claude Code agent..."));
           ctx.writeLine("");
           const triageResult = await runAgent({
             boxRoot: ctx.boxRoot,
             systemPrompt: buildTriagePrompt(ctx.boxRoot, batchSize),
             prompt: `Please triage these news items:\n  - ${paths}`,
-            onOutput: (text) => {
-              // Stream raw output from Claude Code
-              ctx.write(text);
-            },
+            onOutput: (text) => ctx.write(text),
           });
           ctx.writeLine("");
+
           if (triageResult.success) {
             ctx.writeLine(fmt.ok("Agent finished successfully"));
+            results.push({ phase: "triage", success: true, message: `Triaged ${itemsToProcess.length} items` });
           } else {
             ctx.writeLine(fmt.fail(`Agent error: ${triageResult.error}`));
-          }
-
-          if (!triageResult.success) {
             results.push({ phase: "triage", success: false, message: triageResult.error ?? "Failed" });
-          } else {
-            results.push({ phase: "triage", success: true, message: `Triaged ${itemsToProcess.length} items` });
           }
 
           // Commit triage changes
@@ -248,100 +395,99 @@ async function executeProcessNews(
       ctx.writeLine("");
     }
 
-    // Phase 2: Fetch
-    if (runFetch) {
-      ctx.writeLine(fmt.phase("Phase 2: Fetch Content"));
-      const interestingItems = await getNewsByStatus(ctx.boxRoot, ["interesting"]);
+    // Phase 2: Analyze
+    if (runAnalyze) {
+      ctx.writeLine(fmt.phase("Phase 2: Analyze"));
+      // After triage, interesting items are still in inbox/news
+      const inboxItems = await getNewsFromDir(ctx.boxRoot, "box/inbox/news");
 
-      if (interestingItems.length === 0) {
-        ctx.writeLine(fmt.dim("No interesting items to fetch."));
-        results.push({ phase: "fetch", success: true, message: "No items" });
+      if (inboxItems.length === 0) {
+        ctx.writeLine(fmt.dim("No items to analyze."));
+        results.push({ phase: "analyze", success: true, message: "No items" });
       } else {
-        const itemsToFetch = interestingItems.slice(0, batchSize);
-        ctx.writeLine(fmt.progress(itemsToFetch.length, interestingItems.length, "items to fetch"));
+        const itemsToAnalyze = inboxItems.slice(0, batchSize);
+        ctx.writeLine(fmt.progress(itemsToAnalyze.length, inboxItems.length, "items to analyze"));
 
         if (dryRun) {
           ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
-          results.push({ phase: "fetch", success: true, message: "Dry run" });
+          results.push({ phase: "analyze", success: true, message: "Dry run" });
         } else {
-          const paths = itemsToFetch.map((i) => i.relativePath).join("\n  - ");
+          const paths = itemsToAnalyze.join("\n  - ");
           ctx.writeLine(fmt.info("Starting Claude Code agent..."));
           ctx.writeLine("");
-          const fetchResult = await runAgent({
+          const analyzeResult = await runAgent({
             boxRoot: ctx.boxRoot,
-            systemPrompt: buildFetchPrompt(ctx.boxRoot),
-            prompt: `Please fetch content for these items:\n  - ${paths}`,
-            onOutput: (text) => {
-              // Stream raw output from Claude Code
-              ctx.write(text);
-            },
+            systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
+            prompt: `Please analyze these news items:\n  - ${paths}`,
+            onOutput: (text) => ctx.write(text),
           });
           ctx.writeLine("");
-          if (fetchResult.success) {
+
+          if (analyzeResult.success) {
             ctx.writeLine(fmt.ok("Agent finished successfully"));
+            results.push({ phase: "analyze", success: true, message: `Analyzed ${itemsToAnalyze.length} items` });
           } else {
-            ctx.writeLine(fmt.fail(`Agent error: ${fetchResult.error}`));
+            ctx.writeLine(fmt.fail(`Agent error: ${analyzeResult.error}`));
+            results.push({ phase: "analyze", success: false, message: analyzeResult.error ?? "Failed" });
           }
 
-          if (!fetchResult.success) {
-            results.push({ phase: "fetch", success: false, message: fetchResult.error ?? "Failed" });
-          } else {
-            results.push({ phase: "fetch", success: true, message: `Fetched ${itemsToFetch.length} items` });
+          // Commit analysis changes
+          const status = await getStatus(ctx.boxRoot);
+          if (!status.clean) {
+            await stageAll(ctx.boxRoot);
+            await commit(ctx.boxRoot, {
+              message: `Analyze ${itemsToAnalyze.length} news items`,
+              trailers: { "Triggered-By": "cb process-news", Phase: "analyze" },
+            });
+            ctx.writeLine(fmt.dim("  Analysis changes committed."));
           }
         }
       }
       ctx.writeLine("");
     }
 
-    // Phase 3: Summarize
-    if (runSummarize) {
-      ctx.writeLine(fmt.phase("Phase 3: Summarize"));
-      const fetchedItems = await getNewsByStatus(ctx.boxRoot, ["fetched"]);
+    // Phase 3: Create Edition
+    if (runEdition) {
+      ctx.writeLine(fmt.phase("Phase 3: Create Edition"));
+      const poolItems = await getNewsFromDir(ctx.boxRoot, "box/pool/news");
 
-      if (fetchedItems.length === 0) {
-        ctx.writeLine(fmt.dim("No fetched items to summarize."));
-        results.push({ phase: "summarize", success: true, message: "No items" });
+      if (poolItems.length === 0) {
+        ctx.writeLine(fmt.dim("No items in pool to create edition from."));
+        results.push({ phase: "edition", success: true, message: "No items" });
       } else {
-        ctx.writeLine(`Summarizing ${fmt.num(fetchedItems.length)} fetched items...`);
+        ctx.writeLine(`Creating edition from ${fmt.num(poolItems.length)} pooled items...`);
 
         if (dryRun) {
           ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
-          results.push({ phase: "summarize", success: true, message: "Dry run" });
+          results.push({ phase: "edition", success: true, message: "Dry run" });
         } else {
-          const paths = fetchedItems.map((i) => i.relativePath).join("\n  - ");
           ctx.writeLine(fmt.info("Starting Claude Code agent..."));
           ctx.writeLine("");
-          const summaryResult = await runAgent({
+          const editionResult = await runAgent({
             boxRoot: ctx.boxRoot,
-            systemPrompt: buildSummaryPrompt(ctx.boxRoot),
-            prompt: `Please create a summary from these fetched items:\n  - ${paths}`,
-            onOutput: (text) => {
-              // Stream raw output from Claude Code
-              ctx.write(text);
-            },
+            systemPrompt: buildEditionPrompt(ctx.boxRoot),
+            prompt: `Please create a news edition from the items in box/pool/news/`,
+            onOutput: (text) => ctx.write(text),
           });
           ctx.writeLine("");
-          if (summaryResult.success) {
+
+          if (editionResult.success) {
             ctx.writeLine(fmt.ok("Agent finished successfully"));
+            results.push({ phase: "edition", success: true, message: "Edition created" });
           } else {
-            ctx.writeLine(fmt.fail(`Agent error: ${summaryResult.error}`));
+            ctx.writeLine(fmt.fail(`Agent error: ${editionResult.error}`));
+            results.push({ phase: "edition", success: false, message: editionResult.error ?? "Failed" });
           }
 
-          if (!summaryResult.success) {
-            results.push({ phase: "summarize", success: false, message: summaryResult.error ?? "Failed" });
-          } else {
-            results.push({ phase: "summarize", success: true, message: `Summarized ${fetchedItems.length} items` });
-          }
-
-          // Commit summary changes
+          // Commit edition changes
           const status = await getStatus(ctx.boxRoot);
           if (!status.clean) {
             await stageAll(ctx.boxRoot);
             await commit(ctx.boxRoot, {
-              message: "Create news summary",
-              trailers: { "Triggered-By": "cb process-news", Phase: "summarize" },
+              message: "Create news edition",
+              trailers: { "Triggered-By": "cb process-news", Phase: "edition" },
             });
-            ctx.writeLine(fmt.dim("  Summary changes committed."));
+            ctx.writeLine(fmt.dim("  Edition changes committed."));
           }
         }
       }
@@ -375,13 +521,13 @@ async function executeProcessNews(
 // Register the command
 registerCommand({
   name: "process-news",
-  description: "Run the news processing agent (triage, fetch, summarize)",
+  description: "Run the news processing agent (triage, analyze, create edition)",
   args: [
     {
       name: "batchSize",
       description: "Maximum items to process per phase",
       required: false,
-      default: 5,
+      default: 10,
       type: "number",
     },
     {
@@ -392,15 +538,15 @@ registerCommand({
       type: "boolean",
     },
     {
-      name: "fetchOnly",
-      description: "Only run fetch phase",
+      name: "analyzeOnly",
+      description: "Only run analyze phase",
       required: false,
       default: false,
       type: "boolean",
     },
     {
-      name: "summarizeOnly",
-      description: "Only run summarize phase",
+      name: "editionOnly",
+      description: "Only run edition creation phase",
       required: false,
       default: false,
       type: "boolean",

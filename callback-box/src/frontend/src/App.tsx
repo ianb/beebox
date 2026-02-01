@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { Routes, Route, useNavigate, useParams } from "react-router-dom";
 import { StatusBar } from "./components/StatusBar";
 import { CardList } from "./components/CardList";
 import { CardView } from "./components/CardView";
@@ -11,17 +12,44 @@ import { ActivityLog } from "./components/ActivityLog";
 import { NewMemo, buildCreateCommandLabel, type MemoCommandArgs } from "./components/NewMemo";
 import { ProcessNewsForm, buildProcessNewsLabel, type ProcessNewsArgs } from "./components/ProcessNewsForm";
 import { CommandRunner } from "./components/CommandRunner";
+import { NewsPage } from "./components/NewsPage";
 import { useSSE } from "./hooks/useSSE";
 import {
   getInbox,
   getQuestions,
   getCommands,
+  getNewsStatus,
   type CardInfo,
+  type NewsStatusResponse,
 } from "./api";
 
 type Tab = "inbox" | "questions" | "commands" | "activity";
 
-export default function App() {
+/**
+ * News page wrapper with route parameters.
+ */
+function NewsPageWrapper() {
+  const navigate = useNavigate();
+  const { "*": editionPath } = useParams();
+
+  return (
+    <NewsPage
+      initialPath={editionPath}
+      onNavigate={(path) => {
+        if (path) {
+          navigate(`/news/${path}`);
+        } else {
+          navigate("/news");
+        }
+      }}
+    />
+  );
+}
+
+/**
+ * Main dashboard view.
+ */
+function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("questions");
   const [inbox, setInbox] = useState<CardInfo[]>([]);
   const [questions, setQuestions] = useState<CardInfo[]>([]);
@@ -34,6 +62,7 @@ export default function App() {
   const [showProcessNews, setShowProcessNews] = useState(false);
   const [createMemoArgs, setCreateMemoArgs] = useState<MemoCommandArgs | null>(null);
   const [processNewsArgs, setProcessNewsArgs] = useState<ProcessNewsArgs | null>(null);
+  const [newsStatus, setNewsStatus] = useState<NewsStatusResponse>({ inbox: 0, pool: 0, archive: 0, trash: 0 });
 
   // SSE connection for live updates
   const { connected } = useSSE("/api/events", {
@@ -54,14 +83,16 @@ export default function App() {
   // Fetch data
   const fetchData = useCallback(async () => {
     try {
-      const [inboxData, questionsData, commandsData] = await Promise.all([
+      const [inboxData, questionsData, commandsData, newsStatusData] = await Promise.all([
         getInbox(),
         getQuestions(),
         getCommands(),
+        getNewsStatus(),
       ]);
       setInbox(inboxData.items);
       setQuestions(questionsData.items);
       setCommands(commandsData.items);
+      setNewsStatus(newsStatusData);
     } catch (err) {
       console.error("Failed to fetch data:", err);
     }
@@ -233,39 +264,31 @@ export default function App() {
               </button>
             </div>
             {/* Show process-news button if there are any news items to process */}
-            {(() => {
-              const newsItems = inbox.filter((i) => i.type === "news-item");
-              const newCount = newsItems.filter((i) => i.status === "new").length;
-              const interestingCount = newsItems.filter((i) => i.status === "interesting").length;
-              const fetchedCount = newsItems.filter((i) => i.status === "fetched").length;
-              const totalProcessable = newCount + interestingCount + fetchedCount;
-              if (totalProcessable === 0) return null;
-              return (
-                <button
-                  onClick={() => {
-                    setShowProcessNews(true);
-                    setProcessNewsArgs(null);
-                    setShowWakeup(false);
-                    setShowCreateMemo(false);
-                    setShowPull(false);
-                    setSelectedCard(null);
-                  }}
-                  className="btn btn-primary w-full font-mono text-sm"
-                >
-                  cb process-news
-                  {newCount > 0 && (
-                    <span className="ml-2 bg-blue-200 text-blue-800 text-xs px-1.5 rounded">
-                      {newCount} new
-                    </span>
-                  )}
-                  {interestingCount > 0 && (
-                    <span className="ml-1 bg-yellow-200 text-yellow-800 text-xs px-1.5 rounded">
-                      {interestingCount} ready
-                    </span>
-                  )}
-                </button>
-              );
-            })()}
+            {(newsStatus.inbox > 0 || newsStatus.pool > 0) && (
+              <button
+                onClick={() => {
+                  setShowProcessNews(true);
+                  setProcessNewsArgs(null);
+                  setShowWakeup(false);
+                  setShowCreateMemo(false);
+                  setShowPull(false);
+                  setSelectedCard(null);
+                }}
+                className="btn btn-primary w-full font-mono text-sm"
+              >
+                cb process-news
+                {newsStatus.inbox > 0 && (
+                  <span className="ml-2 bg-blue-200 text-blue-800 text-xs px-1.5 rounded">
+                    {newsStatus.inbox} inbox
+                  </span>
+                )}
+                {newsStatus.pool > 0 && (
+                  <span className="ml-1 bg-green-200 text-green-800 text-xs px-1.5 rounded">
+                    {newsStatus.pool} pool
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
@@ -291,9 +314,8 @@ export default function App() {
               <ProcessNewsForm
                 onSubmit={handleProcessNewsSubmit}
                 onClose={() => setShowProcessNews(false)}
-                newCount={inbox.filter((i) => i.type === "news-item" && i.status === "new").length}
-                interestingCount={inbox.filter((i) => i.type === "news-item" && i.status === "interesting").length}
-                fetchedCount={inbox.filter((i) => i.type === "news-item" && i.status === "fetched").length}
+                inboxCount={newsStatus.inbox}
+                poolCount={newsStatus.pool}
               />
             </div>
           ) : showPull ? (
@@ -362,5 +384,17 @@ export default function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Main App with routing.
+ */
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/news/*" element={<NewsPageWrapper />} />
+      <Route path="*" element={<Dashboard />} />
+    </Routes>
   );
 }

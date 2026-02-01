@@ -3,10 +3,24 @@
  */
 
 import type { FastifyInstance } from "fastify";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getSystemState, generateContext, type CardInfo } from "../../core/state.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { getLog } from "../../cli/lib/git.js";
+
+/**
+ * Count news items in a directory.
+ */
+async function countNewsInDir(boxRoot: string, relativeDir: string): Promise<number> {
+  const dir = path.join(boxRoot, relativeDir);
+  try {
+    const files = await fs.readdir(dir);
+    return files.filter((f) => f.endsWith(".news-item.card")).length;
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * Register API routes on the Fastify server.
@@ -110,5 +124,22 @@ export async function registerApiRoutes(
   server.get("/api/context", async () => {
     const context = await generateContext(boxRoot);
     return context;
+  });
+
+  // GET /api/news-status - News pipeline status by location
+  server.get("/api/news-status", async () => {
+    const [inboxCount, poolCount, archiveCount, trashCount] = await Promise.all([
+      countNewsInDir(boxRoot, "box/inbox/news"),
+      countNewsInDir(boxRoot, "box/pool/news"),
+      countNewsInDir(boxRoot, "store/archive/news"),
+      countNewsInDir(boxRoot, "store/trash/news"),
+    ]);
+
+    return {
+      inbox: inboxCount,
+      pool: poolCount,
+      archive: archiveCount,
+      trash: trashCount,
+    };
   });
 }

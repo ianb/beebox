@@ -114,11 +114,84 @@ export const NewsFetchError = element("fetch-error", {
 });
 
 /**
- * News item card schema.
+ * Child element for article analysis.
+ *
+ * This is NOT a summary of the content - the content is already there.
+ * This is metadata about how the article fits into the mental space:
+ * - What topics/themes does it cover?
+ * - Is it opinion, news, tutorial, etc.?
+ * - What's the thesis or main argument?
+ * - How might it be used in an edition?
  *
  * Example:
  * ```xml
- * <news-item status="new">
+ * <analysis analyzed-at="2024-01-15T12:00:00Z">
+ *   <topics>
+ *     <topic>AI safety</topic>
+ *     <topic>regulation</topic>
+ *   </topics>
+ *   <type>opinion</type>
+ *   <thesis>AI regulation should focus on outcomes, not methods</thesis>
+ *   <tone>measured, academic</tone>
+ *   <timeliness>evergreen</timeliness>
+ *   <notes>Could pair well with the EU AI Act news. Author is a known expert.</notes>
+ *   <questions>
+ *     <question>Is this position mainstream or contrarian?</question>
+ *   </questions>
+ * </analysis>
+ * ```
+ */
+export const AnalysisTopic = element("topic", {
+  text: z.string(),
+});
+
+export const AnalysisTopics = element("topics", {
+  children: z.array(AnalysisTopic),
+});
+
+export const AnalysisQuestion = element("question", {
+  text: z.string(),
+});
+
+export const AnalysisQuestions = element("questions", {
+  children: z.array(AnalysisQuestion).optional(),
+});
+
+export const NewsAnalysis = element("analysis", {
+  attrs: {
+    /** When the analysis was created */
+    "analyzed-at": z.string().datetime({ offset: true }),
+  },
+  children: z.array(
+    z.union([
+      AnalysisTopics,
+      AnalysisQuestions,
+      /** Article type: news, opinion, tutorial, announcement, etc. */
+      element("type", { text: z.string() }),
+      /** Main thesis or argument if opinion/analysis piece */
+      element("thesis", { text: z.string().optional() }),
+      /** Tone: measured, urgent, casual, academic, promotional, etc. */
+      element("tone", { text: z.string().optional() }),
+      /** Timeliness: breaking, timely, evergreen */
+      element("timeliness", { text: z.enum(["breaking", "timely", "evergreen"]).optional() }),
+      /** Free-form notes about how this might be used */
+      element("notes", { text: z.string().optional() }),
+    ])
+  ).optional(),
+});
+
+/**
+ * News item card schema.
+ *
+ * Lifecycle is primarily expressed by location:
+ * - box/inbox/news/     → New items from RSS, awaiting triage
+ * - box/pool/news/      → Analyzed and ready for edition creation
+ * - store/archive/news/ → Used in an edition
+ * - store/trash/news/   → Skipped as uninteresting
+ *
+ * Example (new item):
+ * ```xml
+ * <news-item>
  *   <title>Breaking: Important Tech News</title>
  *   <link>https://example.com/article</link>
  *   <published>2024-01-15T10:00:00Z</published>
@@ -128,10 +201,29 @@ export const NewsFetchError = element("fetch-error", {
  *   <guid>unique-article-id-123</guid>
  * </news-item>
  * ```
+ *
+ * Example (analyzed item in pool):
+ * ```xml
+ * <news-item>
+ *   <title>Breaking: Important Tech News</title>
+ *   <link>https://example.com/article</link>
+ *   ...
+ *   <content format="markdown" fetched-at="2024-01-15T11:00:00Z">
+ *     Full article content here...
+ *   </content>
+ *   <analysis analyzed-at="2024-01-15T12:00:00Z">
+ *     <topics><topic>AI</topic><topic>regulation</topic></topics>
+ *     <type>news</type>
+ *     <timeliness>timely</timeliness>
+ *     <notes>Major announcement, should feature prominently</notes>
+ *   </analysis>
+ * </news-item>
+ * ```
  */
 export const NewsItemSchema = element("news-item", {
   attrs: {
-    status: NewsItemStatus.default("new"),
+    /** @deprecated Use location instead. Kept for backward compatibility. */
+    status: NewsItemStatus.optional(),
   },
   children: z.array(
     z.union([
@@ -144,6 +236,7 @@ export const NewsItemSchema = element("news-item", {
       NewsGuid,
       NewsContent,
       NewsFetchError,
+      NewsAnalysis,
     ])
   ),
 });

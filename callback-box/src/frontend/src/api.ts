@@ -132,6 +132,21 @@ export async function getContext(): Promise<ContextResponse> {
   return fetchJson<ContextResponse>(`${API_BASE}/context`);
 }
 
+export interface NewsStatusResponse {
+  /** Items in box/inbox/news/ awaiting triage */
+  inbox: number;
+  /** Items in box/pool/news/ ready for edition creation */
+  pool: number;
+  /** Items in store/archive/news/ that have been used */
+  archive: number;
+  /** Items in store/trash/news/ that were skipped */
+  trash: number;
+}
+
+export async function getNewsStatus(): Promise<NewsStatusResponse> {
+  return fetchJson<NewsStatusResponse>(`${API_BASE}/news-status`);
+}
+
 export async function triggerWakeup(dryRun = false): Promise<{
   success: boolean;
   message: string;
