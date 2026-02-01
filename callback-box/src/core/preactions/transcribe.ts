@@ -1,8 +1,15 @@
 /**
- * Transcribe voice memos pre-action.
+ * Transcribe voice content pre-action.
  *
- * Looks for memo cards with audio attachments and transcribes them
+ * Looks for cards with audio attachments and transcribes them
  * using OpenAI Whisper API.
+ *
+ * Works with any card type that:
+ * - Has an audio attachment (shares basename with card)
+ * - Uses <source>voice</source> to indicate voice input
+ * - Uses <transcription> and <transcription-error> elements
+ *
+ * Currently supports: memo, feedback
  */
 
 import * as fs from "node:fs/promises";
@@ -15,8 +22,8 @@ import type { ElementNode } from "cardworks";
 const AUDIO_EXTENSIONS = [".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac"];
 
 export const transcribePreAction: PreAction = {
-  name: "transcribe-voice-memo",
-  appliesTo: ["memo"],
+  name: "transcribe-voice",
+  appliesTo: ["memo", "feedback"],
 
   async shouldRun(context: PreActionContext): Promise<boolean> {
     const { card, cardPath } = context;

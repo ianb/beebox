@@ -148,76 +148,113 @@ export async function registerEditionRoutes(
     }
   );
 
-  // POST /api/edition/feedback - Submit feedback on an edition
+  // POST /api/edition/feedback - Submit feedback on an edition (text or voice)
   server.post<{
     Body: {
       editionPath: string;
       targetId: string;
-      comment: string;
+      comment?: string;
+      audioData?: string; // Base64-encoded audio for voice feedback
+      audioMimeType?: string;
     };
   }>("/api/edition/feedback", async (request, reply) => {
-    const { editionPath, targetId, comment } = request.body ?? {};
+    const { editionPath, targetId, comment, audioData, audioMimeType } = request.body ?? {};
 
-    if (!editionPath || !targetId || !comment) {
+    if (!editionPath || !targetId) {
       return reply.status(400).send({ error: "Missing required fields" });
     }
 
-    // For now, store feedback as a separate card
-    // TODO: Implement proper feedback storage
+    const isVoice = !!audioData;
+    if (!isVoice && !comment) {
+      return reply.status(400).send({ error: "Either comment or audioData is required" });
+    }
+
     const feedbackDir = path.join(boxRoot, "box/inbox/feedback");
     await fs.mkdir(feedbackDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const feedbackPath = path.join(
-      feedbackDir,
-      `edition_feedback_${timestamp}.feedback.card`
-    );
+    const baseName = `edition_feedback_${timestamp}`;
+    const feedbackPath = path.join(feedbackDir, `${baseName}.feedback.card`);
+
+    // For voice feedback, save the audio file
+    if (isVoice && audioData) {
+      const ext = audioMimeType?.includes("webm") ? ".webm" : ".m4a";
+      const audioPath = path.join(feedbackDir, `${baseName}${ext}`);
+      const audioBuffer = Buffer.from(audioData, "base64");
+      await fs.writeFile(audioPath, audioBuffer);
+    }
 
     const feedbackContent = `<feedback type="edition">
   <target ref="${editionPath}#${targetId}" />
-  <comment>${comment}</comment>
+  <source>${isVoice ? "voice" : "text"}</source>
+  <comment>${isVoice ? "" : escapeXml(comment ?? "")}</comment>
   <timestamp>${new Date().toISOString()}</timestamp>
 </feedback>
 `;
 
     await fs.writeFile(feedbackPath, feedbackContent);
 
-    return { success: true, path: feedbackPath };
+    return { success: true, path: feedbackPath, isVoice };
   });
 
-  // POST /api/edition/query-response - Submit a query response
+  // POST /api/edition/query-response - Submit a query response (text or voice)
   server.post<{
     Body: {
       editionPath: string;
       queryId: string;
-      response: string;
+      response?: string;
+      audioData?: string; // Base64-encoded audio for voice response
+      audioMimeType?: string;
     };
   }>("/api/edition/query-response", async (request, reply) => {
-    const { editionPath, queryId, response } = request.body ?? {};
+    const { editionPath, queryId, response, audioData, audioMimeType } = request.body ?? {};
 
-    if (!editionPath || !queryId || !response) {
+    if (!editionPath || !queryId) {
       return reply.status(400).send({ error: "Missing required fields" });
     }
 
-    // Store query response as a card
+    const isVoice = !!audioData;
+    if (!isVoice && !response) {
+      return reply.status(400).send({ error: "Either response or audioData is required" });
+    }
+
     const feedbackDir = path.join(boxRoot, "box/inbox/feedback");
     await fs.mkdir(feedbackDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const responsePath = path.join(
-      feedbackDir,
-      `query_response_${timestamp}.feedback.card`
-    );
+    const baseName = `query_response_${timestamp}`;
+    const responsePath = path.join(feedbackDir, `${baseName}.feedback.card`);
+
+    // For voice feedback, save the audio file
+    if (isVoice && audioData) {
+      const ext = audioMimeType?.includes("webm") ? ".webm" : ".m4a";
+      const audioPath = path.join(feedbackDir, `${baseName}${ext}`);
+      const audioBuffer = Buffer.from(audioData, "base64");
+      await fs.writeFile(audioPath, audioBuffer);
+    }
 
     const responseContent = `<feedback type="query-response">
   <target ref="${editionPath}#${queryId}" />
-  <response>${response}</response>
+  <source>${isVoice ? "voice" : "text"}</source>
+  <response>${isVoice ? "" : escapeXml(response ?? "")}</response>
   <timestamp>${new Date().toISOString()}</timestamp>
 </feedback>
 `;
 
     await fs.writeFile(responsePath, responseContent);
 
-    return { success: true, path: responsePath };
+    return { success: true, path: responsePath, isVoice };
   });
+}
+
+/**
+ * Escape special XML characters in text.
+ */
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
