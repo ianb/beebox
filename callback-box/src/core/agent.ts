@@ -10,9 +10,11 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fmt } from "../cli/lib/format.js";
 
-// Get the path to the cb wrapper script so we can add it to PATH
+// Get the path to the cb wrapper scripts so we can add them to PATH
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const binDir = path.resolve(__dirname, "../../bin");
+// Path to the cb-claude wrapper that auto-adds plugins
+const cbClaudePath = path.join(binDir, "cb-claude");
 
 /**
  * Format command line for display, with special handling for prompts.
@@ -126,7 +128,7 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
       return;
     }
 
-    // Show the command being run
+    // Show the command being run (show as "claude" for readability even though we use cb-claude)
     const cmdLine = formatCommandLine("claude", args);
     onOutput?.(cmdLine);
 
@@ -136,7 +138,8 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
       PATH: `${binDir}:${process.env.PATH ?? ""}`,
     };
 
-    const child = spawn("claude", args, {
+    // Use cb-claude wrapper which auto-adds --plugin-dir for card validation
+    const child = spawn(cbClaudePath, args, {
       cwd: boxRoot,
       env,
       stdio: ["ignore", "pipe", "pipe"],

@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "name": "validate-card",
+        "matcher": { "tool_name": ["Write", "Edit"] },
+        "type": "command",
+        "command": "$HOOK_DIR/validate-card.sh"
+      }
+    ]
+  }
+}

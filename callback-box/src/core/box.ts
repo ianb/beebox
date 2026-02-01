@@ -9,68 +9,6 @@ import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
 import { initRepo, stageAll, commit, isRepo } from "../cli/lib/git.js";
 
-/**
- * Plugin manifest for Claude Code.
- */
-const PLUGIN_MANIFEST = {
-  name: "callback-box-validator",
-  version: "1.0.0",
-  description: "Validates .card files after Write/Edit operations",
-};
-
-/**
- * Hook configuration for PostToolUse validation.
- */
-const HOOKS_CONFIG = {
-  hooks: {
-    PostToolUse: [
-      {
-        name: "validate-card",
-        matcher: { tool_name: ["Write", "Edit"] },
-        type: "command",
-        command: "$HOOK_DIR/validate-card.sh",
-      },
-    ],
-  },
-};
-
-/**
- * Validation script that runs after Write/Edit on .card files.
- */
-const VALIDATE_SCRIPT = `#!/bin/bash
-# Validate .card files after Write/Edit operations
-# Input: JSON with tool_name and tool_input from Claude Code hook
-
-# Read input from stdin
-input=$(cat)
-
-# Extract file path from tool_input.file_path
-file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
-
-# If no file path or not a .card file, exit silently
-if [ -z "$file_path" ] || [[ ! "$file_path" =~ \\.card$ ]]; then
-  exit 0
-fi
-
-# Check if file exists (might have been deleted or failed to write)
-if [ ! -f "$file_path" ]; then
-  exit 0
-fi
-
-# Run validation
-output=$(cb validate "$file_path" 2>&1)
-exit_code=$?
-
-# If validation produced output (errors or warnings), return as system message
-if [ -n "$output" ]; then
-  # Escape the output for JSON
-  escaped_output=$(echo "$output" | jq -Rs .)
-  echo "{\\"systemMessage\\": $escaped_output}"
-fi
-
-exit 0
-`;
-
 export interface InitOptions {
   /** Skip git initialization */
   skipGit?: boolean | undefined;
@@ -103,9 +41,6 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
 
   // Create all standard directories
   await ensureDirectories(resolvedRoot);
-
-  // Install Claude Code plugin for card validation
-  await installPlugin(resolvedRoot);
 
   // Create marker file with metadata
   const marker = {
@@ -203,37 +138,3 @@ export async function getBoxMetadata(
   }
 }
 
-/**
- * Install the Claude Code plugin for card validation.
- *
- * Creates .claude-plugin/ directory with hooks that validate .card files
- * after Write/Edit operations.
- *
- * @param boxRoot - The box root directory
- */
-export async function installPlugin(boxRoot: string): Promise<void> {
-  const pluginDir = path.join(boxRoot, ".claude-plugin");
-  const hooksDir = path.join(pluginDir, "hooks");
-
-  // Create directories
-  await fs.mkdir(hooksDir, { recursive: true });
-
-  // Write plugin manifest
-  await fs.writeFile(
-    path.join(pluginDir, "plugin.json"),
-    JSON.stringify(PLUGIN_MANIFEST, null, 2) + "\n"
-  );
-
-  // Write hooks configuration
-  await fs.writeFile(
-    path.join(hooksDir, "hooks.json"),
-    JSON.stringify(HOOKS_CONFIG, null, 2) + "\n"
-  );
-
-  // Write validation script
-  const scriptPath = path.join(hooksDir, "validate-card.sh");
-  await fs.writeFile(scriptPath, VALIDATE_SCRIPT);
-
-  // Make script executable
-  await fs.chmod(scriptPath, 0o755);
-}

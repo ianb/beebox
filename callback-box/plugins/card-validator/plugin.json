@@ -1,0 +1,5 @@
+{
+  "name": "callback-box-validator",
+  "version": "1.0.0",
+  "description": "Validates .card files after Write/Edit operations"
+}
