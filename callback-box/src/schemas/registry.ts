@@ -10,6 +10,8 @@ import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { NewsItemSchema } from "./news-item.js";
 import { NewsSummarySchema } from "./news-summary.js";
+import { NewsEditionSchema } from "./news-edition.js";
+import { NewsGuideSchema } from "./news-guide.js";
 
 /**
  * All registered card schemas.
@@ -19,6 +21,8 @@ export const schemas: ElementSchema[] = [
   QuestionSchema,
   NewsItemSchema,
   NewsSummarySchema,
+  NewsEditionSchema,
+  NewsGuideSchema,
 ];
 
 /**
@@ -51,3 +55,5 @@ export { MemoSchema } from "./memo.js";
 export { QuestionSchema } from "./question.js";
 export { NewsItemSchema } from "./news-item.js";
 export { NewsSummarySchema } from "./news-summary.js";
+export { NewsEditionSchema } from "./news-edition.js";
+export { NewsGuideSchema } from "./news-guide.js";
