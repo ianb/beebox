@@ -1,0 +1,40 @@
+/**
+ * cb process-feedback - Process user feedback on editions
+ *
+ * Thin wrapper around the core process-feedback command.
+ */
+
+import { Command } from "commander";
+import { requireBoxRoot } from "../lib/paths.js";
+import { runCommand, createCliContext } from "../../core/commands/index.js";
+
+export const processFeedbackCommand = new Command("process-feedback")
+  .description("Process user feedback and update the news guide")
+  .option("--dry-run", "Show what would happen without doing it")
+  .option("--force", "Force even if another process is running")
+  .action(async (options: {
+    dryRun?: boolean;
+    force?: boolean;
+  }) => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const ctx = createCliContext(boxRoot);
+
+      const result = await runCommand(
+        "process-feedback",
+        {
+          dryRun: options.dryRun,
+          force: options.force,
+        },
+        ctx
+      );
+
+      if (!result.success) {
+        console.error(`Error: ${result.error}`);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(`Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });

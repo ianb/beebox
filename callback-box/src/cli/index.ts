@@ -24,6 +24,7 @@ import {
   moveCommand,
   fetchNewsCommand,
   processNewsCommand,
+  processFeedbackCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -50,6 +51,7 @@ program.addCommand(trashCommand);
 program.addCommand(moveCommand);
 program.addCommand(fetchNewsCommand);
 program.addCommand(processNewsCommand);
+program.addCommand(processFeedbackCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

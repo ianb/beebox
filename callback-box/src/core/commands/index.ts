@@ -13,6 +13,7 @@ import "./trash.js";
 import "./move.js";
 import "./fetch-news.js";
 import "./process-news.js";
+import "./process-feedback.js";
 
 // Re-export for convenience
 export {
