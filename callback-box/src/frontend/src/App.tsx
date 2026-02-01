@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { Routes, Route, useNavigate, useParams, Link } from "react-router-dom";
 import { StatusBar } from "./components/StatusBar";
 import { CardList } from "./components/CardList";
 import { CardView } from "./components/CardView";
@@ -289,6 +289,17 @@ function Dashboard() {
                 )}
               </button>
             )}
+            <Link
+              to="/news"
+              className="btn btn-outline w-full text-sm"
+            >
+              📰 Read Editions
+              {newsStatus.archive > 0 && (
+                <span className="ml-2 text-gray-500 text-xs">
+                  ({newsStatus.archive} archived)
+                </span>
+              )}
+            </Link>
           </div>
         </div>
 

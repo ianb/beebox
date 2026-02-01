@@ -21,6 +21,7 @@ import {
   answerCommand,
   pullCommand,
   trashCommand,
+  moveCommand,
   fetchNewsCommand,
   processNewsCommand,
 } from "./commands/index.js";
@@ -46,6 +47,7 @@ program.addCommand(wakeupCommand);
 program.addCommand(answerCommand);
 program.addCommand(pullCommand);
 program.addCommand(trashCommand);
+program.addCommand(moveCommand);
 program.addCommand(fetchNewsCommand);
 program.addCommand(processNewsCommand);
 
@@ -79,16 +81,6 @@ program
   .option("--dry-run", "Preview without executing")
   .action((options: { dryRun?: boolean }) => {
     console.log(`cb exec: would execute all ready commands${options.dryRun ? " (dry run)" : ""}`);
-    console.log("Not yet implemented");
-  });
-
-program
-  .command("move")
-  .description("Move a card with reference updates")
-  .argument("<source>", "Source path")
-  .argument("<dest>", "Destination path")
-  .action((source: string, dest: string) => {
-    console.log(`cb move: would move ${source} to ${dest}`);
     console.log("Not yet implemented");
   });
 
