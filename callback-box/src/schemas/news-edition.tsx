@@ -15,12 +15,6 @@ import { element, serialize, type ElementNode } from "cardworks";
 import { z } from "zod";
 
 /**
- * Valid edition statuses.
- */
-export const NewsEditionStatus = z.enum(["draft", "published", "archived"]);
-export type NewsEditionStatus = z.infer<typeof NewsEditionStatus>;
-
-/**
  * Edition title - the headline for this edition.
  */
 export const EditionTitle = element("title", {
@@ -244,53 +238,50 @@ export const Curation = element("curation", {
 /**
  * News edition card schema.
  *
+ * Curation comes first because it guides the content - the editorial
+ * decisions should be made before writing begins.
+ *
  * Example:
  * ```xml
- * <news-edition status="published">
+ * <news-edition>
+ *   <curation guide-version="2026-02-01T10:00:00Z">
+ *     <interest application="featured">AI safety</interest>
+ *     <hypothesis id="h1">Technical depth will resonate</hypothesis>
+ *     <rationale>Focusing on security themes that connect multiple stories</rationale>
+ *   </curation>
+ *
  *   <title>The AI Winter That Wasn't</title>
  *   <date>2024-02-01</date>
  *   <byline>Recent developments suggest the opposite of a slowdown</byline>
  *
  *   <content format="markdown">
- * The past week has been remarkable for AI developments, with three
- * major announcements that together paint a picture of acceleration.
+ * The past week has been remarkable for AI developments...
  *
  * <section id="s1" heading="The Big Three">
- *
  * First, OpenAI announced...
- *
- * <expando title="Technical deep-dive" id="exp1">
- * The architecture changes include...
- *
- * > "This represents a fundamental shift" — Sam Altman
- * </expando>
- *
+ * <expando title="Technical deep-dive" id="exp1">...</expando>
  * </section>
  *
- * <query id="q1" prompt="Which of these developments interests you most?">
- * Your answer will help me focus future coverage.
+ * <query id="q1" prompt="Which interests you most?">
+ * Your answer will help focus future coverage.
  * </query>
  *   </content>
  *
  *   <sources>
- *     <source path="box/inbox/news/OpenAI_Announcement.news-item.card" usage="primary">OpenAI's Major Announcement</source>
- *     <source path="box/inbox/news/Google_Response.news-item.card" usage="supporting">Google's Response</source>
+ *     <source path="store/archive/news/Article.news-item.card" usage="primary">Article Title</source>
  *   </sources>
  * </news-edition>
  * ```
  */
 export const NewsEditionSchema = element("news-edition", {
-  attrs: {
-    status: NewsEditionStatus.default("draft"),
-  },
   children: z.array(
     z.union([
+      Curation,
       EditionTitle,
       EditionDate,
       EditionByline,
       EditionContent,
       Sources,
-      Curation,
     ])
   ),
 });
@@ -301,7 +292,6 @@ export type NewsEdition = z.infer<typeof NewsEditionSchema>;
  * Parsed news edition with typed accessors.
  */
 export interface ParsedNewsEdition {
-  status: NewsEditionStatus;
   title: string;
   date: string;
   byline: string;
@@ -438,7 +428,6 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
   }
 
   return {
-    status: edition.attrs.status as NewsEditionStatus,
     title: titleEl?.text ?? "Untitled",
     date: dateEl?.text ?? new Date().toISOString().slice(0, 10),
     byline: bylineEl?.text ?? "",
@@ -480,7 +469,6 @@ export function editionFilename(date: string, title: string): string {
  * Template options for creating a news edition.
  */
 export interface NewsEditionOptions {
-  status?: NewsEditionStatus;
   title: string;
   date: string;
   byline: string;
@@ -503,7 +491,7 @@ export function createNewsEditionTemplate(options: NewsEditionOptions): string {
   ));
 
   const edition = (
-    <news-edition status={options.status ?? "draft"}>
+    <news-edition>
       <title>{options.title}</title>
       <date>{options.date}</date>
       <byline>{options.byline}</byline>

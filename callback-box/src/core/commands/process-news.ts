@@ -246,15 +246,28 @@ Before writing, decide:
 - Are there questions to pose to the reader?
 
 STEP 3 - CREATE THE EDITION:
-Create the edition file:
+Create the edition file in box/output/editions/ (NOT inbox - editions are output, not incoming items):
 \`\`\`
-cb create box/inbox/editions/<date>_<slug>.news-edition.card
+cb create box/output/editions/<date>_<slug>.news-edition.card
 \`\`\`
 
-Then edit it with this structure:
+Then edit it with this structure. IMPORTANT: <curation> comes FIRST because editorial
+decisions should be made before writing content:
 
 \`\`\`xml
-<news-edition status="draft">
+<news-edition>
+  <curation guide-version="[timestamp from guide's updated-at]">
+    <interest application="featured">Topic from guide that was featured</interest>
+    <interest application="tested">Topic being tested as hypothesis</interest>
+    <experiment-ref id="exp-id">How this edition tests the experiment</experiment-ref>
+    <hypothesis id="h1" experiment-ref="exp-id">
+      Specific testable claim about what will work
+    </hypothesis>
+    <rationale>
+      Brief explanation of editorial choices and why this angle/approach was selected.
+    </rationale>
+  </curation>
+
   <title>Compelling headline that captures the theme</title>
   <date>${new Date().toISOString().slice(0, 10)}</date>
   <byline>One sentence teaser of what's inside</byline>
@@ -295,26 +308,14 @@ Closing thoughts that tie things together or look ahead.
   </content>
 
   <sources>
-    <source path="box/pool/news/Article_One.news-item.card" usage="primary">Article Title</source>
-    <source path="box/pool/news/Article_Two.news-item.card" usage="supporting">Article Title</source>
+    <source path="store/archive/news/Article_One.news-item.card" usage="primary">Article Title</source>
+    <source path="store/archive/news/Article_Two.news-item.card" usage="supporting">Article Title</source>
   </sources>
-
-  <curation guide-version="[timestamp from guide's updated-at]">
-    <interest application="featured">Topic from guide that was featured</interest>
-    <interest application="tested">Topic being tested as hypothesis</interest>
-    <experiment-ref id="exp-id">How this edition tests the experiment</experiment-ref>
-    <hypothesis id="h1" experiment-ref="exp-id">
-      Specific testable claim about what will work
-    </hypothesis>
-    <rationale>
-      Brief explanation of editorial choices and why this angle/approach was selected.
-    </rationale>
-  </curation>
 </news-edition>
 \`\`\`
 
 CURATION NOTES:
-- The <curation> element tracks HOW the guide influenced this edition
+- <curation> comes FIRST - decide what to write about before writing
 - Include interests that drove content selection
 - Reference active experiments being tested
 - State hypotheses that feedback can confirm/deny
@@ -383,7 +384,7 @@ async function executeProcessNews(
   // Ensure directories exist
   await ensureDir(ctx.boxRoot, "box/inbox/news");
   await ensureDir(ctx.boxRoot, "box/pool/news");
-  await ensureDir(ctx.boxRoot, "box/inbox/editions");
+  await ensureDir(ctx.boxRoot, "box/output/editions");
   await ensureDir(ctx.boxRoot, "store/archive/news");
   await ensureDir(ctx.boxRoot, "store/archive/editions");
   await ensureDir(ctx.boxRoot, "store/trash/news");

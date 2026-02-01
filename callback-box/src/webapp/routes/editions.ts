@@ -23,7 +23,6 @@ interface EditionSummary {
   title: string;
   date: string;
   byline: string;
-  status: string;
 }
 
 /**
@@ -32,9 +31,10 @@ interface EditionSummary {
 async function findEditions(boxRoot: string): Promise<string[]> {
   const editionPaths: string[] = [];
 
-  // Look in box/inbox/editions/ and store/archive/editions/
+  // Look in box/output/editions/ and store/archive/editions/
   const searchDirs = [
-    path.join(boxRoot, "box/inbox/editions"),
+    path.join(boxRoot, "box/output/editions"),
+    path.join(boxRoot, "box/inbox/editions"), // Legacy location
     path.join(boxRoot, "box/inbox/summaries"), // Legacy location
     path.join(boxRoot, "store/archive/editions"),
   ];
@@ -81,7 +81,6 @@ async function loadEditionSummary(
       title: parsed.title,
       date: parsed.date,
       byline: parsed.byline,
-      status: parsed.status,
     };
   } catch (err) {
     console.error(`Failed to load edition ${editionPath}:`, err);
