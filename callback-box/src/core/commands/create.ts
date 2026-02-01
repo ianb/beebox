@@ -20,6 +20,7 @@ import {
   createTextQuestionTemplate,
   createConfirmQuestionTemplate,
 } from "../../schemas/index.js";
+import { createInitialGuideTemplate } from "../../schemas/news-guide.js";
 
 /**
  * Arguments for the create command.
@@ -77,6 +78,8 @@ const TEMPLATES: Record<string, (args: CreateArgs) => string> = {
       args.memo ?? "Context for this question",
       args.prompt ?? "Do you want to proceed?"
     ),
+
+  "news-guide": () => createInitialGuideTemplate({}),
 };
 
 /**
@@ -87,6 +90,7 @@ const TYPE_TO_TEMPLATE: Record<string, string> = {
   memo: "memo",
   question: "question",
   "voice-memo": "voice-memo",
+  "news-guide": "news-guide",
 };
 
 /**

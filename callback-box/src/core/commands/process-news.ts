@@ -120,7 +120,15 @@ NOT INTERESTING (trash):
 IMPORTANT: Status is expressed by location, not attributes. Don't modify the status attribute.
 Items stay in inbox/news/ if interesting, or get trashed if not.
 
-When done, briefly state how many you kept vs trashed.`;
+OUTPUT: As you process each item, state your decision:
+  KEEP: [filename] - [brief reason why it's interesting]
+  TRASH: [filename] - [brief reason why it's not]
+
+This helps track what's happening during triage.
+
+When done, briefly state how many you kept vs trashed.
+
+GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
 
 /**
@@ -175,14 +183,18 @@ Example analysis element:
 STEP 3 - MOVE TO POOL:
 After adding the analysis, move the file:
 \`\`\`
-mkdir -p box/pool/news
-mv <inbox-path> box/pool/news/
-git add box/pool/news/<filename>
+cb move <inbox-path> box/pool/news/
 \`\`\`
 
+This command handles moving the file and updating any references.
 Then commit all changes.
 
-When done, state what was analyzed and any notable themes emerging.`;
+OUTPUT: As you process each item, state what you found:
+  ANALYZED: [filename] - [topics/type/timeliness summary]
+
+When done, state what was analyzed and any notable themes emerging.
+
+GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
 
 /**
@@ -197,6 +209,19 @@ YOUR TASK:
 Create a news-edition card from items in box/pool/news/. This is a narrative publication,
 not just a list of summaries.
 
+STEP 0 - READ THE USER GUIDE:
+First, check if config/news-guide.news-guide.card exists. If it does, read it to understand:
+- User interests (with confidence levels)
+- Disinterests (things to avoid)
+- Preferences (depth, tone, etc.)
+- Active experiments to test
+- Context notes that might affect curation
+
+If no guide exists, create one:
+\`\`\`
+cb create config/news-guide.news-guide.card --template news-guide
+\`\`\`
+
 STEP 1 - SURVEY THE POOL:
 Read all items in box/pool/news/ with their <analysis> elements.
 Look for:
@@ -204,6 +229,7 @@ Look for:
 - Timely items that should be featured today
 - Interesting contrasts or tensions between pieces
 - A narrative arc that could make this edition compelling
+- Opportunities to test hypotheses from the guide
 
 Optionally, read recent editions in store/archive/editions/ to:
 - Avoid repeating themes too soon
@@ -272,8 +298,27 @@ Closing thoughts that tie things together or look ahead.
     <source path="box/pool/news/Article_One.news-item.card" usage="primary">Article Title</source>
     <source path="box/pool/news/Article_Two.news-item.card" usage="supporting">Article Title</source>
   </sources>
+
+  <curation guide-version="[timestamp from guide's updated-at]">
+    <interest application="featured">Topic from guide that was featured</interest>
+    <interest application="tested">Topic being tested as hypothesis</interest>
+    <experiment-ref id="exp-id">How this edition tests the experiment</experiment-ref>
+    <hypothesis id="h1" experiment-ref="exp-id">
+      Specific testable claim about what will work
+    </hypothesis>
+    <rationale>
+      Brief explanation of editorial choices and why this angle/approach was selected.
+    </rationale>
+  </curation>
 </news-edition>
 \`\`\`
+
+CURATION NOTES:
+- The <curation> element tracks HOW the guide influenced this edition
+- Include interests that drove content selection
+- Reference active experiments being tested
+- State hypotheses that feedback can confirm/deny
+- The rationale explains your editorial thinking
 
 GUIDELINES:
 - BE LIBERAL with expandos - long is fine if it's expandable
@@ -286,16 +331,17 @@ GUIDELINES:
 STEP 4 - ARCHIVE USED ITEMS:
 After creating the edition, move used items to archive:
 \`\`\`
-mkdir -p store/archive/news
-mv box/pool/news/<used-file> store/archive/news/
-git add store/archive/news/<used-file>
+cb move box/pool/news/<used-file> store/archive/news/
 \`\`\`
 
+This command handles moving and updating any references (including in the edition you just created).
 Leave items in pool that weren't used—they'll be available for future editions.
 
 Commit all changes with a message like "Create news edition: [title]"
 
-When done, state the edition title and what was included.`;
+When done, state the edition title and what was included.
+
+GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
 
 /**
