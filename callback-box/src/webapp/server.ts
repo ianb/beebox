@@ -134,6 +134,23 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
 
   const server = await createServer(options);
 
+  // Graceful shutdown handler
+  const shutdown = async (signal: string) => {
+    console.log(`\nReceived ${signal}, shutting down gracefully...`);
+    try {
+      await server.close();
+      console.log("Server closed.");
+      process.exit(0);
+    } catch (err) {
+      console.error("Error during shutdown:", err);
+      process.exit(1);
+    }
+  };
+
+  // Handle termination signals
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+
   try {
     await server.listen({ port, host });
     console.log(`Server running at http://${host}:${port}`);

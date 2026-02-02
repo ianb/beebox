@@ -39,33 +39,28 @@ export const serveCommand = new Command("serve")
       const child = spawn("npx", ["tsx", ...args], {
         stdio: "inherit",
         cwd: process.cwd(),
-        detached: true, // Create new process group so we can kill the tree
+        // Don't use detached - let child inherit our process group
+        // so signals propagate naturally when parent is killed
         env: {
           ...process.env,
           TSX_TSCONFIG_PATH: tsconfigPath,
         },
       });
 
-      // Kill child process tree on exit
+      // Forward termination signals to child
       const cleanup = () => {
         if (child.pid && !child.killed) {
           try {
-            // Kill the process group (negative PID kills the group)
-            process.kill(-child.pid, "SIGTERM");
+            child.kill("SIGTERM");
           } catch {
-            // Process may already be dead, try direct kill
-            try {
-              child.kill("SIGTERM");
-            } catch {
-              // Already dead
-            }
+            // Already dead
           }
         }
       };
 
       process.on("SIGINT", () => {
         cleanup();
-        process.exit(0);
+        // Don't exit immediately - let child handle SIGINT and we'll exit when it does
       });
 
       process.on("SIGTERM", () => {

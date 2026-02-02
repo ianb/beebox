@@ -371,35 +371,21 @@ function QueryPrompt({
 }
 
 /**
- * Strip surrounding quotes from text if present.
- */
-function stripQuotes(text: string): string {
-  const trimmed = text.trim();
-  // Check for various quote styles
-  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-}
-
-/**
  * Excerpt component - quoted text from source.
+ * Uses a div instead of blockquote to avoid prose styling adding quotes.
  */
 function ExcerptBlock({ excerpt }: { excerpt: Excerpt }) {
-  const text = stripQuotes(excerpt.text);
   return (
-    <blockquote className="my-4 pl-4 border-l-4 border-gray-300 bg-gray-50 py-3 pr-4 rounded-r">
-      <p className="text-gray-700 italic">{text}</p>
-      <cite className="block mt-2 text-sm text-gray-500 not-italic">
+    <div className="my-2 pl-3 border-l-2 border-gray-300 text-gray-600 text-sm">
+      <p>{excerpt.text}</p>
+      <p className="mt-1 text-xs text-gray-500">
         — {excerpt.link ? (
           <a href={excerpt.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
             {excerpt.source}
           </a>
         ) : excerpt.source}
-      </cite>
-    </blockquote>
+      </p>
+    </div>
   );
 }
 
@@ -422,22 +408,20 @@ function ContentSection({
   return (
     <div className="mb-8" data-section-id={section.id}>
       {section.heading && (
-        <h2 className="text-xl font-semibold text-gray-800 mb-2 pb-2 border-b">
-          {section.link ? (
-            <a href={section.link} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700">
-              {section.heading}
-            </a>
-          ) : section.heading}
-        </h2>
-      )}
-      {section.via && (
-        <p className="text-sm text-gray-500 mb-4">
-          via {section.link ? (
-            <a href={section.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-              {section.via}
-            </a>
-          ) : section.via}
-        </p>
+        <div className="flex items-baseline justify-between mb-2 pb-2 border-b">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {section.link ? (
+              <a href={section.link} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700">
+                {section.heading}
+              </a>
+            ) : section.heading}
+          </h2>
+          {section.via && (
+            <span className="text-xs text-gray-400 ml-4">
+              via {section.via}
+            </span>
+          )}
+        </div>
       )}
       {section.text && (
         <div className="prose prose-sm max-w-none mb-4">

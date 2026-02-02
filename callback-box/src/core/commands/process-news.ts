@@ -356,8 +356,8 @@ Then your analysis and narrative. Don't just list articles—tell a story about
 what's happening in this space.
 
 <excerpt source="Article Title" link="https://example.com/article">
-"A memorable quote from the article that captures something essential—the author's
-voice, a key technical point, or a surprising finding."
+A memorable passage from the article that captures something essential—the author's
+voice, a key technical point, or a surprising finding. Do NOT include quotation marks.
 </excerpt>
 
 <expando title="Deep dive: Technical details" id="exp1">
