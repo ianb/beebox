@@ -321,6 +321,15 @@ export type NewsEdition = z.infer<typeof NewsEditionSchema>;
 /**
  * Parsed news edition with typed accessors.
  */
+/**
+ * Parsed excerpt structure.
+ */
+export interface ParsedExcerpt {
+  source: string;
+  link: string | undefined;
+  text: string;
+}
+
 export interface ParsedNewsEdition {
   title: string;
   date: string;
@@ -331,12 +340,16 @@ export interface ParsedNewsEdition {
     sections: Array<{
       id: string | undefined;
       heading: string | undefined;
+      link: string | undefined;
+      via: string | undefined;
       text: string | undefined;
       expandos: Array<{ id: string | undefined; title: string; text: string }>;
       queries: Array<{ id: string | undefined; prompt: string; text: string | undefined }>;
+      excerpts: Array<ParsedExcerpt>;
     }>;
     expandos: Array<{ id: string | undefined; title: string; text: string }>;
     queries: Array<{ id: string | undefined; prompt: string; text: string | undefined }>;
+    excerpts: Array<ParsedExcerpt>;
   };
   sources: Array<{
     path: string;
@@ -388,6 +401,14 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
   const contentEl = getChild(children, "content");
   const sourcesEl = getChild(children, "sources");
 
+  // Helper to parse excerpts
+  const parseExcerpts = (children: ElementNode[]): ParsedExcerpt[] =>
+    getChildren(children, "excerpt").map((e) => ({
+      source: e.attrs.source as string,
+      link: e.attrs.link as string | undefined,
+      text: e.text ?? "",
+    }));
+
   // Parse content structure
   const contentChildren = (contentEl?.children ?? []) as ElementNode[];
   const sections = getChildren(contentChildren, "section").map((s) => {
@@ -395,6 +416,8 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
     return {
       id: s.attrs.id as string | undefined,
       heading: s.attrs.heading as string | undefined,
+      link: s.attrs.link as string | undefined,
+      via: s.attrs.via as string | undefined,
       text: s.text,
       expandos: getChildren(sectionChildren, "expando").map((e) => ({
         id: e.attrs.id as string | undefined,
@@ -406,10 +429,11 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
         prompt: q.attrs.prompt as string,
         text: q.text,
       })),
+      excerpts: parseExcerpts(sectionChildren),
     };
   });
 
-  // Top-level expandos and queries (not in sections)
+  // Top-level expandos, queries, and excerpts (not in sections)
   const topExpandos = getChildren(contentChildren, "expando").map((e) => ({
     id: e.attrs.id as string | undefined,
     title: e.attrs.title as string,
@@ -420,6 +444,7 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
     prompt: q.attrs.prompt as string,
     text: q.text,
   }));
+  const topExcerpts = parseExcerpts(contentChildren);
 
   // Parse sources
   const sourceChildren = (sourcesEl?.children ?? []) as ElementNode[];
@@ -467,6 +492,7 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
       sections,
       expandos: topExpandos,
       queries: topQueries,
+      excerpts: topExcerpts,
     },
     sources,
     curation,

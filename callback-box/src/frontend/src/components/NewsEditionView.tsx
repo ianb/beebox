@@ -39,14 +39,26 @@ interface Query {
 }
 
 /**
+ * Parsed excerpt structure.
+ */
+interface Excerpt {
+  source: string;
+  link?: string;
+  text: string;
+}
+
+/**
  * Parsed section structure.
  */
 interface Section {
   id?: string;
   heading?: string;
+  link?: string;
+  via?: string;
   text?: string;
   expandos: Expando[];
   queries: Query[];
+  excerpts: Excerpt[];
 }
 
 /**
@@ -71,6 +83,7 @@ export interface NewsEditionData {
     sections: Section[];
     expandos: Expando[];
     queries: Query[];
+    excerpts: Excerpt[];
   };
   sources: SourceRef[];
 }
@@ -358,6 +371,24 @@ function QueryPrompt({
 }
 
 /**
+ * Excerpt component - quoted text from source.
+ */
+function ExcerptBlock({ excerpt }: { excerpt: Excerpt }) {
+  return (
+    <blockquote className="my-4 pl-4 border-l-4 border-gray-300 bg-gray-50 py-3 pr-4 rounded-r">
+      <p className="text-gray-700 italic">{excerpt.text}</p>
+      <cite className="block mt-2 text-sm text-gray-500 not-italic">
+        — {excerpt.link ? (
+          <a href={excerpt.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            {excerpt.source}
+          </a>
+        ) : excerpt.source}
+      </cite>
+    </blockquote>
+  );
+}
+
+/**
  * Section component - major content division.
  */
 function ContentSection({
@@ -376,15 +407,31 @@ function ContentSection({
   return (
     <div className="mb-8" data-section-id={section.id}>
       {section.heading && (
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">
-          {section.heading}
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 pb-2 border-b">
+          {section.link ? (
+            <a href={section.link} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700">
+              {section.heading}
+            </a>
+          ) : section.heading}
         </h2>
+      )}
+      {section.via && (
+        <p className="text-sm text-gray-500 mb-4">
+          via {section.link ? (
+            <a href={section.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+              {section.via}
+            </a>
+          ) : section.via}
+        </p>
       )}
       {section.text && (
         <div className="prose prose-sm max-w-none mb-4">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.text}</ReactMarkdown>
         </div>
       )}
+      {section.excerpts.map((excerpt, i) => (
+        <ExcerptBlock key={i} excerpt={excerpt} />
+      ))}
       {section.expandos.map((expando, i) => (
         <ExpandoSection
           key={expando.id ?? i}
@@ -554,6 +601,11 @@ export function NewsEditionView({
             onQueryResponse={onQueryResponse}
             onVoiceQueryResponse={onVoiceQueryResponse}
           />
+        ))}
+
+        {/* Top-level excerpts */}
+        {edition.content.excerpts.map((excerpt, i) => (
+          <ExcerptBlock key={i} excerpt={excerpt} />
         ))}
 
         {/* Top-level expandos */}
