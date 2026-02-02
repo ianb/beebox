@@ -424,59 +424,55 @@ export interface InitialGuideOptions {
 /**
  * Create an initial guide template.
  *
- * This creates a starting guide with low-confidence inferences
- * based on the configured RSS feeds.
+ * Creates a minimal guide with XML comments explaining each section.
+ * The agent should fill in actual content based on available news sources.
  */
-export function createInitialGuideTemplate(options: InitialGuideOptions = {}): string {
+export function createInitialGuideTemplate(_options: InitialGuideOptions = {}): string {
   const now = new Date().toISOString();
 
-  // Infer interests from feed titles if provided
-  const inferredTopics: string[] = [];
-  for (const title of options.feedTitles ?? []) {
-    // Simple heuristics - could be smarter
-    const lower = title.toLowerCase();
-    if (lower.includes("hacker") || lower.includes("tech")) {
-      if (!inferredTopics.includes("Technology news")) {
-        inferredTopics.push("Technology news");
-      }
-    }
-    if (lower.includes("programming") || lower.includes("dev")) {
-      if (!inferredTopics.includes("Software development")) {
-        inferredTopics.push("Software development");
-      }
-    }
-  }
+  // Use raw XML string to include comments - JSX doesn't support XML comments
+  return `<news-guide version="1.0.0">
+  <updated-at>${now}</updated-at>
 
-  // Default inferences if no feeds
-  if (inferredTopics.length === 0) {
-    inferredTopics.push("Technology news");
-  }
+  <!-- INTERESTS: Topics the reader cares about. Infer from:
+       - What news sources they've subscribed to
+       - What types of articles are in the pool
+       - Common themes in their feed selection
+       Use confidence="hypothesis" for initial guesses. -->
+  <interests>
+    <!-- Example: <topic confidence="hypothesis" source="inferred">Topic name</topic> -->
+  </interests>
 
-  const interests = inferredTopics.map((topic) => (
-    <topic confidence="hypothesis" source="inferred">
-      {topic}
-    </topic>
-  ));
+  <!-- DISINTERESTS: What to avoid. Infer from:
+       - Topics conspicuously absent from their feeds
+       - Types of content that seem off-brand
+       Start empty - better to include too much than wrongly exclude. -->
+  <disinterests>
+  </disinterests>
 
-  const guide = (
-    <news-guide version="1">
-      <updated-at>{now}</updated-at>
-      <interests>{interests}</interests>
-      <disinterests />
-      <preferences>
-        <preference aspect="depth" confidence="hypothesis" source="default">
-          Balance between surface coverage and technical depth
-        </preference>
-      </preferences>
-      <context-notes />
-      <experiments>
-        <experiment id="exp-initial" status="proposed" created-at={now}>
-          <hypothesis>Initial guide needs calibration through feedback</hypothesis>
-          <approach>Pay attention to which topics get engagement vs skipped</approach>
-        </experiment>
-      </experiments>
-    </news-guide>
-  );
+  <!-- PREFERENCES: How to present content. Start with sensible defaults:
+       - depth: balance of surface vs technical detail
+       - tone: conversational, informative, not breathless or alarmist
+       - format: how to structure editions -->
+  <preferences>
+    <preference aspect="tone" confidence="low" source="default">
+      Informative and curious. Direct headlines that say what happened,
+      not clickbait that hides the point. Trust the reader's intelligence.
+    </preference>
+  </preferences>
 
-  return serialize(guide as ElementNode) + "\n";
+  <!-- CONTEXT: Temporary situational notes that affect curation.
+       E.g., "Conference season", "Following specific news story" -->
+  <context-notes>
+  </context-notes>
+
+  <!-- EXPERIMENTS: Ways to test what works. Start with one about calibration. -->
+  <experiments>
+    <experiment id="exp-initial" status="active" created-at="${now}">
+      <hypothesis>Initial interests need calibration through reader feedback</hypothesis>
+      <approach>Present diverse content, note what gets engagement vs gets skipped</approach>
+    </experiment>
+  </experiments>
+</news-guide>
+`;
 }
