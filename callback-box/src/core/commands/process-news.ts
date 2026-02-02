@@ -217,10 +217,53 @@ First, check if config/news-guide.news-guide.card exists. If it does, read it to
 - Active experiments to test
 - Context notes that might affect curation
 
-If no guide exists, create one:
+If no guide exists, create one using the template:
 \`\`\`
 cb create config/news-guide.news-guide.card --template news-guide
 \`\`\`
+
+Then edit it to add initial interests based on the pool. The guide MUST follow this schema:
+
+\`\`\`xml
+<news-guide version="1.0.0">
+  <updated-at>2026-02-01T12:00:00Z</updated-at>
+
+  <interests>
+    <topic confidence="low" source="inferred">Topic name here</topic>
+    <topic confidence="hypothesis" source="inferred">Another topic</topic>
+  </interests>
+
+  <disinterests>
+    <disinterest confidence="low" source="inferred">Thing to avoid</disinterest>
+  </disinterests>
+
+  <preferences>
+    <preference aspect="depth" confidence="low" source="inferred">
+      Description of preference
+    </preference>
+  </preferences>
+
+  <context-notes>
+    <context duration="ongoing">
+      Contextual notes about curation situation
+    </context>
+  </context-notes>
+
+  <experiments>
+    <experiment id="exp-1" status="proposed">
+      <hypothesis>What you want to test</hypothesis>
+      <approach>How to test it</approach>
+    </experiment>
+  </experiments>
+</news-guide>
+\`\`\`
+
+IMPORTANT schema rules:
+- Use <topic> inside <interests>, NOT <interest>
+- confidence must be: confirmed, high, medium, low, or hypothesis
+- source must be: user-stated, feedback, inferred, or default
+- preference aspect must be: depth, tone, frequency, format, sources, or other
+- experiment status must be: proposed, active, successful, unsuccessful, or inconclusive
 
 STEP 1 - SURVEY THE POOL:
 Read all items in box/pool/news/ with their <analysis> elements.
