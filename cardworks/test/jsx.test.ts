@@ -111,6 +111,36 @@ test("createElement: ignores undefined/null attributes", (t) => {
   t.end();
 });
 
+test("createElement: __commentStart creates start comment", (t) => {
+  const el = createElement("foo", { __commentStart: "This is a comment" });
+  t.equal(el.comments.start, "This is a comment");
+  t.equal(el.comments.end, undefined);
+  t.notOk("__commentStart" in el.attrs);
+  t.end();
+});
+
+test("createElement: __commentEnd creates end comment", (t) => {
+  const el = createElement("foo", { __commentEnd: "End note" });
+  t.equal(el.comments.end, "End note");
+  t.equal(el.comments.start, undefined);
+  t.notOk("__commentEnd" in el.attrs);
+  t.end();
+});
+
+test("createElement: both comment attributes work together", (t) => {
+  const el = createElement("foo", {
+    __commentStart: "Start comment",
+    __commentEnd: "End comment",
+    attr: "value",
+  });
+  t.equal(el.comments.start, "Start comment");
+  t.equal(el.comments.end, "End comment");
+  t.equal(el.attrs["attr"], "value");
+  t.notOk("__commentStart" in el.attrs);
+  t.notOk("__commentEnd" in el.attrs);
+  t.end();
+});
+
 // defineCardJSX tests
 
 test("defineCardJSX: jsx creates element", (t) => {

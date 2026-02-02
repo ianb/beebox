@@ -208,6 +208,11 @@ export interface ICardLoader {
    * Check if a schema is registered for a given tag name.
    */
   hasSchema(tagName: string): boolean;
+
+  /**
+   * Check if any schemas are registered.
+   */
+  hasAnySchemas(): boolean;
 }
 
 /**
@@ -379,6 +384,13 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   hasSchema(tagName: string): boolean {
     return this.schemas.has(tagName);
+  }
+
+  /**
+   * Check if any schemas are registered.
+   */
+  hasAnySchemas(): boolean {
+    return !this.schemas.isEmpty();
   }
 
   /**

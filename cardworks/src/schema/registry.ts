@@ -52,4 +52,11 @@ export class SchemaRegistry {
   tagNames(): string[] {
     return Array.from(this.schemas.keys());
   }
+
+  /**
+   * Check if any schemas are registered.
+   */
+  isEmpty(): boolean {
+    return this.schemas.size === 0;
+  }
 }

@@ -1,7 +1,6 @@
 import type { ICardLoader } from "../loader/loader.js";
 import type { ElementNode, Location } from "../parser/provenance.js";
 import { parseRef, parseRefs } from "../refs/parse-ref.js";
-import { parseXml } from "../parser/parse.js";
 
 /**
  * A lint issue (error or warning).
@@ -57,8 +56,8 @@ export async function lintCard(
     // Load will parse and validate against schema
     const card = await loader.load(path);
 
-    // Check if schema exists for this tag
-    if (!loader.hasSchema(card.element.tagName)) {
+    // Check if schema exists for this tag (only if schemas are in use)
+    if (loader.hasAnySchemas() && !loader.hasSchema(card.element.tagName)) {
       warnings.push({
         type: "schema",
         severity: "warning",

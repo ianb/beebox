@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./jsx/jsx-runtime": {
+      "import": "./dist/jsx/jsx-runtime.js",
+      "types": "./dist/jsx/jsx-runtime.d.ts"
     }
   },
   "scripts": {

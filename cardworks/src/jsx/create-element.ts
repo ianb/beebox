@@ -104,7 +104,12 @@ export function createElement(
   tagName: string,
   props: JSXProps | null
 ): ElementNode {
-  const { children: childrenProp, ...rest } = props ?? {};
+  const {
+    children: childrenProp,
+    __commentStart,
+    __commentEnd,
+    ...rest
+  } = props ?? {};
 
   // Process attributes - convert primitives to strings
   const attrs: Record<string, string> = {};
@@ -120,6 +125,15 @@ export function createElement(
     // Objects/arrays are silently ignored - only primitives become attributes
   }
 
+  // Process comments from special attributes
+  const comments: Comments = {};
+  if (typeof __commentStart === "string") {
+    comments.start = __commentStart;
+  }
+  if (typeof __commentEnd === "string") {
+    comments.end = __commentEnd;
+  }
+
   // Process children
   const { text, children, mixed } = processChildren(childrenProp);
 
@@ -127,7 +141,7 @@ export function createElement(
   const element: ElementNode = {
     tagName,
     attrs,
-    comments: {} as Comments,
+    comments,
     children,
     location: emptyLocation("<jsx>"),
     dirty: false,
