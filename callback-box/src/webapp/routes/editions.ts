@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { CardLoader } from "cardworks";
 import { parseNewsEdition, type ParsedNewsEdition } from "../../schemas/news-edition.js";
+import { stageFiles, commit } from "../../cli/lib/git.js";
 
 /**
  * Edition summary for the index.
@@ -157,7 +158,10 @@ export async function registerEditionRoutes(
       audioData?: string; // Base64-encoded audio for voice feedback
       audioMimeType?: string;
     };
-  }>("/api/edition/feedback", async (request, reply) => {
+  }>("/api/edition/feedback", {
+    // Allow larger body for voice recordings (base64 encoded audio)
+    bodyLimit: 50 * 1024 * 1024, // 50MB
+  }, async (request, reply) => {
     const { editionPath, targetId, comment, audioData, audioMimeType } = request.body ?? {};
 
     if (!editionPath || !targetId) {
@@ -194,6 +198,22 @@ export async function registerEditionRoutes(
 
     await fs.writeFile(feedbackPath, feedbackContent);
 
+    // Commit the feedback to git
+    const filesToStage = [path.relative(boxRoot, feedbackPath)];
+    if (isVoice && audioData) {
+      const ext = audioMimeType?.includes("webm") ? ".webm" : ".m4a";
+      filesToStage.push(`box/inbox/feedback/${baseName}${ext}`);
+    }
+    await stageFiles(boxRoot, filesToStage);
+    await commit(boxRoot, {
+      message: "Add edition feedback",
+      trailers: {
+        "Source": "webapp",
+        "Endpoint": "/api/edition/feedback",
+        "Type": isVoice ? "voice" : "text",
+      },
+    });
+
     return { success: true, path: feedbackPath, isVoice };
   });
 
@@ -206,7 +226,10 @@ export async function registerEditionRoutes(
       audioData?: string; // Base64-encoded audio for voice response
       audioMimeType?: string;
     };
-  }>("/api/edition/query-response", async (request, reply) => {
+  }>("/api/edition/query-response", {
+    // Allow larger body for voice recordings (base64 encoded audio)
+    bodyLimit: 50 * 1024 * 1024, // 50MB
+  }, async (request, reply) => {
     const { editionPath, queryId, response, audioData, audioMimeType } = request.body ?? {};
 
     if (!editionPath || !queryId) {
@@ -242,6 +265,22 @@ export async function registerEditionRoutes(
 `;
 
     await fs.writeFile(responsePath, responseContent);
+
+    // Commit the response to git
+    const filesToStage = [path.relative(boxRoot, responsePath)];
+    if (isVoice && audioData) {
+      const ext = audioMimeType?.includes("webm") ? ".webm" : ".m4a";
+      filesToStage.push(`box/inbox/feedback/${baseName}${ext}`);
+    }
+    await stageFiles(boxRoot, filesToStage);
+    await commit(boxRoot, {
+      message: "Add query response",
+      trailers: {
+        "Source": "webapp",
+        "Endpoint": "/api/edition/query-response",
+        "Type": isVoice ? "voice" : "text",
+      },
+    });
 
     return { success: true, path: responsePath, isVoice };
   });

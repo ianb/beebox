@@ -9,7 +9,7 @@
  * - Source references
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useVoiceRecorder, type VoiceRecordingResult } from "../hooks/useVoiceRecorder";
@@ -104,6 +104,7 @@ interface NewsEditionViewProps {
 
 /**
  * Compact voice recorder for inline use in feedback areas.
+ * Auto-starts recording when mounted.
  */
 function InlineVoiceRecorder({
   onComplete,
@@ -121,6 +122,13 @@ function InlineVoiceRecorder({
 
   const { state, error, duration, startRecording, stopRecording, formatDuration } =
     useVoiceRecorder({ onComplete: handleComplete });
+
+  // Auto-start recording when component mounts
+  useEffect(() => {
+    if (state === "idle") {
+      startRecording();
+    }
+  }, [state, startRecording]);
 
   if (state === "uploading") {
     return (
@@ -152,19 +160,19 @@ function InlineVoiceRecorder({
     );
   }
 
+  // Show error state or starting state
   return (
     <div className="flex items-center gap-2 py-2">
-      <button
-        onClick={startRecording}
-        className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-      >
-        <MicrophoneIcon className="w-4 h-4" />
-        Record Voice
-      </button>
-      <button onClick={onCancel} className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800">
-        Cancel
-      </button>
-      {error && <span className="text-red-600 text-xs">{error}</span>}
+      {error ? (
+        <>
+          <span className="text-red-600 text-sm">{error}</span>
+          <button onClick={onCancel} className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800">
+            Cancel
+          </button>
+        </>
+      ) : (
+        <span className="text-gray-500 text-sm">Starting recorder...</span>
+      )}
     </div>
   );
 }
@@ -221,7 +229,7 @@ function ExpandoSection({
           {/* Comment affordance */}
           <div className="mt-4 pt-4 border-t border-blue-200">
             {submitted ? (
-              <p className="text-green-700 text-sm">Thanks for your feedback!</p>
+              <p className="text-green-700 text-sm">Got it, I'll keep that in mind.</p>
             ) : showVoice ? (
               <InlineVoiceRecorder
                 onComplete={handleVoiceComplete}
@@ -323,7 +331,7 @@ function QueryPrompt({
   if (submitted) {
     return (
       <div className="my-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-green-800 text-sm">Thanks for your response!</p>
+        <p className="text-green-800 text-sm">Got it, I'll keep that in mind.</p>
       </div>
     );
   }
@@ -568,6 +576,7 @@ export function NewsEditionView({
   );
 
   return (
+    <>
     <article className="max-w-3xl mx-auto px-4 py-8">
       {/* Header */}
       <header className="mb-8">
@@ -637,12 +646,7 @@ export function NewsEditionView({
           Feedback
         </h3>
         {globalSubmitted ? (
-          <p className="text-green-700">Thanks for your feedback!</p>
-        ) : showGlobalVoice ? (
-          <InlineVoiceRecorder
-            onComplete={handleGlobalVoice}
-            onCancel={() => setShowGlobalVoice(false)}
-          />
+          <p className="text-green-700">Got it, I'll keep that in mind.</p>
         ) : showGlobalComment ? (
           <div className="space-y-3">
             <textarea
@@ -700,6 +704,19 @@ export function NewsEditionView({
         )}
       </div>
     </article>
+
+    {/* Fixed bottom voice recorder for global feedback */}
+    {showGlobalVoice && (
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50">
+        <div className="max-w-3xl mx-auto">
+          <InlineVoiceRecorder
+            onComplete={handleGlobalVoice}
+            onCancel={() => setShowGlobalVoice(false)}
+          />
+        </div>
+      </div>
+    )}
+  </>
   );
 }
 
