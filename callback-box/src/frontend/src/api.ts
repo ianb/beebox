@@ -146,7 +146,7 @@ export async function getContext(): Promise<ContextResponse> {
 export interface NewsStatusResponse {
   /** Items in box/inbox/news/ awaiting triage */
   inbox: number;
-  /** Items in box/pool/news/ ready for edition creation */
+  /** Items in box/pool/news/ ready for brief creation */
   pool: number;
   /** Items in store/archive/news/ that have been used */
   archive: number;
@@ -326,10 +326,10 @@ export async function getCommandInfo(name: string): Promise<CommandInfo> {
 }
 
 /**
- * Submit feedback on a news edition (text or voice).
+ * Submit feedback on a news brief (text or voice).
  */
-export async function submitEditionFeedback(
-  editionPath: string,
+export async function submitBriefFeedback(
+  briefPath: string,
   targetId: string,
   comment?: string,
   audioBlob?: Blob
@@ -342,10 +342,10 @@ export async function submitEditionFeedback(
     audioMimeType = audioBlob.type;
   }
 
-  return fetchJson(`${API_BASE}/edition/feedback`, {
+  return fetchJson(`${API_BASE}/brief/feedback`, {
     method: "POST",
     body: JSON.stringify({
-      editionPath,
+      briefPath,
       targetId,
       comment,
       audioData,
@@ -355,10 +355,10 @@ export async function submitEditionFeedback(
 }
 
 /**
- * Submit a query response on a news edition (text or voice).
+ * Submit a query response on a news brief (text or voice).
  */
 export async function submitQueryResponse(
-  editionPath: string,
+  briefPath: string,
   queryId: string,
   response?: string,
   audioBlob?: Blob
@@ -371,15 +371,27 @@ export async function submitQueryResponse(
     audioMimeType = audioBlob.type;
   }
 
-  return fetchJson(`${API_BASE}/edition/query-response`, {
+  return fetchJson(`${API_BASE}/brief/query-response`, {
     method: "POST",
     body: JSON.stringify({
-      editionPath,
+      briefPath,
       queryId,
       response,
       audioData,
       audioMimeType,
     }),
+  });
+}
+
+/**
+ * Mark a brief as read.
+ */
+export async function markBriefRead(
+  briefPath: string
+): Promise<{ success: boolean; newPath: string }> {
+  return fetchJson(`${API_BASE}/brief/mark-read`, {
+    method: "POST",
+    body: JSON.stringify({ briefPath }),
   });
 }
 

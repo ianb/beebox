@@ -5,8 +5,10 @@
  * from both the CLI and the web API.
  */
 
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { getSystemState, generateContext } from "./state.js";
-import { stageAll, commit, hasCommits, getStatus } from "../cli/lib/git.js";
+import { stageAll, commit, hasCommits, getStatus, stageFiles } from "../cli/lib/git.js";
 import { createLoader } from "../cli/lib/loader.js";
 import { runPreActions } from "./preactions/index.js";
 import {
@@ -14,6 +16,7 @@ import {
   buildInboxProcessingPrompt,
   buildItemProcessingPrompt,
 } from "./agent.js";
+import { CardLoader } from "cardworks";
 
 export interface WakeupOptions {
   dryRun?: boolean | undefined;
@@ -99,7 +102,18 @@ export async function runWakeup(
     }
     onLog("");
 
-    // Phase 5: Run tailing phase
+    // Phase 5: Expire old briefs
+    onLog("[Expire old briefs]");
+    if (dryRun) {
+      onLog("  (dry run - skipping)");
+      results.push({ name: "expire-briefs", skipped: true });
+    } else {
+      const expireResult = await expireBriefsPhase(boxRoot, onLog);
+      results.push({ name: "expire-briefs", ...expireResult });
+    }
+    onLog("");
+
+    // Phase 6: Run tailing phase
     onLog("[Run tailing phase]");
     if (dryRun) {
       onLog("  (dry run - skipping)");
@@ -311,6 +325,92 @@ async function executeCommandsPhase(
   }
 
   return { message: `${ready.length} command(s) ready (execution not yet implemented)` };
+}
+
+/**
+ * Expire old briefs phase.
+ *
+ * Briefs older than 1 week are automatically moved to the archive
+ * with read-reason="expired" to distinguish them from user-read briefs.
+ */
+async function expireBriefsPhase(
+  boxRoot: string,
+  onLog: (msg: string) => void
+): Promise<Omit<PhaseResult, "name">> {
+  const EXPIRY_DAYS = 7;
+  const now = Date.now();
+  const expiryMs = EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+  const unreadDir = path.join(boxRoot, "box/output/briefs");
+  const archiveDir = path.join(boxRoot, "store/archive/briefs");
+
+  let files: string[];
+  try {
+    files = await fs.readdir(unreadDir);
+  } catch {
+    onLog("  No briefs directory");
+    return { message: "No briefs to expire" };
+  }
+
+  const briefFiles = files.filter((f) => f.endsWith(".news-brief.card"));
+  if (briefFiles.length === 0) {
+    onLog("  No unread briefs");
+    return { message: "No briefs to expire" };
+  }
+
+  let expiredCount = 0;
+  const filesToStage: string[] = [];
+
+  for (const file of briefFiles) {
+    const fullPath = path.join(unreadDir, file);
+
+    // Check file modification time
+    const stat = await fs.stat(fullPath);
+    const age = now - stat.mtimeMs;
+
+    if (age > expiryMs) {
+      onLog(`  Expiring: ${file} (${Math.floor(age / (24 * 60 * 60 * 1000))} days old)`);
+
+      // Add expiry attributes to the card
+      try {
+        const loader = new CardLoader(boxRoot);
+        const card = await loader.load(fullPath);
+        card.element.attrs["read-at"] = new Date().toISOString();
+        card.element.attrs["read-reason"] = "expired";
+        await loader.save(card);
+      } catch (err) {
+        onLog(`    Warning: Could not update card attributes: ${(err as Error).message}`);
+      }
+
+      // Move to archive
+      await fs.mkdir(archiveDir, { recursive: true });
+      const newPath = path.join(archiveDir, file);
+      await fs.rename(fullPath, newPath);
+
+      filesToStage.push(`box/output/briefs/${file}`);
+      filesToStage.push(`store/archive/briefs/${file}`);
+      expiredCount++;
+    }
+  }
+
+  if (expiredCount === 0) {
+    onLog("  No briefs old enough to expire");
+    return { message: "No briefs expired" };
+  }
+
+  // Stage and commit
+  await stageFiles(boxRoot, filesToStage);
+  await commit(boxRoot, {
+    message: `Expire ${expiredCount} old brief(s)`,
+    trailers: {
+      "Triggered-By": "cb wakeup",
+      Phase: "expire-briefs",
+      "Briefs-Expired": String(expiredCount),
+    },
+  });
+
+  onLog(`  Expired ${expiredCount} brief(s)`);
+  return { message: `Expired ${expiredCount} brief(s)` };
 }
 
 /**

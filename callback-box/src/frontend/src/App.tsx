@@ -30,11 +30,11 @@ type Tab = "inbox" | "questions" | "commands" | "activity";
  */
 function NewsPageWrapper() {
   const navigate = useNavigate();
-  const { "*": editionPath } = useParams();
+  const { "*": briefPath } = useParams();
 
   return (
     <NewsPage
-      initialPath={editionPath}
+      initialPath={briefPath}
       onNavigate={(path) => {
         if (path) {
           navigate(`/news/${path}`);
@@ -293,7 +293,7 @@ function Dashboard() {
               to="/news"
               className="btn btn-outline w-full text-sm"
             >
-              📰 Read Editions
+              📰 Read Briefs
               {newsStatus.archive > 0 && (
                 <span className="ml-2 text-gray-500 text-xs">
                   ({newsStatus.archive} archived)

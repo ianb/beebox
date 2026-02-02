@@ -12,15 +12,15 @@
  *    - Create analysis (topics, type, thesis, how to use it)
  *    - Move to box/pool/news/
  *
- * 3. CREATE EDITION: From items in box/pool/news/
+ * 3. CREATE BRIEF: From items in box/pool/news/
  *    - Identify themes and notable items
- *    - Create a news-edition card with narrative structure
+ *    - Create a news-brief card with narrative structure
  *    - Move used items to store/archive/news/
  *
  * Status is expressed by LOCATION, not by attribute:
  * - box/inbox/news/     → New, awaiting triage
- * - box/pool/news/      → Analyzed, ready for edition
- * - store/archive/news/ → Used in an edition
+ * - box/pool/news/      → Analyzed, ready for brief
+ * - store/archive/news/ → Used in a brief
  * - store/trash/news/   → Skipped as uninteresting
  */
 
@@ -46,8 +46,8 @@ export interface ProcessNewsArgs {
   triageOnly?: boolean;
   /** Only do analyze phase (for items already triaged) */
   analyzeOnly?: boolean;
-  /** Only do edition creation phase (for items already analyzed) */
-  editionOnly?: boolean;
+  /** Only do brief creation phase (for items already analyzed) */
+  briefOnly?: boolean;
   /** Show what would happen without doing it */
   dryRun?: boolean;
   /** Force even if another process is running */
@@ -88,21 +88,32 @@ WORKING DIRECTORY: ${boxRoot}
 YOUR TASK:
 Review news items in box/inbox/news/ and decide which are worth reading in full.
 
+STEP 0 - READ THE USER GUIDE:
+First, check if config/news-guide.news-guide.card exists. If it does, read it to understand:
+- User interests (topics they care about)
+- Disinterests (topics to skip/trash)
+- Preferences that might affect what's worth keeping
+
+Use this to inform your triage decisions. If no guide exists, use the default criteria below.
+
 BATCH SIZE: Process up to ${batchSize} items in this run.
 
 FOR EACH NEWS ITEM:
 1. Read the title and summary from the card
-2. Decide: Is this likely interesting based on the title/summary?
+2. Decide: Is this likely interesting based on the title/summary AND the user's guide?
 3. Take action based on your decision:
 
    INTERESTING → Keep the file where it is (we'll analyze it next)
 
-   NOT INTERESTING → Move to trash:
+   NOT INTERESTING → Use the cb trash command (do NOT move files manually):
    \`\`\`
    cb trash <path> --reason "Not interesting: [brief reason]"
    \`\`\`
+   This command moves to store/trash/ and records the reason.
 
-CRITERIA FOR "INTERESTING":
+DEFAULT CRITERIA (use when no guide exists):
+
+INTERESTING:
 - Technical content (programming, systems, architecture)
 - Novel ideas or approaches
 - Significant news in tech/science
@@ -116,6 +127,12 @@ NOT INTERESTING (trash):
 - Entertainment gossip
 - Job postings, hiring announcements
 - Press releases without substance
+
+GUIDE-BASED CRITERIA (when guide exists):
+- Topics in <interests> with high/medium confidence → likely keep
+- Topics in <disinterests> → likely trash
+- Topics with "hypothesis" confidence → keep to test the hypothesis
+- When in doubt, keep—better to analyze and discard later than miss something
 
 IMPORTANT: Status is expressed by location, not attributes. Don't modify the status attribute.
 Items stay in inbox/news/ if interesting, or get trashed if not.
@@ -198,10 +215,10 @@ GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers 
 }
 
 /**
- * Build the system prompt for edition creation.
+ * Build the system prompt for brief creation.
  */
-function buildEditionPrompt(boxRoot: string): string {
-  return `You are creating a personal news edition in a Callback Box.
+function buildBriefPrompt(boxRoot: string): string {
+  return `You are creating a personal news brief in a Callback Box.
 
 WORKING DIRECTORY: ${boxRoot}
 
@@ -233,7 +250,7 @@ The reader has NOT read the source articles. They only see what you write. For e
 - Don't assume shared context; restate key facts even if they seem obvious
 
 YOUR TASK:
-Create a news-edition card from items in box/pool/news/. This is a narrative publication,
+Create a news-brief card from items in box/pool/news/. This is a narrative publication,
 not just a list of summaries.
 
 STEP 0 - READ OR CREATE THE USER GUIDE:
@@ -243,6 +260,9 @@ First, check if config/news-guide.news-guide.card exists. If it does, read it to
 - Preferences (depth, tone, etc.)
 - Active experiments to test
 - Context notes that might affect curation
+
+If the guide exists but has NO active/proposed experiments (all are successful/unsuccessful/inconclusive),
+create 1-2 new experiments based on what you've learned. The guide should always have experiments to run.
 
 If no guide exists, create one:
 \`\`\`
@@ -302,31 +322,31 @@ Look for:
 - A narrative arc that could make this edition compelling
 - Opportunities to test hypotheses from the guide
 
-Optionally, read recent editions in store/archive/editions/ to:
+Optionally, read recent briefs in store/archive/briefs/ to:
 - Avoid repeating themes too soon
 - Build on ongoing stories
 - Reference previous coverage
 
-STEP 2 - PLAN THE EDITION:
+STEP 2 - PLAN THE BRIEF:
 Before writing, decide:
-- What's the headline/angle for this edition?
+- What's the headline/angle for this brief?
 - What 2-3 themes or sections will structure it?
 - Which articles are primary (drive the narrative)?
 - Which are supporting (add depth)?
 - What expandos would enhance without cluttering?
 - Are there questions to pose to the reader?
 
-STEP 3 - CREATE THE EDITION:
-Create the edition file in box/output/editions/ (NOT inbox - editions are output, not incoming items):
+STEP 3 - CREATE THE BRIEF:
+Create the brief file in box/output/briefs/ (NOT inbox - briefs are output, not incoming items):
 \`\`\`
-cb create box/output/editions/<date>_<slug>.news-edition.card
+cb create box/output/briefs/<date>_<slug>.news-brief.card
 \`\`\`
 
 Then edit it with this structure. IMPORTANT: <curation> comes FIRST because editorial
 decisions should be made before writing content:
 
 \`\`\`xml
-<news-edition>
+<news-brief>
   <curation guide-version="[timestamp from guide's updated-at]">
     <interest application="featured">Topic from guide that was featured</interest>
     <interest application="tested">Topic being tested as hypothesis</interest>
@@ -386,7 +406,7 @@ Closing thoughts that tie things together or look ahead.
     <source path="store/archive/news/Article_One.news-item.card" usage="primary">Article Title</source>
     <source path="store/archive/news/Article_Two.news-item.card" usage="supporting">Article Title</source>
   </sources>
-</news-edition>
+</news-brief>
 \`\`\`
 
 CURATION NOTES:
@@ -410,17 +430,17 @@ GUIDELINES:
 - Link themes across articles, don't just list them
 
 STEP 4 - ARCHIVE USED ITEMS:
-After creating the edition, move used items to archive:
+After creating the brief, move used items to archive:
 \`\`\`
 cb move box/pool/news/<used-file> store/archive/news/
 \`\`\`
 
-This command handles moving and updating any references (including in the edition you just created).
-Leave items in pool that weren't used—they'll be available for future editions.
+This command handles moving and updating any references (including in the brief you just created).
+Leave items in pool that weren't used—they'll be available for future briefs.
 
-Commit all changes with a message like "Create news edition: [title]"
+Commit all changes with a message like "Create news brief: [title]"
 
-When done, state the edition title and what was included.
+When done, state the brief title and what was included.
 
 GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
@@ -437,9 +457,9 @@ async function executeProcessNews(
   const dryRun = processArgs.dryRun ?? false;
 
   // Determine which phases to run
-  const runTriage = !processArgs.analyzeOnly && !processArgs.editionOnly;
-  const runAnalyze = !processArgs.triageOnly && !processArgs.editionOnly;
-  const runEdition = !processArgs.triageOnly && !processArgs.analyzeOnly;
+  const runTriage = !processArgs.analyzeOnly && !processArgs.briefOnly;
+  const runAnalyze = !processArgs.triageOnly && !processArgs.briefOnly;
+  const runBrief = !processArgs.triageOnly && !processArgs.analyzeOnly;
 
   // Check for existing lock
   if (!processArgs.force) {
@@ -464,9 +484,9 @@ async function executeProcessNews(
   // Ensure directories exist
   await ensureDir(ctx.boxRoot, "box/inbox/news");
   await ensureDir(ctx.boxRoot, "box/pool/news");
-  await ensureDir(ctx.boxRoot, "box/output/editions");
+  await ensureDir(ctx.boxRoot, "box/output/briefs");
   await ensureDir(ctx.boxRoot, "store/archive/news");
-  await ensureDir(ctx.boxRoot, "store/archive/editions");
+  await ensureDir(ctx.boxRoot, "store/archive/briefs");
   await ensureDir(ctx.boxRoot, "store/trash/news");
 
   const results: { phase: string; success: boolean; message: string }[] = [];
@@ -573,48 +593,48 @@ async function executeProcessNews(
       ctx.writeLine("");
     }
 
-    // Phase 3: Create Edition
-    if (runEdition) {
-      ctx.writeLine(fmt.phase("Phase 3: Create Edition"));
+    // Phase 3: Create Brief
+    if (runBrief) {
+      ctx.writeLine(fmt.phase("Phase 3: Create Brief"));
       const poolItems = await getNewsFromDir(ctx.boxRoot, "box/pool/news");
 
       if (poolItems.length === 0) {
-        ctx.writeLine(fmt.dim("No items in pool to create edition from."));
-        results.push({ phase: "edition", success: true, message: "No items" });
+        ctx.writeLine(fmt.dim("No items in pool to create brief from."));
+        results.push({ phase: "brief", success: true, message: "No items" });
       } else {
-        ctx.writeLine(`Creating edition from ${fmt.num(poolItems.length)} pooled items...`);
+        ctx.writeLine(`Creating brief from ${fmt.num(poolItems.length)} pooled items...`);
 
         if (dryRun) {
           ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
-          results.push({ phase: "edition", success: true, message: "Dry run" });
+          results.push({ phase: "brief", success: true, message: "Dry run" });
         } else {
           ctx.writeLine(fmt.info("Starting Claude Code agent..."));
           ctx.writeLine("");
-          const editionResult = await runAgent({
+          const briefResult = await runAgent({
             boxRoot: ctx.boxRoot,
-            systemPrompt: buildEditionPrompt(ctx.boxRoot),
-            prompt: `Please create a news edition from the items in box/pool/news/`,
+            systemPrompt: buildBriefPrompt(ctx.boxRoot),
+            prompt: `Please create a news brief from the items in box/pool/news/`,
             onOutput: (text) => ctx.write(text),
           });
           ctx.writeLine("");
 
-          if (editionResult.success) {
+          if (briefResult.success) {
             ctx.writeLine(fmt.ok("Agent finished successfully"));
-            results.push({ phase: "edition", success: true, message: "Edition created" });
+            results.push({ phase: "brief", success: true, message: "Brief created" });
           } else {
-            ctx.writeLine(fmt.fail(`Agent error: ${editionResult.error}`));
-            results.push({ phase: "edition", success: false, message: editionResult.error ?? "Failed" });
+            ctx.writeLine(fmt.fail(`Agent error: ${briefResult.error}`));
+            results.push({ phase: "brief", success: false, message: briefResult.error ?? "Failed" });
           }
 
-          // Commit edition changes
+          // Commit brief changes
           const status = await getStatus(ctx.boxRoot);
           if (!status.clean) {
             await stageAll(ctx.boxRoot);
             await commit(ctx.boxRoot, {
-              message: "Create news edition",
-              trailers: { "Triggered-By": "cb process-news", Phase: "edition" },
+              message: "Create news brief",
+              trailers: { "Triggered-By": "cb process-news", Phase: "brief" },
             });
-            ctx.writeLine(fmt.dim("  Edition changes committed."));
+            ctx.writeLine(fmt.dim("  Brief changes committed."));
           }
         }
       }
@@ -648,7 +668,7 @@ async function executeProcessNews(
 // Register the command
 registerCommand({
   name: "process-news",
-  description: "Run the news processing agent (triage, analyze, create edition)",
+  description: "Run the news processing agent (triage, analyze, create brief)",
   args: [
     {
       name: "batchSize",
@@ -672,8 +692,8 @@ registerCommand({
       type: "boolean",
     },
     {
-      name: "editionOnly",
-      description: "Only run edition creation phase",
+      name: "briefOnly",
+      description: "Only run brief creation phase",
       required: false,
       default: false,
       type: "boolean",

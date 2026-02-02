@@ -1,30 +1,30 @@
 /**
- * News edition card schema - a curated narrative digest of news.
+ * News brief card schema - a curated narrative digest of news.
  *
- * Unlike a simple summary, an edition is a publication with:
+ * Unlike a simple summary, a brief is a personal publication with:
  * - A title and byline
  * - Narrative structure (not just a list)
  * - Expandable sections for deeper content
  * - Interactive elements like queries
  * - References to source articles
  *
- * The agent creates editions that tell a story, not just filter content.
+ * The agent creates briefs that tell a story, not just filter content.
  */
 
 import { element, serialize, type ElementNode } from "cardworks";
 import { z } from "zod";
 
 /**
- * Edition title - the headline for this edition.
+ * Edition title - the headline for this brief.
  */
-export const EditionTitle = element("title", {
+export const BriefTitle = element("title", {
   text: z.string(),
 });
 
 /**
- * Edition date - when this edition was created.
+ * Edition date - when this brief was created.
  */
-export const EditionDate = element("date", {
+export const BriefDate = element("date", {
   /** ISO date (YYYY-MM-DD) */
   text: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -32,7 +32,7 @@ export const EditionDate = element("date", {
 /**
  * Edition byline - a brief description/teaser.
  */
-export const EditionByline = element("byline", {
+export const BriefByline = element("byline", {
   text: z.string(),
 });
 
@@ -149,12 +149,12 @@ export const Section = element("section", {
 });
 
 /**
- * Main content element - the body of the edition.
+ * Main content element - the body of the brief.
  *
  * Contains markdown with embedded structural elements.
  * The content is the narrative the agent has crafted.
  */
-export const EditionContent = element("content", {
+export const BriefContent = element("content", {
   attrs: {
     format: z.literal("markdown").default("markdown"),
   },
@@ -165,7 +165,7 @@ export const EditionContent = element("content", {
 });
 
 /**
- * Source reference - links to a news-item card used in this edition.
+ * Source reference - links to a news-item card used in this brief.
  */
 export const SourceRef = element("source", {
   attrs: {
@@ -186,7 +186,7 @@ export const Sources = element("sources", {
 });
 
 /**
- * Reference to an interest from the guide that influenced this edition.
+ * Reference to an interest from the guide that influenced this brief.
  */
 export const InterestRef = element("interest", {
   attrs: {
@@ -198,7 +198,7 @@ export const InterestRef = element("interest", {
 });
 
 /**
- * Reference to an experiment being tested in this edition.
+ * Reference to an experiment being tested in this brief.
  */
 export const ExperimentRef = element("experiment-ref", {
   attrs: {
@@ -210,10 +210,10 @@ export const ExperimentRef = element("experiment-ref", {
 });
 
 /**
- * A hypothesis being tested in this edition.
+ * A hypothesis being tested in this brief.
  * These are specific testable claims that feedback can confirm or deny.
  */
-export const EditionHypothesis = element("hypothesis", {
+export const BriefHypothesis = element("hypothesis", {
   attrs: {
     /** Unique ID for referencing in feedback */
     id: z.string(),
@@ -225,7 +225,7 @@ export const EditionHypothesis = element("hypothesis", {
 });
 
 /**
- * Curation metadata - how the guide influenced this edition.
+ * Curation metadata - how the guide influenced this brief.
  *
  * This enables learning from feedback by tracking what decisions
  * were made and why, so we can update the guide based on results.
@@ -258,7 +258,7 @@ export const Curation = element("curation", {
     z.union([
       InterestRef,
       ExperimentRef,
-      EditionHypothesis,
+      BriefHypothesis,
       /** Explanation of editorial decisions */
       element("rationale", { text: z.string() }),
     ])
@@ -266,14 +266,14 @@ export const Curation = element("curation", {
 });
 
 /**
- * News edition card schema.
+ * News brief card schema.
  *
  * Curation comes first because it guides the content - the editorial
  * decisions should be made before writing begins.
  *
  * Example:
  * ```xml
- * <news-edition>
+ * <news-brief>
  *   <curation guide-version="2026-02-01T10:00:00Z">
  *     <interest application="featured">AI safety</interest>
  *     <hypothesis id="h1">Technical depth will resonate</hypothesis>
@@ -300,26 +300,26 @@ export const Curation = element("curation", {
  *   <sources>
  *     <source path="store/archive/news/Article.news-item.card" usage="primary">Article Title</source>
  *   </sources>
- * </news-edition>
+ * </news-brief>
  * ```
  */
-export const NewsEditionSchema = element("news-edition", {
+export const NewsBriefSchema = element("news-brief", {
   children: z.array(
     z.union([
       Curation,
-      EditionTitle,
-      EditionDate,
-      EditionByline,
-      EditionContent,
+      BriefTitle,
+      BriefDate,
+      BriefByline,
+      BriefContent,
       Sources,
     ])
   ),
 });
 
-export type NewsEdition = z.infer<typeof NewsEditionSchema>;
+export type NewsBrief = z.infer<typeof NewsBriefSchema>;
 
 /**
- * Parsed news edition with typed accessors.
+ * Parsed news brief with typed accessors.
  */
 /**
  * Parsed excerpt structure.
@@ -330,7 +330,7 @@ export interface ParsedExcerpt {
   text: string;
 }
 
-export interface ParsedNewsEdition {
+export interface ParsedNewsBrief {
   title: string;
   date: string;
   byline: string;
@@ -390,10 +390,10 @@ function getChildren(children: ElementNode[], tagName: string): ElementNode[] {
 }
 
 /**
- * Parse a news edition element into a typed structure.
+ * Parse a news brief element into a typed structure.
  */
-export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
-  const children = edition.children as ElementNode[];
+export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
+  const children = brief.children as ElementNode[];
 
   const titleEl = getChild(children, "title");
   const dateEl = getChild(children, "date");
@@ -456,7 +456,7 @@ export function parseNewsEdition(edition: NewsEdition): ParsedNewsEdition {
 
   // Parse curation
   const curationEl = getChild(children, "curation");
-  let curation: ParsedNewsEdition["curation"] = undefined;
+  let curation: ParsedNewsBrief["curation"] = undefined;
   if (curationEl) {
     const curationChildren = (curationEl.children ?? []) as ElementNode[];
     const interests = getChildren(curationChildren, "interest").map((i) => ({
@@ -513,18 +513,18 @@ export function slugify(title: string): string {
 }
 
 /**
- * Generate the card filename for an edition.
+ * Generate the card filename for an brief.
  */
-export function editionFilename(date: string, title: string): string {
+export function briefFilename(date: string, title: string): string {
   const slug = slugify(title).replace(/-/g, "_");
   const safeTitle = slug.charAt(0).toUpperCase() + slug.slice(1);
-  return `${date}_${safeTitle}.news-edition.card`;
+  return `${date}_${safeTitle}.news-brief.card`;
 }
 
 /**
- * Template options for creating a news edition.
+ * Template options for creating a news brief.
  */
-export interface NewsEditionOptions {
+export interface NewsBriefOptions {
   title: string;
   date: string;
   byline: string;
@@ -537,24 +537,24 @@ export interface NewsEditionOptions {
 }
 
 /**
- * Template for creating a news edition card.
+ * Template for creating a news brief card.
  */
-export function createNewsEditionTemplate(options: NewsEditionOptions): string {
+export function createNewsBriefTemplate(options: NewsBriefOptions): string {
   const sources = (options.sources ?? []).map((s) => (
     <source path={s.path} usage={s.usage}>
       {s.title}
     </source>
   ));
 
-  const edition = (
-    <news-edition>
+  const brief = (
+    <news-brief>
       <title>{options.title}</title>
       <date>{options.date}</date>
       <byline>{options.byline}</byline>
       <content format="markdown">{options.content}</content>
       {sources.length > 0 && <sources>{sources}</sources>}
-    </news-edition>
+    </news-brief>
   );
 
-  return serialize(edition as ElementNode) + "\n";
+  return serialize(brief as ElementNode) + "\n";
 }

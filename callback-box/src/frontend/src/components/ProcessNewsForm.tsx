@@ -4,7 +4,7 @@
  * The news processing pipeline has three phases:
  * 1. Triage: Review items in inbox/news/, trash uninteresting ones
  * 2. Analyze: Fetch content & add analysis, move to pool/news/
- * 3. Edition: Create edition from pool items, archive used ones
+ * 3. Brief: Create brief from pool items, archive used ones
  */
 
 import { useState } from "react";
@@ -13,7 +13,7 @@ export interface ProcessNewsArgs {
   batchSize: number;
   triageOnly: boolean;
   analyzeOnly: boolean;
-  editionOnly: boolean;
+  briefOnly: boolean;
 }
 
 interface ProcessNewsFormProps {
@@ -21,7 +21,7 @@ interface ProcessNewsFormProps {
   onClose: () => void;
   /** Items in box/inbox/news/ awaiting triage */
   inboxCount: number;
-  /** Items in box/pool/news/ ready for edition */
+  /** Items in box/pool/news/ ready for brief */
   poolCount: number;
 }
 
@@ -32,14 +32,14 @@ export function ProcessNewsForm({
   poolCount,
 }: ProcessNewsFormProps) {
   const [batchSize, setBatchSize] = useState(10);
-  const [phase, setPhase] = useState<"all" | "triage" | "analyze" | "edition">("all");
+  const [phase, setPhase] = useState<"all" | "triage" | "analyze" | "brief">("all");
 
   const handleSubmit = () => {
     onSubmit({
       batchSize,
       triageOnly: phase === "triage",
       analyzeOnly: phase === "analyze",
-      editionOnly: phase === "edition",
+      briefOnly: phase === "brief",
     });
   };
 
@@ -103,7 +103,7 @@ export function ProcessNewsForm({
               onChange={() => setPhase("all")}
               className="text-blue-600"
             />
-            <span className="text-sm">All phases (triage → analyze → edition)</span>
+            <span className="text-sm">All phases (triage → analyze → brief)</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -137,14 +137,14 @@ export function ProcessNewsForm({
             <input
               type="radio"
               name="phase"
-              value="edition"
-              checked={phase === "edition"}
-              onChange={() => setPhase("edition")}
+              value="brief"
+              checked={phase === "brief"}
+              onChange={() => setPhase("brief")}
               className="text-blue-600"
               disabled={poolCount === 0}
             />
             <span className={`text-sm ${poolCount === 0 ? "text-gray-400" : ""}`}>
-              Create edition ({poolCount} pool items)
+              Create brief ({poolCount} pool items)
             </span>
           </label>
         </div>
@@ -159,7 +159,7 @@ export function ProcessNewsForm({
           cb process-news
           {phase === "triage" && " --triage-only"}
           {phase === "analyze" && " --analyze-only"}
-          {phase === "edition" && " --edition-only"}
+          {phase === "brief" && " --brief-only"}
         </button>
         <button onClick={onClose} className="btn btn-secondary">
           Cancel
@@ -180,6 +180,6 @@ export function buildProcessNewsLabel(args: ProcessNewsArgs): string {
   const parts = ["cb process-news", `--batch-size ${args.batchSize}`];
   if (args.triageOnly) parts.push("--triage-only");
   if (args.analyzeOnly) parts.push("--analyze-only");
-  if (args.editionOnly) parts.push("--edition-only");
+  if (args.briefOnly) parts.push("--brief-only");
   return parts.join(" ");
 }

@@ -10,7 +10,7 @@ import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { NewsItemSchema } from "./news-item.js";
 import { NewsSummarySchema } from "./news-summary.js";
-import { NewsEditionSchema } from "./news-edition.js";
+import { NewsBriefSchema } from "./news-brief.js";
 import { NewsGuideSchema } from "./news-guide.js";
 import { FeedbackSchema } from "./feedback.js";
 
@@ -22,7 +22,7 @@ export const schemas: ElementSchema[] = [
   QuestionSchema,
   NewsItemSchema,
   NewsSummarySchema,
-  NewsEditionSchema,
+  NewsBriefSchema,
   NewsGuideSchema,
   FeedbackSchema,
 ];
@@ -57,6 +57,6 @@ export { MemoSchema } from "./memo.js";
 export { QuestionSchema } from "./question.js";
 export { NewsItemSchema } from "./news-item.js";
 export { NewsSummarySchema } from "./news-summary.js";
-export { NewsEditionSchema } from "./news-edition.js";
+export { NewsBriefSchema } from "./news-brief.js";
 export { NewsGuideSchema } from "./news-guide.js";
 export { FeedbackSchema } from "./feedback.js";

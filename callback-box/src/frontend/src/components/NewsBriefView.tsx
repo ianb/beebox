@@ -1,5 +1,5 @@
 /**
- * NewsEditionView - Renders a news edition with interactive elements.
+ * NewsBriefView - Renders a news brief with interactive elements.
  *
  * Supports:
  * - Markdown content rendering
@@ -71,9 +71,9 @@ interface SourceRef {
 }
 
 /**
- * Parsed news edition for the view.
+ * Parsed news brief for the view.
  */
-export interface NewsEditionData {
+export interface NewsBriefData {
   title: string;
   date: string;
   byline: string;
@@ -88,8 +88,8 @@ export interface NewsEditionData {
   sources: SourceRef[];
 }
 
-interface NewsEditionViewProps {
-  edition: NewsEditionData;
+interface NewsBriefViewProps {
+  brief: NewsBriefData;
   /** Called when user submits a comment (text) */
   onComment?: (targetId: string, comment: string) => void;
   /** Called when user submits a voice comment */
@@ -540,16 +540,16 @@ function SourceList({
 }
 
 /**
- * Main news edition view component.
+ * Main news brief view component.
  */
-export function NewsEditionView({
-  edition,
+export function NewsBriefView({
+  brief,
   onComment,
   onVoiceComment,
   onQueryResponse,
   onVoiceQueryResponse,
   onSourceClick,
-}: NewsEditionViewProps) {
+}: NewsBriefViewProps) {
   const [showGlobalComment, setShowGlobalComment] = useState(false);
   const [showGlobalVoice, setShowGlobalVoice] = useState(false);
   const [globalComment, setGlobalComment] = useState("");
@@ -581,26 +581,26 @@ export function NewsEditionView({
       {/* Header */}
       <header className="mb-8">
         <time className="text-sm text-gray-500 block mb-2">
-          {new Date(edition.date).toLocaleDateString("en-US", {
+          {new Date(brief.date).toLocaleDateString("en-US", {
             weekday: "long",
             year: "numeric",
             month: "long",
             day: "numeric",
           })}
         </time>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">{edition.title}</h1>
-        {edition.byline && <p className="text-lg text-gray-600 italic">{edition.byline}</p>}
+        <h1 className="text-3xl font-bold text-gray-900 mb-3">{brief.title}</h1>
+        {brief.byline && <p className="text-lg text-gray-600 italic">{brief.byline}</p>}
       </header>
 
       {/* Main content */}
       <div className="prose prose-lg max-w-none mb-8">
         {/* Top-level markdown content */}
-        {edition.content.text && (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{edition.content.text}</ReactMarkdown>
+        {brief.content.text && (
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{brief.content.text}</ReactMarkdown>
         )}
 
         {/* Sections */}
-        {edition.content.sections.map((section, i) => (
+        {brief.content.sections.map((section, i) => (
           <ContentSection
             key={section.id ?? i}
             section={section}
@@ -612,12 +612,12 @@ export function NewsEditionView({
         ))}
 
         {/* Top-level excerpts */}
-        {edition.content.excerpts.map((excerpt, i) => (
+        {brief.content.excerpts.map((excerpt, i) => (
           <ExcerptBlock key={i} excerpt={excerpt} />
         ))}
 
         {/* Top-level expandos */}
-        {edition.content.expandos.map((expando, i) => (
+        {brief.content.expandos.map((expando, i) => (
           <ExpandoSection
             key={expando.id ?? i}
             expando={expando}
@@ -627,7 +627,7 @@ export function NewsEditionView({
         ))}
 
         {/* Top-level queries */}
-        {edition.content.queries.map((query, i) => (
+        {brief.content.queries.map((query, i) => (
           <QueryPrompt
             key={query.id ?? i}
             query={query}
@@ -638,7 +638,7 @@ export function NewsEditionView({
       </div>
 
       {/* Sources */}
-      <SourceList sources={edition.sources} onSourceClick={onSourceClick} />
+      <SourceList sources={brief.sources} onSourceClick={onSourceClick} />
 
       {/* Global feedback */}
       <div className="mt-8 pt-6 border-t border-gray-200">
@@ -652,7 +652,7 @@ export function NewsEditionView({
             <textarea
               value={globalComment}
               onChange={(e) => setGlobalComment(e.target.value)}
-              placeholder="What did you think of this edition? What did you learn? What would you like to see more or less of?"
+              placeholder="What did you think of this brief? What did you learn? What would you like to see more or less of?"
               className="w-full p-3 border rounded-lg resize-none"
               rows={4}
             />
@@ -689,7 +689,7 @@ export function NewsEditionView({
               onClick={() => setShowGlobalComment(true)}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
-              Share your thoughts on this edition
+              Share your thoughts on this brief
             </button>
             {onVoiceComment && (
               <button
@@ -720,4 +720,4 @@ export function NewsEditionView({
   );
 }
 
-export default NewsEditionView;
+export default NewsBriefView;

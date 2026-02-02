@@ -1,36 +1,25 @@
 /**
  * NewsPage - Full news reading experience.
  *
- * Shows a sidebar with edition index and main area with the selected edition.
+ * Shows a sidebar with brief index and main area with the selected brief.
  * Supports comments, query responses (text and voice).
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { NewsIndex } from "./NewsIndex";
-import { NewsEditionView, type NewsEditionData } from "./NewsEditionView";
-import { submitEditionFeedback, submitQueryResponse } from "../api";
+import { NewsIndex, type BriefSummary } from "./NewsIndex";
+import { NewsBriefView, type NewsBriefData } from "./NewsBriefView";
+import { submitBriefFeedback, submitQueryResponse, markBriefRead } from "../api";
 
 /**
- * Edition metadata from the index.
+ * Fetch a full brief from the API.
  */
-interface EditionSummary {
-  path: string;
-  relativePath: string;
-  title: string;
-  date: string;
-  byline: string;
-}
-
-/**
- * Fetch a full edition from the API.
- */
-async function fetchEdition(path: string): Promise<NewsEditionData> {
-  const response = await fetch(`/api/edition/${encodeURIComponent(path)}`);
+async function fetchBrief(path: string): Promise<NewsBriefData> {
+  const response = await fetch(`/api/brief/${encodeURIComponent(path)}`);
   if (!response.ok) {
-    throw new Error("Failed to fetch edition");
+    throw new Error("Failed to fetch brief");
   }
   const data = await response.json();
-  return data.edition;
+  return data.brief;
 }
 
 interface NewsPageProps {
@@ -43,24 +32,25 @@ interface NewsPageProps {
 }
 
 export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPageProps) {
-  const [selectedSummary, setSelectedSummary] = useState<EditionSummary | null>(null);
-  const [edition, setEdition] = useState<NewsEditionData | null>(null);
+  const [selectedSummary, setSelectedSummary] = useState<BriefSummary | null>(null);
+  const [brief, setBrief] = useState<NewsBriefData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load initial edition if path provided
+  // Load initial brief if path provided
   useEffect(() => {
     if (initialPath) {
       setLoading(true);
-      fetchEdition(initialPath)
+      fetchBrief(initialPath)
         .then((data) => {
-          setEdition(data);
+          setBrief(data);
           setSelectedSummary({
             path: initialPath,
             relativePath: initialPath,
             title: data.title,
             date: data.date,
             byline: data.byline,
+            read: true, // If loading by path, assume it might be read
           });
           setLoading(false);
         })
@@ -71,9 +61,9 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     }
   }, [initialPath]);
 
-  // Handle edition selection
+  // Handle brief selection
   const handleSelect = useCallback(
-    (summary: EditionSummary) => {
+    (summary: BriefSummary) => {
       setSelectedSummary(summary);
       setLoading(true);
       setError(null);
@@ -81,10 +71,17 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
       // Notify parent of navigation
       onNavigate?.(summary.relativePath);
 
-      fetchEdition(summary.relativePath)
+      fetchBrief(summary.relativePath)
         .then((data) => {
-          setEdition(data);
+          setBrief(data);
           setLoading(false);
+
+          // Mark as read if it's unread
+          if (!summary.read) {
+            markBriefRead(summary.relativePath).catch((err) => {
+              console.error("Failed to mark brief as read:", err);
+            });
+          }
         })
         .catch((err) => {
           setError(err.message);
@@ -99,7 +96,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     (targetId: string, comment: string) => {
       if (!selectedSummary) return;
 
-      submitEditionFeedback(selectedSummary.relativePath, targetId, comment)
+      submitBriefFeedback(selectedSummary.relativePath, targetId, comment)
         .then(() => {
           console.log("Feedback submitted:", targetId);
         })
@@ -115,7 +112,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     async (targetId: string, audioBlob: Blob) => {
       if (!selectedSummary) return;
 
-      await submitEditionFeedback(
+      await submitBriefFeedback(
         selectedSummary.relativePath,
         targetId,
         undefined,
@@ -163,7 +160,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
       {/* Sidebar with index */}
       <div className="w-80 bg-white border-r flex flex-col">
         <div className="p-4 border-b">
-          <h1 className="text-lg font-semibold text-gray-800">News Editions</h1>
+          <h1 className="text-lg font-semibold text-gray-800">News Briefs</h1>
         </div>
         <div className="flex-1 overflow-auto">
           <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} />
@@ -180,9 +177,9 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
           <div className="flex items-center justify-center h-full">
             <div className="text-red-600">Error: {error}</div>
           </div>
-        ) : edition ? (
-          <NewsEditionView
-            edition={edition}
+        ) : brief ? (
+          <NewsBriefView
+            brief={brief}
             onComment={handleComment}
             onVoiceComment={handleVoiceComment}
             onQueryResponse={handleQueryResponse}
@@ -191,7 +188,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
           />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">
-            Select an edition to read
+            Select a brief to read
           </div>
         )}
       </div>

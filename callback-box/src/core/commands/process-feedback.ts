@@ -100,6 +100,8 @@ For each feedback card:
    - Add an <observation> to the experiment
    - If feedback confirms: increase confidence, consider marking experiment "successful"
    - If feedback refutes: decrease confidence, consider marking experiment "unsuccessful"
+   - When marking an experiment unsuccessful, CREATE A NEW EXPERIMENT based on what was learned
+     (e.g., if "hardware hacking stories" failed, try "software debugging stories" instead)
 
    FOR SECTION/EXPANDO FEEDBACK:
    - Positive feedback on a topic → increase confidence on that interest
@@ -169,8 +171,25 @@ CONFIDENCE LEVEL GUIDE:
 - medium → high: Strong evidence (explicit statement or multiple confirmations)
 - high → confirmed: User directly stated preference
 
+CREATING NEW EXPERIMENTS:
+When an experiment concludes (successful or unsuccessful), create a new experiment to test
+something else. The guide should always have 1-3 active/proposed experiments. Ideas for new experiments:
+- Test a hypothesis derived from the feedback just received
+- Explore a different angle on a confirmed interest
+- Try a format/presentation variation based on preferences
+- Test the boundaries of a disinterest (maybe there's a version they'd like?)
+
+Example new experiment after learning user dislikes hardware:
+\`\`\`xml
+<experiment id="exp-4" status="proposed">
+  <hypothesis>User prefers software puzzles with clear problem/solution structure</hypothesis>
+  <approach>Feature a debugging story that's purely software-based with step-by-step resolution</approach>
+</experiment>
+\`\`\`
+
 OUTPUT: As you process each feedback card, state:
   PROCESSED: [filename] → [what was updated in guide]
+  NEW EXPERIMENT: [id] → [hypothesis being tested]
   QUESTION: [filename] → Created question about [topic]
 
 When done, summarize what was learned and any open questions.
