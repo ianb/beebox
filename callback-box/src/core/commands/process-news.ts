@@ -224,6 +224,14 @@ INSTEAD:
 - Summarize accurately rather than tantalizingly
 - Be a knowledgeable friend, not a headline writer
 
+CRITICAL - PROVIDE FULL CONTEXT:
+The reader has NOT read the source articles. They only see what you write. For each story:
+- Introduce what happened and why it matters BEFORE diving into analysis
+- Include enough background that the piece stands alone
+- Use <excerpt> elements to quote key passages from the source—this provides texture and
+  lets the original author's voice come through
+- Don't assume shared context; restate key facts even if they seem obvious
+
 YOUR TASK:
 Create a news-edition card from items in box/pool/news/. This is a narrative publication,
 not just a list of summaries.
@@ -339,27 +347,31 @@ decisions should be made before writing content:
 The opening paragraph sets up the theme. What connects today's stories?
 What makes this moment interesting?
 
-<section id="s1" heading="First Theme">
+<section id="s1" heading="First Theme" link="https://example.com/article" via="Hacker News">
 
-The narrative for this theme. Don't just list articles—tell a story about
+**Start with context**: What is this about? Who did what? This is for a reader who hasn't
+seen the article—introduce the subject, the situation, the key facts.
+
+Then your analysis and narrative. Don't just list articles—tell a story about
 what's happening in this space.
+
+<excerpt source="Article Title" link="https://example.com/article">
+"A memorable quote from the article that captures something essential—the author's
+voice, a key technical point, or a surprising finding."
+</excerpt>
 
 <expando title="Deep dive: Technical details" id="exp1">
 More detailed content that interested readers can explore.
-Quote directly from sources when relevant.
-
-> "Direct quotes add credibility and voice" — Source
-</expando>
-
-<expando title="Background: Why this matters" id="exp2">
-Context that helps readers understand significance.
+Use more excerpts here for depth.
 </expando>
 
 </section>
 
-<section id="s2" heading="Second Theme">
+<section id="s2" heading="Second Theme" link="https://example.com/other" via="Lobsters">
 
-Another narrative thread...
+Again, establish context first. Who? What? When? Why does this matter?
+
+Then your narrative...
 
 <query id="q1" prompt="What aspects of this interest you most?">
 Understanding your interests helps focus future coverage.
@@ -385,6 +397,11 @@ CURATION NOTES:
 - The rationale explains your editorial thinking
 
 GUIDELINES:
+- EVERY SECTION needs: link= to the source article, via= to note the feed source (e.g., "Hacker News")
+- Include <excerpt> elements liberally—at least one per section, more in expandos
+- The <feed> element in each news-item card contains the feed title (use this for "via")
+- The <link> element in each news-item card has the article URL
+- Provide full context: the reader knows NOTHING except what you write
 - BE LIBERAL with expandos - long is fine if it's expandable
 - The main narrative should be scannable (1-2 paragraphs per section)
 - Use expandos for: technical details, background, quotes, tangents

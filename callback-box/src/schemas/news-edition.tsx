@@ -66,6 +66,32 @@ export const Expando = element("expando", {
 });
 
 /**
+ * Excerpt element - a direct quote from a source article.
+ *
+ * Use excerpts to let the original author's voice come through,
+ * especially for memorable phrasing or key technical explanations.
+ * The reader hasn't read the article, so excerpts provide texture.
+ *
+ * Example:
+ * ```xml
+ * <excerpt source="Article Title" link="https://example.com/article">
+ *   "The protection routine performed I/O operations with the dongle
+ *   but always returned the same hardcoded constant."
+ * </excerpt>
+ * ```
+ */
+export const Excerpt = element("excerpt", {
+  attrs: {
+    /** Title of the source being quoted */
+    source: z.string(),
+    /** Optional link to the source */
+    link: z.string().url().optional(),
+  },
+  /** The quoted text */
+  text: z.string(),
+});
+
+/**
  * Query element - prompts for user input/reflection.
  *
  * These are optional elements the agent can include to invite
@@ -111,9 +137,13 @@ export const Section = element("section", {
     heading: z.string().optional(),
     /** ID for feedback targeting */
     id: z.string().optional(),
+    /** Link to the primary source article for this section */
+    link: z.string().url().optional(),
+    /** Feed/source name (e.g., "Hacker News") */
+    via: z.string().optional(),
   },
-  /** Can contain markdown, expandos, queries */
-  children: z.array(z.union([Expando, Query])).optional(),
+  /** Can contain markdown, expandos, queries, excerpts */
+  children: z.array(z.union([Expando, Query, Excerpt])).optional(),
   /** Markdown text content */
   text: z.string().optional(),
 });
@@ -128,8 +158,8 @@ export const EditionContent = element("content", {
   attrs: {
     format: z.literal("markdown").default("markdown"),
   },
-  /** Can contain sections, expandos, queries inline */
-  children: z.array(z.union([Section, Expando, Query])).optional(),
+  /** Can contain sections, expandos, queries, excerpts inline */
+  children: z.array(z.union([Section, Expando, Query, Excerpt])).optional(),
   /** Top-level markdown content */
   text: z.string().optional(),
 });
