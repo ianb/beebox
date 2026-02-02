@@ -371,12 +371,27 @@ function QueryPrompt({
 }
 
 /**
+ * Strip surrounding quotes from text if present.
+ */
+function stripQuotes(text: string): string {
+  const trimmed = text.trim();
+  // Check for various quote styles
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+/**
  * Excerpt component - quoted text from source.
  */
 function ExcerptBlock({ excerpt }: { excerpt: Excerpt }) {
+  const text = stripQuotes(excerpt.text);
   return (
     <blockquote className="my-4 pl-4 border-l-4 border-gray-300 bg-gray-50 py-3 pr-4 rounded-r">
-      <p className="text-gray-700 italic">{excerpt.text}</p>
+      <p className="text-gray-700 italic">{text}</p>
       <cite className="block mt-2 text-sm text-gray-500 not-italic">
         — {excerpt.link ? (
           <a href={excerpt.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
