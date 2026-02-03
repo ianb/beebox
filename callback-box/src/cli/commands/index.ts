@@ -18,3 +18,4 @@ export { moveCommand } from "./move.js";
 export { fetchNewsCommand } from "./fetch-news.js";
 export { processNewsCommand } from "./process-news.js";
 export { processFeedbackCommand } from "./process-feedback.js";
+export { triageFeedbackCommand } from "./triage-feedback.js";

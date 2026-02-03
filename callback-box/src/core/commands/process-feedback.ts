@@ -1,22 +1,18 @@
 /**
- * Process-feedback command - Process user feedback on editions.
+ * Process-feedback command - Single-pass guide revision from all feedback.
  *
- * This command invokes Claude Code to process feedback cards and update
- * the news guide accordingly.
+ * This command processes ALL accumulated feedback and updates the news guide:
+ * 1. Finds all briefs in store/archive/briefs/ missing the guide-revision attr
+ * 2. Collects feedback from each brief:
+ *    - overall-rating, selected-reactions attrs
+ *    - user-feedback attrs on sections/expandos
+ *    - <user-comment> elements (integrated voice/text feedback)
+ *    - <curation> section (what experiments were tested)
+ * 3. Presents all feedback to the agent for unified guide revision
+ * 4. Marks processed briefs with guide-revision="timestamp"
  *
- * The agent:
- * 1. Reads feedback cards from box/inbox/feedback/
- * 2. Resolves the target reference to understand what was commented on
- * 3. Updates the news-guide based on the feedback:
- *    - Adjusts confidence levels on interests/preferences
- *    - Records observations on experiments
- *    - Updates experiment status based on evidence
- * 4. May create questions for ambiguous feedback
- * 5. Archives processed feedback
- *
- * Feedback types:
- * - query-response: User answered a query in an edition
- * - edition: User commented on a section/expando/hypothesis
+ * This replaces the old per-card processing with a single-pass approach
+ * that sees all feedback together for better context.
  */
 
 import * as fs from "node:fs/promises";
@@ -42,157 +38,166 @@ export interface ProcessFeedbackArgs {
 }
 
 /**
- * Get feedback cards from inbox.
+ * Get briefs that haven't been processed for guide revision.
+ * These are briefs in store/archive/briefs/ without a guide-revision attr.
  */
-async function getFeedbackCards(boxRoot: string): Promise<string[]> {
-  const dir = path.join(boxRoot, "box/inbox/feedback");
+async function getUnprocessedBriefs(boxRoot: string): Promise<string[]> {
+  const dir = path.join(boxRoot, "store/archive/briefs");
   try {
     const files = await fs.readdir(dir);
-    return files
-      .filter((f) => f.endsWith(".feedback.card"))
-      .map((f) => path.join("box/inbox/feedback", f));
+    const briefFiles = files.filter((f) => f.endsWith(".news-brief.card"));
+
+    const unprocessed: string[] = [];
+    for (const file of briefFiles) {
+      const filePath = path.join(dir, file);
+      const content = await fs.readFile(filePath, "utf-8");
+
+      // Check if it has a guide-revision attr (already processed)
+      if (!content.includes("guide-revision=")) {
+        unprocessed.push(path.join("store/archive/briefs", file));
+      }
+    }
+
+    return unprocessed;
   } catch {
     return [];
   }
 }
 
 /**
- * Build the system prompt for feedback processing.
+ * Build the system prompt for guide revision.
  */
-function buildFeedbackPrompt(boxRoot: string): string {
-  return `You are processing user feedback on news editions in a Callback Box.
+function buildGuideRevisionPrompt(boxRoot: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const timestamp = new Date().toISOString();
+
+  return `You are revising the news guide based on accumulated reader feedback in a Callback Box.
 
 WORKING DIRECTORY: ${boxRoot}
 
 YOUR TASK:
-Process feedback cards in box/inbox/feedback/ and update the news-guide accordingly.
+Process feedback from all unprocessed briefs and update the news-guide in a single pass.
+
+OVERVIEW:
+1. Read the current news-guide
+2. Read each unprocessed brief and extract all feedback
+3. Synthesize all feedback together
+4. Update the guide based on the complete picture
+5. Mark each processed brief with guide-revision="${timestamp}"
 
 STEP 1 - READ THE GUIDE:
-First, read config/news-guide.news-guide.card to understand current beliefs and experiments.
-
-STEP 2 - PROCESS EACH FEEDBACK CARD:
-For each feedback card:
-
-1. Read the card and note the target reference (ref="path#fragment")
-2. Parse the reference to understand what was targeted:
-   - #q1, #q2 etc. = query responses
-   - #s1, #s2 etc. = section feedback
-   - #h1, #h2 etc. = hypothesis feedback
-   - #exp1, #exp2 etc. = expando feedback
-
-3. Read the referenced edition to understand context:
-   - What was the query asking?
-   - What hypothesis was being tested?
-   - What experiment does this relate to?
-
-4. Update the guide based on feedback type:
-
-   FOR QUERY RESPONSES:
-   - The response often reveals user interests or preferences
-   - Add or update <topic> elements with source="feedback"
-   - Add or update <preference> elements
-   - Increase confidence on confirmed interests
-   - Reference the feedback: evidence="feedback:[feedback-card-path]"
-
-   FOR HYPOTHESIS FEEDBACK:
-   - Check the edition's <curation> section for the hypothesis
-   - Find the related experiment in the guide
-   - Add an <observation> to the experiment
-   - If feedback confirms: increase confidence, consider marking experiment "successful"
-   - If feedback refutes: decrease confidence, consider marking experiment "unsuccessful"
-   - When marking an experiment unsuccessful, CREATE A NEW EXPERIMENT based on what was learned
-     (e.g., if "hardware hacking stories" failed, try "software debugging stories" instead)
-
-   FOR SECTION/EXPANDO FEEDBACK:
-   - Positive feedback on a topic → increase confidence on that interest
-   - Negative feedback → add to disinterests or decrease confidence
-   - Comments about depth/tone → update preferences
-
-5. If feedback is ambiguous or raises questions:
-   Create a question card for clarification:
-   \`\`\`
-   cb create box/questions/Clarify_<topic>.question.card
-   \`\`\`
-
-   Then edit it:
-   \`\`\`xml
-   <question status="pending" answered-by="news-curation">
-     <memo>Processing feedback on edition, need clarification</memo>
-     <context ref="[feedback-card-path]">User feedback that prompted this question</context>
-     <prompt>Your clarifying question here</prompt>
-     <input type="select">
-       <option id="a">Option A</option>
-       <option id="b">Option B</option>
-     </input>
-   </question>
-   \`\`\`
-
-   Note: The answered-by="news-curation" ensures the answer comes back to this agent.
-
-STEP 3 - ARCHIVE PROCESSED FEEDBACK:
-After processing each feedback card:
 \`\`\`
-cb move box/inbox/feedback/<card> store/archive/feedback/
+cat config/news-guide.news-guide.card
 \`\`\`
+Understand current interests, preferences, experiments, and their confidence levels.
+
+STEP 2 - READ EACH BRIEF AND EXTRACT FEEDBACK:
+For each brief provided, read it and note:
+
+**Root-level attrs:**
+- overall-rating="great|ok|meh" - User's overall impression
+- selected-reactions="id1,id2" - Reactions user selected (comma-separated)
+- read-at - When they finished reading
+
+**Section/expando attrs:**
+- user-feedback="thumbs-up" or "thumbs-down" on each section/expando
+
+**User comments:**
+- <user-comment> elements contain transcribed voice/text feedback
+- Note which section/expando they're attached to
+
+**Curation section:**
+- <interest> refs show what interests were featured
+- <experiment-ref> shows which experiments were being tested
+- <hypothesis> elements show specific claims being tested
+
+STEP 3 - SYNTHESIZE ALL FEEDBACK:
+Look at the complete picture across ALL briefs:
+- Patterns in thumbs up/down across topics
+- Overall ratings and what they correlate with
+- Explicit user comments explaining their reactions
+- Which experiments got positive vs negative signals
 
 STEP 4 - UPDATE THE GUIDE:
-Make sure to update <updated-at> in the guide with the current timestamp.
+Based on the synthesis:
+
+**Interests:**
+- Thumbs up on a section → increase confidence on related interests
+- Thumbs down → add to disinterests or decrease confidence
+- User comments mentioning topics → evidence for interest/disinterest
+- Adjust confidence levels: hypothesis → low → medium → high → confirmed
+
+**Preferences:**
+- "Missing context" reaction → update structure preferences
+- "Hard to follow" → update narrative preferences
+- "Too long" / "Too shallow" → update depth preferences
+
+**Experiments:**
+- Add <observation> elements for each piece of evidence
+- If experiment has clear positive signal → mark "successful"
+- If experiment has clear negative signal → mark "unsuccessful" and create replacement
+- If mixed signals → keep "active" and note the observations
+
+**Create new experiments:**
+Keep 1-3 active/proposed experiments. Ideas:
+- Test refinements based on what was learned
+- Explore adjacent interests
+- Try different presentation approaches
+
+STEP 5 - MARK BRIEFS AS PROCESSED:
+For each brief you processed, add the guide-revision attr to the root <news-brief> element.
+
+You can edit each brief to add the attribute. For example, change:
+\`\`\`xml
+<news-brief overall-rating="ok" read-at="...">
+\`\`\`
+to:
+\`\`\`xml
+<news-brief overall-rating="ok" read-at="..." guide-revision="${timestamp}">
+\`\`\`
+
+STEP 6 - UPDATE THE GUIDE TIMESTAMP:
+Update <updated-at> in the guide to reflect when this revision happened.
+
+CONFIDENCE LEVEL GUIDE:
+- hypothesis → low: First signal of interest
+- low → medium: Consistent pattern (2-3 signals)
+- medium → high: Strong evidence (multiple confirmations)
+- high → confirmed: User directly stated preference
 
 EXAMPLE GUIDE UPDATES:
 
 Adding an observation to an experiment:
 \`\`\`xml
-<experiment id="exp-retro" status="active">
-  <hypothesis>User enjoys retro computing content</hypothesis>
-  <approach>Include one retro piece per edition</approach>
-  <observation ref="store/archive/feedback/query_response_2026-02-01.feedback.card" date="${new Date().toISOString().slice(0, 10)}">
-    User explicitly expressed interest in Amiga Unix article
+<experiment id="exp-3" status="successful">
+  <hypothesis>Security research as software puzzles</hypothesis>
+  <approach>Feature security investigations focusing on methodology</approach>
+  <observation ref="store/archive/briefs/2026-02-03_security.news-brief.card" date="${today}">
+    Thumbs up on multi-agent expando, overall rating "ok" - methodology focus worked
   </observation>
+  <conclusion>Security investigation narratives engage when focused on the puzzle aspect</conclusion>
 </experiment>
 \`\`\`
 
-Increasing confidence on an interest:
+Increasing confidence based on feedback:
 \`\`\`xml
-<topic confidence="high" source="feedback" evidence="store/archive/feedback/query_response_2026-02-01.feedback.card">
-  Retro computing
+<topic confidence="medium" source="feedback"
+       evidence="store/archive/briefs/2026-02-03_security.news-brief.card">
+  AI and machine learning tools
 </topic>
 \`\`\`
 
-Adding a new preference:
-\`\`\`xml
-<preference aspect="depth" confidence="medium" source="feedback" evidence="store/archive/feedback/edition_feedback_2026-02-01.feedback.card">
-  Appreciates technical deep-dives on systems programming
-</preference>
-\`\`\`
+OUTPUT FORMAT:
+For each brief processed, state:
+  BRIEF: [path]
+  OVERALL: [rating]
+  THUMBS: [list of up/down on sections/expandos]
+  COMMENTS: [summary of user comments if any]
+  GUIDE CHANGES: [what you updated based on this brief]
 
-CONFIDENCE LEVEL GUIDE:
-- hypothesis → low: First signal of interest
-- low → medium: Consistent pattern (2-3 signals)
-- medium → high: Strong evidence (explicit statement or multiple confirmations)
-- high → confirmed: User directly stated preference
-
-CREATING NEW EXPERIMENTS:
-When an experiment concludes (successful or unsuccessful), create a new experiment to test
-something else. The guide should always have 1-3 active/proposed experiments. Ideas for new experiments:
-- Test a hypothesis derived from the feedback just received
-- Explore a different angle on a confirmed interest
-- Try a format/presentation variation based on preferences
-- Test the boundaries of a disinterest (maybe there's a version they'd like?)
-
-Example new experiment after learning user dislikes hardware:
-\`\`\`xml
-<experiment id="exp-4" status="proposed">
-  <hypothesis>User prefers software puzzles with clear problem/solution structure</hypothesis>
-  <approach>Feature a debugging story that's purely software-based with step-by-step resolution</approach>
-</experiment>
-\`\`\`
-
-OUTPUT: As you process each feedback card, state:
-  PROCESSED: [filename] → [what was updated in guide]
-  NEW EXPERIMENT: [id] → [hypothesis being tested]
-  QUESTION: [filename] → Created question about [topic]
-
-When done, summarize what was learned and any open questions.
+At the end:
+  SUMMARY: [overall synthesis of what was learned]
+  EXPERIMENTS: [status changes and new experiments created]
 
 GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
@@ -228,41 +233,44 @@ async function executeProcessFeedback(
   }
 
   // Ensure directories exist
-  const feedbackDir = path.join(ctx.boxRoot, "box/inbox/feedback");
-  const archiveDir = path.join(ctx.boxRoot, "store/archive/feedback");
+  const briefsDir = path.join(ctx.boxRoot, "store/archive/briefs");
   const questionsDir = path.join(ctx.boxRoot, "box/questions");
-  await fs.mkdir(feedbackDir, { recursive: true });
-  await fs.mkdir(archiveDir, { recursive: true });
+  await fs.mkdir(briefsDir, { recursive: true });
   await fs.mkdir(questionsDir, { recursive: true });
 
   try {
-    ctx.writeLine(fmt.phase("Processing Feedback"));
+    ctx.writeLine(fmt.phase("Guide Revision"));
 
-    const feedbackCards = await getFeedbackCards(ctx.boxRoot);
+    const unprocessedBriefs = await getUnprocessedBriefs(ctx.boxRoot);
 
-    if (feedbackCards.length === 0) {
-      ctx.writeLine(fmt.dim("No feedback to process."));
+    if (unprocessedBriefs.length === 0) {
+      ctx.writeLine(fmt.dim("No unprocessed briefs to revise guide from."));
+      ctx.writeLine(
+        fmt.dim("(Briefs need to be read and have feedback before processing)")
+      );
       return { success: true, data: { processed: 0 } };
     }
 
-    ctx.writeLine(`Found ${fmt.num(feedbackCards.length)} feedback card(s) to process.`);
+    ctx.writeLine(
+      `Found ${fmt.num(unprocessedBriefs.length)} brief(s) with unprocessed feedback.`
+    );
 
     if (dryRun) {
       ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
-      for (const card of feedbackCards) {
-        ctx.writeLine(fmt.dim(`  Would process: ${card}`));
+      for (const brief of unprocessedBriefs) {
+        ctx.writeLine(fmt.dim(`  Would process: ${brief}`));
       }
       return { success: true, data: { processed: 0, dryRun: true } };
     }
 
-    const paths = feedbackCards.join("\n  - ");
+    const paths = unprocessedBriefs.join("\n  - ");
     ctx.writeLine(fmt.info("Starting Claude Code agent..."));
     ctx.writeLine("");
 
     const result = await runAgent({
       boxRoot: ctx.boxRoot,
-      systemPrompt: buildFeedbackPrompt(ctx.boxRoot),
-      prompt: `Please process these feedback cards:\n  - ${paths}`,
+      systemPrompt: buildGuideRevisionPrompt(ctx.boxRoot),
+      prompt: `Please process feedback from these briefs and revise the guide:\n  - ${paths}`,
       onOutput: (text) => ctx.write(text),
     });
     ctx.writeLine("");
@@ -275,7 +283,7 @@ async function executeProcessFeedback(
       if (!status.clean) {
         await stageAll(ctx.boxRoot);
         await commit(ctx.boxRoot, {
-          message: `Process ${feedbackCards.length} feedback card(s)`,
+          message: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
           trailers: { "Triggered-By": "cb process-feedback" },
         });
         ctx.writeLine(fmt.dim("  Changes committed."));
@@ -283,7 +291,7 @@ async function executeProcessFeedback(
 
       return {
         success: true,
-        data: { processed: feedbackCards.length },
+        data: { processed: unprocessedBriefs.length },
       };
     } else {
       ctx.writeLine(fmt.fail(`Agent error: ${result.error}`));
@@ -300,7 +308,7 @@ async function executeProcessFeedback(
 // Register the command
 registerCommand({
   name: "process-feedback",
-  description: "Process user feedback and update the news guide",
+  description: "Process brief feedback and revise the news guide",
   args: [
     {
       name: "dryRun",

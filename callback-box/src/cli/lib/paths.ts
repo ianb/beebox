@@ -9,6 +9,7 @@ import * as fs from "node:fs/promises";
 export const BOX_DIRS = {
   // Working state
   inbox: "box/inbox",
+  inboxUnhandled: "box/inbox/unhandled",
   commands: "box/commands",
   questions: "box/questions",
   resources: "box/resources",
@@ -18,6 +19,7 @@ export const BOX_DIRS = {
   archiveFailed: "store/archive/failed",
   archiveProcessed: "store/archive/processed",
   trash: "store/trash",
+  integrated: "store/integrated",
 
   // Configuration
   config: "config",

@@ -24,14 +24,16 @@ export const initCommand = new Command("init")
       }
 
       console.log("\nDirectory structure created:");
-      console.log("  box/inbox/       - Incoming items");
-      console.log("  box/commands/    - Commands ready to execute");
-      console.log("  box/questions/   - Pending questions");
-      console.log("  box/resources/   - Synced external state");
-      console.log("  store/archive/   - Processed items");
-      console.log("  store/trash/     - Soft-deleted items");
-      console.log("  config/          - Configuration");
-      console.log("  .claude/         - Agent configuration");
+      console.log("  box/inbox/          - Incoming items");
+      console.log("  box/inbox/unhandled - Items with no clear destination");
+      console.log("  box/commands/       - Commands ready to execute");
+      console.log("  box/questions/      - Pending questions");
+      console.log("  box/resources/      - Synced external state");
+      console.log("  store/archive/      - Processed items");
+      console.log("  store/integrated/   - Feedback absorbed into briefs");
+      console.log("  store/trash/        - Soft-deleted items");
+      console.log("  config/             - Configuration");
+      console.log("  .claude/            - Agent configuration");
       console.log("\nRun 'cb status' to see the current state.");
     } catch (error) {
       console.error(`Error: ${(error as Error).message}`);

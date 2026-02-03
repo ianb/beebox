@@ -37,6 +37,37 @@ export const BriefByline = element("byline", {
 });
 
 /**
+ * User comment element - feedback integrated from voice/text comments.
+ *
+ * When a user provides voice or text feedback on a section/expando,
+ * the triage process integrates it as a child element of the target.
+ * This keeps all feedback directly on the brief for unified processing.
+ *
+ * Example:
+ * ```xml
+ * <user-comment timestamp="2026-02-03T12:38:30Z" source="voice"
+ *               audio="store/integrated/brief_feedback_2026-02-03T12-38-30.webm"
+ *               language="en">
+ *   This hardware angle isn't really my thing, more interested in the software side
+ * </user-comment>
+ * ```
+ */
+export const UserComment = element("user-comment", {
+  attrs: {
+    /** When the comment was submitted */
+    timestamp: z.string().datetime({ offset: true }),
+    /** How the comment was provided */
+    source: z.enum(["text", "voice"]),
+    /** Path to audio file (for voice comments, after integration) */
+    audio: z.string().optional(),
+    /** Language of the transcription (for voice comments) */
+    language: z.string().optional(),
+  },
+  /** The comment text (transcription for voice, original text for text) */
+  text: z.string(),
+});
+
+/**
  * Expando element - collapsible content for deeper exploration.
  *
  * The agent uses these to offer more detail without cluttering
@@ -63,6 +94,8 @@ export const Expando = element("expando", {
     /** User feedback on this expando (set when reading is completed) */
     "user-feedback": z.enum(["thumbs-up", "thumbs-down"]).optional(),
   },
+  /** Can contain user comments (integrated feedback) */
+  children: z.array(UserComment).optional(),
   /** Markdown content shown when expanded */
   text: z.string(),
 });
@@ -146,8 +179,8 @@ export const Section = element("section", {
     /** User feedback on this section (set when reading is completed) */
     "user-feedback": z.enum(["thumbs-up", "thumbs-down"]).optional(),
   },
-  /** Can contain markdown, expandos, queries, excerpts */
-  children: z.array(z.union([Expando, Query, Excerpt])).optional(),
+  /** Can contain markdown, expandos, queries, excerpts, and user comments */
+  children: z.array(z.union([Expando, Query, Excerpt, UserComment])).optional(),
   /** Markdown text content */
   text: z.string().optional(),
 });
@@ -363,6 +396,17 @@ export type NewsBrief = z.infer<typeof NewsBriefSchema>;
  * Parsed news brief with typed accessors.
  */
 /**
+ * Parsed user comment structure.
+ */
+export interface ParsedUserComment {
+  timestamp: string;
+  source: "text" | "voice";
+  audio: string | undefined;
+  language: string | undefined;
+  text: string;
+}
+
+/**
  * Parsed excerpt structure.
  */
 export interface ParsedExcerpt {
@@ -384,11 +428,25 @@ export interface ParsedNewsBrief {
       link: string | undefined;
       via: string | undefined;
       text: string | undefined;
-      expandos: Array<{ id: string | undefined; title: string; text: string }>;
+      userFeedback: "thumbs-up" | "thumbs-down" | undefined;
+      expandos: Array<{
+        id: string | undefined;
+        title: string;
+        text: string;
+        userFeedback: "thumbs-up" | "thumbs-down" | undefined;
+        userComments: ParsedUserComment[];
+      }>;
       queries: Array<{ id: string | undefined; prompt: string; text: string | undefined }>;
       excerpts: Array<ParsedExcerpt>;
+      userComments: ParsedUserComment[];
     }>;
-    expandos: Array<{ id: string | undefined; title: string; text: string }>;
+    expandos: Array<{
+      id: string | undefined;
+      title: string;
+      text: string;
+      userFeedback: "thumbs-up" | "thumbs-down" | undefined;
+      userComments: ParsedUserComment[];
+    }>;
     queries: Array<{ id: string | undefined; prompt: string; text: string | undefined }>;
     excerpts: Array<ParsedExcerpt>;
   };
@@ -479,6 +537,16 @@ export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
       text: e.text ?? "",
     }));
 
+  // Helper to parse user comments
+  const parseUserComments = (children: ElementNode[]): ParsedUserComment[] =>
+    getChildren(children, "user-comment").map((c) => ({
+      timestamp: c.attrs.timestamp as string,
+      source: c.attrs.source as "text" | "voice",
+      audio: c.attrs.audio as string | undefined,
+      language: c.attrs.language as string | undefined,
+      text: c.text ?? "",
+    }));
+
   // Parse content structure
   const contentChildren = (contentEl?.children ?? []) as ElementNode[];
   const sections = getChildren(contentChildren, "section").map((s) => {
@@ -489,26 +557,38 @@ export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
       link: s.attrs.link as string | undefined,
       via: s.attrs.via as string | undefined,
       text: getMixedText(s),
-      expandos: getChildren(sectionChildren, "expando").map((e) => ({
-        id: e.attrs.id as string | undefined,
-        title: e.attrs.title as string,
-        text: getMixedText(e),
-      })),
+      userFeedback: s.attrs["user-feedback"] as "thumbs-up" | "thumbs-down" | undefined,
+      expandos: getChildren(sectionChildren, "expando").map((e) => {
+        const expandoChildren = (e.children ?? []) as ElementNode[];
+        return {
+          id: e.attrs.id as string | undefined,
+          title: e.attrs.title as string,
+          text: getMixedText(e),
+          userFeedback: e.attrs["user-feedback"] as "thumbs-up" | "thumbs-down" | undefined,
+          userComments: parseUserComments(expandoChildren),
+        };
+      }),
       queries: getChildren(sectionChildren, "query").map((q) => ({
         id: q.attrs.id as string | undefined,
         prompt: q.attrs.prompt as string,
         text: q.text,
       })),
       excerpts: parseExcerpts(sectionChildren),
+      userComments: parseUserComments(sectionChildren),
     };
   });
 
   // Top-level expandos, queries, and excerpts (not in sections)
-  const topExpandos = getChildren(contentChildren, "expando").map((e) => ({
-    id: e.attrs.id as string | undefined,
-    title: e.attrs.title as string,
-    text: getMixedText(e),
-  }));
+  const topExpandos = getChildren(contentChildren, "expando").map((e) => {
+    const expandoChildren = (e.children ?? []) as ElementNode[];
+    return {
+      id: e.attrs.id as string | undefined,
+      title: e.attrs.title as string,
+      text: getMixedText(e),
+      userFeedback: e.attrs["user-feedback"] as "thumbs-up" | "thumbs-down" | undefined,
+      userComments: parseUserComments(expandoChildren),
+    };
+  });
   const topQueries = getChildren(contentChildren, "query").map((q) => ({
     id: q.attrs.id as string | undefined,
     prompt: q.attrs.prompt as string,

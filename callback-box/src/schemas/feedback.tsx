@@ -113,10 +113,36 @@ export const FeedbackTranscriptionError = element("transcription-error", {
  * </feedback>
  * ```
  */
+/**
+ * Triage status for feedback cards.
+ *
+ * - pending: Awaiting triage (default)
+ * - feedback: Categorized as feedback about the brief, ready for integration
+ * - task: Categorized as a reminder/follow-up, to be routed to tasks
+ * - split: This card was split into multiple cards
+ * - integrated: Feedback has been integrated into the target brief
+ * - unhandled: Unclear intent, moved to inbox/unhandled
+ */
+export const TriageStatus = z.enum([
+  "pending",
+  "feedback",
+  "task",
+  "split",
+  "integrated",
+  "unhandled",
+]);
+export type TriageStatus = z.infer<typeof TriageStatus>;
+
 export const FeedbackSchema = element("feedback", {
   attrs: {
     /** Type of feedback */
     type: z.enum(["query-response", "edition"]),
+    /** Triage status - set during triage phase */
+    "triage-status": TriageStatus.optional(),
+    /** If this card was split from another, reference to the original */
+    "split-from": z.string().optional(),
+    /** Brief summary added during triage (for split portions or clarification) */
+    "triage-summary": z.string().optional(),
   },
   children: z.array(
     z.union([
