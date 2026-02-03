@@ -17,7 +17,8 @@ import { z } from "zod";
  * - interesting: Confirmed interesting, ready to fetch full content
  * - fetched: Full article content has been fetched
  * - fetch-failed: Failed to fetch article content
- * - summarized: Included in a news summary
+ * - analyzed: Full content fetched and analyzed, ready for brief
+ * - summarized: Included in a news summary/brief
  * - skipped: Triaged as not interesting (will be trashed)
  */
 export const NewsItemStatus = z.enum([
@@ -26,6 +27,7 @@ export const NewsItemStatus = z.enum([
   "interesting",
   "fetched",
   "fetch-failed",
+  "analyzed",
   "summarized",
   "skipped",
 ]);
@@ -89,13 +91,15 @@ export const NewsGuid = element("guid", {
  */
 export const NewsContent = element("content", {
   attrs: {
-    format: z.literal("markdown").default("markdown"),
+    /** Content format - defaults to markdown */
+    format: z.literal("markdown").optional(),
     /** Original URL that was fetched (may differ from link due to redirects) */
     "fetched-url": z.string().url().optional(),
     /** When the content was fetched */
     "fetched-at": z.string().datetime({ offset: true }).optional(),
   },
-  text: z.string(),
+  // Text is optional because CDATA content may not be parsed correctly by cardworks
+  text: z.string().optional(),
 });
 
 /**
@@ -172,8 +176,8 @@ export const NewsAnalysis = element("analysis", {
       element("thesis", { text: z.string().optional() }),
       /** Tone: measured, urgent, casual, academic, promotional, etc. */
       element("tone", { text: z.string().optional() }),
-      /** Timeliness: breaking, timely, evergreen */
-      element("timeliness", { text: z.enum(["breaking", "timely", "evergreen"]).optional() }),
+      /** Timeliness: breaking, timely, evergreen, or descriptive text */
+      element("timeliness", { text: z.string().optional() }),
       /** Free-form notes about how this might be used */
       element("notes", { text: z.string().optional() }),
     ])

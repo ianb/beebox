@@ -72,6 +72,8 @@ export const Preference = element("preference", {
       "frequency",    // How often to cover topic
       "format",       // Expandos, queries, length, etc.
       "sources",      // Preferred source types
+      "structure",    // How content is organized/presented
+      "headlines",    // Headline style preferences
       "other",
     ]),
     confidence: ConfidenceLevel.default("low"),
@@ -117,6 +119,7 @@ export const ExperimentStatus = z.enum([
   "active",       // Currently being tested
   "successful",   // Worked well, should continue
   "unsuccessful", // Didn't work, should stop
+  "mixed",        // Partial success, needs refinement
   "inconclusive", // Tried but unclear results
 ]);
 export type ExperimentStatus = z.infer<typeof ExperimentStatus>;
@@ -144,6 +147,15 @@ export const Experiment = element("experiment", {
       element("hypothesis", { text: z.string() }),
       /** How we'll test it */
       element("approach", { text: z.string() }),
+      /** Reference to brief where experiment was tested */
+      element("tested-in", {
+        attrs: {
+          /** Reference to brief */
+          ref: z.string(),
+          date: z.string().optional(),
+        },
+        text: z.string().optional(),
+      }),
       /** What we observed */
       element("observation", {
         attrs: {
