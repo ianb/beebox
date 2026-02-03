@@ -135,8 +135,8 @@ export type TriageStatus = z.infer<typeof TriageStatus>;
 
 export const FeedbackSchema = element("feedback", {
   attrs: {
-    /** Type of feedback */
-    type: z.enum(["query-response", "edition"]),
+    /** Type of feedback: query-response, edition (legacy), or brief */
+    type: z.enum(["query-response", "edition", "brief"]),
     /** Triage status - set during triage phase */
     "triage-status": TriageStatus.optional(),
     /** If this card was split from another, reference to the original */
