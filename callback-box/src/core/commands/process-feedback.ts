@@ -187,6 +187,38 @@ Increasing confidence based on feedback:
 </topic>
 \`\`\`
 
+STEP 7 - COMMIT WITH DETAILED MESSAGE:
+After updating the guide and marking briefs, commit with a detailed message.
+
+Use this format:
+\`\`\`bash
+git add -A && git commit -m "$(cat <<'EOF'
+Guide revision: <one-line summary of main insight>
+
+Changes:
+- <what was added/changed in interests>
+- <what was added/changed in disinterests>
+- <what was added/changed in preferences>
+- <experiment status changes>
+- <new experiments proposed>
+
+Evidence:
+- <brief1>: <rating>, <key signals>
+- <brief2>: <rating>, <key signals>
+
+Feedback-Source: <brief1-path>
+Feedback-Source: <brief2-path>
+Triggered-By: cb process-feedback
+EOF
+)"
+\`\`\`
+
+The commit message should:
+1. First line: One sentence capturing the main learning (e.g., "Reader prefers AI analysis over security incidents")
+2. Changes section: Bullet list of what was modified in the guide
+3. Evidence section: What feedback led to each change
+4. Trailers: One Feedback-Source trailer per brief processed
+
 OUTPUT FORMAT:
 For each brief processed, state:
   BRIEF: [path]
@@ -198,6 +230,8 @@ For each brief processed, state:
 At the end:
   SUMMARY: [overall synthesis of what was learned]
   EXPERIMENTS: [status changes and new experiments created]
+
+Then commit as described above.
 
 GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
@@ -278,15 +312,16 @@ async function executeProcessFeedback(
     if (result.success) {
       ctx.writeLine(fmt.ok("Agent finished successfully"));
 
-      // Commit changes
+      // Agent should have committed, but check for uncommitted changes
       const status = await getStatus(ctx.boxRoot);
       if (!status.clean) {
+        ctx.writeLine(fmt.dim("  (Note: Agent left uncommitted changes)"));
         await stageAll(ctx.boxRoot);
         await commit(ctx.boxRoot, {
           message: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
           trailers: { "Triggered-By": "cb process-feedback" },
         });
-        ctx.writeLine(fmt.dim("  Changes committed."));
+        ctx.writeLine(fmt.dim("  Fallback commit created."));
       }
 
       return {
