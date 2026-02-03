@@ -188,6 +188,49 @@ export const ContextNotes = element("context-notes", {
 });
 
 /**
+ * Sentiment for a reader reaction.
+ */
+export const ReactionSentiment = z.enum([
+  "positive",   // Good feedback, confirms approach
+  "negative",   // Problem feedback, triggers guide revision
+  "neutral",    // Informational, no strong signal
+]);
+export type ReactionSentiment = z.infer<typeof ReactionSentiment>;
+
+/**
+ * A reaction option for reader feedback.
+ *
+ * These are predefined options the user can select after reading a brief.
+ * The agent defines these in the guide based on what feedback would be useful.
+ *
+ * Example:
+ * ```xml
+ * <reader-reactions>
+ *   <reaction id="too-long" sentiment="negative">This felt too long</reaction>
+ *   <reaction id="want-more" sentiment="positive">I want more on this topic</reaction>
+ *   <reaction id="already-knew" sentiment="neutral">I already knew most of this</reaction>
+ * </reader-reactions>
+ * ```
+ */
+export const ReaderReaction = element("reaction", {
+  attrs: {
+    /** Unique ID for this reaction */
+    id: z.string(),
+    /** Sentiment category - negative reactions trigger guide revision */
+    sentiment: ReactionSentiment.default("neutral"),
+  },
+  /** The reaction text shown to the user */
+  text: z.string(),
+});
+
+/**
+ * Container for reader reactions.
+ */
+export const ReaderReactions = element("reader-reactions", {
+  children: z.array(ReaderReaction),
+});
+
+/**
  * The news guide schema.
  *
  * Example:
@@ -260,6 +303,7 @@ export const NewsGuideSchema = element("news-guide", {
       Preferences,
       ContextNotes,
       Experiments,
+      ReaderReactions,
     ])
   ),
 });
@@ -310,6 +354,11 @@ export interface ParsedNewsGuide {
     }>;
     conclusion: string | undefined;
   }>;
+  readerReactions: Array<{
+    id: string;
+    sentiment: ReactionSentiment;
+    text: string;
+  }>;
 }
 
 /**
@@ -338,6 +387,7 @@ export function parseNewsGuide(guide: NewsGuide): ParsedNewsGuide {
   const preferencesEl = getChild(children, "preferences");
   const contextNotesEl = getChild(children, "context-notes");
   const experimentsEl = getChild(children, "experiments");
+  const readerReactionsEl = getChild(children, "reader-reactions");
 
   // Parse interests
   const interestChildren = (interestsEl?.children ?? []) as ElementNode[];
@@ -400,6 +450,14 @@ export function parseNewsGuide(guide: NewsGuide): ParsedNewsGuide {
     };
   });
 
+  // Parse reader reactions
+  const readerReactionChildren = (readerReactionsEl?.children ?? []) as ElementNode[];
+  const readerReactions = getChildren(readerReactionChildren, "reaction").map((r) => ({
+    id: r.attrs.id as string,
+    sentiment: (r.attrs.sentiment ?? "neutral") as ReactionSentiment,
+    text: r.text ?? "",
+  }));
+
   return {
     version: guide.attrs.version as string,
     updatedAt: updatedAtEl?.text,
@@ -408,6 +466,7 @@ export function parseNewsGuide(guide: NewsGuide): ParsedNewsGuide {
     preferences,
     contextNotes,
     experiments,
+    readerReactions,
   };
 }
 

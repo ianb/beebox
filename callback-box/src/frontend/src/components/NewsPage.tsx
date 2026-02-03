@@ -7,19 +7,41 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { NewsIndex, type BriefSummary } from "./NewsIndex";
-import { NewsBriefView, type NewsBriefData } from "./NewsBriefView";
-import { submitBriefFeedback, submitQueryResponse, markBriefRead } from "../api";
+import {
+  NewsBriefView,
+  type NewsBriefData,
+  type GuideReaction,
+  type BriefReaction,
+} from "./NewsBriefView";
+import {
+  submitBriefFeedback,
+  submitQueryResponse,
+  getGuideReactions,
+  completeReading,
+} from "../api";
+
+/**
+ * Extended brief data including curation reactions.
+ */
+interface BriefWithReactions extends NewsBriefData {
+  briefReactions: BriefReaction[];
+}
 
 /**
  * Fetch a full brief from the API.
  */
-async function fetchBrief(path: string): Promise<NewsBriefData> {
+async function fetchBrief(path: string): Promise<BriefWithReactions> {
   const response = await fetch(`/api/brief/${encodeURIComponent(path)}`);
   if (!response.ok) {
     throw new Error("Failed to fetch brief");
   }
   const data = await response.json();
-  return data.brief;
+  // Extract brief reactions from curation
+  const briefReactions: BriefReaction[] = data.brief.curation?.briefReactions ?? [];
+  return {
+    ...data.brief,
+    briefReactions,
+  };
 }
 
 interface NewsPageProps {
@@ -33,9 +55,21 @@ interface NewsPageProps {
 
 export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPageProps) {
   const [selectedSummary, setSelectedSummary] = useState<BriefSummary | null>(null);
-  const [brief, setBrief] = useState<NewsBriefData | null>(null);
+  const [brief, setBrief] = useState<BriefWithReactions | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guideReactions, setGuideReactions] = useState<GuideReaction[]>([]);
+
+  // Fetch guide reactions on mount
+  useEffect(() => {
+    getGuideReactions()
+      .then((data) => {
+        setGuideReactions(data.reactions);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch guide reactions:", err);
+      });
+  }, []);
 
   // Load initial brief if path provided
   useEffect(() => {
@@ -44,13 +78,15 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
       fetchBrief(initialPath)
         .then((data) => {
           setBrief(data);
+          // Briefs in box/output/briefs/ are unread; those in store/archive/briefs/ are read
+          const isUnread = initialPath.includes("box/output/briefs/");
           setSelectedSummary({
             path: initialPath,
             relativePath: initialPath,
             title: data.title,
             date: data.date,
             byline: data.byline,
-            read: true, // If loading by path, assume it might be read
+            read: !isUnread,
           });
           setLoading(false);
         })
@@ -61,7 +97,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     }
   }, [initialPath]);
 
-  // Handle brief selection
+  // Handle brief selection - no longer auto-marks as read
   const handleSelect = useCallback(
     (summary: BriefSummary) => {
       setSelectedSummary(summary);
@@ -75,13 +111,6 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
         .then((data) => {
           setBrief(data);
           setLoading(false);
-
-          // Mark as read if it's unread
-          if (!summary.read) {
-            markBriefRead(summary.relativePath).catch((err) => {
-              console.error("Failed to mark brief as read:", err);
-            });
-          }
         })
         .catch((err) => {
           setError(err.message);
@@ -89,6 +118,29 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
         });
     },
     [onNavigate]
+  );
+
+  // Handle completion of reading with feedback
+  const handleCompleteReading = useCallback(
+    async (data: {
+      overallRating: "great" | "ok" | "meh";
+      selectedReactions: Array<{ id: string; source: "guide" | "brief" }>;
+      itemFeedback: Array<{ id: string; feedback: "thumbs-up" | "thumbs-down" }>;
+    }) => {
+      if (!selectedSummary) return;
+
+      await completeReading(
+        selectedSummary.relativePath,
+        data.overallRating,
+        data.selectedReactions,
+        data.itemFeedback
+      );
+      console.log("Reading completed with feedback");
+
+      // Update the summary to show as read
+      setSelectedSummary((prev) => prev ? { ...prev, read: true } : null);
+    },
+    [selectedSummary]
   );
 
   // Handle text comment submission
@@ -185,6 +237,9 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
             onQueryResponse={handleQueryResponse}
             onVoiceQueryResponse={handleVoiceQueryResponse}
             onSourceClick={onSourceClick}
+            guideReactions={guideReactions}
+            briefReactions={brief.briefReactions}
+            onCompleteReading={selectedSummary && !selectedSummary.read ? handleCompleteReading : undefined}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">

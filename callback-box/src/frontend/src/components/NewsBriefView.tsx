@@ -21,6 +21,84 @@ import {
 } from "./VoiceRecorder";
 
 /**
+ * Thumbs up icon.
+ */
+function ThumbsUpIcon({ className = "w-4 h-4", filled = false }: { className?: string; filled?: boolean }) {
+  return (
+    <svg className={className} fill={filled ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Thumbs down icon.
+ */
+function ThumbsDownIcon({ className = "w-4 h-4", filled = false }: { className?: string; filled?: boolean }) {
+  return (
+    <svg className={className} fill={filled ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.017c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Thumbs feedback component for item-level feedback.
+ */
+function ThumbsFeedback({
+  id,
+  feedback,
+  onFeedback,
+}: {
+  id: string;
+  feedback?: "thumbs-up" | "thumbs-down";
+  onFeedback: (id: string, value: "thumbs-up" | "thumbs-down" | undefined) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 ml-2">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onFeedback(id, feedback === "thumbs-up" ? undefined : "thumbs-up");
+        }}
+        className={`p-1 rounded transition-colors ${
+          feedback === "thumbs-up"
+            ? "text-green-600 bg-green-100"
+            : "text-gray-400 hover:text-green-600 hover:bg-green-50"
+        }`}
+        title="Thumbs up"
+      >
+        <ThumbsUpIcon className="w-4 h-4" filled={feedback === "thumbs-up"} />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onFeedback(id, feedback === "thumbs-down" ? undefined : "thumbs-down");
+        }}
+        className={`p-1 rounded transition-colors ${
+          feedback === "thumbs-down"
+            ? "text-red-600 bg-red-100"
+            : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+        }`}
+        title="Thumbs down"
+      >
+        <ThumbsDownIcon className="w-4 h-4" filled={feedback === "thumbs-down"} />
+      </button>
+    </div>
+  );
+}
+
+/**
  * Parsed expando structure.
  */
 interface Expando {
@@ -88,6 +166,24 @@ export interface NewsBriefData {
   sources: SourceRef[];
 }
 
+/**
+ * Guide reaction from news-guide.
+ */
+export interface GuideReaction {
+  id: string;
+  sentiment: "positive" | "negative" | "neutral";
+  text: string;
+}
+
+/**
+ * Brief-specific reaction from curation.
+ */
+export interface BriefReaction {
+  id: string;
+  experimentRef?: string;
+  text: string;
+}
+
 interface NewsBriefViewProps {
   brief: NewsBriefData;
   /** Called when user submits a comment (text) */
@@ -100,6 +196,16 @@ interface NewsBriefViewProps {
   onVoiceQueryResponse?: (queryId: string, audioBlob: Blob) => Promise<void>;
   /** Called when user clicks a source */
   onSourceClick?: (sourcePath: string) => void;
+  /** Guide reactions for completion UI */
+  guideReactions?: GuideReaction[];
+  /** Brief-specific reactions from curation */
+  briefReactions?: BriefReaction[];
+  /** Called when user completes reading with feedback */
+  onCompleteReading?: (data: {
+    overallRating: "great" | "ok" | "meh";
+    selectedReactions: Array<{ id: string; source: "guide" | "brief" }>;
+    itemFeedback: Array<{ id: string; feedback: "thumbs-up" | "thumbs-down" }>;
+  }) => Promise<void>;
 }
 
 /**
@@ -184,10 +290,14 @@ function ExpandoSection({
   expando,
   onComment,
   onVoiceComment,
+  feedback,
+  onFeedback,
 }: {
   expando: Expando;
   onComment?: (id: string, comment: string) => void;
   onVoiceComment?: (id: string, audioBlob: Blob) => Promise<void>;
+  feedback?: "thumbs-up" | "thumbs-down";
+  onFeedback?: (id: string, value: "thumbs-up" | "thumbs-down" | undefined) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showComment, setShowComment] = useState(false);
@@ -218,7 +328,12 @@ function ExpandoSection({
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-blue-100 transition-colors"
       >
-        <span className="font-medium text-blue-800">{expando.title}</span>
+        <div className="flex items-center">
+          <span className="font-medium text-blue-800">{expando.title}</span>
+          {expanded && expando.id && onFeedback && (
+            <ThumbsFeedback id={expando.id} feedback={feedback} onFeedback={onFeedback} />
+          )}
+        </div>
         <span className="text-blue-600">{expanded ? "−" : "+"}</span>
       </button>
       {expanded && (
@@ -406,24 +521,37 @@ function ContentSection({
   onVoiceComment,
   onQueryResponse,
   onVoiceQueryResponse,
+  itemFeedback,
+  onItemFeedback,
 }: {
   section: Section;
   onComment?: (id: string, comment: string) => void;
   onVoiceComment?: (id: string, audioBlob: Blob) => Promise<void>;
   onQueryResponse?: (id: string, response: string) => void;
   onVoiceQueryResponse?: (id: string, audioBlob: Blob) => Promise<void>;
+  itemFeedback?: Map<string, "thumbs-up" | "thumbs-down">;
+  onItemFeedback?: (id: string, value: "thumbs-up" | "thumbs-down" | undefined) => void;
 }) {
   return (
     <div className="mb-8" data-section-id={section.id}>
       {section.heading && (
-        <div className="flex items-baseline justify-between mb-2 pb-2 border-b">
-          <h2 className="text-xl font-semibold text-gray-800">
-            {section.link ? (
-              <a href={section.link} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700">
-                {section.heading}
-              </a>
-            ) : section.heading}
-          </h2>
+        <div className="flex items-center justify-between mb-2 pb-2 border-b">
+          <div className="flex items-center">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {section.link ? (
+                <a href={section.link} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700">
+                  {section.heading}
+                </a>
+              ) : section.heading}
+            </h2>
+            {section.id && onItemFeedback && (
+              <ThumbsFeedback
+                id={section.id}
+                feedback={itemFeedback?.get(section.id)}
+                onFeedback={onItemFeedback}
+              />
+            )}
+          </div>
           {section.via && (
             <span className="text-xs text-gray-400 ml-4">
               via {section.via}
@@ -445,6 +573,8 @@ function ContentSection({
           expando={expando}
           onComment={onComment}
           onVoiceComment={onVoiceComment}
+          feedback={expando.id ? itemFeedback?.get(expando.id) : undefined}
+          onFeedback={onItemFeedback}
         />
       ))}
       {section.queries.map((query, i) => (
@@ -540,6 +670,163 @@ function SourceList({
 }
 
 /**
+ * Reading completion feedback component.
+ */
+function ReadingFeedback({
+  guideReactions,
+  briefReactions,
+  onComplete,
+  onShowComment,
+  onShowVoice,
+}: {
+  guideReactions: GuideReaction[];
+  briefReactions: BriefReaction[];
+  onComplete: (rating: "great" | "ok" | "meh", selectedReactions: Array<{ id: string; source: "guide" | "brief" }>) => void;
+  onShowComment: () => void;
+  onShowVoice?: () => void;
+}) {
+  const [selectedRating, setSelectedRating] = useState<"great" | "ok" | "meh" | null>(null);
+  const [selectedReactions, setSelectedReactions] = useState<Set<string>>(new Set());
+  const [submitting, setSubmitting] = useState(false);
+
+  const toggleReaction = (id: string) => {
+    setSelectedReactions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedRating) return;
+    setSubmitting(true);
+
+    // Build the selected reactions array with source info
+    const reactions: Array<{ id: string; source: "guide" | "brief" }> = [];
+    for (const id of selectedReactions) {
+      if (guideReactions.some((r) => r.id === id)) {
+        reactions.push({ id, source: "guide" });
+      } else if (briefReactions.some((r) => r.id === id)) {
+        reactions.push({ id, source: "brief" });
+      }
+    }
+
+    onComplete(selectedRating, reactions);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Overall rating */}
+      <div>
+        <p className="text-sm font-medium text-gray-700 mb-2">How was this brief?</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSelectedRating("great")}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              selectedRating === "great"
+                ? "bg-green-100 border-green-500 text-green-800"
+                : "border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            Great
+          </button>
+          <button
+            onClick={() => setSelectedRating("ok")}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              selectedRating === "ok"
+                ? "bg-blue-100 border-blue-500 text-blue-800"
+                : "border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            OK
+          </button>
+          <button
+            onClick={() => setSelectedRating("meh")}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              selectedRating === "meh"
+                ? "bg-amber-100 border-amber-500 text-amber-800"
+                : "border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            Meh
+          </button>
+        </div>
+      </div>
+
+      {/* Reactions */}
+      {(guideReactions.length > 0 || briefReactions.length > 0) && (
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">Anything stand out? (optional)</p>
+          <div className="flex flex-wrap gap-2">
+            {guideReactions.map((reaction) => (
+              <button
+                key={reaction.id}
+                onClick={() => toggleReaction(reaction.id)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                  selectedReactions.has(reaction.id)
+                    ? reaction.sentiment === "negative"
+                      ? "bg-red-100 border-red-400 text-red-800"
+                      : reaction.sentiment === "positive"
+                        ? "bg-green-100 border-green-400 text-green-800"
+                        : "bg-blue-100 border-blue-400 text-blue-800"
+                    : "border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {reaction.text}
+              </button>
+            ))}
+            {briefReactions.map((reaction) => (
+              <button
+                key={reaction.id}
+                onClick={() => toggleReaction(reaction.id)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                  selectedReactions.has(reaction.id)
+                    ? "bg-purple-100 border-purple-400 text-purple-800"
+                    : "border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {reaction.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Submit and additional options */}
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          onClick={handleSubmit}
+          disabled={!selectedRating || submitting}
+          className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {submitting ? "Saving..." : "Done Reading"}
+        </button>
+        <span className="text-gray-400">or</span>
+        <button
+          onClick={onShowComment}
+          className="text-sm text-blue-600 hover:text-blue-800"
+        >
+          Add a comment
+        </button>
+        {onShowVoice && (
+          <button
+            onClick={onShowVoice}
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            <MicrophoneIcon className="w-4 h-4" />
+            Voice
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Main news brief view component.
  */
 export function NewsBriefView({
@@ -549,11 +836,48 @@ export function NewsBriefView({
   onQueryResponse,
   onVoiceQueryResponse,
   onSourceClick,
+  guideReactions = [],
+  briefReactions = [],
+  onCompleteReading,
 }: NewsBriefViewProps) {
   const [showGlobalComment, setShowGlobalComment] = useState(false);
   const [showGlobalVoice, setShowGlobalVoice] = useState(false);
   const [globalComment, setGlobalComment] = useState("");
   const [globalSubmitted, setGlobalSubmitted] = useState(false);
+  const [itemFeedback, setItemFeedback] = useState<Map<string, "thumbs-up" | "thumbs-down">>(new Map());
+  const [completed, setCompleted] = useState(false);
+
+  const handleItemFeedback = useCallback((id: string, value: "thumbs-up" | "thumbs-down" | undefined) => {
+    setItemFeedback((prev) => {
+      const next = new Map(prev);
+      if (value === undefined) {
+        next.delete(id);
+      } else {
+        next.set(id, value);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleCompleteReading = useCallback(
+    async (rating: "great" | "ok" | "meh", selectedReactions: Array<{ id: string; source: "guide" | "brief" }>) => {
+      if (onCompleteReading) {
+        // Convert itemFeedback map to array
+        const feedbackArray = Array.from(itemFeedback.entries()).map(([id, feedback]) => ({
+          id,
+          feedback,
+        }));
+
+        await onCompleteReading({
+          overallRating: rating,
+          selectedReactions,
+          itemFeedback: feedbackArray,
+        });
+        setCompleted(true);
+      }
+    },
+    [onCompleteReading, itemFeedback]
+  );
 
   const handleGlobalComment = useCallback(() => {
     if (globalComment.trim() && onComment) {
@@ -608,6 +932,8 @@ export function NewsBriefView({
             onVoiceComment={onVoiceComment}
             onQueryResponse={onQueryResponse}
             onVoiceQueryResponse={onVoiceQueryResponse}
+            itemFeedback={itemFeedback}
+            onItemFeedback={handleItemFeedback}
           />
         ))}
 
@@ -623,6 +949,8 @@ export function NewsBriefView({
             expando={expando}
             onComment={onComment}
             onVoiceComment={onVoiceComment}
+            feedback={expando.id ? itemFeedback.get(expando.id) : undefined}
+            onFeedback={handleItemFeedback}
           />
         ))}
 
@@ -640,12 +968,14 @@ export function NewsBriefView({
       {/* Sources */}
       <SourceList sources={brief.sources} onSourceClick={onSourceClick} />
 
-      {/* Global feedback */}
+      {/* Reading completion feedback */}
       <div className="mt-8 pt-6 border-t border-gray-200">
         <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
-          Feedback
+          Finish Reading
         </h3>
-        {globalSubmitted ? (
+        {completed ? (
+          <p className="text-green-700">Thanks for your feedback!</p>
+        ) : globalSubmitted ? (
           <p className="text-green-700">Got it, I'll keep that in mind.</p>
         ) : showGlobalComment ? (
           <div className="space-y-3">
@@ -661,7 +991,7 @@ export function NewsBriefView({
                 onClick={handleGlobalComment}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
-                Submit Feedback
+                Submit Comment
               </button>
               {onVoiceComment && (
                 <button
@@ -672,7 +1002,7 @@ export function NewsBriefView({
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-1"
                 >
                   <MicrophoneIcon className="w-4 h-4" />
-                  Voice Feedback
+                  Voice
                 </button>
               )}
               <button
@@ -683,6 +1013,14 @@ export function NewsBriefView({
               </button>
             </div>
           </div>
+        ) : onCompleteReading ? (
+          <ReadingFeedback
+            guideReactions={guideReactions}
+            briefReactions={briefReactions}
+            onComplete={handleCompleteReading}
+            onShowComment={() => setShowGlobalComment(true)}
+            onShowVoice={onVoiceComment ? () => setShowGlobalVoice(true) : undefined}
+          />
         ) : (
           <div className="flex gap-3">
             <button

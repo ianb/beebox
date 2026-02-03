@@ -396,6 +396,42 @@ export async function markBriefRead(
 }
 
 /**
+ * Guide reaction from news-guide.
+ */
+export interface GuideReaction {
+  id: string;
+  sentiment: "positive" | "negative" | "neutral";
+  text: string;
+}
+
+/**
+ * Get guide reactions for the reading completion UI.
+ */
+export async function getGuideReactions(): Promise<{ reactions: GuideReaction[] }> {
+  return fetchJson(`${API_BASE}/news-guide/reactions`);
+}
+
+/**
+ * Complete reading a brief with feedback.
+ */
+export async function completeReading(
+  briefPath: string,
+  overallRating: "great" | "ok" | "meh",
+  selectedReactions: Array<{ id: string; source: "guide" | "brief" }>,
+  itemFeedback: Array<{ id: string; feedback: "thumbs-up" | "thumbs-down" }>
+): Promise<{ success: boolean; newPath: string }> {
+  return fetchJson(`${API_BASE}/brief/complete-reading`, {
+    method: "POST",
+    body: JSON.stringify({
+      briefPath,
+      overallRating,
+      selectedReactions,
+      itemFeedback,
+    }),
+  });
+}
+
+/**
  * Convert a Blob to base64 string.
  */
 async function blobToBase64(blob: Blob): Promise<string> {

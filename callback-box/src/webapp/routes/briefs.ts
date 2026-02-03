@@ -12,8 +12,9 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { CardLoader } from "cardworks";
+import { CardLoader, type ElementNode } from "cardworks";
 import { parseNewsBrief, type ParsedNewsBrief } from "../../schemas/news-brief.js";
+import { parseNewsGuide, type ReactionSentiment } from "../../schemas/news-guide.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 
 /**
@@ -449,6 +450,141 @@ export async function registerBriefRoutes(
       payload: { briefPath: editionPath, queryId, response, audioData, audioMimeType },
     });
   });
+
+  // GET /api/news-guide/reactions - Get reader reactions from the guide
+  server.get("/api/news-guide/reactions", async (request, reply) => {
+    const guidePath = path.join(boxRoot, "config/news-guide.news-guide.card");
+
+    try {
+      await fs.access(guidePath);
+    } catch {
+      // No guide exists yet, return empty reactions
+      return { reactions: [] };
+    }
+
+    try {
+      const loader = new CardLoader(boxRoot);
+      const card = await loader.load(guidePath);
+      const parsed = parseNewsGuide(card.element as any);
+
+      return {
+        reactions: parsed.readerReactions.map((r) => ({
+          id: r.id,
+          sentiment: r.sentiment,
+          text: r.text,
+        })),
+      };
+    } catch (err) {
+      console.error("Failed to load news guide:", err);
+      return { reactions: [] };
+    }
+  });
+
+  // POST /api/brief/complete-reading - Complete reading a brief with feedback
+  server.post<{
+    Body: {
+      briefPath: string;
+      overallRating: "great" | "ok" | "meh";
+      selectedReactions: Array<{ id: string; source: "guide" | "brief" }>;
+      itemFeedback: Array<{ id: string; feedback: "thumbs-up" | "thumbs-down" }>;
+    };
+  }>("/api/brief/complete-reading", async (request, reply) => {
+    const { briefPath, overallRating, selectedReactions, itemFeedback } = request.body ?? {};
+
+    if (!briefPath || !overallRating) {
+      return reply.status(400).send({ error: "Missing required fields: briefPath and overallRating" });
+    }
+
+    const fullPath = path.join(boxRoot, briefPath);
+
+    // Check if brief exists
+    try {
+      await fs.access(fullPath);
+    } catch {
+      return reply.status(404).send({ error: "Brief not found" });
+    }
+
+    // Only accept briefs from unread location
+    if (!briefPath.startsWith("box/output/briefs/") && !briefPath.startsWith("box/output/editions/")) {
+      return reply.status(400).send({ error: "Brief is not in unread location" });
+    }
+
+    // Load and update the brief
+    const loader = new CardLoader(boxRoot);
+    const card = await loader.load(fullPath);
+
+    // Set root-level feedback attributes
+    card.element.attrs["overall-rating"] = overallRating;
+    card.element.attrs["read-at"] = new Date().toISOString();
+    card.element.attrs["read-reason"] = "user";
+
+    // Set selected reactions as comma-separated IDs
+    if (selectedReactions && selectedReactions.length > 0) {
+      card.element.attrs["selected-reactions"] = selectedReactions.map((r) => r.id).join(",");
+    }
+
+    // Apply item feedback (thumbs up/down) to sections and expandos
+    if (itemFeedback && itemFeedback.length > 0) {
+      const feedbackMap = new Map(itemFeedback.map((f) => [f.id, f.feedback]));
+      updateElementFeedback(card.element, feedbackMap);
+    }
+
+    // Save the updated card
+    await loader.save(card);
+
+    // Move to archive
+    const filename = path.basename(briefPath);
+    const archiveDir = path.join(boxRoot, "store/archive/briefs");
+    await fs.mkdir(archiveDir, { recursive: true });
+    const newPath = path.join(archiveDir, filename);
+    await fs.rename(fullPath, newPath);
+
+    // Commit changes
+    const newRelativePath = path.relative(boxRoot, newPath);
+    await stageFiles(boxRoot, [briefPath, newRelativePath]);
+    await commit(boxRoot, {
+      message: `Complete reading: ${overallRating}`,
+      trailers: {
+        "Source": "webapp",
+        "Endpoint": "/api/brief/complete-reading",
+        "Rating": overallRating,
+        "Reactions": selectedReactions?.length?.toString() ?? "0",
+        "Thumbs": itemFeedback?.length?.toString() ?? "0",
+      },
+    });
+
+    return {
+      success: true,
+      newPath: newRelativePath,
+    };
+  });
+}
+
+/**
+ * Recursively update user-feedback attributes on sections and expandos.
+ */
+function updateElementFeedback(
+  element: ElementNode,
+  feedbackMap: Map<string, "thumbs-up" | "thumbs-down">
+): void {
+  // Check if this element has an ID and feedback for it
+  const id = element.attrs?.id as string | undefined;
+  if (id) {
+    const feedback = feedbackMap.get(id);
+    if (feedback) {
+      element.attrs = element.attrs || {};
+      element.attrs["user-feedback"] = feedback;
+    }
+  }
+
+  // Recurse into children
+  if (element.children && Array.isArray(element.children)) {
+    for (const child of element.children) {
+      if (typeof child === "object" && child !== null && "tagName" in child) {
+        updateElementFeedback(child as ElementNode, feedbackMap);
+      }
+    }
+  }
 }
 
 /**

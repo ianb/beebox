@@ -60,6 +60,8 @@ export const Expando = element("expando", {
     id: z.string().optional(),
     /** Whether to start expanded (default: false) */
     expanded: z.boolean().optional(),
+    /** User feedback on this expando (set when reading is completed) */
+    "user-feedback": z.enum(["thumbs-up", "thumbs-down"]).optional(),
   },
   /** Markdown content shown when expanded */
   text: z.string(),
@@ -141,6 +143,8 @@ export const Section = element("section", {
     link: z.string().url().optional(),
     /** Feed/source name (e.g., "Hacker News") */
     via: z.string().optional(),
+    /** User feedback on this section (set when reading is completed) */
+    "user-feedback": z.enum(["thumbs-up", "thumbs-down"]).optional(),
   },
   /** Can contain markdown, expandos, queries, excerpts */
   children: z.array(z.union([Expando, Query, Excerpt])).optional(),
@@ -225,6 +229,30 @@ export const BriefHypothesis = element("hypothesis", {
 });
 
 /**
+ * A brief-specific reaction question.
+ *
+ * The agent can add 0-2 of these when creating a brief to test
+ * specific hypotheses or gather feedback on editorial choices.
+ *
+ * Example:
+ * ```xml
+ * <brief-reaction id="br1" experiment-ref="exp-retro">
+ *   Did the retro computing angle work for you?
+ * </brief-reaction>
+ * ```
+ */
+export const BriefReaction = element("brief-reaction", {
+  attrs: {
+    /** Unique ID for this reaction */
+    id: z.string(),
+    /** Related experiment ID if testing a hypothesis */
+    "experiment-ref": z.string().optional(),
+  },
+  /** The question text shown to the user */
+  text: z.string(),
+});
+
+/**
  * Curation metadata - how the guide influenced this brief.
  *
  * This enables learning from feedback by tracking what decisions
@@ -259,6 +287,7 @@ export const Curation = element("curation", {
       InterestRef,
       ExperimentRef,
       BriefHypothesis,
+      BriefReaction,
       /** Explanation of editorial decisions */
       element("rationale", { text: z.string() }),
     ])
@@ -304,6 +333,18 @@ export const Curation = element("curation", {
  * ```
  */
 export const NewsBriefSchema = element("news-brief", {
+  attrs: {
+    /** Overall rating given by user when completing reading */
+    "overall-rating": z.enum(["great", "ok", "meh"]).optional(),
+    /** When the brief was marked as read */
+    "read-at": z.string().datetime({ offset: true }).optional(),
+    /** How it was marked read: user completed reading, or expired unread */
+    "read-reason": z.enum(["user", "expired"]).optional(),
+    /** Comma-separated IDs of reactions the user selected */
+    "selected-reactions": z.string().optional(),
+    /** When this brief's feedback was processed into guide revision */
+    "guide-revision": z.string().datetime({ offset: true }).optional(),
+  },
   children: z.array(
     z.union([
       Curation,
@@ -371,8 +412,19 @@ export interface ParsedNewsBrief {
       experimentRef: string | undefined;
       text: string;
     }>;
+    briefReactions: Array<{
+      id: string;
+      experimentRef: string | undefined;
+      text: string;
+    }>;
     rationale: string | undefined;
   } | undefined;
+  /** Root-level feedback attributes */
+  overallRating: "great" | "ok" | "meh" | undefined;
+  readAt: string | undefined;
+  readReason: "user" | "expired" | undefined;
+  selectedReactions: string | undefined;
+  guideRevision: string | undefined;
 }
 
 /**
@@ -387,6 +439,24 @@ function getChild(children: ElementNode[], tagName: string): ElementNode | undef
  */
 function getChildren(children: ElementNode[], tagName: string): ElementNode[] {
   return children.filter((c) => c.tagName === tagName);
+}
+
+/**
+ * Helper to extract text from mixed content.
+ * When an element has mixed content (text + child elements), cardworks stores
+ * it in a `mixed` array. This function extracts just the text portions.
+ */
+function getMixedText(element: ElementNode): string {
+  // If there's a mixed property, use it to extract text
+  const mixed = (element as any).mixed as Array<string | ElementNode> | undefined;
+  if (mixed) {
+    return mixed
+      .filter((item): item is string => typeof item === "string")
+      .join("")
+      .trim();
+  }
+  // Fall back to the text property
+  return element.text ?? "";
 }
 
 /**
@@ -418,11 +488,11 @@ export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
       heading: s.attrs.heading as string | undefined,
       link: s.attrs.link as string | undefined,
       via: s.attrs.via as string | undefined,
-      text: s.text,
+      text: getMixedText(s),
       expandos: getChildren(sectionChildren, "expando").map((e) => ({
         id: e.attrs.id as string | undefined,
         title: e.attrs.title as string,
-        text: e.text ?? "",
+        text: getMixedText(e),
       })),
       queries: getChildren(sectionChildren, "query").map((q) => ({
         id: q.attrs.id as string | undefined,
@@ -437,7 +507,7 @@ export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
   const topExpandos = getChildren(contentChildren, "expando").map((e) => ({
     id: e.attrs.id as string | undefined,
     title: e.attrs.title as string,
-    text: e.text ?? "",
+    text: getMixedText(e),
   }));
   const topQueries = getChildren(contentChildren, "query").map((q) => ({
     id: q.attrs.id as string | undefined,
@@ -472,12 +542,18 @@ export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
       experimentRef: h.attrs["experiment-ref"] as string | undefined,
       text: h.text ?? "",
     }));
+    const briefReactions = getChildren(curationChildren, "brief-reaction").map((r) => ({
+      id: r.attrs.id as string,
+      experimentRef: r.attrs["experiment-ref"] as string | undefined,
+      text: r.text ?? "",
+    }));
     const rationaleEl = getChild(curationChildren, "rationale");
     curation = {
       guideVersion: curationEl.attrs["guide-version"] as string | undefined,
       interests,
       experimentRefs,
       hypotheses,
+      briefReactions,
       rationale: rationaleEl?.text,
     };
   }
@@ -496,6 +572,11 @@ export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
     },
     sources,
     curation,
+    overallRating: brief.attrs["overall-rating"] as "great" | "ok" | "meh" | undefined,
+    readAt: brief.attrs["read-at"] as string | undefined,
+    readReason: brief.attrs["read-reason"] as "user" | "expired" | undefined,
+    selectedReactions: brief.attrs["selected-reactions"] as string | undefined,
+    guideRevision: brief.attrs["guide-revision"] as string | undefined,
   };
 }
 
