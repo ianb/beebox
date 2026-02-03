@@ -47,7 +47,7 @@ export const InterestTopic = element("topic", {
     /** How we learned about this interest */
     source: BeliefSource.default("inferred"),
     /** Reference to evidence (edition path, feedback, etc.) */
-    evidence: z.string().optional(),
+    ref: z.string().optional(),
   },
   /** The topic name */
   text: z.string(),
@@ -78,7 +78,7 @@ export const Preference = element("preference", {
     ]),
     confidence: ConfidenceLevel.default("low"),
     source: BeliefSource.default("inferred"),
-    evidence: z.string().optional(),
+    ref: z.string().optional(),
   },
   /** Description of the preference */
   text: z.string(),
@@ -98,7 +98,7 @@ export const Disinterest = element("disinterest", {
   attrs: {
     confidence: ConfidenceLevel.default("low"),
     source: BeliefSource.default("inferred"),
-    evidence: z.string().optional(),
+    ref: z.string().optional(),
   },
   /** What the user isn't interested in */
   text: z.string(),
@@ -332,20 +332,20 @@ export interface ParsedNewsGuide {
     topic: string;
     confidence: ConfidenceLevel;
     source: BeliefSource;
-    evidence: string | undefined;
+    ref: string | undefined;
   }>;
   disinterests: Array<{
     topic: string;
     confidence: ConfidenceLevel;
     source: BeliefSource;
-    evidence: string | undefined;
+    ref: string | undefined;
   }>;
   preferences: Array<{
     aspect: string;
     description: string;
     confidence: ConfidenceLevel;
     source: BeliefSource;
-    evidence: string | undefined;
+    ref: string | undefined;
   }>;
   contextNotes: Array<{
     text: string;
@@ -407,7 +407,7 @@ export function parseNewsGuide(guide: NewsGuide): ParsedNewsGuide {
     topic: t.text ?? "",
     confidence: (t.attrs.confidence ?? "low") as ConfidenceLevel,
     source: (t.attrs.source ?? "inferred") as BeliefSource,
-    evidence: t.attrs.evidence as string | undefined,
+    ref: t.attrs.ref as string | undefined,
   }));
 
   // Parse disinterests
@@ -416,7 +416,7 @@ export function parseNewsGuide(guide: NewsGuide): ParsedNewsGuide {
     topic: d.text ?? "",
     confidence: (d.attrs.confidence ?? "low") as ConfidenceLevel,
     source: (d.attrs.source ?? "inferred") as BeliefSource,
-    evidence: d.attrs.evidence as string | undefined,
+    ref: d.attrs.ref as string | undefined,
   }));
 
   // Parse preferences
@@ -426,7 +426,7 @@ export function parseNewsGuide(guide: NewsGuide): ParsedNewsGuide {
     description: p.text ?? "",
     confidence: (p.attrs.confidence ?? "low") as ConfidenceLevel,
     source: (p.attrs.source ?? "inferred") as BeliefSource,
-    evidence: p.attrs.evidence as string | undefined,
+    ref: p.attrs.ref as string | undefined,
   }));
 
   // Parse context notes
