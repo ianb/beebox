@@ -172,7 +172,7 @@ Adding an observation to an experiment:
 <experiment id="exp-3" status="successful">
   <hypothesis>Security research as software puzzles</hypothesis>
   <approach>Feature security investigations focusing on methodology</approach>
-  <observation ref="store/archive/briefs/2026-02-03_security.news-brief.card" date="${today}">
+  <observation ref="/store/archive/briefs/2026-02-03_security.news-brief.card" date="${today}">
     Thumbs up on multi-agent expando, overall rating "ok" - methodology focus worked
   </observation>
   <conclusion>Security investigation narratives engage when focused on the puzzle aspect</conclusion>
@@ -182,7 +182,7 @@ Adding an observation to an experiment:
 Increasing confidence based on feedback:
 \`\`\`xml
 <topic confidence="medium" source="feedback"
-       evidence="store/archive/briefs/2026-02-03_security.news-brief.card">
+       ref="/store/archive/briefs/2026-02-03_security.news-brief.card">
   AI and machine learning tools
 </topic>
 \`\`\`
