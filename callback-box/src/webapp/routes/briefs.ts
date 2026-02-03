@@ -532,15 +532,30 @@ export async function registerBriefRoutes(
     // Save the updated card
     await loader.save(card);
 
-    // Move to archive
+    // Move to archive using cardworks (updates references in other cards)
     const filename = path.basename(briefPath);
     const archiveDir = path.join(boxRoot, "store/archive/briefs");
     await fs.mkdir(archiveDir, { recursive: true });
     const newPath = path.join(archiveDir, filename);
-    await fs.rename(fullPath, newPath);
 
-    // Commit changes
+    // Use loader.move() to update references pointing to this brief
+    const { result: moveResult } = await loader.move(card, newPath);
+
+    // Commit changes - include any cards that had references updated
     const newRelativePath = path.relative(boxRoot, newPath);
+    const filesToStage = [briefPath, newRelativePath];
+
+    // Add any cards that had references updated
+    for (const updated of moveResult.updatedCards) {
+      filesToStage.push(path.relative(boxRoot, updated.path));
+    }
+    // Add any related files that were moved (attachments)
+    for (const moved of moveResult.movedFiles) {
+      if (moved.from !== fullPath) {
+        filesToStage.push(path.relative(boxRoot, moved.from));
+        filesToStage.push(path.relative(boxRoot, moved.to));
+      }
+    }
     await stageFiles(boxRoot, [briefPath, newRelativePath]);
     await commit(boxRoot, {
       message: `Complete reading: ${overallRating}`,
