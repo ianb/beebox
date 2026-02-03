@@ -74,6 +74,37 @@ function basenameWithoutExt(filename: string): string {
 }
 
 /**
+ * Compute relative path from a directory to a file.
+ * Unlike relativePath, this takes a directory, not a file path.
+ */
+function relative(from: string, to: string): string {
+  const fromParts = from.split("/").filter(Boolean);
+  const toParts = to.split("/").filter(Boolean);
+
+  // Find common prefix
+  let commonLength = 0;
+  while (
+    commonLength < fromParts.length &&
+    commonLength < toParts.length &&
+    fromParts[commonLength] === toParts[commonLength]
+  ) {
+    commonLength++;
+  }
+
+  // Build relative path
+  const upCount = fromParts.length - commonLength;
+  const downParts = toParts.slice(commonLength);
+
+  const parts: string[] = [];
+  for (let i = 0; i < upCount; i++) {
+    parts.push("..");
+  }
+  parts.push(...downParts);
+
+  return parts.join("/") || ".";
+}
+
+/**
  * Compute relative path from one file to another.
  */
 function relativePath(from: string, to: string): string {
@@ -674,11 +705,15 @@ abstract class BaseCardLoader implements ICardLoader {
 
     // Check if this ref points to the file being moved
     if (resolved.resolvedPath === oldPath) {
-      // Compute new relative path
-      const newRelPath = relativePath(cardPath, newPath);
-
-      // Rebuild the ref with version and fragment preserved
-      let newRef = newRelPath;
+      // Compute new path, preserving absolute vs relative style
+      let newRef: string;
+      if (parsed.isAbsolute) {
+        // Preserve absolute ref style - path from project root
+        newRef = "/" + relative(this.projectRoot, newPath);
+      } else {
+        // Compute relative path from card to new location
+        newRef = relativePath(cardPath, newPath);
+      }
       if (parsed.version) {
         newRef += `@${parsed.version}`;
       }
