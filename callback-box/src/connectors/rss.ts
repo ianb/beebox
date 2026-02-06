@@ -43,6 +43,7 @@ interface FeedItem {
   summary?: string;
   author?: string;
   guid: string;
+  comments?: string;
 }
 
 /**
@@ -66,6 +67,7 @@ function parseRss2(data: Record<string, unknown>): FeedItem[] {
     const pubDate = getFirstText(item.pubDate);
     const description = getFirstText(item.description);
     const author = getFirstText(item.author) || getFirstText(item["dc:creator"]);
+    const comments = getFirstText(item.comments);
 
     if (!title || !link || !guid) continue;
 
@@ -77,6 +79,7 @@ function parseRss2(data: Record<string, unknown>): FeedItem[] {
     };
     if (description) feedItem.summary = stripHtml(description);
     if (author) feedItem.author = author;
+    if (comments) feedItem.comments = comments;
     items.push(feedItem);
   }
 
@@ -273,6 +276,7 @@ class RssConnector implements Connector {
           };
           if (item.summary) templateOptions.summary = item.summary;
           if (item.author) templateOptions.author = item.author;
+          if (item.comments) templateOptions.comments = item.comments;
           const content = createNewsItemTemplate(templateOptions);
 
           await fs.writeFile(cardPath, content);

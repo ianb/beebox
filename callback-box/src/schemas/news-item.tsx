@@ -72,6 +72,14 @@ export const NewsSummary = element("summary", {
 });
 
 /**
+ * Child element for discussion/comments URL (e.g., HN discussion page).
+ * The brief agent may optionally fetch this to incorporate community perspective.
+ */
+export const NewsComments = element("comments", {
+  text: z.string().url(),
+});
+
+/**
  * Child element for article author.
  */
 export const NewsAuthor = element("author", {
@@ -238,6 +246,7 @@ export const NewsItemSchema = element("news-item", {
       NewsSummary,
       NewsAuthor,
       NewsGuid,
+      NewsComments,
       NewsContent,
       NewsFetchError,
       NewsAnalysis,
@@ -259,6 +268,7 @@ export function createNewsItemTemplate(options: {
   summary?: string;
   author?: string;
   guid: string;
+  comments?: string;
 }): string {
   const newsItem = (
     <news-item status="new">
@@ -269,6 +279,7 @@ export function createNewsItemTemplate(options: {
       {options.summary && <summary>{options.summary}</summary>}
       {options.author && <author>{options.author}</author>}
       <guid>{options.guid}</guid>
+      {options.comments && <comments>{options.comments}</comments>}
     </news-item>
   );
 
