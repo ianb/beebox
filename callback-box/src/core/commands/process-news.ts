@@ -143,7 +143,25 @@ OUTPUT: As you process each item, state your decision:
 
 This helps track what's happening during triage.
 
-When done, briefly state how many you kept vs trashed.
+When done, commit your changes with a detailed message:
+
+\`\`\`bash
+git add -A && git commit -m "$(cat <<'EOF'
+Triage: <kept>/<total> items kept
+
+Kept:
+- <title> - <reason>
+- <title> - <reason>
+
+Trashed:
+- <title> - <reason>
+- <title> - <reason>
+
+Triggered-By: cb process-news
+Phase: triage
+EOF
+)"
+\`\`\`
 
 GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
@@ -209,7 +227,23 @@ Then commit all changes.
 OUTPUT: As you process each item, state what you found:
   ANALYZED: [filename] - [topics/type/timeliness summary]
 
-When done, state what was analyzed and any notable themes emerging.
+When done, commit your changes with a detailed message:
+
+\`\`\`bash
+git add -A && git commit -m "$(cat <<'EOF'
+Analyze <N> items: <key themes>
+
+Items:
+- <title> (<type>, <timeliness>) - <topics>
+- <title> (<type>, <timeliness>) - <topics>
+
+Emerging themes: <notable patterns or connections>
+
+Triggered-By: cb process-news
+Phase: analyze
+EOF
+)"
+\`\`\`
 
 GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
@@ -438,9 +472,24 @@ cb move box/pool/news/<used-file> store/archive/news/
 This command handles moving and updating any references (including in the brief you just created).
 Leave items in pool that weren't used—they'll be available for future briefs.
 
-Commit all changes with a message like "Create news brief: [title]"
+When done, commit your changes with a detailed message:
 
-When done, state the brief title and what was included.
+\`\`\`bash
+git add -A && git commit -m "$(cat <<'EOF'
+Brief: <title>
+
+Sections:
+- <section heading> (<source article title>)
+- <section heading> (<source article title>)
+
+<N> items used, <M> left in pool.
+Editorial angle: <one sentence on why this angle/structure>
+
+Triggered-By: cb process-news
+Phase: brief
+EOF
+)"
+\`\`\`
 
 GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
@@ -527,15 +576,15 @@ async function executeProcessNews(
             results.push({ phase: "triage", success: false, message: triageResult.error ?? "Failed" });
           }
 
-          // Commit triage changes
+          // Commit any changes the agent didn't commit itself
           const status = await getStatus(ctx.boxRoot);
           if (!status.clean) {
+            ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
             await stageAll(ctx.boxRoot);
             await commit(ctx.boxRoot, {
               message: `Triage ${itemsToProcess.length} news items`,
-              trailers: { "Triggered-By": "cb process-news", Phase: "triage" },
+              trailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageResult.sessionId },
             });
-            ctx.writeLine(fmt.dim("  Triage changes committed."));
           }
         }
       }
@@ -567,6 +616,7 @@ async function executeProcessNews(
             systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
             prompt: `Please analyze these news items:\n  - ${paths}`,
             onOutput: (text) => ctx.write(text),
+            maxTurns: 30,
           });
           ctx.writeLine("");
 
@@ -578,15 +628,15 @@ async function executeProcessNews(
             results.push({ phase: "analyze", success: false, message: analyzeResult.error ?? "Failed" });
           }
 
-          // Commit analysis changes
+          // Commit any changes the agent didn't commit itself
           const status = await getStatus(ctx.boxRoot);
           if (!status.clean) {
+            ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
             await stageAll(ctx.boxRoot);
             await commit(ctx.boxRoot, {
               message: `Analyze ${itemsToAnalyze.length} news items`,
-              trailers: { "Triggered-By": "cb process-news", Phase: "analyze" },
+              trailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeResult.sessionId },
             });
-            ctx.writeLine(fmt.dim("  Analysis changes committed."));
           }
         }
       }
@@ -615,6 +665,7 @@ async function executeProcessNews(
             systemPrompt: buildBriefPrompt(ctx.boxRoot),
             prompt: `Please create a news brief from the items in box/pool/news/`,
             onOutput: (text) => ctx.write(text),
+            maxTurns: 40,
           });
           ctx.writeLine("");
 
@@ -626,15 +677,15 @@ async function executeProcessNews(
             results.push({ phase: "brief", success: false, message: briefResult.error ?? "Failed" });
           }
 
-          // Commit brief changes
+          // Commit any changes the agent didn't commit itself
           const status = await getStatus(ctx.boxRoot);
           if (!status.clean) {
+            ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
             await stageAll(ctx.boxRoot);
             await commit(ctx.boxRoot, {
               message: "Create news brief",
-              trailers: { "Triggered-By": "cb process-news", Phase: "brief" },
+              trailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefResult.sessionId },
             });
-            ctx.writeLine(fmt.dim("  Brief changes committed."));
           }
         }
       }

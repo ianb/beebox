@@ -6,6 +6,7 @@
  */
 
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fmt } from "../cli/lib/format.js";
@@ -79,6 +80,10 @@ export interface AgentOptions {
   maxCost?: number | undefined;
   /** Whether to run in dry-run mode (no side effects) */
   dryRun?: boolean | undefined;
+  /** Explicit session ID (auto-generated if not provided) */
+  sessionId?: string | undefined;
+  /** Maximum agent turns (default: 20) */
+  maxTurns?: number | undefined;
 }
 
 export interface AgentResult {
@@ -86,6 +91,7 @@ export interface AgentResult {
   output: string;
   error?: string;
   exitCode: number;
+  sessionId: string;
 }
 
 /**
@@ -101,19 +107,25 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     onOutput,
     maxCost = 1.0,
     dryRun = false,
+    maxTurns = 20,
   } = options;
+
+  const sessionId = options.sessionId ?? randomUUID();
 
   return new Promise((resolve) => {
     const args = [
       "--print",
       "--verbose",
       "--dangerously-skip-permissions",
-      "--max-turns", "20",
+      "--max-turns", String(maxTurns),
+      "--session-id", sessionId,
     ];
 
-    // Add system prompt via append-system-prompt
-    if (systemPrompt) {
-      args.push("--append-system-prompt", systemPrompt);
+    // Add system prompt with session tracking instruction
+    const sessionInstruction = `\n\nSESSION TRACKING: When making git commits, include this trailer:\n  Session: ${sessionId}\nAdd it after any other trailers in your commit messages.`;
+    const fullSystemPrompt = systemPrompt + sessionInstruction;
+    if (fullSystemPrompt) {
+      args.push("--append-system-prompt", fullSystemPrompt);
     }
 
     // Add the user prompt
@@ -124,6 +136,7 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
         success: true,
         output: `[DRY RUN] Would run Claude Code with prompt:\n${prompt}`,
         exitCode: 0,
+        sessionId,
       });
       return;
     }
@@ -166,6 +179,7 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
         output: stdout,
         error: `Failed to spawn Claude Code: ${err.message}`,
         exitCode: -1,
+        sessionId,
       });
     });
 
@@ -175,6 +189,7 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
         success: exitCode === 0,
         output: stdout,
         exitCode,
+        sessionId,
       };
       if (exitCode !== 0) {
         result.error = stderr || `Exit code: ${exitCode}`;

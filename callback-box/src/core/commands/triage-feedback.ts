@@ -189,7 +189,23 @@ For each card processed, report:
   CATEGORY: feedback | task | unhandled
   ACTION: integrated into [brief#element] | moved to unhandled | split (feedback integrated, task to unhandled)
 
-When done, summarize: X cards integrated, Y moved to unhandled, Z split.
+When done, commit your changes with a detailed message:
+
+\`\`\`bash
+git add -A && git commit -m "$(cat <<'EOF'
+Triage feedback: <N> integrated, <M> unhandled
+
+Integrated:
+- <brief#element>: "<summary of comment>"
+- <brief#element>: "<summary of comment>"
+
+Unhandled:
+- <card>: <reason>
+
+Triggered-By: cb triage-feedback
+EOF
+)"
+\`\`\`
 
 GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
 }
@@ -272,15 +288,15 @@ async function executeTriageFeedback(
     if (result.success) {
       ctx.writeLine(fmt.ok("Agent finished successfully"));
 
-      // Commit changes
+      // Commit any changes the agent didn't commit itself
       const status = await getStatus(ctx.boxRoot);
       if (!status.clean) {
+        ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
         await stageAll(ctx.boxRoot);
         await commit(ctx.boxRoot, {
           message: `Triage ${feedbackCards.length} feedback card(s)`,
-          trailers: { "Triggered-By": "cb triage-feedback" },
+          trailers: { "Triggered-By": "cb triage-feedback", Session: result.sessionId },
         });
-        ctx.writeLine(fmt.dim("  Changes committed."));
       }
 
       return {

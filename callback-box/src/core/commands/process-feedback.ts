@@ -319,7 +319,7 @@ async function executeProcessFeedback(
         await stageAll(ctx.boxRoot);
         await commit(ctx.boxRoot, {
           message: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
-          trailers: { "Triggered-By": "cb process-feedback" },
+          trailers: { "Triggered-By": "cb process-feedback", Session: result.sessionId },
         });
         ctx.writeLine(fmt.dim("  Fallback commit created."));
       }
