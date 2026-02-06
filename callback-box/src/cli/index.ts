@@ -23,6 +23,7 @@ import {
   trashCommand,
   moveCommand,
   fetchNewsCommand,
+  fetchAllNewsCommand,
   processNewsCommand,
   processFeedbackCommand,
   triageFeedbackCommand,
@@ -51,6 +52,7 @@ program.addCommand(pullCommand);
 program.addCommand(trashCommand);
 program.addCommand(moveCommand);
 program.addCommand(fetchNewsCommand);
+program.addCommand(fetchAllNewsCommand);
 program.addCommand(processNewsCommand);
 program.addCommand(processFeedbackCommand);
 program.addCommand(triageFeedbackCommand);

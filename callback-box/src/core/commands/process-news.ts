@@ -1,18 +1,21 @@
 /**
  * Process-news command - Run the news processing agent.
  *
- * This command invokes Claude Code to process news through three phases:
+ * This command invokes Claude Code to process news through four phases:
  *
  * 1. TRIAGE: Review items in box/inbox/news/
  *    - Move uninteresting items to store/trash/news/
  *    - Keep interesting items for analysis
  *
- * 2. ANALYZE: For items that passed triage
- *    - Fetch full article content
+ * 2. FETCH: Fetch article content for triaged items
+ *    - Runs in outer code (parallel, no agent)
+ *    - Adds <content> to each card
+ *
+ * 3. ANALYZE: For items with fetched content
  *    - Create analysis (topics, type, thesis, how to use it)
  *    - Move to box/pool/news/
  *
- * 3. CREATE BRIEF: From items in box/pool/news/
+ * 4. CREATE BRIEF: From items in box/pool/news/
  *    - Identify themes and notable items
  *    - Create a news-brief card with narrative structure
  *    - Move used items to store/archive/news/
@@ -35,6 +38,7 @@ import { runAgent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { stageAll, commit, getStatus } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
+import { fetchAllNewsItems } from "./fetch-all-news.js";
 
 /**
  * Arguments for the process-news command.
@@ -44,6 +48,8 @@ export interface ProcessNewsArgs {
   batchSize?: number;
   /** Only do triage phase */
   triageOnly?: boolean;
+  /** Only do fetch phase */
+  fetchOnly?: boolean;
   /** Only do analyze phase (for items already triaged) */
   analyzeOnly?: boolean;
   /** Only do brief creation phase (for items already analyzed) */
@@ -175,18 +181,14 @@ function buildAnalyzePrompt(boxRoot: string): string {
 WORKING DIRECTORY: ${boxRoot}
 
 YOUR TASK:
-For each news item in box/inbox/news/ that passed triage:
-1. Fetch the full article content
+For each news item in box/inbox/news/:
+1. Read the card (it already has <content> with the fetched article)
 2. Create an analysis of how this article fits into the "mental space"
 3. Move the analyzed item to box/pool/news/
 
-STEP 1 - FETCH CONTENT:
-Run: cb fetch-news <path>
-
-This fetches the article and adds <content> to the card.
-
-STEP 2 - ADD ANALYSIS:
-Edit the card to add an <analysis> element. This is NOT a summary of the content
+STEP 1 - READ AND ANALYZE:
+Each card already has a <content> element with the fetched article in markdown format.
+Read the content and add an <analysis> element. This is NOT a summary of the content
 (the content is already there). Instead, analyze:
 
 - Topics: What themes/subjects does it cover?
@@ -215,7 +217,11 @@ Example analysis element:
 </analysis>
 \`\`\`
 
-STEP 3 - MOVE TO POOL:
+If a card has a <fetch-error> instead of <content>, note it in the analysis and
+still move it to pool — the brief can decide whether to include it based on
+title/summary alone or skip it.
+
+STEP 2 - MOVE TO POOL:
 After adding the analysis, move the file:
 \`\`\`
 cb move <inbox-path> box/pool/news/
@@ -506,9 +512,10 @@ async function executeProcessNews(
   const dryRun = processArgs.dryRun ?? false;
 
   // Determine which phases to run
-  const runTriage = !processArgs.analyzeOnly && !processArgs.briefOnly;
-  const runAnalyze = !processArgs.triageOnly && !processArgs.briefOnly;
-  const runBrief = !processArgs.triageOnly && !processArgs.analyzeOnly;
+  const runTriage = !processArgs.analyzeOnly && !processArgs.briefOnly && !processArgs.fetchOnly;
+  const runFetch = !processArgs.triageOnly && !processArgs.briefOnly;
+  const runAnalyze = !processArgs.triageOnly && !processArgs.briefOnly && !processArgs.fetchOnly;
+  const runBrief = !processArgs.triageOnly && !processArgs.analyzeOnly && !processArgs.fetchOnly;
 
   // Check for existing lock
   if (!processArgs.force) {
@@ -550,27 +557,29 @@ async function executeProcessNews(
         ctx.writeLine(fmt.dim("No items in inbox to triage."));
         results.push({ phase: "triage", success: true, message: "No items" });
       } else {
-        const itemsToProcess = inboxItems.slice(0, batchSize);
-        ctx.writeLine(fmt.progress(itemsToProcess.length, inboxItems.length, "items to triage"));
+        // Triage all items at once — Haiku is fast enough and this avoids
+        // re-triaging kept items in subsequent batches
+        ctx.writeLine(`Triaging ${fmt.num(inboxItems.length)} items...`);
 
         if (dryRun) {
           ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
           results.push({ phase: "triage", success: true, message: "Dry run" });
         } else {
-          const paths = itemsToProcess.join("\n  - ");
-          ctx.writeLine(fmt.info("Starting Claude Code agent..."));
+          const paths = inboxItems.join("\n  - ");
+          ctx.writeLine(fmt.info("Starting Claude Code agent (Haiku)..."));
           ctx.writeLine("");
           const triageResult = await runAgent({
             boxRoot: ctx.boxRoot,
-            systemPrompt: buildTriagePrompt(ctx.boxRoot, batchSize),
+            systemPrompt: buildTriagePrompt(ctx.boxRoot, inboxItems.length),
             prompt: `Please triage these news items:\n  - ${paths}`,
             onOutput: (text) => ctx.write(text),
+            model: "claude-haiku-4-5-20251001",
           });
           ctx.writeLine("");
 
           if (triageResult.success) {
             ctx.writeLine(fmt.ok("Agent finished successfully"));
-            results.push({ phase: "triage", success: true, message: `Triaged ${itemsToProcess.length} items` });
+            results.push({ phase: "triage", success: true, message: `Triaged ${inboxItems.length} items` });
           } else {
             ctx.writeLine(fmt.fail(`Agent error: ${triageResult.error}`));
             results.push({ phase: "triage", success: false, message: triageResult.error ?? "Failed" });
@@ -582,7 +591,7 @@ async function executeProcessNews(
             ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
             await stageAll(ctx.boxRoot);
             await commit(ctx.boxRoot, {
-              message: `Triage ${itemsToProcess.length} news items`,
+              message: `Triage ${inboxItems.length} news items`,
               trailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageResult.sessionId },
             });
           }
@@ -591,10 +600,45 @@ async function executeProcessNews(
       ctx.writeLine("");
     }
 
-    // Phase 2: Analyze
+    // Phase 2: Fetch Content
+    if (runFetch) {
+      ctx.writeLine(fmt.phase("Phase 2: Fetch Content"));
+      const inboxItems = await getNewsFromDir(ctx.boxRoot, "box/inbox/news");
+
+      if (inboxItems.length === 0) {
+        ctx.writeLine(fmt.dim("No items to fetch."));
+        results.push({ phase: "fetch", success: true, message: "No items" });
+      } else if (dryRun) {
+        ctx.writeLine(fmt.dim(`(dry run - would fetch up to ${inboxItems.length} items)`));
+        results.push({ phase: "fetch", success: true, message: "Dry run" });
+      } else {
+        const fetchResult = await fetchAllNewsItems(ctx.boxRoot, "box/inbox/news", {
+          concurrency: 5,
+          onProgress: (msg) => ctx.writeLine(msg),
+        });
+
+        // Commit fetched content
+        if (fetchResult.fetched.length > 0 || fetchResult.failed.length > 0) {
+          await stageAll(ctx.boxRoot);
+          await commit(ctx.boxRoot, {
+            message: `Fetch ${fetchResult.fetched.length} news article(s)${fetchResult.failed.length > 0 ? `, ${fetchResult.failed.length} failed` : ""}`,
+            trailers: { "Triggered-By": "cb process-news", Phase: "fetch" },
+          });
+        }
+
+        if (fetchResult.failed.length > 0) {
+          results.push({ phase: "fetch", success: false, message: `${fetchResult.fetched.length} fetched, ${fetchResult.failed.length} failed` });
+        } else {
+          results.push({ phase: "fetch", success: true, message: `${fetchResult.fetched.length} fetched, ${fetchResult.skipped.length} skipped` });
+        }
+      }
+      ctx.writeLine("");
+    }
+
+    // Phase 3: Analyze
     if (runAnalyze) {
-      ctx.writeLine(fmt.phase("Phase 2: Analyze"));
-      // After triage, interesting items are still in inbox/news
+      ctx.writeLine(fmt.phase("Phase 3: Analyze"));
+      // After triage + fetch, items are still in inbox/news with content
       const inboxItems = await getNewsFromDir(ctx.boxRoot, "box/inbox/news");
 
       if (inboxItems.length === 0) {
@@ -616,7 +660,7 @@ async function executeProcessNews(
             systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
             prompt: `Please analyze these news items:\n  - ${paths}`,
             onOutput: (text) => ctx.write(text),
-            maxTurns: 30,
+            maxTurns: 20,
           });
           ctx.writeLine("");
 
@@ -643,9 +687,9 @@ async function executeProcessNews(
       ctx.writeLine("");
     }
 
-    // Phase 3: Create Brief
+    // Phase 4: Create Brief
     if (runBrief) {
-      ctx.writeLine(fmt.phase("Phase 3: Create Brief"));
+      ctx.writeLine(fmt.phase("Phase 4: Create Brief"));
       const poolItems = await getNewsFromDir(ctx.boxRoot, "box/pool/news");
 
       if (poolItems.length === 0) {
@@ -719,7 +763,7 @@ async function executeProcessNews(
 // Register the command
 registerCommand({
   name: "process-news",
-  description: "Run the news processing agent (triage, analyze, create brief)",
+  description: "Run the news processing agent (triage, fetch, analyze, create brief)",
   args: [
     {
       name: "batchSize",
@@ -731,6 +775,13 @@ registerCommand({
     {
       name: "triageOnly",
       description: "Only run triage phase",
+      required: false,
+      default: false,
+      type: "boolean",
+    },
+    {
+      name: "fetchOnly",
+      description: "Only run fetch phase",
       required: false,
       default: false,
       type: "boolean",

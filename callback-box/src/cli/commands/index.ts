@@ -16,6 +16,7 @@ export { pullCommand } from "./pull.js";
 export { trashCommand } from "./trash.js";
 export { moveCommand } from "./move.js";
 export { fetchNewsCommand } from "./fetch-news.js";
+export { fetchAllNewsCommand } from "./fetch-all-news.js";
 export { processNewsCommand } from "./process-news.js";
 export { processFeedbackCommand } from "./process-feedback.js";
 export { triageFeedbackCommand } from "./triage-feedback.js";

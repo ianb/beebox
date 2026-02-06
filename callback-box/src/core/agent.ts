@@ -84,6 +84,8 @@ export interface AgentOptions {
   sessionId?: string | undefined;
   /** Maximum agent turns (default: 20) */
   maxTurns?: number | undefined;
+  /** Model to use (e.g., "claude-haiku-4-5-20251001"). Omit to use CLI default. */
+  model?: string | undefined;
 }
 
 export interface AgentResult {
@@ -120,6 +122,11 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
       "--max-turns", String(maxTurns),
       "--session-id", sessionId,
     ];
+
+    // Add model selection if specified
+    if (options.model) {
+      args.push("--model", options.model);
+    }
 
     // Add system prompt with session tracking instruction
     const sessionInstruction = `\n\nSESSION TRACKING: When making git commits, include this trailer:\n  Session: ${sessionId}\nAdd it after any other trailers in your commit messages.`;

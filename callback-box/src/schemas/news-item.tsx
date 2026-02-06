@@ -118,8 +118,8 @@ export const NewsFetchError = element("fetch-error", {
   attrs: {
     /** When the fetch was attempted */
     "attempted-at": z.string().datetime({ offset: true }),
-    /** HTTP status code if applicable */
-    "status-code": z.number().optional(),
+    /** HTTP status code if applicable (stored as string in XML) */
+    "status-code": z.coerce.number().optional(),
   },
   /** Error message */
   text: z.string(),

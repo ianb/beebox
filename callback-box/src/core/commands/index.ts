@@ -12,6 +12,7 @@ import "./pull.js";
 import "./trash.js";
 import "./move.js";
 import "./fetch-news.js";
+import "./fetch-all-news.js";
 import "./process-news.js";
 import "./process-feedback.js";
 import "./triage-feedback.js";

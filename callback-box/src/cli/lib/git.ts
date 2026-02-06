@@ -347,13 +347,14 @@ export async function getCommitDiff(
   hash: string
 ): Promise<string> {
   try {
-    // Try normal diff against parent
-    const { stdout } = await git(boxRoot, ["diff", `${hash}~1`, hash]);
+    // Try normal diff against parent, with low rename threshold
+    // to detect moves even when content changes significantly (e.g. analyze phase)
+    const { stdout } = await git(boxRoot, ["diff", "-M10", `${hash}~1`, hash]);
     return stdout;
   } catch {
     // Probably the initial commit with no parent
     try {
-      const { stdout } = await git(boxRoot, ["show", "--format=", hash]);
+      const { stdout } = await git(boxRoot, ["show", "-M10", "--format=", hash]);
       return stdout;
     } catch {
       return "";

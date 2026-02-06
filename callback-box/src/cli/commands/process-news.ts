@@ -9,18 +9,20 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
 export const processNewsCommand = new Command("process-news")
-  .description("Run the news processing agent (triage, analyze, edition)")
+  .description("Run the news processing agent (triage, fetch, analyze, brief)")
   .option("--batch-size <n>", "Maximum items to process per phase", "10")
   .option("--triage-only", "Only run triage phase")
+  .option("--fetch-only", "Only run fetch phase")
   .option("--analyze-only", "Only run analyze phase")
-  .option("--edition-only", "Only run edition creation phase")
+  .option("--brief-only", "Only run brief creation phase")
   .option("--dry-run", "Show what would happen without doing it")
   .option("--force", "Force even if another process is running")
   .action(async (options: {
     batchSize?: string;
     triageOnly?: boolean;
+    fetchOnly?: boolean;
     analyzeOnly?: boolean;
-    editionOnly?: boolean;
+    briefOnly?: boolean;
     dryRun?: boolean;
     force?: boolean;
   }) => {
@@ -33,8 +35,9 @@ export const processNewsCommand = new Command("process-news")
         {
           batchSize: options.batchSize ? parseInt(options.batchSize, 10) : 10,
           triageOnly: options.triageOnly,
+          fetchOnly: options.fetchOnly,
           analyzeOnly: options.analyzeOnly,
-          editionOnly: options.editionOnly,
+          briefOnly: options.briefOnly,
           dryRun: options.dryRun,
           force: options.force,
         },
