@@ -83,6 +83,25 @@ function extractMainContent(html: string): string {
 }
 
 /**
+ * Make relative URLs absolute given a base URL.
+ */
+function makeUrlsAbsolute(html: string, baseUrl: string): string {
+  const base = new URL(baseUrl);
+  // Fix src and href attributes with relative URLs
+  return html.replace(
+    /((?:src|href|poster|action)=["'])([^"']+)(["'])/gi,
+    (_match, prefix: string, url: string, suffix: string) => {
+      try {
+        const absolute = new URL(url, base).href;
+        return prefix + absolute + suffix;
+      } catch {
+        return prefix + url + suffix;
+      }
+    }
+  );
+}
+
+/**
  * Fetch and convert article to markdown.
  */
 async function fetchArticle(
@@ -110,7 +129,8 @@ async function fetchArticle(
 
     const html = await response.text();
     const mainContent = extractMainContent(html);
-    const markdown = turndown.turndown(mainContent);
+    const absoluteContent = makeUrlsAbsolute(mainContent, response.url);
+    const markdown = turndown.turndown(absoluteContent);
 
     return {
       markdown,
