@@ -59,6 +59,12 @@ body {
   @apply bg-gray-100 text-gray-800;
 }
 
+/* Remove backtick decorations from inline code in prose */
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+  content: none;
+}
+
 /* Highlight.js XML customizations - dim the angle brackets */
 .hljs-tag {
   color: #ccc;

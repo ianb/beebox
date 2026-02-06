@@ -65,7 +65,7 @@ function ThumbsFeedback({
   onFeedback: (id: string, value: "thumbs-up" | "thumbs-down" | undefined) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 ml-2">
+    <div className="flex items-center gap-1 ml-2 translate-y-1">
       <button
         onClick={(e) => {
           e.stopPropagation();

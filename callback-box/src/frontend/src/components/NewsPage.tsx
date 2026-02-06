@@ -208,7 +208,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
   );
 
   return (
-    <div className="h-screen flex">
+    <div className="h-full flex">
       {/* Sidebar with index */}
       <div className="w-80 bg-white border-r flex flex-col">
         <div className="p-4 border-b">
