@@ -1,8 +1,9 @@
 /**
  * CommitDetail - Right panel showing commit metadata, diff, and session log.
+ * Uses a tabbed interface: Commit | Diff (N) | New (N) | Moved (N) | Session
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getCommitDiff, type HistoryCommit } from "../api";
@@ -38,24 +39,18 @@ function PhaseBadge({ phase }: { phase: string }) {
   );
 }
 
-/**
- * Extract a readable file path from a diff --git line.
- */
+// --- Diff parsing ---
+
 function extractFilePath(line: string): string {
-  // "diff --git a/path/to/file b/path/to/file" → "path/to/file"
   const match = line.match(/^diff --git a\/(.+) b\/(.+)$/);
   if (!match) return line;
   return match[2]!;
 }
 
-/**
- * Parse diff into structured file sections for cleaner display.
- */
 interface DiffFile {
   path: string;
-  meta: string[]; // compact metadata labels
+  meta: string[];
   hunks: string[];
-  // For moves: structured info for compact display
   move?: { basename: string; fromDir: string; toDir: string };
 }
 
@@ -67,7 +62,6 @@ function parseDiff(diff: string): DiffFile[] {
 
   for (const line of diff.split("\n")) {
     if (line.startsWith("diff --git ")) {
-      // Finalize previous rename if any
       if (current && renameFrom && renameTo) {
         finalizeRename(current, renameFrom, renameTo);
       }
@@ -93,13 +87,12 @@ function parseDiff(diff: string): DiffFile[] {
       line.startsWith("--- ") ||
       line.startsWith("+++ ")
     ) {
-      // Skip noise lines
+      // Skip noise
     } else {
       current.hunks.push(line);
     }
   }
 
-  // Finalize last file's rename
   if (current && renameFrom && renameTo) {
     finalizeRename(current, renameFrom, renameTo);
   }
@@ -107,17 +100,11 @@ function parseDiff(diff: string): DiffFile[] {
   return files;
 }
 
-/**
- * For renames, show the destination path and a compact label.
- * If only the directory changed (same filename), show "moved".
- * If the filename also changed, show "renamed from old-name".
- */
 function finalizeRename(file: DiffFile, from: string, to: string): void {
   file.path = to;
   const fromName = from.split("/").pop()!;
   const toName = to.split("/").pop()!;
   if (fromName === toName) {
-    // Just moved directories — store structured info
     const fromDir = from.substring(0, from.length - fromName.length) || "/";
     const toDir = to.substring(0, to.length - toName.length) || "/";
     file.move = { basename: toName, fromDir, toDir };
@@ -127,9 +114,8 @@ function finalizeRename(file: DiffFile, from: string, to: string): void {
   }
 }
 
-/**
- * Extract file content from new-file diff hunks (strip + prefix and @@ lines).
- */
+// --- XML parsing for card viewer ---
+
 function extractNewFileContent(hunks: string[]): string {
   return hunks
     .filter((line) => !line.startsWith("@@"))
@@ -137,10 +123,6 @@ function extractNewFileContent(hunks: string[]): string {
     .join("\n");
 }
 
-/**
- * Parse XML string into an ElementNode tree using the browser's DOMParser.
- * Returns null if parsing fails.
- */
 function parseXmlToElementNode(xml: string): ElementNode | null {
   try {
     const doc = new DOMParser().parseFromString(xml, "text/xml");
@@ -152,9 +134,6 @@ function parseXmlToElementNode(xml: string): ElementNode | null {
   }
 }
 
-/**
- * Remove common leading whitespace from all lines (dedent).
- */
 function dedent(s: string): string {
   const lines = s.split("\n");
   const nonEmptyLines = lines.filter((l) => l.trim().length > 0);
@@ -193,101 +172,60 @@ function domToElementNode(el: Element): ElementNode {
   };
 }
 
-/**
- * Render a unified diff with color highlighting, organized by file.
- */
-function DiffView({ diff }: { diff: string }) {
-  if (!diff) {
-    return <div className="text-sm text-gray-400 italic p-4">No changes</div>;
-  }
+// --- Trailer helpers ---
 
-  const files = parseDiff(diff);
-
-  if (files.length === 0) {
-    return <div className="text-sm text-gray-400 italic p-4">No content changes (rename/mode only)</div>;
-  }
-
-  // Moves/renames without content changes go in compact summary.
-  // New files show their content plainly (not as a diff).
-  // Deleted files just get a label.
-  // Edited files get full colored diffs.
-  const movedFiles = files.filter((f) => f.meta.includes("moved") && !f.hunks.some((h) => h.trim()));
-  const newFiles = files.filter((f) => f.meta.includes("new file"));
-  const deletedFiles = files.filter((f) => f.meta.includes("deleted"));
-  const editedFiles = files.filter((f) =>
-    !f.meta.includes("new file") && !f.meta.includes("deleted") &&
-    !(f.meta.includes("moved") && !f.hunks.some((h) => h.trim()))
+function stripTrailers(body: string): string {
+  const lines = body.split("\n");
+  const filtered = lines.filter(
+    (line) => !/^(Session|Phase|Triggered-By|Feedback-Source|Agent|Items-Processed):\s/.test(line)
   );
+  return filtered.join("\n").trim();
+}
+
+// --- Tab content components ---
+
+function CommitTab({ commit, bodyText }: { commit: HistoryCommit; bodyText: string }) {
+  const phase = trailerString(commit.trailers?.Phase);
+  const triggeredBy = trailerString(commit.trailers?.["Triggered-By"]);
+
+  return (
+    <div className="p-4">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+          {commit.hash.substring(0, 8)}
+        </code>
+        <span className="text-xs text-gray-400">
+          {new Date(commit.date).toLocaleString()}
+        </span>
+        {phase && <PhaseBadge phase={phase} />}
+        {triggeredBy && (
+          <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+            {triggeredBy}
+          </span>
+        )}
+      </div>
+      <h2 className="font-medium text-gray-900">{commit.subject}</h2>
+      {bodyText && (
+        <div className="mt-2 prose prose-sm max-w-none text-gray-600">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{bodyText}</ReactMarkdown>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DiffTab({ files }: { files: DiffFile[] }) {
+  if (files.length === 0) {
+    return <div className="text-sm text-gray-400 italic p-4">No edited files</div>;
+  }
 
   return (
     <div className="divide-y divide-gray-200">
-      {/* Moved/renamed files shown compactly */}
-      {movedFiles.length > 0 && (
-        <div className="px-3 py-2">
-          {movedFiles.map((file, fi) => (
-            <div key={fi} className="text-xs text-gray-600 py-0.5">
-              {file.move ? (
-                <div>
-                  <div>{file.move.basename} <span className="text-gray-400">moved</span></div>
-                  <div className="text-gray-400 ml-3">
-                    {file.move.fromDir} → {file.move.toDir}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {file.path}
-                  {file.meta.map((m, mi) => (
-                    <span key={mi} className="text-gray-400 ml-1">({m})</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* New files: card viewer for .card files, plain text for others */}
-      {newFiles.map((file, fi) => {
-        const isCard = file.path.endsWith(".card");
-        const content = file.hunks.some((h) => h.trim()) ? extractNewFileContent(file.hunks) : null;
-        const cardElement = isCard && content ? parseXmlToElementNode(content) : null;
-
-        return (
-          <div key={fi}>
-            <div className="px-3 py-1.5 bg-green-50 flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-green-800">{file.path}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">new file</span>
-            </div>
-            {cardElement ? (
-              <CardTreeView element={cardElement} />
-            ) : content ? (
-              <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words text-gray-600">
-                {content.split("\n").map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
-              </pre>
-            ) : null}
-          </div>
-        );
-      })}
-
-      {/* Deleted files: just the label */}
-      {deletedFiles.length > 0 && (
-        <div className="px-3 py-2">
-          {deletedFiles.map((file, fi) => (
-            <div key={fi} className="text-xs text-gray-600 py-0.5">
-              {file.path} <span className="text-red-400">(deleted)</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Edited files: full colored diff */}
-      {editedFiles.map((file, fi) => (
+      {files.map((file, fi) => (
         <div key={fi}>
           <div className="px-3 py-1.5 bg-gray-50 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono font-medium text-gray-700">{file.path}</span>
-            {file.meta.map((m, mi) => (
+            {file.meta.filter((m) => m !== "new file" && m !== "deleted" && m !== "moved").map((m, mi) => (
               <span key={mi} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">{m}</span>
             ))}
           </div>
@@ -301,7 +239,6 @@ function DiffView({ diff }: { diff: string }) {
               } else if (line.startsWith("@@")) {
                 className = "text-purple-500 text-[10px]";
               }
-
               return (
                 <div key={i} className={className}>
                   {line}
@@ -315,26 +252,79 @@ function DiffView({ diff }: { diff: string }) {
   );
 }
 
-/**
- * Strip known trailer lines from the commit body to avoid duplication.
- */
-function stripTrailers(body: string): string {
-  const lines = body.split("\n");
-  const filtered = lines.filter(
-    (line) => !/^(Session|Phase|Triggered-By|Feedback-Source|Agent|Items-Processed):\s/.test(line)
+function NewFilesTab({ files }: { files: DiffFile[] }) {
+  if (files.length === 0) {
+    return <div className="text-sm text-gray-400 italic p-4">No new files</div>;
+  }
+
+  return (
+    <div className="divide-y divide-gray-200">
+      {files.map((file, fi) => {
+        const isCard = file.path.endsWith(".card");
+        const content = file.hunks.some((h) => h.trim()) ? extractNewFileContent(file.hunks) : null;
+        const cardElement = isCard && content ? parseXmlToElementNode(content) : null;
+
+        return (
+          <div key={fi}>
+            <div className="px-3 py-1.5 bg-green-50 flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-green-800">{file.path}</span>
+            </div>
+            {cardElement ? (
+              <CardTreeView element={cardElement} />
+            ) : content ? (
+              <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words text-gray-600">
+                {content.split("\n").map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </pre>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
   );
-  return filtered.join("\n").trim();
 }
+
+function MovedTab({ files }: { files: DiffFile[] }) {
+  if (files.length === 0) {
+    return <div className="text-sm text-gray-400 italic p-4">No moved files</div>;
+  }
+
+  return (
+    <div className="px-3 py-2">
+      {files.map((file, fi) => (
+        <div key={fi} className="text-xs text-gray-600 py-0.5">
+          {file.move ? (
+            <div>
+              <div>{file.move.basename} <span className="text-gray-400">moved</span></div>
+              <div className="text-gray-400 ml-3">
+                {file.move.fromDir} → {file.move.toDir}
+              </div>
+            </div>
+          ) : (
+            <div>
+              {file.path}
+              {file.meta.map((m, mi) => (
+                <span key={mi} className="text-gray-400 ml-1">({m})</span>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Main component ---
+
+type TabId = "commit" | "diff" | "new" | "moved" | "session";
 
 export function CommitDetail({ commit }: CommitDetailProps) {
   const [diff, setDiff] = useState<string | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
-  const [showDiff, setShowDiff] = useState(true);
-  const [showSession, setShowSession] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("commit");
 
   const sessionId = trailerString(commit.trailers?.Session);
-  const phase = trailerString(commit.trailers?.Phase);
-  const triggeredBy = trailerString(commit.trailers?.["Triggered-By"]);
   const bodyText = commit.body ? stripTrailers(commit.body) : "";
 
   useEffect(() => {
@@ -352,85 +342,91 @@ export function CommitDetail({ commit }: CommitDetailProps) {
     return () => { cancelled = true; };
   }, [commit.hash]);
 
-  // Reset session panel when commit changes
+  // Reset to commit tab when switching commits
   useEffect(() => {
-    setShowSession(false);
+    setActiveTab("commit");
   }, [commit.hash]);
 
+  // Parse diff into categories
+  const { editedFiles, newFiles, movedFiles, deletedFiles } = useMemo(() => {
+    if (!diff) return { editedFiles: [], newFiles: [], movedFiles: [], deletedFiles: [] };
+    const files = parseDiff(diff);
+    return {
+      movedFiles: files.filter((f) => f.meta.includes("moved") && !f.hunks.some((h) => h.trim())),
+      newFiles: files.filter((f) => f.meta.includes("new file")),
+      deletedFiles: files.filter((f) => f.meta.includes("deleted")),
+      editedFiles: files.filter((f) =>
+        !f.meta.includes("new file") && !f.meta.includes("deleted") &&
+        !(f.meta.includes("moved") && !f.hunks.some((h) => h.trim()))
+      ),
+    };
+  }, [diff]);
+
+  // Build tab list — only show tabs with content (Commit always shows)
+  const tabs: { id: TabId; label: string; count?: number }[] = [
+    { id: "commit", label: "Commit" },
+  ];
+
+  if (diffLoading) {
+    tabs.push({ id: "diff", label: "Diff" });
+  } else if (diff !== null) {
+    if (editedFiles.length > 0 || deletedFiles.length > 0) {
+      tabs.push({ id: "diff", label: "Diff", count: editedFiles.length + deletedFiles.length });
+    }
+    if (newFiles.length > 0) {
+      tabs.push({ id: "new", label: "New", count: newFiles.length });
+    }
+    if (movedFiles.length > 0) {
+      tabs.push({ id: "moved", label: "Moved", count: movedFiles.length });
+    }
+  }
+
+  if (sessionId) {
+    tabs.push({ id: "session", label: "Session" });
+  }
+
   return (
-    <div className="h-full overflow-auto">
-      {/* Commit metadata */}
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
-            {commit.hash.substring(0, 8)}
-          </code>
-          <span className="text-xs text-gray-400">
-            {new Date(commit.date).toLocaleString()}
-          </span>
-          {phase && <PhaseBadge phase={phase} />}
-          {triggeredBy && (
-            <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-              {triggeredBy}
-            </span>
-          )}
-          {sessionId && (
-            <button
-              onClick={() => setShowSession(!showSession)}
-              className="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
-              title={`View session log: ${sessionId}`}
-            >
-              session {sessionId.substring(0, 8)}...
-            </button>
-          )}
-        </div>
-        <h2 className="font-medium text-gray-900">{commit.subject}</h2>
-        {bodyText && (
-          <div className="mt-2 prose prose-sm max-w-none text-gray-600">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{bodyText}</ReactMarkdown>
-          </div>
-        )}
+    <div className="h-full flex flex-col">
+      {/* Tab bar */}
+      <div className="flex border-b bg-gray-50 px-2 pt-1 gap-1 flex-shrink-0">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
+              activeTab === tab.id
+                ? "bg-white text-gray-900 border border-b-white border-gray-200 -mb-px"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            {tab.label}
+            {tab.count !== undefined && (
+              <span className={`ml-1 ${activeTab === tab.id ? "text-gray-500" : "text-gray-400"}`}>
+                ({tab.count})
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Session log section - shown when session ID is clicked */}
-      {sessionId && showSession && (
-        <div className="border-b">
-          <div className="px-4 py-2 bg-indigo-50 flex items-center justify-between">
-            <span className="text-sm font-medium text-indigo-700">
-              Session Log
-              <code className="ml-2 text-xs text-indigo-400 font-normal">
-                {sessionId.substring(0, 8)}...
-              </code>
-            </span>
-            <button
-              onClick={() => setShowSession(false)}
-              className="text-xs text-indigo-400 hover:text-indigo-600"
-            >
-              close
-            </button>
-          </div>
-          <div className="border-t">
-            <SessionLog sessionId={sessionId} />
-          </div>
-        </div>
-      )}
-
-      {/* Diff section */}
-      <div className="border-b">
-        <button
-          onClick={() => setShowDiff(!showDiff)}
-          className="w-full px-4 py-2 flex items-center gap-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          <span className={`transition-transform ${showDiff ? "rotate-90" : ""}`}>
-            &#9654;
-          </span>
-          Diff
-          {diffLoading && <span className="text-gray-400 font-normal">(loading...)</span>}
-        </button>
-        {showDiff && diff !== null && (
-          <div className="border-t bg-white">
-            <DiffView diff={diff} />
-          </div>
+      {/* Tab content */}
+      <div className="flex-1 overflow-auto">
+        {activeTab === "commit" && (
+          <CommitTab commit={commit} bodyText={bodyText} />
+        )}
+        {activeTab === "diff" && (
+          diffLoading
+            ? <div className="text-sm text-gray-400 italic p-4">Loading...</div>
+            : <DiffTab files={[...editedFiles, ...deletedFiles]} />
+        )}
+        {activeTab === "new" && (
+          <NewFilesTab files={newFiles} />
+        )}
+        {activeTab === "moved" && (
+          <MovedTab files={movedFiles} />
+        )}
+        {activeTab === "session" && sessionId && (
+          <SessionLog sessionId={sessionId} />
         )}
       </div>
     </div>

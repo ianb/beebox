@@ -1,5 +1,8 @@
 /**
- * CommitTimeline - Left panel showing commit list with session grouping.
+ * CommitTimeline - Commit list with session grouping.
+ *
+ * Renders inside a Sidebar container. Shows commits grouped by session ID
+ * with phase badges, relative times, and duration between commits.
  */
 
 import { type HistoryCommit } from "../api";
@@ -11,7 +14,6 @@ interface CommitTimelineProps {
   onLoadMore: () => void;
   hasMore: boolean;
   loading: boolean;
-  onCollapse?: () => void;
 }
 
 /**
@@ -30,6 +32,7 @@ function PhaseBadge({ phase }: { phase: string }) {
     triage: "bg-blue-100 text-blue-700",
     analyze: "bg-amber-100 text-amber-700",
     brief: "bg-green-100 text-green-700",
+    fetch: "bg-cyan-100 text-cyan-700",
     "process-feedback": "bg-purple-100 text-purple-700",
   };
 
@@ -88,19 +91,36 @@ function groupBySession(commits: HistoryCommit[]): CommitGroup[] {
 }
 
 /**
+ * Format duration between two dates as MM:SS.
+ */
+function formatDuration(fromDate: string, toDate: string): string | null {
+  const from = new Date(fromDate).getTime();
+  const to = new Date(toDate).getTime();
+  const diff = to - from;
+  if (diff < 0 || diff > 3600000) return null; // Skip if negative or > 1 hour
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+/**
  * Single commit row in the timeline.
  */
 function CommitRow({
   commit,
   isSelected,
   onSelect,
+  prevCommitDate,
 }: {
   commit: HistoryCommit;
   isSelected: boolean;
   onSelect: () => void;
+  /** Date of the previous commit (earlier in time) to compute duration */
+  prevCommitDate?: string;
 }) {
   const phase = trailerString(commit.trailers?.Phase);
   const triggeredBy = trailerString(commit.trailers?.["Triggered-By"]);
+  const duration = prevCommitDate ? formatDuration(prevCommitDate, commit.date) : null;
 
   return (
     <button
@@ -117,6 +137,9 @@ function CommitRow({
           {relativeTime(commit.date)}
         </span>
         {phase && <PhaseBadge phase={phase} />}
+        {duration && (
+          <span className="text-[10px] text-gray-400 font-mono">{duration}</span>
+        )}
       </div>
       <div className="text-sm text-gray-800 truncate">
         {commit.subject}
@@ -137,84 +160,72 @@ export function CommitTimeline({
   onLoadMore,
   hasMore,
   loading,
-  onCollapse,
 }: CommitTimelineProps) {
   const groups = groupBySession(commits);
 
+  // Build a map of commit hash -> previous commit date (earlier in time).
+  // commits is reverse chronological, so commits[i+1] is earlier than commits[i].
+  const prevDateMap = new Map<string, string>();
+  for (let i = 0; i < commits.length - 1; i++) {
+    prevDateMap.set(commits[i]!.hash, commits[i + 1]!.date);
+  }
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="px-3 py-2 border-b bg-gray-50 flex-shrink-0 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-medium text-gray-700">Commits</h2>
-          <div className="text-xs text-gray-400">{commits.length} loaded</div>
-        </div>
-        {onCollapse && (
-          <button
-            onClick={onCollapse}
-            className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600"
-            title="Collapse sidebar"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-auto divide-y divide-gray-100">
-        {groups.map((group, gi) => {
-          if (group.sessionId && group.commits.length > 1) {
-            // Session group with visual indicator
-            return (
-              <div key={gi} className="border-l-2 border-indigo-200 ml-1">
-                <div className="px-3 py-1 bg-indigo-50/50 text-[10px] text-indigo-500 font-medium">
-                  Session {group.sessionId.substring(0, 8)}...
-                  <span className="text-indigo-400 ml-1">
-                    ({group.commits.length} commits)
-                  </span>
-                </div>
-                {group.commits.map((commit) => (
-                  <CommitRow
-                    key={commit.hash}
-                    commit={commit}
-                    isSelected={commit.hash === selectedHash}
-                    onSelect={() => onSelect(commit)}
-                  />
-                ))}
+    <div className="divide-y divide-gray-100">
+      {groups.map((group, gi) => {
+        if (group.sessionId && group.commits.length > 1) {
+          // Session group with visual indicator
+          return (
+            <div key={gi} className="border-l-2 border-indigo-200 ml-1">
+              <div className="px-3 py-1 bg-indigo-50/50 text-[10px] text-indigo-500 font-medium">
+                Session {group.sessionId.substring(0, 8)}...
+                <span className="text-indigo-400 ml-1">
+                  ({group.commits.length} commits)
+                </span>
               </div>
-            );
-          }
+              {group.commits.map((commit) => (
+                <CommitRow
+                  key={commit.hash}
+                  commit={commit}
+                  isSelected={commit.hash === selectedHash}
+                  onSelect={() => onSelect(commit)}
+                  prevCommitDate={prevDateMap.get(commit.hash)}
+                />
+              ))}
+            </div>
+          );
+        }
 
-          // Ungrouped commits or single-commit sessions
-          return group.commits.map((commit) => (
-            <CommitRow
-              key={commit.hash}
-              commit={commit}
-              isSelected={commit.hash === selectedHash}
-              onSelect={() => onSelect(commit)}
-            />
-          ));
-        })}
+        // Ungrouped commits or single-commit sessions
+        return group.commits.map((commit) => (
+          <CommitRow
+            key={commit.hash}
+            commit={commit}
+            isSelected={commit.hash === selectedHash}
+            onSelect={() => onSelect(commit)}
+            prevCommitDate={prevDateMap.get(commit.hash)}
+          />
+        ));
+      })}
 
-        {loading && (
-          <div className="p-3 text-sm text-gray-400 text-center">Loading...</div>
-        )}
+      {loading && (
+        <div className="p-3 text-sm text-gray-400 text-center">Loading...</div>
+      )}
 
-        {hasMore && !loading && (
-          <button
-            onClick={onLoadMore}
-            className="w-full p-2 text-sm text-blue-600 hover:bg-blue-50"
-          >
-            Load more commits
-          </button>
-        )}
+      {hasMore && !loading && (
+        <button
+          onClick={onLoadMore}
+          className="w-full p-2 text-sm text-blue-600 hover:bg-blue-50"
+        >
+          Load more commits
+        </button>
+      )}
 
-        {!loading && commits.length === 0 && (
-          <div className="p-4 text-sm text-gray-400 text-center">
-            No commits found
-          </div>
-        )}
-      </div>
+      {!loading && commits.length === 0 && (
+        <div className="p-4 text-sm text-gray-400 text-center">
+          No commits found
+        </div>
+      )}
     </div>
   );
 }

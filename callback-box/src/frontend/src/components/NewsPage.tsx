@@ -13,6 +13,7 @@ import {
   type GuideReaction,
   type BriefReaction,
 } from "./NewsBriefView";
+import { Sidebar } from "./Sidebar";
 import {
   submitBriefFeedback,
   submitQueryResponse,
@@ -210,14 +211,9 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
   return (
     <div className="h-full flex">
       {/* Sidebar with index */}
-      <div className="w-80 bg-white border-r flex flex-col">
-        <div className="p-4 border-b">
-          <h1 className="text-lg font-semibold text-gray-800">News Briefs</h1>
-        </div>
-        <div className="flex-1 overflow-auto">
-          <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} />
-        </div>
-      </div>
+      <Sidebar title="News Briefs">
+        <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} />
+      </Sidebar>
 
       {/* Main content */}
       <div className="flex-1 overflow-auto bg-gray-50">
