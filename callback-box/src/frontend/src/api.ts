@@ -431,6 +431,70 @@ export async function completeReading(
   });
 }
 
+// --- History API ---
+
+export interface HistoryCommit {
+  hash: string;
+  date: string;
+  subject: string;
+  body?: string;
+  trailers?: Record<string, string | string[]>;
+}
+
+export interface HistoryResponse {
+  commits: HistoryCommit[];
+}
+
+export interface DiffResponse {
+  hash: string;
+  diff: string;
+}
+
+export interface SessionContentBlock {
+  type: "text" | "tool_use" | "tool_result";
+  text?: string;
+  toolName?: string;
+  toolId?: string;
+  inputSummary?: string;
+  toolUseId?: string;
+  resultSummary?: string;
+}
+
+export interface SessionEntry {
+  uuid: string;
+  type: "user" | "assistant";
+  timestamp: string;
+  content: SessionContentBlock[];
+}
+
+export interface SessionLogResponse {
+  sessionId: string;
+  found: boolean;
+  entries: SessionEntry[];
+  total: number;
+  hasMore: boolean;
+}
+
+export async function getHistory(count = 50, offset = 0): Promise<HistoryResponse> {
+  return fetchJson<HistoryResponse>(
+    `${API_BASE}/history?count=${count}&offset=${offset}`
+  );
+}
+
+export async function getCommitDiff(hash: string): Promise<DiffResponse> {
+  return fetchJson<DiffResponse>(`${API_BASE}/history/diff/${hash}`);
+}
+
+export async function getSessionLog(
+  sessionId: string,
+  offset = 0,
+  limit = 100
+): Promise<SessionLogResponse> {
+  return fetchJson<SessionLogResponse>(
+    `${API_BASE}/history/session/${sessionId}?offset=${offset}&limit=${limit}`
+  );
+}
+
 /**
  * Convert a Blob to base64 string.
  */

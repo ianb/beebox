@@ -179,7 +179,7 @@ export async function getLog(
     ]);
 
     const entries: GitLogEntry[] = [];
-    const commits = stdout.split("%x00\n").filter(Boolean);
+    const commits = stdout.split(String.fromCharCode(0) + "\n").filter(Boolean);
 
     for (const commit of commits) {
       const parts = commit.split("\x00");
@@ -248,5 +248,115 @@ export async function hasCommits(boxRoot: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Extended log entry with multi-value trailer support.
+ */
+export interface GitLogEntryExtended {
+  hash: string;
+  date: string;
+  subject: string;
+  body?: string | undefined;
+  trailers?: Record<string, string | string[]> | undefined;
+}
+
+/**
+ * Get paginated commits from the log with multi-value trailer support.
+ *
+ * @param boxRoot - Repository root
+ * @param count - Number of commits to retrieve
+ * @param offset - Number of commits to skip
+ * @returns Array of log entries
+ */
+export async function getLogPaginated(
+  boxRoot: string,
+  count = 50,
+  offset = 0
+): Promise<GitLogEntryExtended[]> {
+  const format = "%H%x00%aI%x00%s%x00%b%x00";
+
+  try {
+    const args = [
+      "log",
+      `-${count}`,
+      `--format=${format}`,
+    ];
+    if (offset > 0) {
+      args.push(`--skip=${offset}`);
+    }
+
+    const { stdout } = await git(boxRoot, args);
+
+    const entries: GitLogEntryExtended[] = [];
+    const commits = stdout.split(String.fromCharCode(0) + "\n").filter(Boolean);
+
+    for (const commit of commits) {
+      const parts = commit.split("\x00");
+      if (parts.length < 3) continue;
+
+      const [hash, date, subject, body] = parts;
+
+      // Parse trailers from body, collecting multi-value keys
+      const trailers: Record<string, string | string[]> = {};
+      if (body) {
+        const lines = body.trim().split("\n");
+        for (const line of lines) {
+          const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
+          if (match) {
+            const key = match[1]!;
+            const value = match[2]!;
+            const existing = trailers[key];
+            if (existing === undefined) {
+              trailers[key] = value;
+            } else if (Array.isArray(existing)) {
+              existing.push(value);
+            } else {
+              trailers[key] = [existing, value];
+            }
+          }
+        }
+      }
+
+      entries.push({
+        hash: hash!,
+        date: date!,
+        subject: subject!,
+        body: body?.trim() || undefined,
+        trailers: Object.keys(trailers).length > 0 ? trailers : undefined,
+      });
+    }
+
+    return entries;
+  } catch {
+    // No commits yet
+    return [];
+  }
+}
+
+/**
+ * Get the diff for a specific commit.
+ *
+ * @param boxRoot - Repository root
+ * @param hash - Commit hash
+ * @returns The diff output
+ */
+export async function getCommitDiff(
+  boxRoot: string,
+  hash: string
+): Promise<string> {
+  try {
+    // Try normal diff against parent
+    const { stdout } = await git(boxRoot, ["diff", `${hash}~1`, hash]);
+    return stdout;
+  } catch {
+    // Probably the initial commit with no parent
+    try {
+      const { stdout } = await git(boxRoot, ["show", "--format=", hash]);
+      return stdout;
+    } catch {
+      return "";
+    }
   }
 }
