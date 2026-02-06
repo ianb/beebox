@@ -16,4 +16,4 @@ import { fileURLToPath } from "node:url";
 // NOTE: This must happen BEFORE any JSX-using modules are imported.
 // Once tsx compiles a module, changing this env var won't help.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-process.env.TSX_TSCONFIG_PATH = path.resolve(__dirname, "../tsconfig.json");
+process.env.TSX_TSCONFIG_PATH = path.resolve(__dirname, "../../tsconfig.json");
