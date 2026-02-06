@@ -57,6 +57,9 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
 # Local config (credentials, etc.)
 config/connectors/*.secret.*
 
+# Server PID file
+.cb-serve.pid
+
 # Temporary files
 *.tmp
 *.swp

@@ -16,6 +16,7 @@ import { registerSseRoutes } from "./routes/sse.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerBriefRoutes } from "./routes/briefs.js";
+import { registerHistoryRoutes } from "./routes/history.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 
 export const DEFAULT_PORT = 3210;
@@ -59,6 +60,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   await registerActionRoutes(server, boxRoot);
   await registerCommandRoutes(server, boxRoot);
   await registerBriefRoutes(server, boxRoot);
+  await registerHistoryRoutes(server, boxRoot);
 
   // Serve static frontend files (in production)
   // Path from dist/webapp/ to src/frontend/dist
@@ -126,23 +128,68 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
 }
 
 /**
+ * Kill any previous server process using the PID file.
+ */
+async function killPreviousServer(pidFile: string): Promise<void> {
+  try {
+    const pidStr = await fs.promises.readFile(pidFile, "utf-8");
+    const pid = parseInt(pidStr.trim(), 10);
+    if (isNaN(pid)) return;
+
+    try {
+      // Check if process is alive (signal 0 doesn't kill, just checks)
+      process.kill(pid, 0);
+      console.log(`Killing previous server (PID ${pid})...`);
+      process.kill(pid, "SIGTERM");
+      // Give it a moment to shut down
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        process.kill(pid, 0);
+        // Still alive, force kill
+        console.log(`Force killing previous server (PID ${pid})...`);
+        process.kill(pid, "SIGKILL");
+      } catch {
+        // Already dead, good
+      }
+    } catch {
+      // Process doesn't exist, stale PID file
+    }
+
+    await fs.promises.unlink(pidFile).catch(() => {});
+  } catch {
+    // No PID file, nothing to do
+  }
+}
+
+/**
  * Start the server.
  */
 export async function startServer(options: ServerOptions = {}): Promise<void> {
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? "localhost";
+  const boxRoot = options.boxRoot ?? await requireBoxRoot();
 
-  const server = await createServer(options);
+  const pidFile = path.join(boxRoot, ".cb-serve.pid");
+
+  // Kill any previous zombie server
+  await killPreviousServer(pidFile);
+
+  const server = await createServer({ ...options, boxRoot });
+
+  // Write PID file
+  await fs.promises.writeFile(pidFile, String(process.pid));
 
   // Graceful shutdown handler
   const shutdown = async (signal: string) => {
     console.log(`\nReceived ${signal}, shutting down gracefully...`);
     try {
+      await fs.promises.unlink(pidFile).catch(() => {});
       await server.close();
       console.log("Server closed.");
       process.exit(0);
     } catch (err) {
       console.error("Error during shutdown:", err);
+      await fs.promises.unlink(pidFile).catch(() => {});
       process.exit(1);
     }
   };
@@ -155,8 +202,23 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
     await server.listen({ port, host });
     console.log(`Server running at http://${host}:${port}`);
   } catch (err) {
+    await fs.promises.unlink(pidFile).catch(() => {});
     server.log.error(err);
     process.exit(1);
+  }
+
+  // Orphan detection: if our parent process dies (ppid becomes 1),
+  // shut down gracefully instead of becoming a zombie.
+  const initialPpid = process.ppid;
+  if (initialPpid !== 1) {
+    const orphanCheck = setInterval(() => {
+      if (process.ppid !== initialPpid) {
+        console.log(`Parent process died (was ${initialPpid}, now ${process.ppid}), shutting down.`);
+        clearInterval(orphanCheck);
+        shutdown("orphan-detection");
+      }
+    }, 2000);
+    orphanCheck.unref();
   }
 }
 
