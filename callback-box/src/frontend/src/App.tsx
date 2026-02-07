@@ -14,6 +14,7 @@ import { ProcessNewsForm, buildProcessNewsLabel, type ProcessNewsArgs } from "./
 import { CommandRunner } from "./components/CommandRunner";
 import { NewsPage } from "./components/NewsPage";
 import { HistoryPage } from "./components/HistoryPage";
+import { SettingsPage } from "./components/SettingsPage";
 import { useSSE } from "./hooks/useSSE";
 import {
   getInbox,
@@ -36,6 +37,7 @@ function AppNav() {
     { to: "/", label: "Dashboard", match: (p: string) => p === "/" },
     { to: "/news", label: "News", match: (p: string) => p.startsWith("/news") },
     { to: "/history", label: "History", match: (p: string) => p.startsWith("/history") },
+    { to: "/settings", label: "Settings", match: (p: string) => p.startsWith("/settings") },
   ];
 
   return (
@@ -480,6 +482,7 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route path="/news/*" element={<NewsPageWrapper />} />
         <Route path="/history/:hash?" element={<HistoryPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/card/*" element={<CardViewPage />} />
         <Route path="*" element={<Dashboard />} />
       </Route>

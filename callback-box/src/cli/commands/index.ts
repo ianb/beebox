@@ -22,3 +22,4 @@ export { processFeedbackCommand } from "./process-feedback.js";
 export { triageFeedbackCommand } from "./triage-feedback.js";
 export { workflowCommand } from "./workflow.js";
 export { initRulesCommand } from "./init-rules.js";
+export { pairCommand } from "./pair.js";

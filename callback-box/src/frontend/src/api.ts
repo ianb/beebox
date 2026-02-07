@@ -431,6 +431,30 @@ export async function completeReading(
   });
 }
 
+// --- Dropbox Pairing API ---
+
+export interface DropboxStatus {
+  paired: boolean;
+  workerUrl?: string;
+  channelId?: string;
+}
+
+export interface PairResult {
+  code: string;
+  expiresAt: string;
+}
+
+export async function getDropboxStatus(): Promise<DropboxStatus> {
+  return fetchJson<DropboxStatus>(`${API_BASE}/dropbox/status`);
+}
+
+export async function createPairing(workerUrl: string): Promise<PairResult> {
+  return fetchJson<PairResult>(`${API_BASE}/dropbox/pair`, {
+    method: "POST",
+    body: JSON.stringify({ workerUrl }),
+  });
+}
+
 // --- History API ---
 
 export interface HistoryCommit {

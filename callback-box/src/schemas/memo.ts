@@ -38,6 +38,17 @@ export const MemoSource = element("source", {
 });
 
 /**
+ * Child element for context (URL, page title, selected text from browser).
+ */
+export const MemoContext = element("context", {
+  attrs: {
+    url: z.string().url().optional(),
+    title: z.string().optional(),
+  },
+  text: z.string().optional(),
+});
+
+/**
  * Child element for transcription (added by pre-action).
  */
 export const MemoTranscription = element("transcription", {
@@ -94,6 +105,7 @@ export const MemoSchema = element("memo", {
       MemoCreated,
       MemoContent,
       MemoSource,
+      MemoContext,
       MemoTranscription,
       MemoTranscriptionError,
     ])
@@ -137,6 +149,40 @@ export function createVoiceMemoTemplate(): string {
   <source>voice</source>
 </memo>
 `;
+}
+
+/**
+ * Template for creating a memo card from a dropbox message (browser context).
+ */
+export function createDropboxMemoTemplate(options: {
+  content: string;
+  timestamp?: string;
+  context?: { url?: string; title?: string; selectedText?: string };
+}): string {
+  const created = options.timestamp || new Date().toISOString();
+  let contextElement = "";
+  if (options.context) {
+    const attrs: string[] = [];
+    if (options.context.url) attrs.push(` url="${escapeXmlAttr(options.context.url)}"`);
+    if (options.context.title) attrs.push(` title="${escapeXmlAttr(options.context.title)}"`);
+    const text = options.context.selectedText ? escapeXml(options.context.selectedText) : "";
+    contextElement = `\n  <context${attrs.join("")}>${text}</context>`;
+  }
+
+  return `<memo status="new">
+  <created>${created}</created>
+  <content>${escapeXml(options.content)}</content>
+  <source>dropbox</source>${contextElement}
+</memo>
+`;
+}
+
+function escapeXmlAttr(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function escapeXml(str: string): string {

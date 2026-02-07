@@ -17,6 +17,7 @@ import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerBriefRoutes } from "./routes/briefs.js";
 import { registerHistoryRoutes } from "./routes/history.js";
+import { registerPairingRoutes } from "./routes/pairing.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 
 export const DEFAULT_PORT = 3210;
@@ -61,6 +62,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   await registerCommandRoutes(server, boxRoot);
   await registerBriefRoutes(server, boxRoot);
   await registerHistoryRoutes(server, boxRoot);
+  await registerPairingRoutes(server, boxRoot);
 
   // Serve static frontend files (in production)
   // Path from dist/webapp/ to src/frontend/dist

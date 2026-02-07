@@ -7,6 +7,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { createRssConnector } from "../../connectors/rss.js";
+import { createDropboxConnector } from "../../connectors/dropbox.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const pullCommand = new Command("pull")
@@ -17,6 +18,7 @@ export const pullCommand = new Command("pull")
 
     // Initialize connectors
     createRssConnector(boxRoot);
+    createDropboxConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

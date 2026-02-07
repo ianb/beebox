@@ -46,6 +46,7 @@
     "@parcel/markdown-ansi": "^2.16.3",
     "@types/turndown": "^5.0.6",
     "ansi-to-html": "^0.7.2",
+    "callback-dropbox": "file:../callback-dropbox",
     "cardworks": "file:../cardworks",
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
