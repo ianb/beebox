@@ -37,8 +37,9 @@ interface DropboxState {
 }
 
 interface MemoMessage {
-  type: "memo";
+  type: string;
   text: string;
+  url?: string;
   context?: {
     url?: string;
     title?: string;
@@ -50,7 +51,7 @@ interface MemoMessage {
 function isMemoMessage(data: unknown): data is MemoMessage {
   if (!data || typeof data !== "object") return false;
   const d = data as Record<string, unknown>;
-  return d.type === "memo" && typeof d.text === "string";
+  return (d.type === "memo" || d.type === "message") && typeof d.text === "string";
 }
 
 function safeFilename(text: string): string {
@@ -135,8 +136,7 @@ class DropboxConnector implements Connector {
         try {
           const cardContent = this.messageToCard(msg);
           if (!cardContent) {
-            // Unknown message type — skip but still delete
-            await client.deleteMessage(msg.id);
+            // Unknown message type — skip, don't delete (might be handled later)
             continue;
           }
 
@@ -198,8 +198,11 @@ class DropboxConnector implements Connector {
         content: msg.data.text,
         timestamp: msg.data.timestamp || msg.createdAt,
       };
+      // Support both nested context object and flat url field
       if (msg.data.context) {
         opts.context = msg.data.context;
+      } else if (msg.data.url) {
+        opts.context = { url: msg.data.url };
       }
       return createDropboxMemoTemplate(opts);
     }
