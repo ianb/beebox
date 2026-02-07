@@ -6,6 +6,7 @@ import { CommentsSchema, LocationSchema, MixedCommentSchema } from "./base.js";
  */
 export interface ElementSchema<T = unknown> extends ZodType<T> {
   tagName: string;
+  instructions?: string;
 }
 
 /**
@@ -55,6 +56,8 @@ export interface ElementConfig<
   children?: TChildren;
   /** Text content schema */
   text?: TText;
+  /** Handling instructions for agents working with this card type */
+  instructions?: string;
 }
 
 /**
@@ -129,6 +132,9 @@ export function element<
     dirty: boolean;
   }>;
   schemaWithTag.tagName = tagName;
+  if (config.instructions) {
+    schemaWithTag.instructions = config.instructions;
+  }
 
   return schemaWithTag;
 }

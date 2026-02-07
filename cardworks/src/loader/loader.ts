@@ -473,14 +473,19 @@ abstract class BaseCardLoader implements ICardLoader {
       // Skip the card being moved (we'll move it, not update refs in it)
       if (cardPath === from) continue;
 
-      const content = await this.fs.read(cardPath);
-      const node = await parseXml(content, cardPath);
+      try {
+        const content = await this.fs.read(cardPath);
+        const node = await parseXml(content, cardPath);
 
-      const refsUpdated = await this.updateRefsInNode(node, cardPath, from, to);
+        const refsUpdated = await this.updateRefsInNode(node, cardPath, from, to);
 
-      if (refsUpdated > 0) {
-        await this.fs.write(cardPath, serializeElement(node, this.getSerializeOptions()));
-        result.updatedCards.push({ path: cardPath, refsUpdated });
+        if (refsUpdated > 0) {
+          await this.fs.write(cardPath, serializeElement(node, this.getSerializeOptions()));
+          result.updatedCards.push({ path: cardPath, refsUpdated });
+        }
+      } catch {
+        // Skip cards that can't be parsed (malformed XML, etc.)
+        continue;
       }
     }
 
