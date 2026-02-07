@@ -16,13 +16,21 @@ export interface InitOptions {
   branch?: string | undefined;
 }
 
+export interface InitResult {
+  /** Whether this was a fresh init or an update of an existing box */
+  isUpdate: boolean;
+}
+
 /**
- * Initialize a new callback box at the given path.
+ * Initialize a new callback box or update an existing one.
+ *
+ * On a fresh init: creates directories, marker, .gitignore, git repo, initial commit.
+ * On an existing box: ensures directories exist, updates .gitignore.
  *
  * @param boxRoot - Directory to initialize (will be created if needed)
  * @param options - Initialization options
  */
-export async function initBox(boxRoot: string, options: InitOptions = {}): Promise<void> {
+export async function initBox(boxRoot: string, options: InitOptions = {}): Promise<InitResult> {
   const resolvedRoot = path.resolve(boxRoot);
 
   // Create root directory if needed
@@ -30,26 +38,21 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
 
   // Check if already initialized
   const markerPath = path.join(resolvedRoot, BOX_MARKER);
-  try {
-    await fs.access(markerPath);
-    throw new Error(`Directory is already a callback box: ${resolvedRoot}`);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
-    }
-  }
+  const isUpdate = await isValidBox(resolvedRoot);
 
-  // Create all standard directories
+  // Create all standard directories (safe to re-run)
   await ensureDirectories(resolvedRoot);
 
-  // Create marker file with metadata
-  const marker = {
-    version: "1.0.0",
-    created: new Date().toISOString(),
-  };
-  await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
+  if (!isUpdate) {
+    // Create marker file with metadata
+    const marker = {
+      version: "1.0.0",
+      created: new Date().toISOString(),
+    };
+    await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
+  }
 
-  // Create .gitignore
+  // Always write .gitignore (keep in sync with cb version)
   const gitignore = `# Callback Box .gitignore
 # Lock files
 .cb-lock
@@ -67,8 +70,8 @@ config/connectors/*.secret.*
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
 
-  // Initialize git repo
-  if (!options.skipGit) {
+  // Initialize git repo (only on fresh init)
+  if (!options.skipGit && !isUpdate) {
     const isExistingRepo = await isRepo(resolvedRoot);
     if (!isExistingRepo) {
       await initRepo(resolvedRoot, options.branch ?? "main");
@@ -83,6 +86,8 @@ config/connectors/*.secret.*
       },
     });
   }
+
+  return { isUpdate };
 }
 
 /**

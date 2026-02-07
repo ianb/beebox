@@ -252,6 +252,19 @@ export const NewsItemSchema = element("news-item", {
       NewsAnalysis,
     ])
   ),
+  instructions: `# Handling News Items
+
+**Location IS state.** The filesystem path tells you the lifecycle stage:
+- \`box/inbox/news/\` — new, awaiting triage
+- \`box/pool/news/\` — triaged as interesting, ready for brief
+- \`store/archive/news/\` — used in a brief
+- \`store/trash/news/\` — skipped
+
+The \`status\` attribute is deprecated. Don't set it or rely on it. Use \`cb move\` and \`cb trash\` to change state, never manual file moves.
+
+The <analysis> element is NOT a summary. The full article content is already in <content>. Analysis is metadata about how the article fits the reader's mental space: topics, type, thesis, tone, timeliness. Think of it as cataloging notes for the brief writer.
+
+When fetching article content, store it in <content format="markdown"> with \`fetched-at\` and \`fetched-url\` attributes. If fetch fails, add <fetch-error> with \`attempted-at\` — don't leave the card in an ambiguous state.`,
 });
 
 export type NewsItem = z.infer<typeof NewsItemSchema>;

@@ -155,6 +155,19 @@ export const FeedbackSchema = element("feedback", {
       FeedbackTranscriptionError,
     ])
   ),
+  instructions: `# Handling Feedback
+
+**Wait for transcription.** Voice feedback (<source>voice</source>) needs a <transcription> element before it can be processed. If it has <transcription-error permanent="true">, skip it — the audio can't be transcribed. If transcription is just missing, leave the card alone for the transcriber to handle.
+
+**Triage before integrating.** Set \`triage-status\` to categorize what the feedback is:
+- "feedback" → comment about the brief, integrate as <user-comment> on the target
+- "task" → reminder or follow-up, route to tasks
+- "split" → feedback covers multiple topics, split into separate cards
+- "unhandled" → unclear intent
+
+When integrating feedback into a brief: add a <user-comment> child element to the targeted section/expando in the brief card. Include the timestamp, source, and optionally the audio path. Then set triage-status="integrated" on this feedback card.
+
+The <target ref="..."> uses path#fragment format. The fragment identifies which element in the brief (section ID, expando ID, query ID, or hypothesis ID).`,
 });
 
 export type Feedback = z.infer<typeof FeedbackSchema>;

@@ -388,6 +388,19 @@ export const NewsBriefSchema = element("news-brief", {
       Sources,
     ])
   ),
+  instructions: `# Handling News Briefs
+
+**Curate FIRST, write SECOND.** Always create the <curation> element before writing content. Editorial decisions (what to feature, what to test, what rationale) must be explicit before prose begins. This is not optional.
+
+The reader has NOT seen the source articles. Provide FULL context in every section — don't assume background knowledge. Use <excerpt> elements liberally (at least one per section) to let original authors' voices come through.
+
+Every <section> needs a \`link\` attribute (primary source URL) and \`via\` attribute (feed/source name like "Hacker News"). These are how the reader navigates to sources.
+
+Write direct headlines that tell the reader what happened. Never write clickbait or mystery headlines. Trust the reader's intelligence.
+
+<expando> elements are for depth without clutter — use them for technical details, background context, or tangential points the reader might want but doesn't need.
+
+After the user reads (indicated by \`read-at\` and \`overall-rating\` attributes), feedback processing may update the news-guide. The \`guide-revision\` attribute tracks when this happened.`,
 });
 
 export type NewsBrief = z.infer<typeof NewsBriefSchema>;

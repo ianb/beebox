@@ -318,6 +318,21 @@ export const NewsGuideSchema = element("news-guide", {
       ReaderReactions,
     ])
   ),
+  instructions: `# Handling News Guide
+
+This is a living document — the theory of the user. Treat it as a model to be refined, not a static config.
+
+**Confidence ladder:** hypothesis → low → medium → high → confirmed. Only upgrade when there's evidence. Only downgrade when evidence contradicts. Never jump from hypothesis to confirmed in one step.
+
+**Source hierarchy:** user-stated > feedback > inferred > default. A user-stated belief overrides anything inferred.
+
+**ALWAYS have active experiments.** If all experiments are resolved, propose new ones. Experiments are how the system learns — without them it stagnates. Aim for 1-3 active experiments at any time.
+
+Use <topic> elements inside <interests>, NOT <interest>. The container is <interests>, the children are <topic>.
+
+When revising based on brief feedback: cite the specific brief in \`ref\` attributes, update \`updated-at\`, and explain changes in experiment observations. Every change should be traceable to evidence.
+
+Don't remove topics just because one brief got a "meh" rating. Look for patterns across multiple briefs before downgrading confidence.`,
 });
 
 export type NewsGuide = z.infer<typeof NewsGuideSchema>;

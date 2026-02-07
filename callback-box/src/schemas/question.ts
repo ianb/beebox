@@ -142,6 +142,17 @@ export const QuestionSchema = element("question", {
     QuestionAnsweredAt,
     QuestionAnsweredVia,
   ])),
+  instructions: `# Handling Questions
+
+Questions interrupt the user. Every question you create costs the user's attention. Before creating one, ask yourself: can you make a reasonable decision without asking? If so, just decide.
+
+The \`answered-by\` attribute routes the answer back to your agent. Always set it so the system knows where to deliver the response.
+
+Provide enough context in <memo> that the user understands WHY you're asking without needing to look anything up. Include <context ref="..."> to link related cards.
+
+For select questions, make options mutually exclusive and cover the likely answers. For confirm questions, make the prompt unambiguous about what "yes" means.
+
+Don't create questions for things that can wait — batch related questions into one if possible.`,
 });
 
 export type Question = z.infer<typeof QuestionSchema>;

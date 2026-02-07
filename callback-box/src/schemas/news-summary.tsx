@@ -77,6 +77,13 @@ export const NewsSummarySchema = element("news-summary", {
       SourceRef,
     ])
   ),
+  instructions: `# Handling News Summaries
+
+News summaries are simple digests — less structured than news-briefs. Use when a quick compilation is needed rather than a curated narrative.
+
+Set <period> to cover the time range of included articles. List every source article as a <source path="..."> child.
+
+Status is straightforward: draft → final. Set to "final" once the summary is ready for the reader.`,
 });
 
 export type NewsSummary = z.infer<typeof NewsSummarySchema>;
