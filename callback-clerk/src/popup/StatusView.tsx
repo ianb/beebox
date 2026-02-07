@@ -21,8 +21,11 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
     onUnpair();
   }
 
-  function handleOpenSidePanel() {
-    chrome.runtime.sendMessage({ type: "openSidePanel" });
+  async function handleOpenSidePanel() {
+    const win = await chrome.windows.getCurrent();
+    if (win.id != null) {
+      await chrome.sidePanel.open({ windowId: win.id });
+    }
     window.close();
   }
 

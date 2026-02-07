@@ -25,11 +25,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ ok: true });
   }
   if (message.type === "openSidePanel") {
-    chrome.sidePanel
-      .open({ windowId: _sender.tab?.windowId })
-      .catch(() => {
-        // sidePanel.open requires a user gesture in some contexts; ignore errors
-      });
+    chrome.windows.getCurrent().then((win) => {
+      if (win.id != null) {
+        chrome.sidePanel.open({ windowId: win.id }).catch((err) => {
+          console.error("[callback-clerk] sidePanel.open error:", err);
+        });
+      }
+    });
     sendResponse({ ok: true });
   }
 });
