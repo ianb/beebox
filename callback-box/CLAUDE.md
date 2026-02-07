@@ -206,6 +206,7 @@ All detailed documentation lives in `docs/`. **When you add a new doc, update th
 | docs/DESIGN.md | Goals, concepts, rationale—*what* we're building and *why* |
 | docs/IMPLEMENTATION.md | Technical implementation guide—*how* to build it |
 | docs/EXAMPLE_FILES.md | Concrete examples of cards, schemas, CLI usage |
+| docs/workflow-implementation.md | Workflow engine: definitions, runs, steps, validation, CLI usage |
 
 ### Adding Documentation
 

@@ -16,6 +16,7 @@ import "./fetch-all-news.js";
 import "./process-news.js";
 import "./process-feedback.js";
 import "./triage-feedback.js";
+import "./workflow.js";
 
 // Re-export for convenience
 export {

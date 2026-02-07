@@ -27,6 +27,8 @@ import {
   processNewsCommand,
   processFeedbackCommand,
   triageFeedbackCommand,
+  workflowCommand,
+  initRulesCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -56,6 +58,8 @@ program.addCommand(fetchAllNewsCommand);
 program.addCommand(processNewsCommand);
 program.addCommand(processFeedbackCommand);
 program.addCommand(triageFeedbackCommand);
+program.addCommand(workflowCommand);
+program.addCommand(initRulesCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

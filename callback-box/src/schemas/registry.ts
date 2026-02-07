@@ -13,6 +13,8 @@ import { NewsSummarySchema } from "./news-summary.js";
 import { NewsBriefSchema } from "./news-brief.js";
 import { NewsGuideSchema } from "./news-guide.js";
 import { FeedbackSchema } from "./feedback.js";
+import { WorkflowSchema } from "./workflow.js";
+import { WorkflowRunSchema } from "./workflow-run.js";
 
 /**
  * All registered card schemas.
@@ -25,6 +27,8 @@ export const schemas: ElementSchema[] = [
   NewsBriefSchema,
   NewsGuideSchema,
   FeedbackSchema,
+  WorkflowSchema,
+  WorkflowRunSchema,
 ];
 
 /**
@@ -60,3 +64,5 @@ export { NewsSummarySchema } from "./news-summary.js";
 export { NewsBriefSchema } from "./news-brief.js";
 export { NewsGuideSchema } from "./news-guide.js";
 export { FeedbackSchema } from "./feedback.js";
+export { WorkflowSchema } from "./workflow.js";
+export { WorkflowRunSchema } from "./workflow-run.js";
