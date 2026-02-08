@@ -314,6 +314,22 @@ try {
 
 Cards are matched to schemas by tag name - a `<recipe>` element is validated against `RecipeSchema` (which was defined with `element("recipe", ...)`). Cards with no matching schema are loaded without validation.
 
+### Readable Validation Errors
+
+When validation fails on `z.union()` children (e.g., a child element doesn't match any allowed type), cardworks produces concise error messages instead of raw Zod dumps. It matches the actual element's `tagName` against union branches to show only relevant errors:
+
+```
+children[3]: Unexpected element <bogus>, expected one of: <title>, <content>, <sources>
+```
+
+If the tag matches but has other issues (e.g., missing attributes), only that branch's errors are shown:
+
+```
+children[1].attrs.required: Required
+```
+
+You can also use `formatValidationError(zodError, node)` directly to format a `ZodError` from any `element()` schema.
+
 ### Type Inference
 
 The `element()` helper provides full TypeScript type inference:
@@ -1254,6 +1270,7 @@ Steps:
 |----------|-------------|
 | `element(tagName, config)` | Create Zod schema for XML element |
 | `ElementNodeSchema` | Base schema for any ElementNode |
+| `formatValidationError(error, node?)` | Format ZodError into readable message |
 
 ### Serialization
 

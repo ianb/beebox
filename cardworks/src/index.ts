@@ -29,6 +29,7 @@ export {
 } from "./schema/element.js";
 export { CommentsSchema, LocationSchema } from "./schema/base.js";
 export { SchemaRegistry } from "./schema/registry.js";
+export { formatValidationError } from "./schema/format-error.js";
 
 // Serializer
 export { serialize, type SerializeOptions } from "./serialize/serialize.js";

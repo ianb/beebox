@@ -8,6 +8,7 @@ import { NodeFileSystem } from "../fs/node-fs.js";
 import { MemoryFileSystem } from "../fs/memory-fs.js";
 import { SchemaRegistry } from "../schema/registry.js";
 import type { ElementSchema } from "../schema/element.js";
+import { formatValidationError } from "../schema/format-error.js";
 import type { ZodError } from "zod";
 import { type Card, createCard } from "../card/card.js";
 
@@ -322,8 +323,9 @@ abstract class BaseCardLoader implements ICardLoader {
     if (schema) {
       const result = schema.safeParse(node);
       if (!result.success) {
+        const formatted = formatValidationError(result.error, node);
         throw new ValidationError(
-          `${path}: Validation failed for <${node.tagName}>: ${result.error.message}`,
+          `${path}: Validation failed for <${node.tagName}>:\n${formatted}`,
           path,
           node.tagName,
           result.error
