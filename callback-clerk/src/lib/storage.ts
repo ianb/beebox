@@ -32,3 +32,26 @@ export async function getSyncState(): Promise<SyncState | null> {
 export async function saveSyncState(state: SyncState): Promise<void> {
   await chrome.storage.local.set({ syncState: state });
 }
+
+export interface PendingAction {
+  id: string;
+  type: string;
+  url: string;
+  title: string;
+  message: string;
+  receivedAt: string;
+}
+
+export async function getPendingActions(): Promise<PendingAction[]> {
+  const { pendingActions } = await chrome.storage.local.get("pendingActions");
+  return pendingActions ?? [];
+}
+
+export async function savePendingActions(actions: PendingAction[]): Promise<void> {
+  await chrome.storage.local.set({ pendingActions: actions });
+}
+
+export async function removePendingAction(id: string): Promise<void> {
+  const actions = await getPendingActions();
+  await savePendingActions(actions.filter((a) => a.id !== id));
+}

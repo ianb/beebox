@@ -1,4 +1,10 @@
-import { type StoredCredentials, clearCredentials, getSyncState } from "../lib/storage";
+import {
+  type StoredCredentials,
+  type PendingAction,
+  clearCredentials,
+  getSyncState,
+  getPendingActions,
+} from "../lib/storage";
 import { useEffect, useState } from "react";
 
 interface StatusViewProps {
@@ -12,16 +18,26 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
   const [currentUrl, setCurrentUrl] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
 
   useEffect(() => {
     getSyncState().then((state) => {
       setLastSync(state?.lastSyncAt ?? null);
     });
+    getPendingActions().then(setPendingActions);
     chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       if (tabs[0]?.url) {
         setCurrentUrl(tabs[0].url);
       }
     });
+
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if (changes.pendingActions) {
+        setPendingActions(changes.pendingActions.newValue ?? []);
+      }
+    };
+    chrome.storage.onChanged.addListener(onChange);
+    return () => chrome.storage.onChanged.removeListener(onChange);
   }, []);
 
   async function handleUnpair() {
@@ -57,6 +73,15 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
     );
   }
 
+  function dismissAction(id: string) {
+    chrome.runtime.sendMessage({ type: "dismissAction", id });
+  }
+
+  function openAction(action: PendingAction) {
+    chrome.tabs.create({ url: action.url });
+    dismissAction(action.id);
+  }
+
   return (
     <div className="p-4">
       <h1 className="text-lg font-semibold mb-3">Callback Clerk</h1>
@@ -65,6 +90,41 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
           <span className="w-2 h-2 rounded-full bg-green-500" />
           <span className="text-sm text-gray-700">Connected</span>
         </div>
+
+        {pendingActions.length > 0 && (
+          <div className="space-y-2">
+            {pendingActions.map((action) => (
+              <div
+                key={action.id}
+                className="border border-amber-300 bg-amber-50 rounded p-2"
+              >
+                <div className="text-sm font-medium">{action.title}</div>
+                <div className="text-xs text-gray-500 truncate">
+                  {action.url}
+                </div>
+                {action.message && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    {action.message}
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => openAction(action)}
+                    className="flex-1 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                  >
+                    Open
+                  </button>
+                  <button
+                    onClick={() => dismissAction(action.id)}
+                    className="flex-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs hover:bg-gray-200"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <form onSubmit={handleSend}>
           <textarea

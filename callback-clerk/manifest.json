@@ -3,7 +3,7 @@
   "name": "Callback Clerk",
   "version": "0.0.1",
   "description": "Browser companion for callback-box",
-  "permissions": ["tabs", "storage", "sidePanel"],
+  "permissions": ["tabs", "storage", "sidePanel", "alarms"],
   "background": {
     "service_worker": "src/background/index.ts",
     "type": "module"
