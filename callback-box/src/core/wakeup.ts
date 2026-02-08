@@ -17,6 +17,7 @@ import {
   buildItemProcessingPrompt,
 } from "./agent.js";
 import { CardLoader } from "cardworks";
+import { executeCommands } from "../cli/commands/execute-commands.js";
 
 export interface WakeupOptions {
   dryRun?: boolean | undefined;
@@ -307,7 +308,7 @@ async function processQuestionsPhase(
 }
 
 /**
- * Execute commands phase - simulated for now.
+ * Execute commands phase - sends ready command cards via connectors.
  */
 async function executeCommandsPhase(
   state: Awaited<ReturnType<typeof getSystemState>>,
@@ -320,11 +321,16 @@ async function executeCommandsPhase(
     return { message: "No ready commands" };
   }
 
-  for (const cmd of ready) {
-    onLog(`  Would execute: ${cmd.relativePath}`);
+  const result = await executeCommands(state.boxRoot, { onLog });
+
+  if (result.failed.length > 0) {
+    return {
+      message: `${result.sent.length} sent, ${result.failed.length} failed`,
+      error: `${result.failed.length} command(s) failed`,
+    };
   }
 
-  return { message: `${ready.length} command(s) ready (execution not yet implemented)` };
+  return { message: `${result.sent.length} command(s) executed` };
 }
 
 /**

@@ -33,11 +33,14 @@ fi
 output=$(cb validate "$file_path" 2>&1)
 exit_code=$?
 
-# If validation produced output (errors or warnings), return as system message
-if [ -n "$output" ]; then
-  # Escape the output for JSON
-  escaped_output=$(echo "$output" | jq -Rs .)
-  echo "{\"systemMessage\": $escaped_output}"
+if [ $exit_code -ne 0 ]; then
+  # Output JSON with additionalContext so the agent sees the warning
+  jq -n --arg msg "Card validation warning for $file_path:
+$output" '{
+    "hookSpecificOutput": {
+      "hookEventName": "PostToolUse",
+      "additionalContext": $msg
+    }
+  }'
+  exit 0
 fi
-
-exit 0

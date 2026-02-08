@@ -139,21 +139,16 @@ async function loadBriefSummary(
 async function loadBrief(
   boxRoot: string,
   relativePath: string
-): Promise<ParsedNewsBrief | null> {
-  try {
-    const fullPath = path.join(boxRoot, relativePath);
-    const loader = new CardLoader(boxRoot);
-    const card = await loader.load(fullPath);
+): Promise<ParsedNewsBrief> {
+  const fullPath = path.join(boxRoot, relativePath);
+  const loader = new CardLoader(boxRoot);
+  const card = await loader.load(fullPath);
 
-    if (card.element.tagName !== "news-brief" && card.element.tagName !== "news-edition") {
-      return null;
-    }
-
-    return parseNewsBrief(card.element as any);
-  } catch (err) {
-    console.error(`Failed to load brief ${relativePath}:`, err);
-    return null;
+  if (card.element.tagName !== "news-brief" && card.element.tagName !== "news-edition") {
+    throw new Error(`Not a brief: ${card.element.tagName}`);
   }
+
+  return parseNewsBrief(card.element as any);
 }
 
 /**
@@ -198,13 +193,14 @@ export async function registerBriefRoutes(
     "/api/brief/:path",
     async (request, reply) => {
       const relativePath = decodeURIComponent(request.params.path);
-      const brief = await loadBrief(boxRoot, relativePath);
-
-      if (!brief) {
-        return reply.status(404).send({ error: "Brief not found" });
+      try {
+        const brief = await loadBrief(boxRoot, relativePath);
+        return { brief };
+      } catch (err) {
+        const message = (err as Error).message;
+        const status = message.includes("ENOENT") ? 404 : 500;
+        return reply.status(status).send({ error: `Failed to load brief: ${message}` });
       }
-
-      return { brief };
     }
   );
 
@@ -213,13 +209,14 @@ export async function registerBriefRoutes(
     "/api/edition/:path",
     async (request, reply) => {
       const relativePath = decodeURIComponent(request.params.path);
-      const edition = await loadBrief(boxRoot, relativePath);
-
-      if (!edition) {
-        return reply.status(404).send({ error: "Edition not found" });
+      try {
+        const edition = await loadBrief(boxRoot, relativePath);
+        return { edition };
+      } catch (err) {
+        const message = (err as Error).message;
+        const status = message.includes("ENOENT") ? 404 : 500;
+        return reply.status(status).send({ error: `Failed to load edition: ${message}` });
       }
-
-      return { edition };
     }
   );
 

@@ -21,6 +21,7 @@ import {
   MemoMessageSchema,
   type MemoMessage,
 } from "callback-dropbox/client";
+import { CardLoader, type ElementNode } from "cardworks";
 import {
   registerConnector,
   type Connector,
@@ -64,7 +65,7 @@ function safeFilename(text: string): string {
 
 class DropboxConnector implements Connector {
   name = "dropbox";
-  handles: string[] = [];
+  handles: string[] = ["open-tab"];
   produces = ["memo"];
 
   private boxRoot: string;
@@ -223,11 +224,48 @@ class DropboxConnector implements Connector {
     return "Dropbox_Message";
   }
 
-  async execute(_cardPath: string, _dryRun: boolean): Promise<ExecuteResult> {
-    return {
-      success: false,
-      error: "Dropbox connector does not support command execution yet",
-    };
+  async execute(cardPath: string, dryRun: boolean): Promise<ExecuteResult> {
+    const config = await this.loadConfig();
+    if (!config) {
+      return { success: false, error: "Dropbox connector not configured" };
+    }
+
+    // Load and parse the command card
+    const loader = new CardLoader(this.boxRoot);
+    const card = await loader.load(cardPath);
+    const el = card.element;
+
+    const cardType = el.attrs["type"];
+    if (cardType !== "open-tab") {
+      return { success: false, error: `Unsupported command type: ${cardType}` };
+    }
+
+    // Extract child elements
+    const children = el.children as ElementNode[];
+    const url = children.find((c) => c.tagName === "url")?.text?.trim();
+    const title = children.find((c) => c.tagName === "title")?.text?.trim();
+    const message = children.find((c) => c.tagName === "message")?.text?.trim();
+
+    if (!url || !title || !message) {
+      return { success: false, error: "Command card missing required fields (url, title, message)" };
+    }
+
+    if (dryRun) {
+      return { success: true, details: { type: "open-tab", url, title, message } };
+    }
+
+    const client = new DropboxClient({
+      url: config.workerUrl,
+      apiKey: config.apiKey,
+      channelKey: config.channelKey,
+    });
+
+    await client.send(
+      { type: "open-tab", url, title, message },
+      { sender: "agent", contentType: "application/json" }
+    );
+
+    return { success: true };
   }
 }
 

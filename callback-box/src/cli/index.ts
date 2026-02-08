@@ -30,6 +30,7 @@ import {
   workflowCommand,
   initRulesCommand,
   pairCommand,
+  executeCommandsCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -62,6 +63,7 @@ program.addCommand(triageFeedbackCommand);
 program.addCommand(workflowCommand);
 program.addCommand(initRulesCommand);
 program.addCommand(pairCommand);
+program.addCommand(executeCommandsCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)
@@ -84,15 +86,6 @@ program
   .option("--dry-run", "Preview without executing")
   .action((card: string, options: { dryRun?: boolean }) => {
     console.log(`cb do: would execute ${card}${options.dryRun ? " (dry run)" : ""}`);
-    console.log("Not yet implemented");
-  });
-
-program
-  .command("exec")
-  .description("Execute all ready commands")
-  .option("--dry-run", "Preview without executing")
-  .action((options: { dryRun?: boolean }) => {
-    console.log(`cb exec: would execute all ready commands${options.dryRun ? " (dry run)" : ""}`);
     console.log("Not yet implemented");
   });
 
