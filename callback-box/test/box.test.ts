@@ -103,17 +103,19 @@ test("getBoxMetadata returns metadata", async (t) => {
   }
 });
 
-test("initBox fails on existing box", async (t) => {
+test("initBox is idempotent on existing box", async (t) => {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cb-test-"));
 
   try {
     await initBox(tmpDir, { skipGit: true });
+    const metadata1 = await getBoxMetadata(tmpDir);
 
-    // Try to init again
-    await t.rejects(
-      initBox(tmpDir, { skipGit: true }),
-      /already a callback box/
-    );
+    // Init again — should succeed without overwriting metadata
+    await initBox(tmpDir, { skipGit: true });
+    const metadata2 = await getBoxMetadata(tmpDir);
+
+    t.equal(metadata2?.created, metadata1?.created, "created timestamp preserved");
+    t.equal(await isValidBox(tmpDir), true, "still a valid box");
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true });
   }

@@ -1,3 +1,5 @@
+plugin:
+  - "!@tapjs/typescript"
 node-arg:
   - --import=tsx
 include:
