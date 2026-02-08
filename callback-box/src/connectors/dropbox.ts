@@ -15,7 +15,12 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { DropboxClient, type DecryptedMessage } from "callback-dropbox/client";
+import {
+  DropboxClient,
+  type DecryptedMessage,
+  MemoMessageSchema,
+  type MemoMessage,
+} from "callback-dropbox/client";
 import {
   registerConnector,
   type Connector,
@@ -36,22 +41,17 @@ interface DropboxState {
   lastPollTime?: string;
 }
 
-interface MemoMessage {
-  type: string;
-  text: string;
-  url?: string;
-  context?: {
-    url?: string;
-    title?: string;
-    selectedText?: string;
-  };
-  timestamp?: string;
-}
-
-function isMemoMessage(data: unknown): data is MemoMessage {
-  if (!data || typeof data !== "object") return false;
-  const d = data as Record<string, unknown>;
-  return (d.type === "memo" || d.type === "message") && typeof d.text === "string";
+function parseMemoMessage(data: unknown): MemoMessage | null {
+  // Accept canonical "memo" type
+  const result = MemoMessageSchema.safeParse(data);
+  if (result.success) return result.data;
+  // Backward compat: accept legacy "message" type
+  if (data && typeof data === "object" && (data as Record<string, unknown>).type === "message") {
+    const patched = { ...data as Record<string, unknown>, type: "memo" as const };
+    const retry = MemoMessageSchema.safeParse(patched);
+    if (retry.success) return retry.data;
+  }
+  return null;
 }
 
 function safeFilename(text: string): string {
@@ -193,16 +193,21 @@ class DropboxConnector implements Connector {
   }
 
   private messageToCard(msg: DecryptedMessage): string | null {
-    if (isMemoMessage(msg.data)) {
+    const memo = parseMemoMessage(msg.data);
+    if (memo) {
       const opts: Parameters<typeof createDropboxMemoTemplate>[0] = {
-        content: msg.data.text,
-        timestamp: msg.data.timestamp || msg.createdAt,
+        content: memo.text,
+        timestamp: memo.timestamp || msg.createdAt,
       };
       // Support both nested context object and flat url field
-      if (msg.data.context) {
-        opts.context = msg.data.context;
-      } else if (msg.data.url) {
-        opts.context = { url: msg.data.url };
+      if (memo.context) {
+        const ctx: { url?: string; title?: string; selectedText?: string } = {};
+        if (memo.context.url) ctx.url = memo.context.url;
+        if (memo.context.title) ctx.title = memo.context.title;
+        if (memo.context.selectedText) ctx.selectedText = memo.context.selectedText;
+        opts.context = ctx;
+      } else if (memo.url) {
+        opts.context = { url: memo.url };
       }
       return createDropboxMemoTemplate(opts);
     }
@@ -211,8 +216,9 @@ class DropboxConnector implements Connector {
   }
 
   private messageLabel(msg: DecryptedMessage): string {
-    if (isMemoMessage(msg.data)) {
-      return msg.data.text.slice(0, 50);
+    const memo = parseMemoMessage(msg.data);
+    if (memo) {
+      return memo.text.slice(0, 50);
     }
     return "Dropbox_Message";
   }

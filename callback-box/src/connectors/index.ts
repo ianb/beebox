@@ -29,6 +29,8 @@ export interface PullResult {
   success: boolean;
   created: string[];
   updated: string[];
+  /** Cards that were pushed to the remote service (two-way sync) */
+  pushed?: string[];
   error?: string;
 }
 

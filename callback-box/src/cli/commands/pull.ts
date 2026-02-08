@@ -8,6 +8,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { createRssConnector } from "../../connectors/rss.js";
 import { createDropboxConnector } from "../../connectors/dropbox.js";
+import { createRaindropConnector } from "../../connectors/raindrop.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const pullCommand = new Command("pull")
@@ -19,6 +20,7 @@ export const pullCommand = new Command("pull")
     // Initialize connectors
     createRssConnector(boxRoot);
     createDropboxConnector(boxRoot);
+    createRaindropConnector(boxRoot);
 
     const connectors = getAllConnectors();
 
@@ -38,6 +40,7 @@ export const pullCommand = new Command("pull")
     }
 
     let totalCreated = 0;
+    let totalPushed = 0;
     let totalErrors = 0;
 
     for (const connector of toRun) {
@@ -45,6 +48,14 @@ export const pullCommand = new Command("pull")
 
       try {
         const result = await connector.pull();
+
+        if (result.pushed && result.pushed.length > 0) {
+          console.log(`  Pushed ${result.pushed.length} card(s):`);
+          for (const card of result.pushed) {
+            console.log(`    - ${card}`);
+          }
+          totalPushed += result.pushed.length;
+        }
 
         if (result.created.length > 0) {
           console.log(`  Created ${result.created.length} card(s):`);
@@ -61,7 +72,11 @@ export const pullCommand = new Command("pull")
         if (result.error) {
           console.error(`  Error: ${result.error}`);
           totalErrors++;
-        } else if (result.created.length === 0 && result.updated.length === 0) {
+        } else if (
+          result.created.length === 0 &&
+          result.updated.length === 0 &&
+          (!result.pushed || result.pushed.length === 0)
+        ) {
           console.log("  No new items.");
         }
       } catch (err) {
@@ -70,5 +85,9 @@ export const pullCommand = new Command("pull")
       }
     }
 
-    console.log(`\nTotal: ${totalCreated} created, ${totalErrors} errors.`);
+    const parts: string[] = [];
+    if (totalPushed > 0) parts.push(`${totalPushed} pushed`);
+    parts.push(`${totalCreated} created`);
+    parts.push(`${totalErrors} errors`);
+    console.log(`\nTotal: ${parts.join(", ")}.`);
   });

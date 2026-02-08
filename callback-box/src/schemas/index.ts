@@ -15,6 +15,7 @@ export {
   NewsBriefSchema,
   NewsGuideSchema,
   FeedbackSchema,
+  BookmarkSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -25,6 +26,7 @@ export type { NewsSummary, NewsSummaryStatus } from "./news-summary.js";
 export type { NewsBrief } from "./news-brief.js";
 export type { NewsGuide } from "./news-guide.js";
 export type { Feedback } from "./feedback.js";
+export type { Bookmark } from "./bookmark.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -35,6 +37,7 @@ export {
 } from "./question.js";
 export { createNewsItemTemplate } from "./news-item.js";
 export { createNewsSummaryTemplate } from "./news-summary.js";
+export { createBookmarkTemplate } from "./bookmark.js";
 
 // Re-export template registry
 export {
