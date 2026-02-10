@@ -18,6 +18,7 @@ import {
 } from "./agent.js";
 import { CardLoader } from "cardworks";
 import { executeCommands } from "../cli/commands/execute-commands.js";
+import { generateDocs } from "./generate-docs.js";
 
 export interface WakeupOptions {
   dryRun?: boolean | undefined;
@@ -48,6 +49,9 @@ export async function runWakeup(
   const results: PhaseResult[] = [];
 
   try {
+    // Regenerate agent docs (cheap — just writes markdown files)
+    await generateDocs(boxRoot);
+
     // Get current state
     const state = await getSystemState(boxRoot);
     const context = await generateContext(boxRoot);

@@ -3,11 +3,16 @@
  *
  * This module handles spawning Claude Code with appropriate context
  * and processing its outputs.
+ *
+ * Set CB_LOG_PROMPTS=1 to capture full API traffic (including system prompts
+ * and CLAUDE.md content) via claude-code-logger. Logs go to .callback-box/logs/.
  */
 
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { createWriteStream, type WriteStream } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { fmt } from "../cli/lib/format.js";
 
@@ -65,6 +70,88 @@ function formatCommandLine(cmd: string, args: string[]): string {
   lines.push("");
 
   return lines.join("\n");
+}
+
+/**
+ * Start a claude-code-logger proxy for capturing full API traffic.
+ * Returns the proxy process, port, and log file stream.
+ */
+async function startPromptLogger(
+  boxRoot: string,
+  sessionId: string,
+): Promise<{ proxy: ChildProcess; port: number; logStream: WriteStream } | null> {
+  const logsDir = path.join(boxRoot, ".callback-box", "logs");
+  await fs.mkdir(logsDir, { recursive: true });
+
+  const logPath = path.join(logsDir, `${sessionId}.log`);
+  const logStream = createWriteStream(logPath, { flags: "a" });
+
+  // Write header
+  const header = `\n${"=".repeat(60)}\nSession: ${sessionId}\nStarted: ${new Date().toISOString()}\n${"=".repeat(60)}\n\n`;
+  logStream.write(header);
+
+  // Pick a random port in the ephemeral range
+  const port = 30000 + Math.floor(Math.random() * 20000);
+
+  const proxy = spawn("npx", [
+    "claude-code-logger", "start",
+    "--port", String(port),
+    "--verbose",
+    "--log-body",
+    "--merge-sse",
+  ], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  // Pipe proxy output to log file
+  proxy.stdout?.on("data", (data) => logStream.write(data));
+  proxy.stderr?.on("data", (data) => logStream.write(data));
+
+  // Wait for the proxy to signal readiness
+  const ready = await new Promise<boolean>((resolve) => {
+    const timeout = setTimeout(() => resolve(false), 10000);
+    let buffer = "";
+
+    const onData = (data: Buffer) => {
+      buffer += data.toString();
+      if (buffer.includes("Proxy server started")) {
+        clearTimeout(timeout);
+        resolve(true);
+      }
+    };
+
+    proxy.stdout?.on("data", onData);
+    proxy.stderr?.on("data", onData);
+
+    proxy.on("error", () => {
+      clearTimeout(timeout);
+      resolve(false);
+    });
+
+    proxy.on("close", () => {
+      clearTimeout(timeout);
+      resolve(false);
+    });
+  });
+
+  if (!ready) {
+    proxy.kill();
+    logStream.write("Failed to start prompt logger proxy\n");
+    logStream.end();
+    return null;
+  }
+
+  return { proxy, port, logStream };
+}
+
+/**
+ * Stop the prompt logger proxy and close the log file.
+ */
+function stopPromptLogger(logger: { proxy: ChildProcess; logStream: WriteStream }): void {
+  logger.proxy.kill();
+  const footer = `\n${"=".repeat(60)}\nEnded: ${new Date().toISOString()}\n${"=".repeat(60)}\n`;
+  logger.logStream.write(footer);
+  logger.logStream.end();
 }
 
 export interface AgentOptions {
@@ -152,56 +239,77 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     const cmdLine = formatCommandLine("claude", args);
     onOutput?.(cmdLine);
 
-    // Add callback-box bin directory to PATH so cb commands are available
-    const env = {
-      ...process.env,
-      PATH: `${binDir}:${process.env.PATH ?? ""}`,
-    };
+    // Start prompt logger if CB_LOG_PROMPTS is set
+    const shouldLog = process.env.CB_LOG_PROMPTS === "1";
+    const loggerSetup = shouldLog
+      ? startPromptLogger(boxRoot, sessionId)
+      : Promise.resolve(null);
 
-    // Use cb-claude wrapper which auto-adds --plugin-dir for card validation
-    const child = spawn(cbClaudePath, args, {
-      cwd: boxRoot,
-      env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (data) => {
-      const text = data.toString();
-      stdout += text;
-      onOutput?.(text);
-    });
-
-    child.stderr.on("data", (data) => {
-      const text = data.toString();
-      stderr += text;
-      onOutput?.(text);
-    });
-
-    child.on("error", (err) => {
-      resolve({
-        success: false,
-        output: stdout,
-        error: `Failed to spawn Claude Code: ${err.message}`,
-        exitCode: -1,
-        sessionId,
-      });
-    });
-
-    child.on("close", (code) => {
-      const exitCode = code ?? 0;
-      const result: AgentResult = {
-        success: exitCode === 0,
-        output: stdout,
-        exitCode,
-        sessionId,
-      };
-      if (exitCode !== 0) {
-        result.error = stderr || `Exit code: ${exitCode}`;
+    loggerSetup.then((logger) => {
+      if (shouldLog && logger) {
+        onOutput?.(`Prompt logging enabled → .callback-box/logs/${sessionId}.log\n`);
+      } else if (shouldLog) {
+        onOutput?.("Warning: prompt logging requested but logger failed to start\n");
       }
-      resolve(result);
+
+      // Add callback-box bin directory to PATH so cb commands are available
+      const env: Record<string, string | undefined> = {
+        ...process.env,
+        PATH: `${binDir}:${process.env.PATH ?? ""}`,
+      };
+
+      // Route through the logging proxy if active
+      if (logger) {
+        env.ANTHROPIC_BASE_URL = `http://localhost:${logger.port}/`;
+      }
+
+      // Use cb-claude wrapper which auto-adds --plugin-dir for card validation
+      const child = spawn(cbClaudePath, args, {
+        cwd: boxRoot,
+        env,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      child.stdout.on("data", (data) => {
+        const text = data.toString();
+        stdout += text;
+        onOutput?.(text);
+      });
+
+      child.stderr.on("data", (data) => {
+        const text = data.toString();
+        stderr += text;
+        onOutput?.(text);
+      });
+
+      child.on("error", (err) => {
+        if (logger) stopPromptLogger(logger);
+        resolve({
+          success: false,
+          output: stdout,
+          error: `Failed to spawn Claude Code: ${err.message}`,
+          exitCode: -1,
+          sessionId,
+        });
+      });
+
+      child.on("close", (code) => {
+        if (logger) stopPromptLogger(logger);
+        const exitCode = code ?? 0;
+        const result: AgentResult = {
+          success: exitCode === 0,
+          output: stdout,
+          exitCode,
+          sessionId,
+        };
+        if (exitCode !== 0) {
+          result.error = stderr || `Exit code: ${exitCode}`;
+        }
+        resolve(result);
+      });
     });
   });
 }

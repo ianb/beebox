@@ -39,7 +39,7 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
     const glob = `**/*.${schema.tagName}.card`;
     const filename = `card-${schema.tagName}.md`;
     const content = `---
-globs:
+paths:
   - "${glob}"
 ---
 
