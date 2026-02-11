@@ -17,9 +17,46 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// Restore badge on startup/install
-chrome.runtime.onInstalled.addListener(() => updateBadge());
+// Restore badge and create context menu on startup/install
+chrome.runtime.onInstalled.addListener(() => {
+  updateBadge();
+  chrome.contextMenus.create({
+    id: "save-to-brief",
+    title: "Add to News Brief",
+    contexts: ["link"],
+  });
+});
 chrome.runtime.onStartup.addListener(() => updateBadge());
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "save-to-brief" && info.linkUrl) {
+    const title = info.selectionText || info.linkUrl;
+    saveToBrief(info.linkUrl, title).then(() => {
+      if (tab?.id) {
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: (msg: string) => {
+            const el = document.createElement("div");
+            el.textContent = msg;
+            Object.assign(el.style, {
+              position: "fixed", bottom: "24px", right: "24px",
+              background: "#16a34a", color: "white",
+              padding: "10px 18px", borderRadius: "8px",
+              fontSize: "14px", fontFamily: "system-ui, sans-serif",
+              zIndex: "2147483647", boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+              transition: "opacity 0.3s",
+            });
+            document.body.appendChild(el);
+            setTimeout(() => { el.style.opacity = "0"; }, 1500);
+            setTimeout(() => el.remove(), 1800);
+          },
+          args: ["Added to News Brief"],
+        });
+      }
+    });
+  }
+});
 
 // Handle messages from popup/sidepanel
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -35,6 +72,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === "paired") {
     pollMessages().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === "saveToBrief") {
+    saveToBrief(message.url, message.title).then(() =>
+      sendResponse({ ok: true })
+    );
     return true;
   }
   if (message.type === "dismissAction") {
@@ -120,6 +163,20 @@ async function sync() {
     await pollMessages();
   } catch (err) {
     console.error("[callback-clerk] sync error:", err);
+  }
+}
+
+async function saveToBrief(url: string, title: string) {
+  const client = await createDropboxClient();
+  if (!client) return;
+
+  try {
+    await client.send(
+      { type: "save-to-brief", url, title, timestamp: new Date().toISOString() },
+      { sender: "clerk", contentType: "application/json" }
+    );
+  } catch (err) {
+    console.error("[callback-clerk] saveToBrief error:", err);
   }
 }
 

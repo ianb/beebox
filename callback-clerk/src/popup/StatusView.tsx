@@ -16,8 +16,11 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
+  const [currentTitle, setCurrentTitle] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
+  const [savedBrief, setSavedBrief] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
 
   useEffect(() => {
@@ -28,6 +31,9 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
     chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       if (tabs[0]?.url) {
         setCurrentUrl(tabs[0].url);
+      }
+      if (tabs[0]?.title) {
+        setCurrentTitle(tabs[0].title);
       }
     });
 
@@ -69,6 +75,21 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
         setSent(true);
         setMessage("");
         setTimeout(() => setSent(false), 2000);
+      }
+    );
+  }
+
+  function handleSaveToBrief() {
+    setSavingBrief(true);
+    chrome.runtime.sendMessage(
+      { type: "saveToBrief", url: currentUrl, title: currentTitle },
+      () => {
+        setSavedBrief(true);
+        setTimeout(() => {
+          chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+            if (tabs[0]?.id) chrome.tabs.remove(tabs[0].id);
+          });
+        }, 1500);
       }
     );
   }
@@ -124,6 +145,16 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
               </div>
             ))}
           </div>
+        )}
+
+        {currentUrl && (
+          <button
+            onClick={handleSaveToBrief}
+            disabled={savingBrief || savedBrief}
+            className="w-full px-3 py-2 bg-amber-600 text-white rounded text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+          >
+            {savedBrief ? "Saved!" : savingBrief ? "Saving..." : "Add to News Brief"}
+          </button>
         )}
 
         <form onSubmit={handleSend}>
