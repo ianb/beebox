@@ -59,7 +59,7 @@ export const NewsPublished = element("published", {
  */
 export const NewsFeed = element("feed", {
   attrs: {
-    url: z.string().url(),
+    url: z.string().url().optional(),
   },
   text: z.string(), // Feed title
 });
@@ -236,6 +236,8 @@ export const NewsItemSchema = element("news-item", {
   attrs: {
     /** @deprecated Use location instead. Kept for backward compatibility. */
     status: NewsItemStatus.optional(),
+    /** Where this item came from: "rss" (default) or "user" (explicitly saved from browser) */
+    source: z.enum(["rss", "user"]).optional(),
   },
   children: z.array(
     z.union([
@@ -276,22 +278,25 @@ export function createNewsItemTemplate(options: {
   title: string;
   link: string;
   published: string;
-  feedUrl: string;
-  feedTitle: string;
+  feedUrl?: string;
+  feedTitle?: string;
   summary?: string;
   author?: string;
-  guid: string;
+  guid?: string;
   comments?: string;
+  source?: "rss" | "user";
 }): string {
+  const feedTitle = options.feedTitle || (options.source === "user" ? "Saved from browser" : undefined);
+  const guid = options.guid || options.link;
   const newsItem = (
-    <news-item status="new">
+    <news-item status="new" source={options.source}>
       <title>{options.title}</title>
       <link>{options.link}</link>
       <published>{options.published}</published>
-      <feed url={options.feedUrl}>{options.feedTitle}</feed>
+      {feedTitle && <feed url={options.feedUrl}>{feedTitle}</feed>}
       {options.summary && <summary>{options.summary}</summary>}
       {options.author && <author>{options.author}</author>}
-      <guid>{options.guid}</guid>
+      <guid>{guid}</guid>
       {options.comments && <comments>{options.comments}</comments>}
     </news-item>
   );

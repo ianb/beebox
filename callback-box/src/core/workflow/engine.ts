@@ -763,17 +763,23 @@ async function ensureGitClean(
   const gitStatus = await getStatus(boxRoot);
 
   if (!gitStatus.clean) {
-    // Fallback commit — the agent didn't commit
+    // Fallback commit — the agent didn't commit its own work
     await stageAll(boxRoot);
     const trailers: Record<string, string> = {
       Workflow: workflowName,
       Step: stepId,
+      "Commit-Source": "workflow-fallback",
     };
     if (sessionId) {
       trailers["Session"] = sessionId;
     }
+
+    // Build a summary of what changed
+    const allFiles = [...gitStatus.staged, ...gitStatus.modified, ...gitStatus.untracked];
+    const summary = buildFallbackSummary(allFiles, boxRoot);
+
     return await commit(boxRoot, {
-      message: `[workflow] Step work: ${stepId}`,
+      message: `[workflow] ${stepId}: ${summary}`,
       trailers,
     });
   }
@@ -786,6 +792,35 @@ async function ensureGitClean(
     cwd: boxRoot,
   });
   return stdout.trim();
+}
+
+/**
+ * Build a short summary of changed files for fallback commit messages.
+ */
+function buildFallbackSummary(files: string[], boxRoot: string): string {
+  if (files.length === 0) return "uncommitted changes";
+
+  // Extract basenames and count by directory
+  const dirCounts = new Map<string, number>();
+  for (const f of files) {
+    const dir = path.dirname(f);
+    dirCounts.set(dir, (dirCounts.get(dir) || 0) + 1);
+  }
+
+  // If all files are in one directory, mention it
+  if (dirCounts.size === 1) {
+    const entry = [...dirCounts.entries()][0]!;
+    const dir = entry[0];
+    const count = entry[1];
+    const shortDir = dir.replace(/^.*?\//, ""); // trim leading segment
+    if (count === 1) {
+      return `update ${path.basename(files[0]!)}`;
+    }
+    return `update ${count} files in ${shortDir}`;
+  }
+
+  // Multiple dirs — summarize
+  return `update ${files.length} files`;
 }
 
 /**

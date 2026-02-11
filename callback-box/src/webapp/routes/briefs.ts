@@ -93,8 +93,11 @@ async function findBriefs(boxRoot: string): Promise<{ path: string; read: boolea
     }
   }
 
-  // Sort by filename (date prefix) descending
-  briefs.sort((a, b) => b.path.localeCompare(a.path));
+  // Sort: unread first, then by filename (date prefix) descending within each group
+  briefs.sort((a, b) => {
+    if (a.read !== b.read) return a.read ? 1 : -1;
+    return path.basename(b.path).localeCompare(path.basename(a.path));
+  });
 
   return briefs;
 }

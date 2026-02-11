@@ -159,7 +159,9 @@
         cb move box/inbox/feedback/&lt;card&gt; box/inbox/unhandled/
         ```
 
-        STEP 4 - COMMIT:
+        STEP 4 - COMMIT (REQUIRED — do not skip):
+        You MUST commit before finishing. Uncommitted work gets a generic fallback message.
+
         ```bash
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
         Triage feedback: &lt;N&gt; integrated, &lt;M&gt; unhandled
@@ -336,8 +338,8 @@
         &lt;/topic&gt;
         ```
 
-        STEP 7 - COMMIT WITH DETAILED MESSAGE:
-        After updating the guide and marking briefs, commit with a detailed message.
+        STEP 7 - COMMIT (REQUIRED — do not skip):
+        You MUST commit before finishing. Uncommitted work gets a generic fallback message.
 
         ```bash
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'

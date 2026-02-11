@@ -9,12 +9,12 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
 export const trashCommand = new Command("trash")
-  .description("Move a card to the trash")
-  .argument("<path>", "Path to the card to trash")
+  .description("Move one or more cards to the trash")
+  .argument("<paths...>", "Paths to the cards to trash")
   .option("--reason <reason>", "Reason for trashing")
   .option("--commit", "Commit the change")
   .option("--dry-run", "Show what would happen without doing it")
-  .action(async (cardPath: string, options: { reason?: string; commit?: boolean; dryRun?: boolean }) => {
+  .action(async (cardPaths: string[], options: { reason?: string; commit?: boolean; dryRun?: boolean }) => {
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
@@ -22,7 +22,7 @@ export const trashCommand = new Command("trash")
       const result = await runCommand(
         "trash",
         {
-          path: cardPath,
+          paths: cardPaths,
           reason: options.reason,
           commit: options.commit,
           dryRun: options.dryRun,

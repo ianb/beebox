@@ -21,8 +21,8 @@ import { stageFiles, commit } from "../../cli/lib/git.js";
  * Arguments for the move command.
  */
 export interface MoveArgs {
-  /** Path to the card to move (relative to box root or absolute) */
-  from: string;
+  /** Path(s) to the card(s) to move (relative to box root or absolute) */
+  from: string | string[];
   /** Destination path (relative to box root or absolute) */
   to: string;
   /** Whether to commit the change */
@@ -31,8 +31,80 @@ export interface MoveArgs {
   dryRun?: boolean;
 }
 
+interface MoveOneResult {
+  from: string;
+  to: string;
+  movedFiles: Array<{ from: string; to: string }>;
+  updatedCards: Array<{ path: string; refsUpdated: number }>;
+  filesToStage: string[];
+}
+
 /**
- * Execute the move command.
+ * Check if a destination path looks like a directory (not a specific card file).
+ */
+function isDirectoryDest(destPath: string): boolean {
+  return destPath.endsWith("/") || !destPath.includes(".card");
+}
+
+/**
+ * Move a single card, returning structured results.
+ */
+async function moveOne(
+  ctx: CommandContext,
+  sourcePath: string,
+  destPath: string
+): Promise<MoveOneResult> {
+  const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
+  const relDestPath = path.relative(ctx.boxRoot, destPath);
+
+  const loader = new CardLoader(ctx.boxRoot);
+  const card = await loader.load(sourcePath);
+  const { result } = await loader.move(card, destPath);
+
+  ctx.writeLine(`Moved: ${relSourcePath} → ${relDestPath}`);
+
+  for (const file of result.movedFiles) {
+    if (file.from !== sourcePath) {
+      const relFrom = path.relative(ctx.boxRoot, file.from);
+      const relTo = path.relative(ctx.boxRoot, file.to);
+      ctx.writeLine(`  Also moved: ${relFrom} → ${relTo}`);
+    }
+  }
+
+  if (result.updatedCards.length > 0) {
+    ctx.writeLine(`Updated references in ${result.updatedCards.length} card(s):`);
+    for (const update of result.updatedCards) {
+      const relPath = path.relative(ctx.boxRoot, update.path);
+      ctx.writeLine(`  ${relPath} (${update.refsUpdated} ref${update.refsUpdated > 1 ? "s" : ""})`);
+    }
+  }
+
+  const filesToStage: string[] = [];
+  for (const file of result.movedFiles) {
+    filesToStage.push(path.relative(ctx.boxRoot, file.from));
+    filesToStage.push(path.relative(ctx.boxRoot, file.to));
+  }
+  for (const update of result.updatedCards) {
+    filesToStage.push(path.relative(ctx.boxRoot, update.path));
+  }
+
+  return {
+    from: relSourcePath,
+    to: relDestPath,
+    movedFiles: result.movedFiles.map((f) => ({
+      from: path.relative(ctx.boxRoot, f.from),
+      to: path.relative(ctx.boxRoot, f.to),
+    })),
+    updatedCards: result.updatedCards.map((u) => ({
+      path: path.relative(ctx.boxRoot, u.path),
+      refsUpdated: u.refsUpdated,
+    })),
+    filesToStage,
+  };
+}
+
+/**
+ * Execute the move command (supports single or multiple source paths).
  */
 async function executeMove(
   ctx: CommandContext,
@@ -44,142 +116,117 @@ async function executeMove(
     return { success: false, error: "Both 'from' and 'to' paths are required" };
   }
 
-  // Resolve source path
-  let sourcePath: string;
-  if (path.isAbsolute(moveArgs.from)) {
-    sourcePath = moveArgs.from;
-  } else {
-    sourcePath = boxPath(ctx.boxRoot, moveArgs.from);
-  }
+  // Normalize from to an array
+  const fromPaths = Array.isArray(moveArgs.from) ? moveArgs.from : [moveArgs.from];
 
   // Resolve destination path
-  let destPath: string;
+  let rawDestPath: string;
   if (path.isAbsolute(moveArgs.to)) {
-    destPath = moveArgs.to;
+    rawDestPath = moveArgs.to;
   } else {
-    destPath = boxPath(ctx.boxRoot, moveArgs.to);
+    rawDestPath = boxPath(ctx.boxRoot, moveArgs.to);
   }
 
-  // Validate source is a card file
-  if (!isCardFile(sourcePath)) {
-    return { success: false, error: "Source must be a .card file" };
+  const destIsDir = isDirectoryDest(rawDestPath);
+
+  // Multiple sources require a directory destination
+  if (fromPaths.length > 1 && !destIsDir) {
+    return { success: false, error: "Moving multiple cards requires a directory destination" };
   }
 
-  // If destination is a directory, move the file into it with same name
-  if (destPath.endsWith("/") || !destPath.includes(".card")) {
-    const basename = path.basename(sourcePath);
-    destPath = path.join(destPath, basename);
-  }
+  const results: MoveOneResult[] = [];
+  const allFilesToStage: string[] = [];
+  const errors: string[] = [];
 
-  // Validate destination is a card file
-  if (!isCardFile(destPath)) {
-    return { success: false, error: "Destination must be a .card file" };
-  }
+  for (const fromPath of fromPaths) {
+    // Resolve source path
+    let sourcePath: string;
+    if (path.isAbsolute(fromPath)) {
+      sourcePath = fromPath;
+    } else {
+      sourcePath = boxPath(ctx.boxRoot, fromPath);
+    }
 
-  const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
-  const relDestPath = path.relative(ctx.boxRoot, destPath);
+    if (!isCardFile(sourcePath)) {
+      errors.push(`Source must be a .card file: ${fromPath}`);
+      ctx.writeLine(`Error: Source must be a .card file: ${fromPath}`);
+      continue;
+    }
+
+    // Resolve final destination for this file
+    let destPath = rawDestPath;
+    if (destIsDir) {
+      destPath = path.join(rawDestPath, path.basename(sourcePath));
+    }
+
+    if (!isCardFile(destPath)) {
+      errors.push(`Destination must be a .card file: ${destPath}`);
+      ctx.writeLine(`Error: Destination must be a .card file: ${destPath}`);
+      continue;
+    }
+
+    if (moveArgs.dryRun) {
+      const relSource = path.relative(ctx.boxRoot, sourcePath);
+      const relDest = path.relative(ctx.boxRoot, destPath);
+      ctx.writeLine(`Would move: ${relSource} → ${relDest}`);
+      continue;
+    }
+
+    try {
+      const result = await moveOne(ctx, sourcePath, destPath);
+      results.push(result);
+      allFilesToStage.push(...result.filesToStage);
+    } catch (err) {
+      errors.push(`Failed to move ${fromPath}: ${(err as Error).message}`);
+      ctx.writeLine(`Error: Failed to move ${fromPath}: ${(err as Error).message}`);
+    }
+  }
 
   if (moveArgs.dryRun) {
-    ctx.writeLine(`Would move: ${relSourcePath} → ${relDestPath}`);
     ctx.writeLine("(dry run - no changes made)");
-    return {
-      success: true,
-      data: { dryRun: true, from: relSourcePath, to: relDestPath },
-    };
+    return { success: true, data: { dryRun: true } };
   }
 
-  // Use cardworks loader to move the card and update references
-  const loader = new CardLoader(ctx.boxRoot);
+  if (results.length === 0) {
+    return { success: false, error: errors.join("; ") };
+  }
 
-  try {
-    const card = await loader.load(sourcePath);
-    const { card: newCard, result } = await loader.move(card, destPath);
+  // Optionally commit all at once
+  if (moveArgs.commit) {
+    await stageFiles(ctx.boxRoot, allFilesToStage);
 
-    // Report what was moved
-    ctx.writeLine(`Moved: ${relSourcePath} → ${relDestPath}`);
-
-    for (const file of result.movedFiles) {
-      if (file.from !== sourcePath) {
-        const relFrom = path.relative(ctx.boxRoot, file.from);
-        const relTo = path.relative(ctx.boxRoot, file.to);
-        ctx.writeLine(`  Also moved: ${relFrom} → ${relTo}`);
-      }
-    }
-
-    // Report reference updates
-    if (result.updatedCards.length > 0) {
-      ctx.writeLine(`Updated references in ${result.updatedCards.length} card(s):`);
-      for (const update of result.updatedCards) {
-        const relPath = path.relative(ctx.boxRoot, update.path);
-        ctx.writeLine(`  ${relPath} (${update.refsUpdated} ref${update.refsUpdated > 1 ? "s" : ""})`);
-      }
-    }
-
-    // Optionally commit
-    if (moveArgs.commit) {
-      // Stage all the moved files and updated cards
-      const filesToStage: string[] = [];
-
-      // Old paths (deletions)
-      for (const file of result.movedFiles) {
-        filesToStage.push(path.relative(ctx.boxRoot, file.from));
-      }
-
-      // New paths (additions)
-      for (const file of result.movedFiles) {
-        filesToStage.push(path.relative(ctx.boxRoot, file.to));
-      }
-
-      // Updated cards
-      for (const update of result.updatedCards) {
-        filesToStage.push(path.relative(ctx.boxRoot, update.path));
-      }
-
-      await stageFiles(ctx.boxRoot, filesToStage);
-
-      const basename = path.basename(relSourcePath);
-      await commit(ctx.boxRoot, {
-        message: `Move card: ${basename}\n\n${relSourcePath} → ${relDestPath}`,
-        trailers: {
-          "Moved-By": "cb move",
-        },
-      });
-      ctx.writeLine("Committed.");
-    }
-
-    return {
-      success: true,
-      data: {
-        from: relSourcePath,
-        to: relDestPath,
-        movedFiles: result.movedFiles.map((f) => ({
-          from: path.relative(ctx.boxRoot, f.from),
-          to: path.relative(ctx.boxRoot, f.to),
-        })),
-        updatedCards: result.updatedCards.map((u) => ({
-          path: path.relative(ctx.boxRoot, u.path),
-          refsUpdated: u.refsUpdated,
-        })),
+    const summary = results.length === 1
+      ? `Move card: ${path.basename(results[0]!.from)}\n\n${results[0]!.from} → ${results[0]!.to}`
+      : `Move ${results.length} cards to ${path.relative(ctx.boxRoot, rawDestPath)}`;
+    await commit(ctx.boxRoot, {
+      message: summary,
+      trailers: {
+        "Moved-By": "cb move",
       },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to move card: ${(error as Error).message}`,
-    };
+    });
+    ctx.writeLine("Committed.");
   }
+
+  if (errors.length > 0) {
+    ctx.writeLine(`\nMoved ${results.length} card(s), ${errors.length} error(s)`);
+  }
+
+  return {
+    success: true,
+    data: results.length === 1 ? results[0] : { results, errors },
+  };
 }
 
 // Register the command
 registerCommand({
   name: "move",
-  description: "Move/rename a card and update all references",
+  description: "Move/rename one or more cards and update all references",
   args: [
     {
       name: "from",
-      description: "Path to the card to move",
+      description: "Path(s) to the card(s) to move",
       required: true,
-      type: "string",
+      type: "string[]",
     },
     {
       name: "to",

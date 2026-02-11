@@ -113,6 +113,8 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       withDocId(`${DOCS_DIR}/cb-commands.md`, generateCbCommands(), debug)),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
       withDocId(`${DOCS_DIR}/connectors.md`, generateConnectorsDocs(), debug)),
+    writeFile(join(boxRoot, DOCS_DIR, "workflows.md"),
+      withDocId(`${DOCS_DIR}/workflows.md`, generateWorkflowGuide(), debug)),
     ...schemas
       .filter((s) => s.instructions)
       .map((s) => {
@@ -163,6 +165,7 @@ function generateAgentGuide(): string {
     "- `cb validate <path>` — Validate a card against its schema",
     "- `cb answer <path>` — Answer a pending question",
     "- `cb context` — Show current box state for agent prompts",
+    "- `cb workflow run <name-or-path>` — Run a workflow (see `docs/generated/workflows.md`)",
     "",
     "## Card Types",
     "",
@@ -351,6 +354,21 @@ function generateCbCommands(): string {
     "cb status",
     "```",
     "",
+    "## cb workflow",
+    "",
+    "Run and manage declarative workflows. See `docs/generated/workflows.md` for details.",
+    "",
+    "```bash",
+    "cb workflow run <name-or-path>          # Run a workflow",
+    "cb workflow run <name> --step <id>      # Run a single step",
+    "cb workflow run <name> --dry-run        # Preview without executing",
+    "cb workflow list                        # List available workflows",
+    "cb workflow status [run-dir]            # Show status of latest/specific run",
+    "```",
+    "",
+    "The `<name-or-path>` argument can be a bare name (resolves to `config/workflows/<name>.workflow.card`)",
+    "or a direct path to any `.workflow.card` file.",
+    "",
   );
 
   return lines.join("\n");
@@ -434,6 +452,192 @@ function generateConnectorsDocs(): string {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Generate the workflows guide for agents.
+ */
+function generateWorkflowGuide(): string {
+  return `# Workflows
+
+Workflows are multi-step processes defined as XML cards. The workflow engine runs each step in order, checking preconditions, executing actions, and validating results. Everything is tracked in git.
+
+## Running Workflows
+
+\`\`\`bash
+cb workflow run process-news                    # Run by name
+cb workflow run config/workflows/my.workflow.card  # Run by path
+cb workflow run process-news --step triage      # Run one step only
+cb workflow run process-news --dry-run          # Preview steps
+cb workflow list                                # List available workflows
+cb workflow status                              # Show latest run status
+\`\`\`
+
+Workflow definitions live in \`config/workflows/\`. Each run creates a tracking card in \`workflow/runs/<name>_<timestamp>/\`.
+
+## How Steps Work
+
+Each step has three optional phases:
+
+1. **Precheck** — Should this step run? Shell script that exits 0 (proceed), \`$CHECK_SKIP\` (skip), or non-zero (fail).
+2. **Run** — The main action: a shell command or an agent invocation.
+3. **Validate** — Did it work? Shell check + optional model evaluation.
+
+The engine enforces a clean git state between steps. Every step's work is committed before the next step begins.
+
+## Workflow Card Structure
+
+\`\`\`xml
+<workflow name="my-workflow">
+  <description>What this workflow does</description>
+
+  <step id="first-step">
+    <description>Human-readable description of this step</description>
+
+    <precheck>
+      <shell>
+        # Exit 0 to proceed, exit $CHECK_SKIP to skip
+        count=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+        if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
+        echo "Found $count items"
+      </shell>
+      <why>Explanation of when/why this step should be skipped</why>
+    </precheck>
+
+    <run>
+      <agent model="haiku" max-turns="20">
+        Agent prompt goes here. The engine prepends context
+        (date, workflow name, step ID, working directory).
+      </agent>
+    </run>
+
+    <validate severity="review">
+      <shell>
+        # Exit 0 = pass, non-zero = fail
+        remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+        echo "Remaining: $remaining"
+        [ "$remaining" -eq 0 ]
+      </shell>
+      <instruction>
+        Natural language description of what success looks like.
+        A model evaluates the git diff against this instruction.
+      </instruction>
+      <why>Why this validation matters</why>
+    </validate>
+  </step>
+</workflow>
+\`\`\`
+
+## Building Blocks
+
+### Shell Commands
+
+Shell scripts run in the box root via \`bash -c\`. Three outcomes:
+- **Exit 0**: success
+- **Exit \`$CHECK_SKIP\`**: skip this step (prechecks only)
+- **Other exit code**: failure
+
+**Important:** macOS ships bash 3.2. Avoid bash 4+ features like \`declare -A\` (associative arrays). Use \`shopt -s nullglob\` instead of \`for f in glob 2>/dev/null\`.
+
+### Agent Invocations
+
+\`\`\`xml
+<agent model="haiku" max-turns="25">
+  Prompt text here...
+</agent>
+\`\`\`
+
+- \`model\`: \`haiku\` (fast/cheap), \`sonnet\` (balanced), \`opus\` (most capable). Default: sonnet.
+- \`max-turns\`: Maximum tool-use rounds. Default: 20.
+- The engine injects a context block with the date, run card path, step ID, and workflow source location.
+- Agent text is automatically dedented, so indent freely within the XML.
+
+### Passing Precheck Data to Agents
+
+Add \`pass-output="true"\` to a precheck to include its stdout in the agent's context:
+
+\`\`\`xml
+<precheck pass-output="true">
+  <shell>echo "Items to process: 5"</shell>
+</precheck>
+\`\`\`
+
+The agent sees this as a \`<precheck>\` block in its system prompt. Use this to avoid redundant work — the precheck can compute a manifest that the agent acts on.
+
+### Validation Severity
+
+- \`severity="warn"\` — Log the failure and continue
+- \`severity="review"\` — A model evaluates the git diff against the \`<instruction>\`. If it fails, the agent gets one retry attempt.
+- \`severity="abort"\` — Stop the workflow immediately
+
+### Why Elements
+
+\`<why>\` elements explain the purpose of a phase. They're shown to:
+- Humans reading the workflow
+- Review models evaluating validation failures
+- Agents retrying failed steps
+
+## Writing a New Workflow
+
+1. Create \`config/workflows/my-workflow.workflow.card\`
+2. Define steps with prechecks that skip gracefully when there's nothing to do
+3. Use \`cb workflow run my-workflow --dry-run\` to verify the structure
+4. Test step-by-step with \`--step <id>\`
+
+### Tips
+
+- **Prechecks should be fast.** They run every time. Don't do expensive work in prechecks — save that for the run phase.
+- **One concern per step.** Each step should do one thing. If a step needs 40+ agent turns, consider splitting it.
+- **Idempotent steps.** If a workflow is interrupted, it may be re-run. Steps should handle partial state gracefully.
+- **Commit messages matter.** Agents should commit with descriptive messages. The git history IS the audit trail.
+- **Use \`cb move\` not \`mv\`.** Card moves update cross-references. Agents in workflow steps should use \`cb move\` for cards.
+
+### Agent Prompt Guidelines
+
+Agent prompts in workflows should:
+- Start with a clear role statement ("You are triaging inbox items...")
+- List concrete steps (STEP 1, STEP 2, etc.)
+- Include exact shell/command examples the agent can copy
+- Include a commit step marked "REQUIRED — do not skip" with the expected message format
+- End with "GIT: Do NOT add Co-Authored-By to commits."
+
+**Important:** If an agent doesn't commit, the engine creates a fallback commit with a generic message (tagged \`Commit-Source: workflow-fallback\`). Always instruct agents to commit explicitly so the git history is meaningful.
+
+## System Workflows and Migration
+
+Workflow cards in \`config/workflows/\` are installed by \`cb init\` from built-in templates. If you edit a system workflow, your changes are preserved:
+
+- **\`cb init\` on a fresh box**: Templates are copied directly.
+- **\`cb init\` on an existing box (unchanged workflows)**: Templates are updated in place.
+- **\`cb init\` on an existing box (modified workflows)**: The new template is written as \`<name>.orig-workflow.card\` alongside your modified version. You can diff them and merge manually.
+
+To check for updates:
+\`\`\`bash
+ls config/workflows/*.orig-workflow.card
+# If any exist, compare with the main version and merge changes
+diff config/workflows/process-news.workflow.card config/workflows/process-news.orig-workflow.card
+\`\`\`
+
+After merging, delete the \`.orig-workflow.card\` file. The next \`cb init\` will see your merged version as the current copy.
+
+## Git History
+
+A complete workflow run produces commits like:
+
+\`\`\`
+abc123f Complete workflow: process-news
+abc123e [workflow] Complete step: brief
+abc123d Brief: The Specification Problem           ← agent commit
+abc123c [workflow] Complete step: analyze
+abc123b Analyze 5 items                            ← agent commit
+abc123a [workflow] Complete step: fetch
+abc1239 [workflow] Complete step: triage
+abc1238 Triage: 5/12 items kept                    ← agent commit
+abc1237 Start workflow: process-news
+\`\`\`
+
+Each commit represents a clean, consistent state. You can \`git reset --hard\` to any commit to get a valid snapshot.
+`;
 }
 
 /**

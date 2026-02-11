@@ -20,6 +20,8 @@ import {
   type DecryptedMessage,
   MemoMessageSchema,
   type MemoMessage,
+  SaveToBriefMessageSchema,
+  type SaveToBriefMessage,
 } from "callback-dropbox/client";
 import { CardLoader, type ElementNode } from "cardworks";
 import {
@@ -29,6 +31,7 @@ import {
   type ExecuteResult,
 } from "./index.js";
 import { createDropboxMemoTemplate } from "../schemas/memo.js";
+import { createNewsItemTemplate } from "../schemas/news-item.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 
 export interface DropboxConfig {
@@ -55,6 +58,12 @@ function parseMemoMessage(data: unknown): MemoMessage | null {
   return null;
 }
 
+function parseSaveToBriefMessage(data: unknown): SaveToBriefMessage | null {
+  const result = SaveToBriefMessageSchema.safeParse(data);
+  if (result.success) return result.data;
+  return null;
+}
+
 function safeFilename(text: string): string {
   return text
     .replace(/[^a-zA-Z0-9\s-]/g, "")
@@ -66,7 +75,7 @@ function safeFilename(text: string): string {
 class DropboxConnector implements Connector {
   name = "dropbox";
   handles: string[] = ["open-tab"];
-  produces = ["memo"];
+  produces = ["memo", "news-item"];
 
   private boxRoot: string;
 
@@ -130,13 +139,10 @@ class DropboxConnector implements Connector {
         return { success: true, created: [], updated: [] };
       }
 
-      const inboxDir = path.join(this.boxRoot, "box/inbox");
-      await fs.mkdir(inboxDir, { recursive: true });
-
       for (const msg of messages) {
         try {
-          const cardContent = this.messageToCard(msg);
-          if (!cardContent) {
+          const result = this.messageToCard(msg);
+          if (!result) {
             // Unknown message type — skip, don't delete (might be handled later)
             continue;
           }
@@ -146,10 +152,15 @@ class DropboxConnector implements Connector {
             .replace(/[:.]/g, "-")
             .slice(0, 19);
           const label = this.messageLabel(msg);
-          const filename = `${safeFilename(label)}_${timestamp}.memo.card`;
-          const cardPath = path.join(inboxDir, filename);
+          const dir = result.type === "news-item"
+            ? path.join(this.boxRoot, "box/inbox/news")
+            : path.join(this.boxRoot, "box/inbox");
+          await fs.mkdir(dir, { recursive: true });
+          const ext = result.type === "news-item" ? "news-item.card" : "memo.card";
+          const filename = `${safeFilename(label)}_${timestamp}.${ext}`;
+          const cardPath = path.join(dir, filename);
 
-          await fs.writeFile(cardPath, cardContent);
+          await fs.writeFile(cardPath, result.content);
           created.push(path.relative(this.boxRoot, cardPath));
 
           await client.deleteMessage(msg.id);
@@ -175,7 +186,7 @@ class DropboxConnector implements Connector {
     if (created.length > 0) {
       await stageFiles(this.boxRoot, created);
       await commit(this.boxRoot, {
-        message: `Pull ${created.length} memo(s) from dropbox`,
+        message: `Pull ${created.length} item(s) from dropbox`,
         trailers: {
           "Pulled-By": "dropbox-connector",
         },
@@ -193,7 +204,22 @@ class DropboxConnector implements Connector {
     return result;
   }
 
-  private messageToCard(msg: DecryptedMessage): string | null {
+  private messageToCard(msg: DecryptedMessage): { content: string; type: "memo" | "news-item" } | null {
+    const saveToBrief = parseSaveToBriefMessage(msg.data);
+    if (saveToBrief) {
+      return {
+        content: createNewsItemTemplate({
+          title: saveToBrief.title,
+          link: saveToBrief.url,
+          published: saveToBrief.timestamp || msg.createdAt,
+          feedTitle: "Saved from browser",
+          guid: saveToBrief.url,
+          source: "user",
+        }),
+        type: "news-item",
+      };
+    }
+
     const memo = parseMemoMessage(msg.data);
     if (memo) {
       const opts: Parameters<typeof createDropboxMemoTemplate>[0] = {
@@ -210,13 +236,17 @@ class DropboxConnector implements Connector {
       } else if (memo.url) {
         opts.context = { url: memo.url };
       }
-      return createDropboxMemoTemplate(opts);
+      return { content: createDropboxMemoTemplate(opts), type: "memo" };
     }
     // Unknown message type
     return null;
   }
 
   private messageLabel(msg: DecryptedMessage): string {
+    const saveToBrief = parseSaveToBriefMessage(msg.data);
+    if (saveToBrief) {
+      return saveToBrief.title.slice(0, 50);
+    }
     const memo = parseMemoMessage(msg.data);
     if (memo) {
       return memo.text.slice(0, 50);

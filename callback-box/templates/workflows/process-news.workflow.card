@@ -33,18 +33,21 @@
 
         Use this to inform your triage decisions. If no guide exists, use the default criteria below.
 
-        FOR EACH NEWS ITEM:
-        1. Read the title and summary from the card
-        2. Decide: Is this likely interesting based on the title/summary AND the user's guide?
-        3. Take action based on your decision:
+        STEP 1 - READ ALL ITEMS:
+        Read all news items at once:
+        ```
+        cat box/inbox/news/*.news-item.card
+        ```
+        Review the title and summary of each card. Decide which to keep and which to trash.
 
-           INTERESTING → Keep the file where it is (we'll analyze it next)
+        STEP 2 - TRASH REJECTED ITEMS:
+        Use a SINGLE cb trash command with ALL rejected paths:
+        ```
+        cb trash box/inbox/news/item1.news-item.card box/inbox/news/item2.news-item.card ...
+        ```
+        cb trash accepts multiple paths in one call. Do NOT call it once per item.
 
-           NOT INTERESTING → Use the cb trash command (do NOT move files manually):
-           ```
-           cb trash &lt;path&gt; --reason "Not interesting: [brief reason]"
-           ```
-           This command moves to store/trash/ and records the reason.
+        Items you want to keep stay where they are — no action needed for keeps.
 
         DEFAULT CRITERIA (use when no guide exists):
 
@@ -63,11 +66,19 @@
         - Job postings, hiring announcements
         - Press releases without substance
 
+        USER-SAVED ITEMS:
+        Items with source="user" on the &lt;news-item&gt; element are explicit user picks.
+        ALWAYS keep these — never trash them regardless of other criteria.
+
+        TARGET: Keep 5-10 items. Be selective — a focused pool makes better briefs.
+        If there are 30+ items, aim for the lower end. Quality over quantity.
+
         GUIDE-BASED CRITERIA (when guide exists):
-        - Topics in &lt;interests&gt; with high/medium confidence → likely keep
-        - Topics in &lt;disinterests&gt; → likely trash
-        - Topics with "hypothesis" confidence → keep to test the hypothesis
-        - When in doubt, keep—better to analyze and discard later than miss something
+        - Topics in &lt;interests&gt; with high/confirmed confidence → keep
+        - Topics in &lt;disinterests&gt; → trash
+        - Topics with "hypothesis" or "low" confidence → keep 1-2 to test, trash the rest
+        - Duplicates or overlapping coverage → keep the best one, trash others
+        - When in doubt, trash — there will always be more items tomorrow
 
         IMPORTANT: Status is expressed by location, not attributes. Don't modify the status attribute.
         Items stay in inbox/news/ if interesting, or get trashed if not.
@@ -78,7 +89,8 @@
 
         This helps track what's happening during triage.
 
-        When done, commit your changes with a detailed message:
+        COMMIT (REQUIRED — do not skip):
+        You MUST commit before finishing. Uncommitted work gets a generic fallback message.
 
         ```bash
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
@@ -152,7 +164,7 @@
     </precheck>
 
     <run>
-      <agent model="sonnet" max-turns="30">
+      <agent model="sonnet" max-turns="50">
         You are analyzing news articles in a Callback Box.
 
         YOUR TASK:
@@ -197,18 +209,20 @@
         title/summary alone or skip it.
 
         STEP 2 - MOVE TO POOL:
-        After adding the analysis, move the file:
+        After adding analysis to ALL items, move them all at once:
         ```
-        cb move &lt;inbox-path&gt; box/pool/news/
+        cb move box/inbox/news/item1.news-item.card box/inbox/news/item2.news-item.card ... box/pool/news/
         ```
 
-        This command handles moving the file and updating any references.
+        cb move accepts multiple source paths with a directory destination (like mv).
+        Do NOT call it once per item — use a single command for all moves.
         Then commit all changes.
 
         OUTPUT: As you process each item, state what you found:
           ANALYZED: [filename] - [topics/type/timeliness summary]
 
-        When done, commit your changes with a detailed message:
+        COMMIT (REQUIRED — do not skip):
+        You MUST commit before finishing. Uncommitted work gets a generic fallback message.
 
         ```bash
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
@@ -462,12 +476,13 @@
         - Link themes across articles, don't just list them
 
         STEP 4 - ARCHIVE USED ITEMS:
-        After creating the brief, move used items to archive:
+        After creating the brief, move ALL used items to archive in one command:
         ```
-        cb move box/pool/news/&lt;used-file&gt; store/archive/news/
+        cb move box/pool/news/&lt;used1&gt; box/pool/news/&lt;used2&gt; ... store/archive/news/
         ```
 
-        This command handles moving and updating any references (including in the brief you just created).
+        cb move accepts multiple source paths with a directory destination.
+        This handles moving and updating any references (including in the brief you just created).
         Leave items in pool that weren't used—they'll be available for future briefs.
 
         STEP 5 - CREATE NOTIFICATION:
@@ -487,7 +502,8 @@
         Replace &lt;brief-filename&gt; with the actual filename of the brief you just created,
         and &lt;brief title&gt; with the title you chose for the brief.
 
-        When done, commit your changes with a detailed message:
+        COMMIT (REQUIRED — do not skip):
+        You MUST commit before finishing. Uncommitted work gets a generic fallback message.
 
         ```bash
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'

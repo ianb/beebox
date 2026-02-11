@@ -19,8 +19,9 @@ import { stageFiles, commit } from "../../cli/lib/git.js";
  * Arguments for the trash command.
  */
 export interface TrashArgs {
-  /** Path to the card to trash (relative to box root or absolute) */
-  path: string;
+  /** Path(s) to the card(s) to trash (relative to box root or absolute) */
+  path?: string;
+  paths?: string[];
   /** Whether to commit the change */
   commit?: boolean;
   /** Reason for trashing (recorded in commit message) */
@@ -28,43 +29,37 @@ export interface TrashArgs {
 }
 
 /**
- * Execute the trash command.
+ * Trash a single card and its attachments. Returns info about what was moved.
  */
-async function executeTrash(
+async function trashOne(
   ctx: CommandContext,
-  args: Record<string, unknown>
-): Promise<CommandResult> {
-  const trashArgs = args as unknown as TrashArgs;
-
-  if (!trashArgs.path) {
-    return { success: false, error: "Path is required" };
-  }
-
+  cardPath: string
+): Promise<{ relSourcePath: string; relDestPath: string; relatedFiles: string[]; movedFiles: string[] }> {
   // Resolve source path
   let sourcePath: string;
-  if (path.isAbsolute(trashArgs.path)) {
-    sourcePath = trashArgs.path;
+  if (path.isAbsolute(cardPath)) {
+    sourcePath = cardPath;
   } else {
-    sourcePath = boxPath(ctx.boxRoot, trashArgs.path);
+    sourcePath = boxPath(ctx.boxRoot, cardPath);
   }
 
   // Validate it's a card file
   if (!isCardFile(sourcePath)) {
-    return { success: false, error: "Path must be a .card file" };
+    throw new Error(`Path must be a .card file: ${cardPath}`);
   }
 
   // Check source exists
   try {
     await fs.access(sourcePath);
   } catch {
-    return { success: false, error: `Card not found: ${sourcePath}` };
+    throw new Error(`Card not found: ${cardPath}`);
   }
 
   // Parse card name
   const basename = path.basename(sourcePath);
   const parsed = parseCardName(basename);
   if (!parsed) {
-    return { success: false, error: "Invalid card name format" };
+    throw new Error(`Invalid card name format: ${basename}`);
   }
 
   // Build destination path in trash
@@ -75,7 +70,6 @@ async function executeTrash(
   let finalDestPath = destPath;
   try {
     await fs.access(destPath);
-    // File exists, add timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const newName = `${parsed.name}_${timestamp}.${parsed.type}.card`;
     finalDestPath = path.join(trashDir, newName);
@@ -118,20 +112,69 @@ async function executeTrash(
     ctx.writeLine(`  Also moved: ${relatedFile}`);
   }
 
-  // Optionally commit
-  if (trashArgs.commit) {
-    // Stage both removals and additions
-    const additions = [relDestPath];
-    for (const relatedFile of relatedFiles) {
-      additions.push(path.relative(ctx.boxRoot, path.join(trashDir, relatedFile)));
-    }
+  return { relSourcePath, relDestPath, relatedFiles, movedFiles };
+}
 
-    // Git handles renames automatically when we stage both
-    await stageFiles(ctx.boxRoot, [...movedFiles, ...additions]);
+/**
+ * Execute the trash command (supports single or multiple paths).
+ */
+async function executeTrash(
+  ctx: CommandContext,
+  args: Record<string, unknown>
+): Promise<CommandResult> {
+  const trashArgs = args as unknown as TrashArgs;
+
+  // Collect all paths (support both single `path` and array `paths`)
+  const allPaths: string[] = [];
+  if (trashArgs.paths && Array.isArray(trashArgs.paths)) {
+    allPaths.push(...trashArgs.paths);
+  }
+  if (trashArgs.path) {
+    allPaths.push(trashArgs.path);
+  }
+  if (allPaths.length === 0) {
+    return { success: false, error: "At least one path is required" };
+  }
+
+  const results: Array<{ sourcePath: string; destPath: string; relatedFiles: string[] }> = [];
+  const allMovedFiles: string[] = [];
+  const allAdditions: string[] = [];
+  const errors: string[] = [];
+
+  for (const cardPath of allPaths) {
+    try {
+      const result = await trashOne(ctx, cardPath);
+      results.push({
+        sourcePath: result.relSourcePath,
+        destPath: result.relDestPath,
+        relatedFiles: result.relatedFiles,
+      });
+      allMovedFiles.push(...result.movedFiles);
+      allAdditions.push(result.relDestPath);
+      for (const relatedFile of result.relatedFiles) {
+        const trashDir = getBoxDir(ctx.boxRoot, "trash");
+        allAdditions.push(path.relative(ctx.boxRoot, path.join(trashDir, relatedFile)));
+      }
+    } catch (err) {
+      errors.push((err as Error).message);
+      ctx.writeLine(`Error: ${(err as Error).message}`);
+    }
+  }
+
+  if (results.length === 0) {
+    return { success: false, error: errors.join("; ") };
+  }
+
+  // Optionally commit all at once
+  if (trashArgs.commit) {
+    await stageFiles(ctx.boxRoot, [...allMovedFiles, ...allAdditions]);
 
     const reason = trashArgs.reason ? `: ${trashArgs.reason}` : "";
+    const summary = results.length === 1
+      ? `Trash card: ${path.basename(results[0]!.sourcePath)}${reason}`
+      : `Trash ${results.length} cards${reason}`;
     await commit(ctx.boxRoot, {
-      message: `Trash ${parsed.type} card: ${parsed.name}${reason}`,
+      message: summary,
       trailers: {
         "Trashed-By": "cb trash",
       },
@@ -139,26 +182,26 @@ async function executeTrash(
     ctx.writeLine("Committed.");
   }
 
+  if (errors.length > 0) {
+    ctx.writeLine(`\nTrashed ${results.length} card(s), ${errors.length} error(s)`);
+  }
+
   return {
     success: true,
-    data: {
-      sourcePath: relSourcePath,
-      destPath: relDestPath,
-      relatedFiles,
-    },
+    data: results.length === 1 ? results[0] : { results, errors },
   };
 }
 
 // Register the command
 registerCommand({
   name: "trash",
-  description: "Move a card to the trash directory",
+  description: "Move one or more cards to the trash directory",
   args: [
     {
-      name: "path",
-      description: "Path to the card to trash",
+      name: "paths",
+      description: "Paths to the cards to trash",
       required: true,
-      type: "string",
+      type: "string[]",
     },
     {
       name: "commit",

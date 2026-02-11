@@ -25,6 +25,8 @@ interface NewsIndexProps {
   onSelect: (brief: BriefSummary) => void;
   /** Currently selected brief path */
   selectedPath?: string;
+  /** Increment to trigger a refresh of the brief list */
+  refreshKey?: number;
 }
 
 /**
@@ -40,18 +42,27 @@ async function fetchBriefs(): Promise<BriefSummary[]> {
 }
 
 /**
- * Format a date for display.
+ * Format a date for display using relative dates for recent items.
  */
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  const sameYear = date.getFullYear() === now.getFullYear();
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
   });
 }
 
-export function NewsIndex({ onSelect, selectedPath }: NewsIndexProps) {
+export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps) {
   const [briefs, setBriefs] = useState<BriefSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +77,7 @@ export function NewsIndex({ onSelect, selectedPath }: NewsIndexProps) {
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [refreshKey]);
 
   if (loading) {
     return (

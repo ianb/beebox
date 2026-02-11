@@ -60,6 +60,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guideReactions, setGuideReactions] = useState<GuideReaction[]>([]);
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
   // Fetch guide reactions on mount
   useEffect(() => {
@@ -130,7 +131,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     }) => {
       if (!selectedSummary) return;
 
-      await completeReading(
+      const result = await completeReading(
         selectedSummary.relativePath,
         data.overallRating,
         data.selectedReactions,
@@ -138,8 +139,16 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
       );
       console.log("Reading completed with feedback");
 
-      // Update the summary to show as read
-      setSelectedSummary((prev) => prev ? { ...prev, read: true } : null);
+      // Update the summary to show as read with new archived path
+      setSelectedSummary((prev) => prev ? {
+        ...prev,
+        read: true,
+        path: result.newPath,
+        relativePath: result.newPath,
+      } : null);
+
+      // Refresh the sidebar list
+      setSidebarRefreshKey((k) => k + 1);
     },
     [selectedSummary]
   );
@@ -212,7 +221,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     <div className="h-full flex">
       {/* Sidebar with index */}
       <Sidebar title="News Briefs">
-        <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} />
+        <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} refreshKey={sidebarRefreshKey} />
       </Sidebar>
 
       {/* Main content */}
