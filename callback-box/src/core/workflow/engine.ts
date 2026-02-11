@@ -30,6 +30,8 @@ const MODEL_MAP: Record<string, string> = {
 export interface WorkflowOptions {
   dryRun?: boolean;
   force?: boolean;
+  /** Run only this step (by id), skip all others */
+  step?: string;
 }
 
 // ─── Types for parsed workflow definitions ───────────────────────────
@@ -44,7 +46,7 @@ interface ParsedPhase {
 interface ParsedStep {
   id: string;
   description: string;
-  precheck?: ParsedPhase;
+  precheck?: ParsedPhase & { passOutput?: boolean };
   run?: ParsedPhase;
   validate?: { phase: ParsedPhase; severity: string };
 }
@@ -62,17 +64,29 @@ interface ParsedWorkflow {
  */
 export async function startWorkflow(
   ctx: CommandContext,
-  workflowName: string,
+  workflowNameOrPath: string,
   options: WorkflowOptions = {}
 ): Promise<CommandResult> {
   const { boxRoot } = ctx;
 
-  // Resolve workflow definition
-  const workflowCardPath = path.join(
-    boxRoot,
-    "config/workflows",
-    `${workflowName}.workflow.card`
-  );
+  // Resolve workflow definition: accept a path or a bare name
+  let workflowCardPath: string;
+  if (
+    workflowNameOrPath.endsWith(".workflow.card") ||
+    workflowNameOrPath.includes("/")
+  ) {
+    // Treat as a path (absolute or relative to boxRoot)
+    workflowCardPath = path.isAbsolute(workflowNameOrPath)
+      ? workflowNameOrPath
+      : path.join(boxRoot, workflowNameOrPath);
+  } else {
+    // Bare name → config/workflows/<name>.workflow.card
+    workflowCardPath = path.join(
+      boxRoot,
+      "config/workflows",
+      `${workflowNameOrPath}.workflow.card`
+    );
+  }
 
   try {
     await fs.access(workflowCardPath);
@@ -85,6 +99,7 @@ export async function startWorkflow(
 
   // Parse workflow definition
   const workflow = await loadWorkflowDefinition(workflowCardPath);
+  const workflowName = workflow.name;
 
   if (options.dryRun) {
     ctx.writeLine(fmt.header(`Workflow: ${workflow.name}`));
@@ -103,6 +118,18 @@ export async function startWorkflow(
       );
     }
     return { success: true };
+  }
+
+  // Validate --step if provided
+  if (options.step) {
+    const found = workflow.steps.find((s) => s.id === options.step);
+    if (!found) {
+      const validIds = workflow.steps.map((s) => s.id).join(", ");
+      return {
+        success: false,
+        error: `Unknown step "${options.step}". Available steps: ${validIds}`,
+      };
+    }
   }
 
   // Create run directory
@@ -134,9 +161,12 @@ export async function startWorkflow(
   ctx.writeLine(fmt.dim(`Run: ${path.relative(boxRoot, runDir)}`));
   ctx.writeLine("");
 
-  // Execute steps
+  // Execute steps (optionally filtered to a single step)
+  const stepsToRun = options.step
+    ? workflow.steps.filter((s) => s.id === options.step)
+    : workflow.steps;
   let allSucceeded = true;
-  for (const step of workflow.steps) {
+  for (const step of stepsToRun) {
     const result = await executeStep(
       ctx,
       boxRoot,
@@ -318,7 +348,10 @@ function parseStepDef(stepEl: ElementNode): ParsedStep {
         result.description = description;
         break;
       case "precheck":
-        result.precheck = parsePhaseDef(child);
+        result.precheck = {
+          ...parsePhaseDef(child),
+          passOutput: child.attrs["pass-output"] === "true",
+        };
         break;
       case "run":
         result.run = parsePhaseDef(child);
@@ -426,9 +459,10 @@ async function executeStep(
   });
 
   // ── Precheck ──
+  let precheckResult: { exitCode: number; stdout: string; stderr: string; skipped: boolean } | undefined;
   if (step.precheck) {
     ctx.writeLine(fmt.dim("  Precheck..."));
-    const precheckResult = await executePhaseShells(boxRoot, step.precheck);
+    precheckResult = await executePhaseShells(boxRoot, step.precheck);
 
     if (precheckResult.skipped) {
       ctx.writeLine(fmt.dim(`  Skipped: ${precheckResult.stdout || "precheck exit $CHECK_SKIP"}`));
@@ -467,6 +501,12 @@ async function executeStep(
     ctx.writeLine(fmt.ok(`Precheck passed${precheckResult.stdout ? `: ${precheckResult.stdout}` : ""}`));
   }
 
+  // Capture precheck output for pass-output feature
+  const precheckOutput =
+    step.precheck?.passOutput && precheckResult?.stdout
+      ? precheckResult.stdout
+      : undefined;
+
   // ── Run ──
   if (!step.run) {
     ctx.writeLine(fmt.warn("  No run phase defined"));
@@ -496,7 +536,8 @@ async function executeStep(
       relRunCardPath,
       step.id,
       relWorkflowPath,
-      stepLineRange
+      stepLineRange,
+      precheckOutput
     );
 
     const systemPrompt = contextBlock + "\n\n" + agent.prompt;
@@ -754,18 +795,29 @@ function buildContextBlock(
   runCardPath: string,
   stepId: string,
   workflowPath: string,
-  stepLineRange?: string
+  stepLineRange?: string,
+  precheckOutput?: string
 ): string {
   const date = new Date().toISOString().slice(0, 10);
   const stepRef = stepLineRange
     ? `${stepId} (defined at ${workflowPath} ${stepLineRange})`
     : stepId;
 
-  return `# Context
+  let block = `# Context
 
 Current date: ${date}
 Workflow run: ${runCardPath}
 Step: ${stepRef}`;
+
+  if (precheckOutput) {
+    block += `
+
+<precheck>
+${precheckOutput}
+</precheck>`;
+  }
+
+  return block;
 }
 
 /**

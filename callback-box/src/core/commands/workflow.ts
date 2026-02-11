@@ -13,13 +13,13 @@ import {
 
 registerCommand({
   name: "workflow-run",
-  description: "Run a workflow by name",
+  description: "Run a workflow by name or path",
   args: [
     {
       name: "name",
       type: "string",
       required: true,
-      description: "Workflow name (e.g., process-news)",
+      description: "Workflow name (e.g., process-news) or path to .workflow.card",
     },
     {
       name: "dryRun",
@@ -35,6 +35,12 @@ registerCommand({
       default: false,
       description: "Force even if another process is running",
     },
+    {
+      name: "step",
+      type: "string",
+      required: false,
+      description: "Run only this step, skip all others",
+    },
   ],
   execute: async (ctx, args) => {
     const name = args["name"] as string;
@@ -44,6 +50,9 @@ registerCommand({
     }
     if (args["force"]) {
       options.force = true;
+    }
+    if (args["step"]) {
+      options.step = args["step"] as string;
     }
 
     return startWorkflow(ctx, name, options);

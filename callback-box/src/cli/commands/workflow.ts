@@ -17,10 +17,11 @@ export const workflowCommand = new Command("workflow")
 workflowCommand
   .command("run")
   .description("Start a new workflow run")
-  .argument("<name>", "Workflow name (e.g., process-news)")
+  .argument("<name-or-path>", "Workflow name (e.g., process-news) or path to .workflow.card")
   .option("--dry-run", "Preview without executing")
   .option("--force", "Force even if another process is running")
-  .action(async (name: string, options: { dryRun?: boolean; force?: boolean }) => {
+  .option("--step <id>", "Run only this step, skip all others")
+  .action(async (name: string, options: { dryRun?: boolean; force?: boolean; step?: string }) => {
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
@@ -31,6 +32,7 @@ workflowCommand
           name,
           dryRun: options.dryRun,
           force: options.force,
+          step: options.step,
         },
         ctx
       );

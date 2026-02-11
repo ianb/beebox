@@ -4,7 +4,7 @@
 
 import { Command } from "commander";
 import { resolve } from "node:path";
-import { initBox } from "../../core/box.js";
+import { initBox, installWorkflows } from "../../core/box.js";
 import { generateRules } from "./init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 
@@ -43,6 +43,15 @@ export const initCommand = new Command("init")
         console.log("  store/trash/        - Soft-deleted items");
         console.log("  config/             - Configuration");
         console.log("  .claude/            - Agent configuration");
+      }
+
+      // Install workflow templates
+      const workflows = await installWorkflows(resolve(targetPath));
+      if (workflows.length > 0) {
+        console.log(`\nInstalled ${workflows.length} workflow(s) in config/workflows/`);
+        for (const w of workflows) {
+          console.log(`  ${w}`);
+        }
       }
 
       // Generate card-handling rules from schemas

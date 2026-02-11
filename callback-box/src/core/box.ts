@@ -6,8 +6,11 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
 import { initRepo, stageAll, commit, isRepo } from "../cli/lib/git.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface InitOptions {
   /** Skip git initialization */
@@ -148,5 +151,65 @@ export async function getBoxMetadata(
   } catch {
     return null;
   }
+}
+
+/**
+ * Install workflow templates into a box.
+ *
+ * On fresh install: copies template workflow cards to config/workflows/.
+ * On update: if the box's copy matches the previously installed version,
+ * updates it. If the box's copy has been modified, writes the new version
+ * as a .orig-workflow.card file for manual merging.
+ *
+ * @returns List of installed/updated workflow names
+ */
+export async function installWorkflows(boxRoot: string): Promise<string[]> {
+  // Templates live alongside the compiled JS: ../../templates/workflows/
+  const templatesDir = path.join(__dirname, "..", "..", "templates", "workflows");
+  const targetDir = path.join(boxRoot, BOX_DIRS.workflows);
+
+  await fs.mkdir(targetDir, { recursive: true });
+
+  let templateFiles: string[];
+  try {
+    templateFiles = (await fs.readdir(templatesDir)).filter((f) =>
+      f.endsWith(".workflow.card")
+    );
+  } catch {
+    // No templates directory — nothing to install
+    return [];
+  }
+
+  const installed: string[] = [];
+
+  for (const file of templateFiles) {
+    const templateContent = await fs.readFile(
+      path.join(templatesDir, file),
+      "utf-8"
+    );
+    const targetPath = path.join(targetDir, file);
+
+    let existingContent: string | null = null;
+    try {
+      existingContent = await fs.readFile(targetPath, "utf-8");
+    } catch {
+      // File doesn't exist yet
+    }
+
+    if (existingContent === null) {
+      // Fresh install
+      await fs.writeFile(targetPath, templateContent);
+      installed.push(file);
+    } else if (existingContent === templateContent) {
+      // Already up to date
+    } else {
+      // Box copy differs from template — write as .orig for manual merge
+      const origName = file.replace(".workflow.card", ".orig-workflow.card");
+      await fs.writeFile(path.join(targetDir, origName), templateContent);
+      installed.push(`${origName} (update available)`);
+    }
+  }
+
+  return installed;
 }
 

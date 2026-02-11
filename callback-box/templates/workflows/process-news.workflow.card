@@ -1,0 +1,555 @@
+<workflow name="process-news">
+  <description>
+    Process news items from RSS feeds into a curated brief.
+    Pulls items from inbox through triage, fetch, analysis, and brief creation.
+  </description>
+
+  <step id="triage">
+    <description>Review inbox items and trash uninteresting ones</description>
+
+    <precheck>
+      <shell>
+        count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+        if [ "$count" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $count items to triage"
+      </shell>
+      <why>Triage reviews items in the inbox — nothing to do if inbox is empty</why>
+    </precheck>
+
+    <run>
+      <agent model="haiku" max-turns="20">
+        You are triaging news items in a Callback Box.
+
+        YOUR TASK:
+        Review news items in box/inbox/news/ and decide which are worth reading in full.
+
+        STEP 0 - READ THE USER GUIDE:
+        First, check if config/news-guide.news-guide.card exists. If it does, read it to understand:
+        - User interests (topics they care about)
+        - Disinterests (topics to skip/trash)
+        - Preferences that might affect what's worth keeping
+
+        Use this to inform your triage decisions. If no guide exists, use the default criteria below.
+
+        FOR EACH NEWS ITEM:
+        1. Read the title and summary from the card
+        2. Decide: Is this likely interesting based on the title/summary AND the user's guide?
+        3. Take action based on your decision:
+
+           INTERESTING → Keep the file where it is (we'll analyze it next)
+
+           NOT INTERESTING → Use the cb trash command (do NOT move files manually):
+           ```
+           cb trash &lt;path&gt; --reason "Not interesting: [brief reason]"
+           ```
+           This command moves to store/trash/ and records the reason.
+
+        DEFAULT CRITERIA (use when no guide exists):
+
+        INTERESTING:
+        - Technical content (programming, systems, architecture)
+        - Novel ideas or approaches
+        - Significant news in tech/science
+        - Things that would be educational or useful
+        - Opinion pieces with substantive arguments
+
+        NOT INTERESTING (trash):
+        - Marketing/promotional content
+        - Listicles without substance
+        - Repetitive news already covered elsewhere
+        - Entertainment gossip
+        - Job postings, hiring announcements
+        - Press releases without substance
+
+        GUIDE-BASED CRITERIA (when guide exists):
+        - Topics in &lt;interests&gt; with high/medium confidence → likely keep
+        - Topics in &lt;disinterests&gt; → likely trash
+        - Topics with "hypothesis" confidence → keep to test the hypothesis
+        - When in doubt, keep—better to analyze and discard later than miss something
+
+        IMPORTANT: Status is expressed by location, not attributes. Don't modify the status attribute.
+        Items stay in inbox/news/ if interesting, or get trashed if not.
+
+        OUTPUT: As you process each item, state your decision:
+          KEEP: [filename] - [brief reason why it's interesting]
+          TRASH: [filename] - [brief reason why it's not]
+
+        This helps track what's happening during triage.
+
+        When done, commit your changes with a detailed message:
+
+        ```bash
+        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
+        Triage: &lt;kept&gt;/&lt;total&gt; items kept
+
+        Kept:
+        - &lt;title&gt; - &lt;reason&gt;
+
+        Trashed:
+        - &lt;title&gt; - &lt;reason&gt;
+
+        Triggered-By: cb workflow
+        Phase: triage
+        EOF
+        )"
+        ```
+
+        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
+      </agent>
+    </run>
+
+    <validate severity="review">
+      <shell>
+        count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+        trash=$(ls store/trash/news/*.news-item.card 2>/dev/null | wc -l)
+        echo "Inbox: $count items, Trash: $trash items"
+        [ "$count" -gt 0 ] || [ "$trash" -gt 0 ]
+      </shell>
+      <instruction>
+        The git diff should show items being moved to store/trash/ via cb trash.
+        Every item the agent examined should have an explicit keep or trash decision.
+      </instruction>
+      <why>
+        Triage must make an explicit decision on every item. If items are
+        skipped, they'll sit in the inbox forever and never get processed.
+      </why>
+    </validate>
+  </step>
+
+  <step id="fetch">
+    <description>Fetch full article content for triaged items</description>
+
+    <precheck>
+      <shell>
+        count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+        if [ "$count" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $count items to fetch"
+      </shell>
+      <why>Nothing to fetch if no items survived triage</why>
+    </precheck>
+
+    <run>
+      <shell>cb fetch-all-news --dir box/inbox/news</shell>
+    </run>
+  </step>
+
+  <step id="analyze">
+    <description>Analyze fetched articles and move to pool</description>
+
+    <precheck>
+      <shell>
+        count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+        if [ "$count" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $count items to analyze"
+      </shell>
+      <why>Nothing to analyze if no items remain after fetch</why>
+    </precheck>
+
+    <run>
+      <agent model="sonnet" max-turns="30">
+        You are analyzing news articles in a Callback Box.
+
+        YOUR TASK:
+        For each news item in box/inbox/news/:
+        1. Read the card (it already has &lt;content&gt; with the fetched article)
+        2. Create an analysis of how this article fits into the "mental space"
+        3. Move the analyzed item to box/pool/news/
+
+        STEP 1 - READ AND ANALYZE:
+        Each card already has a &lt;content&gt; element with the fetched article in markdown format.
+        Read the content and add an &lt;analysis&gt; element. This is NOT a summary of the content
+        (the content is already there). Instead, analyze:
+
+        - Topics: What themes/subjects does it cover?
+        - Type: Is it news, opinion, tutorial, announcement, research, etc.?
+        - Thesis: If opinion/analysis, what's the main argument?
+        - Tone: Measured, urgent, casual, academic, promotional?
+        - Timeliness: Is it breaking news, timely, or evergreen?
+        - Notes: How might this be used in an edition? What pairs well with it?
+        - Questions: Any open questions this raises?
+
+        Example analysis element:
+        ```xml
+        &lt;analysis analyzed-at="[current ISO timestamp]"&gt;
+          &lt;topics&gt;
+            &lt;topic&gt;AI safety&lt;/topic&gt;
+            &lt;topic&gt;regulation&lt;/topic&gt;
+          &lt;/topics&gt;
+          &lt;type&gt;opinion&lt;/type&gt;
+          &lt;thesis&gt;AI regulation should focus on outcomes rather than methods&lt;/thesis&gt;
+          &lt;tone&gt;measured, academic&lt;/tone&gt;
+          &lt;timeliness&gt;evergreen&lt;/timeliness&gt;
+          &lt;notes&gt;Could pair well with EU AI Act coverage.&lt;/notes&gt;
+          &lt;questions&gt;
+            &lt;question&gt;How does this compare to the Anthropic safety approach?&lt;/question&gt;
+          &lt;/questions&gt;
+        &lt;/analysis&gt;
+        ```
+
+        If a card has a &lt;fetch-error&gt; instead of &lt;content&gt;, note it in the analysis and
+        still move it to pool — the brief can decide whether to include it based on
+        title/summary alone or skip it.
+
+        STEP 2 - MOVE TO POOL:
+        After adding the analysis, move the file:
+        ```
+        cb move &lt;inbox-path&gt; box/pool/news/
+        ```
+
+        This command handles moving the file and updating any references.
+        Then commit all changes.
+
+        OUTPUT: As you process each item, state what you found:
+          ANALYZED: [filename] - [topics/type/timeliness summary]
+
+        When done, commit your changes with a detailed message:
+
+        ```bash
+        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
+        Analyze &lt;N&gt; items: &lt;key themes&gt;
+
+        Items:
+        - &lt;title&gt; (&lt;type&gt;, &lt;timeliness&gt;) - &lt;topics&gt;
+
+        Emerging themes: &lt;notable patterns or connections&gt;
+
+        Triggered-By: cb workflow
+        Phase: analyze
+        EOF
+        )"
+        ```
+
+        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
+      </agent>
+    </run>
+
+    <validate severity="review">
+      <shell>
+        remaining=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+        echo "Remaining in inbox: $remaining"
+        [ "$remaining" -eq 0 ]
+      </shell>
+      <instruction>
+        All items should have been moved from box/inbox/news/ to box/pool/news/
+        with an analysis element added to each. Items with fetch-error should
+        still be moved and analyzed based on title/summary alone.
+      </instruction>
+      <why>
+        Items left in inbox won't reach the brief. The analyze step must
+        process everything that triage kept.
+      </why>
+    </validate>
+  </step>
+
+  <step id="brief">
+    <description>Create a narrative news brief from pooled items</description>
+
+    <precheck>
+      <shell>
+        count=$(ls box/pool/news/*.news-item.card 2>/dev/null | wc -l)
+        if [ "$count" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $count items in pool"
+      </shell>
+      <why>Can't create a brief without items in the pool</why>
+    </precheck>
+
+    <run>
+      <agent model="sonnet" max-turns="40">
+        You are creating a personal news brief in a Callback Box.
+
+        YOUR ROLE:
+        You are a personal assistant curating news for ONE reader. This is not journalism competing
+        for attention on a crowded homepage. You don't need to convince anyone to read—they already
+        want to. Your job is to serve the reader's genuine interests, not to maximize engagement.
+
+        AVOID:
+        - Clickbait headlines ("Your Phone's Secret Conversations", "What They Don't Want You to Know")
+        - Urgency and alarm ("Breaking:", "Critical:", manufactured importance)
+        - Mystery as hook (hiding the point to create curiosity)
+        - Superlatives and hype ("Revolutionary", "Game-changing", "Mind-blowing")
+        - Treating speculation as fact
+
+        INSTEAD:
+        - Be direct and informative ("New EU AI regulation passes", "How the exploit works")
+        - Trust the reader's intelligence and curiosity
+        - Let interesting things be interesting on their own merits
+        - Summarize accurately rather than tantalizingly
+        - Be a knowledgeable friend, not a headline writer
+
+        CRITICAL - PROVIDE FULL CONTEXT:
+        The reader has NOT read the source articles. They only see what you write. For each story:
+        - Introduce what happened and why it matters BEFORE diving into analysis
+        - Include enough background that the piece stands alone
+        - Use &lt;excerpt&gt; elements to quote key passages from the source—this provides texture and
+          lets the original author's voice come through
+        - Don't assume shared context; restate key facts even if they seem obvious
+
+        YOUR TASK:
+        Create a news-brief card from items in box/pool/news/. This is a narrative publication,
+        not just a list of summaries.
+
+        STEP 0 - READ OR CREATE THE USER GUIDE:
+        First, check if config/news-guide.news-guide.card exists. If it does, read it to understand:
+        - User interests (with confidence levels)
+        - Disinterests (things to avoid)
+        - Preferences (depth, tone, etc.)
+        - Active experiments to test
+        - Context notes that might affect curation
+
+        If the guide exists but has NO active/proposed experiments (all are successful/unsuccessful/inconclusive),
+        create 1-2 new experiments based on what you've learned. The guide should always have experiments to run.
+
+        If no guide exists, create one:
+        ```
+        cb create config/news-guide.news-guide.card
+        ```
+
+        Then edit the file, replacing the comment placeholders with actual content inferred from
+        the news sources in the pool. The guide MUST follow this schema:
+
+        ```xml
+        &lt;news-guide version="1.0.0"&gt;
+          &lt;updated-at&gt;[current ISO timestamp]&lt;/updated-at&gt;
+
+          &lt;interests&gt;
+            &lt;topic confidence="low" source="inferred"&gt;Topic name here&lt;/topic&gt;
+          &lt;/interests&gt;
+
+          &lt;disinterests&gt;
+            &lt;disinterest confidence="low" source="inferred"&gt;Thing to avoid&lt;/disinterest&gt;
+          &lt;/disinterests&gt;
+
+          &lt;preferences&gt;
+            &lt;preference aspect="depth" confidence="low" source="inferred"&gt;
+              Description of preference
+            &lt;/preference&gt;
+          &lt;/preferences&gt;
+
+          &lt;context-notes&gt;
+            &lt;context duration="ongoing"&gt;
+              Contextual notes about curation situation
+            &lt;/context&gt;
+          &lt;/context-notes&gt;
+
+          &lt;experiments&gt;
+            &lt;experiment id="exp-1" status="proposed"&gt;
+              &lt;hypothesis&gt;What you want to test&lt;/hypothesis&gt;
+              &lt;approach&gt;How to test it&lt;/approach&gt;
+            &lt;/experiment&gt;
+          &lt;/experiments&gt;
+        &lt;/news-guide&gt;
+        ```
+
+        IMPORTANT schema rules:
+        - Use &lt;topic&gt; inside &lt;interests&gt;, NOT &lt;interest&gt;
+        - confidence must be: confirmed, high, medium, low, or hypothesis
+        - source must be: user-stated, feedback, inferred, or default
+        - preference aspect must be: depth, tone, frequency, format, sources, or other
+        - experiment status must be: proposed, active, successful, unsuccessful, or inconclusive
+
+        STEP 1 - SURVEY THE POOL:
+        Read all items in box/pool/news/ with their &lt;analysis&gt; elements.
+        Look for:
+        - Common themes that connect multiple articles
+        - Timely items that should be featured today
+        - Interesting contrasts or tensions between pieces
+        - A narrative arc that could make this edition compelling
+        - Opportunities to test hypotheses from the guide
+
+        Optionally, read recent briefs in store/archive/briefs/ to:
+        - Avoid repeating themes too soon
+        - Build on ongoing stories
+        - Reference previous coverage
+
+        STEP 2 - PLAN THE BRIEF:
+        Before writing, decide:
+        - What's the headline/angle for this brief?
+        - What 2-3 themes or sections will structure it?
+        - Which articles are primary (drive the narrative)?
+        - Which are supporting (add depth)?
+        - What expandos would enhance without cluttering?
+        - Are there questions to pose to the reader?
+
+        STEP 3 - CREATE THE BRIEF:
+        Create the brief file in box/output/briefs/ (NOT inbox - briefs are output, not incoming items):
+        ```
+        cb create box/output/briefs/&lt;date&gt;_&lt;slug&gt;.news-brief.card
+        ```
+
+        Then edit it with this structure. IMPORTANT: &lt;curation&gt; comes FIRST because editorial
+        decisions should be made before writing content:
+
+        ```xml
+        &lt;news-brief&gt;
+          &lt;curation guide-version="[timestamp from guide's updated-at]"&gt;
+            &lt;interest application="featured"&gt;Topic from guide that was featured&lt;/interest&gt;
+            &lt;interest application="tested"&gt;Topic being tested as hypothesis&lt;/interest&gt;
+            &lt;experiment-ref id="exp-id"&gt;How this edition tests the experiment&lt;/experiment-ref&gt;
+            &lt;hypothesis id="h1" experiment-ref="exp-id"&gt;
+              Specific testable claim about what will work
+            &lt;/hypothesis&gt;
+            &lt;rationale&gt;
+              Brief explanation of editorial choices and why this angle/approach was selected.
+            &lt;/rationale&gt;
+          &lt;/curation&gt;
+
+          &lt;title&gt;Compelling headline that captures the theme&lt;/title&gt;
+          &lt;date&gt;[today's date YYYY-MM-DD]&lt;/date&gt;
+          &lt;byline&gt;One sentence teaser of what's inside&lt;/byline&gt;
+
+          &lt;content format="markdown"&gt;
+        The opening paragraph sets up the theme.
+
+        &lt;section id="s1" heading="First Theme" link="https://example.com/article" via="Hacker News"&gt;
+
+        **Start with context**: What is this about? Who did what?
+
+        &lt;excerpt source="Article Title" link="https://example.com/article"&gt;
+        A memorable passage from the article.
+        &lt;/excerpt&gt;
+
+        &lt;expando title="Deep dive: Technical details" id="exp1"&gt;
+        More detailed content that interested readers can explore.
+        &lt;/expando&gt;
+
+        &lt;/section&gt;
+
+        &lt;section id="s2" heading="Second Theme" link="https://example.com/other" via="Lobsters"&gt;
+
+        Establish context first. Then your narrative...
+
+        &lt;query id="q1" prompt="What aspects of this interest you most?"&gt;
+        Understanding your interests helps focus future coverage.
+        &lt;/query&gt;
+
+        &lt;/section&gt;
+
+        Closing thoughts.
+          &lt;/content&gt;
+
+          &lt;sources&gt;
+            &lt;source path="store/archive/news/Article_One.news-item.card" usage="primary"&gt;Article Title&lt;/source&gt;
+          &lt;/sources&gt;
+        &lt;/news-brief&gt;
+        ```
+
+        CURATION NOTES:
+        - &lt;curation&gt; comes FIRST - decide what to write about before writing
+        - Include interests that drove content selection
+        - Reference active experiments being tested
+        - State hypotheses that feedback can confirm/deny
+        - The rationale explains your editorial thinking
+
+        GUIDELINES:
+        - EVERY SECTION needs: link= to the source article, via= to note the feed source
+        - Include &lt;excerpt&gt; elements liberally—at least one per section, more in expandos
+        - The &lt;feed&gt; element in each news-item card contains the feed title (use this for "via")
+        - The &lt;link&gt; element in each news-item card has the article URL
+        - Provide full context: the reader knows NOTHING except what you write
+        - BE LIBERAL with expandos - long is fine if it's expandable
+        - The main narrative should be scannable (1-2 paragraphs per section)
+        - Use expandos for: technical details, background, quotes, tangents
+        - Use queries to invite reader engagement (but sparingly)
+        - Quote sources directly when they say it better
+        - Link themes across articles, don't just list them
+
+        STEP 4 - ARCHIVE USED ITEMS:
+        After creating the brief, move used items to archive:
+        ```
+        cb move box/pool/news/&lt;used-file&gt; store/archive/news/
+        ```
+
+        This command handles moving and updating any references (including in the brief you just created).
+        Leave items in pool that weren't used—they'll be available for future briefs.
+
+        STEP 5 - CREATE NOTIFICATION:
+        After creating the brief and archiving items, create a notification command card
+        so the user gets alerted in their browser. First create the card:
+        ```
+        cb create box/commands/notify-brief_&lt;date&gt;.open-tab.command.card
+        ```
+        Then edit it to contain:
+        ```xml
+        &lt;command type="open-tab" status="ready"&gt;
+          &lt;url&gt;http://localhost:3210/news/box/output/briefs/&lt;brief-filename&gt;&lt;/url&gt;
+          &lt;title&gt;&lt;brief title&gt;&lt;/title&gt;
+          &lt;message&gt;Your news brief is ready&lt;/message&gt;
+        &lt;/command&gt;
+        ```
+        Replace &lt;brief-filename&gt; with the actual filename of the brief you just created,
+        and &lt;brief title&gt; with the title you chose for the brief.
+
+        When done, commit your changes with a detailed message:
+
+        ```bash
+        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
+        Brief: &lt;title&gt;
+
+        Sections:
+        - &lt;section heading&gt; (&lt;source article title&gt;)
+
+        &lt;N&gt; items used, &lt;M&gt; left in pool.
+        Editorial angle: &lt;one sentence on why this angle/structure&gt;
+
+        Triggered-By: cb workflow
+        Phase: brief
+        EOF
+        )"
+        ```
+
+        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
+      </agent>
+    </run>
+
+    <validate severity="review">
+      <shell>
+        ls box/output/briefs/*.news-brief.card 2>/dev/null
+        # Validate that all brief cards parse as valid XML
+        for f in box/output/briefs/*.news-brief.card; do
+          if [ -f "$f" ]; then
+            cb validate "$f" || { echo "INVALID XML: $f"; exit 1; }
+          fi
+        done
+      </shell>
+      <instruction>
+        A new brief should exist in box/output/briefs/ with today's date.
+        Items used in the brief should be archived to store/archive/news/.
+        Unused items should remain in box/pool/news/ for future briefs.
+        The brief's sources should reference all used items.
+        All briefs must be valid XML (no unescaped ampersands, etc.).
+      </instruction>
+      <why>
+        The brief is the whole point of the pipeline. If it wasn't created,
+        or if used items weren't archived, the pipeline didn't complete its job.
+        Invalid XML means the brief can't be displayed to the user.
+      </why>
+    </validate>
+  </step>
+
+  <step id="execute">
+    <description>Execute any pending command cards (e.g. notifications)</description>
+
+    <precheck>
+      <shell>
+        count=$(ls box/commands/*.command.card 2>/dev/null | wc -l)
+        if [ "$count" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $count command(s) to execute"
+      </shell>
+      <why>Nothing to execute if no command cards exist</why>
+    </precheck>
+
+    <run>
+      <shell>cb execute-commands</shell>
+    </run>
+  </step>
+</workflow>
