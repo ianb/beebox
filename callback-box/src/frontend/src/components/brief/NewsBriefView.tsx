@@ -167,78 +167,83 @@ export function NewsBriefView({
       {/* Sources */}
       <SourceList sources={brief.sources} onSourceClick={onSourceClick} />
 
-      {/* Reading completion feedback */}
-      <div className="mt-8 pt-6 border-t border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
-          Finish Reading
-        </h3>
-        {completed ? (
-          <p className="text-green-700">Thanks for your feedback!</p>
-        ) : globalSubmitted ? (
-          <p className="text-green-700">Got it, I'll keep that in mind.</p>
-        ) : showGlobalComment ? (
-          <div className="space-y-3">
-            <textarea
-              value={globalComment}
-              onChange={(e) => setGlobalComment(e.target.value)}
-              placeholder="What did you think of this brief? What did you learn? What would you like to see more or less of?"
-              className="w-full p-3 border rounded-lg resize-none"
-              rows={4}
-            />
-            <div className="flex gap-2">
+      {/* Global comment / voice feedback */}
+      {!completed && (
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          {globalSubmitted ? (
+            <p className="text-green-700 text-sm">Got it, I'll keep that in mind.</p>
+          ) : showGlobalComment ? (
+            <div className="space-y-3">
+              <textarea
+                value={globalComment}
+                onChange={(e) => setGlobalComment(e.target.value)}
+                placeholder="What did you think of this brief? What did you learn? What would you like to see more or less of?"
+                className="w-full p-3 border rounded-lg resize-none"
+                rows={4}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleGlobalComment}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Submit Comment
+                </button>
+                {onVoiceComment && (
+                  <button
+                    onClick={() => {
+                      setShowGlobalComment(false);
+                      setShowGlobalVoice(true);
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-1"
+                  >
+                    <MicrophoneIcon className="w-4 h-4" />
+                    Voice
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowGlobalComment(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3">
               <button
-                onClick={handleGlobalComment}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                onClick={() => setShowGlobalComment(true)}
+                className="text-sm text-gray-400 hover:text-blue-600"
               >
-                Submit Comment
+                + Add a comment about this brief
               </button>
               {onVoiceComment && (
                 <button
-                  onClick={() => {
-                    setShowGlobalComment(false);
-                    setShowGlobalVoice(true);
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-1"
+                  onClick={() => setShowGlobalVoice(true)}
+                  className="text-sm text-gray-400 hover:text-blue-600 flex items-center gap-1"
                 >
                   <MicrophoneIcon className="w-4 h-4" />
                   Voice
                 </button>
               )}
-              <button
-                onClick={() => setShowGlobalComment(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
             </div>
-          </div>
+          )}
+        </div>
+      )}
+
+      {/* Reading completion feedback */}
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
+          Finish Reading
+        </h3>
+        {completed ? (
+          <p className="text-green-700">Thanks for your feedback!</p>
         ) : onCompleteReading ? (
           <ReadingFeedback
             guideReactions={guideReactions}
             briefReactions={briefReactions}
             onComplete={handleCompleteReading}
-            onShowComment={() => setShowGlobalComment(true)}
-            onShowVoice={onVoiceComment ? () => setShowGlobalVoice(true) : undefined}
           />
-        ) : (
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowGlobalComment(true)}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Share your thoughts on this brief
-            </button>
-            {onVoiceComment && (
-              <button
-                onClick={() => setShowGlobalVoice(true)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-              >
-                <MicrophoneIcon className="w-4 h-4" />
-                Voice Feedback
-              </button>
-            )}
-          </div>
-        )}
+        ) : null}
       </div>
     </article>
 

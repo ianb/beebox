@@ -3,21 +3,16 @@
  */
 
 import { useState } from "react";
-import { MicrophoneIcon } from "../VoiceRecorder";
 import type { GuideReaction, BriefReaction } from "./types";
 
 export function ReadingFeedback({
   guideReactions,
   briefReactions,
   onComplete,
-  onShowComment,
-  onShowVoice,
 }: {
   guideReactions: GuideReaction[];
   briefReactions: BriefReaction[];
   onComplete: (rating: "great" | "ok" | "meh", selectedReactions: Array<{ id: string; source: "guide" | "brief" }>) => void;
-  onShowComment: () => void;
-  onShowVoice?: () => void;
 }) {
   const [selectedRating, setSelectedRating] = useState<"great" | "ok" | "meh" | null>(null);
   const [selectedReactions, setSelectedReactions] = useState<Set<string>>(new Set());
@@ -129,8 +124,8 @@ export function ReadingFeedback({
         </div>
       )}
 
-      {/* Submit and additional options */}
-      <div className="flex items-center gap-3 pt-2">
+      {/* Submit */}
+      <div className="pt-2">
         <button
           onClick={handleSubmit}
           disabled={!selectedRating || submitting}
@@ -138,22 +133,6 @@ export function ReadingFeedback({
         >
           {submitting ? "Saving..." : "Done Reading"}
         </button>
-        <span className="text-gray-400">or</span>
-        <button
-          onClick={onShowComment}
-          className="text-sm text-blue-600 hover:text-blue-800"
-        >
-          Add a comment
-        </button>
-        {onShowVoice && (
-          <button
-            onClick={onShowVoice}
-            className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-          >
-            <MicrophoneIcon className="w-4 h-4" />
-            Voice
-          </button>
-        )}
       </div>
     </div>
   );
