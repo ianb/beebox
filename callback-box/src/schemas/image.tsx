@@ -11,17 +11,11 @@ import { z } from "zod";
 export const ImageStatus = z.enum(["new", "analyzed", "invalid"]);
 export type ImageStatus = z.infer<typeof ImageStatus>;
 
-export const ImageCaptured = element("captured", {
-  text: z.string().datetime({ offset: true }),
-});
-
-export const ImageSource = element("source", {
-  text: z.enum(["camera-user", "camera-environment", "gallery"]),
-});
-
 export const ImageFilename = element("filename", {
   attrs: {
     name: z.string(),
+    captured: z.string().datetime({ offset: true }),
+    source: z.enum(["camera-user", "camera-environment", "gallery"]),
   },
 });
 
@@ -39,9 +33,7 @@ export const ImageText = element("text", {
  * Example:
  * ```xml
  * <image status="new">
- *   <captured>2024-01-15T10:00:00Z</captured>
- *   <source>camera-environment</source>
- *   <filename name="photo-001.jpg" />
+ *   <filename name="photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
  *   <description></description>
  *   <text></text>
  * </image>
@@ -53,8 +45,6 @@ export const ImageSchema = element("image", {
   },
   children: z.array(
     z.union([
-      ImageCaptured,
-      ImageSource,
       ImageFilename,
       ImageDescription,
       ImageText,
@@ -87,9 +77,7 @@ export function createImageTemplate(options: {
 }): string {
   const image = (
     <image status="new">
-      <captured>{options.capturedAt}</captured>
-      <source>{options.source}</source>
-      <filename name={options.filename} />
+      <filename name={options.filename} captured={options.capturedAt} source={options.source} />
       <description></description>
     </image>
   );

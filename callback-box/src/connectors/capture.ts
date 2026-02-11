@@ -150,7 +150,11 @@ class CaptureConnector implements Connector {
     client: CaptureClient,
     manifest: CaptureManifest
   ): Promise<string[]> {
-    const dirName = `capture-${manifest.sessionId}`;
+    // Format: capture-YYYYMMDDTHHMM-shortid
+    const startDate = new Date(manifest.startedAt);
+    const datePart = startDate.toISOString().replace(/[-:]/g, "").slice(0, 13); // 20260211T1951
+    const shortId = manifest.sessionId.slice(0, 8);
+    const dirName = `capture-${datePart}-${shortId}`;
     const dirPath = path.join(this.boxRoot, "box/inbox", dirName);
     await fs.mkdir(dirPath, { recursive: true });
 
