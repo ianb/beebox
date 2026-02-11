@@ -7,6 +7,7 @@
  * - Updating all references from other cards
  */
 
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { CardLoader } from "cardworks";
 import {
@@ -44,6 +45,82 @@ interface MoveOneResult {
  */
 function isDirectoryDest(destPath: string): boolean {
   return destPath.endsWith("/") || !destPath.includes(".card");
+}
+
+/**
+ * Check if a path is an existing directory.
+ */
+async function isDirectory(filePath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+interface MoveDirResult {
+  from: string;
+  to: string;
+  filesToStage: string[];
+  updatedCards: Array<{ path: string; refsUpdated: number }>;
+}
+
+/**
+ * Move an entire directory (e.g., a capture session) and update external references.
+ */
+async function moveDir(
+  ctx: CommandContext,
+  sourcePath: string,
+  destPath: string
+): Promise<MoveDirResult> {
+  const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
+  const relDestPath = path.relative(ctx.boxRoot, destPath);
+
+  // Move the directory
+  await fs.mkdir(path.dirname(destPath), { recursive: true });
+  await fs.rename(sourcePath, destPath);
+  ctx.writeLine(`Moved directory: ${relSourcePath} → ${relDestPath}`);
+
+  const filesToStage: string[] = [];
+  const updatedCards: Array<{ path: string; refsUpdated: number }> = [];
+
+  // Scan all cards outside the moved directory for references to the old path
+  const loader = new CardLoader(ctx.boxRoot);
+  const allCards = await loader.listCards();
+  const externalCards = allCards.filter((c) => !c.startsWith(destPath + "/"));
+
+  for (const cardPath of externalCards) {
+    try {
+      const content = await fs.readFile(cardPath, "utf-8");
+      // Check if this card references anything under the old directory
+      if (!content.includes(relSourcePath)) continue;
+
+      // Replace old path references with new path references
+      const updatedContent = content.replaceAll(relSourcePath, relDestPath);
+      if (updatedContent !== content) {
+        await fs.writeFile(cardPath, updatedContent);
+        const refsUpdated = (content.split(relSourcePath).length - 1);
+        updatedCards.push({ path: path.relative(ctx.boxRoot, cardPath), refsUpdated });
+        filesToStage.push(path.relative(ctx.boxRoot, cardPath));
+        ctx.writeLine(`  Updated references in ${path.relative(ctx.boxRoot, cardPath)} (${refsUpdated} ref${refsUpdated > 1 ? "s" : ""})`);
+      }
+    } catch {
+      // Skip cards that can't be read
+    }
+  }
+
+  // Stage old directory removal and new directory addition
+  // git add with the old path marks it as deleted, new path as added
+  filesToStage.push(relSourcePath);
+  filesToStage.push(relDestPath);
+
+  return {
+    from: relSourcePath,
+    to: relDestPath,
+    filesToStage,
+    updatedCards,
+  };
 }
 
 /**
@@ -147,13 +224,45 @@ async function executeMove(
       sourcePath = boxPath(ctx.boxRoot, fromPath);
     }
 
-    if (!isCardFile(sourcePath)) {
-      errors.push(`Source must be a .card file: ${fromPath}`);
-      ctx.writeLine(`Error: Source must be a .card file: ${fromPath}`);
+    const sourceIsDir = await isDirectory(sourcePath);
+
+    if (!isCardFile(sourcePath) && !sourceIsDir) {
+      errors.push(`Source must be a .card file or directory: ${fromPath}`);
+      ctx.writeLine(`Error: Source must be a .card file or directory: ${fromPath}`);
       continue;
     }
 
-    // Resolve final destination for this file
+    if (sourceIsDir) {
+      // Directory move: destination is always a directory path
+      const destPath = destIsDir
+        ? path.join(rawDestPath, path.basename(sourcePath))
+        : rawDestPath;
+
+      if (moveArgs.dryRun) {
+        const relSource = path.relative(ctx.boxRoot, sourcePath);
+        const relDest = path.relative(ctx.boxRoot, destPath);
+        ctx.writeLine(`Would move directory: ${relSource} → ${relDest}`);
+        continue;
+      }
+
+      try {
+        const dirResult = await moveDir(ctx, sourcePath, destPath);
+        results.push({
+          from: dirResult.from,
+          to: dirResult.to,
+          movedFiles: [{ from: dirResult.from, to: dirResult.to }],
+          updatedCards: dirResult.updatedCards,
+          filesToStage: dirResult.filesToStage,
+        });
+        allFilesToStage.push(...dirResult.filesToStage);
+      } catch (err) {
+        errors.push(`Failed to move directory ${fromPath}: ${(err as Error).message}`);
+        ctx.writeLine(`Error: Failed to move directory ${fromPath}: ${(err as Error).message}`);
+      }
+      continue;
+    }
+
+    // Card file move
     let destPath = rawDestPath;
     if (destIsDir) {
       destPath = path.join(rawDestPath, path.basename(sourcePath));
@@ -196,8 +305,8 @@ async function executeMove(
     await stageFiles(ctx.boxRoot, allFilesToStage);
 
     const summary = results.length === 1
-      ? `Move card: ${path.basename(results[0]!.from)}\n\n${results[0]!.from} → ${results[0]!.to}`
-      : `Move ${results.length} cards to ${path.relative(ctx.boxRoot, rawDestPath)}`;
+      ? `Move ${results[0]!.from} → ${results[0]!.to}`
+      : `Move ${results.length} item(s) to ${path.relative(ctx.boxRoot, rawDestPath)}`;
     await commit(ctx.boxRoot, {
       message: summary,
       trailers: {
@@ -220,11 +329,11 @@ async function executeMove(
 // Register the command
 registerCommand({
   name: "move",
-  description: "Move/rename one or more cards and update all references",
+  description: "Move/rename cards or directories and update all references",
   args: [
     {
       name: "from",
-      description: "Path(s) to the card(s) to move",
+      description: "Path(s) to the card(s) or directory to move",
       required: true,
       type: "string[]",
     },

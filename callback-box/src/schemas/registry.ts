@@ -16,6 +16,9 @@ import { FeedbackSchema } from "./feedback.js";
 import { WorkflowSchema } from "./workflow.js";
 import { WorkflowRunSchema } from "./workflow-run.js";
 import { BookmarkSchema } from "./bookmark.js";
+import { ImageSchema } from "./image.js";
+import { AudioSchema } from "./audio.js";
+import { CaptureSessionSchema } from "./capture-session.js";
 
 /**
  * All registered card schemas.
@@ -31,6 +34,9 @@ export const schemas: ElementSchema[] = [
   WorkflowSchema,
   WorkflowRunSchema,
   BookmarkSchema,
+  ImageSchema,
+  AudioSchema,
+  CaptureSessionSchema,
 ];
 
 /**
@@ -69,3 +75,6 @@ export { FeedbackSchema } from "./feedback.js";
 export { WorkflowSchema } from "./workflow.js";
 export { WorkflowRunSchema } from "./workflow-run.js";
 export { BookmarkSchema } from "./bookmark.js";
+export { ImageSchema } from "./image.js";
+export { AudioSchema } from "./audio.js";
+export { CaptureSessionSchema } from "./capture-session.js";

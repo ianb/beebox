@@ -9,6 +9,7 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { createRssConnector } from "../../connectors/rss.js";
 import { createDropboxConnector } from "../../connectors/dropbox.js";
 import { createRaindropConnector } from "../../connectors/raindrop.js";
+import { createCaptureConnector } from "../../connectors/capture.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const pullCommand = new Command("pull")
@@ -21,6 +22,7 @@ export const pullCommand = new Command("pull")
     createRssConnector(boxRoot);
     createDropboxConnector(boxRoot);
     createRaindropConnector(boxRoot);
+    createCaptureConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

@@ -16,6 +16,9 @@ export {
   NewsGuideSchema,
   FeedbackSchema,
   BookmarkSchema,
+  ImageSchema,
+  AudioSchema,
+  CaptureSessionSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -27,6 +30,9 @@ export type { NewsBrief } from "./news-brief.js";
 export type { NewsGuide } from "./news-guide.js";
 export type { Feedback } from "./feedback.js";
 export type { Bookmark } from "./bookmark.js";
+export type { Image, ImageStatus } from "./image.js";
+export type { Audio, AudioStatus } from "./audio.js";
+export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -38,6 +44,9 @@ export {
 export { createNewsItemTemplate } from "./news-item.js";
 export { createNewsSummaryTemplate } from "./news-summary.js";
 export { createBookmarkTemplate } from "./bookmark.js";
+export { createImageTemplate } from "./image.js";
+export { createAudioTemplate } from "./audio.js";
+export { createCaptureSessionTemplate } from "./capture-session.js";
 
 // Re-export template registry
 export {
