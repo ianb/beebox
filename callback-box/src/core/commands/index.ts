@@ -17,6 +17,8 @@ import "./process-news.js";
 import "./process-feedback.js";
 import "./triage-feedback.js";
 import "./workflow.js";
+import "./transcribe-captures.js";
+import "./assemble-timeline.js";
 
 // Re-export for convenience
 export {

@@ -233,8 +233,10 @@ async function executeMove(
     }
 
     if (sourceIsDir) {
-      // Directory move: destination is always a directory path
-      const destPath = destIsDir
+      // Directory rename vs move-into: if dest already exists as a directory,
+      // move source inside it. Otherwise treat dest as the new name.
+      const destExists = await isDirectory(rawDestPath);
+      const destPath = destExists
         ? path.join(rawDestPath, path.basename(sourcePath))
         : rawDestPath;
 

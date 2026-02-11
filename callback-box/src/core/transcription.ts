@@ -11,6 +11,20 @@ export interface TranscriptionResult {
   language: string;
 }
 
+export interface WordTimestamp {
+  word: string;
+  start: number;  // seconds
+  end: number;    // seconds
+}
+
+export interface DetailedTranscriptionResult extends TranscriptionResult {
+  words: WordTimestamp[];
+}
+
+export interface TranscriptionOptions {
+  wordTimestamps?: boolean;
+}
+
 export interface TranscriptionError {
   message: string;
   permanent: boolean; // If true, don't retry
@@ -29,8 +43,9 @@ export interface TranscriptionError {
 export async function transcribeAudio(
   audioBuffer: Buffer,
   filename: string,
-  prompt?: string
-): Promise<TranscriptionResult> {
+  prompt?: string,
+  options?: TranscriptionOptions
+): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   const apiKey = process.env["THINKING_OPENAI_API_KEY"];
   if (!apiKey) {
     const error: TranscriptionError = {
@@ -78,6 +93,17 @@ export async function transcribeAudio(
     )
   );
 
+  // Add timestamp_granularities if word timestamps requested
+  if (options?.wordTimestamps) {
+    formParts.push(
+      Buffer.from(
+        `--${boundary}\r\n` +
+          `Content-Disposition: form-data; name="timestamp_granularities[]"\r\n\r\n` +
+          `word\r\n`
+      )
+    );
+  }
+
   // Add prompt if provided
   if (prompt) {
     formParts.push(
@@ -113,7 +139,21 @@ export async function transcribeAudio(
       text: string;
       duration: number;
       language: string;
+      words?: Array<{ word: string; start: number; end: number }>;
     };
+
+    if (options?.wordTimestamps && result.words) {
+      return {
+        text: result.text,
+        duration: result.duration,
+        language: result.language,
+        words: result.words.map((w) => ({
+          word: w.word,
+          start: w.start,
+          end: w.end,
+        })),
+      } as DetailedTranscriptionResult;
+    }
 
     return {
       text: result.text,

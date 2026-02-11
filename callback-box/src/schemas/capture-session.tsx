@@ -11,7 +11,7 @@
 import { element, serialize } from "cardworks";
 import { z } from "zod";
 
-export const CaptureSessionStatus = z.enum(["new", "transcribing", "transcribed"]);
+export const CaptureSessionStatus = z.enum(["new", "transcribing", "transcribed", "intake-complete"]);
 export type CaptureSessionStatus = z.infer<typeof CaptureSessionStatus>;
 
 export const SessionTime = element("time", {
@@ -42,8 +42,32 @@ export const SessionAudioClips = element("audio-clips", {
   children: z.array(SessionAudioRef).optional(),
 });
 
-export const SessionTranscript = element("transcript", {
+export const SessionPurpose = element("purpose", {
   text: z.string().optional(),
+});
+
+export const TranscriptText = element("text", {
+  text: z.string().optional(),
+});
+
+export const TranscriptSilence = element("silence", {
+  attrs: {
+    duration: z.string(),
+  },
+});
+
+export const TranscriptImage = element("image", {
+  attrs: {
+    ref: z.string(),
+    description: z.string().optional(),
+    filename: z.string().optional(),
+  },
+});
+
+export const SessionTranscript = element("transcript", {
+  children: z.array(
+    z.union([TranscriptText, TranscriptSilence, TranscriptImage])
+  ).optional(),
 });
 
 /**
@@ -51,17 +75,24 @@ export const SessionTranscript = element("transcript", {
  *
  * Example:
  * ```xml
- * <capture-session status="new" session-id="abc123">
+ * <capture-session status="intake-complete" session-id="abc123">
  *   <time start="2024-01-15T10:00:00Z" end="2024-01-15T10:15:00Z" duration="15m0s" />
  *   <images>
- *     <image-ref file="photo-001.image.card" />
- *     <image-ref file="photo-002.image.card" />
+ *     <image-ref file="photo-001-whiteboard.image.card" />
+ *     <image-ref file="photo-002-diagram.image.card" />
  *   </images>
  *   <audio-clips>
  *     <audio-ref file="audio-001.audio.card" />
- *     <audio-ref file="audio-002.audio.card" />
  *   </audio-clips>
- *   <transcript></transcript>
+ *   <purpose>User is planning the Q2 project timeline and capturing whiteboard notes</purpose>
+ *   <transcript>
+ *     <text>So let me walk through the timeline we've got here...</text>
+ *     <image ref="photo-001-whiteboard.image.card" description="Whiteboard with Q2 milestones" filename="photo-001-whiteboard.jpg" />
+ *     <text>And then phase two starts in March.</text>
+ *     <silence duration="15s" />
+ *     <text>OK let me get a photo of this diagram too.</text>
+ *     <image ref="photo-002-diagram.image.card" description="Architecture diagram" filename="photo-002-diagram.jpg" />
+ *   </transcript>
  * </capture-session>
  * ```
  */
@@ -75,6 +106,7 @@ export const CaptureSessionSchema = element("capture-session", {
       SessionTime,
       SessionImages,
       SessionAudioClips,
+      SessionPurpose,
       SessionTranscript,
     ])
   ),
@@ -84,15 +116,18 @@ A capture session groups images and audio from a single recording session. All c
 
 - **status="new"**: Just pulled, nothing processed yet.
 - **status="transcribing"**: Audio transcription is in progress.
-- **status="transcribed"**: All audio transcribed and unified transcript created.
+- **status="transcribed"**: All audio transcribed, ready for further processing.
+- **status="intake-complete"**: Fully processed — purpose established, images described, timeline assembled.
 
 The <images> and <audio-clips> containers hold references (relative file paths) to the child cards in this directory.
 
-When processing a session:
-1. First transcribe all audio clips (set each audio card to "transcribed").
-2. Then analyze all images (set each image card to "analyzed" or "invalid").
-3. Build a unified <transcript> that interleaves the audio transcriptions with inline <image-ref> markers showing where photos were taken relative to the audio timeline.
-4. Set status to "transcribed".
+## Elements
+
+- **<purpose>**: One-sentence statement of what the user is trying to do in this session. Written by synthesizing audio summaries.
+- **<transcript>**: Structured timeline with children:
+  - \`<text>\`: Transcribed speech segments (no timestamps in text).
+  - \`<silence duration="Ns" />\`: Gaps of 10+ seconds between speech.
+  - \`<image ref="..." description="..." filename="..." />\`: Where a photo was taken in the timeline.
 
 The session-id attribute links back to the capture API for reference.`,
 });
@@ -143,6 +178,7 @@ export function createCaptureSessionTemplate(options: {
           <audio-ref file={ref} />
         ))}
       </audio-clips>
+      <purpose></purpose>
       <transcript></transcript>
     </capture-session>
   );

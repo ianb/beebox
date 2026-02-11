@@ -31,6 +31,8 @@ import {
   initRulesCommand,
   pairCommand,
   executeCommandsCommand,
+  transcribeCapturesCommand,
+  assembleTimelineCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -64,6 +66,8 @@ program.addCommand(workflowCommand);
 program.addCommand(initRulesCommand);
 program.addCommand(pairCommand);
 program.addCommand(executeCommandsCommand);
+program.addCommand(transcribeCapturesCommand);
+program.addCommand(assembleTimelineCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

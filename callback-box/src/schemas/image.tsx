@@ -24,6 +24,9 @@ export const ImageDescription = element("description", {
 });
 
 export const ImageText = element("text", {
+  attrs: {
+    source: z.string().optional(),
+  },
   text: z.string().optional(),
 });
 
@@ -32,16 +35,17 @@ export const ImageText = element("text", {
  *
  * Example:
  * ```xml
- * <image status="new">
+ * <image status="analyzed" has-text="true">
  *   <filename name="photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
- *   <description></description>
- *   <text></text>
+ *   <description>Whiteboard with project timeline and milestones</description>
+ *   <text source="whiteboard">## Project Timeline\n- Phase 1: Jan-Feb\n- Phase 2: Mar-Apr</text>
  * </image>
  * ```
  */
 export const ImageSchema = element("image", {
   attrs: {
     status: ImageStatus.default("new"),
+    "has-text": z.enum(["true", "false"]).optional(),
   },
   children: z.array(
     z.union([
@@ -60,9 +64,11 @@ Images are photos from capture sessions. Each image card has an attached image f
 
 When analyzing:
 1. View the attached image file.
-2. Write a description of what's in the image.
-3. If the image contains readable text, extract it into the <text> element (OCR).
-4. Set status to "analyzed" (or "invalid" if it's not useful).`,
+2. Write a one-sentence \`<description>\` oriented toward telling a future agent what's useful in this image.
+3. If the image contains readable text, set \`has-text="true"\` and create one or more \`<text source="...">\` elements with the transcribed content in Markdown. The source attribute describes what the text is on (e.g. "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements are allowed for different text sources in the same image.
+4. If there's no text, set \`has-text="false"\`.
+5. Rename the card via \`cb move\` to \`photo-NNN-short-name.image.card\` where the short name helps identify the content.
+6. Set status to "analyzed" (or "invalid" if it's not useful).`,
 });
 
 export type Image = z.infer<typeof ImageSchema>;
