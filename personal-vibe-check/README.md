@@ -32,7 +32,7 @@ If you prefer to set things up yourself instead of using `vibe-init`:
 ### 1. Install
 
 ```bash
-npm install --save-dev @ianbicking/personal-vibe-check eslint oxlint knip madge husky lint-staged
+npm install --save-dev @ianbicking/personal-vibe-check eslint@^9 oxlint knip madge husky lint-staged
 ```
 
 The package bundles all ESLint plugins as dependencies — you don't need to install them individually.
@@ -160,7 +160,7 @@ The package includes these as dependencies (you don't install them):
 
 Your project installs separately (as devDependencies):
 
-- `eslint`, `oxlint`, `knip`, `madge` — CLI tools invoked by npm scripts
+- `eslint@^9`, `oxlint`, `knip`, `madge` — CLI tools invoked by npm scripts (ESLint pinned to v9; v10 has breaking plugin incompatibilities)
 - `husky`, `lint-staged` — pre-commit hook infrastructure
 - `typescript` — peer dependency (>= 5)
 

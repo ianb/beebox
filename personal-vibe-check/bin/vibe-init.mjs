@@ -114,9 +114,19 @@ async function main() {
   }
 
   // 6. Install CLI tools + husky + lint-staged
-  const toolDeps = ["eslint", "oxlint", "knip", "madge", "husky", "lint-staged"];
+  // Pin versions where needed for compatibility
+  const toolDeps = {
+    eslint: "^9",
+    oxlint: null,
+    knip: null,
+    madge: null,
+    husky: null,
+    "lint-staged": null,
+  };
   const devDeps = pkg.devDependencies || {};
-  const missing = toolDeps.filter((dep) => !devDeps[dep]);
+  const missing = Object.entries(toolDeps)
+    .filter(([name]) => !devDeps[name])
+    .map(([name, version]) => (version ? `${name}@${version}` : name));
   if (missing.length > 0) {
     console.log(`\nInstalling ${missing.join(", ")}...`);
     execSync(`npm install --save-dev ${missing.join(" ")}`, { stdio: "inherit" });
