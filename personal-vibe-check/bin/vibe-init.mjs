@@ -113,11 +113,14 @@ async function main() {
     created.push("Created knip.json");
   }
 
-  // 6. Set up husky + lint-staged
-  if (!pkg.devDependencies || !pkg.devDependencies.husky) {
-    console.log("\nInstalling husky and lint-staged...");
-    execSync("npm install --save-dev husky lint-staged", { stdio: "inherit" });
-    created.push("Installed husky + lint-staged");
+  // 6. Install CLI tools + husky + lint-staged
+  const toolDeps = ["eslint", "oxlint", "knip", "madge", "husky", "lint-staged"];
+  const devDeps = pkg.devDependencies || {};
+  const missing = toolDeps.filter((dep) => !devDeps[dep]);
+  if (missing.length > 0) {
+    console.log(`\nInstalling ${missing.join(", ")}...`);
+    execSync(`npm install --save-dev ${missing.join(" ")}`, { stdio: "inherit" });
+    created.push(`Installed ${missing.join(", ")}`);
   }
 
   // Add lint-staged config if missing
