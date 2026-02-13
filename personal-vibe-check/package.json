@@ -1,0 +1,45 @@
+{
+  "name": "@ianbicking/personal-vibe-check",
+  "version": "0.1.0",
+  "description": "Reusable TypeScript/React lint and static analysis preset",
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint.config.mjs",
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./knip-base.json": "./knip-base.json"
+  },
+  "bin": {
+    "vibe-check": "./bin/vibe-check.mjs",
+    "vibe-init": "./bin/vibe-init.mjs"
+  },
+  "files": [
+    "eslint.config.mjs",
+    "tsconfig.base.json",
+    "knip-base.json",
+    "CONVENTIONS.md",
+    "bin/"
+  ],
+  "peerDependencies": {
+    "typescript": ">=5"
+  },
+  "dependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
+    "eslint": "^9.39.2",
+    "eslint-config-agent": "^1.9.3",
+    "eslint-plugin-class-export": "^1.0.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-n": "^17.23.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-security": "^3.0.1",
+    "knip": "^5.83.1",
+    "madge": "^8.0.0",
+    "oxlint": "^1.47.0",
+    "typescript-eslint": "^8.55.0"
+  },
+  "license": "ISC",
+  "author": "Ian Bicking"
+}
