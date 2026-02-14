@@ -128,7 +128,7 @@ test("formatValidationError: integration with loader", async (t) => {
       // The key test: message should NOT be the raw Zod dump
       t.ok(
         e.message.split("\n").length < 10,
-        `Error should be concise, got ${e.message.split("\n").length} lines: ${e.message}`
+        `Error should be concise, got ${String(e.message.split("\n").length)} lines: ${e.message}`
       );
     }
   }

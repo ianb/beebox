@@ -43,7 +43,7 @@ function formatSimpleIssue(issue: ZodIssue, lines: string[]): void {
  */
 function formatUnionError(issue: ZodIssue & { code: "invalid_union" }, lines: string[], rootNode?: unknown): void {
   const unionErrors = issue.unionErrors;
-  if (!unionErrors || unionErrors.length === 0) {
+  if (unionErrors.length === 0) {
     formatSimpleIssue(issue, lines);
     return;
   }
@@ -80,6 +80,7 @@ function formatUnionError(issue: ZodIssue & { code: "invalid_union" }, lines: st
   }
 
   // We found the matching branch — show only its errors (excluding the tagName match)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- index validated by findMatchingBranch
   const matchingErrors = unionErrors[matchingBranchIndex]!;
   const relevantIssues = matchingErrors.issues.filter(
     (i) => !isTagNameIssue(i)
@@ -131,6 +132,7 @@ function getTagName(node: unknown): string | undefined {
  */
 function findMatchingBranch(unionErrors: ZodError[], tagName: string): number {
   for (let i = 0; i < unionErrors.length; i++) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- loop bounded by array length
     const err = unionErrors[i]!;
     // A branch matches if it does NOT have a tagName literal error for this tag.
     // i.e., the tagName was accepted by this branch.
@@ -200,7 +202,7 @@ function formatPath(path: (string | number)[]): string {
   let result = "";
   for (const segment of path) {
     if (typeof segment === "number") {
-      result += `[${segment}]`;
+      result += `[${String(segment)}]`;
     } else if (result === "") {
       result = segment;
     } else {
