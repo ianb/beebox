@@ -90,13 +90,19 @@ export function listCommands(): CommandDefinition[] {
 }
 
 /**
+ * Parameters for runCommand
+ */
+export interface RunCommandParams {
+  name: string;
+  args: Record<string, unknown>;
+  ctx: CommandContext;
+}
+
+/**
  * Run a command by name with the given arguments.
  */
-export async function runCommand(
-  name: string,
-  args: Record<string, unknown>,
-  ctx: CommandContext
-): Promise<CommandResult> {
+export async function runCommand(params: RunCommandParams): Promise<CommandResult> {
+  const { name, args, ctx } = params;
   const cmd = registry.get(name);
   if (!cmd) {
     return {

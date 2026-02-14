@@ -106,8 +106,12 @@ export function CommandRunner({
     setError(null);
 
     try {
-      const result = await executeCommand(command, args, (text) => {
-        setOutput((prev) => [...prev, text]);
+      const result = await executeCommand({
+        command,
+        args,
+        onOutput: (text) => {
+          setOutput((prev) => [...prev, text]);
+        },
       });
 
       if (result.success) {

@@ -169,30 +169,38 @@ export async function triggerWakeup(dryRun = false): Promise<{
   });
 }
 
+export interface AnswerQuestionParams {
+  questionPath: string;
+  answer: string;
+  selectedId?: string;
+}
+
 export async function answerQuestion(
-  questionPath: string,
-  answer: string,
-  selectedId?: string
+  params: AnswerQuestionParams
 ): Promise<{ success: boolean; message: string; path: string }> {
+  const { questionPath, answer, selectedId } = params;
   return fetchJson(`${API_BASE}/actions/answer`, {
     method: "POST",
     body: JSON.stringify({ questionPath, answer, selectedId }),
   });
 }
 
+export interface CreateCardParams {
+  path: string;
+  template: string;
+  content?: string;
+  prompt?: string;
+  memo?: string;
+  options?: string[];
+}
+
 export async function createCard(
-  path: string,
-  template: string,
-  options?: {
-    content?: string;
-    prompt?: string;
-    memo?: string;
-    options?: string[];
-  }
+  params: CreateCardParams
 ): Promise<{ success: boolean; path: string }> {
+  const { path, template, content, prompt, memo, options } = params;
   return fetchJson(`${API_BASE}/actions/create`, {
     method: "POST",
-    body: JSON.stringify({ path, template, ...options }),
+    body: JSON.stringify({ path, template, content, prompt, memo, options }),
   });
 }
 
@@ -240,16 +248,17 @@ export async function uploadFile(
 
 /**
  * Execute a command with streaming output.
- * @param command Command name
- * @param args Command arguments
- * @param onOutput Callback for streaming output lines
- * @returns Promise resolving to the command result
  */
+export interface ExecuteCommandParams {
+  command: string;
+  args: Record<string, unknown>;
+  onOutput?: (text: string) => void;
+}
+
 export async function executeCommand(
-  command: string,
-  args: Record<string, unknown>,
-  onOutput?: (text: string) => void
+  params: ExecuteCommandParams
 ): Promise<CommandResult> {
+  const { command, args, onOutput } = params;
   const response = await fetch(`${API_BASE}/commands/execute`, {
     method: "POST",
     headers: {
@@ -328,12 +337,17 @@ export async function getCommandInfo(name: string): Promise<CommandInfo> {
 /**
  * Submit feedback on a news brief (text or voice).
  */
+export interface SubmitBriefFeedbackParams {
+  briefPath: string;
+  targetId: string;
+  comment?: string;
+  audioBlob?: Blob;
+}
+
 export async function submitBriefFeedback(
-  briefPath: string,
-  targetId: string,
-  comment?: string,
-  audioBlob?: Blob
+  params: SubmitBriefFeedbackParams
 ): Promise<{ success: boolean; path: string; isVoice: boolean }> {
+  const { briefPath, targetId, comment, audioBlob } = params;
   let audioData: string | undefined;
   let audioMimeType: string | undefined;
 
@@ -357,12 +371,17 @@ export async function submitBriefFeedback(
 /**
  * Submit a query response on a news brief (text or voice).
  */
+export interface SubmitQueryResponseParams {
+  briefPath: string;
+  queryId: string;
+  response?: string;
+  audioBlob?: Blob;
+}
+
 export async function submitQueryResponse(
-  briefPath: string,
-  queryId: string,
-  response?: string,
-  audioBlob?: Blob
+  params: SubmitQueryResponseParams
 ): Promise<{ success: boolean; path: string; isVoice: boolean }> {
+  const { briefPath, queryId, response, audioBlob } = params;
   let audioData: string | undefined;
   let audioMimeType: string | undefined;
 
@@ -414,12 +433,17 @@ export async function getGuideReactions(): Promise<{ reactions: GuideReaction[] 
 /**
  * Complete reading a brief with feedback.
  */
+export interface CompleteReadingParams {
+  briefPath: string;
+  overallRating: "great" | "ok" | "meh";
+  selectedReactions: Array<{ id: string; source: "guide" | "brief" }>;
+  itemFeedback: Array<{ id: string; feedback: "thumbs-up" | "thumbs-down" }>;
+}
+
 export async function completeReading(
-  briefPath: string,
-  overallRating: "great" | "ok" | "meh",
-  selectedReactions: Array<{ id: string; source: "guide" | "brief" }>,
-  itemFeedback: Array<{ id: string; feedback: "thumbs-up" | "thumbs-down" }>
+  params: CompleteReadingParams
 ): Promise<{ success: boolean; newPath: string }> {
+  const { briefPath, overallRating, selectedReactions, itemFeedback } = params;
   return fetchJson(`${API_BASE}/brief/complete-reading`, {
     method: "POST",
     body: JSON.stringify({
@@ -509,11 +533,16 @@ export async function getCommitDiff(hash: string): Promise<DiffResponse> {
   return fetchJson<DiffResponse>(`${API_BASE}/history/diff/${hash}`);
 }
 
+export interface GetSessionLogParams {
+  sessionId: string;
+  offset?: number;
+  limit?: number;
+}
+
 export async function getSessionLog(
-  sessionId: string,
-  offset = 0,
-  limit = 100
+  params: GetSessionLogParams
 ): Promise<SessionLogResponse> {
+  const { sessionId, offset = 0, limit = 100 } = params;
   return fetchJson<SessionLogResponse>(
     `${API_BASE}/history/session/${sessionId}?offset=${offset}&limit=${limit}`
   );

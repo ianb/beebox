@@ -46,19 +46,27 @@ async function hasContent(boxRoot: string, cardPath: string): Promise<boolean> {
 }
 
 /**
+ * Parameters for fetchAllNewsItems
+ */
+export interface FetchAllNewsItemsParams {
+  boxRoot: string;
+  dir: string;
+  options?: {
+    concurrency?: number;
+    onProgress?: (msg: string) => void;
+  };
+}
+
+/**
  * Fetch all unfetched news items in a directory.
  *
  * Shared logic used by both the `fetch-all-news` command and
  * the fetch phase of `process-news`.
  */
 export async function fetchAllNewsItems(
-  boxRoot: string,
-  dir: string,
-  options?: {
-    concurrency?: number;
-    onProgress?: (msg: string) => void;
-  }
+  params: FetchAllNewsItemsParams
 ): Promise<FetchAllResult> {
+  const { boxRoot, dir, options } = params;
   const concurrency = options?.concurrency ?? 5;
   const onProgress = options?.onProgress;
 
@@ -111,14 +119,12 @@ export async function fetchAllNewsItems(
   );
 
   // Fetch in parallel with concurrency limit
-  let active = 0;
   let index = 0;
 
   async function fetchNext(): Promise<void> {
     while (index < itemPaths.length) {
       const currentPath = itemPaths[index]!;
       index++;
-      active++;
 
       try {
         const { ctx } = createCollectorContext(boxRoot);
@@ -144,8 +150,6 @@ export async function fetchAllNewsItems(
           `  Error: ${path.basename(currentPath)}: ${(err as Error).message}`
         );
       }
-
-      active--;
     }
   }
 
@@ -174,9 +178,13 @@ async function executeFetchAllNews(
   const concurrency = (args.concurrency as number) ?? 5;
   const dir = (args.dir as string) ?? "box/inbox/news";
 
-  const result = await fetchAllNewsItems(ctx.boxRoot, dir, {
-    concurrency,
-    onProgress: (msg) => ctx.writeLine(msg),
+  const result = await fetchAllNewsItems({
+    boxRoot: ctx.boxRoot,
+    dir,
+    options: {
+      concurrency,
+      onProgress: (msg) => ctx.writeLine(msg),
+    },
   });
 
   // Commit all changes at once

@@ -10,6 +10,7 @@ import {
   listWorkflows,
   workflowStatus,
 } from "../workflow/engine.js";
+import type { WorkflowOptions } from "../workflow/engine.js";
 
 registerCommand({
   name: "workflow-run",
@@ -44,7 +45,7 @@ registerCommand({
   ],
   execute: async (ctx, args) => {
     const name = args["name"] as string;
-    const options: import("../workflow/engine.js").WorkflowOptions = {};
+    const options: WorkflowOptions = {};
     if (args["dryRun"]) {
       options.dryRun = true;
     }
@@ -55,7 +56,7 @@ registerCommand({
       options.step = args["step"] as string;
     }
 
-    return startWorkflow(ctx, name, options);
+    return startWorkflow({ ctx, workflowNameOrPath: name, options });
   },
 });
 

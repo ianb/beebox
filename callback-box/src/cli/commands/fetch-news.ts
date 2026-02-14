@@ -18,15 +18,15 @@ export const fetchNewsCommand = new Command("fetch-news")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "fetch-news",
-        {
+      const result = await runCommand({
+        name: "fetch-news",
+        args: {
           path: cardPath,
           commit: options.commit,
           dryRun: options.dryRun,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

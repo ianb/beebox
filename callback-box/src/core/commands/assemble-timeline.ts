@@ -218,7 +218,7 @@ registerCommand({
           flushText();
           const img = event.image;
           transcriptChildren.push(
-            makeImageElement(img.ref, img.description, img.filename)
+            makeImageElement({ ref: img.ref, description: img.description, filename: img.filename })
           );
         }
       }
@@ -230,7 +230,7 @@ registerCommand({
       if (transcriptChildren.length === 0 && allImages.length > 0) {
         for (const img of allImages) {
           transcriptChildren.push(
-            makeImageElement(img.ref, img.description, img.filename)
+            makeImageElement({ ref: img.ref, description: img.description, filename: img.filename })
           );
         }
       }
@@ -291,7 +291,17 @@ function makeSilenceElement(duration: string): ElementNode {
   };
 }
 
-function makeImageElement(ref: string, description: string, filename: string): ElementNode {
+/**
+ * Parameters for makeImageElement
+ */
+interface MakeImageElementParams {
+  ref: string;
+  description: string;
+  filename: string;
+}
+
+function makeImageElement(params: MakeImageElementParams): ElementNode {
+  const { ref, description, filename } = params;
   const attrs: Record<string, string> = { ref };
   if (description) attrs["description"] = description;
   if (filename) attrs["filename"] = filename;

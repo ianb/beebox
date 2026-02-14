@@ -30,9 +30,9 @@ export const processNewsCommand = new Command("process-news")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "process-news",
-        {
+      const result = await runCommand({
+        name: "process-news",
+        args: {
           batchSize: options.batchSize ? parseInt(options.batchSize, 10) : 10,
           triageOnly: options.triageOnly,
           fetchOnly: options.fetchOnly,
@@ -41,8 +41,8 @@ export const processNewsCommand = new Command("process-news")
           dryRun: options.dryRun,
           force: options.force,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

@@ -18,14 +18,14 @@ export const triageFeedbackCommand = new Command("triage-feedback")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "triage-feedback",
-        {
+      const result = await runCommand({
+        name: "triage-feedback",
+        args: {
           dryRun: options.dryRun,
           force: options.force,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

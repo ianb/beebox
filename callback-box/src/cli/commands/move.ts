@@ -26,16 +26,16 @@ export const moveCommand = new Command("move")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "move",
-        {
+      const result = await runCommand({
+        name: "move",
+        args: {
           from: from.length === 1 ? from[0] : from,
           to,
           commit: options.commit,
           dryRun: options.dryRun,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

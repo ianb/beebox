@@ -67,7 +67,7 @@ export async function registerActionRoutes(
     };
 
     try {
-      const result = await runCommand("wakeup", { dryRun }, ctx);
+      const result = await runCommand({ name: "wakeup", args: { dryRun }, ctx });
 
       // Broadcast completion
       broadcastEvent("wakeup-complete", {
@@ -123,16 +123,16 @@ export async function registerActionRoutes(
     };
 
     try {
-      const result = await runCommand(
-        "answer",
-        {
+      const result = await runCommand({
+        name: "answer",
+        args: {
           question: questionPath,
           answer: answer,
           selectedId: selectedId,
           via: "web",
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         return reply.status(400).send({ error: result.error });
@@ -177,9 +177,9 @@ export async function registerActionRoutes(
     };
 
     try {
-      const result = await runCommand(
-        "create",
-        {
+      const result = await runCommand({
+        name: "create",
+        args: {
           path: cardPath,
           template,
           content,
@@ -188,8 +188,8 @@ export async function registerActionRoutes(
           options,
           commit: true, // Always commit from web API
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         return reply.status(400).send({ error: result.error });
@@ -253,17 +253,17 @@ export async function registerActionRoutes(
         writeLine: () => {},
       };
 
-      const result = await runCommand(
-        "create",
-        {
+      const result = await runCommand({
+        name: "create",
+        args: {
           path: cardPath,
           template: "voice-memo",
           attachment: tempPath,
           attachmentMimetype: mimetype,
           commit: true,
         },
-        ctx
-      );
+        ctx,
+      });
 
       // Clean up temp file
       try {

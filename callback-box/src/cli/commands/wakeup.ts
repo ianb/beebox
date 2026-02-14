@@ -17,14 +17,14 @@ export const wakeupCommand = new Command("wakeup")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "wakeup",
-        {
+      const result = await runCommand({
+        name: "wakeup",
+        args: {
           dryRun: options.dryRun,
           force: options.force,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

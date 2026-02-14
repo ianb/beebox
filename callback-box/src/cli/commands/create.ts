@@ -9,7 +9,6 @@ import { requireBoxRoot } from "../lib/paths.js";
 import {
   runCommand,
   createCliContext,
-  getTemplateNames,
 } from "../../core/commands/index.js";
 import {
   getAllTemplates,
@@ -75,9 +74,9 @@ export const createCommand = new Command("create")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "create",
-        {
+      const result = await runCommand({
+        name: "create",
+        args: {
           path: targetPath,
           template: options.template,
           content: options.content,
@@ -87,8 +86,8 @@ export const createCommand = new Command("create")
           commit: options.commit,
           attachment: options.attachment,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

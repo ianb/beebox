@@ -55,14 +55,14 @@ test("createMemoTemplate works without source", async (t) => {
 });
 
 test("createSelectQuestionTemplate generates valid XML structure", async (t) => {
-  const template = createSelectQuestionTemplate(
-    "Context here",
-    "What do you want?",
-    [
+  const template = createSelectQuestionTemplate({
+    memo: "Context here",
+    prompt: "What do you want?",
+    options: [
       { id: "a", label: "Choice A" },
       { id: "b", label: "Choice B" },
-    ]
-  );
+    ],
+  });
 
   t.ok(template.includes("<question status=\"pending\">"));
   t.ok(template.includes("<memo>Context here</memo>"));
@@ -74,11 +74,11 @@ test("createSelectQuestionTemplate generates valid XML structure", async (t) => 
 });
 
 test("createSelectQuestionTemplate escapes special characters", async (t) => {
-  const template = createSelectQuestionTemplate(
-    "Context with <special> & chars",
-    "What's \"this\"?",
-    [{ id: "a", label: "Option <A>" }]
-  );
+  const template = createSelectQuestionTemplate({
+    memo: "Context with <special> & chars",
+    prompt: "What's \"this\"?",
+    options: [{ id: "a", label: "Option <A>" }],
+  });
 
   t.ok(template.includes("&lt;special&gt;"));
   t.ok(template.includes("&amp;"));

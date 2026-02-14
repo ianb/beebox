@@ -612,9 +612,13 @@ async function executeProcessNews(
         ctx.writeLine(fmt.dim(`(dry run - would fetch up to ${inboxItems.length} items)`));
         results.push({ phase: "fetch", success: true, message: "Dry run" });
       } else {
-        const fetchResult = await fetchAllNewsItems(ctx.boxRoot, "box/inbox/news", {
-          concurrency: 5,
-          onProgress: (msg) => ctx.writeLine(msg),
+        const fetchResult = await fetchAllNewsItems({
+          boxRoot: ctx.boxRoot,
+          dir: "box/inbox/news",
+          options: {
+            concurrency: 5,
+            onProgress: (msg) => ctx.writeLine(msg),
+          },
         });
 
         // Commit fetched content
@@ -646,7 +650,7 @@ async function executeProcessNews(
         results.push({ phase: "analyze", success: true, message: "No items" });
       } else {
         const itemsToAnalyze = inboxItems.slice(0, batchSize);
-        ctx.writeLine(fmt.progress(itemsToAnalyze.length, inboxItems.length, "items to analyze"));
+        ctx.writeLine(fmt.progress({ current: itemsToAnalyze.length, total: inboxItems.length, label: "items to analyze" }));
 
         if (dryRun) {
           ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
@@ -707,7 +711,7 @@ async function executeProcessNews(
           const briefResult = await runAgent({
             boxRoot: ctx.boxRoot,
             systemPrompt: buildBriefPrompt(ctx.boxRoot),
-            prompt: `Please create a news brief from the items in box/pool/news/`,
+            prompt: "Please create a news brief from the items in box/pool/news/",
             onOutput: (text) => ctx.write(text),
             maxTurns: 40,
           });
@@ -739,7 +743,7 @@ async function executeProcessNews(
     // Summary
     ctx.writeLine(fmt.phase("Results"));
     for (const r of results) {
-      ctx.writeLine(fmt.result(r.success, r.phase, r.message));
+      ctx.writeLine(fmt.result({ success: r.success, label: r.phase, message: r.message }));
     }
 
     const allSuccess = results.every((r) => r.success);

@@ -11,6 +11,9 @@
 import type { Card } from "cardworks";
 import type { ICardLoader } from "cardworks";
 
+// Import and register pre-actions
+import { transcribePreAction } from "./transcribe.js";
+
 export interface PreActionContext {
   boxRoot: string;
   loader: ICardLoader;
@@ -112,7 +115,4 @@ export async function runPreActions(
 
   return results;
 }
-
-// Import and register pre-actions
-import { transcribePreAction } from "./transcribe.js";
 registerPreAction(transcribePreAction);

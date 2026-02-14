@@ -31,7 +31,7 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
       const name = `Memo_${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
       const path = `box/inbox/${name}.memo.card`;
 
-      await createCard(path, "memo", { content: content.trim() });
+      await createCard({ path, template: "memo", content: content.trim() });
 
       setContent("");
       onCreated();

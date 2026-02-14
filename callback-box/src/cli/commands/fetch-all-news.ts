@@ -22,15 +22,15 @@ export const fetchAllNewsCommand = new Command("fetch-all-news")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "fetch-all-news",
-        {
+      const result = await runCommand({
+        name: "fetch-all-news",
+        args: {
           dir: options.dir,
           commit: options.commit !== false,
           concurrency: options.concurrency ? parseInt(options.concurrency, 10) : 5,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

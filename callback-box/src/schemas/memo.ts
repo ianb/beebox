@@ -13,7 +13,7 @@ import { z } from "zod";
  * Valid memo statuses.
  */
 export const MemoStatus = z.enum(["new", "processing", "processed"]);
-export type MemoStatus = z.infer<typeof MemoStatus>;
+export type MemoStatusType = typeof MemoStatus._type;
 
 /**
  * Child element for created timestamp.

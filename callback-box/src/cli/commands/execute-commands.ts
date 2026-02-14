@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { CardLoader, type ElementNode } from "cardworks";
+import { CardLoader } from "cardworks";
 import { requireBoxRoot } from "../lib/paths.js";
 import { stageFiles, commit } from "../lib/git.js";
 import { createRssConnector } from "../../connectors/rss.js";
@@ -87,7 +87,7 @@ export async function executeCommands(
       onLog(`  Executing ${file} via ${connector.name}...`);
 
       if (dryRun) {
-        onLog(`    (dry run - would execute)`);
+        onLog("    (dry run - would execute)");
         skipped.push(relativePath);
         continue;
       }
@@ -95,7 +95,7 @@ export async function executeCommands(
       const result = await connector.execute(cardPath, false);
 
       if (result.success) {
-        onLog(`    Sent successfully`);
+        onLog("    Sent successfully");
 
         // Update card status and archive it
         el.attrs["status"] = "sent";

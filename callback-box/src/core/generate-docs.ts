@@ -10,6 +10,7 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
+import type { ZodTypeAny } from "zod";
 import { schemas } from "../schemas/registry.js";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
 
@@ -89,10 +90,20 @@ export async function setDocIdDebug(boxRoot: string, enabled: boolean): Promise<
 }
 
 /**
+ * Parameters for withDocId
+ */
+interface WithDocIdParams {
+  relativePath: string;
+  content: string;
+  debug: boolean;
+}
+
+/**
  * Optionally prepend a DOCID marker comment to content.
  * Uses the relative path from box root, e.g. "DOCID:docs/generated/card-question.md"
  */
-function withDocId(relativePath: string, content: string, debug: boolean): string {
+function withDocId(params: WithDocIdParams): string {
+  const { relativePath, content, debug } = params;
   if (!debug) return content;
   return `<!-- DOCID:${relativePath} -->\n${content}`;
 }
@@ -108,19 +119,19 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
 
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId(`${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, generateAgentGuide(), debug)),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
-      withDocId(`${DOCS_DIR}/cb-commands.md`, generateCbCommands(), debug)),
+      withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
-      withDocId(`${DOCS_DIR}/connectors.md`, generateConnectorsDocs(), debug)),
+      withDocId({ relativePath: `${DOCS_DIR}/connectors.md`, content: generateConnectorsDocs(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "workflows.md"),
-      withDocId(`${DOCS_DIR}/workflows.md`, generateWorkflowGuide(), debug)),
+      withDocId({ relativePath: `${DOCS_DIR}/workflows.md`, content: generateWorkflowGuide(), debug })),
     ...schemas
       .filter((s) => s.instructions)
       .map((s) => {
         const filename = `card-${s.tagName}.md`;
         return writeFile(join(boxRoot, DOCS_DIR, filename),
-          withDocId(`${DOCS_DIR}/${filename}`, generateCardDoc(s.tagName), debug));
+          withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.tagName), debug }));
       }),
   ]);
 
@@ -251,11 +262,11 @@ function generateCbCommands(): string {
     'cb create box/inbox/my-note.memo.card -c "Remember to check the logs"',
     "",
     "# Create a yes/no question",
-    'cb create box/questions/confirm.question.card -t question-confirm \\',
+    "cb create box/questions/confirm.question.card -t question-confirm \\",
     '  -m "The news brief is ready" -p "Should I publish it?"',
     "",
     "# Create a select question",
-    'cb create box/questions/pick.question.card \\',
+    "cb create box/questions/pick.question.card \\",
     '  -m "Multiple topics found" -p "Which topic to focus on?" \\',
     '  -o "AI" "Climate" "Economics"',
     "```",
@@ -277,7 +288,7 @@ function generateCbCommands(): string {
     if (argEntries.length > 0) {
       lines.push("Arguments:");
       for (const [key, schema] of argEntries) {
-        const zodSchema = schema as import("zod").ZodTypeAny;
+        const zodSchema = schema as ZodTypeAny;
         const isOptional = zodSchema.isOptional();
         const desc = zodSchema.description ?? "";
         let line = `- \`${key}\``;

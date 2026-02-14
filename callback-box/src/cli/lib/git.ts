@@ -181,8 +181,8 @@ export async function getLog(
     const entries: GitLogEntry[] = [];
     const commits = stdout.split(String.fromCharCode(0) + "\n").filter(Boolean);
 
-    for (const commit of commits) {
-      const parts = commit.split("\x00");
+    for (const commitText of commits) {
+      const parts = commitText.split("\x00");
       if (parts.length < 3) continue;
 
       const [hash, date, subject, body] = parts;
@@ -263,18 +263,24 @@ export interface GitLogEntryExtended {
 }
 
 /**
+ * Parameters for getLogPaginated
+ */
+export interface GetLogPaginatedParams {
+  boxRoot: string;
+  count?: number;
+  offset?: number;
+}
+
+/**
  * Get paginated commits from the log with multi-value trailer support.
  *
- * @param boxRoot - Repository root
- * @param count - Number of commits to retrieve
- * @param offset - Number of commits to skip
+ * @param params - Parameters object
  * @returns Array of log entries
  */
 export async function getLogPaginated(
-  boxRoot: string,
-  count = 50,
-  offset = 0
+  params: GetLogPaginatedParams
 ): Promise<GitLogEntryExtended[]> {
+  const { boxRoot, count = 50, offset = 0 } = params;
   const format = "%H%x00%aI%x00%s%x00%b%x00";
 
   try {
@@ -292,8 +298,8 @@ export async function getLogPaginated(
     const entries: GitLogEntryExtended[] = [];
     const commits = stdout.split(String.fromCharCode(0) + "\n").filter(Boolean);
 
-    for (const commit of commits) {
-      const parts = commit.split("\x00");
+    for (const commitText of commits) {
+      const parts = commitText.split("\x00");
       if (parts.length < 3) continue;
 
       const [hash, date, subject, body] = parts;

@@ -55,17 +55,17 @@ const TEMPLATES: Record<string, (args: CreateArgs) => string> = {
   "voice-memo": () => createVoiceMemoTemplate(),
 
   question: (args) =>
-    createSelectQuestionTemplate(
-      args.memo ?? "Context for this question",
-      args.prompt ?? "What would you like to do?",
-      args.options?.map((opt, i) => ({
+    createSelectQuestionTemplate({
+      memo: args.memo ?? "Context for this question",
+      prompt: args.prompt ?? "What would you like to do?",
+      options: args.options?.map((opt, i) => ({
         id: String.fromCharCode(97 + i),
         label: opt,
       })) ?? [
         { id: "a", label: "Option A" },
         { id: "b", label: "Option B" },
-      ]
-    ),
+      ],
+    }),
 
   "question-text": (args) =>
     createTextQuestionTemplate(
@@ -139,7 +139,7 @@ async function executeCreate(
 
   // Determine template from card type
   // Template can be explicitly specified, but typically it's inferred from the filename
-  let templateName = createArgs.template ?? TYPE_TO_TEMPLATE[parsed.type];
+  const templateName = createArgs.template ?? TYPE_TO_TEMPLATE[parsed.type];
   if (!templateName) {
     return {
       success: false,

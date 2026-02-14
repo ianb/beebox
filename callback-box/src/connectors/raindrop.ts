@@ -72,11 +72,19 @@ interface RaindropCollection {
 
 const API_BASE = "https://api.raindrop.io/rest/v1";
 
+/**
+ * Parameters for raindropFetch
+ */
+interface RaindropFetchParams {
+  token: string;
+  endpoint: string;
+  options?: RequestInit;
+}
+
 async function raindropFetch(
-  token: string,
-  endpoint: string,
-  options: RequestInit = {}
+  params: RaindropFetchParams
 ): Promise<unknown> {
+  const { token, endpoint, options = {} } = params;
   const url = `${API_BASE}${endpoint}`;
   const resp = await fetch(url, {
     ...options,
@@ -94,7 +102,7 @@ async function raindropFetch(
 }
 
 async function fetchCollections(token: string): Promise<RaindropCollection[]> {
-  const data = (await raindropFetch(token, "/collections")) as {
+  const data = (await raindropFetch({ token, endpoint: "/collections" })) as {
     items: RaindropCollection[];
   };
   return data.items || [];
@@ -104,10 +112,10 @@ async function fetchAllBookmarks(token: string): Promise<RaindropBookmark[]> {
   const all: RaindropBookmark[] = [];
   let page = 0;
   while (true) {
-    const data = (await raindropFetch(
+    const data = (await raindropFetch({
       token,
-      `/raindrops/0?page=${page}&perpage=50`
-    )) as { items: RaindropBookmark[] };
+      endpoint: `/raindrops/0?page=${page}&perpage=50`,
+    })) as { items: RaindropBookmark[] };
     if (!data.items || data.items.length === 0) break;
     all.push(...data.items);
     if (data.items.length < 50) break;
@@ -126,27 +134,41 @@ async function createRaindrop(
     collection?: { $id: number };
   }
 ): Promise<RaindropBookmark> {
-  const data = (await raindropFetch(token, "/raindrop", {
-    method: "POST",
-    body: JSON.stringify(payload),
+  const data = (await raindropFetch({
+    token,
+    endpoint: "/raindrop",
+    options: {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
   })) as { item: RaindropBookmark };
   return data.item;
 }
 
-async function updateRaindrop(
-  token: string,
-  id: number,
+/**
+ * Parameters for updateRaindrop
+ */
+interface UpdateRaindropParams {
+  token: string;
+  id: number;
   payload: Partial<{
     title: string;
     link: string;
     tags: string[];
     note: string;
     collection: { $id: number };
-  }>
-): Promise<RaindropBookmark> {
-  const data = (await raindropFetch(token, `/raindrop/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
+  }>;
+}
+
+async function updateRaindrop(params: UpdateRaindropParams): Promise<RaindropBookmark> {
+  const { token, id, payload } = params;
+  const data = (await raindropFetch({
+    token,
+    endpoint: `/raindrop/${id}`,
+    options: {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    },
   })) as { item: RaindropBookmark };
   return data.item;
 }
@@ -164,10 +186,17 @@ function computeContentHash(fields: BookmarkFields): string {
   return crypto.createHash("sha256").update(normalized).digest("hex").slice(0, 16);
 }
 
+/**
+ * Parameters for computeFieldDiff
+ */
+interface ComputeFieldDiffParams {
+  current: BookmarkFields;
+  synced: BookmarkFields;
+  collectionMap: Record<string, number>;
+}
+
 function computeFieldDiff(
-  current: BookmarkFields,
-  synced: BookmarkFields,
-  collectionMap: Record<string, number>
+  params: ComputeFieldDiffParams
 ): Partial<{
   title: string;
   link: string;
@@ -175,6 +204,7 @@ function computeFieldDiff(
   note: string;
   collection: { $id: number };
 }> {
+  const { current, synced, collectionMap } = params;
   const diff: Partial<{
     title: string;
     link: string;
@@ -280,8 +310,18 @@ function extractAllFromCard(root: ElementNode): {
   return result;
 }
 
+/**
+ * Parameters for buildBookmarkCard
+ */
+interface BuildBookmarkCardParams {
+  rb: RaindropBookmark;
+  id: string;
+  collName: string;
+}
+
 /** Build a bookmark card from a Raindrop API response. */
-function buildBookmarkCard(rb: RaindropBookmark, id: string, collName: string): string {
+function buildBookmarkCard(params: BuildBookmarkCardParams): string {
+  const { rb, id, collName } = params;
   const opts: Parameters<typeof createBookmarkTemplate>[0] = {
     title: rb.title,
     link: rb.link,
@@ -534,10 +574,18 @@ class RaindropConnector implements Connector {
 
           if (entry && hash !== entry.lastSyncedHash) {
             // Changed locally — push to Raindrop
-            const diff = computeFieldDiff(fields, entry.syncedFields, state.collections);
+            const diff = computeFieldDiff({
+              current: fields,
+              synced: entry.syncedFields,
+              collectionMap: state.collections,
+            });
 
             if (Object.keys(diff).length > 0) {
-              await updateRaindrop(token, Number(raindropId), diff);
+              await updateRaindrop({
+                token,
+                id: Number(raindropId),
+                payload: diff,
+              });
 
               entry.lastSyncedHash = hash;
               entry.syncedFields = { ...fields };
@@ -623,7 +671,7 @@ class RaindropConnector implements Connector {
         const cardPath = path.join(dir, filename);
         const relPath = path.relative(this.boxRoot, cardPath);
 
-        const content = buildBookmarkCard(rb, id, collName);
+        const content = buildBookmarkCard({ rb, id, collName });
 
         await fs.writeFile(cardPath, content);
         state.bookmarks[id] = {
@@ -639,7 +687,7 @@ class RaindropConnector implements Connector {
         const cardPath = path.join(dir, filename);
         const relPath = path.relative(this.boxRoot, cardPath);
 
-        const content = buildBookmarkCard(rb, id, collName);
+        const content = buildBookmarkCard({ rb, id, collName });
 
         // Remove old file if the name changed
         if (entry.cardPath !== relPath) {

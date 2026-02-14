@@ -19,16 +19,16 @@ export const trashCommand = new Command("trash")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "trash",
-        {
+      const result = await runCommand({
+        name: "trash",
+        args: {
           paths: cardPaths,
           reason: options.reason,
           commit: options.commit,
           dryRun: options.dryRun,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

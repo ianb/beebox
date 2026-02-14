@@ -69,7 +69,7 @@ export async function runWakeup(
       onLog("  (dry run - skipping)");
       results.push({ name: "pre-actions", skipped: true });
     } else {
-      const preActionResult = await runPreActionsPhase(boxRoot, state, onLog);
+      const preActionResult = await runPreActionsPhase({ boxRoot, state, onLog });
       results.push({ name: "pre-actions", ...preActionResult });
     }
     onLog("");
@@ -80,7 +80,7 @@ export async function runWakeup(
       onLog("  (dry run - skipping)");
       results.push({ name: "check-inbox", skipped: true });
     } else {
-      const inboxResult = await checkInboxPhase(boxRoot, state, onLog);
+      const inboxResult = await checkInboxPhase({ boxRoot, state, onLog });
       results.push({ name: "check-inbox", ...inboxResult });
     }
     onLog("");
@@ -156,13 +156,21 @@ export async function runWakeup(
 }
 
 /**
+ * Parameters for runPreActionsPhase
+ */
+interface RunPreActionsPhaseParams {
+  boxRoot: string;
+  state: Awaited<ReturnType<typeof getSystemState>>;
+  onLog: (msg: string) => void;
+}
+
+/**
  * Run pre-actions phase.
  */
 async function runPreActionsPhase(
-  boxRoot: string,
-  state: Awaited<ReturnType<typeof getSystemState>>,
-  onLog: (msg: string) => void
+  params: RunPreActionsPhaseParams
 ): Promise<Omit<PhaseResult, "name">> {
+  const { boxRoot, state, onLog } = params;
   if (state.inbox.length === 0) {
     onLog("  No items to prepare");
     return { message: "No items to prepare" };
@@ -212,13 +220,21 @@ async function runPreActionsPhase(
 }
 
 /**
+ * Parameters for checkInboxPhase
+ */
+interface CheckInboxPhaseParams {
+  boxRoot: string;
+  state: Awaited<ReturnType<typeof getSystemState>>;
+  onLog: (msg: string) => void;
+}
+
+/**
  * Check inbox phase - invokes agent to process inbox items.
  */
 async function checkInboxPhase(
-  boxRoot: string,
-  state: Awaited<ReturnType<typeof getSystemState>>,
-  onLog: (msg: string) => void
+  params: CheckInboxPhaseParams
 ): Promise<Omit<PhaseResult, "name">> {
+  const { boxRoot, state, onLog } = params;
   // Filter to only new items
   const newItems = state.inbox.filter((item) => item.status === "new");
 

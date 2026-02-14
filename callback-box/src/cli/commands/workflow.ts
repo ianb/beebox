@@ -26,16 +26,16 @@ workflowCommand
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "workflow-run",
-        {
+      const result = await runCommand({
+        name: "workflow-run",
+        args: {
           name,
           dryRun: options.dryRun,
           force: options.force,
           step: options.step,
         },
-        ctx
-      );
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);
@@ -55,7 +55,11 @@ workflowCommand
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand("workflow-list", {}, ctx);
+      const result = await runCommand({
+        name: "workflow-list",
+        args: {},
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);
@@ -76,11 +80,11 @@ workflowCommand
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand(
-        "workflow-status",
-        { runDir },
-        ctx
-      );
+      const result = await runCommand({
+        name: "workflow-status",
+        args: { runDir },
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

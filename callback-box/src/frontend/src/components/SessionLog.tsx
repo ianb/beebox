@@ -112,7 +112,7 @@ export function SessionLog({ sessionId }: SessionLogProps) {
   const loadEntries = useCallback(async (offset = 0) => {
     try {
       setLoading(true);
-      const result = await getSessionLog(sessionId, offset, 100);
+      const result = await getSessionLog({ sessionId, offset, limit: 100 });
       setFound(result.found);
       if (offset === 0) {
         setEntries(result.entries);

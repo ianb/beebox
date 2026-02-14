@@ -60,13 +60,21 @@ interface ParsedWorkflow {
 // ─── Public API ──────────────────────────────────────────────────────
 
 /**
+ * Parameters for startWorkflow
+ */
+export interface StartWorkflowParams {
+  ctx: CommandContext;
+  workflowNameOrPath: string;
+  options?: WorkflowOptions;
+}
+
+/**
  * Start a new workflow run.
  */
 export async function startWorkflow(
-  ctx: CommandContext,
-  workflowNameOrPath: string,
-  options: WorkflowOptions = {}
+  params: StartWorkflowParams
 ): Promise<CommandResult> {
+  const { ctx, workflowNameOrPath, options = {} } = params;
   const { boxRoot } = ctx;
 
   // Resolve workflow definition: accept a path or a bare name
@@ -109,10 +117,10 @@ export async function startWorkflow(
       const hasPrecheck = step.precheck !== undefined;
       const hasValidate = step.validate !== undefined;
       const runType = step.run?.agents.length
-        ? `agent`
+        ? "agent"
         : step.run?.shells.length
-          ? `shell`
-          : `none`;
+          ? "shell"
+          : "none";
       ctx.writeLine(
         `  ${fmt.strong(step.id)}: ${step.description} ${fmt.dim(`[${runType}${hasPrecheck ? ", precheck" : ""}${hasValidate ? ", validate" : ""}]`)}`
       );
@@ -147,7 +155,7 @@ export async function startWorkflow(
   // Generate initial run card
   const now = new Date().toISOString();
   const relWorkflowPath = path.relative(boxRoot, workflowCardPath);
-  const initialRunCard = buildInitialRunCard(workflow, relWorkflowPath, now);
+  const initialRunCard = buildInitialRunCard({ workflow, workflowPath: relWorkflowPath, startedAt: now });
   await fs.writeFile(runCardPath, initialRunCard);
 
   // Commit start
@@ -167,15 +175,15 @@ export async function startWorkflow(
     : workflow.steps;
   let allSucceeded = true;
   for (const step of stepsToRun) {
-    const result = await executeStep(
+    const result = await executeStep({
       ctx,
       boxRoot,
       step,
       workflow,
       workflowCardPath,
       runCardPath,
-      relWorkflowPath
-    );
+      relWorkflowPath,
+    });
 
     if (result === "failed") {
       allSucceeded = false;
@@ -185,11 +193,11 @@ export async function startWorkflow(
 
   // Final run card update
   const completedAt = new Date().toISOString();
-  await updateRunCardStatus(
+  await updateRunCardStatus({
     runCardPath,
-    allSucceeded ? "completed" : "failed",
-    completedAt
-  );
+    status: allSucceeded ? "completed" : "failed",
+    completedAt,
+  });
   await stageAll(boxRoot);
   await commit(boxRoot, {
     message: `${allSucceeded ? "Complete" : "Failed"} workflow: ${workflowName}`,
@@ -408,13 +416,19 @@ function parsePhaseDef(phaseEl: ElementNode): ParsedPhase {
 }
 
 /**
+ * Parameters for buildInitialRunCard
+ */
+interface BuildInitialRunCardParams {
+  workflow: ParsedWorkflow;
+  workflowPath: string;
+  startedAt: string;
+}
+
+/**
  * Build the initial run card XML.
  */
-function buildInitialRunCard(
-  workflow: ParsedWorkflow,
-  workflowPath: string,
-  startedAt: string
-): string {
+function buildInitialRunCard(params: BuildInitialRunCardParams): string {
+  const { workflow, workflowPath, startedAt } = params;
   const stepElements = workflow.steps.map((step) =>
     createElement("step", {
       id: step.id,
@@ -433,19 +447,25 @@ function buildInitialRunCard(
 }
 
 /**
+ * Parameters for executeStep
+ */
+interface ExecuteStepParams {
+  ctx: CommandContext;
+  boxRoot: string;
+  step: ParsedStep;
+  workflow: ParsedWorkflow;
+  workflowCardPath: string;
+  runCardPath: string;
+  relWorkflowPath: string;
+}
+
+/**
  * Execute a single workflow step.
  *
  * Returns "completed", "skipped", or "failed".
  */
-async function executeStep(
-  ctx: CommandContext,
-  boxRoot: string,
-  step: ParsedStep,
-  workflow: ParsedWorkflow,
-  workflowCardPath: string,
-  runCardPath: string,
-  relWorkflowPath: string
-): Promise<"completed" | "skipped" | "failed"> {
+async function executeStep(params: ExecuteStepParams): Promise<"completed" | "skipped" | "failed"> {
+  const { ctx, boxRoot, step, workflow, workflowCardPath, runCardPath, relWorkflowPath } = params;
   const relRunCardPath = path.relative(boxRoot, runCardPath);
 
   ctx.writeLine(fmt.phase(`Step: ${step.id}`));
@@ -453,9 +473,13 @@ async function executeStep(
   ctx.writeLine("");
 
   // Update run card: step is now running (uncommitted signal)
-  await updateStepInRunCard(runCardPath, step.id, {
-    status: "running",
-    startedAt: new Date().toISOString(),
+  await updateStepInRunCard({
+    runCardPath,
+    stepId: step.id,
+    update: {
+      status: "running",
+      startedAt: new Date().toISOString(),
+    },
   });
 
   // ── Precheck ──
@@ -466,9 +490,13 @@ async function executeStep(
 
     if (precheckResult.skipped) {
       ctx.writeLine(fmt.dim(`  Skipped: ${precheckResult.stdout || "precheck exit $CHECK_SKIP"}`));
-      await updateStepInRunCard(runCardPath, step.id, {
-        status: "skipped",
-        precheck: { status: "skip", stdout: precheckResult.stdout },
+      await updateStepInRunCard({
+        runCardPath,
+        stepId: step.id,
+        update: {
+          status: "skipped",
+          precheck: { status: "skip", stdout: precheckResult.stdout },
+        },
       });
       await stageAll(boxRoot);
       await commit(boxRoot, {
@@ -484,10 +512,14 @@ async function executeStep(
       if (precheckResult.stderr) {
         ctx.writeLine(fmt.dim(`  ${precheckResult.stderr}`));
       }
-      await updateStepInRunCard(runCardPath, step.id, {
-        status: "failed",
-        precheck: { status: "fail", stdout: precheckResult.stdout },
-        completedAt: new Date().toISOString(),
+      await updateStepInRunCard({
+        runCardPath,
+        stepId: step.id,
+        update: {
+          status: "failed",
+          precheck: { status: "fail", stdout: precheckResult.stdout },
+          completedAt: new Date().toISOString(),
+        },
       });
       await stageAll(boxRoot);
       await commit(boxRoot, {
@@ -510,9 +542,13 @@ async function executeStep(
   // ── Run ──
   if (!step.run) {
     ctx.writeLine(fmt.warn("  No run phase defined"));
-    await updateStepInRunCard(runCardPath, step.id, {
-      status: "completed",
-      completedAt: new Date().toISOString(),
+    await updateStepInRunCard({
+      runCardPath,
+      stepId: step.id,
+      update: {
+        status: "completed",
+        completedAt: new Date().toISOString(),
+      },
     });
     await stageAll(boxRoot);
     await commit(boxRoot, {
@@ -532,13 +568,13 @@ async function executeStep(
 
     // Build context block
     const stepLineRange = await getStepLineRange(workflowCardPath, step.id);
-    const contextBlock = buildContextBlock(
-      relRunCardPath,
-      step.id,
-      relWorkflowPath,
-      stepLineRange,
-      precheckOutput
-    );
+    const contextBlock = buildContextBlock({
+      runCardPath: relRunCardPath,
+      stepId: step.id,
+      workflowPath: relWorkflowPath,
+      ...(stepLineRange && { stepLineRange }),
+      ...(precheckOutput && { precheckOutput }),
+    });
 
     const systemPrompt = contextBlock + "\n\n" + agent.prompt;
 
@@ -579,23 +615,28 @@ async function executeStep(
   }
 
   // Ensure git is clean after run phase
-  const gitRef = await ensureGitClean(boxRoot, step.id, workflow.name, sessionId);
+  const gitRef = await ensureGitClean({
+    boxRoot,
+    stepId: step.id,
+    workflowName: workflow.name,
+    ...(sessionId && { sessionId }),
+  });
 
   // ── Validate ──
   let validateResult: { status: string; stdout?: string; review?: string } | undefined;
 
   if (step.validate) {
     ctx.writeLine(fmt.dim("  Validating..."));
-    validateResult = await executeValidation(
+    validateResult = await executeValidation({
       ctx,
       boxRoot,
       step,
-      workflow,
-      workflowCardPath,
-      runCardPath,
-      relWorkflowPath,
-      gitRef
-    );
+      _workflow: workflow,
+      _workflowCardPath: workflowCardPath,
+      _runCardPath: runCardPath,
+      _relWorkflowPath: relWorkflowPath,
+      _gitRef: gitRef,
+    });
   }
 
   // ── Record results ──
@@ -632,7 +673,7 @@ async function executeStep(
     stepUpdate.validate = valUpdate;
   }
 
-  await updateStepInRunCard(runCardPath, step.id, stepUpdate);
+  await updateStepInRunCard({ runCardPath, stepId: step.id, update: stepUpdate });
   await stageAll(boxRoot);
   await commit(boxRoot, {
     message: `[workflow] Complete step: ${step.id}`,
@@ -681,18 +722,24 @@ async function executePhaseShells(
 }
 
 /**
+ * Parameters for executeValidation
+ */
+interface ExecuteValidationParams {
+  ctx: CommandContext;
+  boxRoot: string;
+  step: ParsedStep;
+  _workflow: ParsedWorkflow;
+  _workflowCardPath: string;
+  _runCardPath: string;
+  _relWorkflowPath: string;
+  _gitRef: string;
+}
+
+/**
  * Execute validation phase.
  */
-async function executeValidation(
-  ctx: CommandContext,
-  boxRoot: string,
-  step: ParsedStep,
-  workflow: ParsedWorkflow,
-  _workflowCardPath: string,
-  _runCardPath: string,
-  _relWorkflowPath: string,
-  gitRef: string
-): Promise<{ status: string; stdout?: string; review?: string }> {
+async function executeValidation(params: ExecuteValidationParams): Promise<{ status: string; stdout?: string; review?: string }> {
+  const { ctx, boxRoot, step, _workflow, _workflowCardPath, _runCardPath, _relWorkflowPath, _gitRef } = params;
   const validate = step.validate!;
   const { phase, severity } = validate;
   let status = "pass";
@@ -750,16 +797,22 @@ async function executeValidation(
 }
 
 /**
+ * Parameters for ensureGitClean
+ */
+interface EnsureGitCleanParams {
+  boxRoot: string;
+  stepId: string;
+  workflowName: string;
+  sessionId?: string;
+}
+
+/**
  * Ensure git is clean after a step's run phase.
  * If there are uncommitted changes, make a fallback commit.
  * Returns the git ref of the step's work.
  */
-async function ensureGitClean(
-  boxRoot: string,
-  stepId: string,
-  workflowName: string,
-  sessionId?: string
-): Promise<string> {
+async function ensureGitClean(params: EnsureGitCleanParams): Promise<string> {
+  const { boxRoot, stepId, workflowName, sessionId } = params;
   const gitStatus = await getStatus(boxRoot);
 
   if (!gitStatus.clean) {
@@ -797,7 +850,7 @@ async function ensureGitClean(
 /**
  * Build a short summary of changed files for fallback commit messages.
  */
-function buildFallbackSummary(files: string[], boxRoot: string): string {
+function buildFallbackSummary(files: string[], _boxRoot: string): string {
   if (files.length === 0) return "uncommitted changes";
 
   // Extract basenames and count by directory
@@ -824,15 +877,21 @@ function buildFallbackSummary(files: string[], boxRoot: string): string {
 }
 
 /**
+ * Parameters for buildContextBlock
+ */
+interface BuildContextBlockParams {
+  runCardPath: string;
+  stepId: string;
+  workflowPath: string;
+  stepLineRange?: string;
+  precheckOutput?: string;
+}
+
+/**
  * Build the context block prepended to agent system prompts.
  */
-function buildContextBlock(
-  runCardPath: string,
-  stepId: string,
-  workflowPath: string,
-  stepLineRange?: string,
-  precheckOutput?: string
-): string {
+function buildContextBlock(params: BuildContextBlockParams): string {
+  const { runCardPath, stepId, workflowPath, stepLineRange, precheckOutput } = params;
   const date = new Date().toISOString().slice(0, 10);
   const stepRef = stepLineRange
     ? `${stepId} (defined at ${workflowPath} ${stepLineRange})`
@@ -904,13 +963,19 @@ interface StepUpdate {
 }
 
 /**
+ * Parameters for updateRunCardStatus
+ */
+interface UpdateRunCardStatusParams {
+  runCardPath: string;
+  status: string;
+  completedAt?: string;
+}
+
+/**
  * Update the run card's overall status.
  */
-async function updateRunCardStatus(
-  runCardPath: string,
-  status: string,
-  completedAt?: string
-): Promise<void> {
+async function updateRunCardStatus(params: UpdateRunCardStatusParams): Promise<void> {
+  const { runCardPath, status, completedAt } = params;
   const content = await fs.readFile(runCardPath, "utf-8");
   const root = await parseXml(content, runCardPath);
 
@@ -923,13 +988,19 @@ async function updateRunCardStatus(
 }
 
 /**
+ * Parameters for updateStepInRunCard
+ */
+interface UpdateStepInRunCardParams {
+  runCardPath: string;
+  stepId: string;
+  update: StepUpdate;
+}
+
+/**
  * Update a specific step in the run card.
  */
-async function updateStepInRunCard(
-  runCardPath: string,
-  stepId: string,
-  update: StepUpdate
-): Promise<void> {
+async function updateStepInRunCard(params: UpdateStepInRunCardParams): Promise<void> {
+  const { runCardPath, stepId, update } = params;
   const content = await fs.readFile(runCardPath, "utf-8");
   const root = await parseXml(content, runCardPath);
 

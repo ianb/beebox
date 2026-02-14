@@ -194,7 +194,6 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     systemPrompt,
     prompt,
     onOutput,
-    maxCost = 1.0,
     dryRun = false,
     maxTurns = 20,
   } = options;

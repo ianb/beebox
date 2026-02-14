@@ -131,12 +131,12 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     }) => {
       if (!selectedSummary) return;
 
-      const result = await completeReading(
-        selectedSummary.relativePath,
-        data.overallRating,
-        data.selectedReactions,
-        data.itemFeedback
-      );
+      const result = await completeReading({
+        briefPath: selectedSummary.relativePath,
+        overallRating: data.overallRating,
+        selectedReactions: data.selectedReactions,
+        itemFeedback: data.itemFeedback,
+      });
       console.log("Reading completed with feedback");
 
       // Update the summary to show as read with new archived path
@@ -158,7 +158,11 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     (targetId: string, comment: string) => {
       if (!selectedSummary) return;
 
-      submitBriefFeedback(selectedSummary.relativePath, targetId, comment)
+      submitBriefFeedback({
+        briefPath: selectedSummary.relativePath,
+        targetId,
+        comment,
+      })
         .then(() => {
           console.log("Feedback submitted:", targetId);
         })
@@ -174,12 +178,11 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     async (targetId: string, audioBlob: Blob) => {
       if (!selectedSummary) return;
 
-      await submitBriefFeedback(
-        selectedSummary.relativePath,
+      await submitBriefFeedback({
+        briefPath: selectedSummary.relativePath,
         targetId,
-        undefined,
-        audioBlob
-      );
+        audioBlob,
+      });
       console.log("Voice feedback submitted:", targetId);
     },
     [selectedSummary]
@@ -190,7 +193,11 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     (queryId: string, response: string) => {
       if (!selectedSummary) return;
 
-      submitQueryResponse(selectedSummary.relativePath, queryId, response)
+      submitQueryResponse({
+        briefPath: selectedSummary.relativePath,
+        queryId,
+        response,
+      })
         .then(() => {
           console.log("Query response submitted:", queryId);
         })
@@ -206,12 +213,11 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     async (queryId: string, audioBlob: Blob) => {
       if (!selectedSummary) return;
 
-      await submitQueryResponse(
-        selectedSummary.relativePath,
+      await submitQueryResponse({
+        briefPath: selectedSummary.relativePath,
         queryId,
-        undefined,
-        audioBlob
-      );
+        audioBlob,
+      });
       console.log("Voice query response submitted:", queryId);
     },
     [selectedSummary]

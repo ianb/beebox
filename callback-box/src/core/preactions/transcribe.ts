@@ -49,7 +49,7 @@ export const transcribePreAction: PreAction = {
   },
 
   async execute(context: PreActionContext): Promise<PreActionResult> {
-    const { card, cardPath, boxRoot } = context;
+    const { card, cardPath } = context;
     const element = card.element;
 
     // Find the audio file
@@ -65,13 +65,15 @@ export const transcribePreAction: PreAction = {
 
       // Get any existing content for context
       const existingContent = getExistingContent(element);
-      const prompt = existingContent || undefined;
-
       // Transcribe
-      const result = await transcribeAudio(audioBuffer, filename, prompt);
+      const result = await transcribeAudio({
+        audioBuffer,
+        filename,
+        ...(existingContent && { prompt: existingContent }),
+      });
 
       // Add transcription to the card
-      addTranscription(element, result.text, result.language);
+      addTranscription({ element, text: result.text, language: result.language });
 
       return {
         modified: true,
@@ -81,12 +83,12 @@ export const transcribePreAction: PreAction = {
       const transcriptionError = error as TranscriptionError;
 
       // Record the error in the card
-      addTranscriptionError(
+      addTranscriptionError({
         element,
-        transcriptionError.message,
-        transcriptionError.permanent,
-        transcriptionError.code
-      );
+        message: transcriptionError.message,
+        permanent: transcriptionError.permanent,
+        ...(transcriptionError.code && { code: transcriptionError.code }),
+      });
 
       return {
         modified: true, // We modified the card to add the error
@@ -150,13 +152,19 @@ function getExistingContent(element: ElementNode): string | null {
 }
 
 /**
+ * Parameters for addTranscription
+ */
+interface AddTranscriptionParams {
+  element: ElementNode;
+  text: string;
+  language: string;
+}
+
+/**
  * Add transcription to a memo element.
  */
-function addTranscription(
-  element: ElementNode,
-  text: string,
-  language: string
-): void {
+function addTranscription(params: AddTranscriptionParams): void {
+  const { element, text, language } = params;
   const children = element.children as ElementNode[];
 
   // Remove any previous transcription error
@@ -183,14 +191,20 @@ function addTranscription(
 }
 
 /**
+ * Parameters for addTranscriptionError
+ */
+interface AddTranscriptionErrorParams {
+  element: ElementNode;
+  message: string;
+  permanent: boolean;
+  code?: string;
+}
+
+/**
  * Add a transcription error to a memo element.
  */
-function addTranscriptionError(
-  element: ElementNode,
-  message: string,
-  permanent: boolean,
-  code?: string
-): void {
+function addTranscriptionError(params: AddTranscriptionErrorParams): void {
+  const { element, message, permanent, code } = params;
   const children = element.children as ElementNode[];
 
   // Remove any previous error

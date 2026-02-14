@@ -30,7 +30,7 @@ export async function registerSseRoutes(
       persistent: true,
       ignoreInitial: true,
       // Watch for card files and any files in box directories
-      ignored: /(^|[\/\\])\../,
+      ignored: /(^|[/\\])\../,
     });
 
     watcher.on("all", (event, filePath) => {
@@ -63,7 +63,7 @@ export async function registerSseRoutes(
     });
 
     // Send initial connection event
-    sendEvent(reply, "connected", { clientId });
+    sendEvent({ reply, event: "connected", data: { clientId } });
 
     // Add to clients list
     const client: SSEClient = { id: clientId, reply };
@@ -72,7 +72,7 @@ export async function registerSseRoutes(
     // Keep connection alive with periodic pings
     const pingInterval = setInterval(() => {
       if (reply.raw.writable) {
-        sendEvent(reply, "ping", { timestamp: new Date().toISOString() });
+        sendEvent({ reply, event: "ping", data: { timestamp: new Date().toISOString() } });
       } else {
         clearInterval(pingInterval);
       }
@@ -96,9 +96,19 @@ export async function registerSseRoutes(
 }
 
 /**
+ * Parameters for sendEvent
+ */
+interface SendEventParams {
+  reply: FastifyReply;
+  event: string;
+  data: unknown;
+}
+
+/**
  * Send an SSE event to a client.
  */
-function sendEvent(reply: FastifyReply, event: string, data: unknown): void {
+function sendEvent(params: SendEventParams): void {
+  const { reply, event, data } = params;
   if (!reply.raw.writable) return;
 
   const payload = JSON.stringify(data);

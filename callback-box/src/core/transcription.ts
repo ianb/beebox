@@ -32,20 +32,26 @@ export interface TranscriptionError {
 }
 
 /**
+ * Parameters for transcribeAudio
+ */
+export interface TranscribeAudioParams {
+  audioBuffer: Buffer;
+  filename: string;
+  prompt?: string;
+  options?: TranscriptionOptions;
+}
+
+/**
  * Transcribe audio using OpenAI Whisper API.
  *
- * @param audioBuffer - The audio file content
- * @param filename - Original filename (used for content-type detection)
- * @param prompt - Optional prompt for context/terminology
+ * @param params - Parameters object
  * @returns Transcription result
  * @throws TranscriptionError on failure
  */
 export async function transcribeAudio(
-  audioBuffer: Buffer,
-  filename: string,
-  prompt?: string,
-  options?: TranscriptionOptions
+  params: TranscribeAudioParams
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
+  const { audioBuffer, filename, prompt, options } = params;
   const apiKey = process.env["THINKING_OPENAI_API_KEY"];
   if (!apiKey) {
     const error: TranscriptionError = {
@@ -79,7 +85,7 @@ export async function transcribeAudio(
   formParts.push(
     Buffer.from(
       `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="model"\r\n\r\n` +
+        "Content-Disposition: form-data; name=\"model\"\r\n\r\n" +
         `${OPENAI_MODEL}\r\n`
     )
   );
@@ -88,8 +94,8 @@ export async function transcribeAudio(
   formParts.push(
     Buffer.from(
       `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="response_format"\r\n\r\n` +
-        `verbose_json\r\n`
+        "Content-Disposition: form-data; name=\"response_format\"\r\n\r\n" +
+        "verbose_json\r\n"
     )
   );
 
@@ -98,8 +104,8 @@ export async function transcribeAudio(
     formParts.push(
       Buffer.from(
         `--${boundary}\r\n` +
-          `Content-Disposition: form-data; name="timestamp_granularities[]"\r\n\r\n` +
-          `word\r\n`
+          "Content-Disposition: form-data; name=\"timestamp_granularities[]\"\r\n\r\n" +
+          "word\r\n"
       )
     );
   }
@@ -109,7 +115,7 @@ export async function transcribeAudio(
     formParts.push(
       Buffer.from(
         `--${boundary}\r\n` +
-          `Content-Disposition: form-data; name="prompt"\r\n\r\n` +
+          "Content-Disposition: form-data; name=\"prompt\"\r\n\r\n" +
           `${prompt}\r\n`
       )
     );

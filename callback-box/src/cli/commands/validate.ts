@@ -4,7 +4,7 @@
 
 import { Command } from "commander";
 import * as path from "node:path";
-import { lintAll, lintCard, lintCards, formatLintResults, type LintSummary } from "cardworks";
+import { lintAll, lintCards, formatLintResults, type LintSummary } from "cardworks";
 import { requireBoxRoot, isCardFile } from "../lib/paths.js";
 import { createLoader } from "../lib/loader.js";
 

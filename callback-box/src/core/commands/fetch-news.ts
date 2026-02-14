@@ -83,6 +83,30 @@ function extractMainContent(html: string): string {
 }
 
 /**
+ * Parameters for replaceUrlInAttr
+ */
+interface ReplaceUrlInAttrParams {
+  match: string;
+  prefix: string;
+  url: string;
+  suffix: string;
+  base: URL;
+}
+
+/**
+ * Replace a single URL in an attribute value.
+ */
+function replaceUrlInAttr(params: ReplaceUrlInAttrParams): string {
+  const { prefix, url, suffix, base } = params;
+  try {
+    const absolute = new URL(url, base).href;
+    return prefix + absolute + suffix;
+  } catch {
+    return prefix + url + suffix;
+  }
+}
+
+/**
  * Make relative URLs absolute given a base URL.
  */
 function makeUrlsAbsolute(html: string, baseUrl: string): string {
@@ -90,13 +114,9 @@ function makeUrlsAbsolute(html: string, baseUrl: string): string {
   // Fix src and href attributes with relative URLs
   return html.replace(
     /((?:src|href|poster|action)=["'])([^"']+)(["'])/gi,
-    (_match, prefix: string, url: string, suffix: string) => {
-      try {
-        const absolute = new URL(url, base).href;
-        return prefix + absolute + suffix;
-      } catch {
-        return prefix + url + suffix;
-      }
+    // eslint-disable-next-line max-params -- regex replacement callback signature
+    (match: string, prefix: string, url: string, suffix: string) => {
+      return replaceUrlInAttr({ match, prefix, url, suffix, base });
     }
   );
 }

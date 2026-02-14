@@ -63,7 +63,7 @@ function parseDiff(diff: string): DiffFile[] {
   for (const line of diff.split("\n")) {
     if (line.startsWith("diff --git ")) {
       if (current && renameFrom && renameTo) {
-        finalizeRename(current, renameFrom, renameTo);
+        finalizeRename({ file: current, from: renameFrom, to: renameTo });
       }
       renameFrom = null;
       renameTo = null;
@@ -94,13 +94,20 @@ function parseDiff(diff: string): DiffFile[] {
   }
 
   if (current && renameFrom && renameTo) {
-    finalizeRename(current, renameFrom, renameTo);
+    finalizeRename({ file: current, from: renameFrom, to: renameTo });
   }
 
   return files;
 }
 
-function finalizeRename(file: DiffFile, from: string, to: string): void {
+interface FinalizeRenameParams {
+  file: DiffFile;
+  from: string;
+  to: string;
+}
+
+function finalizeRename(params: FinalizeRenameParams): void {
+  const { file, from, to } = params;
   file.path = to;
   const fromName = from.split("/").pop()!;
   const toName = to.split("/").pop()!;

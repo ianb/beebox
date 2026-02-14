@@ -67,13 +67,19 @@ interface MoveDirResult {
 }
 
 /**
+ * Parameters for moveDir
+ */
+interface MoveDirParams {
+  ctx: CommandContext;
+  sourcePath: string;
+  destPath: string;
+}
+
+/**
  * Move an entire directory (e.g., a capture session) and update external references.
  */
-async function moveDir(
-  ctx: CommandContext,
-  sourcePath: string,
-  destPath: string
-): Promise<MoveDirResult> {
+async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
+  const { ctx, sourcePath, destPath } = params;
   const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
   const relDestPath = path.relative(ctx.boxRoot, destPath);
 
@@ -124,13 +130,19 @@ async function moveDir(
 }
 
 /**
+ * Parameters for moveOne
+ */
+interface MoveOneParams {
+  ctx: CommandContext;
+  sourcePath: string;
+  destPath: string;
+}
+
+/**
  * Move a single card, returning structured results.
  */
-async function moveOne(
-  ctx: CommandContext,
-  sourcePath: string,
-  destPath: string
-): Promise<MoveOneResult> {
+async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
+  const { ctx, sourcePath, destPath } = params;
   const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
   const relDestPath = path.relative(ctx.boxRoot, destPath);
 
@@ -248,7 +260,7 @@ async function executeMove(
       }
 
       try {
-        const dirResult = await moveDir(ctx, sourcePath, destPath);
+        const dirResult = await moveDir({ ctx, sourcePath, destPath });
         results.push({
           from: dirResult.from,
           to: dirResult.to,
@@ -284,7 +296,7 @@ async function executeMove(
     }
 
     try {
-      const result = await moveOne(ctx, sourcePath, destPath);
+      const result = await moveOne({ ctx, sourcePath, destPath });
       results.push(result);
       allFilesToStage.push(...result.filesToStage);
     } catch (err) {

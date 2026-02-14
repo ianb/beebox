@@ -5,7 +5,7 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getSystemState, generateContext, type CardInfo } from "../../core/state.js";
+import { getSystemState, generateContext } from "../../core/state.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { getLog } from "../../cli/lib/git.js";
 import type { ElementNode } from "cardworks";

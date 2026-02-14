@@ -49,14 +49,22 @@ export interface ContextOutput {
 }
 
 /**
+ * Parameters for scanCards
+ */
+interface ScanCardsParams {
+  dir: string;
+  boxRoot: string;
+  subdir?: string;
+}
+
+/**
  * Scan a directory for card files, including subdirectories.
  *
- * @param dir - Directory to scan
- * @param boxRoot - Box root for relative paths
- * @param subdir - Current subdirectory (for recursive calls)
+ * @param params - Parameters object
  * @returns Array of card info
  */
-async function scanCards(dir: string, boxRoot: string, subdir?: string): Promise<CardInfo[]> {
+async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
+  const { dir, boxRoot, subdir } = params;
   const cards: CardInfo[] = [];
   const loader = createLoader(boxRoot);
 
@@ -73,7 +81,7 @@ async function scanCards(dir: string, boxRoot: string, subdir?: string): Promise
 
     // Recurse into subdirectories
     if (entry.isDirectory() && !name.startsWith(".")) {
-      const subdirCards = await scanCards(fullPath, boxRoot, name);
+      const subdirCards = await scanCards({ dir: fullPath, boxRoot, subdir: name });
       cards.push(...subdirCards);
       continue;
     }
@@ -129,9 +137,9 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
 
   const [git, inbox, commands, questions, recentActivity] = await Promise.all([
     getStatus(root),
-    scanCards(getBoxDir(root, "inbox"), root),
-    scanCards(getBoxDir(root, "commands"), root),
-    scanCards(getBoxDir(root, "questions"), root),
+    scanCards({ dir: getBoxDir(root, "inbox"), boxRoot: root }),
+    scanCards({ dir: getBoxDir(root, "commands"), boxRoot: root }),
+    scanCards({ dir: getBoxDir(root, "questions"), boxRoot: root }),
     getLog(root, 10),
   ]);
 

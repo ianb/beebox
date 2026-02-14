@@ -167,14 +167,14 @@ registerTemplate({
       .describe("Answer options (at least 2)"),
   }),
   generate: (args) =>
-    createSelectQuestionTemplate(
-      args.memo,
-      args.prompt,
-      args.options.map((opt, i) => ({
+    createSelectQuestionTemplate({
+      memo: args.memo,
+      prompt: args.prompt,
+      options: args.options.map((opt, i) => ({
         id: String.fromCharCode(97 + i),
         label: opt,
-      }))
-    ),
+      })),
+    }),
 });
 
 registerTemplate({

@@ -93,12 +93,11 @@ registerCommand({
         try {
           // Read audio and transcribe with word timestamps
           const audioBuffer = await fs.readFile(audioPath);
-          const result = (await transcribeAudio(
+          const result = (await transcribeAudio({
             audioBuffer,
-            audioFilename,
-            undefined,
-            { wordTimestamps: true }
-          )) as DetailedTranscriptionResult;
+            filename: audioFilename,
+            options: { wordTimestamps: true },
+          })) as DetailedTranscriptionResult;
 
           // Write transcript text to <transcript> element
           const transcriptEl = children.find((c) => c.tagName === "transcript");

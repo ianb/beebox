@@ -15,10 +15,8 @@ import {
   listCommands,
   getCommand,
   type CommandContext,
-  type CommandResult,
 } from "../../core/commands/index.js";
 import { broadcastEvent } from "./sse.js";
-import type { MultipartFile } from "@fastify/multipart";
 
 interface ExecuteBody {
   command: string;
@@ -105,7 +103,7 @@ export async function registerCommandRoutes(
       };
 
       try {
-        const result = await runCommand(command, args ?? {}, ctx);
+        const result = await runCommand({ name: command, args: args ?? {}, ctx });
 
         // Send final result
         const resultLine: OutputLine = result.success
@@ -157,7 +155,7 @@ export async function registerCommandRoutes(
       };
 
       try {
-        const result = await runCommand(command, args ?? {}, ctx);
+        const result = await runCommand({ name: command, args: args ?? {}, ctx });
 
         // Broadcast command completion event
         broadcastEvent("command-complete", {

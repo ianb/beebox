@@ -15,7 +15,11 @@ export const transcribeCapturesCommand = new Command("transcribe-captures")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand("transcribe-captures", {}, ctx);
+      const result = await runCommand({
+        name: "transcribe-captures",
+        args: {},
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

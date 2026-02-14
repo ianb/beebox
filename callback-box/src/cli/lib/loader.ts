@@ -35,18 +35,24 @@ export function createLoader(
 }
 
 /**
+ * Parameters for createMemoryLoader
+ */
+export interface CreateMemoryLoaderParams {
+  projectRoot: string;
+  files?: Record<string, string>;
+  options?: CreateLoaderOptions;
+}
+
+/**
  * Create an in-memory CardLoader for testing.
  *
- * @param projectRoot - The virtual project root
- * @param files - Initial file contents
- * @param options - Optional configuration
+ * @param params - Parameters object
  * @returns A configured MemoryCardLoader
  */
 export function createMemoryLoader(
-  projectRoot: string,
-  files: Record<string, string> = {},
-  options: CreateLoaderOptions = {}
+  params: CreateMemoryLoaderParams
 ): MemoryCardLoader {
+  const { projectRoot, files = {}, options = {} } = params;
   return new MemoryCardLoader(projectRoot, {
     schemas: createSchemaRegistry(),
     requireVersion: options.requireVersion ?? false,

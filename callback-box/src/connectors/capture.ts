@@ -18,7 +18,6 @@ import * as path from "node:path";
 import {
   CaptureClient,
   type CaptureManifest,
-  type CaptureFile,
 } from "callback-dropbox/client";
 import {
   registerConnector,

@@ -13,8 +13,8 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { CardLoader, type ElementNode } from "cardworks";
-import { parseNewsBrief, type ParsedNewsBrief } from "../../schemas/news-brief.js";
-import { parseNewsGuide, type ReactionSentiment } from "../../schemas/news-guide.js";
+import { parseNewsBrief, type ParsedNewsBrief, type NewsBrief } from "../../schemas/news-brief.js";
+import { parseNewsGuide, type NewsGuide } from "../../schemas/news-guide.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 
 /**
@@ -103,14 +103,22 @@ async function findBriefs(boxRoot: string): Promise<{ path: string; read: boolea
 }
 
 /**
+ * Parameters for loadBriefSummary
+ */
+interface LoadBriefSummaryParams {
+  boxRoot: string;
+  briefPath: string;
+  read: boolean;
+  readReason?: "user" | "expired";
+}
+
+/**
  * Load a brief and extract summary info.
  */
 async function loadBriefSummary(
-  boxRoot: string,
-  briefPath: string,
-  read: boolean,
-  readReason?: "user" | "expired"
+  params: LoadBriefSummaryParams
 ): Promise<BriefSummary | null> {
+  const { boxRoot, briefPath, read, readReason } = params;
   try {
     const loader = new CardLoader(boxRoot);
     const card = await loader.load(briefPath);
@@ -119,7 +127,7 @@ async function loadBriefSummary(
       return null;
     }
 
-    const parsed = parseNewsBrief(card.element as any);
+    const parsed = parseNewsBrief(card.element as NewsBrief);
 
     return {
       path: briefPath,
@@ -151,7 +159,7 @@ async function loadBrief(
     throw new Error(`Not a brief: ${card.element.tagName}`);
   }
 
-  return parseNewsBrief(card.element as any);
+  return parseNewsBrief(card.element as NewsBrief);
 }
 
 /**
@@ -167,7 +175,12 @@ export async function registerBriefRoutes(
     const briefs: BriefSummary[] = [];
 
     for (const info of briefInfos) {
-      const summary = await loadBriefSummary(boxRoot, info.path, info.read, info.readReason);
+      const summary = await loadBriefSummary({
+        boxRoot,
+        briefPath: info.path,
+        read: info.read,
+        ...(info.readReason && { readReason: info.readReason }),
+      });
       if (summary) {
         briefs.push(summary);
       }
@@ -182,7 +195,12 @@ export async function registerBriefRoutes(
     const editions: BriefSummary[] = [];
 
     for (const info of briefInfos) {
-      const summary = await loadBriefSummary(boxRoot, info.path, info.read, info.readReason);
+      const summary = await loadBriefSummary({
+        boxRoot,
+        briefPath: info.path,
+        read: info.read,
+        ...(info.readReason && { readReason: info.readReason }),
+      });
       if (summary) {
         editions.push(summary);
       }
@@ -355,10 +373,10 @@ export async function registerBriefRoutes(
     };
   }>("/api/edition/feedback", {
     bodyLimit: 50 * 1024 * 1024,
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { editionPath, targetId, comment, audioData, audioMimeType } = request.body ?? {};
     // Redirect to new endpoint
-    request.body = { briefPath: editionPath, targetId, comment, audioData, audioMimeType } as any;
+    request.body = { briefPath: editionPath, targetId, comment, audioData, audioMimeType } as unknown as typeof request.body;
     return server.inject({
       method: "POST",
       url: "/api/brief/feedback",
@@ -442,7 +460,7 @@ export async function registerBriefRoutes(
     };
   }>("/api/edition/query-response", {
     bodyLimit: 50 * 1024 * 1024,
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { editionPath, queryId, response, audioData, audioMimeType } = request.body ?? {};
     return server.inject({
       method: "POST",
@@ -452,7 +470,7 @@ export async function registerBriefRoutes(
   });
 
   // GET /api/news-guide/reactions - Get reader reactions from the guide
-  server.get("/api/news-guide/reactions", async (request, reply) => {
+  server.get("/api/news-guide/reactions", async (_request, _reply) => {
     const guidePath = path.join(boxRoot, "config/news-guide.news-guide.card");
 
     try {
@@ -465,7 +483,7 @@ export async function registerBriefRoutes(
     try {
       const loader = new CardLoader(boxRoot);
       const card = await loader.load(guidePath);
-      const parsed = parseNewsGuide(card.element as any);
+      const parsed = parseNewsGuide(card.element as NewsGuide);
 
       return {
         reactions: parsed.readerReactions.map((r) => ({

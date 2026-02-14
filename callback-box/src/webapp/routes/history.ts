@@ -123,13 +123,21 @@ function transformContent(content: unknown): SessionContentBlock[] {
 }
 
 /**
+ * Parameters for parseSessionLog
+ */
+interface ParseSessionLogParams {
+  logPath: string;
+  offset: number;
+  limit: number;
+}
+
+/**
  * Parse a session log JSONL file with filtering and pagination.
  */
 async function parseSessionLog(
-  logPath: string,
-  offset: number,
-  limit: number
+  params: ParseSessionLogParams
 ): Promise<{ entries: SessionEntry[]; total: number; hasMore: boolean }> {
+  const { logPath, offset, limit } = params;
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
@@ -198,7 +206,7 @@ export async function registerHistoryRoutes(
     const count = parseInt(request.query.count || "50", 10);
     const offset = parseInt(request.query.offset || "0", 10);
 
-    const commits = await getLogPaginated(boxRoot, count, offset);
+    const commits = await getLogPaginated({ boxRoot, count, offset });
 
     return { commits };
   });
@@ -243,7 +251,7 @@ export async function registerHistoryRoutes(
       return { sessionId, found: false, entries: [], total: 0, hasMore: false };
     }
 
-    const result = await parseSessionLog(logPath, offset, limit);
+    const result = await parseSessionLog({ logPath, offset, limit });
 
     return {
       sessionId,

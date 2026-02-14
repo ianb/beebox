@@ -12,13 +12,13 @@ import { z } from "zod";
  * Valid question statuses.
  */
 export const QuestionStatus = z.enum(["pending", "answered", "expired"]);
-export type QuestionStatus = z.infer<typeof QuestionStatus>;
+export type QuestionStatusType = typeof QuestionStatus._type;
 
 /**
  * Input types for questions.
  */
 export const QuestionInputType = z.enum(["select", "text", "confirm"]);
-export type QuestionInputType = z.infer<typeof QuestionInputType>;
+export type QuestionInputTypeValue = typeof QuestionInputType._type;
 
 /**
  * Child element for context/memo about the question.
@@ -158,13 +158,21 @@ Don't create questions for things that can wait — batch related questions into
 export type Question = z.infer<typeof QuestionSchema>;
 
 /**
+ * Parameters for createSelectQuestionTemplate
+ */
+interface CreateSelectQuestionTemplateParams {
+  memo: string;
+  prompt: string;
+  options: Array<{ id: string; label: string }>;
+}
+
+/**
  * Template for creating a new question card with select options.
  */
 export function createSelectQuestionTemplate(
-  memo: string,
-  prompt: string,
-  options: Array<{ id: string; label: string }>
+  params: CreateSelectQuestionTemplateParams
 ): string {
+  const { memo, prompt, options } = params;
   const optionsXml = options
     .map(opt => `    <option id="${escapeXml(opt.id)}">${escapeXml(opt.label)}</option>`)
     .join("\n");

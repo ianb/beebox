@@ -100,14 +100,18 @@ export const fmt = {
   phase: (name: string) => chalk.bold.cyan(`=== ${name} ===`),
 
   /** Result line with status icon */
-  result: (success: boolean, label: string, message: string) =>
-    success
+  result: (params: { success: boolean; label: string; message: string }) => {
+    const { success, label, message } = params;
+    return success
       ? `  ${chalk.green("✓")} ${label}: ${message}`
-      : `  ${chalk.red("✗")} ${label}: ${message}`,
+      : `  ${chalk.red("✗")} ${label}: ${message}`;
+  },
 
   /** Progress indicator */
-  progress: (current: number, total: number, label: string) =>
-    chalk.dim(`[${current}/${total}]`) + ` ${label}`,
+  progress: (params: { current: number; total: number; label: string }) => {
+    const { current, total, label } = params;
+    return chalk.dim(`[${current}/${total}]`) + ` ${label}`;
+  },
 
   /** Key-value pair */
   kv: (key: string, value: string) =>

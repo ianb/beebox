@@ -47,12 +47,12 @@ pairCommand
     const { channelId, apiKey, channelKey } = await createChannel(workerUrl);
 
     console.log("Generating pairing code...");
-    const { code, expiresAt } = await generatePairingCode(
+    const { code, expiresAt } = await generatePairingCode({
       workerUrl,
       apiKey,
       channelId,
-      channelKey
-    );
+      channelKey,
+    });
 
     const config: DropboxConfig = {
       workerUrl,
@@ -68,8 +68,8 @@ pairCommand
 
     console.log(`\nPairing code: ${code}`);
     console.log(`Expires in ~${expiresIn} minutes (${expiresAt})`);
-    console.log(`\nConfig saved to config/connectors/dropbox.secret.json`);
-    console.log(`(This file is gitignored — credentials stay local.)`);
+    console.log("\nConfig saved to config/connectors/dropbox.secret.json");
+    console.log("(This file is gitignored — credentials stay local.)");
   });
 
 pairCommand

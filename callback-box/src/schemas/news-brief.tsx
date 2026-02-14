@@ -519,7 +519,7 @@ function getChildren(children: ElementNode[], tagName: string): ElementNode[] {
  */
 function getMixedText(element: ElementNode): string {
   // If there's a mixed property, use it to extract text
-  const mixed = (element as any).mixed as Array<string | ElementNode> | undefined;
+  const mixed = (element as ElementNode & { mixed?: Array<string | ElementNode> }).mixed;
   if (mixed) {
     return mixed
       .filter((item): item is string => typeof item === "string")

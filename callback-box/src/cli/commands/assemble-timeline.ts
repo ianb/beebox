@@ -15,7 +15,11 @@ export const assembleTimelineCommand = new Command("assemble-timeline")
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
-      const result = await runCommand("assemble-timeline", {}, ctx);
+      const result = await runCommand({
+        name: "assemble-timeline",
+        args: {},
+        ctx,
+      });
 
       if (!result.success) {
         console.error(`Error: ${result.error}`);

@@ -36,7 +36,7 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
         ? String.fromCharCode(97 + (question.options?.indexOf(selectedOption) ?? 0))
         : undefined;
 
-      await answerQuestion(question.relativePath, answer, selectedId);
+      await answerQuestion({ questionPath: question.relativePath, answer, selectedId });
       onAnswered();
     } catch (err) {
       setError((err as Error).message);

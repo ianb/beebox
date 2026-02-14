@@ -62,12 +62,12 @@ export async function registerPairingRoutes(
 
     try {
       const { channelId, apiKey, channelKey } = await createChannel(normalizedUrl);
-      const { code, expiresAt } = await generatePairingCode(
-        normalizedUrl,
+      const { code, expiresAt } = await generatePairingCode({
+        workerUrl: normalizedUrl,
         apiKey,
         channelId,
-        channelKey
-      );
+        channelKey,
+      });
 
       const config: DropboxConfig = {
         workerUrl: normalizedUrl,
