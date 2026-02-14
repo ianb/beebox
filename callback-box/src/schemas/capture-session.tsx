@@ -11,7 +11,7 @@
 import { element, serialize } from "cardworks";
 import { z } from "zod";
 
-export const CaptureSessionStatus = z.enum(["new", "transcribing", "transcribed", "intake-complete"]);
+export const CaptureSessionStatus = z.enum(["new", "transcribing", "transcribed", "intake-complete", "extracted"]);
 export type CaptureSessionStatus = z.infer<typeof CaptureSessionStatus>;
 
 export const SessionTime = element("time", {
@@ -118,6 +118,7 @@ A capture session groups images and audio from a single recording session. All c
 - **status="transcribing"**: Audio transcription is in progress.
 - **status="transcribed"**: All audio transcribed, ready for further processing.
 - **status="intake-complete"**: Fully processed — purpose established, images described, timeline assembled.
+- **status="extracted"**: Records have been extracted from this session into a catalog directory.
 
 The <images> and <audio-clips> containers hold references (relative file paths) to the child cards in this directory.
 

@@ -1,7 +1,7 @@
 <workflow name="process-captures">
   <description>
     Process capture sessions through intake: transcribe audio, establish purpose,
-    describe images, assemble timeline, and rename.
+    describe images, assemble timeline, rename, and extract records.
   </description>
 
   <step id="transcribe">
@@ -392,5 +392,254 @@
         GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
       </agent>
     </run>
+  </step>
+
+  <step id="plan-extraction">
+    <description>Plan extraction of records from intake-complete sessions</description>
+
+    <precheck>
+      <shell pass-output="true">
+        found=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
+          [ -f "$session" ] || continue
+          if grep -q 'status="intake-complete"' "$session"; then
+            echo "  Session: $session"
+            # Show purpose for context
+            purpose=$(sed -n 's/.*&lt;purpose&gt;\(.*\)&lt;\/purpose&gt;.*/\1/p' "$session" 2>/dev/null || true)
+            if [ -n "$purpose" ]; then
+              echo "    Purpose: $purpose"
+            fi
+            found=$((found + 1))
+          fi
+        done
+        if [ "$found" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $found intake-complete session(s) for extraction planning"
+      </shell>
+      <why>No intake-complete sessions need extraction planning</why>
+    </precheck>
+
+    <run>
+      <agent model="opus" max-turns="10">
+        You are planning the extraction of records from capture sessions.
+
+        YOUR TASK:
+        For each intake-complete session listed in the precheck output, decide whether to extract
+        records and write an extraction spec.
+
+        STEP 1 - READ EACH SESSION:
+        For each session listed above:
+        1. Read the session card (the .capture-session.card file)
+        2. Read the image cards in the same directory to understand what was captured
+        3. Consider the purpose and transcript content
+
+        STEP 2 - DECIDE AND WRITE SPEC:
+        For each session, create a file called `extraction-spec.md` in the session directory.
+
+        IF extraction is appropriate (the session contains identifiable, discrete things to catalog):
+        Write a spec with these sections:
+
+        ```markdown
+        # Extraction Spec
+
+        ## Description
+        Brief description of what kind of records to create (e.g., "Home inventory items from living room walkthrough")
+
+        ## Format Guidance
+        Which record fields to use for this domain. For example:
+        - Use: name, description, location, measure, sources
+        - Skip: content, person, language, triage
+
+        ## Example Record
+        ```xml
+        &lt;record status="draft"&gt;
+          &lt;name&gt;Example Item Name&lt;/name&gt;
+          &lt;description&gt;What this item is and its condition&lt;/description&gt;
+          &lt;sources&gt;
+            &lt;source ref="path/to/session.capture-session.card" time="1:30"&gt;
+              User describes this item while pointing at it
+            &lt;/source&gt;
+          &lt;/sources&gt;
+          &lt;location&gt;Living room, near the window&lt;/location&gt;
+          &lt;measure value="500 USD"&gt;Estimated value&lt;/measure&gt;
+        &lt;/record&gt;
+        ```
+
+        ## Records to Extract
+        - **Record Name** → `Slugified_Filename.record.card`
+        - **Another Record** → `Another_Record.record.card`
+        ```
+
+        IF extraction is NOT appropriate (session is too vague, incomplete, or doesn't contain
+        discrete extractable things):
+
+        ```markdown
+        skip: true
+
+        Reason: Brief explanation of why extraction doesn't apply.
+        ```
+
+        IMPORTANT:
+        - Filenames should be slugified with underscores, retaining capitals (e.g., `Brown_Leather_Couch.record.card`)
+        - The example XML should match the specific domain (home inventory, document archive, etc.)
+        - Be selective about which fields to recommend — don't suggest using every field
+        - Each record in the list should have a clear, specific name
+
+        COMMIT (REQUIRED — do not skip):
+        ```bash
+        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
+        Plan extraction for capture sessions
+
+        Triggered-By: cb workflow
+        Phase: plan-extraction
+        EOF
+        )"
+        ```
+
+        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
+      </agent>
+    </run>
+
+    <validate severity="warn">
+      <shell>
+        missing=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
+          [ -f "$session" ] || continue
+          if grep -q 'status="intake-complete"' "$session"; then
+            if [ ! -f "${dir}extraction-spec.md" ]; then
+              echo "Missing extraction-spec.md: $dir"
+              missing=$((missing + 1))
+            fi
+          fi
+        done
+        echo "Sessions missing extraction spec: $missing"
+        [ "$missing" -eq 0 ]
+      </shell>
+      <instruction>Each intake-complete session should have an extraction-spec.md file.</instruction>
+      <why>The extract step needs a spec to follow.</why>
+    </validate>
+  </step>
+
+  <step id="extract">
+    <description>Extract records from sessions following the extraction spec</description>
+
+    <precheck>
+      <shell pass-output="true">
+        found=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          spec="${dir}extraction-spec.md"
+          [ -f "$spec" ] || continue
+          # Skip if spec says to skip
+          if grep -q '^skip: true' "$spec"; then
+            continue
+          fi
+          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
+          [ -f "$session" ] || continue
+          if grep -q 'status="intake-complete"' "$session"; then
+            echo "  Session: $session"
+            echo "  Spec: $spec"
+            found=$((found + 1))
+          fi
+        done
+        if [ "$found" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $found session(s) ready for extraction"
+      </shell>
+      <why>No sessions have non-skip extraction specs ready</why>
+    </precheck>
+
+    <run>
+      <agent model="haiku" max-turns="30">
+        You are extracting records from capture sessions following extraction specs.
+
+        YOUR TASK:
+        For each session listed in the precheck output, read the extraction spec and create
+        record cards accordingly.
+
+        STEP 1 - READ THE SPEC:
+        For each session, read the extraction-spec.md file. It contains:
+        - What kind of records to create
+        - Which fields to use
+        - An example record in XML
+        - A list of records to extract with suggested filenames
+
+        STEP 2 - READ THE SESSION:
+        Read the session card and its image cards to gather the actual content for each record.
+
+        STEP 3 - CREATE CATALOG DIRECTORY:
+        Create an output directory under store/catalogs/ with a descriptive name derived from
+        the session purpose. Use underscores and retain capitals:
+        ```bash
+        mkdir -p store/catalogs/Descriptive_Name
+        ```
+
+        STEP 4 - CREATE RECORDS:
+        For each record listed in the spec:
+        ```bash
+        cb create store/catalogs/Descriptive_Name/Slugified_Name.record.card
+        ```
+        Then edit the created card to fill in the record following the spec's format guidance
+        and example. Key rules:
+        - Always include &lt;sources&gt; referencing the session card and specific image cards
+        - Source body text must explain WHY that source is relevant
+        - &lt;measure value="..."&gt; uses natural language: "2 pages", "7 feet", "1200 USD"
+        - Only use fields the spec recommends
+        - &lt;name&gt; is always required
+
+        STEP 5 - UPDATE SESSION STATUS:
+        After creating all records, edit the session card to set status="extracted".
+
+        COMMIT (REQUIRED — do not skip):
+        ```bash
+        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
+        Extract records from capture sessions
+
+        Triggered-By: cb workflow
+        Phase: extract
+        EOF
+        )"
+        ```
+
+        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
+      </agent>
+    </run>
+
+    <validate severity="abort">
+      <shell>
+        failed=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          spec="${dir}extraction-spec.md"
+          [ -f "$spec" ] || continue
+          if grep -q '^skip: true' "$spec"; then
+            continue
+          fi
+          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
+          [ -f "$session" ] || continue
+          if grep -q 'status="extracted"' "$session"; then
+            # Check that at least one record card exists in store/catalogs
+            catalog_count=$(find store/catalogs -name "*.record.card" 2>/dev/null | wc -l)
+            if [ "$catalog_count" -eq 0 ]; then
+              echo "FAIL: Session marked extracted but no record cards found in store/catalogs/"
+              failed=$((failed + 1))
+            fi
+          elif grep -q 'status="intake-complete"' "$session"; then
+            echo "FAIL: Session not updated to extracted: $session"
+            failed=$((failed + 1))
+          fi
+        done
+        echo "Failed sessions: $failed"
+        [ "$failed" -eq 0 ]
+      </shell>
+      <instruction>Extracted sessions must have status="extracted" and record cards in store/catalogs/.</instruction>
+      <why>Extraction must produce actual record cards to be useful.</why>
+    </validate>
   </step>
 </workflow>

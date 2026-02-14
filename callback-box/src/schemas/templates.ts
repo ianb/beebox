@@ -21,6 +21,7 @@ import {
 import { createNewsItemTemplate } from "./news-item.js";
 import { createNewsSummaryTemplate } from "./news-summary.js";
 import { createInitialGuideTemplate } from "./news-guide.js";
+import { createRecordTemplate } from "./record.js";
 
 /**
  * Template definition with typed arguments.
@@ -269,4 +270,21 @@ registerTemplate({
     createInitialGuideTemplate(
       args.feedTitles ? { feedTitles: args.feedTitles } : {}
     ),
+});
+
+registerTemplate({
+  name: "record",
+  description: "A record card — generic extracted unit from capture sessions",
+  cardTypes: ["record"],
+  argsSchema: z.object({
+    name: z.string().describe("Short identifying label for the record"),
+    description: z.string().optional().describe("Description of the thing"),
+  }),
+  generate: (args) => {
+    const templateArgs: Parameters<typeof createRecordTemplate>[0] = {
+      name: args.name,
+    };
+    if (args.description) templateArgs.description = args.description;
+    return createRecordTemplate(templateArgs);
+  },
 });

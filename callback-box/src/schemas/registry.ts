@@ -19,6 +19,7 @@ import { BookmarkSchema } from "./bookmark.js";
 import { ImageSchema } from "./image.js";
 import { AudioSchema } from "./audio.js";
 import { CaptureSessionSchema } from "./capture-session.js";
+import { RecordSchema } from "./record.js";
 
 /**
  * All registered card schemas.
@@ -37,6 +38,7 @@ export const schemas: ElementSchema[] = [
   ImageSchema,
   AudioSchema,
   CaptureSessionSchema,
+  RecordSchema,
 ];
 
 /**
@@ -78,3 +80,4 @@ export { BookmarkSchema } from "./bookmark.js";
 export { ImageSchema } from "./image.js";
 export { AudioSchema } from "./audio.js";
 export { CaptureSessionSchema } from "./capture-session.js";
+export { RecordSchema } from "./record.js";
