@@ -59,6 +59,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // Handle messages from popup/sidepanel
+// eslint-disable-next-line max-params -- Chrome API callback signature
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "syncNow") {
     sync().then(() => sendResponse({ ok: true }));

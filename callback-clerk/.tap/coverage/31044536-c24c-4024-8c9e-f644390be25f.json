@@ -1,0 +1,168 @@
+{
+  "result": [
+    {
+      "scriptId": "590",
+      "url": "file:///Users/ianbicking/src/callback/callback-clerk/src/lib/storage.ts",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [
+            {
+              "startOffset": 0,
+              "endOffset": 5382,
+              "count": 1
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getCredentials",
+          "ranges": [
+            {
+              "startOffset": 7,
+              "endOffset": 149,
+              "count": 3
+            },
+            {
+              "startOffset": 139,
+              "endOffset": 146,
+              "count": 2
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "saveCredentials",
+          "ranges": [
+            {
+              "startOffset": 157,
+              "endOffset": 258,
+              "count": 1
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "clearCredentials",
+          "ranges": [
+            {
+              "startOffset": 266,
+              "endOffset": 372,
+              "count": 1
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getSyncState",
+          "ranges": [
+            {
+              "startOffset": 380,
+              "endOffset": 514,
+              "count": 2
+            },
+            {
+              "startOffset": 504,
+              "endOffset": 511,
+              "count": 1
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "saveSyncState",
+          "ranges": [
+            {
+              "startOffset": 522,
+              "endOffset": 619,
+              "count": 1
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getPendingActions",
+          "ranges": [
+            {
+              "startOffset": 627,
+              "endOffset": 779,
+              "count": 0
+            }
+          ],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "savePendingActions",
+          "ranges": [
+            {
+              "startOffset": 787,
+              "endOffset": 898,
+              "count": 0
+            }
+          ],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "removePendingAction",
+          "ranges": [
+            {
+              "startOffset": 906,
+              "endOffset": 1061,
+              "count": 0
+            }
+          ],
+          "isBlockCoverage": false
+        }
+      ]
+    }
+  ],
+  "timestamp": 168217.935167,
+  "source-map-cache": {
+    "file:///Users/ianbicking/src/callback/callback-clerk/src/lib/storage.ts": {
+      "lineLengths": [
+        40,
+        74,
+        31,
+        1,
+        46,
+        59,
+        1,
+        42,
+        68,
+        1,
+        38,
+        70,
+        29,
+        1,
+        44,
+        57,
+        1,
+        43,
+        80,
+        32,
+        1,
+        51,
+        64,
+        1,
+        47,
+        46,
+        65,
+        1,
+        4320
+      ],
+      "data": {
+        "version": 3,
+        "file": "/Users/ianbicking/src/callback/callback-clerk/src/lib/storage.ts",
+        "sources": [
+          "file:///Users/ianbicking/src/callback/callback-clerk/src/lib/storage.ts"
+        ],
+        "names": [],
+        "mappings": "AAaA,MAAM,CAAC,KAAK,UAAU,cAAc;IAClC,MAAM,EAAE,WAAW,EAAE,GAAG,MAAM,MAAM,CAAC,OAAO,CAAC,KAAK,CAAC,GAAG,CAAC,aAAa,CAAC,CAAC;IACtE,OAAO,WAAW,IAAI,IAAI,CAAC;AAC7B,CAAC;AAED,MAAM,CAAC,KAAK,UAAU,eAAe,CAAC,KAAwB;IAC5D,MAAM,MAAM,CAAC,OAAO,CAAC,KAAK,CAAC,GAAG,CAAC,EAAE,WAAW,EAAE,KAAK,EAAE,CAAC,CAAC;AACzD,CAAC;AAED,MAAM,CAAC,KAAK,UAAU,gBAAgB;IACpC,MAAM,MAAM,CAAC,OAAO,CAAC,KAAK,CAAC,MAAM,CAAC,CAAC,aAAa,EAAE,WAAW,CAAC,CAAC,CAAC;AAClE,CAAC;AAED,MAAM,CAAC,KAAK,UAAU,YAAY;IAChC,MAAM,EAAE,SAAS,EAAE,GAAG,MAAM,MAAM,CAAC,OAAO,CAAC,KAAK,CAAC,GAAG,CAAC,WAAW,CAAC,CAAC;IAClE,OAAO,SAAS,IAAI,IAAI,CAAC;AAC3B,CAAC;AAED,MAAM,CAAC,KAAK,UAAU,aAAa,CAAC,KAAgB;IAClD,MAAM,MAAM,CAAC,OAAO,CAAC,KAAK,CAAC,GAAG,CAAC,EAAE,SAAS,EAAE,KAAK,EAAE,CAAC,CAAC;AACvD,CAAC;AAWD,MAAM,CAAC,KAAK,UAAU,iBAAiB;IACrC,MAAM,EAAE,cAAc,EAAE,GAAG,MAAM,MAAM,CAAC,OAAO,CAAC,KAAK,CAAC,GAAG,CAAC,gBAAgB,CAAC,CAAC;IAC5E,OAAO,cAAc,IAAI,EAAE,CAAC;AAC9B,CAAC;AAED,MAAM,CAAC,KAAK,UAAU,kBAAkB,CAAC,OAAwB;IAC/D,MAAM,MAAM,CAAC,OAAO,CAAC,KAAK,CAAC,GAAG,CAAC,EAAE,cAAc,EAAE,OAAO,EAAE,CAAC,CAAC;AAC9D,CAAC;AAED,MAAM,CAAC,KAAK,UAAU,mBAAmB,CAAC,EAAU;IAClD,MAAM,OAAO,GAAG,MAAM,iBAAiB,EAAE,CAAC;IAC1C,MAAM,kBAAkB,CAAC,OAAO,CAAC,MAAM,CAAC,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC,CAAC,EAAE,KAAK,EAAE,CAAC,CAAC,CAAC;AAC/D,CAAC",
+        "sourcesContent": [
+          "export interface StoredCredentials {\n  workerUrl: string;\n  apiKey: string;\n  channelKey: string; // base64-encoded AES key\n  channelId: string;\n}\n\nexport interface SyncState {\n  lastSyncAt: string | null;\n  tabCount: number | null;\n  lastMessageId: string | null;\n}\n\nexport async function getCredentials(): Promise<StoredCredentials | null> {\n  const { credentials } = await chrome.storage.local.get(\"credentials\");\n  return credentials ?? null;\n}\n\nexport async function saveCredentials(creds: StoredCredentials): Promise<void> {\n  await chrome.storage.local.set({ credentials: creds });\n}\n\nexport async function clearCredentials(): Promise<void> {\n  await chrome.storage.local.remove([\"credentials\", \"syncState\"]);\n}\n\nexport async function getSyncState(): Promise<SyncState | null> {\n  const { syncState } = await chrome.storage.local.get(\"syncState\");\n  return syncState ?? null;\n}\n\nexport async function saveSyncState(state: SyncState): Promise<void> {\n  await chrome.storage.local.set({ syncState: state });\n}\n\nexport interface PendingAction {\n  id: string;\n  type: string;\n  url: string;\n  title: string;\n  message: string;\n  receivedAt: string;\n}\n\nexport async function getPendingActions(): Promise<PendingAction[]> {\n  const { pendingActions } = await chrome.storage.local.get(\"pendingActions\");\n  return pendingActions ?? [];\n}\n\nexport async function savePendingActions(actions: PendingAction[]): Promise<void> {\n  await chrome.storage.local.set({ pendingActions: actions });\n}\n\nexport async function removePendingAction(id: string): Promise<void> {\n  const actions = await getPendingActions();\n  await savePendingActions(actions.filter((a) => a.id !== id));\n}\n"
+        ],
+        "sourceRoot": ""
+      }
+    }
+  }
+}

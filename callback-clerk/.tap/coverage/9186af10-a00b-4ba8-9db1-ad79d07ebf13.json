@@ -1,0 +1,127 @@
+{
+  "result": [
+    {
+      "scriptId": "500",
+      "url": "file:///Users/ianbicking/src/callback/callback-clerk/src/lib/tabs.ts",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [
+            {
+              "startOffset": 0,
+              "endOffset": 3682,
+              "count": 1
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getTabSnapshot",
+          "ranges": [
+            {
+              "startOffset": 7,
+              "endOffset": 346,
+              "count": 0
+            }
+          ],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "toTabInfoList",
+          "ranges": [
+            {
+              "startOffset": 427,
+              "endOffset": 717,
+              "count": 5
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [
+            {
+              "startOffset": 490,
+              "endOffset": 526,
+              "count": 6
+            },
+            {
+              "startOffset": 510,
+              "endOffset": 526,
+              "count": 5
+            }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [
+            {
+              "startOffset": 541,
+              "endOffset": 713,
+              "count": 4
+            },
+            {
+              "startOffset": 618,
+              "endOffset": 623,
+              "count": 0
+            },
+            {
+              "startOffset": 648,
+              "endOffset": 653,
+              "count": 1
+            }
+          ],
+          "isBlockCoverage": true
+        }
+      ]
+    }
+  ],
+  "timestamp": 168217.939417,
+  "source-map-cache": {
+    "file:///Users/ianbicking/src/callback/callback-clerk/src/lib/tabs.ts": {
+      "lineLengths": [
+        40,
+        45,
+        15,
+        53,
+        22,
+        17,
+        29,
+        25,
+        29,
+        25,
+        25,
+        8,
+        1,
+        72,
+        37,
+        15,
+        53,
+        22,
+        17,
+        29,
+        25,
+        29,
+        25,
+        25,
+        8,
+        1,
+        2964
+      ],
+      "data": {
+        "version": 3,
+        "file": "/Users/ianbicking/src/callback/callback-clerk/src/lib/tabs.ts",
+        "sources": [
+          "file:///Users/ianbicking/src/callback/callback-clerk/src/lib/tabs.ts"
+        ],
+        "names": [],
+        "mappings": "AASA,MAAM,CAAC,KAAK,UAAU,cAAc;IAClC,MAAM,IAAI,GAAG,MAAM,MAAM,CAAC,IAAI,CAAC,KAAK,CAAC,EAAE,CAAC,CAAC;IACzC,OAAO,IAAI;SACR,MAAM,CAAC,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC,CAAC,EAAE,IAAI,IAAI,IAAI,CAAC,CAAC,GAAG,IAAI,IAAI,CAAC;SAC5C,GAAG,CAAC,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC;QACX,EAAE,EAAE,CAAC,CAAC,EAAG;QACT,QAAQ,EAAE,CAAC,CAAC,QAAQ;QACpB,GAAG,EAAE,CAAC,CAAC,GAAG,IAAI,EAAE;QAChB,KAAK,EAAE,CAAC,CAAC,KAAK,IAAI,EAAE;QACpB,MAAM,EAAE,CAAC,CAAC,MAAM;QAChB,MAAM,EAAE,CAAC,CAAC,MAAM;KACjB,CAAC,CAAC,CAAC;AACR,CAAC;AAED,wEAAwE;AACxE,MAAM,UAAU,aAAa,CAC3B,IAOE;IAEF,OAAO,IAAI;SACR,MAAM,CAAC,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC,CAAC,EAAE,IAAI,IAAI,IAAI,CAAC,CAAC,GAAG,IAAI,IAAI,CAAC;SAC5C,GAAG,CAAC,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC;QACX,EAAE,EAAE,CAAC,CAAC,EAAG;QACT,QAAQ,EAAE,CAAC,CAAC,QAAQ;QACpB,GAAG,EAAE,CAAC,CAAC,GAAG,IAAI,EAAE;QAChB,KAAK,EAAE,CAAC,CAAC,KAAK,IAAI,EAAE;QACpB,MAAM,EAAE,CAAC,CAAC,MAAM;QAChB,MAAM,EAAE,CAAC,CAAC,MAAM;KACjB,CAAC,CAAC,CAAC;AACR,CAAC",
+        "sourcesContent": [
+          "export interface TabInfo {\n  id: number;\n  windowId: number;\n  url: string;\n  title: string;\n  active: boolean;\n  pinned: boolean;\n}\n\nexport async function getTabSnapshot(): Promise<TabInfo[]> {\n  const tabs = await chrome.tabs.query({});\n  return tabs\n    .filter((t) => t.id != null && t.url != null)\n    .map((t) => ({\n      id: t.id!,\n      windowId: t.windowId,\n      url: t.url ?? \"\",\n      title: t.title ?? \"\",\n      active: t.active,\n      pinned: t.pinned,\n    }));\n}\n\n// Pure function for testing: converts raw tab-like objects to TabInfo[]\nexport function toTabInfoList(\n  tabs: Array<{\n    id?: number;\n    windowId: number;\n    url?: string;\n    title?: string;\n    active: boolean;\n    pinned: boolean;\n  }>\n): TabInfo[] {\n  return tabs\n    .filter((t) => t.id != null && t.url != null)\n    .map((t) => ({\n      id: t.id!,\n      windowId: t.windowId,\n      url: t.url ?? \"\",\n      title: t.title ?? \"\",\n      active: t.active,\n      pinned: t.pinned,\n    }));\n}\n"
+        ],
+        "sourceRoot": ""
+      }
+    }
+  }
+}

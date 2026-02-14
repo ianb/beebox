@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "tap test/*.test.ts"
+    "test": "tap test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "lint:oxlint": "oxlint -A no-unused-vars",
+    "lint:knip": "knip",
+    "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "prepare": "husky"
   },
   "dependencies": {
     "callback-dropbox": "file:../callback-dropbox",
@@ -15,23 +21,39 @@
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.28",
+    "@ianbicking/personal-vibe-check": "file:../../personal-vibe-check",
     "@types/chrome": "^0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4",
     "autoprefixer": "^10",
+    "eslint": "^9.39.2",
+    "husky": "^9.1.7",
+    "knip": "^5.83.1",
+    "lint-staged": "^16.2.7",
+    "madge": "^8.0.0",
+    "oxlint": "^1.47.0",
     "postcss": "^8",
     "tailwindcss": "^3",
     "tap": "^21",
     "typescript": "^5",
-    "vite": "^5",
-    "@vitejs/plugin-react": "^4"
+    "vite": "^5"
   },
   "tap": {
-    "plugin": ["!@tapjs/node-serialize"],
-    "coverage-report": ["none"],
+    "plugin": [
+      "!@tapjs/node-serialize"
+    ],
+    "coverage-report": [
+      "none"
+    ],
     "statements": 0,
     "branches": 0,
     "functions": 0,
     "lines": 0
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint"
+    ]
   }
 }
