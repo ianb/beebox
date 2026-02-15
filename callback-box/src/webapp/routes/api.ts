@@ -206,9 +206,11 @@ export async function registerApiRoutes(
           element,
         };
       } catch (error) {
-        return reply.status(404).send({
-          error: `Card not found: ${cardPath}`,
-          details: (error as Error).message,
+        const msg = (error as Error).message;
+        const isNotFound = msg.includes("ENOENT") || msg.includes("no such file");
+        return reply.status(isNotFound ? 404 : 422).send({
+          error: isNotFound ? `Card not found: ${cardPath}` : `Card validation failed: ${cardPath}`,
+          details: msg,
         });
       }
     }

@@ -5,6 +5,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Fraction from "fraction.js";
 import type { RendererProps } from "./index";
 import { registerCardRenderer } from "./index";
 import type { ElementNode } from "../api";
@@ -31,7 +32,8 @@ interface RecipeSection {
 
 interface ParsedIngredient {
   name: string;
-  amount?: number;
+  /** Raw amount string from the card — may be a number, fraction, or range */
+  amount?: string;
   unit?: string;
 }
 
@@ -65,7 +67,7 @@ function parseSection(el: ElementNode): RecipeSection {
     notes: notesEl?.text?.trim(),
     ingredients: (ingsEl?.children ?? []).map(ing => ({
       name: ing.text?.trim() ?? "",
-      amount: ing.attrs.amount ? parseFloat(ing.attrs.amount) : undefined,
+      amount: ing.attrs.amount?.trim() || undefined,
       unit: ing.attrs.unit,
     })),
     steps: (stepsEl?.children ?? []).map(s => s.text?.trim() ?? ""),
@@ -82,17 +84,19 @@ function renderIngredientRefs(text: string): string {
     .replace(/@(\w+)/g, "**$1**");
 }
 
-/** Format scaled amounts with nice fractions */
-function formatAmount(n: number): string {
-  if (Number.isInteger(n)) return String(n);
-  const quarters = Math.round(n * 4) / 4;
-  const frac = quarters % 1;
-  const whole = Math.floor(quarters);
-  const fractions: Record<number, string> = { 0.25: "\u00BC", 0.5: "\u00BD", 0.75: "\u00BE" };
-  if (frac in fractions) {
-    return whole > 0 ? `${whole} ${fractions[frac]}` : fractions[frac]!;
+/** Scale an amount string by a multiplier and format as a nice fraction */
+function scaleAmount(raw: string, scale: number): string {
+  // Handle ranges like "2-3"
+  const range = raw.match(/^(.+?)\s*-\s*(.+)$/);
+  if (range) {
+    return `${scaleAmount(range[1], scale)}-${scaleAmount(range[2], scale)}`;
   }
-  return quarters.toFixed(1);
+  try {
+    const f = new Fraction(raw).mul(scale);
+    return f.toFraction(true); // mixed number form: "1 1/2"
+  } catch {
+    return raw; // unparseable — return as-is
+  }
 }
 
 // --- Components ---
@@ -118,7 +122,7 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
               <li key={i} className="flex gap-2">
                 {ing.amount != null ? (
                   <span className="font-medium min-w-[5rem] text-right shrink-0">
-                    {formatAmount(ing.amount * scale)}{ing.unit ? ` ${ing.unit}` : ""}
+                    {scaleAmount(ing.amount, scale)}{ing.unit ? ` ${ing.unit}` : ""}
                   </span>
                 ) : (
                   <span className="min-w-[5rem] shrink-0" />
@@ -202,7 +206,7 @@ function RecipeDetailView({ data }: RendererProps) {
             <span className="text-sm text-gray-500 ml-2">
               {scale === 1
                 ? recipe.yieldText
-                : `${formatAmount(recipe.yieldAmount * scale)} servings`}
+                : `${scaleAmount(String(recipe.yieldAmount), scale)} servings`}
             </span>
           )}
         </div>

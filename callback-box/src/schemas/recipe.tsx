@@ -48,8 +48,8 @@ export const RecipeNotes = element("notes", {
 
 export const RecipeIng = element("ing", {
   attrs: {
-    /** Numeric amount for scaling — this is what gets multiplied */
-    amount: z.coerce.number().optional(),
+    /** Amount for scaling — can be a number or fraction like "1/4" */
+    amount: z.string().optional(),
     /** Freeform unit: "cups", "28oz can", "cloves", etc. */
     unit: z.string().optional(),
   },
@@ -138,12 +138,14 @@ Recipes live in \`store/recipes/\`. Use subdirectories for organization (e.g., \
 ## Ingredients
 
 Inside \`<ingredients>\`, each \`<ing>\` has:
-- \`amount\` (number, optional) — the value that gets multiplied when scaling
+- \`amount\` (string, optional) — number or fraction that gets multiplied when scaling. Supports integers, decimals, fractions ("1/4"), and mixed numbers ("1 1/2").
 - \`unit\` (string, optional) — freeform: "cups", "28oz can", "cloves", "large"
 - Text content is the ingredient name (and optional prep notes)
 
 Examples:
 - \`<ing amount="2" unit="cups">all-purpose flour</ing>\`
+- \`<ing amount="1/4" unit="cup">olive oil</ing>\`
+- \`<ing amount="1 1/2" unit="cups">sugar</ing>\`
 - \`<ing amount="1" unit="28oz can">San Marzano tomatoes</ing>\`
 - \`<ing>fresh basil</ing>\` (no amount — "to taste")
 - \`<ing amount="3" unit="large">eggs</ing>\`
