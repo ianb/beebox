@@ -110,10 +110,14 @@ function formatFraction(f: Fraction): string {
   const unicodeFrac = UNICODE_FRACTIONS[fracKey];
 
   if (unicodeFrac) {
-    return whole > 0 ? `${sign}${whole}${unicodeFrac}` : `${sign}${unicodeFrac}`;
+    // Hair space (\u200A) between whole number and fraction for readability
+    return whole > 0 ? `${sign}${whole}\u200A${unicodeFrac}` : `${sign}${unicodeFrac}`;
   }
-  // No Unicode char available — use regular fraction notation
-  return whole > 0 ? `${sign}${whole} ${remN}/${d}` : `${sign}${remN}/${d}`;
+  // No Unicode char available — use superscript/subscript fraction
+  const sup = String(remN).split("").map(c => "\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079"[+c]).join("");
+  const sub = String(d).split("").map(c => "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089"[+c]).join("");
+  const frac = `${sup}\u2044${sub}`; // fraction slash
+  return whole > 0 ? `${sign}${whole}\u200A${frac}` : `${sign}${frac}`;
 }
 
 /** Scale an amount string by a multiplier and format as a nice fraction */
