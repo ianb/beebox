@@ -156,12 +156,23 @@ export type Record = z.infer<typeof RecordSchema>;
 export function createRecordTemplate(options: {
   name: string;
   description?: string;
+  content?: string;
+  sources?: Array<{ ref: string; text?: string }>;
 }): string {
   const record = (
     <record status="draft">
       <name>{options.name}</name>
-      <description>{options.description || ""}</description>
-      <sources />
+      {options.description && <description>{options.description}</description>}
+      {options.content && <content>{options.content}</content>}
+      {options.sources && options.sources.length > 0 ? (
+        <sources>
+          {options.sources.map((s) => (
+            <source ref={s.ref}>{s.text || ""}</source>
+          ))}
+        </sources>
+      ) : (
+        <sources />
+      )}
       <notes />
     </record>
   );

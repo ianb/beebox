@@ -55,6 +55,12 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
 
+  // Always write .gitattributes (LFS rules)
+  const gitattributes = `# Track frozen page captures in Git LFS
+*.frozen filter=lfs diff=lfs merge=lfs -text
+`;
+  await fs.writeFile(path.join(resolvedRoot, ".gitattributes"), gitattributes);
+
   // Always write .gitignore (keep in sync with cb version)
   const gitignore = `# Callback Box .gitignore
 # Lock files

@@ -22,6 +22,8 @@ import {
   type MemoMessage,
   SaveToBriefMessageSchema,
   type SaveToBriefMessage,
+  SavePageMessageSchema,
+  type SavePageMessage,
 } from "callback-dropbox/client";
 import { CardLoader, type ElementNode } from "cardworks";
 import {
@@ -32,6 +34,7 @@ import {
 } from "./index.js";
 import { createDropboxMemoTemplate } from "../schemas/memo.js";
 import { createNewsItemTemplate } from "../schemas/news-item.js";
+import { createRecordTemplate } from "../schemas/record.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 
 export interface DropboxConfig {
@@ -64,6 +67,12 @@ function parseSaveToBriefMessage(data: unknown): SaveToBriefMessage | null {
   return null;
 }
 
+function parseSavePageMessage(data: unknown): SavePageMessage | null {
+  const result = SavePageMessageSchema.safeParse(data);
+  if (result.success) return result.data;
+  return null;
+}
+
 function safeFilename(text: string): string {
   return text
     .replace(/[^a-zA-Z0-9\s-]/g, "")
@@ -75,7 +84,7 @@ function safeFilename(text: string): string {
 class DropboxConnector implements Connector {
   name = "dropbox";
   handles: string[] = ["open-tab"];
-  produces = ["memo", "news-item"];
+  produces = ["memo", "news-item", "record"];
 
   private boxRoot: string;
 
@@ -152,16 +161,27 @@ class DropboxConnector implements Connector {
             .replace(/[:.]/g, "-")
             .slice(0, 19);
           const label = this.messageLabel(msg);
-          const dir = result.type === "news-item"
-            ? path.join(this.boxRoot, "box/inbox/news")
-            : path.join(this.boxRoot, "box/inbox");
+          const dir = result.dir
+            ? path.join(this.boxRoot, result.dir)
+            : result.type === "news-item"
+              ? path.join(this.boxRoot, "box/inbox/news")
+              : path.join(this.boxRoot, "box/inbox");
           await fs.mkdir(dir, { recursive: true });
-          const ext = result.type === "news-item" ? "news-item.card" : "memo.card";
-          const filename = `${safeFilename(label)}_${timestamp}.${ext}`;
+          const extMap = { "news-item": "news-item.card", memo: "memo.card", record: "record.card" } as const;
+          const ext = extMap[result.type];
+          const baseName = `${safeFilename(label)}_${timestamp}`;
+          const filename = `${baseName}.${ext}`;
           const cardPath = path.join(dir, filename);
 
           await fs.writeFile(cardPath, result.content);
           created.push(path.relative(this.boxRoot, cardPath));
+
+          // Write frozen HTML sidecar if present
+          if (result.frozenHtml) {
+            const frozenPath = path.join(dir, `${baseName}.frozen`);
+            await fs.writeFile(frozenPath, result.frozenHtml);
+            created.push(path.relative(this.boxRoot, frozenPath));
+          }
 
           await client.deleteMessage(msg.id);
         } catch (err) {
@@ -204,7 +224,39 @@ class DropboxConnector implements Connector {
     return result;
   }
 
-  private messageToCard(msg: DecryptedMessage): { content: string; type: "memo" | "news-item" } | null {
+  private messageToCard(msg: DecryptedMessage): {
+    content: string;
+    type: "memo" | "news-item" | "record";
+    dir?: string;
+    frozenHtml?: string;
+  } | null {
+    const savePage = parseSavePageMessage(msg.data);
+    if (savePage) {
+      const sources: Array<{ ref: string; text?: string }> = [];
+      const sourceText = [savePage.siteName, savePage.byline].filter(Boolean).join(" — ");
+      sources.push({ ref: savePage.url, text: sourceText || "Saved from browser" });
+
+      const templateOpts: Parameters<typeof createRecordTemplate>[0] = {
+        name: savePage.title,
+        sources,
+      };
+      if (savePage.excerpt) templateOpts.description = savePage.excerpt;
+      if (savePage.markdown) templateOpts.content = savePage.markdown;
+
+      const result: {
+        content: string;
+        type: "memo" | "news-item" | "record";
+        dir: string;
+        frozenHtml?: string;
+      } = {
+        content: createRecordTemplate(templateOpts),
+        type: "record",
+        dir: savePage.intent === "do" ? "box/inbox/pages-todo" : "box/inbox/pages-saved",
+      };
+      if (savePage.frozenHtml) result.frozenHtml = savePage.frozenHtml;
+      return result;
+    }
+
     const saveToBrief = parseSaveToBriefMessage(msg.data);
     if (saveToBrief) {
       return {
@@ -243,6 +295,10 @@ class DropboxConnector implements Connector {
   }
 
   private messageLabel(msg: DecryptedMessage): string {
+    const savePage = parseSavePageMessage(msg.data);
+    if (savePage) {
+      return savePage.title.slice(0, 50);
+    }
     const saveToBrief = parseSaveToBriefMessage(msg.data);
     if (saveToBrief) {
       return saveToBrief.title.slice(0, 50);
