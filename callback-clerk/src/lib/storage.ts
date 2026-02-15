@@ -12,8 +12,8 @@ export interface SyncState {
 }
 
 export async function getCredentials(): Promise<StoredCredentials | null> {
-  const { credentials } = await chrome.storage.local.get("credentials");
-  return credentials ?? null;
+  const result = await chrome.storage.local.get("credentials");
+  return (result.credentials as StoredCredentials | undefined) ?? null;
 }
 
 export async function saveCredentials(creds: StoredCredentials): Promise<void> {
@@ -25,8 +25,8 @@ export async function clearCredentials(): Promise<void> {
 }
 
 export async function getSyncState(): Promise<SyncState | null> {
-  const { syncState } = await chrome.storage.local.get("syncState");
-  return syncState ?? null;
+  const result = await chrome.storage.local.get("syncState");
+  return (result.syncState as SyncState | undefined) ?? null;
 }
 
 export async function saveSyncState(state: SyncState): Promise<void> {
@@ -43,8 +43,8 @@ export interface PendingAction {
 }
 
 export async function getPendingActions(): Promise<PendingAction[]> {
-  const { pendingActions } = await chrome.storage.local.get("pendingActions");
-  return pendingActions ?? [];
+  const result = await chrome.storage.local.get("pendingActions");
+  return (result.pendingActions as PendingAction[] | undefined) ?? [];
 }
 
 export async function savePendingActions(actions: PendingAction[]): Promise<void> {

@@ -1,3 +1,4 @@
+import type { ExtractResult } from "../content/extract";
 import { createDropboxClient } from "../lib/dropbox";
 import { getTabSnapshot } from "../lib/tabs";
 import {
@@ -21,39 +22,49 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.runtime.onInstalled.addListener(() => {
   updateBadge();
   chrome.contextMenus.create({
-    id: "save-to-brief",
-    title: "Add to News Brief",
-    contexts: ["link"],
+    id: "save-to-box",
+    title: "Save to Callback Box",
+    contexts: ["page", "link"],
   });
 });
 chrome.runtime.onStartup.addListener(() => updateBadge());
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "save-to-brief" && info.linkUrl) {
+  if (info.menuItemId !== "save-to-box") return;
+
+  const showToast = (tabId: number, msg: string) => {
+    chrome.scripting.executeScript({
+      target: { tabId },
+      func: (text: string) => {
+        const el = document.createElement("div");
+        el.textContent = text;
+        Object.assign(el.style, {
+          position: "fixed", bottom: "24px", right: "24px",
+          background: "#16a34a", color: "white",
+          padding: "10px 18px", borderRadius: "8px",
+          fontSize: "14px", fontFamily: "system-ui, sans-serif",
+          zIndex: "2147483647", boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          transition: "opacity 0.3s",
+        });
+        document.body.appendChild(el);
+        setTimeout(() => { el.style.opacity = "0"; }, 1500);
+        setTimeout(() => el.remove(), 1800);
+      },
+      args: [msg],
+    });
+  };
+
+  if (info.linkUrl) {
+    // Right-click on a link — lightweight save (URL + title only)
     const title = info.selectionText || info.linkUrl;
     saveToBrief(info.linkUrl, title).then(() => {
-      if (tab?.id) {
-        chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: (msg: string) => {
-            const el = document.createElement("div");
-            el.textContent = msg;
-            Object.assign(el.style, {
-              position: "fixed", bottom: "24px", right: "24px",
-              background: "#16a34a", color: "white",
-              padding: "10px 18px", borderRadius: "8px",
-              fontSize: "14px", fontFamily: "system-ui, sans-serif",
-              zIndex: "2147483647", boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-              transition: "opacity 0.3s",
-            });
-            document.body.appendChild(el);
-            setTimeout(() => { el.style.opacity = "0"; }, 1500);
-            setTimeout(() => el.remove(), 1800);
-          },
-          args: ["Added to News Brief"],
-        });
-      }
+      if (tab?.id) showToast(tab.id, "Saved to Callback Box");
+    });
+  } else if (tab?.id) {
+    // Right-click on page — full extraction with save intent
+    savePage("save", tab.id).then(() => {
+      if (tab.id) showToast(tab.id, "Saved to Callback Box");
     });
   }
 });
@@ -77,6 +88,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === "saveToBrief") {
     saveToBrief(message.url, message.title).then(() =>
+      sendResponse({ ok: true })
+    );
+    return true;
+  }
+  if (message.type === "savePage" || message.type === "doPage") {
+    const intent = message.type === "savePage" ? "save" : "do";
+    savePage(intent, message.tabId).then(() =>
       sendResponse({ ok: true })
     );
     return true;
@@ -178,6 +196,44 @@ async function saveToBrief(url: string, title: string) {
     );
   } catch (err) {
     console.error("[callback-clerk] saveToBrief error:", err);
+  }
+}
+
+async function savePage(intent: "save" | "do", tabId: number) {
+  const client = await createDropboxClient();
+  if (!client) return;
+
+  try {
+    // Send message to content script to extract page
+    const extracted = await new Promise<ExtractResult>((resolve, reject) => {
+      chrome.tabs.sendMessage(tabId, { type: "extractPage" }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (response?.error) {
+          reject(new Error(response.error));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+
+    await client.send(
+      {
+        type: "save-page" as const,
+        intent,
+        url: extracted.url,
+        title: extracted.title,
+        siteName: extracted.siteName ?? undefined,
+        byline: extracted.byline ?? undefined,
+        excerpt: extracted.excerpt ?? undefined,
+        markdown: extracted.markdown,
+        selectedText: extracted.selectedText ?? undefined,
+        timestamp: new Date().toISOString(),
+      },
+      { sender: "clerk", contentType: "application/json" }
+    );
+  } catch (err) {
+    console.error("[callback-clerk] savePage error:", err);
   }
 }
 

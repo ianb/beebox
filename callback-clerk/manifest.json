@@ -17,5 +17,12 @@
   },
   "side_panel": {
     "default_path": "src/sidepanel/index.html"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content/extract.ts"],
+      "run_at": "document_idle"
+    }
+  ]
 }

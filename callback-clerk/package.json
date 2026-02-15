@@ -15,9 +15,11 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "callback-dropbox": "file:../callback-dropbox",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "turndown": "^7.2.2"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.28",
@@ -25,6 +27,7 @@
     "@types/chrome": "^0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^4",
     "autoprefixer": "^10",
     "eslint": "^9.39.2",

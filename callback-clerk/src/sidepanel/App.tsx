@@ -27,10 +27,10 @@ export default function App() {
     ) => {
       if (area !== "local") return;
       if (changes.credentials) {
-        setCredentials(changes.credentials.newValue ?? null);
+        setCredentials((changes.credentials.newValue as StoredCredentials | undefined) ?? null);
       }
       if (changes.syncState) {
-        setSyncState(changes.syncState.newValue ?? null);
+        setSyncState((changes.syncState.newValue as SyncState | undefined) ?? null);
       }
     };
     chrome.storage.onChanged.addListener(listener);

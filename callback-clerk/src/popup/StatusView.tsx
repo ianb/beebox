@@ -16,11 +16,10 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
-  const [currentTitle, setCurrentTitle] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [savingBrief, setSavingBrief] = useState(false);
-  const [savedBrief, setSavedBrief] = useState(false);
+  const [savingPage, setSavingPage] = useState<"save" | "do" | null>(null);
+  const [savedPage, setSavedPage] = useState<"save" | "do" | null>(null);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
 
   useEffect(() => {
@@ -32,14 +31,11 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
       if (tabs[0]?.url) {
         setCurrentUrl(tabs[0].url);
       }
-      if (tabs[0]?.title) {
-        setCurrentTitle(tabs[0].title);
-      }
     });
 
     const onChange = (changes: Record<string, chrome.storage.StorageChange>) => {
       if (changes.pendingActions) {
-        setPendingActions(changes.pendingActions.newValue ?? []);
+        setPendingActions((changes.pendingActions.newValue as PendingAction[] | undefined) ?? []);
       }
     };
     chrome.storage.onChanged.addListener(onChange);
@@ -79,19 +75,17 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
     );
   }
 
-  function handleSaveToBrief() {
-    setSavingBrief(true);
-    chrome.runtime.sendMessage(
-      { type: "saveToBrief", url: currentUrl, title: currentTitle },
-      () => {
-        setSavedBrief(true);
-        setTimeout(() => {
-          chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
-            if (tabs[0]?.id) chrome.tabs.remove(tabs[0].id);
-          });
-        }, 1500);
-      }
-    );
+  function handleSavePage(intent: "save" | "do") {
+    setSavingPage(intent);
+    chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+      const tabId = tabs[0]?.id;
+      if (!tabId) return;
+      const msgType = intent === "save" ? "savePage" : "doPage";
+      chrome.runtime.sendMessage({ type: msgType, tabId }, () => {
+        setSavedPage(intent);
+        setSavingPage(null);
+      });
+    });
   }
 
   function dismissAction(id: string) {
@@ -148,13 +142,22 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
         )}
 
         {currentUrl && (
-          <button
-            onClick={handleSaveToBrief}
-            disabled={savingBrief || savedBrief}
-            className="w-full px-3 py-2 bg-amber-600 text-white rounded text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
-          >
-            {savedBrief ? "Saved!" : savingBrief ? "Saving..." : "Add to News Brief"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleSavePage("save")}
+              disabled={savingPage !== null || savedPage !== null}
+              className="flex-1 px-3 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
+            >
+              {savedPage === "save" ? "Saved!" : savingPage === "save" ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={() => handleSavePage("do")}
+              disabled={savingPage !== null || savedPage !== null}
+              className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {savedPage === "do" ? "Saved!" : savingPage === "do" ? "Saving..." : "Do"}
+            </button>
+          </div>
         )}
 
         <form onSubmit={handleSend}>
