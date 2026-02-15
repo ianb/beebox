@@ -81,13 +81,6 @@ const UNIT_ABBREV: Record<string, string> = {
   teaspoon: "t", teaspoons: "t", tsp: "t",
   tablespoon: "T", tablespoons: "T", tbsp: "T",
   cup: "c", cups: "c",
-  ounce: "oz", ounces: "oz",
-  pound: "lb", pounds: "lbs",
-  quart: "qt", quarts: "qt",
-  pint: "pt", pints: "pt",
-  gallon: "gal", gallons: "gal",
-  liter: "L", liters: "L",
-  milliliter: "mL", milliliters: "mL",
 };
 
 function abbreviateUnit(unit: string): string {

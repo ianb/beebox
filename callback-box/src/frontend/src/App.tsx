@@ -478,7 +478,7 @@ function CardViewPage() {
 
   return (
     <div className="h-full bg-gray-50 overflow-auto">
-      <div className="max-w-4xl mx-auto py-8">
+      <div className="max-w-4xl mx-auto py-8 px-4">
         <div className="mb-4">
           <Link to="/" className="text-blue-600 hover:text-blue-800">
             &larr; Back to Dashboard
