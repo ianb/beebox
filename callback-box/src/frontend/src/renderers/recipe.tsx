@@ -76,6 +76,24 @@ function parseSection(el: ElementNode): RecipeSection {
 
 // --- Formatting ---
 
+/** Common unit abbreviations for compact display */
+const UNIT_ABBREV: Record<string, string> = {
+  teaspoon: "t", teaspoons: "t", tsp: "t",
+  tablespoon: "T", tablespoons: "T", tbsp: "T",
+  cup: "c", cups: "c",
+  ounce: "oz", ounces: "oz",
+  pound: "lb", pounds: "lbs",
+  quart: "qt", quarts: "qt",
+  pint: "pt", pints: "pt",
+  gallon: "gal", gallons: "gal",
+  liter: "L", liters: "L",
+  milliliter: "mL", milliliters: "mL",
+};
+
+function abbreviateUnit(unit: string): string {
+  return UNIT_ABBREV[unit.toLowerCase()] ?? unit;
+}
+
 /** Parse @{ingredient}{quantity} references into markdown bold */
 function renderIngredientRefs(text: string): string {
   return text
@@ -155,7 +173,7 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
               <li key={i} className="flex gap-2">
                 {ing.amount != null ? (
                   <span className="font-medium min-w-[5rem] text-right shrink-0">
-                    {scaleAmount(ing.amount, scale)}{ing.unit ? ` ${ing.unit}` : ""}
+                    {scaleAmount(ing.amount, scale)}{ing.unit ? ` ${abbreviateUnit(ing.unit)}` : ""}
                   </span>
                 ) : (
                   <span className="min-w-[5rem] shrink-0" />
