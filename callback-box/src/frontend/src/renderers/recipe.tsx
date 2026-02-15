@@ -84,18 +84,50 @@ function renderIngredientRefs(text: string): string {
     .replace(/@(\w+)/g, "**$1**");
 }
 
+const UNICODE_FRACTIONS: Record<string, string> = {
+  "1/2": "\u00BD", "1/3": "\u2153", "2/3": "\u2154",
+  "1/4": "\u00BC", "3/4": "\u00BE",
+  "1/5": "\u2155", "2/5": "\u2156", "3/5": "\u2157", "4/5": "\u2158",
+  "1/6": "\u2159", "5/6": "\u215A",
+  "1/8": "\u215B", "3/8": "\u215C", "5/8": "\u215D", "7/8": "\u215E",
+};
+
+/** Format a Fraction as a nice string with Unicode fraction characters */
+function formatFraction(f: Fraction): string {
+  const s = f.s;
+  const n = Number(f.n);
+  const d = Number(f.d);
+  const sign = s < 0 ? "\u2212" : "";
+
+  if (d === 1) return `${sign}${n}`;
+
+  const whole = Math.floor(n / d);
+  const remN = n % d;
+
+  if (remN === 0) return `${sign}${whole}`;
+
+  const fracKey = `${remN}/${d}`;
+  const unicodeFrac = UNICODE_FRACTIONS[fracKey];
+
+  if (unicodeFrac) {
+    return whole > 0 ? `${sign}${whole}${unicodeFrac}` : `${sign}${unicodeFrac}`;
+  }
+  // No Unicode char available — use regular fraction notation
+  return whole > 0 ? `${sign}${whole} ${remN}/${d}` : `${sign}${remN}/${d}`;
+}
+
 /** Scale an amount string by a multiplier and format as a nice fraction */
 function scaleAmount(raw: string, scale: number): string {
   // Handle ranges like "2-3"
   const range = raw.match(/^(.+?)\s*-\s*(.+)$/);
   if (range) {
-    return `${scaleAmount(range[1], scale)}-${scaleAmount(range[2], scale)}`;
+    return `${scaleAmount(range[1], scale)}\u2013${scaleAmount(range[2], scale)}`;
   }
   try {
     const f = new Fraction(raw).mul(scale);
-    return f.toFraction(true); // mixed number form: "1 1/2"
+    return formatFraction(f);
   } catch {
-    return raw; // unparseable — return as-is
+    return raw;
   }
 }
 
