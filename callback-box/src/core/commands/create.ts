@@ -21,6 +21,7 @@ import {
   createConfirmQuestionTemplate,
 } from "../../schemas/index.js";
 import { createInitialGuideTemplate } from "../../schemas/news-guide.js";
+import { createRecipeTemplate } from "../../schemas/recipe.js";
 
 /**
  * Arguments for the create command.
@@ -80,6 +81,11 @@ const TEMPLATES: Record<string, (args: CreateArgs) => string> = {
     ),
 
   "news-guide": () => createInitialGuideTemplate({}),
+
+  recipe: (args) =>
+    createRecipeTemplate({
+      title: args.content ?? "Untitled Recipe",
+    }),
 };
 
 /**
@@ -91,6 +97,7 @@ const TYPE_TO_TEMPLATE: Record<string, string> = {
   question: "question",
   "voice-memo": "voice-memo",
   "news-guide": "news-guide",
+  recipe: "recipe",
 };
 
 /**

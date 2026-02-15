@@ -22,6 +22,7 @@ import { createNewsItemTemplate } from "./news-item.js";
 import { createNewsSummaryTemplate } from "./news-summary.js";
 import { createInitialGuideTemplate } from "./news-guide.js";
 import { createRecordTemplate } from "./record.js";
+import { createRecipeTemplate } from "./recipe.js";
 
 /**
  * Template definition with typed arguments.
@@ -286,5 +287,24 @@ registerTemplate({
     };
     if (args.description) templateArgs.description = args.description;
     return createRecordTemplate(templateArgs);
+  },
+});
+
+registerTemplate({
+  name: "recipe",
+  description: "A recipe card with ingredients, steps, and scaling support",
+  cardTypes: ["recipe"],
+  argsSchema: z.object({
+    title: z.string().describe("Recipe name"),
+    description: z.string().optional().describe("What the dish is"),
+    servings: z.coerce.number().optional().describe("Number of servings (default: 4)"),
+  }),
+  generate: (args) => {
+    const templateArgs: Parameters<typeof createRecipeTemplate>[0] = {
+      title: args.title,
+    };
+    if (args.description) templateArgs.description = args.description;
+    if (args.servings) templateArgs.servings = args.servings;
+    return createRecipeTemplate(templateArgs);
   },
 });

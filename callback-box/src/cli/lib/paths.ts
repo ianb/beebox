@@ -20,6 +20,7 @@ export const BOX_DIRS = {
   archiveProcessed: "store/archive/processed",
   trash: "store/trash",
   integrated: "store/integrated",
+  recipes: "store/recipes",
 
   // Configuration
   config: "config",

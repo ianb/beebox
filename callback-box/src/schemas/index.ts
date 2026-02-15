@@ -20,6 +20,7 @@ export {
   AudioSchema,
   CaptureSessionSchema,
   RecordSchema,
+  RecipeSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -35,6 +36,7 @@ export type { Image, ImageStatus } from "./image.js";
 export type { Audio, AudioStatus } from "./audio.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
 export type { Record, RecordStatus } from "./record.js";
+export type { Recipe } from "./recipe.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -50,6 +52,7 @@ export { createImageTemplate } from "./image.js";
 export { createAudioTemplate } from "./audio.js";
 export { createCaptureSessionTemplate } from "./capture-session.js";
 export { createRecordTemplate } from "./record.js";
+export { createRecipeTemplate } from "./recipe.js";
 
 // Re-export template registry
 export {

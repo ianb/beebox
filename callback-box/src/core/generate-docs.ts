@@ -163,6 +163,7 @@ function generateAgentGuide(): string {
     "| `box/pool/` | Items being actively worked on |",
     "| `store/archive/` | Processed/completed items |",
     "| `store/integrated/` | Feedback absorbed into guides |",
+    "| `store/recipes/` | Recipe collection (subdirectories for organization) |",
     "| `store/trash/` | Soft-deleted items |",
     "| `config/` | Box configuration |",
     "",
