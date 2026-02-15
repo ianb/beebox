@@ -15,6 +15,7 @@ import { CommandRunner } from "./components/CommandRunner";
 import { NewsPage } from "./components/NewsPage";
 import { HistoryPage } from "./components/HistoryPage";
 import { SettingsPage } from "./components/SettingsPage";
+import { BrowsePage } from "./components/BrowsePage";
 import { useSSE } from "./hooks/useSSE";
 import {
   getInbox,
@@ -36,6 +37,7 @@ function AppNav() {
   const links = [
     { to: "/", label: "Dashboard", match: (p: string) => p === "/" },
     { to: "/news", label: "News", match: (p: string) => p.startsWith("/news") },
+    { to: "/browse", label: "Browse", match: (p: string) => p.startsWith("/browse") },
     { to: "/history", label: "History", match: (p: string) => p.startsWith("/history") },
     { to: "/settings", label: "Settings", match: (p: string) => p.startsWith("/settings") },
   ];
@@ -90,6 +92,23 @@ function NewsPageWrapper() {
         } else {
           navigate("/news");
         }
+      }}
+    />
+  );
+}
+
+/**
+ * Browse page wrapper with route parameters.
+ */
+function BrowsePageWrapper() {
+  const navigate = useNavigate();
+  const { "*": browsePath } = useParams();
+
+  return (
+    <BrowsePage
+      currentPath={browsePath}
+      onNavigate={(path) => {
+        navigate(path ? `/browse/${path}` : "/browse");
       }}
     />
   );
@@ -481,6 +500,7 @@ export default function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/news/*" element={<NewsPageWrapper />} />
+        <Route path="/browse/*" element={<BrowsePageWrapper />} />
         <Route path="/history/:hash?" element={<HistoryPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/card/*" element={<CardViewPage />} />

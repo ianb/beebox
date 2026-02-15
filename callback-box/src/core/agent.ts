@@ -255,6 +255,9 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
       const env: Record<string, string | undefined> = {
         ...process.env,
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
+        // Allow nested Claude Code sessions (e.g., when cb is invoked from
+        // within an existing Claude Code session)
+        CLAUDECODE: undefined,
       };
 
       // Route through the logging proxy if active

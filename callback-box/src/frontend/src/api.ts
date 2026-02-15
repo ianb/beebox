@@ -175,6 +175,26 @@ export async function getNewsStatus(): Promise<NewsStatusResponse> {
   return fetchJson<NewsStatusResponse>(`${API_BASE}/news-status`);
 }
 
+// --- Browse API ---
+
+export interface BrowseCardInfo {
+  relativePath: string;
+  name: string;
+  type: string;
+  tagName: string;
+  status?: string;
+}
+
+export interface BrowseResponse {
+  path: string;
+  dirs: string[];
+  cards: BrowseCardInfo[];
+}
+
+export async function getBrowse(dirPath = ""): Promise<BrowseResponse> {
+  return fetchJson<BrowseResponse>(`${API_BASE}/browse/${dirPath}`);
+}
+
 export async function triggerWakeup(dryRun = false): Promise<{
   success: boolean;
   message: string;

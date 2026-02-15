@@ -7,6 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getSystemState, generateContext } from "../../core/state.js";
 import { createLoader } from "../../cli/lib/loader.js";
+import { parseCardName } from "../../cli/lib/paths.js";
 import { getLog } from "../../cli/lib/git.js";
 import type { ElementNode } from "cardworks";
 
@@ -305,6 +306,81 @@ export async function registerApiRoutes(
     const context = await generateContext(boxRoot);
     return context;
   });
+
+  // GET /api/browse/* - Browse directory contents (one level)
+  server.get<{ Params: { "*": string } }>(
+    "/api/browse/*",
+    async (request) => {
+      const reqPath = request.params["*"] || "";
+
+      // Resolve the target directory
+      const targetDir = reqPath ? path.join(boxRoot, reqPath) : boxRoot;
+
+      // Security: ensure we stay within boxRoot
+      const resolved = path.resolve(targetDir);
+      if (!resolved.startsWith(path.resolve(boxRoot))) {
+        return { path: reqPath, dirs: [], cards: [] };
+      }
+
+      let entries: Array<{ name: string; isDirectory: () => boolean }>;
+      try {
+        entries = await fs.readdir(resolved, { withFileTypes: true });
+      } catch {
+        return { path: reqPath, dirs: [], cards: [] };
+      }
+
+      const dirs: string[] = [];
+      const cards: Array<{
+        relativePath: string;
+        name: string;
+        type: string;
+        tagName: string;
+        status?: string | undefined;
+      }> = [];
+
+      const loader = createLoader(boxRoot);
+
+      for (const entry of entries) {
+        if (entry.name.startsWith(".")) continue;
+
+        if (entry.isDirectory()) {
+          dirs.push(entry.name);
+          continue;
+        }
+
+        if (!entry.name.endsWith(".card")) continue;
+
+        const parsed = parseCardName(entry.name);
+        if (!parsed) continue;
+
+        const fullPath = path.join(resolved, entry.name);
+        const relativePath = path.relative(boxRoot, fullPath);
+
+        try {
+          const card = await loader.load(fullPath);
+          cards.push({
+            relativePath,
+            name: parsed.name,
+            type: parsed.type,
+            tagName: card.element.tagName,
+            status: card.element.attrs["status"],
+          });
+        } catch {
+          cards.push({
+            relativePath,
+            name: parsed.name,
+            type: parsed.type,
+            tagName: "unknown",
+          });
+        }
+      }
+
+      dirs.sort();
+      cards.sort((a, b) => a.name.localeCompare(b.name));
+
+      return { path: reqPath, dirs, cards };
+    }
+  );
 
   // GET /api/news-status - News pipeline status by location
   server.get("/api/news-status", async () => {
