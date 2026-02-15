@@ -10,6 +10,61 @@ import { createLoader } from "../../cli/lib/loader.js";
 import { getLog } from "../../cli/lib/git.js";
 import type { ElementNode } from "cardworks";
 
+type PatchOp =
+  | { op: "set-attr"; path?: string; attr: string; value: string }
+  | { op: "remove-attr"; path?: string; attr: string }
+  | { op: "set-text"; path: string; value: string }
+  | { op: "append-child"; path?: string; xml: string }
+  | { op: "remove-child"; path: string; index: number };
+
+/**
+ * Navigate to a child element by a simple path like "section/ingredients/ing[2]".
+ * Segments are tag names; [N] picks the Nth match (0-indexed).
+ */
+function navigateToChild(el: ElementNode, pathStr: string): ElementNode | null {
+  const segments = pathStr.split("/").filter(Boolean);
+  let current: ElementNode = el;
+  for (const seg of segments) {
+    const match = seg.match(/^(\w[\w-]*?)(?:\[(\d+)\])?$/);
+    if (!match) return null;
+    const tagName = match[1]!;
+    const idx = match[2] !== undefined ? parseInt(match[2], 10) : 0;
+    const matches = current.children.filter(c => c.tagName === tagName);
+    if (idx >= matches.length) return null;
+    current = matches[idx]!;
+  }
+  return current;
+}
+
+/**
+ * Parse a simple XML fragment like `<tag attr="val">text</tag>` into an ElementNode.
+ * Very basic — handles single elements only.
+ */
+function parseXmlFragment(xml: string): ElementNode | null {
+  const match = xml.match(/^<(\w[\w-]*)((?:\s+[\w-]+="[^"]*")*)(?:\s*\/>|>([\s\S]*?)<\/\1>)$/);
+  if (!match) return null;
+  const tagName = match[1]!;
+  const attrStr = match[2] ?? "";
+  const text = match[3]?.trim();
+
+  const attrs: Record<string, string> = {};
+  const attrRegex = /([\w-]+)="([^"]*)"/g;
+  let attrMatch;
+  while ((attrMatch = attrRegex.exec(attrStr))) {
+    attrs[attrMatch[1]!] = attrMatch[2]!;
+  }
+
+  return {
+    tagName,
+    attrs,
+    children: [],
+    text: text || undefined,
+    comments: {},
+    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+    dirty: true,
+  } as ElementNode;
+}
+
 /**
  * JSON-safe element node for the frontend.
  */
@@ -153,6 +208,84 @@ export async function registerApiRoutes(
         return reply.status(404).send({
           error: `Card not found: ${cardPath}`,
           details: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // PATCH /api/card/:path - Apply patch operations to a card
+  server.patch<{ Params: { "*": string }; Body: { ops: PatchOp[] } }>(
+    "/api/card/*",
+    async (request, reply) => {
+      const cardPath = request.params["*"];
+      if (!cardPath) {
+        return reply.status(400).send({ error: "Card path required" });
+      }
+
+      const { ops } = request.body as { ops: PatchOp[] };
+      if (!Array.isArray(ops) || ops.length === 0) {
+        return reply.status(400).send({ error: "Patch ops required" });
+      }
+
+      const fullPath = path.join(boxRoot, cardPath);
+      const loader = createLoader(boxRoot);
+
+      try {
+        const card = await loader.load(fullPath);
+
+        // Apply each patch operation
+        for (const op of ops) {
+          const target = op.path ? navigateToChild(card.element, op.path) : card.element;
+          if (!target) {
+            return reply.status(400).send({ error: `Path not found: ${op.path}` });
+          }
+
+          switch (op.op) {
+            case "set-attr":
+              target.attrs[op.attr] = op.value;
+              break;
+            case "remove-attr":
+              delete target.attrs[op.attr];
+              break;
+            case "set-text":
+              target.text = op.value;
+              break;
+            case "append-child": {
+              const fragment = parseXmlFragment(op.xml);
+              if (fragment) {
+                target.children.push(fragment);
+              }
+              break;
+            }
+            case "remove-child": {
+              const idx = op.index;
+              if (idx >= 0 && idx < target.children.length) {
+                target.children.splice(idx, 1);
+              }
+              break;
+            }
+          }
+        }
+
+        // Save (validates against schema if one exists)
+        await loader.save(card);
+
+        // Re-read and return updated card
+        const updated = await loader.load(fullPath);
+        const xml = loader.serialize(updated.element);
+        const element = sanitizeElement(updated.element);
+
+        return {
+          path: cardPath,
+          tagName: updated.element.tagName,
+          status: updated.element.attrs["status"],
+          version: updated.version,
+          xml,
+          element,
+        };
+      } catch (error) {
+        return reply.status(400).send({
+          error: `Patch failed: ${(error as Error).message}`,
         });
       }
     }

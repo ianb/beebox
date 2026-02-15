@@ -135,6 +135,23 @@ export async function getCard(path: string): Promise<CardResponse> {
   return fetchJson<CardResponse>(`${API_BASE}/card/${path}`);
 }
 
+export type PatchOp =
+  | { op: "set-attr"; path?: string; attr: string; value: string }
+  | { op: "remove-attr"; path?: string; attr: string }
+  | { op: "set-text"; path: string; value: string }
+  | { op: "append-child"; path?: string; xml: string }
+  | { op: "remove-child"; path: string; index: number };
+
+export async function patchCard(
+  cardPath: string,
+  ops: PatchOp[]
+): Promise<CardResponse> {
+  return fetchJson<CardResponse>(`${API_BASE}/card/${cardPath}`, {
+    method: "PATCH",
+    body: JSON.stringify({ ops }),
+  });
+}
+
 export async function getLog(count = 10): Promise<LogResponse> {
   return fetchJson<LogResponse>(`${API_BASE}/log?count=${count}`);
 }

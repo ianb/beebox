@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Routes, Route, useNavigate, useParams, useLocation, Link, Outlet } from "react-router-dom";
 import { StatusBar } from "./components/StatusBar";
 import { CardList } from "./components/CardList";
-import { CardView } from "./components/CardView";
+import { FileView } from "./components/FileView";
 import { QuestionForm } from "./components/QuestionForm";
 import { ActivityLog } from "./components/ActivityLog";
 import { NewMemo, buildCreateCommandLabel, type MemoCommandArgs } from "./components/NewMemo";
@@ -433,7 +433,7 @@ function Dashboard() {
 
               {/* Card view */}
               <div className="card">
-                <CardView path={selectedCard.relativePath} />
+                <FileView path={selectedCard.relativePath} />
               </div>
             </div>
           ) : (
@@ -466,7 +466,7 @@ function CardViewPage() {
           </Link>
         </div>
         <div className="bg-white rounded-lg shadow">
-          <CardView path={cardPath} />
+          <FileView path={cardPath} />
         </div>
       </div>
     </div>
