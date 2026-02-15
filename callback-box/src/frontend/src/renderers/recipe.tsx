@@ -2,7 +2,7 @@
  * Recipe card renderer — formatted recipe with scaling controls.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Fraction from "fraction.js";
@@ -92,8 +92,8 @@ const UNICODE_FRACTIONS: Record<string, string> = {
   "1/8": "\u215B", "3/8": "\u215C", "5/8": "\u215D", "7/8": "\u215E",
 };
 
-/** Format a Fraction as a nice string with Unicode fraction characters */
-function formatFraction(f: Fraction): string {
+/** Format a Fraction as a ReactNode with nice fraction display */
+function formatFraction(f: Fraction): ReactNode {
   const s = f.s;
   const n = Number(f.n);
   const d = Number(f.d);
@@ -110,22 +110,19 @@ function formatFraction(f: Fraction): string {
   const unicodeFrac = UNICODE_FRACTIONS[fracKey];
 
   if (unicodeFrac) {
-    // Hair space (\u200A) between whole number and fraction for readability
     return whole > 0 ? `${sign}${whole}\u200A${unicodeFrac}` : `${sign}${unicodeFrac}`;
   }
-  // No Unicode char available — use superscript/subscript fraction
-  const sup = String(remN).split("").map(c => "\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079"[+c]).join("");
-  const sub = String(d).split("").map(c => "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089"[+c]).join("");
-  const frac = `${sup}\u2044${sub}`; // fraction slash
-  return whole > 0 ? `${sign}${whole}\u200A${frac}` : `${sign}${frac}`;
+  // No Unicode char — render as styled fraction with numerator/slash/denominator
+  const fracEl = <span className="text-[0.8em] tracking-tight">{remN}<span className="mx-px">/</span>{d}</span>;
+  return whole > 0 ? <>{sign}{whole}{"\u200A"}{fracEl}</> : <>{sign}{fracEl}</>;
 }
 
 /** Scale an amount string by a multiplier and format as a nice fraction */
-function scaleAmount(raw: string, scale: number): string {
+function scaleAmount(raw: string, scale: number): ReactNode {
   // Handle ranges like "2-3"
   const range = raw.match(/^(.+?)\s*-\s*(.+)$/);
   if (range) {
-    return `${scaleAmount(range[1], scale)}\u2013${scaleAmount(range[2], scale)}`;
+    return <>{scaleAmount(range[1], scale)}{"\u2013"}{scaleAmount(range[2], scale)}</>;
   }
   try {
     const f = new Fraction(raw).mul(scale);
@@ -242,7 +239,7 @@ function RecipeDetailView({ data }: RendererProps) {
             <span className="text-sm text-gray-500 ml-2">
               {scale === 1
                 ? recipe.yieldText
-                : `${scaleAmount(String(recipe.yieldAmount), scale)} servings`}
+                : <>{scaleAmount(String(recipe.yieldAmount), scale)} servings</>}
             </span>
           )}
         </div>
