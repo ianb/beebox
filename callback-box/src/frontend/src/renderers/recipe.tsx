@@ -81,6 +81,10 @@ const UNIT_ABBREV: Record<string, string> = {
   teaspoon: "t", teaspoons: "t", tsp: "t",
   tablespoon: "T", tablespoons: "T", tbsp: "T",
   cup: "c", cups: "c",
+  milliliter: "mL", milliliters: "mL",
+  ounce: "oz", ounces: "oz",
+  liter: "L", liters: "L",
+  kilogram: "kg", kilograms: "kg",
 };
 
 function abbreviateUnit(unit: string): string {
