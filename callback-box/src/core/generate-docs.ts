@@ -9,8 +9,9 @@
  */
 
 import { join } from "node:path";
-import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import type { ZodTypeAny } from "zod";
+import { parseXml } from "cardworks";
 import { schemas } from "../schemas/registry.js";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
 
@@ -48,6 +49,12 @@ const CONNECTORS: ConnectorInfo[] = [
     handles: ["open-tab"],
     produces: ["memo"],
     description: "Relays browser notifications via Dropbox. Handles `open-tab` commands to open URLs in the user's browser.",
+  },
+  {
+    name: "gmail",
+    handles: [],
+    produces: ["email-thread", "email-message"],
+    description: "Pulls emails from Gmail via IMAP. Creates thread directories with message cards and body text files.",
   },
 ];
 
@@ -109,6 +116,52 @@ function withDocId(params: WithDocIdParams): string {
 }
 
 /**
+ * Scan workflow cards and extract name + first-line description.
+ */
+interface WorkflowSummary {
+  name: string;
+  filename: string;
+  description: string;
+}
+
+async function scanWorkflows(boxRoot: string): Promise<WorkflowSummary[]> {
+  const workflowDir = join(boxRoot, "config/workflows");
+  let files: string[];
+  try {
+    files = await readdir(workflowDir);
+  } catch {
+    return [];
+  }
+
+  const cards = files.filter((f) => f.endsWith(".workflow.card")).sort();
+  const results: WorkflowSummary[] = [];
+
+  for (const filename of cards) {
+    try {
+      const content = await readFile(join(workflowDir, filename), "utf-8");
+      const root = await parseXml(content, filename);
+      const name = root.attrs["name"] ?? filename.replace(".workflow.card", "");
+      const descEl = (root.children ?? []).find(
+        (c: { tagName?: string }) => c.tagName === "description"
+      );
+      const desc = (descEl as { text?: string })?.text?.trim() ?? "";
+      // Take just the first sentence/line for the compact index
+      const shortDesc = desc.split(/\n/)[0]?.replace(/\.\s.*/, ".").trim() || desc;
+      results.push({ name, filename, description: shortDesc });
+    } catch {
+      // Skip unparseable workflow cards
+      results.push({
+        name: filename.replace(".workflow.card", ""),
+        filename,
+        description: "(could not parse)",
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Generate all agent documentation for a box.
  */
 export async function generateDocs(boxRoot: string, options: GenerateDocsOptions = {}): Promise<void> {
@@ -117,9 +170,11 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
   await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
   await mkdir(join(boxRoot, DOCS_DIR), { recursive: true });
 
+  const workflows = await scanWorkflows(boxRoot);
+
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide(), debug })),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide(workflows), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
@@ -141,7 +196,7 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
 /**
  * Generate the compact agent guide (always loaded via @-include).
  */
-function generateAgentGuide(): string {
+function generateAgentGuide(workflows: WorkflowSummary[]): string {
   const commandTypes = CONNECTORS.flatMap((c) => c.handles).filter(Boolean);
   const templates = getAllTemplates();
 
@@ -179,9 +234,28 @@ function generateAgentGuide(): string {
     "- `cb context` — Show current box state for agent prompts",
     "- `cb workflow run <name-or-path>` — Run a workflow (see `docs/generated/workflows.md`)",
     "",
+  ];
+
+  // Workflow index (dynamic, scanned from box)
+  if (workflows.length > 0) {
+    lines.push(
+      "## Workflows",
+      "",
+      "Available workflows in `config/workflows/`:",
+      "",
+    );
+    for (const w of workflows) {
+      lines.push(`- **${w.name}** — ${w.description}`);
+    }
+    lines.push("");
+    lines.push("Run with `cb workflow run <name>`. See `docs/generated/workflows.md` for authoring details.");
+    lines.push("");
+  }
+
+  lines.push(
     "## Card Types",
     "",
-  ];
+  );
 
   for (const schema of schemas) {
     const hasDoc = schema.instructions ? ` — see \`docs/generated/card-${schema.tagName}.md\`` : "";

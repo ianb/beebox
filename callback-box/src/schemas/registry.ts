@@ -21,6 +21,8 @@ import { AudioSchema } from "./audio.js";
 import { CaptureSessionSchema } from "./capture-session.js";
 import { RecordSchema } from "./record.js";
 import { RecipeSchema } from "./recipe.js";
+import { EmailThreadSchema } from "./email-thread.js";
+import { EmailMessageSchema } from "./email-message.js";
 
 /**
  * All registered card schemas.
@@ -41,6 +43,8 @@ export const schemas: ElementSchema[] = [
   CaptureSessionSchema,
   RecordSchema,
   RecipeSchema,
+  EmailThreadSchema,
+  EmailMessageSchema,
 ];
 
 /**
@@ -84,3 +88,5 @@ export { AudioSchema } from "./audio.js";
 export { CaptureSessionSchema } from "./capture-session.js";
 export { RecordSchema } from "./record.js";
 export { RecipeSchema } from "./recipe.js";
+export { EmailThreadSchema } from "./email-thread.js";
+export { EmailMessageSchema } from "./email-message.js";
