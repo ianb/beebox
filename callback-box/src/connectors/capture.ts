@@ -166,15 +166,18 @@ class CaptureConnector implements Connector {
       a.name.localeCompare(b.name)
     );
 
-    for (const file of sortedFiles) {
-      // Download the media file
+    // Separate audio and non-audio files
+    const audioFiles = sortedFiles.filter((f) => f.type.startsWith("audio/"));
+    const nonAudioFiles = sortedFiles.filter((f) => !f.type.startsWith("audio/"));
+
+    // Process non-audio files individually
+    for (const file of nonAudioFiles) {
       const data = await client.downloadFile(manifest.sessionId, file.name);
       const mediaPath = path.join(dirPath, file.name);
       await fs.writeFile(mediaPath, Buffer.from(data));
       created.push(path.relative(this.boxRoot, mediaPath));
 
-      // Create the corresponding card
-      const baseName = path.parse(file.name).name; // e.g. "photo-001"
+      const baseName = path.parse(file.name).name;
 
       if (file.type.startsWith("image/")) {
         const cardName = `${baseName}.image.card`;
@@ -187,18 +190,39 @@ class CaptureConnector implements Connector {
         await fs.writeFile(cardPath, cardContent);
         created.push(path.relative(this.boxRoot, cardPath));
         imageRefs.push(cardName);
-      } else if (file.type.startsWith("audio/")) {
-        const cardName = `${baseName}.audio.card`;
-        const cardPath = path.join(dirPath, cardName);
-        const cardContent = createAudioTemplate({
-          recordedAt: file.startedAt,
-          source: file.source,
-          filename: file.name,
-        });
-        await fs.writeFile(cardPath, cardContent);
-        created.push(path.relative(this.boxRoot, cardPath));
-        audioRefs.push(cardName);
       }
+    }
+
+    // Concatenate audio chunks into a single file
+    // MediaRecorder timeslice mode produces chunks where only the first has
+    // the WebM header; subsequent chunks are raw Cluster data. Concatenating
+    // them produces a valid WebM file.
+    if (audioFiles.length > 0) {
+      const firstAudio = audioFiles[0]!;
+      const ext = path.extname(firstAudio.name) || ".webm";
+      const combinedName = `recording${ext}`;
+      const chunks: Buffer[] = [];
+
+      for (const file of audioFiles) {
+        const data = await client.downloadFile(manifest.sessionId, file.name);
+        chunks.push(Buffer.from(data));
+      }
+
+      const combinedBuffer = Buffer.concat(chunks);
+      const mediaPath = path.join(dirPath, combinedName);
+      await fs.writeFile(mediaPath, combinedBuffer);
+      created.push(path.relative(this.boxRoot, mediaPath));
+
+      const cardName = "recording.audio.card";
+      const cardPath = path.join(dirPath, cardName);
+      const cardContent = createAudioTemplate({
+        recordedAt: firstAudio.startedAt,
+        source: firstAudio.source,
+        filename: combinedName,
+      });
+      await fs.writeFile(cardPath, cardContent);
+      created.push(path.relative(this.boxRoot, cardPath));
+      audioRefs.push(cardName);
     }
 
     // Create the session card
