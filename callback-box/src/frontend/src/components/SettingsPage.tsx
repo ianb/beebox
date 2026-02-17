@@ -1,10 +1,151 @@
 /**
- * Settings page with dropbox pairing UI.
+ * Settings page with dropbox pairing UI and calendar configuration.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { getDropboxStatus, createPairing, type DropboxStatus, type PairResult } from "../api";
+import {
+  getDropboxStatus,
+  createPairing,
+  getAvailableCalendars,
+  getCalendarConfig,
+  putCalendarConfig,
+  type DropboxStatus,
+  type PairResult,
+  type AvailableCalendar,
+  type CalendarConfig,
+} from "../api";
+
+function CalendarSection() {
+  const [calendars, setCalendars] = useState<AvailableCalendar[] | null>(null);
+  const [config, setConfig] = useState<CalendarConfig | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [available, cfg] = await Promise.all([
+        getAvailableCalendars(),
+        getCalendarConfig(),
+      ]);
+      setCalendars(available);
+      setConfig(cfg);
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const toggleCalendar = async (cal: AvailableCalendar) => {
+    if (!config) return;
+    setSaving(true);
+
+    const currentList = config.calendars || ["primary"];
+    // Use the actual ID (resolve "primary" alias)
+    const calId = cal.primary && cal.resolvedId ? cal.resolvedId : cal.id;
+    // Also check if "primary" alias is in the list and this is the primary calendar
+    const isCurrentlySyncing = cal.syncing;
+
+    let newList: string[];
+    if (isCurrentlySyncing) {
+      // Remove — filter both the real ID and "primary" alias
+      newList = currentList.filter((id) => {
+        if (id === calId) return false;
+        if (cal.primary && id === "primary") return false;
+        return true;
+      });
+    } else {
+      newList = [...currentList, calId];
+    }
+
+    try {
+      const newConfig = { ...config, calendars: newList };
+      await putCalendarConfig(newConfig);
+      setConfig(newConfig);
+      // Refresh to get updated syncing flags
+      const available = await getAvailableCalendars();
+      setCalendars(available);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          Google Calendar
+        </h2>
+        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!calendars) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          Google Calendar
+        </h2>
+        <p className="text-sm text-gray-500">Loading calendars...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 mt-6">
+      <h2 className="text-lg font-semibold text-gray-800 mb-2">
+        Google Calendar
+      </h2>
+      <p className="text-sm text-gray-600 mb-4">
+        Choose which calendars to sync. Events are pulled as .ics files during{" "}
+        <code className="text-xs bg-gray-100 px-1 rounded">cb pull</code>.
+      </p>
+
+      <div className="space-y-1">
+        {calendars.map((cal) => (
+          <label
+            key={cal.id}
+            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              checked={cal.syncing}
+              onChange={() => toggleCalendar(cal)}
+              disabled={saving}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="flex-1 min-w-0">
+              <span className="text-sm text-gray-900">{cal.summary}</span>
+              {cal.primary && (
+                <span className="ml-1 text-xs text-gray-400">(primary)</span>
+              )}
+              {cal.accessRole !== "owner" && (
+                <span className="ml-1 text-xs text-gray-400">
+                  ({cal.accessRole})
+                </span>
+              )}
+            </span>
+            {cal.backgroundColor && (
+              <span
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: cal.backgroundColor }}
+              />
+            )}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function SettingsPage() {
   const [status, setStatus] = useState<DropboxStatus | null>(null);
@@ -163,6 +304,8 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+
+        <CalendarSection />
       </div>
     </div>
   );

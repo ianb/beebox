@@ -1,19 +1,31 @@
 /**
  * cb calendar — View calendar events from local .ics files.
  *
- * Subcommands:
- *   cb calendar upcoming [--count N]  — next N events (default 10)
- *   cb calendar today                 — today's events
- *   cb calendar week                  — this week's events
+ * Usage:
+ *   cb calendar              — next 7 days (default)
+ *   cb calendar 3d           — next 3 days
+ *   cb calendar 2w           — next 2 weeks
+ *   cb calendar today        — today only
+ *   cb calendar calendars    — list available calendars (from Google API)
+ *   cb calendar add <id>     — add a calendar to sync
+ *   cb calendar remove <id>  — remove a calendar from sync
  */
 
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
+import { getGoogleAuth } from "../../connectors/google-auth.js";
+import {
+  loadCalendarConfig,
+  saveCalendarConfig,
+  fetchAvailableCalendars,
+} from "../../connectors/calendar-config.js";
 import {
   loadAllEvents,
   filterByDateRange,
   formatEvent,
+  parseTimespan,
 } from "../../connectors/calendar-utils.js";
 
 function startOfDay(date: Date): Date {
@@ -29,76 +41,129 @@ function endOfDay(date: Date): Date {
 }
 
 export const calendarCommand = new Command("calendar")
-  .description("View calendar events");
-
-calendarCommand
-  .command("upcoming")
-  .description("Show upcoming events")
-  .option("-n, --count <n>", "Number of events to show", "10")
-  .action(async (options: { count: string }) => {
+  .description("View calendar events (default: next 7 days)")
+  .argument("[timespan]", 'Time range: "today", "3d", "2w", "1m" (default: 7d)')
+  .action(async (timespan?: string) => {
     const boxRoot = await requireBoxRoot();
     const calDir = path.join(boxRoot, "store/calendar");
     const events = await loadAllEvents(calDir);
-
     const now = new Date();
-    const upcoming = events
-      .filter((e) => e.end > now)
-      .slice(0, parseInt(options.count, 10));
 
-    if (upcoming.length === 0) {
-      console.log("No upcoming events.");
+    let from: Date;
+    let to: Date;
+    let label: string;
+
+    if (timespan === "today") {
+      from = startOfDay(now);
+      to = endOfDay(now);
+      label = "today";
+    } else {
+      from = startOfDay(now);
+      const ms = parseTimespan(timespan || "7d");
+      to = new Date(from.getTime() + ms);
+      label = `next ${timespan || "7d"}`;
+    }
+
+    const filtered = filterByDateRange(events, { from, to });
+
+    if (filtered.length === 0) {
+      console.log(`No events ${label}.`);
       return;
     }
 
-    for (const event of upcoming) {
+    for (const event of filtered) {
       console.log(formatEvent(event));
     }
   });
 
 calendarCommand
-  .command("today")
-  .description("Show today's events")
+  .command("calendars")
+  .description("List available Google calendars")
   .action(async () => {
     const boxRoot = await requireBoxRoot();
-    const calDir = path.join(boxRoot, "store/calendar");
-    const events = await loadAllEvents(calDir);
-
-    const now = new Date();
-    const todayStart = startOfDay(now);
-    const todayEnd = endOfDay(now);
-    const todayEvents = filterByDateRange(events, { from: todayStart, to: todayEnd });
-
-    if (todayEvents.length === 0) {
-      console.log("No events today.");
-      return;
+    const auth = await getGoogleAuth(boxRoot);
+    if (!auth) {
+      console.error("Google auth not configured. Run: cb google-auth");
+      process.exit(1);
     }
 
-    for (const event of todayEvents) {
-      console.log(formatEvent(event));
+    const config = await loadCalendarConfig(boxRoot);
+    const syncList = config.calendars || ["primary"];
+    const syncing = new Set(syncList);
+
+    const available = await fetchAvailableCalendars(auth);
+
+    // "primary" is an alias for the user's main calendar
+    const primaryId = available.find((c) => c.primary)?.id;
+
+    function isSyncing(calId: string): boolean {
+      if (syncing.has(calId)) return true;
+      if (primaryId && calId === primaryId && syncing.has("primary")) return true;
+      return false;
     }
+
+    // Read state for event count
+    const statePath = path.join(boxRoot, "config/connectors/google-calendar-state.json");
+    let eventCount = 0;
+    try {
+      const content = await fs.readFile(statePath, "utf-8");
+      const state = JSON.parse(content);
+      eventCount = Object.keys(state.eventFiles || {}).length;
+    } catch {
+      // No state
+    }
+
+    console.log("Available calendars:\n");
+    for (const cal of available) {
+      const active = isSyncing(cal.id) ? "[syncing]" : "";
+      const role = cal.accessRole !== "owner" ? `(${cal.accessRole})` : "";
+      console.log(`  ${active ? active + " " : ""}${cal.summary}  ${role}`);
+      console.log(`         id: ${cal.id}`);
+    }
+    console.log(`\n${eventCount} events stored locally.`);
+    console.log("\nUse \"cb calendar add <id>\" / \"cb calendar remove <id>\" to configure.");
   });
 
 calendarCommand
-  .command("week")
-  .description("Show this week's events")
-  .action(async () => {
+  .command("add")
+  .description("Add a calendar to sync")
+  .argument("<id>", "Calendar ID (email or 'primary')")
+  .action(async (id: string) => {
     const boxRoot = await requireBoxRoot();
-    const calDir = path.join(boxRoot, "store/calendar");
-    const events = await loadAllEvents(calDir);
+    const config = await loadCalendarConfig(boxRoot);
+    const calendars = config.calendars || ["primary"];
 
-    const now = new Date();
-    const weekStart = startOfDay(now);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-
-    const weekEvents = filterByDateRange(events, { from: weekStart, to: weekEnd });
-
-    if (weekEvents.length === 0) {
-      console.log("No events this week.");
+    if (calendars.includes(id)) {
+      console.log(`Calendar "${id}" is already being synced.`);
       return;
     }
 
-    for (const event of weekEvents) {
-      console.log(formatEvent(event));
+    calendars.push(id);
+    await saveCalendarConfig(boxRoot, { ...config, calendars });
+    console.log(`Added "${id}" to synced calendars.`);
+    console.log("Run \"cb pull\" to fetch events.");
+  });
+
+calendarCommand
+  .command("remove")
+  .description("Remove a calendar from sync")
+  .argument("<id>", "Calendar ID to stop syncing")
+  .action(async (id: string) => {
+    const boxRoot = await requireBoxRoot();
+    const config = await loadCalendarConfig(boxRoot);
+    const calendars = config.calendars || ["primary"];
+
+    if (!calendars.includes(id)) {
+      console.log(`Calendar "${id}" is not being synced.`);
+      return;
     }
+
+    const updated = calendars.filter((c) => c !== id);
+    if (updated.length === 0) {
+      console.error("Cannot remove the last calendar. At least one must be synced.");
+      process.exit(1);
+    }
+
+    await saveCalendarConfig(boxRoot, { ...config, calendars: updated });
+    console.log(`Removed "${id}" from synced calendars.`);
   });

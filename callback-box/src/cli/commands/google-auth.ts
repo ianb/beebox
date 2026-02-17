@@ -77,7 +77,7 @@ export const googleAuthCommand = new Command("google-auth")
           p { color: #666; font-size: 0.95rem; }
         </style>`;
 
-      const successPage = `<!DOCTYPE html><html><head><title>Authorized</title>${pageStyle}</head>
+      const successPage = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Authorized</title>${pageStyle}</head>
         <body><div class="card">
           <div class="icon">\u2705</div>
           <h1>Authorization successful</h1>
@@ -85,7 +85,7 @@ export const googleAuthCommand = new Command("google-auth")
         </div></body></html>`;
 
       const errorPage = (msg: string) =>
-        `<!DOCTYPE html><html><head><title>Error</title>${pageStyle}</head>
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Error</title>${pageStyle}</head>
         <body><div class="card">
           <div class="icon">\u274C</div>
           <h1>${msg}</h1>

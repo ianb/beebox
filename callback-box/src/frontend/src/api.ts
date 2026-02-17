@@ -516,6 +516,42 @@ export async function createPairing(workerUrl: string): Promise<PairResult> {
   });
 }
 
+// --- Calendar Config API ---
+
+export interface AvailableCalendar {
+  id: string;
+  summary: string;
+  description?: string;
+  primary?: boolean;
+  accessRole: string;
+  backgroundColor?: string;
+  syncing: boolean;
+  resolvedId?: string;
+}
+
+export interface CalendarConfig {
+  calendars?: string[];
+  syncDaysBack?: number;
+  syncDaysForward?: number;
+}
+
+export async function getAvailableCalendars(): Promise<AvailableCalendar[]> {
+  return fetchJson<AvailableCalendar[]>(`${API_BASE}/calendar/available`);
+}
+
+export async function getCalendarConfig(): Promise<CalendarConfig> {
+  return fetchJson<CalendarConfig>(`${API_BASE}/calendar/config`);
+}
+
+export async function putCalendarConfig(
+  config: CalendarConfig
+): Promise<{ success: boolean }> {
+  return fetchJson(`${API_BASE}/calendar/config`, {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+}
+
 // --- History API ---
 
 export interface HistoryCommit {

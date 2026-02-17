@@ -24,6 +24,7 @@ const REDIRECT_URI = "http://localhost:8976/oauth/callback";
 /** All scopes we request during auth */
 export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.compose",
   "https://www.googleapis.com/auth/drive.readonly",

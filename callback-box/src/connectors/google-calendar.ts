@@ -21,19 +21,29 @@ import {
   type ExecuteResult,
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
+import {
+  loadCalendarConfig,
+  saveCalendarConfig,
+  fetchAvailableCalendars,
+  type CalendarConfig,
+} from "./calendar-config.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 
-interface CalendarConfig {
-  calendars?: string[];
-  syncDaysBack?: number;
-  syncDaysForward?: number;
+interface EventFileEntry {
+  filename: string;
+  calendarId: string;
 }
 
 interface CalendarState {
   /** syncToken per calendar ID */
   syncTokens: Record<string, string>;
-  /** Google event ID → local filename mapping */
-  eventFiles: Record<string, string>;
+  /** Google event ID → file info (or legacy plain filename string) */
+  eventFiles: Record<string, string | EventFileEntry>;
+}
+
+/** Get filename from eventFiles entry (handles legacy string format) */
+function getFilename(entry: string | EventFileEntry): string {
+  return typeof entry === "string" ? entry : entry.filename;
 }
 
 interface GoogleCalendarEvent {
@@ -55,6 +65,8 @@ interface GoogleCalendarEvent {
     responseStatus?: string;
   }>;
   iCalUID?: string;
+  /** "opaque" = busy (default), "transparent" = free */
+  transparency?: string;
 }
 
 interface GoogleCalendarListResponse {
@@ -63,14 +75,11 @@ interface GoogleCalendarListResponse {
   nextSyncToken?: string;
 }
 
-function slugify(text: string): string {
-  return text
-    .replace(/[^a-zA-Z0-9\s-]/g, "")
-    .replace(/\s+/g, "_")
-    .slice(0, 40);
-}
-
-function eventToIcs(event: GoogleCalendarEvent): string {
+function eventToIcs(
+  event: GoogleCalendarEvent,
+  opts: { calendarId: string; calendarName?: string; calendarRole?: string },
+): string {
+  const { calendarId, calendarName, calendarRole } = opts;
   const comp = new ICAL.Component(["vcalendar", [], []]);
   comp.updatePropertyWithValue("prodid", "-//Callback Box//EN");
   comp.updatePropertyWithValue("version", "2.0");
@@ -133,6 +142,13 @@ function eventToIcs(event: GoogleCalendarEvent): string {
     vevent.updatePropertyWithValue("status", "CONFIRMED");
   }
 
+  // Transparency (busy/free)
+  if (event.transparency === "transparent") {
+    vevent.updatePropertyWithValue("transp", "TRANSPARENT");
+  } else {
+    vevent.updatePropertyWithValue("transp", "OPAQUE");
+  }
+
   // Organizer
   if (event.organizer?.email) {
     const prop = new ICAL.Property("organizer");
@@ -168,18 +184,25 @@ function eventToIcs(event: GoogleCalendarEvent): string {
     }
   }
 
+  // Source calendar tracking
+  vevent.updatePropertyWithValue("x-cb-calendar-id", calendarId);
+  if (calendarName) {
+    vevent.updatePropertyWithValue("x-cb-calendar-name", calendarName);
+  }
+  if (calendarRole) {
+    vevent.updatePropertyWithValue("x-cb-calendar-role", calendarRole);
+  }
+
   return comp.toString();
 }
 
 function eventFilename(event: GoogleCalendarEvent): string {
-  const summary = event.summary || "untitled";
-  const slug = slugify(summary);
   const dateStr =
     event.start?.dateTime?.slice(0, 10) ||
     event.start?.date ||
     "no-date";
   const shortId = event.id.slice(-8);
-  return `${slug}_${dateStr}_${shortId}.ics`;
+  return `${dateStr}_${shortId}.ics`;
 }
 
 class GoogleCalendarConnector implements Connector {
@@ -191,10 +214,6 @@ class GoogleCalendarConnector implements Connector {
 
   constructor(boxRoot: string) {
     this.boxRoot = boxRoot;
-  }
-
-  private configPath(): string {
-    return path.join(this.boxRoot, "config/connectors/google-calendar.json");
   }
 
   private statePath(): string {
@@ -209,12 +228,7 @@ class GoogleCalendarConnector implements Connector {
   }
 
   private async loadConfig(): Promise<CalendarConfig> {
-    try {
-      const content = await fs.readFile(this.configPath(), "utf-8");
-      return JSON.parse(content);
-    } catch {
-      return {};
-    }
+    return loadCalendarConfig(this.boxRoot);
   }
 
   private async loadState(): Promise<CalendarState> {
@@ -243,6 +257,24 @@ class GoogleCalendarConnector implements Connector {
     const syncDaysBack = config.syncDaysBack ?? 30;
     const syncDaysForward = config.syncDaysForward ?? 90;
 
+    // Fetch calendar metadata and cache names/roles
+    const available = await fetchAvailableCalendars(auth);
+    const calendarNames: Record<string, string> = {};
+    const calendarRoles: Record<string, string> = {};
+    for (const cal of available) {
+      calendarNames[cal.id] = cal.summary;
+      calendarRoles[cal.id] = cal.accessRole;
+      if (cal.primary) {
+        calendarNames["primary"] = cal.summary;
+        calendarRoles["primary"] = cal.accessRole;
+      }
+    }
+    await saveCalendarConfig(this.boxRoot, {
+      ...config,
+      calendarNames,
+      calendarRoles,
+    });
+
     const calDir = this.calendarDir();
     await fs.mkdir(calDir, { recursive: true });
 
@@ -252,6 +284,9 @@ class GoogleCalendarConnector implements Connector {
 
     for (const calendarId of calendars) {
       const existingSyncToken = state.syncTokens[calendarId];
+      const icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string } = { calendarId };
+      if (calendarNames[calendarId]) icsOpts.calendarName = calendarNames[calendarId];
+      if (calendarRoles[calendarId]) icsOpts.calendarRole = calendarRoles[calendarId];
 
       try {
         const events = await this.fetchEvents({
@@ -266,9 +301,10 @@ class GoogleCalendarConnector implements Connector {
         for (const event of events) {
           if (event.status === "cancelled") {
             // Remove the .ics file if it exists
-            const existingFile = state.eventFiles[event.id];
-            if (existingFile) {
-              const filePath = path.join(calDir, existingFile);
+            const existingEntry = state.eventFiles[event.id];
+            if (existingEntry) {
+              const oldName = getFilename(existingEntry);
+              const filePath = path.join(calDir, oldName);
               try {
                 await fs.unlink(filePath);
                 deleted.push(path.relative(this.boxRoot, filePath));
@@ -282,16 +318,17 @@ class GoogleCalendarConnector implements Connector {
 
           const filename = eventFilename(event);
           const filePath = path.join(calDir, filename);
-          const icsContent = eventToIcs(event);
+          const icsContent = eventToIcs(event, icsOpts);
 
           // Check if this is an update (different filename) or new
-          const oldFile = state.eventFiles[event.id];
-          if (oldFile && oldFile !== filename) {
+          const existingEntry = state.eventFiles[event.id];
+          const oldName = existingEntry ? getFilename(existingEntry) : undefined;
+          if (oldName && oldName !== filename) {
             // Remove old file
             try {
-              await fs.unlink(path.join(calDir, oldFile));
+              await fs.unlink(path.join(calDir, oldName));
               deleted.push(
-                path.relative(this.boxRoot, path.join(calDir, oldFile))
+                path.relative(this.boxRoot, path.join(calDir, oldName))
               );
             } catch {
               // Old file already gone
@@ -301,13 +338,13 @@ class GoogleCalendarConnector implements Connector {
           await fs.writeFile(filePath, icsContent);
           const relPath = path.relative(this.boxRoot, filePath);
 
-          if (oldFile) {
+          if (existingEntry) {
             updated.push(relPath);
           } else {
             created.push(relPath);
           }
 
-          state.eventFiles[event.id] = filename;
+          state.eventFiles[event.id] = { filename, calendarId };
         }
       } catch (err) {
         const message = (err as Error).message;
@@ -331,14 +368,14 @@ class GoogleCalendarConnector implements Connector {
             if (event.status === "cancelled") continue;
             const filename = eventFilename(event);
             const filePath = path.join(calDir, filename);
-            await fs.writeFile(filePath, eventToIcs(event));
+            await fs.writeFile(filePath, eventToIcs(event, icsOpts));
             const relPath = path.relative(this.boxRoot, filePath);
             if (state.eventFiles[event.id]) {
               updated.push(relPath);
             } else {
               created.push(relPath);
             }
-            state.eventFiles[event.id] = filename;
+            state.eventFiles[event.id] = { filename, calendarId };
           }
         } else {
           await this.saveState(state);
@@ -354,15 +391,23 @@ class GoogleCalendarConnector implements Connector {
 
     await this.saveState(state);
 
-    // Stage and commit if there are changes
+    // Stage and commit changes (calendar events + config/state files)
+    const filesToStage = [
+      path.relative(this.boxRoot, calDir),
+      path.relative(this.boxRoot, this.statePath()),
+      "config/connectors/google-calendar.json",
+    ];
+    await stageFiles(this.boxRoot, filesToStage);
     const allChanged = [...created, ...updated, ...deleted];
     if (allChanged.length > 0) {
-      // Stage the calendar directory (handles additions, modifications, deletions)
-      await stageFiles(this.boxRoot, [
-        path.relative(this.boxRoot, calDir),
-      ]);
       await commit(this.boxRoot, {
         message: `Pull ${created.length} new, ${updated.length} updated, ${deleted.length} deleted calendar events`,
+        trailers: { "Pulled-By": "google-calendar-connector" },
+      });
+    } else {
+      // Even if no events changed, config/state may have been updated
+      await commit(this.boxRoot, {
+        message: "Update calendar sync state",
         trailers: { "Pulled-By": "google-calendar-connector" },
       });
     }
