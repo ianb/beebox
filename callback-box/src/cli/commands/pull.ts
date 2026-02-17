@@ -10,6 +10,8 @@ import { createRssConnector } from "../../connectors/rss.js";
 import { createDropboxConnector } from "../../connectors/dropbox.js";
 import { createRaindropConnector } from "../../connectors/raindrop.js";
 import { createCaptureConnector } from "../../connectors/capture.js";
+import { createGmailConnector } from "../../connectors/gmail.js";
+import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const pullCommand = new Command("pull")
@@ -23,6 +25,8 @@ export const pullCommand = new Command("pull")
     createDropboxConnector(boxRoot);
     createRaindropConnector(boxRoot);
     createCaptureConnector(boxRoot);
+    createGmailConnector(boxRoot);
+    createGoogleCalendarConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

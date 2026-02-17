@@ -33,6 +33,8 @@ import {
   executeCommandsCommand,
   transcribeCapturesCommand,
   assembleTimelineCommand,
+  googleAuthCommand,
+  calendarCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -68,6 +70,8 @@ program.addCommand(pairCommand);
 program.addCommand(executeCommandsCommand);
 program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);
+program.addCommand(googleAuthCommand);
+program.addCommand(calendarCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

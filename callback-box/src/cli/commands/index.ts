@@ -26,3 +26,5 @@ export { pairCommand } from "./pair.js";
 export { executeCommandsCommand } from "./execute-commands.js";
 export { transcribeCapturesCommand } from "./transcribe-captures.js";
 export { assembleTimelineCommand } from "./assemble-timeline.js";
+export { googleAuthCommand } from "./google-auth.js";
+export { calendarCommand } from "./calendar.js";
