@@ -137,11 +137,14 @@ function hasTranscription(element: ElementNode): boolean {
 }
 
 /**
- * Check if an audio card already has a transcript.
+ * Check if an audio card already has a non-empty transcript.
  */
 function hasTranscript(element: ElementNode): boolean {
   const children = element.children as ElementNode[];
-  return children.some((c) => c.tagName === "transcript");
+  const transcript = children.find((c) => c.tagName === "transcript");
+  if (!transcript) return false;
+  // Empty <transcript/> doesn't count — that's an untranscribed card from the old template
+  return Boolean(transcript.text?.trim());
 }
 
 /**
