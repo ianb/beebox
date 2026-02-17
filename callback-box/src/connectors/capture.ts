@@ -35,6 +35,11 @@ interface CaptureState {
   pulledSessionIds: string[];
 }
 
+interface CaptureConfig {
+  /** All credentials we've ever used, keyed by channelId */
+  channels: Record<string, { workerUrl: string; apiKey: string }>;
+}
+
 class CaptureConnector implements Connector {
   name = "capture";
   handles: string[] = [];
@@ -46,7 +51,11 @@ class CaptureConnector implements Connector {
     this.boxRoot = boxRoot;
   }
 
-  private configPath(): string {
+  private captureConfigPath(): string {
+    return path.join(this.boxRoot, "config/connectors/capture.secret.json");
+  }
+
+  private dropboxConfigPath(): string {
     return path.join(this.boxRoot, "config/connectors/dropbox.secret.json");
   }
 
@@ -54,13 +63,63 @@ class CaptureConnector implements Connector {
     return path.join(this.boxRoot, "config/connectors/capture-state.json");
   }
 
+  /**
+   * Load capture config, merging in the current dropbox credentials.
+   * This ensures we accumulate all channels we've ever paired with,
+   * so re-pairing doesn't orphan sessions on old channels.
+   */
   private async loadConfig(): Promise<DropboxConfig | null> {
+    // Load the current dropbox config (primary credentials)
+    let dropboxConfig: DropboxConfig | null = null;
     try {
-      const content = await fs.readFile(this.configPath(), "utf-8");
-      return JSON.parse(content);
+      const content = await fs.readFile(this.dropboxConfigPath(), "utf-8");
+      dropboxConfig = JSON.parse(content);
     } catch {
-      return null;
+      // No dropbox config
     }
+
+    if (!dropboxConfig) return null;
+
+    // Load existing capture config (accumulated channels)
+    let captureConfig: CaptureConfig = { channels: {} };
+    try {
+      const content = await fs.readFile(this.captureConfigPath(), "utf-8");
+      captureConfig = JSON.parse(content);
+    } catch {
+      // First time — will be created
+    }
+
+    // Add current dropbox channel to capture config if not already there
+    if (dropboxConfig.channelId && !captureConfig.channels[dropboxConfig.channelId]) {
+      captureConfig.channels[dropboxConfig.channelId] = {
+        workerUrl: dropboxConfig.workerUrl,
+        apiKey: dropboxConfig.apiKey,
+      };
+      await this.saveCaptureConfig(captureConfig);
+    }
+
+    // Return the current dropbox config for primary use
+    return dropboxConfig;
+  }
+
+  /**
+   * Get all known channel credentials for pulling sessions.
+   */
+  private async getAllChannelCredentials(): Promise<Array<{ workerUrl: string; apiKey: string }>> {
+    let captureConfig: CaptureConfig = { channels: {} };
+    try {
+      const content = await fs.readFile(this.captureConfigPath(), "utf-8");
+      captureConfig = JSON.parse(content);
+    } catch {
+      // No capture config yet
+    }
+    return Object.values(captureConfig.channels);
+  }
+
+  private async saveCaptureConfig(config: CaptureConfig): Promise<void> {
+    const dir = path.dirname(this.captureConfigPath());
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(this.captureConfigPath(), JSON.stringify(config, null, 2));
   }
 
   private async loadState(): Promise<CaptureState> {
@@ -78,41 +137,43 @@ class CaptureConnector implements Connector {
   }
 
   async pull(): Promise<PullResult> {
+    // Ensure current dropbox credentials are registered
     const config = await this.loadConfig();
     if (!config) {
       return { success: true, created: [], updated: [] };
     }
-
-    const client = new CaptureClient({
-      url: config.workerUrl,
-      apiKey: config.apiKey,
-    });
 
     const state = await this.loadState();
     const pulledSet = new Set(state.pulledSessionIds);
     const created: string[] = [];
     const errors: string[] = [];
 
-    try {
-      const sessions = await client.listSessions({ status: "completed" });
-      const newSessions = sessions.filter((s) => !pulledSet.has(s.id));
+    // Check all known channels for completed sessions
+    const allCredentials = await this.getAllChannelCredentials();
 
-      if (newSessions.length === 0) {
-        return { success: true, created: [], updated: [] };
-      }
+    for (const creds of allCredentials) {
+      const client = new CaptureClient({
+        url: creds.workerUrl,
+        apiKey: creds.apiKey,
+      });
 
-      for (const session of newSessions) {
-        try {
-          const manifest = await client.getManifest(session.id);
-          const sessionCreated = await this.pullSession(client, manifest);
-          created.push(...sessionCreated);
-          pulledSet.add(session.id);
-        } catch (err) {
-          errors.push(`Failed to pull session ${session.id}: ${(err as Error).message}`);
+      try {
+        const sessions = await client.listSessions({ status: "completed" });
+        const newSessions = sessions.filter((s) => !pulledSet.has(s.id));
+
+        for (const session of newSessions) {
+          try {
+            const manifest = await client.getManifest(session.id);
+            const sessionCreated = await this.pullSession(client, manifest);
+            created.push(...sessionCreated);
+            pulledSet.add(session.id);
+          } catch (err) {
+            errors.push(`Failed to pull session ${session.id}: ${(err as Error).message}`);
+          }
         }
+      } catch {
+        // Channel may have been revoked — skip silently
       }
-    } catch (err) {
-      errors.push(`List sessions failed: ${(err as Error).message}`);
     }
 
     // Save updated state
