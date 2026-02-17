@@ -58,16 +58,10 @@ export const AudioSchema = element("audio", {
 
 Audio clips are chunks from continuous recording in capture sessions. Each audio card has an attached audio file (same basename, e.g. audio-001.webm alongside audio-001.audio.card).
 
-- **status="new"**: Just pulled from capture, not yet transcribed.
-- **status="transcribed"**: Transcript, summary, and duration have been filled in.
+- **status="new"**: Just pulled from capture, needs transcription. Will NOT have <transcript> or <summary> elements yet — these are added during transcription.
+- **status="transcribed"**: Has been transcribed. Will have <transcript> and <summary> elements.
 
-When transcribing:
-1. Transcribe the attached audio file.
-2. Fill in <transcript> with the full text.
-3. Fill in <summary> with a one-sentence description of what's in the audio.
-4. Set the duration attribute on <filename> (in seconds).
-5. Optionally create a timing file (e.g. audio-001.timing.json) with word-level timestamps.
-6. Set status to "transcribed".`,
+If you see status="new" with no <transcript> element, the audio has NOT been transcribed yet. Do not treat it as empty — it needs to be transcribed first.`,
 });
 
 export type Audio = z.infer<typeof AudioSchema>;
@@ -83,8 +77,6 @@ export function createAudioTemplate(options: {
   const audio = (
     <audio status="new">
       <filename name={options.filename} recorded={options.recordedAt} source={options.source} />
-      <summary></summary>
-      <transcript></transcript>
     </audio>
   );
 

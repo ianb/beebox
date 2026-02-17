@@ -23,11 +23,12 @@ const AUDIO_EXTENSIONS = [".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac"];
 
 export const transcribePreAction: PreAction = {
   name: "transcribe-voice",
-  appliesTo: ["memo", "feedback"],
+  appliesTo: ["memo", "feedback", "audio"],
 
   async shouldRun(context: PreActionContext): Promise<boolean> {
     const { card, cardPath } = context;
     const element = card.element;
+    const isAudioCard = element.tagName === "audio";
 
     // Check if it's a voice memo (has audio attachment)
     const audioFile = await findAudioAttachment(cardPath);
@@ -36,7 +37,7 @@ export const transcribePreAction: PreAction = {
     }
 
     // Check if already transcribed
-    if (hasTranscription(element)) {
+    if (isAudioCard ? hasTranscript(element) : hasTranscription(element)) {
       return false;
     }
 
@@ -51,6 +52,7 @@ export const transcribePreAction: PreAction = {
   async execute(context: PreActionContext): Promise<PreActionResult> {
     const { card, cardPath } = context;
     const element = card.element;
+    const isAudioCard = element.tagName === "audio";
 
     // Find the audio file
     const audioFile = await findAudioAttachment(cardPath);
@@ -73,7 +75,11 @@ export const transcribePreAction: PreAction = {
       });
 
       // Add transcription to the card
-      addTranscription({ element, text: result.text, language: result.language });
+      if (isAudioCard) {
+        addTranscript({ element, text: result.text });
+      } else {
+        addTranscription({ element, text: result.text, language: result.language });
+      }
 
       return {
         modified: true,
@@ -128,6 +134,14 @@ async function findAudioAttachment(cardPath: string): Promise<string | null> {
 function hasTranscription(element: ElementNode): boolean {
   const children = element.children as ElementNode[];
   return children.some((c) => c.tagName === "transcription");
+}
+
+/**
+ * Check if an audio card already has a transcript.
+ */
+function hasTranscript(element: ElementNode): boolean {
+  const children = element.children as ElementNode[];
+  return children.some((c) => c.tagName === "transcript");
 }
 
 /**
@@ -188,6 +202,31 @@ function addTranscription(params: AddTranscriptionParams): void {
   };
 
   children.push(transcriptionEl);
+}
+
+/**
+ * Add transcript to an audio card element and set status to transcribed.
+ */
+function addTranscript(params: { element: ElementNode; text: string }): void {
+  const { element, text } = params;
+  const children = element.children as ElementNode[];
+
+  // Add transcript element
+  const transcriptEl: ElementNode = {
+    tagName: "transcript",
+    attrs: {},
+    children: [],
+    text,
+    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+    comments: {},
+    dirty: true,
+  };
+
+  children.push(transcriptEl);
+
+  // Set status to transcribed
+  element.attrs["status"] = "transcribed";
+  element.dirty = true;
 }
 
 /**
