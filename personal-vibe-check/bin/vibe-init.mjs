@@ -153,28 +153,17 @@ async function main() {
     created.push("Created .husky/pre-commit");
   }
 
-  const selfDir = dirname(fileURLToPath(import.meta.url));
-
   // 7. Set up Claude Code PostToolUse lint hook
   const claudeDir = join(cwd, ".claude");
-  const hooksDir = join(claudeDir, "hooks");
   const claudeSettingsPath = join(claudeDir, "settings.json");
-  // Copy lint-check.sh into .claude/hooks/
-  const lintCheckDest = join(hooksDir, "lint-check.sh");
-  const srcLintCheck = join(selfDir, "..", "hooks", "lint-check.sh");
-  if (!existsSync(lintCheckDest)) {
-    mkdirSync(hooksDir, { recursive: true });
-    copyFileSync(srcLintCheck, lintCheckDest);
-    execSync(`chmod +x ${JSON.stringify(lintCheckDest)}`);
-    created.push("Copied .claude/hooks/lint-check.sh");
-  }
-  // Add PostToolUse hook to settings.json
-  const lintHookCommand = '"$CLAUDE_PROJECT_DIR"/.claude/hooks/lint-check.sh';
+  const lintHookCommand = "npx vibe-check lint --hook";
   const claudeSettings = readJson(claudeSettingsPath) || {};
   const postToolHooks = claudeSettings.hooks && claudeSettings.hooks.PostToolUse;
+  // Also detect old shell script hook for migration
+  const oldShellHookCommand = '"$CLAUDE_PROJECT_DIR"/.claude/hooks/lint-check.sh';
   const hasLintHook = Array.isArray(postToolHooks) && postToolHooks.some(
     (group) => Array.isArray(group.hooks) && group.hooks.some(
-      (h) => h.type === "command" && h.command === lintHookCommand
+      (h) => h.type === "command" && (h.command === lintHookCommand || h.command === oldShellHookCommand)
     )
   );
   if (!hasLintHook) {
@@ -205,6 +194,7 @@ async function main() {
   }
 
   // 8. Copy CONVENTIONS.md and add @CONVENTIONS.md to CLAUDE.md
+  const selfDir = dirname(fileURLToPath(import.meta.url));
   const srcConventions = join(selfDir, "..", "CONVENTIONS.md");
   const destConventions = join(cwd, "CONVENTIONS.md");
   if (!existsSync(destConventions)) {
