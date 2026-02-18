@@ -218,3 +218,5 @@ When you create a new document in `docs/`:
 Keep docs focused. One topic per document. Cross-reference rather than duplicate.
 
 @THINKING_CLAUDE.md
+
+@CONVENTIONS.md
