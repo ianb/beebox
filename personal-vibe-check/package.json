@@ -17,7 +17,8 @@
     "tsconfig.base.json",
     "knip-base.json",
     "CONVENTIONS.md",
-    "bin/"
+    "bin/",
+    "hooks/"
   ],
   "peerDependencies": {
     "typescript": ">=5"

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 
 const cwd = process.cwd();
@@ -152,7 +153,79 @@ async function main() {
     created.push("Created .husky/pre-commit");
   }
 
-  // 7. Summary
+  const selfDir = dirname(fileURLToPath(import.meta.url));
+
+  // 7. Set up Claude Code PostToolUse lint hook
+  const claudeDir = join(cwd, ".claude");
+  const hooksDir = join(claudeDir, "hooks");
+  const claudeSettingsPath = join(claudeDir, "settings.json");
+  // Copy lint-check.sh into .claude/hooks/
+  const lintCheckDest = join(hooksDir, "lint-check.sh");
+  const srcLintCheck = join(selfDir, "..", "hooks", "lint-check.sh");
+  if (!existsSync(lintCheckDest)) {
+    mkdirSync(hooksDir, { recursive: true });
+    copyFileSync(srcLintCheck, lintCheckDest);
+    execSync(`chmod +x ${JSON.stringify(lintCheckDest)}`);
+    created.push("Copied .claude/hooks/lint-check.sh");
+  }
+  // Add PostToolUse hook to settings.json
+  const lintHookCommand = '"$CLAUDE_PROJECT_DIR"/.claude/hooks/lint-check.sh';
+  const claudeSettings = readJson(claudeSettingsPath) || {};
+  const postToolHooks = claudeSettings.hooks && claudeSettings.hooks.PostToolUse;
+  const hasLintHook = Array.isArray(postToolHooks) && postToolHooks.some(
+    (group) => Array.isArray(group.hooks) && group.hooks.some(
+      (h) => h.type === "command" && h.command === lintHookCommand
+    )
+  );
+  if (!hasLintHook) {
+    if (!claudeSettings.hooks) {
+      claudeSettings.hooks = {};
+    }
+    if (!Array.isArray(claudeSettings.hooks.PostToolUse)) {
+      claudeSettings.hooks.PostToolUse = [];
+    }
+    // Remove old Stop vibe-check hook if present
+    if (Array.isArray(claudeSettings.hooks.Stop)) {
+      claudeSettings.hooks.Stop = claudeSettings.hooks.Stop.filter(
+        (group) => !(Array.isArray(group.hooks) && group.hooks.some(
+          (h) => h.type === "command" && h.command === "npx vibe-check"
+        ))
+      );
+      if (claudeSettings.hooks.Stop.length === 0) {
+        delete claudeSettings.hooks.Stop;
+      }
+    }
+    claudeSettings.hooks.PostToolUse.push({
+      matcher: "Edit|Write",
+      hooks: [{ type: "command", command: lintHookCommand }],
+    });
+    mkdirSync(claudeDir, { recursive: true });
+    writeJson(claudeSettingsPath, claudeSettings);
+    created.push("Added lint hook to .claude/settings.json");
+  }
+
+  // 8. Copy CONVENTIONS.md and add @CONVENTIONS.md to CLAUDE.md
+  const srcConventions = join(selfDir, "..", "CONVENTIONS.md");
+  const destConventions = join(cwd, "CONVENTIONS.md");
+  if (!existsSync(destConventions)) {
+    copyFileSync(srcConventions, destConventions);
+    created.push("Copied CONVENTIONS.md into project");
+  }
+  const claudeMdPath = join(cwd, "CLAUDE.md");
+  const claudeMdContent = existsSync(claudeMdPath)
+    ? readFileSync(claudeMdPath, "utf-8")
+    : "";
+  if (!claudeMdContent.includes("@CONVENTIONS.md")) {
+    const separator = claudeMdContent.length > 0 && !claudeMdContent.endsWith("\n")
+      ? "\n\n"
+      : claudeMdContent.length > 0
+        ? "\n"
+        : "";
+    writeFileSync(claudeMdPath, claudeMdContent + separator + "@CONVENTIONS.md\n");
+    created.push("Added @CONVENTIONS.md to CLAUDE.md");
+  }
+
+  // 9. Summary
   console.log("\n" + "─".repeat(40));
   if (created.length === 0) {
     console.log("vibe-init: everything already set up!");
@@ -162,7 +235,7 @@ async function main() {
       console.log(`  ✓ ${item}`);
     }
     console.log(
-      "\nNext steps:\n  1. Run `npx vibe-check` to verify\n  2. Add CONVENTIONS.md content to your CLAUDE.md"
+      "\nNext steps:\n  1. Run `npx vibe-check` to verify\n  2. Review CLAUDE.md and .claude/settings.json"
     );
   }
 }
