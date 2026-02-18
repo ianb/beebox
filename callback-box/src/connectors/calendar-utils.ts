@@ -2,6 +2,7 @@
  * Calendar utilities — parse .ics files and query events.
  *
  * Reads from local store/calendar/*.ics files. No API calls.
+ * Supports recurring events via RRULE expansion using ical.js.
  */
 
 import * as fs from "node:fs/promises";
@@ -27,59 +28,174 @@ export interface CalendarEvent {
   calendarRole?: string;
   /** Just the filename, e.g. "2026-02-18_abc123.ics" */
   filename: string;
+  /** True if this event is from a recurring series */
+  recurring?: boolean;
 }
 
 /**
- * Parse a single .ics file into a CalendarEvent.
+ * Shared metadata extracted from a VEVENT component.
+ */
+interface VeventMeta {
+  summary: string;
+  description?: string;
+  location?: string;
+  status: string;
+  opaque: boolean;
+  calendarId?: string;
+  calendarName?: string;
+  calendarRole?: string;
+}
+
+function extractMeta(vevent: ICAL.Component): VeventMeta {
+  const event = new ICAL.Event(vevent);
+  const transp = String(vevent.getFirstPropertyValue("transp") || "OPAQUE").toUpperCase();
+  const calId = vevent.getFirstPropertyValue("x-cb-calendar-id");
+  const calName = vevent.getFirstPropertyValue("x-cb-calendar-name");
+  const calRole = vevent.getFirstPropertyValue("x-cb-calendar-role");
+
+  const meta: VeventMeta = {
+    summary: event.summary || "(no title)",
+    status: String(vevent.getFirstPropertyValue("status") || "CONFIRMED"),
+    opaque: transp !== "TRANSPARENT",
+  };
+  if (event.description) meta.description = event.description;
+  if (event.location) meta.location = event.location;
+  if (calId) meta.calendarId = String(calId);
+  if (calName) meta.calendarName = String(calName);
+  if (calRole) meta.calendarRole = String(calRole);
+  return meta;
+}
+
+/**
+ * Parse a single .ics file into CalendarEvent(s).
+ * Non-recurring events return a single event.
+ * Recurring events are expanded within the given date range.
+ * Without a range, recurring events return only their first occurrence.
  */
 export function parseIcsContent(
   content: string,
-  filename: string
-): CalendarEvent | null {
+  opts: { filename: string; range?: { from: Date; to: Date } },
+): CalendarEvent[] {
+  const { filename, range } = opts;
   try {
     const parsed = ICAL.parse(content);
     const comp = new ICAL.Component(parsed);
     const vevent = comp.getFirstSubcomponent("vevent");
-    if (!vevent) return null;
+    if (!vevent) return [];
 
     const event = new ICAL.Event(vevent);
+    const meta = extractMeta(vevent);
+
+    if (meta.status === "CANCELLED") return [];
+
+    // Check if this is a recurring event
+    if (event.isRecurring() && range) {
+      return expandRecurring(event, { meta, filename, range });
+    }
+
+    // Non-recurring event (or no range given): parse directly
     const dtstart = vevent.getFirstPropertyValue("dtstart") as ICAL.Time;
     const dtend = vevent.getFirstPropertyValue("dtend") as ICAL.Time;
-
     const allDay = dtstart ? dtstart.isDate : false;
-
-    const transp = String(vevent.getFirstPropertyValue("transp") || "OPAQUE").toUpperCase();
-
-    const calId = vevent.getFirstPropertyValue("x-cb-calendar-id");
-    const calName = vevent.getFirstPropertyValue("x-cb-calendar-name");
-    const calRole = vevent.getFirstPropertyValue("x-cb-calendar-role");
 
     const result: CalendarEvent = {
       uid: event.uid || filename,
-      summary: event.summary || "(no title)",
+      summary: meta.summary,
       start: dtstart ? dtstart.toJSDate() : new Date(0),
       end: dtend ? dtend.toJSDate() : (dtstart ? dtstart.toJSDate() : new Date(0)),
       allDay,
-      status: String(vevent.getFirstPropertyValue("status") || "CONFIRMED"),
-      opaque: transp !== "TRANSPARENT",
+      status: meta.status,
+      opaque: meta.opaque,
       filename,
     };
-    if (event.description) result.description = event.description;
-    if (event.location) result.location = event.location;
-    if (calId) result.calendarId = String(calId);
-    if (calName) result.calendarName = String(calName);
-    if (calRole) result.calendarRole = String(calRole);
-    return result;
-  } catch {
-    return null;
+    if (meta.description) result.description = meta.description;
+    if (meta.location) result.location = meta.location;
+    if (meta.calendarId) result.calendarId = meta.calendarId;
+    if (meta.calendarName) result.calendarName = meta.calendarName;
+    if (meta.calendarRole) result.calendarRole = meta.calendarRole;
+    return [result];
+  } catch (err: unknown) {
+    console.warn(`Failed to parse ${opts.filename}:`, err);
+    return [];
   }
 }
 
 /**
- * Load all events from the calendar directory, sorted by start time.
+ * Expand a recurring event into individual occurrences within a date range.
+ */
+function expandRecurring(
+  event: ICAL.Event,
+  opts: { meta: VeventMeta; filename: string; range: { from: Date; to: Date } },
+): CalendarEvent[] {
+  const { meta, filename, range } = opts;
+  const results: CalendarEvent[] = [];
+  const rangeStart = ICAL.Time.fromJSDate(range.from, false);
+  const rangeEnd = ICAL.Time.fromJSDate(range.to, false);
+
+  // Calculate duration from first occurrence for computing end times
+  const dtstart = event.startDate;
+  const dtend = event.endDate;
+  const duration = dtend && dtstart
+    ? dtend.subtractDate(dtstart)
+    : null;
+
+  const iter = event.iterator();
+  let occurrence: ICAL.Time | null;
+  // Safety limit to prevent infinite loops on broken RRULEs
+  let count = 0;
+  const MAX_EXPANSIONS = 500;
+
+  while ((occurrence = iter.next()) && count < MAX_EXPANSIONS) {
+    // Past our range — stop iterating
+    if (occurrence.compare(rangeEnd) >= 0) break;
+    // Before our range — skip (but count toward limit)
+    if (occurrence.compare(rangeStart) < 0) {
+      count++;
+      continue;
+    }
+    count++;
+
+    const occStart = occurrence.toJSDate();
+    let occEnd: Date;
+    if (duration) {
+      const endTime = occurrence.clone();
+      endTime.addDuration(duration);
+      occEnd = endTime.toJSDate();
+    } else {
+      occEnd = occStart;
+    }
+
+    const allDay = occurrence.isDate;
+
+    const result: CalendarEvent = {
+      uid: event.uid || filename,
+      summary: meta.summary,
+      start: occStart,
+      end: occEnd,
+      allDay,
+      status: meta.status,
+      opaque: meta.opaque,
+      filename,
+      recurring: true,
+    };
+    if (meta.description) result.description = meta.description;
+    if (meta.location) result.location = meta.location;
+    if (meta.calendarId) result.calendarId = meta.calendarId;
+    if (meta.calendarName) result.calendarName = meta.calendarName;
+    if (meta.calendarRole) result.calendarRole = meta.calendarRole;
+    results.push(result);
+  }
+
+  return results;
+}
+
+/**
+ * Load events from the calendar directory within a date range, sorted by start time.
+ * Recurring events are expanded into individual occurrences.
  */
 export async function loadAllEvents(
-  calendarDir: string
+  calendarDir: string,
+  range?: { from: Date; to: Date },
 ): Promise<CalendarEvent[]> {
   let files: string[];
   try {
@@ -93,10 +209,8 @@ export async function loadAllEvents(
 
   for (const file of icsFiles) {
     const content = await fs.readFile(path.join(calendarDir, file), "utf-8");
-    const event = parseIcsContent(content, file);
-    if (event && event.status !== "CANCELLED") {
-      events.push(event);
-    }
+    const parsed = parseIcsContent(content, { filename: file, ...(range ? { range } : {}) });
+    events.push(...parsed);
   }
 
   events.sort((a, b) => a.start.getTime() - b.start.getTime());

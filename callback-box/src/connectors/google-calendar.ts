@@ -7,7 +7,11 @@
  *   config/connectors/google.secret.json          - shared Google OAuth2 credentials
  *
  * Events are stored as individual .ics files in store/calendar/.
- * Filename format: {Slugged_Summary}_{YYYY-MM-DD}_{shortId}.ics
+ * Uses singleEvents=false so recurring events are returned as compact masters
+ * with RRULEs (expanded at query time by calendar-utils.ts).
+ * Exception instances (single overrides of recurring events) are skipped.
+ * Incremental sync may return events outside the time window, so we filter
+ * client-side. Filename format: {YYYY-MM-DD}_{shortId}.ics
  */
 
 import * as fs from "node:fs/promises";
@@ -27,7 +31,7 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "./calendar-config.js";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { stageFiles, commit, getStatus } from "../cli/lib/git.js";
 
 interface EventFileEntry {
   filename: string;
@@ -184,6 +188,16 @@ function eventToIcs(
     }
   }
 
+  // Recurrence rules (for recurring master events)
+  if (event.recurrence) {
+    for (const rule of event.recurrence) {
+      // Each entry is a raw iCalendar line like "RRULE:FREQ=WEEKLY;BYDAY=MO"
+      // or "EXDATE;VALUE=DATE:20240101". Parse via ical.js to handle all formats.
+      const prop = ICAL.Property.fromString(rule);
+      vevent.addProperty(prop);
+    }
+  }
+
   // Source calendar tracking
   vevent.updatePropertyWithValue("x-cb-calendar-id", calendarId);
   if (calendarName) {
@@ -203,6 +217,17 @@ function eventFilename(event: GoogleCalendarEvent): string {
     "no-date";
   const shortId = event.id.slice(-8);
   return `${dateStr}_${shortId}.ics`;
+}
+
+/** Check if an event's start falls within a time window */
+function isInWindow(event: GoogleCalendarEvent, window: { start: Date; end: Date }): boolean {
+  // Recurring masters: Google already filtered server-side via timeMin/timeMax
+  if (event.recurrence) return true;
+  const dateTime = event.start?.dateTime;
+  const dateOnly = event.start?.date;
+  if (!dateTime && !dateOnly) return true;
+  const eventStart = dateTime ? new Date(dateTime) : new Date(dateOnly + "T00:00:00");
+  return eventStart >= window.start && eventStart <= window.end;
 }
 
 class GoogleCalendarConnector implements Connector {
@@ -235,7 +260,10 @@ class GoogleCalendarConnector implements Connector {
     try {
       const content = await fs.readFile(this.statePath(), "utf-8");
       return JSON.parse(content);
-    } catch {
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) {
+        throw err;
+      }
       return { syncTokens: {}, eventFiles: {} };
     }
   }
@@ -278,6 +306,14 @@ class GoogleCalendarConnector implements Connector {
     const calDir = this.calendarDir();
     await fs.mkdir(calDir, { recursive: true });
 
+    // Time window for client-side filtering (incremental sync can return
+    // events outside our window, e.g. all instances of a recurring event)
+    const now = new Date();
+    const windowStart = new Date(now);
+    windowStart.setDate(windowStart.getDate() - syncDaysBack);
+    const windowEnd = new Date(now);
+    windowEnd.setDate(windowEnd.getDate() + syncDaysForward);
+
     const created: string[] = [];
     const updated: string[] = [];
     const deleted: string[] = [];
@@ -289,94 +325,30 @@ class GoogleCalendarConnector implements Connector {
       if (calendarRoles[calendarId]) icsOpts.calendarRole = calendarRoles[calendarId];
 
       try {
-        const events = await this.fetchEvents({
-          auth,
-          calendarId,
-          syncToken: existingSyncToken,
-          syncDaysBack,
-          syncDaysForward,
-          state,
+        const result = await this.syncCalendar({
+          auth, calendarId, syncToken: existingSyncToken,
+          syncDaysBack, syncDaysForward, state, icsOpts, calDir,
+          windowStart, windowEnd,
         });
-
-        for (const event of events) {
-          if (event.status === "cancelled") {
-            // Remove the .ics file if it exists
-            const existingEntry = state.eventFiles[event.id];
-            if (existingEntry) {
-              const oldName = getFilename(existingEntry);
-              const filePath = path.join(calDir, oldName);
-              try {
-                await fs.unlink(filePath);
-                deleted.push(path.relative(this.boxRoot, filePath));
-              } catch {
-                // File already gone
-              }
-              delete state.eventFiles[event.id];
-            }
-            continue;
-          }
-
-          const filename = eventFilename(event);
-          const filePath = path.join(calDir, filename);
-          const icsContent = eventToIcs(event, icsOpts);
-
-          // Check if this is an update (different filename) or new
-          const existingEntry = state.eventFiles[event.id];
-          const oldName = existingEntry ? getFilename(existingEntry) : undefined;
-          if (oldName && oldName !== filename) {
-            // Remove old file
-            try {
-              await fs.unlink(path.join(calDir, oldName));
-              deleted.push(
-                path.relative(this.boxRoot, path.join(calDir, oldName))
-              );
-            } catch {
-              // Old file already gone
-            }
-          }
-
-          await fs.writeFile(filePath, icsContent);
-          const relPath = path.relative(this.boxRoot, filePath);
-
-          if (existingEntry) {
-            updated.push(relPath);
-          } else {
-            created.push(relPath);
-          }
-
-          state.eventFiles[event.id] = { filename, calendarId };
-        }
+        created.push(...result.created);
+        updated.push(...result.updated);
+        deleted.push(...result.deleted);
       } catch (err) {
         const message = (err as Error).message;
-        // On 410 Gone, clear sync token and retry with full sync
         if (message.includes("410")) {
           console.log(
             `  Sync token expired for ${calendarId}, doing full sync...`
           );
           delete state.syncTokens[calendarId];
           await this.saveState(state);
-          // Retry this calendar
-          const events = await this.fetchEvents({
-            auth,
-            calendarId,
-            syncToken: undefined,
-            syncDaysBack,
-            syncDaysForward,
-            state,
+          const result = await this.syncCalendar({
+            auth, calendarId, syncToken: undefined,
+            syncDaysBack, syncDaysForward, state, icsOpts, calDir,
+            windowStart, windowEnd,
           });
-          for (const event of events) {
-            if (event.status === "cancelled") continue;
-            const filename = eventFilename(event);
-            const filePath = path.join(calDir, filename);
-            await fs.writeFile(filePath, eventToIcs(event, icsOpts));
-            const relPath = path.relative(this.boxRoot, filePath);
-            if (state.eventFiles[event.id]) {
-              updated.push(relPath);
-            } else {
-              created.push(relPath);
-            }
-            state.eventFiles[event.id] = { filename, calendarId };
-          }
+          created.push(...result.created);
+          updated.push(...result.updated);
+          deleted.push(...result.deleted);
         } else {
           await this.saveState(state);
           return {
@@ -389,9 +361,13 @@ class GoogleCalendarConnector implements Connector {
       }
     }
 
+    // Clean up orphan files not tracked in state
+    const orphansDeleted = await this.cleanOrphans(state, calDir);
+    deleted.push(...orphansDeleted);
+
     await this.saveState(state);
 
-    // Stage and commit changes (calendar events + config/state files)
+    // Stage and commit
     const filesToStage = [
       path.relative(this.boxRoot, calDir),
       path.relative(this.boxRoot, this.statePath()),
@@ -405,14 +381,134 @@ class GoogleCalendarConnector implements Connector {
         trailers: { "Pulled-By": "google-calendar-connector" },
       });
     } else {
-      // Even if no events changed, config/state may have been updated
-      await commit(this.boxRoot, {
-        message: "Update calendar sync state",
-        trailers: { "Pulled-By": "google-calendar-connector" },
-      });
+      // Only commit state update if there are actually staged changes
+      // (syncToken may have changed even with no event changes)
+      const status = await getStatus(this.boxRoot);
+      if (status.staged.length > 0) {
+        await commit(this.boxRoot, {
+          message: "Update calendar sync state",
+          trailers: { "Pulled-By": "google-calendar-connector" },
+        });
+      }
     }
 
     return { success: true, created, updated };
+  }
+
+  private async syncCalendar(opts: {
+    auth: OAuth2Client;
+    calendarId: string;
+    syncToken: string | undefined;
+    syncDaysBack: number;
+    syncDaysForward: number;
+    state: CalendarState;
+    icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string };
+    calDir: string;
+    windowStart: Date;
+    windowEnd: Date;
+  }): Promise<{ created: string[]; updated: string[]; deleted: string[] }> {
+    const { auth, calendarId, syncToken, syncDaysBack, syncDaysForward,
+            state, icsOpts, calDir, windowStart, windowEnd } = opts;
+    const created: string[] = [];
+    const updated: string[] = [];
+    const deleted: string[] = [];
+
+    const events = await this.fetchEvents({
+      auth, calendarId, syncToken, syncDaysBack, syncDaysForward, state,
+    });
+
+    for (const event of events) {
+      // Skip exception instances (single-instance overrides of recurring events).
+      // We only store the recurring master with its RRULE.
+      if (event.recurringEventId) continue;
+
+      if (event.status === "cancelled") {
+        const existingEntry = state.eventFiles[event.id];
+        if (existingEntry) {
+          const oldName = getFilename(existingEntry);
+          const filePath = path.join(calDir, oldName);
+          try {
+            await fs.unlink(filePath);
+            deleted.push(path.relative(this.boxRoot, filePath));
+          } catch (err: unknown) {
+            if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+          }
+          delete state.eventFiles[event.id];
+        }
+        continue;
+      }
+
+      // Filter out events outside the sync window
+      if (!isInWindow(event, { start: windowStart, end: windowEnd })) {
+        continue;
+      }
+
+      const filename = eventFilename(event);
+      const filePath = path.join(calDir, filename);
+      const icsContent = eventToIcs(event, icsOpts);
+
+      const existingEntry = state.eventFiles[event.id];
+      const oldName = existingEntry ? getFilename(existingEntry) : undefined;
+      if (oldName && oldName !== filename) {
+        try {
+          await fs.unlink(path.join(calDir, oldName));
+          deleted.push(
+            path.relative(this.boxRoot, path.join(calDir, oldName))
+          );
+        } catch (err: unknown) {
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        }
+      }
+
+      await fs.writeFile(filePath, icsContent);
+      const relPath = path.relative(this.boxRoot, filePath);
+
+      if (existingEntry) {
+        updated.push(relPath);
+      } else {
+        created.push(relPath);
+      }
+
+      state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId };
+    }
+
+    return { created, updated, deleted };
+  }
+
+  /**
+   * Remove .ics files not tracked in state (orphans from old syncs).
+   */
+  private async cleanOrphans(
+    state: CalendarState,
+    calDir: string,
+  ): Promise<string[]> {
+    const deleted: string[] = [];
+    const trackedFiles = new Set<string>();
+    for (const entry of Object.values(state.eventFiles)) {
+      trackedFiles.add(getFilename(entry));
+    }
+
+    let files: string[];
+    try {
+      files = await fs.readdir(calDir);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      return deleted;
+    }
+
+    for (const file of files) {
+      if (!file.endsWith(".ics")) continue;
+      if (trackedFiles.has(file)) continue;
+
+      try {
+        await fs.unlink(path.join(calDir, file));
+        deleted.push(path.relative(this.boxRoot, path.join(calDir, file)));
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      }
+    }
+
+    return deleted;
   }
 
   private async fetchEvents(
@@ -430,7 +526,7 @@ class GoogleCalendarConnector implements Connector {
       if (syncToken) {
         url.searchParams.set("syncToken", syncToken);
       } else {
-        // Full sync with time window
+        // Full sync: use time window to limit results
         const now = new Date();
         const timeMin = new Date(now);
         timeMin.setDate(timeMin.getDate() - syncDaysBack);
@@ -440,7 +536,7 @@ class GoogleCalendarConnector implements Connector {
         url.searchParams.set("timeMax", timeMax.toISOString());
       }
 
-      url.searchParams.set("singleEvents", "true");
+      url.searchParams.set("singleEvents", "false");
       url.searchParams.set("maxResults", "2500");
       if (pageToken) {
         url.searchParams.set("pageToken", pageToken);
@@ -465,7 +561,6 @@ class GoogleCalendarConnector implements Connector {
 
       pageToken = data.nextPageToken;
 
-      // Save sync token when we get the final page
       if (data.nextSyncToken) {
         state.syncTokens[calendarId] = data.nextSyncToken;
       }

@@ -46,7 +46,6 @@ export const calendarCommand = new Command("calendar")
   .action(async (timespan?: string) => {
     const boxRoot = await requireBoxRoot();
     const calDir = path.join(boxRoot, "store/calendar");
-    const events = await loadAllEvents(calDir);
     const now = new Date();
 
     let from: Date;
@@ -64,6 +63,8 @@ export const calendarCommand = new Command("calendar")
       label = `next ${timespan || "7d"}`;
     }
 
+    // Pass range to loadAllEvents so recurring events get expanded
+    const events = await loadAllEvents(calDir, { from, to });
     const filtered = filterByDateRange(events, { from, to });
 
     if (filtered.length === 0) {
