@@ -3,7 +3,7 @@ dist/
 *.log
 .DS_Store
 .env
-.claude/
+.claude/session-*
 .thinking/
 .thinking/local/
 .tap/
