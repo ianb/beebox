@@ -1,5 +1,6 @@
 import baseConfig from "eslint-config-agent";
 import unicornPlugin from "eslint-plugin-unicorn";
+import importXPlugin from "eslint-plugin-import-x";
 
 // ── Enabled rules ──────────────────────────────────────────────────
 // Rules reviewed and accepted. Each has a comment explaining why.
@@ -112,6 +113,21 @@ const enabledRules = {
   "import/first": "error",
   "import/newline-after-import": "error",
   "import/no-absolute-path": "error",
+
+  // ── Import-x rules ────────────────────────────────────────────
+  // (import-x/default, import-x/named, import-x/export are skipped — TypeScript already catches these)
+  // No empty import blocks — `import {} from 'x'` is dead code
+  "import-x/no-empty-named-blocks": "error",
+  // Don't export `let`/`var` — mutable exports cause subtle bugs across modules
+  "import-x/no-mutable-exports": "error",
+  // Warn when default import name shadows a named export from the same module
+  "import-x/no-named-as-default": "error",
+  // Warn when accessing a named export as a property of the default import
+  "import-x/no-named-as-default-member": "error",
+  // Don't rename default imports to something misleading
+  "import-x/no-rename-default": "error",
+  // Prevent a module from importing itself
+  "import-x/no-self-import": "error",
 
   // ── Security ─────────────────────────────────────────────────────
   "security/detect-bidi-characters": "error",
@@ -368,6 +384,7 @@ export function vibeCheck(options) {
       files: filePatterns,
       plugins: {
         unicorn: unicornPlugin,
+        "import-x": importXPlugin,
       },
       settings: {
         ...reactSettings,
