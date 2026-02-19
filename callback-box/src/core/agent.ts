@@ -15,6 +15,62 @@ import * as fs from "node:fs/promises";
 import { createWriteStream, type WriteStream } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { fmt } from "../cli/lib/format.js";
+import { getStatus, stageAll, commit } from "../cli/lib/git.js";
+
+const COMMIT_NUDGE_PROMPT = `IMPORTANT: You have uncommitted changes in the working directory. Please:
+
+1. Review the current state of your work (git status, check files)
+2. Commit everything with a descriptive message following the format in your original instructions
+
+Do NOT leave changes uncommitted. Commit now.`;
+
+export interface EnsureCommittedOptions {
+  boxRoot: string;
+  agentResult: AgentResult;
+  /** Original agent options (for resuming the session) */
+  agentOptions: AgentOptions;
+  /** Fallback commit message if retry also fails */
+  fallbackMessage: string;
+  /** Trailers for fallback commit */
+  fallbackTrailers: Record<string, string>;
+  /** Callback for status messages */
+  onOutput?: (text: string) => void;
+}
+
+/**
+ * Ensure the agent committed its work. If uncommitted changes remain,
+ * resume the same session with a nudge to commit. If that also fails,
+ * create a fallback commit marked with Fallback: true.
+ */
+export async function ensureAgentCommitted(options: EnsureCommittedOptions): Promise<void> {
+  const { boxRoot, agentResult, agentOptions, fallbackMessage, fallbackTrailers, onOutput } = options;
+
+  const status = await getStatus(boxRoot);
+  if (status.clean) return;
+
+  // Retry: resume the same session with a nudge to commit
+  onOutput?.(fmt.dim("  (Agent didn't commit — resuming session to request commit...)\n"));
+  await runAgent({
+    ...agentOptions,
+    sessionId: agentResult.sessionId,
+    prompt: COMMIT_NUDGE_PROMPT,
+    maxTurns: 5,
+  });
+
+  const retryStatus = await getStatus(boxRoot);
+  if (retryStatus.clean) {
+    onOutput?.(fmt.ok("  Agent committed on retry\n"));
+    return;
+  }
+
+  // Final fallback: commit with Fallback trailer
+  onOutput?.(fmt.warn("  Agent failed to commit after retry — creating fallback commit\n"));
+  await stageAll(boxRoot);
+  await commit(boxRoot, {
+    message: fallbackMessage,
+    trailers: { ...fallbackTrailers, Fallback: "true" },
+  });
+}
 
 // Get the path to the cb wrapper scripts so we can add them to PATH
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

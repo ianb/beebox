@@ -22,9 +22,8 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { runAgent } from "../agent.js";
+import { runAgent, ensureAgentCommitted } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
-import { stageAll, commit, getStatus } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 
 /**
@@ -312,17 +311,19 @@ async function executeProcessFeedback(
     if (result.success) {
       ctx.writeLine(fmt.ok("Agent finished successfully"));
 
-      // Agent should have committed, but check for uncommitted changes
-      const status = await getStatus(ctx.boxRoot);
-      if (!status.clean) {
-        ctx.writeLine(fmt.dim("  (Note: Agent left uncommitted changes)"));
-        await stageAll(ctx.boxRoot);
-        await commit(ctx.boxRoot, {
-          message: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
-          trailers: { "Triggered-By": "cb process-feedback", Session: result.sessionId },
-        });
-        ctx.writeLine(fmt.dim("  Fallback commit created."));
-      }
+      // Retry if agent didn't commit, then fallback
+      await ensureAgentCommitted({
+        boxRoot: ctx.boxRoot,
+        agentResult: result,
+        agentOptions: {
+          boxRoot: ctx.boxRoot,
+          systemPrompt: buildGuideRevisionPrompt(ctx.boxRoot),
+          prompt: `Please process feedback from these briefs and revise the guide:\n  - ${paths}`,
+        },
+        fallbackMessage: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
+        fallbackTrailers: { "Triggered-By": "cb process-feedback", Session: result.sessionId },
+        onOutput: (text) => ctx.write(text),
+      });
 
       return {
         success: true,

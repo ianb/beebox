@@ -18,9 +18,8 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { runAgent } from "../agent.js";
+import { runAgent, ensureAgentCommitted } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
-import { stageAll, commit, getStatus } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 
 /**
@@ -288,16 +287,19 @@ async function executeTriageFeedback(
     if (result.success) {
       ctx.writeLine(fmt.ok("Agent finished successfully"));
 
-      // Commit any changes the agent didn't commit itself
-      const status = await getStatus(ctx.boxRoot);
-      if (!status.clean) {
-        ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
-        await stageAll(ctx.boxRoot);
-        await commit(ctx.boxRoot, {
-          message: `Triage ${feedbackCards.length} feedback card(s)`,
-          trailers: { "Triggered-By": "cb triage-feedback", Session: result.sessionId },
-        });
-      }
+      // Retry if agent didn't commit, then fallback
+      await ensureAgentCommitted({
+        boxRoot: ctx.boxRoot,
+        agentResult: result,
+        agentOptions: {
+          boxRoot: ctx.boxRoot,
+          systemPrompt: buildTriagePrompt(ctx.boxRoot),
+          prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
+        },
+        fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
+        fallbackTrailers: { "Triggered-By": "cb triage-feedback", Session: result.sessionId },
+        onOutput: (text) => ctx.write(text),
+      });
 
       return {
         success: true,

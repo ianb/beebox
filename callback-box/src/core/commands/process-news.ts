@@ -34,9 +34,9 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { runAgent } from "../agent.js";
+import { runAgent, ensureAgentCommitted } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
-import { stageAll, commit, getStatus } from "../../cli/lib/git.js";
+import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import { fetchAllNewsItems } from "./fetch-all-news.js";
 
@@ -585,16 +585,20 @@ async function executeProcessNews(
             results.push({ phase: "triage", success: false, message: triageResult.error ?? "Failed" });
           }
 
-          // Commit any changes the agent didn't commit itself
-          const status = await getStatus(ctx.boxRoot);
-          if (!status.clean) {
-            ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
-            await stageAll(ctx.boxRoot);
-            await commit(ctx.boxRoot, {
-              message: `Triage ${inboxItems.length} news items`,
-              trailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageResult.sessionId },
-            });
-          }
+          // Retry if agent didn't commit, then fallback
+          await ensureAgentCommitted({
+            boxRoot: ctx.boxRoot,
+            agentResult: triageResult,
+            agentOptions: {
+              boxRoot: ctx.boxRoot,
+              systemPrompt: buildTriagePrompt(ctx.boxRoot, inboxItems.length),
+              prompt: `Please triage these news items:\n  - ${paths}`,
+              model: "claude-haiku-4-5-20251001",
+            },
+            fallbackMessage: `Triage ${inboxItems.length} news items`,
+            fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageResult.sessionId },
+            onOutput: (text) => ctx.write(text),
+          });
         }
       }
       ctx.writeLine("");
@@ -676,16 +680,20 @@ async function executeProcessNews(
             results.push({ phase: "analyze", success: false, message: analyzeResult.error ?? "Failed" });
           }
 
-          // Commit any changes the agent didn't commit itself
-          const status = await getStatus(ctx.boxRoot);
-          if (!status.clean) {
-            ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
-            await stageAll(ctx.boxRoot);
-            await commit(ctx.boxRoot, {
-              message: `Analyze ${itemsToAnalyze.length} news items`,
-              trailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeResult.sessionId },
-            });
-          }
+          // Retry if agent didn't commit, then fallback
+          await ensureAgentCommitted({
+            boxRoot: ctx.boxRoot,
+            agentResult: analyzeResult,
+            agentOptions: {
+              boxRoot: ctx.boxRoot,
+              systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
+              prompt: `Please analyze these news items:\n  - ${paths}`,
+              maxTurns: 20,
+            },
+            fallbackMessage: `Analyze ${itemsToAnalyze.length} news items`,
+            fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeResult.sessionId },
+            onOutput: (text) => ctx.write(text),
+          });
         }
       }
       ctx.writeLine("");
@@ -725,16 +733,20 @@ async function executeProcessNews(
             results.push({ phase: "brief", success: false, message: briefResult.error ?? "Failed" });
           }
 
-          // Commit any changes the agent didn't commit itself
-          const status = await getStatus(ctx.boxRoot);
-          if (!status.clean) {
-            ctx.writeLine(fmt.dim("  (Agent left uncommitted changes, creating fallback commit)"));
-            await stageAll(ctx.boxRoot);
-            await commit(ctx.boxRoot, {
-              message: "Create news brief",
-              trailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefResult.sessionId },
-            });
-          }
+          // Retry if agent didn't commit, then fallback
+          await ensureAgentCommitted({
+            boxRoot: ctx.boxRoot,
+            agentResult: briefResult,
+            agentOptions: {
+              boxRoot: ctx.boxRoot,
+              systemPrompt: buildBriefPrompt(ctx.boxRoot),
+              prompt: "Please create a news brief from the items in box/pool/news/",
+              maxTurns: 40,
+            },
+            fallbackMessage: "Create news brief",
+            fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefResult.sessionId },
+            onOutput: (text) => ctx.write(text),
+          });
         }
       }
       ctx.writeLine("");
