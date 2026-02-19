@@ -359,6 +359,23 @@ export function vibeCheck(options) {
           "error",
           { extensions: [".tsx", ".jsx"] },
         ],
+        // Boolean props must start with is/has/should/can/did/will
+        "react/boolean-prop-naming": "error",
+        // <input checked> requires onChange or readOnly — prevents uncontrolled/controlled mismatch
+        "react/checked-requires-onchange-or-readonly": "error",
+        // defaultProps values must have matching propType declarations
+        "react/default-props-match-prop-types": "error",
+        // Require displayName on components — helps React DevTools and error messages
+        "react/display-name": "error",
+        // Require forwardRef components to actually use the ref parameter
+        "react/forward-ref-uses-ref": "error",
+        // useState must destructure as [value, setValue] — symmetric naming
+        "react/hook-use-state": "error",
+        // Omit `={true}` on boolean JSX attributes — <Foo disabled /> not <Foo disabled={true} />
+        "react/jsx-boolean-value": "error",
+        // NOTE: react/forbid-elements is not enabled globally but is useful per-project
+        // to enforce a component vocabulary (e.g. ban <button> in favor of <Button>).
+        // Enable it in your project's eslint config with the elements you want to restrict.
       }
     : {};
 
