@@ -425,6 +425,11 @@ class GoogleCalendarConnector implements Connector {
       }
     }
 
+    // Process locally-marked deletes (X-CB-DELETE property)
+    const deleteResult = await this.processLocalDeletes({ auth, state, calDir });
+    deleted.push(...deleteResult.map((d) => d.path));
+    const deleteReasons = deleteResult.map((d) => `${d.summary}: ${d.reason}`);
+
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
     const orphanResult = await this.pushAndCleanOrphans(
@@ -449,8 +454,12 @@ class GoogleCalendarConnector implements Connector {
       if (updated.length > 0) parts.push(`${updated.length} updated`);
       if (deleted.length > 0) parts.push(`${deleted.length} deleted`);
       if (pushed.length > 0) parts.push(`${pushed.length} pushed`);
+      let message = `Sync calendar: ${parts.join(", ")}`;
+      if (deleteReasons.length > 0) {
+        message += `\n\nDeleted:\n${deleteReasons.map((r) => `- ${r}`).join("\n")}`;
+      }
       await commit(this.boxRoot, {
-        message: `Sync calendar: ${parts.join(", ")}`,
+        message,
         trailers: { "Pulled-By": "google-calendar-connector" },
       });
     } else {
@@ -610,6 +619,92 @@ class GoogleCalendarConnector implements Connector {
     }
 
     return { pushed, deleted };
+  }
+
+  /**
+   * Scan tracked .ics files for X-CB-DELETE property. If found, delete the
+   * event from Google Calendar, remove the local file, and untrack it.
+   * Safety cap: at most 3 deletes per sync. Skips read-only calendars.
+   */
+  private async processLocalDeletes(
+    opts: { auth: OAuth2Client; state: CalendarState; calDir: string },
+  ): Promise<Array<{ path: string; reason: string; summary: string }>> {
+    const { auth, state, calDir } = opts;
+    const deleted: Array<{ path: string; reason: string; summary: string }> = [];
+    const MAX_DELETES = 3;
+
+    for (const [googleEventId, entry] of Object.entries(state.eventFiles)) {
+      const filename = getFilename(entry);
+      const calendarId = typeof entry === "string" ? undefined : entry.calendarId;
+      const filePath = path.join(calDir, filename);
+
+      let content: string;
+      try {
+        content = await fs.readFile(filePath, "utf-8");
+      } catch {
+        continue; // File missing — not a delete request
+      }
+
+      // Check for X-CB-DELETE property
+      const deleteMatch = content.match(/^x-cb-delete[:;](.*)$/im);
+      if (!deleteMatch) continue;
+
+      const reason = deleteMatch[1]?.trim() || "(no reason)";
+
+      // Extract event summary for the commit message
+      const summaryMatch = content.match(/^summary[:;](.*)$/im);
+      const summary = summaryMatch?.[1]?.trim() || filename;
+
+      if (deleted.length >= MAX_DELETES) {
+        console.warn(`  Skipping delete of ${filename} — reached limit of ${MAX_DELETES} deletes per sync`);
+        continue;
+      }
+
+      if (!calendarId) {
+        console.warn(`  Skipping delete of ${filename} — no calendar ID in state`);
+        continue;
+      }
+
+      console.log(`  Deleting ${filename}: ${reason}`);
+      const success = await this.deleteEvent(auth, { calendarId, googleEventId });
+      if (success) {
+        await fs.unlink(filePath);
+        delete state.eventFiles[googleEventId];
+        deleted.push({ path: path.relative(this.boxRoot, filePath), reason, summary });
+      } else {
+        console.warn(`  Failed to delete ${filename} from Google Calendar`);
+      }
+    }
+
+    return deleted;
+  }
+
+  /**
+   * Delete an event from Google Calendar via the REST API.
+   */
+  private async deleteEvent(
+    auth: OAuth2Client,
+    opts: { calendarId: string; googleEventId: string },
+  ): Promise<boolean> {
+    const { calendarId, googleEventId } = opts;
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`;
+    const accessToken = (await auth.getAccessToken()).token;
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (response.status === 204 || response.status === 410) {
+      return true; // Deleted or already gone
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.warn(`  API error deleting from ${calendarId}: ${response.status} ${text}`);
+      return false;
+    }
+
+    return true;
   }
 
   /**
