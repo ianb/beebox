@@ -1,4 +1,5 @@
 import baseConfig from "eslint-config-agent";
+import unicornPlugin from "eslint-plugin-unicorn";
 
 // ── Enabled rules ──────────────────────────────────────────────────
 // Rules reviewed and accepted. Each has a comment explaining why.
@@ -154,6 +155,91 @@ const enabledRules = {
   // No string literals in Error constructors — custom error classes define their own messages
   "error/no-literal-error-message": "error",
 
+  // ── Unicorn rules ───────────────────────────────────────────────
+  // Simplify regex where possible (e.g. [0-9] → \d)
+  "unicorn/better-regex": "error",
+  // Enforce === -1 / !== -1 for indexOf/findIndex checks
+  "unicorn/consistent-existence-index-check": "error",
+  // Enforce correct custom Error subclass pattern
+  "unicorn/custom-error-definition": "error",
+  // No whitespace inside empty braces — `{}` not `{ }`
+  "unicorn/empty-brace-spaces": "error",
+  // Uppercase hex escape sequences — \xAB not \xab
+  "unicorn/escape-case": "error",
+  // Require explicit .length > 0 instead of truthiness check on .length
+  "unicorn/explicit-length-check": "error",
+  // kebab-case for most files, PascalCase allowed for React components
+  // Disabled: too disruptive for existing codebases with mixed naming
+  // "unicorn/filename-case": ["error", { cases: { kebabCase: true, pascalCase: true } }],
+  // Use `new` with builtins that require it (Map, Set, Promise, etc.)
+  "unicorn/new-for-builtins": "error",
+  // Use for-of instead of .forEach() — better control flow (break/continue/return)
+  "unicorn/no-array-for-each": "error",
+  // Array methods don't use thisArg in practice — likely a bug
+  "unicorn/no-array-method-this-argument": "error",
+  // Use .toReversed() instead of mutating .reverse()
+  "unicorn/no-array-reverse": "error",
+  // Use .toSorted() instead of mutating .sort()
+  "unicorn/no-array-sort": "error",
+  // Use for-of instead of C-style for (let i = 0; ...) loops
+  "unicorn/no-for-loop": "error",
+  // Use \u escapes not \x — \u is clearer and works for all code points
+  "unicorn/no-hex-escape": "error",
+  // Use Array.isArray() / typeof instead of unreliable instanceof on builtins
+  "unicorn/no-instanceof-builtins": "error",
+  // Catch invalid fetch() options (e.g. typo in method name)
+  "unicorn/no-invalid-fetch-options": "error",
+  // Use Array.from({length: n}) instead of confusing new Array(n)
+  "unicorn/no-new-array": "error",
+  // Use Buffer.alloc/Buffer.from instead of deprecated new Buffer()
+  "unicorn/no-new-buffer": "error",
+  // Don't alias `this` — use arrow functions or bind instead
+  "unicorn/no-this-assignment": "error",
+  // Use direct undefined check, not typeof x === "undefined"
+  "unicorn/no-typeof-undefined": "error",
+  // Ban unreadable IIFEs with arrow expression bodies
+  "unicorn/no-unreadable-iife": "error",
+  // Drop useless empty args on collection constructors (new Set([]) → new Set())
+  "unicorn/no-useless-collection-argument": "error",
+  // Don't pass undefined explicitly when it's the default
+  "unicorn/no-useless-undefined": "error",
+  // Drop unnecessary .0 fractions — 1.0 → 1
+  "unicorn/no-zero-fractions": "error",
+  // Lowercase hex in number literals — 0xFF not 0XFF
+  "unicorn/number-literal-case": "error",
+  // Use .find() instead of .filter()[0]
+  "unicorn/prefer-array-find": "error",
+  // Use .some() instead of .filter().length or .find() !== undefined
+  "unicorn/prefer-array-some": "error",
+  // Use blob.text()/blob.arrayBuffer() instead of FileReader
+  "unicorn/prefer-blob-reading-methods": "error",
+  // Use class fields instead of this.x = ... in constructor
+  "unicorn/prefer-class-fields": "error",
+  // Use String#codePointAt() instead of charCodeAt() — handles full Unicode
+  "unicorn/prefer-code-point": "error",
+  // Use Date.now() instead of new Date().getTime()
+  "unicorn/prefer-date-now": "error",
+  // Use import.meta.url/filename/dirname instead of __filename/__dirname
+  "unicorn/prefer-import-meta-properties": "error",
+  // Use .includes() instead of .indexOf() !== -1
+  "unicorn/prefer-includes": "error",
+  // Use KeyboardEvent.key instead of deprecated .keyCode/.charCode/.which
+  "unicorn/prefer-keyboard-event-key": "error",
+  // Use modern Math APIs (Math.hypot, Math.trunc, etc.) over manual equivalents
+  "unicorn/prefer-modern-math-apis": "error",
+  // Use `node:` protocol for Node.js built-in imports
+  "unicorn/prefer-node-protocol": "error",
+  // Use .trimStart()/.trimEnd() instead of deprecated .trimLeft()/.trimRight()
+  "unicorn/prefer-string-trim-start-end": "error",
+  // Require explicit separator in .join() — .join(",") not .join()
+  "unicorn/require-array-join-separator": "error",
+  // Require digits argument in .toFixed() — .toFixed(2) not .toFixed()
+  "unicorn/require-number-to-fixed-digits-argument": "error",
+  // Require targetOrigin in postMessage() for security
+  "unicorn/require-post-message-target-origin": "error",
+  // Always use `new` with throw — `throw new Error()` not `throw Error()`
+  "unicorn/throw-new-error": "error",
+
   // ── Restricted syntax ─────────────────────────────────────────────
   // Catch must bind the error — prevents silently swallowing errors
   "no-restricted-syntax": [
@@ -280,6 +366,9 @@ export function vibeCheck(options) {
     },
     {
       files: filePatterns,
+      plugins: {
+        unicorn: unicornPlugin,
+      },
       settings: {
         ...reactSettings,
       },

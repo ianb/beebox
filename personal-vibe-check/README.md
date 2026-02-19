@@ -157,6 +157,7 @@ The package includes these as dependencies (you don't install them):
 - `eslint-config-agent` (base rule set — all rules reviewed and selectively enabled/disabled)
 - `eslint-plugin-import`, `eslint-plugin-react`, `eslint-plugin-react-hooks`
 - `eslint-plugin-security`, `eslint-plugin-class-export`, `eslint-plugin-n`
+- [`eslint-plugin-unicorn`](https://github.com/sindresorhus/eslint-plugin-unicorn) — misc best practices (modern APIs, array methods, filename conventions, etc.)
 
 Your project installs separately (as devDependencies):
 
