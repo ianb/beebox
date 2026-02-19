@@ -258,7 +258,7 @@ function Dashboard() {
                   }`}
                 >
                   {labels[tab]}
-                  {tab === "questions" && questions.filter((q) => q.status === "pending").length > 0 && (
+                  {tab === "questions" && questions.some((q) => q.status === "pending") && (
                     <span className="ml-1 bg-yellow-100 text-yellow-800 text-xs px-1.5 rounded">
                       {questions.filter((q) => q.status === "pending").length}
                     </span>
@@ -316,7 +316,7 @@ function Dashboard() {
                 }}
                 className="btn btn-secondary flex-1 font-mono text-sm"
               >
-                cb pull
+                cb sync
               </button>
               <button
                 onClick={() => {
@@ -400,7 +400,7 @@ function Dashboard() {
           ) : showPull ? (
             <div className="p-4 h-full flex flex-col max-w-3xl">
               <CommandRunner
-                command="pull"
+                command="sync"
                 onComplete={handleCommandComplete}
                 onClose={() => setShowPull(false)}
                 autoRun

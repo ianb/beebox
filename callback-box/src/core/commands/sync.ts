@@ -1,5 +1,5 @@
 /**
- * Pull command - Pull data from connectors.
+ * Sync command - Sync data with connectors.
  *
  * This is the core logic shared by both CLI and web API.
  */
@@ -13,21 +13,21 @@ import { createRssConnector } from "../../connectors/rss.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 /**
- * Arguments for the pull command.
+ * Arguments for the sync command.
  */
-export interface PullArgs {
+export interface SyncArgs {
   /** Only run specific connector */
   connector?: string;
 }
 
 /**
- * Execute the pull command.
+ * Execute the sync command.
  */
-async function executePull(
+async function executeSync(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const pullArgs = args as unknown as PullArgs;
+  const syncArgs = args as unknown as SyncArgs;
 
   // Initialize connectors
   createRssConnector(ctx.boxRoot);
@@ -40,14 +40,14 @@ async function executePull(
   }
 
   // Filter by name if specified
-  const toRun = pullArgs.connector
-    ? connectors.filter((c) => c.name === pullArgs.connector)
+  const toRun = syncArgs.connector
+    ? connectors.filter((c) => c.name === syncArgs.connector)
     : connectors;
 
   if (toRun.length === 0) {
     return {
       success: false,
-      error: `Connector not found: ${pullArgs.connector}`,
+      error: `Connector not found: ${syncArgs.connector}`,
     };
   }
 
@@ -55,10 +55,10 @@ async function executePull(
   let totalErrors = 0;
 
   for (const connector of toRun) {
-    ctx.writeLine(`Pulling from ${connector.name}...`);
+    ctx.writeLine(`Syncing ${connector.name}...`);
 
     try {
-      const result = await connector.pull();
+      const result = await connector.sync();
 
       if (result.created.length > 0) {
         ctx.writeLine(`  Created ${result.created.length} card(s):`);
@@ -94,8 +94,8 @@ async function executePull(
 
 // Register the command
 registerCommand({
-  name: "pull",
-  description: "Pull data from connectors",
+  name: "sync",
+  description: "Sync data with connectors",
   args: [
     {
       name: "connector",
@@ -104,7 +104,7 @@ registerCommand({
       type: "string",
     },
   ],
-  execute: executePull,
+  execute: executeSync,
 });
 
-export { executePull };
+export { executeSync };

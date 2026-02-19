@@ -21,7 +21,7 @@ import type { OAuth2Client } from "google-auth-library";
 import {
   registerConnector,
   type Connector,
-  type PullResult,
+  type SyncResult,
   type ExecuteResult,
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
@@ -230,6 +230,70 @@ function isInWindow(event: GoogleCalendarEvent, window: { start: Date; end: Date
   return eventStart >= window.start && eventStart <= window.end;
 }
 
+/**
+ * Parse a local .ics file back into a Google Calendar API event object.
+ * Returns null if the file can't be parsed.
+ * Includes _calendarId from X-CB-CALENDAR-ID if present.
+ */
+function icsToGoogleEvent(content: string): (GoogleCalendarEvent & { _calendarId?: string }) | null {
+  try {
+    const parsed = ICAL.parse(content);
+    const comp = new ICAL.Component(parsed);
+    const vevent = comp.getFirstSubcomponent("vevent");
+    if (!vevent) return null;
+
+    const event = new ICAL.Event(vevent);
+    const result: GoogleCalendarEvent & { _calendarId?: string } = {
+      id: "",
+      status: "confirmed",
+      summary: event.summary || "(no title)",
+    };
+
+    if (event.description) result.description = event.description;
+    if (event.location) result.location = event.location;
+
+    // Start time
+    const dtstart = vevent.getFirstPropertyValue("dtstart") as ICAL.Time | null;
+    if (dtstart) {
+      if (dtstart.isDate) {
+        result.start = { date: dtstart.toString() };
+      } else {
+        result.start = { dateTime: dtstart.toJSDate().toISOString() };
+      }
+    }
+
+    // End time
+    const dtend = vevent.getFirstPropertyValue("dtend") as ICAL.Time | null;
+    if (dtend) {
+      if (dtend.isDate) {
+        result.end = { date: dtend.toString() };
+      } else {
+        result.end = { dateTime: dtend.toJSDate().toISOString() };
+      }
+    }
+
+    // Transparency
+    const transp = String(vevent.getFirstPropertyValue("transp") || "OPAQUE").toUpperCase();
+    if (transp === "TRANSPARENT") {
+      result.transparency = "transparent";
+    }
+
+    // Recurrence rules
+    const rrules = vevent.getAllProperties("rrule");
+    if (rrules.length > 0) {
+      result.recurrence = rrules.map((p: ICAL.Property) => p.toICALString().trim());
+    }
+
+    // Source calendar ID
+    const calId = vevent.getFirstPropertyValue("x-cb-calendar-id");
+    if (calId) result._calendarId = String(calId);
+
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
   handles: string[] = [];
@@ -273,7 +337,7 @@ class GoogleCalendarConnector implements Connector {
     await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2));
   }
 
-  async pull(): Promise<PullResult> {
+  async sync(): Promise<SyncResult> {
     const auth = await getGoogleAuth(this.boxRoot);
     if (!auth) {
       return { success: true, created: [], updated: [] };
@@ -361,9 +425,13 @@ class GoogleCalendarConnector implements Connector {
       }
     }
 
-    // Clean up orphan files not tracked in state
-    const orphansDeleted = await this.cleanOrphans(state, calDir);
-    deleted.push(...orphansDeleted);
+    // Push locally-created files to Google, clean unparseable orphans
+    const defaultCalendarId = calendars[0] || "primary";
+    const orphanResult = await this.pushAndCleanOrphans(
+      { auth, state, calDir, defaultCalendarId },
+    );
+    const pushed = orphanResult.pushed;
+    deleted.push(...orphanResult.deleted);
 
     await this.saveState(state);
 
@@ -374,10 +442,15 @@ class GoogleCalendarConnector implements Connector {
       "config/connectors/google-calendar.json",
     ];
     await stageFiles(this.boxRoot, filesToStage);
-    const allChanged = [...created, ...updated, ...deleted];
+    const allChanged = [...created, ...updated, ...deleted, ...pushed];
     if (allChanged.length > 0) {
+      const parts = [];
+      if (created.length > 0) parts.push(`${created.length} new`);
+      if (updated.length > 0) parts.push(`${updated.length} updated`);
+      if (deleted.length > 0) parts.push(`${deleted.length} deleted`);
+      if (pushed.length > 0) parts.push(`${pushed.length} pushed`);
       await commit(this.boxRoot, {
-        message: `Pull ${created.length} new, ${updated.length} updated, ${deleted.length} deleted calendar events`,
+        message: `Sync calendar: ${parts.join(", ")}`,
         trailers: { "Pulled-By": "google-calendar-connector" },
       });
     } else {
@@ -392,7 +465,9 @@ class GoogleCalendarConnector implements Connector {
       }
     }
 
-    return { success: true, created, updated };
+    const result: SyncResult = { success: true, created, updated };
+    if (pushed.length > 0) result.pushed = pushed;
+    return result;
   }
 
   private async syncCalendar(opts: {
@@ -476,12 +551,14 @@ class GoogleCalendarConnector implements Connector {
   }
 
   /**
-   * Remove .ics files not tracked in state (orphans from old syncs).
+   * Push locally-created .ics files (not tracked in state) to Google Calendar,
+   * then track them. Returns { pushed, deleted } arrays of relative paths.
    */
-  private async cleanOrphans(
-    state: CalendarState,
-    calDir: string,
-  ): Promise<string[]> {
+  private async pushAndCleanOrphans(
+    opts: { auth: OAuth2Client; state: CalendarState; calDir: string; defaultCalendarId: string },
+  ): Promise<{ pushed: string[]; deleted: string[] }> {
+    const { auth, state, calDir, defaultCalendarId } = opts;
+    const pushed: string[] = [];
     const deleted: string[] = [];
     const trackedFiles = new Set<string>();
     for (const entry of Object.values(state.eventFiles)) {
@@ -493,22 +570,75 @@ class GoogleCalendarConnector implements Connector {
       files = await fs.readdir(calDir);
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      return deleted;
+      return { pushed, deleted };
     }
 
     for (const file of files) {
       if (!file.endsWith(".ics")) continue;
       if (trackedFiles.has(file)) continue;
 
+      const filePath = path.join(calDir, file);
+      const relPath = path.relative(this.boxRoot, filePath);
+
       try {
-        await fs.unlink(path.join(calDir, file));
-        deleted.push(path.relative(this.boxRoot, path.join(calDir, file)));
+        const content = await fs.readFile(filePath, "utf-8");
+        const apiEvent = icsToGoogleEvent(content);
+        if (!apiEvent) {
+          // Unparseable — delete orphan
+          await fs.unlink(filePath);
+          deleted.push(relPath);
+          continue;
+        }
+
+        // Determine target calendar from X-CB-CALENDAR-ID or use default
+        const calendarId = apiEvent._calendarId || defaultCalendarId;
+        // Remove our internal field before sending to API
+        delete apiEvent._calendarId;
+
+        const result = await this.insertEvent(auth, { calendarId, event: apiEvent });
+        if (result) {
+          // Track the file with its new Google event ID
+          state.eventFiles[result.id] = { filename: file, calendarId };
+          pushed.push(relPath);
+        } else {
+          // Push failed — leave the file alone (don't delete it)
+          console.warn(`  Failed to push ${file}, keeping locally`);
+        }
       } catch (err: unknown) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        console.warn(`  Error processing ${file}:`, err);
       }
     }
 
-    return deleted;
+    return { pushed, deleted };
+  }
+
+  /**
+   * Insert an event into Google Calendar via the REST API.
+   * Returns the created event or null on failure.
+   */
+  private async insertEvent(
+    auth: OAuth2Client,
+    opts: { calendarId: string; event: GoogleCalendarEvent },
+  ): Promise<GoogleCalendarEvent | null> {
+    const { calendarId, event } = opts;
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+    const accessToken = (await auth.getAccessToken()).token;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(event),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.warn(`  API error pushing to ${calendarId}: ${response.status} ${text}`);
+      return null;
+    }
+
+    return (await response.json()) as GoogleCalendarEvent;
   }
 
   private async fetchEvents(

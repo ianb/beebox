@@ -17,7 +17,7 @@ import { parseStringPromise } from "xml2js";
 import {
   registerConnector,
   type Connector,
-  type PullResult,
+  type SyncResult,
   type ExecuteResult,
 } from "./index.js";
 import { createNewsItemTemplate } from "../schemas/news-item.js";
@@ -164,7 +164,7 @@ function stripHtml(html: string): string {
  */
 function safeFilename(title: string): string {
   return title
-    .replace(/[^a-zA-Z0-9\s-]/g, "")
+    .replace(/[^\d\sA-Za-z-]/g, "")
     .replace(/\s+/g, "_")
     .slice(0, 50);
 }
@@ -211,7 +211,7 @@ class RssConnector implements Connector {
     await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2));
   }
 
-  async pull(): Promise<PullResult> {
+  async sync(): Promise<SyncResult> {
     const config = await this.loadConfig();
     const state = await this.loadState();
 
@@ -262,7 +262,7 @@ class RssConnector implements Connector {
         await fs.mkdir(newsDir, { recursive: true });
 
         for (const item of newItems) {
-          const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+          const timestamp = new Date().toISOString().replace(/[.:]/g, "-").slice(0, 19);
           const filename = `${safeFilename(item.title)}_${timestamp}.news-item.card`;
           const cardPath = path.join(newsDir, filename);
 
@@ -306,7 +306,7 @@ class RssConnector implements Connector {
       });
     }
 
-    const result: PullResult = {
+    const result: SyncResult = {
       success: errors.length === 0,
       created,
       updated: [],

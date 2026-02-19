@@ -18,7 +18,7 @@ import { parseXml, type ElementNode } from "cardworks";
 import {
   registerConnector,
   type Connector,
-  type PullResult,
+  type SyncResult,
   type ExecuteResult,
 } from "./index.js";
 import { createBookmarkTemplate } from "../schemas/bookmark.js";
@@ -180,7 +180,7 @@ function computeContentHash(fields: BookmarkFields): string {
     title: fields.title.trim(),
     link: fields.link.trim(),
     note: fields.note.trim(),
-    tags: [...fields.tags].sort(),
+    tags: [...fields.tags].toSorted(),
     collection: fields.collection.trim(),
   });
   return crypto.createHash("sha256").update(normalized).digest("hex").slice(0, 16);
@@ -215,7 +215,7 @@ function computeFieldDiff(
   if (current.title !== synced.title) diff.title = current.title;
   if (current.link !== synced.link) diff.link = current.link;
   if (current.note !== synced.note) diff.note = current.note;
-  if (JSON.stringify([...current.tags].sort()) !== JSON.stringify([...synced.tags].sort())) {
+  if (JSON.stringify([...current.tags].toSorted()) !== JSON.stringify([...synced.tags].toSorted())) {
     diff.tags = current.tags;
   }
   if (current.collection !== synced.collection) {
@@ -228,7 +228,7 @@ function computeFieldDiff(
 function safeFilename(text: string): string {
   return (
     text
-      .replace(/[^a-zA-Z0-9\s-]/g, "")
+      .replace(/[^\d\sA-Za-z-]/g, "")
       .replace(/\s+/g, "_")
       .slice(0, 50) || "Bookmark"
   );
@@ -384,7 +384,7 @@ class RaindropConnector implements Connector {
     await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2) + "\n");
   }
 
-  async pull(): Promise<PullResult> {
+  async sync(): Promise<SyncResult> {
     const config = await this.loadConfig();
     if (!config) {
       return { success: true, created: [], updated: [] };
@@ -445,9 +445,9 @@ class RaindropConnector implements Connector {
         }
         await stageFiles(this.boxRoot, toStage);
         const parts: string[] = [];
-        if (pullResult.created.length) parts.push(`${pullResult.created.length} new`);
-        if (pullResult.updated.length) parts.push(`${pullResult.updated.length} updated`);
-        if (pullResult.removed.length) parts.push(`${pullResult.removed.length} removed`);
+        if (pullResult.created.length > 0) parts.push(`${pullResult.created.length} new`);
+        if (pullResult.updated.length > 0) parts.push(`${pullResult.updated.length} updated`);
+        if (pullResult.removed.length > 0) parts.push(`${pullResult.removed.length} removed`);
         await commit(this.boxRoot, {
           message: `Pull ${parts.join(", ")} bookmark(s) from Raindrop`,
           trailers: { "Pulled-By": "raindrop-connector" },
@@ -460,7 +460,7 @@ class RaindropConnector implements Connector {
       errors.push(`Raindrop sync failed: ${(err as Error).message}`);
     }
 
-    const result: PullResult = {
+    const result: SyncResult = {
       success: errors.length === 0,
       created,
       updated,

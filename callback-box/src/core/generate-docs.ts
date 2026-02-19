@@ -133,7 +133,7 @@ async function scanWorkflows(boxRoot: string): Promise<WorkflowSummary[]> {
     return [];
   }
 
-  const cards = files.filter((f) => f.endsWith(".workflow.card")).sort();
+  const cards = files.filter((f) => f.endsWith(".workflow.card")).toSorted();
   const results: WorkflowSummary[] = [];
 
   for (const filename of cards) {
@@ -519,7 +519,7 @@ function generateConnectorsDocs(): string {
     lines.push("");
 
     if (c.produces.length > 0) {
-      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`cb pull\`)`);
+      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`cb sync\`)`);
     }
 
     if (c.handles.length > 0) {

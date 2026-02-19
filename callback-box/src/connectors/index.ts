@@ -3,7 +3,7 @@
  *
  * Connectors bridge external services to the filesystem.
  * Each connector:
- * - Pulls external state into the repo
+ * - Syncs external state with the repo (pull + push)
  * - Executes commands by pushing actions back out
  * - Transforms between external formats and cards
  */
@@ -15,17 +15,17 @@ export interface Connector {
   /** Command card types this connector can execute */
   handles: string[];
 
-  /** Card types this connector creates on pull */
+  /** Card types this connector creates on sync */
   produces: string[];
 
-  /** Pull external state into the repo */
-  pull(): Promise<PullResult>;
+  /** Sync external state with the repo */
+  sync(): Promise<SyncResult>;
 
   /** Execute a command card */
   execute(cardPath: string, dryRun: boolean): Promise<ExecuteResult>;
 }
 
-export interface PullResult {
+export interface SyncResult {
   success: boolean;
   created: string[];
   updated: string[];

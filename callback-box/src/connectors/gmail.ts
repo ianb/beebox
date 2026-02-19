@@ -26,7 +26,7 @@ import { simpleParser } from "mailparser";
 import {
   registerConnector,
   type Connector,
-  type PullResult,
+  type SyncResult,
   type ExecuteResult,
 } from "./index.js";
 import { createEmailThreadTemplate } from "../schemas/email-thread.js";
@@ -75,7 +75,7 @@ interface FetchedMessage {
 function safeDirectoryName(subject: string, threadId: string): string {
   const safePart = subject
     .replace(/^(re|fwd|fw):\s*/gi, "")
-    .replace(/[^a-zA-Z0-9\s-]/g, "")
+    .replace(/[^\d\sA-Za-z-]/g, "")
     .replace(/\s+/g, "_")
     .slice(0, 40);
   const shortId = threadId.slice(-8);
@@ -133,7 +133,7 @@ function safeAttachmentFilename(
   }
 
   // No filename — generate one from CID or fallback, with extension from content-type
-  const base = cid ? `attachment-${cid.replace(/[^a-zA-Z0-9_-]/g, "")}` : "attachment";
+  const base = cid ? `attachment-${cid.replace(/[^\w-]/g, "")}` : "attachment";
   const ext = CONTENT_TYPE_EXTENSIONS[contentType] || ".bin";
   return `${base}${ext}`;
 }
@@ -203,7 +203,7 @@ class GmailConnector implements Connector {
     await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2));
   }
 
-  async pull(): Promise<PullResult> {
+  async sync(): Promise<SyncResult> {
     const secret = await this.loadSecret();
     if (!secret) {
       // Not configured — silently skip
@@ -387,8 +387,8 @@ class GmailConnector implements Connector {
 
           // Write individual message cards
           const messageRefs: string[] = [];
-          for (let i = 0; i < threadMessages.length; i++) {
-            const tmsg = threadMessages[i]!;
+          for (const [i, threadMessage] of threadMessages.entries()) {
+            const tmsg = threadMessage!;
             const msgNum = String(existingCount + i + 1).padStart(3, "0");
             const cardFilename = `msg-${msgNum}.email-message.card`;
             const bodyFilename = `msg-${msgNum}.body.txt`;
@@ -444,7 +444,7 @@ class GmailConnector implements Connector {
             const files = await fs.readdir(actualDir);
             const existingRefs = files
               .filter((f) => f.match(/^msg-\d+\.email-message\.card$/))
-              .sort();
+              .toSorted();
             // Merge: existing + new (avoid duplicates)
             for (const ref of existingRefs) {
               if (!messageRefs.includes(ref)) {
@@ -471,7 +471,7 @@ class GmailConnector implements Connector {
             participants: Array.from(participants),
             dateStart: firstMsg.date,
             dateEnd: lastMsg.date,
-            messageRefs: messageRefs.sort(),
+            messageRefs: messageRefs.toSorted(),
           };
           if (allLabels.size > 0) {
             threadOpts.labels = Array.from(allLabels);

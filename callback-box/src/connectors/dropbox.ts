@@ -29,7 +29,7 @@ import { CardLoader, type ElementNode } from "cardworks";
 import {
   registerConnector,
   type Connector,
-  type PullResult,
+  type SyncResult,
   type ExecuteResult,
 } from "./index.js";
 import { createDropboxMemoTemplate } from "../schemas/memo.js";
@@ -75,7 +75,7 @@ function parseSavePageMessage(data: unknown): SavePageMessage | null {
 
 function safeFilename(text: string): string {
   return text
-    .replace(/[^a-zA-Z0-9\s-]/g, "")
+    .replace(/[^\d\sA-Za-z-]/g, "")
     .replace(/\s+/g, "_")
     .slice(0, 50)
     || "Memo";
@@ -123,7 +123,7 @@ class DropboxConnector implements Connector {
     await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2));
   }
 
-  async pull(): Promise<PullResult> {
+  async sync(): Promise<SyncResult> {
     const config = await this.loadConfig();
     if (!config) {
       return { success: true, created: [], updated: [] };
@@ -158,7 +158,7 @@ class DropboxConnector implements Connector {
 
           const timestamp = new Date()
             .toISOString()
-            .replace(/[:.]/g, "-")
+            .replace(/[.:]/g, "-")
             .slice(0, 19);
           const label = this.messageLabel(msg);
           const dir = result.dir
@@ -192,7 +192,7 @@ class DropboxConnector implements Connector {
       // Update last poll time to the most recent message
       const latestTime = messages
         .map((m) => m.createdAt)
-        .sort()
+        .toSorted()
         .pop();
       if (latestTime) {
         state.lastPollTime = latestTime;
@@ -213,7 +213,7 @@ class DropboxConnector implements Connector {
       });
     }
 
-    const result: PullResult = {
+    const result: SyncResult = {
       success: errors.length === 0,
       created,
       updated: [],

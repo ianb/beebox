@@ -22,7 +22,7 @@ import {
 import {
   registerConnector,
   type Connector,
-  type PullResult,
+  type SyncResult,
   type ExecuteResult,
 } from "./index.js";
 import type { DropboxConfig } from "./dropbox.js";
@@ -136,7 +136,7 @@ class CaptureConnector implements Connector {
     await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2));
   }
 
-  async pull(): Promise<PullResult> {
+  async sync(): Promise<SyncResult> {
     // Ensure current dropbox credentials are registered
     const config = await this.loadConfig();
     if (!config) {
@@ -195,7 +195,7 @@ class CaptureConnector implements Connector {
       });
     }
 
-    const result: PullResult = {
+    const result: SyncResult = {
       success: errors.length === 0,
       created,
       updated: [],
@@ -212,7 +212,7 @@ class CaptureConnector implements Connector {
   ): Promise<string[]> {
     // Format: capture-YYYYMMDDTHHMM-shortid
     const startDate = new Date(manifest.startedAt);
-    const datePart = startDate.toISOString().replace(/[-:]/g, "").slice(0, 13); // 20260211T1951
+    const datePart = startDate.toISOString().replace(/[:-]/g, "").slice(0, 13); // 20260211T1951
     const shortId = manifest.sessionId.slice(0, 8);
     const dirName = `capture-${datePart}-${shortId}`;
     const dirPath = path.join(this.boxRoot, "box/inbox", dirName);
@@ -223,7 +223,7 @@ class CaptureConnector implements Connector {
     const audioRefs: string[] = [];
 
     // Sort files by name for consistent ordering
-    const sortedFiles = [...manifest.files].sort((a, b) =>
+    const sortedFiles = [...manifest.files].toSorted((a, b) =>
       a.name.localeCompare(b.name)
     );
 

@@ -1,7 +1,7 @@
 /**
- * cb pull - Pull data from connectors.
+ * cb sync - Sync data with connectors.
  *
- * Runs connectors to fetch external data and create cards.
+ * Runs connectors to sync external data (pull + push).
  */
 
 import { Command } from "commander";
@@ -14,8 +14,8 @@ import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
-export const pullCommand = new Command("pull")
-  .description("Pull data from connectors")
+export const syncCommand = new Command("sync")
+  .description("Sync data with connectors")
   .option("-c, --connector <name>", "Only run specific connector")
   .action(async (options: { connector?: string }) => {
     const boxRoot = await requireBoxRoot();
@@ -50,10 +50,10 @@ export const pullCommand = new Command("pull")
     let totalErrors = 0;
 
     for (const connector of toRun) {
-      console.log(`Pulling from ${connector.name}...`);
+      console.log(`Syncing ${connector.name}...`);
 
       try {
-        const result = await connector.pull();
+        const result = await connector.sync();
 
         if (result.pushed && result.pushed.length > 0) {
           console.log(`  Pushed ${result.pushed.length} card(s):`);

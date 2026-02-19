@@ -8,7 +8,7 @@
 import "./create.js";
 import "./wakeup.js";
 import "./answer.js";
-import "./pull.js";
+import "./sync.js";
 import "./trash.js";
 import "./move.js";
 import "./fetch-news.js";

@@ -169,7 +169,7 @@ External event → Connector pulls → Commits to repo → cb wakeup
 | `cb context` | Show what Claude Code would see |
 | `cb commit` | Commit with validation |
 | `cb validate` | Check cards against schemas |
-| `cb pull` | Pull from connectors |
+| `cb sync` | Sync with connectors |
 | `cb do` | Execute a specific command |
 | `cb exec` | Execute all ready commands |
 
