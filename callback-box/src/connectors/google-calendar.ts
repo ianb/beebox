@@ -627,7 +627,7 @@ class GoogleCalendarConnector implements Connector {
       const status = await getStatus(this.boxRoot);
       if (status.staged.length > 0) {
         await commit(this.boxRoot, {
-          message: "Update calendar sync state",
+          message: "Sync calendar: no changes (token refreshed)",
           trailers: { "Pulled-By": "google-calendar-connector" },
         });
       }

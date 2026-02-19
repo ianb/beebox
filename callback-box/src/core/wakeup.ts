@@ -13,6 +13,7 @@ import { createLoader } from "../cli/lib/loader.js";
 import { runPreActions } from "./preactions/index.js";
 import {
   runAgent,
+  ensureAgentCommitted,
   buildInboxProcessingPrompt,
   buildItemProcessingPrompt,
 } from "./agent.js";
@@ -276,20 +277,26 @@ async function checkInboxPhase(
       };
     }
 
-    // Commit any changes made by the agent
-    const status = await getStatus(boxRoot);
-    if (!status.clean) {
-      await stageAll(boxRoot);
-      await commit(boxRoot, {
-        message: `Process ${itemsToProcess.length} inbox item(s)`,
-        trailers: {
-          "Triggered-By": "cb wakeup",
-          Phase: "check-inbox",
-          "Items-Processed": String(itemsToProcess.length),
-        },
-      });
-      onLog("  Agent changes committed");
-    }
+    // Build fallback message with item details
+    const itemNotes = itemsToProcess.map((item) => `- ${item.type}: "${item.name}"`);
+    const fallbackBody = itemNotes.length > 0 ? `\n\n${itemNotes.join("\n")}` : "";
+
+    await ensureAgentCommitted({
+      boxRoot,
+      agentResult: result,
+      agentOptions: {
+        boxRoot,
+        systemPrompt,
+        prompt: userPrompt,
+      },
+      fallbackMessage: `Process ${itemsToProcess.length} inbox item(s)${fallbackBody}`,
+      fallbackTrailers: {
+        "Triggered-By": "cb wakeup",
+        Phase: "check-inbox",
+        "Items-Processed": String(itemsToProcess.length),
+      },
+      onOutput: (text) => onLog(text),
+    });
 
     const msg = remaining > 0
       ? `Processed ${itemsToProcess.length} item(s), ${remaining} remaining`
