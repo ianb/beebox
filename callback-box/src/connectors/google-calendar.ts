@@ -294,6 +294,164 @@ function icsToGoogleEvent(content: string): (GoogleCalendarEvent & { _calendarId
   }
 }
 
+interface SyncNote {
+  action: "new" | "updated" | "deleted" | "pushed" | "cancelled";
+  summary: string;
+  detail?: string;
+  ref?: string;
+}
+
+/** Format an event date for commit messages: "Thu Feb 20" or "Thu Feb 20 3:00 PM" */
+function formatEventDate(event: GoogleCalendarEvent): string {
+  const dateTime = event.start?.dateTime;
+  const dateOnly = event.start?.date;
+  if (!dateTime && !dateOnly) return "";
+  const d = dateTime ? new Date(dateTime) : new Date(dateOnly + "T00:00:00");
+  const dayStr = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  if (dateOnly) return dayStr;
+  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${dayStr} ${timeStr}`;
+}
+
+/** Compare old and new ICS content, return human-readable change descriptions */
+function describeChanges(oldContent: string, newContent: string): string[] {
+  const changes: string[] = [];
+  try {
+    const oldComp = new ICAL.Component(ICAL.parse(oldContent));
+    const newComp = new ICAL.Component(ICAL.parse(newContent));
+    const oldV = oldComp.getFirstSubcomponent("vevent");
+    const newV = newComp.getFirstSubcomponent("vevent");
+    if (!oldV || !newV) return changes;
+
+    const getProp = (v: ICAL.Component, name: string): string =>
+      String(v.getFirstPropertyValue(name) || "");
+
+    // Summary
+    const oldSummary = getProp(oldV, "summary");
+    const newSummary = getProp(newV, "summary");
+    if (oldSummary !== newSummary) {
+      changes.push(`title changed from "${oldSummary}" to "${newSummary}"`);
+    }
+
+    // Start/end times
+    const oldStart = getProp(oldV, "dtstart");
+    const newStart = getProp(newV, "dtstart");
+    const oldEnd = getProp(oldV, "dtend");
+    const newEnd = getProp(newV, "dtend");
+    if (oldStart !== newStart || oldEnd !== newEnd) {
+      changes.push("time changed");
+    }
+
+    // Location
+    const oldLoc = getProp(oldV, "location");
+    const newLoc = getProp(newV, "location");
+    if (oldLoc !== newLoc) {
+      if (!oldLoc) {
+        changes.push(`added location: ${newLoc}`);
+      } else if (!newLoc) {
+        changes.push("location removed");
+      } else {
+        changes.push(`location changed to ${newLoc}`);
+      }
+    }
+
+    // Description
+    const oldDesc = getProp(oldV, "description");
+    const newDesc = getProp(newV, "description");
+    if (oldDesc !== newDesc) {
+      changes.push("description updated");
+    }
+
+    // Transparency
+    const oldTransp = getProp(oldV, "transp");
+    const newTransp = getProp(newV, "transp");
+    if (oldTransp !== newTransp) {
+      changes.push(newTransp === "TRANSPARENT" ? "marked as free" : "marked as busy");
+    }
+  } catch {
+    // Can't parse — skip diffing
+  }
+  return changes;
+}
+
+/**
+ * Extract X-CB-REASON and X-CB-REF from ICS content.
+ * Returns the values and stripped content.
+ */
+function extractCbAnnotations(content: string): { reason?: string; ref?: string; stripped: string } {
+  let reason: string | undefined;
+  let ref: string | undefined;
+
+  const reasonMatch = content.match(/^x-cb-reason[:;](.*)$/im);
+  if (reasonMatch) reason = reasonMatch[1]?.trim();
+
+  const refMatch = content.match(/^x-cb-ref[:;](.*)$/im);
+  if (refMatch) ref = refMatch[1]?.trim();
+
+  // Strip the annotation lines
+  const stripped = content
+    .replace(/^x-cb-reason[:;].*\r?\n?/gim, "")
+    .replace(/^x-cb-ref[:;].*\r?\n?/gim, "");
+
+  const result: { reason?: string; ref?: string; stripped: string } = { stripped };
+  if (reason) result.reason = reason;
+  if (ref) result.ref = ref;
+  return result;
+}
+
+/** Build narrative commit message from SyncNotes */
+function buildNarrativeCommitMessage(
+  notes: SyncNote[],
+  opts: { isFullResync: boolean; totalEvents?: number },
+): string {
+  if (opts.isFullResync) {
+    const count = opts.totalEvents ?? notes.length;
+    return `Sync calendar: full re-sync (token expired), ${count} events refreshed`;
+  }
+
+  const counts: Record<string, number> = {};
+  for (const note of notes) {
+    counts[note.action] = (counts[note.action] || 0) + 1;
+  }
+
+  const parts: string[] = [];
+  if (counts["new"]) parts.push(`${counts["new"]} new`);
+  if (counts["updated"]) parts.push(`${counts["updated"]} updated`);
+  if (counts["deleted"]) parts.push(`${counts["deleted"]} deleted`);
+  if (counts["pushed"]) parts.push(`${counts["pushed"]} pushed`);
+  if (counts["cancelled"]) parts.push(`${counts["cancelled"]} cancelled`);
+
+  let message = `Sync calendar: ${parts.join(", ")}`;
+
+  // Group notes by action for the body
+  const sections: Array<{ label: string; action: SyncNote["action"] }> = [
+    { label: "New", action: "new" },
+    { label: "Updated", action: "updated" },
+    { label: "Pushed", action: "pushed" },
+    { label: "Deleted", action: "deleted" },
+    { label: "Cancelled", action: "cancelled" },
+  ];
+
+  const bodyParts: string[] = [];
+  for (const { label, action } of sections) {
+    const items = notes.filter((n) => n.action === action);
+    if (items.length === 0) continue;
+    const lines = items.map((n) => {
+      let line = `- ${n.summary}`;
+      if (n.detail) line += ` — ${n.detail}`;
+      if (n.ref) line += ` [ref: ${n.ref}]`;
+      return line;
+    });
+    bodyParts.push(`${label}:\n${lines.join("\n")}`);
+  }
+
+  if (bodyParts.length > 0) {
+    message += `\n\n${bodyParts.join("\n\n")}`;
+  }
+
+  return message;
+}
+
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
   handles: string[] = [];
@@ -381,6 +539,8 @@ class GoogleCalendarConnector implements Connector {
     const created: string[] = [];
     const updated: string[] = [];
     const deleted: string[] = [];
+    const allNotes: SyncNote[] = [];
+    let isFullResync = false;
 
     for (const calendarId of calendars) {
       const existingSyncToken = state.syncTokens[calendarId];
@@ -397,12 +557,14 @@ class GoogleCalendarConnector implements Connector {
         created.push(...result.created);
         updated.push(...result.updated);
         deleted.push(...result.deleted);
+        allNotes.push(...result.notes);
       } catch (err) {
         const message = (err as Error).message;
         if (message.includes("410")) {
           console.log(
             `  Sync token expired for ${calendarId}, doing full sync...`
           );
+          isFullResync = true;
           delete state.syncTokens[calendarId];
           await this.saveState(state);
           const result = await this.syncCalendar({
@@ -413,6 +575,7 @@ class GoogleCalendarConnector implements Connector {
           created.push(...result.created);
           updated.push(...result.updated);
           deleted.push(...result.deleted);
+          // Don't add individual notes for full re-sync — the message will summarize
         } else {
           await this.saveState(state);
           return {
@@ -427,8 +590,8 @@ class GoogleCalendarConnector implements Connector {
 
     // Process locally-marked deletes (X-CB-DELETE property)
     const deleteResult = await this.processLocalDeletes({ auth, state, calDir });
-    deleted.push(...deleteResult.map((d) => d.path));
-    const deleteReasons = deleteResult.map((d) => `${d.summary}: ${d.reason}`);
+    deleted.push(...deleteResult.deleted);
+    allNotes.push(...deleteResult.notes);
 
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
@@ -437,6 +600,7 @@ class GoogleCalendarConnector implements Connector {
     );
     const pushed = orphanResult.pushed;
     deleted.push(...orphanResult.deleted);
+    allNotes.push(...orphanResult.notes);
 
     await this.saveState(state);
 
@@ -449,15 +613,10 @@ class GoogleCalendarConnector implements Connector {
     await stageFiles(this.boxRoot, filesToStage);
     const allChanged = [...created, ...updated, ...deleted, ...pushed];
     if (allChanged.length > 0) {
-      const parts = [];
-      if (created.length > 0) parts.push(`${created.length} new`);
-      if (updated.length > 0) parts.push(`${updated.length} updated`);
-      if (deleted.length > 0) parts.push(`${deleted.length} deleted`);
-      if (pushed.length > 0) parts.push(`${pushed.length} pushed`);
-      let message = `Sync calendar: ${parts.join(", ")}`;
-      if (deleteReasons.length > 0) {
-        message += `\n\nDeleted:\n${deleteReasons.map((r) => `- ${r}`).join("\n")}`;
-      }
+      const message = buildNarrativeCommitMessage(allNotes, {
+        isFullResync,
+        totalEvents: allChanged.length,
+      });
       await commit(this.boxRoot, {
         message,
         trailers: { "Pulled-By": "google-calendar-connector" },
@@ -490,12 +649,13 @@ class GoogleCalendarConnector implements Connector {
     calDir: string;
     windowStart: Date;
     windowEnd: Date;
-  }): Promise<{ created: string[]; updated: string[]; deleted: string[] }> {
+  }): Promise<{ created: string[]; updated: string[]; deleted: string[]; notes: SyncNote[] }> {
     const { auth, calendarId, syncToken, syncDaysBack, syncDaysForward,
             state, icsOpts, calDir, windowStart, windowEnd } = opts;
     const created: string[] = [];
     const updated: string[] = [];
     const deleted: string[] = [];
+    const notes: SyncNote[] = [];
 
     const events = await this.fetchEvents({
       auth, calendarId, syncToken, syncDaysBack, syncDaysForward, state,
@@ -514,6 +674,10 @@ class GoogleCalendarConnector implements Connector {
           try {
             await fs.unlink(filePath);
             deleted.push(path.relative(this.boxRoot, filePath));
+            notes.push({
+              action: "cancelled",
+              summary: event.summary || oldName,
+            });
           } catch (err: unknown) {
             if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
           }
@@ -544,6 +708,36 @@ class GoogleCalendarConnector implements Connector {
         }
       }
 
+      // Diff old vs new content for update notes
+      if (existingEntry) {
+        try {
+          const oldContent = await fs.readFile(
+            path.join(calDir, oldName || filename), "utf-8"
+          );
+          const changes = describeChanges(oldContent, icsContent);
+          if (changes.length > 0) {
+            notes.push({
+              action: "updated",
+              summary: event.summary || filename,
+              detail: changes.join(", "),
+            });
+          }
+          // If no visible changes, skip the note (just metadata refresh)
+        } catch {
+          // Old file unreadable — treat as simple update
+          notes.push({ action: "updated", summary: event.summary || filename });
+        }
+      } else {
+        // New event from Google
+        const dateStr = formatEventDate(event);
+        const calLabel = icsOpts.calendarName && calendarId !== "primary"
+          ? `, ${icsOpts.calendarName}` : "";
+        notes.push({
+          action: "new",
+          summary: `${event.summary || "(no title)"}${dateStr ? ` (${dateStr}${calLabel})` : ""}`,
+        });
+      }
+
       await fs.writeFile(filePath, icsContent);
       const relPath = path.relative(this.boxRoot, filePath);
 
@@ -556,19 +750,20 @@ class GoogleCalendarConnector implements Connector {
       state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId };
     }
 
-    return { created, updated, deleted };
+    return { created, updated, deleted, notes };
   }
 
   /**
    * Push locally-created .ics files (not tracked in state) to Google Calendar,
-   * then track them. Returns { pushed, deleted } arrays of relative paths.
+   * then track them. Returns { pushed, deleted, notes } arrays.
    */
   private async pushAndCleanOrphans(
     opts: { auth: OAuth2Client; state: CalendarState; calDir: string; defaultCalendarId: string },
-  ): Promise<{ pushed: string[]; deleted: string[] }> {
+  ): Promise<{ pushed: string[]; deleted: string[]; notes: SyncNote[] }> {
     const { auth, state, calDir, defaultCalendarId } = opts;
     const pushed: string[] = [];
     const deleted: string[] = [];
+    const notes: SyncNote[] = [];
     const trackedFiles = new Set<string>();
     for (const entry of Object.values(state.eventFiles)) {
       trackedFiles.add(getFilename(entry));
@@ -579,7 +774,7 @@ class GoogleCalendarConnector implements Connector {
       files = await fs.readdir(calDir);
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      return { pushed, deleted };
+      return { pushed, deleted, notes };
     }
 
     for (const file of files) {
@@ -599,6 +794,9 @@ class GoogleCalendarConnector implements Connector {
           continue;
         }
 
+        // Extract and strip annotations before pushing
+        const { reason, ref, stripped } = extractCbAnnotations(content);
+
         // Determine target calendar from X-CB-CALENDAR-ID or use default
         const calendarId = apiEvent._calendarId || defaultCalendarId;
         // Remove our internal field before sending to API
@@ -609,6 +807,21 @@ class GoogleCalendarConnector implements Connector {
           // Track the file with its new Google event ID
           state.eventFiles[result.id] = { filename: file, calendarId };
           pushed.push(relPath);
+
+          // Write back stripped content (without annotations)
+          if (reason || ref) {
+            await fs.writeFile(filePath, stripped);
+          }
+
+          // Build push note
+          const dateStr = formatEventDate(apiEvent);
+          const pushNote: SyncNote = {
+            action: "pushed",
+            summary: `${apiEvent.summary || file}${dateStr ? ` (${dateStr})` : ""}`,
+          };
+          if (reason) pushNote.detail = reason;
+          if (ref) pushNote.ref = ref;
+          notes.push(pushNote);
         } else {
           // Push failed — leave the file alone (don't delete it)
           console.warn(`  Failed to push ${file}, keeping locally`);
@@ -618,7 +831,7 @@ class GoogleCalendarConnector implements Connector {
       }
     }
 
-    return { pushed, deleted };
+    return { pushed, deleted, notes };
   }
 
   /**
@@ -628,9 +841,10 @@ class GoogleCalendarConnector implements Connector {
    */
   private async processLocalDeletes(
     opts: { auth: OAuth2Client; state: CalendarState; calDir: string },
-  ): Promise<Array<{ path: string; reason: string; summary: string }>> {
+  ): Promise<{ deleted: string[]; notes: SyncNote[] }> {
     const { auth, state, calDir } = opts;
-    const deleted: Array<{ path: string; reason: string; summary: string }> = [];
+    const deleted: string[] = [];
+    const notes: SyncNote[] = [];
     const MAX_DELETES = 3;
 
     for (const [googleEventId, entry] of Object.entries(state.eventFiles)) {
@@ -655,6 +869,10 @@ class GoogleCalendarConnector implements Connector {
       const summaryMatch = content.match(/^summary[:;](.*)$/im);
       const summary = summaryMatch?.[1]?.trim() || filename;
 
+      // Extract optional X-CB-REF
+      const refMatch = content.match(/^x-cb-ref[:;](.*)$/im);
+      const ref = refMatch?.[1]?.trim();
+
       if (deleted.length >= MAX_DELETES) {
         console.warn(`  Skipping delete of ${filename} — reached limit of ${MAX_DELETES} deletes per sync`);
         continue;
@@ -670,13 +888,16 @@ class GoogleCalendarConnector implements Connector {
       if (success) {
         await fs.unlink(filePath);
         delete state.eventFiles[googleEventId];
-        deleted.push({ path: path.relative(this.boxRoot, filePath), reason, summary });
+        deleted.push(path.relative(this.boxRoot, filePath));
+        const deleteNote: SyncNote = { action: "deleted", summary, detail: reason };
+        if (ref) deleteNote.ref = ref;
+        notes.push(deleteNote);
       } else {
         console.warn(`  Failed to delete ${filename} from Google Calendar`);
       }
     }
 
-    return deleted;
+    return { deleted, notes };
   }
 
   /**
