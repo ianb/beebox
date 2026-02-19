@@ -148,6 +148,52 @@ function makeSnippet(text: string, maxLen = 100): string {
     .slice(0, maxLen);
 }
 
+interface ThreadNote {
+  subject: string;
+  from: string;
+  isNew: boolean;
+  messageCount: number;
+}
+
+function displayName(from: string): string {
+  // "Alice Smith <alice@example.com>" → "Alice Smith"
+  const match = from.match(/^(.+?)\s*<[^>]+>$/);
+  return match ? match[1]!.trim() : from;
+}
+
+function buildGmailCommitMessage(notes: ThreadNote[], fileCount: number): string {
+  const subject = `Pull ${notes.length} Gmail thread${notes.length === 1 ? "" : "s"} (${fileCount} file${fileCount === 1 ? "" : "s"})`;
+  if (notes.length === 0) return subject;
+
+  const newThreads = notes.filter((n) => n.isNew);
+  const updatedThreads = notes.filter((n) => !n.isNew);
+  const lines = [subject, ""];
+  const cap = 5;
+
+  if (newThreads.length > 0) {
+    lines.push("New:");
+    for (const n of newThreads.slice(0, cap)) {
+      lines.push(`- "${n.subject}" from ${displayName(n.from)}`);
+    }
+    if (newThreads.length > cap) {
+      lines.push(`  + ${newThreads.length - cap} more`);
+    }
+    if (updatedThreads.length > 0) lines.push("");
+  }
+
+  if (updatedThreads.length > 0) {
+    lines.push("Updated:");
+    for (const n of updatedThreads.slice(0, cap)) {
+      lines.push(`- "${n.subject}" (+${n.messageCount} message${n.messageCount === 1 ? "" : "s"})`);
+    }
+    if (updatedThreads.length > cap) {
+      lines.push(`  + ${updatedThreads.length - cap} more`);
+    }
+  }
+
+  return lines.join("\n").trimEnd();
+}
+
 class GmailConnector implements Connector {
   name = "gmail";
   handles: string[] = []; // No outbound commands yet (future: email-draft, email-send)
@@ -232,7 +278,7 @@ class GmailConnector implements Connector {
 
     const created: string[] = [];
     const updated: string[] = [];
-    let threadCount = 0;
+    const threadNotes: ThreadNote[] = [];
 
     try {
       await client.connect();
@@ -330,8 +376,6 @@ class GmailConnector implements Connector {
         // Create/update thread directories
         const emailDir = path.join(this.boxRoot, "box/inbox/email");
         await fs.mkdir(emailDir, { recursive: true });
-        threadCount = threads.size;
-
         for (const [threadId, threadMessages] of threads) {
           // Sort messages by date
           threadMessages.sort(
@@ -492,6 +536,14 @@ class GmailConnector implements Connector {
             created.push(path.relative(this.boxRoot, threadCardPath));
           }
 
+          // Accumulate thread note for commit message
+          threadNotes.push({
+            subject,
+            from: firstMsg.from,
+            isNew: !existingDir,
+            messageCount: threadMessages.length,
+          });
+
           // Track seen message IDs
           for (const msg of threadMessages) {
             if (!state.seenMessageIds.includes(msg.messageId)) {
@@ -533,7 +585,7 @@ class GmailConnector implements Connector {
     if (created.length > 0 || updated.length > 0) {
       await stageFiles(this.boxRoot, [...created, ...updated]);
       await commit(this.boxRoot, {
-        message: `Pull ${created.length} file(s) from Gmail (${threadCount} thread(s))`,
+        message: buildGmailCommitMessage(threadNotes, created.length + updated.length),
         trailers: {
           "Pulled-By": "gmail-connector",
         },

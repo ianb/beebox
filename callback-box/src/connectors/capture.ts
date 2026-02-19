@@ -147,6 +147,7 @@ class CaptureConnector implements Connector {
     const pulledSet = new Set(state.pulledSessionIds);
     const created: string[] = [];
     const errors: string[] = [];
+    const sessionNotes: SessionNote[] = [];
 
     // Check all known channels for completed sessions
     const allCredentials = await this.getAllChannelCredentials();
@@ -167,6 +168,11 @@ class CaptureConnector implements Connector {
             const sessionCreated = await this.pullSession(client, manifest);
             created.push(...sessionCreated);
             pulledSet.add(session.id);
+
+            // Accumulate session note
+            const photoCount = manifest.files.filter((f) => f.type.startsWith("image/")).length;
+            const hasRecording = manifest.files.some((f) => f.type.startsWith("audio/"));
+            sessionNotes.push({ startedAt: manifest.startedAt, photoCount, hasRecording });
           } catch (err) {
             errors.push(`Failed to pull session ${session.id}: ${(err as Error).message}`);
           }
@@ -188,7 +194,7 @@ class CaptureConnector implements Connector {
       ];
       await stageFiles(this.boxRoot, toStage);
       await commit(this.boxRoot, {
-        message: `Pull ${newSessionCount(created)} capture session(s)`,
+        message: buildCaptureCommitMessage(sessionNotes),
         trailers: {
           "Pulled-By": "capture-connector",
         },
@@ -306,19 +312,36 @@ class CaptureConnector implements Connector {
   }
 }
 
-/**
- * Count how many session directories were created from a list of relative paths.
- */
-function newSessionCount(created: string[]): number {
-  const dirs = new Set<string>();
-  for (const p of created) {
-    const parts = p.split(path.sep);
-    // box/inbox/capture-xxx/... → the capture-xxx part
-    if (parts.length >= 3) {
-      dirs.add(parts.slice(0, 3).join(path.sep));
-    }
+interface SessionNote {
+  startedAt: string;
+  photoCount: number;
+  hasRecording: boolean;
+}
+
+function buildCaptureCommitMessage(notes: SessionNote[]): string {
+  const totalPhotos = notes.reduce((sum, n) => sum + n.photoCount, 0);
+  const totalRecordings = notes.filter((n) => n.hasRecording).length;
+
+  const parts: string[] = [];
+  if (totalPhotos > 0) parts.push(`${totalPhotos} photo${totalPhotos === 1 ? "" : "s"}`);
+  if (totalRecordings > 0) parts.push(`${totalRecordings} recording${totalRecordings === 1 ? "" : "s"}`);
+  const detail = parts.length > 0 ? ` (${parts.join(", ")})` : "";
+
+  const subject = `Pull ${notes.length} capture session${notes.length === 1 ? "" : "s"}${detail}`;
+
+  if (notes.length <= 1) return subject;
+
+  const lines = [subject, ""];
+  for (const note of notes) {
+    const d = new Date(note.startedAt);
+    const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    const sessionParts: string[] = [];
+    if (note.photoCount > 0) sessionParts.push(`${note.photoCount} photo${note.photoCount === 1 ? "" : "s"}`);
+    if (note.hasRecording) sessionParts.push("recording");
+    lines.push(`- ${dateStr}, ${timeStr}: ${sessionParts.join(", ") || "empty session"}`);
   }
-  return dirs.size;
+  return lines.join("\n");
 }
 
 /**

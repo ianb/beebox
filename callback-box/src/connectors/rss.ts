@@ -169,6 +169,30 @@ function safeFilename(title: string): string {
     .slice(0, 50);
 }
 
+function buildRssCommitMessage(feedNotes: Map<string, string[]>): string {
+  let total = 0;
+  for (const items of feedNotes.values()) total += items.length;
+
+  const subject = `Pull ${total} news item${total === 1 ? "" : "s"} from RSS`;
+  if (feedNotes.size === 0) return subject;
+
+  const lines = [subject, ""];
+  for (const [feedTitle, items] of feedNotes) {
+    if (feedNotes.size > 1) {
+      lines.push(`${feedTitle} (${items.length}):`);
+    }
+    const cap = 5;
+    for (const title of items.slice(0, cap)) {
+      lines.push(`- ${title}`);
+    }
+    if (items.length > cap) {
+      lines.push(`  + ${items.length - cap} more`);
+    }
+    if (feedNotes.size > 1) lines.push("");
+  }
+  return lines.join("\n").trimEnd();
+}
+
 class RssConnector implements Connector {
   name = "rss";
   handles: string[] = []; // RSS connector doesn't execute commands
@@ -225,6 +249,7 @@ class RssConnector implements Connector {
 
     const created: string[] = [];
     const errors: string[] = [];
+    const feedNotes = new Map<string, string[]>();
 
     for (const feed of config.feeds) {
       try {
@@ -281,6 +306,11 @@ class RssConnector implements Connector {
 
           await fs.writeFile(cardPath, content);
           created.push(path.relative(this.boxRoot, cardPath));
+
+          // Accumulate note for commit message
+          const feedItems = feedNotes.get(feedTitle) || [];
+          feedItems.push(item.title);
+          feedNotes.set(feedTitle, feedItems);
         }
 
         // Update state with new GUIDs
@@ -299,7 +329,7 @@ class RssConnector implements Connector {
     if (created.length > 0) {
       await stageFiles(this.boxRoot, created);
       await commit(this.boxRoot, {
-        message: `Pull ${created.length} news item(s) from RSS`,
+        message: buildRssCommitMessage(feedNotes),
         trailers: {
           "Pulled-By": "rss-connector",
         },

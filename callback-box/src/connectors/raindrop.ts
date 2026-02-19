@@ -43,6 +43,7 @@ interface BookmarkSyncEntry {
   lastSyncedHash: string;
   raindropUpdated: string;
   syncedFields: BookmarkFields;
+  title?: string;
 }
 
 interface RaindropState {
@@ -336,6 +337,73 @@ function buildBookmarkCard(params: BuildBookmarkCardParams): string {
   return createBookmarkTemplate(opts);
 }
 
+// ─── Commit Message Builders ─────────────────────────────────────────────────
+
+interface PushNote {
+  title: string;
+  collection: string;
+  isNew: boolean;
+}
+
+interface PullNote {
+  action: "new" | "updated" | "removed";
+  title: string;
+  collection?: string;
+}
+
+function buildRaindropPushMessage(notes: PushNote[]): string {
+  const subject = `Push ${notes.length} bookmark${notes.length === 1 ? "" : "s"} to Raindrop`;
+  if (notes.length === 0) return subject;
+
+  const lines = [subject, ""];
+  const cap = 5;
+  for (const n of notes.slice(0, cap)) {
+    lines.push(`- "${n.title}" (${n.collection})`);
+  }
+  if (notes.length > cap) {
+    lines.push(`  + ${notes.length - cap} more`);
+  }
+  return lines.join("\n");
+}
+
+function buildRaindropPullMessage(notes: PullNote[]): string {
+  const newNotes = notes.filter((n) => n.action === "new");
+  const updatedNotes = notes.filter((n) => n.action === "updated");
+  const removedNotes = notes.filter((n) => n.action === "removed");
+
+  const parts: string[] = [];
+  if (newNotes.length > 0) parts.push(`${newNotes.length} new`);
+  if (updatedNotes.length > 0) parts.push(`${updatedNotes.length} updated`);
+  if (removedNotes.length > 0) parts.push(`${removedNotes.length} removed`);
+  const subject = `Pull ${parts.join(", ")} bookmark${notes.length === 1 ? "" : "s"} from Raindrop`;
+
+  if (notes.length === 0) return subject;
+
+  const lines = [subject, ""];
+  const cap = 5;
+
+  const sections: [string, PullNote[]][] = [
+    ["New", newNotes],
+    ["Updated", updatedNotes],
+    ["Removed", removedNotes],
+  ];
+
+  for (const [label, sectionNotes] of sections) {
+    if (sectionNotes.length === 0) continue;
+    lines.push(`${label}:`);
+    for (const n of sectionNotes.slice(0, cap)) {
+      const coll = n.collection ? ` (${n.collection})` : "";
+      lines.push(`- "${n.title}"${coll}`);
+    }
+    if (sectionNotes.length > cap) {
+      lines.push(`  + ${sectionNotes.length - cap} more`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trimEnd();
+}
+
 // ─── Connector ──────────────────────────────────────────────────────────────
 
 class RaindropConnector implements Connector {
@@ -418,7 +486,7 @@ class RaindropConnector implements Connector {
         await this.saveState(state);
         await stageFiles(this.boxRoot, toStage);
         await commit(this.boxRoot, {
-          message: `Push ${pushed.length} bookmark(s) to Raindrop`,
+          message: buildRaindropPushMessage(pushResult.pushNotes),
           trailers: { "Pushed-By": "raindrop-connector" },
         });
       }
@@ -444,12 +512,8 @@ class RaindropConnector implements Connector {
           toStage.push(removed);
         }
         await stageFiles(this.boxRoot, toStage);
-        const parts: string[] = [];
-        if (pullResult.created.length > 0) parts.push(`${pullResult.created.length} new`);
-        if (pullResult.updated.length > 0) parts.push(`${pullResult.updated.length} updated`);
-        if (pullResult.removed.length > 0) parts.push(`${pullResult.removed.length} removed`);
         await commit(this.boxRoot, {
-          message: `Pull ${parts.join(", ")} bookmark(s) from Raindrop`,
+          message: buildRaindropPullMessage(pullResult.pullNotes),
           trailers: { "Pulled-By": "raindrop-connector" },
         });
       } else {
@@ -477,10 +541,12 @@ class RaindropConnector implements Connector {
     pushed: string[];
     errors: string[];
     modifiedCards: string[];
+    pushNotes: PushNote[];
   }> {
     const pushed: string[] = [];
     const errors: string[] = [];
     const modifiedCards: string[] = [];
+    const pushNotes: PushNote[] = [];
 
     const dir = this.bookmarksDir();
     let files: string[];
@@ -488,7 +554,7 @@ class RaindropConnector implements Connector {
       files = await fs.readdir(dir);
     } catch {
       // No bookmarks directory yet
-      return { pushed, errors, modifiedCards };
+      return { pushed, errors, modifiedCards, pushNotes };
     }
 
     const cardFiles = files.filter((f) => f.endsWith(".bookmark.card"));
@@ -562,12 +628,14 @@ class RaindropConnector implements Connector {
               tags: fields.tags,
               collection: fields.collection,
             },
+            title: fields.title,
           };
 
           localRaindropIds.add(newId);
           pushed.push(relPath);
           modifiedCards.push(newPath);
           if (newPath !== cardPath) modifiedCards.push(cardPath);
+          pushNotes.push({ title: fields.title, collection: fields.collection, isNew: true });
         } else {
           localRaindropIds.add(raindropId);
           const entry = state.bookmarks[raindropId];
@@ -591,6 +659,7 @@ class RaindropConnector implements Connector {
               entry.syncedFields = { ...fields };
               entry.cardPath = relPath;
               pushed.push(relPath);
+              pushNotes.push({ title: fields.title, collection: fields.collection, isNew: false });
             }
           } else if (!entry) {
             // Card has raindrop-id but not in state — add to state
@@ -620,7 +689,7 @@ class RaindropConnector implements Connector {
       }
     }
 
-    return { pushed, errors, modifiedCards };
+    return { pushed, errors, modifiedCards, pushNotes };
   }
 
   private async pullRemoteChanges(
@@ -631,11 +700,13 @@ class RaindropConnector implements Connector {
     updated: string[];
     removed: string[];
     errors: string[];
+    pullNotes: PullNote[];
   }> {
     const created: string[] = [];
     const updated: string[] = [];
     const removed: string[] = [];
     const errors: string[] = [];
+    const pullNotes: PullNote[] = [];
 
     const dir = this.bookmarksDir();
     await fs.mkdir(dir, { recursive: true });
@@ -679,8 +750,10 @@ class RaindropConnector implements Connector {
           lastSyncedHash: hash,
           raindropUpdated: rb.lastUpdate,
           syncedFields: fields,
+          title: rb.title,
         };
         created.push(relPath);
+        pullNotes.push({ action: "new", title: rb.title, collection: collName });
       } else if (rb.lastUpdate > (entry.raindropUpdated || "")) {
         // Remote changed since last sync — overwrite local card
         const filename = `${safeFilename(rb.title)}_${id}.bookmark.card`;
@@ -704,24 +777,28 @@ class RaindropConnector implements Connector {
         entry.lastSyncedHash = hash;
         entry.raindropUpdated = rb.lastUpdate;
         entry.syncedFields = fields;
+        entry.title = rb.title;
         updated.push(relPath);
+        pullNotes.push({ action: "updated", title: rb.title, collection: collName });
       }
     }
 
     // Bookmarks in state but not in remote → deleted remotely
     for (const [id, entry] of Object.entries(state.bookmarks)) {
       if (!remoteIds.has(id)) {
+        const title = entry.title || entry.syncedFields.title || "Unknown bookmark";
         try {
           await fs.unlink(path.join(this.boxRoot, entry.cardPath));
           removed.push(entry.cardPath);
         } catch {
           // Already gone
         }
+        pullNotes.push({ action: "removed", title });
         delete state.bookmarks[id];
       }
     }
 
-    return { created, updated, removed, errors };
+    return { created, updated, removed, errors, pullNotes };
   }
 
   async execute(_cardPath: string, _dryRun: boolean): Promise<ExecuteResult> {

@@ -81,6 +81,32 @@ function safeFilename(text: string): string {
     || "Memo";
 }
 
+const TYPE_LABELS: Record<string, string> = {
+  record: "Saved page",
+  "news-item": "Brief",
+  memo: "Memo",
+};
+
+interface DropboxNote {
+  typeLabel: string;
+  title: string;
+}
+
+function buildDropboxCommitMessage(notes: DropboxNote[]): string {
+  const subject = `Pull ${notes.length} item${notes.length === 1 ? "" : "s"} from Dropbox`;
+  if (notes.length === 0) return subject;
+
+  const lines = [subject, ""];
+  const cap = 5;
+  for (const note of notes.slice(0, cap)) {
+    lines.push(`- ${note.typeLabel}: "${note.title}"`);
+  }
+  if (notes.length > cap) {
+    lines.push(`  + ${notes.length - cap} more`);
+  }
+  return lines.join("\n");
+}
+
 class DropboxConnector implements Connector {
   name = "dropbox";
   handles: string[] = ["open-tab"];
@@ -138,6 +164,7 @@ class DropboxConnector implements Connector {
     const state = await this.loadState();
     const created: string[] = [];
     const errors: string[] = [];
+    const notes: DropboxNote[] = [];
 
     try {
       const messages = await client.poll(
@@ -176,6 +203,12 @@ class DropboxConnector implements Connector {
           await fs.writeFile(cardPath, result.content);
           created.push(path.relative(this.boxRoot, cardPath));
 
+          // Accumulate note for commit message
+          notes.push({
+            typeLabel: TYPE_LABELS[result.type] || result.type,
+            title: label,
+          });
+
           // Write frozen HTML sidecar if present
           if (result.frozenHtml) {
             const frozenPath = path.join(dir, `${baseName}.frozen`);
@@ -206,7 +239,7 @@ class DropboxConnector implements Connector {
     if (created.length > 0) {
       await stageFiles(this.boxRoot, created);
       await commit(this.boxRoot, {
-        message: `Pull ${created.length} item(s) from dropbox`,
+        message: buildDropboxCommitMessage(notes),
         trailers: {
           "Pulled-By": "dropbox-connector",
         },
