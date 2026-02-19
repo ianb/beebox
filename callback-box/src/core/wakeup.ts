@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getSystemState, generateContext } from "./state.js";
-import { stageAll, commit, hasCommits, getStatus, stageFiles } from "../cli/lib/git.js";
+import { stageAll, commit, getStatus, stageFiles } from "../cli/lib/git.js";
 import { createLoader } from "../cli/lib/loader.js";
 import { runPreActions } from "./preactions/index.js";
 import {
@@ -129,22 +129,6 @@ export async function runWakeup(
     }
     onLog("");
 
-    // Commit any remaining changes
-    if (!dryRun) {
-      const status = await getStatus(boxRoot);
-      if (!status.clean && (await hasCommits(boxRoot))) {
-        onLog("[Committing changes]");
-        await stageAll(boxRoot);
-        await commit(boxRoot, {
-          message: "Wakeup processing cycle",
-          trailers: {
-            "Triggered-By": "cb wakeup",
-          },
-        });
-        onLog("  Changes committed");
-      }
-    }
-
     return { success: true, phases: results };
   } catch (error) {
     return {
@@ -177,7 +161,7 @@ async function runPreActionsPhase(
   }
 
   const loader = createLoader(boxRoot);
-  let actionsRun = 0;
+  const actionNotes: string[] = [];
 
   for (const item of state.inbox) {
     try {
@@ -189,15 +173,19 @@ async function runPreActionsPhase(
         cardPath: item.path,
       });
 
-      if (results.length > 0) {
-        actionsRun += results.length;
+      for (const r of results) {
+        if (r.result.modified && r.result.message) {
+          actionNotes.push(`${item.name}: ${r.result.message}`);
+        } else if (r.result.error) {
+          actionNotes.push(`${item.name}: ${r.name} failed`);
+        }
       }
     } catch (error) {
       onLog(`  Error processing ${item.relativePath}: ${(error as Error).message}`);
     }
   }
 
-  if (actionsRun === 0) {
+  if (actionNotes.length === 0) {
     onLog("  No pre-actions needed");
     return { message: "No pre-actions needed" };
   }
@@ -206,8 +194,15 @@ async function runPreActionsPhase(
   const status = await getStatus(boxRoot);
   if (!status.clean) {
     await stageAll(boxRoot);
+    const lines = [`Pre-actions: ${actionNotes.length} item${actionNotes.length === 1 ? "" : "s"}`, ""];
+    for (const note of actionNotes.slice(0, 5)) {
+      lines.push(`- ${note}`);
+    }
+    if (actionNotes.length > 5) {
+      lines.push(`  + ${actionNotes.length - 5} more`);
+    }
     await commit(boxRoot, {
-      message: "Pre-action processing",
+      message: lines.join("\n"),
       trailers: {
         "Triggered-By": "cb wakeup",
         Phase: "pre-actions",
@@ -216,7 +211,7 @@ async function runPreActionsPhase(
     onLog("  Pre-action changes committed");
   }
 
-  return { message: `Ran ${actionsRun} pre-action(s)` };
+  return { message: `Ran ${actionNotes.length} pre-action(s)` };
 }
 
 /**
@@ -384,8 +379,8 @@ async function expireBriefsPhase(
     return { message: "No briefs to expire" };
   }
 
-  let expiredCount = 0;
   const filesToStage: string[] = [];
+  const expiredNotes: Array<{ name: string; ageDays: number }> = [];
 
   for (const file of briefFiles) {
     const fullPath = path.join(unreadDir, file);
@@ -395,7 +390,8 @@ async function expireBriefsPhase(
     const age = now - stat.mtimeMs;
 
     if (age > expiryMs) {
-      onLog(`  Expiring: ${file} (${Math.floor(age / (24 * 60 * 60 * 1000))} days old)`);
+      const ageDays = Math.floor(age / (24 * 60 * 60 * 1000));
+      onLog(`  Expiring: ${file} (${ageDays} days old)`);
 
       // Add expiry attributes to the card
       try {
@@ -415,28 +411,38 @@ async function expireBriefsPhase(
 
       filesToStage.push(`box/output/briefs/${file}`);
       filesToStage.push(`store/archive/briefs/${file}`);
-      expiredCount++;
+
+      // Extract a readable name from the filename (strip date prefix and extension)
+      const briefName = file.replace(/\.news-brief\.card$/, "").replace(/^\d{4}-\d{2}-\d{2}[T_]?/, "").replace(/_/g, " ").trim() || file;
+      expiredNotes.push({ name: briefName, ageDays });
     }
   }
 
-  if (expiredCount === 0) {
+  if (expiredNotes.length === 0) {
     onLog("  No briefs old enough to expire");
     return { message: "No briefs expired" };
   }
 
   // Stage and commit
   await stageFiles(boxRoot, filesToStage);
+  const expireLines = [`Expire ${expiredNotes.length} old brief${expiredNotes.length === 1 ? "" : "s"}`, ""];
+  for (const note of expiredNotes.slice(0, 5)) {
+    expireLines.push(`- ${note.name} (${note.ageDays} days old)`);
+  }
+  if (expiredNotes.length > 5) {
+    expireLines.push(`  + ${expiredNotes.length - 5} more`);
+  }
   await commit(boxRoot, {
-    message: `Expire ${expiredCount} old brief(s)`,
+    message: expireLines.join("\n"),
     trailers: {
       "Triggered-By": "cb wakeup",
       Phase: "expire-briefs",
-      "Briefs-Expired": String(expiredCount),
+      "Briefs-Expired": String(expiredNotes.length),
     },
   });
 
-  onLog(`  Expired ${expiredCount} brief(s)`);
-  return { message: `Expired ${expiredCount} brief(s)` };
+  onLog(`  Expired ${expiredNotes.length} brief(s)`);
+  return { message: `Expired ${expiredNotes.length} brief(s)` };
 }
 
 /**
