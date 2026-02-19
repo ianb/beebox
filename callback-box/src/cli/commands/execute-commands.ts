@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { CardLoader } from "cardworks";
+import { CardLoader, type ElementNode } from "cardworks";
 import { requireBoxRoot } from "../lib/paths.js";
 import { stageFiles, commit } from "../lib/git.js";
 import { createRssConnector } from "../../connectors/rss.js";
@@ -55,6 +55,7 @@ export async function executeCommands(
   const failed: string[] = [];
   const skipped: string[] = [];
   const filesToStage: string[] = [];
+  const commandNotes: string[] = [];
 
   for (const file of cardFiles) {
     const cardPath = path.join(commandsDir, file);
@@ -94,6 +95,12 @@ export async function executeCommands(
 
       const result = await connector.execute(cardPath, false);
 
+      // Extract title for commit message
+      const titleEl = (el.children as ElementNode[]).find(
+        (c) => c.tagName === "title"
+      );
+      const title = titleEl?.text ?? file;
+
       if (result.success) {
         onLog("    Sent successfully");
 
@@ -109,6 +116,7 @@ export async function executeCommands(
         filesToStage.push(relativePath);
         filesToStage.push(path.relative(boxRoot, archivePath));
         sent.push(relativePath);
+        commandNotes.push(`${cardType}: "${title}"`);
       } else {
         onLog(`    Failed: ${result.error}`);
 
@@ -118,6 +126,7 @@ export async function executeCommands(
 
         filesToStage.push(relativePath);
         failed.push(relativePath);
+        commandNotes.push(`${cardType}: "${title}" (failed)`);
       }
     } catch (err) {
       onLog(`  Error processing ${file}: ${(err as Error).message}`);
@@ -128,8 +137,11 @@ export async function executeCommands(
   // Commit changes if any commands were processed
   if (filesToStage.length > 0 && !dryRun) {
     await stageFiles(boxRoot, filesToStage);
+    const failedNote = failed.length > 0 ? `, ${failed.length} failed` : "";
+    const subject = `Execute ${sent.length + failed.length} command(s)${failedNote}`;
+    const body = commandNotes.map((n) => `- ${n}`).join("\n");
     await commit(boxRoot, {
-      message: `Execute ${sent.length} command(s)${failed.length > 0 ? `, ${failed.length} failed` : ""}`,
+      message: `${subject}\n\n${body}`,
       trailers: {
         "Triggered-By": "cb execute-commands",
       },

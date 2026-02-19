@@ -190,8 +190,38 @@ async function executeFetchAllNews(
   // Commit all changes at once
   if (shouldCommit && result.fetched.length > 0) {
     await stageFiles(ctx.boxRoot, [...result.fetched, ...result.failed]);
+
+    // Collect feed sources from fetched items
+    const feedCounts = new Map<string, number>();
+    const loader = createLoader(ctx.boxRoot);
+    for (const itemPath of result.fetched) {
+      try {
+        const fullPath = path.isAbsolute(itemPath)
+          ? itemPath
+          : path.join(ctx.boxRoot, itemPath);
+        const card = await loader.load(fullPath);
+        const feedEl = (card.element.children as ElementNode[]).find(
+          (c) => c.tagName === "feed"
+        );
+        const feedName = feedEl?.text ?? "unknown";
+        feedCounts.set(feedName, (feedCounts.get(feedName) ?? 0) + 1);
+      } catch {
+        // Skip items we can't read
+      }
+    }
+
+    const sourceNotes = [...feedCounts.entries()]
+      .toSorted((a, b) => b[1] - a[1])
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ");
+    const failed = result.failed.length > 0
+      ? `, ${result.failed.length} failed`
+      : "";
+    const subject = `Fetch ${result.fetched.length} news articles${failed}`;
+    const body = sourceNotes ? `\nSources: ${sourceNotes}` : "";
+
     await commit(ctx.boxRoot, {
-      message: `Fetch ${result.fetched.length} news article(s)`,
+      message: `${subject}${body}`,
       trailers: {
         "Triggered-By": "cb fetch-all-news",
         Phase: "fetch",
