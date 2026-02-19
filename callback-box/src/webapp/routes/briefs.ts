@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { CardLoader, type ElementNode } from "cardworks";
 import { parseNewsBrief, type ParsedNewsBrief, type NewsBrief } from "../../schemas/news-brief.js";
 import { parseNewsGuide, type NewsGuide } from "../../schemas/news-guide.js";
-import { stageFiles, commit } from "../../cli/lib/git.js";
+import { stageFiles, commit, getLog } from "../../cli/lib/git.js";
 
 /**
  * Brief summary for the index.
@@ -163,6 +163,42 @@ async function loadBrief(
 }
 
 /**
+ * Extract readable name from brief path.
+ * e.g. "box/output/briefs/2026-02-16_dark-flow-and-hidden-signals.news-brief.card"
+ *   → "dark-flow-and-hidden-signals"
+ */
+function briefNameFromPath(briefPath: string): string {
+  const filename = path.basename(briefPath);
+  const withoutExt = filename.replace(/\.news-(?:brief|edition)\.card$/, "");
+  const withoutDate = withoutExt.replace(/^\d{4}-\d{2}-\d{2}_/, "");
+  return withoutDate || filename;
+}
+
+/**
+ * Check if the last commit is part of a reading session for the given brief.
+ * Returns whether to amend and the accumulated action list.
+ */
+async function getReadingSession(boxRoot: string, briefPath: string): Promise<{
+  shouldAmend: boolean;
+  actions: string[];
+}> {
+  try {
+    const [lastCommit] = await getLog(boxRoot, 1);
+    if (
+      lastCommit?.trailers?.["Brief-Path"] === briefPath &&
+      lastCommit?.trailers?.["Source"] === "webapp"
+    ) {
+      const actionsStr = lastCommit.trailers["Actions"] ?? "";
+      const actions = actionsStr ? actionsStr.split(", ") : [];
+      return { shouldAmend: true, actions };
+    }
+  } catch {
+    // No commits or error — start fresh
+  }
+  return { shouldAmend: false, actions: [] };
+}
+
+/**
  * Register brief routes on the Fastify server.
  */
 export async function registerBriefRoutes(
@@ -286,8 +322,9 @@ export async function registerBriefRoutes(
     // Commit
     const newRelativePath = path.relative(boxRoot, newPath);
     await stageFiles(boxRoot, [briefPath, newRelativePath]);
+    const name = briefNameFromPath(briefPath);
     await commit(boxRoot, {
-      message: "Mark brief as read",
+      message: `Mark read: "${name}"`,
       trailers: {
         "Source": "webapp",
         "Endpoint": "/api/brief/mark-read",
@@ -323,7 +360,7 @@ export async function registerBriefRoutes(
     const feedbackDir = path.join(boxRoot, "box/inbox/feedback");
     await fs.mkdir(feedbackDir, { recursive: true });
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const timestamp = new Date().toISOString().replace(/[.:]/g, "-").slice(0, 19);
     const baseName = `brief_feedback_${timestamp}`;
     const feedbackPath = path.join(feedbackDir, `${baseName}.feedback.card`);
 
@@ -350,13 +387,19 @@ export async function registerBriefRoutes(
       filesToStage.push(`box/inbox/feedback/${baseName}${ext}`);
     }
     await stageFiles(boxRoot, filesToStage);
+    const name = briefNameFromPath(briefPath);
+    const actionLabel = isVoice ? "voice comment" : "text comment";
+    const session = await getReadingSession(boxRoot, briefPath);
+    const actions = [...session.actions, actionLabel];
     await commit(boxRoot, {
-      message: "Add brief feedback",
+      message: `Reading "${name}": ${actions.join(", ")}`,
       trailers: {
         "Source": "webapp",
         "Endpoint": "/api/brief/feedback",
-        "Type": isVoice ? "voice" : "text",
+        "Brief-Path": briefPath,
+        "Actions": actions.join(", "),
       },
+      amend: session.shouldAmend,
     });
 
     return { success: true, path: feedbackPath, isVoice };
@@ -410,7 +453,7 @@ export async function registerBriefRoutes(
     const feedbackDir = path.join(boxRoot, "box/inbox/feedback");
     await fs.mkdir(feedbackDir, { recursive: true });
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const timestamp = new Date().toISOString().replace(/[.:]/g, "-").slice(0, 19);
     const baseName = `query_response_${timestamp}`;
     const responsePath = path.join(feedbackDir, `${baseName}.feedback.card`);
 
@@ -437,13 +480,18 @@ export async function registerBriefRoutes(
       filesToStage.push(`box/inbox/feedback/${baseName}${ext}`);
     }
     await stageFiles(boxRoot, filesToStage);
+    const name = briefNameFromPath(briefPath);
+    const session = await getReadingSession(boxRoot, briefPath);
+    const actions = [...session.actions, "query response"];
     await commit(boxRoot, {
-      message: "Add query response",
+      message: `Reading "${name}": ${actions.join(", ")}`,
       trailers: {
         "Source": "webapp",
         "Endpoint": "/api/brief/query-response",
-        "Type": isVoice ? "voice" : "text",
+        "Brief-Path": briefPath,
+        "Actions": actions.join(", "),
       },
+      amend: session.shouldAmend,
     });
 
     return { success: true, path: responsePath, isVoice };
@@ -575,15 +623,44 @@ export async function registerBriefRoutes(
       }
     }
     await stageFiles(boxRoot, [briefPath, newRelativePath]);
+    const name = briefNameFromPath(briefPath);
+    const session = await getReadingSession(boxRoot, briefPath);
+    const allActions = session.actions;
+
+    // Build body lines
+    const bodyLines: string[] = [];
+    if (allActions.length > 0) {
+      bodyLines.push(`- ${allActions.map((a) => a.charAt(0).toUpperCase() + a.slice(1)).join(", ")}`);
+    }
+    if (selectedReactions && selectedReactions.length > 0) {
+      bodyLines.push(`- Reactions: ${selectedReactions.map((r) => r.id).join(", ")}`);
+    }
+    const thumbsUp = itemFeedback?.filter((f) => f.feedback === "thumbs-up").length ?? 0;
+    const thumbsDown = itemFeedback?.filter((f) => f.feedback === "thumbs-down").length ?? 0;
+    const thumbsParts: string[] = [];
+    if (thumbsUp > 0) thumbsParts.push(`${thumbsUp} thumbs-up`);
+    if (thumbsDown > 0) thumbsParts.push(`${thumbsDown} thumbs-down`);
+    if (thumbsParts.length > 0) {
+      bodyLines.push(`- ${thumbsParts.join(", ")}`);
+    }
+
+    const subject = `Read "${name}" (${overallRating})`;
+    const message = bodyLines.length > 0
+      ? `${subject}\n\n${bodyLines.join("\n")}`
+      : subject;
+
     await commit(boxRoot, {
-      message: `Complete reading: ${overallRating}`,
+      message,
       trailers: {
         "Source": "webapp",
         "Endpoint": "/api/brief/complete-reading",
+        "Brief-Path": briefPath,
+        "Actions": allActions.join(", ") || "none",
         "Rating": overallRating,
-        "Reactions": selectedReactions?.length?.toString() ?? "0",
+        "Reactions": selectedReactions?.map((r) => r.id).join(", ") || "0",
         "Thumbs": itemFeedback?.length?.toString() ?? "0",
       },
+      amend: session.shouldAmend,
     });
 
     return {

@@ -12,6 +12,7 @@ const execFileAsync = promisify(execFile);
 export interface GitCommitOptions {
   message: string;
   trailers?: Record<string, string>;
+  amend?: boolean;
 }
 
 export interface GitLogEntry {
@@ -151,7 +152,11 @@ export async function commit(
     }
   }
 
-  await git(boxRoot, ["commit", "-m", message]);
+  const commitArgs = ["commit", "-m", message];
+  if (options.amend) {
+    commitArgs.push("--amend");
+  }
+  await git(boxRoot, commitArgs);
 
   // Get the commit hash
   const { stdout } = await git(boxRoot, ["rev-parse", "HEAD"]);
@@ -179,10 +184,10 @@ export async function getLog(
     ]);
 
     const entries: GitLogEntry[] = [];
-    const commits = stdout.split(String.fromCharCode(0) + "\n").filter(Boolean);
+    const commits = stdout.split(String.fromCodePoint(0) + "\n").filter(Boolean);
 
     for (const commitText of commits) {
-      const parts = commitText.split("\x00");
+      const parts = commitText.split("\u0000");
       if (parts.length < 3) continue;
 
       const [hash, date, subject, body] = parts;
@@ -296,10 +301,10 @@ export async function getLogPaginated(
     const { stdout } = await git(boxRoot, args);
 
     const entries: GitLogEntryExtended[] = [];
-    const commits = stdout.split(String.fromCharCode(0) + "\n").filter(Boolean);
+    const commits = stdout.split(String.fromCodePoint(0) + "\n").filter(Boolean);
 
     for (const commitText of commits) {
-      const parts = commitText.split("\x00");
+      const parts = commitText.split("\u0000");
       if (parts.length < 3) continue;
 
       const [hash, date, subject, body] = parts;
