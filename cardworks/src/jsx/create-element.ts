@@ -30,7 +30,7 @@ interface ProcessedChildren {
  * - Array of elements → children array
  * - Mixed strings and elements → mixed array
  */
-export function processChildren(children: unknown): ProcessedChildren {
+function processChildren(children: unknown): ProcessedChildren {
   if (children === undefined || children === null) {
     return { children: [] };
   }

@@ -1,1 +1,1 @@
-export { Card, createCard, attachCardToElements, NewCardImpl } from "./card.js";
+export { Card, createCard } from "./card.js";

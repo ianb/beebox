@@ -67,7 +67,7 @@ function basenameWithoutExt(filename: string): string {
 /**
  * Internal implementation of Card for cards loaded from disk.
  */
-export class CardImpl implements Card {
+class CardImpl implements Card {
   private readonly snapshot: string;
   private readonly fs: FileSystem;
   readonly isNew = false;
@@ -195,7 +195,7 @@ export class NewCardImpl implements Card {
  * Attach a non-enumerable card reference to an element and all its children.
  * This allows navigation from any element back to its containing card.
  */
-export function attachCardToElements(element: ElementNode, card: Card): void {
+function attachCardToElements(element: ElementNode, card: Card): void {
   Object.defineProperty(element, "card", {
     value: card,
     enumerable: false,
