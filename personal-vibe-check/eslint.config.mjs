@@ -373,9 +373,40 @@ export function vibeCheck(options) {
         "react/hook-use-state": "error",
         // Omit `={true}` on boolean JSX attributes — <Foo disabled /> not <Foo disabled={true} />
         "react/jsx-boolean-value": "error",
+        // Use shorthand <></> fragment syntax instead of <React.Fragment>
+        "react/jsx-fragments": "error",
+        // Event handler props must be named on*/handle* — onX for props, handleX for definitions
+        "react/jsx-handler-names": "error",
+        // Require key prop on elements in arrays/iterators
+        "react/jsx-key": "error",
+        // TODO: react/jsx-max-depth — investigate appropriate max depth value before enabling
+        // No .bind() or arrow functions in JSX props — causes unnecessary re-renders
+        "react/jsx-no-bind": "error",
+        // Catch accidental comment text in JSX (e.g. {/* comment */} not // comment)
+        "react/jsx-no-comment-textnodes": "error",
+        // Wrap context values in useMemo — prevents unnecessary consumer re-renders
+        "react/jsx-no-constructed-context-values": "error",
+        // Prevent leaked renders like {count && <Foo/>} rendering "0"
+        "react/jsx-no-leaked-render": "error",
+        // No javascript: URLs in JSX — XSS risk
+        "react/jsx-no-script-url": "error",
+        // Don't spread the same props object more than once
+        "react/jsx-props-no-spread-multi": "error",
+        // Enforce consistent spacing: <tag /> and <tag></tag> (no space before closing >)
+        "react/jsx-tag-spacing": [
+          "error",
+          {
+            closingSlash: "never",
+            beforeSelfClosing: "always",
+            afterOpening: "never",
+            beforeClosing: "never",
+          },
+        ],
         // NOTE: react/forbid-elements is not enabled globally but is useful per-project
         // to enforce a component vocabulary (e.g. ban <button> in favor of <Button>).
         // Enable it in your project's eslint config with the elements you want to restrict.
+        // NOTE: react/jsx-no-duplicate-props and react/jsx-no-undef are skipped —
+        // TypeScript already catches duplicate JSX attributes and undefined components.
       }
     : {};
 
