@@ -403,11 +403,17 @@ export function vibeCheck(options) {
             beforeClosing: "never",
           },
         ],
+        // Catch deprecated React APIs (createClass, componentWillMount, etc.)
+        "react/no-deprecated": "error",
+        // Catch invalid HTML attribute values (e.g. bad `rel` values on <a>/<link>)
+        "react/no-invalid-html-attribute": "error",
+        // Void elements (<br>, <img>, etc.) must not have children or dangerouslySetInnerHTML
+        "react/void-dom-elements-no-children": "error",
         // NOTE: react/forbid-elements is not enabled globally but is useful per-project
         // to enforce a component vocabulary (e.g. ban <button> in favor of <Button>).
         // Enable it in your project's eslint config with the elements you want to restrict.
-        // NOTE: react/jsx-no-duplicate-props and react/jsx-no-undef are skipped —
-        // TypeScript already catches duplicate JSX attributes and undefined components.
+        // NOTE: react/jsx-no-duplicate-props, react/jsx-no-undef, and react/prop-types
+        // are skipped — TypeScript already catches these.
       }
     : {};
 
