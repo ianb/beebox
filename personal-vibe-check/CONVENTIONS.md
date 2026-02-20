@@ -29,6 +29,24 @@ npm run lint:circular  # Circular dependency detector (madge)
 - Never silently ignore errors — at minimum log them
 - Use custom error classes, not `new Error()` — enables programmatic error inspection
 
+## React Compiler Compatibility
+
+The linter enforces React Compiler rules (`react-hooks/*`). These ensure components and hooks follow patterns the compiler can optimize. Key points:
+
+- Components and hooks must be **pure** — no side effects during render
+- Never **mutate** props, state, or context — treat them as immutable
+- Don't read **mutable globals** during render — pass values as props or use context
+- Don't call **setState during render** — it causes infinite loops
+- Keep **refs** out of render output — read/write refs only in effects and handlers
+- `useMemo`/`useCallback` memoization must not be broken by surrounding code
+
+Some rules flag code that **works correctly but can't be optimized** by the compiler:
+
+- `react-hooks/unsupported-syntax` — the compiler skips this code. Refactor if possible; if the pattern is intentional, suppress with `// eslint-disable-next-line react-hooks/unsupported-syntax`
+- `react-hooks/incompatible-library` — a third-party library isn't compiler-compatible. Suppress if no alternative exists: `// eslint-disable-next-line react-hooks/incompatible-library`
+
+When suppressing these rules, add a comment explaining why.
+
 ## Code Style
 
 - **Semicolons**: always (enforced by eslint)

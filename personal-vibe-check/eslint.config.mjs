@@ -350,6 +350,22 @@ export function vibeCheck(options) {
         // React hooks
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "error",
+        // React Compiler rules — enforce patterns compatible with automatic memoization
+        "react-hooks/config": "error",
+        "react-hooks/error-boundaries": "error",
+        "react-hooks/component-hook-factories": "error",
+        "react-hooks/gating": "error",
+        "react-hooks/globals": "error",
+        "react-hooks/immutability": "error",
+        "react-hooks/preserve-manual-memoization": "error",
+        "react-hooks/purity": "error",
+        "react-hooks/refs": "error",
+        "react-hooks/set-state-in-effect": "error",
+        "react-hooks/set-state-in-render": "error",
+        "react-hooks/static-components": "error",
+        "react-hooks/unsupported-syntax": "error",
+        "react-hooks/use-memo": "error",
+        "react-hooks/incompatible-library": "error",
         // React JSX
         "react/jsx-no-useless-fragment": "error",
         "react/self-closing-comp": "error",
