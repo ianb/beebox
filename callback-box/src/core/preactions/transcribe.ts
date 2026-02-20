@@ -14,7 +14,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { PreAction, PreActionContext, PreActionResult } from "./index.js";
+import type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 import { transcribeAudio, type TranscriptionError } from "../transcription.js";
 import type { ElementNode } from "cardworks";
 

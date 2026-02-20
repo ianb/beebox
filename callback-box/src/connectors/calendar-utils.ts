@@ -7,6 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+// eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 
 export interface CalendarEvent {
@@ -288,7 +289,7 @@ export function formatEvent(event: CalendarEvent): string {
  * Plain number treated as days.
  */
 export function parseTimespan(input: string): number {
-  const match = input.match(/^(\d+)\s*([dwm]?)$/i);
+  const match = input.match(/^(\d+)\s*([dmw]?)$/i);
   if (!match) {
     throw new Error(`Invalid timespan: "${input}". Use e.g. "7d", "2w", "1m".`);
   }

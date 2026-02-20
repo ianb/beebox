@@ -49,21 +49,21 @@ function extractMainContent(html: string): string {
   // This is a basic implementation - could be improved with readability-like library
 
   // Try to find article tag content
-  const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+  const articleMatch = html.match(/<article[^>]*>([\S\s]*?)<\/article>/i);
   if (articleMatch) {
     return articleMatch[1]!;
   }
 
   // Try main tag
-  const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+  const mainMatch = html.match(/<main[^>]*>([\S\s]*?)<\/main>/i);
   if (mainMatch) {
     return mainMatch[1]!;
   }
 
   // Try common content divs
   const contentPatterns = [
-    /<div[^>]*class="[^"]*(?:article|content|post|entry)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*id="(?:article|content|post|entry)"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*(?:article|content|post|entry)[^"]*"[^>]*>([\S\s]*?)<\/div>/i,
+    /<div[^>]*id="(?:article|content|post|entry)"[^>]*>([\S\s]*?)<\/div>/i,
   ];
 
   for (const pattern of contentPatterns) {
@@ -74,7 +74,7 @@ function extractMainContent(html: string): string {
   }
 
   // Fall back to body
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const bodyMatch = html.match(/<body[^>]*>([\S\s]*?)<\/body>/i);
   if (bodyMatch) {
     return bodyMatch[1]!;
   }

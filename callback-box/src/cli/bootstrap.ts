@@ -6,7 +6,6 @@
  */
 
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 // Set TSX_TSCONFIG_PATH so tsx finds the correct tsconfig.json
 // regardless of working directory. This is needed because tsx uses
@@ -15,5 +14,5 @@ import { fileURLToPath } from "node:url";
 //
 // NOTE: This must happen BEFORE any JSX-using modules are imported.
 // Once tsx compiles a module, changing this env var won't help.
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 process.env.TSX_TSCONFIG_PATH = path.resolve(__dirname, "../../tsconfig.json");

@@ -106,7 +106,7 @@ async function executeAnswer(
 
   if (inputType === "select" && !selectedId) {
     // Check if answer is an option ID (a, b, c, etc.)
-    const optionIndex = answerArgs.answer.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, etc.
+    const optionIndex = (answerArgs.answer.codePointAt(0) ?? 0) - 97; // 'a' = 0, 'b' = 1, etc.
     if (
       answerArgs.answer.length === 1 &&
       optionIndex >= 0 &&
@@ -127,7 +127,7 @@ async function executeAnswer(
         finalAnswer = match.text;
       } else {
         const optionsList = questionOptions
-          .map((o, i) => `  ${String.fromCharCode(97 + i)}) ${o.text}`)
+          .map((o, i) => `  ${String.fromCodePoint(97 + i)}) ${o.text}`)
           .join("\n");
         return {
           success: false,

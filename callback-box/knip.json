@@ -2,14 +2,24 @@
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
     "src/cli/index.ts",
-    "src/webapp/server.ts"
+    "src/webapp/server.ts",
+    "src/schemas/index.ts",
+    "src/connectors/index.ts"
   ],
   "project": [
-    "src/**/*.{ts,tsx}"
+    "src/**/*.{ts,tsx}",
+    "!src/frontend/**"
   ],
   "exclude": [
     "enumMembers",
     "duplicates",
-    "types"
+    "types",
+    "exports"
+  ],
+  "ignoreDependencies": [
+    "@ianbicking/personal-vibe-check",
+    "@parcel/markdown-ansi",
+    "ansi-to-html",
+    "callback-dropbox"
   ]
 }

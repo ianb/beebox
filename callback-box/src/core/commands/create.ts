@@ -60,7 +60,7 @@ const TEMPLATES: Record<string, (args: CreateArgs) => string> = {
       memo: args.memo ?? "Context for this question",
       prompt: args.prompt ?? "What would you like to do?",
       options: args.options?.map((opt, i) => ({
-        id: String.fromCharCode(97 + i),
+        id: String.fromCodePoint(97 + i),
         label: opt,
       })) ?? [
         { id: "a", label: "Option A" },

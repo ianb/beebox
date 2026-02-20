@@ -26,7 +26,7 @@ function navigateToChild(el: ElementNode, pathStr: string): ElementNode | null {
   const segments = pathStr.split("/").filter(Boolean);
   let current: ElementNode = el;
   for (const seg of segments) {
-    const match = seg.match(/^(\w[\w-]*?)(?:\[(\d+)\])?$/);
+    const match = seg.match(/^(\w[\w-]*?)(?:\[(\d+)])?$/);
     if (!match) return null;
     const tagName = match[1]!;
     const idx = match[2] !== undefined ? parseInt(match[2], 10) : 0;
@@ -42,7 +42,7 @@ function navigateToChild(el: ElementNode, pathStr: string): ElementNode | null {
  * Very basic — handles single elements only.
  */
 function parseXmlFragment(xml: string): ElementNode | null {
-  const match = xml.match(/^<(\w[\w-]*)((?:\s+[\w-]+="[^"]*")*)(?:\s*\/>|>([\s\S]*?)<\/\1>)$/);
+  const match = xml.match(/^<(\w[\w-]*)((?:\s+[\w-]+="[^"]*")*)(?:\s*\/>|>([\S\s]*?)<\/\1>)$/);
   if (!match) return null;
   const tagName = match[1]!;
   const attrStr = match[2] ?? "";

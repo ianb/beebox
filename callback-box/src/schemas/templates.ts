@@ -172,7 +172,7 @@ registerTemplate({
       memo: args.memo,
       prompt: args.prompt,
       options: args.options.map((opt, i) => ({
-        id: String.fromCharCode(97 + i),
+        id: String.fromCodePoint(97 + i),
         label: opt,
       })),
     }),

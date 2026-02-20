@@ -16,6 +16,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+// eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import type { OAuth2Client } from "google-auth-library";
 import {

@@ -70,7 +70,7 @@ async function trashOne(
   let finalDestPath = destPath;
   try {
     await fs.access(destPath);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     const newName = `${parsed.name}_${timestamp}.${parsed.type}.card`;
     finalDestPath = path.join(trashDir, newName);
   } catch {

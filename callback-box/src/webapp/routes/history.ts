@@ -220,7 +220,7 @@ export async function registerHistoryRoutes(
     const { hash } = request.params;
 
     // Validate hash looks like a git hash
-    if (!/^[0-9a-f]{6,40}$/i.test(hash)) {
+    if (!/^[\da-f]{6,40}$/i.test(hash)) {
       return { hash, diff: "" };
     }
 
@@ -240,7 +240,7 @@ export async function registerHistoryRoutes(
     const limit = parseInt(request.query.limit || "100", 10);
 
     // Validate sessionId looks like a UUID
-    if (!/^[0-9a-f-]{36}$/i.test(sessionId)) {
+    if (!/^[\da-f-]{36}$/i.test(sessionId)) {
       return { sessionId, found: false, entries: [], total: 0, hasMore: false };
     }
 

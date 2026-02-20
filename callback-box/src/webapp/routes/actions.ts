@@ -244,7 +244,7 @@ export async function registerActionRoutes(
 
       // Generate a name from timestamp
       const now = new Date();
-      const name = `Voice_Memo_${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
+      const name = `Voice_Memo_${now.toISOString().replace(/[.:]/g, "-").slice(0, 19)}`;
       const cardPath = `box/inbox/${name}.memo.card`;
 
       const ctx: CommandContext = {

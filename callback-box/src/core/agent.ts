@@ -13,7 +13,6 @@ import { randomUUID } from "node:crypto";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { createWriteStream, type WriteStream } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit } from "../cli/lib/git.js";
 
@@ -73,7 +72,7 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
 }
 
 // Get the path to the cb wrapper scripts so we can add them to PATH
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 const binDir = path.resolve(__dirname, "../../bin");
 // Path to the cb-claude wrapper that auto-adds plugins
 const cbClaudePath = path.join(binDir, "cb-claude");

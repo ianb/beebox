@@ -143,7 +143,7 @@ export async function startWorkflow(
   // Create run directory
   const timestamp = new Date()
     .toISOString()
-    .replace(/[:.]/g, "")
+    .replace(/[.:]/g, "")
     .replace("T", "T")
     .slice(0, 15);
   const runDirName = `${workflowName}_${timestamp}`;
@@ -256,7 +256,7 @@ export async function workflowStatus(
     const runsDir = path.join(boxRoot, "workflow/runs");
     try {
       const dirs = await fs.readdir(runsDir);
-      const sorted = dirs.sort().reverse();
+      const sorted = dirs.toSorted().toReversed();
       if (sorted.length === 0) {
         ctx.writeLine(fmt.dim("No workflow runs found."));
         return { success: true };
@@ -928,8 +928,8 @@ async function getStepLineRange(
     let startLine: number | undefined;
     let endLine: number | undefined;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]!;
+    for (const [i, line_] of lines.entries()) {
+      const line = line_!;
       if (
         line.includes("<step") &&
         line.includes(`id="${stepId}"`)
