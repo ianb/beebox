@@ -379,7 +379,8 @@ export function vibeCheck(options) {
         "react/jsx-handler-names": "error",
         // Require key prop on elements in arrays/iterators
         "react/jsx-key": "error",
-        // TODO: react/jsx-max-depth — investigate appropriate max depth value before enabling
+        // Cap JSX nesting depth — encourages extracting sub-components
+        "react/jsx-max-depth": ["error", { max: 4 }],
         // No .bind() or arrow functions in JSX props — causes unnecessary re-renders
         "react/jsx-no-bind": "error",
         // Catch accidental comment text in JSX (e.g. {/* comment */} not // comment)
