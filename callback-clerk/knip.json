@@ -1,9 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    "src/background/service-worker.ts",
-    "src/popup/Popup.tsx",
-    "src/sidepanel/Sidepanel.tsx"
+    "src/background/index.ts",
+    "src/popup/index.tsx",
+    "src/sidepanel/index.tsx",
+    "src/content/extract.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}"
@@ -11,6 +12,12 @@
   "exclude": [
     "enumMembers",
     "duplicates",
-    "types"
+    "types",
+    "exports"
+  ],
+  "ignoreDependencies": [
+    "@ianbicking/personal-vibe-check",
+    "@types/chrome",
+    "callback-dropbox"
   ]
 }

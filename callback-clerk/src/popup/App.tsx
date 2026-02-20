@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getCredentials, type StoredCredentials } from "../lib/storage";
 import PairingView from "./PairingView";
 import StatusView from "./StatusView";
@@ -16,6 +16,14 @@ export default function App() {
     });
   }, []);
 
+  const handlePaired = useCallback((creds: StoredCredentials) => {
+    setCredentials(creds);
+  }, []);
+
+  const handleUnpair = useCallback(() => {
+    setCredentials(null);
+  }, []);
+
   if (loading) {
     return (
       <div className="p-4 text-center text-gray-500 text-sm">Loading...</div>
@@ -25,12 +33,10 @@ export default function App() {
   if (!credentials) {
     return (
       <PairingView
-        onPaired={(creds) => {
-          setCredentials(creds);
-        }}
+        onPaired={handlePaired}
       />
     );
   }
 
-  return <StatusView credentials={credentials} onUnpair={() => setCredentials(null)} />;
+  return <StatusView credentials={credentials} onUnpair={handleUnpair} />;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   getCredentials,
   getSyncState,
@@ -12,6 +12,10 @@ export default function App() {
   );
   const [syncState, setSyncState] = useState<SyncState | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleSyncNow = useCallback(() => {
+    chrome.runtime.sendMessage({ type: "syncNow" });
+  }, []);
 
   useEffect(() => {
     Promise.all([getCredentials(), getSyncState()]).then(([creds, state]) => {
@@ -67,11 +71,11 @@ export default function App() {
         <div className="text-xs text-gray-500 mt-1">
           Channel: {credentials.channelId.slice(0, 8)}...
         </div>
-        {syncState?.lastSyncAt && (
+        {syncState?.lastSyncAt ? (
           <div className="text-xs text-gray-500">
             Last sync: {new Date(syncState.lastSyncAt).toLocaleTimeString()}
           </div>
-        )}
+        ) : null}
       </section>
 
       <section className="mb-4">
@@ -86,7 +90,7 @@ export default function App() {
       <section>
         <h2 className="text-sm font-medium text-gray-500 mb-1">Actions</h2>
         <button
-          onClick={() => chrome.runtime.sendMessage({ type: "syncNow" })}
+          onClick={handleSyncNow}
           className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
         >
           Sync Now

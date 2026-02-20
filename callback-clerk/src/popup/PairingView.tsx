@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { redeemPairingCode } from "callback-dropbox/client";
 import { saveCredentials, type StoredCredentials } from "../lib/storage";
 
@@ -15,7 +15,7 @@ export default function PairingView({ onPaired }: PairingViewProps) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
@@ -37,7 +37,19 @@ export default function PairingView({ onPaired }: PairingViewProps) {
     } finally {
       setSubmitting(false);
     }
-  }
+  }, [workerUrl, code, onPaired]);
+
+  const handleCodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCode(e.target.value);
+  }, []);
+
+  const handleWorkerUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setWorkerUrl(e.target.value);
+  }, []);
+
+  const toggleAdvanced = useCallback(() => {
+    setShowAdvanced((prev) => !prev);
+  }, []);
 
   return (
     <div className="p-4">
@@ -49,7 +61,7 @@ export default function PairingView({ onPaired }: PairingViewProps) {
         <input
           type="text"
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={handleCodeChange}
           placeholder="123456"
           maxLength={6}
           className="w-full px-3 py-2 border rounded text-center text-2xl tracking-widest font-mono"
@@ -57,23 +69,23 @@ export default function PairingView({ onPaired }: PairingViewProps) {
         />
         <button
           type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
+          onClick={toggleAdvanced}
           className="text-xs text-gray-400 mt-2 hover:text-gray-600"
         >
           {showAdvanced ? "Hide" : "Advanced"}
         </button>
-        {showAdvanced && (
+        {showAdvanced ? (
           <input
             type="url"
             value={workerUrl}
-            onChange={(e) => setWorkerUrl(e.target.value)}
+            onChange={handleWorkerUrlChange}
             placeholder="Worker URL"
             className="w-full px-3 py-1.5 border rounded text-xs mt-1"
           />
-        )}
-        {error && (
+        ) : null}
+        {error ? (
           <p className="text-red-500 text-xs mt-2">{error}</p>
-        )}
+        ) : null}
         <button
           type="submit"
           disabled={submitting || code.trim().length < 6}

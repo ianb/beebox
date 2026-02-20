@@ -5,7 +5,7 @@ import {
   getSyncState,
   getPendingActions,
 } from "../lib/storage";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface StatusViewProps {
   credentials: StoredCredentials;
@@ -42,25 +42,25 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
     return () => chrome.storage.onChanged.removeListener(onChange);
   }, []);
 
-  async function handleUnpair() {
+  const handleUnpair = useCallback(async () => {
     await clearCredentials();
     chrome.runtime.sendMessage({ type: "unpaired" });
     onUnpair();
-  }
+  }, [onUnpair]);
 
-  async function handleOpenSidePanel() {
+  const handleOpenSidePanel = useCallback(async () => {
     const win = await chrome.windows.getCurrent();
     if (win.id != null) {
       await chrome.sidePanel.open({ windowId: win.id });
     }
     window.close();
-  }
+  }, []);
 
-  function handleSyncNow() {
+  const handleSyncNow = useCallback(() => {
     chrome.runtime.sendMessage({ type: "syncNow" });
-  }
+  }, []);
 
-  async function handleSend(e: React.FormEvent) {
+  const handleSend = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
     setSending(true);
@@ -73,9 +73,20 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
         setTimeout(() => setSent(false), 2000);
       }
     );
-  }
+  }, [message, currentUrl]);
 
-  function handleSavePage(intent: "save" | "do") {
+  const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(e);
+    }
+  }, [handleSend]);
+
+  const handleSavePage = useCallback((intent: "save" | "do") => {
     setSavingPage(intent);
     chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       const tabId = tabs[0]?.id;
@@ -86,16 +97,24 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
         setSavingPage(null);
       });
     });
-  }
+  }, []);
 
-  function dismissAction(id: string) {
+  const handleSavePageSave = useCallback(() => {
+    handleSavePage("save");
+  }, [handleSavePage]);
+
+  const handleSavePageDo = useCallback(() => {
+    handleSavePage("do");
+  }, [handleSavePage]);
+
+  const dismissAction = useCallback((id: string) => {
     chrome.runtime.sendMessage({ type: "dismissAction", id });
-  }
+  }, []);
 
-  function openAction(action: PendingAction) {
+  const openAction = useCallback((action: PendingAction) => {
     chrome.tabs.create({ url: action.url });
-    dismissAction(action.id);
-  }
+    chrome.runtime.sendMessage({ type: "dismissAction", id: action.id });
+  }, []);
 
   return (
     <div className="p-4">
@@ -106,79 +125,52 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
           <span className="text-sm text-gray-700">Connected</span>
         </div>
 
-        {pendingActions.length > 0 && (
+        {pendingActions.length > 0 ? (
           <div className="space-y-2">
             {pendingActions.map((action) => (
-              <div
+              <PendingActionCard
                 key={action.id}
-                className="border border-amber-300 bg-amber-50 rounded p-2"
-              >
-                <div className="text-sm font-medium">{action.title}</div>
-                <div className="text-xs text-gray-500 truncate">
-                  {action.url}
-                </div>
-                {action.message && (
-                  <div className="text-xs text-gray-600 mt-1">
-                    {action.message}
-                  </div>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => openAction(action)}
-                    className="flex-1 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
-                  >
-                    Open
-                  </button>
-                  <button
-                    onClick={() => dismissAction(action.id)}
-                    className="flex-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs hover:bg-gray-200"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
+                action={action}
+                onOpen={openAction}
+                onDismiss={dismissAction}
+              />
             ))}
           </div>
-        )}
+        ) : null}
 
-        {currentUrl && (
+        {currentUrl ? (
           <div className="flex gap-2">
             <button
-              onClick={() => handleSavePage("save")}
+              onClick={handleSavePageSave}
               disabled={savingPage !== null || savedPage !== null}
               className="flex-1 px-3 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
             >
               {savedPage === "save" ? "Saved!" : savingPage === "save" ? "Saving..." : "Save"}
             </button>
             <button
-              onClick={() => handleSavePage("do")}
+              onClick={handleSavePageDo}
               disabled={savingPage !== null || savedPage !== null}
               className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {savedPage === "do" ? "Saved!" : savingPage === "do" ? "Saving..." : "Do"}
             </button>
           </div>
-        )}
+        ) : null}
 
         <form onSubmit={handleSend}>
           <textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleMessageChange}
             placeholder="Send a message..."
             rows={3}
             className="w-full px-3 py-2 border rounded text-sm resize-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend(e);
-              }
-            }}
+            onKeyDown={handleKeyDown}
           />
-          {currentUrl && (
+          {currentUrl ? (
             <div className="text-xs text-gray-400 truncate mt-1">
               {currentUrl}
             </div>
-          )}
+          ) : null}
           <button
             type="submit"
             disabled={sending || !message.trim()}
@@ -205,9 +197,9 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
 
         <div className="text-xs text-gray-400">
           Channel: {credentials.channelId.slice(0, 8)}...
-          {lastSync && (
+          {lastSync ? (
             <> &middot; Last sync: {new Date(lastSync).toLocaleTimeString()}</>
-          )}
+          ) : null}
         </div>
 
         <button
@@ -215,6 +207,50 @@ export default function StatusView({ credentials, onUnpair }: StatusViewProps) {
           className="w-full px-3 py-1.5 text-red-600 text-xs hover:text-red-800"
         >
           Disconnect
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface PendingActionCardProps {
+  action: PendingAction;
+  onOpen: (action: PendingAction) => void;
+  onDismiss: (id: string) => void;
+}
+
+function PendingActionCard({ action, onOpen, onDismiss }: PendingActionCardProps) {
+  const handleOpen = useCallback(() => {
+    onOpen(action);
+  }, [onOpen, action]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss(action.id);
+  }, [onDismiss, action.id]);
+
+  return (
+    <div className="border border-amber-300 bg-amber-50 rounded p-2">
+      <div className="text-sm font-medium">{action.title}</div>
+      <div className="text-xs text-gray-500 truncate">
+        {action.url}
+      </div>
+      {action.message ? (
+        <div className="text-xs text-gray-600 mt-1">
+          {action.message}
+        </div>
+      ) : null}
+      <div className="flex gap-2 mt-2">
+        <button
+          onClick={handleOpen}
+          className="flex-1 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+        >
+          Open
+        </button>
+        <button
+          onClick={handleDismiss}
+          className="flex-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs hover:bg-gray-200"
+        >
+          Dismiss
         </button>
       </div>
     </div>
