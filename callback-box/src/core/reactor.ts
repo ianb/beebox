@@ -25,6 +25,8 @@ export interface ReactorOptions {
   maxCycles?: number | undefined;
   /** Poll interval in seconds (0 = one-shot, default) */
   pollInterval?: number | undefined;
+  /** Skip agent invocation if only low-priority jobs remain */
+  skipLowPriority?: boolean | undefined;
   onLog?: ((text: string) => void) | undefined;
 }
 
@@ -48,6 +50,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     sync = false,
     maxCycles = 3,
     pollInterval = 0,
+    skipLowPriority = false,
     onLog,
   } = options;
 
@@ -74,28 +77,40 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     const jobsDir = path.join(boxRoot, "box/jobs");
     await fs.mkdir(jobsDir, { recursive: true });
 
-    const jobFiles = await findJobCards(jobsDir);
+    const jobCards = await findJobCards(jobsDir);
 
-    if (jobFiles.length === 0) {
+    if (jobCards.length === 0) {
       onLog?.("No pending jobs.\n");
       return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
     }
 
-    const jobPaths = jobFiles.map((f) => path.join("box/jobs", f));
-    onLog?.(fmt.header(`Found ${jobFiles.length} job(s):\n`));
-    for (const jp of jobPaths) {
-      onLog?.(`  - ${jp}\n`);
+    const hasNormalPriority = jobCards.some((j) => j.priority === "normal");
+
+    // Skip if only low-priority jobs and skipLowPriority is set
+    if (skipLowPriority && !hasNormalPriority) {
+      const count = jobCards.length;
+      onLog?.(fmt.dim(`Only ${count} low-priority job(s), skipping.\n`));
+      return { success: true, jobsProcessed: 0, jobsRemaining: count };
+    }
+
+    const jobPaths = jobCards.map((j) => path.join("box/jobs", j.file));
+    onLog?.(fmt.header(`Found ${jobCards.length} job(s):\n`));
+    for (const card of jobCards) {
+      const label = card.priority === "low" ? " (low priority)" : "";
+      onLog?.(`  - box/jobs/${card.file}${label}\n`);
     }
 
     // Read each job card to build context
     const jobDescriptions: string[] = [];
-    for (const jp of jobPaths) {
+    for (const card of jobCards) {
+      const jp = path.join("box/jobs", card.file);
       const absPath = path.join(boxRoot, jp);
+      const priorityLabel = card.priority === "low" ? " *(low priority)*" : "";
       try {
         const content = await fs.readFile(absPath, "utf-8");
-        jobDescriptions.push(`### ${jp}\n\`\`\`xml\n${content.trim()}\n\`\`\``);
+        jobDescriptions.push(`### ${jp}${priorityLabel}\n\`\`\`xml\n${content.trim()}\n\`\`\``);
       } catch {
-        jobDescriptions.push(`### ${jp}\n(could not read)`);
+        jobDescriptions.push(`### ${jp}${priorityLabel}\n(could not read)`);
       }
     }
 
@@ -105,7 +120,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     if (dryRun) {
       onLog?.("\n[DRY RUN] Would run agent with prompt:\n");
       onLog?.(userPrompt + "\n");
-      return { success: true, jobsProcessed: 0, jobsRemaining: jobFiles.length };
+      return { success: true, jobsProcessed: 0, jobsRemaining: jobCards.length };
     }
 
     // Run the agent
@@ -132,7 +147,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
 
     // Count remaining jobs
     const remaining = await findJobCards(jobsDir);
-    const processed = jobFiles.length - remaining.length;
+    const processed = jobCards.length - remaining.length;
 
     onLog?.(fmt.dim(`\nCycle complete: ${processed} processed, ${remaining.length} remaining\n`));
 
@@ -254,11 +269,39 @@ ${jobDescriptions.join("\n\n")}
 Process each job according to its type's instructions, then call \`cb finish\` for each one when done.`;
 }
 
-async function findJobCards(jobsDir: string): Promise<string[]> {
+interface JobCardInfo {
+  file: string;
+  priority: "normal" | "low";
+}
+
+async function findJobCards(jobsDir: string): Promise<JobCardInfo[]> {
+  let entries: string[];
   try {
-    const entries = await fs.readdir(jobsDir, { recursive: true });
-    return entries.filter((e) => e.endsWith(".job.card"));
+    entries = await fs.readdir(jobsDir, { recursive: true });
   } catch {
     return [];
   }
+
+  const jobFiles = entries.filter((e) => e.endsWith(".job.card"));
+  const results: JobCardInfo[] = [];
+
+  for (const file of jobFiles) {
+    let priority: "normal" | "low" = "normal";
+    try {
+      const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
+      const match = content.match(/priority="(low|normal)"/);
+      if (match?.[1] === "low") priority = "low";
+    } catch {
+      // Can't read — default to normal priority
+    }
+    results.push({ file, priority });
+  }
+
+  // Sort: normal-priority first, low-priority last
+  results.sort((a, b) => {
+    if (a.priority === b.priority) return 0;
+    return a.priority === "normal" ? -1 : 1;
+  });
+
+  return results;
 }

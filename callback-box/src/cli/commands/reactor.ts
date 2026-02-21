@@ -16,7 +16,8 @@ export const reactorCommand = new Command("reactor")
   .option("--sync", "Run sync before processing jobs")
   .option("--max-cycles <n>", "Maximum sync→process cycles (default 3)", "3")
   .option("--poll <seconds>", "Re-run every N seconds (0 = one-shot)", "0")
-  .action(async (options: { dryRun?: boolean; sync?: boolean; maxCycles: string; poll: string }) => {
+  .option("--skip-low-priority", "Skip if only low-priority jobs remain")
+  .action(async (options: { dryRun?: boolean; sync?: boolean; maxCycles: string; poll: string; skipLowPriority?: boolean }) => {
     try {
       const boxRoot = await requireBoxRoot();
 
@@ -26,6 +27,7 @@ export const reactorCommand = new Command("reactor")
         sync: options.sync,
         maxCycles: parseInt(options.maxCycles, 10),
         pollInterval: parseInt(options.poll, 10),
+        skipLowPriority: options.skipLowPriority,
         onLog: (text) => process.stdout.write(text),
       });
 
