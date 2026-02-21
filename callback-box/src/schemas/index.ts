@@ -21,6 +21,7 @@ export {
   CaptureSessionSchema,
   RecordSchema,
   RecipeSchema,
+  NewsJobSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -37,6 +38,7 @@ export type { Audio, AudioStatus } from "./audio.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
 export type { Record, RecordStatus } from "./record.js";
 export type { Recipe } from "./recipe.js";
+export type { NewsJob } from "./news-job.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -53,6 +55,7 @@ export { createAudioTemplate } from "./audio.js";
 export { createCaptureSessionTemplate } from "./capture-session.js";
 export { createRecordTemplate } from "./record.js";
 export { createRecipeTemplate } from "./recipe.js";
+export { createNewsJobTemplate } from "./news-job.js";
 
 // Re-export template registry
 export {
