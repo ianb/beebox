@@ -38,13 +38,14 @@ An intake job means new items have arrived in the inbox and need triage.
 ## Steps
 
 1. Read this job card to find the referenced items (each \`<item ref="...">\` points to an inbox card)
-2. Read each referenced item to understand what it is
-3. For each item, decide on a disposition:
+2. Check for an applicable guide — see the compiled reference in \`docs/generated/\` if available
+3. Read each referenced item to understand what it is
+4. For each item, follow the guide's triage rules and actions. Without a guide:
    - **Move** to a permanent location (e.g., \`store/\` or \`box/pool/\`) if it's worth keeping
    - **Trash** with \`cb trash <path>\` if it's not useful
    - **Ask** the user a question if you need guidance (create a question card)
-4. When all items are triaged, commit your work
-5. Run \`cb finish <this-job-file>\` to complete the job
+5. When all items are triaged, commit your work
+6. Run \`cb finish <this-job-file>\` to complete the job
 
 ## Important
 

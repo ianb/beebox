@@ -320,12 +320,27 @@ async function createGuideRevisionJobIfNeeded(boxRoot: string): Promise<string |
     return null;
   }
 
+  // Find the news guide (new format first, then legacy)
+  let guidePath: string | undefined;
+  try {
+    await fs.access(path.join(boxRoot, "config/news.guide.card"));
+    guidePath = "config/news.guide.card";
+  } catch {
+    try {
+      await fs.access(path.join(boxRoot, "config/news-guide.news-guide.card"));
+      guidePath = "config/news-guide.news-guide.card";
+    } catch {
+      // No guide found — still create the job, agent can handle it
+    }
+  }
+
   const now = getBoxTimeISO(boxRoot);
   const jobContent = createGuideRevisionJobTemplate({
     created: now,
     source: "feedback-sync",
     description: `${withFeedback.length} brief(s) with unprocessed feedback`,
     briefs: withFeedback,
+    ...(guidePath && { guide: guidePath }),
   });
 
   const datePrefix = now.slice(0, 10);

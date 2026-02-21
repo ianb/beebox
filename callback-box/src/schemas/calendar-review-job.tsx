@@ -65,13 +65,14 @@ A calendar-review job means calendar events have changed and may need attention.
 ## Steps
 
 1. Read this job card to find the changes
-2. For each change, decide if any action is needed:
+2. Check for an applicable guide — see the compiled reference in \`docs/generated/\` if available
+3. For each change, follow the guide's triage rules and actions. Without a guide:
    - **New events**: Does the user need to prepare anything? Create a memo or reminder if so.
    - **Updated events**: Note what changed (time, location, etc.). Flag significant changes.
    - **Deleted events**: Note the cancellation. Usually no action needed.
-3. Most changes need no action — just review and move on
-4. If something needs user attention, create a question card
-5. When done reviewing, commit any work and run \`cb finish <this-job-file>\`
+4. Most changes need no action — just review and move on
+5. If something needs user attention, create a question card
+6. When done reviewing, commit any work and run \`cb finish <this-job-file>\`
 
 ## Important
 

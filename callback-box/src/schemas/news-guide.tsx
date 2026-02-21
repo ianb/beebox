@@ -1,6 +1,10 @@
 /**
  * News guide schema - the theory of user for news curation.
  *
+ * @deprecated Use the generic guide schema from ./guide.tsx instead.
+ * This module is kept for backward compatibility with existing news-guide cards.
+ * New guides should use the `<guide>` element type. Migration is handled by `cb init`.
+ *
  * This is a living document that captures:
  * - What we know about the user's interests (with confidence levels)
  * - Hypotheses to test through editions
@@ -300,6 +304,8 @@ export const ReaderReactions = element("reader-reactions", {
  *   </experiments>
  * </news-guide>
  * ```
+ *
+ * @deprecated Use GuideSchema from ./guide.tsx instead.
  */
 export const NewsGuideSchema = element("news-guide", {
   attrs: {

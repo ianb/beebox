@@ -8,6 +8,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
 import { initRepo, stageAll, commit, isRepo } from "../cli/lib/git.js";
+import { createInitialGuideTemplate } from "../schemas/guide.js";
 
 const __dirname = import.meta.dirname;
 
@@ -211,6 +212,72 @@ export async function installWorkflows(boxRoot: string): Promise<string[]> {
       // Box copy differs from template — write as .orig for manual merge
       const origName = file.replace(".workflow.card", ".orig-workflow.card");
       await fs.writeFile(path.join(targetDir, origName), templateContent);
+      installed.push(`${origName} (update available)`);
+    }
+  }
+
+  return installed;
+}
+
+/** Known guide domains that get default templates */
+const GUIDE_DOMAINS = ["news", "intake", "calendar"];
+
+/**
+ * Strip ISO timestamps from guide content so we can compare
+ * template output across runs (created-at changes each time).
+ */
+function normalizeGuideForComparison(content: string): string {
+  return content.replace(
+    / (created-at|updated-at|added-at)="[^"]*"/g,
+    ""
+  );
+}
+
+/**
+ * Install default guide cards into a box.
+ *
+ * On fresh install: writes default guide cards to config/.
+ * On update: if the box's copy matches the template (ignoring timestamps),
+ * overwrites it with the latest template. If the user has modified the guide,
+ * writes the new version as a .orig-guide.card for manual merging.
+ *
+ * Skips any domain where a guide already exists from migration (e.g., news
+ * guide migrated from the legacy news-guide format).
+ *
+ * @returns List of installed/updated guide names
+ */
+export async function installGuides(boxRoot: string): Promise<string[]> {
+  const configDir = path.join(boxRoot, "config");
+  await fs.mkdir(configDir, { recursive: true });
+
+  const installed: string[] = [];
+
+  for (const domain of GUIDE_DOMAINS) {
+    const fileName = `${domain}.guide.card`;
+    const targetPath = path.join(configDir, fileName);
+    const templateContent = createInitialGuideTemplate({ name: domain });
+
+    let existingContent: string | null = null;
+    try {
+      existingContent = await fs.readFile(targetPath, "utf-8");
+    } catch {
+      // File doesn't exist yet
+    }
+
+    if (existingContent === null) {
+      // Fresh install
+      await fs.writeFile(targetPath, templateContent);
+      installed.push(fileName);
+    } else if (
+      normalizeGuideForComparison(existingContent) ===
+      normalizeGuideForComparison(templateContent)
+    ) {
+      // Template content matches (user hasn't modified it) — overwrite with latest
+      await fs.writeFile(targetPath, templateContent);
+    } else {
+      // User has modified the guide — write .orig for manual merge
+      const origName = `${domain}.orig-guide.card`;
+      await fs.writeFile(path.join(configDir, origName), templateContent);
       installed.push(`${origName} (update available)`);
     }
   }

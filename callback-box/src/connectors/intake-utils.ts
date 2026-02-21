@@ -45,7 +45,8 @@ export async function createOrAppendIntakeJob(
   const timestamp = getBoxTimeISO(opts.boxRoot)
     .replace(/[.:]/g, "-")
     .slice(0, 19);
-  const jobFilename = `${timestamp}.intake.job.card`;
+  const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
+  const jobFilename = `${timestamp}-${safeSource}.intake.job.card`;
   const jobPath = path.join(jobsDir, jobFilename);
 
   const templateOpts: Parameters<typeof createIntakeJobTemplate>[0] = {

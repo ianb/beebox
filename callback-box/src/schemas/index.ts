@@ -24,6 +24,7 @@ export {
   NewsJobSchema,
   IntakeJobSchema,
   CalendarReviewJobSchema,
+  GuideSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -43,6 +44,7 @@ export type { Recipe } from "./recipe.js";
 export type { NewsJob } from "./news-job.js";
 export type { IntakeJob } from "./intake-job.js";
 export type { CalendarReviewJob } from "./calendar-review-job.js";
+export type { Guide } from "./guide.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -62,6 +64,10 @@ export { createRecipeTemplate } from "./recipe.js";
 export { createNewsJobTemplate } from "./news-job.js";
 export { createIntakeJobTemplate } from "./intake-job.js";
 export { createCalendarReviewJobTemplate } from "./calendar-review-job.js";
+
+// Guide exports
+export { parseGuide, compileGuide, createInitialGuideTemplate } from "./guide.js";
+export type { ParsedGuide } from "./guide.js";
 
 // Re-export template registry
 export {

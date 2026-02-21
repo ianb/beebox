@@ -75,10 +75,10 @@ function buildGuideRevisionPrompt(boxRoot: string): string {
 WORKING DIRECTORY: ${boxRoot}
 
 YOUR TASK:
-Process feedback from all unprocessed briefs and update the news-guide in a single pass.
+Process feedback from all unprocessed briefs and update the guide in a single pass.
 
 OVERVIEW:
-1. Read the current news-guide
+1. Read the current guide
 2. Read each unprocessed brief and extract all feedback
 3. Synthesize all feedback together
 4. Update the guide based on the complete picture
@@ -86,9 +86,9 @@ OVERVIEW:
 
 STEP 1 - READ THE GUIDE:
 \`\`\`
-cat config/news-guide.news-guide.card
+cat config/news.guide.card
 \`\`\`
-Understand current interests, preferences, experiments, and their confidence levels.
+Understand current triage rules, actions, experiments, and their confidence levels.
 
 STEP 2 - READ EACH BRIEF AND EXTRACT FEEDBACK:
 For each brief provided, read it and note:
@@ -120,16 +120,16 @@ Look at the complete picture across ALL briefs:
 STEP 4 - UPDATE THE GUIDE:
 Based on the synthesis:
 
-**Interests:**
-- Thumbs up on a section → increase confidence on related interests
-- Thumbs down → add to disinterests or decrease confidence
-- User comments mentioning topics → evidence for interest/disinterest
+**Triage rules:**
+- Thumbs up on a section → increase confidence on related rules
+- Thumbs down → add Skip rules or decrease confidence
+- User comments mentioning topics → evidence for rule adjustments
 - Adjust confidence levels: hypothesis → low → medium → high → confirmed
 
-**Preferences:**
-- "Missing context" reaction → update structure preferences
-- "Hard to follow" → update narrative preferences
-- "Too long" / "Too shallow" → update depth preferences
+**Actions:**
+- Adjust action instructions based on feedback patterns
+- "Missing context" → update Write Brief instructions
+- "Too long" / "Too shallow" → update depth/structure in action instructions
 
 **Experiments:**
 - Add <observation> elements for each piece of evidence
@@ -155,9 +155,6 @@ to:
 <news-brief overall-rating="ok" read-at="..." guide-revision="${timestamp}">
 \`\`\`
 
-STEP 6 - UPDATE THE GUIDE TIMESTAMP:
-Update <updated-at> in the guide to reflect when this revision happened.
-
 CONFIDENCE LEVEL GUIDE:
 - hypothesis → low: First signal of interest
 - low → medium: Consistent pattern (2-3 signals)
@@ -178,15 +175,15 @@ Adding an observation to an experiment:
 </experiment>
 \`\`\`
 
-Increasing confidence based on feedback:
+Increasing confidence on a triage rule based on feedback:
 \`\`\`xml
-<topic confidence="medium" source="feedback"
-       ref="/store/archive/briefs/2026-02-03_security.news-brief.card">
-  AI and machine learning tools
-</topic>
+<rule confidence="medium" source="feedback"
+      ref="/store/archive/briefs/2026-02-03_security.news-brief.card">
+  AI and machine learning tools — prioritize these
+</rule>
 \`\`\`
 
-STEP 7 - COMMIT WITH DETAILED MESSAGE:
+STEP 6 - COMMIT WITH DETAILED MESSAGE:
 After updating the guide and marking briefs, commit with a detailed message.
 
 Use this format:

@@ -20,7 +20,8 @@ import {
 } from "./question.js";
 import { createNewsItemTemplate } from "./news-item.js";
 import { createNewsSummaryTemplate } from "./news-summary.js";
-import { createInitialGuideTemplate } from "./news-guide.js";
+import { createInitialGuideTemplate as createInitialNewsGuideTemplate } from "./news-guide.js";
+import { createInitialGuideTemplate } from "./guide.js";
 import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
 
@@ -268,9 +269,19 @@ registerTemplate({
       .describe("Feed titles to infer initial interests from"),
   }),
   generate: (args) =>
-    createInitialGuideTemplate(
+    createInitialNewsGuideTemplate(
       args.feedTitles ? { feedTitles: args.feedTitles } : {}
     ),
+});
+
+registerTemplate({
+  name: "guide",
+  description: "A generic guide card — triage rules, actions, experiments, reactions",
+  cardTypes: ["guide"],
+  argsSchema: z.object({
+    name: z.string().describe("Domain name (news, intake, calendar, or custom)"),
+  }),
+  generate: (args) => createInitialGuideTemplate({ name: args.name }),
 });
 
 registerTemplate({

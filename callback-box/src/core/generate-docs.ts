@@ -14,6 +14,7 @@ import type { ZodTypeAny } from "zod";
 import { parseXml } from "cardworks";
 import { schemas } from "../schemas/registry.js";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
+import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 
 const AGENT_GUIDE_DIR = ".callback-box";
 const AGENT_GUIDE_FILE = "agent-guide.md";
@@ -185,7 +186,88 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       }),
   ]);
 
+  // Compile guides and generate job-type rules
+  await compileGuides(boxRoot, debug);
+
   await ensureClaudeMdInclude(boxRoot);
+}
+
+/**
+ * Scan config/*.guide.card, compile each, and generate job-type rules.
+ */
+async function compileGuides(boxRoot: string, debug: boolean): Promise<void> {
+  const configDir = join(boxRoot, "config");
+  let files: string[];
+  try {
+    files = await readdir(configDir);
+  } catch {
+    return;
+  }
+
+  const guideFiles = files.filter((f) => f.endsWith(".guide.card"));
+  if (guideFiles.length === 0) return;
+
+  // job-type → list of { guidePath, appliesTo, compiledPath }
+  const jobTypeMap = new Map<string, Array<{ guidePath: string; appliesTo: string; compiledPath: string }>>();
+
+  const rulesDir = join(boxRoot, ".claude/rules");
+  await mkdir(rulesDir, { recursive: true });
+
+  for (const filename of guideFiles) {
+    const guidePath = `config/${filename}`;
+    const guideName = filename.replace(".guide.card", "");
+
+    try {
+      const content = await readFile(join(configDir, filename), "utf-8");
+      const root = await parseXml(content, filename) as Guide;
+      const parsed = parseGuide(root);
+      const compiled = compileGuide(parsed, guideName);
+      const compiledFilename = `${guideName}-guide.md`;
+      const compiledPath = `${DOCS_DIR}/${compiledFilename}`;
+
+      await writeFile(
+        join(boxRoot, compiledPath),
+        withDocId({ relativePath: compiledPath, content: compiled, debug })
+      );
+
+      // Collect job-type mappings
+      for (const jobType of parsed.jobTypes) {
+        if (!jobTypeMap.has(jobType)) {
+          jobTypeMap.set(jobType, []);
+        }
+        jobTypeMap.get(jobType)!.push({
+          guidePath,
+          appliesTo: parsed.appliesTo ?? "",
+          compiledPath,
+        });
+      }
+    } catch {
+      // Skip unparseable guide cards
+    }
+  }
+
+  // Generate a rule file for each job type
+  for (const [jobType, guides] of jobTypeMap) {
+    const ruleFilename = `guides-for-${jobType}.md`;
+    const lines: string[] = [
+      "---",
+      "paths:",
+      `  - "**/*.${jobType}.card"`,
+      "---",
+      "# Applicable Guides",
+      "",
+      "The following guides may help with processing this job. Read the relevant one(s):",
+      "",
+    ];
+
+    for (const g of guides) {
+      lines.push(`- **${g.guidePath}** — ${g.appliesTo}`);
+      lines.push(`  Compiled reference: \`${g.compiledPath}\``);
+    }
+    lines.push("");
+
+    await writeFile(join(rulesDir, ruleFilename), lines.join("\n"));
+  }
 }
 
 /**

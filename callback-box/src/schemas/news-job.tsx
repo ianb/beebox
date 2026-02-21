@@ -50,7 +50,7 @@ A news job means new RSS/news items have arrived and need processing.
 ## Steps
 
 1. Read this job card to find the referenced items (each \`<item ref="...">\` points to a news-item card)
-2. Read the news guide (\`config/news-guide.news-guide.card\`) if it exists — it describes what topics are interesting
+2. Read the news guide (\`config/news.guide.card\` or legacy \`config/news-guide.news-guide.card\`) if it exists — it describes what topics are interesting
 3. Triage: run \`cb trash <path>\` on items that aren't interesting based on the guide
 4. Fetch: run \`cb fetch-all-news --dir box/inbox/news\` to get full article content for remaining items
 5. Analyze: use \`cb process-news\` to analyze and create a brief

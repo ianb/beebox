@@ -95,10 +95,11 @@ YOUR TASK:
 Review news items in box/inbox/news/ and decide which are worth reading in full.
 
 STEP 0 - READ THE USER GUIDE:
-First, check if config/news-guide.news-guide.card exists. If it does, read it to understand:
-- User interests (topics they care about)
-- Disinterests (topics to skip/trash)
-- Preferences that might affect what's worth keeping
+First, check if config/news.guide.card exists (or the compiled reference at docs/generated/news-guide.md).
+If it does, read it to understand:
+- Triage rules (what topics to prioritize or skip)
+- Actions (what to do with different kinds of items)
+- Active experiments to keep in mind
 
 Use this to inform your triage decisions. If no guide exists, use the default criteria below.
 
@@ -135,9 +136,9 @@ NOT INTERESTING (trash):
 - Press releases without substance
 
 GUIDE-BASED CRITERIA (when guide exists):
-- Topics in <interests> with high/medium confidence → likely keep
-- Topics in <disinterests> → likely trash
-- Topics with "hypothesis" confidence → keep to test the hypothesis
+- Triage rules with high/medium confidence → follow the rule's action
+- Rules with "hypothesis" confidence → keep to test the hypothesis
+- Follow the default-action when no specific rule matches
 - When in doubt, keep—better to analyze and discard later than miss something
 
 IMPORTANT: Status is expressed by location, not attributes. Don't modify the status attribute.
@@ -294,63 +295,25 @@ Create a news-brief card from items in box/pool/news/. This is a narrative publi
 not just a list of summaries.
 
 STEP 0 - READ OR CREATE THE USER GUIDE:
-First, check if config/news-guide.news-guide.card exists. If it does, read it to understand:
-- User interests (with confidence levels)
-- Disinterests (things to avoid)
-- Preferences (depth, tone, etc.)
+First, check if config/news.guide.card exists. If it does, read it to understand:
+- Triage rules (what to prioritize or skip, with confidence levels)
+- Actions (what to do with items — Write Brief, Skip, Ask User, etc.)
 - Active experiments to test
 - Context notes that might affect curation
+
+Also check docs/generated/news-guide.md for the compiled reference version.
 
 If the guide exists but has NO active/proposed experiments (all are successful/unsuccessful/inconclusive),
 create 1-2 new experiments based on what you've learned. The guide should always have experiments to run.
 
 If no guide exists, create one:
 \`\`\`
-cb create config/news-guide.news-guide.card
-\`\`\`
-
-Then edit the file, replacing the comment placeholders with actual content inferred from
-the news sources in the pool. The guide MUST follow this schema:
-
-\`\`\`xml
-<news-guide version="1.0.0">
-  <updated-at>2026-02-01T12:00:00Z</updated-at>
-
-  <interests>
-    <topic confidence="low" source="inferred">Topic name here</topic>
-    <topic confidence="hypothesis" source="inferred">Another topic</topic>
-  </interests>
-
-  <disinterests>
-    <disinterest confidence="low" source="inferred">Thing to avoid</disinterest>
-  </disinterests>
-
-  <preferences>
-    <preference aspect="depth" confidence="low" source="inferred">
-      Description of preference
-    </preference>
-  </preferences>
-
-  <context-notes>
-    <context duration="ongoing">
-      Contextual notes about curation situation
-    </context>
-  </context-notes>
-
-  <experiments>
-    <experiment id="exp-1" status="proposed">
-      <hypothesis>What you want to test</hypothesis>
-      <approach>How to test it</approach>
-    </experiment>
-  </experiments>
-</news-guide>
+cb create config/news.guide.card -t guide --name news
 \`\`\`
 
 IMPORTANT schema rules:
-- Use <topic> inside <interests>, NOT <interest>
 - confidence must be: confirmed, high, medium, low, or hypothesis
 - source must be: user-stated, feedback, inferred, or default
-- preference aspect must be: depth, tone, frequency, format, sources, or other
 - experiment status must be: proposed, active, successful, unsuccessful, or inconclusive
 
 STEP 1 - SURVEY THE POOL:

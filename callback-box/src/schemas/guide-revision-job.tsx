@@ -34,16 +34,20 @@ export const GuideRevisionJobSchema = element("guide-revision-job", {
   attrs: {
     created: z.string().datetime({ offset: true }),
     source: z.string(),
+    /** Path to the guide being revised */
+    guide: z.string().optional(),
   },
   children: z.array(z.union([JobDescription, JobBrief])),
   instructions: `# Processing Guide Revision Jobs
 
-A guide-revision job means archived briefs have reader feedback that should inform the news guide.
+A guide-revision job means archived briefs have reader feedback that should inform a guide.
 
 ## Steps
 
-1. Read this job card to find the referenced briefs (each \`<brief ref="...">\` points to an archived brief)
-2. Read the news guide (\`config/news-guide.news-guide.card\`)
+1. Read this job card to find:
+   - The \`guide\` attribute — the path to the guide to revise (e.g., \`config/news.guide.card\`)
+   - The referenced briefs (each \`<brief ref="...">\` points to an archived brief)
+2. Read the guide card specified in the \`guide\` attribute
 3. Read each referenced brief and extract all feedback signals:
    - **Root attrs**: \`overall-rating\` (great/ok/meh), \`selected-reactions\`, \`read-at\`
    - **Section/expando attrs**: \`user-feedback="thumbs-up"\` or \`"thumbs-down"\`
@@ -51,14 +55,13 @@ A guide-revision job means archived briefs have reader feedback that should info
    - **Curation section**: \`<interest>\` refs, \`<experiment-ref>\`, \`<hypothesis>\` elements
 4. Synthesize feedback across all briefs — look for patterns in thumbs up/down, overall ratings, explicit comments
 5. Update the guide based on the complete picture:
-   - **Interests**: thumbs up → increase confidence; thumbs down → decrease or add to disinterests
-   - **Preferences**: reactions like "missing context" → structure prefs; "too long"/"too shallow" → depth prefs
+   - **Triage rules**: thumbs up → increase confidence; thumbs down → decrease confidence or add Skip rule
+   - **Actions**: adjust instructions based on feedback patterns
    - **Experiments**: add \`<observation>\` elements; mark successful/unsuccessful based on clear signals
    - Keep 1-3 active/proposed experiments
 6. Mark each processed brief with \`guide-revision="<current-timestamp>"\` attribute on the root element
-7. Update \`<updated-at>\` in the guide
-8. Commit with a detailed message summarizing the revision
-9. Run \`cb finish <this-job-file>\` to complete the job
+7. Commit with a detailed message summarizing the revision
+8. Run \`cb finish <this-job-file>\` to complete the job
 
 ## Confidence Ladder
 
@@ -85,13 +88,16 @@ export function createGuideRevisionJobTemplate(options: {
   source: string;
   description: string;
   briefs: string[];
+  /** Path to the guide being revised */
+  guide?: string;
 }): string {
   const created = options.created ?? new Date().toISOString();
+  const guideAttr = options.guide ? ` guide="${escapeAttr(options.guide)}"` : "";
   const briefElements = options.briefs
     .map((ref) => `  <brief ref="${escapeAttr(ref)}" />`)
     .join("\n");
 
-  return `<guide-revision-job created="${created}" source="${escapeAttr(options.source)}">
+  return `<guide-revision-job created="${created}" source="${escapeAttr(options.source)}"${guideAttr}>
   <description>${escapeText(options.description)}</description>
 ${briefElements}
 </guide-revision-job>

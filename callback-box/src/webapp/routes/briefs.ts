@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { CardLoader, type ElementNode } from "cardworks";
 import { parseNewsBrief, type ParsedNewsBrief, type NewsBrief } from "../../schemas/news-brief.js";
 import { parseNewsGuide, type NewsGuide } from "../../schemas/news-guide.js";
+import { parseGuide, type Guide } from "../../schemas/guide.js";
 import { stageFiles, commit, getLog } from "../../cli/lib/git.js";
 
 /**
@@ -519,20 +520,32 @@ export async function registerBriefRoutes(
 
   // GET /api/news-guide/reactions - Get reader reactions from the guide
   server.get("/api/news-guide/reactions", async (_request, _reply) => {
-    const guidePath = path.join(boxRoot, "config/news-guide.news-guide.card");
+    // Try new guide format first, fall back to legacy
+    const newGuidePath = path.join(boxRoot, "config/news.guide.card");
+    const legacyGuidePath = path.join(boxRoot, "config/news-guide.news-guide.card");
 
+    // Try new format
     try {
-      await fs.access(guidePath);
+      await fs.access(newGuidePath);
+      const loader = new CardLoader(boxRoot);
+      const card = await loader.load(newGuidePath);
+      const parsed = parseGuide(card.element as Guide);
+      return {
+        reactions: parsed.reactions.map((r) => ({
+          id: r.id,
+          sentiment: r.sentiment,
+          text: r.text,
+        })),
+      };
     } catch {
-      // No guide exists yet, return empty reactions
-      return { reactions: [] };
+      // Try legacy format
     }
 
     try {
+      await fs.access(legacyGuidePath);
       const loader = new CardLoader(boxRoot);
-      const card = await loader.load(guidePath);
+      const card = await loader.load(legacyGuidePath);
       const parsed = parseNewsGuide(card.element as NewsGuide);
-
       return {
         reactions: parsed.readerReactions.map((r) => ({
           id: r.id,
@@ -540,8 +553,7 @@ export async function registerBriefRoutes(
           text: r.text,
         })),
       };
-    } catch (err) {
-      console.error("Failed to load news guide:", err);
+    } catch {
       return { reactions: [] };
     }
   });
