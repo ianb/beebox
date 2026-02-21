@@ -2,7 +2,7 @@
  * News item card schema - RSS/Atom feed items.
  *
  * Created by the RSS connector when pulling feeds.
- * Processed by the agent during wakeup to create summaries.
+ * Processed by the reactor agent via news jobs.
  */
 
 import { element, serialize } from "cardworks";

@@ -10,7 +10,6 @@ export { validateCommand } from "./validate.js";
 export { createCommand } from "./create.js";
 export { contextCommand } from "./context.js";
 export { serveCommand } from "./serve.js";
-export { wakeupCommand } from "./wakeup.js";
 export { answerCommand } from "./answer.js";
 export { syncCommand } from "./sync.js";
 export { trashCommand } from "./trash.js";

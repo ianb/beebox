@@ -1,7 +1,7 @@
 /**
  * Pre-action registry.
  *
- * Pre-actions run during wakeup to prepare inbox items before
+ * Pre-actions run during sync to prepare inbox items before
  * they're processed by agents. Examples:
  * - Transcribe voice memos
  * - Extract text from images (OCR)

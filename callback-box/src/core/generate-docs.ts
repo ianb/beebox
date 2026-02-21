@@ -5,7 +5,7 @@
  * 1. `.callback-box/agent-guide.md` — compact, always-loaded via @-include in CLAUDE.md
  * 2. `docs/generated/*.md` — detailed reference docs, read on demand by agents
  *
- * Called by `cb init` and at the start of `cb wakeup`.
+ * Called by `cb init` and at the start of `cb reactor`.
  */
 
 import { join } from "node:path";
