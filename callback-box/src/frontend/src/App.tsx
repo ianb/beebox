@@ -316,7 +316,7 @@ function Dashboard() {
                 }}
                 className="btn btn-secondary flex-1 font-mono text-sm"
               >
-                cb sync
+                cb wakeup
               </button>
               <button
                 onClick={() => {

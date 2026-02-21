@@ -107,7 +107,7 @@ function CalendarSection() {
       </h2>
       <p className="text-sm text-gray-600 mb-4">
         Choose which calendars to sync. Events are pulled as .ics files during{" "}
-        <code className="text-xs bg-gray-100 px-1 rounded">cb sync</code>.
+        <code className="text-xs bg-gray-100 px-1 rounded">cb wakeup</code>.
       </p>
 
       <div className="space-y-1">
