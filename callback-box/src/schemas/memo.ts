@@ -6,7 +6,7 @@
  * Voice memos have audio attachments and get transcribed.
  */
 
-import { element } from "cardworks";
+import { element, escapeText, escapeAttr } from "cardworks";
 import { z } from "zod";
 
 /**
@@ -128,11 +128,11 @@ export type Memo = z.infer<typeof MemoSchema>;
  */
 export function createMemoTemplate(content: string, source?: string): string {
   const now = new Date().toISOString();
-  const sourceElement = source ? `\n  <source>${escapeXml(source)}</source>` : "";
+  const sourceElement = source ? `\n  <source>${escapeText(source)}</source>` : "";
 
   return `<memo status="new">
   <created>${now}</created>
-  <content>${escapeXml(content)}</content>${sourceElement}
+  <content>${escapeText(content)}</content>${sourceElement}
 </memo>
 `;
 }
@@ -163,31 +163,16 @@ export function createDropboxMemoTemplate(options: {
   let contextElement = "";
   if (options.context) {
     const attrs: string[] = [];
-    if (options.context.url) attrs.push(` url="${escapeXmlAttr(options.context.url)}"`);
-    if (options.context.title) attrs.push(` title="${escapeXmlAttr(options.context.title)}"`);
-    const text = options.context.selectedText ? escapeXml(options.context.selectedText) : "";
+    if (options.context.url) attrs.push(` url="${escapeAttr(options.context.url)}"`);
+    if (options.context.title) attrs.push(` title="${escapeAttr(options.context.title)}"`);
+    const text = options.context.selectedText ? escapeText(options.context.selectedText) : "";
     contextElement = `\n  <context${attrs.join("")}>${text}</context>`;
   }
 
   return `<memo status="new">
   <created>${created}</created>
-  <content>${escapeXml(options.content)}</content>
+  <content>${escapeText(options.content)}</content>
   <source>dropbox</source>${contextElement}
 </memo>
 `;
-}
-
-function escapeXmlAttr(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }

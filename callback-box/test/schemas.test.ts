@@ -82,5 +82,6 @@ test("createSelectQuestionTemplate escapes special characters", async (t) => {
 
   t.ok(template.includes("&lt;special&gt;"));
   t.ok(template.includes("&amp;"));
-  t.ok(template.includes("&quot;"));
+  // Quotes in text content don't need escaping (only in attributes)
+  t.ok(template.includes("\"this\""));
 });

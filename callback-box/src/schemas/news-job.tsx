@@ -6,7 +6,7 @@
  * creates a brief, and then calls `cb finish` to complete the job.
  */
 
-import { element } from "cardworks";
+import { element, escapeText, escapeAttr } from "cardworks";
 import { z } from "zod";
 
 /**
@@ -76,27 +76,12 @@ export function createNewsJobTemplate(options: {
 }): string {
   const created = options.created ?? new Date().toISOString();
   const itemElements = options.items
-    .map((ref) => `  <item ref="${escapeXmlAttr(ref)}" />`)
+    .map((ref) => `  <item ref="${escapeAttr(ref)}" />`)
     .join("\n");
 
-  return `<news-job created="${created}" source="${escapeXmlAttr(options.source)}">
-  <description>${escapeXml(options.description)}</description>
+  return `<news-job created="${created}" source="${escapeAttr(options.source)}">
+  <description>${escapeText(options.description)}</description>
 ${itemElements}
 </news-job>
 `;
-}
-
-function escapeXmlAttr(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }

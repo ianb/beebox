@@ -5,7 +5,7 @@
  * They can have different input types (select, text, confirm).
  */
 
-import { element } from "cardworks";
+import { element, escapeText, escapeAttr } from "cardworks";
 import { z } from "zod";
 
 /**
@@ -174,12 +174,12 @@ export function createSelectQuestionTemplate(
 ): string {
   const { memo, prompt, options } = params;
   const optionsXml = options
-    .map(opt => `    <option id="${escapeXml(opt.id)}">${escapeXml(opt.label)}</option>`)
+    .map(opt => `    <option id="${escapeAttr(opt.id)}">${escapeText(opt.label)}</option>`)
     .join("\n");
 
   return `<question status="pending">
-  <memo>${escapeXml(memo)}</memo>
-  <prompt>${escapeXml(prompt)}</prompt>
+  <memo>${escapeText(memo)}</memo>
+  <prompt>${escapeText(prompt)}</prompt>
   <input type="select">
 ${optionsXml}
   </input>
@@ -192,8 +192,8 @@ ${optionsXml}
  */
 export function createTextQuestionTemplate(memo: string, prompt: string): string {
   return `<question status="pending">
-  <memo>${escapeXml(memo)}</memo>
-  <prompt>${escapeXml(prompt)}</prompt>
+  <memo>${escapeText(memo)}</memo>
+  <prompt>${escapeText(prompt)}</prompt>
   <input type="text" />
 </question>
 `;
@@ -204,17 +204,9 @@ export function createTextQuestionTemplate(memo: string, prompt: string): string
  */
 export function createConfirmQuestionTemplate(memo: string, prompt: string): string {
   return `<question status="pending">
-  <memo>${escapeXml(memo)}</memo>
-  <prompt>${escapeXml(prompt)}</prompt>
+  <memo>${escapeText(memo)}</memo>
+  <prompt>${escapeText(prompt)}</prompt>
   <input type="confirm" />
 </question>
 `;
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

@@ -6,7 +6,7 @@
  * from referenced briefs, updates the guide, and calls `cb finish`.
  */
 
-import { element } from "cardworks";
+import { element, escapeText, escapeAttr } from "cardworks";
 import { z } from "zod";
 import { JobDescription } from "./news-job.js";
 
@@ -88,27 +88,12 @@ export function createGuideRevisionJobTemplate(options: {
 }): string {
   const created = options.created ?? new Date().toISOString();
   const briefElements = options.briefs
-    .map((ref) => `  <brief ref="${escapeXmlAttr(ref)}" />`)
+    .map((ref) => `  <brief ref="${escapeAttr(ref)}" />`)
     .join("\n");
 
-  return `<guide-revision-job created="${created}" source="${escapeXmlAttr(options.source)}">
-  <description>${escapeXml(options.description)}</description>
+  return `<guide-revision-job created="${created}" source="${escapeAttr(options.source)}">
+  <description>${escapeText(options.description)}</description>
 ${briefElements}
 </guide-revision-job>
 `;
-}
-
-function escapeXmlAttr(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
