@@ -13,7 +13,7 @@ export interface SerializeOptions {
 /**
  * Escape special XML characters in text content.
  */
-function escapeText(text: string): string {
+export function escapeText(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -23,7 +23,7 @@ function escapeText(text: string): string {
 /**
  * Escape special XML characters in attribute values.
  */
-function escapeAttr(value: string): string {
+export function escapeAttr(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

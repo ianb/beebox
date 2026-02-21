@@ -32,7 +32,12 @@ export { SchemaRegistry } from "./schema/registry.js";
 export { formatValidationError } from "./schema/format-error.js";
 
 // Serializer
-export { serialize, type SerializeOptions } from "./serialize/serialize.js";
+export {
+  serialize,
+  escapeText,
+  escapeAttr,
+  type SerializeOptions,
+} from "./serialize/serialize.js";
 
 // References
 export { parseRef, parseRefs } from "./refs/parse-ref.js";
