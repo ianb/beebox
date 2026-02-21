@@ -23,7 +23,6 @@ import {
   registerConnector,
   type Connector,
   type SyncResult,
-  type ExecuteResult,
 } from "./index.js";
 import type { DropboxConfig } from "./dropbox.js";
 import { createImageTemplate } from "../schemas/image.js";
@@ -42,7 +41,6 @@ interface CaptureConfig {
 
 class CaptureConnector implements Connector {
   name = "capture";
-  handles: string[] = [];
   produces = ["capture-session", "image", "audio"];
 
   private boxRoot: string;
@@ -307,9 +305,6 @@ class CaptureConnector implements Connector {
     return created;
   }
 
-  async execute(_cardPath: string, _dryRun: boolean): Promise<ExecuteResult> {
-    return { success: false, error: "Capture connector does not handle commands" };
-  }
 }
 
 interface SessionNote {

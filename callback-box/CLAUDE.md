@@ -91,18 +91,7 @@ This system is designed for Claude Code to run. Design for that reality:
 
 Claude Code should be able to: understand the system state, decide what to do, do it, and verify it worked—all through the CLI and filesystem. The human provides goals and answers questions; Claude Code does the work.
 
-### 7. Commands Are Data
-
-Actions with external effects are represented as command cards—files that can be inspected, edited, approved, or rejected before execution.
-
-- **Review before execution**: Commands can be held for human approval
-- **Authorization is explicit**: Command cards document *why* they're justified
-- **Dry run shows effects**: See what would happen without doing it
-- **Results are recorded**: Executed commands archive with their outcomes
-
-The command card is the "paperwork." No action happens without a paper trail.
-
-### 8. Idle by Default
+### 7. Idle by Default
 
 The system is not a daemon. It's not watching. It's not polling. It wakes up when triggered, processes what needs processing, and returns to idle.
 
@@ -122,14 +111,12 @@ This means no background resource usage, no mysterious processes, and clear boun
 ```
 /box/                    # Working state
   inbox/                 # Incoming items awaiting processing
-  commands/              # Commands ready to execute
+  jobs/                  # Pending job cards for reactor
   questions/             # Pending questions for user
   resources/             # Synced external state (calendar, contacts)
 
 /store/                  # Archives
-  archive/done/          # Successfully executed commands
-  archive/failed/        # Failed executions
-  archive/processed/     # Processed inbox items
+  archive/               # Processed items
   trash/                 # Soft-deleted items
 
 /config/                 # Configuration
@@ -169,9 +156,9 @@ External event → Connector pulls → Commits to repo → cb wakeup
 | `cb context` | Show what Claude Code would see |
 | `cb commit` | Commit with validation |
 | `cb validate` | Check cards against schemas |
-| `cb sync` | Sync with connectors |
-| `cb do` | Execute a specific command |
-| `cb exec` | Execute all ready commands |
+| `cb wakeup` | Sync with connectors and create jobs |
+| `cb reactor` | Process pending jobs |
+| `cb finish` | Complete a job |
 
 ---
 

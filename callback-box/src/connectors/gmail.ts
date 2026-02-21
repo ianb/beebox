@@ -27,7 +27,6 @@ import {
   registerConnector,
   type Connector,
   type SyncResult,
-  type ExecuteResult,
 } from "./index.js";
 import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
@@ -196,7 +195,6 @@ function buildGmailCommitMessage(notes: ThreadNote[], fileCount: number): string
 
 class GmailConnector implements Connector {
   name = "gmail";
-  handles: string[] = []; // No outbound commands yet (future: email-draft, email-send)
   produces = ["email-thread", "email-message"];
 
   private boxRoot: string;
@@ -595,12 +593,6 @@ class GmailConnector implements Connector {
     return { success: true, created, updated };
   }
 
-  async execute(_cardPath: string, _dryRun: boolean): Promise<ExecuteResult> {
-    return {
-      success: false,
-      error: "Gmail connector does not support command execution yet",
-    };
-  }
 }
 
 /**

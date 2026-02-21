@@ -1,3 +1,5 @@
+> **Note:** References to "command cards", `box/commands/`, `cb do`, and `cb execute-commands` in this document are outdated. The command card system has been removed. External actions are now handled through the reactor/jobs model.
+
 # Callback Box: Implementation Guide
 
 This document describes how to build Callback Box, complementing DESIGN.md with concrete implementation details.

@@ -485,23 +485,6 @@
         This handles moving and updating any references (including in the brief you just created).
         Leave items in pool that weren't used—they'll be available for future briefs.
 
-        STEP 5 - CREATE NOTIFICATION:
-        After creating the brief and archiving items, create a notification command card
-        so the user gets alerted in their browser. First create the card:
-        ```
-        cb create box/commands/notify-brief_&lt;date&gt;.open-tab.command.card
-        ```
-        Then edit it to contain:
-        ```xml
-        &lt;command type="open-tab" status="ready"&gt;
-          &lt;url&gt;http://localhost:3210/news/box/output/briefs/&lt;brief-filename&gt;&lt;/url&gt;
-          &lt;title&gt;&lt;brief title&gt;&lt;/title&gt;
-          &lt;message&gt;Your news brief is ready&lt;/message&gt;
-        &lt;/command&gt;
-        ```
-        Replace &lt;brief-filename&gt; with the actual filename of the brief you just created,
-        and &lt;brief title&gt; with the title you chose for the brief.
-
         COMMIT (REQUIRED — do not skip):
         You MUST commit before finishing. Uncommitted work gets a generic fallback message.
 
@@ -550,22 +533,4 @@
     </validate>
   </step>
 
-  <step id="execute">
-    <description>Execute any pending command cards (e.g. notifications)</description>
-
-    <precheck>
-      <shell>
-        count=$(ls box/commands/*.command.card 2>/dev/null | wc -l)
-        if [ "$count" -eq 0 ]; then
-          exit $CHECK_SKIP
-        fi
-        echo "Found $count command(s) to execute"
-      </shell>
-      <why>Nothing to execute if no command cards exist</why>
-    </precheck>
-
-    <run>
-      <shell>cb execute-commands</shell>
-    </run>
-  </step>
 </workflow>

@@ -18,7 +18,6 @@ import {
   registerConnector,
   type Connector,
   type SyncResult,
-  type ExecuteResult,
 } from "./index.js";
 import { createNewsItemTemplate } from "../schemas/news-item.js";
 import { createNewsJobTemplate } from "../schemas/news-job.js";
@@ -198,7 +197,6 @@ function buildRssCommitMessage(feedNotes: Map<string, string[]>): string {
 
 class RssConnector implements Connector {
   name = "rss";
-  handles: string[] = []; // RSS connector doesn't execute commands
   produces = ["news-item"];
 
   private boxRoot: string;
@@ -368,14 +366,6 @@ class RssConnector implements Connector {
       result.error = errors.join("; ");
     }
     return result;
-  }
-
-  async execute(_cardPath: string, _dryRun: boolean): Promise<ExecuteResult> {
-    // RSS connector doesn't execute commands
-    return {
-      success: false,
-      error: "RSS connector does not support command execution",
-    };
   }
 }
 

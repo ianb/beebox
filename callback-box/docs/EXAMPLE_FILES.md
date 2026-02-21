@@ -1,3 +1,5 @@
+> **Note:** References to "command cards" and `box/commands/` in this document are outdated. The command card system has been removed.
+
 # Callback Box: Example Files
 
 Concrete examples of cards, schemas, directory structure, and workflows.

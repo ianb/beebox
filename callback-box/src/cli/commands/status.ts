@@ -52,13 +52,6 @@ export const statusCommand = new Command("status")
         printCards(pending);
       }
 
-      // Commands
-      const ready = state.commands.filter(c => c.status === "ready");
-      console.log(`Commands: ${state.commands.length} total, ${ready.length} ready`);
-      if (state.commands.length > 0 && options.verbose) {
-        printCards(state.commands);
-      }
-
       // Recent activity
       if (options.verbose && state.recentActivity.length > 0) {
         console.log();

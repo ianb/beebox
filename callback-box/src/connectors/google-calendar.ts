@@ -23,7 +23,6 @@ import {
   registerConnector,
   type Connector,
   type SyncResult,
-  type ExecuteResult,
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
 import {
@@ -455,7 +454,6 @@ function buildNarrativeCommitMessage(
 
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
-  handles: string[] = [];
   produces = ["calendar-event"];
 
   private boxRoot: string;
@@ -1016,12 +1014,6 @@ class GoogleCalendarConnector implements Connector {
     return allEvents;
   }
 
-  async execute(_cardPath: string, _dryRun: boolean): Promise<ExecuteResult> {
-    return {
-      success: false,
-      error: "Google Calendar connector does not support command execution yet",
-    };
-  }
 }
 
 export function createGoogleCalendarConnector(boxRoot: string): Connector {

@@ -26,7 +26,6 @@ const INCLUDE_LINE = `@.callback-box/${AGENT_GUIDE_FILE}`;
  */
 interface ConnectorInfo {
   name: string;
-  handles: string[];
   produces: string[];
   description: string;
 }
@@ -34,25 +33,21 @@ interface ConnectorInfo {
 const CONNECTORS: ConnectorInfo[] = [
   {
     name: "rss",
-    handles: [],
     produces: ["news-item", "news-job"],
     description: "Pulls RSS/Atom feeds and creates news-item cards. Creates a news job in `box/jobs/` when new items arrive.",
   },
   {
     name: "raindrop",
-    handles: [],
     produces: ["bookmark"],
     description: "Syncs bookmarks with Raindrop.io.",
   },
   {
     name: "dropbox",
-    handles: ["open-tab"],
     produces: ["memo"],
-    description: "Relays browser notifications via Dropbox. Handles `open-tab` commands to open URLs in the user's browser.",
+    description: "Relays browser notifications via Dropbox.",
   },
   {
     name: "gmail",
-    handles: [],
     produces: ["email-thread", "email-message"],
     description: "Pulls emails from Gmail via IMAP. Creates thread directories with message cards and body text files.",
   },
@@ -197,7 +192,6 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
  * Generate the compact agent guide (always loaded via @-include).
  */
 function generateAgentGuide(workflows: WorkflowSummary[]): string {
-  const commandTypes = CONNECTORS.flatMap((c) => c.handles).filter(Boolean);
   const templates = getAllTemplates();
 
   const lines: string[] = [
@@ -212,7 +206,6 @@ function generateAgentGuide(workflows: WorkflowSummary[]): string {
     "| `box/inbox/` | Incoming items to be triaged |",
     "| `box/inbox/unhandled/` | Items with no clear destination |",
     "| `box/jobs/` | Pending job cards for the reactor to process |",
-    "| `box/commands/` | Command cards ready to execute |",
     "| `box/questions/` | Pending questions for the user |",
     "| `box/resources/` | Synced external state |",
     "| `box/output/` | Produced content (briefs, etc.) |",
@@ -278,16 +271,6 @@ function generateAgentGuide(workflows: WorkflowSummary[]): string {
 
   lines.push("");
   lines.push("Always run `cb validate <path>` after creating or editing a card.");
-
-  if (commandTypes.length > 0) {
-    lines.push("");
-    lines.push("## Commands (External Actions)");
-    lines.push("");
-    lines.push("Create command cards in `box/commands/` to trigger external actions.");
-    lines.push(`Supported command types: ${commandTypes.map((t) => `\`${t}\``).join(", ")}`);
-    lines.push("");
-    lines.push("See `docs/generated/connectors.md` for details on each connector.");
-  }
 
   lines.push("");
   lines.push("## Questions");
@@ -557,18 +540,6 @@ function generateConnectorsDocs(): string {
 
     if (c.produces.length > 0) {
       lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`cb wakeup\`)`);
-    }
-
-    if (c.handles.length > 0) {
-      lines.push(`**Handles commands:** ${c.handles.map((t) => `\`${t}\``).join(", ")}`);
-      lines.push("");
-      lines.push("To trigger this connector, create a command card in `box/commands/`:");
-      lines.push("");
-      for (const type of c.handles) {
-        lines.push("```bash");
-        lines.push(`cb create box/commands/<name>.${type}.card`);
-        lines.push("```");
-      }
     }
 
     lines.push("");

@@ -1,3 +1,5 @@
+> **Note:** References to "command cards" and `box/commands/` in this document are outdated. The command card system has been removed. External actions are now handled through the reactor/jobs model.
+
 # Callback Box: comprehensive design notes
 
 ## 1) What Callback Box is

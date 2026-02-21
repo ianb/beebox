@@ -44,9 +44,6 @@ export const contextCommand = new Command("context")
         console.log(`Inbox: ${context.inboxCount} item(s) waiting to be processed`);
       }
 
-      if (context.commandCount > 0) {
-        console.log(`Commands: ${context.commandCount} command(s) pending`);
-      }
     } catch (error) {
       console.error(`Error: ${(error as Error).message}`);
       process.exit(1);

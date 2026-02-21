@@ -4,7 +4,6 @@
  * Connectors bridge external services to the filesystem.
  * Each connector:
  * - Syncs external state with the repo (pull + push)
- * - Executes commands by pushing actions back out
  * - Transforms between external formats and cards
  */
 
@@ -12,17 +11,11 @@ export interface Connector {
   /** Unique name for this connector */
   name: string;
 
-  /** Command card types this connector can execute */
-  handles: string[];
-
   /** Card types this connector creates on sync */
   produces: string[];
 
   /** Sync external state with the repo */
   sync(): Promise<SyncResult>;
-
-  /** Execute a command card */
-  execute(cardPath: string, dryRun: boolean): Promise<ExecuteResult>;
 }
 
 export interface SyncResult {
@@ -34,12 +27,6 @@ export interface SyncResult {
   /** Job cards created during sync */
   jobs?: string[];
   error?: string;
-}
-
-export interface ExecuteResult {
-  success: boolean;
-  error?: string;
-  details?: Record<string, unknown>;
 }
 
 const registry = new Map<string, Connector>();
@@ -54,13 +41,4 @@ export function getConnector(name: string): Connector | undefined {
 
 export function getAllConnectors(): Connector[] {
   return Array.from(registry.values());
-}
-
-export function getConnectorForCardType(cardType: string): Connector | undefined {
-  for (const connector of registry.values()) {
-    if (connector.handles.includes(cardType)) {
-      return connector;
-    }
-  }
-  return undefined;
 }

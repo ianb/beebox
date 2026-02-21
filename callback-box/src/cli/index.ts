@@ -29,7 +29,6 @@ import {
   workflowCommand,
   initRulesCommand,
   pairCommand,
-  executeCommandsCommand,
   transcribeCapturesCommand,
   assembleTimelineCommand,
   googleAuthCommand,
@@ -68,7 +67,6 @@ program.addCommand(triageFeedbackCommand);
 program.addCommand(workflowCommand);
 program.addCommand(initRulesCommand);
 program.addCommand(pairCommand);
-program.addCommand(executeCommandsCommand);
 program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);
 program.addCommand(googleAuthCommand);
@@ -90,16 +88,6 @@ program
     console.log("Not yet implemented");
   });
 
-
-program
-  .command("do")
-  .description("Execute a specific command card")
-  .argument("<card>", "Command card to execute")
-  .option("--dry-run", "Preview without executing")
-  .action((card: string, options: { dryRun?: boolean }) => {
-    console.log(`cb do: would execute ${card}${options.dryRun ? " (dry run)" : ""}`);
-    console.log("Not yet implemented");
-  });
 
 program
   .command("tail")

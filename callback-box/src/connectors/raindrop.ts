@@ -19,7 +19,6 @@ import {
   registerConnector,
   type Connector,
   type SyncResult,
-  type ExecuteResult,
 } from "./index.js";
 import { createBookmarkTemplate } from "../schemas/bookmark.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
@@ -408,7 +407,6 @@ function buildRaindropPullMessage(notes: PullNote[]): string {
 
 class RaindropConnector implements Connector {
   name = "raindrop";
-  handles: string[] = [];
   produces = ["bookmark"];
 
   private boxRoot: string;
@@ -801,12 +799,6 @@ class RaindropConnector implements Connector {
     return { created, updated, removed, errors, pullNotes };
   }
 
-  async execute(_cardPath: string, _dryRun: boolean): Promise<ExecuteResult> {
-    return {
-      success: false,
-      error: "Raindrop connector does not support command execution",
-    };
-  }
 }
 
 /**

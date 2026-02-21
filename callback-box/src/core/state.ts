@@ -30,7 +30,6 @@ export interface SystemState {
   created: string;
   git: GitStatus;
   inbox: CardInfo[];
-  commands: CardInfo[];
   questions: CardInfo[];
   recentActivity: GitLogEntry[];
 }
@@ -45,7 +44,6 @@ export interface ContextOutput {
   summary: string;
   pendingQuestions: PendingQuestion[];
   inboxCount: number;
-  commandCount: number;
 }
 
 /**
@@ -135,10 +133,9 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
     throw new Error("Invalid callback box: missing marker file");
   }
 
-  const [git, inbox, commands, questions, recentActivity] = await Promise.all([
+  const [git, inbox, questions, recentActivity] = await Promise.all([
     getStatus(root),
     scanCards({ dir: getBoxDir(root, "inbox"), boxRoot: root }),
-    scanCards({ dir: getBoxDir(root, "commands"), boxRoot: root }),
     scanCards({ dir: getBoxDir(root, "questions"), boxRoot: root }),
     getLog(root, 10),
   ]);
@@ -149,7 +146,6 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
     created: metadata.created,
     git,
     inbox,
-    commands,
     questions,
     recentActivity,
   };
@@ -218,11 +214,6 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
     parts.push(`${pendingQuestions.length} pending question(s)`);
   }
 
-  if (state.commands.length > 0) {
-    const ready = state.commands.filter(c => c.status === "ready");
-    parts.push(`${state.commands.length} command(s) (${ready.length} ready)`);
-  }
-
   if (!state.git.clean) {
     const changes = state.git.modified.length + state.git.untracked.length;
     parts.push(`${changes} uncommitted change(s)`);
@@ -236,6 +227,5 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
     summary,
     pendingQuestions,
     inboxCount: state.inbox.length,
-    commandCount: state.commands.length,
   };
 }

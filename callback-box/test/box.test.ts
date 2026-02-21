@@ -26,7 +26,6 @@ test("initBox creates directory structure", async (t) => {
     const dirs = [
       "box/inbox",
       "box/questions",
-      "box/commands",
       "box/resources",
       "store/archive/done",
       "store/archive/failed",

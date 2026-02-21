@@ -135,7 +135,6 @@ export async function registerApiRoutes(
       git: state.git,
       counts: {
         inbox: state.inbox.length,
-        commands: state.commands.length,
         questions: state.questions.length,
         pendingQuestions: state.questions.filter(q => q.status === "pending").length,
       },
@@ -147,14 +146,6 @@ export async function registerApiRoutes(
     const state = await getSystemState(boxRoot);
     return {
       items: state.inbox,
-    };
-  });
-
-  // GET /api/commands - List command cards
-  server.get("/api/commands", async () => {
-    const state = await getSystemState(boxRoot);
-    return {
-      items: state.commands,
     };
   });
 

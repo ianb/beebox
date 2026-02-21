@@ -40,6 +40,5 @@ test("isCardFile", async (t) => {
 test("BOX_DIRS constants", async (t) => {
   t.equal(BOX_DIRS.inbox, "box/inbox");
   t.equal(BOX_DIRS.questions, "box/questions");
-  t.equal(BOX_DIRS.commands, "box/commands");
   t.equal(BOX_DIRS.archiveDone, "store/archive/done");
 });
