@@ -34,6 +34,7 @@ import { createDropboxMemoTemplate } from "../schemas/memo.js";
 import { createNewsItemTemplate } from "../schemas/news-item.js";
 import { createRecordTemplate } from "../schemas/record.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
+import { createOrAppendIntakeJob } from "./intake-utils.js";
 
 export interface DropboxConfig {
   workerUrl: string;
@@ -243,11 +244,33 @@ class DropboxConnector implements Connector {
       });
     }
 
+    // Create intake job for non-news inbox items
+    const jobs: string[] = [];
+    const intakeItems = created.filter(
+      (p) => !p.includes("box/inbox/news/") && p.endsWith(".card")
+    );
+    if (intakeItems.length > 0) {
+      const jobPath = await createOrAppendIntakeJob({
+        boxRoot: this.boxRoot,
+        source: "dropbox-connector",
+        items: intakeItems,
+        priority: "normal",
+        description: `Triage ${intakeItems.length} item${intakeItems.length === 1 ? "" : "s"} from Dropbox`,
+      });
+      jobs.push(jobPath);
+      await stageFiles(this.boxRoot, [jobPath]);
+      await commit(this.boxRoot, {
+        message: "Create intake job for Dropbox items",
+        trailers: { "Created-By": "dropbox-connector" },
+      });
+    }
+
     const result: SyncResult = {
       success: errors.length === 0,
       created,
       updated: [],
     };
+    if (jobs.length > 0) result.jobs = jobs;
     if (errors.length > 0) {
       result.error = errors.join("; ");
     }

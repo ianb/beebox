@@ -29,6 +29,7 @@ import { createImageTemplate } from "../schemas/image.js";
 import { createAudioTemplate } from "../schemas/audio.js";
 import { createCaptureSessionTemplate } from "../schemas/capture-session.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
+import { createOrAppendIntakeJob } from "./intake-utils.js";
 
 interface CaptureState {
   pulledSessionIds: string[];
@@ -199,11 +200,33 @@ class CaptureConnector implements Connector {
       });
     }
 
+    // Create intake job for new capture sessions
+    const jobs: string[] = [];
+    if (created.length > 0) {
+      const sessionCards = created.filter((p) => p.endsWith(".capture-session.card"));
+      if (sessionCards.length > 0) {
+        const jobPath = await createOrAppendIntakeJob({
+          boxRoot: this.boxRoot,
+          source: "capture-connector",
+          items: sessionCards,
+          priority: "low",
+          description: `Triage ${sessionCards.length} capture session${sessionCards.length === 1 ? "" : "s"}`,
+        });
+        jobs.push(jobPath);
+        await stageFiles(this.boxRoot, [jobPath]);
+        await commit(this.boxRoot, {
+          message: "Create intake job for capture sessions",
+          trailers: { "Created-By": "capture-connector" },
+        });
+      }
+    }
+
     const result: SyncResult = {
       success: errors.length === 0,
       created,
       updated: [],
     };
+    if (jobs.length > 0) result.jobs = jobs;
     if (errors.length > 0) {
       result.error = errors.join("; ");
     }

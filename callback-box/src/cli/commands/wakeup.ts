@@ -6,7 +6,8 @@
  * 2. Triage feedback (lightweight agent classifies and integrates feedback cards)
  * 3. Run housekeeping (expire old briefs)
  * 4. Run connectors (pull external data, create jobs)
- * 5. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
+ * 5. Create intake jobs for unjobbed inbox items (UI memos, etc.)
+ * 6. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
  */
 
 import * as fs from "node:fs/promises";
@@ -23,13 +24,14 @@ import { getAllConnectors } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
-import { stageAll, commit, getStatus } from "../lib/git.js";
+import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { expireOldBriefs } from "../../core/housekeeping.js";
 import { getTranscribedFeedbackCards, buildTriagePrompt } from "../../core/commands/triage-feedback.js";
 import { getUnprocessedBriefs } from "../../core/commands/process-feedback.js";
 import { runAgent, ensureAgentCommitted } from "../../core/agent.js";
 import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job.js";
 import { getBoxTimeISO } from "../lib/time.js";
+import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 
 export const wakeupCommand = new Command("wakeup")
   .description("Sync data with connectors")
@@ -164,7 +166,17 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 5: Create guide-revision jobs if needed
+    // Step 5: Create intake jobs for unjobbed inbox items
+    console.log("[Checking for unjobbed inbox items]");
+    const intakeJobs = await createIntakeJobsForUnjobbed(boxRoot);
+    if (intakeJobs > 0) {
+      console.log(`  Created intake jobs for ${intakeJobs} item(s)`);
+    } else {
+      console.log("  No unjobbed items");
+    }
+    console.log("");
+
+    // Step 6: Create guide-revision jobs if needed
     console.log("[Checking for guide revision]");
     const jobPath = await createGuideRevisionJobIfNeeded(boxRoot);
     if (jobPath) {
@@ -334,4 +346,108 @@ async function createGuideRevisionJobIfNeeded(boxRoot: string): Promise<string |
   });
 
   return jobPath;
+}
+
+/**
+ * Scan inbox for items not referenced by any pending job and create
+ * intake jobs for them. Returns the number of items covered.
+ */
+async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<number> {
+  // Subdirectories with their own pipelines — skip these
+  const EXCLUDED_SUBDIRS = ["news", "feedback", "editions"];
+
+  // Collect all refs from existing pending job cards
+  const jobsDir = path.join(boxRoot, "box/jobs");
+  const existingRefs = new Set<string>();
+  try {
+    const jobFiles = await fs.readdir(jobsDir);
+    for (const file of jobFiles) {
+      if (!file.endsWith(".job.card")) continue;
+      const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
+      // Extract all ref="..." attributes from job cards
+      for (const match of content.matchAll(/ref="([^"]+)"/g)) {
+        existingRefs.add(match[1]!);
+      }
+    }
+  } catch {
+    // No jobs dir yet
+  }
+
+  // Scan inbox for card files
+  const inboxDir = path.join(boxRoot, "box/inbox");
+  const unjobbedItems: string[] = [];
+
+  async function scanDir(dir: string): Promise<void> {
+    let entries: string[];
+    try {
+      entries = await fs.readdir(dir);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry);
+      const relPath = path.relative(boxRoot, fullPath);
+      const stat = await fs.stat(fullPath);
+
+      if (stat.isDirectory()) {
+        // Skip excluded subdirectories at the inbox root level
+        const relToInbox = path.relative(inboxDir, fullPath);
+        if (!relToInbox.includes(path.sep) && EXCLUDED_SUBDIRS.includes(relToInbox)) {
+          continue;
+        }
+        await scanDir(fullPath);
+      } else if (entry.endsWith(".card") && !existingRefs.has(relPath)) {
+        unjobbedItems.push(relPath);
+      }
+    }
+  }
+
+  await scanDir(inboxDir);
+  if (unjobbedItems.length === 0) return 0;
+
+  // Group by type for priority assignment
+  const lowPriority = unjobbedItems.filter(
+    (p) => p.includes(".capture-session.card") || p.includes(".image.card") || p.includes(".audio.card")
+  );
+  const normalPriority = unjobbedItems.filter(
+    (p) => !lowPriority.includes(p)
+  );
+
+  const jobPaths: string[] = [];
+
+  if (normalPriority.length > 0) {
+    const jobPath = await createOrAppendIntakeJob({
+      boxRoot,
+      source: "wakeup",
+      items: normalPriority,
+      priority: "normal",
+      description: `Triage ${normalPriority.length} inbox item${normalPriority.length === 1 ? "" : "s"}`,
+    });
+    jobPaths.push(jobPath);
+  }
+
+  if (lowPriority.length > 0) {
+    const jobPath = await createOrAppendIntakeJob({
+      boxRoot,
+      source: "wakeup-captures",
+      items: lowPriority,
+      priority: "low",
+      description: `Triage ${lowPriority.length} capture item${lowPriority.length === 1 ? "" : "s"}`,
+    });
+    jobPaths.push(jobPath);
+  }
+
+  if (jobPaths.length > 0) {
+    await stageFiles(boxRoot, jobPaths);
+    await commit(boxRoot, {
+      message: `Create intake jobs for ${unjobbedItems.length} unjobbed inbox item(s)`,
+      trailers: {
+        "Triggered-By": "cb wakeup",
+        Phase: "intake-jobs",
+      },
+    });
+  }
+
+  return unjobbedItems.length;
 }

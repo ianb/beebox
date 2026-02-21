@@ -22,6 +22,7 @@ import {
 } from "./index.js";
 import { createBookmarkTemplate } from "../schemas/bookmark.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
+import { createOrAppendIntakeJob } from "./intake-utils.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -522,12 +523,34 @@ class RaindropConnector implements Connector {
       errors.push(`Raindrop sync failed: ${(err as Error).message}`);
     }
 
+    // Create intake job for newly pulled bookmarks
+    const jobs: string[] = [];
+    if (created.length > 0) {
+      const bookmarkCards = created.filter((p) => p.endsWith(".bookmark.card"));
+      if (bookmarkCards.length > 0) {
+        const jobPath = await createOrAppendIntakeJob({
+          boxRoot: this.boxRoot,
+          source: "raindrop-connector",
+          items: bookmarkCards,
+          priority: "low",
+          description: `Triage ${bookmarkCards.length} new bookmark${bookmarkCards.length === 1 ? "" : "s"}`,
+        });
+        jobs.push(jobPath);
+        await stageFiles(this.boxRoot, [jobPath]);
+        await commit(this.boxRoot, {
+          message: "Create intake job for Raindrop bookmarks",
+          trailers: { "Created-By": "raindrop-connector" },
+        });
+      }
+    }
+
     const result: SyncResult = {
       success: errors.length === 0,
       created,
       updated,
     };
     if (pushed.length > 0) result.pushed = pushed;
+    if (jobs.length > 0) result.jobs = jobs;
     if (errors.length > 0) result.error = errors.join("; ");
     return result;
   }
