@@ -1,7 +1,7 @@
 /**
- * cb sync - Sync data with connectors.
+ * cb wakeup - Sync data with connectors.
  *
- * Full sync flow:
+ * Full wakeup flow:
  * 1. Run preprocessors on inbox items (transcription, etc.)
  * 2. Triage feedback (lightweight agent classifies and integrates feedback cards)
  * 3. Run housekeeping (expire old briefs)
@@ -31,7 +31,7 @@ import { runAgent, ensureAgentCommitted } from "../../core/agent.js";
 import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job.js";
 import { getBoxTimeISO } from "../lib/time.js";
 
-export const syncCommand = new Command("sync")
+export const wakeupCommand = new Command("wakeup")
   .description("Sync data with connectors")
   .option("-c, --connector <name>", "Only run specific connector")
   .option("--skip-preprocess", "Skip preprocessing step")
@@ -226,7 +226,7 @@ async function runPreprocessors(boxRoot: string): Promise<number> {
     await commit(boxRoot, {
       message: lines.join("\n"),
       trailers: {
-        "Triggered-By": "cb sync",
+        "Triggered-By": "cb wakeup",
         Phase: "pre-actions",
       },
     });
@@ -268,7 +268,7 @@ async function runTriageFeedback(boxRoot: string): Promise<number> {
         maxTurns: 10,
       },
       fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
-      fallbackTrailers: { "Triggered-By": "cb sync", Phase: "triage-feedback" },
+      fallbackTrailers: { "Triggered-By": "cb wakeup", Phase: "triage-feedback" },
       onOutput: (text) => process.stdout.write(text),
     });
   } else {
@@ -328,7 +328,7 @@ async function createGuideRevisionJobIfNeeded(boxRoot: string): Promise<string |
   await commit(boxRoot, {
     message: `Guide revision job: ${withFeedback.length} brief(s) with feedback`,
     trailers: {
-      "Triggered-By": "cb sync",
+      "Triggered-By": "cb wakeup",
       Phase: "guide-revision-check",
     },
   });

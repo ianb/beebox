@@ -184,11 +184,11 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
 }
 
 /**
- * Run `cb sync` as a subprocess.
+ * Run `cb wakeup` as a subprocess.
  */
 async function runSync(boxRoot: string, onLog?: (text: string) => void): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn("cb", ["sync"], {
+    const child = spawn("cb", ["wakeup"], {
       cwd: boxRoot,
       stdio: ["ignore", "pipe", "pipe"],
     });

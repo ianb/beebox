@@ -1,7 +1,7 @@
 /**
- * Wakeup command - Wake up and process pending items.
+ * Sync command - Sync data with connectors.
  *
- * This wraps the existing wakeup logic as a registered command.
+ * This is the core logic shared by both CLI and web API.
  */
 
 import {
@@ -9,109 +9,102 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { runWakeup, type WakeupResult } from "../wakeup.js";
-import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
+import { createRssConnector } from "../../connectors/rss.js";
+import { getAllConnectors } from "../../connectors/index.js";
 
 /**
- * Arguments for the wakeup command.
+ * Arguments for the sync command.
  */
-export interface WakeupArgs {
-  /** Show what would happen without doing it */
-  dryRun?: boolean;
-  /** Force wakeup even if another process is running */
-  force?: boolean;
+export interface SyncArgs {
+  /** Only run specific connector */
+  connector?: string;
 }
 
 /**
- * Execute the wakeup command.
+ * Execute the sync command.
  */
-async function executeWakeup(
+async function executeSync(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const wakeupArgs = args as WakeupArgs;
+  const syncArgs = args as unknown as SyncArgs;
 
-  // Check for existing lock
-  if (!wakeupArgs.force) {
-    const existingLock = await getLockInfo(ctx.boxRoot);
-    if (existingLock) {
-      return {
-        success: false,
-        error: `Another wakeup is running (PID ${existingLock.pid}, started ${existingLock.startedAt}). Use --force to override.`,
-      };
+  // Initialize connectors
+  createRssConnector(ctx.boxRoot);
+
+  const connectors = getAllConnectors();
+
+  if (connectors.length === 0) {
+    ctx.writeLine("No connectors configured.");
+    return { success: true, data: { created: 0, errors: 0 } };
+  }
+
+  // Filter by name if specified
+  const toRun = syncArgs.connector
+    ? connectors.filter((c) => c.name === syncArgs.connector)
+    : connectors;
+
+  if (toRun.length === 0) {
+    return {
+      success: false,
+      error: `Connector not found: ${syncArgs.connector}`,
+    };
+  }
+
+  let totalCreated = 0;
+  let totalErrors = 0;
+
+  for (const connector of toRun) {
+    ctx.writeLine(`Syncing ${connector.name}...`);
+
+    try {
+      const result = await connector.sync();
+
+      if (result.created.length > 0) {
+        ctx.writeLine(`  Created ${result.created.length} card(s):`);
+        for (const card of result.created) {
+          ctx.writeLine(`    - ${card}`);
+        }
+        totalCreated += result.created.length;
+      }
+
+      if (result.updated.length > 0) {
+        ctx.writeLine(`  Updated ${result.updated.length} card(s)`);
+      }
+
+      if (result.error) {
+        ctx.writeLine(`  Error: ${result.error}`);
+        totalErrors++;
+      } else if (result.created.length === 0 && result.updated.length === 0) {
+        ctx.writeLine("  No new items.");
+      }
+    } catch (err) {
+      ctx.writeLine(`  Failed: ${(err as Error).message}`);
+      totalErrors++;
     }
   }
 
-  // Acquire lock
-  const lock = await acquireLock(ctx.boxRoot);
-  if (!lock && !wakeupArgs.force) {
-    return {
-      success: false,
-      error: "Failed to acquire lock - another process may be running",
-    };
-  }
+  ctx.writeLine(`\nTotal: ${totalCreated} created, ${totalErrors} errors.`);
 
-  let result: WakeupResult;
-  try {
-    ctx.writeLine("Wakeup started");
-    ctx.writeLine("================");
-    ctx.writeLine("");
-
-    result = await runWakeup(ctx.boxRoot, {
-      dryRun: wakeupArgs.dryRun,
-      onLog: ctx.writeLine,
-    });
-
-    ctx.writeLine("================");
-    if (result.success) {
-      ctx.writeLine("Wakeup complete");
-    } else {
-      ctx.writeLine(`Wakeup failed: ${result.error}`);
-    }
-  } finally {
-    // Always release lock
-    await releaseLock(ctx.boxRoot);
-  }
-
-  if (result.success) {
-    return {
-      success: true,
-      data: {
-        phases: result.phases,
-      },
-    };
-  } else {
-    return {
-      success: false,
-      data: {
-        phases: result.phases,
-      },
-      error: result.error ?? "Unknown error",
-    };
-  }
+  return {
+    success: totalErrors === 0,
+    data: { created: totalCreated, errors: totalErrors },
+  };
 }
 
 // Register the command
 registerCommand({
   name: "wakeup",
-  description: "Wake up and process pending items",
+  description: "Sync data with connectors",
   args: [
     {
-      name: "dryRun",
-      description: "Show what would happen without doing it",
+      name: "connector",
+      description: "Only run specific connector",
       required: false,
-      default: false,
-      type: "boolean",
-    },
-    {
-      name: "force",
-      description: "Force wakeup even if another process is running",
-      required: false,
-      default: false,
-      type: "boolean",
+      type: "string",
     },
   ],
-  execute: executeWakeup,
+  execute: executeSync,
 });
 
-export { executeWakeup };
+export { executeSync };

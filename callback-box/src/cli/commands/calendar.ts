@@ -142,7 +142,7 @@ calendarCommand
     calendars.push(id);
     await saveCalendarConfig(boxRoot, { ...config, calendars });
     console.log(`Added "${id}" to synced calendars.`);
-    console.log("Run \"cb sync\" to fetch events.");
+    console.log("Run \"cb wakeup\" to fetch events.");
   });
 
 calendarCommand

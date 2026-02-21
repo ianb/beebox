@@ -556,7 +556,7 @@ function generateConnectorsDocs(): string {
     lines.push("");
 
     if (c.produces.length > 0) {
-      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`cb sync\`)`);
+      lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`cb wakeup\`)`);
     }
 
     if (c.handles.length > 0) {

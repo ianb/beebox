@@ -11,7 +11,7 @@ export { createCommand } from "./create.js";
 export { contextCommand } from "./context.js";
 export { serveCommand } from "./serve.js";
 export { answerCommand } from "./answer.js";
-export { syncCommand } from "./sync.js";
+export { wakeupCommand } from "./wakeup.js";
 export { trashCommand } from "./trash.js";
 export { moveCommand } from "./move.js";
 export { fetchNewsCommand } from "./fetch-news.js";

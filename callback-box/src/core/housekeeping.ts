@@ -100,7 +100,7 @@ export async function expireOldBriefs(
   await commit(boxRoot, {
     message: expireLines.join("\n"),
     trailers: {
-      "Triggered-By": "cb sync",
+      "Triggered-By": "cb wakeup",
       Phase: "housekeeping",
       "Briefs-Expired": String(expiredNotes.length),
     },

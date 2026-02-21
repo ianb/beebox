@@ -224,7 +224,7 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
     });
   }
 
-  // Load stubs — set env vars so child processes (cb sync, cb reactor) inherit them
+  // Load stubs — set env vars so child processes (cb wakeup, cb reactor) inherit them
   if (stubs?.time) {
     process.env.CB_TIME = stubs.time;
     log(options, `Stub time: ${stubs.time}`);
