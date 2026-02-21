@@ -23,6 +23,8 @@ import {
 import { createNewsItemTemplate } from "../schemas/news-item.js";
 import { createNewsJobTemplate } from "../schemas/news-job.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
+import { getBoxTimeISO } from "../cli/lib/time.js";
+import { boxFetch } from "../cli/lib/fetch.js";
 
 interface FeedConfig {
   url: string;
@@ -76,7 +78,7 @@ function parseRss2(data: Record<string, unknown>): FeedItem[] {
       title,
       link,
       guid,
-      published: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+      published: pubDate ? new Date(pubDate).toISOString() : getBoxTimeISO(),
     };
     if (description) feedItem.summary = stripHtml(description);
     if (author) feedItem.author = author;
@@ -117,7 +119,7 @@ function parseAtom(data: Record<string, unknown>): FeedItem[] {
       title,
       link: linkUrl,
       guid: id,
-      published: published ? new Date(published).toISOString() : new Date().toISOString(),
+      published: published ? new Date(published).toISOString() : getBoxTimeISO(),
     };
     if (summary) feedItem.summary = stripHtml(summary);
     if (author) feedItem.author = author;
@@ -254,7 +256,7 @@ class RssConnector implements Connector {
 
     for (const feed of config.feeds) {
       try {
-        const response = await fetch(feed.url);
+        const response = await boxFetch(feed.url);
         if (!response.ok) {
           errors.push(`Failed to fetch ${feed.url}: ${response.status}`);
           continue;
@@ -288,7 +290,7 @@ class RssConnector implements Connector {
         await fs.mkdir(newsDir, { recursive: true });
 
         for (const item of newItems) {
-          const timestamp = new Date().toISOString().replace(/[.:]/g, "-").slice(0, 19);
+          const timestamp = getBoxTimeISO(this.boxRoot).replace(/[.:]/g, "-").slice(0, 19);
           const filename = `${safeFilename(item.title)}_${timestamp}.news-item.card`;
           const cardPath = path.join(newsDir, filename);
 
@@ -333,12 +335,13 @@ class RssConnector implements Connector {
       const jobsDir = path.join(this.boxRoot, "box/jobs");
       await fs.mkdir(jobsDir, { recursive: true });
 
-      const timestamp = new Date().toISOString().replace(/[.:]/g, "-").slice(0, 19);
+      const timestamp = getBoxTimeISO(this.boxRoot).replace(/[.:]/g, "-").slice(0, 19);
       const jobFilename = `${timestamp}.news.job.card`;
       const jobPath = path.join(jobsDir, jobFilename);
       const jobRelPath = path.relative(this.boxRoot, jobPath);
 
       const jobContent = createNewsJobTemplate({
+        created: getBoxTimeISO(this.boxRoot),
         source: "rss-connector",
         description: `${created.length} new item${created.length === 1 ? "" : "s"} from RSS feeds`,
         items: created,

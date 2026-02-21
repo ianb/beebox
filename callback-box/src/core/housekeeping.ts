@@ -9,6 +9,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { CardLoader } from "cardworks";
 import { stageFiles, commit } from "../cli/lib/git.js";
+import { getBoxTime } from "../cli/lib/time.js";
 
 /**
  * Expire old briefs by moving them to the archive.
@@ -21,7 +22,7 @@ export async function expireOldBriefs(
   onLog?: (msg: string) => void,
 ): Promise<number> {
   const EXPIRY_DAYS = 7;
-  const now = Date.now();
+  const now = getBoxTime(boxRoot).getTime();
   const expiryMs = EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
   const unreadDir = path.join(boxRoot, "box/output/briefs");
@@ -56,7 +57,7 @@ export async function expireOldBriefs(
       try {
         const loader = new CardLoader(boxRoot);
         const card = await loader.load(fullPath);
-        card.element.attrs["read-at"] = new Date().toISOString();
+        card.element.attrs["read-at"] = getBoxTime(boxRoot).toISOString();
         card.element.attrs["read-reason"] = "expired";
         await loader.save(card);
       } catch (err) {

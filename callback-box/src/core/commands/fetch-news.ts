@@ -16,6 +16,8 @@ import {
 import { isCardFile, boxPath } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { createLoader } from "../../cli/lib/loader.js";
+import { getBoxTimeISO } from "../../cli/lib/time.js";
+import { boxFetch } from "../../cli/lib/fetch.js";
 import { serialize, createElement, type ElementNode } from "cardworks";
 
 /**
@@ -132,7 +134,7 @@ async function fetchArticle(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
+    const response = await boxFetch(url, {
       signal: controller.signal,
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; CallbackBox/1.0; +https://github.com/example/callback-box)",
@@ -211,7 +213,7 @@ async function executeFetchNews(
 
   const url = linkElement.text;
   const timeout = fetchArgs.timeout ?? 30000;
-  const now = new Date().toISOString();
+  const now = getBoxTimeISO(ctx.boxRoot);
 
   ctx.writeLine(`Fetching: ${url}`);
 

@@ -7,16 +7,18 @@ import * as path from "node:path";
 import { lintAll, lintCards, formatLintResults, type LintSummary } from "cardworks";
 import { requireBoxRoot, isCardFile } from "../lib/paths.js";
 import { createLoader } from "../lib/loader.js";
+import { getStatus } from "../lib/git.js";
 
 export const validateCommand = new Command("validate")
   .description("Validate cards against schemas")
   .argument("[path]", "Path to validate (file or directory)")
   .option("--all", "Validate all cards in the box")
   .option("--json", "Output results as JSON")
+  .option("--committed", "Also check that git working tree is clean")
   .action(
     async (
       targetPath: string | undefined,
-      options: { all?: boolean; json?: boolean }
+      options: { all?: boolean; json?: boolean; committed?: boolean }
     ) => {
       try {
         const boxRoot = await requireBoxRoot();
@@ -58,6 +60,22 @@ export const validateCommand = new Command("validate")
             `${summary.filesChecked - summary.filesWithErrors} valid, ` +
             `${summary.filesWithErrors} with issues`
           );
+        }
+
+        // Check git cleanliness if --committed
+        if (options.committed) {
+          const status = await getStatus(boxRoot);
+          if (!status.clean) {
+            const dirty = [...status.staged, ...status.modified, ...status.untracked];
+            console.error("\nGit working tree is not clean:");
+            for (const file of dirty) {
+              console.error(`  ${file}`);
+            }
+            process.exit(1);
+          }
+          if (!options.json) {
+            console.log("Git working tree is clean.");
+          }
         }
 
         // Exit with error if any errors

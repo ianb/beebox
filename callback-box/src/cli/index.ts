@@ -36,6 +36,7 @@ import {
   calendarCommand,
   finishCommand,
   reactorCommand,
+  scenarioCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -74,6 +75,7 @@ program.addCommand(googleAuthCommand);
 program.addCommand(calendarCommand);
 program.addCommand(finishCommand);
 program.addCommand(reactorCommand);
+program.addCommand(scenarioCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

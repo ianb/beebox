@@ -257,6 +257,27 @@ export async function hasCommits(boxRoot: string): Promise<boolean> {
 }
 
 /**
+ * Create and switch to a new branch.
+ */
+export async function createBranch(boxRoot: string, name: string): Promise<void> {
+  await git(boxRoot, ["checkout", "-b", name]);
+}
+
+/**
+ * Switch to an existing branch.
+ */
+export async function checkoutBranch(boxRoot: string, name: string): Promise<void> {
+  await git(boxRoot, ["checkout", name]);
+}
+
+/**
+ * Create a lightweight tag.
+ */
+export async function createTag(boxRoot: string, name: string): Promise<void> {
+  await git(boxRoot, ["tag", name]);
+}
+
+/**
  * Extended log entry with multi-value trailer support.
  */
 export interface GitLogEntryExtended {
