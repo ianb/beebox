@@ -32,6 +32,11 @@ import {
   type CalendarConfig,
 } from "./calendar-config.js";
 import { stageFiles, commit, getStatus } from "../cli/lib/git.js";
+import {
+  createCalendarReviewJobTemplate,
+  type CalendarChangeInput,
+} from "../schemas/calendar-review-job.js";
+import { getBoxTimeISO } from "../cli/lib/time.js";
 
 interface EventFileEntry {
   filename: string;
@@ -299,6 +304,18 @@ interface SyncNote {
   summary: string;
   detail?: string;
   ref?: string;
+  /** Full ICS content for deleted events (embedded in calendar-review job) */
+  icsContent?: string;
+  /** Event start date for priority heuristic */
+  eventStart?: Date;
+}
+
+/** Parse event start as a Date (for priority heuristic) */
+function parseEventStart(event: GoogleCalendarEvent): Date | undefined {
+  const dateTime = event.start?.dateTime;
+  const dateOnly = event.start?.date;
+  if (!dateTime && !dateOnly) return undefined;
+  return dateTime ? new Date(dateTime) : new Date(dateOnly + "T00:00:00");
 }
 
 /** Format an event date for commit messages: "Thu Feb 20" or "Thu Feb 20 3:00 PM" */
@@ -632,9 +649,75 @@ class GoogleCalendarConnector implements Connector {
       }
     }
 
+    // Create calendar-review job if there are reviewable changes
+    const jobs: string[] = [];
+    const reviewableNotes = allNotes.filter(
+      (n) => n.action === "new" || n.action === "updated" || n.action === "cancelled" || n.action === "deleted"
+    );
+    if (reviewableNotes.length > 0 && !isFullResync) {
+      const jobPath = await this.createCalendarReviewJob(reviewableNotes);
+      if (jobPath) jobs.push(jobPath);
+    }
+
     const result: SyncResult = { success: true, created, updated };
     if (pushed.length > 0) result.pushed = pushed;
+    if (jobs.length > 0) result.jobs = jobs;
     return result;
+  }
+
+  /**
+   * Create a calendar-review job from sync notes.
+   * Priority heuristic: if any event starts today or tomorrow, normal; otherwise low.
+   */
+  private async createCalendarReviewJob(notes: SyncNote[]): Promise<string | null> {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 2);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const hasUrgent = notes.some((n) => {
+      if (!n.eventStart) return false;
+      return n.eventStart <= tomorrow;
+    });
+    const priority = hasUrgent ? "normal" : "low";
+
+    const changes: CalendarChangeInput[] = notes.map((n) => {
+      const action = n.action === "cancelled" ? "deleted" : n.action;
+      const change: CalendarChangeInput = {
+        action: action as "new" | "updated" | "deleted",
+        summary: n.summary + (n.detail ? ` — ${n.detail}` : ""),
+      };
+      if (n.ref) change.ref = n.ref;
+      if (n.icsContent) change.icsContent = n.icsContent;
+      return change;
+    });
+
+    const jobsDir = path.join(this.boxRoot, "box/jobs");
+    await fs.mkdir(jobsDir, { recursive: true });
+
+    const timestamp = getBoxTimeISO(this.boxRoot)
+      .replace(/[.:]/g, "-")
+      .slice(0, 19);
+    const jobFilename = `${timestamp}.calendar-review.job.card`;
+    const jobPath = path.join(jobsDir, jobFilename);
+    const jobRelPath = path.relative(this.boxRoot, jobPath);
+
+    const content = createCalendarReviewJobTemplate({
+      created: getBoxTimeISO(this.boxRoot),
+      source: "google-calendar",
+      description: `${changes.length} calendar change${changes.length === 1 ? "" : "s"} to review`,
+      changes,
+      priority,
+    });
+    await fs.writeFile(jobPath, content);
+
+    await stageFiles(this.boxRoot, [jobRelPath]);
+    await commit(this.boxRoot, {
+      message: "Create calendar-review job",
+      trailers: { "Created-By": "google-calendar-connector" },
+    });
+
+    return jobRelPath;
   }
 
   private async syncCalendar(opts: {
@@ -671,12 +754,21 @@ class GoogleCalendarConnector implements Connector {
           const oldName = getFilename(existingEntry);
           const filePath = path.join(calDir, oldName);
           try {
+            // Capture ICS content before deleting for calendar-review job
+            let icsContent: string | undefined;
+            try {
+              icsContent = await fs.readFile(filePath, "utf-8");
+            } catch {
+              // File already gone
+            }
             await fs.unlink(filePath);
             deleted.push(path.relative(this.boxRoot, filePath));
-            notes.push({
+            const note: SyncNote = {
               action: "cancelled",
               summary: event.summary || oldName,
-            });
+            };
+            if (icsContent) note.icsContent = icsContent;
+            notes.push(note);
           } catch (err: unknown) {
             if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
           }
@@ -707,6 +799,9 @@ class GoogleCalendarConnector implements Connector {
         }
       }
 
+      const relPath = path.relative(this.boxRoot, filePath);
+      const eventStart = parseEventStart(event);
+
       // Diff old vs new content for update notes
       if (existingEntry) {
         try {
@@ -715,30 +810,41 @@ class GoogleCalendarConnector implements Connector {
           );
           const changes = describeChanges(oldContent, icsContent);
           if (changes.length > 0) {
-            notes.push({
+            const note: SyncNote = {
               action: "updated",
               summary: event.summary || filename,
               detail: changes.join(", "),
-            });
+              ref: relPath,
+            };
+            if (eventStart) note.eventStart = eventStart;
+            notes.push(note);
           }
           // If no visible changes, skip the note (just metadata refresh)
         } catch {
           // Old file unreadable — treat as simple update
-          notes.push({ action: "updated", summary: event.summary || filename });
+          const note: SyncNote = {
+            action: "updated",
+            summary: event.summary || filename,
+            ref: relPath,
+          };
+          if (eventStart) note.eventStart = eventStart;
+          notes.push(note);
         }
       } else {
         // New event from Google
         const dateStr = formatEventDate(event);
         const calLabel = icsOpts.calendarName && calendarId !== "primary"
           ? `, ${icsOpts.calendarName}` : "";
-        notes.push({
+        const note: SyncNote = {
           action: "new",
           summary: `${event.summary || "(no title)"}${dateStr ? ` (${dateStr}${calLabel})` : ""}`,
-        });
+          ref: relPath,
+        };
+        if (eventStart) note.eventStart = eventStart;
+        notes.push(note);
       }
 
       await fs.writeFile(filePath, icsContent);
-      const relPath = path.relative(this.boxRoot, filePath);
 
       if (existingEntry) {
         updated.push(relPath);
@@ -883,12 +989,20 @@ class GoogleCalendarConnector implements Connector {
       }
 
       console.log(`  Deleting ${filename}: ${reason}`);
+      // Capture ICS content before deleting for calendar-review job
+      let icsContent: string | undefined;
+      try {
+        icsContent = await fs.readFile(filePath, "utf-8");
+      } catch {
+        // File already gone
+      }
       const success = await this.deleteEvent(auth, { calendarId, googleEventId });
       if (success) {
         await fs.unlink(filePath);
         delete state.eventFiles[googleEventId];
         deleted.push(path.relative(this.boxRoot, filePath));
         const deleteNote: SyncNote = { action: "deleted", summary, detail: reason };
+        if (icsContent) deleteNote.icsContent = icsContent;
         if (ref) deleteNote.ref = ref;
         notes.push(deleteNote);
       } else {
