@@ -278,6 +278,13 @@ export async function createTag(boxRoot: string, name: string): Promise<void> {
 }
 
 /**
+ * Delete a tag.
+ */
+export async function deleteTag(boxRoot: string, name: string): Promise<void> {
+  await git(boxRoot, ["tag", "-d", name]);
+}
+
+/**
  * Extended log entry with multi-value trailer support.
  */
 export interface GitLogEntryExtended {

@@ -52,6 +52,7 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
   await runAgent({
     ...agentOptions,
     sessionId: agentResult.sessionId,
+    resume: true,
     prompt: COMMIT_NUDGE_PROMPT,
     maxTurns: 5,
   });
@@ -228,6 +229,8 @@ export interface AgentOptions {
   maxTurns?: number | undefined;
   /** Model to use (e.g., "claude-haiku-4-5-20251001"). Omit to use CLI default. */
   model?: string | undefined;
+  /** Resume an existing session instead of starting a new one. Requires sessionId. */
+  resume?: boolean | undefined;
 }
 
 export interface AgentResult {
@@ -261,19 +264,27 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
       "--verbose",
       "--dangerously-skip-permissions",
       "--max-turns", String(maxTurns),
-      "--session-id", sessionId,
     ];
+
+    // Resume existing session or start new one
+    if (options.resume && options.sessionId) {
+      args.push("--resume", sessionId);
+    } else {
+      args.push("--session-id", sessionId);
+    }
 
     // Add model selection if specified
     if (options.model) {
       args.push("--model", options.model);
     }
 
-    // Add system prompt with session tracking instruction
-    const sessionInstruction = `\n\nSESSION TRACKING: When making git commits, include this trailer:\n  Session: ${sessionId}\nAdd it after any other trailers in your commit messages.`;
-    const fullSystemPrompt = systemPrompt + sessionInstruction;
-    if (fullSystemPrompt) {
-      args.push("--append-system-prompt", fullSystemPrompt);
+    // Add system prompt with session tracking instruction (skip on resume — session already has it)
+    if (!options.resume) {
+      const sessionInstruction = `\n\nSESSION TRACKING: When making git commits, include this trailer:\n  Session: ${sessionId}\nAdd it after any other trailers in your commit messages.`;
+      const fullSystemPrompt = systemPrompt + sessionInstruction;
+      if (fullSystemPrompt) {
+        args.push("--append-system-prompt", fullSystemPrompt);
+      }
     }
 
     // Add the user prompt

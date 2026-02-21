@@ -13,6 +13,7 @@ import {
   createBranch,
   checkoutBranch,
   createTag,
+  deleteTag,
   commit,
   stageAll,
   getCurrentBranch,
@@ -168,9 +169,10 @@ async function runStep(params: RunStepParams): Promise<StepResult> {
     }
   }
 
-  // Create checkpoint tag if specified
+  // Create checkpoint tag if specified (force-replace if it exists from a previous run)
   if (step.checkpoint) {
     const tagName = `scenario/${options.name}/${step.checkpoint}`;
+    await deleteTag(boxRoot, tagName).catch(() => {});
     await createTag(boxRoot, tagName);
     log(options, `  Checkpoint: ${tagName}`);
   }
@@ -189,6 +191,9 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   // Load scenario and stubs
   const scenario = await loadScenario(name);
   const stubs = await loadStubs(name);
+
+  // Pre-flight: clean gitignored files from previous runs (e.g. rss-state.json)
+  await runShell(boxRoot, "git clean -fXd");
 
   // Pre-flight checks
   const currentBranch = await getCurrentBranch(boxRoot);
