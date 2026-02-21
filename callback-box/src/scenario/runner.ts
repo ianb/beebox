@@ -5,6 +5,7 @@
  * executes commands, validates outcomes, and returns to main.
  */
 
+import * as path from "node:path";
 import { runShell } from "../core/workflow/shell.js";
 import { runAgent } from "../core/agent.js";
 import {
@@ -218,7 +219,7 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
     });
   }
 
-  // Load stubs
+  // Load stubs — set env vars so child processes (cb sync, cb reactor) inherit them
   if (stubs?.time) {
     process.env.CB_TIME = stubs.time;
     log(options, `Stub time: ${stubs.time}`);
@@ -232,6 +233,9 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
       contentType: h.content_type,
     }));
     loadFetchStubs(scenarioDir, fetchStubs);
+    // Also set env var so child processes load stubs from the file
+    const stubsFilePath = path.join(scenarioDir, "stubs.yaml");
+    process.env.CB_STUBS_FILE = stubsFilePath;
     log(options, `Stub HTTP: ${stubs.http.length} pattern(s)`);
   }
 
@@ -274,6 +278,7 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   // Cleanup
   clearFetchStubs();
   delete process.env.CB_TIME;
+  delete process.env.CB_STUBS_FILE;
 
   if (!options.dryRun) {
     await checkoutBranch(boxRoot, "main");
