@@ -21,6 +21,7 @@ import {
   type ExecuteResult,
 } from "./index.js";
 import { createNewsItemTemplate } from "../schemas/news-item.js";
+import { createNewsJobTemplate } from "../schemas/news-job.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 
 interface FeedConfig {
@@ -325,9 +326,27 @@ class RssConnector implements Connector {
 
     await this.saveState(state);
 
-    // Commit if we created any cards
+    // Commit if we created any cards, and create a job
+    const jobs: string[] = [];
     if (created.length > 0) {
-      await stageFiles(this.boxRoot, created);
+      // Create a news job card referencing the new items
+      const jobsDir = path.join(this.boxRoot, "box/jobs");
+      await fs.mkdir(jobsDir, { recursive: true });
+
+      const timestamp = new Date().toISOString().replace(/[.:]/g, "-").slice(0, 19);
+      const jobFilename = `${timestamp}.news.job.card`;
+      const jobPath = path.join(jobsDir, jobFilename);
+      const jobRelPath = path.relative(this.boxRoot, jobPath);
+
+      const jobContent = createNewsJobTemplate({
+        source: "rss-connector",
+        description: `${created.length} new item${created.length === 1 ? "" : "s"} from RSS feeds`,
+        items: created,
+      });
+      await fs.writeFile(jobPath, jobContent);
+      jobs.push(jobRelPath);
+
+      await stageFiles(this.boxRoot, [...created, jobRelPath]);
       await commit(this.boxRoot, {
         message: buildRssCommitMessage(feedNotes),
         trailers: {
@@ -340,6 +359,7 @@ class RssConnector implements Connector {
       success: errors.length === 0,
       created,
       updated: [],
+      jobs,
     };
     if (errors.length > 0) {
       result.error = errors.join("; ");

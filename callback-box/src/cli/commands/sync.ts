@@ -47,6 +47,7 @@ export const syncCommand = new Command("sync")
 
     let totalCreated = 0;
     let totalPushed = 0;
+    let totalJobs = 0;
     let totalErrors = 0;
 
     for (const connector of toRun) {
@@ -69,6 +70,14 @@ export const syncCommand = new Command("sync")
             console.log(`    - ${card}`);
           }
           totalCreated += result.created.length;
+        }
+
+        if (result.jobs && result.jobs.length > 0) {
+          console.log(`  Jobs created: ${result.jobs.length}`);
+          for (const job of result.jobs) {
+            console.log(`    - ${job}`);
+          }
+          totalJobs += result.jobs.length;
         }
 
         if (result.updated.length > 0) {
@@ -94,6 +103,7 @@ export const syncCommand = new Command("sync")
     const parts: string[] = [];
     if (totalPushed > 0) parts.push(`${totalPushed} pushed`);
     parts.push(`${totalCreated} created`);
+    if (totalJobs > 0) parts.push(`${totalJobs} jobs`);
     parts.push(`${totalErrors} errors`);
     console.log(`\nTotal: ${parts.join(", ")}.`);
   });

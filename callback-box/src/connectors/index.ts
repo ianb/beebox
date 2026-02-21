@@ -31,6 +31,8 @@ export interface SyncResult {
   updated: string[];
   /** Cards that were pushed to the remote service (two-way sync) */
   pushed?: string[];
+  /** Job cards created during sync */
+  jobs?: string[];
   error?: string;
 }
 
