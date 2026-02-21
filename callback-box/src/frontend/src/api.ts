@@ -78,7 +78,6 @@ export interface ContextResponse {
     options?: string[];
   }>;
   inboxCount: number;
-  commandCount: number;
 }
 
 export interface CommandResult {

@@ -60,9 +60,6 @@ export function StatusBar({ connected, onRefresh }: StatusBarProps) {
             <span className="text-gray-600">
               <span className="font-medium">{status.counts.pendingQuestions}</span> questions
             </span>
-            <span className="text-gray-600">
-              <span className="font-medium">{status.counts.commands}</span> commands
-            </span>
             {!status.git.clean && (
               <span className="text-yellow-600 font-medium">Uncommitted changes</span>
             )}
