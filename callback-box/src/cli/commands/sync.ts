@@ -1,7 +1,10 @@
 /**
  * cb sync - Sync data with connectors.
  *
- * Runs connectors to sync external data (pull + push).
+ * Full sync flow:
+ * 1. Run preprocessors on inbox items (transcription, etc.)
+ * 2. Run housekeeping (expire old briefs)
+ * 3. Run connectors (pull external data, create jobs)
  */
 
 import { Command } from "commander";
@@ -13,12 +16,44 @@ import { createCaptureConnector } from "../../connectors/capture.js";
 import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { getAllConnectors } from "../../connectors/index.js";
+import { runPreActions } from "../../core/preactions/index.js";
+import { createLoader } from "../lib/loader.js";
+import { getSystemState } from "../../core/state.js";
+import { stageAll, commit, getStatus } from "../lib/git.js";
+import { expireOldBriefs } from "../../core/housekeeping.js";
 
 export const syncCommand = new Command("sync")
   .description("Sync data with connectors")
   .option("-c, --connector <name>", "Only run specific connector")
-  .action(async (options: { connector?: string }) => {
+  .option("--skip-preprocess", "Skip preprocessing step")
+  .option("--skip-housekeeping", "Skip housekeeping step")
+  .action(async (options: { connector?: string; skipPreprocess?: boolean; skipHousekeeping?: boolean }) => {
     const boxRoot = await requireBoxRoot();
+
+    // Step 1: Preprocessors
+    if (!options.skipPreprocess) {
+      console.log("[Preprocessing inbox items]");
+      const preprocessed = await runPreprocessors(boxRoot);
+      if (preprocessed > 0) {
+        console.log(`  Preprocessed ${preprocessed} item(s)`);
+      } else {
+        console.log("  No preprocessing needed");
+      }
+      console.log("");
+    }
+
+    // Step 2: Housekeeping
+    if (!options.skipHousekeeping) {
+      console.log("[Housekeeping]");
+      const expired = await expireOldBriefs(boxRoot, (msg) => console.log(msg));
+      if (expired === 0) {
+        console.log("  Nothing to clean up");
+      }
+      console.log("");
+    }
+
+    // Step 3: Connectors
+    console.log("[Running connectors]");
 
     // Initialize connectors
     createRssConnector(boxRoot);
@@ -107,3 +142,64 @@ export const syncCommand = new Command("sync")
     parts.push(`${totalErrors} errors`);
     console.log(`\nTotal: ${parts.join(", ")}.`);
   });
+
+/**
+ * Run preprocessors on all inbox items (transcription, etc.).
+ * Returns the number of items that were preprocessed.
+ */
+async function runPreprocessors(boxRoot: string): Promise<number> {
+  const state = await getSystemState(boxRoot);
+  if (state.inbox.length === 0) return 0;
+
+  const loader = createLoader(boxRoot);
+  const actionNotes: string[] = [];
+
+  for (const item of state.inbox) {
+    try {
+      const card = await loader.load(item.path);
+      const results = await runPreActions({
+        boxRoot,
+        loader,
+        card,
+        cardPath: item.path,
+      });
+
+      for (const r of results) {
+        if (r.result.modified && r.result.message) {
+          actionNotes.push(`${item.name}: ${r.result.message}`);
+        } else if (r.result.error) {
+          actionNotes.push(`${item.name}: ${r.name} failed`);
+        }
+      }
+    } catch (error) {
+      console.error(`  Error processing ${item.relativePath}: ${(error as Error).message}`);
+    }
+  }
+
+  if (actionNotes.length === 0) return 0;
+
+  // Commit pre-action changes
+  const status = await getStatus(boxRoot);
+  if (!status.clean) {
+    await stageAll(boxRoot);
+    const lines = [
+      `Pre-actions: ${actionNotes.length} item${actionNotes.length === 1 ? "" : "s"}`,
+      "",
+    ];
+    for (const note of actionNotes.slice(0, 5)) {
+      lines.push(`- ${note}`);
+    }
+    if (actionNotes.length > 5) {
+      lines.push(`  + ${actionNotes.length - 5} more`);
+    }
+    await commit(boxRoot, {
+      message: lines.join("\n"),
+      trailers: {
+        "Triggered-By": "cb sync",
+        Phase: "pre-actions",
+      },
+    });
+  }
+
+  return actionNotes.length;
+}
