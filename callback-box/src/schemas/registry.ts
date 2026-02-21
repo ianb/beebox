@@ -24,6 +24,7 @@ import { RecipeSchema } from "./recipe.js";
 import { EmailThreadSchema } from "./email-thread.js";
 import { EmailMessageSchema } from "./email-message.js";
 import { NewsJobSchema } from "./news-job.js";
+import { GuideRevisionJobSchema } from "./guide-revision-job.js";
 
 /**
  * All registered card schemas.
@@ -47,6 +48,7 @@ export const schemas: ElementSchema[] = [
   EmailThreadSchema,
   EmailMessageSchema,
   NewsJobSchema,
+  GuideRevisionJobSchema,
 ];
 
 /**
@@ -93,3 +95,4 @@ export { RecipeSchema } from "./recipe.js";
 export { EmailThreadSchema } from "./email-thread.js";
 export { EmailMessageSchema } from "./email-message.js";
 export { NewsJobSchema } from "./news-job.js";
+export { GuideRevisionJobSchema } from "./guide-revision-job.js";

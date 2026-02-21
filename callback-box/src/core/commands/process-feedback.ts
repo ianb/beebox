@@ -364,4 +364,4 @@ registerCommand({
   execute: executeProcessFeedback,
 });
 
-export { executeProcessFeedback };
+export { executeProcessFeedback, getUnprocessedBriefs };

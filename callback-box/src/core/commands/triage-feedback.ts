@@ -340,4 +340,4 @@ registerCommand({
   execute: executeTriageFeedback,
 });
 
-export { executeTriageFeedback };
+export { executeTriageFeedback, getTranscribedFeedbackCards, buildTriagePrompt };
