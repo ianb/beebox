@@ -35,6 +35,8 @@ import {
   assembleTimelineCommand,
   googleAuthCommand,
   calendarCommand,
+  finishCommand,
+  reactorCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -72,6 +74,8 @@ program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);
 program.addCommand(googleAuthCommand);
 program.addCommand(calendarCommand);
+program.addCommand(finishCommand);
+program.addCommand(reactorCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

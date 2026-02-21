@@ -28,3 +28,5 @@ export { transcribeCapturesCommand } from "./transcribe-captures.js";
 export { assembleTimelineCommand } from "./assemble-timeline.js";
 export { googleAuthCommand } from "./google-auth.js";
 export { calendarCommand } from "./calendar.js";
+export { finishCommand } from "./finish.js";
+export { reactorCommand } from "./reactor.js";
