@@ -27,6 +27,7 @@ export const BOX_DIRS = {
   connectors: "config/connectors",
   schemas: "config/schemas",
   workflows: "config/workflows",
+  schedules: "config/schedules",
 
   // Agent configuration
   claude: ".claude",

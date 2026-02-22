@@ -5,9 +5,10 @@
  * 1. Run preprocessors on inbox items (transcription, etc.)
  * 2. Triage feedback (lightweight agent classifies and integrates feedback cards)
  * 3. Run housekeeping (expire old briefs)
- * 4. Run connectors (pull external data, create jobs)
- * 5. Create intake jobs for unjobbed inbox items (UI memos, etc.)
- * 6. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
+ * 4. Run on-wakeup scheduled scripts
+ * 5. Run connectors (pull external data, create jobs) — fallback for uncovered connectors
+ * 6. Create intake jobs for unjobbed inbox items (UI memos, etc.)
+ * 7. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
  */
 
 import * as fs from "node:fs/promises";
@@ -30,8 +31,9 @@ import { getTranscribedFeedbackCards, buildTriagePrompt } from "../../core/comma
 import { getUnprocessedBriefs } from "../../core/commands/process-feedback.js";
 import { runAgent, ensureAgentCommitted } from "../../core/agent.js";
 import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job.js";
-import { getBoxTimeISO } from "../lib/time.js";
+import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
+import { runOnWakeupScripts } from "./tick-utils.js";
 
 export const wakeupCommand = new Command("wakeup")
   .description("Sync data with connectors")
@@ -76,7 +78,20 @@ export const wakeupCommand = new Command("wakeup")
       console.log("");
     }
 
-    // Step 4: Connectors
+    // Step 4: On-wakeup scheduled scripts
+    if (!options.connector) {
+      console.log("[Running on-wakeup scripts]");
+      const now = getBoxTime(boxRoot);
+      const scriptsRan = await runOnWakeupScripts(boxRoot, now);
+      if (scriptsRan > 0) {
+        console.log(`  Ran ${scriptsRan} script(s)`);
+      } else {
+        console.log("  No scripts due");
+      }
+      console.log("");
+    }
+
+    // Step 5: Connectors
     console.log("[Running connectors]");
 
     // Initialize connectors

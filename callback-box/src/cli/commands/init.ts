@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
-import { initBox, installWorkflows, installGuides } from "../../core/box.js";
+import { initBox, installWorkflows, installGuides, installSchedules } from "../../core/box.js";
 import { generateRules } from "./init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { parseXml } from "cardworks";
@@ -65,6 +65,15 @@ export const initCommand = new Command("init")
         console.log(`\nInstalled ${guides.length} guide(s) in config/`);
         for (const g of guides) {
           console.log(`  ${g}`);
+        }
+      }
+
+      // Install default scheduled scripts
+      const schedules = await installSchedules(resolve(targetPath));
+      if (schedules.length > 0) {
+        console.log(`\nInstalled ${schedules.length} schedule(s) in config/schedules/`);
+        for (const s of schedules) {
+          console.log(`  ${s}`);
         }
       }
 

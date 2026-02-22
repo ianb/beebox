@@ -1,0 +1,313 @@
+/**
+ * Scheduled script card schema - declarative scheduling for commands.
+ *
+ * Scheduled scripts define what to run and when. They live in
+ * config/schedules/ and are evaluated by `cb tick` (cron) and
+ * `cb wakeup` (on-wakeup scripts).
+ *
+ * The filename stem is the identity (e.g., check-email.scheduled-script.card).
+ */
+
+import { element } from "cardworks";
+import { z } from "zod";
+import { CronExpressionParser } from "cron-parser";
+import rrulePkg from "rrule";
+const { rrulestr } = rrulePkg;
+
+// ============================================
+// Child elements
+// ============================================
+
+export const Runs = element("runs", {
+  text: z.string(),
+});
+
+export const ScriptSource = element("source", {
+  attrs: {
+    ref: z.string().optional(),
+  },
+  text: z.string().optional(),
+});
+
+// ============================================
+// Schema
+// ============================================
+
+export const ScheduledScriptSchema = element("scheduled-script", {
+  attrs: {
+    /** Cron expression (mutually exclusive with at/rrule) */
+    cron: z.string().optional(),
+    /** ISO datetime for one-shot execution (mutually exclusive) */
+    at: z.string().optional(),
+    /** iCalendar RRULE string (mutually exclusive) */
+    rrule: z.string().optional(),
+    /** Optional end date (ISO datetime) */
+    until: z.string().optional(),
+    /** Minimum interval since last run (e.g., "5m", "1h", "1d") */
+    "not-before": z.string().optional(),
+    /** Also run during cb wakeup (subject to not-before) */
+    "on-wakeup": z.enum(["true", "false"]).optional(),
+    /** Delete card after successful execution */
+    once: z.enum(["true", "false"]).optional(),
+    /** Enable/disable without deleting */
+    enabled: z.enum(["true", "false"]).optional(),
+  },
+  children: z.array(z.union([Runs, ScriptSource])),
+  instructions: `# Scheduled Script Cards
+
+Scheduled scripts define commands to run on a schedule. They live in \`config/schedules/\`.
+
+## Schedule Types (mutually exclusive)
+- **cron**: Standard cron expression (e.g., \`0 6 * * *\` for 6am daily)
+- **at**: ISO datetime for a one-shot future execution
+- **rrule**: iCalendar RRULE for complex recurrence patterns
+
+## Attributes
+- **not-before**: Minimum time since last run. Prevents running more often than this interval even if the schedule says otherwise. Use duration strings: \`5m\`, \`1h\`, \`4h\`, \`1d\`.
+- **on-wakeup**: If \`true\`, also run opportunistically during \`cb wakeup\`, subject to not-before.
+- **once**: If \`true\`, the card is deleted after successful execution.
+- **until**: ISO datetime after which this schedule expires.
+- **enabled**: Set to \`false\` to disable without deleting.
+
+## Children
+- **<runs>**: The command to execute (required). Runs with cwd set to box root.
+- **<source>**: Optional. Why this schedule exists, with optional \`ref\` to a related card.
+
+## Guidelines
+- Set reasonable not-before values to prevent hammering external services.
+- Use on-wakeup for things that should happen whenever the agent is active.
+- For one-shot future tasks, combine \`at\` with \`once="true"\`.`,
+});
+
+export type ScheduledScript = z.infer<typeof ScheduledScriptSchema>;
+
+// ============================================
+// Parsed scheduled script
+// ============================================
+
+export interface ParsedScheduledScript {
+  cron: string | undefined;
+  at: string | undefined;
+  rrule: string | undefined;
+  until: string | undefined;
+  notBefore: string | undefined;
+  onWakeup: boolean;
+  once: boolean;
+  enabled: boolean;
+  runs: string;
+  source: { ref?: string; text?: string } | undefined;
+}
+
+function buildSource(ref: string | undefined, text: string | undefined): { ref?: string; text?: string } {
+  const result: { ref?: string; text?: string } = {};
+  if (ref) result.ref = ref;
+  if (text) result.text = text;
+  return result;
+}
+
+/**
+ * Parse a scheduled-script element into a typed structure.
+ */
+export function parseScheduledScript(script: ScheduledScript): ParsedScheduledScript {
+  const children = script.children as Array<{ tagName: string; text?: string; attrs: Record<string, unknown> }>;
+
+  const runsEl = children.find((c) => c.tagName === "runs");
+  const sourceEl = children.find((c) => c.tagName === "source");
+
+  return {
+    cron: script.attrs.cron as string | undefined,
+    at: script.attrs.at as string | undefined,
+    rrule: script.attrs.rrule as string | undefined,
+    until: script.attrs.until as string | undefined,
+    notBefore: script.attrs["not-before"] as string | undefined,
+    onWakeup: script.attrs["on-wakeup"] === "true",
+    once: script.attrs.once === "true",
+    enabled: script.attrs.enabled !== "false",
+    runs: runsEl?.text ?? "",
+    source: sourceEl
+      ? buildSource(sourceEl.attrs.ref as string | undefined, sourceEl.text)
+      : undefined,
+  };
+}
+
+// ============================================
+// Duration parsing
+// ============================================
+
+/**
+ * Parse a duration string like "5m", "1h", "1d" into milliseconds.
+ *
+ * Supported suffixes: s (seconds), m (minutes), h (hours), d (days)
+ */
+export function parseDuration(str: string): number {
+  const match = str.match(/^(\d+\.?\d*)\s*(s|m|h|d)$/);
+  if (!match) {
+    throw new Error(`Invalid duration: "${str}". Use format like "5m", "1h", "1d".`);
+  }
+
+  const value = parseFloat(match[1]!);
+  const unit = match[2]!;
+
+  switch (unit) {
+    case "s":
+      return value * 1000;
+    case "m":
+      return value * 60 * 1000;
+    case "h":
+      return value * 60 * 60 * 1000;
+    case "d":
+      return value * 24 * 60 * 60 * 1000;
+    default:
+      throw new Error(`Unknown duration unit: "${unit}"`);
+  }
+}
+
+// ============================================
+// Schedule evaluation
+// ============================================
+
+export interface ScheduleCheckContext {
+  lastRun: string | null;
+  now: Date;
+}
+
+/**
+ * Check if a scheduled script is due to run.
+ */
+export function isDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext): boolean {
+  if (!script.enabled) return false;
+
+  // Check until
+  if (script.until) {
+    const untilDate = new Date(script.until);
+    if (ctx.now > untilDate) return false;
+  }
+
+  // Check not-before (debounce)
+  if (script.notBefore && ctx.lastRun) {
+    const minInterval = parseDuration(script.notBefore);
+    const elapsed = ctx.now.getTime() - new Date(ctx.lastRun).getTime();
+    if (elapsed < minInterval) return false;
+  }
+
+  // Check schedule type
+  if (script.cron) {
+    return isCronDue(script.cron, ctx);
+  }
+
+  if (script.at) {
+    const atDate = new Date(script.at);
+    // Due if the time has passed and we haven't run yet
+    return ctx.now >= atDate && !ctx.lastRun;
+  }
+
+  if (script.rrule) {
+    return isRruleDue(script.rrule, ctx);
+  }
+
+  // No schedule type means on-wakeup only — not due for tick
+  return false;
+}
+
+/**
+ * Check if a script should run during wakeup (on-wakeup check).
+ * Only checks not-before constraint, not the cron/at/rrule schedule.
+ */
+export function isDueForWakeup(script: ParsedScheduledScript, ctx: ScheduleCheckContext): boolean {
+  if (!script.enabled) return false;
+  if (!script.onWakeup) return false;
+
+  // Check until
+  if (script.until) {
+    const untilDate = new Date(script.until);
+    if (ctx.now > untilDate) return false;
+  }
+
+  // Check not-before
+  if (script.notBefore && ctx.lastRun) {
+    const minInterval = parseDuration(script.notBefore);
+    const elapsed = ctx.now.getTime() - new Date(ctx.lastRun).getTime();
+    if (elapsed < minInterval) return false;
+  }
+
+  return true;
+}
+
+function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
+  try {
+    const interval = CronExpressionParser.parse(cronExpr, {
+      currentDate: ctx.now,
+    });
+
+    // Get the most recent scheduled time
+    const prev = interval.prev().toDate();
+
+    if (!ctx.lastRun) {
+      // Never run — due if there's a scheduled time in the past
+      return prev <= ctx.now;
+    }
+
+    // Due if the most recent scheduled time is after our last run
+    return prev > new Date(ctx.lastRun);
+  } catch {
+    // Invalid cron expression — don't run
+    return false;
+  }
+}
+
+function isRruleDue(rruleStr: string, ctx: ScheduleCheckContext): boolean {
+  try {
+    const rule = rrulestr(rruleStr);
+
+    // Get occurrences between last run and now
+    const after = ctx.lastRun ? new Date(ctx.lastRun) : new Date(0);
+    const occurrences = rule.between(after, ctx.now, false);
+
+    return occurrences.length > 0;
+  } catch {
+    // Invalid RRULE — don't run
+    return false;
+  }
+}
+
+// ============================================
+// Template
+// ============================================
+
+export interface ScheduledScriptTemplateOptions {
+  cron?: string;
+  at?: string;
+  rrule?: string;
+  until?: string;
+  notBefore?: string;
+  onWakeup?: boolean;
+  once?: boolean;
+  runs: string;
+  source?: string;
+  sourceRef?: string;
+}
+
+/**
+ * Create a scheduled-script card template.
+ */
+export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOptions): string {
+  const attrs: string[] = [];
+  if (options.cron) attrs.push(`cron="${options.cron}"`);
+  if (options.at) attrs.push(`at="${options.at}"`);
+  if (options.rrule) attrs.push(`rrule="${options.rrule}"`);
+  if (options.until) attrs.push(`until="${options.until}"`);
+  if (options.notBefore) attrs.push(`not-before="${options.notBefore}"`);
+  if (options.onWakeup) attrs.push(`on-wakeup="true"`);
+  if (options.once) attrs.push(`once="true"`);
+
+  const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+
+  const children: string[] = [];
+  children.push(`  <runs>${options.runs}</runs>`);
+  if (options.source || options.sourceRef) {
+    const refAttr = options.sourceRef ? ` ref="${options.sourceRef}"` : "";
+    children.push(`  <source${refAttr}>${options.source ?? ""}</source>`);
+  }
+
+  return `<scheduled-script${attrStr}>\n${children.join("\n")}\n</scheduled-script>\n`;
+}

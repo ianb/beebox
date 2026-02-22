@@ -36,6 +36,8 @@ import {
   finishCommand,
   reactorCommand,
   scenarioCommand,
+  tickCommand,
+  scheduledCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -74,6 +76,8 @@ program.addCommand(calendarCommand);
 program.addCommand(finishCommand);
 program.addCommand(reactorCommand);
 program.addCommand(scenarioCommand);
+program.addCommand(tickCommand);
+program.addCommand(scheduledCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)
@@ -94,14 +98,6 @@ program
   .description("Run tailing phase (indexing, scheduling)")
   .action(() => {
     console.log("cb tail: would run tailing phase");
-    console.log("Not yet implemented");
-  });
-
-program
-  .command("scheduled")
-  .description("Show scheduled tasks")
-  .action(() => {
-    console.log("cb scheduled: would show scheduled tasks");
     console.log("Not yet implemented");
   });
 
