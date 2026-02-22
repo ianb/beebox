@@ -92,12 +92,18 @@ docs/generated/
 # Schedule state (machine-local)
 config/schedules/.state/
 
+# Trick dependencies (installed by agent)
+tricks/node_modules/
+
 # Temporary files
 *.tmp
 *.swp
 *~
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
+
+  // Install tricks types.d.ts and CLAUDE.md if missing
+  await installTricksFiles(resolvedRoot);
 
   // Initialize git repo (only on fresh init)
   if (!options.skipGit && !isUpdate) {
@@ -426,5 +432,118 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
   }
 
   return installed;
+}
+
+// ============================================
+// Tricks (agent-authored scripts)
+// ============================================
+
+const TRICKS_PACKAGE_JSON = JSON.stringify(
+  {
+    name: "tricks",
+    private: true,
+    type: "module",
+  },
+  null,
+  2
+) + "\n";
+
+const TRICKS_CLAUDE_MD = `# Writing Tricks
+
+Tricks are custom TypeScript scripts that extend your box's capabilities.
+Each trick runs as a standalone subprocess via tsx with its own package context,
+so you can install and import npm packages.
+
+## Structure
+
+Each trick is a directory under \`tricks/scripts/\` with an \`index.ts\` entry point:
+
+\`\`\`
+tricks/
+  package.json        <- npm dependencies for tricks
+  node_modules/       <- installed packages (gitignored)
+  lib/                <- Shared utilities (import with relative paths)
+  scripts/
+    CLAUDE.md         <- This file
+    clean-inbox/
+      index.ts        <- cb trick clean-inbox
+    summarize/
+      index.ts        <- cb trick summarize
+\`\`\`
+
+**Every trick must be a directory** -- never put a \`.ts\` file directly in \`tricks/scripts/\`.
+
+## Script Interface
+
+Tricks are standalone TypeScript programs. The box root is passed via \`CB_BOX_ROOT\`
+and extra arguments via \`process.argv\`:
+
+\`\`\`typescript
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+export const description = "Short description shown in cb trick list";
+
+const boxRoot = process.env.CB_BOX_ROOT!;
+const args = process.argv.slice(2);
+
+const inboxDir = path.join(boxRoot, "box/inbox");
+console.log("Done!");
+\`\`\`
+
+The \`export const description\` line is parsed (not executed) by \`cb trick\` for the listing.
+
+## Running
+
+- \`cb trick\` -- list all tricks with descriptions
+- \`cb trick <name>\` -- run a trick
+- \`cb trick <name> arg1 arg2\` -- pass arguments
+
+## Dependencies
+
+Install npm packages into the tricks directory:
+
+\`\`\`bash
+cd tricks && npm install <package>
+\`\`\`
+
+These are available to all tricks via normal imports.
+
+## Shared Code
+
+Put reusable utilities in \`tricks/lib/\` and import them with relative paths:
+
+\`\`\`typescript
+import { helper } from "../../lib/helper.js";
+\`\`\`
+
+## Tips
+
+- Use \`node:fs/promises\` and \`node:path\` for file operations
+- Tricks run via tsx as subprocesses -- no build step needed
+- Keep tricks focused on a single task
+- Use \`cb\` commands (via \`child_process\`) for card operations
+- The subprocess cwd is \`tricks/\`, so package resolution works naturally
+`;
+
+/**
+ * Install tricks scaffold files (package.json, CLAUDE.md) if they don't exist.
+ */
+async function installTricksFiles(boxRoot: string): Promise<void> {
+  const packageJsonPath = path.join(boxRoot, "tricks/package.json");
+  try {
+    await fs.access(packageJsonPath);
+  } catch {
+    await fs.mkdir(path.join(boxRoot, "tricks"), { recursive: true });
+    await fs.writeFile(packageJsonPath, TRICKS_PACKAGE_JSON);
+  }
+
+  const claudeMdPath = path.join(boxRoot, "tricks/scripts/CLAUDE.md");
+  try {
+    await fs.access(claudeMdPath);
+  } catch {
+    await fs.mkdir(path.join(boxRoot, "tricks/scripts"), { recursive: true });
+    await fs.writeFile(claudeMdPath, TRICKS_CLAUDE_MD);
+  }
 }
 

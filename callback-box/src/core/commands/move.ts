@@ -19,6 +19,28 @@ import { isCardFile, boxPath } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 
 /**
+ * Remove empty ancestor directories up to (but not including) stopAt.
+ * Walks up from dirPath, removing each directory if empty, stopping
+ * when it reaches stopAt or a non-empty directory.
+ */
+async function removeEmptyAncestors(
+  dirPath: string,
+  stopAt: string
+): Promise<void> {
+  let current = dirPath;
+  while (current !== stopAt && current.startsWith(stopAt + "/")) {
+    try {
+      const entries = await fs.readdir(current);
+      if (entries.length > 0) break;
+      await fs.rmdir(current);
+    } catch {
+      break;
+    }
+    current = path.dirname(current);
+  }
+}
+
+/**
  * Arguments for the move command.
  */
 export interface MoveArgs {
@@ -116,6 +138,9 @@ async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
     }
   }
 
+  // Clean up empty parent of source directory
+  await removeEmptyAncestors(path.dirname(sourcePath), ctx.boxRoot);
+
   // Stage old directory removal and new directory addition
   // git add with the old path marks it as deleted, new path as added
   filesToStage.push(relSourcePath);
@@ -167,6 +192,9 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
       ctx.writeLine(`  ${relPath} (${update.refsUpdated} ref${update.refsUpdated > 1 ? "s" : ""})`);
     }
   }
+
+  // Clean up empty source directory
+  await removeEmptyAncestors(path.dirname(sourcePath), ctx.boxRoot);
 
   const filesToStage: string[] = [];
   for (const file of result.movedFiles) {

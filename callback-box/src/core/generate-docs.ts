@@ -346,6 +346,15 @@ function generateAgentGuide(workflows: WorkflowSummary[]): string {
     "",
   );
 
+  // Tricks section
+  lines.push(
+    "## Tricks",
+    "",
+    "Custom scripts live in `tricks/scripts/`. Each trick is a directory with an `index.ts`.",
+    "Run with `cb trick <name>`. See `tricks/scripts/CLAUDE.md` for how to write tricks.",
+    "",
+  );
+
   lines.push(
     "## Card Types",
     "",

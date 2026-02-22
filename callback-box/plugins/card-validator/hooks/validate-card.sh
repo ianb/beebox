@@ -8,8 +8,24 @@ input=$(cat)
 # Extract file path from tool_input.file_path
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
 
-# If no file path or not a .card file, exit silently
-if [ -z "$file_path" ] || [[ ! "$file_path" =~ \.card$ ]]; then
+# If no file path, exit silently
+if [ -z "$file_path" ]; then
+  exit 0
+fi
+
+# Enforce tricks directory structure: .ts files directly in tricks/scripts/ are not allowed
+if [[ "$file_path" =~ tricks/scripts/[^/]+\.ts$ ]]; then
+  jq -n --arg msg "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/" '{
+    "hookSpecificOutput": {
+      "hookEventName": "PostToolUse",
+      "additionalContext": $msg
+    }
+  }'
+  exit 2
+fi
+
+# Only validate .card files beyond this point
+if [[ ! "$file_path" =~ \.card$ ]]; then
   exit 0
 fi
 

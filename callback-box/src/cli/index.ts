@@ -38,6 +38,7 @@ import {
   scenarioCommand,
   tickCommand,
   scheduledCommand,
+  trickCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -78,6 +79,7 @@ program.addCommand(reactorCommand);
 program.addCommand(scenarioCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
+program.addCommand(trickCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

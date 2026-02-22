@@ -29,6 +29,10 @@ export const BOX_DIRS = {
   workflows: "config/workflows",
   schedules: "config/schedules",
 
+  // Tricks (agent-authored scripts)
+  tricks: "tricks/scripts",
+  tricksLib: "tricks/lib",
+
   // Agent configuration
   claude: ".claude",
   rules: ".claude/rules",
