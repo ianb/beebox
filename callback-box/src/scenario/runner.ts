@@ -18,7 +18,7 @@ import {
   stageAll,
   getCurrentBranch,
 } from "../cli/lib/git.js";
-import { loadFetchStubs, clearFetchStubs, type FetchStub } from "../cli/lib/fetch.js";
+import { loadFetchStubs, clearFetchStubs, installStrictFetch, uninstallStrictFetch, type FetchStub } from "../cli/lib/fetch.js";
 import { loadScenario, loadStubs, getScenarioDir, getBoxRoot } from "./loader.js";
 import type { ScenarioStep, ValidationCheck } from "./types.js";
 
@@ -227,6 +227,7 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   // Load stubs — set env vars so child processes (cb wakeup, cb reactor) inherit them
   if (stubs?.time) {
     process.env.CB_TIME = stubs.time;
+    process.env.CB_SCENARIO_START_TIME = stubs.time;
     log(options, `Stub time: ${stubs.time}`);
   }
 
@@ -234,8 +235,9 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
     const fetchStubs: FetchStub[] = stubs.http.map((h) => ({
       pattern: h.pattern,
       responseFile: h.response_file,
-      status: h.status,
-      contentType: h.content_type,
+      ...(h.status != null && { status: h.status }),
+      ...(h.content_type && { contentType: h.content_type }),
+      ...(h.after && { after: h.after }),
     }));
     loadFetchStubs(scenarioDir, fetchStubs);
     // Also set env var so child processes load stubs from the file
@@ -243,6 +245,10 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
     process.env.CB_STUBS_FILE = stubsFilePath;
     log(options, `Stub HTTP: ${stubs.http.length} pattern(s)`);
   }
+
+  // Install strict fetch — all fetch() calls must match a stub or throw
+  process.env.CB_STRICT_FETCH = "1";
+  installStrictFetch();
 
   // Determine starting step (--from checkpoint support)
   let startIndex = 0;
@@ -272,6 +278,12 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
       continue;
     }
 
+    // Update CB_TIME if the step specifies its own time
+    if (step.time) {
+      process.env.CB_TIME = step.time;
+      log(options, `  Time: ${step.time}`);
+    }
+
     const result = await runStep({ step, boxRoot, options });
     stepResults.push(result);
 
@@ -282,8 +294,11 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
 
   // Cleanup
   clearFetchStubs();
+  uninstallStrictFetch();
   delete process.env.CB_TIME;
   delete process.env.CB_STUBS_FILE;
+  delete process.env.CB_STRICT_FETCH;
+  delete process.env.CB_SCENARIO_START_TIME;
 
   if (!options.dryRun) {
     await checkoutBranch(boxRoot, "main");

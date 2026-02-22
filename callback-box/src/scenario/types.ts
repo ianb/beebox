@@ -5,6 +5,7 @@
 export interface ScenarioStep {
   name: string;
   run: string;
+  time?: string;
   checkpoint?: string;
   validate?: ValidationCheck[];
 }
@@ -30,4 +31,5 @@ export interface HttpStub {
   response_file: string;
   status?: number;
   content_type?: string;
+  after?: string;
 }

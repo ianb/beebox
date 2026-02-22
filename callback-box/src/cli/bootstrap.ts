@@ -16,3 +16,11 @@ import * as path from "node:path";
 // Once tsx compiles a module, changing this env var won't help.
 const __dirname = import.meta.dirname;
 process.env.TSX_TSCONFIG_PATH = path.resolve(__dirname, "../../tsconfig.json");
+
+// Install strict fetch mode for scenario runs — must happen before any
+// connector or library code calls fetch(). When CB_STRICT_FETCH is set,
+// all fetch() calls must match a stub or throw.
+if (process.env.CB_STRICT_FETCH) {
+  const { installStrictFetch } = await import("./lib/fetch.js");
+  installStrictFetch();
+}
