@@ -97,6 +97,19 @@ pairCommand
       });
       const messages = await client.poll();
       console.log(`Status:    connected (${messages.length} pending message(s))`);
+
+      // List paired clients
+      try {
+        const keys = await client.listChannelKeys(config.channelId);
+        const activeKeys = keys.filter((k) => k.active);
+        console.log(`\nPaired clients (${activeKeys.length}):`);
+        for (const key of activeKeys) {
+          const date = new Date(key.createdAt).toLocaleDateString();
+          console.log(`  - ${key.label} (paired ${date})`);
+        }
+      } catch {
+        // Endpoint may not be deployed yet
+      }
     } catch (err) {
       console.log(`Status:    error — ${(err as Error).message}`);
     }

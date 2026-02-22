@@ -97,6 +97,7 @@ registerCommand({
             audioBuffer,
             filename: audioFilename,
             options: { wordTimestamps: true },
+            boxRoot: ctx.boxRoot,
           })) as DetailedTranscriptionResult;
 
           // Write transcript text to <transcript> element

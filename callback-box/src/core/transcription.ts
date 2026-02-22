@@ -1,6 +1,10 @@
 /**
- * Audio transcription using OpenAI Whisper API.
+ * Audio transcription — dispatches to Whisper or Voxtral based on box config.
  */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { transcribeAudioVoxtral } from "./transcription-voxtral.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 const OPENAI_MODEL = "whisper-1";
@@ -39,16 +43,45 @@ export interface TranscribeAudioParams {
   filename: string;
   prompt?: string;
   options?: TranscriptionOptions;
+  boxRoot?: string;
+}
+
+interface TranscriptionConfig {
+  service: "whisper" | "voxtral";
+}
+
+async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
+  if (!boxRoot) return { service: "whisper" };
+  try {
+    const configPath = path.join(boxRoot, "config/transcription.json");
+    const content = await fs.readFile(configPath, "utf-8");
+    return JSON.parse(content) as TranscriptionConfig;
+  } catch {
+    return { service: "whisper" };
+  }
 }
 
 /**
- * Transcribe audio using OpenAI Whisper API.
+ * Transcribe audio using the configured service (Whisper or Voxtral).
  *
  * @param params - Parameters object
  * @returns Transcription result
  * @throws TranscriptionError on failure
  */
 export async function transcribeAudio(
+  params: TranscribeAudioParams
+): Promise<TranscriptionResult | DetailedTranscriptionResult> {
+  const config = await loadTranscriptionConfig(params.boxRoot);
+  if (config.service === "voxtral") {
+    return transcribeAudioVoxtral(params);
+  }
+  return transcribeAudioWhisper(params);
+}
+
+/**
+ * Transcribe audio using OpenAI Whisper API.
+ */
+async function transcribeAudioWhisper(
   params: TranscribeAudioParams
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   const { audioBuffer, filename, prompt, options } = params;

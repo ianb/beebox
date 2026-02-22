@@ -56,6 +56,18 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
 
+  // Install default transcription config if missing
+  const transcriptionConfigPath = path.join(resolvedRoot, "config/transcription.json");
+  try {
+    await fs.access(transcriptionConfigPath);
+  } catch {
+    await fs.mkdir(path.join(resolvedRoot, "config"), { recursive: true });
+    await fs.writeFile(
+      transcriptionConfigPath,
+      JSON.stringify({ service: "whisper" }, null, 2) + "\n"
+    );
+  }
+
   // Always write .gitattributes (LFS rules)
   const gitattributes = `# Track frozen page captures in Git LFS
 *.frozen filter=lfs diff=lfs merge=lfs -text
@@ -301,6 +313,7 @@ interface DefaultSchedule {
   onWakeup?: boolean;
   runs: string;
   source: string;
+  createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
 }
 
 const DEFAULT_SCHEDULES: DefaultSchedule[] = [
@@ -312,6 +325,15 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     onWakeup: true,
     runs: "cb wakeup --connector rss",
     source: "Check RSS feeds twice daily and on wakeup",
+    createAfterSuccess: [{
+      path: "config/schedules/process-news.scheduled-script.card",
+      args: {
+        runs: "cb process-news",
+        once: "true",
+        onWakeup: "true",
+        description: "Process news: triage, fetch, analyze, create brief",
+      },
+    }],
   },
   {
     name: "check-email",
@@ -378,6 +400,7 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       ...(sched.cron && { cron: sched.cron }),
       ...(sched.notBefore && { notBefore: sched.notBefore }),
       ...(sched.onWakeup && { onWakeup: sched.onWakeup }),
+      ...(sched.createAfterSuccess && { createAfterSuccess: sched.createAfterSuccess }),
       runs: sched.runs,
       description: sched.description,
       source: sched.source,

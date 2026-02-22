@@ -72,6 +72,7 @@ export const transcribePreAction: PreAction = {
         audioBuffer,
         filename,
         ...(existingContent && { prompt: existingContent }),
+        boxRoot: context.boxRoot,
       });
 
       // Add transcription to the card
