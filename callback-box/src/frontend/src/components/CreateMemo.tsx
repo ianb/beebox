@@ -2,7 +2,7 @@
  * Form for creating a new memo.
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { createCard } from "../api";
 
 interface CreateMemoProps {
@@ -14,10 +14,11 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!content.trim()) {
+    const trimmed = content.trim();
+    if (!trimmed) {
       setError("Please enter some content");
       return;
     }
@@ -28,10 +29,10 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
 
       // Generate a name from timestamp
       const now = new Date();
-      const name = `Memo_${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
+      const name = `Memo_${now.toISOString().replace(/[.:]/g, "-").slice(0, 19)}`;
       const path = `box/inbox/${name}.memo.card`;
 
-      await createCard({ path, template: "memo", content: content.trim() });
+      await createCard({ path, template: "memo", args: { content: trimmed } });
 
       setContent("");
       onCreated();
@@ -40,7 +41,11 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [content, onCreated]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+  }, []);
 
   return (
     <div className="p-4 bg-white rounded-lg shadow">
@@ -50,16 +55,16 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
         <div className="mb-4">
           <textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={handleChange}
             placeholder="What's on your mind?"
             className="input w-full h-32 resize-none"
             disabled={submitting}
           />
         </div>
 
-        {error && (
+        {error ? (
           <div className="text-red-600 text-sm mb-4">Error: {error}</div>
-        )}
+        ) : null}
 
         <button
           type="submit"

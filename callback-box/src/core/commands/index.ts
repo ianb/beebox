@@ -33,4 +33,4 @@ export {
   type ArgDefinition,
 } from "../command-runner.js";
 
-export { getTemplateNames } from "./create.js";
+export { getTemplateNames } from "../../schemas/index.js";

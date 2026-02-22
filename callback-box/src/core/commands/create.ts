@@ -14,14 +14,10 @@ import {
 import { parseCardName, isCardFile, boxPath } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import {
-  createMemoTemplate,
-  createVoiceMemoTemplate,
-  createSelectQuestionTemplate,
-  createTextQuestionTemplate,
-  createConfirmQuestionTemplate,
+  getTemplate,
+  getDefaultTemplate,
+  getTemplateNames,
 } from "../../schemas/index.js";
-import { createInitialGuideTemplate } from "../../schemas/news-guide.js";
-import { createRecipeTemplate } from "../../schemas/recipe.js";
 
 /**
  * Arguments for the create command.
@@ -29,82 +25,16 @@ import { createRecipeTemplate } from "../../schemas/recipe.js";
 export interface CreateArgs {
   /** Path for the new card (relative to box root or absolute) */
   path: string;
-  /** Template to use */
+  /** Template to use (overrides type-based default) */
   template?: string;
-  /** Content for memo cards */
-  content?: string;
-  /** Prompt for question cards */
-  prompt?: string;
-  /** Memo/context for question cards */
-  memo?: string;
-  /** Options for select questions */
-  options?: string[];
+  /** Template arguments as key=value pairs */
+  args?: Record<string, unknown>;
   /** Whether to commit the new card */
   commit?: boolean;
   /** Path to an attachment file (will be copied alongside the card) */
   attachment?: string;
   /** Mimetype of the attachment (used for determining extension) */
   attachmentMimetype?: string;
-}
-
-/**
- * Template generators.
- */
-const TEMPLATES: Record<string, (args: CreateArgs) => string> = {
-  memo: (args) => createMemoTemplate(args.content ?? "Sample memo content", args.template),
-
-  "voice-memo": () => createVoiceMemoTemplate(),
-
-  question: (args) =>
-    createSelectQuestionTemplate({
-      memo: args.memo ?? "Context for this question",
-      prompt: args.prompt ?? "What would you like to do?",
-      options: args.options?.map((opt, i) => ({
-        id: String.fromCodePoint(97 + i),
-        label: opt,
-      })) ?? [
-        { id: "a", label: "Option A" },
-        { id: "b", label: "Option B" },
-      ],
-    }),
-
-  "question-text": (args) =>
-    createTextQuestionTemplate(
-      args.memo ?? "Context for this question",
-      args.prompt ?? "Please provide your response:"
-    ),
-
-  "question-confirm": (args) =>
-    createConfirmQuestionTemplate(
-      args.memo ?? "Context for this question",
-      args.prompt ?? "Do you want to proceed?"
-    ),
-
-  "news-guide": () => createInitialGuideTemplate({}),
-
-  recipe: (args) =>
-    createRecipeTemplate({
-      title: args.content ?? "Untitled Recipe",
-    }),
-};
-
-/**
- * Map card types to their default templates.
- * The card type is the middle part of the filename (e.g., "memo" in "Foo.memo.card").
- */
-const TYPE_TO_TEMPLATE: Record<string, string> = {
-  memo: "memo",
-  question: "question",
-  "voice-memo": "voice-memo",
-  "news-guide": "news-guide",
-  recipe: "recipe",
-};
-
-/**
- * Get available template names.
- */
-export function getTemplateNames(): string[] {
-  return Object.keys(TEMPLATES);
 }
 
 /**
@@ -144,21 +74,34 @@ async function executeCreate(
     };
   }
 
-  // Determine template from card type
-  // Template can be explicitly specified, but typically it's inferred from the filename
-  const templateName = createArgs.template ?? TYPE_TO_TEMPLATE[parsed.type];
-  if (!templateName) {
+  // Look up template: explicit name or default for card type
+  const template = createArgs.template
+    ? getTemplate(createArgs.template)
+    : getDefaultTemplate(parsed.type);
+
+  if (!template) {
+    if (createArgs.template) {
+      return {
+        success: false,
+        error: `Unknown template '${createArgs.template}'. Available templates: ${getTemplateNames().join(", ")}`,
+      };
+    }
     return {
       success: false,
-      error: `Unknown card type '${parsed.type}'. Available types: ${Object.keys(TYPE_TO_TEMPLATE).join(", ")}`,
+      error: `No default template for card type '${parsed.type}'. Use -t to specify a template.\nAvailable templates: ${getTemplateNames().join(", ")}`,
     };
   }
 
-  const templateFn = TEMPLATES[templateName];
-  if (!templateFn) {
+  // Validate args against the template's schema
+  const parseResult = template.argsSchema.safeParse(createArgs.args ?? {});
+
+  if (!parseResult.success) {
+    const issues = parseResult.error.issues
+      .map((issue) => `  ${issue.path.join(".")}: ${issue.message}`)
+      .join("\n");
     return {
       success: false,
-      error: `Unknown template '${templateName}'. Available templates: ${Object.keys(TEMPLATES).join(", ")}`,
+      error: `Invalid arguments for template '${template.name}':\n${issues}\n\nUse: cb create --describe-template ${template.name}`,
     };
   }
 
@@ -174,7 +117,7 @@ async function executeCreate(
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
 
   // Generate content from template
-  const content = templateFn(createArgs);
+  const content = template.generate(parseResult.data);
 
   // Write card file
   await fs.writeFile(fullPath, content);
@@ -264,34 +207,15 @@ registerCommand({
     },
     {
       name: "template",
-      description:
-        "Template to use (memo, voice-memo, question, question-text, question-confirm)",
+      description: "Template to use (overrides type-based default)",
       required: false,
       type: "string",
     },
     {
-      name: "content",
-      description: "Content for memo cards",
+      name: "args",
+      description: "Template arguments as key=value pairs",
       required: false,
       type: "string",
-    },
-    {
-      name: "prompt",
-      description: "Prompt for question cards",
-      required: false,
-      type: "string",
-    },
-    {
-      name: "memo",
-      description: "Memo/context for question cards",
-      required: false,
-      type: "string",
-    },
-    {
-      name: "options",
-      description: "Options for select questions",
-      required: false,
-      type: "string[]",
     },
     {
       name: "commit",

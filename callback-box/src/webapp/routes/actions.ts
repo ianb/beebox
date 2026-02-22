@@ -29,10 +29,7 @@ interface WakeupBody {
 interface CreateBody {
   path: string;
   template: string;
-  content?: string;
-  prompt?: string;
-  memo?: string;
-  options?: string[];
+  args?: Record<string, unknown>;
 }
 
 /**
@@ -161,7 +158,7 @@ export async function registerActionRoutes(
 
   // POST /api/actions/create - Create a card
   server.post<{ Body: CreateBody }>("/api/actions/create", async (request, reply) => {
-    const { path: cardPath, template, content, prompt, memo, options } = request.body ?? {};
+    const { path: cardPath, template, args: templateArgs } = request.body ?? {};
 
     if (!cardPath) {
       return reply.status(400).send({ error: "path is required" });
@@ -182,10 +179,7 @@ export async function registerActionRoutes(
         args: {
           path: cardPath,
           template,
-          content,
-          prompt,
-          memo,
-          options,
+          args: templateArgs,
           commit: true, // Always commit from web API
         },
         ctx,

@@ -224,19 +224,16 @@ export async function answerQuestion(
 export interface CreateCardParams {
   path: string;
   template: string;
-  content?: string;
-  prompt?: string;
-  memo?: string;
-  options?: string[];
+  args?: Record<string, unknown>;
 }
 
 export async function createCard(
   params: CreateCardParams
 ): Promise<{ success: boolean; path: string }> {
-  const { path, template, content, prompt, memo, options } = params;
+  const { path, template, args } = params;
   return fetchJson(`${API_BASE}/actions/create`, {
     method: "POST",
-    body: JSON.stringify({ path, template, content, prompt, memo, options }),
+    body: JSON.stringify({ path, template, args }),
   });
 }
 

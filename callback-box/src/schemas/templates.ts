@@ -24,6 +24,7 @@ import { createInitialGuideTemplate as createInitialNewsGuideTemplate } from "./
 import { createInitialGuideTemplate } from "./guide.js";
 import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
+import { createScheduledScriptTemplate } from "./scheduled-script.js";
 
 /**
  * Template definition with typed arguments.
@@ -39,6 +40,8 @@ export interface TemplateDefinition<T extends ZodRawShape = ZodRawShape> {
   generate: (args: z.infer<ZodObject<T>>) => string;
   /** Card types this template can create (e.g., "memo", "question") */
   cardTypes: string[];
+  /** If set, this template is the default when creating cards of these types */
+  defaultForTypes?: string[];
 }
 
 /**
@@ -81,6 +84,14 @@ export function getAllTemplates(): TemplateDefinition[] {
  */
 export function getTemplatesForCardType(cardType: string): TemplateDefinition[] {
   return getAllTemplates().filter((t) => t.cardTypes.includes(cardType));
+}
+
+/**
+ * Get the default template for a given card type.
+ * Returns the template whose defaultForTypes includes this card type.
+ */
+export function getDefaultTemplate(cardType: string): TemplateDefinition | undefined {
+  return getAllTemplates().find((t) => t.defaultForTypes?.includes(cardType));
 }
 
 /**
@@ -141,6 +152,7 @@ registerTemplate({
   name: "memo",
   description: "A text memo card",
   cardTypes: ["memo"],
+  defaultForTypes: ["memo"],
   argsSchema: z.object({
     content: z.string().describe("The memo content text"),
     source: z.string().optional().describe("Source identifier (e.g., 'text', 'email')"),
@@ -152,6 +164,7 @@ registerTemplate({
   name: "voice-memo",
   description: "A voice memo card (audio attached separately)",
   cardTypes: ["voice-memo", "memo"],
+  defaultForTypes: ["voice-memo"],
   argsSchema: z.object({}),
   generate: () => createVoiceMemoTemplate(),
 });
@@ -160,6 +173,7 @@ registerTemplate({
   name: "question",
   description: "A multiple-choice question card",
   cardTypes: ["question"],
+  defaultForTypes: ["question"],
   argsSchema: z.object({
     memo: z.string().describe("Context/background for the question"),
     prompt: z.string().describe("The question to ask"),
@@ -262,6 +276,7 @@ registerTemplate({
   name: "news-guide",
   description: "User guide for news curation - captures interests, preferences, and experiments",
   cardTypes: ["news-guide"],
+  defaultForTypes: ["news-guide"],
   argsSchema: z.object({
     feedTitles: z
       .array(z.string())
@@ -278,6 +293,7 @@ registerTemplate({
   name: "guide",
   description: "A generic guide card — triage rules, actions, experiments, reactions",
   cardTypes: ["guide"],
+  defaultForTypes: ["guide"],
   argsSchema: z.object({
     name: z.string().describe("Domain name (news, intake, calendar, or custom)"),
   }),
@@ -288,6 +304,7 @@ registerTemplate({
   name: "record",
   description: "A record card — generic extracted unit from capture sessions",
   cardTypes: ["record"],
+  defaultForTypes: ["record"],
   argsSchema: z.object({
     name: z.string().describe("Short identifying label for the record"),
     description: z.string().optional().describe("Description of the thing"),
@@ -305,6 +322,7 @@ registerTemplate({
   name: "recipe",
   description: "A recipe card with ingredients, steps, and scaling support",
   cardTypes: ["recipe"],
+  defaultForTypes: ["recipe"],
   argsSchema: z.object({
     title: z.string().describe("Recipe name"),
     description: z.string().optional().describe("What the dish is"),
@@ -317,5 +335,37 @@ registerTemplate({
     if (args.description) templateArgs.description = args.description;
     if (args.servings) templateArgs.servings = args.servings;
     return createRecipeTemplate(templateArgs);
+  },
+});
+
+registerTemplate({
+  name: "scheduled-script",
+  description: "A scheduled script card — declarative scheduling for commands",
+  cardTypes: ["scheduled-script"],
+  defaultForTypes: ["scheduled-script"],
+  argsSchema: z.object({
+    runs: z.string().describe("The command to execute"),
+    description: z.string().optional().describe("Human-readable summary of what this schedule does"),
+    cron: z.string().optional().describe("Cron expression (e.g., '0 6 * * *')"),
+    at: z.string().optional().describe("ISO datetime for one-shot execution"),
+    rrule: z.string().optional().describe("iCalendar RRULE string"),
+    notBefore: z.string().optional().describe("Minimum interval since last run (e.g., '5m', '1h')"),
+    onWakeup: z.coerce.boolean().optional().describe("Also run during cb wakeup"),
+    once: z.coerce.boolean().optional().describe("Delete after successful execution"),
+    source: z.string().optional().describe("Why this schedule exists"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createScheduledScriptTemplate>[0] = {
+      runs: args.runs,
+    };
+    if (args.description) opts.description = args.description;
+    if (args.cron) opts.cron = args.cron;
+    if (args.at) opts.at = args.at;
+    if (args.rrule) opts.rrule = args.rrule;
+    if (args.notBefore) opts.notBefore = args.notBefore;
+    if (args.onWakeup) opts.onWakeup = args.onWakeup;
+    if (args.once) opts.once = args.once;
+    if (args.source) opts.source = args.source;
+    return createScheduledScriptTemplate(opts);
   },
 });

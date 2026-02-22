@@ -84,6 +84,7 @@ export {
 export {
   registerTemplate,
   getTemplate,
+  getDefaultTemplate,
   getTemplateNames,
   getAllTemplates,
   getTemplatesForCardType,

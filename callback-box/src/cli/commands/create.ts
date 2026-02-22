@@ -17,38 +17,37 @@ import {
 
 interface CreateOptions {
   template?: string;
-  content?: string;
-  prompt?: string;
-  memo?: string;
-  options?: string[];
   commit?: boolean;
   attachment?: string;
+  listTemplates?: boolean;
+  describeTemplate?: string;
 }
 
 export const createCommand = new Command("create")
   .description("Create a new card from template")
   .argument("[path]", "Path for new card (relative to box root or absolute)")
+  .argument("[args...]", "Template arguments as key=value pairs")
   .option(
     "-t, --template <name>",
     "Override template (usually inferred from card type in filename)"
-  )
-  .option("-c, --content <text>", "Content for memo cards")
-  .option("-p, --prompt <text>", "Prompt for question cards")
-  .option("-m, --memo <text>", "Memo/context for question cards")
-  .option(
-    "-o, --options <items...>",
-    'Options for select questions (e.g., -o "Yes" "No" "Maybe")'
   )
   .option("--commit", "Commit the new card")
   .option("-a, --attachment <path>", "Path to an attachment file")
   .option("--list-templates", "List all available templates")
   .option("--describe-template <name>", "Show details about a specific template")
-  .action(async (targetPath: string | undefined, options: CreateOptions & { listTemplates?: boolean; describeTemplate?: string }) => {
+  .action(async (targetPath: string | undefined, ...rest: unknown[]) => {
+    // Commander passes variadic args as second param, options as third
+    const kvArgs = (rest[0] ?? []) as string[];
+    const options = (rest[1] ?? {}) as CreateOptions;
+
     // Handle --list-templates
     if (options.listTemplates) {
       console.log("Available templates:\n");
       for (const template of getAllTemplates()) {
-        console.log(`  ${template.name}`);
+        const defaultNote = template.defaultForTypes?.length
+          ? ` (default for: ${template.defaultForTypes.join(", ")})`
+          : "";
+        console.log(`  ${template.name}${defaultNote}`);
         console.log(`    ${template.description}`);
         console.log(`    Card types: ${template.cardTypes.join(", ")}`);
         console.log();
@@ -70,6 +69,17 @@ export const createCommand = new Command("create")
       process.exit(1);
     }
 
+    // Parse key=value positional args
+    const parsedArgs: Record<string, string> = {};
+    for (const arg of kvArgs) {
+      const eqIndex = arg.indexOf("=");
+      if (eqIndex === -1) {
+        console.error(`Error: invalid argument '${arg}'. Use key=value format.`);
+        process.exit(1);
+      }
+      parsedArgs[arg.slice(0, eqIndex)] = arg.slice(eqIndex + 1);
+    }
+
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
@@ -79,10 +89,7 @@ export const createCommand = new Command("create")
         args: {
           path: targetPath,
           template: options.template,
-          content: options.content,
-          prompt: options.prompt,
-          memo: options.memo,
-          options: options.options,
+          args: Object.keys(parsedArgs).length > 0 ? parsedArgs : undefined,
           commit: options.commit,
           attachment: options.attachment,
         },
