@@ -29,6 +29,10 @@ export const ScriptSource = element("source", {
   text: z.string().optional(),
 });
 
+export const ScheduleDescription = element("description", {
+  text: z.string(),
+});
+
 // ============================================
 // Schema
 // ============================================
@@ -52,7 +56,7 @@ export const ScheduledScriptSchema = element("scheduled-script", {
     /** Enable/disable without deleting */
     enabled: z.enum(["true", "false"]).optional(),
   },
-  children: z.array(z.union([Runs, ScriptSource])),
+  children: z.array(z.union([Runs, ScriptSource, ScheduleDescription])),
   instructions: `# Scheduled Script Cards
 
 Scheduled scripts define commands to run on a schedule. They live in \`config/schedules/\`.
@@ -71,6 +75,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 
 ## Children
 - **<runs>**: The command to execute (required). Runs with cwd set to box root.
+- **<description>**: Optional. Human-readable summary of what this schedule does.
 - **<source>**: Optional. Why this schedule exists, with optional \`ref\` to a related card.
 
 ## Guidelines
@@ -95,6 +100,7 @@ export interface ParsedScheduledScript {
   once: boolean;
   enabled: boolean;
   runs: string;
+  description: string | undefined;
   source: { ref?: string; text?: string } | undefined;
 }
 
@@ -112,6 +118,7 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
   const children = script.children as Array<{ tagName: string; text?: string; attrs: Record<string, unknown> }>;
 
   const runsEl = children.find((c) => c.tagName === "runs");
+  const descEl = children.find((c) => c.tagName === "description");
   const sourceEl = children.find((c) => c.tagName === "source");
 
   return {
@@ -124,6 +131,7 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
     once: script.attrs.once === "true",
     enabled: script.attrs.enabled !== "false",
     runs: runsEl?.text ?? "",
+    description: (descEl?.text as string | undefined) ?? undefined,
     source: sourceEl
       ? buildSource(sourceEl.attrs.ref as string | undefined, sourceEl.text)
       : undefined,
@@ -283,6 +291,7 @@ export interface ScheduledScriptTemplateOptions {
   onWakeup?: boolean;
   once?: boolean;
   runs: string;
+  description?: string;
   source?: string;
   sourceRef?: string;
 }
@@ -303,6 +312,9 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
 
   const children: string[] = [];
+  if (options.description) {
+    children.push(`  <description>${options.description}</description>`);
+  }
   children.push(`  <runs>${options.runs}</runs>`);
   if (options.source || options.sourceRef) {
     const refAttr = options.sourceRef ? ` ref="${options.sourceRef}"` : "";

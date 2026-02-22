@@ -295,6 +295,7 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
 
 interface DefaultSchedule {
   name: string;
+  description: string;
   cron?: string;
   notBefore?: string;
   onWakeup?: boolean;
@@ -305,6 +306,7 @@ interface DefaultSchedule {
 const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   {
     name: "check-rss",
+    description: "Sync RSS feeds for new articles to triage and brief",
     cron: "0 6,18 * * *",
     notBefore: "4h",
     onWakeup: true,
@@ -313,6 +315,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   },
   {
     name: "check-email",
+    description: "Pull new emails from Gmail for triage and response",
     cron: "*/15 * * * *",
     notBefore: "10m",
     onWakeup: true,
@@ -321,6 +324,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   },
   {
     name: "check-calendar",
+    description: "Sync Google Calendar events and detect changes",
     cron: "0 * * * *",
     notBefore: "30m",
     onWakeup: true,
@@ -329,6 +333,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   },
   {
     name: "check-captures",
+    description: "Process new photo/screen captures from the capture directory",
     notBefore: "5m",
     onWakeup: true,
     runs: "cb wakeup --connector capture",
@@ -336,6 +341,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   },
   {
     name: "check-dropbox",
+    description: "Relay browser notifications via Dropbox message passing",
     notBefore: "5m",
     onWakeup: true,
     runs: "cb wakeup --connector dropbox",
@@ -343,6 +349,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   },
   {
     name: "check-raindrop",
+    description: "Sync saved bookmarks from Raindrop.io",
     cron: "0 */6 * * *",
     notBefore: "2h",
     onWakeup: true,
@@ -372,6 +379,7 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       ...(sched.notBefore && { notBefore: sched.notBefore }),
       ...(sched.onWakeup && { onWakeup: sched.onWakeup }),
       runs: sched.runs,
+      description: sched.description,
       source: sched.source,
     });
 
