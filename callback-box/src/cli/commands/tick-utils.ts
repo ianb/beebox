@@ -11,11 +11,14 @@ import {
   parseScheduledScript,
   isDueForWakeup,
   type ScheduledScript,
+  type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import {
   loadScriptState,
   saveScriptState,
 } from "../../core/schedule-state.js";
+import { parseCardName } from "../lib/paths.js";
+import { getDefaultTemplate } from "../../schemas/templates.js";
 
 const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
@@ -71,6 +74,8 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       state.runCount++;
       await saveScriptState({ boxRoot, scriptName, state });
       ranCount++;
+
+      await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
     } catch (err) {
       state.lastRun = now.toISOString();
       state.lastResult = "failure";
@@ -82,4 +87,48 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
   }
 
   return ranCount;
+}
+
+/**
+ * After a script succeeds, create any chained cards declared via <create-after-success>.
+ * Skips if the target file already exists (idempotent).
+ */
+export async function handleCreateAfterSuccess(
+  { boxRoot, parsed, scriptName }: { boxRoot: string; parsed: ParsedScheduledScript; scriptName: string },
+): Promise<void> {
+  for (const chain of parsed.createAfterSuccess) {
+    const fullPath = path.join(boxRoot, chain.path);
+
+    // Skip if already exists (idempotent)
+    try {
+      await fs.access(fullPath);
+      console.log(`  Chain: ${chain.path} already exists, skipping`);
+      continue;
+    } catch {
+      // doesn't exist, proceed
+    }
+
+    const basename = path.basename(chain.path);
+    const cardName = parseCardName(basename);
+    if (!cardName) {
+      console.error(`  Chain: cannot parse card name from ${chain.path}`);
+      continue;
+    }
+
+    const template = getDefaultTemplate(cardName.type);
+    if (!template) {
+      console.error(`  Chain: no default template for type "${cardName.type}"`);
+      continue;
+    }
+
+    const parseResult = template.argsSchema.safeParse(chain.args);
+    if (!parseResult.success) {
+      console.error(`  Chain: invalid args for ${chain.path}: ${parseResult.error.message}`);
+      continue;
+    }
+
+    await fs.mkdir(path.dirname(fullPath), { recursive: true });
+    await fs.writeFile(fullPath, template.generate(parseResult.data));
+    console.log(`  Chain: created ${chain.path} (from ${scriptName})`);
+  }
 }

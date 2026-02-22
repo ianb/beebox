@@ -18,6 +18,7 @@ import {
   loadScriptState,
   saveScriptState,
 } from "../../core/schedule-state.js";
+import { handleCreateAfterSuccess } from "./tick-utils.js";
 
 const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
@@ -103,6 +104,8 @@ export const tickCommand = new Command("tick")
         state.runCount++;
         await saveScriptState({ boxRoot, scriptName, state });
         ranCount++;
+
+        await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
 
         // Handle once: delete the card after success
         if (parsed.once) {

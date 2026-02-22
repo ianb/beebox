@@ -475,8 +475,11 @@ tricks/
 
 ## Script Interface
 
-Tricks are standalone TypeScript programs. The box root is passed via \`CB_BOX_ROOT\`
-and extra arguments via \`process.argv\`:
+Tricks are standalone TypeScript programs. Environment variables provide context:
+
+- \`CB_BOX_ROOT\` -- absolute path to the box root
+- \`CB_TRICK_NAME\` -- the trick name (e.g. "clean-inbox"), useful for usage/help output
+- \`process.argv.slice(2)\` -- extra arguments after the trick name
 
 \`\`\`typescript
 import * as fs from "node:fs/promises";
@@ -485,6 +488,7 @@ import * as path from "node:path";
 export const description = "Short description shown in cb trick list";
 
 const boxRoot = process.env.CB_BOX_ROOT!;
+const trickName = process.env.CB_TRICK_NAME!;
 const args = process.argv.slice(2);
 
 const inboxDir = path.join(boxRoot, "box/inbox");

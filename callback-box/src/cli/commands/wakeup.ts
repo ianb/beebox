@@ -9,6 +9,7 @@
  * 5. Run connectors (pull external data, create jobs) — fallback for uncovered connectors
  * 6. Create intake jobs for unjobbed inbox items (UI memos, etc.)
  * 7. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
+ * 8. Process pending jobs via reactor (one cycle, skip low-priority)
  */
 
 import * as fs from "node:fs/promises";
@@ -34,6 +35,7 @@ import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job
 import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { runOnWakeupScripts } from "./tick-utils.js";
+import { runReactor } from "../../core/reactor.js";
 
 export const wakeupCommand = new Command("wakeup")
   .description("Sync data with connectors")
@@ -198,6 +200,26 @@ export const wakeupCommand = new Command("wakeup")
       console.log(`  Created guide-revision job: ${jobPath}`);
     } else {
       console.log("  No guide revision needed");
+    }
+    console.log("");
+
+    // Step 7: Process pending jobs
+    if (!options.connector) {
+      console.log("[Processing pending jobs]");
+      const result = await runReactor({
+        boxRoot,
+        maxCycles: 1,
+        skipLowPriority: true,
+        onLog: (text) => process.stdout.write(text),
+      });
+      if (result.jobsProcessed > 0) {
+        console.log(`  Processed ${result.jobsProcessed} job(s)`);
+      } else {
+        console.log("  No jobs to process");
+      }
+      if (result.jobsRemaining > 0) {
+        console.log(`  ${result.jobsRemaining} job(s) still remaining`);
+      }
     }
   });
 

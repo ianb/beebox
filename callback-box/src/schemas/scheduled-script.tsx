@@ -33,6 +33,13 @@ export const ScheduleDescription = element("description", {
   text: z.string(),
 });
 
+export const CreateAfterSuccess = element("create-after-success", {
+  attrs: {
+    path: z.string(),
+  },
+  text: z.string().optional(),
+});
+
 // ============================================
 // Schema
 // ============================================
@@ -56,7 +63,7 @@ export const ScheduledScriptSchema = element("scheduled-script", {
     /** Enable/disable without deleting */
     enabled: z.enum(["true", "false"]).optional(),
   },
-  children: z.array(z.union([Runs, ScriptSource, ScheduleDescription])),
+  children: z.array(z.union([Runs, ScriptSource, ScheduleDescription, CreateAfterSuccess])),
   instructions: `# Scheduled Script Cards
 
 Scheduled scripts define commands to run on a schedule. They live in \`config/schedules/\`.
@@ -77,6 +84,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **<runs>**: The command to execute (required). Runs with cwd set to box root.
 - **<description>**: Optional. Human-readable summary of what this schedule does.
 - **<source>**: Optional. Why this schedule exists, with optional \`ref\` to a related card.
+- **<create-after-success path="...">**: Optional. Create a card at the given path after successful execution. Text content is key=value lines (one per line) passed as template args. Skipped if the target file already exists.
 
 ## Guidelines
 - Set reasonable not-before values to prevent hammering external services.
@@ -102,6 +110,7 @@ export interface ParsedScheduledScript {
   runs: string;
   description: string | undefined;
   source: { ref?: string; text?: string } | undefined;
+  createAfterSuccess: Array<{ path: string; args: Record<string, string> }>;
 }
 
 function buildSource(ref: string | undefined, text: string | undefined): { ref?: string; text?: string } {
@@ -120,6 +129,23 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
   const runsEl = children.find((c) => c.tagName === "runs");
   const descEl = children.find((c) => c.tagName === "description");
   const sourceEl = children.find((c) => c.tagName === "source");
+  const chainEls = children.filter((c) => c.tagName === "create-after-success");
+
+  const createAfterSuccess = chainEls.map((el) => {
+    const args: Record<string, string> = {};
+    const text = (el.text as string | undefined)?.trim();
+    if (text) {
+      for (const line of text.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        const eqIndex = trimmed.indexOf("=");
+        if (eqIndex > 0) {
+          args[trimmed.slice(0, eqIndex)] = trimmed.slice(eqIndex + 1);
+        }
+      }
+    }
+    return { path: el.attrs.path as string, args };
+  });
 
   return {
     cron: script.attrs.cron as string | undefined,
@@ -135,6 +161,7 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
     source: sourceEl
       ? buildSource(sourceEl.attrs.ref as string | undefined, sourceEl.text)
       : undefined,
+    createAfterSuccess,
   };
 }
 
@@ -294,6 +321,7 @@ export interface ScheduledScriptTemplateOptions {
   description?: string;
   source?: string;
   sourceRef?: string;
+  createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
 }
 
 /**
@@ -319,6 +347,13 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   if (options.source || options.sourceRef) {
     const refAttr = options.sourceRef ? ` ref="${options.sourceRef}"` : "";
     children.push(`  <source${refAttr}>${options.source ?? ""}</source>`);
+  }
+
+  if (options.createAfterSuccess) {
+    for (const chain of options.createAfterSuccess) {
+      const lines = Object.entries(chain.args).map(([k, v]) => `${k}=${v}`).join("\n");
+      children.push(`  <create-after-success path="${chain.path}">\n${lines}\n  </create-after-success>`);
+    }
   }
 
   return `<scheduled-script${attrStr}>\n${children.join("\n")}\n</scheduled-script>\n`;

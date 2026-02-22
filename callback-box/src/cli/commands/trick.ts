@@ -77,6 +77,7 @@ async function discoverTricks(boxRoot: string): Promise<TrickInfo[]> {
 
 interface RunTrickOptions {
   boxRoot: string;
+  name: string;
   entryPoint: string;
   args: string[];
 }
@@ -89,7 +90,11 @@ function runTrick(opts: RunTrickOptions): Promise<number> {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [resolveTsx(), opts.entryPoint, ...opts.args], {
       cwd: path.join(opts.boxRoot, "tricks"),
-      env: { ...process.env, CB_BOX_ROOT: opts.boxRoot },
+      env: {
+        ...process.env,
+        CB_BOX_ROOT: opts.boxRoot,
+        CB_TRICK_NAME: opts.name,
+      },
       stdio: "inherit",
     });
 
@@ -146,7 +151,7 @@ export const trickCommand = new Command("trick")
     // Collect remaining args after the trick name
     const trickArgs = this.args.slice(1);
 
-    const exitCode = await runTrick({ boxRoot, entryPoint, args: trickArgs });
+    const exitCode = await runTrick({ boxRoot, name, entryPoint, args: trickArgs });
     if (exitCode !== 0) {
       process.exitCode = exitCode;
     }
