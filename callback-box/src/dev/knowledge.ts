@@ -1,0 +1,107 @@
+#!/usr/bin/env tsx
+/**
+ * Knowledge testing CLI — run agent knowledge tests, list them, or evaluate results.
+ *
+ * Usage (via npm script):
+ *   npm run knowledge -- run [--box <path>] [--filter <tag-or-id>]
+ *   npm run knowledge -- list [--tests <path>]
+ *   npm run knowledge -- eval <report-path>
+ */
+
+import { Command } from "commander";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
+import { generateReport } from "./lib/report.js";
+
+const DEFAULT_SCENARIO_DIR = path.join(
+  process.env.HOME ?? "~",
+  "src/boxes/scenarios/knowledge",
+);
+
+const program = new Command()
+  .name("knowledge")
+  .description("Agent knowledge testing");
+
+program
+  .command("list")
+  .description("List available knowledge tests")
+  .option("--tests <path>", "Path to knowledge-tests.yaml")
+  .action(async (options: { tests?: string }) => {
+    const testsPath = options.tests ?? getTestsPath(DEFAULT_SCENARIO_DIR);
+    const suite = await loadTests(testsPath);
+
+    console.log(`Tests in ${testsPath}:\n`);
+    for (const test of suite.tests) {
+      const tags = test.tags ? ` [${test.tags.join(", ")}]` : "";
+      console.log(`  ${test.id} — ${test.expected_level}${tags}`);
+      console.log(`    "${test.prompt}"`);
+    }
+    console.log(`\nTotal: ${suite.tests.length} tests`);
+  });
+
+program
+  .command("run")
+  .description("Run knowledge tests against a box")
+  .option("--box <path>", "Box root directory")
+  .option("--tests <path>", "Path to knowledge-tests.yaml")
+  .option("--filter <id-or-tag>", "Filter by test ID or tag")
+  .option("--output <path>", "Output report path")
+  .action(async (options: { box?: string; tests?: string; filter?: string; output?: string }) => {
+    const scenarioDir = path.dirname(options.tests ?? getTestsPath(DEFAULT_SCENARIO_DIR));
+    const boxRoot = options.box ?? path.join(scenarioDir, "box");
+    const testsPath = options.tests ?? getTestsPath(scenarioDir);
+
+    const resolvedBox = path.resolve(boxRoot);
+    const suite = await loadTests(testsPath);
+
+    // Filter tests if requested
+    let tests = suite.tests;
+    if (options.filter) {
+      const filter = options.filter;
+      tests = tests.filter(
+        (t) => t.id === filter || t.id.includes(filter) || t.tags?.includes(filter),
+      );
+      if (tests.length === 0) {
+        console.error(`No tests match filter: ${filter}`);
+        process.exit(1);
+      }
+    }
+
+    console.log(`Running ${tests.length} knowledge tests against ${resolvedBox}\n`);
+
+    const results = [];
+    for (const test of tests) {
+      console.log(`\n${"=".repeat(60)}`);
+      console.log(`Test: ${test.id} (${test.expected_level})`);
+      console.log(`Prompt: "${test.prompt}"`);
+      console.log("=".repeat(60));
+
+      const result = await runTest({ test, boxRoot: resolvedBox });
+      results.push(result);
+
+      // Print quick summary
+      const passedContains = result.checks.containsChecks.every((c) => c.found);
+      const passedReads = result.checks.shouldReadChecks.every((c) => c.wasRead);
+      const status = passedContains && passedReads ? "\u2713" : "\u2717";
+      console.log(`\n${status} ${test.id} — ${result.behavior.filesRead.length} files read, ${result.behavior.searches.length} searches`);
+    }
+
+    // Generate and write report
+    const report = generateReport({ boxRoot: resolvedBox, results });
+    const timestamp = new Date().toISOString().replace(/[.:]/g, "-").substring(0, 19);
+    const outputPath = options.output ?? path.join(scenarioDir, `knowledge-report-${timestamp}.md`);
+
+    await fs.writeFile(outputPath, report, "utf-8");
+    console.log(`\nReport written to: ${outputPath}`);
+  });
+
+program
+  .command("eval <report>")
+  .description("Open a report for evaluation (prints to stdout)")
+  .action(async (reportPath: string) => {
+    const content = await fs.readFile(path.resolve(reportPath), "utf-8");
+    console.log(content);
+  });
+
+program.parse();

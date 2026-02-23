@@ -22,6 +22,7 @@
     "start": "node dist/webapp/server.js",
     "cli": "node dist/cli/index.js",
     "test": "tap",
+    "knowledge": "tsx src/dev/knowledge.ts",
     "test:watch": "tap --watch",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",

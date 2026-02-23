@@ -338,7 +338,7 @@ function generateAgentGuide(workflows: WorkflowSummary[], allSchemas: ElementSch
       lines.push(`- **${w.name}** — ${w.description}`);
     }
     lines.push("");
-    lines.push("Run with `cb workflow run <name>`. See `docs/generated/workflows.md` for authoring details.");
+    lines.push("Run with `cb workflow run <name>`. Read `docs/generated/workflows.md` before writing or modifying workflows.");
     lines.push("");
   }
 
@@ -353,7 +353,7 @@ function generateAgentGuide(workflows: WorkflowSummary[], allSchemas: ElementSch
     "- `cb scheduled` — list all schedules with status and last-run time",
     "",
     "Agents can create or modify scheduled scripts for custom automation.",
-    "See `docs/generated/card-scheduled-script.md` for the full schema.",
+    "Schedule format includes cron expressions, throttling (`not-before`), chaining (`create-after-success`), and one-shot options — see `docs/generated/card-scheduled-script.md` for the full schema.",
     "",
   );
 
@@ -375,6 +375,9 @@ function generateAgentGuide(workflows: WorkflowSummary[], allSchemas: ElementSch
     const hasDoc = schema.instructions ? ` — see \`docs/generated/card-${schema.tagName}.md\`` : "";
     lines.push(`- **${schema.tagName}**${hasDoc}`);
   }
+
+  lines.push("");
+  lines.push("New card types can be defined in `config/schemas/` using `element()` + Zod — see `config/schemas/CLAUDE.md` for how. Run `cb init` after adding a schema to generate rules and docs.");
 
   lines.push("");
   lines.push("## Creating Cards");
