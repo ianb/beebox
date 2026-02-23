@@ -76,6 +76,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
   // Load initial brief if path provided
   useEffect(() => {
     if (initialPath) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
       fetchBrief(initialPath)
         .then((data) => {
@@ -243,6 +244,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
         ) : brief ? (
           <NewsBriefView
             brief={brief}
+            briefPath={selectedSummary?.relativePath}
             onComment={handleComment}
             onVoiceComment={handleVoiceComment}
             onQueryResponse={handleQueryResponse}

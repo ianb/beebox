@@ -13,6 +13,7 @@ import { NewMemo, buildCreateCommandLabel, type MemoCommandArgs } from "./compon
 import { ProcessNewsForm, buildProcessNewsLabel, type ProcessNewsArgs } from "./components/ProcessNewsForm";
 import { CommandRunner } from "./components/CommandRunner";
 import { NewsPage } from "./components/NewsPage";
+import { PrintBriefView } from "./components/brief/PrintBriefView";
 import { HistoryPage } from "./components/HistoryPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { BrowsePage } from "./components/BrowsePage";
@@ -172,6 +173,7 @@ function Dashboard() {
   }, [fetchData]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData]);
 
@@ -305,6 +307,7 @@ function Dashboard() {
             >
               + New Memo
             </button>
+            {/* eslint-disable react/jsx-max-depth */}
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -331,6 +334,7 @@ function Dashboard() {
                 cb wakeup
               </button>
             </div>
+            {/* eslint-enable react/jsx-max-depth */}
             {/* Show process-news button if there are any news items to process */}
             {(newsStatus.inbox > 0 || newsStatus.pool > 0) && (
               <button
@@ -441,14 +445,14 @@ function Dashboard() {
           ) : selectedCard ? (
             <div className="p-4">
               {/* Question form for pending questions */}
-              {selectedQuestion && (
+              {selectedQuestion ? (
                 <div className="mb-4">
                   <QuestionForm
                     question={selectedQuestion}
                     onAnswered={handleQuestionAnswered}
                   />
                 </div>
-              )}
+              ) : null}
 
               {/* Card view */}
               <div className="card">
@@ -498,6 +502,7 @@ function CardViewPage() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/print/*" element={<PrintBriefView />} />
       <Route element={<AppLayout />}>
         <Route path="/news/*" element={<NewsPageWrapper />} />
         <Route path="/browse/*" element={<BrowsePageWrapper />} />

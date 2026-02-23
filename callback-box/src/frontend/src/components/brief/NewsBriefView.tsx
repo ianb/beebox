@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MicrophoneIcon } from "../VoiceRecorder";
@@ -20,6 +21,7 @@ import { InlineVoiceRecorder } from "./InlineVoiceRecorder";
 
 interface NewsBriefViewProps {
   brief: NewsBriefData;
+  briefPath?: string;
   onComment?: (targetId: string, comment: string) => void;
   onVoiceComment?: (targetId: string, audioBlob: Blob) => Promise<void>;
   onQueryResponse?: (queryId: string, response: string) => void;
@@ -36,6 +38,7 @@ interface NewsBriefViewProps {
 
 export function NewsBriefView({
   brief,
+  briefPath,
   onComment,
   onVoiceComment,
   onQueryResponse,
@@ -117,14 +120,19 @@ export function NewsBriefView({
           })}
         </time>
         <h1 className="text-3xl font-bold text-gray-900 mb-3">{brief.title}</h1>
-        {brief.byline && <p className="text-lg text-gray-600 italic">{brief.byline}</p>}
+        {brief.byline ? <p className="text-lg text-gray-600 italic">{brief.byline}</p> : null}
+        {briefPath ? (
+          <Link to={`/print/${briefPath}`} className="text-sm text-gray-400 hover:text-gray-600 mt-2 inline-block">
+            Print view
+          </Link>
+        ) : null}
       </header>
 
       {/* Main content */}
       <div className="prose prose-lg max-w-none mb-8">
-        {brief.content.text && (
+        {brief.content.text ? (
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{brief.content.text}</ReactMarkdown>
-        )}
+        ) : null}
 
         {brief.content.sections.map((section, i) => (
           <ContentSection
@@ -188,7 +196,7 @@ export function NewsBriefView({
                 >
                   Submit Comment
                 </button>
-                {onVoiceComment && (
+                {onVoiceComment ? (
                   <button
                     onClick={() => {
                       setShowGlobalComment(false);
@@ -199,7 +207,7 @@ export function NewsBriefView({
                     <MicrophoneIcon className="w-4 h-4" />
                     Voice
                   </button>
-                )}
+                ) : null}
                 <button
                   onClick={() => setShowGlobalComment(false)}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
@@ -216,7 +224,7 @@ export function NewsBriefView({
               >
                 + Add a comment about this brief
               </button>
-              {onVoiceComment && (
+              {onVoiceComment ? (
                 <button
                   onClick={() => setShowGlobalVoice(true)}
                   className="text-sm text-gray-400 hover:text-blue-600 flex items-center gap-1"
@@ -224,7 +232,7 @@ export function NewsBriefView({
                   <MicrophoneIcon className="w-4 h-4" />
                   Voice
                 </button>
-              )}
+              ) : null}
             </div>
           )}
         </div>
@@ -248,7 +256,7 @@ export function NewsBriefView({
     </article>
 
     {/* Fixed bottom voice recorder for global feedback */}
-    {showGlobalVoice && (
+    {showGlobalVoice ? (
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50">
         <div className="max-w-3xl mx-auto">
           <InlineVoiceRecorder
@@ -257,7 +265,7 @@ export function NewsBriefView({
           />
         </div>
       </div>
-    )}
+    ) : null}
   </>
   );
 }
