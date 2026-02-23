@@ -33,3 +33,5 @@ export { tickCommand } from "./tick.js";
 export { scheduledCommand } from "./scheduled.js";
 export { trickCommand } from "./trick.js";
 export { finalizeCommand } from "./finalize.js";
+export { promptCommand } from "./prompt.js";
+export { sessionCommand } from "./session.js";
