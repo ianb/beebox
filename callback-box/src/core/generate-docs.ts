@@ -52,6 +52,11 @@ const CONNECTORS: ConnectorInfo[] = [
     produces: ["email-thread", "email-message"],
     description: "Pulls emails from Gmail via IMAP. Creates thread directories with message cards and body text files.",
   },
+  {
+    name: "pushover",
+    produces: [],
+    description: "Sends push notifications via Pushover. Outbound-only — consumes `pushover-message` cards from `box/output/` during `cb finalize`.",
+  },
 ];
 
 const DOCID_DEBUG_MARKER = ".callback-box/docid-debug";
@@ -290,7 +295,7 @@ function generateAgentGuide(workflows: WorkflowSummary[]): string {
     "| `box/jobs/` | Pending job cards for the reactor to process |",
     "| `box/questions/` | Pending questions for the user |",
     "| `box/resources/` | Synced external state |",
-    "| `box/output/` | Produced content (briefs, etc.) |",
+    "| `box/output/` | Outbound cards (push notifications, etc.) — flushed by `cb finalize` |",
     "| `box/pool/` | Items being actively worked on |",
     "| `store/archive/` | Processed/completed items |",
     "| `store/integrated/` | Feedback absorbed into guides |",
@@ -309,6 +314,7 @@ function generateAgentGuide(workflows: WorkflowSummary[]): string {
     "- `cb answer <path>` — Answer a pending question",
     "- `cb context` — Show current box state for agent prompts",
     "- `cb reactor` — Process all pending jobs in `box/jobs/`",
+    "- `cb finalize` — Flush outbound cards in `box/output/` (push notifications, etc.)",
     "- `cb scenario list|run` — Run scenario tests against boxes",
     "- `cb finish <job-file>` — Complete a job (deletes the job card and commits)",
     "- `cb workflow run <name-or-path>` — Run a workflow (see `docs/generated/workflows.md`)",
@@ -596,6 +602,18 @@ function generateCbCommands(): string {
     "",
     "Shows each schedule's name, type (cron/at/rrule), next due time, last run, and flags (on-wakeup, once, enabled).",
     "",
+    "## cb finalize",
+    "",
+    "Run outbound connectors to flush pending output cards.",
+    "",
+    "```",
+    "cb finalize [-c, --connector <name>]",
+    "```",
+    "",
+    "Symmetric counterpart to `cb wakeup`. Sends any pending cards in `box/output/`",
+    "(e.g. pushover notifications). Called automatically by the reactor after job processing,",
+    "or run manually to flush output.",
+    "",
     "## cb scenario",
     "",
     "Run scenario tests against boxes. Scenarios live in `~/src/boxes/scenarios/`.",
@@ -672,6 +690,8 @@ function generateConnectorsDocs(): string {
 
     if (c.produces.length > 0) {
       lines.push(`**Produces:** ${c.produces.map((t) => `\`${t}\``).join(", ")} (via \`cb wakeup\`)`);
+    } else {
+      lines.push("**Outbound only** — no cards produced.");
     }
 
     lines.push("");

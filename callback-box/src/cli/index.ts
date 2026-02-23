@@ -39,6 +39,7 @@ import {
   tickCommand,
   scheduledCommand,
   trickCommand,
+  finalizeCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -80,6 +81,7 @@ program.addCommand(scenarioCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
 program.addCommand(trickCommand);
+program.addCommand(finalizeCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

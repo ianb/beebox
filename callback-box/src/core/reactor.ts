@@ -178,6 +178,14 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     }
   }
 
+  // Run finalize to flush outbound cards
+  onLog?.(fmt.header("\n[Finalize]\n"));
+  const finalizeOk = await runFinalize(boxRoot, onLog);
+  if (!finalizeOk) {
+    onLog?.(fmt.warn("Finalize failed.\n"));
+  }
+  onLog?.("\n");
+
   // Polling mode: wait and repeat
   if (pollInterval > 0 && success) {
     onLog?.(fmt.dim(`\nPolling every ${pollInterval}s... (Ctrl+C to stop)\n`));
@@ -218,6 +226,35 @@ async function runSync(boxRoot: string, onLog?: (text: string) => void): Promise
 
     child.on("error", (err) => {
       onLog?.(`Sync error: ${err.message}\n`);
+      resolve(false);
+    });
+
+    child.on("close", (code) => {
+      resolve(code === 0);
+    });
+  });
+}
+
+/**
+ * Run `cb finalize` as a subprocess.
+ */
+async function runFinalize(boxRoot: string, onLog?: (text: string) => void): Promise<boolean> {
+  return new Promise((resolve) => {
+    const child = spawn("cb", ["finalize"], {
+      cwd: boxRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    child.stdout.on("data", (data: Buffer) => {
+      onLog?.(data.toString());
+    });
+
+    child.stderr.on("data", (data: Buffer) => {
+      onLog?.(data.toString());
+    });
+
+    child.on("error", (err) => {
+      onLog?.(`Finalize error: ${err.message}\n`);
       resolve(false);
     });
 

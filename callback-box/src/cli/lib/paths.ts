@@ -11,6 +11,7 @@ export const BOX_DIRS = {
   inbox: "box/inbox",
   inboxUnhandled: "box/inbox/unhandled",
   jobs: "box/jobs",
+  output: "box/output",
   questions: "box/questions",
   resources: "box/resources",
 

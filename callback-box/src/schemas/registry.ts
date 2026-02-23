@@ -29,6 +29,7 @@ import { IntakeJobSchema } from "./intake-job.js";
 import { CalendarReviewJobSchema } from "./calendar-review-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
+import { PushoverMessageSchema } from "./pushover-message.js";
 
 /**
  * All registered card schemas.
@@ -57,6 +58,7 @@ export const schemas: ElementSchema[] = [
   CalendarReviewJobSchema,
   GuideSchema,
   ScheduledScriptSchema,
+  PushoverMessageSchema,
 ];
 
 /**
@@ -108,3 +110,4 @@ export { IntakeJobSchema } from "./intake-job.js";
 export { CalendarReviewJobSchema } from "./calendar-review-job.js";
 export { GuideSchema } from "./guide.js";
 export { ScheduledScriptSchema } from "./scheduled-script.js";
+export { PushoverMessageSchema } from "./pushover-message.js";
