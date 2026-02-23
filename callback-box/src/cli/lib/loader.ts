@@ -17,16 +17,18 @@ export interface CreateLoaderOptions {
 /**
  * Create a CardLoader for the given box root.
  *
+ * Loads both built-in schemas and any box-local schemas from config/schemas/.
+ *
  * @param boxRoot - The root directory of the callback box
  * @param options - Optional configuration
  * @returns A configured CardLoader
  */
-export function createLoader(
+export async function createLoader(
   boxRoot: string,
   options: CreateLoaderOptions = {}
-): CardLoader {
+): Promise<CardLoader> {
   const loaderOptions: CardLoaderOptions = {
-    schemas: createSchemaRegistry(),
+    schemas: await createSchemaRegistry(boxRoot),
     requireVersion: options.requireVersion ?? false,
     indent: options.indent ?? true,
   };
@@ -49,12 +51,12 @@ export interface CreateMemoryLoaderParams {
  * @param params - Parameters object
  * @returns A configured MemoryCardLoader
  */
-export function createMemoryLoader(
+export async function createMemoryLoader(
   params: CreateMemoryLoaderParams
-): MemoryCardLoader {
+): Promise<MemoryCardLoader> {
   const { projectRoot, files = {}, options = {} } = params;
   return new MemoryCardLoader(projectRoot, {
-    schemas: createSchemaRegistry(),
+    schemas: await createSchemaRegistry(),
     requireVersion: options.requireVersion ?? false,
     indent: options.indent ?? true,
     files,

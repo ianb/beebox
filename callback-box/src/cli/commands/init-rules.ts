@@ -11,7 +11,7 @@
 import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
-import { schemas } from "../../schemas/registry.js";
+import { schemas, loadBoxSchemas } from "../../schemas/registry.js";
 
 interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
@@ -84,8 +84,12 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
 
   const generated: string[] = [];
 
+  // Load box-local schemas alongside built-in ones
+  const boxSchemas = await loadBoxSchemas(boxRoot);
+  const allSchemas = [...schemas, ...boxSchemas];
+
   // Schema-driven card rules
-  for (const schema of schemas) {
+  for (const schema of allSchemas) {
     if (!schema.instructions) continue;
 
     const glob = `**/*.${schema.tagName}.card`;

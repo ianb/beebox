@@ -190,7 +190,7 @@ async function executeFetchNews(
   }
 
   // Load the card
-  const loader = createLoader(ctx.boxRoot);
+  const loader = await createLoader(ctx.boxRoot);
   let card;
   try {
     card = await loader.load(fullPath);

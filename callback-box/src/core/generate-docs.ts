@@ -12,7 +12,8 @@ import { join } from "node:path";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import type { ZodTypeAny } from "zod";
 import { parseXml } from "cardworks";
-import { schemas } from "../schemas/registry.js";
+import { schemas, loadBoxSchemas } from "../schemas/registry.js";
+import type { ElementSchema } from "cardworks";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
 import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 
@@ -173,21 +174,25 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
 
   const workflows = await scanWorkflows(boxRoot);
 
+  // Load box-local schemas alongside built-in ones
+  const boxSchemas = await loadBoxSchemas(boxRoot);
+  const allSchemas = [...schemas, ...boxSchemas];
+
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide(workflows), debug })),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide(workflows, allSchemas), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
       withDocId({ relativePath: `${DOCS_DIR}/connectors.md`, content: generateConnectorsDocs(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "workflows.md"),
       withDocId({ relativePath: `${DOCS_DIR}/workflows.md`, content: generateWorkflowGuide(), debug })),
-    ...schemas
+    ...allSchemas
       .filter((s) => s.instructions)
       .map((s) => {
         const filename = `card-${s.tagName}.md`;
         return writeFile(join(boxRoot, DOCS_DIR, filename),
-          withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.tagName), debug }));
+          withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.tagName, allSchemas), debug }));
       }),
   ]);
 
@@ -278,7 +283,7 @@ async function compileGuides(boxRoot: string, debug: boolean): Promise<void> {
 /**
  * Generate the compact agent guide (always loaded via @-include).
  */
-function generateAgentGuide(workflows: WorkflowSummary[]): string {
+function generateAgentGuide(workflows: WorkflowSummary[], allSchemas: ElementSchema[] = schemas): string {
   const templates = getAllTemplates();
 
   const lines: string[] = [
@@ -366,7 +371,7 @@ function generateAgentGuide(workflows: WorkflowSummary[]): string {
     "",
   );
 
-  for (const schema of schemas) {
+  for (const schema of allSchemas) {
     const hasDoc = schema.instructions ? ` — see \`docs/generated/card-${schema.tagName}.md\`` : "";
     lines.push(`- **${schema.tagName}**${hasDoc}`);
   }
@@ -633,8 +638,8 @@ function generateCbCommands(): string {
 /**
  * Generate a detailed doc for a single card type.
  */
-function generateCardDoc(tagName: string): string {
-  const schema = schemas.find((s) => s.tagName === tagName);
+function generateCardDoc(tagName: string, allSchemas: ElementSchema[] = schemas): string {
+  const schema = allSchemas.find((s) => s.tagName === tagName);
   if (!schema) return `# ${tagName}\n\nNo schema found.\n`;
 
   const templates = getTemplatesForCardType(tagName);

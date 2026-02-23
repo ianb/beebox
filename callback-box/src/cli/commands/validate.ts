@@ -22,7 +22,7 @@ export const validateCommand = new Command("validate")
     ) => {
       try {
         const boxRoot = await requireBoxRoot();
-        const loader = createLoader(boxRoot);
+        const loader = await createLoader(boxRoot);
 
         let summary: LintSummary;
 

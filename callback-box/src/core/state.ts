@@ -64,7 +64,7 @@ interface ScanCardsParams {
 async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
   const { dir, boxRoot, subdir } = params;
   const cards: CardInfo[] = [];
-  const loader = createLoader(boxRoot);
+  const loader = await createLoader(boxRoot);
 
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
@@ -163,7 +163,7 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
 export async function generateContext(boxRoot?: string): Promise<ContextOutput> {
   const root = boxRoot ?? await requireBoxRoot();
   const state = await getSystemState(root);
-  const loader = createLoader(root);
+  const loader = await createLoader(root);
 
   // Get pending questions with their prompts
   const pendingQuestions: PendingQuestion[] = [];

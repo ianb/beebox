@@ -233,7 +233,7 @@ async function runPreprocessors(boxRoot: string): Promise<number> {
   const state = await getSystemState(boxRoot);
   if (state.inbox.length === 0) return 0;
 
-  const loader = createLoader(boxRoot);
+  const loader = await createLoader(boxRoot);
   const actionNotes: string[] = [];
 
   for (const item of state.inbox) {

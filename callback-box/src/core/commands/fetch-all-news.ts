@@ -33,7 +33,7 @@ export interface FetchAllResult {
  */
 async function hasContent(boxRoot: string, cardPath: string): Promise<boolean> {
   try {
-    const loader = createLoader(boxRoot);
+    const loader = await createLoader(boxRoot);
     const fullPath = path.isAbsolute(cardPath)
       ? cardPath
       : path.join(boxRoot, cardPath);
@@ -193,7 +193,7 @@ async function executeFetchAllNews(
 
     // Collect feed sources from fetched items
     const feedCounts = new Map<string, number>();
-    const loader = createLoader(ctx.boxRoot);
+    const loader = await createLoader(ctx.boxRoot);
     for (const itemPath of result.fetched) {
       try {
         const fullPath = path.isAbsolute(itemPath)

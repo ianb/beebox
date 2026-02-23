@@ -59,7 +59,7 @@ async function executeAnswer(
     return { success: false, error: "Path must be a card file (*.card)" };
   }
 
-  const loader = createLoader(ctx.boxRoot);
+  const loader = await createLoader(ctx.boxRoot);
 
   // Load the question
   let card;

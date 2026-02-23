@@ -105,6 +105,9 @@ tricks/node_modules/
   // Install tricks types.d.ts and CLAUDE.md if missing
   await installTricksFiles(resolvedRoot);
 
+  // Install schemas guide CLAUDE.md if missing
+  await installSchemasGuide(resolvedRoot);
+
   // Initialize git repo (only on fresh init)
   if (!options.skipGit && !isUpdate) {
     const isExistingRepo = await isRepo(resolvedRoot);
@@ -438,6 +441,104 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
 // Tricks (agent-authored scripts)
 // ============================================
 
+// ============================================
+// Box-local schemas guide
+// ============================================
+
+const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
+
+Box-local schemas let you define new card types inside your box. Each schema is a \`.ts\` file
+in \`config/schemas/\` that uses the same tools as built-in schemas.
+
+## Creating a Schema
+
+Create a \`.ts\` file in \`config/schemas/\` that exports a default \`ElementSchema\`:
+
+\`\`\`typescript
+import { element } from "cardworks";
+import { z } from "zod";
+
+export default element("my-type", {
+  attrs: {
+    status: z.enum(["draft", "final"]).default("draft"),
+    priority: z.enum(["low", "medium", "high"]).optional(),
+  },
+  children: z.array(z.unknown()),
+  instructions: \\\`# My Type Cards
+
+Instructions for the agent on how to handle this card type.
+These appear in .claude/rules/ and are loaded when the agent
+reads or edits a matching card file.\\\`,
+});
+\`\`\`
+
+The filename becomes the card type: \`config/schemas/task.ts\` → \`*.task.card\` files.
+
+## Available Imports
+
+From \`cardworks\`:
+- \`element(tagName, config)\` — define a schema
+- \`escapeText(str)\` — XML-escape text content
+- \`escapeAttr(str)\` — XML-escape attribute values
+
+From \`zod\`:
+- \`z\` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)
+
+## Optional: Templates
+
+Export a \`template\` to enable \`cb create\` support for your card type:
+
+\`\`\`typescript
+import { element, escapeText } from "cardworks";
+import { z } from "zod";
+
+export const template = {
+  name: "task",
+  description: "A task card",
+  argsSchema: z.object({
+    title: z.string().describe("Task title"),
+    priority: z.enum(["low", "medium", "high"]).optional().describe("Priority level"),
+  }),
+  generate: (args: { title: string; priority?: string }) => {
+    const now = new Date().toISOString();
+    return \\\`<task status="todo"\${args.priority ? \\\` priority="\${args.priority}"\\\` : ""}>
+  <created>\${now}</created>
+  <title>\${escapeText(args.title)}</title>
+  <description></description>
+</task>
+\\\`;
+  },
+  cardTypes: ["task"],
+  defaultForTypes: ["task"],
+};
+
+export default element("task", {
+  // ... schema definition
+});
+\`\`\`
+
+## After Adding or Modifying Schemas
+
+Run \`cb init\` to regenerate rules and documentation:
+
+\`\`\`bash
+cb init .
+\`\`\`
+
+This will:
+- Generate \`.claude/rules/card-<type>.md\` (if the schema has \`instructions\`)
+- Generate \`docs/generated/card-<type>.md\`
+- Update the agent guide with the new card type
+- Register any templates for \`cb create\`
+
+## Tips
+
+- Keep schema files focused — one card type per file
+- Always include \`instructions\` so the agent knows how to handle the card type
+- Use \`z.unknown()\` for children if the card can contain arbitrary XML elements
+- Test with \`cb validate\` after creating cards of the new type
+`;
+
 const TRICKS_PACKAGE_JSON = JSON.stringify(
   {
     name: "tricks",
@@ -548,6 +649,19 @@ async function installTricksFiles(boxRoot: string): Promise<void> {
   } catch {
     await fs.mkdir(path.join(boxRoot, "tricks/scripts"), { recursive: true });
     await fs.writeFile(claudeMdPath, TRICKS_CLAUDE_MD);
+  }
+}
+
+/**
+ * Install schemas CLAUDE.md guide if it doesn't exist.
+ */
+async function installSchemasGuide(boxRoot: string): Promise<void> {
+  const claudeMdPath = path.join(boxRoot, "config/schemas/CLAUDE.md");
+  try {
+    await fs.access(claudeMdPath);
+  } catch {
+    await fs.mkdir(path.join(boxRoot, "config/schemas"), { recursive: true });
+    await fs.writeFile(claudeMdPath, SCHEMAS_CLAUDE_MD);
   }
 }
 

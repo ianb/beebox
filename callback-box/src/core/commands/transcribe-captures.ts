@@ -29,7 +29,7 @@ registerCommand({
   args: [],
   execute: async (ctx) => {
     const inboxDir = getBoxDir(ctx.boxRoot, "inbox");
-    const loader = createLoader(ctx.boxRoot);
+    const loader = await createLoader(ctx.boxRoot);
 
     // Find capture directories
     let entries: Array<{ name: string; isDirectory: () => boolean }>;

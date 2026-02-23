@@ -179,7 +179,7 @@ export async function registerApiRoutes(
       }
 
       const fullPath = path.join(boxRoot, cardPath);
-      const loader = createLoader(boxRoot);
+      const loader = await createLoader(boxRoot);
 
       try {
         const card = await loader.load(fullPath);
@@ -222,7 +222,7 @@ export async function registerApiRoutes(
       }
 
       const fullPath = path.join(boxRoot, cardPath);
-      const loader = createLoader(boxRoot);
+      const loader = await createLoader(boxRoot);
 
       try {
         const card = await loader.load(fullPath);
@@ -331,7 +331,7 @@ export async function registerApiRoutes(
         status?: string | undefined;
       }> = [];
 
-      const loader = createLoader(boxRoot);
+      const loader = await createLoader(boxRoot);
 
       for (const entry of entries) {
         if (entry.name.startsWith(".")) continue;
