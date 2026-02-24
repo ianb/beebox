@@ -327,12 +327,43 @@ Can the agent use git history, inbox state, recent archives to answer questions 
   - Expected: checks output directory or git log
 
 ### Personality & Identity
-Does the agent know who it is and who it works for? (Depends on personality guide cards being implemented.)
+Does the agent know who it is and who it works for?
 
-- "What's your name?"
-- "Who do you work for?"
-- "How would you describe your role?"
-- "What kind of tone do you use when writing?"
+```
+cb prompt "What's your name?"
+```
+- **Expected level: Knows directly** — the compiled personality section says "You are **Egg**"
+- Watch for: does it answer immediately, or search for the information?
+
+```
+cb prompt "What's your role?"
+```
+- **Expected level: Knows directly** — "Personal information aide" is in the compiled personality
+- Watch for: does it use the exact term from the personality card?
+
+```
+cb prompt "Describe your personality."
+```
+- **Expected level: Knows directly** — the description paragraph is compiled into the agent guide
+- Watch for: does it paraphrase the description, or make up traits not in the card?
+
+```
+cb prompt "How would I change your personality or tone?"
+```
+- **Expected level: Knows about** — the compiled section has a source comment pointing to `config/main.personality.card`
+- Watch for: does it identify the personality card as the source? Or suggest editing CLAUDE.md directly?
+
+```
+cb prompt "What tone instructions do you follow?"
+```
+- **Expected level: Discoverable** — tone instructions are all low confidence in the default template, so they're NOT in the compiled output. Agent would need to read the personality card to find them.
+- Watch for: does it say "I don't have specific tone instructions" (accurate for what's compiled) or read the card to find the low-confidence defaults?
+
+```
+cb prompt "Who is your boxholder?"
+```
+- **Expected level: Knows directly (partial)** — the default template has no boxholder name filled in, so the agent should acknowledge it doesn't know yet
+- Watch for: does it say it doesn't know, or guess? Does it know the concept of "boxholder"?
 
 **Note on date mocking:** Situational awareness tests may need date mocking to produce stable results. Consider a `CB_MOCK_DATE` env var in the future. For now, these tests require a live box with real recent activity.
 
@@ -359,3 +390,42 @@ First full run of the knowledge test suite (27 tests). Results and observations:
 **"Knows about" vs. creation prompts** — Pattern across multiple tests: the agent reads docs when asked to *explain* something but skips the read when asked to *create* something. It seems to treat creation as an opportunity to demonstrate capability rather than a signal to look things up. This affects create-question-card, create-workflow, and add-daily-task (before fix). The schedule fix worked by making the pointer more specific about what the doc contains; the workflow fix (trimming) didn't work. More investigation needed on what makes an agent follow a pointer.
 
 **Recipe test replaced** — Original `track-recipes` test asked about recipes, but recipe is a built-in card type. Agent correctly identified existing support rather than discovering schemas. Replaced with `track-reading-list` (books with progress/ratings) — no built-in type for this. Agent now correctly creates a schema in `config/schemas/book.ts` but does so without reading `config/schemas/CLAUDE.md` — it has enough from the agent guide pointer + the existing bookmark.ts example. This is "knows about" behavior working correctly; the automated `should_read` check is too strict.
+
+## Personality Test Run Notes (2026-02-23)
+
+Six personality tests run against the default "Egg" template.
+
+### Results
+
+| Test | Expected Level | Result | Notes |
+|------|---------------|--------|-------|
+| What's your name? | Knows directly | **Pass** | Immediate answer: "Egg". No file reads. |
+| What's your role? | Knows directly | **Pass** | "Personal information aide" — exact term. |
+| Describe your personality | Knows directly | **Pass** | Paraphrased description paragraph into bullet points. All content grounded in the actual card. |
+| How would I change your personality or tone? | Knows about | **Pass** | Identified `config/main.personality.card`, mentioned `cb validate` and `cb init`. |
+| What tone instructions do you follow? | Discoverable | **Guessed** | Answered from description paragraph, reformatting it as tone instructions. Did NOT read the personality card to find actual `<tone>` elements. Sounds right but isn't surfacing the real data. |
+| Who is your boxholder? | Knows directly (partial) | **Mixed** | Correctly knew the "boxholder" concept. Acknowledged personality card doesn't have a name. But then inferred "Ian Bicking" from the filesystem path — clever but not personality-card-sourced. |
+
+### Observations (initial run, before fixes)
+
+**Identity tests work well.** The compiled personality section in the agent guide is doing its job — name, role, and description are all "knows directly" and answered accurately without file reads.
+
+**"How to change" works well.** The source comment (`<!-- Source: config/main.personality.card -->`) successfully guides the agent to the right file.
+
+**Tone instructions were a blind spot.** Initially, all default tone instructions were low confidence and filtered from compiled output. The agent didn't know they existed and improvised from the description.
+
+**Boxholder inference from filesystem.** Without a name in the personality card, the agent inferred "Ian Bicking" from the Unix username. Resourceful but not personality-card-sourced.
+
+### Fixes applied
+
+**Relaxed confidence filter.** Changed compilation to only filter out `hypothesis` confidence level (not `low`). Rationale: if you put something in the card, it should compile. Low confidence means "not sure yet" — it's still a real instruction. Only hypothesis ("pure guess, not yet tested") should be excluded. Applied to both tone instructions and boxholder relationships.
+
+**Added boxholder name to test box.** Filled in `<full-name>Ian Bicking</full-name>` and `<called>Ian</called>` in the test box's personality card.
+
+### Re-run results (after fixes)
+
+| Test | Result | Notes |
+|------|--------|-------|
+| What tone instructions do you follow? | **Pass** | All three tone instructions surfaced directly. Agent correctly cited the personality card as source. |
+| Who is your boxholder? | **Pass** | Immediate answer: "Ian Bicking (Ian)" with relationship note. Sourced from personality card. |
+| "What should I have for dinner?" reasoning test | **Pass** | Personality traits visibly shaped reasoning: grounded suggestions in boxholder's saved data, asked clarifying questions, credited ideas back, admitted limits ("I'm not a food expert — I'm an information aide"), and imagined a long-term version with more signal. |

@@ -374,13 +374,9 @@ export function compilePersonality(parsed: ParsedPersonality): string {
     lines.push(`Your boxholder is **${parsed.boxholder.fullName}**${called}.`);
   }
 
-  // Boxholder relationships (user-stated or high+ confidence inferred)
+  // Boxholder relationships (anything above hypothesis)
   const confidentRelationships = parsed.boxholder.relationships.filter(
-    (r) =>
-      r.source === "user-stated" ||
-      r.source === "feedback" ||
-      r.confidence === "confirmed" ||
-      r.confidence === "high"
+    (r) => r.confidence !== "hypothesis"
   );
   if (confidentRelationships.length > 0) {
     for (const rel of confidentRelationships) {
@@ -396,10 +392,9 @@ export function compilePersonality(parsed: ParsedPersonality): string {
     lines.push("");
   }
 
-  // Tone instructions (medium+ confidence)
+  // Tone instructions (anything above hypothesis)
   const confidentTone = parsed.toneInstructions.filter(
-    (t) =>
-      t.confidence !== "hypothesis" && t.confidence !== "low"
+    (t) => t.confidence !== "hypothesis"
   );
   if (confidentTone.length > 0) {
     lines.push("**Tone:**");
