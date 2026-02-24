@@ -31,6 +31,7 @@ import {
 import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
+import { loadTransientState, saveTransientState } from "./transient-state.js";
 
 interface GmailConfig {
   /** Gmail search query (uses Gmail search syntax via X-GM-RAW) */
@@ -46,6 +47,9 @@ interface GmailSecret {
 
 interface GmailState {
   seenMessageIds: string[];
+}
+
+interface GmailTransientState {
   lastPullDate?: string;
 }
 
@@ -196,6 +200,7 @@ function buildGmailCommitMessage(notes: ThreadNote[], fileCount: number): string
 class GmailConnector implements Connector {
   name = "gmail";
   produces = ["email-thread", "email-message"];
+  triggeredBy?: string;
 
   private boxRoot: string;
 
@@ -300,9 +305,12 @@ class GmailConnector implements Connector {
         }
 
         // Only fetch messages newer than last pull if we have a date
-        if (state.lastPullDate) {
+        const transient = await loadTransientState<GmailTransientState>({
+          boxRoot: this.boxRoot, connectorName: "gmail", defaultValue: {},
+        });
+        if (transient.lastPullDate) {
           const existing = searchCriteria.gmraw as string;
-          searchCriteria.gmraw = `${existing} after:${state.lastPullDate.split("T")[0]}`;
+          searchCriteria.gmraw = `${existing} after:${transient.lastPullDate.split("T")[0]}`;
         }
 
         const searchResult = await client.search(searchCriteria, { uid: true });
@@ -560,7 +568,7 @@ class GmailConnector implements Connector {
       }
     } catch (err) {
       // Make sure we save state even on error
-      state.lastPullDate = new Date().toISOString();
+      await saveTransientState({ boxRoot: this.boxRoot, connectorName: "gmail", data: { lastPullDate: new Date().toISOString() } });
       await this.saveState(state);
 
       return {
@@ -571,9 +579,9 @@ class GmailConnector implements Connector {
       };
     }
 
-    // Update state
-    state.lastPullDate = new Date().toISOString();
-    // Keep last 5000 seen message IDs to prevent unbounded growth
+    // Update transient state (timestamps — gitignored)
+    await saveTransientState({ boxRoot: this.boxRoot, connectorName: "gmail", data: { lastPullDate: new Date().toISOString() } });
+    // Update persistent state (seen IDs — committed)
     if (state.seenMessageIds.length > 5000) {
       state.seenMessageIds = state.seenMessageIds.slice(-5000);
     }
@@ -581,11 +589,13 @@ class GmailConnector implements Connector {
 
     // Commit if we created or updated any files
     if (created.length > 0 || updated.length > 0) {
-      await stageFiles(this.boxRoot, [...created, ...updated]);
+      const stateRelPath = path.relative(this.boxRoot, this.statePath());
+      await stageFiles(this.boxRoot, [...created, ...updated, stateRelPath]);
       await commit(this.boxRoot, {
         message: buildGmailCommitMessage(threadNotes, created.length + updated.length),
         trailers: {
           "Pulled-By": "gmail-connector",
+          ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}),
         },
       });
     }

@@ -14,7 +14,7 @@ import * as os from "node:os";
  * Content block from a session log entry.
  */
 export interface SessionContentBlock {
-  type: "text" | "tool_use" | "tool_result";
+  type: "text" | "tool_use" | "tool_result" | "thinking";
   text?: string;
   toolName?: string;
   toolId?: string;
@@ -171,6 +171,12 @@ export function transformContent(content: unknown): SessionContentBlock[] {
       };
     }
 
+    if (block.type === "thinking") {
+      return { type: "thinking" as const, text: String(block.thinking || "") };
+    }
+    if (block.type === "redacted_thinking") {
+      return { type: "thinking" as const, text: "[redacted]" };
+    }
     return { type: "text" as const, text: `[${block.type}]` };
   });
 }

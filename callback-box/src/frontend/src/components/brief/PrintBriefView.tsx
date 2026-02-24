@@ -10,6 +10,7 @@ import { useParams, useSearchParams, Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { NewsBriefData, Section, Excerpt, Expando } from "./types";
+import { getApiBase } from "../../api";
 
 /**
  * Collects all links from the brief for footnote rendering.
@@ -113,7 +114,7 @@ export function PrintBriefView() {
 
   useEffect(() => {
     if (!briefPath) return;
-    fetch(`/api/brief/${encodeURIComponent(briefPath)}`)
+    fetch(`${getApiBase()}/brief/${encodeURIComponent(briefPath)}`)
       .then((r) => {
         if (!r.ok) throw new Error("Failed to fetch brief");
         return r.json();

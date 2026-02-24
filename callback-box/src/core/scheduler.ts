@@ -11,6 +11,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { BOX_MARKER } from "../cli/lib/paths.js";
 import { runTick, type TickResult } from "../cli/commands/tick.js";
+import { getStatus, isRepo } from "../cli/lib/git.js";
 
 export interface SchedulerConfig {
   boxes: string[];
@@ -129,6 +130,24 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
         if (!(await isBox(boxPath))) {
           console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (missing ${BOX_MARKER})`);
           continue;
+        }
+
+        // Check for uncommitted changes before running tick
+        if (await isRepo(boxPath)) {
+          const status = await getStatus(boxPath);
+          if (!status.clean) {
+            const counts = [];
+            if (status.staged.length > 0) counts.push(`${status.staged.length} staged`);
+            if (status.modified.length > 0) counts.push(`${status.modified.length} modified`);
+            if (status.untracked.length > 0) counts.push(`${status.untracked.length} untracked`);
+            await writeBoxLog(boxPath, {
+              ts: new Date().toISOString(),
+              event: "dirty-repo",
+              box: boxPath,
+              warning: `Uncommitted changes: ${counts.join(", ")}`,
+              files: [...status.staged, ...status.modified, ...status.untracked].slice(0, 20),
+            });
+          }
         }
 
         const result = await runTick(boxPath, { quiet: true });

@@ -43,6 +43,7 @@ interface CaptureConfig {
 class CaptureConnector implements Connector {
   name = "capture";
   produces = ["capture-session", "image", "audio"];
+  triggeredBy?: string;
 
   private boxRoot: string;
 
@@ -196,6 +197,7 @@ class CaptureConnector implements Connector {
         message: buildCaptureCommitMessage(sessionNotes),
         trailers: {
           "Pulled-By": "capture-connector",
+          ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}),
         },
       });
     }
@@ -216,7 +218,7 @@ class CaptureConnector implements Connector {
         await stageFiles(this.boxRoot, [jobPath]);
         await commit(this.boxRoot, {
           message: "Create intake job for capture sessions",
-          trailers: { "Created-By": "capture-connector" },
+          trailers: { "Created-By": "capture-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
         });
       }
     }

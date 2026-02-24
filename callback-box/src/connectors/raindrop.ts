@@ -23,6 +23,7 @@ import {
 import { createBookmarkTemplate } from "../schemas/bookmark.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { createOrAppendIntakeJob } from "./intake-utils.js";
+import { saveTransientState } from "./transient-state.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -47,7 +48,6 @@ interface BookmarkSyncEntry {
 }
 
 interface RaindropState {
-  lastSyncTime?: string;
   collections: Record<string, number>; // name → id
   bookmarks: Record<string, BookmarkSyncEntry>; // raindropId → entry
 }
@@ -409,6 +409,7 @@ function buildRaindropPullMessage(notes: PullNote[]): string {
 class RaindropConnector implements Connector {
   name = "raindrop";
   produces = ["bookmark"];
+  triggeredBy?: string;
 
   private boxRoot: string;
 
@@ -486,7 +487,7 @@ class RaindropConnector implements Connector {
         await stageFiles(this.boxRoot, toStage);
         await commit(this.boxRoot, {
           message: buildRaindropPushMessage(pushResult.pushNotes),
-          trailers: { "Pushed-By": "raindrop-connector" },
+          trailers: { "Pushed-By": "raindrop-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
         });
       }
 
@@ -497,7 +498,7 @@ class RaindropConnector implements Connector {
       errors.push(...pullResult.errors);
 
       // Save state and commit pull changes
-      state.lastSyncTime = new Date().toISOString();
+      await saveTransientState({ boxRoot: this.boxRoot, connectorName: "raindrop", data: { lastSyncTime: new Date().toISOString() } });
       await this.saveState(state);
 
       if (pullResult.created.length > 0 || pullResult.updated.length > 0 || pullResult.removed.length > 0) {
@@ -513,7 +514,7 @@ class RaindropConnector implements Connector {
         await stageFiles(this.boxRoot, toStage);
         await commit(this.boxRoot, {
           message: buildRaindropPullMessage(pullResult.pullNotes),
-          trailers: { "Pulled-By": "raindrop-connector" },
+          trailers: { "Pulled-By": "raindrop-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
         });
       } else {
         // Still save state even if no card changes
@@ -539,7 +540,7 @@ class RaindropConnector implements Connector {
         await stageFiles(this.boxRoot, [jobPath]);
         await commit(this.boxRoot, {
           message: "Create intake job for Raindrop bookmarks",
-          trailers: { "Created-By": "raindrop-connector" },
+          trailers: { "Created-By": "raindrop-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
         });
       }
     }

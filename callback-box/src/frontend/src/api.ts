@@ -2,7 +2,14 @@
  * API client for the Callback Box backend.
  */
 
-const API_BASE = "/api";
+/**
+ * Get the API base URL for the current box, derived from the URL's first path segment.
+ * e.g., /test1/chat → /test1/api
+ */
+export function getApiBase(): string {
+  const firstSegment = window.location.pathname.split("/")[1] || "";
+  return `/${firstSegment}/api`;
+}
 
 export interface StatusResponse {
   boxRoot: string;
@@ -115,23 +122,23 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export async function getStatus(): Promise<StatusResponse> {
-  return fetchJson<StatusResponse>(`${API_BASE}/status`);
+  return fetchJson<StatusResponse>(`${getApiBase()}/status`);
 }
 
 export async function getInbox(): Promise<ListResponse> {
-  return fetchJson<ListResponse>(`${API_BASE}/inbox`);
+  return fetchJson<ListResponse>(`${getApiBase()}/inbox`);
 }
 
 export async function getCommands(): Promise<ListResponse> {
-  return fetchJson<ListResponse>(`${API_BASE}/commands`);
+  return fetchJson<ListResponse>(`${getApiBase()}/commands`);
 }
 
 export async function getQuestions(): Promise<ListResponse> {
-  return fetchJson<ListResponse>(`${API_BASE}/questions`);
+  return fetchJson<ListResponse>(`${getApiBase()}/questions`);
 }
 
 export async function getCard(path: string): Promise<CardResponse> {
-  return fetchJson<CardResponse>(`${API_BASE}/card/${path}`);
+  return fetchJson<CardResponse>(`${getApiBase()}/card/${path}`);
 }
 
 export type PatchOp =
@@ -145,18 +152,18 @@ export async function patchCard(
   cardPath: string,
   ops: PatchOp[]
 ): Promise<CardResponse> {
-  return fetchJson<CardResponse>(`${API_BASE}/card/${cardPath}`, {
+  return fetchJson<CardResponse>(`${getApiBase()}/card/${cardPath}`, {
     method: "PATCH",
     body: JSON.stringify({ ops }),
   });
 }
 
 export async function getLog(count = 10): Promise<LogResponse> {
-  return fetchJson<LogResponse>(`${API_BASE}/log?count=${count}`);
+  return fetchJson<LogResponse>(`${getApiBase()}/log?count=${count}`);
 }
 
 export async function getContext(): Promise<ContextResponse> {
-  return fetchJson<ContextResponse>(`${API_BASE}/context`);
+  return fetchJson<ContextResponse>(`${getApiBase()}/context`);
 }
 
 export interface NewsStatusResponse {
@@ -171,7 +178,7 @@ export interface NewsStatusResponse {
 }
 
 export async function getNewsStatus(): Promise<NewsStatusResponse> {
-  return fetchJson<NewsStatusResponse>(`${API_BASE}/news-status`);
+  return fetchJson<NewsStatusResponse>(`${getApiBase()}/news-status`);
 }
 
 // --- Browse API ---
@@ -191,7 +198,7 @@ export interface BrowseResponse {
 }
 
 export async function getBrowse(dirPath = ""): Promise<BrowseResponse> {
-  return fetchJson<BrowseResponse>(`${API_BASE}/browse/${dirPath}`);
+  return fetchJson<BrowseResponse>(`${getApiBase()}/browse/${dirPath}`);
 }
 
 export async function triggerWakeup(dryRun = false): Promise<{
@@ -199,7 +206,7 @@ export async function triggerWakeup(dryRun = false): Promise<{
   message: string;
   actions: string[];
 }> {
-  return fetchJson(`${API_BASE}/actions/wakeup`, {
+  return fetchJson(`${getApiBase()}/actions/wakeup`, {
     method: "POST",
     body: JSON.stringify({ dryRun }),
   });
@@ -215,7 +222,7 @@ export async function answerQuestion(
   params: AnswerQuestionParams
 ): Promise<{ success: boolean; message: string; path: string }> {
   const { questionPath, answer, selectedId } = params;
-  return fetchJson(`${API_BASE}/actions/answer`, {
+  return fetchJson(`${getApiBase()}/actions/answer`, {
     method: "POST",
     body: JSON.stringify({ questionPath, answer, selectedId }),
   });
@@ -231,7 +238,7 @@ export async function createCard(
   params: CreateCardParams
 ): Promise<{ success: boolean; path: string }> {
   const { path, template, args } = params;
-  return fetchJson(`${API_BASE}/actions/create`, {
+  return fetchJson(`${getApiBase()}/actions/create`, {
     method: "POST",
     body: JSON.stringify({ path, template, args }),
   });
@@ -243,7 +250,7 @@ export async function createVoiceMemo(
   const formData = new FormData();
   formData.append("file", audioBlob, "recording.webm");
 
-  const response = await fetch(`${API_BASE}/actions/create-voice-memo`, {
+  const response = await fetch(`${getApiBase()}/actions/create-voice-memo`, {
     method: "POST",
     body: formData,
   });
@@ -266,7 +273,7 @@ export async function uploadFile(
   const formData = new FormData();
   formData.append("file", blob, filename ?? "upload");
 
-  const response = await fetch(`${API_BASE}/upload`, {
+  const response = await fetch(`${getApiBase()}/upload`, {
     method: "POST",
     body: formData,
   });
@@ -292,7 +299,7 @@ export async function executeCommand(
   params: ExecuteCommandParams
 ): Promise<CommandResult> {
   const { command, args, onOutput } = params;
-  const response = await fetch(`${API_BASE}/commands/execute`, {
+  const response = await fetch(`${getApiBase()}/commands/execute`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -347,7 +354,7 @@ export async function executeCommandSync(
   command: string,
   args: Record<string, unknown>
 ): Promise<{ success: boolean; data?: unknown; error?: string; output: string[] }> {
-  return fetchJson(`${API_BASE}/commands/execute-sync`, {
+  return fetchJson(`${getApiBase()}/commands/execute-sync`, {
     method: "POST",
     body: JSON.stringify({ command, args }),
   });
@@ -357,14 +364,14 @@ export async function executeCommandSync(
  * List available commands.
  */
 export async function listCommands(): Promise<{ commands: CommandInfo[] }> {
-  return fetchJson(`${API_BASE}/commands/list`);
+  return fetchJson(`${getApiBase()}/commands/list`);
 }
 
 /**
  * Get details for a specific command.
  */
 export async function getCommandInfo(name: string): Promise<CommandInfo> {
-  return fetchJson(`${API_BASE}/commands/${name}`);
+  return fetchJson(`${getApiBase()}/commands/${name}`);
 }
 
 /**
@@ -389,7 +396,7 @@ export async function submitBriefFeedback(
     audioMimeType = audioBlob.type;
   }
 
-  return fetchJson(`${API_BASE}/brief/feedback`, {
+  return fetchJson(`${getApiBase()}/brief/feedback`, {
     method: "POST",
     body: JSON.stringify({
       briefPath,
@@ -423,7 +430,7 @@ export async function submitQueryResponse(
     audioMimeType = audioBlob.type;
   }
 
-  return fetchJson(`${API_BASE}/brief/query-response`, {
+  return fetchJson(`${getApiBase()}/brief/query-response`, {
     method: "POST",
     body: JSON.stringify({
       briefPath,
@@ -441,7 +448,7 @@ export async function submitQueryResponse(
 export async function markBriefRead(
   briefPath: string
 ): Promise<{ success: boolean; newPath: string }> {
-  return fetchJson(`${API_BASE}/brief/mark-read`, {
+  return fetchJson(`${getApiBase()}/brief/mark-read`, {
     method: "POST",
     body: JSON.stringify({ briefPath }),
   });
@@ -460,7 +467,7 @@ export interface GuideReaction {
  * Get guide reactions for the reading completion UI.
  */
 export async function getGuideReactions(): Promise<{ reactions: GuideReaction[] }> {
-  return fetchJson(`${API_BASE}/news-guide/reactions`);
+  return fetchJson(`${getApiBase()}/news-guide/reactions`);
 }
 
 /**
@@ -477,7 +484,7 @@ export async function completeReading(
   params: CompleteReadingParams
 ): Promise<{ success: boolean; newPath: string }> {
   const { briefPath, overallRating, selectedReactions, itemFeedback } = params;
-  return fetchJson(`${API_BASE}/brief/complete-reading`, {
+  return fetchJson(`${getApiBase()}/brief/complete-reading`, {
     method: "POST",
     body: JSON.stringify({
       briefPath,
@@ -502,11 +509,11 @@ export interface PairResult {
 }
 
 export async function getDropboxStatus(): Promise<DropboxStatus> {
-  return fetchJson<DropboxStatus>(`${API_BASE}/dropbox/status`);
+  return fetchJson<DropboxStatus>(`${getApiBase()}/dropbox/status`);
 }
 
 export async function createPairing(workerUrl: string): Promise<PairResult> {
-  return fetchJson<PairResult>(`${API_BASE}/dropbox/pair`, {
+  return fetchJson<PairResult>(`${getApiBase()}/dropbox/pair`, {
     method: "POST",
     body: JSON.stringify({ workerUrl }),
   });
@@ -532,17 +539,17 @@ export interface CalendarConfig {
 }
 
 export async function getAvailableCalendars(): Promise<AvailableCalendar[]> {
-  return fetchJson<AvailableCalendar[]>(`${API_BASE}/calendar/available`);
+  return fetchJson<AvailableCalendar[]>(`${getApiBase()}/calendar/available`);
 }
 
 export async function getCalendarConfig(): Promise<CalendarConfig> {
-  return fetchJson<CalendarConfig>(`${API_BASE}/calendar/config`);
+  return fetchJson<CalendarConfig>(`${getApiBase()}/calendar/config`);
 }
 
 export async function putCalendarConfig(
   config: CalendarConfig
 ): Promise<{ success: boolean }> {
-  return fetchJson(`${API_BASE}/calendar/config`, {
+  return fetchJson(`${getApiBase()}/calendar/config`, {
     method: "PUT",
     body: JSON.stringify(config),
   });
@@ -568,10 +575,11 @@ export interface DiffResponse {
 }
 
 export interface SessionContentBlock {
-  type: "text" | "tool_use" | "tool_result";
+  type: "text" | "tool_use" | "tool_result" | "thinking";
   text?: string;
   toolName?: string;
   toolId?: string;
+  input?: Record<string, unknown>;
   inputSummary?: string;
   toolUseId?: string;
   resultSummary?: string;
@@ -594,12 +602,12 @@ export interface SessionLogResponse {
 
 export async function getHistory(count = 50, offset = 0): Promise<HistoryResponse> {
   return fetchJson<HistoryResponse>(
-    `${API_BASE}/history?count=${count}&offset=${offset}`
+    `${getApiBase()}/history?count=${count}&offset=${offset}`
   );
 }
 
 export async function getCommitDiff(hash: string): Promise<DiffResponse> {
-  return fetchJson<DiffResponse>(`${API_BASE}/history/diff/${hash}`);
+  return fetchJson<DiffResponse>(`${getApiBase()}/history/diff/${hash}`);
 }
 
 export interface GetSessionLogParams {
@@ -613,7 +621,7 @@ export async function getSessionLog(
 ): Promise<SessionLogResponse> {
   const { sessionId, offset = 0, limit = 100 } = params;
   return fetchJson<SessionLogResponse>(
-    `${API_BASE}/history/session/${sessionId}?offset=${offset}&limit=${limit}`
+    `${getApiBase()}/history/session/${sessionId}?offset=${offset}&limit=${limit}`
   );
 }
 
@@ -640,7 +648,7 @@ export interface SchedulesResponse {
 }
 
 export async function getSchedules(): Promise<SchedulesResponse> {
-  return fetchJson<SchedulesResponse>(`${API_BASE}/schedules`);
+  return fetchJson<SchedulesResponse>(`${getApiBase()}/schedules`);
 }
 
 // --- Scheduler Log API ---
@@ -681,8 +689,103 @@ export async function getSchedulerLog(options?: {
   if (options?.status) params.set("status", options.status);
   const qs = params.toString();
   return fetchJson<SchedulerLogResponse>(
-    `${API_BASE}/scheduler/log${qs ? `?${qs}` : ""}`,
+    `${getApiBase()}/scheduler/log${qs ? `?${qs}` : ""}`,
   );
+}
+
+// --- Chat API ---
+
+export interface ChatStatusResponse {
+  sessionId: string | null;
+  running: boolean;
+  busy: boolean;
+}
+
+export interface ChatHistoryResponse {
+  sessionId: string | null;
+  entries: SessionEntry[];
+}
+
+export async function getChatStatus(): Promise<ChatStatusResponse> {
+  return fetchJson<ChatStatusResponse>(`${getApiBase()}/chat/status`);
+}
+
+export async function getChatHistory(): Promise<ChatHistoryResponse> {
+  return fetchJson<ChatHistoryResponse>(`${getApiBase()}/chat/history`);
+}
+
+export async function interruptChat(): Promise<{ ok: boolean }> {
+  return fetchJson(`${getApiBase()}/chat/interrupt`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function resetChatSession(): Promise<{ ok: boolean }> {
+  return fetchJson(`${getApiBase()}/chat/reset`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Send a chat message and stream the response via SSE.
+ * Calls onMessage for each streamed JSON message from Claude.
+ * Returns when the turn is complete.
+ */
+export async function sendChatMessage(params: {
+  message: string;
+  onMessage: (msg: Record<string, unknown>) => void;
+}): Promise<void> {
+  const { message, onMessage } = params;
+  const response = await fetch(`${getApiBase()}/chat/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ error: response.statusText }));
+    throw new Error(error.error || "Chat send failed");
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          onMessage(data);
+        } catch {
+          // Skip unparseable lines
+        }
+      }
+    }
+  }
+
+  // Process remaining buffer
+  if (buffer.startsWith("data: ")) {
+    try {
+      const data = JSON.parse(buffer.slice(6));
+      onMessage(data);
+    } catch {
+      // Skip
+    }
+  }
 }
 
 /**

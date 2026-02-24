@@ -1,18 +1,49 @@
 /**
  * cb serve - Start the webapp server
+ *
+ * Serves one or more boxes, each at its own URL slug based on directory basename.
+ * Usage: cb serve [dirs...]
+ *   - No args: serves current directory
+ *   - Multiple dirs: each dir's basename becomes its URL slug
  */
 
 import { Command } from "commander";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
-import { startServer, DEFAULT_PORT } from "../../webapp/server.js";
+import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
+
+/**
+ * Resolve directory arguments into BoxSpec array.
+ */
+function resolveBoxes(dirs: string[]): BoxSpec[] {
+  const resolved = dirs.map((dir) => {
+    const boxRoot = path.resolve(dir);
+    const slug = path.basename(boxRoot);
+    return { slug, boxRoot };
+  });
+
+  // Check for duplicate slugs
+  const slugs = new Set<string>();
+  for (const box of resolved) {
+    if (slugs.has(box.slug)) {
+      console.error(
+        `Error: Duplicate box slug "${box.slug}". All directories must have unique basenames.`
+      );
+      process.exit(1);
+    }
+    slugs.add(box.slug);
+  }
+
+  return resolved;
+}
 
 export const serveCommand = new Command("serve")
   .description("Start the webapp server")
+  .argument("[dirs...]", "Box directories to serve (default: current directory)")
   .option("-p, --port <port>", "Port to listen on", String(DEFAULT_PORT))
   .option("-h, --host <host>", "Host to bind to", "localhost")
   .option("-d, --dev", "Run in development mode with auto-reload")
-  .action(async (options: { port: string; host: string; dev?: boolean }) => {
+  .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean }) => {
     const port = parseInt(options.port, 10);
 
     if (isNaN(port) || port < 1 || port > 65535) {
@@ -20,34 +51,37 @@ export const serveCommand = new Command("serve")
       process.exit(1);
     }
 
+    // Default to current directory if no dirs specified
+    const boxDirs = dirs.length > 0 ? dirs : [process.cwd()];
+    const boxes = resolveBoxes(boxDirs);
+
     if (options.dev) {
       // Run with tsx --watch for auto-reload
-      // Find the source file path (relative to this compiled file)
       const srcFile = path.resolve(
         import.meta.dirname,
         "../../../src/cli/index.ts"
       );
 
-      const args = ["--watch", srcFile, "serve", "--port", String(port), "--host", options.host];
+      const args = [
+        "--watch", srcFile, "serve",
+        "--port", String(port),
+        "--host", options.host,
+        ...boxDirs,
+      ];
 
       console.log(`Starting dev server with auto-reload on http://${options.host}:${port}`);
 
-      // Set TSX_TSCONFIG_PATH so tsx finds the correct tsconfig.json
-      // regardless of the current working directory
       const tsconfigPath = path.resolve(import.meta.dirname, "../../../tsconfig.json");
 
       const child = spawn("npx", ["tsx", ...args], {
         stdio: "inherit",
         cwd: process.cwd(),
-        // Don't use detached - let child inherit our process group
-        // so signals propagate naturally when parent is killed
         env: {
           ...process.env,
           TSX_TSCONFIG_PATH: tsconfigPath,
         },
       });
 
-      // Forward termination signals to child
       const cleanup = () => {
         if (child.pid && !child.killed) {
           try {
@@ -60,7 +94,6 @@ export const serveCommand = new Command("serve")
 
       process.on("SIGINT", () => {
         cleanup();
-        // Don't exit immediately - let child handle SIGINT and we'll exit when it does
       });
 
       process.on("SIGTERM", () => {
@@ -85,5 +118,6 @@ export const serveCommand = new Command("serve")
     await startServer({
       port,
       host: options.host,
+      boxes,
     });
   });

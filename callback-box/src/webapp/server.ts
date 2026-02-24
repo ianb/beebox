@@ -1,9 +1,7 @@
 /**
  * Web app server - combined frontend + runner
  *
- * This is the central piece for MVP:
- * - Frontend for visibility (view cards, answer questions, trigger runs)
- * - Runner for event handling (timers, webhooks, agent spawning)
+ * Supports serving multiple boxes, each at its own URL prefix (slug).
  */
 
 import Fastify, { type FastifyInstance } from "fastify";
@@ -20,13 +18,21 @@ import { registerHistoryRoutes } from "./routes/history.js";
 import { registerPairingRoutes } from "./routes/pairing.js";
 import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
+import { registerChatRoutes } from "./routes/chat.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 
 export const DEFAULT_PORT = 3210;
 
+export interface BoxSpec {
+  slug: string;
+  boxRoot: string;
+}
+
 export interface ServerOptions {
   port?: number | undefined;
   host?: string | undefined;
+  boxes?: BoxSpec[] | undefined;
+  /** @deprecated Use boxes instead */
   boxRoot?: string | undefined;
 }
 
@@ -39,16 +45,20 @@ export interface ServerContext {
  * Create and configure the Fastify server.
  */
 export async function createServer(options: ServerOptions = {}): Promise<FastifyInstance> {
-  const boxRoot = options.boxRoot ?? await requireBoxRoot();
+  // Build boxes array from either boxes or legacy boxRoot
+  let boxes: BoxSpec[];
+  if (options.boxes && options.boxes.length > 0) {
+    boxes = options.boxes;
+  } else {
+    const boxRoot = options.boxRoot ?? await requireBoxRoot();
+    boxes = [{ slug: path.basename(boxRoot), boxRoot }];
+  }
 
   const server = Fastify({
     logger: {
-      level: "warn", // Only log warnings and errors
+      level: "warn",
     },
   });
-
-  // Store box root in server decorator
-  server.decorate("boxRoot", boxRoot);
 
   // Register multipart for file uploads
   await server.register(fastifyMultipart, {
@@ -57,45 +67,79 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     },
   });
 
-  // Register routes
-  await registerApiRoutes(server, boxRoot);
-  await registerSseRoutes(server, boxRoot);
-  await registerActionRoutes(server, boxRoot);
-  await registerCommandRoutes(server, boxRoot);
-  await registerBriefRoutes(server, boxRoot);
-  await registerHistoryRoutes(server, boxRoot);
-  await registerPairingRoutes(server, boxRoot);
-  await registerCalendarRoutes(server, boxRoot);
-  await registerSchedulerRoutes(server, boxRoot);
+  // Root-level box list endpoint
+  server.get("/api/boxes", async () => {
+    return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  });
 
-  // Serve static frontend files (in production)
   // Path from dist/webapp/ to src/frontend/dist
   const frontendPath = path.join(import.meta.dirname, "../../src/frontend/dist");
   const frontendExists = fs.existsSync(path.join(frontendPath, "index.html"));
 
+  // Serve static frontend assets at root level (for the box selector page at /)
   if (frontendExists) {
     await server.register(fastifyStatic, {
       root: frontendPath,
       prefix: "/",
       wildcard: true,
     });
+  }
 
-    // SPA fallback - serve index.html for non-API, non-asset routes
+  // Register each box under its slug prefix
+  for (const box of boxes) {
+    await server.register(async (instance) => {
+      // Register all routes for this box
+      const { broadcastEvent } = await registerSseRoutes(instance, box.boxRoot);
+      await registerApiRoutes(instance, box.boxRoot);
+      await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerBriefRoutes(instance, box.boxRoot);
+      await registerHistoryRoutes(instance, box.boxRoot);
+      await registerPairingRoutes(instance, box.boxRoot);
+      await registerCalendarRoutes(instance, box.boxRoot);
+      await registerSchedulerRoutes(instance, box.boxRoot);
+      await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+
+      // Serve static frontend files within this prefix
+      if (frontendExists) {
+        await instance.register(fastifyStatic, {
+          root: frontendPath,
+          prefix: "/",
+          wildcard: true,
+          decorateReply: false, // Avoid duplicate decorator across box prefixes
+        });
+      }
+    }, { prefix: `/${box.slug}` });
+  }
+
+  if (frontendExists) {
+    // SPA fallback — serve index.html for non-API, non-asset routes
     server.setNotFoundHandler(async (request, reply) => {
-      // Don't serve index.html for API routes or static asset files
       const url = request.url;
-      if (url.startsWith("/api/") || url.startsWith("/assets/")) {
+
+      // Don't serve index.html for root-level API
+      if (url === "/api/boxes") {
         return reply.status(404).send({ error: "Not found" });
       }
-      // Check for actual asset file extensions (not .card paths which are SPA routes)
+
+      // Check if this looks like a static asset request
       const assetExtensions = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
       if (assetExtensions.test(url)) {
         return reply.status(404).send({ error: "Not found" });
       }
-      return reply.sendFile("index.html");
+
+      // For API routes under box slugs that weren't matched
+      if (/^\/[^/]+\/api\//.test(url)) {
+        return reply.status(404).send({ error: "Not found" });
+      }
+
+      // SPA fallback: serve index.html
+      return reply.type("text/html").send(
+        fs.readFileSync(path.join(frontendPath, "index.html"), "utf-8")
+      );
     });
   } else {
-    // Frontend not built yet, show dev placeholder
+    // Root redirect when frontend not built
     server.get("/", async (_request, reply) => {
       return reply.type("text/html").send(`
 <!DOCTYPE html>
@@ -106,24 +150,15 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
     h1 { color: #333; }
     code { background: #f4f4f4; padding: 0.2rem 0.4rem; border-radius: 3px; }
-    pre { background: #f4f4f4; padding: 1rem; border-radius: 5px; overflow-x: auto; }
-    a { color: #0066cc; }
   </style>
 </head>
 <body>
   <h1>Callback Box</h1>
   <p>The frontend is not built yet. Run <code>npm run build:frontend</code> to build it.</p>
-  <h2>API Endpoints</h2>
+  <h2>Boxes</h2>
   <ul>
-    <li><a href="/api/status">/api/status</a> - System state</li>
-    <li><a href="/api/inbox">/api/inbox</a> - Inbox items</li>
-    <li><a href="/api/questions">/api/questions</a> - Questions</li>
-    <li><a href="/api/commands">/api/commands</a> - Commands</li>
-    <li><a href="/api/log">/api/log</a> - Recent activity</li>
-    <li>/api/events - SSE stream</li>
+    ${boxes.map((b) => `<li><a href="/${b.slug}/">${b.slug}</a> — ${b.boxRoot}</li>`).join("\n    ")}
   </ul>
-  <h2>Box Root</h2>
-  <pre>${boxRoot}</pre>
 </body>
 </html>
       `);
@@ -173,29 +208,47 @@ async function killPreviousServer(pidFile: string): Promise<void> {
 export async function startServer(options: ServerOptions = {}): Promise<void> {
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? "localhost";
-  const boxRoot = options.boxRoot ?? await requireBoxRoot();
 
-  const pidFile = path.join(boxRoot, ".cb-serve.pid");
+  // Build boxes from options
+  let boxes: BoxSpec[];
+  if (options.boxes && options.boxes.length > 0) {
+    boxes = options.boxes;
+  } else {
+    const boxRoot = options.boxRoot ?? await requireBoxRoot();
+    boxes = [{ slug: path.basename(boxRoot), boxRoot }];
+  }
 
-  // Kill any previous zombie server
-  await killPreviousServer(pidFile);
+  // Kill previous server for each box
+  for (const box of boxes) {
+    const pidFile = path.join(box.boxRoot, ".cb-serve.pid");
+    await killPreviousServer(pidFile);
+  }
 
-  const server = await createServer({ ...options, boxRoot });
+  const server = await createServer({ ...options, boxes });
 
-  // Write PID file
-  await fs.promises.writeFile(pidFile, String(process.pid));
+  // Write PID file to each box
+  const pidFiles: string[] = [];
+  for (const box of boxes) {
+    const pidFile = path.join(box.boxRoot, ".cb-serve.pid");
+    await fs.promises.writeFile(pidFile, String(process.pid));
+    pidFiles.push(pidFile);
+  }
 
   // Graceful shutdown handler
   const shutdown = async (signal: string) => {
     console.log(`\nReceived ${signal}, shutting down gracefully...`);
     try {
-      await fs.promises.unlink(pidFile).catch(() => {});
+      for (const pf of pidFiles) {
+        await fs.promises.unlink(pf).catch(() => {});
+      }
       await server.close();
       console.log("Server closed.");
       process.exit(0);
     } catch (err) {
       console.error("Error during shutdown:", err);
-      await fs.promises.unlink(pidFile).catch(() => {});
+      for (const pf of pidFiles) {
+        await fs.promises.unlink(pf).catch(() => {});
+      }
       process.exit(1);
     }
   };
@@ -207,8 +260,13 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
   try {
     await server.listen({ port, host });
     console.log(`Server running at http://${host}:${port}`);
+    for (const box of boxes) {
+      console.log(`  ${box.slug}: http://${host}:${port}/${box.slug}/`);
+    }
   } catch (err) {
-    await fs.promises.unlink(pidFile).catch(() => {});
+    for (const pf of pidFiles) {
+      await fs.promises.unlink(pf).catch(() => {});
+    }
     server.log.error(err);
     process.exit(1);
   }

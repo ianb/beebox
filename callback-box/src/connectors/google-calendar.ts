@@ -37,6 +37,11 @@ import {
   type CalendarChangeInput,
 } from "../schemas/calendar-review-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
+import { loadTransientState, saveTransientState } from "./transient-state.js";
+
+interface CalendarTransientState {
+  syncTokens: Record<string, string>;
+}
 
 interface EventFileEntry {
   filename: string;
@@ -472,6 +477,7 @@ function buildNarrativeCommitMessage(
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
   produces = ["calendar-event"];
+  triggeredBy?: string;
 
   private boxRoot: string;
 
@@ -495,20 +501,33 @@ class GoogleCalendarConnector implements Connector {
   }
 
   private async loadState(): Promise<CalendarState> {
+    let persistent: CalendarState;
     try {
       const content = await fs.readFile(this.statePath(), "utf-8");
-      return JSON.parse(content);
+      persistent = JSON.parse(content);
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) {
         throw err;
       }
-      return { syncTokens: {}, eventFiles: {} };
+      persistent = { syncTokens: {}, eventFiles: {} };
     }
+    // Merge syncTokens from transient state (gitignored)
+    const transient = await loadTransientState<CalendarTransientState>({
+      boxRoot: this.boxRoot, connectorName: "google-calendar", defaultValue: { syncTokens: {} },
+    });
+    persistent.syncTokens = { ...persistent.syncTokens, ...transient.syncTokens };
+    return persistent;
   }
 
   private async saveState(state: CalendarState): Promise<void> {
+    // Save syncTokens to transient (gitignored), eventFiles to persistent (committed)
+    await saveTransientState({
+      boxRoot: this.boxRoot, connectorName: "google-calendar",
+      data: { syncTokens: state.syncTokens },
+    });
+    const persistent = { syncTokens: {}, eventFiles: state.eventFiles };
     await fs.mkdir(path.dirname(this.statePath()), { recursive: true });
-    await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2));
+    await fs.writeFile(this.statePath(), JSON.stringify(persistent, null, 2));
   }
 
   async sync(): Promise<SyncResult> {
@@ -635,7 +654,7 @@ class GoogleCalendarConnector implements Connector {
       });
       await commit(this.boxRoot, {
         message,
-        trailers: { "Pulled-By": "google-calendar-connector" },
+        trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
       });
     } else {
       // Only commit state update if there are actually staged changes
@@ -644,7 +663,7 @@ class GoogleCalendarConnector implements Connector {
       if (status.staged.length > 0) {
         await commit(this.boxRoot, {
           message: "Sync calendar: no changes (token refreshed)",
-          trailers: { "Pulled-By": "google-calendar-connector" },
+          trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
         });
       }
     }
@@ -714,7 +733,7 @@ class GoogleCalendarConnector implements Connector {
     await stageFiles(this.boxRoot, [jobRelPath]);
     await commit(this.boxRoot, {
       message: "Create calendar-review job",
-      trailers: { "Created-By": "google-calendar-connector" },
+      trailers: { "Created-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
     });
 
     return jobRelPath;

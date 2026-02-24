@@ -198,6 +198,7 @@ function buildRssCommitMessage(feedNotes: Map<string, string[]>): string {
 class RssConnector implements Connector {
   name = "rss";
   produces = ["news-item"];
+  triggeredBy?: string;
 
   private boxRoot: string;
 
@@ -347,11 +348,13 @@ class RssConnector implements Connector {
       await fs.writeFile(jobPath, jobContent);
       jobs.push(jobRelPath);
 
-      await stageFiles(this.boxRoot, [...created, jobRelPath]);
+      const stateRelPath = path.relative(this.boxRoot, this.statePath());
+      await stageFiles(this.boxRoot, [...created, jobRelPath, stateRelPath]);
       await commit(this.boxRoot, {
         message: buildRssCommitMessage(feedNotes),
         trailers: {
           "Pulled-By": "rss-connector",
+          ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}),
         },
       });
     }

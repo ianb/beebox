@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { getApiBase } from "../api";
 
 /**
  * Brief metadata for the index.
@@ -33,7 +34,7 @@ interface NewsIndexProps {
  * Fetch the list of news briefs from the API.
  */
 async function fetchBriefs(): Promise<BriefSummary[]> {
-  const response = await fetch("/api/briefs");
+  const response = await fetch(`${getApiBase()}/briefs`);
   if (!response.ok) {
     throw new Error("Failed to fetch briefs");
   }
@@ -119,11 +120,11 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
               <h3 className={`truncate ${brief.read ? "font-normal text-gray-700" : "font-medium text-gray-900"}`}>
                 {brief.title}
               </h3>
-              {brief.byline && (
+              {brief.byline ? (
                 <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                   {brief.byline}
                 </p>
-              )}
+              ) : null}
             </div>
             <div className="flex-shrink-0 text-right">
               <time className="text-sm text-gray-500">
@@ -134,11 +135,11 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
                   New
                 </span>
               )}
-              {brief.read && brief.readReason === "expired" && (
+              {brief.read && brief.readReason === "expired" ? (
                 <span className="block mt-1 text-xs text-gray-400">
                   Expired
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </button>

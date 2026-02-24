@@ -43,6 +43,7 @@ export const finalizeCommand = new Command("finalize")
     let totalErrors = 0;
 
     for (const connector of toRun) {
+      connector.triggeredBy = "cb finalize";
       console.log(`Syncing ${connector.name}...`);
 
       try {

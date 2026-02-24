@@ -38,6 +38,7 @@ function getChildText(children: ElementNode[], tagName: string): string | undefi
 class PushoverConnector implements Connector {
   name = "pushover";
   produces: string[] = [];
+  triggeredBy?: string;
 
   private boxRoot: string;
 
@@ -156,7 +157,7 @@ class PushoverConnector implements Connector {
           const commitTitle = title ? `Send pushover: ${title}` : "Send pushover message";
           await commit(this.boxRoot, {
             message: commitTitle,
-            trailers: { "Pushed-By": "pushover-connector" },
+            trailers: { "Pushed-By": "pushover-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
           });
 
           // Delete the card
@@ -164,7 +165,7 @@ class PushoverConnector implements Connector {
           await stageFiles(this.boxRoot, [cardRelPath]);
           await commit(this.boxRoot, {
             message: "Delete sent pushover message",
-            trailers: { "Pushed-By": "pushover-connector" },
+            trailers: { "Pushed-By": "pushover-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
           });
 
           pushed.push(cardRelPath);
@@ -183,7 +184,7 @@ class PushoverConnector implements Connector {
           await stageFiles(this.boxRoot, [cardRelPath]);
           await commit(this.boxRoot, {
             message: `Pushover send failed: ${errorMsg}`,
-            trailers: { "Pushed-By": "pushover-connector" },
+            trailers: { "Pushed-By": "pushover-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
           });
 
           errors.push(`${cardRelPath}: ${errorMsg}`);

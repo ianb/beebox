@@ -11,88 +11,10 @@ interface SSEClient {
   reply: FastifyReply;
 }
 
-let clients: SSEClient[] = [];
-let watcher: FSWatcher | null = null;
-let clientIdCounter = 0;
+export type BroadcastEventFn = (event: string, data: unknown) => void;
 
-/**
- * Register SSE routes on the Fastify server.
- */
-export async function registerSseRoutes(
-  server: FastifyInstance,
-  boxRoot: string
-): Promise<void> {
-  // Start file watcher if not already running
-  if (!watcher) {
-    const watchPath = path.join(boxRoot, "box");
-
-    watcher = watch(watchPath, {
-      persistent: true,
-      ignoreInitial: true,
-      // Watch for card files and any files in box directories
-      ignored: /(^|[/\\])\../,
-    });
-
-    watcher.on("all", (event, filePath) => {
-      const relativePath = path.relative(boxRoot, filePath);
-      broadcastEvent("file-change", {
-        event,
-        path: relativePath,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    watcher.on("error", (error) => {
-      console.error("File watcher error:", error);
-    });
-  }
-
-  // GET /api/events - SSE endpoint
-  server.get("/api/events", (request, reply) => {
-    const clientId = `client-${++clientIdCounter}`;
-
-    // Hijack the response - tells Fastify we're handling it ourselves
-    reply.hijack();
-
-    // Set SSE headers
-    reply.raw.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "Access-Control-Allow-Origin": "*",
-    });
-
-    // Send initial connection event
-    sendEvent({ reply, event: "connected", data: { clientId } });
-
-    // Add to clients list
-    const client: SSEClient = { id: clientId, reply };
-    clients.push(client);
-
-    // Keep connection alive with periodic pings
-    const pingInterval = setInterval(() => {
-      if (reply.raw.writable) {
-        sendEvent({ reply, event: "ping", data: { timestamp: new Date().toISOString() } });
-      } else {
-        clearInterval(pingInterval);
-      }
-    }, 30000);
-
-    // Remove client on close
-    request.raw.on("close", () => {
-      clients = clients.filter((c) => c.id !== clientId);
-      clearInterval(pingInterval);
-    });
-  });
-
-  // Cleanup on server close
-  server.addHook("onClose", async () => {
-    if (watcher) {
-      await watcher.close();
-      watcher = null;
-    }
-    clients = [];
-  });
+export interface SseRouteResult {
+  broadcastEvent: BroadcastEventFn;
 }
 
 /**
@@ -117,22 +39,90 @@ function sendEvent(params: SendEventParams): void {
 }
 
 /**
- * Broadcast an event to all connected clients.
+ * Register SSE routes on the Fastify server.
+ * Returns a broadcastEvent function scoped to this box's clients.
  */
-export function broadcastEvent(event: string, data: unknown): void {
-  const payload = JSON.stringify(data);
-  const message = `event: ${event}\ndata: ${payload}\n\n`;
+export async function registerSseRoutes(
+  server: FastifyInstance,
+  boxRoot: string
+): Promise<SseRouteResult> {
+  let clients: SSEClient[] = [];
+  let watcher: FSWatcher | null = null;
+  let clientIdCounter = 0;
 
-  for (const client of clients) {
-    if (client.reply.raw.writable) {
-      client.reply.raw.write(message);
+  function broadcastEvent(event: string, data: unknown): void {
+    const payload = JSON.stringify(data);
+    const message = `event: ${event}\ndata: ${payload}\n\n`;
+
+    for (const client of clients) {
+      if (client.reply.raw.writable) {
+        client.reply.raw.write(message);
+      }
     }
   }
-}
 
-/**
- * Get the number of connected SSE clients.
- */
-export function getClientCount(): number {
-  return clients.length;
+  // Start file watcher
+  const watchPath = path.join(boxRoot, "box");
+
+  watcher = watch(watchPath, {
+    persistent: true,
+    ignoreInitial: true,
+    ignored: /(^|[/\\])\../,
+  });
+
+  watcher.on("all", (event, filePath) => {
+    const relativePath = path.relative(boxRoot, filePath);
+    broadcastEvent("file-change", {
+      event,
+      path: relativePath,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  watcher.on("error", (error) => {
+    console.error("File watcher error:", error);
+  });
+
+  // GET /api/events - SSE endpoint
+  server.get("/api/events", (request, reply) => {
+    const clientId = `client-${++clientIdCounter}`;
+
+    reply.hijack();
+
+    reply.raw.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+    });
+
+    sendEvent({ reply, event: "connected", data: { clientId } });
+
+    const client: SSEClient = { id: clientId, reply };
+    clients.push(client);
+
+    const pingInterval = setInterval(() => {
+      if (reply.raw.writable) {
+        sendEvent({ reply, event: "ping", data: { timestamp: new Date().toISOString() } });
+      } else {
+        clearInterval(pingInterval);
+      }
+    }, 30000);
+
+    request.raw.on("close", () => {
+      clients = clients.filter((c) => c.id !== clientId);
+      clearInterval(pingInterval);
+    });
+  });
+
+  // Cleanup on server close
+  server.addHook("onClose", async () => {
+    if (watcher) {
+      await watcher.close();
+      watcher = null;
+    }
+    clients = [];
+  });
+
+  return { broadcastEvent };
 }

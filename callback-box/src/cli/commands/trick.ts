@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
+import { stageAll, commit, getStatus } from "../lib/git.js";
 
 const require = createRequire(import.meta.url);
 
@@ -21,6 +22,21 @@ const require = createRequire(import.meta.url);
 function resolveTsx(): string {
   // tsx/cli is the entry point for the tsx binary
   return require.resolve("tsx/cli");
+}
+
+/**
+ * If the trick left uncommitted changes, stage and commit them.
+ */
+async function commitIfDirty(boxRoot: string, trickName: string): Promise<void> {
+  const status = await getStatus(boxRoot);
+  if (status.clean) return;
+
+  await stageAll(boxRoot);
+  await commit(boxRoot, {
+    message: `Auto-commit changes from trick: ${trickName}`,
+    trailers: { "Run-By": `trick/${trickName}` },
+  });
+  console.log(`Committed changes left by trick "${trickName}".`);
 }
 
 interface TrickInfo {
@@ -154,5 +170,9 @@ export const trickCommand = new Command("trick")
     const exitCode = await runTrick({ boxRoot, name, entryPoint, args: trickArgs });
     if (exitCode !== 0) {
       process.exitCode = exitCode;
+      return;
     }
+
+    // Auto-commit any changes the trick left uncommitted
+    await commitIfDirty(boxRoot, name);
   });

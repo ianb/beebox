@@ -10,8 +10,13 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Proxy API requests to the backend during development
+      // Proxy root-level API (box list)
       "/api": {
+        target: "http://localhost:3210",
+        changeOrigin: true,
+      },
+      // Proxy per-box API requests: /<slug>/api/...
+      "^/[^/]+/api": {
         target: "http://localhost:3210",
         changeOrigin: true,
       },

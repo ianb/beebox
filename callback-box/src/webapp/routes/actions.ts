@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { randomUUID } from "node:crypto";
-import { broadcastEvent } from "./sse.js";
+import type { BroadcastEventFn } from "./sse.js";
 import {
   runCommand,
   type CommandContext,
@@ -32,13 +32,19 @@ interface CreateBody {
   args?: Record<string, unknown>;
 }
 
+interface RegisterActionRoutesOptions {
+  server: FastifyInstance;
+  boxRoot: string;
+  broadcastEvent: BroadcastEventFn;
+}
+
 /**
  * Register action routes on the Fastify server.
  */
 export async function registerActionRoutes(
-  server: FastifyInstance,
-  boxRoot: string
+  options: RegisterActionRoutesOptions
 ): Promise<void> {
+  const { server, boxRoot, broadcastEvent } = options;
   // POST /api/actions/wakeup - Trigger processing
   server.post<{ Body: WakeupBody }>("/api/actions/wakeup", async (request, reply) => {
     const dryRun = request.body?.dryRun ?? false;

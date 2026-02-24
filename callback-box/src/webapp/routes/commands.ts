@@ -16,7 +16,7 @@ import {
   getCommand,
   type CommandContext,
 } from "../../core/commands/index.js";
-import { broadcastEvent } from "./sse.js";
+import type { BroadcastEventFn } from "./sse.js";
 
 interface ExecuteBody {
   command: string;
@@ -34,13 +34,19 @@ interface OutputLine {
   error?: string;
 }
 
+interface RegisterCommandRoutesOptions {
+  server: FastifyInstance;
+  boxRoot: string;
+  broadcastEvent: BroadcastEventFn;
+}
+
 /**
  * Register command routes on the Fastify server.
  */
 export async function registerCommandRoutes(
-  server: FastifyInstance,
-  boxRoot: string
+  options: RegisterCommandRoutesOptions
 ): Promise<void> {
+  const { server, boxRoot, broadcastEvent } = options;
   // GET /api/commands/list - List available commands
   server.get("/api/commands/list", async () => {
     const commands = listCommands();

@@ -47,6 +47,17 @@ export const wakeupCommand = new Command("wakeup")
   .action(async (options: { connector?: string; skipPreprocess?: boolean; skipTriage?: boolean; skipHousekeeping?: boolean }) => {
     const boxRoot = await requireBoxRoot();
 
+    // Health check: warn about uncommitted changes
+    const status = await getStatus(boxRoot);
+    if (!status.clean) {
+      const counts = [];
+      if (status.staged.length > 0) counts.push(`${status.staged.length} staged`);
+      if (status.modified.length > 0) counts.push(`${status.modified.length} modified`);
+      if (status.untracked.length > 0) counts.push(`${status.untracked.length} untracked`);
+      console.log(`⚠ Uncommitted changes detected: ${counts.join(", ")}`);
+      console.log("");
+    }
+
     // Step 1: Preprocessors
     if (!options.skipPreprocess) {
       console.log("[Preprocessing inbox items]");
@@ -127,6 +138,7 @@ export const wakeupCommand = new Command("wakeup")
       let totalErrors = 0;
 
       for (const connector of toRun) {
+        connector.triggeredBy = "cb wakeup";
         console.log(`Syncing ${connector.name}...`);
 
         try {

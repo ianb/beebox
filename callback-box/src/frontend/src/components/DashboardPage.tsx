@@ -11,6 +11,7 @@ import {
   getLog,
   getQuestions,
   getNewsStatus,
+  getApiBase,
   type StatusResponse,
   type ScheduleInfo,
   type SchedulerLogEntry,
@@ -74,7 +75,7 @@ export function DashboardPage() {
     });
   }, []);
 
-  const { connected } = useSSE("/api/events", {
+  const { connected } = useSSE(`${getApiBase()}/events`, {
     onEvent: (event) => {
       if (
         event.event === "file-change" ||

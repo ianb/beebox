@@ -83,6 +83,9 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
 # Local config (credentials, etc.)
 config/connectors/*.secret.*
 
+# Transient connector state (timestamps, sync tokens — machine-local)
+config/connectors/*.state.*
+
 # Server PID file
 .cb-serve.pid
 

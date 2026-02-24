@@ -19,6 +19,7 @@ import {
   submitQueryResponse,
   getGuideReactions,
   completeReading,
+  getApiBase,
 } from "../api";
 
 /**
@@ -32,7 +33,7 @@ interface BriefWithReactions extends NewsBriefData {
  * Fetch a full brief from the API.
  */
 async function fetchBrief(path: string): Promise<BriefWithReactions> {
-  const response = await fetch(`/api/brief/${encodeURIComponent(path)}`);
+  const response = await fetch(`${getApiBase()}/brief/${encodeURIComponent(path)}`);
   if (!response.ok) {
     throw new Error("Failed to fetch brief");
   }

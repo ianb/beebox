@@ -35,6 +35,7 @@ import { createNewsItemTemplate } from "../schemas/news-item.js";
 import { createRecordTemplate } from "../schemas/record.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { createOrAppendIntakeJob } from "./intake-utils.js";
+import { loadTransientState, saveTransientState } from "./transient-state.js";
 
 export interface DropboxConfig {
   workerUrl: string;
@@ -109,6 +110,7 @@ function buildDropboxCommitMessage(notes: DropboxNote[]): string {
 class DropboxConnector implements Connector {
   name = "dropbox";
   produces = ["memo", "news-item", "record"];
+  triggeredBy?: string;
 
   private boxRoot: string;
 
@@ -120,10 +122,6 @@ class DropboxConnector implements Connector {
     return path.join(this.boxRoot, "config/connectors/dropbox.secret.json");
   }
 
-  private statePath(): string {
-    return path.join(this.boxRoot, "config/connectors/dropbox-state.json");
-  }
-
   async loadConfig(): Promise<DropboxConfig | null> {
     try {
       const content = await fs.readFile(this.configPath(), "utf-8");
@@ -131,20 +129,6 @@ class DropboxConnector implements Connector {
     } catch {
       return null;
     }
-  }
-
-  private async loadState(): Promise<DropboxState> {
-    try {
-      const content = await fs.readFile(this.statePath(), "utf-8");
-      return JSON.parse(content);
-    } catch {
-      return {};
-    }
-  }
-
-  private async saveState(state: DropboxState): Promise<void> {
-    await fs.mkdir(path.dirname(this.statePath()), { recursive: true });
-    await fs.writeFile(this.statePath(), JSON.stringify(state, null, 2));
   }
 
   async sync(): Promise<SyncResult> {
@@ -159,7 +143,9 @@ class DropboxConnector implements Connector {
       channelKey: config.channelKey,
     });
 
-    const state = await this.loadState();
+    const state = await loadTransientState<DropboxState>({
+      boxRoot: this.boxRoot, connectorName: "dropbox", defaultValue: {},
+    });
     const created: string[] = [];
     const errors: string[] = [];
     const notes: DropboxNote[] = [];
@@ -232,7 +218,7 @@ class DropboxConnector implements Connector {
       errors.push(`Poll failed: ${(err as Error).message}`);
     }
 
-    await this.saveState(state);
+    await saveTransientState({ boxRoot: this.boxRoot, connectorName: "dropbox", data: state });
 
     if (created.length > 0) {
       await stageFiles(this.boxRoot, created);
@@ -240,6 +226,7 @@ class DropboxConnector implements Connector {
         message: buildDropboxCommitMessage(notes),
         trailers: {
           "Pulled-By": "dropbox-connector",
+          ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}),
         },
       });
     }
@@ -261,7 +248,7 @@ class DropboxConnector implements Connector {
       await stageFiles(this.boxRoot, [jobPath]);
       await commit(this.boxRoot, {
         message: "Create intake job for Dropbox items",
-        trailers: { "Created-By": "dropbox-connector" },
+        trailers: { "Created-By": "dropbox-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
       });
     }
 

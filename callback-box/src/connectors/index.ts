@@ -14,6 +14,13 @@ export interface Connector {
   /** Card types this connector creates on sync */
   produces: string[];
 
+  /**
+   * How this connector was triggered. Set by the caller before sync().
+   * Included as a "Triggered-By" trailer on commits.
+   * Examples: "cb wakeup", "cb wakeup --connector rss", "cb finalize"
+   */
+  triggeredBy?: string;
+
   /** Sync external state with the repo */
   sync(): Promise<SyncResult>;
 }
