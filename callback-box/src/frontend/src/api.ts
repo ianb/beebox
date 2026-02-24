@@ -617,6 +617,48 @@ export async function getSessionLog(
   );
 }
 
+// --- Scheduler API ---
+
+export interface SchedulerScriptEntry {
+  name: string;
+  status: "ran" | "skipped" | "error";
+  command?: string;
+  durationMs?: number;
+  error?: string;
+}
+
+export interface SchedulerLogEntry {
+  ts: string;
+  event: string;
+  box?: string;
+  result?: {
+    ran: number;
+    skipped: number;
+    errors: number;
+    scripts: SchedulerScriptEntry[];
+  };
+  error?: string;
+}
+
+export interface SchedulerLogResponse {
+  entries: SchedulerLogEntry[];
+}
+
+export async function getSchedulerLog(options?: {
+  limit?: number;
+  event?: string;
+  status?: string;
+}): Promise<SchedulerLogResponse> {
+  const params = new URLSearchParams();
+  if (options?.limit) params.set("limit", String(options.limit));
+  if (options?.event) params.set("event", options.event);
+  if (options?.status) params.set("status", options.status);
+  const qs = params.toString();
+  return fetchJson<SchedulerLogResponse>(
+    `${API_BASE}/scheduler/log${qs ? `?${qs}` : ""}`,
+  );
+}
+
 /**
  * Convert a Blob to base64 string.
  */
