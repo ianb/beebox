@@ -1,4 +1,4 @@
-<workflow name="process-pages">
+<procedure name="process-pages">
   <description>
     Process saved pages from browser captures. Classifies content,
     converts to appropriate card types, and asks questions when unsure.
@@ -142,7 +142,7 @@
         Routed:
         - &lt;title&gt; → &lt;destination&gt;
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: intake
         EOF
         )"
@@ -174,4 +174,4 @@
       </why>
     </validate>
   </step>
-</workflow>
+</procedure>

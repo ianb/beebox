@@ -1,5 +1,5 @@
 /**
- * Text dedenting utility for workflow card content.
+ * Text dedenting utility for procedure card content.
  *
  * Strips common leading whitespace from inline text in XML elements,
  * so prompts and scripts can be written at natural indentation levels

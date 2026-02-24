@@ -12,9 +12,13 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { parseXml, type ElementNode } from "cardworks";
 import { runAgent, ensureAgentCommitted, type AgentOptions } from "./agent.js";
 import { generateDocs } from "./generate-docs.js";
+import { startProcedure } from "./procedure/engine.js";
+import { finishJob } from "./finish-job.js";
 import { fmt } from "../cli/lib/format.js";
+import type { CommandContext } from "./command-runner.js";
 
 export interface ReactorOptions {
   boxRoot: string;
@@ -93,57 +97,120 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
       return { success: true, jobsProcessed: 0, jobsRemaining: count };
     }
 
-    const jobPaths = jobCards.map((j) => path.join("box/jobs", j.file));
     onLog?.(fmt.header(`Found ${jobCards.length} job(s):\n`));
     for (const card of jobCards) {
       const label = card.priority === "low" ? " (low priority)" : "";
       onLog?.(`  - box/jobs/${card.file}${label}\n`);
     }
 
-    // Read each job card to build context
-    const jobDescriptions: string[] = [];
+    // Read each job card and detect procedure jobs
+    interface JobWithContent {
+      card: JobCardInfo;
+      relPath: string;
+      content: string;
+      procedureInfo: ProcedureJobInfo | null;
+    }
+    const jobsWithContent: JobWithContent[] = [];
     for (const card of jobCards) {
       const jp = path.join("box/jobs", card.file);
       const absPath = path.join(boxRoot, jp);
-      const priorityLabel = card.priority === "low" ? " *(low priority)*" : "";
       try {
         const content = await fs.readFile(absPath, "utf-8");
-        jobDescriptions.push(`### ${jp}${priorityLabel}\n\`\`\`xml\n${content.trim()}\n\`\`\``);
+        const procedureInfo = await detectProcedureInJob(content, absPath);
+        jobsWithContent.push({ card, relPath: jp, content, procedureInfo });
       } catch {
-        jobDescriptions.push(`### ${jp}${priorityLabel}\n(could not read)`);
+        jobsWithContent.push({ card, relPath: jp, content: "", procedureInfo: null });
       }
     }
 
-    const systemPrompt = buildReactorSystemPrompt(boxRoot);
-    const userPrompt = buildReactorUserPrompt(jobPaths, jobDescriptions);
+    // Partition: procedure jobs vs agent jobs
+    const procedureJobs = jobsWithContent.filter((j) => j.procedureInfo !== null);
+    const agentJobs = jobsWithContent.filter((j) => j.procedureInfo === null);
 
-    if (dryRun) {
-      onLog?.("\n[DRY RUN] Would run agent with prompt:\n");
-      onLog?.(userPrompt + "\n");
+    // Process procedure jobs first (trampoline)
+    if (procedureJobs.length > 0) {
+      onLog?.(fmt.header(`\nProcessing ${procedureJobs.length} procedure job(s):\n`));
+
+      const ctx: CommandContext = {
+        boxRoot,
+        write: (text: string) => onLog?.(text),
+        writeLine: (text: string) => onLog?.(text + "\n"),
+      };
+
+      for (const job of procedureJobs) {
+        const info = job.procedureInfo!;
+        onLog?.(`  ${fmt.strong(info.procedureRef)}${info.directive ? ` (directive: ${info.directive})` : ""}\n`);
+
+        if (dryRun) {
+          onLog?.(fmt.dim(`  [DRY RUN] Would run procedure: ${info.procedureRef}\n`));
+          continue;
+        }
+
+        const result = await startProcedure({
+          ctx,
+          procedureNameOrPath: info.procedureRef,
+          options: { ...(info.directive && { directive: info.directive }) },
+        });
+
+        if (result.success) {
+          await finishJob({ boxRoot, jobRelPath: job.relPath });
+          onLog?.(fmt.ok(`Finished procedure job: ${job.relPath}\n`));
+        } else {
+          onLog?.(fmt.fail(`Procedure failed for ${job.relPath}: ${result.error ?? "unknown"}\n`));
+        }
+      }
+    }
+
+    if (dryRun && agentJobs.length === 0) {
       return { success: true, jobsProcessed: 0, jobsRemaining: jobCards.length };
     }
 
-    // Run the agent
-    onLog?.("\n");
-    const agentOptions: AgentOptions = {
-      boxRoot,
-      systemPrompt,
-      prompt: userPrompt,
-      onOutput: onLog,
-      maxTurns: 30,
-    };
+    // Process remaining agent jobs as before
+    let cycleSuccess = true;
+    if (agentJobs.length > 0) {
+      const agentJobPaths = agentJobs.map((j) => j.relPath);
+      const jobDescriptions: string[] = [];
+      for (const job of agentJobs) {
+        const priorityLabel = job.card.priority === "low" ? " *(low priority)*" : "";
+        if (job.content) {
+          jobDescriptions.push(`### ${job.relPath}${priorityLabel}\n\`\`\`xml\n${job.content.trim()}\n\`\`\``);
+        } else {
+          jobDescriptions.push(`### ${job.relPath}${priorityLabel}\n(could not read)`);
+        }
+      }
 
-    const agentResult = await runAgent(agentOptions);
+      const systemPrompt = buildReactorSystemPrompt(boxRoot);
+      const userPrompt = buildReactorUserPrompt(agentJobPaths, jobDescriptions);
 
-    // Ensure the agent committed its work
-    await ensureAgentCommitted({
-      boxRoot,
-      agentResult,
-      agentOptions,
-      fallbackMessage: "Reactor: agent work (fallback commit)",
-      fallbackTrailers: { Phase: "reactor" },
-      ...(onLog ? { onOutput: onLog } : {}),
-    });
+      if (dryRun) {
+        onLog?.("\n[DRY RUN] Would run agent with prompt:\n");
+        onLog?.(userPrompt + "\n");
+        return { success: true, jobsProcessed: 0, jobsRemaining: jobCards.length };
+      }
+
+      // Run the agent
+      onLog?.("\n");
+      const agentOptions: AgentOptions = {
+        boxRoot,
+        systemPrompt,
+        prompt: userPrompt,
+        onOutput: onLog,
+        maxTurns: 30,
+      };
+
+      const agentResult = await runAgent(agentOptions);
+      cycleSuccess = agentResult.success;
+
+      // Ensure the agent committed its work
+      await ensureAgentCommitted({
+        boxRoot,
+        agentResult,
+        agentOptions,
+        fallbackMessage: "Reactor: agent work (fallback commit)",
+        fallbackTrailers: { Phase: "reactor" },
+        ...(onLog ? { onOutput: onLog } : {}),
+      });
+    }
 
     // Count remaining jobs
     const remaining = await findJobCards(jobsDir);
@@ -152,7 +219,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     onLog?.(fmt.dim(`\nCycle complete: ${processed} processed, ${remaining.length} remaining\n`));
 
     return {
-      success: agentResult.success,
+      success: cycleSuccess,
       jobsProcessed: processed,
       jobsRemaining: remaining.length,
     };
@@ -268,6 +335,37 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ─── Procedure trampoline ────────────────────────────────────────────
+
+interface ProcedureJobInfo {
+  procedureRef: string;
+  directive?: string;
+}
+
+/**
+ * Detect if a job card contains a `<procedure ref="...">` element.
+ * If so, return the ref and optional directive text.
+ */
+async function detectProcedureInJob(content: string, filePath: string): Promise<ProcedureJobInfo | null> {
+  try {
+    const root = await parseXml(content, filePath);
+    for (const child of root.children as ElementNode[]) {
+      if (child.tagName === "procedure" && child.attrs["ref"]) {
+        let directive: string | undefined;
+        for (const grandchild of (child.children ?? []) as ElementNode[]) {
+          if (grandchild.tagName === "directive") {
+            directive = grandchild.text?.trim();
+          }
+        }
+        return { procedureRef: child.attrs["ref"], ...(directive && { directive }) };
+      }
+    }
+  } catch {
+    // Not valid XML or no procedure element — not a procedure job
+  }
+  return null;
+}
+
 function buildReactorSystemPrompt(boxRoot: string): string {
   return `You are processing jobs in a Callback Box.
 
@@ -281,7 +379,7 @@ what kind of work and has associated rules with detailed instructions.
 
 Your goal: process every job card and clear the jobs directory.
 
-## Workflow
+## Process
 
 For each job:
 1. Read the job card

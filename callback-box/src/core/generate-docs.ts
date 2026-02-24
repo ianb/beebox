@@ -119,31 +119,31 @@ function withDocId(params: WithDocIdParams): string {
 }
 
 /**
- * Scan workflow cards and extract name + first-line description.
+ * Scan procedure cards and extract name + first-line description.
  */
-interface WorkflowSummary {
+interface ProcedureSummary {
   name: string;
   filename: string;
   description: string;
 }
 
-async function scanWorkflows(boxRoot: string): Promise<WorkflowSummary[]> {
-  const workflowDir = join(boxRoot, "config/workflows");
+async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[]> {
+  const procedureDir = join(boxRoot, "config/procedures");
   let files: string[];
   try {
-    files = await readdir(workflowDir);
+    files = await readdir(procedureDir);
   } catch {
     return [];
   }
 
-  const cards = files.filter((f) => f.endsWith(".workflow.card")).toSorted();
-  const results: WorkflowSummary[] = [];
+  const cards = files.filter((f) => f.endsWith(".procedure.card")).toSorted();
+  const results: ProcedureSummary[] = [];
 
   for (const filename of cards) {
     try {
-      const content = await readFile(join(workflowDir, filename), "utf-8");
+      const content = await readFile(join(procedureDir, filename), "utf-8");
       const root = await parseXml(content, filename);
-      const name = root.attrs["name"] ?? filename.replace(".workflow.card", "");
+      const name = root.attrs["name"] ?? filename.replace(".procedure.card", "");
       const descEl = (root.children ?? []).find(
         (c: { tagName?: string }) => c.tagName === "description"
       );
@@ -152,9 +152,9 @@ async function scanWorkflows(boxRoot: string): Promise<WorkflowSummary[]> {
       const shortDesc = desc.split(/\n/)[0]?.replace(/\.\s.*/, ".").trim() || desc;
       results.push({ name, filename, description: shortDesc });
     } catch {
-      // Skip unparseable workflow cards
+      // Skip unparseable procedure cards
       results.push({
-        name: filename.replace(".workflow.card", ""),
+        name: filename.replace(".procedure.card", ""),
         filename,
         description: "(could not parse)",
       });
@@ -173,7 +173,7 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
   await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
   await mkdir(join(boxRoot, DOCS_DIR), { recursive: true });
 
-  const workflows = await scanWorkflows(boxRoot);
+  const procedures = await scanProcedures(boxRoot);
 
   // Load box-local schemas alongside built-in ones
   const boxSchemas = await loadBoxSchemas(boxRoot);
@@ -184,13 +184,13 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
 
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ workflows, allSchemas, personalitySection }), debug })),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allSchemas, personalitySection }), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
       withDocId({ relativePath: `${DOCS_DIR}/connectors.md`, content: generateConnectorsDocs(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "workflows.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/workflows.md`, content: generateWorkflowGuide(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     ...allSchemas
       .filter((s) => s.instructions)
       .map((s) => {
@@ -336,13 +336,13 @@ async function compilePersonalities(boxRoot: string, debug: boolean): Promise<st
  * Generate the compact agent guide (always loaded via @-include).
  */
 interface AgentGuideOptions {
-  workflows: WorkflowSummary[];
+  procedures: ProcedureSummary[];
   allSchemas?: ElementSchema[];
   personalitySection?: string | undefined;
 }
 
 function generateAgentGuide(options: AgentGuideOptions): string {
-  const { workflows, allSchemas = schemas, personalitySection } = options;
+  const { procedures, allSchemas = schemas, personalitySection } = options;
   const templates = getAllTemplates();
 
   const lines: string[] = [
@@ -381,23 +381,23 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "- `cb finalize` — Flush outbound cards in `box/output/` (push notifications, etc.)",
     "- `cb scenario list|run` — Run scenario tests against boxes",
     "- `cb finish <job-file>` — Complete a job (deletes the job card and commits)",
-    "- `cb workflow run <name-or-path>` — Run a workflow (see `docs/generated/workflows.md`)",
+    "- `cb procedure run <name-or-path>` — Run a procedure (see `docs/generated/procedures.md`)",
     "",
   ];
 
-  // Workflow index (dynamic, scanned from box)
-  if (workflows.length > 0) {
+  // Procedure index (dynamic, scanned from box)
+  if (procedures.length > 0) {
     lines.push(
-      "## Workflows",
+      "## Procedures",
       "",
-      "Available workflows in `config/workflows/`:",
+      "Available procedures in `config/procedures/`:",
       "",
     );
-    for (const w of workflows) {
-      lines.push(`- **${w.name}** — ${w.description}`);
+    for (const p of procedures) {
+      lines.push(`- **${p.name}** — ${p.description}`);
     }
     lines.push("");
-    lines.push("Run with `cb workflow run <name>`. Read `docs/generated/workflows.md` before writing or modifying workflows.");
+    lines.push("Run with `cb procedure run <name>`. Read `docs/generated/procedures.md` before writing or modifying procedures.");
     lines.push("");
   }
 
@@ -631,20 +631,24 @@ function generateCbCommands(): string {
     "",
     "Call this after all work for a job is done and committed. It only handles the job card deletion.",
     "",
-    "## cb workflow",
+    "## cb procedure",
     "",
-    "Run and manage declarative workflows. See `docs/generated/workflows.md` for details.",
+    "Run and manage declarative procedures. See `docs/generated/procedures.md` for details.",
     "",
     "```bash",
-    "cb workflow run <name-or-path>          # Run a workflow",
-    "cb workflow run <name> --step <id>      # Run a single step",
-    "cb workflow run <name> --dry-run        # Preview without executing",
-    "cb workflow list                        # List available workflows",
-    "cb workflow status [run-dir]            # Show status of latest/specific run",
+    "cb procedure run <name-or-path>          # Run a procedure",
+    "cb procedure run <name> --step <id>      # Run a single step",
+    "cb procedure run <name> --dry-run        # Preview without executing",
+    'cb procedure run <name> --directive "text" # Pass a directive to agents',
+    "cb procedure list                        # List available procedures",
+    "cb procedure status [run-dir]            # Show status of latest/specific run",
     "```",
     "",
-    "The `<name-or-path>` argument can be a bare name (resolves to `config/workflows/<name>.workflow.card`)",
-    "or a direct path to any `.workflow.card` file.",
+    "The `<name-or-path>` argument can be a bare name (resolves to `config/procedures/<name>.procedure.card`)",
+    "or a direct path to any `.procedure.card` file.",
+    "",
+    "The `--directive` flag passes an opaque string that appears as `<directive>...</directive>` in every agent's",
+    "system prompt within the procedure. Use it to customize behavior without modifying the procedure card.",
     "",
     "## cb tick",
     "",
@@ -772,25 +776,50 @@ function generateConnectorsDocs(): string {
 }
 
 /**
- * Generate the workflows guide for agents.
+ * Generate the procedures guide for agents.
  */
-function generateWorkflowGuide(): string {
-  return `# Workflows
+function generateProcedureGuide(): string {
+  return `# Procedures
 
-Workflows are multi-step processes defined as XML cards. The workflow engine runs each step in order, checking preconditions, executing actions, and validating results. Everything is tracked in git.
+Procedures are multi-step processes defined as XML cards. The procedure engine runs each step in order, checking preconditions, executing actions, and validating results. Everything is tracked in git.
 
-## Running Workflows
+## Running Procedures
 
 \`\`\`bash
-cb workflow run process-news                    # Run by name
-cb workflow run config/workflows/my.workflow.card  # Run by path
-cb workflow run process-news --step triage      # Run one step only
-cb workflow run process-news --dry-run          # Preview steps
-cb workflow list                                # List available workflows
-cb workflow status                              # Show latest run status
+cb procedure run process-news                       # Run by name
+cb procedure run config/procedures/my.procedure.card  # Run by path
+cb procedure run process-news --step triage         # Run one step only
+cb procedure run process-news --dry-run             # Preview steps
+cb procedure run process-news --directive "focus on AI stories"  # Pass directive
+cb procedure list                                   # List available procedures
+cb procedure status                                 # Show latest run status
 \`\`\`
 
-Workflow definitions live in \`config/workflows/\`. Each run creates a tracking card in \`workflow/runs/<name>_<timestamp>/\`.
+Procedure definitions live in \`config/procedures/\`. Each run creates a tracking card in \`procedure/runs/<name>_<timestamp>/\`.
+
+## Directives
+
+A **directive** is an opaque runtime string passed when invoking a procedure. It appears as \`<directive>...</directive>\` in every agent's system prompt within the procedure, allowing callers to customize behavior without modifying the procedure card.
+
+\`\`\`bash
+cb procedure run process-news --directive "Only include stories about AI safety"
+\`\`\`
+
+The directive is also recorded as an attribute on the \`<procedure-run>\` element for auditability. Step prompts can reference "the Directive" to act on it.
+
+## Procedures in Jobs
+
+Job cards can trigger a procedure directly using the \`<procedure>\` element:
+
+\`\`\`xml
+<some-job-type>
+  <procedure ref="process-news">
+    <directive>Focus on technology stories</directive>
+  </procedure>
+</some-job-type>
+\`\`\`
+
+The reactor detects \`<procedure ref="...">\` in job cards and runs the procedure engine directly — no nested agent session is needed. The job is automatically finished when the procedure completes. If the procedure fails, the job remains for retry.
 
 ## How Steps Work
 
@@ -802,11 +831,11 @@ Each step has three optional phases:
 
 The engine enforces a clean git state between steps. Every step's work is committed before the next step begins.
 
-## Workflow Card Structure
+## Procedure Card Structure
 
 \`\`\`xml
-<workflow name="my-workflow">
-  <description>What this workflow does</description>
+<procedure name="my-procedure">
+  <description>What this procedure does</description>
 
   <step id="first-step">
     <description>Human-readable description of this step</description>
@@ -824,7 +853,7 @@ The engine enforces a clean git state between steps. Every step's work is commit
     <run>
       <agent model="haiku" max-turns="20">
         Agent prompt goes here. The engine prepends context
-        (date, workflow name, step ID, working directory).
+        (date, procedure name, step ID, working directory).
       </agent>
     </run>
 
@@ -842,7 +871,7 @@ The engine enforces a clean git state between steps. Every step's work is commit
       <why>Why this validation matters</why>
     </validate>
   </step>
-</workflow>
+</procedure>
 \`\`\`
 
 ## Building Blocks
@@ -866,7 +895,7 @@ Shell scripts run in the box root via \`bash -c\`. Three outcomes:
 
 - \`model\`: \`haiku\` (fast/cheap), \`sonnet\` (balanced), \`opus\` (most capable). Default: sonnet.
 - \`max-turns\`: Maximum tool-use rounds. Default: 20.
-- The engine injects a context block with the date, run card path, step ID, and workflow source location.
+- The engine injects a context block with the date, run card path, step ID, and procedure source location.
 - Agent text is automatically dedented, so indent freely within the XML.
 
 ### Passing Precheck Data to Agents
@@ -885,72 +914,72 @@ The agent sees this as a \`<precheck>\` block in its system prompt. Use this to 
 
 - \`severity="warn"\` — Log the failure and continue
 - \`severity="review"\` — A model evaluates the git diff against the \`<instruction>\`. If it fails, the agent gets one retry attempt.
-- \`severity="abort"\` — Stop the workflow immediately
+- \`severity="abort"\` — Stop the procedure immediately
 
 ### Why Elements
 
 \`<why>\` elements explain the purpose of a phase. They're shown to:
-- Humans reading the workflow
+- Humans reading the procedure
 - Review models evaluating validation failures
 - Agents retrying failed steps
 
-## Writing a New Workflow
+## Writing a New Procedure
 
-1. Create \`config/workflows/my-workflow.workflow.card\`
+1. Create \`config/procedures/my-procedure.procedure.card\`
 2. Define steps with prechecks that skip gracefully when there's nothing to do
-3. Use \`cb workflow run my-workflow --dry-run\` to verify the structure
+3. Use \`cb procedure run my-procedure --dry-run\` to verify the structure
 4. Test step-by-step with \`--step <id>\`
 
 ### Tips
 
 - **Prechecks should be fast.** They run every time. Don't do expensive work in prechecks — save that for the run phase.
 - **One concern per step.** Each step should do one thing. If a step needs 40+ agent turns, consider splitting it.
-- **Idempotent steps.** If a workflow is interrupted, it may be re-run. Steps should handle partial state gracefully.
+- **Idempotent steps.** If a procedure is interrupted, it may be re-run. Steps should handle partial state gracefully.
 - **Commit messages matter.** Agents should commit with descriptive messages. The git history IS the audit trail.
-- **Use \`cb move\` not \`mv\`.** Card moves update cross-references. Agents in workflow steps should use \`cb move\` for cards.
+- **Use \`cb move\` not \`mv\`.** Card moves update cross-references. Agents in procedure steps should use \`cb move\` for cards.
 
 ### Agent Prompt Guidelines
 
-Agent prompts in workflows should:
+Agent prompts in procedures should:
 - Start with a clear role statement ("You are triaging inbox items...")
 - List concrete steps (STEP 1, STEP 2, etc.)
 - Include exact shell/command examples the agent can copy
 - Include a commit step marked "REQUIRED — do not skip" with the expected message format
 - End with "GIT: Do NOT add Co-Authored-By to commits."
 
-**Important:** If an agent doesn't commit, the engine creates a fallback commit with a generic message (tagged \`Commit-Source: workflow-fallback\`). Always instruct agents to commit explicitly so the git history is meaningful.
+**Important:** If an agent doesn't commit, the engine creates a fallback commit with a generic message (tagged \`Commit-Source: procedure-fallback\`). Always instruct agents to commit explicitly so the git history is meaningful.
 
-## System Workflows and Migration
+## System Procedures and Migration
 
-Workflow cards in \`config/workflows/\` are installed by \`cb init\` from built-in templates. If you edit a system workflow, your changes are preserved:
+Procedure cards in \`config/procedures/\` are installed by \`cb init\` from built-in templates. If you edit a system procedure, your changes are preserved:
 
 - **\`cb init\` on a fresh box**: Templates are copied directly.
-- **\`cb init\` on an existing box (unchanged workflows)**: Templates are updated in place.
-- **\`cb init\` on an existing box (modified workflows)**: The new template is written as \`<name>.orig-workflow.card\` alongside your modified version. You can diff them and merge manually.
+- **\`cb init\` on an existing box (unchanged procedures)**: Templates are updated in place.
+- **\`cb init\` on an existing box (modified procedures)**: The new template is written as \`<name>.orig-procedure.card\` alongside your modified version. You can diff them and merge manually.
 
 To check for updates:
 \`\`\`bash
-ls config/workflows/*.orig-workflow.card
+ls config/procedures/*.orig-procedure.card
 # If any exist, compare with the main version and merge changes
-diff config/workflows/process-news.workflow.card config/workflows/process-news.orig-workflow.card
+diff config/procedures/process-news.procedure.card config/procedures/process-news.orig-procedure.card
 \`\`\`
 
-After merging, delete the \`.orig-workflow.card\` file. The next \`cb init\` will see your merged version as the current copy.
+After merging, delete the \`.orig-procedure.card\` file. The next \`cb init\` will see your merged version as the current copy.
 
 ## Git History
 
-A complete workflow run produces commits like:
+A complete procedure run produces commits like:
 
 \`\`\`
-abc123f Complete workflow: process-news
-abc123e [workflow] Complete step: brief
+abc123f Complete procedure: process-news
+abc123e [procedure] Complete step: brief
 abc123d Brief: The Specification Problem           ← agent commit
-abc123c [workflow] Complete step: analyze
+abc123c [procedure] Complete step: analyze
 abc123b Analyze 5 items                            ← agent commit
-abc123a [workflow] Complete step: fetch
-abc1239 [workflow] Complete step: triage
+abc123a [procedure] Complete step: fetch
+abc1239 [procedure] Complete step: triage
 abc1238 Triage: 5/12 items kept                    ← agent commit
-abc1237 Start workflow: process-news
+abc1237 Start procedure: process-news
 \`\`\`
 
 Each commit represents a clean, consistent state. You can \`git reset --hard\` to any commit to get a valid snapshot.

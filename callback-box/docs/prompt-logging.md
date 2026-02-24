@@ -1,6 +1,6 @@
 # Prompt Logging for Agent Invocations
 
-When agents run in a callback box (via `cb wakeup`, `cb process-news`, workflows, etc.), you can capture the full API traffic — including system prompts, CLAUDE.md content, and all context that Claude Code sends to the API.
+When agents run in a callback box (via `cb wakeup`, `cb process-news`, procedures, etc.), you can capture the full API traffic — including system prompts, CLAUDE.md content, and all context that Claude Code sends to the API.
 
 This is useful for:
 - Verifying that generated documentation (`agent-guide.md`, card rules) is actually loaded
@@ -81,7 +81,7 @@ Contents of /Users/.../CLAUDE.md (project instructions, checked into the codebas
 Contents of /Users/.../THINKING_CLAUDE.md (project instructions, checked into the codebase):
 Contents of /Users/.../boxes/test1/CLAUDE.md (project instructions, checked into the codebase):
 Contents of /Users/.../boxes/test1/.callback-box/agent-guide.md (project instructions, checked into the codebase):
-Contents of /Users/.../boxes/test1/.claude/rules/card-workflow.md (project instructions, checked into the codebase):
+Contents of /Users/.../boxes/test1/.claude/rules/card-procedure.md (project instructions, checked into the codebase):
 Contents of /Users/.../boxes/test1/.claude/rules/card-question.md (project instructions, checked into the codebase):
 ...
 ```

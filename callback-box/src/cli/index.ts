@@ -26,7 +26,7 @@ import {
   processNewsCommand,
   processFeedbackCommand,
   triageFeedbackCommand,
-  workflowCommand,
+  procedureCommand,
   initRulesCommand,
   pairCommand,
   transcribeCapturesCommand,
@@ -70,7 +70,7 @@ program.addCommand(fetchAllNewsCommand);
 program.addCommand(processNewsCommand);
 program.addCommand(processFeedbackCommand);
 program.addCommand(triageFeedbackCommand);
-program.addCommand(workflowCommand);
+program.addCommand(procedureCommand);
 program.addCommand(initRulesCommand);
 program.addCommand(pairCommand);
 program.addCommand(transcribeCapturesCommand);

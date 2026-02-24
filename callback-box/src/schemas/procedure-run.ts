@@ -1,8 +1,8 @@
 /**
- * Workflow run card schema.
+ * Procedure run card schema.
  *
- * Tracks the execution state of a workflow run. Created in
- * workflow/runs/<name>_<timestamp>/run.workflow-run.card
+ * Tracks the execution state of a procedure run. Created in
+ * procedure/runs/<name>_<timestamp>/run.procedure-run.card
  */
 
 import { element } from "cardworks";
@@ -86,26 +86,26 @@ export const RunStep = element("step", {
 });
 
 /**
- * Workflow run schema — the root element.
+ * Procedure run schema — the root element.
  */
-export const WorkflowRunSchema = element("workflow-run", {
+export const ProcedureRunSchema = element("procedure-run", {
   attrs: {
-    workflow: z.string(),
+    procedure: z.string(),
     status: z.enum(["pending", "running", "completed", "failed"]),
     "started-at": z.string().datetime({ offset: true }),
     "completed-at": z.string().datetime({ offset: true }).optional(),
   },
   children: z.array(RunStep),
-  instructions: `# Handling Workflow Runs
+  instructions: `# Handling Procedure Runs
 
-This card is managed by the workflow engine. Agents should read it to understand execution progress but should NOT modify it directly.
+This card is managed by the procedure engine. Agents should read it to understand execution progress but should NOT modify it directly.
 
 Check the root \`status\` attribute for overall progress: pending → running → completed/failed. Each <step> child also has its own status.
 
 Step statuses: pending → running → completed/skipped/failed. Look at <precheck status="..."> to see why a step was skipped, and <validate status="..."> to see if validation passed.
 
-The \`workflow\` attribute names the workflow definition this run belongs to. The run card lives in \`workflow/runs/<name>_<timestamp>/\`.`,
+The \`procedure\` attribute names the procedure definition this run belongs to. The run card lives in \`procedure/runs/<name>_<timestamp>/\`.`,
 });
 
-export type WorkflowRun = z.infer<typeof WorkflowRunSchema>;
+export type ProcedureRun = z.infer<typeof ProcedureRunSchema>;
 export type RunStepResult = z.infer<typeof RunStep>;

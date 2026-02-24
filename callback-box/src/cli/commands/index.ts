@@ -19,7 +19,7 @@ export { fetchAllNewsCommand } from "./fetch-all-news.js";
 export { processNewsCommand } from "./process-news.js";
 export { processFeedbackCommand } from "./process-feedback.js";
 export { triageFeedbackCommand } from "./triage-feedback.js";
-export { workflowCommand } from "./workflow.js";
+export { procedureCommand } from "./procedure.js";
 export { initRulesCommand } from "./init-rules.js";
 export { pairCommand } from "./pair.js";
 export { transcribeCapturesCommand } from "./transcribe-captures.js";

@@ -1,4 +1,4 @@
-<workflow name="process-captures">
+<procedure name="process-captures">
   <description>
     Process capture sessions through intake: transcribe audio, establish purpose,
     describe images, assemble timeline, rename, and extract records.
@@ -96,7 +96,7 @@
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
         Summarize audio clips
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: summarize
         EOF
         )"
@@ -172,7 +172,7 @@
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
         Establish session purposes
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: purpose
         EOF
         )"
@@ -247,7 +247,7 @@
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
         Describe images: &lt;N&gt; analyzed, &lt;M&gt; invalid
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: describe-images
         EOF
         )"
@@ -383,7 +383,7 @@
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
         Rename capture sessions
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: rename
         EOF
         )"
@@ -493,7 +493,7 @@
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
         Plan extraction for capture sessions
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: plan-extraction
         EOF
         )"
@@ -601,7 +601,7 @@
         git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
         Extract records from capture sessions
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: extract
         EOF
         )"
@@ -642,4 +642,4 @@
       <why>Extraction must produce actual record cards to be useful.</why>
     </validate>
   </step>
-</workflow>
+</procedure>

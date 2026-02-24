@@ -1,5 +1,5 @@
 /**
- * Shell execution helper for workflow steps.
+ * Shell execution helper for procedure steps.
  *
  * Executes shell commands via bash in the box root directory,
  * with the CHECK_SKIP environment variable set.

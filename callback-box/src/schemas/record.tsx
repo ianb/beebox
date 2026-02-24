@@ -134,7 +134,7 @@ Records are generic extracted units — discrete things pulled from capture sess
 
 - **<language>**: Only include when notable — non-default language, multilingual content, or language is a significant attribute of the record.
 
-- **<triage>**: Only used when a triage workflow is active. Contains triage status or disposition.
+- **<triage>**: Only used when a triage procedure is active. Contains triage status or disposition.
 
 - **<notes>**: Anything that doesn't fit elsewhere — observations, caveats, follow-up items.
 

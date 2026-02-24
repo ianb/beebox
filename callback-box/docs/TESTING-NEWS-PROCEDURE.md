@@ -1,6 +1,6 @@
-# Testing the News Workflow
+# Testing the News Procedure
 
-This document describes how to test the news processing workflow from start to finish.
+This document describes how to test the news processing procedure from start to finish.
 
 ## Prerequisites
 

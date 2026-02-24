@@ -149,7 +149,7 @@ You also described "outboard things" that the system integrates with:
 
 ---
 
-## 6) Calendar (and similar synced resources) with commit-like workflow
+## 6) Calendar (and similar synced resources) with commit-like procedure
 
 Calendar is a prime early service.
 
@@ -182,7 +182,7 @@ Meaning:
 
 ---
 
-## 8) Question loop (Callback concept at the workflow level)
+## 8) Question loop (Callback concept at the procedure level)
 
 During processing, the system may hit a point where:
 

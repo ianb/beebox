@@ -1,7 +1,7 @@
 /**
- * Workflow engine — executes workflow definitions step by step.
+ * Procedure engine — executes procedure definitions step by step.
  *
- * Loads a workflow definition card, creates a run directory with a run card,
+ * Loads a procedure definition card, creates a run directory with a run card,
  * executes steps sequentially, records results, and maintains git-clean state
  * between steps.
  */
@@ -27,14 +27,16 @@ const MODEL_MAP: Record<string, string> = {
   opus: "claude-opus-4-6",
 };
 
-export interface WorkflowOptions {
+export interface ProcedureOptions {
   dryRun?: boolean;
   force?: boolean;
   /** Run only this step (by id), skip all others */
   step?: string;
+  /** Runtime directive string passed to procedure agents */
+  directive?: string;
 }
 
-// ─── Types for parsed workflow definitions ───────────────────────────
+// ─── Types for parsed procedure definitions ───────────────────────────
 
 interface ParsedPhase {
   shells: string[];
@@ -51,7 +53,7 @@ interface ParsedStep {
   validate?: { phase: ParsedPhase; severity: string };
 }
 
-interface ParsedWorkflow {
+interface ParsedProcedure {
   name: string;
   description: string;
   steps: ParsedStep[];
@@ -60,60 +62,63 @@ interface ParsedWorkflow {
 // ─── Public API ──────────────────────────────────────────────────────
 
 /**
- * Parameters for startWorkflow
+ * Parameters for startProcedure
  */
-export interface StartWorkflowParams {
+export interface StartProcedureParams {
   ctx: CommandContext;
-  workflowNameOrPath: string;
-  options?: WorkflowOptions;
+  procedureNameOrPath: string;
+  options?: ProcedureOptions;
 }
 
 /**
- * Start a new workflow run.
+ * Start a new procedure run.
  */
-export async function startWorkflow(
-  params: StartWorkflowParams
+export async function startProcedure(
+  params: StartProcedureParams
 ): Promise<CommandResult> {
-  const { ctx, workflowNameOrPath, options = {} } = params;
+  const { ctx, procedureNameOrPath, options = {} } = params;
   const { boxRoot } = ctx;
 
-  // Resolve workflow definition: accept a path or a bare name
-  let workflowCardPath: string;
+  // Resolve procedure definition: accept a path or a bare name
+  let procedureCardPath: string;
   if (
-    workflowNameOrPath.endsWith(".workflow.card") ||
-    workflowNameOrPath.includes("/")
+    procedureNameOrPath.endsWith(".procedure.card") ||
+    procedureNameOrPath.includes("/")
   ) {
     // Treat as a path (absolute or relative to boxRoot)
-    workflowCardPath = path.isAbsolute(workflowNameOrPath)
-      ? workflowNameOrPath
-      : path.join(boxRoot, workflowNameOrPath);
+    procedureCardPath = path.isAbsolute(procedureNameOrPath)
+      ? procedureNameOrPath
+      : path.join(boxRoot, procedureNameOrPath);
   } else {
-    // Bare name → config/workflows/<name>.workflow.card
-    workflowCardPath = path.join(
+    // Bare name → config/procedures/<name>.procedure.card
+    procedureCardPath = path.join(
       boxRoot,
-      "config/workflows",
-      `${workflowNameOrPath}.workflow.card`
+      "config/procedures",
+      `${procedureNameOrPath}.procedure.card`
     );
   }
 
   try {
-    await fs.access(workflowCardPath);
+    await fs.access(procedureCardPath);
   } catch {
     return {
       success: false,
-      error: `Workflow definition not found: ${workflowCardPath}`,
+      error: `Procedure definition not found: ${procedureCardPath}`,
     };
   }
 
-  // Parse workflow definition
-  const workflow = await loadWorkflowDefinition(workflowCardPath);
-  const workflowName = workflow.name;
+  // Parse procedure definition
+  const procedure = await loadProcedureDefinition(procedureCardPath);
+  const procedureName = procedure.name;
 
   if (options.dryRun) {
-    ctx.writeLine(fmt.header(`Workflow: ${workflow.name}`));
-    ctx.writeLine(fmt.dim(workflow.description));
+    ctx.writeLine(fmt.header(`Procedure: ${procedure.name}`));
+    ctx.writeLine(fmt.dim(procedure.description));
+    if (options.directive) {
+      ctx.writeLine(fmt.kv("Directive", options.directive));
+    }
     ctx.writeLine("");
-    for (const step of workflow.steps) {
+    for (const step of procedure.steps) {
       const hasPrecheck = step.precheck !== undefined;
       const hasValidate = step.validate !== undefined;
       const runType = step.run?.agents.length
@@ -130,9 +135,9 @@ export async function startWorkflow(
 
   // Validate --step if provided
   if (options.step) {
-    const found = workflow.steps.find((s) => s.id === options.step);
+    const found = procedure.steps.find((s) => s.id === options.step);
     if (!found) {
-      const validIds = workflow.steps.map((s) => s.id).join(", ");
+      const validIds = procedure.steps.map((s) => s.id).join(", ");
       return {
         success: false,
         error: `Unknown step "${options.step}". Available steps: ${validIds}`,
@@ -146,43 +151,44 @@ export async function startWorkflow(
     .replace(/[.:]/g, "")
     .replace("T", "T")
     .slice(0, 15);
-  const runDirName = `${workflowName}_${timestamp}`;
-  const runDir = path.join(boxRoot, "workflow/runs", runDirName);
+  const runDirName = `${procedureName}_${timestamp}`;
+  const runDir = path.join(boxRoot, "procedure/runs", runDirName);
   await fs.mkdir(runDir, { recursive: true });
 
-  const runCardPath = path.join(runDir, "run.workflow-run.card");
+  const runCardPath = path.join(runDir, "run.procedure-run.card");
 
   // Generate initial run card
   const now = new Date().toISOString();
-  const relWorkflowPath = path.relative(boxRoot, workflowCardPath);
-  const initialRunCard = buildInitialRunCard({ workflow, workflowPath: relWorkflowPath, startedAt: now });
+  const relProcedurePath = path.relative(boxRoot, procedureCardPath);
+  const initialRunCard = buildInitialRunCard({ procedure, procedurePath: relProcedurePath, startedAt: now, ...(options.directive && { directive: options.directive }) });
   await fs.writeFile(runCardPath, initialRunCard);
 
   // Commit start
   await stageAll(boxRoot);
   await commit(boxRoot, {
-    message: `Start workflow: ${workflowName}`,
-    trailers: { Workflow: workflowName },
+    message: `Start procedure: ${procedureName}`,
+    trailers: { Procedure: procedureName },
   });
 
-  ctx.writeLine(fmt.header(`Starting workflow: ${workflow.name}`));
+  ctx.writeLine(fmt.header(`Starting procedure: ${procedure.name}`));
   ctx.writeLine(fmt.dim(`Run: ${path.relative(boxRoot, runDir)}`));
   ctx.writeLine("");
 
   // Execute steps (optionally filtered to a single step)
   const stepsToRun = options.step
-    ? workflow.steps.filter((s) => s.id === options.step)
-    : workflow.steps;
+    ? procedure.steps.filter((s) => s.id === options.step)
+    : procedure.steps;
   let allSucceeded = true;
   for (const step of stepsToRun) {
     const result = await executeStep({
       ctx,
       boxRoot,
       step,
-      workflow,
-      workflowCardPath,
+      procedure,
+      procedureCardPath,
       runCardPath,
-      relWorkflowPath,
+      relProcedurePath,
+      ...(options.directive && { directive: options.directive }),
     });
 
     if (result === "failed") {
@@ -200,52 +206,52 @@ export async function startWorkflow(
   });
   await stageAll(boxRoot);
   await commit(boxRoot, {
-    message: `${allSucceeded ? "Complete" : "Failed"} workflow: ${workflowName}`,
-    trailers: { Workflow: workflowName },
+    message: `${allSucceeded ? "Complete" : "Failed"} procedure: ${procedureName}`,
+    trailers: { Procedure: procedureName },
   });
 
   if (allSucceeded) {
-    ctx.writeLine(fmt.ok(`Workflow completed: ${workflowName}`));
+    ctx.writeLine(fmt.ok(`Procedure completed: ${procedureName}`));
   } else {
-    ctx.writeLine(fmt.fail(`Workflow failed: ${workflowName}`));
+    ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));
   }
 
   return { success: allSucceeded };
 }
 
 /**
- * List available workflow definitions.
+ * List available procedure definitions.
  */
-export async function listWorkflows(
+export async function listProcedures(
   ctx: CommandContext
 ): Promise<CommandResult> {
-  const workflowDir = path.join(ctx.boxRoot, "config/workflows");
+  const procedureDir = path.join(ctx.boxRoot, "config/procedures");
 
   try {
-    const files = await fs.readdir(workflowDir);
-    const cards = files.filter((f) => f.endsWith(".workflow.card"));
+    const files = await fs.readdir(procedureDir);
+    const cards = files.filter((f) => f.endsWith(".procedure.card"));
 
     if (cards.length === 0) {
-      ctx.writeLine(fmt.dim("No workflow definitions found."));
+      ctx.writeLine(fmt.dim("No procedure definitions found."));
       return { success: true, data: [] };
     }
 
     for (const card of cards) {
-      const name = card.replace(".workflow.card", "");
+      const name = card.replace(".procedure.card", "");
       ctx.writeLine(`  ${fmt.strong(name)} ${fmt.dim(card)}`);
     }
 
     return { success: true, data: cards };
   } catch {
-    ctx.writeLine(fmt.dim("No config/workflows/ directory."));
+    ctx.writeLine(fmt.dim("No config/procedures/ directory."));
     return { success: true, data: [] };
   }
 }
 
 /**
- * Show status of a workflow run.
+ * Show status of a procedure run.
  */
-export async function workflowStatus(
+export async function procedureStatus(
   ctx: CommandContext,
   runDir?: string
 ): Promise<CommandResult> {
@@ -253,24 +259,24 @@ export async function workflowStatus(
 
   // If no run dir specified, find the latest
   if (!runDir) {
-    const runsDir = path.join(boxRoot, "workflow/runs");
+    const runsDir = path.join(boxRoot, "procedure/runs");
     try {
       const dirs = await fs.readdir(runsDir);
       const sorted = dirs.toSorted().toReversed();
       if (sorted.length === 0) {
-        ctx.writeLine(fmt.dim("No workflow runs found."));
+        ctx.writeLine(fmt.dim("No procedure runs found."));
         return { success: true };
       }
       runDir = path.join(runsDir, sorted[0]!);
     } catch {
-      ctx.writeLine(fmt.dim("No workflow/runs/ directory."));
+      ctx.writeLine(fmt.dim("No procedure/runs/ directory."));
       return { success: true };
     }
   }
 
   const runCardPath = path.join(
     runDir.startsWith("/") ? runDir : path.join(boxRoot, runDir),
-    "run.workflow-run.card"
+    "run.procedure-run.card"
   );
 
   try {
@@ -278,7 +284,7 @@ export async function workflowStatus(
     const element = await parseXml(content, runCardPath);
 
     ctx.writeLine(
-      fmt.header(`Workflow Run: ${element.attrs["workflow"]}`)
+      fmt.header(`Procedure Run: ${element.attrs["procedure"]}`)
     );
     ctx.writeLine(fmt.kv("Status", fmt.status(element.attrs["status"] ?? "unknown")));
     ctx.writeLine(fmt.kv("Started", element.attrs["started-at"] ?? "unknown"));
@@ -316,11 +322,11 @@ export async function workflowStatus(
 // ─── Internal helpers ────────────────────────────────────────────────
 
 /**
- * Parse a workflow definition card into a structured object.
+ * Parse a procedure definition card into a structured object.
  */
-async function loadWorkflowDefinition(
+async function loadProcedureDefinition(
   cardPath: string
-): Promise<ParsedWorkflow> {
+): Promise<ParsedProcedure> {
   const content = await fs.readFile(cardPath, "utf-8");
   const root = await parseXml(content, cardPath);
 
@@ -419,27 +425,29 @@ function parsePhaseDef(phaseEl: ElementNode): ParsedPhase {
  * Parameters for buildInitialRunCard
  */
 interface BuildInitialRunCardParams {
-  workflow: ParsedWorkflow;
-  workflowPath: string;
+  procedure: ParsedProcedure;
+  procedurePath: string;
   startedAt: string;
+  directive?: string;
 }
 
 /**
  * Build the initial run card XML.
  */
 function buildInitialRunCard(params: BuildInitialRunCardParams): string {
-  const { workflow, workflowPath, startedAt } = params;
-  const stepElements = workflow.steps.map((step) =>
+  const { procedure, procedurePath, startedAt, directive } = params;
+  const stepElements = procedure.steps.map((step) =>
     createElement("step", {
       id: step.id,
       status: "pending",
     })
   );
 
-  const root = createElement("workflow-run", {
-    workflow: workflowPath,
+  const root = createElement("procedure-run", {
+    procedure: procedurePath,
     status: "running",
     "started-at": startedAt,
+    ...(directive && { directive }),
     children: stepElements,
   });
 
@@ -453,19 +461,20 @@ interface ExecuteStepParams {
   ctx: CommandContext;
   boxRoot: string;
   step: ParsedStep;
-  workflow: ParsedWorkflow;
-  workflowCardPath: string;
+  procedure: ParsedProcedure;
+  procedureCardPath: string;
   runCardPath: string;
-  relWorkflowPath: string;
+  relProcedurePath: string;
+  directive?: string;
 }
 
 /**
- * Execute a single workflow step.
+ * Execute a single procedure step.
  *
  * Returns "completed", "skipped", or "failed".
  */
 async function executeStep(params: ExecuteStepParams): Promise<"completed" | "skipped" | "failed"> {
-  const { ctx, boxRoot, step, workflow, workflowCardPath, runCardPath, relWorkflowPath } = params;
+  const { ctx, boxRoot, step, procedure, procedureCardPath, runCardPath, relProcedurePath } = params;
   const relRunCardPath = path.relative(boxRoot, runCardPath);
 
   ctx.writeLine(fmt.phase(`Step: ${step.id}`));
@@ -500,8 +509,8 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
       });
       await stageAll(boxRoot);
       await commit(boxRoot, {
-        message: `[workflow] Skip step: ${step.id}`,
-        trailers: { Workflow: workflow.name, Step: step.id },
+        message: `[procedure] Skip step: ${step.id}`,
+        trailers: { Procedure: procedure.name, Step: step.id },
       });
       ctx.writeLine("");
       return "skipped";
@@ -523,8 +532,8 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
       });
       await stageAll(boxRoot);
       await commit(boxRoot, {
-        message: `[workflow] Failed step: ${step.id} (precheck)`,
-        trailers: { Workflow: workflow.name, Step: step.id },
+        message: `[procedure] Failed step: ${step.id} (precheck)`,
+        trailers: { Procedure: procedure.name, Step: step.id },
       });
       ctx.writeLine("");
       return "failed";
@@ -552,8 +561,8 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
     });
     await stageAll(boxRoot);
     await commit(boxRoot, {
-      message: `[workflow] Complete step: ${step.id}`,
-      trailers: { Workflow: workflow.name, Step: step.id },
+      message: `[procedure] Complete step: ${step.id}`,
+      trailers: { Procedure: procedure.name, Step: step.id },
     });
     ctx.writeLine("");
     return "completed";
@@ -567,13 +576,14 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
     ctx.writeLine(fmt.dim(`  Running agent${agent.model ? ` (${agent.model})` : ""}...`));
 
     // Build context block
-    const stepLineRange = await getStepLineRange(workflowCardPath, step.id);
+    const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
     const contextBlock = buildContextBlock({
       runCardPath: relRunCardPath,
       stepId: step.id,
-      workflowPath: relWorkflowPath,
+      procedurePath: relProcedurePath,
       ...(stepLineRange && { stepLineRange }),
       ...(precheckOutput && { precheckOutput }),
+      ...(params.directive && { directive: params.directive }),
     });
 
     const systemPrompt = contextBlock + "\n\n" + agent.prompt;
@@ -581,7 +591,7 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
     const agentOpts: AgentOptions = {
       boxRoot,
       systemPrompt,
-      prompt: `Execute the ${step.id} step of the ${workflow.name} workflow. Follow the instructions in your system prompt.`,
+      prompt: `Execute the ${step.id} step of the ${procedure.name} procedure. Follow the instructions in your system prompt.`,
       onOutput: (text) => ctx.write(text),
       maxTurns: agent.maxTurns ?? 20,
     };
@@ -618,7 +628,7 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
   const gitRef = await ensureGitClean({
     boxRoot,
     stepId: step.id,
-    workflowName: workflow.name,
+    procedureName: procedure.name,
     ...(sessionId && { sessionId }),
   });
 
@@ -631,10 +641,10 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
       ctx,
       boxRoot,
       step,
-      _workflow: workflow,
-      _workflowCardPath: workflowCardPath,
+      _procedure: procedure,
+      _procedureCardPath: procedureCardPath,
       _runCardPath: runCardPath,
-      _relWorkflowPath: relWorkflowPath,
+      _relProcedurePath: relProcedurePath,
       _gitRef: gitRef,
     });
   }
@@ -676,8 +686,8 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
   await updateStepInRunCard({ runCardPath, stepId: step.id, update: stepUpdate });
   await stageAll(boxRoot);
   await commit(boxRoot, {
-    message: `[workflow] Complete step: ${step.id}`,
-    trailers: { Workflow: workflow.name, Step: step.id },
+    message: `[procedure] Complete step: ${step.id}`,
+    trailers: { Procedure: procedure.name, Step: step.id },
   });
 
   const succeeded = stepUpdate.status !== "failed";
@@ -728,10 +738,10 @@ interface ExecuteValidationParams {
   ctx: CommandContext;
   boxRoot: string;
   step: ParsedStep;
-  _workflow: ParsedWorkflow;
-  _workflowCardPath: string;
+  _procedure: ParsedProcedure;
+  _procedureCardPath: string;
   _runCardPath: string;
-  _relWorkflowPath: string;
+  _relProcedurePath: string;
   _gitRef: string;
 }
 
@@ -739,7 +749,7 @@ interface ExecuteValidationParams {
  * Execute validation phase.
  */
 async function executeValidation(params: ExecuteValidationParams): Promise<{ status: string; stdout?: string; review?: string }> {
-  const { ctx, boxRoot, step, _workflow, _workflowCardPath, _runCardPath, _relWorkflowPath, _gitRef } = params;
+  const { ctx, boxRoot, step, _procedure, _procedureCardPath, _runCardPath, _relProcedurePath, _gitRef } = params;
   const validate = step.validate!;
   const { phase, severity } = validate;
   let status = "pass";
@@ -802,7 +812,7 @@ async function executeValidation(params: ExecuteValidationParams): Promise<{ sta
 interface EnsureGitCleanParams {
   boxRoot: string;
   stepId: string;
-  workflowName: string;
+  procedureName: string;
   sessionId?: string;
 }
 
@@ -812,16 +822,16 @@ interface EnsureGitCleanParams {
  * Returns the git ref of the step's work.
  */
 async function ensureGitClean(params: EnsureGitCleanParams): Promise<string> {
-  const { boxRoot, stepId, workflowName, sessionId } = params;
+  const { boxRoot, stepId, procedureName, sessionId } = params;
   const gitStatus = await getStatus(boxRoot);
 
   if (!gitStatus.clean) {
     // Fallback commit — the agent didn't commit its own work
     await stageAll(boxRoot);
     const trailers: Record<string, string> = {
-      Workflow: workflowName,
+      Procedure: procedureName,
       Step: stepId,
-      "Commit-Source": "workflow-fallback",
+      "Commit-Source": "procedure-fallback",
     };
     if (sessionId) {
       trailers["Session"] = sessionId;
@@ -832,7 +842,7 @@ async function ensureGitClean(params: EnsureGitCleanParams): Promise<string> {
     const summary = buildFallbackSummary(allFiles, boxRoot);
 
     return await commit(boxRoot, {
-      message: `[workflow] ${stepId}: ${summary}`,
+      message: `[procedure] ${stepId}: ${summary}`,
       trailers,
     });
   }
@@ -882,25 +892,26 @@ function buildFallbackSummary(files: string[], _boxRoot: string): string {
 interface BuildContextBlockParams {
   runCardPath: string;
   stepId: string;
-  workflowPath: string;
+  procedurePath: string;
   stepLineRange?: string;
   precheckOutput?: string;
+  directive?: string;
 }
 
 /**
  * Build the context block prepended to agent system prompts.
  */
 function buildContextBlock(params: BuildContextBlockParams): string {
-  const { runCardPath, stepId, workflowPath, stepLineRange, precheckOutput } = params;
+  const { runCardPath, stepId, procedurePath, stepLineRange, precheckOutput, directive } = params;
   const date = new Date().toISOString().slice(0, 10);
   const stepRef = stepLineRange
-    ? `${stepId} (defined at ${workflowPath} ${stepLineRange})`
+    ? `${stepId} (defined at ${procedurePath} ${stepLineRange})`
     : stepId;
 
   let block = `# Context
 
 Current date: ${date}
-Workflow run: ${runCardPath}
+Procedure run: ${runCardPath}
 Step: ${stepRef}`;
 
   if (precheckOutput) {
@@ -911,18 +922,26 @@ ${precheckOutput}
 </precheck>`;
   }
 
+  if (directive) {
+    block += `
+
+<directive>
+${directive}
+</directive>`;
+  }
+
   return block;
 }
 
 /**
- * Find the line range of a step definition in the workflow card.
+ * Find the line range of a step definition in the procedure card.
  */
 async function getStepLineRange(
-  workflowCardPath: string,
+  procedureCardPath: string,
   stepId: string
 ): Promise<string | undefined> {
   try {
-    const content = await fs.readFile(workflowCardPath, "utf-8");
+    const content = await fs.readFile(procedureCardPath, "utf-8");
     const lines = content.split("\n");
 
     let startLine: number | undefined;

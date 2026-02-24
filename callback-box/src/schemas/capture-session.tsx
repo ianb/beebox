@@ -4,7 +4,7 @@
  * Created by the capture connector. Contains references to all child
  * image and audio cards in the same directory.
  *
- * Later workflows transcribe audio, analyze images, and build a unified
+ * Later procedures transcribe audio, analyze images, and build a unified
  * transcript with inline image references.
  */
 

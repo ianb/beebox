@@ -1,4 +1,4 @@
-<workflow name="process-news">
+<procedure name="process-news">
   <description>
     Process news items from RSS feeds into a curated brief.
     Pulls items from inbox through triage, fetch, analysis, and brief creation.
@@ -102,7 +102,7 @@
         Trashed:
         - &lt;title&gt; - &lt;reason&gt;
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: triage
         EOF
         )"
@@ -233,7 +233,7 @@
 
         Emerging themes: &lt;notable patterns or connections&gt;
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: analyze
         EOF
         )"
@@ -498,7 +498,7 @@
         &lt;N&gt; items used, &lt;M&gt; left in pool.
         Editorial angle: &lt;one sentence on why this angle/structure&gt;
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: brief
         EOF
         )"
@@ -533,4 +533,4 @@
     </validate>
   </step>
 
-</workflow>
+</procedure>

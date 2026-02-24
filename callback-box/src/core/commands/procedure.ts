@@ -1,26 +1,26 @@
 /**
- * Workflow commands — command runner integration.
+ * Procedure commands — command runner integration.
  *
- * Registers workflow-related commands with the command runner framework.
+ * Registers procedure-related commands with the command runner framework.
  */
 
 import { registerCommand } from "../command-runner.js";
 import {
-  startWorkflow,
-  listWorkflows,
-  workflowStatus,
-} from "../workflow/engine.js";
-import type { WorkflowOptions } from "../workflow/engine.js";
+  startProcedure,
+  listProcedures,
+  procedureStatus,
+} from "../procedure/engine.js";
+import type { ProcedureOptions } from "../procedure/engine.js";
 
 registerCommand({
-  name: "workflow-run",
-  description: "Run a workflow by name or path",
+  name: "procedure-run",
+  description: "Run a procedure by name or path",
   args: [
     {
       name: "name",
       type: "string",
       required: true,
-      description: "Workflow name (e.g., process-news) or path to .workflow.card",
+      description: "Procedure name (e.g., process-news) or path to .procedure.card",
     },
     {
       name: "dryRun",
@@ -42,10 +42,16 @@ registerCommand({
       required: false,
       description: "Run only this step, skip all others",
     },
+    {
+      name: "directive",
+      type: "string",
+      required: false,
+      description: "Directive string passed to procedure agents",
+    },
   ],
   execute: async (ctx, args) => {
     const name = args["name"] as string;
-    const options: WorkflowOptions = {};
+    const options: ProcedureOptions = {};
     if (args["dryRun"]) {
       options.dryRun = true;
     }
@@ -55,23 +61,26 @@ registerCommand({
     if (args["step"]) {
       options.step = args["step"] as string;
     }
+    if (args["directive"]) {
+      options.directive = args["directive"] as string;
+    }
 
-    return startWorkflow({ ctx, workflowNameOrPath: name, options });
+    return startProcedure({ ctx, procedureNameOrPath: name, options });
   },
 });
 
 registerCommand({
-  name: "workflow-list",
-  description: "List available workflow definitions",
+  name: "procedure-list",
+  description: "List available procedure definitions",
   args: [],
   execute: async (ctx) => {
-    return listWorkflows(ctx);
+    return listProcedures(ctx);
   },
 });
 
 registerCommand({
-  name: "workflow-status",
-  description: "Show status of a workflow run",
+  name: "procedure-status",
+  description: "Show status of a procedure run",
   args: [
     {
       name: "runDir",
@@ -82,6 +91,6 @@ registerCommand({
   ],
   execute: async (ctx, args) => {
     const runDir = args["runDir"] as string | undefined;
-    return workflowStatus(ctx, runDir);
+    return procedureStatus(ctx, runDir);
   },
 });

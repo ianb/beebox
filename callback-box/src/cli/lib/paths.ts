@@ -27,7 +27,7 @@ export const BOX_DIRS = {
   config: "config",
   connectors: "config/connectors",
   schemas: "config/schemas",
-  workflows: "config/workflows",
+  procedures: "config/procedures",
   schedules: "config/schedules",
 
   // Tricks (agent-authored scripts)

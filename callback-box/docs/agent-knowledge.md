@@ -10,7 +10,7 @@ When we talk about what the agent "knows," there are distinct phenomena worth na
 
 3. **Discoverable** — Information is available locally but requires search or exploration to locate. For example, grepping docs for a keyword, listing directory contents, or reading config files. The agent isn't told where to look — it has to figure that out. Success depends on search strategy and how discoverable the information is.
 
-4. **Deducible** — Requires investigation and reasoning from local artifacts. For instance, reading callback-box source code to understand how a feature works, or examining multiple files to piece together a workflow. The agent may not always succeed, and different agents might reach different (plausible) conclusions from the same evidence.
+4. **Deducible** — Requires investigation and reasoning from local artifacts. For instance, reading callback-box source code to understand how a feature works, or examining multiple files to piece together a procedure. The agent may not always succeed, and different agents might reach different (plausible) conclusions from the same evidence.
 
 5. **Researchable** — The information exists somewhere on the internet but not locally. The agent would need to use web search to find it. Examples: how a third-party API works, what format a particular standard uses, best practices for something the codebase doesn't document. Distinct from deducible because the answer can't be found by reading local files — it requires going outside the environment.
 
@@ -32,7 +32,7 @@ The same information can sit at different levels depending on what the agent is 
 
 - A guide card's compiled rules (e.g., `docs/generated/news-guide.md`) are **knows directly** when processing a news job (the job-specific rule file references them). Outside that context, the same information is **knows about** (referenced in the agent guide's card type list) or **discoverable** (via directory listing).
 
-This means testing should consider: what was the agent *doing* when it answered? A question about memo card structure might be "knows directly" mid-workflow but "knows about" in a cold prompt.
+This means testing should consider: what was the agent *doing* when it answered? A question about memo card structure might be "knows directly" mid-procedure but "knows about" in a cold prompt.
 
 ### How the knowledge chain works in Claude Code
 
@@ -40,8 +40,8 @@ The agent's context is built in layers, each corresponding to a knowledge level:
 
 - **Always loaded** → *knows directly*: `CLAUDE.md` → `.callback-box/agent-guide.md` (~128 lines of operational overview, directory layout, command summaries, card type catalog with doc references)
 - **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `CLAUDE.md` files (e.g., `config/schemas/CLAUDE.md`) are loaded when the agent works in that directory.
-- **Referenced but not loaded** → *knows about*: `docs/generated/*.md` (~31 files — full card type specs, command reference, workflow authoring guide, domain guides). The agent guide points to these by path.
-- **Present but not referenced** → *discoverable*: config files, workflow definitions, guide cards. Available in the box but the agent has to find them by exploring.
+- **Referenced but not loaded** → *knows about*: `docs/generated/*.md` (~31 files — full card type specs, command reference, procedure authoring guide, domain guides). The agent guide points to these by path.
+- **Present but not referenced** → *discoverable*: config files, procedure definitions, guide cards. Available in the box but the agent has to find them by exploring.
 - **Outside the box** → *deducible*: callback-box source code, cardworks library. Accessible if the agent knows where to look (`~/src/callback/`), but outside the box.
 - **On the internet** → *researchable*: Third-party API docs, standards, libraries the codebase depends on but doesn't document locally.
 
@@ -113,7 +113,7 @@ cb prompt "How would you create a new question card asking the user to pick a co
 - Watch for: does it combine `cb create` knowledge with the question card spec, or wing it?
 
 ```
-cb prompt "What's the difference between a guide card and a workflow card?"
+cb prompt "What's the difference between a guide card and a procedure card?"
 ```
 - **Expected level: Knows about** — both are listed in the agent guide; reading their respective docs gives the full picture
 - Watch for: high-level answer from agent guide is fine, but details require doc reads
@@ -145,23 +145,23 @@ cb prompt "How do you validate a card after editing it?"
 - **Expected level: Knows directly** — `cb validate` is in the agent guide
 - Watch for: does it know the syntax, or does it look it up? Looking up `docs/generated/cb-commands.md` is fine
 
-## 4. Workflows
+## 4. Procedures
 
 **Test prompts:**
 ```
-cb prompt "What workflows are configured in this box?"
+cb prompt "What procedures are configured in this box?"
 ```
-- **Expected level: Knows directly** — the agent guide lists available workflows
+- **Expected level: Knows directly** — the agent guide lists available procedures
 - Watch for: does it name them from the guide, or list the directory?
 
 ```
-cb prompt "How would you create a new workflow that processes bookmark cards?"
+cb prompt "How would you create a new procedure that processes bookmark cards?"
 ```
-- **Expected level: Knows about** — the agent guide mentions workflows exist; `docs/generated/workflows.md` has the authoring guide
-- Watch for: does it read the workflow docs, or guess at XML structure?
+- **Expected level: Knows about** — the agent guide mentions procedures exist; `docs/generated/procedures.md` has the authoring guide
+- Watch for: does it read the procedure docs, or guess at XML structure?
 
 ```
-cb prompt "Explain the relationship between a workflow card and a workflow-run card."
+cb prompt "Explain the relationship between a procedure card and a procedure-run card."
 ```
 - **Expected level: Knows about** — needs to read both card type docs to explain accurately
 - Watch for: does it explain the definition-vs-execution distinction, or conflate them?
@@ -238,7 +238,7 @@ cb prompt "How would I add a daily task?"
 
 ### Things the agent CAN do today (in-box):
 - **Create new card types/schemas** — write `.ts` files in `config/schemas/` using `element()` + Zod (see `config/schemas/CLAUDE.md`)
-- **Create new workflows** — write XML to `config/workflows/`
+- **Create new procedures** — write XML to `config/procedures/`
 - **Modify guides** — edit `config/*.guide.card` to change triage/processing rules
 - **Add tricks** — create scripts in `tricks/scripts/`
 - **Add scheduled tasks** — create `config/scheduled/*.scheduled-script.card`
@@ -273,7 +273,7 @@ cb prompt "Can you create a new type of card for tracking project tasks?"
 ```
 cb prompt "How would you add a new capability to this box?"
 ```
-- **Expected level: Knows directly (partially)** — the agent guide describes workflows, tricks, guides, and schedules as extension points. But box-local schemas require discovery.
+- **Expected level: Knows directly (partially)** — the agent guide describes procedures, tricks, guides, and schedules as extension points. But box-local schemas require discovery.
 - Watch for: does it list all the extension mechanisms? Does it mention schemas?
 
 ```
@@ -314,7 +314,7 @@ The generic triage agent gets something domain-specific. Can it figure out the r
 - "Here's a card from the inbox that says 'I want to follow more stories about renewable energy.' What do you do with it?"
   - Expected: recognizes this as a preference that should update the news guide's triage rules, not just archive it
 - "Someone dropped a bookmark URL into the inbox. What happens to it?"
-  - Expected: understands bookmark processing workflow or manual flow
+  - Expected: understands bookmark processing procedure or manual flow
 
 ### Situational Awareness
 Can the agent use git history, inbox state, recent archives to answer questions about recent activity?
@@ -375,19 +375,19 @@ First full run of the knowledge test suite (27 tests). Results and observations:
 
 ### What worked well
 - **Knows directly** tests all passed cleanly — zero file reads, correct answers. The agent guide layer is solid.
-- **Knows about** tests mostly passed when the question was about *understanding* something (guide-vs-workflow, workflow-vs-workflowrun, what-are-tricks all read their docs).
+- **Knows about** tests mostly passed when the question was about *understanding* something (guide-vs-procedure, procedure-vs-procedurerun, what-are-tricks all read their docs).
 - **Discoverable** tests for exploration passed well (list-guides, list-connectors both searched the filesystem).
 
 ### Fixes applied based on results
 - **Box-local schemas**: Agent guide had no mention of `config/schemas/`. Agent said "card types are defined by the framework, I can't add new ones." Fix: added one line to the Card Types section pointing to `config/schemas/CLAUDE.md`. After fix, `create-new-card-type` and `card-types-and-add-new` both pass.
 - **Scheduled scripts**: Agent guide pointer was too vague. Agent mentioned the doc but didn't read it. Fix: added specifics about what the doc contains (cron, throttling, chaining). After fix, `add-daily-task` passes.
-- **Workflow authoring**: Trimmed the workflow pointer to remove specifics (phases, primitives) that were giving the agent enough to guess from.
+- **Procedure authoring**: Trimmed the procedure pointer to remove specifics (phases, primitives) that were giving the agent enough to guess from.
 
 ### Open questions
 
-**Workflow authoring (`create-workflow`)** — The agent constructs plausible workflow XML without reading `docs/generated/workflows.md`, even after trimming the pointer. The workflow format uses custom conventions (precheck/run/validate phases, shell/agent/instruction primitives, CHECK_SKIP exit codes) but the general shape is close enough to common XML workflow patterns that the model guesses confidently. Open question: should the format be more conventional (so guessing works reliably) or more distinctive (so guessing fails visibly)? Alternatively, the real test might be whether the generated XML actually validates — a scenario test that creates a workflow and runs `cb validate` would answer this better than a knowledge test.
+**Procedure authoring (`create-procedure`)** — The agent constructs plausible procedure XML without reading `docs/generated/procedures.md`, even after trimming the pointer. The procedure format uses custom conventions (precheck/run/validate phases, shell/agent/instruction primitives, CHECK_SKIP exit codes) but the general shape is close enough to common XML procedure patterns that the model guesses confidently. Open question: should the format be more conventional (so guessing works reliably) or more distinctive (so guessing fails visibly)? Alternatively, the real test might be whether the generated XML actually validates — a scenario test that creates a procedure and runs `cb validate` would answer this better than a knowledge test.
 
-**"Knows about" vs. creation prompts** — Pattern across multiple tests: the agent reads docs when asked to *explain* something but skips the read when asked to *create* something. It seems to treat creation as an opportunity to demonstrate capability rather than a signal to look things up. This affects create-question-card, create-workflow, and add-daily-task (before fix). The schedule fix worked by making the pointer more specific about what the doc contains; the workflow fix (trimming) didn't work. More investigation needed on what makes an agent follow a pointer.
+**"Knows about" vs. creation prompts** — Pattern across multiple tests: the agent reads docs when asked to *explain* something but skips the read when asked to *create* something. It seems to treat creation as an opportunity to demonstrate capability rather than a signal to look things up. This affects create-question-card, create-procedure, and add-daily-task (before fix). The schedule fix worked by making the pointer more specific about what the doc contains; the procedure fix (trimming) didn't work. More investigation needed on what makes an agent follow a pointer.
 
 **Recipe test replaced** — Original `track-recipes` test asked about recipes, but recipe is a built-in card type. Agent correctly identified existing support rather than discovering schemas. Replaced with `track-reading-list` (books with progress/ratings) — no built-in type for this. Agent now correctly creates a schema in `config/schemas/book.ts` but does so without reading `config/schemas/CLAUDE.md` — it has enough from the agent guide pointer + the existing bookmark.ts example. This is "knows about" behavior working correctly; the automated `should_read` check is too strict.
 

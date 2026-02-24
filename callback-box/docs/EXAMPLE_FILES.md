@@ -2,7 +2,7 @@
 
 # Callback Box: Example Files
 
-Concrete examples of cards, schemas, directory structure, and workflows.
+Concrete examples of cards, schemas, directory structure, and procedures.
 
 ---
 
@@ -366,7 +366,7 @@ For webhooks or API integrations:
   <source ref="/box/inbox/Task_Review_Request.card"/>
   <endpoint-trust>configured-integration</endpoint-trust>
   <data-sensitivity>internal</data-sensitivity>
-  <user-intent>Completing task workflow triggered by incoming request</user-intent>
+  <user-intent>Completing task procedure triggered by incoming request</user-intent>
 </http-request>
 ```
 
@@ -758,7 +758,7 @@ cb scheduled
 
 ---
 
-## Workflow Examples
+## Procedure Examples
 
 ### Processing an incoming email
 

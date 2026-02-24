@@ -1,4 +1,4 @@
-<workflow name="process-guidance">
+<procedure name="process-guidance">
   <description>
     Process reader feedback on news briefs and revise the news guide.
     Transcribes voice feedback, triages and integrates into briefs, then revises
@@ -172,7 +172,7 @@
         Unhandled:
         - &lt;card&gt;: &lt;reason&gt;
 
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: triage
         EOF
         )"
@@ -358,7 +358,7 @@
 
         Feedback-Source: &lt;brief1-path&gt;
         Feedback-Source: &lt;brief2-path&gt;
-        Triggered-By: cb workflow
+        Triggered-By: cb procedure
         Phase: revise-guide
         EOF
         )"
@@ -419,4 +419,4 @@
       </why>
     </validate>
   </step>
-</workflow>
+</procedure>

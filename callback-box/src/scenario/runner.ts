@@ -6,7 +6,7 @@
  */
 
 import * as path from "node:path";
-import { runShell } from "../core/workflow/shell.js";
+import { runShell } from "../core/procedure/shell.js";
 import { runAgent } from "../core/agent.js";
 import {
   getStatus,

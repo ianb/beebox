@@ -1,38 +1,40 @@
 /**
- * cb workflow — CLI command group for workflow operations.
+ * cb procedure — CLI command group for procedure operations.
  *
  * Subcommands:
- *   cb workflow run <name>      Start a new workflow run
- *   cb workflow list            List available workflow definitions
- *   cb workflow status [dir]    Show status of a workflow run
+ *   cb procedure run <name>      Start a new procedure run
+ *   cb procedure list            List available procedure definitions
+ *   cb procedure status [dir]    Show status of a procedure run
  */
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
-export const workflowCommand = new Command("workflow")
-  .description("Manage and run declarative workflows");
+export const procedureCommand = new Command("procedure")
+  .description("Manage and run declarative procedures");
 
-workflowCommand
+procedureCommand
   .command("run")
-  .description("Start a new workflow run")
-  .argument("<name-or-path>", "Workflow name (e.g., process-news) or path to .workflow.card")
+  .description("Start a new procedure run")
+  .argument("<name-or-path>", "Procedure name (e.g., process-news) or path to .procedure.card")
   .option("--dry-run", "Preview without executing")
   .option("--force", "Force even if another process is running")
   .option("--step <id>", "Run only this step, skip all others")
-  .action(async (name: string, options: { dryRun?: boolean; force?: boolean; step?: string }) => {
+  .option("--directive <text>", "Directive string passed to procedure agents")
+  .action(async (name: string, options: { dryRun?: boolean; force?: boolean; step?: string; directive?: string }) => {
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
       const result = await runCommand({
-        name: "workflow-run",
+        name: "procedure-run",
         args: {
           name,
           dryRun: options.dryRun,
           force: options.force,
           step: options.step,
+          directive: options.directive,
         },
         ctx,
       });
@@ -47,16 +49,16 @@ workflowCommand
     }
   });
 
-workflowCommand
+procedureCommand
   .command("list")
-  .description("List available workflow definitions")
+  .description("List available procedure definitions")
   .action(async () => {
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
 
       const result = await runCommand({
-        name: "workflow-list",
+        name: "procedure-list",
         args: {},
         ctx,
       });
@@ -71,9 +73,9 @@ workflowCommand
     }
   });
 
-workflowCommand
+procedureCommand
   .command("status")
-  .description("Show status of a workflow run")
+  .description("Show status of a procedure run")
   .argument("[run-dir]", "Run directory (defaults to latest)")
   .action(async (runDir?: string) => {
     try {
@@ -81,7 +83,7 @@ workflowCommand
       const ctx = createCliContext(boxRoot);
 
       const result = await runCommand({
-        name: "workflow-status",
+        name: "procedure-status",
         args: { runDir },
         ctx,
       });

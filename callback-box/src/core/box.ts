@@ -186,26 +186,26 @@ export async function getBoxMetadata(
 }
 
 /**
- * Install workflow templates into a box.
+ * Install procedure templates into a box.
  *
- * On fresh install: copies template workflow cards to config/workflows/.
+ * On fresh install: copies template procedure cards to config/procedures/.
  * On update: if the box's copy matches the previously installed version,
  * updates it. If the box's copy has been modified, writes the new version
- * as a .orig-workflow.card file for manual merging.
+ * as a .orig-procedure.card file for manual merging.
  *
- * @returns List of installed/updated workflow names
+ * @returns List of installed/updated procedure names
  */
-export async function installWorkflows(boxRoot: string): Promise<string[]> {
-  // Templates live alongside the compiled JS: ../../templates/workflows/
-  const templatesDir = path.join(__dirname, "..", "..", "templates", "workflows");
-  const targetDir = path.join(boxRoot, BOX_DIRS.workflows);
+export async function installProcedures(boxRoot: string): Promise<string[]> {
+  // Templates live alongside the compiled JS: ../../templates/procedures/
+  const templatesDir = path.join(__dirname, "..", "..", "templates", "procedures");
+  const targetDir = path.join(boxRoot, BOX_DIRS.procedures);
 
   await fs.mkdir(targetDir, { recursive: true });
 
   let templateFiles: string[];
   try {
     templateFiles = (await fs.readdir(templatesDir)).filter((f) =>
-      f.endsWith(".workflow.card")
+      f.endsWith(".procedure.card")
     );
   } catch {
     // No templates directory — nothing to install
@@ -236,7 +236,7 @@ export async function installWorkflows(boxRoot: string): Promise<string[]> {
       // Already up to date
     } else {
       // Box copy differs from template — write as .orig for manual merge
-      const origName = file.replace(".workflow.card", ".orig-workflow.card");
+      const origName = file.replace(".procedure.card", ".orig-procedure.card");
       await fs.writeFile(path.join(targetDir, origName), templateContent);
       installed.push(`${origName} (update available)`);
     }
@@ -417,7 +417,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
 /**
  * Install default scheduled-script cards into a box.
  *
- * Same update-or-preserve pattern as workflows and guides.
+ * Same update-or-preserve pattern as procedures and guides.
  *
  * @returns List of installed/updated schedule names
  */

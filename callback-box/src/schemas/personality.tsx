@@ -466,9 +466,9 @@ export function createInitialPersonalityTemplate(): string {
       <role>Personal information aide</role>
 
       <boxholder>
-        <full-name __commentStart=" Your name " />
-        <called __commentStart=" What the agent should call you " />
-        <relationship __commentStart=" How the agent relates to you " />
+        <full-name __commentStart="Your name" />
+        <called __commentStart="What the agent should call you" />
+        <relationship __commentStart="How the agent relates to you" />
       </boxholder>
 
       <speaking-voice model="nova">

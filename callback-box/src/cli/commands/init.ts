@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
-import { initBox, installWorkflows, installGuides, installSchedules, installPersonality } from "../../core/box.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../core/box.js";
 import { generateRules } from "./init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { parseXml } from "cardworks";
@@ -47,12 +47,12 @@ export const initCommand = new Command("init")
         console.log("  .claude/            - Agent configuration");
       }
 
-      // Install workflow templates
-      const workflows = await installWorkflows(resolve(targetPath));
-      if (workflows.length > 0) {
-        console.log(`\nInstalled ${workflows.length} workflow(s) in config/workflows/`);
-        for (const w of workflows) {
-          console.log(`  ${w}`);
+      // Install procedure templates
+      const procedures = await installProcedures(resolve(targetPath));
+      if (procedures.length > 0) {
+        console.log(`\nInstalled ${procedures.length} procedure(s) in config/procedures/`);
+        for (const p of procedures) {
+          console.log(`  ${p}`);
         }
       }
 

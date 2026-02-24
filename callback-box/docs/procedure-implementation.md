@@ -1,24 +1,24 @@
-# Workflows
+# Procedures
 
-Workflows are multi-step processes expressed as cards. Each step is a shell command, agent invocation, or model-evaluated instruction. The workflow engine runs steps in order, checks results, and records what happened.
+Procedures are multi-step processes expressed as cards. Each step is a shell command, agent invocation, or model-evaluated instruction. The procedure engine runs steps in order, checks results, and records what happened.
 
-Workflows replace hand-coded TypeScript orchestration with declarative cards that can be inspected, edited, and versioned. The prompts, sequencing, and checks all live in the filesystem.
+Procedures replace hand-coded TypeScript orchestration with declarative cards that can be inspected, edited, and versioned. The prompts, sequencing, and checks all live in the filesystem.
 
 ## Two Halves: Definition and Run
 
-A **workflow definition** lives in `config/workflows/` and describes the steps. It's a template — what _should_ happen, not what _did_ happen.
+A **procedure definition** lives in `config/procedures/` and describes the steps. It's a template — what _should_ happen, not what _did_ happen.
 
-A **workflow run** is created when the workflow executes. It contains a run card tracking progress and per-step results. Effects land in the normal places (inbox, pool, archive, trash) — the run directory is bookkeeping.
+A **procedure run** is created when the procedure executes. It contains a run card tracking progress and per-step results. Effects land in the normal places (inbox, pool, archive, trash) — the run directory is bookkeeping.
 
 ```
 config/
-  workflows/
-    process-news.workflow.card
+  procedures/
+    process-news.procedure.card
 
-workflow/
+procedure/
   runs/
     process-news_2026-02-06T200000/
-      run.workflow-run.card
+      run.procedure-run.card
 ```
 
 ## Building Blocks
@@ -76,7 +76,7 @@ The `$CHECK_SKIP` environment variable is set by the engine.
 
 ### Agent Invocations
 
-`<agent>` invokes Claude Code with the text as the prompt. The engine prepends a context block with working directory, date, workflow name, and step ID.
+`<agent>` invokes Claude Code with the text as the prompt. The engine prepends a context block with working directory, date, procedure name, and step ID.
 
 Attributes:
 - `model` — `haiku`, `sonnet`, or `opus` (default: sonnet)
@@ -90,7 +90,7 @@ Attributes:
 
 - `severity="warn"` — log and continue
 - `severity="review"` — evaluate with model, attempt one fix if failed
-- `severity="abort"` — stop the workflow
+- `severity="abort"` — stop the procedure
 
 ## Execution Model
 
@@ -108,9 +108,9 @@ The engine enforces **git-clean between steps**. Agent steps produce two commits
 ## CLI
 
 ```
-cb workflow run <name>       # Start a new run
-cb workflow status           # Show current run status
-cb workflow list             # List available definitions
+cb procedure run <name>       # Start a new run
+cb procedure status           # Show current run status
+cb procedure list             # List available definitions
 ```
 
 ## Git History
@@ -118,15 +118,15 @@ cb workflow list             # List available definitions
 A complete run produces:
 
 ```
-abc123f Complete workflow: process-news
-abc123e [workflow] Complete step: brief
+abc123f Complete procedure: process-news
+abc123e [procedure] Complete step: brief
 abc123d Brief: The Specification Problem           ← agent commit
-abc123c [workflow] Complete step: analyze
+abc123c [procedure] Complete step: analyze
 abc123b Analyze 5 items                            ← agent commit
-abc123a [workflow] Complete step: fetch
-abc1239 [workflow] Complete step: triage
+abc123a [procedure] Complete step: fetch
+abc1239 [procedure] Complete step: triage
 abc1238 Triage: 5/12 items kept                    ← agent commit
-abc1237 Start workflow: process-news
+abc1237 Start procedure: process-news
 ```
 
 Rewinding to any commit gives a valid, consistent state.
