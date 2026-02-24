@@ -35,6 +35,7 @@ import { CalendarReviewJobSchema } from "./calendar-review-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { PushoverMessageSchema } from "./pushover-message.js";
+import { PersonalitySchema } from "./personality.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -65,6 +66,7 @@ export const schemas: ElementSchema[] = [
   GuideSchema,
   ScheduledScriptSchema,
   PushoverMessageSchema,
+  PersonalitySchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
@@ -247,3 +249,4 @@ export { CalendarReviewJobSchema } from "./calendar-review-job.js";
 export { GuideSchema } from "./guide.js";
 export { ScheduledScriptSchema } from "./scheduled-script.js";
 export { PushoverMessageSchema } from "./pushover-message.js";
+export { PersonalitySchema } from "./personality.js";

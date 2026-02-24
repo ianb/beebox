@@ -10,6 +10,7 @@ import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
 import { initRepo, stageAll, commit, isRepo } from "../cli/lib/git.js";
 import { createInitialGuideTemplate } from "../schemas/guide.js";
 import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
+import { createInitialPersonalityTemplate } from "../schemas/personality.js";
 
 const __dirname = import.meta.dirname;
 
@@ -308,6 +309,30 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
   }
 
   return installed;
+}
+
+/**
+ * Install the personality card template if missing.
+ *
+ * Unlike guides (which have domain seeds), there's only one personality
+ * card per box: config/main.personality.card.
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installPersonality(boxRoot: string): Promise<boolean> {
+  const configDir = path.join(boxRoot, "config");
+  await fs.mkdir(configDir, { recursive: true });
+
+  const targetPath = path.join(configDir, "main.personality.card");
+
+  try {
+    await fs.access(targetPath);
+    return false; // Already exists — don't overwrite
+  } catch {
+    // File doesn't exist — install template
+    await fs.writeFile(targetPath, createInitialPersonalityTemplate());
+    return true;
+  }
 }
 
 // ============================================

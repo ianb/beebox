@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
-import { initBox, installWorkflows, installGuides, installSchedules } from "../../core/box.js";
+import { initBox, installWorkflows, installGuides, installSchedules, installPersonality } from "../../core/box.js";
 import { generateRules } from "./init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { parseXml } from "cardworks";
@@ -66,6 +66,12 @@ export const initCommand = new Command("init")
         for (const g of guides) {
           console.log(`  ${g}`);
         }
+      }
+
+      // Install personality card template
+      const personalityInstalled = await installPersonality(resolve(targetPath));
+      if (personalityInstalled) {
+        console.log("\nInstalled config/main.personality.card");
       }
 
       // Install default scheduled scripts
