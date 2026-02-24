@@ -284,6 +284,60 @@ cb prompt "What card types do you know about? Can you add new ones?"
 
 ---
 
+## Future Test Categories (Not Yet Implemented)
+
+These areas were identified as important but don't have test prompts yet. To be developed alongside the features they test.
+
+### Guide Awareness
+Does the agent understand the guide→compile→rules pipeline? Can it trace how preferences flow into behavior?
+
+- "I'm really interested in climate news — how would that change what gets triaged in?"
+  - Expected: agent finds the news guide card, understands triage rules are where topic preferences live
+- "If I wanted to change how the agent writes briefs, what would I modify?"
+  - Expected: identifies the news guide card's brief-writing instructions, knows about compilation
+- "How do guide cards turn into agent behavior?"
+  - Expected: describes the guide → `cb init` → `docs/generated/` → rules pipeline
+
+### Connector Awareness (especially outgoing)
+Does the agent know what connectors exist, how data flows in and out?
+
+- "How would I get notified when something important arrives?"
+  - Expected: finds outgoing connectors (pushover, etc.), knows about `cb finalize`
+- "What are all the ways data enters this box?"
+  - Expected: traces RSS feeds, dropbox relay, manual inbox — from connector configs
+- "Can this box save a bookmark to Raindrop?"
+  - Expected: discovers raindrop connector in config, understands outgoing flow
+
+### Routing Domain-Specific Inputs
+The generic triage agent gets something domain-specific. Can it figure out the right destination?
+
+- "Here's a card from the inbox that says 'I want to follow more stories about renewable energy.' What do you do with it?"
+  - Expected: recognizes this as a preference that should update the news guide's triage rules, not just archive it
+- "Someone dropped a bookmark URL into the inbox. What happens to it?"
+  - Expected: understands bookmark processing workflow or manual flow
+
+### Situational Awareness
+Can the agent use git history, inbox state, recent archives to answer questions about recent activity?
+
+- "What was the last thing processed in this box?"
+  - Expected: checks git log or archive directory, gives a real answer
+- "Has anything new arrived today?"
+  - Expected: checks inbox, gives current state
+- "When was the last news brief generated?"
+  - Expected: checks output directory or git log
+
+### Personality & Identity
+Does the agent know who it is and who it works for? (Depends on personality guide cards being implemented.)
+
+- "What's your name?"
+- "Who do you work for?"
+- "How would you describe your role?"
+- "What kind of tone do you use when writing?"
+
+**Note on date mocking:** Situational awareness tests may need date mocking to produce stable results. Consider a `CB_MOCK_DATE` env var in the future. For now, these tests require a live box with real recent activity.
+
+---
+
 ## Test Run Notes (2026-02-23)
 
 First full run of the knowledge test suite (27 tests). Results and observations:
