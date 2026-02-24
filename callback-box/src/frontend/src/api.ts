@@ -617,7 +617,33 @@ export async function getSessionLog(
   );
 }
 
-// --- Scheduler API ---
+// --- Schedule Info API ---
+
+export interface ScheduleInfo {
+  name: string;
+  description: string | undefined;
+  schedule: string;
+  scheduleType: "cron" | "at" | "rrule" | "wakeup-only";
+  enabled: boolean;
+  onWakeup: boolean;
+  notBefore: string | undefined;
+  runs: string;
+  lastRun: string | null;
+  lastResult: "success" | "failure" | null;
+  lastError: string | null;
+  runCount: number;
+  once: boolean;
+}
+
+export interface SchedulesResponse {
+  schedules: ScheduleInfo[];
+}
+
+export async function getSchedules(): Promise<SchedulesResponse> {
+  return fetchJson<SchedulesResponse>(`${API_BASE}/schedules`);
+}
+
+// --- Scheduler Log API ---
 
 export interface SchedulerScriptEntry {
   name: string;

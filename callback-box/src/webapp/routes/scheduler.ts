@@ -4,9 +4,16 @@
 
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { boxLogFile, type LogEntry } from "../../core/scheduler.js";
+import { parseXml } from "cardworks";
+import {
+  parseScheduledScript,
+  type ScheduledScript,
+} from "../../schemas/scheduled-script.js";
+import { loadScriptState } from "../../core/schedule-state.js";
 
 export async function registerSchedulerRoutes(
   server: FastifyInstance,
@@ -72,5 +79,90 @@ export async function registerSchedulerRoutes(
     }
 
     return { entries };
+  });
+
+  /**
+   * GET /api/schedules
+   *
+   * Returns all scheduled scripts with their config + run state.
+   */
+  server.get("/api/schedules", async () => {
+    const schedulesDir = path.join(boxRoot, "config/schedules");
+
+    let files: string[];
+    try {
+      files = (await fs.readdir(schedulesDir)).filter((f) =>
+        f.endsWith(".scheduled-script.card"),
+      );
+    } catch {
+      return { schedules: [] };
+    }
+
+    const schedules = [];
+
+    for (const file of files) {
+      const scriptName = file.replace(".scheduled-script.card", "");
+      const cardPath = path.join(schedulesDir, file);
+
+      let parsed;
+      try {
+        const content = await fs.readFile(cardPath, "utf-8");
+        const root = await parseXml(content, file);
+        parsed = parseScheduledScript(root as ScheduledScript);
+      } catch {
+        schedules.push({
+          name: scriptName,
+          description: undefined,
+          schedule: "parse error",
+          scheduleType: "wakeup-only" as const,
+          enabled: false,
+          onWakeup: false,
+          notBefore: undefined,
+          runs: "",
+          lastRun: null,
+          lastResult: null,
+          lastError: null,
+          runCount: 0,
+          once: false,
+        });
+        continue;
+      }
+
+      const state = await loadScriptState(boxRoot, scriptName);
+
+      let schedule: string;
+      let scheduleType: "cron" | "at" | "rrule" | "wakeup-only";
+      if (parsed.cron) {
+        schedule = `cron ${parsed.cron}`;
+        scheduleType = "cron";
+      } else if (parsed.at) {
+        schedule = `at ${parsed.at}`;
+        scheduleType = "at";
+      } else if (parsed.rrule) {
+        schedule = `rrule ${parsed.rrule.substring(0, 60)}`;
+        scheduleType = "rrule";
+      } else {
+        schedule = "on-wakeup only";
+        scheduleType = "wakeup-only";
+      }
+
+      schedules.push({
+        name: scriptName,
+        description: parsed.description,
+        schedule,
+        scheduleType,
+        enabled: parsed.enabled,
+        onWakeup: parsed.onWakeup,
+        notBefore: parsed.notBefore,
+        runs: parsed.runs,
+        lastRun: state.lastRun,
+        lastResult: state.lastResult,
+        lastError: state.lastError,
+        runCount: state.runCount,
+        once: parsed.once,
+      });
+    }
+
+    return { schedules };
   });
 }
