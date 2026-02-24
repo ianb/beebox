@@ -15,10 +15,7 @@ import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
 import { generateReport } from "./lib/report.js";
 
 const DEFAULT_TESTS_DIR = path.dirname(new URL(import.meta.url).pathname);
-const DEFAULT_OUTPUT_DIR = path.join(
-  process.env.HOME ?? "~",
-  "src/boxes/scenarios/knowledge",
-);
+const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");
 
 const program = new Command()
   .name("knowledge")
@@ -50,7 +47,7 @@ program
   .option("--output <path>", "Output report path")
   .action(async (options: { box?: string; tests?: string; filter?: string; output?: string }) => {
     const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
-    const boxRoot = options.box ?? path.join(DEFAULT_OUTPUT_DIR, "box");
+    const boxRoot = options.box ?? path.join(process.env.HOME ?? "~", "src/boxes/test1");
 
     const resolvedBox = path.resolve(boxRoot);
     const suite = await loadTests(testsPath);
