@@ -14,7 +14,8 @@ import * as path from "node:path";
 import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
 import { generateReport } from "./lib/report.js";
 
-const DEFAULT_SCENARIO_DIR = path.join(
+const DEFAULT_TESTS_DIR = path.dirname(new URL(import.meta.url).pathname);
+const DEFAULT_OUTPUT_DIR = path.join(
   process.env.HOME ?? "~",
   "src/boxes/scenarios/knowledge",
 );
@@ -28,7 +29,7 @@ program
   .description("List available knowledge tests")
   .option("--tests <path>", "Path to knowledge-tests.yaml")
   .action(async (options: { tests?: string }) => {
-    const testsPath = options.tests ?? getTestsPath(DEFAULT_SCENARIO_DIR);
+    const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
     const suite = await loadTests(testsPath);
 
     console.log(`Tests in ${testsPath}:\n`);
@@ -48,9 +49,8 @@ program
   .option("--filter <id-or-tag>", "Filter by test ID or tag")
   .option("--output <path>", "Output report path")
   .action(async (options: { box?: string; tests?: string; filter?: string; output?: string }) => {
-    const scenarioDir = path.dirname(options.tests ?? getTestsPath(DEFAULT_SCENARIO_DIR));
-    const boxRoot = options.box ?? path.join(scenarioDir, "box");
-    const testsPath = options.tests ?? getTestsPath(scenarioDir);
+    const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
+    const boxRoot = options.box ?? path.join(DEFAULT_OUTPUT_DIR, "box");
 
     const resolvedBox = path.resolve(boxRoot);
     const suite = await loadTests(testsPath);
@@ -90,7 +90,7 @@ program
     // Generate and write report
     const report = generateReport({ boxRoot: resolvedBox, results });
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-").substring(0, 19);
-    const outputPath = options.output ?? path.join(scenarioDir, `knowledge-report-${timestamp}.md`);
+    const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `knowledge-report-${timestamp}.md`);
 
     await fs.writeFile(outputPath, report, "utf-8");
     console.log(`\nReport written to: ${outputPath}`);

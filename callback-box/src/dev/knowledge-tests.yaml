@@ -1,0 +1,227 @@
+tests:
+  # === Box Structure and Navigation ===
+
+  - id: box-structure-inbox
+    prompt: "Where would you look for unprocessed incoming items?"
+    expected_level: knows_directly
+    watch_for: "Names box/inbox/ directly without searching"
+    correct_contains: ["box/inbox"]
+    tags: [navigation]
+
+  - id: find-memo-cards
+    prompt: "If I wanted to find all memo cards in the system, how would you search?"
+    expected_level: knows_directly
+    watch_for: "Suggests *.memo.card glob pattern without searching"
+    correct_contains: [".memo.card"]
+    tags: [navigation, cards]
+
+  - id: card-after-processing
+    prompt: "What happens to a card after it's processed?"
+    expected_level: knows_directly
+    watch_for: "Mentions cb move and store/archive/ without file reads"
+    correct_contains: ["archive"]
+    tags: [navigation, lifecycle]
+
+  # === Card Types and Schemas ===
+
+  - id: list-card-types
+    prompt: "What card types do you know about? List them all."
+    expected_level: knows_directly
+    watch_for: "Lists types from agent guide without filesystem search"
+    tags: [cards, schemas]
+
+  - id: memo-xml-structure
+    prompt: "Show me the XML structure of a memo card."
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-memo.md before answering"
+    should_read: ["docs/generated/card-memo.md"]
+    tags: [cards, schemas]
+
+  - id: create-question-card
+    prompt: "How would you create a new question card asking the user to pick a color?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-question.md and uses cb create"
+    should_read: ["docs/generated/card-question.md"]
+    correct_contains: ["cb create"]
+    tags: [cards, schemas]
+
+  - id: guide-vs-procedure
+    prompt: "What's the difference between a guide card and a procedure card?"
+    expected_level: knows_about
+    watch_for: "Reads both card type docs for accurate comparison"
+    tags: [cards]
+
+  - id: create-new-card-type
+    prompt: "How would you create a brand new card type for this box?"
+    expected_level: discoverable
+    watch_for: "Navigates to config/schemas/ and finds CLAUDE.md"
+    should_read: ["config/schemas/CLAUDE.md"]
+    tags: [schemas, extension]
+
+  # === CLI Commands ===
+
+  - id: list-cb-commands
+    prompt: "What cb commands are available to you? List the ones you'd use most."
+    expected_level: knows_directly
+    watch_for: "Lists commands from agent guide without running cb --help"
+    tags: [cli]
+
+  - id: move-card-syntax
+    prompt: "How do you move a card from inbox to archive?"
+    expected_level: knows_directly
+    watch_for: "Correct cb move syntax with source and destination"
+    correct_contains: ["cb move"]
+    tags: [cli]
+
+  - id: validate-card
+    prompt: "How do you validate a card after editing it?"
+    expected_level: knows_directly
+    watch_for: "Knows cb validate syntax; looking up docs is fine"
+    correct_contains: ["cb validate"]
+    tags: [cli]
+
+  # === Procedures ===
+
+  - id: list-procedures
+    prompt: "What procedures are configured in this box?"
+    expected_level: knows_directly
+    watch_for: "Names procedures from agent guide without listing directory"
+    tags: [procedures]
+
+  - id: create-procedure
+    prompt: "How would you create a new procedure that processes bookmark cards?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/procedures.md for authoring guide"
+    should_read: ["docs/generated/procedures.md"]
+    tags: [procedures, extension]
+    notes: >
+      Agent consistently guesses plausible procedure XML without reading docs.
+      The procedure format uses custom conventions (precheck/run/validate phases,
+      shell/agent/instruction primitives, CHECK_SKIP) but is close enough to
+      common XML patterns that the model guesses confidently. Open question:
+      would the guessed XML actually validate? A scenario test would answer
+      this better than a knowledge test.
+
+  - id: procedure-vs-procedurerun
+    prompt: "Explain the relationship between a procedure card and a procedure-run card."
+    expected_level: knows_about
+    watch_for: "Reads both card type docs to explain definition-vs-execution"
+    tags: [procedures, cards]
+
+  - id: procedure-directive
+    prompt: "How do I pass a directive to a procedure when running it?"
+    expected_level: knows_about
+    watch_for: "Mentions --directive flag and how it appears in agent context"
+    correct_contains: ["--directive"]
+    should_read: ["docs/generated/procedures.md"]
+    tags: [procedures, cli]
+
+  - id: procedure-in-job
+    prompt: "Can a job card trigger a procedure? How does that work?"
+    expected_level: knows_directly
+    watch_for: "Describes <procedure ref='...'> in job cards and reactor trampolining"
+    correct_contains: ["procedure"]
+    tags: [procedures, jobs]
+    notes: >
+      Agent knows this directly from the agent guide and procedures doc
+      loaded in context. No need to require file reads.
+
+  # === Guides ===
+
+  - id: list-guides
+    prompt: "What guides exist in this box and what do they do?"
+    expected_level: discoverable
+    watch_for: "Lists config/ directory to find guide cards"
+    tags: [guides]
+
+  - id: modify-news-triage
+    prompt: "If I wanted to change how news items are triaged, what would I modify?"
+    expected_level: discoverable
+    watch_for: "Finds the news guide card in config/ and understands guide→rules compilation"
+    tags: [guides]
+
+  # === Tricks ===
+
+  - id: what-are-tricks
+    prompt: "What are tricks and how would I create a new one?"
+    expected_level: knows_about
+    watch_for: "Reads tricks/scripts/CLAUDE.md for details"
+    should_read: ["tricks/scripts/CLAUDE.md"]
+    tags: [tricks, extension]
+
+  - id: trick-scripts-path
+    prompt: "Where do trick scripts live?"
+    expected_level: knows_directly
+    watch_for: "Correct path without searching"
+    correct_contains: ["tricks/scripts"]
+    tags: [tricks]
+
+  # === Connectors ===
+
+  - id: list-connectors
+    prompt: "What connectors are configured for this box?"
+    expected_level: discoverable
+    watch_for: "Explores config/connectors/ or reads docs/generated/connectors.md"
+    tags: [connectors]
+
+  - id: rss-to-inbox-flow
+    prompt: "How does data get from RSS feeds into the inbox?"
+    expected_level: discoverable
+    watch_for: "Traces actual flow (connector → wakeup → inbox) rather than hypothetical"
+    tags: [connectors]
+
+  - id: outbound-notifications
+    prompt: "How would outbound notifications work?"
+    expected_level: knows_about
+    watch_for: "Mentions cb finalize and finds pushover connector"
+    correct_contains: ["finalize"]
+    tags: [connectors]
+
+  # === Scheduled Tasks ===
+
+  - id: how-schedules-work
+    prompt: "How do scheduled tasks work in this box?"
+    expected_level: knows_directly
+    watch_for: "Describes tick/scheduled mechanism from agent guide"
+    tags: [schedules]
+
+  - id: add-daily-task
+    prompt: "How would I add a daily task?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-scheduled-script.md for format"
+    should_read: ["docs/generated/card-scheduled-script.md"]
+    tags: [schedules, extension]
+
+  # === Extension ===
+
+  - id: track-reading-list
+    prompt: "I want to track books I'm reading with progress and ratings. How would you set that up?"
+    expected_level: discoverable
+    watch_for: "Discovers config/schemas/CLAUDE.md to create a custom card type rather than suggesting memos"
+    should_read: ["config/schemas/CLAUDE.md"]
+    tags: [schemas, extension]
+    notes: >
+      Agent correctly creates config/schemas/book.ts but may skip reading
+      CLAUDE.md — it has enough from the agent guide pointer + the existing
+      bookmark.ts example. This is "knows about" behavior working correctly;
+      the should_read check is too strict. Reading any file in config/schemas/
+      should count.
+
+  - id: create-task-card-type
+    prompt: "Can you create a new type of card for tracking project tasks?"
+    expected_level: discoverable
+    watch_for: "Says yes and navigates to schemas, not 'card types are built-in'"
+    should_read: ["config/schemas/CLAUDE.md"]
+    tags: [schemas, extension]
+
+  - id: add-new-capability
+    prompt: "How would you add a new capability to this box?"
+    expected_level: knows_directly
+    watch_for: "Lists extension mechanisms: procedures, tricks, guides, schedules; bonus if mentions schemas"
+    tags: [extension]
+
+  - id: card-types-and-add-new
+    prompt: "What card types do you know about? Can you add new ones?"
+    expected_level: knows_directly
+    watch_for: "Lists types (knows directly) AND addresses adding new ones (discoverable)"
+    tags: [cards, schemas, extension]
