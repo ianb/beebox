@@ -452,8 +452,18 @@ export function ChatPage() {
       .catch(() => {});
   }, [refreshStatus]);
 
-  // Realtime transcription
-  const transcription = useRealtimeTranscription();
+  // Realtime transcription with voice keyword spotting
+  const transcription = useRealtimeTranscription({
+    onKeywordSend: (text) => {
+      transcription.cancel();
+      if (text.trim()) {
+        doSend(`<speech local-time="${localTime()}">${text}</speech>`);
+      }
+    },
+    onKeywordCancel: () => {
+      transcription.cancel();
+    },
+  });
   const isTranscribing =
     transcription.state === "connecting" ||
     transcription.state === "recording" ||
