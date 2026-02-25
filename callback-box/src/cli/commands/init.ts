@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../core/box.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, symlinkClaudeMemory } from "../../core/box.js";
 import { generateRules } from "./init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { parseXml } from "cardworks";
@@ -81,6 +81,12 @@ export const initCommand = new Command("init")
         for (const s of schedules) {
           console.log(`  ${s}`);
         }
+      }
+
+      // Symlink .claude/memory/ so auto-memory is git-tracked
+      const memoryLinked = await symlinkClaudeMemory(resolve(targetPath));
+      if (memoryLinked) {
+        console.log("\nLinked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
       }
 
       // Generate card-handling rules from schemas

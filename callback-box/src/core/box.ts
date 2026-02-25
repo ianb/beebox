@@ -687,6 +687,77 @@ async function installTricksFiles(boxRoot: string): Promise<void> {
 /**
  * Install schemas CLAUDE.md guide if it doesn't exist.
  */
+/**
+ * Ensure `.claude/memory/` exists in the box and symlink it from
+ * `~/.claude/projects/<slug>/memory` so Claude Code's auto-memory
+ * is stored inside the git-tracked project directory.
+ *
+ * Claude Code derives the project slug by replacing `/` with `-`
+ * in the absolute path. We compute the same slug and create a
+ * symlink from the global location to the box-local directory.
+ *
+ * If memory files already exist in the global location, they are
+ * moved into the box first.
+ */
+export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
+  const resolvedRoot = path.resolve(boxRoot);
+  const localMemoryDir = path.join(resolvedRoot, ".claude", "memory");
+  const slug = resolvedRoot.replaceAll("/", "-");
+  const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? "";
+  const globalMemoryDir = path.join(homeDir, ".claude", "projects", slug, "memory");
+
+  // Check if the global path is already a symlink pointing here
+  try {
+    const stat = await fs.lstat(globalMemoryDir);
+    if (stat.isSymbolicLink()) {
+      const target = await fs.readlink(globalMemoryDir);
+      if (path.resolve(target) === localMemoryDir) {
+        return false; // Already set up
+      }
+    }
+  } catch {
+    // Doesn't exist yet — that's fine
+  }
+
+  // Ensure local .claude/memory/ exists
+  await fs.mkdir(localMemoryDir, { recursive: true });
+
+  // Move any existing memory files from global to local
+  try {
+    const stat = await fs.lstat(globalMemoryDir);
+    if (stat.isDirectory() && !stat.isSymbolicLink()) {
+      const files = await fs.readdir(globalMemoryDir);
+      for (const file of files) {
+        const src = path.join(globalMemoryDir, file);
+        const dest = path.join(localMemoryDir, file);
+        try {
+          await fs.access(dest);
+          // Local file already exists — skip (don't overwrite)
+        } catch {
+          await fs.rename(src, dest);
+        }
+      }
+      await fs.rm(globalMemoryDir, { recursive: true });
+    }
+  } catch {
+    // Global dir doesn't exist — nothing to move
+  }
+
+  // Ensure parent directory for symlink exists
+  await fs.mkdir(path.dirname(globalMemoryDir), { recursive: true });
+
+  // Remove whatever's at the global path (stale symlink, empty dir, etc.)
+  try {
+    await fs.rm(globalMemoryDir, { recursive: true });
+  } catch {
+    // Nothing there
+  }
+
+  // Create symlink: global → local
+  await fs.symlink(localMemoryDir, globalMemoryDir);
+  return true;
+}
+
 async function installSchemasGuide(boxRoot: string): Promise<void> {
   const claudeMdPath = path.join(boxRoot, "config/schemas/CLAUDE.md");
   try {
