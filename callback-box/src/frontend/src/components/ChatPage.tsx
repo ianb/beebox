@@ -128,7 +128,7 @@ function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "assista
 function UserMessage({ entries }: { entries: SessionEntry[] }) {
   return (
     <div className="flex justify-end pl-24 py-1">
-      <div className="rounded-l-2xl bg-blue-900 text-blue-100 px-4 py-2">
+      <div className="rounded-l-2xl bg-blue-900 text-blue-100 px-4 py-2 min-w-[120px]">
         {entries.map((entry) =>
           entry.content
             .filter((b) => b.type === "text")
@@ -169,7 +169,7 @@ function AssistantMessage({ entries }: { entries: SessionEntry[] }) {
   }
 
   return (
-    <div className="pr-24 pl-4 py-2">
+    <div className="pr-24 pl-6 py-2">
       {parts.map((part, i) =>
         part.type === "thinking" ? (
           <ThinkingBlock key={i} text={part.text ?? ""} />
@@ -266,7 +266,7 @@ function Spinner({ className = "" }: { className?: string }) {
  */
 function StreamingMessage({ text }: { text: string }) {
   return (
-    <div className="pr-24 pl-4 py-2">
+    <div className="pr-24 pl-6 py-2">
       {text ? (
         <MarkdownContent text={text} />
       ) : (
@@ -483,7 +483,7 @@ export function ChatPage() {
         />
       </div>
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-1">
+      <div className="flex-1 overflow-y-auto py-4 pl-4 space-y-1">
         {messages.length === 0 && !streaming ? (
           <div className="flex items-center justify-center h-full text-gray-400 text-sm">
             Start a conversation with your box assistant.
@@ -500,7 +500,7 @@ export function ChatPage() {
           <div>
             <StreamingMessage text={streamText} />
             {streamTools.length > 0 ? (
-              <div className="pl-4 pr-24 pb-2">
+              <div className="pl-6 pr-24 pb-2">
                 <ToolList blocks={streamTools} />
               </div>
             ) : null}
