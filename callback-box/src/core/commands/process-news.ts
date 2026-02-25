@@ -31,6 +31,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
   registerCommand,
+  runCommand,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -39,6 +40,7 @@ import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import { fetchAllNewsItems } from "./fetch-all-news.js";
+import { parseXml } from "cardworks";
 
 /**
  * Arguments for the process-news command.
@@ -84,93 +86,117 @@ async function ensureDir(boxRoot: string, relativeDir: string): Promise<void> {
 }
 
 /**
- * Build the system prompt for news triage.
+ * Metadata extracted from a news-item card for batch triage.
  */
-function buildTriagePrompt(boxRoot: string, batchSize: number): string {
-  return `You are triaging news items in a Callback Box.
+interface NewsItemMetadata {
+  path: string;
+  title: string;
+  author: string;
+  published: string;
+  feed: string;
+}
 
-WORKING DIRECTORY: ${boxRoot}
+/**
+ * Extract metadata from news-item cards using parseXml.
+ */
+async function extractNewsMetadata(
+  boxRoot: string,
+  items: string[]
+): Promise<NewsItemMetadata[]> {
+  const results: NewsItemMetadata[] = [];
+  for (const relPath of items) {
+    try {
+      const content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
+      const root = await parseXml(content, relPath);
+      let title = "";
+      let author = "";
+      let published = "";
+      let feed = "";
+      for (const child of root.children) {
+        switch (child.tagName) {
+          case "title":
+            title = child.text ?? "";
+            break;
+          case "author":
+            author = child.text ?? "";
+            break;
+          case "published":
+            published = child.text ?? "";
+            break;
+          case "feed":
+            feed = child.text ?? "";
+            break;
+        }
+      }
+      results.push({ path: relPath, title, author, published, feed });
+    } catch {
+      // If we can't parse a card, include it with minimal info
+      results.push({ path: relPath, title: "(parse error)", author: "", published: "", feed: "" });
+    }
+  }
+  return results;
+}
 
-YOUR TASK:
-Review news items in box/inbox/news/ and decide which are worth reading in full.
+/**
+ * Load the news guide content for inline inclusion in the triage prompt.
+ */
+async function loadGuideContent(boxRoot: string): Promise<string | null> {
+  // Prefer compiled reference
+  try {
+    return await fs.readFile(
+      path.join(boxRoot, "docs/generated/news-guide.md"),
+      "utf-8"
+    );
+  } catch {
+    // Fall back to raw guide card
+    try {
+      return await fs.readFile(
+        path.join(boxRoot, "config/news.guide.card"),
+        "utf-8"
+      );
+    } catch {
+      return null;
+    }
+  }
+}
 
-STEP 0 - READ THE USER GUIDE:
-First, check if config/news.guide.card exists (or the compiled reference at docs/generated/news-guide.md).
-If it does, read it to understand:
-- Triage rules (what topics to prioritize or skip)
-- Actions (what to do with different kinds of items)
-- Active experiments to keep in mind
+/**
+ * Build the prompt for batch news triage.
+ * The LLM picks the best N items from a list of metadata — no tools needed.
+ */
+function buildTriagePrompt(opts: {
+  metadata: NewsItemMetadata[];
+  guideContent: string | null;
+  selectCount: number;
+}): string {
+  const { metadata, guideContent, selectCount } = opts;
+  const guideSection = guideContent
+    ? guideContent
+    : "No guide configured. Use general interest criteria: prioritize substantive news, analysis, and technical content. Deprioritize marketing, listicles, press releases, and gossip.";
 
-Use this to inform your triage decisions. If no guide exists, use the default criteria below.
+  const itemLines = metadata
+    .map((m, i) => {
+      const parts = [m.title || "(no title)"];
+      if (m.author) parts.push(m.author);
+      if (m.published) parts.push(m.published.slice(0, 10));
+      if (m.feed) parts.push(m.feed);
+      return `${i + 1}. ${parts.join(" — ")}`;
+    })
+    .join("\n");
 
-BATCH SIZE: Process up to ${batchSize} items in this run.
+  return `You are selecting the most interesting news items for a personal reader.
 
-FOR EACH NEWS ITEM:
-1. Read the title and summary from the card
-2. Decide: Is this likely interesting based on the title/summary AND the user's guide?
-3. Take action based on your decision:
+USER'S NEWS GUIDE:
+${guideSection}
 
-   INTERESTING → Keep the file where it is (we'll analyze it next)
+ITEMS:
+${itemLines}
 
-   NOT INTERESTING → Use the cb trash command (do NOT move files manually):
-   \`\`\`
-   cb trash <path> --reason "Not interesting: [brief reason]"
-   \`\`\`
-   This command moves to store/trash/ and records the reason.
+Select the ${selectCount} most interesting items based on the guide above.
+If there are fewer than ${selectCount} interesting items, select fewer — don't pad with uninteresting ones.
 
-DEFAULT CRITERIA (use when no guide exists):
-
-INTERESTING:
-- Technical content (programming, systems, architecture)
-- Novel ideas or approaches
-- Significant news in tech/science
-- Things that would be educational or useful
-- Opinion pieces with substantive arguments
-
-NOT INTERESTING (trash):
-- Marketing/promotional content
-- Listicles without substance
-- Repetitive news already covered elsewhere
-- Entertainment gossip
-- Job postings, hiring announcements
-- Press releases without substance
-
-GUIDE-BASED CRITERIA (when guide exists):
-- Triage rules with high/medium confidence → follow the rule's action
-- Rules with "hypothesis" confidence → keep to test the hypothesis
-- Follow the default-action when no specific rule matches
-- When in doubt, keep—better to analyze and discard later than miss something
-
-IMPORTANT: Status is expressed by location, not attributes. Don't modify the status attribute.
-Items stay in inbox/news/ if interesting, or get trashed if not.
-
-OUTPUT: As you process each item, state your decision:
-  KEEP: [filename] - [brief reason why it's interesting]
-  TRASH: [filename] - [brief reason why it's not]
-
-This helps track what's happening during triage.
-
-When done, commit your changes with a detailed message:
-
-\`\`\`bash
-git add -A && git commit -m "$(cat <<'EOF'
-Triage: <kept>/<total> items kept
-
-Kept:
-- <title> - <reason>
-- <title> - <reason>
-
-Trashed:
-- <title> - <reason>
-- <title> - <reason>
-
-Triggered-By: cb process-news
-Phase: triage
-EOF
-)"
-\`\`\`
-
-GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.`;
+Output a JSON array of the selected item numbers, e.g. [1, 5, 12, 23].
+Output ONLY the JSON array, nothing else.`;
 }
 
 /**
@@ -520,48 +546,86 @@ async function executeProcessNews(
         ctx.writeLine(fmt.dim("No items in inbox to triage."));
         results.push({ phase: "triage", success: true, message: "No items" });
       } else {
-        // Triage all items at once — Haiku is fast enough and this avoids
-        // re-triaging kept items in subsequent batches
-        ctx.writeLine(`Triaging ${fmt.num(inboxItems.length)} items...`);
+        const selectCount = batchSize * 3;
+        ctx.writeLine(`Triaging ${fmt.num(inboxItems.length)} items (selecting up to ${selectCount})...`);
 
         if (dryRun) {
-          ctx.writeLine(fmt.dim("(dry run - skipping agent)"));
+          ctx.writeLine(fmt.dim("(dry run - skipping triage)"));
           results.push({ phase: "triage", success: true, message: "Dry run" });
         } else {
-          const paths = inboxItems.join("\n  - ");
-          ctx.writeLine(fmt.info("Starting Claude Code agent (Haiku)..."));
-          ctx.writeLine("");
+          // Extract metadata from all cards
+          ctx.writeLine(fmt.info("Extracting metadata..."));
+          const metadata = await extractNewsMetadata(ctx.boxRoot, inboxItems);
+          const guideContent = await loadGuideContent(ctx.boxRoot);
+
+          // Single LLM call to pick best items
+          ctx.writeLine(fmt.info("Selecting items (Haiku, single call)..."));
           const triageResult = await runAgent({
             boxRoot: ctx.boxRoot,
-            systemPrompt: buildTriagePrompt(ctx.boxRoot, inboxItems.length),
-            prompt: `Please triage these news items:\n  - ${paths}`,
+            systemPrompt: buildTriagePrompt({ metadata, guideContent, selectCount }),
+            prompt: "Select the best items now.",
             onOutput: (text) => ctx.write(text),
             model: "claude-haiku-4-5-20251001",
+            maxTurns: 1,
           });
           ctx.writeLine("");
 
-          if (triageResult.success) {
-            ctx.writeLine(fmt.ok("Agent finished successfully"));
-            results.push({ phase: "triage", success: true, message: `Triaged ${inboxItems.length} items` });
-          } else {
-            ctx.writeLine(fmt.fail(`Agent error: ${triageResult.error}`));
-            results.push({ phase: "triage", success: false, message: triageResult.error ?? "Failed" });
+          // Parse selected indices from the LLM response
+          let selectedIndices: number[] = [];
+          if (triageResult.success && triageResult.output) {
+            const match = /\[[\d\s,]+]/.exec(triageResult.output);
+            if (match) {
+              try {
+                selectedIndices = JSON.parse(match[0]) as number[];
+              } catch {
+                ctx.writeLine(fmt.fail("Failed to parse selection JSON"));
+              }
+            }
           }
 
-          // Retry if agent didn't commit, then fallback
-          await ensureAgentCommitted({
-            boxRoot: ctx.boxRoot,
-            agentResult: triageResult,
-            agentOptions: {
-              boxRoot: ctx.boxRoot,
-              systemPrompt: buildTriagePrompt(ctx.boxRoot, inboxItems.length),
-              prompt: `Please triage these news items:\n  - ${paths}`,
-              model: "claude-haiku-4-5-20251001",
-            },
-            fallbackMessage: `Triage ${inboxItems.length} news items`,
-            fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageResult.sessionId },
-            onOutput: (text) => ctx.write(text),
-          });
+          if (selectedIndices.length === 0) {
+            ctx.writeLine(fmt.fail("Triage returned no selections — keeping all items"));
+            results.push({ phase: "triage", success: false, message: "No selections returned" });
+          } else {
+            // Determine which items to trash (not selected)
+            const selectedSet = new Set(selectedIndices);
+            const keptPaths: string[] = [];
+            const trashPaths: string[] = [];
+            for (const [i, m] of metadata.entries()) {
+              if (selectedSet.has(i + 1)) {
+                keptPaths.push(m.path);
+              } else {
+                trashPaths.push(m.path);
+              }
+            }
+
+            ctx.writeLine(`Selected ${fmt.num(keptPaths.length)}, trashing ${fmt.num(trashPaths.length)}`);
+
+            // Trash non-selected items
+            if (trashPaths.length > 0) {
+              await runCommand({
+                name: "trash",
+                args: {
+                  paths: trashPaths,
+                  reason: "Not selected during triage",
+                },
+                ctx,
+              });
+            }
+
+            // Commit the triage
+            await stageAll(ctx.boxRoot);
+            await commit(ctx.boxRoot, {
+              message: `Triage: ${keptPaths.length}/${metadata.length} items kept`,
+              trailers: { "Triggered-By": "cb process-news", Phase: "triage" },
+            });
+
+            results.push({
+              phase: "triage",
+              success: true,
+              message: `Kept ${keptPaths.length}, trashed ${trashPaths.length} of ${metadata.length}`,
+            });
+          }
         }
       }
       ctx.writeLine("");
