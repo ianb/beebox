@@ -59,6 +59,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     logger: {
       level: "warn",
     },
+    trustProxy: true,
   });
 
   // Register multipart for file uploads
