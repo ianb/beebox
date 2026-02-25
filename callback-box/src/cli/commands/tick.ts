@@ -5,6 +5,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+import { performance } from "node:perf_hooks";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
@@ -12,15 +13,19 @@ import { parseXml } from "cardworks";
 import {
   parseScheduledScript,
   isDue,
+  isWithinBudget,
   type ScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import {
   loadScriptState,
   saveScriptState,
+  recordRun,
 } from "../../core/schedule-state.js";
 import { handleCreateAfterSuccess } from "./tick-utils.js";
 
 const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h default pruning window
+const SLEEP_THRESHOLD_MS = 5_000; // wall vs monotonic drift > 5s = sleep
 
 /**
  * Run a command with a reliable timeout. Uses spawn with a process group
@@ -137,6 +142,17 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       continue;
     }
 
+    // Budget check: skip if cumulative runtime within window is exceeded
+    if (parsed.budget) {
+      const check = isWithinBudget(parsed.budget, { recentRuns: state.recentRuns, now });
+      if (!check.allowed) {
+        if (!options.quiet) console.log(`  Skipping ${scriptName}: budget exceeded (${Math.round(check.usedMs / 1000)}s used)`);
+        skipCount++;
+        scripts.push({ name: scriptName, status: "skipped" });
+        continue;
+      }
+    }
+
     if (options.dryRun) {
       if (!options.quiet) console.log(`Would run: ${scriptName} → ${parsed.runs}`);
       ranCount++;
@@ -145,7 +161,8 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     }
 
     if (!options.quiet) console.log(`Running ${scriptName}...`);
-    const startTime = Date.now();
+    const wallStart = Date.now();
+    const monoStart = performance.now();
     try {
       await execWithTimeout(parsed.runs, {
         cwd: boxRoot,
@@ -154,11 +171,17 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
         env: { ...process.env, CB_TRIGGERED_BY: "schedule" },
       });
 
-      const durationMs = Date.now() - startTime;
+      const wallElapsed = Date.now() - wallStart;
+      const monoElapsed = performance.now() - monoStart;
+      const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
+      const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
+
       state.lastRun = now.toISOString();
       state.lastResult = "success";
       state.lastError = null;
       state.runCount++;
+      const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+      recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       ranCount++;
 
@@ -172,11 +195,17 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
         if (!options.quiet) console.log(`  Deleted one-shot script: ${file}`);
       }
     } catch (err) {
-      const durationMs = Date.now() - startTime;
+      const wallElapsed = Date.now() - wallStart;
+      const monoElapsed = performance.now() - monoStart;
+      const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
+      const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
+
       state.lastRun = now.toISOString();
       state.lastResult = "failure";
       state.lastError = (err as Error).message;
       state.runCount++;
+      const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+      recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       if (!options.quiet) console.error(`  Failed: ${(err as Error).message}`);
       errorCount++;

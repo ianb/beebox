@@ -8,11 +8,18 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
+export interface RunRecord {
+  ts: string;
+  durationMs: number;
+  sleepAffected?: boolean;
+}
+
 export interface ScriptState {
   lastRun: string | null;
   lastResult: "success" | "failure" | null;
   lastError: string | null;
   runCount: number;
+  recentRuns?: RunRecord[];
 }
 
 const EMPTY_STATE: ScriptState = {
@@ -58,4 +65,35 @@ export async function saveScriptState(opts: SaveStateOptions): Promise<void> {
     stateFile(opts.boxRoot, opts.scriptName),
     JSON.stringify(opts.state, null, 2) + "\n"
   );
+}
+
+/**
+ * Remove run records older than the given window (in ms).
+ * Returns a new array (or undefined if empty).
+ */
+export function pruneRecentRuns(
+  runs: RunRecord[] | undefined,
+  opts: { windowMs: number; now: Date },
+): RunRecord[] | undefined {
+  if (!runs || runs.length === 0) return undefined;
+  const cutoff = opts.now.getTime() - opts.windowMs;
+  const kept = runs.filter((r) => new Date(r.ts).getTime() >= cutoff);
+  return kept.length > 0 ? kept : undefined;
+}
+
+/**
+ * Record a run and prune old entries.
+ */
+export function recordRun(
+  state: ScriptState,
+  opts: { record: RunRecord; windowMs: number; now: Date },
+): void {
+  const runs = state.recentRuns ?? [];
+  runs.push(opts.record);
+  const pruned = pruneRecentRuns(runs, { windowMs: opts.windowMs, now: opts.now });
+  if (pruned) {
+    state.recentRuns = pruned;
+  } else {
+    delete state.recentRuns;
+  }
 }

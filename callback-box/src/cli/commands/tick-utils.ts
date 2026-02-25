@@ -6,21 +6,26 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
+import { performance } from "node:perf_hooks";
 import { parseXml } from "cardworks";
 import {
   parseScheduledScript,
   isDueForWakeup,
+  isWithinBudget,
   type ScheduledScript,
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import {
   loadScriptState,
   saveScriptState,
+  recordRun,
 } from "../../core/schedule-state.js";
 import { parseCardName } from "../lib/paths.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
 
 const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h default pruning window
+const SLEEP_THRESHOLD_MS = 5_000; // wall vs monotonic drift > 5s = sleep
 
 /**
  * Run all on-wakeup scheduled scripts that are due.
@@ -59,7 +64,18 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       continue;
     }
 
+    // Budget check
+    if (parsed.budget) {
+      const check = isWithinBudget(parsed.budget, { recentRuns: state.recentRuns, now });
+      if (!check.allowed) {
+        console.log(`  Skipping ${scriptName}: budget exceeded (${Math.round(check.usedMs / 1000)}s used)`);
+        continue;
+      }
+    }
+
     console.log(`  Running ${scriptName}...`);
+    const wallStart = Date.now();
+    const monoStart = performance.now();
     try {
       execSync(parsed.runs, {
         cwd: boxRoot,
@@ -68,19 +84,33 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
         env: { ...process.env, CB_TRIGGERED_BY: "wakeup" },
       });
 
+      const wallElapsed = Date.now() - wallStart;
+      const monoElapsed = performance.now() - monoStart;
+      const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
+      const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
+
       state.lastRun = now.toISOString();
       state.lastResult = "success";
       state.lastError = null;
       state.runCount++;
+      const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+      recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       ranCount++;
 
       await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
     } catch (err) {
+      const wallElapsed = Date.now() - wallStart;
+      const monoElapsed = performance.now() - monoStart;
+      const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
+      const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
+
       state.lastRun = now.toISOString();
       state.lastResult = "failure";
       state.lastError = (err as Error).message;
       state.runCount++;
+      const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+      recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       console.error(`  Failed: ${(err as Error).message}`);
     }

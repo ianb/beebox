@@ -19,7 +19,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
   if (untracked.length > 0) sections.push({ label: "Untracked", files: untracked, color: "text-gray-500" });
 
   return (
-    <div className="absolute left-0 top-full mt-1 w-80 bg-white border rounded-lg shadow-lg z-10 p-3 text-xs">
+    <div className="fixed left-[10vw] top-24 w-[80vw] bg-white border rounded-lg shadow-lg z-10 p-3 text-xs">
       {git.clean ? (
         <p className="text-green-600">Working tree clean</p>
       ) : (
@@ -31,7 +31,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
               </div>
               <ul className="font-mono text-gray-600 space-y-0.5 max-h-32 overflow-auto">
                 {s.files.map((f) => (
-                  <li key={f} className="truncate">{f}</li>
+                  <li key={f}>{f}</li>
                 ))}
               </ul>
             </div>

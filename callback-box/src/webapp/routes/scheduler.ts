@@ -11,6 +11,7 @@ import { boxLogFile, type LogEntry } from "../../core/scheduler.js";
 import { parseXml } from "cardworks";
 import {
   parseScheduledScript,
+  isWithinBudget,
   type ScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import { loadScriptState } from "../../core/schedule-state.js";
@@ -99,6 +100,7 @@ export async function registerSchedulerRoutes(
     }
 
     const schedules = [];
+    const now = new Date();
 
     for (const file of files) {
       const scriptName = file.replace(".scheduled-script.card", "");
@@ -124,6 +126,7 @@ export async function registerSchedulerRoutes(
           lastError: null,
           runCount: 0,
           once: false,
+          budget: undefined as { limitMs: number; windowMs: number; usedMs: number } | undefined,
         });
         continue;
       }
@@ -146,6 +149,12 @@ export async function registerSchedulerRoutes(
         scheduleType = "wakeup-only";
       }
 
+      let budgetInfo: { limitMs: number; windowMs: number; usedMs: number } | undefined;
+      if (parsed.budget) {
+        const check = isWithinBudget(parsed.budget, { recentRuns: state.recentRuns, now });
+        budgetInfo = { limitMs: parsed.budget.limitMs, windowMs: parsed.budget.windowMs, usedMs: check.usedMs };
+      }
+
       schedules.push({
         name: scriptName,
         description: parsed.description,
@@ -160,6 +169,7 @@ export async function registerSchedulerRoutes(
         lastError: state.lastError,
         runCount: state.runCount,
         once: parsed.once,
+        budget: budgetInfo,
       });
     }
 

@@ -62,6 +62,8 @@ export const ScheduledScriptSchema = element("scheduled-script", {
     once: z.enum(["true", "false"]).optional(),
     /** Enable/disable without deleting */
     enabled: z.enum(["true", "false"]).optional(),
+    /** Runtime budget: max cumulative runtime within a window, e.g. "10m/5h" */
+    budget: z.string().optional(),
   },
   children: z.array(z.union([Runs, ScriptSource, ScheduleDescription, CreateAfterSuccess])),
   instructions: `# Scheduled Script Cards
@@ -79,6 +81,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **once**: If \`true\`, the card is deleted after successful execution.
 - **until**: ISO datetime after which this schedule expires.
 - **enabled**: Set to \`false\` to disable without deleting.
+- **budget**: Max cumulative runtime within a window. Format: \`"LIMIT/WINDOW"\` (e.g., \`"10m/5h"\` = max 10 minutes of runtime in any 5-hour window). Scripts exceeding their budget are skipped until the window clears.
 
 ## Children
 - **<runs>**: The command to execute (required). Runs with cwd set to box root.
@@ -111,6 +114,7 @@ export interface ParsedScheduledScript {
   description: string | undefined;
   source: { ref?: string; text?: string } | undefined;
   createAfterSuccess: Array<{ path: string; args: Record<string, string> }>;
+  budget: { limitMs: number; windowMs: number } | undefined;
 }
 
 function buildSource(ref: string | undefined, text: string | undefined): { ref?: string; text?: string } {
@@ -147,6 +151,8 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
     return { path: el.attrs.path as string, args };
   });
 
+  const budgetStr = script.attrs.budget as string | undefined;
+
   return {
     cron: script.attrs.cron as string | undefined,
     at: script.attrs.at as string | undefined,
@@ -162,6 +168,7 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
       ? buildSource(sourceEl.attrs.ref as string | undefined, sourceEl.text)
       : undefined,
     createAfterSuccess,
+    budget: budgetStr ? parseBudget(budgetStr) : undefined,
   };
 }
 
@@ -195,6 +202,21 @@ export function parseDuration(str: string): number {
     default:
       throw new Error(`Unknown duration unit: "${unit}"`);
   }
+}
+
+/**
+ * Parse a budget string like "10m/5h" into limit and window in milliseconds.
+ * Format: "LIMIT/WINDOW" where both use duration syntax (e.g., "5m", "1h").
+ */
+export function parseBudget(str: string): { limitMs: number; windowMs: number } {
+  const slash = str.indexOf("/");
+  if (slash < 1 || slash >= str.length - 1) {
+    throw new Error(`Invalid budget: "${str}". Use format like "10m/5h".`);
+  }
+  return {
+    limitMs: parseDuration(str.slice(0, slash)),
+    windowMs: parseDuration(str.slice(slash + 1)),
+  };
 }
 
 // ============================================
@@ -240,8 +262,8 @@ export function isDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext):
     return isRruleDue(script.rrule, ctx);
   }
 
-  // No schedule type means on-wakeup only — not due for tick
-  return false;
+  // No schedule type — run during tick if on-wakeup is set
+  return script.onWakeup;
 }
 
 /**
@@ -266,6 +288,27 @@ export function isDueForWakeup(script: ParsedScheduledScript, ctx: ScheduleCheck
   }
 
   return true;
+}
+
+/**
+ * Check if a script is within its runtime budget.
+ * Returns true if the script is allowed to run (budget not exceeded).
+ * Sums non-sleep-affected durations within the budget window.
+ */
+export function isWithinBudget(
+  budget: { limitMs: number; windowMs: number },
+  opts: { recentRuns: Array<{ ts: string; durationMs: number; sleepAffected?: boolean }> | undefined; now: Date },
+): { allowed: boolean; usedMs: number } {
+  const cutoff = opts.now.getTime() - budget.windowMs;
+  const runs = opts.recentRuns ?? [];
+  let usedMs = 0;
+  for (const r of runs) {
+    if (r.sleepAffected) continue;
+    if (new Date(r.ts).getTime() >= cutoff) {
+      usedMs += r.durationMs;
+    }
+  }
+  return { allowed: usedMs < budget.limitMs, usedMs };
 }
 
 function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
@@ -322,6 +365,7 @@ export interface ScheduledScriptTemplateOptions {
   source?: string;
   sourceRef?: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
+  budget?: string;
 }
 
 /**
@@ -336,6 +380,7 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   if (options.notBefore) attrs.push(`not-before="${options.notBefore}"`);
   if (options.onWakeup) attrs.push(`on-wakeup="true"`);
   if (options.once) attrs.push(`once="true"`);
+  if (options.budget) attrs.push(`budget="${options.budget}"`);
 
   const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
 

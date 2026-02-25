@@ -641,6 +641,7 @@ export interface ScheduleInfo {
   lastError: string | null;
   runCount: number;
   once: boolean;
+  budget?: { limitMs: number; windowMs: number; usedMs: number };
 }
 
 export interface SchedulesResponse {

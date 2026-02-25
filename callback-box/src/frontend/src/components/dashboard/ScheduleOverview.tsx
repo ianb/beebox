@@ -22,6 +22,21 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
+function formatDurationMs(ms: number): string {
+  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
+  return `${Math.round(ms / 60_000)}m`;
+}
+
+function BudgetIndicator({ budget }: { budget: { limitMs: number; windowMs: number; usedMs: number } }) {
+  const exceeded = budget.usedMs >= budget.limitMs;
+  const cls = exceeded ? "text-red-600 font-medium" : "text-gray-400";
+  return (
+    <span className={`ml-1 ${cls}`} title={`${formatDurationMs(budget.usedMs)} used of ${formatDurationMs(budget.limitMs)} budget in ${formatDurationMs(budget.windowMs)} window`}>
+      [{formatDurationMs(budget.usedMs)}/{formatDurationMs(budget.limitMs)}]
+    </span>
+  );
+}
+
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
   return (
     <tr className={!s.enabled ? "opacity-50" : ""}>
@@ -42,6 +57,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
         {s.notBefore ? (
           <span className="ml-1 text-gray-400">&ge;{s.notBefore}</span>
         ) : null}
+        {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
       </td>
       <td className="py-2 pr-3 text-gray-600 text-xs">
         {s.lastRun ? timeAgo(s.lastRun) : "never"}

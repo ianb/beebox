@@ -5,8 +5,10 @@
 import { test } from "tap";
 import {
   parseDuration,
+  parseBudget,
   isDue,
   isDueForWakeup,
+  isWithinBudget,
   createScheduledScriptTemplate,
   type ParsedScheduledScript,
   type ScheduleCheckContext,
@@ -59,6 +61,7 @@ function makeScript(overrides: Partial<ParsedScheduledScript>): ParsedScheduledS
     enabled: true,
     runs: "echo test",
     source: undefined,
+    budget: undefined,
     ...overrides,
   };
 }
@@ -163,12 +166,31 @@ test("isDue: not-before allows running after enough time", async (t) => {
   t.ok(isDue(script, ctx));
 });
 
-test("isDue: wakeup-only script (no cron/at/rrule) is not due for tick", async (t) => {
+test("isDue: wakeup-only script (no cron/at/rrule) IS due for tick", async (t) => {
   const script = makeScript({ onWakeup: true });
   const ctx: ScheduleCheckContext = {
     lastRun: null,
     now: new Date("2026-02-21T10:00:00Z"),
   };
+  t.ok(isDue(script, ctx));
+});
+
+test("isDue: no-schedule non-wakeup script is not due", async (t) => {
+  const script = makeScript({ onWakeup: false });
+  const ctx: ScheduleCheckContext = {
+    lastRun: null,
+    now: new Date("2026-02-21T10:00:00Z"),
+  };
+  t.notOk(isDue(script, ctx));
+});
+
+test("isDue: wakeup-only script respects not-before debouncing", async (t) => {
+  const script = makeScript({ onWakeup: true, notBefore: "5m" });
+  const ctx: ScheduleCheckContext = {
+    lastRun: "2026-02-21T09:58:00Z",
+    now: new Date("2026-02-21T10:00:00Z"),
+  };
+  // Only 2 min elapsed, not-before is 5m
   t.notOk(isDue(script, ctx));
 });
 
@@ -282,4 +304,98 @@ test("createScheduledScriptTemplate: minimal (wakeup only)", async (t) => {
   t.ok(template.includes('on-wakeup="true"'));
   t.notOk(template.includes("cron"));
   t.notOk(template.includes("at="));
+});
+
+// ============================================
+// parseBudget
+// ============================================
+
+test("parseBudget: parses 10m/5h", async (t) => {
+  const b = parseBudget("10m/5h");
+  t.equal(b.limitMs, 10 * 60 * 1000);
+  t.equal(b.windowMs, 5 * 60 * 60 * 1000);
+});
+
+test("parseBudget: parses 30s/1m", async (t) => {
+  const b = parseBudget("30s/1m");
+  t.equal(b.limitMs, 30_000);
+  t.equal(b.windowMs, 60_000);
+});
+
+test("parseBudget: throws on invalid format", async (t) => {
+  t.throws(() => parseBudget("10m"));
+  t.throws(() => parseBudget("/5h"));
+  t.throws(() => parseBudget("abc/def"));
+});
+
+// ============================================
+// isWithinBudget
+// ============================================
+
+test("isWithinBudget: allowed when no recent runs", async (t) => {
+  const result = isWithinBudget(
+    { limitMs: 600_000, windowMs: 18_000_000 },
+    { recentRuns: [], now: new Date("2026-02-21T10:00:00Z") },
+  );
+  t.ok(result.allowed);
+  t.equal(result.usedMs, 0);
+});
+
+test("isWithinBudget: allowed when under limit", async (t) => {
+  const result = isWithinBudget(
+    { limitMs: 600_000, windowMs: 18_000_000 },
+    {
+      recentRuns: [
+        { ts: "2026-02-21T09:00:00Z", durationMs: 300_000 },
+      ],
+      now: new Date("2026-02-21T10:00:00Z"),
+    },
+  );
+  t.ok(result.allowed);
+  t.equal(result.usedMs, 300_000);
+});
+
+test("isWithinBudget: not allowed when over limit", async (t) => {
+  const result = isWithinBudget(
+    { limitMs: 600_000, windowMs: 18_000_000 },
+    {
+      recentRuns: [
+        { ts: "2026-02-21T08:00:00Z", durationMs: 300_000 },
+        { ts: "2026-02-21T09:00:00Z", durationMs: 400_000 },
+      ],
+      now: new Date("2026-02-21T10:00:00Z"),
+    },
+  );
+  t.notOk(result.allowed);
+  t.equal(result.usedMs, 700_000);
+});
+
+test("isWithinBudget: ignores sleep-affected runs", async (t) => {
+  const result = isWithinBudget(
+    { limitMs: 600_000, windowMs: 18_000_000 },
+    {
+      recentRuns: [
+        { ts: "2026-02-21T09:00:00Z", durationMs: 500_000, sleepAffected: true },
+        { ts: "2026-02-21T09:30:00Z", durationMs: 100_000 },
+      ],
+      now: new Date("2026-02-21T10:00:00Z"),
+    },
+  );
+  t.ok(result.allowed);
+  t.equal(result.usedMs, 100_000);
+});
+
+test("isWithinBudget: ignores runs outside window", async (t) => {
+  const result = isWithinBudget(
+    { limitMs: 600_000, windowMs: 3_600_000 }, // 1h window
+    {
+      recentRuns: [
+        { ts: "2026-02-21T08:00:00Z", durationMs: 500_000 }, // 2h ago, outside window
+        { ts: "2026-02-21T09:30:00Z", durationMs: 100_000 },
+      ],
+      now: new Date("2026-02-21T10:00:00Z"),
+    },
+  );
+  t.ok(result.allowed);
+  t.equal(result.usedMs, 100_000);
 });
