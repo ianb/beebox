@@ -20,10 +20,16 @@ export interface SpeechPlayback {
   markAsPlayed: (messageId: string) => void;
 }
 
-export function useSpeechPlayback(): SpeechPlayback {
+export interface SpeechPlaybackOptions {
+  onComplete?: () => void;
+}
+
+export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayback {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const playedMessagesRef = useRef<Set<string>>(new Set());
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
   const ttsClient = getTTSClient();
 
   useEffect(() => {
@@ -53,6 +59,7 @@ export function useSpeechPlayback(): SpeechPlayback {
         for (const segment of segments) {
           await ttsClient.speak(segment.text, segment.instructions);
         }
+        optionsRef.current?.onComplete?.();
       } catch (error) {
         if ((error as Error).message !== "Playback stopped") {
           console.error("[Speech] Playback error:", error);

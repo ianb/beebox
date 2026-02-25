@@ -20,8 +20,11 @@ import {
   type SessionContentBlock,
 } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
-import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
+import { useSpeechPlayback, type SpeechPlayback } from "../hooks/useSpeechPlayback";
 import { hasAssistantSpeech, parseAllSpeechTags } from "../lib/speech-parsing";
+import { Grid } from "ldrs/react";
+import "ldrs/react/Grid.css";
+import { sendSound, tick, recordingStart } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 
 /**
@@ -279,17 +282,6 @@ function ChatDebugMenu({
 }
 
 /**
- * Inline spinner using Tailwind animate-spin.
- */
-function Spinner({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`inline-block w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin ${className}`}
-    />
-  );
-}
-
-/**
  * Streaming content being built up during a turn.
  */
 function StreamingMessage({ text }: { text: string }) {
@@ -297,11 +289,9 @@ function StreamingMessage({ text }: { text: string }) {
     <div className="pr-24 pl-6 py-2">
       {text ? (
         <MarkdownContent text={text} />
-      ) : (
-        <div className="text-sm text-gray-400">Thinking...</div>
-      )}
-      <div className="flex items-center gap-1.5 mt-2">
-        <Spinner />
+      ) : null}
+      <div className="flex justify-center mt-6">
+        <Grid size={40} color="#93c5fd" speed={1.5} />
       </div>
     </div>
   );
@@ -320,8 +310,20 @@ export function ChatPage() {
   const [debugView, setDebugView] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const turnTakingRef = useRef(false);
+  const streamingRef = useRef(false);
+  const transcriptionRef = useRef<{ start: () => void } | null>(null);
+  const speechPlaybackRef = useRef<SpeechPlayback | null>(null);
+  const stopTickRef = useRef<(() => void) | null>(null);
 
-  const speechPlayback = useSpeechPlayback();
+  const speechPlayback = useSpeechPlayback({
+    onComplete: () => {
+      if (turnTakingRef.current && !streamingRef.current) {
+        recordingStart.play();
+        transcriptionRef.current?.start();
+      }
+    },
+  });
 
   const refreshStatus = useCallback(() => {
     getChatStatus()
@@ -361,6 +363,7 @@ export function ChatPage() {
   }, [messages, streamText]);
 
   const doSend = useCallback(async (wrapped: string) => {
+    streamingRef.current = true;
     setStreaming(true);
     setStreamText("");
     setStreamTools([]);
@@ -419,23 +422,36 @@ export function ChatPage() {
           }
 
           if (type === "result") {
+            // Stop waiting tick
+            if (stopTickRef.current) {
+              stopTickRef.current();
+              stopTickRef.current = null;
+            }
             // Auto-play speech before refreshing history
             if (hasAssistantSpeech(accumulatedText)) {
               const segments = parseAllSpeechTags(accumulatedText);
-              speechPlayback.playSegments({
+              speechPlaybackRef.current?.playSegments({
                 messageId: `stream-${Date.now()}`,
                 segments,
               });
             }
+            const hasSpeech = hasAssistantSpeech(accumulatedText);
             getChatHistory()
               .then((result) => {
                 setMessages(result.entries);
               })
               .catch(() => {})
               .finally(() => {
+                streamingRef.current = false;
                 setStreaming(false);
                 setStreamText("");
                 setStreamTools([]);
+                // For non-speech responses, auto-restart mic now
+                // (speech responses restart mic via onComplete callback)
+                if (!hasSpeech && turnTakingRef.current) {
+                  recordingStart.play();
+                  transcriptionRef.current?.start();
+                }
               });
           }
         },
@@ -446,7 +462,7 @@ export function ChatPage() {
       setStreamText("");
       setStreamTools([]);
     }
-  }, [speechPlayback]);
+  }, []);
 
   const handleSend = useCallback(() => {
     const text = input.trim();
@@ -493,12 +509,24 @@ export function ChatPage() {
     onKeywordSend: (text) => {
       transcription.cancel();
       if (text.trim()) {
+        sendSound.play();
+        stopTickRef.current = tick.repeatPlay(1000, 30000);
         doSend(`<speech local-time="${localTime()}">${text}</speech>`);
       }
     },
     onKeywordCancel: () => {
       transcription.cancel();
     },
+    onKeywordMicOff: () => {
+      turnTakingRef.current = false;
+    },
+    onKeywordErase: () => {
+      // Transcript is already cleared by the hook; nothing else needed
+    },
+  });
+  useEffect(() => {
+    transcriptionRef.current = transcription;
+    speechPlaybackRef.current = speechPlayback;
   });
   const isTranscribing =
     transcription.state === "connecting" ||
@@ -506,6 +534,7 @@ export function ChatPage() {
     transcription.state === "finalizing";
 
   const handleCancelTranscription = useCallback(() => {
+    turnTakingRef.current = false;
     transcription.cancel();
   }, [transcription]);
 
@@ -679,7 +708,7 @@ export function ChatPage() {
           ) : (
             <>
               <button
-                onClick={() => transcription.start()}
+                onClick={() => { turnTakingRef.current = true; recordingStart.play(); transcription.start(); }}
                 disabled={streaming}
                 className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200 disabled:text-gray-300 disabled:hover:bg-transparent"
                 title="Voice input"

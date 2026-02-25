@@ -25,6 +25,8 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 export interface UseRealtimeTranscriptionOptions {
   onKeywordSend?: (processedTranscript: string) => void;
   onKeywordCancel?: () => void;
+  onKeywordMicOff?: () => void;
+  onKeywordErase?: () => void;
 }
 
 export interface UseRealtimeTranscriptionResult {
@@ -57,9 +59,20 @@ function handleTextDelta(ctx: MessageContext, delta: string) {
     console.log("[realtime-transcription] optionsRef.current:", ctx.optionsRef.current);
     console.log("[realtime-transcription] onKeywordSend:", ctx.optionsRef.current?.onKeywordSend);
     ctx.optionsRef.current?.onKeywordSend?.(keyword.processedTranscript);
+  } else if (keyword?.action === "micOff") {
+    console.log("[realtime-transcription] Keyword MIC_OFF detected");
+    ctx.cleanup();
+    ctx.transcriptRef.current = "";
+    ctx.setTranscript("");
+    ctx.setState("idle");
+    ctx.optionsRef.current?.onKeywordMicOff?.();
   } else if (keyword?.action === "cancel") {
     console.log("[realtime-transcription] Keyword CANCEL detected");
     ctx.optionsRef.current?.onKeywordCancel?.();
+  } else if (keyword?.action === "erase") {
+    console.log("[realtime-transcription] Keyword ERASE detected — resetting transcript");
+    ctx.transcriptRef.current = "";
+    ctx.setTranscript("");
   }
 }
 
