@@ -29,7 +29,7 @@ function formatDurationMs(ms: number): string {
 
 function BudgetIndicator({ budget }: { budget: { limitMs: number; windowMs: number; usedMs: number } }) {
   const exceeded = budget.usedMs >= budget.limitMs;
-  const cls = exceeded ? "text-red-600 font-medium" : "text-gray-400";
+  const cls = exceeded ? "text-red-600 font-medium" : "text-warm-500";
   return (
     <span className={`ml-1 ${cls}`} title={`${formatDurationMs(budget.usedMs)} used of ${formatDurationMs(budget.limitMs)} budget in ${formatDurationMs(budget.windowMs)} window`}>
       [{formatDurationMs(budget.usedMs)}/{formatDurationMs(budget.limitMs)}]
@@ -41,25 +41,25 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
   return (
     <tr className={!s.enabled ? "opacity-50" : ""}>
       <td className="py-2 pr-3">
-        <span className="font-medium text-gray-900">{s.name}</span>
+        <span className="font-medium text-warm-900">{s.name}</span>
         {s.description ? (
-          <span className="block text-xs text-gray-500">{s.description}</span>
+          <span className="block text-xs text-warm-600">{s.description}</span>
         ) : null}
         {!s.enabled ? (
-          <span className="ml-1 text-xs text-gray-400">(disabled)</span>
+          <span className="ml-1 text-xs text-warm-500">(disabled)</span>
         ) : null}
       </td>
-      <td className="py-2 pr-3 text-gray-600 font-mono text-xs">
+      <td className="py-2 pr-3 text-warm-700 font-mono text-xs">
         {s.schedule}
         {s.onWakeup && s.scheduleType !== "wakeup-only" ? (
-          <span className="ml-1 text-gray-400">+wakeup</span>
+          <span className="ml-1 text-warm-500">+wakeup</span>
         ) : null}
         {s.notBefore ? (
-          <span className="ml-1 text-gray-400">&ge;{s.notBefore}</span>
+          <span className="ml-1 text-warm-500">&ge;{s.notBefore}</span>
         ) : null}
         {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
       </td>
-      <td className="py-2 pr-3 text-gray-600 text-xs">
+      <td className="py-2 pr-3 text-warm-700 text-xs">
         {s.lastRun ? timeAgo(s.lastRun) : "never"}
       </td>
       <td className="py-2">
@@ -78,14 +78,14 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs text-gray-500 border-b">
+          <tr className="text-left text-xs text-warm-600 border-b">
             <th className="pb-2 font-medium">Name</th>
             <th className="pb-2 font-medium">Schedule</th>
             <th className="pb-2 font-medium">Last Run</th>
             <th className="pb-2 font-medium">Status</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-warm-200">
           {schedules.map((s) => (
             <ScheduleRow key={s.name} s={s} />
           ))}
@@ -112,17 +112,17 @@ function StatusIndicator({ lastResult, lastError }: { lastResult: "success" | "f
   if (lastResult === "failure") {
     return (
       <span className="text-red-600 text-xs" title={lastError ?? ""}>
-        &#10007; {lastError ? <span className="text-gray-500">{lastError.substring(0, 40)}</span> : null}
+        &#10007; {lastError ? <span className="text-warm-600">{lastError.substring(0, 40)}</span> : null}
       </span>
     );
   }
-  return <span className="text-gray-400 text-xs">&mdash;</span>;
+  return <span className="text-warm-500 text-xs">&mdash;</span>;
 }
 
 function TickEntry({ tick }: { tick: SchedulerLogEntry }) {
   const hasActivity = Boolean(tick.result && (tick.result.ran > 0 || tick.result.errors > 0));
   return (
-    <div className={`flex items-center gap-2 ${hasActivity ? "text-gray-700" : "text-gray-400"}`}>
+    <div className={`flex items-center gap-2 ${hasActivity ? "text-warm-700" : "text-warm-500"}`}>
       <span className="font-mono">{new Date(tick.ts).toLocaleTimeString()}</span>
       {tick.result ? (
         <TickResult result={tick.result} />
@@ -148,8 +148,8 @@ export function ScheduleOverview({ schedules, recentTicks }: ScheduleOverviewPro
   if (schedules.length === 0) {
     return (
       <div className="card">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Schedules</h3>
-        <p className="text-sm text-gray-400">No scheduled scripts in config/schedules/</p>
+        <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
+        <p className="text-sm text-warm-500">No scheduled scripts in config/schedules/</p>
       </div>
     );
   }
@@ -160,7 +160,7 @@ export function ScheduleOverview({ schedules, recentTicks }: ScheduleOverviewPro
 
   return (
     <div className="card">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Schedules</h3>
+      <h3 className="text-sm font-semibold text-warm-700 mb-3">Schedules</h3>
 
       <ScheduleTable schedules={schedules} />
 
@@ -168,11 +168,11 @@ export function ScheduleOverview({ schedules, recentTicks }: ScheduleOverviewPro
         <div className="mt-3 pt-3 border-t">
           <button
             onClick={() => setShowTicks(!showTicks)}
-            className="text-xs text-gray-500 hover:text-gray-700"
+            className="text-xs text-warm-600 hover:text-warm-700"
           >
             {showTicks ? "Hide" : "Show"} recent ticks ({recentTicks.length})
             {skippedCount > 0 && !showTicks ? (
-              <span className="ml-1 text-gray-400">
+              <span className="ml-1 text-warm-500">
                 &middot; {skippedCount} all-skipped
               </span>
             ) : null}

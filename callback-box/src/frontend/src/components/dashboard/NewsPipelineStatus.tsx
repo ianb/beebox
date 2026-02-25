@@ -20,26 +20,26 @@ export function NewsPipelineStatus({ newsStatus }: NewsPipelineStatusProps) {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700">News Pipeline</h3>
-        <Link to="/news" className="text-xs text-blue-600 hover:text-blue-800">
+        <h3 className="text-sm font-semibold text-warm-700">News Pipeline</h3>
+        <Link to="/news" className="text-xs text-plum hover:text-plum-dark">
           Read Briefs &rarr;
         </Link>
       </div>
 
       <div className="flex items-center gap-2 text-sm">
-        <span className={`px-2 py-1 rounded ${inbox > 0 ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-500"}`}>
+        <span className={`px-2 py-1 rounded ${inbox > 0 ? "bg-iris-100 text-plum-dark" : "bg-warm-100 text-warm-600"}`}>
           Inbox ({inbox})
         </span>
-        <span className="text-gray-400">&rarr;</span>
-        <span className={`px-2 py-1 rounded ${pool > 0 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"}`}>
+        <span className="text-warm-500">&rarr;</span>
+        <span className={`px-2 py-1 rounded ${pool > 0 ? "bg-green-100 text-green-800" : "bg-warm-100 text-warm-600"}`}>
           Pool ({pool})
         </span>
-        <span className="text-gray-400">&rarr;</span>
-        <span className="px-2 py-1 rounded bg-gray-100 text-gray-600">
+        <span className="text-warm-500">&rarr;</span>
+        <span className="px-2 py-1 rounded bg-warm-100 text-warm-700">
           Archive ({archive})
         </span>
-        <span className="text-gray-400">|</span>
-        <span className="px-2 py-1 rounded bg-gray-100 text-gray-500">
+        <span className="text-warm-500">|</span>
+        <span className="px-2 py-1 rounded bg-warm-100 text-warm-600">
           Trash ({trash})
         </span>
       </div>

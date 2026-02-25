@@ -130,8 +130,8 @@ export function CommandRunner({
   };
 
   const stateColors = {
-    idle: "bg-gray-100 border-gray-300",
-    running: "bg-blue-50 border-blue-300",
+    idle: "bg-warm-100 border-warm-400",
+    running: "bg-iris-50 border-plum-light",
     success: "bg-green-50 border-green-300",
     error: "bg-red-50 border-red-300",
   };
@@ -151,17 +151,17 @@ export function CommandRunner({
           <span
             className={`text-sm ${
               state === "running"
-                ? "text-blue-600 animate-pulse"
+                ? "text-plum animate-pulse"
                 : state === "success"
                   ? "text-green-600"
                   : state === "error"
                     ? "text-red-600"
-                    : "text-gray-400"
+                    : "text-warm-500"
             }`}
           >
             {stateIcons[state]}
           </span>
-          <code className="text-sm font-mono font-semibold text-gray-800">
+          <code className="text-sm font-mono font-semibold text-warm-800">
             {commandLabel}
           </code>
         </div>
@@ -170,39 +170,36 @@ export function CommandRunner({
           {state === "idle" && (
             <button
               onClick={runCommand}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              className="px-3 py-1 text-sm bg-plum text-white rounded hover:bg-plum-dark transition-colors"
             >
               Run
             </button>
           )}
 
           {state === "running" && (
-            <span className="text-xs text-blue-600">Running...</span>
+            <span className="text-xs text-plum">Running...</span>
           )}
 
           {(state === "success" || state === "error") && (
             <button
               onClick={runCommand}
-              className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+              className="px-3 py-1 text-sm bg-warm-200 text-warm-700 rounded hover:bg-warm-300 transition-colors"
             >
               Run Again
             </button>
           )}
 
-          {onClose && (
-            <button
+          {onClose ? <button
               onClick={onClose}
-              className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              className="px-3 py-1 text-sm text-warm-600 hover:text-warm-700 hover:bg-warm-100 rounded transition-colors"
             >
               Close
-            </button>
-          )}
+            </button> : null}
         </div>
       </div>
 
       {/* Output area */}
-      {(output.length > 0 || error) && (
-        <pre
+      {(output.length > 0 || error) ? <pre
           ref={outputRef}
           data-debug-context={fullCommand}
           className="flex-1 p-3 text-xs font-mono overflow-auto min-h-[200px] bg-gray-900 text-gray-100 whitespace-pre-wrap break-words"
@@ -213,13 +210,12 @@ export function CommandRunner({
               dangerouslySetInnerHTML={{ __html: ansiConverter.toHtml(line) }}
             />
           ))}
-          {error && <div className="text-red-400">Error: {error}</div>}
-        </pre>
-      )}
+          {error ? <div className="text-red-400">Error: {error}</div> : null}
+        </pre> : null}
 
       {/* Empty state */}
       {state === "idle" && output.length === 0 && (
-        <div className="flex-1 flex items-center justify-center px-3 py-8 text-sm text-gray-500">
+        <div className="flex-1 flex items-center justify-center px-3 py-8 text-sm text-warm-600">
           Click Run to execute
         </div>
       )}
@@ -271,7 +267,7 @@ export function CommandButton({
       />
       <button
         onClick={() => setIsExpanded(false)}
-        className="text-xs text-gray-500 hover:text-gray-700"
+        className="text-xs text-warm-600 hover:text-warm-700"
       >
         Collapse
       </button>

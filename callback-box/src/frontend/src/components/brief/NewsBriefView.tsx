@@ -111,7 +111,7 @@ export function NewsBriefView({
     <article className="max-w-3xl mx-auto px-4 py-8">
       {/* Header */}
       <header className="mb-8">
-        <time className="text-sm text-gray-500 block mb-2">
+        <time className="text-sm text-warm-600 block mb-2">
           {new Date(brief.date).toLocaleDateString("en-US", {
             weekday: "long",
             year: "numeric",
@@ -119,10 +119,10 @@ export function NewsBriefView({
             day: "numeric",
           })}
         </time>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">{brief.title}</h1>
-        {brief.byline ? <p className="text-lg text-gray-600 italic">{brief.byline}</p> : null}
+        <h1 className="text-3xl font-bold text-warm-900 mb-3">{brief.title}</h1>
+        {brief.byline ? <p className="text-lg text-warm-700 italic">{brief.byline}</p> : null}
         {briefPath ? (
-          <Link to={`/print/${briefPath}`} className="text-sm text-gray-400 hover:text-gray-600 mt-2 inline-block">
+          <Link to={`/print/${briefPath}`} className="text-sm text-warm-500 hover:text-warm-700 mt-2 inline-block">
             Print view
           </Link>
         ) : null}
@@ -177,7 +177,7 @@ export function NewsBriefView({
 
       {/* Global comment / voice feedback */}
       {!completed && (
-        <div className="mt-8 pt-6 border-t border-gray-200">
+        <div className="mt-8 pt-6 border-t border-warm-300">
           {globalSubmitted ? (
             <p className="text-green-700 text-sm">Got it, I'll keep that in mind.</p>
           ) : showGlobalComment ? (
@@ -192,7 +192,7 @@ export function NewsBriefView({
               <div className="flex gap-2">
                 <button
                   onClick={handleGlobalComment}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-plum text-white rounded hover:bg-plum-dark"
                 >
                   Submit Comment
                 </button>
@@ -202,7 +202,7 @@ export function NewsBriefView({
                       setShowGlobalComment(false);
                       setShowGlobalVoice(true);
                     }}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-1"
+                    className="px-4 py-2 border border-warm-400 text-warm-700 rounded hover:bg-warm-50 flex items-center gap-1"
                   >
                     <MicrophoneIcon className="w-4 h-4" />
                     Voice
@@ -210,7 +210,7 @@ export function NewsBriefView({
                 ) : null}
                 <button
                   onClick={() => setShowGlobalComment(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  className="px-4 py-2 text-warm-700 hover:text-warm-800"
                 >
                   Cancel
                 </button>
@@ -220,14 +220,14 @@ export function NewsBriefView({
             <div className="flex gap-3">
               <button
                 onClick={() => setShowGlobalComment(true)}
-                className="text-sm text-gray-400 hover:text-blue-600"
+                className="text-sm text-warm-500 hover:text-plum"
               >
                 + Add a comment about this brief
               </button>
               {onVoiceComment ? (
                 <button
                   onClick={() => setShowGlobalVoice(true)}
-                  className="text-sm text-gray-400 hover:text-blue-600 flex items-center gap-1"
+                  className="text-sm text-warm-500 hover:text-plum flex items-center gap-1"
                 >
                   <MicrophoneIcon className="w-4 h-4" />
                   Voice
@@ -239,8 +239,8 @@ export function NewsBriefView({
       )}
 
       {/* Reading completion feedback */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
+      <div className="mt-6 pt-6 border-t border-warm-300">
+        <h3 className="text-sm font-semibold text-warm-700 uppercase tracking-wide mb-3">
           Finish Reading
         </h3>
         {completed ? (
@@ -257,7 +257,7 @@ export function NewsBriefView({
 
     {/* Fixed bottom voice recorder for global feedback */}
     {showGlobalVoice ? (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-warm-300 shadow-lg p-4 z-50">
         <div className="max-w-3xl mx-auto">
           <InlineVoiceRecorder
             onComplete={handleGlobalVoice}

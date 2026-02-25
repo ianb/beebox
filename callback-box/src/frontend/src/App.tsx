@@ -51,14 +51,14 @@ function AppNav() {
   ];
 
   return (
-    <nav className="bg-blue-700 text-white px-4 py-2 flex items-center gap-5 text-sm flex-shrink-0 shadow-sm">
+    <nav className="bg-gradient-to-r from-iris-dark via-plum to-coral text-white px-4 py-2 flex items-center gap-5 text-sm flex-shrink-0 shadow-sm">
       {boxes.length > 1 ? (
         <select
           value={boxSlug}
           onChange={(e) => {
             window.location.href = `/${e.target.value}/`;
           }}
-          className="font-bold bg-blue-800 text-white border border-blue-600 rounded px-2 py-0.5 text-sm"
+          className="font-bold bg-iris-dark text-white border border-iris rounded px-2 py-0.5 text-sm"
         >
           {boxes.map((b) => (
             <option key={b.slug} value={b.slug}>{b.name}</option>
@@ -73,8 +73,8 @@ function AppNav() {
           to={link.to}
           className={`hover:text-white transition-colors px-2 py-0.5 rounded ${
             link.match(location.pathname)
-              ? "bg-blue-600 text-white font-medium"
-              : "text-blue-200 hover:bg-blue-600"
+              ? "bg-white/20 text-white font-medium"
+              : "text-white/70 hover:bg-white/10"
           }`}
         >
           {link.label}
@@ -143,14 +143,14 @@ function CardViewPage() {
   const { boxSlug, "*": cardPath } = useParams();
 
   if (!cardPath) {
-    return <div className="p-8 text-gray-500">No card path specified</div>;
+    return <div className="p-8 text-warm-600">No card path specified</div>;
   }
 
   return (
-    <div className="h-full bg-gray-50 overflow-auto">
+    <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-4xl mx-auto py-8 px-4">
         <div className="mb-4">
-          <Link to={`/${boxSlug}`} className="text-blue-600 hover:text-blue-800">
+          <Link to={`/${boxSlug}`} className="text-plum hover:text-plum-dark">
             &larr; Back to Dashboard
           </Link>
         </div>
@@ -177,7 +177,7 @@ function BoxRedirect() {
   }, []);
 
   if (loading) {
-    return <div className="p-8 text-gray-500">Loading...</div>;
+    return <div className="p-8 text-warm-600">Loading...</div>;
   }
 
   if (boxes.length === 1) {
@@ -185,18 +185,18 @@ function BoxRedirect() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-warm-50 flex items-center justify-center">
       <div className="max-w-md w-full">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Callback Box</h1>
+        <h1 className="text-2xl font-bold text-warm-800 mb-6 text-center">Callback Box</h1>
         <div className="space-y-3">
           {boxes.map((box) => (
             <Link
               key={box.slug}
               to={`/${box.slug}/`}
-              className="block bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4 hover:border-blue-400 hover:shadow transition-all"
+              className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-gold hover:shadow transition-all"
             >
-              <span className="text-lg font-medium text-blue-700">{box.name}</span>
-              <span className="block text-sm text-gray-500 mt-0.5">/{box.slug}/</span>
+              <span className="text-lg font-medium text-plum">{box.name}</span>
+              <span className="block text-sm text-warm-600 mt-0.5">/{box.slug}/</span>
             </Link>
           ))}
         </div>

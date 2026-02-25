@@ -35,11 +35,9 @@ export function HistoryPage() {
             setSelectedCommit(match);
           } else if (result.commits.length > 0) {
             setSelectedCommit(result.commits[0]);
-            navigate(`/history/${result.commits[0].hash.substring(0, 8)}`, { replace: true });
           }
         } else if (result.commits.length > 0) {
           setSelectedCommit(result.commits[0]);
-          navigate(`/history/${result.commits[0].hash.substring(0, 8)}`, { replace: true });
         }
       } else {
         setCommits((prev) => [...prev, ...result.commits]);
@@ -50,7 +48,7 @@ export function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [urlHash, navigate]);
+  }, [urlHash]);
 
   useEffect(() => {
     loadCommits(0);
@@ -58,7 +56,7 @@ export function HistoryPage() {
 
   const handleSelect = (commit: HistoryCommit) => {
     setSelectedCommit(commit);
-    navigate(`/history/${commit.hash.substring(0, 8)}`);
+    navigate(commit.hash.substring(0, 8), { replace: true });
   };
 
   const handleLoadMore = () => {
@@ -83,7 +81,7 @@ export function HistoryPage() {
         {selectedCommit ? (
           <CommitDetail commit={selectedCommit} />
         ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
+          <div className="flex items-center justify-center h-full text-warm-500">
             {loading ? "Loading..." : "Select a commit to view details"}
           </div>
         )}

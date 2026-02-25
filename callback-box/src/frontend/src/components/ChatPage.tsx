@@ -63,18 +63,18 @@ function stripSpeechTags(content: string): string {
 function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
   if (blocks.length === 0) return null;
   return (
-    <div className="text-xs text-gray-500 leading-tight my-1 ml-2 pl-2 border-l border-gray-300">
+    <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-400">
       {blocks.map((block, i) => (
         <details key={i} className="group">
-          <summary className="cursor-pointer list-none flex items-center gap-1 hover:text-gray-700">
-            <span className="text-gray-400 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
-            <span className="font-medium text-gray-600">{block.toolName}</span>
+          <summary className="cursor-pointer list-none flex items-center gap-1 hover:text-warm-700">
+            <span className="text-warm-500 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
+            <span className="font-medium text-warm-700">{block.toolName}</span>
             {block.inputSummary && block.inputSummary !== block.toolName ? (
               <span className="ml-0.5">{block.inputSummary}</span>
             ) : null}
           </summary>
           {block.input ? (
-            <pre className="mt-1 mb-1 ml-3 text-[11px] text-gray-400 bg-gray-50 rounded p-2 overflow-x-auto max-h-40 whitespace-pre-wrap">
+            <pre className="mt-1 mb-1 ml-3 text-[11px] text-warm-500 bg-warm-50 rounded p-2 overflow-x-auto max-h-40 whitespace-pre-wrap">
               {JSON.stringify(block.input, null, 2)}
             </pre>
           ) : null}
@@ -87,12 +87,12 @@ function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
 function ThinkingBlock({ text }: { text: string }) {
   if (!text) return null;
   return (
-    <details className="group my-1 ml-2 pl-2 border-l border-purple-300">
-      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-purple-400 hover:text-purple-600">
+    <details className="group my-1 ml-2 pl-2 border-l border-plum-100">
+      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-plum hover:text-plum-dark">
         <span className="group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
         thinking
       </summary>
-      <div className="mt-1 text-xs text-gray-500 whitespace-pre-wrap max-h-60 overflow-auto">
+      <div className="mt-1 text-xs text-warm-600 whitespace-pre-wrap max-h-60 overflow-auto">
         {text}
       </div>
     </details>
@@ -136,7 +136,7 @@ function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "assista
 function UserMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
   return (
     <div className="flex justify-end pl-24 py-1">
-      <div className="rounded-l-2xl bg-blue-900 text-blue-100 px-4 py-2 min-w-[120px]">
+      <div className="rounded-l-2xl bg-iris text-white px-4 py-2 min-w-[120px]">
         {entries.map((entry) =>
           entry.content
             .filter((b) => b.type === "text")
@@ -189,7 +189,7 @@ function AssistantMessage({ entries, debugView }: { entries: SessionEntry[]; deb
           <ThinkingBlock key={i} text={part.text ?? ""} />
         ) : part.type === "text" ? (
           debugView ? (
-            <pre key={i} className="font-mono text-xs whitespace-pre-wrap bg-gray-50 text-gray-800 p-2 rounded">
+            <pre key={i} className="font-mono text-xs whitespace-pre-wrap bg-warm-50 text-warm-800 p-2 rounded">
               {part.text ?? ""}
             </pre>
           ) : (
@@ -241,7 +241,7 @@ function ChatDebugMenu({
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="p-1.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+        className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
         title="Debug controls"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,29 +249,29 @@ function ChatDebugMenu({
         </svg>
       </button>
       {open ? (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+        <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-warm-300 rounded-lg shadow-lg z-50 py-1">
           <button
             onClick={() => { onNewSession(); setOpen(false); }}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-700"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700"
           >
             New Session
           </button>
           <button
             onClick={() => { onStopProcess(); setOpen(false); }}
             disabled={!running}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-700 disabled:text-gray-400 disabled:hover:bg-white"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700 disabled:text-warm-500 disabled:hover:bg-warm-50"
           >
             Stop Process
           </button>
-          <div className="border-t border-gray-100 my-1" />
+          <div className="border-t border-warm-200 my-1" />
           <button
             onClick={() => { onToggleDebugView(); setOpen(false); }}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-700"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700"
           >
             {debugView ? "\u2713 " : ""}Debug View
           </button>
-          <div className="border-t border-gray-100 my-1" />
-          <div className="px-3 py-1.5 text-xs text-gray-400">
+          <div className="border-t border-warm-200 my-1" />
+          <div className="px-3 py-1.5 text-xs text-warm-500">
             <div>Session: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
             <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
           </div>
@@ -291,7 +291,7 @@ function StreamingMessage({ text }: { text: string }) {
         <MarkdownContent text={text} />
       ) : null}
       <div className="flex justify-center mt-6">
-        <Grid size={40} color="#93c5fd" speed={1.5} />
+        <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
       </div>
     </div>
   );
@@ -556,17 +556,17 @@ export function ChatPage() {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400">
+      <div className="h-full flex items-center justify-center text-warm-500">
         Loading chat...
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200">
       {/* Header with debug controls */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
-        <h2 className="text-sm font-medium text-gray-700">Chat</h2>
+      <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
+        <h2 className="text-sm font-semibold text-white tracking-wide">Chat</h2>
         <ChatDebugMenu
           onNewSession={handleNewSession}
           onStopProcess={handleStopProcess}
@@ -580,7 +580,7 @@ export function ChatPage() {
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto py-4 pl-4 space-y-1">
         {messages.length === 0 && !streaming ? (
-          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+          <div className="flex items-center justify-center h-full text-warm-500 text-sm">
             Start a conversation with your box assistant.
           </div>
         ) : null}
@@ -606,11 +606,11 @@ export function ChatPage() {
 
       {/* Error display */}
       {error || transcription.error ? (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm">
+        <div className="px-4 py-2 bg-rose-50 border-t border-rose-light text-rose-dark text-sm">
           {error || transcription.error}
           <button
             onClick={() => setError(null)}
-            className="ml-2 text-red-500 hover:text-red-700"
+            className="ml-2 text-rose hover:text-rose-dark"
           >
             dismiss
           </button>
@@ -618,7 +618,7 @@ export function ChatPage() {
       ) : null}
 
       {/* Input area */}
-      <div className="border-t border-gray-200 p-4 bg-gray-50">
+      <div className="border-t border-warm-300 p-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
         <div className="max-w-3xl mx-auto flex gap-2 items-center">
           {isTranscribing ? (
             <div className="flex-shrink-0 self-center">
@@ -643,14 +643,14 @@ export function ChatPage() {
                   ? "Listening..."
                   : "Type a message..."
             }
-            className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+            className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
             minRows={1}
             maxRows={8}
           />
           {speechPlayback.isPlaying ? (
             <button
               onClick={handleStopSpeech}
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200"
+              className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
               title="Stop speaking (Esc)"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -662,7 +662,7 @@ export function ChatPage() {
           {streaming ? (
             <button
               onClick={handleInterrupt}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+              className="px-4 py-2 bg-rose text-white rounded-lg hover:bg-rose-dark text-sm font-medium"
             >
               Stop
             </button>
@@ -670,7 +670,7 @@ export function ChatPage() {
             <>
               <button
                 onClick={handleCancelTranscription}
-                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200"
+                className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
                 title="Cancel (Esc)"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -685,7 +685,7 @@ export function ChatPage() {
                   }
                   transcription.stop();
                 }}
-                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200"
+                className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50"
                 title="Edit before sending"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -700,7 +700,7 @@ export function ChatPage() {
                     doSend(`<speech local-time="${localTime()}">${text}</speech>`);
                   }
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                className="px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark text-sm font-medium"
               >
                 Send
               </button>
@@ -710,7 +710,7 @@ export function ChatPage() {
               <button
                 onClick={() => { turnTakingRef.current = true; recordingStart.play(); transcription.start(); }}
                 disabled={streaming}
-                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200 disabled:text-gray-300 disabled:hover:bg-transparent"
+                className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50 disabled:text-warm-400 disabled:hover:bg-transparent"
                 title="Voice input"
               >
                 <MicrophoneIcon className="w-5 h-5" />
@@ -718,7 +718,7 @@ export function ChatPage() {
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
+                className="px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
               >
                 Send
               </button>

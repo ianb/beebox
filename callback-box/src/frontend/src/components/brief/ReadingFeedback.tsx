@@ -50,14 +50,14 @@ export function ReadingFeedback({
     <div className="space-y-4">
       {/* Overall rating */}
       <div>
-        <p className="text-sm font-medium text-gray-700 mb-2">How was this brief?</p>
+        <p className="text-sm font-medium text-warm-700 mb-2">How was this brief?</p>
         <div className="flex gap-2">
           <button
             onClick={() => setSelectedRating("great")}
             className={`px-4 py-2 rounded-lg border transition-colors ${
               selectedRating === "great"
                 ? "bg-green-100 border-green-500 text-green-800"
-                : "border-gray-300 hover:bg-gray-50"
+                : "border-warm-400 hover:bg-warm-50"
             }`}
           >
             Great
@@ -66,8 +66,8 @@ export function ReadingFeedback({
             onClick={() => setSelectedRating("ok")}
             className={`px-4 py-2 rounded-lg border transition-colors ${
               selectedRating === "ok"
-                ? "bg-blue-100 border-blue-500 text-blue-800"
-                : "border-gray-300 hover:bg-gray-50"
+                ? "bg-iris-100 border-plum text-plum-dark"
+                : "border-warm-400 hover:bg-warm-50"
             }`}
           >
             OK
@@ -77,7 +77,7 @@ export function ReadingFeedback({
             className={`px-4 py-2 rounded-lg border transition-colors ${
               selectedRating === "meh"
                 ? "bg-amber-100 border-amber-500 text-amber-800"
-                : "border-gray-300 hover:bg-gray-50"
+                : "border-warm-400 hover:bg-warm-50"
             }`}
           >
             Meh
@@ -88,7 +88,7 @@ export function ReadingFeedback({
       {/* Reactions */}
       {(guideReactions.length > 0 || briefReactions.length > 0) && (
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">Anything stand out? (optional)</p>
+          <p className="text-sm font-medium text-warm-700 mb-2">Anything stand out? (optional)</p>
           <div className="flex flex-wrap gap-2">
             {guideReactions.map((reaction) => (
               <button
@@ -100,8 +100,8 @@ export function ReadingFeedback({
                       ? "bg-red-100 border-red-400 text-red-800"
                       : reaction.sentiment === "positive"
                         ? "bg-green-100 border-green-400 text-green-800"
-                        : "bg-blue-100 border-blue-400 text-blue-800"
-                    : "border-gray-300 hover:bg-gray-50"
+                        : "bg-iris-100 border-plum-light text-plum-dark"
+                    : "border-warm-400 hover:bg-warm-50"
                 }`}
               >
                 {reaction.text}
@@ -114,7 +114,7 @@ export function ReadingFeedback({
                 className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                   selectedReactions.has(reaction.id)
                     ? "bg-purple-100 border-purple-400 text-purple-800"
-                    : "border-gray-300 hover:bg-gray-50"
+                    : "border-warm-400 hover:bg-warm-50"
                 }`}
               >
                 {reaction.text}
@@ -129,7 +129,7 @@ export function ReadingFeedback({
         <button
           onClick={handleSubmit}
           disabled={!selectedRating || submitting}
-          className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-5 py-2 bg-plum text-white rounded-lg hover:bg-plum-dark disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? "Saving..." : "Done Reading"}
         </button>

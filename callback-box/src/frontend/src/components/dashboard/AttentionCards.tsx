@@ -24,7 +24,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
       {pendingQuestions.length > 0 && (
         <div className="card">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-700">
+            <h3 className="text-sm font-semibold text-warm-700">
               Questions
               <span className="ml-2 status-badge status-pending">
                 {pendingQuestions.length}
@@ -36,14 +36,14 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
               <li key={q.path} className="text-sm">
                 <Link
                   to={`/card/${q.relativePath}`}
-                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                  className="text-plum hover:text-plum-dark hover:underline"
                 >
                   {q.prompt || q.name}
                 </Link>
               </li>
             ))}
             {pendingQuestions.length > 5 && (
-              <li className="text-xs text-gray-500">
+              <li className="text-xs text-warm-600">
                 +{pendingQuestions.length - 5} more
               </li>
             )}
@@ -55,7 +55,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
       {inboxCount > 0 && (
         <div className="card">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-700">
+            <h3 className="text-sm font-semibold text-warm-700">
               Inbox
               <span className="ml-2 status-badge status-new">
                 {inboxCount}
@@ -63,12 +63,12 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
             </h3>
             <Link
               to="/browse/box/inbox"
-              className="text-xs text-blue-600 hover:text-blue-800"
+              className="text-xs text-plum hover:text-plum-dark"
             >
               Browse &rarr;
             </Link>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-warm-700">
             {inboxCount} item{inboxCount !== 1 ? "s" : ""} waiting
           </p>
         </div>

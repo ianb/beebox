@@ -29,7 +29,7 @@ function trailerString(value: string | string[] | undefined): string | undefined
  */
 function PhaseBadge({ phase }: { phase: string }) {
   const colors: Record<string, string> = {
-    triage: "bg-blue-100 text-blue-700",
+    triage: "bg-iris-100 text-plum",
     analyze: "bg-amber-100 text-amber-700",
     brief: "bg-green-100 text-green-700",
     fetch: "bg-cyan-100 text-cyan-700",
@@ -37,7 +37,7 @@ function PhaseBadge({ phase }: { phase: string }) {
   };
 
   return (
-    <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${colors[phase] || "bg-gray-100 text-gray-600"}`}>
+    <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${colors[phase] || "bg-warm-100 text-warm-700"}`}>
       {phase}
     </span>
   );
@@ -125,30 +125,26 @@ function CommitRow({
   return (
     <button
       onClick={onSelect}
-      className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors ${
-        isSelected ? "bg-blue-50 border-r-2 border-blue-500" : ""
+      className={`w-full text-left px-3 py-2 hover:bg-warm-50 transition-colors ${
+        isSelected ? "bg-iris-50 border-r-2 border-plum" : ""
       }`}
     >
       <div className="flex items-center gap-1.5 mb-0.5">
-        <code className="text-[10px] text-gray-400">
+        <code className="text-[10px] text-warm-500">
           {commit.hash.substring(0, 7)}
         </code>
-        <span className="text-[10px] text-gray-400">
+        <span className="text-[10px] text-warm-500">
           {relativeTime(commit.date)}
         </span>
-        {phase && <PhaseBadge phase={phase} />}
-        {duration && (
-          <span className="text-[10px] text-gray-400 font-mono">{duration}</span>
-        )}
+        {phase ? <PhaseBadge phase={phase} /> : null}
+        {duration ? <span className="text-[10px] text-warm-500 font-mono">{duration}</span> : null}
       </div>
-      <div className="text-sm text-gray-800 truncate">
+      <div className="text-sm text-warm-800 truncate">
         {commit.subject}
       </div>
-      {triggeredBy && (
-        <div className="text-[10px] text-gray-400 mt-0.5">
+      {triggeredBy ? <div className="text-[10px] text-warm-500 mt-0.5">
           triggered by {triggeredBy}
-        </div>
-      )}
+        </div> : null}
     </button>
   );
 }
@@ -171,7 +167,7 @@ export function CommitTimeline({
   }
 
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-warm-200">
       {groups.map((group, gi) => {
         if (group.sessionId && group.commits.length > 1) {
           // Session group with visual indicator
@@ -208,21 +204,17 @@ export function CommitTimeline({
         ));
       })}
 
-      {loading && (
-        <div className="p-3 text-sm text-gray-400 text-center">Loading...</div>
-      )}
+      {loading ? <div className="p-3 text-sm text-warm-500 text-center">Loading...</div> : null}
 
-      {hasMore && !loading && (
-        <button
+      {hasMore && !loading ? <button
           onClick={onLoadMore}
-          className="w-full p-2 text-sm text-blue-600 hover:bg-blue-50"
+          className="w-full p-2 text-sm text-plum hover:bg-iris-50"
         >
           Load more commits
-        </button>
-      )}
+        </button> : null}
 
       {!loading && commits.length === 0 && (
-        <div className="p-4 text-sm text-gray-400 text-center">
+        <div className="p-4 text-sm text-warm-500 text-center">
           No commits found
         </div>
       )}

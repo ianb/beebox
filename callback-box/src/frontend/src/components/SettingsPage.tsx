@@ -79,7 +79,7 @@ function CalendarSection() {
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6 mt-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <h2 className="text-lg font-semibold text-warm-800 mb-4">
           Google Calendar
         </h2>
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
@@ -92,54 +92,54 @@ function CalendarSection() {
   if (!calendars) {
     return (
       <div className="bg-white rounded-lg shadow p-6 mt-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <h2 className="text-lg font-semibold text-warm-800 mb-4">
           Google Calendar
         </h2>
-        <p className="text-sm text-gray-500">Loading calendars...</p>
+        <p className="text-sm text-warm-600">Loading calendars...</p>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mt-6">
-      <h2 className="text-lg font-semibold text-gray-800 mb-2">
+      <h2 className="text-lg font-semibold text-warm-800 mb-2">
         Google Calendar
       </h2>
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-warm-700 mb-4">
         Choose which calendars to sync. Events are pulled as .ics files during{" "}
-        <code className="text-xs bg-gray-100 px-1 rounded">cb wakeup</code>.
+        <code className="text-xs bg-warm-100 px-1 rounded">cb wakeup</code>.
       </p>
 
       <div className="space-y-1">
         {calendars.map((cal) => (
           <label
             key={cal.id}
-            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 cursor-pointer"
+            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-warm-50 cursor-pointer"
           >
             <input
               type="checkbox"
               checked={cal.syncing}
               onChange={() => toggleCalendar(cal)}
               disabled={saving}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-warm-400 text-plum focus:ring-gold"
             />
             <span className="flex-1 min-w-0">
-              <span className="text-sm text-gray-900">{cal.summary}</span>
-              {cal.primary && (
-                <span className="ml-1 text-xs text-gray-400">(primary)</span>
-              )}
+              <span className="text-sm text-warm-900">{cal.summary}</span>
+              {cal.primary ? (
+                <span className="ml-1 text-xs text-warm-500">(primary)</span>
+              ) : null}
               {cal.accessRole !== "owner" && (
-                <span className="ml-1 text-xs text-gray-400">
+                <span className="ml-1 text-xs text-warm-500">
                   ({cal.accessRole})
                 </span>
               )}
             </span>
-            {cal.backgroundColor && (
+            {cal.backgroundColor ? (
               <span
                 className="w-3 h-3 rounded-full flex-shrink-0"
                 style={{ backgroundColor: cal.backgroundColor }}
               />
-            )}
+            ) : null}
           </label>
         ))}
       </div>
@@ -210,29 +210,29 @@ export function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
+      <div className="h-full flex items-center justify-center text-warm-600">
         Loading...
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-gray-50 overflow-auto">
+    <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <Link to="/" className="text-blue-600 hover:text-blue-800 text-sm">
+          <Link to="/" className="text-plum hover:text-plum-dark text-sm">
             &larr; Back to Dashboard
           </Link>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
+        <h1 className="text-2xl font-bold text-warm-900 mb-6">Settings</h1>
 
         {/* Dropbox Pairing Section */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          <h2 className="text-lg font-semibold text-warm-800 mb-4">
             Browser Message Relay
           </h2>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-warm-700 mb-4">
             Connect a browser extension to send memos and context to your callback box
             via an encrypted relay.
           </p>
@@ -244,14 +244,14 @@ export function SettingsPage() {
               <span className="text-green-700 ml-2">to {status.workerUrl}</span>
             </div>
           ) : (
-            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded text-sm text-gray-600">
+            <div className="mb-4 p-3 bg-warm-50 border border-warm-300 rounded text-sm text-warm-700">
               Not connected
             </div>
           )}
 
           {/* Worker URL input */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-warm-700 mb-1">
               Worker URL
             </label>
             <input
@@ -259,7 +259,7 @@ export function SettingsPage() {
               value={workerUrl}
               onChange={(e) => setWorkerUrl(e.target.value)}
               placeholder="https://callback-dropbox.your-account.workers.dev"
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-warm-400 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
             />
           </div>
 
@@ -277,23 +277,23 @@ export function SettingsPage() {
           </button>
 
           {/* Error */}
-          {error && (
+          {error ? (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
               {error}
             </div>
-          )}
+          ) : null}
 
           {/* Pairing code display */}
-          {pairResult && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-              <p className="text-sm text-blue-700 mb-2">
+          {pairResult ? (
+            <div className="mt-6 p-4 bg-iris-50 border border-iris-100 rounded">
+              <p className="text-sm text-plum mb-2">
                 Enter this code in your browser extension:
               </p>
-              <div className="text-3xl font-mono font-bold text-blue-900 tracking-widest text-center py-2">
+              <div className="text-3xl font-mono font-bold text-iris-dark tracking-widest text-center py-2">
                 {pairResult.code}
               </div>
               {countdown !== null && countdown > 0 ? (
-                <p className="text-xs text-blue-600 text-center mt-2">
+                <p className="text-xs text-plum text-center mt-2">
                   Expires in {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}
                 </p>
               ) : countdown === 0 ? (
@@ -302,7 +302,7 @@ export function SettingsPage() {
                 </p>
               ) : null}
             </div>
-          )}
+          ) : null}
         </div>
 
         <CalendarSection />

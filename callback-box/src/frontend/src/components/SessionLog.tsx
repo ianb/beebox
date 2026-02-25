@@ -26,21 +26,19 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
       <div className="my-1">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 text-xs font-mono text-gray-600 hover:text-gray-900 bg-gray-100 rounded px-2 py-1"
+          className="flex items-center gap-1.5 text-xs font-mono text-warm-700 hover:text-warm-900 bg-warm-100 rounded px-2 py-1"
         >
           <span className={`transition-transform ${expanded ? "rotate-90" : ""}`}>
             &#9654;
           </span>
-          <span className="font-semibold text-blue-700">{block.toolName}</span>
-          <span className="text-gray-500 truncate max-w-[500px]">
+          <span className="font-semibold text-plum">{block.toolName}</span>
+          <span className="text-warm-600 truncate max-w-[500px]">
             {block.inputSummary}
           </span>
         </button>
-        {expanded && block.inputSummary && (
-          <div className="ml-6 mt-1 text-xs font-mono text-gray-500 bg-gray-50 rounded p-2 whitespace-pre-wrap max-h-40 overflow-auto">
+        {expanded && block.inputSummary ? <div className="ml-6 mt-1 text-xs font-mono text-warm-600 bg-warm-50 rounded p-2 whitespace-pre-wrap max-h-40 overflow-auto">
             {block.inputSummary}
-          </div>
-        )}
+          </div> : null}
       </div>
     );
   }
@@ -52,7 +50,7 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
       return null;
     }
     return (
-      <div className="ml-6 text-xs font-mono text-gray-500 bg-gray-50 rounded p-2 whitespace-pre-wrap max-h-60 overflow-auto">
+      <div className="ml-6 text-xs font-mono text-warm-600 bg-warm-50 rounded p-2 whitespace-pre-wrap max-h-60 overflow-auto">
         {block.resultSummary}
       </div>
     );
@@ -84,12 +82,12 @@ function EntryView({ entry }: { entry: SessionEntry }) {
   }
 
   return (
-    <div className={`px-3 py-2 ${isUser ? "bg-blue-50 border-l-2 border-blue-300" : ""}`}>
+    <div className={`px-3 py-2 ${isUser ? "bg-iris-50 border-l-2 border-plum-light" : ""}`}>
       <div className="flex items-center gap-2 mb-1">
-        <span className={`text-xs font-medium ${isUser ? "text-blue-600" : "text-gray-500"}`}>
+        <span className={`text-xs font-medium ${isUser ? "text-plum" : "text-warm-600"}`}>
           {isUser ? "User" : "Assistant"}
         </span>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-warm-500">
           {new Date(entry.timestamp).toLocaleTimeString()}
         </span>
       </div>
@@ -134,7 +132,7 @@ export function SessionLog({ sessionId }: SessionLogProps) {
 
   if (!found) {
     return (
-      <div className="text-sm text-gray-400 italic p-3">
+      <div className="text-sm text-warm-500 italic p-3">
         Session log not found for {sessionId.substring(0, 8)}...
       </div>
     );
@@ -142,25 +140,21 @@ export function SessionLog({ sessionId }: SessionLogProps) {
 
   return (
     <div>
-      <div className="text-xs text-gray-500 px-3 py-1 bg-gray-50 border-b">
+      <div className="text-xs text-warm-600 px-3 py-1 bg-warm-50 border-b">
         {total} messages in session {sessionId.substring(0, 8)}...
       </div>
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-warm-200">
         {entries.map((entry) => (
           <EntryView key={entry.uuid} entry={entry} />
         ))}
       </div>
-      {loading && (
-        <div className="p-3 text-sm text-gray-400">Loading...</div>
-      )}
-      {hasMore && !loading && (
-        <button
+      {loading ? <div className="p-3 text-sm text-warm-500">Loading...</div> : null}
+      {hasMore && !loading ? <button
           onClick={() => loadEntries(entries.length)}
-          className="w-full p-2 text-sm text-blue-600 hover:bg-blue-50 border-t"
+          className="w-full p-2 text-sm text-plum hover:bg-iris-50 border-t"
         >
           Load more ({total - entries.length} remaining)
-        </button>
-      )}
+        </button> : null}
     </div>
   );
 }

@@ -24,7 +24,7 @@ function HighlightedXml({ xml: xmlContent }: { xml: string }) {
   }, [xmlContent]);
 
   return (
-    <div className="bg-gray-100 rounded p-4 overflow-auto">
+    <div className="bg-warm-100 rounded p-4 overflow-auto">
       <pre className="text-sm whitespace-pre-wrap font-mono">
         <code
           className="hljs"
@@ -66,7 +66,7 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
   }, [path]);
 
   if (loading) {
-    return <div className="p-4 text-gray-500">Loading...</div>;
+    return <div className="p-4 text-warm-600">Loading...</div>;
   }
 
   if (error) {
@@ -74,7 +74,7 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
   }
 
   if (!card) {
-    return <div className="p-4 text-gray-500">Card not found</div>;
+    return <div className="p-4 text-warm-600">Card not found</div>;
   }
 
   return (
@@ -82,28 +82,24 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">{card.path}</h2>
+          <h2 className="text-lg font-bold text-warm-900">{card.path}</h2>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm text-gray-500">Type: {card.tagName}</span>
-            {card.status && (
-              <span className={`status-badge status-${card.status}`}>
+            <span className="text-sm text-warm-600">Type: {card.tagName}</span>
+            {card.status ? <span className={`status-badge status-${card.status}`}>
                 {card.status}
-              </span>
-            )}
-            {card.version && (
-              <span className="text-sm text-gray-400">v{card.version}</span>
-            )}
+              </span> : null}
+            {card.version ? <span className="text-sm text-warm-500">v{card.version}</span> : null}
           </div>
         </div>
 
         {/* View mode toggle */}
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex gap-1 bg-warm-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode("tree")}
             className={`px-3 py-1 text-sm rounded ${
               viewMode === "tree"
-                ? "bg-white shadow text-gray-900"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white shadow text-warm-900"
+                : "text-warm-700 hover:text-warm-900"
             }`}
           >
             Tree
@@ -112,8 +108,8 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
             onClick={() => setViewMode("xml")}
             className={`px-3 py-1 text-sm rounded ${
               viewMode === "xml"
-                ? "bg-white shadow text-gray-900"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white shadow text-warm-900"
+                : "text-warm-700 hover:text-warm-900"
             }`}
           >
             XML

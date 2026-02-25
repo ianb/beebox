@@ -16,7 +16,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
   const sections: Array<{ label: string; files: string[]; color: string }> = [];
   if (staged.length > 0) sections.push({ label: "Staged", files: staged, color: "text-green-700" });
   if (modified.length > 0) sections.push({ label: "Modified", files: modified, color: "text-yellow-700" });
-  if (untracked.length > 0) sections.push({ label: "Untracked", files: untracked, color: "text-gray-500" });
+  if (untracked.length > 0) sections.push({ label: "Untracked", files: untracked, color: "text-warm-600" });
 
   return (
     <div className="fixed left-[10vw] top-24 w-[80vw] bg-white border rounded-lg shadow-lg z-10 p-3 text-xs">
@@ -29,7 +29,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
               <div className={`font-semibold ${s.color} mb-0.5`}>
                 {s.label} ({s.files.length})
               </div>
-              <ul className="font-mono text-gray-600 space-y-0.5 max-h-32 overflow-auto">
+              <ul className="font-mono text-warm-700 space-y-0.5 max-h-32 overflow-auto">
                 {s.files.map((f) => (
                   <li key={f}>{f}</li>
                 ))}
@@ -62,9 +62,9 @@ export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
     <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">{boxName}</h1>
+          <h1 className="text-lg font-semibold text-warm-900">{boxName}</h1>
           {boxRoot ? (
-            <div className="text-xs text-gray-400 font-mono">{boxRoot}</div>
+            <div className="text-xs text-warm-500 font-mono">{boxRoot}</div>
           ) : null}
         </div>
         <span
@@ -75,7 +75,7 @@ export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
           <div className="relative" ref={gitRef}>
             <button
               onClick={() => setShowGit(!showGit)}
-              className={`text-sm px-2 py-0.5 rounded hover:bg-gray-100 ${
+              className={`text-sm px-2 py-0.5 rounded hover:bg-warm-100 ${
                 status.git.clean ? "text-green-600" : "text-yellow-600"
               }`}
             >

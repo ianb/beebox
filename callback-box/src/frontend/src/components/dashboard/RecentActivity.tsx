@@ -31,23 +31,23 @@ function CommitRow({ commit }: { commit: LogEntry }) {
   return (
     <div className="py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <div className="text-sm text-gray-900 truncate">
-          <Link to={`/history/${commit.hash}`} className="hover:text-blue-600">
+        <div className="text-sm text-warm-900 truncate">
+          <Link to={`/history/${commit.hash}`} className="hover:text-plum">
             {commit.subject}
           </Link>
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-gray-400 font-mono">
+          <span className="text-xs text-warm-500 font-mono">
             {commit.hash.substring(0, 7)}
           </span>
           {phase ? (
-            <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+            <span className="text-xs bg-warm-100 text-warm-700 px-1.5 py-0.5 rounded">
               {phase}
             </span>
           ) : null}
         </div>
       </div>
-      <span className="text-xs text-gray-400 whitespace-nowrap">
+      <span className="text-xs text-warm-500 whitespace-nowrap">
         {timeAgo(commit.date)}
       </span>
     </div>
@@ -59,8 +59,8 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
   return (
     <div className="py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <div className="text-sm text-gray-700">
-          <span className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded mr-1">
+        <div className="text-sm text-warm-700">
+          <span className="text-xs bg-iris-50 text-plum px-1.5 py-0.5 rounded mr-1">
             tick
           </span>
           {scripts.map((s) => (
@@ -70,7 +70,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
             >
               {s.name}
               {s.durationMs != null ? (
-                <span className="text-gray-400 ml-0.5">
+                <span className="text-warm-500 ml-0.5">
                   {s.durationMs < 1000 ? `${s.durationMs}ms` : `${(s.durationMs / 1000).toFixed(1)}s`}
                 </span>
               ) : null}
@@ -78,7 +78,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
           ))}
         </div>
       </div>
-      <span className="text-xs text-gray-400 whitespace-nowrap">
+      <span className="text-xs text-warm-500 whitespace-nowrap">
         {timeAgo(tick.ts)}
       </span>
     </div>
@@ -112,16 +112,16 @@ export function RecentActivity({ commits, ticks }: RecentActivityProps) {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">Recent Activity</h3>
-        <Link to="/history" className="text-xs text-blue-600 hover:text-blue-800">
+        <h3 className="text-sm font-semibold text-warm-700">Recent Activity</h3>
+        <Link to="/history" className="text-xs text-plum hover:text-plum-dark">
           All history &rarr;
         </Link>
       </div>
 
       {display.length === 0 ? (
-        <p className="text-sm text-gray-400">No recent activity</p>
+        <p className="text-sm text-warm-500">No recent activity</p>
       ) : (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-warm-200">
           {display.map((item, i) =>
             item.type === "commit" ? (
               <CommitRow key={`c-${item.data.hash}`} commit={item.data} />

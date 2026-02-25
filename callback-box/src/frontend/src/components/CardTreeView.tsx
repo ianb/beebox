@@ -40,15 +40,15 @@ function formatTagName(tagName: string): string {
  */
 function getAttrColor(name: string): string {
   const colors: Record<string, string> = {
-    confidence: "bg-blue-100 text-blue-800",
+    confidence: "bg-iris-100 text-plum-dark",
     status: "bg-green-100 text-green-800",
     source: "bg-purple-100 text-purple-800",
     aspect: "bg-amber-100 text-amber-800",
     duration: "bg-cyan-100 text-cyan-800",
-    id: "bg-gray-100 text-gray-600",
-    version: "bg-gray-100 text-gray-600",
+    id: "bg-warm-100 text-warm-700",
+    version: "bg-warm-100 text-warm-700",
   };
-  return colors[name] || "bg-gray-100 text-gray-700";
+  return colors[name] || "bg-warm-100 text-warm-700";
 }
 
 /**
@@ -84,13 +84,13 @@ function ElementTree({ element, depth = 0 }: ElementTreeProps) {
 
   return (
     <div
-      className={`${depth > 0 ? "ml-4 border-l-2 border-gray-200 pl-3" : ""} ${
+      className={`${depth > 0 ? "ml-4 border-l-2 border-warm-300 pl-3" : ""} ${
         depth === 0 ? "" : "mt-3"
       }`}
     >
       {/* Header with tag name and attributes */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="font-medium text-gray-700 text-sm">
+        <span className="font-medium text-warm-700 text-sm">
           {formatTagName(element.tagName)}
         </span>
         {attrs.map(([name, value]) => (
@@ -101,38 +101,30 @@ function ElementTree({ element, depth = 0 }: ElementTreeProps) {
             <span className="opacity-60">{name}:</span> {value}
           </span>
         ))}
-        {hasContent && (
-          <button
+        {hasContent ? <button
             onClick={() => setCollapsed(!collapsed)}
-            className="text-gray-400 hover:text-gray-600 w-4 h-4 flex items-center justify-center text-xs"
+            className="text-warm-500 hover:text-warm-700 w-4 h-4 flex items-center justify-center text-xs"
           >
             {collapsed ? "▶" : "▼"}
-          </button>
-        )}
+          </button> : null}
       </div>
 
       {/* Content */}
-      {!collapsed && hasContent && (
-        <div className="mt-1">
+      {!collapsed && hasContent ? <div className="mt-1">
           {/* Text content rendered as Markdown */}
-          {element.text && (
-            <div className="prose prose-sm max-w-none text-gray-600">
+          {element.text ? <div className="prose prose-sm max-w-none text-warm-700">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {element.text}
               </ReactMarkdown>
-            </div>
-          )}
+            </div> : null}
 
           {/* Children */}
-          {element.children && element.children.length > 0 && (
-            <div className="mt-2">
+          {element.children && element.children.length > 0 ? <div className="mt-2">
               {element.children.map((child, i) => (
                 <ElementTree key={i} element={child} depth={depth + 1} />
               ))}
-            </div>
-          )}
-        </div>
-      )}
+            </div> : null}
+        </div> : null}
     </div>
   );
 }
@@ -150,21 +142,17 @@ export function CardTreeView({ element, path, version }: CardTreeViewProps) {
   return (
     <div className="p-4">
       {/* Card header */}
-      {path && (
-        <div className="mb-4 pb-3 border-b">
-          <h2 className="text-lg font-bold text-gray-900">
+      {path ? <div className="mb-4 pb-3 border-b">
+          <h2 className="text-lg font-bold text-warm-900">
             {formatTagName(element.tagName)}
           </h2>
-          <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+          <div className="flex items-center gap-2 mt-1 text-sm text-warm-600">
             <span>{path}</span>
-            {version && (
-              <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+            {version ? <span className="text-xs bg-warm-100 px-1.5 py-0.5 rounded">
                 v{version}
-              </span>
-            )}
+              </span> : null}
           </div>
-        </div>
-      )}
+        </div> : null}
 
       {/* Element tree */}
       <ElementTree element={element} />

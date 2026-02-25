@@ -50,7 +50,7 @@ export function Sidebar({
       {collapsed ? (
         <button
           onClick={() => setCollapsed(false)}
-          className="p-2 hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+          className="p-2 hover:bg-warm-100 text-warm-600 hover:text-warm-700"
           title={`Show ${title.toLowerCase()}`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,14 +59,14 @@ export function Sidebar({
         </button>
       ) : (
         <>
-          <div className="px-3 py-2 border-b bg-gray-50 flex-shrink-0 flex items-center justify-between">
+          <div className="px-3 py-2 border-b bg-warm-50 flex-shrink-0 flex items-center justify-between">
             <div className="min-w-0">
-              <h2 className="text-sm font-medium text-gray-700 truncate">{title}</h2>
-              {subtitle && <div className="text-xs text-gray-400 truncate">{subtitle}</div>}
+              <h2 className="text-sm font-medium text-warm-700 truncate">{title}</h2>
+              {subtitle ? <div className="text-xs text-warm-500 truncate">{subtitle}</div> : null}
             </div>
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 flex-shrink-0"
+              className="p-1 hover:bg-warm-200 rounded text-warm-500 hover:text-warm-700 flex-shrink-0"
               title="Collapse sidebar"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

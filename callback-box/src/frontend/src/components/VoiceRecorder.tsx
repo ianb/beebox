@@ -24,7 +24,7 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
 
   return (
     <div className="p-4 bg-white rounded-lg shadow">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Voice Memo</h3>
+      <h3 className="text-lg font-bold text-warm-900 mb-4">Voice Memo</h3>
 
       <div className="flex flex-col items-center gap-4">
         {state === "idle" && (
@@ -55,10 +55,10 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
 
         {state === "uploading" && <UploadingIndicator />}
 
-        {error && <div className="text-red-600 text-sm text-center">Error: {error}</div>}
+        {error ? <div className="text-red-600 text-sm text-center">Error: {error}</div> : null}
       </div>
 
-      <p className="text-xs text-gray-500 text-center mt-4">
+      <p className="text-xs text-warm-600 text-center mt-4">
         Voice memos will be transcribed automatically at the next wakeup.
       </p>
     </div>
@@ -102,7 +102,7 @@ export function RecordingIndicator() {
 
 export function UploadingIndicator() {
   return (
-    <div className="flex items-center gap-2 text-gray-600">
+    <div className="flex items-center gap-2 text-warm-700">
       <svg
         className="animate-spin h-5 w-5"
         xmlns="http://www.w3.org/2000/svg"

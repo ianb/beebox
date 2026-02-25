@@ -4,7 +4,7 @@
 
 /* Custom styles */
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-warm-50 text-warm-900;
 }
 
 .card {
@@ -20,11 +20,11 @@ body {
 }
 
 .btn-primary {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
+  @apply bg-plum text-white hover:bg-plum-dark;
 }
 
 .btn-secondary {
-  @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+  @apply bg-warm-200 text-warm-800 hover:bg-warm-300;
 }
 
 .btn-success {
@@ -32,7 +32,7 @@ body {
 }
 
 .input {
-  @apply border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500;
+  @apply border border-warm-400 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold;
 }
 
 .status-badge {
@@ -40,7 +40,7 @@ body {
 }
 
 .status-pending {
-  @apply bg-yellow-100 text-yellow-800;
+  @apply bg-gold-100 text-gold-dark;
 }
 
 .status-answered {
@@ -48,15 +48,15 @@ body {
 }
 
 .status-new {
-  @apply bg-blue-100 text-blue-800;
+  @apply bg-iris-50 text-iris-dark;
 }
 
 .status-processing {
-  @apply bg-purple-100 text-purple-800;
+  @apply bg-plum-50 text-plum-dark;
 }
 
 .status-processed {
-  @apply bg-gray-100 text-gray-800;
+  @apply bg-warm-200 text-warm-800;
 }
 
 /* Remove backtick decorations from inline code in prose */

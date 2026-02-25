@@ -96,7 +96,7 @@ export function ActionModal({ action, onClose, onComplete, newsInboxCount = 0, n
     <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="text-sm font-semibold text-gray-700">
+          <h2 className="text-sm font-semibold text-warm-700">
             {action === "wakeup" && "cb wakeup"}
             {action === "sync" && "cb sync"}
             {action === "create-memo" && "New Memo"}
@@ -104,7 +104,7 @@ export function ActionModal({ action, onClose, onComplete, newsInboxCount = 0, n
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+            className="text-warm-500 hover:text-warm-700 text-lg leading-none"
           >
             &times;
           </button>

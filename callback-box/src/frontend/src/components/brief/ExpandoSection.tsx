@@ -47,26 +47,23 @@ export function ExpandoSection({
   };
 
   return (
-    <div className="my-4 border-l-4 border-blue-200 bg-blue-50 rounded-r-lg overflow-hidden">
+    <div className="my-4 border-l-4 border-iris-100 bg-iris-50 rounded-r-lg overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-blue-100 transition-colors"
+        className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-iris-100 transition-colors"
       >
         <div className="flex items-center">
-          <span className="font-medium text-blue-800">{expando.title}</span>
-          {expanded && expando.id && onFeedback && (
-            <ThumbsFeedback id={expando.id} feedback={feedback} onFeedback={onFeedback} />
-          )}
+          <span className="font-medium text-plum-dark">{expando.title}</span>
+          {expanded && expando.id && onFeedback ? <ThumbsFeedback id={expando.id} feedback={feedback} onFeedback={onFeedback} /> : null}
         </div>
-        <span className="text-blue-600">{expanded ? "\u2212" : "+"}</span>
+        <span className="text-plum">{expanded ? "\u2212" : "+"}</span>
       </button>
-      {expanded && (
-        <div className="px-4 pb-4">
+      {expanded ? <div className="px-4 pb-4">
           <div className="prose prose-sm max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{expando.text}</ReactMarkdown>
           </div>
           {/* Comment affordance */}
-          <div className="mt-4 pt-4 border-t border-blue-200">
+          <div className="mt-4 pt-4 border-t border-iris-100">
             {submitted ? (
               <p className="text-green-700 text-sm">Got it, I'll keep that in mind.</p>
             ) : showVoice ? (
@@ -86,25 +83,23 @@ export function ExpandoSection({
                 <div className="flex gap-2">
                   <button
                     onClick={handleSubmitComment}
-                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                    className="px-3 py-1 bg-plum text-white text-sm rounded hover:bg-plum-dark"
                   >
                     Comment
                   </button>
-                  {onVoiceComment && (
-                    <button
+                  {onVoiceComment ? <button
                       onClick={() => {
                         setShowComment(false);
                         setShowVoice(true);
                       }}
-                      className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50 flex items-center gap-1"
+                      className="px-3 py-1 border border-warm-400 text-warm-700 text-sm rounded hover:bg-warm-50 flex items-center gap-1"
                     >
                       <MicrophoneIcon className="w-4 h-4" />
                       Voice
-                    </button>
-                  )}
+                    </button> : null}
                   <button
                     onClick={() => setShowComment(false)}
-                    className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800"
+                    className="px-3 py-1 text-warm-700 text-sm hover:text-warm-800"
                   >
                     Cancel
                   </button>
@@ -114,24 +109,21 @@ export function ExpandoSection({
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowComment(true)}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-plum hover:text-plum-dark"
                 >
                   + Add comment
                 </button>
-                {onVoiceComment && (
-                  <button
+                {onVoiceComment ? <button
                     onClick={() => setShowVoice(true)}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    className="text-sm text-plum hover:text-plum-dark flex items-center gap-1"
                   >
                     <MicrophoneIcon className="w-4 h-4" />
                     Voice
-                  </button>
-                )}
+                  </button> : null}
               </div>
             )}
           </div>
-        </div>
-      )}
+        </div> : null}
     </div>
   );
 }

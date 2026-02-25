@@ -18,11 +18,11 @@ function XmlRenderer({ data }: RendererProps) {
     return hljs.highlight(data.xml, { language: "xml" }).value;
   }, [data.xml]);
 
-  if (!data.xml) return <div className="p-4 text-gray-500">No XML content</div>;
+  if (!data.xml) return <div className="p-4 text-warm-600">No XML content</div>;
 
   return (
     <div className="p-4">
-      <div className="bg-gray-100 rounded p-4 overflow-auto">
+      <div className="bg-warm-100 rounded p-4 overflow-auto">
         <pre className="text-sm whitespace-pre-wrap font-mono">
           <code
             className="hljs"
@@ -36,7 +36,7 @@ function XmlRenderer({ data }: RendererProps) {
 
 /** Structured card tree view */
 function TreeRenderer({ data }: RendererProps) {
-  if (!data.element) return <div className="p-4 text-gray-500">No element data</div>;
+  if (!data.element) return <div className="p-4 text-warm-600">No element data</div>;
   return <CardTreeView element={data.element} />;
 }
 

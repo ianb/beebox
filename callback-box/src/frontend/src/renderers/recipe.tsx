@@ -5,6 +5,7 @@
 import { useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+// eslint-disable-next-line import-x/no-named-as-default
 import Fraction from "fraction.js";
 import type { RendererProps } from "./index";
 import { registerCardRenderer } from "./index";
@@ -94,8 +95,8 @@ function abbreviateUnit(unit: string): string {
 /** Parse @{ingredient}{quantity} references into markdown bold */
 function renderIngredientRefs(text: string): string {
   return text
-    .replace(/@\{([^}]+)\}\{([^}]+)\}/g, "**$1** ($2)")
-    .replace(/@\{([^}]+)\}/g, "**$1**")
+    .replace(/@{([^}]+)}{([^}]+)}/g, "**$1** ($2)")
+    .replace(/@{([^}]+)}/g, "**$1**")
     .replace(/@(\w+)/g, "**$1**");
 }
 
@@ -152,17 +153,17 @@ function scaleAmount(raw: string, scale: number): ReactNode {
 function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: number }) {
   return (
     <div className="mb-6">
-      {section.name && <h2 className="text-lg font-semibold mb-3">{section.name}</h2>}
+      {section.name ? <h2 className="text-lg font-semibold mb-3">{section.name}</h2> : null}
 
-      {section.notes && (
-        <div className="mb-3 text-sm text-gray-600 italic">
+      {section.notes ? (
+        <div className="mb-3 text-sm text-warm-700 italic">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.notes}</ReactMarkdown>
         </div>
-      )}
+      ) : null}
 
-      {section.ingredients.length > 0 && (
+      {section.ingredients.length > 0 ? (
         <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
+          <h3 className="text-sm font-medium text-warm-600 uppercase tracking-wide mb-2">
             Ingredients
           </h3>
           <ul className="space-y-1">
@@ -180,11 +181,11 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
             ))}
           </ul>
         </div>
-      )}
+      ) : null}
 
-      {section.steps.length > 0 && (
+      {section.steps.length > 0 ? (
         <div>
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
+          <h3 className="text-sm font-medium text-warm-600 uppercase tracking-wide mb-2">
             Steps
           </h3>
           <ol className="list-decimal list-inside space-y-2">
@@ -199,7 +200,7 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
             ))}
           </ol>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -207,7 +208,7 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
 function RecipeDetailView({ data }: RendererProps) {
   const [scale, setScale] = useState(1);
 
-  if (!data.element) return <div className="p-4 text-gray-500">No recipe data</div>;
+  if (!data.element) return <div className="p-4 text-warm-600">No recipe data</div>;
 
   const recipe = parseRecipeElement(data.element);
 
@@ -215,64 +216,64 @@ function RecipeDetailView({ data }: RendererProps) {
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-2">{recipe.title}</h1>
 
-      {recipe.description && (
-        <p className="text-gray-600 mb-4">{recipe.description}</p>
-      )}
+      {recipe.description ? (
+        <p className="text-warm-700 mb-4">{recipe.description}</p>
+      ) : null}
 
-      {recipe.source && (
-        <p className="text-sm text-gray-400 mb-4">Source: {recipe.source}</p>
-      )}
+      {recipe.source ? (
+        <p className="text-sm text-warm-500 mb-4">Source: {recipe.source}</p>
+      ) : null}
 
-      {recipe.tags.length > 0 && (
+      {recipe.tags.length > 0 ? (
         <div className="flex gap-1 mb-4">
           {recipe.tags.map(tag => (
-            <span key={tag} className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+            <span key={tag} className="text-xs px-2 py-0.5 bg-warm-100 text-warm-700 rounded">
               {tag}
             </span>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Scaling controls */}
-      {recipe.yieldAmount > 0 && (
-        <div className="flex items-center gap-2 mb-6 p-3 bg-blue-50 rounded-lg">
-          <span className="text-sm text-gray-600">Scale:</span>
+      {recipe.yieldAmount > 0 ? (
+        <div className="flex items-center gap-2 mb-6 p-3 bg-iris-50 rounded-lg">
+          <span className="text-sm text-warm-700">Scale:</span>
           {[0.5, 1, 1.5, 2, 3].map(s => (
             <button
               key={s}
               className={`px-3 py-1 text-sm rounded ${
                 scale === s
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-white text-gray-700 hover:bg-gray-100"
+                  ? "bg-plum text-white shadow-sm"
+                  : "bg-white text-warm-700 hover:bg-warm-100"
               }`}
               onClick={() => setScale(s)}
             >
               {s === 1 ? "1x" : `${s}x`}
             </button>
           ))}
-          {recipe.yieldText && (
-            <span className="text-sm text-gray-500 ml-2">
+          {recipe.yieldText ? (
+            <span className="text-sm text-warm-600 ml-2">
               {scale === 1
                 ? recipe.yieldText
                 : <>{scaleAmount(String(recipe.yieldAmount), scale)} servings</>}
             </span>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {/* Sections */}
       {recipe.sections.map((section, i) => (
         <RecipeSectionView key={i} section={section} scale={scale} />
       ))}
 
-      {recipe.notes && (
+      {recipe.notes ? (
         <div className="mt-6 p-4 bg-amber-50 rounded-lg">
           <h3 className="font-medium text-amber-800 mb-1">Notes</h3>
           <div className="prose prose-sm max-w-none text-amber-900">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{recipe.notes}</ReactMarkdown>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -233,10 +233,10 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
       </Sidebar>
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto bg-gray-50">
+      <div className="flex-1 overflow-auto bg-warm-50">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-gray-500">Loading...</div>
+            <div className="text-warm-600">Loading...</div>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-full">
@@ -256,7 +256,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
             onCompleteReading={selectedSummary && !selectedSummary.read ? handleCompleteReading : undefined}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
+          <div className="flex items-center justify-center h-full text-warm-500">
             Select a brief to read
           </div>
         )}

@@ -36,7 +36,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   }, []);
 
   useEffect(() => {
-    fetchDir(currentPath);
+    fetchDir(currentPath); // eslint-disable-line react-hooks/set-state-in-effect
   }, [currentPath, fetchDir]);
 
   // Build breadcrumb segments
@@ -50,7 +50,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
           <div className="px-3 py-2 border-b text-sm flex flex-wrap items-center gap-1">
             <button
               onClick={() => onNavigate("")}
-              className="text-blue-600 hover:text-blue-800 hover:underline"
+              className="text-plum hover:text-plum-dark hover:underline"
             >
               /
             </button>
@@ -59,13 +59,13 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
               const isLast = i === segments.length - 1;
               return (
                 <span key={segPath} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-gray-400">/</span>}
+                  {i > 0 && <span className="text-warm-500">/</span>}
                   {isLast ? (
-                    <span className="text-gray-700 font-medium">{seg}</span>
+                    <span className="text-warm-700 font-medium">{seg}</span>
                   ) : (
                     <button
                       onClick={() => onNavigate(segPath)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      className="text-plum hover:text-plum-dark hover:underline"
                     >
                       {seg}
                     </button>
@@ -76,7 +76,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
           </div>
 
           {loading ? (
-            <div className="p-4 text-gray-500 text-sm">Loading...</div>
+            <div className="p-4 text-warm-600 text-sm">Loading...</div>
           ) : data ? (
             <div>
               {/* Directories */}
@@ -86,14 +86,14 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                   onClick={() =>
                     onNavigate(currentPath ? `${currentPath}/${dir}` : dir)
                   }
-                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center gap-2 border-b border-gray-100"
+                  className="w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200"
                 >
-                  <span className="text-blue-500 flex-shrink-0">
+                  <span className="text-plum flex-shrink-0">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                     </svg>
                   </span>
-                  <span className="text-gray-900 font-medium text-sm">{dir}/</span>
+                  <span className="text-warm-900 font-medium text-sm">{dir}/</span>
                 </button>
               ))}
 
@@ -102,25 +102,25 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 <button
                   key={card.relativePath}
                   onClick={() => setSelectedCard(card)}
-                  className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+                  className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
                     selectedCard?.relativePath === card.relativePath
-                      ? "bg-blue-50"
+                      ? "bg-iris-50"
                       : ""
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-gray-900 text-sm truncate">
+                      <div className="font-medium text-warm-900 text-sm truncate">
                         {card.name}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <span className="text-xs text-gray-400">{card.type}</span>
-                      {card.status && (
+                      <span className="text-xs text-warm-500">{card.type}</span>
+                      {card.status ? (
                         <span className={`status-badge status-${card.status}`}>
                           {card.status}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </button>
@@ -128,7 +128,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
 
               {/* Empty state */}
               {data.dirs.length === 0 && data.cards.length === 0 && (
-                <div className="p-4 text-gray-500 text-sm text-center">
+                <div className="p-4 text-warm-600 text-sm text-center">
                   Empty directory
                 </div>
               )}
@@ -138,13 +138,13 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
       </Sidebar>
 
       {/* Detail panel */}
-      <div className="flex-1 overflow-auto bg-gray-50">
+      <div className="flex-1 overflow-auto bg-warm-50">
         {selectedCard ? (
           <div className="max-w-4xl mx-auto py-8">
             <div className="mb-4 px-4">
               <Link
                 to={`/card/${selectedCard.relativePath}`}
-                className="text-blue-600 hover:text-blue-800 text-sm"
+                className="text-plum hover:text-plum-dark text-sm"
               >
                 Open full view &rarr;
               </Link>
@@ -154,7 +154,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
+          <div className="flex items-center justify-center h-full text-warm-500">
             Select a card to view details
           </div>
         )}

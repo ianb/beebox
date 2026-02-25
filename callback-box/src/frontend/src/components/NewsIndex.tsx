@@ -82,7 +82,7 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
 
   if (loading) {
     return (
-      <div className="p-8 text-center text-gray-500">
+      <div className="p-8 text-center text-warm-600">
         Loading briefs...
       </div>
     );
@@ -98,45 +98,45 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
 
   if (briefs.length === 0) {
     return (
-      <div className="p-8 text-center text-gray-500">
+      <div className="p-8 text-center text-warm-600">
         <p className="mb-2">No news briefs yet.</p>
-        <p className="text-sm">Run <code className="bg-gray-100 px-1 rounded">cb process-news</code> to create one.</p>
+        <p className="text-sm">Run <code className="bg-warm-100 px-1 rounded">cb process-news</code> to create one.</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-gray-200">
+    <div className="divide-y divide-warm-300">
       {briefs.map((brief) => (
         <button
           key={brief.path}
           onClick={() => onSelect(brief)}
-          className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
-            selectedPath === brief.path ? "bg-blue-50 border-l-4 border-blue-500" : ""
+          className={`w-full text-left p-4 hover:bg-warm-50 transition-colors ${
+            selectedPath === brief.path ? "bg-iris-50 border-l-4 border-plum" : ""
           } ${brief.read ? "opacity-60" : ""}`}
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h3 className={`truncate ${brief.read ? "font-normal text-gray-700" : "font-medium text-gray-900"}`}>
+              <h3 className={`truncate ${brief.read ? "font-normal text-warm-700" : "font-medium text-warm-900"}`}>
                 {brief.title}
               </h3>
               {brief.byline ? (
-                <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                <p className="text-sm text-warm-700 mt-1 line-clamp-2">
                   {brief.byline}
                 </p>
               ) : null}
             </div>
             <div className="flex-shrink-0 text-right">
-              <time className="text-sm text-gray-500">
+              <time className="text-sm text-warm-600">
                 {formatDate(brief.date)}
               </time>
               {!brief.read && (
-                <span className="block mt-1 text-xs text-blue-600 font-medium">
+                <span className="block mt-1 text-xs text-plum font-medium">
                   New
                 </span>
               )}
               {brief.read && brief.readReason === "expired" ? (
-                <span className="block mt-1 text-xs text-gray-400">
+                <span className="block mt-1 text-xs text-warm-500">
                   Expired
                 </span>
               ) : null}

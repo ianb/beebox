@@ -67,7 +67,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
       };
 
       mediaRecorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
+        for (const track of stream.getTracks()) track.stop();
 
         if (timerRef.current) {
           clearInterval(timerRef.current);
@@ -128,7 +128,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
 
       // Generate card path
       const now = new Date();
-      const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const timestamp = now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
 
       // Determine card type based on content
       const hasAudio = audioBlob !== null;
@@ -170,10 +170,10 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
   return (
     <div className="bg-white rounded-lg shadow p-4 max-w-xl">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-900">New Memo</h3>
+        <h3 className="text-lg font-bold text-warm-900">New Memo</h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-warm-500 hover:text-warm-700"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -193,15 +193,15 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
       </div>
 
       {/* Voice recording section */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+      <div className="mb-4 p-3 bg-warm-50 rounded-lg">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Voice Recording</span>
+          <span className="text-sm text-warm-700">Voice Recording</span>
 
           {recordingState === "idle" && !audioBlob && (
             <button
               onClick={startRecording}
               disabled={uploading}
-              className="btn btn-sm bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-1"
+              className="btn btn-sm bg-warm-200 hover:bg-warm-300 text-warm-700 flex items-center gap-1"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -230,27 +230,23 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
             </div>
           )}
 
-          {recordingState === "idle" && audioBlob && (
-            <div className="flex items-center gap-2">
+          {recordingState === "idle" && audioBlob ? <div className="flex items-center gap-2">
               <span className="text-sm text-green-600">
                 ✓ {formatDuration(duration)} recorded
               </span>
               <button
                 onClick={clearRecording}
                 disabled={uploading}
-                className="text-sm text-gray-500 hover:text-red-600"
+                className="text-sm text-warm-600 hover:text-red-600"
               >
                 Remove
               </button>
-            </div>
-          )}
+            </div> : null}
         </div>
       </div>
 
       {/* Error display */}
-      {error && (
-        <div className="text-red-600 text-sm mb-4">Error: {error}</div>
-      )}
+      {error ? <div className="text-red-600 text-sm mb-4">Error: {error}</div> : null}
 
       {/* Submit button */}
       <div className="flex gap-2">
@@ -273,7 +269,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
         </button>
       </div>
 
-      <p className="text-xs text-gray-500 text-center mt-3">
+      <p className="text-xs text-warm-600 text-center mt-3">
         {audioBlob
           ? "Voice will be transcribed at the next wakeup."
           : "You can type text and/or record voice."}

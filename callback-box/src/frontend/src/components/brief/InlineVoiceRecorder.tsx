@@ -57,7 +57,7 @@ export function InlineVoiceRecorder({
         </button>
         <button
           onClick={onCancel}
-          className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800"
+          className="px-3 py-1 text-warm-700 text-sm hover:text-warm-800"
         >
           Cancel
         </button>
@@ -70,12 +70,12 @@ export function InlineVoiceRecorder({
       {error ? (
         <>
           <span className="text-red-600 text-sm">{error}</span>
-          <button onClick={onCancel} className="px-3 py-1 text-gray-600 text-sm hover:text-gray-800">
+          <button onClick={onCancel} className="px-3 py-1 text-warm-700 text-sm hover:text-warm-800">
             Cancel
           </button>
         </>
       ) : (
-        <span className="text-gray-500 text-sm">Starting recorder...</span>
+        <span className="text-warm-600 text-sm">Starting recorder...</span>
       )}
     </div>
   );

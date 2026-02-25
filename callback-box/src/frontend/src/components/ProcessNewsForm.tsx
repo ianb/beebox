@@ -46,10 +46,10 @@ export function ProcessNewsForm({
   return (
     <div className="bg-white rounded-lg shadow p-4 max-w-xl">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-900">Process News</h3>
+        <h3 className="text-lg font-bold text-warm-900">Process News</h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-warm-500 hover:text-warm-700"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -58,11 +58,11 @@ export function ProcessNewsForm({
       </div>
 
       {/* Status summary */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-        <div className="text-sm text-gray-600 mb-2">Pipeline Status:</div>
+      <div className="mb-4 p-3 bg-warm-50 rounded-lg">
+        <div className="text-sm text-warm-700 mb-2">Pipeline Status:</div>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-blue-500" />
+            <span className="w-3 h-3 rounded-full bg-plum" />
             <span>{inboxCount} in inbox</span>
           </div>
           <div className="flex items-center gap-1">
@@ -74,7 +74,7 @@ export function ProcessNewsForm({
 
       {/* Batch size */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-warm-700 mb-1">
           Batch Size
         </label>
         <input
@@ -85,12 +85,12 @@ export function ProcessNewsForm({
           onChange={(e) => setBatchSize(parseInt(e.target.value) || 10)}
           className="input w-24"
         />
-        <span className="text-sm text-gray-500 ml-2">items per phase</span>
+        <span className="text-sm text-warm-600 ml-2">items per phase</span>
       </div>
 
       {/* Phase selection */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-warm-700 mb-2">
           Run Phase
         </label>
         <div className="space-y-2">
@@ -101,7 +101,7 @@ export function ProcessNewsForm({
               value="all"
               checked={phase === "all"}
               onChange={() => setPhase("all")}
-              className="text-blue-600"
+              className="text-plum"
             />
             <span className="text-sm">All phases (triage → analyze → brief)</span>
           </label>
@@ -112,10 +112,10 @@ export function ProcessNewsForm({
               value="triage"
               checked={phase === "triage"}
               onChange={() => setPhase("triage")}
-              className="text-blue-600"
+              className="text-plum"
               disabled={inboxCount === 0}
             />
-            <span className={`text-sm ${inboxCount === 0 ? "text-gray-400" : ""}`}>
+            <span className={`text-sm ${inboxCount === 0 ? "text-warm-500" : ""}`}>
               Triage only ({inboxCount} inbox items)
             </span>
           </label>
@@ -126,10 +126,10 @@ export function ProcessNewsForm({
               value="analyze"
               checked={phase === "analyze"}
               onChange={() => setPhase("analyze")}
-              className="text-blue-600"
+              className="text-plum"
               disabled={inboxCount === 0}
             />
-            <span className={`text-sm ${inboxCount === 0 ? "text-gray-400" : ""}`}>
+            <span className={`text-sm ${inboxCount === 0 ? "text-warm-500" : ""}`}>
               Analyze only ({inboxCount} inbox items)
             </span>
           </label>
@@ -140,10 +140,10 @@ export function ProcessNewsForm({
               value="brief"
               checked={phase === "brief"}
               onChange={() => setPhase("brief")}
-              className="text-blue-600"
+              className="text-plum"
               disabled={poolCount === 0}
             />
-            <span className={`text-sm ${poolCount === 0 ? "text-gray-400" : ""}`}>
+            <span className={`text-sm ${poolCount === 0 ? "text-warm-500" : ""}`}>
               Create brief ({poolCount} pool items)
             </span>
           </label>
@@ -166,7 +166,7 @@ export function ProcessNewsForm({
         </button>
       </div>
 
-      <p className="text-xs text-gray-500 text-center mt-3">
+      <p className="text-xs text-warm-600 text-center mt-3">
         The agent will process news items using Claude Code.
       </p>
     </div>

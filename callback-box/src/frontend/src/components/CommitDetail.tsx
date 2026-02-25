@@ -27,13 +27,13 @@ function trailerString(value: string | string[] | undefined): string | undefined
  */
 function PhaseBadge({ phase }: { phase: string }) {
   const colors: Record<string, string> = {
-    triage: "bg-blue-100 text-blue-700",
+    triage: "bg-iris-100 text-plum",
     analyze: "bg-amber-100 text-amber-700",
     brief: "bg-green-100 text-green-700",
   };
 
   return (
-    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${colors[phase] || "bg-gray-100 text-gray-600"}`}>
+    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${colors[phase] || "bg-warm-100 text-warm-700"}`}>
       {phase}
     </span>
   );
@@ -198,47 +198,43 @@ function CommitTab({ commit, bodyText }: { commit: HistoryCommit; bodyText: stri
   return (
     <div className="p-4">
       <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+        <code className="text-xs bg-warm-100 px-1.5 py-0.5 rounded text-warm-700">
           {commit.hash.substring(0, 8)}
         </code>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-warm-500">
           {new Date(commit.date).toLocaleString()}
         </span>
-        {phase && <PhaseBadge phase={phase} />}
-        {triggeredBy && (
-          <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+        {phase ? <PhaseBadge phase={phase} /> : null}
+        {triggeredBy ? <span className="text-xs bg-warm-100 text-warm-700 px-1.5 py-0.5 rounded">
             {triggeredBy}
-          </span>
-        )}
+          </span> : null}
       </div>
-      <h2 className="font-medium text-gray-900">{commit.subject}</h2>
-      {bodyText && (
-        <div className="mt-2 prose prose-sm max-w-none text-gray-600">
+      <h2 className="font-medium text-warm-900">{commit.subject}</h2>
+      {bodyText ? <div className="mt-2 prose prose-sm max-w-none text-warm-700">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{bodyText}</ReactMarkdown>
-        </div>
-      )}
+        </div> : null}
     </div>
   );
 }
 
 function DiffTab({ files }: { files: DiffFile[] }) {
   if (files.length === 0) {
-    return <div className="text-sm text-gray-400 italic p-4">No edited files</div>;
+    return <div className="text-sm text-warm-500 italic p-4">No edited files</div>;
   }
 
   return (
-    <div className="divide-y divide-gray-200">
+    <div className="divide-y divide-warm-300">
       {files.map((file, fi) => (
         <div key={fi}>
-          <div className="px-3 py-1.5 bg-gray-50 flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-mono font-medium text-gray-700">{file.path}</span>
+          <div className="px-3 py-1.5 bg-warm-50 flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-mono font-medium text-warm-700">{file.path}</span>
             {file.meta.filter((m) => m !== "new file" && m !== "deleted" && m !== "moved").map((m, mi) => (
               <span key={mi} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">{m}</span>
             ))}
           </div>
           <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words">
             {file.hunks.map((line, i) => {
-              let className = "text-gray-600";
+              let className = "text-warm-700";
               if (line.startsWith("+")) {
                 className = "text-green-700 bg-green-50";
               } else if (line.startsWith("-")) {
@@ -261,11 +257,11 @@ function DiffTab({ files }: { files: DiffFile[] }) {
 
 function NewFilesTab({ files }: { files: DiffFile[] }) {
   if (files.length === 0) {
-    return <div className="text-sm text-gray-400 italic p-4">No new files</div>;
+    return <div className="text-sm text-warm-500 italic p-4">No new files</div>;
   }
 
   return (
-    <div className="divide-y divide-gray-200">
+    <div className="divide-y divide-warm-300">
       {files.map((file, fi) => {
         const isCard = file.path.endsWith(".card");
         const content = file.hunks.some((h) => h.trim()) ? extractNewFileContent(file.hunks) : null;
@@ -279,7 +275,7 @@ function NewFilesTab({ files }: { files: DiffFile[] }) {
             {cardElement ? (
               <CardTreeView element={cardElement} />
             ) : content ? (
-              <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words text-gray-600">
+              <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words text-warm-700">
                 {content.split("\n").map((line, i) => (
                   <div key={i}>{line}</div>
                 ))}
@@ -294,17 +290,17 @@ function NewFilesTab({ files }: { files: DiffFile[] }) {
 
 function MovedTab({ files }: { files: DiffFile[] }) {
   if (files.length === 0) {
-    return <div className="text-sm text-gray-400 italic p-4">No moved files</div>;
+    return <div className="text-sm text-warm-500 italic p-4">No moved files</div>;
   }
 
   return (
     <div className="px-3 py-2">
       {files.map((file, fi) => (
-        <div key={fi} className="text-xs text-gray-600 py-0.5">
+        <div key={fi} className="text-xs text-warm-700 py-0.5">
           {file.move ? (
             <div>
-              <div>{file.move.basename} <span className="text-gray-400">moved</span></div>
-              <div className="text-gray-400 ml-3">
+              <div>{file.move.basename} <span className="text-warm-500">moved</span></div>
+              <div className="text-warm-500 ml-3">
                 {file.move.fromDir} → {file.move.toDir}
               </div>
             </div>
@@ -312,7 +308,7 @@ function MovedTab({ files }: { files: DiffFile[] }) {
             <div>
               {file.path}
               {file.meta.map((m, mi) => (
-                <span key={mi} className="text-gray-400 ml-1">({m})</span>
+                <span key={mi} className="text-warm-500 ml-1">({m})</span>
               ))}
             </div>
           )}
@@ -334,10 +330,17 @@ export function CommitDetail({ commit }: CommitDetailProps) {
   const sessionId = trailerString(commit.trailers?.Session);
   const bodyText = commit.body ? stripTrailers(commit.body) : "";
 
+  // Track commit hash to reset state on change
+  const [loadedHash, setLoadedHash] = useState<string | null>(null);
+  if (loadedHash !== commit.hash) {
+    setLoadedHash(commit.hash);
+    setDiff(null);
+    setDiffLoading(true);
+    setActiveTab("commit");
+  }
+
   useEffect(() => {
     let cancelled = false;
-    setDiffLoading(true);
-    setDiff(null);
     getCommitDiff(commit.hash)
       .then((result) => {
         if (!cancelled) setDiff(result.diff);
@@ -347,11 +350,6 @@ export function CommitDetail({ commit }: CommitDetailProps) {
         if (!cancelled) setDiffLoading(false);
       });
     return () => { cancelled = true; };
-  }, [commit.hash]);
-
-  // Reset to commit tab when switching commits
-  useEffect(() => {
-    setActiveTab("commit");
   }, [commit.hash]);
 
   // Parse diff into categories
@@ -395,20 +393,20 @@ export function CommitDetail({ commit }: CommitDetailProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Tab bar */}
-      <div className="flex border-b bg-gray-50 px-2 pt-1 gap-1 flex-shrink-0">
+      <div className="flex border-b bg-warm-50 px-2 pt-1 gap-1 flex-shrink-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
               activeTab === tab.id
-                ? "bg-white text-gray-900 border border-b-white border-gray-200 -mb-px"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                ? "bg-white text-warm-900 border border-b-white border-warm-300 -mb-px"
+                : "text-warm-600 hover:text-warm-700 hover:bg-warm-100"
             }`}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className={`ml-1 ${activeTab === tab.id ? "text-gray-500" : "text-gray-400"}`}>
+              <span className={`ml-1 ${activeTab === tab.id ? "text-warm-600" : "text-warm-500"}`}>
                 ({tab.count})
               </span>
             )}
@@ -423,7 +421,7 @@ export function CommitDetail({ commit }: CommitDetailProps) {
         )}
         {activeTab === "diff" && (
           diffLoading
-            ? <div className="text-sm text-gray-400 italic p-4">Loading...</div>
+            ? <div className="text-sm text-warm-500 italic p-4">Loading...</div>
             : <DiffTab files={[...editedFiles, ...deletedFiles]} />
         )}
         {activeTab === "new" && (
@@ -432,9 +430,7 @@ export function CommitDetail({ commit }: CommitDetailProps) {
         {activeTab === "moved" && (
           <MovedTab files={movedFiles} />
         )}
-        {activeTab === "session" && sessionId && (
-          <SessionLog sessionId={sessionId} />
-        )}
+        {activeTab === "session" && sessionId ? <SessionLog sessionId={sessionId} /> : null}
       </div>
     </div>
   );

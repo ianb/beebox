@@ -33,7 +33,7 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
 
       // For select questions, find the option ID
       const selectedId = hasOptions
-        ? String.fromCharCode(97 + (question.options?.indexOf(selectedOption) ?? 0))
+        ? String.fromCodePoint(97 + (question.options?.indexOf(selectedOption) ?? 0))
         : undefined;
 
       await answerQuestion({ questionPath: question.relativePath, answer, selectedId });
@@ -47,8 +47,8 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
 
   return (
     <div className="p-4 bg-white rounded-lg shadow">
-      <h3 className="text-lg font-bold text-gray-900 mb-2">{question.name}</h3>
-      <p className="text-gray-600 mb-4">{question.prompt}</p>
+      <h3 className="text-lg font-bold text-warm-900 mb-2">{question.name}</h3>
+      <p className="text-warm-700 mb-4">{question.prompt}</p>
 
       <form onSubmit={handleSubmit}>
         {hasOptions ? (
@@ -58,8 +58,8 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
                 key={index}
                 className={`block p-3 border rounded cursor-pointer transition-colors ${
                   selectedOption === option
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "border-plum bg-iris-50"
+                    : "border-warm-300 hover:border-warm-400"
                 }`}
               >
                 <input
@@ -70,7 +70,7 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
                   onChange={(e) => setSelectedOption(e.target.value)}
                   className="sr-only"
                 />
-                <span className="text-gray-900">{option}</span>
+                <span className="text-warm-900">{option}</span>
               </label>
             ))}
           </div>
@@ -85,9 +85,7 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
           </div>
         )}
 
-        {error && (
-          <div className="text-red-600 text-sm mb-4">Error: {error}</div>
-        )}
+        {error ? <div className="text-red-600 text-sm mb-4">Error: {error}</div> : null}
 
         <button
           type="submit"

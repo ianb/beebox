@@ -49,7 +49,7 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
 
   return (
     <div className="p-4 bg-white rounded-lg shadow">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">New Memo</h3>
+      <h3 className="text-lg font-bold text-warm-900 mb-4">New Memo</h3>
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">

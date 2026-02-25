@@ -32,7 +32,7 @@ export function ActivityLog({ refreshKey }: ActivityLogProps) {
   }, [refreshKey]);
 
   if (loading) {
-    return <div className="p-4 text-gray-500">Loading...</div>;
+    return <div className="p-4 text-warm-600">Loading...</div>;
   }
 
   if (error) {
@@ -41,7 +41,7 @@ export function ActivityLog({ refreshKey }: ActivityLogProps) {
 
   if (entries.length === 0) {
     return (
-      <div className="text-gray-500 text-center py-8">No activity yet</div>
+      <div className="text-warm-600 text-center py-8">No activity yet</div>
     );
   }
 
@@ -50,26 +50,24 @@ export function ActivityLog({ refreshKey }: ActivityLogProps) {
       {entries.map((entry) => (
         <div key={entry.hash} className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="font-medium text-gray-900">{entry.subject}</div>
-            <div className="text-sm text-gray-400">
+            <div className="font-medium text-warm-900">{entry.subject}</div>
+            <div className="text-sm text-warm-500">
               {new Date(entry.date).toLocaleString()}
             </div>
           </div>
-          <div className="text-xs text-gray-400 font-mono mt-1">
+          <div className="text-xs text-warm-500 font-mono mt-1">
             {entry.hash.substring(0, 8)}
           </div>
-          {entry.trailers && Object.keys(entry.trailers).length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-2">
+          {entry.trailers && Object.keys(entry.trailers).length > 0 ? <div className="mt-1 flex flex-wrap gap-2">
               {Object.entries(entry.trailers).map(([key, value]) => (
                 <span
                   key={key}
-                  className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded"
+                  className="text-xs bg-warm-100 text-warm-700 px-2 py-0.5 rounded"
                 >
                   {key}: {value}
                 </span>
               ))}
-            </div>
-          )}
+            </div> : null}
         </div>
       ))}
     </div>

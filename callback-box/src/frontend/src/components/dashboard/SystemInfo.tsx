@@ -12,7 +12,7 @@ export function SystemInfo({ status }: SystemInfoProps) {
   if (!status) return null;
 
   return (
-    <div className="px-4 py-3 text-xs text-gray-500 flex items-center gap-4 border-t bg-gray-50">
+    <div className="px-4 py-3 text-xs text-warm-600 flex items-center gap-4 border-t bg-warm-50">
       <span>v{status.boxVersion}</span>
       <span>Created: {new Date(status.created).toLocaleDateString()}</span>
       <span>
