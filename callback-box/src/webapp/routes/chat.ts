@@ -9,6 +9,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { ChatSession, type ChatMessage } from "../../core/chat-session.js";
+import { WebSocket as WsWebSocket } from "ws";
 import type { BroadcastEventFn } from "./sse.js";
 
 interface SendBody {
@@ -165,4 +166,91 @@ export async function registerChatRoutes(
     chatSession.resetSession();
     return { ok: true };
   });
+
+  // GET /api/chat/transcribe-ws - WebSocket proxy to Mistral Voxtral Realtime
+  server.get(
+    "/api/chat/transcribe-ws",
+    { websocket: true },
+    (socket) => {
+      const apiKey = process.env.CALLBACK_MISTRAL_API_KEY;
+      if (!apiKey) {
+        console.error("[transcribe-ws] CALLBACK_MISTRAL_API_KEY not set");
+        socket.send(JSON.stringify({ type: "error", error: "Mistral API key not configured" }));
+        socket.close(1008, "API key not configured");
+        return;
+      }
+
+      const mistralModel = "voxtral-mini-transcribe-realtime-2602";
+      const mistralUrl = `wss://api.mistral.ai/v1/audio/transcriptions/realtime?model=${encodeURIComponent(mistralModel)}`;
+      const queued: string[] = [];
+      let mistralReady = false;
+
+      console.log("[transcribe-ws] Browser connected, opening Mistral WebSocket...");
+
+      const mistral = new WsWebSocket(mistralUrl, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      mistral.on("open", () => {
+        console.log("[transcribe-ws] Mistral connected, waiting for session.created...");
+        // Mistral sends session.created automatically; no session.update needed.
+        // Mark ready immediately — queued audio will be flushed.
+        mistralReady = true;
+        for (const msg of queued) {
+          mistral.send(msg);
+        }
+        queued.length = 0;
+      });
+
+      mistral.on("message", (data) => {
+        const text = data.toString();
+        const truncated = text.length > 200 ? text.slice(0, 200) + "…" : text;
+        console.log("[transcribe-ws] Mistral→Browser:", truncated);
+        if (socket.readyState === socket.OPEN) {
+          socket.send(text);
+        }
+      });
+
+      mistral.on("error", (err) => {
+        console.error("[transcribe-ws] Mistral error:", err.message);
+        if (socket.readyState === socket.OPEN) {
+          socket.send(JSON.stringify({ type: "error", error: `Mistral: ${err.message}` }));
+          socket.close(1011, "Mistral error");
+        }
+      });
+
+      mistral.on("close", (code, reason) => {
+        console.log(`[transcribe-ws] Mistral closed: ${code} ${reason.toString()}`);
+        if (socket.readyState === socket.OPEN) {
+          socket.close(1000, "Mistral closed");
+        }
+      });
+
+      // Browser → Mistral
+      socket.on("message", (data) => {
+        const text = data.toString();
+        const truncated = text.length > 200 ? text.slice(0, 200) + "…" : text;
+        console.log("[transcribe-ws] Browser→Mistral:", truncated);
+        if (mistralReady && mistral.readyState === WsWebSocket.OPEN) {
+          mistral.send(text);
+        } else {
+          queued.push(text);
+        }
+      });
+
+      socket.on("close", () => {
+        console.log("[transcribe-ws] Browser disconnected");
+        if (mistral.readyState === WsWebSocket.OPEN || mistral.readyState === WsWebSocket.CONNECTING) {
+          mistral.close();
+        }
+      });
+
+      socket.on("error", (err) => {
+        console.error("[transcribe-ws] Browser socket error:", err.message);
+        if (mistral.readyState === WsWebSocket.OPEN) {
+          mistral.close();
+        }
+      });
+    }
+  );
 }

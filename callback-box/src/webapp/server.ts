@@ -7,6 +7,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
+import fastifyWebsocket from "@fastify/websocket";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { registerApiRoutes } from "./routes/api.js";
@@ -66,6 +67,9 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       fileSize: 50 * 1024 * 1024, // 50MB max for audio files
     },
   });
+
+  // Register WebSocket support (used by realtime transcription proxy)
+  await server.register(fastifyWebsocket);
 
   // Root-level box list endpoint
   server.get("/api/boxes", async () => {

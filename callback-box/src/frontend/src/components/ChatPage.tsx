@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import TextareaAutosize from "react-textarea-autosize";
 import {
   getChatHistory,
   getChatStatus,
@@ -18,6 +19,8 @@ import {
   type SessionEntry,
   type SessionContentBlock,
 } from "../api";
+import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
+import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 
 /**
  * Format the current local time as HH:MM for the typed tag.
@@ -329,26 +332,11 @@ export function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamText]);
 
-  // Auto-resize textarea
-  const adjustTextarea = useCallback(() => {
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.style.height = "auto";
-      ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
-    }
-  }, []);
-
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
-    if (!text || streaming) return;
-
-    setInput("");
+  const doSend = useCallback(async (wrapped: string) => {
     setStreaming(true);
     setStreamText("");
     setStreamTools([]);
     setError(null);
-
-    const wrapped = `<typed local-time="${localTime()}">${text}</typed>`;
 
     const userEntry: SessionEntry = {
       uuid: `user-${Date.now()}`,
@@ -422,11 +410,14 @@ export function ChatPage() {
       setStreamText("");
       setStreamTools([]);
     }
+  }, []);
 
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
-  }, [input, streaming]);
+  const handleSend = useCallback(() => {
+    const text = input.trim();
+    if (!text || streaming) return;
+    setInput("");
+    doSend(`<typed local-time="${localTime()}">${text}</typed>`);
+  }, [input, streaming, doSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -460,6 +451,29 @@ export function ChatPage() {
       .then(() => refreshStatus())
       .catch(() => {});
   }, [refreshStatus]);
+
+  // Realtime transcription
+  const transcription = useRealtimeTranscription();
+  const isTranscribing =
+    transcription.state === "connecting" ||
+    transcription.state === "recording" ||
+    transcription.state === "finalizing";
+
+  const handleCancelTranscription = useCallback(() => {
+    transcription.cancel();
+  }, [transcription]);
+
+  // Escape key cancels transcription
+  useEffect(() => {
+    if (!isTranscribing) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        transcription.cancel();
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isTranscribing, transcription]);
 
   if (loading) {
     return (
@@ -510,9 +524,9 @@ export function ChatPage() {
       </div>
 
       {/* Error display */}
-      {error ? (
+      {error || transcription.error ? (
         <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm">
-          {error}
+          {error || transcription.error}
           <button
             onClick={() => setError(null)}
             className="ml-2 text-red-500 hover:text-red-700"
@@ -524,19 +538,33 @@ export function ChatPage() {
 
       {/* Input area */}
       <div className="border-t border-gray-200 p-4 bg-gray-50">
-        <div className="max-w-3xl mx-auto flex gap-2">
-          <textarea
+        <div className="max-w-3xl mx-auto flex gap-2 items-center">
+          {isTranscribing ? (
+            <div className="flex-shrink-0 self-center">
+              <RecordingIndicator />
+            </div>
+          ) : null}
+          <TextareaAutosize
             ref={textareaRef}
-            value={input}
+            value={isTranscribing ? transcription.transcript : input}
             onChange={(e) => {
-              setInput(e.target.value);
-              adjustTextarea();
+              if (!isTranscribing) {
+                setInput(e.target.value);
+              }
             }}
             onKeyDown={handleKeyDown}
-            disabled={streaming}
-            placeholder={streaming ? "Working..." : "Type a message..."}
+            disabled={streaming || isTranscribing}
+            readOnly={isTranscribing}
+            placeholder={
+              streaming
+                ? "Working..."
+                : isTranscribing
+                  ? "Listening..."
+                  : "Type a message..."
+            }
             className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-            rows={1}
+            minRows={1}
+            maxRows={8}
           />
           {streaming ? (
             <button
@@ -545,14 +573,63 @@ export function ChatPage() {
             >
               Stop
             </button>
+          ) : isTranscribing ? (
+            <>
+              <button
+                onClick={handleCancelTranscription}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200"
+                title="Cancel (Esc)"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  const text = transcription.transcript;
+                  if (text) {
+                    setInput((existing) => (existing ? existing + " " + text : text));
+                  }
+                  transcription.stop();
+                }}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200"
+                title="Edit before sending"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+              <button
+                onClick={async () => {
+                  const finalText = await transcription.stop();
+                  const text = finalText.trim();
+                  if (text) {
+                    doSend(`<speech local-time="${localTime()}">${text}</speech>`);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              >
+                Send
+              </button>
+            </>
           ) : (
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Send
-            </button>
+            <>
+              <button
+                onClick={() => transcription.start()}
+                disabled={streaming}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200 disabled:text-gray-300 disabled:hover:bg-transparent"
+                title="Voice input"
+              >
+                <MicrophoneIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                Send
+              </button>
+            </>
           )}
         </div>
       </div>

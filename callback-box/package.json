@@ -56,9 +56,11 @@
   "dependencies": {
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
+    "@fastify/websocket": "^11.2.0",
     "@parcel/markdown-ansi": "^2.16.3",
     "@types/mailparser": "^3.4.6",
     "@types/turndown": "^5.0.6",
+    "@types/ws": "^8.18.1",
     "ansi-to-html": "^0.7.2",
     "callback-dropbox": "file:../callback-dropbox",
     "cardworks": "file:../cardworks",
