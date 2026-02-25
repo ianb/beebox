@@ -167,6 +167,40 @@ export async function registerChatRoutes(
     return { ok: true };
   });
 
+  // POST /api/chat/tts - Proxy TTS requests to OpenAI
+  server.post<{ Body: { text: string; instructions?: string } }>(
+    "/api/chat/tts",
+    async (request, reply) => {
+      const apiKey = process.env.THINKING_OPENAI_API_KEY;
+      if (!apiKey) {
+        return reply.status(500).send({ error: "TTS API key not configured" });
+      }
+      const { text, instructions } = request.body;
+      const response = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini-tts-2025-03-20",
+          input: text,
+          voice: "marin",
+          response_format: "mp3",
+          instructions:
+            instructions ||
+            "Fast and concise, but with a friendly lilting tone.",
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        return reply.status(response.status).send({ error: err });
+      }
+      reply.header("Content-Type", "audio/mpeg");
+      return reply.send(response.body);
+    }
+  );
+
   // GET /api/chat/transcribe-ws - WebSocket proxy to Mistral Voxtral Realtime
   server.get(
     "/api/chat/transcribe-ws",

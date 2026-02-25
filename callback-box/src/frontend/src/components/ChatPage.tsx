@@ -20,6 +20,8 @@ import {
   type SessionContentBlock,
 } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
+import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
+import { hasAssistantSpeech, parseAllSpeechTags } from "../lib/speech-parsing";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 
 /**
@@ -128,18 +130,24 @@ function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "assista
 /**
  * Render a user message bubble.
  */
-function UserMessage({ entries }: { entries: SessionEntry[] }) {
+function UserMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
   return (
     <div className="flex justify-end pl-24 py-1">
       <div className="rounded-l-2xl bg-blue-900 text-blue-100 px-4 py-2 min-w-[120px]">
         {entries.map((entry) =>
           entry.content
             .filter((b) => b.type === "text")
-            .map((block, i) => (
-              <div key={`${entry.uuid}-${i}`} className="text-sm whitespace-pre-wrap">
-                {stripInputTags(block.text ?? "")}
-              </div>
-            ))
+            .map((block, i) =>
+              debugView ? (
+                <pre key={`${entry.uuid}-${i}`} className="font-mono text-xs whitespace-pre-wrap">
+                  {block.text ?? ""}
+                </pre>
+              ) : (
+                <div key={`${entry.uuid}-${i}`} className="text-sm whitespace-pre-wrap">
+                  {stripInputTags(block.text ?? "")}
+                </div>
+              )
+            )
         )}
       </div>
     </div>
@@ -149,7 +157,7 @@ function UserMessage({ entries }: { entries: SessionEntry[] }) {
 /**
  * Render a group of consecutive assistant messages merged together.
  */
-function AssistantMessage({ entries }: { entries: SessionEntry[] }) {
+function AssistantMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
   // Collect all content blocks across the group, interleaved
   const parts: Array<{ type: "text" | "tools" | "thinking"; text?: string; tools?: SessionContentBlock[] }> = [];
 
@@ -177,7 +185,13 @@ function AssistantMessage({ entries }: { entries: SessionEntry[] }) {
         part.type === "thinking" ? (
           <ThinkingBlock key={i} text={part.text ?? ""} />
         ) : part.type === "text" ? (
-          <MarkdownContent key={i} text={part.text ?? ""} />
+          debugView ? (
+            <pre key={i} className="font-mono text-xs whitespace-pre-wrap bg-gray-50 text-gray-800 p-2 rounded">
+              {part.text ?? ""}
+            </pre>
+          ) : (
+            <MarkdownContent key={i} text={part.text ?? ""} />
+          )
         ) : (
           <ToolList key={i} blocks={part.tools ?? []} />
         )
@@ -195,12 +209,16 @@ function ChatDebugMenu({
   sessionId,
   running,
   busy,
+  debugView,
+  onToggleDebugView,
 }: {
   onNewSession: () => void;
   onStopProcess: () => void;
   sessionId: string | null;
   running: boolean;
   busy: boolean;
+  debugView: boolean;
+  onToggleDebugView: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -241,6 +259,13 @@ function ChatDebugMenu({
             className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-700 disabled:text-gray-400 disabled:hover:bg-white"
           >
             Stop Process
+          </button>
+          <div className="border-t border-gray-100 my-1" />
+          <button
+            onClick={() => { onToggleDebugView(); setOpen(false); }}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-700"
+          >
+            {debugView ? "\u2713 " : ""}Debug View
           </button>
           <div className="border-t border-gray-100 my-1" />
           <div className="px-3 py-1.5 text-xs text-gray-400">
@@ -292,8 +317,11 @@ export function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [processRunning, setProcessRunning] = useState(false);
+  const [debugView, setDebugView] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const speechPlayback = useSpeechPlayback();
 
   const refreshStatus = useCallback(() => {
     getChatStatus()
@@ -391,6 +419,14 @@ export function ChatPage() {
           }
 
           if (type === "result") {
+            // Auto-play speech before refreshing history
+            if (hasAssistantSpeech(accumulatedText)) {
+              const segments = parseAllSpeechTags(accumulatedText);
+              speechPlayback.playSegments({
+                messageId: `stream-${Date.now()}`,
+                segments,
+              });
+            }
             getChatHistory()
               .then((result) => {
                 setMessages(result.entries);
@@ -410,7 +446,7 @@ export function ChatPage() {
       setStreamText("");
       setStreamTools([]);
     }
-  }, []);
+  }, [speechPlayback]);
 
   const handleSend = useCallback(() => {
     const text = input.trim();
@@ -473,6 +509,10 @@ export function ChatPage() {
     transcription.cancel();
   }, [transcription]);
 
+  const handleStopSpeech = useCallback(() => {
+    speechPlayback.stop();
+  }, [speechPlayback]);
+
   // Escape key cancels transcription
   useEffect(() => {
     if (!isTranscribing) return;
@@ -504,6 +544,8 @@ export function ChatPage() {
           sessionId={sessionId}
           running={processRunning}
           busy={streaming}
+          debugView={debugView}
+          onToggleDebugView={() => setDebugView((v) => !v)}
         />
       </div>
       {/* Messages area */}
@@ -515,9 +557,9 @@ export function ChatPage() {
         ) : null}
         {groupMessages(messages).map((group) =>
           group.type === "user" ? (
-            <UserMessage key={group.entries[0].uuid} entries={group.entries} />
+            <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
           ) : (
-            <AssistantMessage key={group.entries[0].uuid} entries={group.entries} />
+            <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
           )
         )}
         {streaming ? (
@@ -576,6 +618,18 @@ export function ChatPage() {
             minRows={1}
             maxRows={8}
           />
+          {speechPlayback.isPlaying ? (
+            <button
+              onClick={handleStopSpeech}
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-200"
+              title="Stop speaking (Esc)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+              </svg>
+            </button>
+          ) : null}
           {streaming ? (
             <button
               onClick={handleInterrupt}
