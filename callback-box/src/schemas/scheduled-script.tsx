@@ -64,6 +64,8 @@ export const ScheduledScriptSchema = element("scheduled-script", {
     enabled: z.enum(["true", "false"]).optional(),
     /** Runtime budget: max cumulative runtime within a window, e.g. "10m/5h" */
     budget: z.string().optional(),
+    /** Lock group name — scripts in the same group won't run concurrently */
+    "lock-group": z.string().optional(),
   },
   children: z.array(z.union([Runs, ScriptSource, ScheduleDescription, CreateAfterSuccess])),
   instructions: `# Scheduled Script Cards
@@ -82,6 +84,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **until**: ISO datetime after which this schedule expires.
 - **enabled**: Set to \`false\` to disable without deleting.
 - **budget**: Max cumulative runtime within a window. Format: \`"LIMIT/WINDOW"\` (e.g., \`"10m/5h"\` = max 10 minutes of runtime in any 5-hour window). Scripts exceeding their budget are skipped until the window clears.
+- **lock-group**: Named concurrency group. Scripts sharing a lock-group won't run concurrently — if one is already running, others in the same group are skipped.
 
 ## Children
 - **<runs>**: The command to execute (required). Runs with cwd set to box root.
@@ -115,6 +118,7 @@ export interface ParsedScheduledScript {
   source: { ref?: string; text?: string } | undefined;
   createAfterSuccess: Array<{ path: string; args: Record<string, string> }>;
   budget: { limitMs: number; windowMs: number } | undefined;
+  lockGroup: string | undefined;
 }
 
 function buildSource(ref: string | undefined, text: string | undefined): { ref?: string; text?: string } {
@@ -169,6 +173,7 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
       : undefined,
     createAfterSuccess,
     budget: budgetStr ? parseBudget(budgetStr) : undefined,
+    lockGroup: script.attrs["lock-group"] as string | undefined,
   };
 }
 
@@ -366,6 +371,7 @@ export interface ScheduledScriptTemplateOptions {
   sourceRef?: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   budget?: string;
+  lockGroup?: string;
 }
 
 /**
@@ -381,6 +387,7 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   if (options.onWakeup) attrs.push(`on-wakeup="true"`);
   if (options.once) attrs.push(`once="true"`);
   if (options.budget) attrs.push(`budget="${options.budget}"`);
+  if (options.lockGroup) attrs.push(`lock-group="${options.lockGroup}"`);
 
   const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
 

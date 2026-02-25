@@ -353,6 +353,7 @@ registerTemplate({
     onWakeup: z.coerce.boolean().optional().describe("Also run during cb wakeup"),
     once: z.coerce.boolean().optional().describe("Delete after successful execution"),
     source: z.string().optional().describe("Why this schedule exists"),
+    "lock-group": z.string().optional().describe("Named concurrency group"),
   }),
   generate: (args) => {
     const opts: Parameters<typeof createScheduledScriptTemplate>[0] = {
@@ -366,6 +367,7 @@ registerTemplate({
     if (args.onWakeup) opts.onWakeup = args.onWakeup;
     if (args.once) opts.once = args.once;
     if (args.source) opts.source = args.source;
+    if (args["lock-group"]) opts.lockGroup = args["lock-group"];
     return createScheduledScriptTemplate(opts);
   },
 });

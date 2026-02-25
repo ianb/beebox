@@ -22,6 +22,7 @@ import {
   recordRun,
   acquireScriptLock,
   releaseScriptLock,
+  loadRunningScripts,
 } from "../../core/schedule-state.js";
 import { handleCreateAfterSuccess } from "./tick-utils.js";
 
@@ -119,6 +120,9 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
   let errorCount = 0;
   const scripts: ScriptResult[] = [];
 
+  // Load currently running scripts for lock-group conflict detection
+  const running = await loadRunningScripts(boxRoot);
+
   for (const file of files) {
     const scriptName = file.replace(".scheduled-script.card", "");
     const cardPath = path.join(schedulesDir, file);
@@ -155,6 +159,19 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       }
     }
 
+    // Lock-group check: skip if another script in the same group is already running
+    if (parsed.lockGroup) {
+      const conflict = [...running.entries()].find(
+        ([name, lock]) => lock.lockGroup === parsed.lockGroup && name !== scriptName
+      );
+      if (conflict) {
+        if (!options.quiet) console.log(`  Skipping ${scriptName}: lock-group "${parsed.lockGroup}" held by ${conflict[0]}`);
+        skipCount++;
+        scripts.push({ name: scriptName, status: "skipped" });
+        continue;
+      }
+    }
+
     if (options.dryRun) {
       if (!options.quiet) console.log(`Would run: ${scriptName} → ${parsed.runs}`);
       ranCount++;
@@ -163,7 +180,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     }
 
     if (!options.quiet) console.log(`Running ${scriptName}...`);
-    await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule" });
+    await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
     const wallStart = Date.now();
     const monoStart = performance.now();
     try {

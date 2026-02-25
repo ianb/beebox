@@ -104,6 +104,7 @@ export interface ScriptLock {
   pid: number;
   startedAt: string;
   triggeredBy: string;
+  lockGroup?: string;
 }
 
 function lockFile(boxRoot: string, scriptName: string): string {
@@ -111,7 +112,7 @@ function lockFile(boxRoot: string, scriptName: string): string {
 }
 
 export async function acquireScriptLock(
-  opts: { boxRoot: string; scriptName: string; triggeredBy: string },
+  opts: { boxRoot: string; scriptName: string; triggeredBy: string; lockGroup?: string },
 ): Promise<void> {
   const dir = stateDir(opts.boxRoot);
   await fs.mkdir(dir, { recursive: true });
@@ -119,6 +120,7 @@ export async function acquireScriptLock(
     pid: process.pid,
     startedAt: new Date().toISOString(),
     triggeredBy: opts.triggeredBy,
+    ...(opts.lockGroup ? { lockGroup: opts.lockGroup } : {}),
   };
   await fs.writeFile(lockFile(opts.boxRoot, opts.scriptName), JSON.stringify(lock) + "\n");
 }

@@ -21,6 +21,7 @@ import {
   recordRun,
   acquireScriptLock,
   releaseScriptLock,
+  loadRunningScripts,
 } from "../../core/schedule-state.js";
 import { parseCardName } from "../lib/paths.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
@@ -46,6 +47,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
   }
 
   let ranCount = 0;
+  const running = await loadRunningScripts(boxRoot);
 
   for (const file of files) {
     const scriptName = file.replace(".scheduled-script.card", "");
@@ -75,8 +77,19 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       }
     }
 
+    // Lock-group check: skip if another script in the same group is already running
+    if (parsed.lockGroup) {
+      const conflict = [...running.entries()].find(
+        ([name, lock]) => lock.lockGroup === parsed.lockGroup && name !== scriptName
+      );
+      if (conflict) {
+        console.log(`  Skipping ${scriptName}: lock-group "${parsed.lockGroup}" held by ${conflict[0]}`);
+        continue;
+      }
+    }
+
     console.log(`  Running ${scriptName}...`);
-    await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup" });
+    await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
     const wallStart = Date.now();
     const monoStart = performance.now();
     try {

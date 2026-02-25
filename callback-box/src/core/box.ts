@@ -351,6 +351,7 @@ interface DefaultSchedule {
   runs: string;
   source: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
+  lockGroup?: string;
 }
 
 const DEFAULT_SCHEDULES: DefaultSchedule[] = [
@@ -362,6 +363,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     onWakeup: true,
     runs: "cb wakeup --connector rss",
     source: "Check RSS feeds twice daily and on wakeup",
+    lockGroup: "news",
     createAfterSuccess: [{
       path: "config/schedules/process-news.scheduled-script.card",
       args: {
@@ -369,6 +371,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
         once: "true",
         onWakeup: "true",
         description: "Process news: triage, fetch, analyze, create brief",
+        "lock-group": "news",
       },
     }],
   },
@@ -438,6 +441,7 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       ...(sched.notBefore && { notBefore: sched.notBefore }),
       ...(sched.onWakeup && { onWakeup: sched.onWakeup }),
       ...(sched.createAfterSuccess && { createAfterSuccess: sched.createAfterSuccess }),
+      ...(sched.lockGroup && { lockGroup: sched.lockGroup }),
       runs: sched.runs,
       description: sched.description,
       source: sched.source,

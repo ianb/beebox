@@ -94,17 +94,27 @@ export async function releaseLock(boxRoot: string): Promise<void> {
 }
 
 /**
- * Get current lock info if locked.
+ * Get current lock info if locked by a live process.
+ * Removes stale locks (dead PIDs) automatically.
  *
  * @param boxRoot - The box root directory
- * @returns Lock info or null if not locked
+ * @returns Lock info or null if not locked (or lock was stale)
  */
 export async function getLockInfo(boxRoot: string): Promise<LockInfo | null> {
   const lockPath = path.join(boxRoot, LOCK_FILE);
 
   try {
     const content = await fs.readFile(lockPath, "utf-8");
-    return JSON.parse(content) as LockInfo;
+    const info = JSON.parse(content) as LockInfo;
+
+    if (await isProcessRunning(info.pid)) {
+      return info;
+    }
+
+    // Stale lock — clean up
+    console.log(`Removing stale lock from PID ${info.pid}`);
+    await fs.unlink(lockPath).catch(() => {});
+    return null;
   } catch {
     return null;
   }

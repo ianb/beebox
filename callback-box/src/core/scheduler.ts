@@ -114,10 +114,32 @@ export interface SchedulerOptions {
  */
 export async function runScheduler(options?: SchedulerOptions): Promise<never> {
   const interval = (options?.intervalSeconds ?? 60) * 1000;
+  let stopping = false;
 
-  console.log(`Scheduler started (interval: ${interval / 1000}s)`);
+  async function shutdown(signal: string) {
+    console.log(`[${new Date().toISOString()}] Scheduler received ${signal}, shutting down...`);
+    stopping = true;
 
-  while (true) {
+    // Log shutdown to each box
+    const config = await loadSchedulerConfig().catch(() => ({ boxes: [] as string[] }));
+    for (const boxPath of config.boxes) {
+      await writeBoxLog(boxPath, {
+        ts: new Date().toISOString(),
+        event: "shutdown",
+        box: boxPath,
+        signal,
+      }).catch(() => {});
+    }
+
+    process.exit(0);
+  }
+
+  process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
+  process.on("SIGINT", () => { void shutdown("SIGINT"); });
+
+  console.log(`Scheduler started (interval: ${interval / 1000}s, pid: ${process.pid})`);
+
+  while (!stopping) {
     const config = await loadSchedulerConfig();
 
     if (config.boxes.length === 0) {
@@ -126,6 +148,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
     }
 
     for (const boxPath of config.boxes) {
+      if (stopping) break;
       try {
         if (!(await isBox(boxPath))) {
           console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (missing ${BOX_MARKER})`);
@@ -174,4 +197,8 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
 
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
+
+  // Unreachable, but satisfies return type
+  process.exit(0);
+  return undefined as never;
 }
