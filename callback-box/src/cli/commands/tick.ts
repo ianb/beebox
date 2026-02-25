@@ -20,6 +20,8 @@ import {
   loadScriptState,
   saveScriptState,
   recordRun,
+  acquireScriptLock,
+  releaseScriptLock,
 } from "../../core/schedule-state.js";
 import { handleCreateAfterSuccess } from "./tick-utils.js";
 
@@ -161,6 +163,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     }
 
     if (!options.quiet) console.log(`Running ${scriptName}...`);
+    await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule" });
     const wallStart = Date.now();
     const monoStart = performance.now();
     try {
@@ -210,6 +213,8 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       if (!options.quiet) console.error(`  Failed: ${(err as Error).message}`);
       errorCount++;
       scripts.push({ name: scriptName, status: "error", command: parsed.runs, durationMs, error: (err as Error).message });
+    } finally {
+      await releaseScriptLock({ boxRoot, scriptName });
     }
   }
 

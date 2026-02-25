@@ -642,6 +642,7 @@ export interface ScheduleInfo {
   runCount: number;
   once: boolean;
   budget?: { limitMs: number; windowMs: number; usedMs: number };
+  running?: { startedAt: string; triggeredBy: string };
 }
 
 export interface SchedulesResponse {

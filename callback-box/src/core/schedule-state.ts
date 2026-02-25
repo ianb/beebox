@@ -97,3 +97,76 @@ export function recordRun(
     delete state.recentRuns;
   }
 }
+
+// --- Lock files for running script tracking ---
+
+export interface ScriptLock {
+  pid: number;
+  startedAt: string;
+  triggeredBy: string;
+}
+
+function lockFile(boxRoot: string, scriptName: string): string {
+  return path.join(stateDir(boxRoot), `${scriptName}.lock`);
+}
+
+export async function acquireScriptLock(
+  opts: { boxRoot: string; scriptName: string; triggeredBy: string },
+): Promise<void> {
+  const dir = stateDir(opts.boxRoot);
+  await fs.mkdir(dir, { recursive: true });
+  const lock: ScriptLock = {
+    pid: process.pid,
+    startedAt: new Date().toISOString(),
+    triggeredBy: opts.triggeredBy,
+  };
+  await fs.writeFile(lockFile(opts.boxRoot, opts.scriptName), JSON.stringify(lock) + "\n");
+}
+
+export async function releaseScriptLock(
+  opts: { boxRoot: string; scriptName: string },
+): Promise<void> {
+  try {
+    await fs.unlink(lockFile(opts.boxRoot, opts.scriptName));
+  } catch {
+    // Already removed or never created
+  }
+}
+
+/**
+ * Read all lock files, verify PIDs are alive, remove stale locks.
+ * Returns a map of scriptName → ScriptLock for currently running scripts.
+ */
+export async function loadRunningScripts(boxRoot: string): Promise<Map<string, ScriptLock>> {
+  const dir = stateDir(boxRoot);
+  const running = new Map<string, ScriptLock>();
+
+  let files: string[];
+  try {
+    files = (await fs.readdir(dir)).filter((f) => f.endsWith(".lock"));
+  } catch {
+    return running;
+  }
+
+  for (const file of files) {
+    const scriptName = file.replace(".lock", "");
+    try {
+      const content = await fs.readFile(path.join(dir, file), "utf-8");
+      const lock = JSON.parse(content) as ScriptLock;
+
+      // Check if PID is still alive
+      try {
+        process.kill(lock.pid, 0);
+        running.set(scriptName, lock);
+      } catch {
+        // Process is dead — stale lock, clean up
+        await fs.unlink(path.join(dir, file)).catch(() => {});
+      }
+    } catch {
+      // Malformed lock file, remove it
+      await fs.unlink(path.join(dir, file)).catch(() => {});
+    }
+  }
+
+  return running;
+}

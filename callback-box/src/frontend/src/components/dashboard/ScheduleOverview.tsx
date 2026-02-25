@@ -63,7 +63,11 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
         {s.lastRun ? timeAgo(s.lastRun) : "never"}
       </td>
       <td className="py-2">
-        <StatusIndicator lastResult={s.lastResult} lastError={s.lastError} />
+        {s.running ? (
+          <RunningIndicator running={s.running} />
+        ) : (
+          <StatusIndicator lastResult={s.lastResult} lastError={s.lastError} />
+        )}
       </td>
     </tr>
   );
@@ -88,6 +92,16 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function RunningIndicator({ running }: { running: { startedAt: string; triggeredBy: string } }) {
+  const elapsed = timeAgo(running.startedAt).replace(" ago", "");
+  return (
+    <span className="text-yellow-600 text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
+      <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 animate-pulse mr-1 align-middle" />
+      running ({elapsed})
+    </span>
   );
 }
 

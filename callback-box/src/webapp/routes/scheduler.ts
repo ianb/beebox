@@ -14,7 +14,7 @@ import {
   isWithinBudget,
   type ScheduledScript,
 } from "../../schemas/scheduled-script.js";
-import { loadScriptState } from "../../core/schedule-state.js";
+import { loadScriptState, loadRunningScripts } from "../../core/schedule-state.js";
 
 export async function registerSchedulerRoutes(
   server: FastifyInstance,
@@ -101,6 +101,7 @@ export async function registerSchedulerRoutes(
 
     const schedules = [];
     const now = new Date();
+    const running = await loadRunningScripts(boxRoot);
 
     for (const file of files) {
       const scriptName = file.replace(".scheduled-script.card", "");
@@ -155,6 +156,8 @@ export async function registerSchedulerRoutes(
         budgetInfo = { limitMs: parsed.budget.limitMs, windowMs: parsed.budget.windowMs, usedMs: check.usedMs };
       }
 
+      const lock = running.get(scriptName);
+
       schedules.push({
         name: scriptName,
         description: parsed.description,
@@ -170,6 +173,7 @@ export async function registerSchedulerRoutes(
         runCount: state.runCount,
         once: parsed.once,
         budget: budgetInfo,
+        ...(lock ? { running: { startedAt: lock.startedAt, triggeredBy: lock.triggeredBy } } : {}),
       });
     }
 

@@ -19,6 +19,8 @@ import {
   loadScriptState,
   saveScriptState,
   recordRun,
+  acquireScriptLock,
+  releaseScriptLock,
 } from "../../core/schedule-state.js";
 import { parseCardName } from "../lib/paths.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
@@ -74,6 +76,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     }
 
     console.log(`  Running ${scriptName}...`);
+    await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "wakeup" });
     const wallStart = Date.now();
     const monoStart = performance.now();
     try {
@@ -113,6 +116,8 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       console.error(`  Failed: ${(err as Error).message}`);
+    } finally {
+      await releaseScriptLock({ boxRoot, scriptName });
     }
   }
 
