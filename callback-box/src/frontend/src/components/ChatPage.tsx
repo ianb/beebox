@@ -43,15 +43,51 @@ function localTime(): string {
 }
 
 /**
- * Strip speech/typed XML wrappers from user message for display.
+ * Render user message text with keyword pills (e.g. send-message).
  */
-function stripInputTags(text: string): string {
-  return text
+function UserMessageText({ text }: { text: string }) {
+  const stripped = text
     .replace(/<typed[^>]*>/gi, "")
     .replace(/<\/typed>/gi, "")
     .replace(/<speech[^>]*>/gi, "")
-    .replace(/<\/speech>/gi, "")
-    .trim();
+    .replace(/<\/speech>/gi, "");
+
+  const parts: Array<{ type: "text"; value: string } | { type: "send"; phrase: string }> = [];
+  const tagRe = /<send-message\s+phrase="([^"]*?)"\s*\/>/gi;
+  let lastIndex = 0;
+  let match;
+  while ((match = tagRe.exec(stripped)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", value: stripped.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: "send", phrase: match[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&") });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < stripped.length) {
+    parts.push({ type: "text", value: stripped.slice(lastIndex) });
+  }
+
+  const hasPill = parts.some((p) => p.type === "send");
+  if (!hasPill) {
+    return <>{stripped.trim()}</>;
+  }
+
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.type === "text" ? (
+          <span key={i}>{p.value}</span>
+        ) : (
+          <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+            {p.phrase}
+          </span>
+        )
+      )}
+    </>
+  );
 }
 
 /**
@@ -154,7 +190,7 @@ function UserMessage({ entries, debugView }: { entries: SessionEntry[]; debugVie
                 </pre>
               ) : (
                 <div key={`${entry.uuid}-${i}`} className="text-sm whitespace-pre-wrap">
-                  {stripInputTags(block.text ?? "")}
+                  <UserMessageText text={block.text ?? ""} />
                 </div>
               )
             )
