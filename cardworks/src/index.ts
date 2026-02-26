@@ -48,6 +48,9 @@ export {
   type ResolvedRef,
 } from "./refs/types.js";
 
+// XPath
+export { executeXPath, evaluateXPathString } from "./refs/xpath.js";
+
 // Loader
 export {
   CardLoader,

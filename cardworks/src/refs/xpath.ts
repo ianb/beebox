@@ -257,6 +257,56 @@ function followPath(root: ElementNode, path: number[]): ElementNode | null {
 }
 
 /**
+ * Evaluate an XPath expression against an ElementNode tree and return a string result.
+ *
+ * Unlike executeXPath which returns ElementNode references, this function extracts
+ * text content from any XPath result type (elements, attributes, text nodes).
+ * Useful for template evaluation where you want display strings.
+ *
+ * @param expr - The XPath expression
+ * @param root - The root ElementNode to query
+ * @returns The string result, or empty string if no match
+ */
+export function evaluateXPathString(expr: string, root: ElementNode): string {
+  const doc = elementNodeToDocument(root);
+  const contextNode = doc.documentElement ?? doc;
+
+  let selected: unknown;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    selected = xpath.select(expr, contextNode as any);
+  } catch {
+    return "";
+  }
+
+  // xpath.select returns string/number/boolean for string() etc.
+  if (typeof selected === "string") return selected;
+  if (typeof selected === "number") return String(selected);
+  if (typeof selected === "boolean") return String(selected);
+
+  if (!Array.isArray(selected) || selected.length === 0) return "";
+
+  // Extract text from each result node
+  const parts: string[] = [];
+  for (const node of selected) {
+    if (typeof node !== "object" || node === null || !("nodeType" in node)) continue;
+    const domNode = node as { nodeType: number; textContent?: string | null; value?: string; nodeValue?: string | null };
+    if (domNode.nodeType === 1) {
+      // Element — get text content
+      parts.push(domNode.textContent ?? "");
+    } else if (domNode.nodeType === 2) {
+      // Attribute
+      parts.push(domNode.value ?? domNode.nodeValue ?? "");
+    } else if (domNode.nodeType === 3) {
+      // Text node
+      parts.push(domNode.nodeValue ?? "");
+    }
+  }
+
+  return parts.join(", ");
+}
+
+/**
  * Get element children from an ElementNode (handles both children and mixed).
  */
 function getElementChildren(node: ElementNode): ElementNode[] {
