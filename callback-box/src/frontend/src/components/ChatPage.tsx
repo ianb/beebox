@@ -135,8 +135,8 @@ function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "assista
  */
 function UserMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
   return (
-    <div className="flex justify-end pl-24 py-1">
-      <div className="rounded-l-2xl bg-iris text-white px-4 py-2 min-w-[120px]">
+    <div className="flex justify-end pl-12 sm:pl-24 py-1">
+      <div className="rounded-l-2xl bg-iris text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px]">
         {entries.map((entry) =>
           entry.content
             .filter((b) => b.type === "text")
@@ -183,7 +183,7 @@ function AssistantMessage({ entries, debugView }: { entries: SessionEntry[]; deb
   }
 
   return (
-    <div className="pr-24 pl-6 py-2">
+    <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
       {parts.map((part, i) =>
         part.type === "thinking" ? (
           <ThinkingBlock key={i} text={part.text ?? ""} />
@@ -286,7 +286,7 @@ function ChatDebugMenu({
  */
 function StreamingMessage({ text }: { text: string }) {
   return (
-    <div className="pr-24 pl-6 py-2">
+    <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
       {text ? (
         <MarkdownContent text={text} />
       ) : null}
@@ -578,7 +578,7 @@ export function ChatPage() {
         />
       </div>
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto py-4 pl-4 space-y-1">
+      <div className="flex-1 overflow-y-auto py-4 pl-2 sm:pl-4 space-y-1">
         {messages.length === 0 && !streaming ? (
           <div className="flex items-center justify-center h-full text-warm-500 text-sm">
             Start a conversation with your box assistant.
@@ -595,7 +595,7 @@ export function ChatPage() {
           <div>
             <StreamingMessage text={streamText} />
             {streamTools.length > 0 ? (
-              <div className="pl-6 pr-24 pb-2">
+              <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
                 <ToolList blocks={streamTools} />
               </div>
             ) : null}
@@ -618,8 +618,8 @@ export function ChatPage() {
       ) : null}
 
       {/* Input area */}
-      <div className="border-t border-warm-300 p-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
-        <div className="max-w-3xl mx-auto flex gap-2 items-center">
+      <div className="border-t border-warm-300 px-2 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
+        <div className="max-w-3xl mx-auto flex gap-1.5 sm:gap-2 items-center">
           {isTranscribing ? (
             <div className="flex-shrink-0 self-center">
               <RecordingIndicator />
@@ -662,7 +662,7 @@ export function ChatPage() {
           {streaming ? (
             <button
               onClick={handleInterrupt}
-              className="px-4 py-2 bg-rose text-white rounded-lg hover:bg-rose-dark text-sm font-medium"
+              className="flex-shrink-0 px-4 py-2 bg-rose text-white rounded-lg hover:bg-rose-dark text-sm font-medium"
             >
               Stop
             </button>
@@ -700,7 +700,7 @@ export function ChatPage() {
                     doSend(`<speech local-time="${localTime()}">${text}</speech>`);
                   }
                 }}
-                className="px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark text-sm font-medium"
+                className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark text-sm font-medium"
               >
                 Send
               </button>
@@ -718,7 +718,7 @@ export function ChatPage() {
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
+                className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
               >
                 Send
               </button>

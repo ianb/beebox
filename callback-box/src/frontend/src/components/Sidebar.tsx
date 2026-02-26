@@ -1,8 +1,9 @@
 /**
  * Sidebar - Shared collapsible sidebar for list/detail pages.
  *
- * Provides the container, header with collapse button, and scrollable content area.
- * The actual list content is passed as children.
+ * On desktop: fixed-width sidebar alongside content.
+ * On mobile: full-width list view. When `detailSelected` is true,
+ * the sidebar hides and content takes over.
  */
 
 import { useState, type ReactNode } from "react";
@@ -18,35 +19,34 @@ interface SidebarProps {
   widthPx?: number;
   /** Initially collapsed? */
   defaultCollapsed?: boolean;
+  /** Whether a detail item is selected (controls mobile visibility) */
+  detailSelected?: boolean;
 }
 
-/**
- * Collapsible sidebar with header and scrollable content.
- *
- * Usage:
- * ```tsx
- * <Sidebar title="Commits" subtitle="50 loaded">
- *   <CommitTimeline ... />
- * </Sidebar>
- * ```
- */
 export function Sidebar({
   title,
   subtitle,
   children,
   widthPx = 320,
   defaultCollapsed = false,
+  detailSelected = false,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
-  // Collapsed width: just enough for the hamburger button
   const collapsedWidth = 40;
+  const desktopWidth = collapsed ? collapsedWidth : widthPx;
 
   return (
     <div
-      className="border-r bg-white flex-shrink-0 overflow-hidden flex flex-col transition-[width] duration-150 ease-in-out"
-      style={{ width: collapsed ? collapsedWidth : widthPx }}
+      className={`sm:border-r bg-white overflow-hidden flex-col transition-[width] duration-150 ease-in-out ${
+        detailSelected
+          ? "hidden sm:flex sm:flex-shrink-0"
+          : "flex flex-1 sm:flex-initial sm:flex-shrink-0"
+      }`}
+      style={{ "--sidebar-desktop-w": `${desktopWidth}px` } as React.CSSProperties}
     >
+      {/* Apply desktop width via inline style scoped to sm+ */}
+      <style>{"@media (min-width: 640px) { [style*=\"--sidebar-desktop-w\"] { width: var(--sidebar-desktop-w) !important; } }"}</style>
       {collapsed ? (
         <button
           onClick={() => setCollapsed(false)}
@@ -66,7 +66,7 @@ export function Sidebar({
             </div>
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1 hover:bg-warm-200 rounded text-warm-500 hover:text-warm-700 flex-shrink-0"
+              className="hidden sm:block p-1 hover:bg-warm-200 rounded text-warm-500 hover:text-warm-700 flex-shrink-0"
               title="Collapse sidebar"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

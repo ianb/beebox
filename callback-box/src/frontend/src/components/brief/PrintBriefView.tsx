@@ -105,7 +105,7 @@ function PrintSection({
 }
 
 export function PrintBriefView() {
-  const { "*": briefPath } = useParams();
+  const { boxSlug, "*": briefPath } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [brief, setBrief] = useState<NewsBriefData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,7 +145,7 @@ export function PrintBriefView() {
   if (error) return <div className="print-error">Error: {error}</div>;
   if (!brief) return null;
 
-  const interactiveUrl = `/news/${briefPath}`;
+  const interactiveUrl = `/${boxSlug}/news/${briefPath}`;
 
   const footnotes = collectFootnotes(brief);
   const dateStr = new Date(brief.date + "T00:00").toLocaleDateString("en-US", {

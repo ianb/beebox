@@ -225,15 +225,23 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
     [selectedSummary]
   );
 
+  const handleBack = useCallback(() => {
+    setSelectedSummary(null);
+    setBrief(null);
+    onNavigate?.(null);
+  }, [onNavigate]);
+
+  const hasDetail = Boolean(brief || loading || error);
+
   return (
     <div className="h-full flex">
       {/* Sidebar with index */}
-      <Sidebar title="News Briefs">
+      <Sidebar title="News Briefs" detailSelected={hasDetail}>
         <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} refreshKey={sidebarRefreshKey} />
       </Sidebar>
 
-      {/* Main content */}
-      <div className="flex-1 overflow-auto bg-warm-50">
+      {/* Main content — hidden on mobile when no detail selected */}
+      <div className={`flex-1 overflow-auto bg-warm-50 ${hasDetail ? "" : "hidden sm:block"}`}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-warm-600">Loading...</div>
@@ -243,18 +251,29 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
             <div className="text-red-600">Error: {error}</div>
           </div>
         ) : brief ? (
-          <NewsBriefView
-            brief={brief}
-            briefPath={selectedSummary?.relativePath}
-            onComment={handleComment}
-            onVoiceComment={handleVoiceComment}
-            onQueryResponse={handleQueryResponse}
-            onVoiceQueryResponse={handleVoiceQueryResponse}
-            onSourceClick={onSourceClick}
-            guideReactions={guideReactions}
-            briefReactions={brief.briefReactions}
-            onCompleteReading={selectedSummary && !selectedSummary.read ? handleCompleteReading : undefined}
-          />
+          <div>
+            <button
+              onClick={handleBack}
+              className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-plum hover:text-plum-dark"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to briefs
+            </button>
+            <NewsBriefView
+              brief={brief}
+              briefPath={selectedSummary?.relativePath}
+              onComment={handleComment}
+              onVoiceComment={handleVoiceComment}
+              onQueryResponse={handleQueryResponse}
+              onVoiceQueryResponse={handleVoiceQueryResponse}
+              onSourceClick={onSourceClick}
+              guideReactions={guideReactions}
+              briefReactions={brief.briefReactions}
+              onCompleteReading={selectedSummary && !selectedSummary.read ? handleCompleteReading : undefined}
+            />
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full text-warm-500">
             Select a brief to read

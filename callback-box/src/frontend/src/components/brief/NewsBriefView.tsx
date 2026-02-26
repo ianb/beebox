@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MicrophoneIcon } from "../VoiceRecorder";
@@ -48,6 +48,7 @@ export function NewsBriefView({
   briefReactions = [],
   onCompleteReading,
 }: NewsBriefViewProps) {
+  const { boxSlug } = useParams();
   const [showGlobalComment, setShowGlobalComment] = useState(false);
   const [showGlobalVoice, setShowGlobalVoice] = useState(false);
   const [globalComment, setGlobalComment] = useState("");
@@ -122,7 +123,7 @@ export function NewsBriefView({
         <h1 className="text-3xl font-bold text-warm-900 mb-3">{brief.title}</h1>
         {brief.byline ? <p className="text-lg text-warm-700 italic">{brief.byline}</p> : null}
         {briefPath ? (
-          <Link to={`/print/${briefPath}`} className="text-sm text-warm-500 hover:text-warm-700 mt-2 inline-block">
+          <Link to={`/${boxSlug}/print/${briefPath}`} className="text-sm text-warm-500 hover:text-warm-700 mt-2 inline-block">
             Print view
           </Link>
         ) : null}

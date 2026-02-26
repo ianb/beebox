@@ -42,9 +42,11 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   // Build breadcrumb segments
   const segments = currentPath ? currentPath.split("/").filter(Boolean) : [];
 
+  const hasDetail = Boolean(selectedCard);
+
   return (
     <div className="h-full flex">
-      <Sidebar title="Browse" subtitle={currentPath || "/"}>
+      <Sidebar title="Browse" subtitle={currentPath || "/"} detailSelected={hasDetail}>
         <div className="flex flex-col">
           {/* Breadcrumbs */}
           <div className="px-3 py-2 border-b text-sm flex flex-wrap items-center gap-1">
@@ -138,10 +140,19 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
       </Sidebar>
 
       {/* Detail panel */}
-      <div className="flex-1 overflow-auto bg-warm-50">
+      <div className={`flex-1 overflow-auto bg-warm-50 ${hasDetail ? "" : "hidden sm:block"}`}>
         {selectedCard ? (
-          <div className="max-w-4xl mx-auto py-8">
-            <div className="mb-4 px-4">
+          <div className="max-w-4xl mx-auto py-4 sm:py-8">
+            <div className="mb-4 px-4 flex items-center justify-between">
+              <button
+                onClick={() => setSelectedCard(null)}
+                className="sm:hidden flex items-center gap-1 text-sm text-plum hover:text-plum-dark"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
               <Link
                 to={`/card/${selectedCard.relativePath}`}
                 className="text-plum hover:text-plum-dark text-sm"
