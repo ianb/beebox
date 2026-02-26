@@ -1,10 +1,11 @@
 /**
  * TTS client for chat speech output.
  * Fetches audio from the backend proxy (/api/chat/tts) and plays it.
- * Adapted from thinking-machine tts.ts + ttsStream.ts.
+ * Uses shared pre-unlocked Audio element for iOS Safari compatibility.
  */
 
 import { getApiBase } from "../api";
+import { playAudioBlob } from "./audio-context";
 
 const BASE_INSTRUCTIONS = "Fast and concise, but with a friendly lilting tone.";
 
@@ -18,7 +19,7 @@ interface SpeechQueueItem {
 class TTSClient {
   private queue: SpeechQueueItem[] = [];
   private playing = false;
-  private currentAudio: HTMLAudioElement | null = null;
+  private currentStop: (() => void) | null = null;
   private abortController: AbortController | null = null;
   private onPlayingChange?: (playing: boolean) => void;
 
@@ -42,10 +43,9 @@ class TTSClient {
       this.abortController.abort();
       this.abortController = null;
     }
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.src = "";
-      this.currentAudio = null;
+    if (this.currentStop) {
+      this.currentStop();
+      this.currentStop = null;
     }
     const pending = this.queue.splice(0);
     for (const item of pending) {
@@ -84,8 +84,6 @@ class TTSClient {
   private async playItem(item: SpeechQueueItem): Promise<void> {
     const instructions = this.buildInstructions(item.instructions);
 
-    console.log("[TTS] Generating speech:", item.text.slice(0, 50), "...");
-
     this.abortController = new AbortController();
     const response = await fetch(`${getApiBase()}/chat/tts`, {
       method: "POST",
@@ -99,32 +97,11 @@ class TTSClient {
       throw new Error(`TTS API error ${response.status}: ${err}`);
     }
 
-    await this.playAudioFromResponse(response);
-  }
-
-  private async playAudioFromResponse(response: Response): Promise<void> {
     const buffer = await this.readStreamToBuffer(response);
-    const blob = new Blob([buffer], { type: "audio/mpeg" });
-    const url = URL.createObjectURL(blob);
-
-    return new Promise((resolve, reject) => {
-      const audio = new Audio(url);
-      this.currentAudio = audio;
-
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        this.currentAudio = null;
-        resolve();
-      };
-
-      audio.onerror = (e) => {
-        URL.revokeObjectURL(url);
-        this.currentAudio = null;
-        reject(new Error(`Audio playback error: ${e}`));
-      };
-
-      audio.play().catch(reject);
-    });
+    const { stop, finished } = playAudioBlob(buffer);
+    this.currentStop = stop;
+    await finished;
+    this.currentStop = null;
   }
 
   private async readStreamToBuffer(response: Response): Promise<ArrayBuffer> {

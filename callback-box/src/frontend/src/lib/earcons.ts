@@ -1,13 +1,15 @@
 /**
  * Simple earcon (UI sound) player, adapted from memory-atlas.
  * Audio files live in public/earcons/.
+ * Uses shared pre-unlocked Audio element for iOS Safari compatibility.
  */
+
+import { playAudioUrl } from "./audio-context";
 
 class EarCon {
   name: string;
   filename: string;
   volume: number;
-  private audioElement?: HTMLAudioElement;
 
   constructor({ name, filename, volume }: { name: string; filename: string; volume: number }) {
     this.name = name;
@@ -17,42 +19,24 @@ class EarCon {
 
   play() {
     const url = `/earcons/${this.filename}`;
-    if (!this.audioElement) {
-      this.audioElement = new Audio(url);
-    }
-    try {
-      this.audioElement.pause();
-    } catch (_e) {
-      // ignore
-    }
-    this.audioElement.src = url;
-    this.audioElement.volume = this.volume;
-    this.audioElement.play().catch((e) => {
-      console.info("[earcon] Error playing", this.name, e);
-    });
-    const audio = this.audioElement;
-    const finished = new Promise<void>((resolve) => {
-      const callback = () => {
-        resolve();
-        audio.removeEventListener("ended", callback);
-      };
-      audio.addEventListener("ended", callback);
-    });
-    return { finished };
+    const result = playAudioUrl(url, this.volume);
+    return { started: result.finished, finished: result.finished, stop: result.stop };
   }
 
   repeatPlay(period: number, limit = 5000) {
-    this.play();
+    const handles: Array<{ stop: () => void }> = [];
+    handles.push(this.play());
     const start = Date.now();
     const id = setInterval(() => {
       if (Date.now() - start > limit) {
         clearInterval(id);
         return;
       }
-      this.play();
+      handles.push(this.play());
     }, period);
     return () => {
       clearInterval(id);
+      for (const h of handles) h.stop();
     };
   }
 }

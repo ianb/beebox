@@ -391,4 +391,42 @@ export async function registerApiRoutes(
       trash: trashCount,
     };
   });
+
+  // --- Client debug log collector ---
+  // The frontend patches console.log/warn/error (via DebugLog.tsx + enableDebugLogCapture())
+  // and forwards entries here. Useful for mobile debugging where dev tools aren't available.
+  //   GET  /api/debug-log    — read collected logs
+  //   POST /api/debug-log    — { entries: [{ level, message }] }
+  //   DELETE /api/debug-log  — clear all logs
+  // To enable: toggle "Debug Log" in the Chat page's ⋮ menu (also shows on-screen overlay).
+  // Read from CLI:  curl http://localhost:3210/<box>/api/debug-log | python3 -m json.tool
+  const clientLogs: Array<{ ts: string; level: string; message: string }> = [];
+  const MAX_CLIENT_LOGS = 200;
+
+  server.post<{ Body: { entries: Array<{ level: string; message: string }> } }>(
+    "/api/debug-log",
+    async (request) => {
+      const { entries } = request.body;
+      if (Array.isArray(entries)) {
+        for (const entry of entries) {
+          clientLogs.push({
+            ts: new Date().toISOString(),
+            level: String(entry.level),
+            message: String(entry.message),
+          });
+        }
+        while (clientLogs.length > MAX_CLIENT_LOGS) clientLogs.shift();
+      }
+      return { ok: true };
+    }
+  );
+
+  server.get("/api/debug-log", async () => {
+    return { entries: clientLogs };
+  });
+
+  server.delete("/api/debug-log", async () => {
+    clientLogs.length = 0;
+    return { ok: true };
+  });
 }

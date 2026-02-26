@@ -22,10 +22,15 @@ import {
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { useSpeechPlayback, type SpeechPlayback } from "../hooks/useSpeechPlayback";
 import { hasAssistantSpeech, parseAllSpeechTags } from "../lib/speech-parsing";
+import { unlockAudioContext } from "../lib/audio-context";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { sendSound, tick, recordingStart } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
+import { DebugLogPanel, enableDebugLogCapture } from "./DebugLog";
+
+// Start capturing console logs immediately so we don't miss early messages
+enableDebugLogCapture();
 
 /**
  * Format the current local time as HH:MM for the typed tag.
@@ -214,6 +219,8 @@ function ChatDebugMenu({
   busy,
   debugView,
   onToggleDebugView,
+  showDebugLog,
+  onToggleDebugLog,
 }: {
   onNewSession: () => void;
   onStopProcess: () => void;
@@ -222,6 +229,8 @@ function ChatDebugMenu({
   busy: boolean;
   debugView: boolean;
   onToggleDebugView: () => void;
+  showDebugLog: boolean;
+  onToggleDebugLog: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -270,6 +279,12 @@ function ChatDebugMenu({
           >
             {debugView ? "\u2713 " : ""}Debug View
           </button>
+          <button
+            onClick={() => { onToggleDebugLog(); setOpen(false); }}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700"
+          >
+            {showDebugLog ? "\u2713 " : ""}Debug Log
+          </button>
           <div className="border-t border-warm-200 my-1" />
           <div className="px-3 py-1.5 text-xs text-warm-500">
             <div>Session: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
@@ -308,6 +323,7 @@ export function ChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [processRunning, setProcessRunning] = useState(false);
   const [debugView, setDebugView] = useState(false);
+  const [showDebugLog, setShowDebugLog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const turnTakingRef = useRef(false);
@@ -467,6 +483,7 @@ export function ChatPage() {
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text || streaming) return;
+    unlockAudioContext();
     setInput("");
     doSend(`<typed local-time="${localTime()}">${text}</typed>`);
   }, [input, streaming, doSend]);
@@ -563,6 +580,7 @@ export function ChatPage() {
   }
 
   return (
+    <>
     <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200">
       {/* Header with debug controls */}
       <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
@@ -575,6 +593,8 @@ export function ChatPage() {
           busy={streaming}
           debugView={debugView}
           onToggleDebugView={() => setDebugView((v) => !v)}
+          showDebugLog={showDebugLog}
+          onToggleDebugLog={() => setShowDebugLog((v) => !v)}
         />
       </div>
       {/* Messages area */}
@@ -708,7 +728,7 @@ export function ChatPage() {
           ) : (
             <>
               <button
-                onClick={() => { turnTakingRef.current = true; recordingStart.play(); transcription.start(); }}
+                onClick={async () => { turnTakingRef.current = true; unlockAudioContext(); await recordingStart.play().started; transcription.start(); }}
                 disabled={streaming}
                 className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50 disabled:text-warm-400 disabled:hover:bg-transparent"
                 title="Voice input"
@@ -727,5 +747,7 @@ export function ChatPage() {
         </div>
       </div>
     </div>
+    {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
+    </>
   );
 }
