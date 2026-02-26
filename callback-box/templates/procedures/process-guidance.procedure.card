@@ -151,12 +151,12 @@
         STEP 3 - MOVE ALL CARDS:
         Move integrated feedback cards and their audio files:
         ```
-        cb move box/inbox/feedback/&lt;card&gt; store/integrated/
+        cb mv box/inbox/feedback/&lt;card&gt; store/integrated/
         mv box/inbox/feedback/&lt;basename&gt;.webm store/integrated/
         ```
         Move unhandled cards:
         ```
-        cb move box/inbox/feedback/&lt;card&gt; box/inbox/unhandled/
+        cb mv box/inbox/feedback/&lt;card&gt; box/inbox/unhandled/
         ```
 
         STEP 4 - COMMIT (REQUIRED — do not skip):

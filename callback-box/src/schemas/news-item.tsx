@@ -262,7 +262,7 @@ export const NewsItemSchema = element("news-item", {
 - \`store/archive/news/\` — used in a brief
 - \`store/trash/news/\` — skipped
 
-The \`status\` attribute is deprecated. Don't set it or rely on it. Use \`cb move\` and \`cb trash\` to change state, never manual file moves.
+The \`status\` attribute is deprecated. Don't set it or rely on it. Use \`cb mv\` and \`cb rm\` to change state, never manual file moves.
 
 The <analysis> element is NOT a summary. The full article content is already in <content>. Analysis is metadata about how the article fits the reader's mental space: topics, type, thesis, tone, timeliness. Think of it as cataloging notes for the brief writer.
 

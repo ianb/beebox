@@ -246,7 +246,7 @@ grep guide-revision store/archive/briefs/*.card
 
 ## Troubleshooting
 
-**`cb trash` fails with tsconfig error**: The agent may fall back to manual file moves. The end result is the same.
+**`cb rm` fails with tsconfig error**: The agent may fall back to manual file moves. The end result is the same.
 
 **Agent hits max turns**: Run the phase again with a smaller batch size. Remaining items will be processed.
 

@@ -743,7 +743,7 @@ cb exec
 cb exec --dry-run          # preview all
 
 # Move a card (updates references)
-cb move /box/inbox/Email.card /store/archive/processed/Email.card
+cb mv /box/inbox/Email.card /store/archive/processed/Email.card
 
 # Create a new card from template
 cb create /box/commands/Reply.email-reply.card reply-to=/box/inbox/Thread.email-thread.card

@@ -176,7 +176,7 @@ async function executeTrash(
     await commit(ctx.boxRoot, {
       message: summary,
       trailers: {
-        "Trashed-By": "cb trash",
+        "Trashed-By": "cb rm",
       },
     });
     ctx.writeLine("Committed.");

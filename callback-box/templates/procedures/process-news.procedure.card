@@ -41,11 +41,11 @@
         Review the title and summary of each card. Decide which to keep and which to trash.
 
         STEP 2 - TRASH REJECTED ITEMS:
-        Use a SINGLE cb trash command with ALL rejected paths:
+        Use a SINGLE cb rm command with ALL rejected paths:
         ```
-        cb trash box/inbox/news/item1.news-item.card box/inbox/news/item2.news-item.card ...
+        cb rm box/inbox/news/item1.news-item.card box/inbox/news/item2.news-item.card ...
         ```
-        cb trash accepts multiple paths in one call. Do NOT call it once per item.
+        cb rm accepts multiple paths in one call. Do NOT call it once per item.
 
         Items you want to keep stay where they are — no action needed for keeps.
 
@@ -120,7 +120,7 @@
         [ "$count" -gt 0 ] || [ "$trash" -gt 0 ]
       </shell>
       <instruction>
-        The git diff should show items being moved to store/trash/ via cb trash.
+        The git diff should show items being moved to store/trash/ via cb rm.
         Every item the agent examined should have an explicit keep or trash decision.
       </instruction>
       <why>
@@ -211,10 +211,10 @@
         STEP 2 - MOVE TO POOL:
         After adding analysis to ALL items, move them all at once:
         ```
-        cb move box/inbox/news/item1.news-item.card box/inbox/news/item2.news-item.card ... box/pool/news/
+        cb mv box/inbox/news/item1.news-item.card box/inbox/news/item2.news-item.card ... box/pool/news/
         ```
 
-        cb move accepts multiple source paths with a directory destination (like mv).
+        cb mv accepts multiple source paths with a directory destination (like mv).
         Do NOT call it once per item — use a single command for all moves.
         Then commit all changes.
 
@@ -478,10 +478,10 @@
         STEP 4 - ARCHIVE USED ITEMS:
         After creating the brief, move ALL used items to archive in one command:
         ```
-        cb move box/pool/news/&lt;used1&gt; box/pool/news/&lt;used2&gt; ... store/archive/news/
+        cb mv box/pool/news/&lt;used1&gt; box/pool/news/&lt;used2&gt; ... store/archive/news/
         ```
 
-        cb move accepts multiple source paths with a directory destination.
+        cb mv accepts multiple source paths with a directory destination.
         This handles moving and updating any references (including in the brief you just created).
         Leave items in pool that weren't used—they'll be available for future briefs.
 

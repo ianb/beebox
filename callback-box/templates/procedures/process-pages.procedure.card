@@ -77,7 +77,7 @@
         **If it's clearly reference material (pages-saved):**
         Move to an appropriate catalog:
         ```
-        cb move box/inbox/pages-saved/Page.record.card store/catalogs/Category/
+        cb mv box/inbox/pages-saved/Page.record.card store/catalogs/Category/
         ```
 
         **If it's a pages-todo item with clear action:**

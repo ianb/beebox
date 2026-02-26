@@ -352,7 +352,7 @@ async function executeMove(
     await commit(ctx.boxRoot, {
       message: summary,
       trailers: {
-        "Moved-By": "cb move",
+        "Moved-By": "cb mv",
       },
     });
     ctx.writeLine("Committed.");

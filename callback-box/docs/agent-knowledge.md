@@ -88,8 +88,8 @@ cb prompt "If I wanted to find all memo cards in the system, how would you searc
 ```
 cb prompt "What happens to a card after it's processed?"
 ```
-- **Expected level: Knows directly** — the agent guide describes the inbox→archive lifecycle and `cb move`
-- Watch for: does it mention `cb move` and `store/archive/`, or guess at a generic pipeline?
+- **Expected level: Knows directly** — the agent guide describes the inbox→archive lifecycle and `cb mv`
+- Watch for: does it mention `cb mv` and `store/archive/`, or guess at a generic pipeline?
 
 ## 2. Card Types and Schemas
 
@@ -136,7 +136,7 @@ cb prompt "What cb commands are available to you? List the ones you'd use most."
 ```
 cb prompt "How do you move a card from inbox to archive?"
 ```
-- **Expected level: Knows directly** — `cb move` is described in the agent guide
+- **Expected level: Knows directly** — `cb mv` is described in the agent guide
 - Watch for: correct syntax with source and destination arguments
 
 ```

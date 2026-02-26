@@ -1,5 +1,5 @@
 /**
- * cb move - Move/rename a card and update all references
+ * cb mv - Move/rename a card and update all references
  *
  * Thin wrapper around the core move command.
  */
@@ -8,7 +8,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
-export const moveCommand = new Command("move")
+export const moveCommand = new Command("mv")
   .description("Move/rename one or more cards and update all references")
   .argument("<paths...>", "Source path(s) followed by destination (like mv)")
   .option("--commit", "Commit the change")

@@ -1,5 +1,5 @@
 /**
- * cb trash - Move a card to the trash
+ * cb rm - Move a card to the trash
  *
  * Thin wrapper around the core trash command.
  */
@@ -8,7 +8,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
-export const trashCommand = new Command("trash")
+export const trashCommand = new Command("rm")
   .description("Move one or more cards to the trash")
   .argument("<paths...>", "Paths to the cards to trash")
   .option("--reason <reason>", "Reason for trashing")

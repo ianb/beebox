@@ -919,7 +919,7 @@ POST /api/card/box/output/briefs/today.news-brief.card/move
 { "destination": "store/archive/briefs/today.news-brief.card", "commit": true }
 ```
 
-This wraps the existing `cb move` logic (loader.move + reference updates + git commit).
+This wraps the existing `cb mv` logic (loader.move + reference updates + git commit).
 
 ## Implementation Order
 

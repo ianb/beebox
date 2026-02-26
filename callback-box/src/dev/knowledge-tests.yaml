@@ -18,7 +18,7 @@ tests:
   - id: card-after-processing
     prompt: "What happens to a card after it's processed?"
     expected_level: knows_directly
-    watch_for: "Mentions cb move and store/archive/ without file reads"
+    watch_for: "Mentions cb mv and store/archive/ without file reads"
     correct_contains: ["archive"]
     tags: [navigation, lifecycle]
 
@@ -69,8 +69,8 @@ tests:
   - id: move-card-syntax
     prompt: "How do you move a card from inbox to archive?"
     expected_level: knows_directly
-    watch_for: "Correct cb move syntax with source and destination"
-    correct_contains: ["cb move"]
+    watch_for: "Correct cb mv syntax with source and destination"
+    correct_contains: ["cb mv"]
     tags: [cli]
 
   - id: validate-card

@@ -67,7 +67,7 @@ When analyzing:
 2. Write a one-sentence \`<description>\` oriented toward telling a future agent what's useful in this image.
 3. If the image contains readable text, set \`has-text="true"\` and create one or more \`<text source="...">\` elements with the transcribed content in Markdown. The source attribute describes what the text is on (e.g. "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements are allowed for different text sources in the same image.
 4. If there's no text, set \`has-text="false"\`.
-5. Rename the card via \`cb move\` to \`photo-NNN-short-name.image.card\` where the short name helps identify the content.
+5. Rename the card via \`cb mv\` to \`photo-NNN-short-name.image.card\` where the short name helps identify the content.
 6. Set status to "analyzed" (or "invalid" if it's not useful).`,
 });
 

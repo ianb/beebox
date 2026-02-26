@@ -229,7 +229,7 @@
            - The source attribute describes what the text is on (e.g. "whiteboard", "business card", "screen")
            - Multiple &lt;text&gt; elements are allowed for different text sources
         4. If no text: set has-text="false"
-        5. Rename via cb move to photo-NNN-short-name.image.card (keep the NNN prefix, add a descriptive slug)
+        5. Rename via cb mv to photo-NNN-short-name.image.card (keep the NNN prefix, add a descriptive slug)
         6. Set status="analyzed" (or "invalid" for accidental/useless captures)
 
         Use the session purpose (shown above) to inform your descriptions — focus on what's relevant
@@ -237,7 +237,7 @@
 
         RENAMING:
         ```
-        cb move box/inbox/capture-.../photo-000.image.card box/inbox/capture-.../photo-000-whiteboard.image.card
+        cb mv box/inbox/capture-.../photo-000.image.card box/inbox/capture-.../photo-000-whiteboard.image.card
         ```
 
         IMPORTANT: Process ALL images before committing. Do not commit after each image.
@@ -371,9 +371,9 @@
         3. Rename the directory: capture-YYYYMMDDTHHMM-Session_Name/
            The date part comes from the session's start time.
 
-        Use cb move to rename:
+        Use cb mv to rename:
         ```
-        cb move box/inbox/capture-20260211T1951-f26ffa35 box/inbox/capture-20260211T1951-Whiteboard_Planning
+        cb mv box/inbox/capture-20260211T1951-f26ffa35 box/inbox/capture-20260211T1951-Whiteboard_Planning
         ```
 
         4. Set status="intake-complete" on the session card.

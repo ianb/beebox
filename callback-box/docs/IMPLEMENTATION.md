@@ -451,7 +451,7 @@ cb create /box/commands/Reply.email-reply.card reply-to=/box/inbox/Thread.email-
 cb create /box/inbox/Question.question.card context=/box/inbox/Item.card
 
 # Move with reference updates (wraps cardworks)
-cb move /box/inbox/Item.card /store/archive/processed/Item.card
+cb mv /box/inbox/Item.card /store/archive/processed/Item.card
 
 # Run tailing phase manually
 cb tail
@@ -708,7 +708,7 @@ You are operating within a Callback Box environment. All work happens through ca
 ## Key commands
 - `cb commit` - commit changes
 - `cb validate` - check cards against schemas
-- `cb move` - move cards with reference updates
+- `cb mv` - move cards with reference updates
 - `cb context` - see current state
 
 ## Important

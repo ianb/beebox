@@ -139,12 +139,12 @@ For each feedback card:
 4. MOVE THE FEEDBACK CARD:
    - For integrated feedback:
      \`\`\`
-     cb move box/inbox/feedback/<card> store/integrated/
+     cb mv box/inbox/feedback/<card> store/integrated/
      \`\`\`
    - For unhandled items:
      \`\`\`
      mkdir -p box/inbox/unhandled
-     cb move box/inbox/feedback/<card> box/inbox/unhandled/
+     cb mv box/inbox/feedback/<card> box/inbox/unhandled/
      \`\`\`
 
 5. UPDATE TRIAGE STATUS:

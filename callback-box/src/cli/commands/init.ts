@@ -208,7 +208,7 @@ ${triageRules.join("\n")}
     </action>
     <action name="Skip">
       <when>Item doesn't match interests or is low quality</when>
-      <instructions>Trash the item with cb trash</instructions>
+      <instructions>Trash the item with cb rm</instructions>
     </action>
     <action name="Ask User">
       <when>Unsure about disposition or need clarification</when>

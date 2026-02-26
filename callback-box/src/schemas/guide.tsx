@@ -526,7 +526,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Skip",
         when: "Item doesn't match interests or is low quality",
-        instructions: "Trash the item with cb trash",
+        instructions: "Trash the item with cb rm",
       },
       {
         name: "Ask User",
@@ -574,7 +574,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Trash",
         when: "Item is not useful or relevant",
-        instructions: "Use cb trash to soft-delete",
+        instructions: "Use cb rm to soft-delete",
       },
       {
         name: "Ask User",
