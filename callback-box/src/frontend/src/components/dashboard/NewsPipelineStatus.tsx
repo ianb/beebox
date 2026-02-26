@@ -3,7 +3,7 @@
  * Hidden if all counts are zero.
  */
 
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { NewsStatusResponse } from "../../api";
 
 interface NewsPipelineStatusProps {
@@ -11,6 +11,7 @@ interface NewsPipelineStatusProps {
 }
 
 export function NewsPipelineStatus({ newsStatus }: NewsPipelineStatusProps) {
+  const { boxSlug } = useParams();
   const { inbox, pool, archive, trash } = newsStatus;
 
   if (inbox === 0 && pool === 0 && archive === 0 && trash === 0) {
@@ -21,7 +22,7 @@ export function NewsPipelineStatus({ newsStatus }: NewsPipelineStatusProps) {
     <div className="card">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-warm-700">News Pipeline</h3>
-        <Link to="/news" className="text-xs text-plum hover:text-plum-dark">
+        <Link to={`/${boxSlug}/news`} className="text-xs text-plum hover:text-plum-dark">
           Read Briefs &rarr;
         </Link>
       </div>

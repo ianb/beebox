@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   getDropboxStatus,
   createPairing,
@@ -148,6 +148,7 @@ function CalendarSection() {
 }
 
 export function SettingsPage() {
+  const { boxSlug } = useParams();
   const [status, setStatus] = useState<DropboxStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [workerUrl, setWorkerUrl] = useState("");
@@ -220,7 +221,7 @@ export function SettingsPage() {
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <Link to="/" className="text-plum hover:text-plum-dark text-sm">
+          <Link to={`/${boxSlug}/`} className="text-plum hover:text-plum-dark text-sm">
             &larr; Back to Dashboard
           </Link>
         </div>

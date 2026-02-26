@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { FileView } from "./FileView";
 import { getBrowse, type BrowseResponse, type BrowseCardInfo } from "../api";
@@ -18,6 +18,7 @@ interface BrowsePageProps {
 }
 
 export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
+  const { boxSlug } = useParams();
   const [data, setData] = useState<BrowseResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<BrowseCardInfo | null>(null);
@@ -154,7 +155,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 Back
               </button>
               <Link
-                to={`/card/${selectedCard.relativePath}`}
+                to={`/${boxSlug}/card/${selectedCard.relativePath}`}
                 className="text-plum hover:text-plum-dark text-sm"
               >
                 Open full view &rarr;

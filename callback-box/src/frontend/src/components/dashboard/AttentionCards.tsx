@@ -3,7 +3,7 @@
  * Hidden entirely if both are zero.
  */
 
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { CardInfo } from "../../api";
 
 interface AttentionCardsProps {
@@ -12,6 +12,7 @@ interface AttentionCardsProps {
 }
 
 export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
+  const { boxSlug } = useParams();
   const pendingQuestions = questions.filter((q) => q.status === "pending");
 
   if (pendingQuestions.length === 0 && inboxCount === 0) {
@@ -35,7 +36,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
             {pendingQuestions.slice(0, 5).map((q) => (
               <li key={q.path} className="text-sm">
                 <Link
-                  to={`/card/${q.relativePath}`}
+                  to={`/${boxSlug}/card/${q.relativePath}`}
                   className="text-plum hover:text-plum-dark hover:underline"
                 >
                   {q.prompt || q.name}
@@ -62,7 +63,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
               </span>
             </h3>
             <Link
-              to="/browse/box/inbox"
+              to={`/${boxSlug}/browse/box/inbox`}
               className="text-xs text-plum hover:text-plum-dark"
             >
               Browse &rarr;
