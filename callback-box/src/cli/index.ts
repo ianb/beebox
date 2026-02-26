@@ -43,6 +43,7 @@ import {
   promptCommand,
   sessionCommand,
   schedulerCommand,
+  lsCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -88,6 +89,7 @@ program.addCommand(finalizeCommand);
 program.addCommand(promptCommand);
 program.addCommand(sessionCommand);
 program.addCommand(schedulerCommand);
+program.addCommand(lsCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)
