@@ -239,28 +239,23 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
     pidFiles.push(pidFile);
   }
 
-  // Graceful shutdown handler
+  // Shutdown handler — force-close all connections immediately so
+  // --watch restarts don't hang on open SSE/WebSocket sockets.
   const shutdown = async (signal: string) => {
-    console.log(`\nReceived ${signal}, shutting down gracefully...`);
-    try {
-      for (const pf of pidFiles) {
-        await fs.promises.unlink(pf).catch(() => {});
-      }
-      await server.close();
-      console.log("Server closed.");
-      process.exit(0);
-    } catch (err) {
-      console.error("Error during shutdown:", err);
-      for (const pf of pidFiles) {
-        await fs.promises.unlink(pf).catch(() => {});
-      }
-      process.exit(1);
+    console.log(`\nReceived ${signal}, shutting down...`);
+    for (const pf of pidFiles) {
+      await fs.promises.unlink(pf).catch(() => {});
     }
+    server.server.closeAllConnections();
+    await server.close();
+    console.log("Server closed.");
+    process.exit(0);
   };
 
   // Handle termination signals
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGHUP", () => shutdown("SIGHUP"));
 
   try {
     await server.listen({ port, host });
