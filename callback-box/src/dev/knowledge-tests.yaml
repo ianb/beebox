@@ -40,10 +40,29 @@ tests:
   - id: create-question-card
     prompt: "How would you create a new question card asking the user to pick a color?"
     expected_level: knows_about
-    watch_for: "Reads docs/generated/card-question.md and uses cb create"
+    watch_for: "Reads docs/generated/card-question.md, uses cb create, includes a directive"
     should_read: ["docs/generated/card-question.md"]
-    correct_contains: ["cb create"]
-    tags: [cards, schemas]
+    correct_contains: ["cb create", "directive"]
+    tags: [cards, schemas, questions]
+
+  - id: question-directive
+    prompt: "I want to ask the user whether to include tech news in their brief. Create the question card."
+    expected_level: knows_about
+    watch_for: "Includes a <directive> element describing what to do with the answer"
+    should_read: ["docs/generated/card-question.md"]
+    correct_contains: ["<directive>"]
+    tags: [cards, questions]
+    notes: >
+      The directive is critical — without it, answering the question is a dead end.
+      The agent should describe the concrete action (e.g., update news guide) not
+      just restate the question.
+
+  - id: question-answer-creates-job
+    prompt: "What happens when a user answers a question?"
+    expected_level: knows_about
+    watch_for: "Mentions that a follow-up job is created from the directive"
+    correct_contains: ["job", "directive"]
+    tags: [questions, jobs]
 
   - id: guide-vs-procedure
     prompt: "What's the difference between a guide card and a procedure card?"

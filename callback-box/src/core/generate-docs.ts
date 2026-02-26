@@ -461,6 +461,7 @@ function generateAgentGuide(options: AgentGuideOptions): string {
   lines.push("");
   lines.push("Create question cards in `box/questions/` to ask the user.");
   lines.push("Set `answered-by` to your agent name so the answer routes back to you.");
+  lines.push("Always include a `<directive>` element describing what you'll do with the answer — when the user answers, the system creates a follow-up job using this directive.");
   lines.push("See `docs/generated/card-question.md` for format and templates.");
   lines.push("");
   lines.push("## General Principles");

@@ -5,6 +5,7 @@
  */
 
 import * as path from "node:path";
+import * as fs from "node:fs/promises";
 import {
   registerCommand,
   type CommandContext,
@@ -13,6 +14,7 @@ import {
 import { boxPath, isCardFile } from "../../cli/lib/paths.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
+import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 import type { ElementNode } from "cardworks";
 
 /**
@@ -206,6 +208,35 @@ async function executeAnswer(
   if (selectedId) {
     ctx.writeLine(`  Selected: ${selectedId}`);
   }
+
+  // Create a follow-up job from the question's directive
+  const directive = (element.children as ElementNode[]).find(
+    (c) => c.tagName === "directive"
+  );
+  const questionPrompt = (element.children as ElementNode[]).find(
+    (c) => c.tagName === "prompt"
+  );
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[.:]/g, "-")
+    .slice(0, 19);
+  const jobFilename = `${timestamp}-question-followup.question-followup.job.card`;
+  const jobPath = path.join(ctx.boxRoot, "box/jobs", jobFilename);
+  const jobContent = createQuestionFollowupJobTemplate({
+    description: `Follow up on answered question: ${questionPrompt?.text ?? path.basename(answerArgs.question)}`,
+    questionRef: relativePath,
+    directive: directive?.text ?? "Process the answer to this question",
+    answer: finalAnswer,
+  });
+
+  await fs.mkdir(path.join(ctx.boxRoot, "box/jobs"), { recursive: true });
+  await fs.writeFile(jobPath, jobContent);
+  const jobRelative = path.relative(ctx.boxRoot, jobPath);
+  await stageFiles(ctx.boxRoot, [jobRelative]);
+  await commit(ctx.boxRoot, {
+    message: "Create follow-up job for answered question",
+  });
+  ctx.writeLine(`  Created follow-up job: ${jobRelative}`);
 
   return {
     success: true,

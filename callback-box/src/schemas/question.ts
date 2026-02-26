@@ -92,6 +92,14 @@ export const QuestionAnsweredVia = element("answered-via", {
 });
 
 /**
+ * Child element describing what the agent should do with the answer.
+ * When present, answering the question creates a follow-up job.
+ */
+export const QuestionDirective = element("directive", {
+  text: z.string(),
+});
+
+/**
  * Question card schema.
  *
  * Pending example:
@@ -103,6 +111,7 @@ export const QuestionAnsweredVia = element("answered-via", {
  *     <option id="a">Option A</option>
  *     <option id="b">Option B</option>
  *   </input>
+ *   <directive>Update the news guide based on the user's preference</directive>
  * </question>
  * ```
  *
@@ -138,6 +147,7 @@ export const QuestionSchema = element("question", {
     QuestionContext,
     QuestionPrompt,
     QuestionInput,
+    QuestionDirective,
     QuestionAnswer,
     QuestionAnsweredAt,
     QuestionAnsweredVia,
@@ -147,6 +157,8 @@ export const QuestionSchema = element("question", {
 Questions interrupt the user. Every question you create costs the user's attention. Before creating one, ask yourself: can you make a reasonable decision without asking? If so, just decide.
 
 The \`answered-by\` attribute routes the answer back to your agent. Always set it so the system knows where to deliver the response.
+
+Always include a \`<directive>\` element describing what you'll do with the answer. When the user answers, the system creates a follow-up job using this directive as instructions. Be specific: name the files you'll edit, the action you'll take, or the decision you'll apply. Without a directive, the answer goes nowhere.
 
 Provide enough context in <memo> that the user understands WHY you're asking without needing to look anything up. Include <context ref="..."> to link related cards.
 
@@ -164,6 +176,7 @@ interface CreateSelectQuestionTemplateParams {
   memo: string;
   prompt: string;
   options: Array<{ id: string; label: string }>;
+  directive?: string;
 }
 
 /**
@@ -172,29 +185,38 @@ interface CreateSelectQuestionTemplateParams {
 export function createSelectQuestionTemplate(
   params: CreateSelectQuestionTemplateParams
 ): string {
-  const { memo, prompt, options } = params;
+  const { memo, prompt, options, directive } = params;
   const optionsXml = options
     .map(opt => `    <option id="${escapeAttr(opt.id)}">${escapeText(opt.label)}</option>`)
     .join("\n");
+  const directiveXml = directive ? `\n  <directive>${escapeText(directive)}</directive>` : "";
 
   return `<question status="pending">
   <memo>${escapeText(memo)}</memo>
   <prompt>${escapeText(prompt)}</prompt>
   <input type="select">
 ${optionsXml}
-  </input>
+  </input>${directiveXml}
 </question>
 `;
+}
+
+interface CreateQuestionTemplateParams {
+  memo: string;
+  prompt: string;
+  directive?: string;
 }
 
 /**
  * Template for creating a new question card with text input.
  */
-export function createTextQuestionTemplate(memo: string, prompt: string): string {
+export function createTextQuestionTemplate(params: CreateQuestionTemplateParams): string {
+  const { memo, prompt, directive } = params;
+  const directiveXml = directive ? `\n  <directive>${escapeText(directive)}</directive>` : "";
   return `<question status="pending">
   <memo>${escapeText(memo)}</memo>
   <prompt>${escapeText(prompt)}</prompt>
-  <input type="text" />
+  <input type="text" />${directiveXml}
 </question>
 `;
 }
@@ -202,11 +224,13 @@ export function createTextQuestionTemplate(memo: string, prompt: string): string
 /**
  * Template for creating a confirm (yes/no) question.
  */
-export function createConfirmQuestionTemplate(memo: string, prompt: string): string {
+export function createConfirmQuestionTemplate(params: CreateQuestionTemplateParams): string {
+  const { memo, prompt, directive } = params;
+  const directiveXml = directive ? `\n  <directive>${escapeText(directive)}</directive>` : "";
   return `<question status="pending">
   <memo>${escapeText(memo)}</memo>
   <prompt>${escapeText(prompt)}</prompt>
-  <input type="confirm" />
+  <input type="confirm" />${directiveXml}
 </question>
 `;
 }
