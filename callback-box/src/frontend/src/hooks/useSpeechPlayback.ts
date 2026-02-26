@@ -57,7 +57,11 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
 
       try {
         for (const segment of segments) {
-          await ttsClient.speak(segment.text, segment.instructions);
+          await ttsClient.speak(segment.text, {
+            instructions: segment.instructions,
+            voice: segment.voice,
+            overrideInstructions: segment.overrideInstructions,
+          });
         }
         optionsRef.current?.onComplete?.();
       } catch (error) {

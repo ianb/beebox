@@ -6,12 +6,25 @@
 
 import { getApiBase } from "../api";
 import { playAudioBlob } from "./audio-context";
+import { VALID_VOICES, type TTSVoice } from "./speech-parsing";
 
-const BASE_INSTRUCTIONS = "Fast and concise, but with a friendly lilting tone.";
+const DEFAULT_VOICE: TTSVoice = "marin";
+const DEFAULT_INSTRUCTIONS = "Fast and concise, but with a friendly lilting tone.";
+
+export interface VoiceConfig {
+  voice: TTSVoice;
+  baseInstructions: string;
+}
+
+interface SpeechOptions {
+  instructions?: string;
+  voice?: TTSVoice;
+  overrideInstructions?: boolean;
+}
 
 interface SpeechQueueItem {
   text: string;
-  instructions?: string;
+  options?: SpeechOptions;
   resolve: () => void;
   reject: (error: Error) => void;
 }
@@ -22,18 +35,46 @@ class TTSClient {
   private currentStop: (() => void) | null = null;
   private abortController: AbortController | null = null;
   private onPlayingChange?: (playing: boolean) => void;
+  private voiceConfig: VoiceConfig = {
+    voice: DEFAULT_VOICE,
+    baseInstructions: DEFAULT_INSTRUCTIONS,
+  };
 
-  private buildInstructions(custom?: string): string {
-    return custom ? `${BASE_INSTRUCTIONS} ${custom}` : BASE_INSTRUCTIONS;
+  private buildInstructions(custom?: string, overrideBase?: boolean): string {
+    if (overrideBase && custom) return custom;
+    return custom
+      ? `${this.voiceConfig.baseInstructions} ${custom}`
+      : this.voiceConfig.baseInstructions;
+  }
+
+  private resolveVoice(perSpeechVoice?: TTSVoice): string {
+    if (perSpeechVoice && (VALID_VOICES as readonly string[]).includes(perSpeechVoice)) {
+      return perSpeechVoice;
+    }
+    return this.voiceConfig.voice;
+  }
+
+  /**
+   * Update voice configuration (called when personality config loads).
+   */
+  setVoiceConfig(config: Partial<VoiceConfig>): void {
+    if (config.voice) this.voiceConfig.voice = config.voice;
+    if (config.baseInstructions !== undefined) {
+      this.voiceConfig.baseInstructions = config.baseInstructions;
+    }
+  }
+
+  getVoiceConfig(): VoiceConfig {
+    return { ...this.voiceConfig };
   }
 
   setOnPlayingChange(callback: (playing: boolean) => void): void {
     this.onPlayingChange = callback;
   }
 
-  async speak(text: string, customInstructions?: string): Promise<void> {
+  async speak(text: string, options?: SpeechOptions): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ text, instructions: customInstructions, resolve, reject });
+      this.queue.push({ text, options, resolve, reject });
       this.processQueue();
     });
   }
@@ -82,13 +123,17 @@ class TTSClient {
   }
 
   private async playItem(item: SpeechQueueItem): Promise<void> {
-    const instructions = this.buildInstructions(item.instructions);
+    const instructions = this.buildInstructions(
+      item.options?.instructions,
+      item.options?.overrideInstructions,
+    );
+    const voice = this.resolveVoice(item.options?.voice);
 
     this.abortController = new AbortController();
     const response = await fetch(`${getApiBase()}/chat/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: item.text, instructions }),
+      body: JSON.stringify({ text: item.text, instructions, voice }),
       signal: this.abortController.signal,
     });
 

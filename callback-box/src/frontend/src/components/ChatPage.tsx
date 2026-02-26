@@ -11,6 +11,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import TextareaAutosize from "react-textarea-autosize";
 import {
+  getApiBase,
   getChatHistory,
   getChatStatus,
   sendChatMessage,
@@ -21,7 +22,8 @@ import {
 } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { useSpeechPlayback, type SpeechPlayback } from "../hooks/useSpeechPlayback";
-import { hasAssistantSpeech, parseAllSpeechTags } from "../lib/speech-parsing";
+import { hasAssistantSpeech, parseAllSpeechTags, VALID_VOICES } from "../lib/speech-parsing";
+import { getTTSClient } from "../lib/tts-client";
 import { unlockAudioContext } from "../lib/audio-context";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
@@ -208,11 +210,24 @@ function AssistantMessage({ entries, debugView }: { entries: SessionEntry[]; deb
   );
 }
 
+function NewSessionButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
+      title="New Session"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+  );
+}
+
 /**
  * Debug dropdown menu for chat controls.
  */
 function ChatDebugMenu({
-  onNewSession,
   onStopProcess,
   sessionId,
   running,
@@ -222,7 +237,6 @@ function ChatDebugMenu({
   showDebugLog,
   onToggleDebugLog,
 }: {
-  onNewSession: () => void;
   onStopProcess: () => void;
   sessionId: string | null;
   running: boolean;
@@ -259,12 +273,6 @@ function ChatDebugMenu({
       </button>
       {open ? (
         <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-warm-300 rounded-lg shadow-lg z-50 py-1">
-          <button
-            onClick={() => { onNewSession(); setOpen(false); }}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700"
-          >
-            New Session
-          </button>
           <button
             onClick={() => { onStopProcess(); setOpen(false); }}
             disabled={!running}
@@ -346,6 +354,22 @@ export function ChatPage() {
       .then((s) => {
         setSessionId(s.sessionId);
         setProcessRunning(s.running);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Load voice config from personality on mount
+  useEffect(() => {
+    fetch(`${getApiBase()}/chat/voice-config`)
+      .then((r) => r.json())
+      .then((config: { model?: string; instructions?: string[] }) => {
+        const tts = getTTSClient();
+        if (config.model && (VALID_VOICES as readonly string[]).includes(config.model as typeof VALID_VOICES[number])) {
+          tts.setVoiceConfig({ voice: config.model as typeof VALID_VOICES[number] });
+        }
+        if (config.instructions?.length) {
+          tts.setVoiceConfig({ baseInstructions: config.instructions.join(" ") });
+        }
       })
       .catch(() => {});
   }, []);
@@ -583,10 +607,10 @@ export function ChatPage() {
     <>
     <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200">
       {/* Header with debug controls */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
-        <h2 className="text-sm font-semibold text-white tracking-wide">Chat</h2>
+      <div className="flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
+        <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
+        <NewSessionButton onClick={handleNewSession} />
         <ChatDebugMenu
-          onNewSession={handleNewSession}
           onStopProcess={handleStopProcess}
           sessionId={sessionId}
           running={processRunning}

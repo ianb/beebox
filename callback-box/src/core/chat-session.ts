@@ -77,6 +77,16 @@ BEHAVIOR:
 - If the user speaks (<speech> input), always respond with speech
 - If the user types (<typed> input), speech is optional
 
+SPEECH OUTPUT:
+- Wrap spoken text in <speech> tags.
+- Optionally add <instructions> after the text (before </speech>) when the delivery matters — tone, pacing, emphasis on specific words or phrases. Don't add instructions for normal conversational speech; only when something notable is called for.
+- Instructions can be general ("Warm and slow") or targeted ("Emphasize the word 'never', pause before 'but'").
+- Your default voice and base instructions come from the personality card (<speaking-voice>). Base instructions are prepended to any inline <instructions>.
+- To experiment with a different voice: <speech voice="fable">text</speech>
+  Available voices: alloy, ash, ballad, cedar, coral, echo, fable, marin, onyx, nova, sage, shimmer, verse
+- To replace base instructions entirely: <speech override-instructions="1">text<instructions>Whisper softly</instructions></speech>
+- Optional emotion attribute for avatar: <speech emotion="happy">text</speech>
+
 INPUT FORMAT:
 - User messages are wrapped in <speech> or <typed> tags
 - local-time attribute shows the current time

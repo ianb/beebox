@@ -167,15 +167,34 @@ export async function registerChatRoutes(
     return { ok: true };
   });
 
+  // GET /api/chat/voice-config - Return speaking voice config from personality
+  server.get("/api/chat/voice-config", async (_request, _reply) => {
+    try {
+      const { readFile } = await import("node:fs/promises");
+      const { join } = await import("node:path");
+      const voicePath = join(boxRoot, "docs/generated/speaking-voice.json");
+      const content = await readFile(voicePath, "utf-8");
+      return JSON.parse(content);
+    } catch {
+      return { model: undefined, instructions: [] };
+    }
+  });
+
   // POST /api/chat/tts - Proxy TTS requests to OpenAI
-  server.post<{ Body: { text: string; instructions?: string } }>(
+  const VALID_TTS_VOICES = [
+    "alloy", "ash", "ballad", "cedar", "coral", "echo",
+    "fable", "marin", "onyx", "nova", "sage", "shimmer", "verse",
+  ];
+
+  server.post<{ Body: { text: string; instructions?: string; voice?: string } }>(
     "/api/chat/tts",
     async (request, reply) => {
       const apiKey = process.env.THINKING_OPENAI_API_KEY;
       if (!apiKey) {
         return reply.status(500).send({ error: "TTS API key not configured" });
       }
-      const { text, instructions } = request.body;
+      const { text, instructions, voice } = request.body;
+      const resolvedVoice = voice && VALID_TTS_VOICES.includes(voice) ? voice : "marin";
       const response = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {
@@ -185,7 +204,7 @@ export async function registerChatRoutes(
         body: JSON.stringify({
           model: "gpt-4o-mini-tts-2025-03-20",
           input: text,
-          voice: "marin",
+          voice: resolvedVoice,
           response_format: "mp3",
           instructions:
             instructions ||

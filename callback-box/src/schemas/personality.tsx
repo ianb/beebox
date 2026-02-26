@@ -404,6 +404,19 @@ export function compilePersonality(parsed: ParsedPersonality): string {
     lines.push("");
   }
 
+  // Speaking voice (if configured)
+  if (parsed.speakingVoice.model || parsed.speakingVoice.instructions.length > 0) {
+    lines.push("**Speaking Voice:**");
+    if (parsed.speakingVoice.model) {
+      lines.push(`- Voice model: ${parsed.speakingVoice.model}`);
+    }
+    for (const instruction of parsed.speakingVoice.instructions) {
+      lines.push(`- ${instruction}`);
+    }
+    lines.push("- Edit `<speaking-voice>` in `config/main.personality.card` to change defaults");
+    lines.push("");
+  }
+
   // Active experiments
   const activeExperiments = parsed.experiments.filter(
     (e) => e.status === "active" || e.status === "proposed"
