@@ -1,5 +1,5 @@
 /**
- * Knowledge test runner — executes test prompts against a box via runAgent()
+ * Knowledge Audit runner — executes audit prompts against a box via runAgent()
  * and parses session transcripts to extract agent behavior.
  */
 
@@ -13,7 +13,7 @@ import {
   type SessionContentBlock,
 } from "../../cli/lib/session.js";
 
-export interface KnowledgeTest {
+export interface AuditTest {
   id: string;
   prompt: string;
   expected_level: string;
@@ -27,7 +27,7 @@ export interface KnowledgeTest {
 }
 
 export interface TestSuite {
-  tests: KnowledgeTest[];
+  tests: AuditTest[];
 }
 
 export interface AgentBehavior {
@@ -45,14 +45,14 @@ export interface AutomatedChecks {
 }
 
 export interface TestResult {
-  test: KnowledgeTest;
+  test: AuditTest;
   sessionId: string;
   behavior: AgentBehavior;
   checks: AutomatedChecks;
 }
 
 /**
- * Load knowledge tests from a YAML file.
+ * Load audit tests from a YAML file.
  */
 export async function loadTests(yamlPath: string): Promise<TestSuite> {
   const content = await fs.readFile(yamlPath, "utf-8");
@@ -60,17 +60,17 @@ export async function loadTests(yamlPath: string): Promise<TestSuite> {
 }
 
 /**
- * Find the knowledge-tests.yaml in a scenario directory.
+ * Find the audits.yaml in a scenario directory.
  */
 export function getTestsPath(scenarioDir: string): string {
-  return path.join(scenarioDir, "knowledge-tests.yaml");
+  return path.join(scenarioDir, "knowledge-audits.yaml");
 }
 
 /**
- * Run a single knowledge test and return the result.
+ * Run a single knowledge audit and return the result.
  */
 export interface RunTestOptions {
-  test: KnowledgeTest;
+  test: AuditTest;
   boxRoot: string;
   onOutput?: (text: string) => void;
 }
@@ -157,7 +157,7 @@ function categorizeToolUse(block: SessionContentBlock, acc: BehaviorAccumulator)
 /**
  * Run automated checks against the agent's behavior.
  */
-function runChecks(test: KnowledgeTest, behavior: AgentBehavior): AutomatedChecks {
+function runChecks(test: AuditTest, behavior: AgentBehavior): AutomatedChecks {
   const containsChecks = (test.correct_contains ?? []).map((expected) => ({
     expected,
     found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),

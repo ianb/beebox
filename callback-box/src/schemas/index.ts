@@ -27,6 +27,9 @@ export {
   QuestionFollowupJobSchema,
   GuideSchema,
   ScheduledScriptSchema,
+  TelegramMessageSchema,
+  ChatThreadSchema,
+  ChatJobSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -49,6 +52,9 @@ export type { CalendarReviewJob } from "./calendar-review-job.js";
 export type { QuestionFollowupJob } from "./question-followup-job.js";
 export type { Guide } from "./guide.js";
 export type { ScheduledScript, ParsedScheduledScript, ScheduleCheckContext } from "./scheduled-script.js";
+export type { TelegramMessage } from "./telegram-message.js";
+export type { ChatThread } from "./chat-thread.js";
+export type { ChatJob } from "./chat-job.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -69,6 +75,9 @@ export { createNewsJobTemplate } from "./news-job.js";
 export { createIntakeJobTemplate } from "./intake-job.js";
 export { createCalendarReviewJobTemplate } from "./calendar-review-job.js";
 export { createQuestionFollowupJobTemplate } from "./question-followup-job.js";
+export { createTelegramMessageTemplate } from "./telegram-message.js";
+export { createChatThreadTemplate, createMessageElement } from "./chat-thread.js";
+export { createChatJobTemplate } from "./chat-job.js";
 
 // Guide exports
 export { parseGuide, compileGuide, createInitialGuideTemplate } from "./guide.js";

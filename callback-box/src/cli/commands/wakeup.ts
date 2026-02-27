@@ -23,6 +23,7 @@ import { createCaptureConnector } from "../../connectors/capture.js";
 import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createPushoverConnector } from "../../connectors/pushover.js";
+import { createTelegramConnector } from "../../connectors/telegram.js";
 import { getAllConnectors } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { createLoader } from "../lib/loader.js";
@@ -116,6 +117,7 @@ export const wakeupCommand = new Command("wakeup")
     createGmailConnector(boxRoot);
     createGoogleCalendarConnector(boxRoot);
     createPushoverConnector(boxRoot);
+    createTelegramConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

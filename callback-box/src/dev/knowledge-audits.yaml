@@ -119,7 +119,7 @@ tests:
       shell/agent/instruction primitives, CHECK_SKIP) but is close enough to
       common XML patterns that the model guesses confidently. Open question:
       would the guessed XML actually validate? A scenario test would answer
-      this better than a knowledge test.
+      this better than a knowledge audit.
 
   - id: procedure-vs-procedurerun
     prompt: "Explain the relationship between a procedure card and a procedure-run card."
@@ -244,3 +244,116 @@ tests:
     expected_level: knows_directly
     watch_for: "Lists types (knows directly) AND addresses adding new ones (discoverable)"
     tags: [cards, schemas, extension]
+
+  # === Chat Threads ===
+
+  - id: chat-thread-structure
+    prompt: "Show me the XML structure of a chat-thread card."
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-chat-thread.md before answering"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["<message", "<seen"]
+    tags: [cards, chat]
+
+  - id: chat-thread-new-messages
+    prompt: "I have a chat-thread card with some messages. How do I find which messages are new?"
+    expected_level: knows_about
+    watch_for: "Describes scanning backward for last <seen> or <message sender='agent'>"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["seen", "agent"]
+    tags: [chat, processing]
+
+  - id: chat-thread-respond-vs-acknowledge
+    prompt: "When processing a chat thread, how do I decide whether to respond or just acknowledge?"
+    expected_level: knows_about
+    watch_for: "Describes <message sender='agent'> for response and <seen /> for acknowledgment"
+    correct_contains: ["<seen"]
+    tags: [chat, processing]
+
+  - id: chat-thread-callback
+    prompt: "When processing a chat-thread card, how can I tell the system to re-invoke me later if no new messages arrive?"
+    expected_level: knows_about
+    watch_for: "Mentions callback-in attribute on <seen> element"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["callback-in"]
+    tags: [chat, processing]
+
+  - id: chat-thread-agent-message
+    prompt: "I want to send a message to a Telegram chat from a chat thread. How do I do that?"
+    expected_level: knows_about
+    watch_for: "Describes appending <message sender='agent'>text</message> without sent attribute"
+    correct_contains: ["sender=\"agent\""]
+    tags: [chat, processing]
+    notes: >
+      Critical that the agent knows NOT to fill in sent or id attributes.
+      The connector handles delivery. If the agent fills in sent, the message
+      won't actually be delivered.
+
+  - id: chat-thread-seen-note
+    prompt: "Can I leave a note for myself when acknowledging chat messages?"
+    expected_level: knows_about
+    watch_for: "Describes text content of <seen> as a note-to-self for future invocation"
+    correct_contains: ["<seen"]
+    tags: [chat, processing]
+
+  - id: chat-job-processing
+    prompt: "I have a chat job card. Walk me through how to process it."
+    expected_level: knows_about
+    watch_for: "Reads job, follows thread ref, finds new messages, responds or acknowledges, commits, finishes"
+    should_read: ["docs/generated/card-chat-job.md"]
+    correct_contains: ["thread", "cb finish"]
+    tags: [chat, jobs]
+
+  - id: chat-thread-invariant
+    prompt: "After I process a chat thread, what must be true about the last element?"
+    expected_level: knows_about
+    watch_for: "States that the last element must be <seen> or <message sender='agent'>"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["<seen", "agent"]
+    tags: [chat, processing]
+
+  - id: chat-thread-dont-modify
+    prompt: "Can I edit or remove existing messages in a chat thread?"
+    expected_level: knows_about
+    watch_for: "Says no — only append, never modify or remove existing elements"
+    tags: [chat, processing]
+
+  - id: chat-thread-participants
+    prompt: "How do I know who's in a chat thread?"
+    expected_level: knows_about
+    watch_for: "Mentions <participants> element with <person ref='people/...'> references"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["participants"]
+    tags: [chat, processing]
+
+  - id: chat-thread-guidelines
+    prompt: "Is there any per-chat configuration for how I should behave in a specific chat thread?"
+    expected_level: knows_about
+    watch_for: "Mentions looking for a chat.guide.card in the thread directory"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["guide"]
+    tags: [chat, guides]
+
+  - id: chat-guide-compilation
+    prompt: "If I create a chat.guide.card in a chat thread directory, how does it get used?"
+    expected_level: knows_about
+    watch_for: "Mentions that the guide is compiled to markdown and loaded as a rule when accessing files in that directory"
+    correct_contains: ["guide", "rule"]
+    tags: [chat, guides]
+    notes: >
+      The agent should understand the pipeline: chat.guide.card is compiled
+      during init/wakeup into docs/generated/ and a .claude/rules/ file is
+      generated with paths: matching that chat directory. This means the
+      guide auto-loads when the agent touches any file in that chat's directory.
+      Removed should_read because the agent may answer from codebase knowledge.
+
+  - id: chat-thread-outbound-flow
+    prompt: "After I write a response in a chat thread, how does it actually get sent to Telegram?"
+    expected_level: discoverable
+    watch_for: "Describes the finalize/connector flow: unsent agent message found, sent via API, stamped"
+    correct_contains: ["finalize"]
+    tags: [chat, connectors]
+    notes: >
+      The agent shouldn't need to know the outbound mechanics to process
+      a chat job — just write the response and commit. But understanding
+      the flow helps debug issues. This is discoverable from connector docs.

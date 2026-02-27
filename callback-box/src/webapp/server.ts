@@ -20,6 +20,7 @@ import { registerPairingRoutes } from "./routes/pairing.js";
 import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
+import { registerTelegramRoutes } from "./routes/telegram.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 
 export const DEFAULT_PORT = 3210;
@@ -104,6 +105,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerCalendarRoutes(instance, box.boxRoot);
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerTelegramRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
 
       // Serve static frontend files within this prefix
       if (frontendExists) {

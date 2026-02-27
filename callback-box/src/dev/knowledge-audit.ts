@@ -1,11 +1,12 @@
 #!/usr/bin/env tsx
 /**
- * Knowledge testing CLI — run agent knowledge tests, list them, or evaluate results.
+ * Knowledge Audit CLI — run audits to verify agent knowledge, list them,
+ * or evaluate results.
  *
  * Usage (via npm script):
- *   npm run knowledge -- run [--box <path>] [--filter <tag-or-id>]
- *   npm run knowledge -- list [--tests <path>]
- *   npm run knowledge -- eval <report-path>
+ *   npm run knowledge-audit -- run [--box <path>] [--filter <tag-or-id>]
+ *   npm run knowledge-audit -- list [--tests <path>]
+ *   npm run knowledge-audit -- eval <report-path>
  */
 
 import { Command } from "commander";
@@ -18,32 +19,32 @@ const DEFAULT_TESTS_DIR = path.dirname(new URL(import.meta.url).pathname);
 const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");
 
 const program = new Command()
-  .name("knowledge")
-  .description("Agent knowledge testing");
+  .name("audit")
+  .description("Knowledge Audit — verify agent knowledge");
 
 program
   .command("list")
-  .description("List available knowledge tests")
-  .option("--tests <path>", "Path to knowledge-tests.yaml")
+  .description("List available audits")
+  .option("--tests <path>", "Path to audits.yaml")
   .action(async (options: { tests?: string }) => {
     const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
     const suite = await loadTests(testsPath);
 
-    console.log(`Tests in ${testsPath}:\n`);
+    console.log(`Audits in ${testsPath}:\n`);
     for (const test of suite.tests) {
       const tags = test.tags ? ` [${test.tags.join(", ")}]` : "";
       console.log(`  ${test.id} — ${test.expected_level}${tags}`);
       console.log(`    "${test.prompt}"`);
     }
-    console.log(`\nTotal: ${suite.tests.length} tests`);
+    console.log(`\nTotal: ${suite.tests.length} audits`);
   });
 
 program
   .command("run")
-  .description("Run knowledge tests against a box")
+  .description("Run knowledge audits against a box")
   .option("--box <path>", "Box root directory")
-  .option("--tests <path>", "Path to knowledge-tests.yaml")
-  .option("--filter <id-or-tag>", "Filter by test ID or tag")
+  .option("--tests <path>", "Path to audits.yaml")
+  .option("--filter <id-or-tag>", "Filter by audit ID or tag")
   .option("--output <path>", "Output report path")
   .action(async (options: { box?: string; tests?: string; filter?: string; output?: string }) => {
     const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
@@ -52,7 +53,7 @@ program
     const resolvedBox = path.resolve(boxRoot);
     const suite = await loadTests(testsPath);
 
-    // Filter tests if requested
+    // Filter audits if requested
     let tests = suite.tests;
     if (options.filter) {
       const filter = options.filter;
@@ -60,17 +61,17 @@ program
         (t) => t.id === filter || t.id.includes(filter) || t.tags?.includes(filter),
       );
       if (tests.length === 0) {
-        console.error(`No tests match filter: ${filter}`);
+        console.error(`No audits match filter: ${filter}`);
         process.exit(1);
       }
     }
 
-    console.log(`Running ${tests.length} knowledge tests against ${resolvedBox}\n`);
+    console.log(`Running ${tests.length} knowledge audits against ${resolvedBox}\n`);
 
     const results = [];
     for (const test of tests) {
       console.log(`\n${"=".repeat(60)}`);
-      console.log(`Test: ${test.id} (${test.expected_level})`);
+      console.log(`Audit: ${test.id} (${test.expected_level})`);
       console.log(`Prompt: "${test.prompt}"`);
       console.log("=".repeat(60));
 
@@ -87,7 +88,7 @@ program
     // Generate and write report
     const report = generateReport({ boxRoot: resolvedBox, results });
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-").substring(0, 19);
-    const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `knowledge-report-${timestamp}.md`);
+    const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `audit-report-${timestamp}.md`);
 
     await fs.writeFile(outputPath, report, "utf-8");
     console.log(`\nReport written to: ${outputPath}`);

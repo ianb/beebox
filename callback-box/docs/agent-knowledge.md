@@ -1,4 +1,4 @@
-# Agent Knowledge: What It Should Know and How to Test
+# Agent Knowledge Audit: What It Should Know and How to Verify
 
 ## Knowledge Taxonomy
 
@@ -371,7 +371,7 @@ cb prompt "Who is your boxholder?"
 
 ## Test Run Notes (2026-02-23)
 
-First full run of the knowledge test suite (27 tests). Results and observations:
+First full run of the knowledge audit suite (27 tests). Results and observations:
 
 ### What worked well
 - **Knows directly** tests all passed cleanly — zero file reads, correct answers. The agent guide layer is solid.
@@ -385,7 +385,7 @@ First full run of the knowledge test suite (27 tests). Results and observations:
 
 ### Open questions
 
-**Procedure authoring (`create-procedure`)** — The agent constructs plausible procedure XML without reading `docs/generated/procedures.md`, even after trimming the pointer. The procedure format uses custom conventions (precheck/run/validate phases, shell/agent/instruction primitives, CHECK_SKIP exit codes) but the general shape is close enough to common XML procedure patterns that the model guesses confidently. Open question: should the format be more conventional (so guessing works reliably) or more distinctive (so guessing fails visibly)? Alternatively, the real test might be whether the generated XML actually validates — a scenario test that creates a procedure and runs `cb validate` would answer this better than a knowledge test.
+**Procedure authoring (`create-procedure`)** — The agent constructs plausible procedure XML without reading `docs/generated/procedures.md`, even after trimming the pointer. The procedure format uses custom conventions (precheck/run/validate phases, shell/agent/instruction primitives, CHECK_SKIP exit codes) but the general shape is close enough to common XML procedure patterns that the model guesses confidently. Open question: should the format be more conventional (so guessing works reliably) or more distinctive (so guessing fails visibly)? Alternatively, the real test might be whether the generated XML actually validates — a scenario test that creates a procedure and runs `cb validate` would answer this better than a knowledge audit.
 
 **"Knows about" vs. creation prompts** — Pattern across multiple tests: the agent reads docs when asked to *explain* something but skips the read when asked to *create* something. It seems to treat creation as an opportunity to demonstrate capability rather than a signal to look things up. This affects create-question-card, create-procedure, and add-daily-task (before fix). The schedule fix worked by making the pointer more specific about what the doc contains; the procedure fix (trimming) didn't work. More investigation needed on what makes an agent follow a pointer.
 

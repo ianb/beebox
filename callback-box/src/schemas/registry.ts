@@ -35,6 +35,9 @@ import { CalendarReviewJobSchema } from "./calendar-review-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { PushoverMessageSchema } from "./pushover-message.js";
+import { TelegramMessageSchema } from "./telegram-message.js";
+import { ChatThreadSchema } from "./chat-thread.js";
+import { ChatJobSchema } from "./chat-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
@@ -67,6 +70,9 @@ export const schemas: ElementSchema[] = [
   GuideSchema,
   ScheduledScriptSchema,
   PushoverMessageSchema,
+  TelegramMessageSchema,
+  ChatThreadSchema,
+  ChatJobSchema,
   PersonalitySchema,
   QuestionFollowupJobSchema,
 ];
@@ -251,5 +257,8 @@ export { CalendarReviewJobSchema } from "./calendar-review-job.js";
 export { GuideSchema } from "./guide.js";
 export { ScheduledScriptSchema } from "./scheduled-script.js";
 export { PushoverMessageSchema } from "./pushover-message.js";
+export { TelegramMessageSchema } from "./telegram-message.js";
+export { ChatThreadSchema } from "./chat-thread.js";
+export { ChatJobSchema } from "./chat-job.js";
 export { PersonalitySchema } from "./personality.js";
 export { QuestionFollowupJobSchema } from "./question-followup-job.js";

@@ -208,8 +208,28 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
 
 /**
  * Scan config/*.guide.card, compile each, and generate job-type rules.
+ * Also scan per-chat guide cards in store/chat/ directories.
  */
 async function compileGuides(boxRoot: string, debug: boolean): Promise<void> {
+  const rulesDir = join(boxRoot, ".claude/rules");
+  await mkdir(rulesDir, { recursive: true });
+
+  const ctx = { boxRoot, rulesDir, debug };
+  await compileConfigGuides(ctx);
+  await compileChatGuides(ctx);
+}
+
+interface GuideCompileContext {
+  boxRoot: string;
+  rulesDir: string;
+  debug: boolean;
+}
+
+/**
+ * Compile config/*.guide.card and generate job-type rules.
+ */
+async function compileConfigGuides(ctx: GuideCompileContext): Promise<void> {
+  const { boxRoot, rulesDir, debug } = ctx;
   const configDir = join(boxRoot, "config");
   let files: string[];
   try {
@@ -223,9 +243,6 @@ async function compileGuides(boxRoot: string, debug: boolean): Promise<void> {
 
   // job-type → list of { guidePath, appliesTo, compiledPath }
   const jobTypeMap = new Map<string, Array<{ guidePath: string; appliesTo: string; compiledPath: string }>>();
-
-  const rulesDir = join(boxRoot, ".claude/rules");
-  await mkdir(rulesDir, { recursive: true });
 
   for (const filename of guideFiles) {
     const guidePath = `config/${filename}`;
@@ -281,6 +298,83 @@ async function compileGuides(boxRoot: string, debug: boolean): Promise<void> {
     lines.push("");
 
     await writeFile(join(rulesDir, ruleFilename), lines.join("\n"));
+  }
+}
+
+/**
+ * Scan per-chat directory guide cards (chat.guide.card) under store/chat/.
+ * Each guide compiles to a rule that loads when accessing files in that chat directory.
+ */
+async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
+  const { boxRoot, rulesDir, debug } = ctx;
+  const chatRoot = join(boxRoot, "store/chat");
+  let connectors: string[];
+  try {
+    connectors = await readdir(chatRoot);
+  } catch {
+    return;
+  }
+
+  for (const connector of connectors) {
+    const connectorDir = join(chatRoot, connector);
+    let connectorStat;
+    try {
+      connectorStat = await stat(connectorDir);
+    } catch {
+      continue;
+    }
+    if (!connectorStat.isDirectory()) continue;
+
+    let chatSlugs: string[];
+    try {
+      chatSlugs = await readdir(connectorDir);
+    } catch {
+      continue;
+    }
+
+    for (const slug of chatSlugs) {
+      const guideFile = join(connectorDir, slug, "chat.guide.card");
+      let content: string;
+      try {
+        content = await readFile(guideFile, "utf-8");
+      } catch {
+        continue; // No guide card for this chat
+      }
+
+      try {
+        const root = await parseXml(content, "chat.guide.card") as Guide;
+        const parsed = parseGuide(root);
+        const guideName = `chat-${connector}-${slug}`;
+        const compiled = compileGuide(parsed, guideName);
+        const compiledFilename = `${guideName}-guide.md`;
+        const compiledPath = `${DOCS_DIR}/${compiledFilename}`;
+
+        await writeFile(
+          join(boxRoot, compiledPath),
+          withDocId({ relativePath: compiledPath, content: compiled, debug })
+        );
+
+        // Generate a rule file scoped to this chat directory
+        const chatDir = `store/chat/${connector}/${slug}`;
+        const ruleFilename = `guide-for-chat-${connector}-${slug}.md`;
+        const lines = [
+          "---",
+          "paths:",
+          `  - "${chatDir}/**"`,
+          "---",
+          `# Chat Guide: ${slug.replace(/_/g, " ")}`,
+          "",
+          `This chat has behavioral guidelines. Read \`${compiledPath}\` before responding.`,
+          "",
+          `Source: \`${chatDir}/chat.guide.card\``,
+          "",
+        ];
+
+        await writeFile(join(rulesDir, ruleFilename), lines.join("\n"));
+      } catch {
+        // Skip unparseable guide cards
+      }
+    }
   }
 }
 

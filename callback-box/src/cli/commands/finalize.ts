@@ -10,6 +10,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { createPushoverConnector } from "../../connectors/pushover.js";
+import { createTelegramConnector } from "../../connectors/telegram.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const finalizeCommand = new Command("finalize")
@@ -22,6 +23,7 @@ export const finalizeCommand = new Command("finalize")
 
     // Initialize connectors
     createPushoverConnector(boxRoot);
+    createTelegramConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

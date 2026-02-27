@@ -1,6 +1,6 @@
 /**
- * Knowledge test report generation — produces markdown reports
- * from test results for manual evaluation.
+ * Knowledge Audit report generation — produces markdown reports
+ * from audit results for manual evaluation.
  */
 
 import type { TestResult } from "./test-runner.js";
@@ -16,7 +16,7 @@ export function generateReport(options: ReportOptions): string {
   const timestamp = options.timestamp ?? new Date().toISOString();
   const lines: string[] = [];
 
-  lines.push(`# Knowledge Test Report — ${timestamp}`);
+  lines.push(`# Knowledge Audit Report — ${timestamp}`);
   lines.push("");
   lines.push(`Box: ${boxRoot}`);
   lines.push(`Tests run: ${results.length}`);
