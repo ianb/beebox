@@ -105,7 +105,6 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerCalendarRoutes(instance, box.boxRoot);
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
-      await registerTelegramRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
 
       // Serve static frontend files within this prefix
       if (frontendExists) {
@@ -117,6 +116,13 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
         });
       }
     }, { prefix: `/${box.slug}` });
+
+    // Register webhooks at /webhook/<slug>/ — outside auth so external
+    // services (Telegram, etc.) can reach them without Cloudflare Access.
+    await server.register(async (instance) => {
+      const { broadcastEvent } = await registerSseRoutes(instance, box.boxRoot);
+      await registerTelegramRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+    }, { prefix: `/webhook/${box.slug}` });
   }
 
   if (frontendExists) {

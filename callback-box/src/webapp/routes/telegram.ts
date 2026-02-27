@@ -1,7 +1,7 @@
 /**
  * Telegram webhook route.
  *
- * POST /api/telegram/webhook — receives updates from Telegram's Bot API.
+ * POST /webhook/<box>/telegram — receives updates from Telegram's Bot API.
  * Validates the secret token header, processes the update synchronously
  * (appends to chat thread, commits, creates chat job), then returns 200.
  */
@@ -23,7 +23,7 @@ interface RegisterTelegramRoutesOptions {
 export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions): Promise<void> {
   const { server, boxRoot, broadcastEvent } = opts;
 
-  server.post("/api/telegram/webhook", async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post("/telegram", async (request: FastifyRequest, reply: FastifyReply) => {
     const config = await loadTelegramConfig(boxRoot);
     if (!config) {
       return reply.status(404).send({ error: "Telegram not configured" });

@@ -404,7 +404,7 @@ class TelegramConnector implements Connector {
     }
 
     const boxSlug = path.basename(this.boxRoot);
-    const webhookUrl = `${publicUrl}/${boxSlug}/api/telegram/webhook`;
+    const webhookUrl = `${publicUrl}/webhook/${boxSlug}/telegram`;
 
     const bot = new Bot(config.botToken);
     await bot.api.setWebhook(webhookUrl, {

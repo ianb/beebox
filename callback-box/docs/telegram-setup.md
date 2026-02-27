@@ -63,7 +63,7 @@ cb wakeup --connector telegram
 
 This does three things:
 1. Polls for any messages sent while the server was down
-2. Registers the webhook URL (`$PUBLIC_URL/<box>/api/telegram/webhook`) with Telegram
+2. Registers the webhook URL (`$PUBLIC_URL/webhook/<box>/telegram`) with Telegram
 3. Sends any pending outbound messages from `box/output/`
 
 After this, new messages will be pushed to your server in real-time via the webhook.
