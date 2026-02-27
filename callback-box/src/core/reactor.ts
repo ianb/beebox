@@ -31,6 +31,8 @@ export interface ReactorOptions {
   pollInterval?: number | undefined;
   /** Skip agent invocation if only low-priority jobs remain */
   skipLowPriority?: boolean | undefined;
+  /** Only process jobs of this type (e.g. "chat" matches *.chat.job.card) */
+  type?: string | undefined;
   onLog?: ((text: string) => void) | undefined;
 }
 
@@ -55,8 +57,17 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     maxCycles = 3,
     pollInterval = 0,
     skipLowPriority = false,
+    type: typeFilter,
     onLog,
   } = options;
+
+  // Acquire lock — prevent concurrent reactor runs
+  const lockFile = path.join(boxRoot, ".cb-reactor.lock");
+  const lockAcquired = await acquireReactorLock(lockFile);
+  if (!lockAcquired) {
+    onLog?.(fmt.dim("Another reactor is already running, skipping.\n"));
+    return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
+  }
 
   let totalProcessed = 0;
   let lastRemaining = 0;
@@ -81,7 +92,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     const jobsDir = path.join(boxRoot, "box/jobs");
     await fs.mkdir(jobsDir, { recursive: true });
 
-    const jobCards = await findJobCards(jobsDir);
+    const jobCards = await findJobCards(jobsDir, typeFilter);
 
     if (jobCards.length === 0) {
       onLog?.("No pending jobs.\n");
@@ -173,7 +184,21 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
       for (const job of agentJobs) {
         const priorityLabel = job.card.priority === "low" ? " *(low priority)*" : "";
         if (job.content) {
-          jobDescriptions.push(`### ${job.relPath}${priorityLabel}\n\`\`\`xml\n${job.content.trim()}\n\`\`\``);
+          let desc = `### ${job.relPath}${priorityLabel}\n\`\`\`xml\n${job.content.trim()}\n\`\`\``;
+
+          // Inline referenced files so the agent doesn't need extra reads
+          const refs = extractRefs(job.content);
+          for (const ref of refs) {
+            const refPath = path.join(boxRoot, ref);
+            try {
+              const refContent = await fs.readFile(refPath, "utf-8");
+              desc += `\n\n#### ${ref}\n\`\`\`xml\n${refContent.trim()}\n\`\`\``;
+            } catch {
+              // Referenced file doesn't exist — agent will discover this
+            }
+          }
+
+          jobDescriptions.push(desc);
         } else {
           jobDescriptions.push(`### ${job.relPath}${priorityLabel}\n(could not read)`);
         }
@@ -213,7 +238,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     }
 
     // Count remaining jobs
-    const remaining = await findJobCards(jobsDir);
+    const remaining = await findJobCards(jobsDir, typeFilter);
     const processed = jobCards.length - remaining.length;
 
     onLog?.(fmt.dim(`\nCycle complete: ${processed} processed, ${remaining.length} remaining\n`));
@@ -255,9 +280,10 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
 
   // Polling mode: wait and repeat
   if (pollInterval > 0 && success) {
+    await releaseReactorLock(lockFile);
     onLog?.(fmt.dim(`\nPolling every ${pollInterval}s... (Ctrl+C to stop)\n`));
     await sleep(pollInterval * 1000);
-    // Recurse for next poll iteration
+    // Recurse for next poll iteration (re-acquires lock)
     const pollResult = await runReactor(options);
     return {
       success: pollResult.success,
@@ -265,6 +291,8 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
       jobsRemaining: pollResult.jobsRemaining,
     };
   }
+
+  await releaseReactorLock(lockFile);
 
   return {
     success,
@@ -335,6 +363,36 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ─── Reactor lock ─────────────────────────────────────────────────────
+
+/**
+ * Try to acquire a PID-based lock file. Returns true if acquired.
+ * Stale locks (dead PIDs) are automatically cleaned up.
+ */
+async function acquireReactorLock(lockFile: string): Promise<boolean> {
+  try {
+    const content = await fs.readFile(lockFile, "utf-8");
+    const pid = parseInt(content.trim(), 10);
+    if (!isNaN(pid)) {
+      try {
+        process.kill(pid, 0); // Check if process is alive
+        return false; // Process is alive — lock is held
+      } catch {
+        // Process is dead — stale lock, clean up and proceed
+      }
+    }
+  } catch {
+    // No lock file — proceed
+  }
+
+  await fs.writeFile(lockFile, String(process.pid));
+  return true;
+}
+
+async function releaseReactorLock(lockFile: string): Promise<void> {
+  await fs.unlink(lockFile).catch(() => {});
+}
+
 // ─── Procedure trampoline ────────────────────────────────────────────
 
 interface ProcedureJobInfo {
@@ -366,6 +424,19 @@ async function detectProcedureInJob(content: string, filePath: string): Promise<
   return null;
 }
 
+/**
+ * Extract ref="..." attributes from elements like <thread ref="..."> and <item ref="...">.
+ */
+function extractRefs(xmlContent: string): string[] {
+  const refs: string[] = [];
+  const pattern = /<(?:thread|item)\s[^>]*ref="([^"]+)"/g;
+  let match;
+  while ((match = pattern.exec(xmlContent)) !== null) {
+    refs.push(match[1]!);
+  }
+  return refs;
+}
+
 function buildReactorSystemPrompt(boxRoot: string): string {
   return `You are processing jobs in a Callback Box.
 
@@ -382,16 +453,16 @@ Your goal: process every job card and clear the jobs directory.
 ## Process
 
 For each job:
-1. Read the job card
-2. Follow the instructions for that job type (loaded via .claude/rules/)
-3. Do the work, committing as you go
-4. When done, call \`cb finish <job-file-path>\` to delete the job card and commit the deletion
+1. The job card content is already provided below — do NOT re-read the job file
+2. Instructions for each job type are loaded via .claude/rules/ — do NOT read docs/generated/ files
+3. If the job references other files (threads, items), read those — unless their content is already included below
+4. Do the work, committing as you go
+5. When done, call \`cb finish <job-file-path>\` to delete the job card and commit the deletion
 
 ## Guidelines
 
 - Process one job at a time
 - Commit your work frequently — don't let changes pile up
-- Read referenced files before making decisions
 - If a job references items (\`<item ref="...">\`), read those items
 - \`cb finish\` only deletes the job file — make sure your work is committed first`;
 }
@@ -409,7 +480,7 @@ interface JobCardInfo {
   priority: "normal" | "low";
 }
 
-async function findJobCards(jobsDir: string): Promise<JobCardInfo[]> {
+async function findJobCards(jobsDir: string, typeFilter?: string): Promise<JobCardInfo[]> {
   let entries: string[];
   try {
     entries = await fs.readdir(jobsDir, { recursive: true });
@@ -417,7 +488,8 @@ async function findJobCards(jobsDir: string): Promise<JobCardInfo[]> {
     return [];
   }
 
-  const jobFiles = entries.filter((e) => e.endsWith(".job.card"));
+  const suffix = typeFilter ? `.${typeFilter}.job.card` : ".job.card";
+  const jobFiles = entries.filter((e) => e.endsWith(suffix));
   const results: JobCardInfo[] = [];
 
   for (const file of jobFiles) {

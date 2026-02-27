@@ -4,8 +4,10 @@
  * POST /webhook/<box>/telegram — receives updates from Telegram's Bot API.
  * Validates the secret token header, processes the update synchronously
  * (appends to chat thread, commits, creates chat job), then returns 200.
+ * After processing, triggers the reactor to handle the chat job.
  */
 
+import { spawn } from "node:child_process";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { BroadcastEventFn } from "./sse.js";
 import {
@@ -47,6 +49,16 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
 
       if (cardPath) {
         broadcastEvent("cards-changed", { source: "telegram" });
+
+        // Fire-and-forget: trigger reactor for chat jobs only.
+        // The reactor lock prevents concurrent runs — if one is already
+        // running, this will exit immediately.
+        const child = spawn("cb", ["reactor", "--type", "chat"], {
+          cwd: boxRoot,
+          stdio: "ignore",
+          detached: true,
+        });
+        child.unref();
       }
 
       return reply.status(200).send({ ok: true });

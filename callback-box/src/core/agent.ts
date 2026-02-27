@@ -45,7 +45,9 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
   const { boxRoot, agentResult, agentOptions, fallbackMessage, fallbackTrailers, onOutput } = options;
 
   const status = await getStatus(boxRoot);
-  if (status.clean) return;
+  // Only care about staged/modified files — untracked files (lock files, pending
+  // jobs, etc.) are not the agent's uncommitted work.
+  if (status.staged.length === 0 && status.modified.length === 0) return;
 
   // Retry: resume the same session with a nudge to commit
   onOutput?.(fmt.dim("  (Agent didn't commit — resuming session to request commit...)\n"));
@@ -58,7 +60,7 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
   });
 
   const retryStatus = await getStatus(boxRoot);
-  if (retryStatus.clean) {
+  if (retryStatus.staged.length === 0 && retryStatus.modified.length === 0) {
     onOutput?.(fmt.ok("  Agent committed on retry\n"));
     return;
   }

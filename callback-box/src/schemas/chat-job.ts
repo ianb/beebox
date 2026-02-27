@@ -48,19 +48,17 @@ A chat job means there are new messages (or a scheduled callback) in a chat thre
 
 ## Steps
 
-1. Read this job card to find the thread reference (\`<thread ref="...">\`)
-2. Read the referenced chat thread file
-3. Find new messages: scan backward from the end for the last \`<seen>\` or \`<message sender="agent">\` — everything after that is new
-4. If there are no new messages, check the last \`<seen>\` for a note-to-self about what to do
-5. Decide whether to respond or acknowledge:
+1. The job content and thread content are provided in the prompt — do NOT re-read them
+2. Find new messages: scan backward from the end for the last \`<seen>\` or \`<message sender="agent">\` — everything after that is new
+3. If there are no new messages, check the last \`<seen>\` for a note-to-self about what to do
+4. Decide whether to respond or acknowledge:
    - **Respond**: append \`<message sender="agent">Your response</message>\` at the end
    - **Acknowledge**: append \`<seen />\` (optionally with \`callback-in\` and/or a note-to-self)
-6. Commit the thread file
-7. Run \`cb finish <this-job-file>\` to complete the job
+5. Commit the thread file
+6. Run \`cb finish <this-job-file>\` to complete the job
 
 ## Important
 
-- Read the thread BEFORE responding — understand context
 - Only append ONE element at the end of the thread
 - Do NOT modify existing messages
 - Do NOT fill in \`sent\` or \`id\` on agent messages — the connector handles delivery
