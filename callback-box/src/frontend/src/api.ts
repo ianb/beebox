@@ -113,6 +113,13 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     },
   });
 
+  if (response.status === 401) {
+    const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/auth/login?returnTo=${returnTo}`;
+    // Never resolves — page is navigating away
+    return new Promise(() => {});
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
     throw new Error(error.error || error.message || "Request failed");

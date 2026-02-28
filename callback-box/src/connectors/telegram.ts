@@ -127,7 +127,7 @@ function getChatSlug(
 }
 
 /** Extract message fields from a Telegram update. Returns null if not processable. */
-function extractMessage(update: TelegramUpdate): {
+export function extractMessage(update: TelegramUpdate): {
   msg: TelegramMessageObj;
   text: string;
   senderName: string;
@@ -609,8 +609,10 @@ export function createTelegramConnector(boxRoot: string): Connector {
 export async function processWebhookUpdate(opts: {
   boxRoot: string;
   update: TelegramUpdate;
+  /** When true, skip chat job creation (caller handles response directly) */
+  skipJob?: boolean | undefined;
 }): Promise<string | null> {
-  const { boxRoot, update } = opts;
+  const { boxRoot, update, skipJob } = opts;
 
   // Load state for chat mappings
   const state = await loadTransientState<TelegramState>({
@@ -638,18 +640,20 @@ export async function processWebhookUpdate(opts: {
     trailers: { "Pulled-By": "telegram-webhook" },
   });
 
-  // Create chat job
-  const slug = path.basename(path.dirname(result.threadRelPath));
-  const jobPath = await createChatJob({
-    boxRoot,
-    threadRef: result.threadRelPath,
-    description: `New messages in ${slug}`,
-  });
-  await stageFiles(boxRoot, [jobPath]);
-  await commit(boxRoot, {
-    message: "Create chat job for Telegram message",
-    trailers: { "Created-By": "telegram-webhook" },
-  });
+  if (!skipJob) {
+    // Create chat job
+    const slug = path.basename(path.dirname(result.threadRelPath));
+    const jobPath = await createChatJob({
+      boxRoot,
+      threadRef: result.threadRelPath,
+      description: `New messages in ${slug}`,
+    });
+    await stageFiles(boxRoot, [jobPath]);
+    await commit(boxRoot, {
+      message: "Create chat job for Telegram message",
+      trailers: { "Created-By": "telegram-webhook" },
+    });
+  }
 
   // Update state so catch-up polling doesn't re-process this update
   if (!state.lastUpdateId || update.update_id > state.lastUpdateId) {

@@ -13,11 +13,20 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { parseXml, type ElementNode } from "cardworks";
+import { schemas } from "../schemas/registry.js";
 import { runAgent, ensureAgentCommitted, type AgentOptions } from "./agent.js";
 import { generateDocs } from "./generate-docs.js";
 import { startProcedure } from "./procedure/engine.js";
 import { finishJob } from "./finish-job.js";
 import { fmt } from "../cli/lib/format.js";
+import {
+  loadChatSessions,
+  saveChatSessions,
+  getOrCreateSession,
+  markSessionUsed,
+  resetSession,
+  resetAllSessions,
+} from "./chat-reactor-sessions.js";
 import type { CommandContext } from "./command-runner.js";
 
 export interface ReactorOptions {
@@ -33,6 +42,8 @@ export interface ReactorOptions {
   skipLowPriority?: boolean | undefined;
   /** Only process jobs of this type (e.g. "chat" matches *.chat.job.card) */
   type?: string | undefined;
+  /** Reset all persisted chat sessions before processing */
+  resetSessions?: boolean | undefined;
   onLog?: ((text: string) => void) | undefined;
 }
 
@@ -41,6 +52,13 @@ export interface ReactorResult {
   jobsProcessed: number;
   jobsRemaining: number;
   error?: string;
+}
+
+interface JobWithContent {
+  card: JobCardInfo;
+  relPath: string;
+  content: string;
+  procedureInfo: ProcedureJobInfo | null;
 }
 
 /**
@@ -58,6 +76,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     pollInterval = 0,
     skipLowPriority = false,
     type: typeFilter,
+    resetSessions: shouldResetSessions = false,
     onLog,
   } = options;
 
@@ -67,6 +86,14 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
   if (!lockAcquired) {
     onLog?.(fmt.dim("Another reactor is already running, skipping.\n"));
     return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
+  }
+
+  // Handle --reset-sessions
+  if (shouldResetSessions) {
+    const sessions = await loadChatSessions(boxRoot);
+    resetAllSessions(sessions);
+    await saveChatSessions(boxRoot, sessions);
+    onLog?.(fmt.ok("Chat reactor sessions reset.\n"));
   }
 
   let totalProcessed = 0;
@@ -84,7 +111,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
       onLog?.("\n");
     }
 
-    // Refresh agent docs
+    // Refresh agent docs (fast no-op if inputs haven't changed)
     onLog?.(fmt.dim("Refreshing agent docs...\n"));
     await generateDocs(boxRoot);
 
@@ -115,12 +142,6 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     }
 
     // Read each job card and detect procedure jobs
-    interface JobWithContent {
-      card: JobCardInfo;
-      relPath: string;
-      content: string;
-      procedureInfo: ProcedureJobInfo | null;
-    }
     const jobsWithContent: JobWithContent[] = [];
     for (const card of jobCards) {
       const jp = path.join("box/jobs", card.file);
@@ -176,65 +197,17 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
       return { success: true, jobsProcessed: 0, jobsRemaining: jobCards.length };
     }
 
-    // Process remaining agent jobs as before
+    // Process remaining agent jobs
     let cycleSuccess = true;
     if (agentJobs.length > 0) {
-      const agentJobPaths = agentJobs.map((j) => j.relPath);
-      const jobDescriptions: string[] = [];
-      for (const job of agentJobs) {
-        const priorityLabel = job.card.priority === "low" ? " *(low priority)*" : "";
-        if (job.content) {
-          let desc = `### ${job.relPath}${priorityLabel}\n\`\`\`xml\n${job.content.trim()}\n\`\`\``;
-
-          // Inline referenced files so the agent doesn't need extra reads
-          const refs = extractRefs(job.content);
-          for (const ref of refs) {
-            const refPath = path.join(boxRoot, ref);
-            try {
-              const refContent = await fs.readFile(refPath, "utf-8");
-              desc += `\n\n#### ${ref}\n\`\`\`xml\n${refContent.trim()}\n\`\`\``;
-            } catch {
-              // Referenced file doesn't exist — agent will discover this
-            }
-          }
-
-          jobDescriptions.push(desc);
-        } else {
-          jobDescriptions.push(`### ${job.relPath}${priorityLabel}\n(could not read)`);
-        }
+      const jobOpts: ProcessJobsOptions = { jobs: agentJobs, boxRoot, dryRun, typeFilter, onLog };
+      if (typeFilter === "chat") {
+        // Chat jobs: process individually with per-thread session reuse
+        cycleSuccess = await processChatJobs(jobOpts);
+      } else {
+        // Non-chat jobs: batch into a single agent session
+        cycleSuccess = await processBatchJobs(jobOpts);
       }
-
-      const systemPrompt = buildReactorSystemPrompt(boxRoot);
-      const userPrompt = buildReactorUserPrompt(agentJobPaths, jobDescriptions);
-
-      if (dryRun) {
-        onLog?.("\n[DRY RUN] Would run agent with prompt:\n");
-        onLog?.(userPrompt + "\n");
-        return { success: true, jobsProcessed: 0, jobsRemaining: jobCards.length };
-      }
-
-      // Run the agent
-      onLog?.("\n");
-      const agentOptions: AgentOptions = {
-        boxRoot,
-        systemPrompt,
-        prompt: userPrompt,
-        onOutput: onLog,
-        maxTurns: 30,
-      };
-
-      const agentResult = await runAgent(agentOptions);
-      cycleSuccess = agentResult.success;
-
-      // Ensure the agent committed its work
-      await ensureAgentCommitted({
-        boxRoot,
-        agentResult,
-        agentOptions,
-        fallbackMessage: "Reactor: agent work (fallback commit)",
-        fallbackTrailers: { Phase: "reactor" },
-        ...(onLog ? { onOutput: onLog } : {}),
-      });
     }
 
     // Count remaining jobs
@@ -299,6 +272,164 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     jobsProcessed: totalProcessed,
     jobsRemaining: lastRemaining,
   };
+}
+
+// ─── Chat job processing (per-thread session reuse) ─────────────────
+
+interface ProcessJobsOptions {
+  jobs: JobWithContent[];
+  boxRoot: string;
+  dryRun: boolean;
+  typeFilter?: string | undefined;
+  onLog?: ((text: string) => void) | undefined;
+}
+
+/**
+ * Process chat jobs individually, one agent call per thread,
+ * reusing Claude Code sessions across reactor invocations.
+ */
+async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean> {
+  const { jobs, boxRoot, dryRun, onLog } = opts;
+  const sessions = await loadChatSessions(boxRoot);
+  let allSuccess = true;
+
+  for (const job of jobs) {
+    const threadRef = extractThreadRef(job.content);
+    const sessionKey = threadRef ?? job.relPath; // fall back to job path if no thread ref
+
+    if (threadRef) {
+      onLog?.(fmt.dim(`  Thread: ${threadRef}\n`));
+    }
+
+    const { sessionId, resume } = getOrCreateSession(sessions, sessionKey);
+    onLog?.(fmt.dim(`  Session: ${sessionId.slice(0, 8)}... (${resume ? "resume" : "new"})\n`));
+
+    const desc = await buildJobDescription(job, boxRoot);
+    const userPrompt = `Please process this job:\n\n${desc}\n\nProcess it according to the instructions, then call \`cb finish\` when done.`;
+
+    if (dryRun) {
+      onLog?.("\n[DRY RUN] Would run agent with prompt:\n");
+      onLog?.(userPrompt + "\n");
+      continue;
+    }
+
+    const systemPrompt = buildReactorSystemPrompt(boxRoot);
+    const agentOptions: AgentOptions = {
+      boxRoot,
+      systemPrompt,
+      prompt: userPrompt,
+      onOutput: onLog,
+      maxTurns: 10,
+      sessionId,
+      resume,
+    };
+
+    onLog?.("\n");
+    const agentResult = await runAgent(agentOptions);
+
+    await ensureAgentCommitted({
+      boxRoot,
+      agentResult,
+      agentOptions,
+      fallbackMessage: "Reactor: chat agent work (fallback commit)",
+      fallbackTrailers: { Phase: "reactor" },
+      ...(onLog ? { onOutput: onLog } : {}),
+    });
+
+    if (agentResult.success) {
+      markSessionUsed(sessions, sessionKey);
+    } else {
+      // Failed — reset so next message starts fresh
+      resetSession(sessions, sessionKey);
+      allSuccess = false;
+    }
+  }
+
+  await saveChatSessions(boxRoot, sessions);
+  return allSuccess;
+}
+
+// ─── Batch job processing (non-chat) ────────────────────────────────
+
+/**
+ * Process agent jobs in a single batched agent session (original behavior).
+ */
+async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolean> {
+  const { jobs, boxRoot, typeFilter, dryRun, onLog } = opts;
+  const jobPaths = jobs.map((j) => j.relPath);
+  const jobDescriptions: string[] = [];
+
+  for (const job of jobs) {
+    if (job.content) {
+      jobDescriptions.push(await buildJobDescription(job, boxRoot));
+    } else {
+      const priorityLabel = job.card.priority === "low" ? " *(low priority)*" : "";
+      jobDescriptions.push(`### ${job.relPath}${priorityLabel}\n(could not read)`);
+    }
+  }
+
+  const systemPrompt = buildReactorSystemPrompt(boxRoot);
+  const userPrompt = buildReactorUserPrompt(jobPaths, jobDescriptions);
+
+  if (dryRun) {
+    onLog?.("\n[DRY RUN] Would run agent with prompt:\n");
+    onLog?.(userPrompt + "\n");
+    return true;
+  }
+
+  onLog?.("\n");
+  const maxTurns = typeFilter ? 10 : 30;
+  const agentOptions: AgentOptions = {
+    boxRoot,
+    systemPrompt,
+    prompt: userPrompt,
+    onOutput: onLog,
+    maxTurns,
+  };
+
+  const agentResult = await runAgent(agentOptions);
+
+  await ensureAgentCommitted({
+    boxRoot,
+    agentResult,
+    agentOptions,
+    fallbackMessage: "Reactor: agent work (fallback commit)",
+    fallbackTrailers: { Phase: "reactor" },
+    ...(onLog ? { onOutput: onLog } : {}),
+  });
+
+  return agentResult.success;
+}
+
+// ─── Job description building ───────────────────────────────────────
+
+/**
+ * Build a formatted job description with inlined refs and schema instructions.
+ */
+async function buildJobDescription(job: JobWithContent, boxRoot: string): Promise<string> {
+  const priorityLabel = job.card.priority === "low" ? " *(low priority)*" : "";
+  let desc = `### ${job.relPath}${priorityLabel}\n\`\`\`xml\n${job.content.trim()}\n\`\`\``;
+
+  const refs = extractRefs(job.content);
+  for (const ref of refs) {
+    const refPath = path.join(boxRoot, ref);
+    try {
+      const refContent = await fs.readFile(refPath, "utf-8");
+      desc += `\n\n#### ${ref}\n\`\`\`xml\n${refContent.trim()}\n\`\`\``;
+    } catch {
+      // Referenced file doesn't exist — agent will discover this
+    }
+  }
+
+  const rootTag = extractRootTag(job.content);
+  if (rootTag) {
+    const instructions = getSchemaInstructions(rootTag);
+    if (instructions) {
+      desc += `\n\n#### Instructions for ${rootTag}\n${instructions}`;
+    }
+  }
+
+  return desc;
 }
 
 /**
@@ -425,6 +556,22 @@ async function detectProcedureInJob(content: string, filePath: string): Promise<
 }
 
 /**
+ * Extract the root element tag name from XML content (e.g. "chat-job" from "<chat-job ...>").
+ */
+function extractRootTag(xmlContent: string): string | null {
+  const match = xmlContent.match(/<([a-z][\w-]*)/);
+  return match ? match[1]! : null;
+}
+
+/**
+ * Look up schema instructions for a given root tag name.
+ */
+function getSchemaInstructions(tagName: string): string | null {
+  const schema = schemas.find((s) => s.tagName === tagName);
+  return schema?.instructions ?? null;
+}
+
+/**
  * Extract ref="..." attributes from elements like <thread ref="..."> and <item ref="...">.
  */
 function extractRefs(xmlContent: string): string[] {
@@ -437,33 +584,45 @@ function extractRefs(xmlContent: string): string[] {
   return refs;
 }
 
+/**
+ * Extract the thread ref from a job card's XML content.
+ * Looks for <thread ref="..."> element.
+ */
+function extractThreadRef(xmlContent: string): string | null {
+  const match = xmlContent.match(/<thread\s[^>]*ref="([^"]+)"/);
+  return match ? match[1]! : null;
+}
+
 function buildReactorSystemPrompt(boxRoot: string): string {
   return `You are processing jobs in a Callback Box.
 
 WORKING DIRECTORY: ${boxRoot}
 
-## How Jobs Work
+## What You Already Have (DO NOT re-read these)
 
-Job cards live in \`box/jobs/\`. Each job card describes work to do.
-The card's type (from its file extension, e.g. \`.news.job.card\`) determines
-what kind of work and has associated rules with detailed instructions.
+The following are ALREADY loaded into your context — reading them again wastes time:
 
-Your goal: process every job card and clear the jobs directory.
+1. **Job card XML** — included in the user prompt below
+2. **Referenced files** (threads, items) — inlined in the user prompt below
+3. **Processing instructions** — included in the user prompt below (from the schema)
+4. **.claude/rules/ files** — auto-loaded by the system based on job type
+5. **CLAUDE.md and agent-guide.md** — auto-loaded by the system
+
+Do NOT read \`docs/generated/\` or \`.claude/rules/\` files — you already have all the instructions you need.
+
+**Note:** The Edit tool requires you to Read a file first. You may Read a file once before editing it, but do NOT read it to understand the content — you already have that from this prompt.
 
 ## Process
 
 For each job:
-1. The job card content is already provided below — do NOT re-read the job file
-2. Instructions for each job type are loaded via .claude/rules/ — do NOT read docs/generated/ files
-3. If the job references other files (threads, items), read those — unless their content is already included below
-4. Do the work, committing as you go
-5. When done, call \`cb finish <job-file-path>\` to delete the job card and commit the deletion
+1. Read the job content from this prompt (already provided below)
+2. Do the work (edit files, etc.)
+3. Commit your changes
+4. Call \`cb finish <job-file-path>\` to complete the job
 
 ## Guidelines
 
 - Process one job at a time
-- Commit your work frequently — don't let changes pile up
-- If a job references items (\`<item ref="...">\`), read those items
 - \`cb finish\` only deletes the job file — make sure your work is committed first`;
 }
 

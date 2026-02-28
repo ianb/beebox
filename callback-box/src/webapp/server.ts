@@ -8,6 +8,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyWebsocket from "@fastify/websocket";
+import fastifyCookie from "@fastify/cookie";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { registerApiRoutes } from "./routes/api.js";
@@ -21,6 +22,9 @@ import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
+import { registerAuthRoutes } from "./routes/auth.js";
+import { isAuthEnabled, getSessionEmail } from "./auth.js";
+import { loadBoxConfig } from "./box-config.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 
 export const DEFAULT_PORT = 3210;
@@ -63,6 +67,9 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     trustProxy: true,
   });
 
+  // Register cookie support (used for auth sessions)
+  await server.register(fastifyCookie);
+
   // Register multipart for file uploads
   await server.register(fastifyMultipart, {
     limits: {
@@ -73,8 +80,27 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   // Register WebSocket support (used by realtime transcription proxy)
   await server.register(fastifyWebsocket);
 
-  // Root-level box list endpoint
-  server.get("/api/boxes", async () => {
+  // Register auth routes (login, callback, logout, me) when auth is enabled
+  if (isAuthEnabled()) {
+    await server.register(registerAuthRoutes, { boxes });
+  }
+
+  // Root-level box list endpoint (filtered by user access when auth enabled)
+  server.get("/api/boxes", async (request) => {
+    if (isAuthEnabled()) {
+      const email = getSessionEmail(request);
+      if (!email) {
+        return { boxes: [], authRequired: true };
+      }
+      const accessible: Array<{ slug: string; name: string }> = [];
+      for (const b of boxes) {
+        const config = await loadBoxConfig(b.boxRoot);
+        if (!config.allowedEmails?.length || config.allowedEmails.includes(email)) {
+          accessible.push({ slug: b.slug, name: b.slug });
+        }
+      }
+      return { boxes: accessible };
+    }
     return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
   });
 
@@ -94,6 +120,24 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   // Register each box under its slug prefix
   for (const box of boxes) {
     await server.register(async (instance) => {
+      // Per-box auth check: verify session and box-level access
+      if (isAuthEnabled()) {
+        instance.addHook("preHandler", async (request, reply) => {
+          // Let static assets through (handled by fastify-static)
+          if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i.test(request.url)) {
+            return;
+          }
+          const email = getSessionEmail(request);
+          if (!email) {
+            return reply.status(401).send({ error: "Not authenticated" });
+          }
+          const config = await loadBoxConfig(box.boxRoot);
+          if (config.allowedEmails?.length && !config.allowedEmails.includes(email)) {
+            return reply.status(403).send({ error: "Not authorized for this box" });
+          }
+        });
+      }
+
       // Register all routes for this box
       const { broadcastEvent } = await registerSseRoutes(instance, box.boxRoot);
       await registerApiRoutes(instance, box.boxRoot);

@@ -2,19 +2,25 @@
  * Telegram webhook route.
  *
  * POST /webhook/<box>/telegram — receives updates from Telegram's Bot API.
- * Validates the secret token header, processes the update synchronously
- * (appends to chat thread, commits, creates chat job), then returns 200.
- * After processing, triggers the reactor to handle the chat job.
+ * Validates the secret token header, appends the message to the thread,
+ * then routes it to a persistent per-thread Claude session via ChatSessionPool.
+ * Responses are sent directly to Telegram via the Bot API as soon as
+ * <chat-response> tags are intercepted from the agent's output stream.
  */
 
-import { spawn } from "node:child_process";
+import * as path from "node:path";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { BroadcastEventFn } from "./sse.js";
 import {
   loadTelegramConfig,
   processWebhookUpdate,
+  extractMessage,
   type TelegramUpdate,
 } from "../../connectors/telegram.js";
+import { ChatSessionPool } from "../../core/chat-session-pool.js";
+import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
+import { appendMessageToThread } from "../../connectors/chat-utils.js";
+import { stageFiles, commit } from "../../cli/lib/git.js";
 
 interface RegisterTelegramRoutesOptions {
   server: FastifyInstance;
@@ -24,6 +30,9 @@ interface RegisterTelegramRoutesOptions {
 
 export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions): Promise<void> {
   const { server, boxRoot, broadcastEvent } = opts;
+
+  // Singleton pool for this box
+  const pool = new ChatSessionPool(boxRoot);
 
   server.post("/telegram", async (request: FastifyRequest, reply: FastifyReply) => {
     const config = await loadTelegramConfig(boxRoot);
@@ -43,22 +52,36 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
     }
 
     const update = body as unknown as TelegramUpdate;
+    const extracted = extractMessage(update);
+    if (!extracted) {
+      return reply.status(200).send({ ok: true });
+    }
+
+    const chatId = extracted.msg.chat.id;
 
     try {
-      const cardPath = await processWebhookUpdate({ boxRoot, update });
+      // Append message to thread, commit (skip job creation — we handle directly)
+      const threadRef = await processWebhookUpdate({ boxRoot, update, skipJob: true });
 
-      if (cardPath) {
+      if (threadRef) {
         broadcastEvent("cards-changed", { source: "telegram" });
 
-        // Fire-and-forget: trigger reactor for chat jobs only.
-        // The reactor lock prevents concurrent runs — if one is already
-        // running, this will exit immediately.
-        const child = spawn("cb", ["reactor", "--type", "chat"], {
-          cwd: boxRoot,
-          stdio: "ignore",
-          detached: true,
+        const chatDescription = extracted.msg.chat.title ?? extracted.senderName;
+
+        // Fire-and-forget: send to pool, deliver responses, archive
+        handleChatMessage({
+          pool,
+          boxRoot,
+          threadRef,
+          chatDescription,
+          messageText: extracted.text,
+          senderName: extracted.senderName,
+          chatId,
+          botToken: config.botToken,
+          broadcastEvent,
+        }).catch((err) => {
+          console.error(`[telegram-webhook] Pool handling failed: ${err}`);
         });
-        child.unref();
       }
 
       return reply.status(200).send({ ok: true });
@@ -68,4 +91,79 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
       return reply.status(200).send({ ok: true, error: "processing failed" });
     }
   });
+}
+
+interface HandleChatMessageOptions {
+  pool: ChatSessionPool;
+  boxRoot: string;
+  threadRef: string;
+  chatDescription: string;
+  messageText: string;
+  senderName: string;
+  chatId: number;
+  botToken: string;
+  broadcastEvent: BroadcastEventFn;
+}
+
+/**
+ * Send a message to the persistent session. Responses are delivered eagerly
+ * to Telegram as soon as each <chat-response> tag is intercepted from the
+ * agent's output stream — the agent may continue working after responding.
+ */
+async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> {
+  const { pool, boxRoot, threadRef, chatDescription, messageText, senderName, chatId, botToken, broadcastEvent } = opts;
+  const slug = path.basename(path.dirname(threadRef));
+
+  // Show "typing..." indicator until agent responds or turn ends
+  const stopTyping = startTypingIndicator({ botToken, chatId });
+
+  const onResponse = async (text: string) => {
+    // Stop typing indicator once first response arrives
+    stopTyping();
+
+    // Send to Telegram immediately
+    let messageId: string | undefined;
+    try {
+      const sent = await sendTelegramMessage({ botToken, chatId, text });
+      messageId = String(sent.messageId);
+    } catch (err) {
+      console.error(`[telegram-webhook] Failed to send response: ${err}`);
+    }
+
+    // Archive to thread file
+    try {
+      await appendMessageToThread({
+        boxRoot,
+        threadRelPath: threadRef,
+        message: {
+          sender: "agent",
+          sent: new Date().toISOString(),
+          ...(messageId ? { id: messageId } : {}),
+          text,
+        },
+      });
+
+      await stageFiles(boxRoot, [threadRef]);
+      await commit(boxRoot, {
+        message: `Chat response to ${senderName} in ${slug}`,
+        trailers: { "Sent-By": "telegram-chat-pool" },
+      });
+
+      broadcastEvent("cards-changed", { source: "telegram" });
+    } catch (err) {
+      console.error(`[telegram-webhook] Failed to archive response in ${slug}: ${err}`);
+    }
+  };
+
+  try {
+    await pool.send({
+      threadRef,
+      message: messageText,
+      chatDescription,
+      onResponse,
+    });
+  } finally {
+    // Ensure typing indicator is stopped even if send fails
+    stopTyping();
+  }
 }

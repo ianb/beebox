@@ -14,17 +14,22 @@ import { DashboardPage } from "./components/DashboardPage";
 import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./components/QuestionsPage";
 
+interface BoxesResult {
+  boxes: Array<{ slug: string; name: string }>;
+  authRequired?: boolean;
+}
+
 /**
  * Fetch the list of available boxes from the server.
  */
-async function fetchBoxes(): Promise<Array<{ slug: string; name: string }>> {
+async function fetchBoxes(): Promise<BoxesResult> {
   try {
     const resp = await fetch("/api/boxes");
-    if (!resp.ok) return [];
+    if (!resp.ok) return { boxes: [] };
     const data = await resp.json();
-    return data.boxes ?? [];
+    return { boxes: data.boxes ?? [], authRequired: data.authRequired };
   } catch {
-    return [];
+    return { boxes: [] };
   }
 }
 
@@ -41,7 +46,7 @@ function AppNav() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchBoxes().then(setBoxes);
+    fetchBoxes().then((result) => setBoxes(result.boxes));
   }, []);
 
   useEffect(() => {
@@ -232,17 +237,36 @@ function CardViewPage() {
  */
 function BoxRedirect() {
   const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
+  const [authRequired, setAuthRequired] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchBoxes().then((b) => {
-      setBoxes(b);
+    fetchBoxes().then((result) => {
+      setBoxes(result.boxes);
+      setAuthRequired(result.authRequired ?? false);
       setLoading(false);
     });
   }, []);
 
   if (loading) {
     return <div className="p-8 text-warm-600">Loading...</div>;
+  }
+
+  if (boxes.length === 0 && authRequired) {
+    return (
+      <div className="min-h-screen bg-warm-50 flex items-center justify-center">
+        <div className="max-w-sm w-full text-center">
+          <h1 className="text-2xl font-bold text-warm-800 mb-4">Callback Box</h1>
+          <p className="text-warm-600 mb-6">Sign in to access your boxes.</p>
+          <a
+            href={`/auth/login?returnTo=${encodeURIComponent(window.location.pathname)}`}
+            className="inline-block bg-plum text-white px-6 py-3 rounded-lg font-medium hover:bg-plum-dark transition-colors"
+          >
+            Sign in with Google
+          </a>
+        </div>
+      </div>
+    );
   }
 
   if (boxes.length === 1) {

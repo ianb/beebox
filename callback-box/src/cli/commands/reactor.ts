@@ -18,7 +18,8 @@ export const reactorCommand = new Command("reactor")
   .option("--poll <seconds>", "Re-run every N seconds (0 = one-shot)", "0")
   .option("--skip-low-priority", "Skip if only low-priority jobs remain")
   .option("--type <type>", "Only process jobs of this type (e.g. chat, news)")
-  .action(async (options: { dryRun?: boolean; sync?: boolean; maxCycles: string; poll: string; skipLowPriority?: boolean; type?: string }) => {
+  .option("--reset-sessions", "Reset all persisted chat reactor sessions")
+  .action(async (options: { dryRun?: boolean; sync?: boolean; maxCycles: string; poll: string; skipLowPriority?: boolean; type?: string; resetSessions?: boolean }) => {
     try {
       const boxRoot = await requireBoxRoot();
 
@@ -30,6 +31,7 @@ export const reactorCommand = new Command("reactor")
         pollInterval: parseInt(options.poll, 10),
         skipLowPriority: options.skipLowPriority,
         type: options.type,
+        resetSessions: options.resetSessions,
         onLog: (text) => process.stdout.write(text),
       });
 

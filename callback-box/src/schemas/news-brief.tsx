@@ -674,10 +674,18 @@ export function parseNewsBrief(brief: NewsBrief): ParsedNewsBrief {
 }
 
 /**
+ * Strip leading/trailing punctuation and whitespace from a title.
+ * Handles cases like LLM-generated titles ending with ``` or starting with quotes.
+ */
+export function cleanTitle(title: string): string {
+  return title.replace(/^[\s`'"*_#:;,.\-!?]+|[\s`'"*_#:;,.\-!?]+$/g, "");
+}
+
+/**
  * Generate a slug from a title for URL use.
  */
 export function slugify(title: string): string {
-  return title
+  return cleanTitle(title)
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
@@ -722,7 +730,7 @@ export function createNewsBriefTemplate(options: NewsBriefOptions): string {
 
   const brief = (
     <news-brief>
-      <title>{options.title}</title>
+      <title>{cleanTitle(options.title)}</title>
       <date>{options.date}</date>
       <byline>{options.byline}</byline>
       <content format="markdown">{options.content}</content>

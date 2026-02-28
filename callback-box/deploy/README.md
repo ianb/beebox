@@ -123,12 +123,48 @@ systemctl restart callback-serve callback-scheduler
 ANTHROPIC_API_KEY=sk-ant-...
 PUBLIC_URL=https://box.example.com
 
+# Auth (optional — enables Google OAuth when set)
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
+CB_PUBLIC_URL=https://box.example.com
+
 # Optional
 THINKING_OPENAI_API_KEY=sk-...
 CALLBACK_MISTRAL_API_KEY=...
 ```
 
 After editing `.env`, restart services: `systemctl restart callback-serve callback-scheduler`
+
+## Authentication (Google OAuth)
+
+Auth is opt-in. When `GOOGLE_OAUTH_CLIENT_ID` is set, all box access requires login.
+
+### Setup
+
+1. Go to [Google Cloud Console - Credentials](https://console.cloud.google.com/apis/credentials?project=callback-box)
+2. Create an **OAuth 2.0 Client ID** (Web application type)
+3. Add authorized redirect URI: `https://box.example.com/auth/callback`
+4. Add to `/root/.env`:
+   ```
+   GOOGLE_OAUTH_CLIENT_ID=...
+   GOOGLE_OAUTH_CLIENT_SECRET=...
+   CB_PUBLIC_URL=https://box.example.com
+   ```
+5. Restart services: `systemctl restart callback-serve`
+
+### Per-box access control
+
+Each box can restrict access to specific email addresses via `config/box.json`:
+
+```json
+{
+  "allowedEmails": ["ian@ianbicking.org", "someone@example.com"]
+}
+```
+
+If `allowedEmails` is empty or missing, any authenticated user can access the box.
+
+Webhooks (`/webhook/<box>/`) remain unauthenticated so external services (Telegram, etc.) still work.
 
 ## Adding connector secrets
 

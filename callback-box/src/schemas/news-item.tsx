@@ -7,6 +7,7 @@
 
 import { element, serialize } from "cardworks";
 import { z } from "zod";
+import { cleanTitle } from "./news-brief.js";
 
 /**
  * Valid news item statuses.
@@ -290,7 +291,7 @@ export function createNewsItemTemplate(options: {
   const guid = options.guid || options.link;
   const newsItem = (
     <news-item status="new" source={options.source}>
-      <title>{options.title}</title>
+      <title>{cleanTitle(options.title)}</title>
       <link>{options.link}</link>
       <published>{options.published}</published>
       {feedTitle && <feed url={options.feedUrl}>{feedTitle}</feed>}

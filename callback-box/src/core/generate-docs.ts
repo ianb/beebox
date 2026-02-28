@@ -22,6 +22,7 @@ const AGENT_GUIDE_DIR = ".callback-box";
 const AGENT_GUIDE_FILE = "agent-guide.md";
 const DOCS_DIR = "docs/generated";
 const INCLUDE_LINE = `@.callback-box/${AGENT_GUIDE_FILE}`;
+const GENERATE_MARKER = ".callback-box/docs-generated-at";
 
 /**
  * Static connector metadata. Connectors register at runtime with a boxRoot,
@@ -165,9 +166,79 @@ async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[]> {
 }
 
 /**
+ * Collect mtimes of all input files that affect doc generation.
+ * Returns the newest mtime found, or 0 if no inputs exist.
+ */
+async function newestInputMtime(boxRoot: string): Promise<number> {
+  let newest = 0;
+
+  const check = async (filePath: string) => {
+    try {
+      const s = await stat(filePath);
+      if (s.mtimeMs > newest) newest = s.mtimeMs;
+    } catch {
+      // File doesn't exist — skip
+    }
+  };
+
+  const checkDir = async (dirPath: string, pattern: RegExp) => {
+    let files: string[];
+    try {
+      files = await readdir(dirPath);
+    } catch {
+      return;
+    }
+    for (const f of files) {
+      if (pattern.test(f)) {
+        await check(join(dirPath, f));
+      }
+    }
+  };
+
+  // Config-level inputs
+  await checkDir(join(boxRoot, "config"), /\.(guide|personality)\.card$/);
+  await checkDir(join(boxRoot, "config/procedures"), /\.procedure\.card$/);
+  await checkDir(join(boxRoot, "config/schemas"), /\.ts$/);
+
+  // Per-chat guide cards
+  const chatRoot = join(boxRoot, "store/chat");
+  try {
+    const connectors = await readdir(chatRoot);
+    for (const connector of connectors) {
+      const connectorDir = join(chatRoot, connector);
+      let slugs: string[];
+      try {
+        slugs = await readdir(connectorDir);
+      } catch {
+        continue;
+      }
+      for (const slug of slugs) {
+        await check(join(connectorDir, slug, "chat.guide.card"));
+      }
+    }
+  } catch {
+    // No store/chat directory
+  }
+
+  return newest;
+}
+
+/**
  * Generate all agent documentation for a box.
  */
 export async function generateDocs(boxRoot: string, options: GenerateDocsOptions = {}): Promise<void> {
+  // Fast path: skip if no input files changed since last generation
+  const markerPath = join(boxRoot, GENERATE_MARKER);
+  const inputMtime = await newestInputMtime(boxRoot);
+  try {
+    const markerStat = await stat(markerPath);
+    if (inputMtime > 0 && inputMtime <= markerStat.mtimeMs) {
+      return; // Nothing changed — skip regeneration
+    }
+  } catch {
+    // No marker file — first run, generate everything
+  }
+
   const debug = options.docIdDebug ?? await hasDocIdMarker(boxRoot);
 
   await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
@@ -204,6 +275,9 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
   await compileGuides(boxRoot, debug);
 
   await ensureClaudeMdInclude(boxRoot);
+
+  // Write marker so next call can skip if nothing changed
+  await writeFile(markerPath, new Date().toISOString());
 }
 
 /**
