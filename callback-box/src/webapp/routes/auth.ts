@@ -59,20 +59,40 @@ export async function registerAuthRoutes(
         return reply.status(400).send({ error: "Missing authorization code" });
       }
 
-      const { tokens } = await oauth2Client.getToken(code);
+      let tokens;
+      try {
+        const result = await oauth2Client.getToken(code);
+        tokens = result.tokens;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        const response = (err as { response?: { data?: unknown } })?.response?.data;
+        console.error("[auth] Token exchange failed:", message);
+        if (response) console.error("[auth] Google response:", JSON.stringify(response));
+        console.error("[auth] Redirect URI used:", redirectUri);
+        console.error("[auth] Client ID:", clientId.slice(0, 20) + "...");
+        return reply.status(500).send({ error: `Token exchange failed: ${message}` });
+      }
+
       const idToken = tokens.id_token;
       if (!idToken) {
         return reply.status(400).send({ error: "No ID token received" });
       }
 
-      const ticket = await oauth2Client.verifyIdToken({
-        idToken,
-        audience: clientId,
-      });
-      const payload = ticket.getPayload();
-      const email = payload?.email;
-      if (!email) {
-        return reply.status(400).send({ error: "No email in token" });
+      let email: string;
+      try {
+        const ticket = await oauth2Client.verifyIdToken({
+          idToken,
+          audience: clientId,
+        });
+        const payload = ticket.getPayload();
+        if (!payload?.email) {
+          return reply.status(400).send({ error: "No email in token" });
+        }
+        email = payload.email;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[auth] ID token verification failed:", message);
+        return reply.status(500).send({ error: `Token verification failed: ${message}` });
       }
 
       const sessionValue = signSession(email);
