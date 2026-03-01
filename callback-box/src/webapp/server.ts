@@ -138,9 +138,12 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
           if (!email) {
             return reply.status(401).send({ error: "Not authenticated" });
           }
-          const config = await loadBoxConfig(box.boxRoot);
-          if (config.allowedEmails?.length && !config.allowedEmails.includes(email)) {
-            return reply.status(403).send({ error: "Not authorized for this box" });
+          const ownerEmail = getOwnerEmail();
+          if (email !== ownerEmail) {
+            const config = await loadBoxConfig(box.boxRoot);
+            if (config.allowedEmails?.length && !config.allowedEmails.includes(email)) {
+              return reply.status(403).send({ error: "Not authorized for this box" });
+            }
           }
         });
       }

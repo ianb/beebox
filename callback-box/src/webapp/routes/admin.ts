@@ -21,14 +21,16 @@ export async function registerAdminRoutes(server: FastifyInstance) {
   server.get("/api/admin/claude-status", async () => {
     return new Promise<Record<string, unknown>>((resolve) => {
       execFile("claude", ["auth", "status"], { timeout: 10000 }, (err, stdout) => {
-        if (err) {
-          resolve({ loggedIn: false, error: err.message });
-          return;
-        }
+        // claude auth status exits 1 when not logged in, but still outputs JSON to stdout
+        const output = stdout || "";
         try {
-          resolve(JSON.parse(stdout));
+          const parsed = JSON.parse(output);
+          resolve(parsed);
         } catch {
-          resolve({ loggedIn: false, raw: stdout });
+          const result = err
+            ? { loggedIn: false, error: err.message }
+            : { loggedIn: false, raw: output };
+          resolve(result);
         }
       });
     });

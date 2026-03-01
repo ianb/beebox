@@ -166,7 +166,7 @@ export async function patchCard(
 }
 
 export async function getLog(count = 10): Promise<LogResponse> {
-  return fetchJson<LogResponse>(`${getApiBase()}/log?count=${count}`);
+  return fetchJson<LogResponse>(`${getApiBase()}/activity?count=${count}`);
 }
 
 export async function getContext(): Promise<ContextResponse> {

@@ -285,8 +285,8 @@ export async function registerApiRoutes(
     }
   );
 
-  // GET /api/log - Recent git commits
-  server.get<{ Querystring: { count?: string } }>("/api/log", async (request) => {
+  // GET /api/activity - Recent git commits (renamed from /api/log to avoid ad blockers)
+  server.get<{ Querystring: { count?: string } }>("/api/activity", async (request) => {
     const count = parseInt(request.query.count ?? "10", 10);
     const entries = await getLog(boxRoot, count);
     return {
