@@ -106,4 +106,21 @@ export function getSessionEmail(request: FastifyRequest): string | null {
   return verifySession(cookie);
 }
 
+/**
+ * Get the owner email from environment, or null if not set.
+ */
+export function getOwnerEmail(): string | null {
+  return process.env.CB_OWNER_EMAIL || null;
+}
+
+/**
+ * Check if the authenticated user is the system owner.
+ */
+export function isOwner(request: FastifyRequest): boolean {
+  const ownerEmail = getOwnerEmail();
+  if (!ownerEmail) return false;
+  const email = getSessionEmail(request);
+  return email === ownerEmail;
+}
+
 export { COOKIE_NAME, SESSION_MAX_AGE_MS };

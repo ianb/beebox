@@ -23,7 +23,8 @@ import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerAuthRoutes } from "./routes/auth.js";
-import { isAuthEnabled, getSessionEmail } from "./auth.js";
+import { registerAdminRoutes } from "./routes/admin.js";
+import { isAuthEnabled, getSessionEmail, getOwnerEmail } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 
@@ -83,6 +84,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   // Register auth routes (login, callback, logout, me) when auth is enabled
   if (isAuthEnabled()) {
     await server.register(registerAuthRoutes, { boxes });
+    await server.register(registerAdminRoutes);
   }
 
   // Root-level box list endpoint (filtered by user access when auth enabled)
@@ -92,11 +94,16 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       if (!email) {
         return { boxes: [], authRequired: true };
       }
+      const ownerEmail = getOwnerEmail();
       const accessible: Array<{ slug: string; name: string }> = [];
       for (const b of boxes) {
-        const config = await loadBoxConfig(b.boxRoot);
-        if (!config.allowedEmails?.length || config.allowedEmails.includes(email)) {
+        if (email === ownerEmail) {
           accessible.push({ slug: b.slug, name: b.slug });
+        } else {
+          const config = await loadBoxConfig(b.boxRoot);
+          if (!config.allowedEmails?.length || config.allowedEmails.includes(email)) {
+            accessible.push({ slug: b.slug, name: b.slug });
+          }
         }
       }
       return { boxes: accessible };

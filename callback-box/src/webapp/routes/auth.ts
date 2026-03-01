@@ -13,6 +13,7 @@ import {
   signSession,
   getSessionEmail,
   getPublicUrl,
+  getOwnerEmail,
   COOKIE_NAME,
   SESSION_MAX_AGE_MS,
 } from "../auth.js";
@@ -123,14 +124,19 @@ export async function registerAuthRoutes(
     }
 
     // Determine which boxes this user can access
+    const ownerEmail = getOwnerEmail();
     const accessibleBoxes: string[] = [];
     for (const box of options.boxes) {
-      const config = await loadBoxConfig(box.boxRoot);
-      if (!config.allowedEmails?.length || config.allowedEmails.includes(email)) {
+      if (email === ownerEmail) {
         accessibleBoxes.push(box.slug);
+      } else {
+        const config = await loadBoxConfig(box.boxRoot);
+        if (!config.allowedEmails?.length || config.allowedEmails.includes(email)) {
+          accessibleBoxes.push(box.slug);
+        }
       }
     }
 
-    return { email, boxes: accessibleBoxes };
+    return { email, isOwner: email === ownerEmail, boxes: accessibleBoxes };
   });
 }

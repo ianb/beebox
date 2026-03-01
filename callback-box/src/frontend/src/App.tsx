@@ -13,6 +13,7 @@ import { BrowsePage } from "./components/BrowsePage";
 import { DashboardPage } from "./components/DashboardPage";
 import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./components/QuestionsPage";
+import { AdminPage } from "./components/AdminPage";
 
 interface BoxesResult {
   boxes: Array<{ slug: string; name: string }>;
@@ -42,11 +43,15 @@ function AppNav() {
   const location = useLocation();
   const { boxSlug } = useParams();
   const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchBoxes().then((result) => setBoxes(result.boxes));
+    fetch("/auth/me").then((r) => r.ok ? r.json() : null).then((data) => {
+      if (data?.isOwner) setShowAdmin(true);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -69,6 +74,7 @@ function AppNav() {
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
     { to: `${base}/settings`, label: "Settings", match: (p: string) => p.startsWith(`${base}/settings`) },
+    ...(showAdmin ? [{ to: "/admin", label: "Admin", match: (p: string) => p === "/admin" }] : []),
   ];
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";
@@ -301,6 +307,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<BoxRedirect />} />
+      <Route path="/admin" element={<AdminPage />} />
       <Route path="/:boxSlug/print/*" element={<PrintBriefView />} />
       <Route path="/:boxSlug" element={<AppLayout />}>
         <Route path="questions" element={<QuestionsPage />} />
