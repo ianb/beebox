@@ -10,7 +10,9 @@ set -euo pipefail
 #   ./deploy/add-box.sh ianb/hearth
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BOXES_DIR="/root/boxes"
+CB_USER="callback"
+CB_HOME="/home/$CB_USER"
+BOXES_DIR="$CB_HOME/boxes"
 
 # ── Parse repo argument ─────────────────────────────────────────────
 if [[ $# -lt 1 ]]; then
@@ -58,15 +60,14 @@ set -euo pipefail
 
 if [[ -d "$BOX_PATH" ]]; then
   echo "Box already exists at $BOX_PATH, pulling latest..."
-  cd "$BOX_PATH" && git pull --ff-only
+  su - $CB_USER -c "cd '$BOX_PATH' && git pull --ff-only"
 else
   echo "Cloning $REPO to $BOX_PATH..."
-  mkdir -p "$BOXES_DIR"
-  git clone "$REPO" "$BOX_PATH"
+  su - $CB_USER -c "mkdir -p '$BOXES_DIR' && git clone '$REPO' '$BOX_PATH'"
 fi
 
 # Register with scheduler
-cb scheduler add "$BOX_PATH" 2>/dev/null && echo "Registered with scheduler" || echo "Already registered with scheduler"
+su - $CB_USER -c "cb scheduler add '$BOX_PATH'" 2>/dev/null && echo "Registered with scheduler" || echo "Already registered with scheduler"
 
 # Rebuild the serve service to include all boxes
 echo "Updating systemd services..."
@@ -79,9 +80,11 @@ After=network.target
 
 [Service]
 Type=simple
+User=$CB_USER
+Group=$CB_USER
 ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210 \$BOX_DIRS
 WorkingDirectory=$BOXES_DIR
-EnvironmentFile=/root/.env
+EnvironmentFile=$CB_HOME/.env
 Restart=on-failure
 RestartSec=5
 

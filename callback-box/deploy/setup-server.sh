@@ -5,7 +5,9 @@ set -euo pipefail
 REPO_BASE="git@github.com:ianb"
 REPOS=(cardworks callback-dropbox callback-box)
 INSTALL_DIR="/opt/callback"
-BOX_DIR="/root/boxes/test1"
+CB_USER="callback"
+CB_HOME="/home/$CB_USER"
+BOX_DIR="$CB_HOME/boxes/test1"
 NODE_MAJOR=22
 
 echo "=== Callback Box Server Setup ==="
@@ -24,7 +26,7 @@ if ! command -v node &>/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d v)" -lt 
 fi
 echo "Node.js $(node -v), npm $(npm -v)"
 
-# ── Git config ───────────────────────────────────────────────────────
+# ── Git config (root, for cloning repos) ─────────────────────────────
 git config --global user.email "callback-box@box.example.com"
 git config --global user.name "Callback Box"
 
@@ -32,6 +34,17 @@ git config --global user.name "Callback Box"
 echo "Adding GitHub to known hosts..."
 mkdir -p ~/.ssh
 ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+# ── Create callback user ─────────────────────────────────────────────
+echo "Creating $CB_USER user..."
+if ! id -u "$CB_USER" &>/dev/null; then
+  useradd -m -s /bin/bash "$CB_USER"
+fi
+su - "$CB_USER" -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
+grep github.com ~/.ssh/known_hosts >> "$CB_HOME/.ssh/known_hosts" 2>/dev/null || true
+chown "$CB_USER:$CB_USER" "$CB_HOME/.ssh/known_hosts"
+su - "$CB_USER" -c 'git config --global user.email "callback-box@box.example.com"'
+su - "$CB_USER" -c 'git config --global user.name "Callback Box"'
 
 # ── Clone repos ─────────────────────────────────────────────────────
 echo "Cloning repositories..."
@@ -75,35 +88,39 @@ cb --help >/dev/null 2>&1 && echo "cb CLI is working" || echo "WARNING: cb CLI t
 echo "Installing Claude Code CLI..."
 npm install -g @anthropic-ai/claude-code
 
+# ── Code directory permissions ───────────────────────────────────────
+echo "Setting read permissions on $INSTALL_DIR for $CB_USER..."
+chmod -R o+rX "$INSTALL_DIR"
+
 # ── Create test box ─────────────────────────────────────────────────
 echo "Creating test box at $BOX_DIR..."
-mkdir -p "$BOX_DIR"
+su - "$CB_USER" -c "mkdir -p '$BOX_DIR'"
 cd "$BOX_DIR"
 if [[ ! -f .cb-box ]]; then
-  git init
-  cb init .
-  git add -A && git commit -m "Initial box setup"
+  su - "$CB_USER" -c "cd '$BOX_DIR' && git init && cb init . && git add -A && git commit -m 'Initial box setup'"
 fi
 
 # ── Environment file ────────────────────────────────────────────────
-if [[ ! -f /root/.env ]]; then
-  echo "Creating /root/.env with placeholders..."
-  cat > /root/.env <<'ENVEOF'
+ENV_FILE="$CB_HOME/.env"
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Creating $ENV_FILE with placeholders..."
+  cat > "$ENV_FILE" <<'ENVEOF'
 # Required
-ANTHROPIC_API_KEY=sk-ant-REPLACE_ME
 PUBLIC_URL=https://box.example.com
 
 # Optional
 # THINKING_OPENAI_API_KEY=sk-REPLACE_ME
 # CALLBACK_MISTRAL_API_KEY=REPLACE_ME
 ENVEOF
+  chown "$CB_USER:$CB_USER" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
 else
-  echo "/root/.env already exists, not overwriting"
+  echo "$ENV_FILE already exists, not overwriting"
 fi
 
 # ── Systemd: callback-serve ─────────────────────────────────────────
 echo "Creating systemd services..."
-BOXES_DIR="/root/boxes"
+BOXES_DIR="$CB_HOME/boxes"
 BOX_DIRS=$(find "$BOXES_DIR" -maxdepth 1 -mindepth 1 -type d | sort | tr '\n' ' ')
 
 cat > /etc/systemd/system/callback-serve.service <<EOF
@@ -113,9 +130,11 @@ After=network.target
 
 [Service]
 Type=simple
+User=$CB_USER
+Group=$CB_USER
 ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210 $BOX_DIRS
 WorkingDirectory=$BOXES_DIR
-EnvironmentFile=/root/.env
+EnvironmentFile=$CB_HOME/.env
 Restart=on-failure
 RestartSec=5
 
@@ -126,7 +145,7 @@ EOF
 # ── Systemd: callback-scheduler ────────────────────────────────────
 # Register all boxes with the scheduler
 for box in $BOX_DIRS; do
-  cb scheduler add "$box" 2>/dev/null || true
+  su - "$CB_USER" -c "cb scheduler add '$box'" 2>/dev/null || true
 done
 
 cat > /etc/systemd/system/callback-scheduler.service <<EOF
@@ -136,8 +155,11 @@ After=network.target
 
 [Service]
 Type=simple
+User=$CB_USER
+Group=$CB_USER
 ExecStart=/usr/local/bin/cb scheduler start
-EnvironmentFile=/root/.env
+WorkingDirectory=$BOXES_DIR
+EnvironmentFile=$CB_HOME/.env
 Restart=on-failure
 RestartSec=10
 
