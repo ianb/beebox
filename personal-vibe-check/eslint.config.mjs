@@ -397,8 +397,9 @@ export function vibeCheck(options) {
         "react/jsx-key": "error",
         // Cap JSX nesting depth — encourages extracting sub-components
         "react/jsx-max-depth": ["error", { max: 4 }],
-        // No .bind() or arrow functions in JSX props — causes unnecessary re-renders
-        "react/jsx-no-bind": "error",
+        // Disabled: arrow functions in JSX props create new refs each render, but React Compiler
+        // auto-memoizes and the perf impact is negligible for most UI. Too noisy for the value.
+        // "react/jsx-no-bind": "error",
         // Catch accidental comment text in JSX (e.g. {/* comment */} not // comment)
         "react/jsx-no-comment-textnodes": "error",
         // Wrap context values in useMemo — prevents unnecessary consumer re-renders
