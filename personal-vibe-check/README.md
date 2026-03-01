@@ -12,12 +12,13 @@ npx vibe-init
 ```
 
 `vibe-init` will:
-1. Add npm scripts (`typecheck`, `lint`, `lint:oxlint`, `lint:knip`, `lint:circular`)
+1. Add npm scripts (`typecheck`, `lint`, `format`, `format:check`, `lint:oxlint`, `lint:knip`, `lint:circular`)
 2. Create `eslint.config.mjs` importing the preset
-3. Create `tsconfig.json` extending the base config (if none exists)
-4. Create `knip.json` for dead code detection
-5. Install CLI tools (`eslint`, `oxlint`, `knip`, `madge`) as devDependencies
-6. Set up husky + lint-staged with a pre-commit hook
+3. Create `prettier.config.mjs` importing the base Prettier config
+4. Create `tsconfig.json` extending the base config (if none exists)
+5. Create `knip.json` for dead code detection
+6. Install CLI tools (`eslint`, `prettier`, `oxlint`, `knip`, `madge`) as devDependencies
+7. Set up husky + lint-staged with a pre-commit hook (runs Prettier + ESLint on staged files)
 
 Then run all checks:
 
@@ -32,7 +33,7 @@ If you prefer to set things up yourself instead of using `vibe-init`:
 ### 1. Install
 
 ```bash
-npm install --save-dev @ianbicking/personal-vibe-check eslint@^9 oxlint knip madge husky lint-staged
+npm install --save-dev @ianbicking/personal-vibe-check eslint@^9 prettier oxlint knip madge husky lint-staged
 ```
 
 The package bundles all ESLint plugins as dependencies — you don't need to install them individually.
@@ -50,7 +51,17 @@ Options:
 - `react` (boolean) — include React hooks and JSX rules. Default: `false`.
 - `ignores` (string[]) — additional glob patterns to ignore.
 
-### 3. TypeScript Config
+### 3. Prettier Config
+
+Create `prettier.config.mjs`:
+
+```js
+export { default } from "@ianbicking/personal-vibe-check/prettier";
+```
+
+The base config uses: `semi: true`, `singleQuote: false`, `trailingComma: "all"`, `printWidth: 100`, `tabWidth: 2`, `arrowParens: "always"`. These match the ESLint formatting rules so the two tools don't conflict.
+
+### 4. TypeScript Config
 
 Create or update `tsconfig.json`:
 
@@ -70,7 +81,7 @@ The base config provides: `strict`, `noImplicitAny`, `noUncheckedIndexedAccess`,
 
 Add project-specific options like `jsx`, `lib`, `types`, `include`, `exclude` yourself.
 
-### 4. Knip Config (dead code detection)
+### 5. Knip Config (dead code detection)
 
 Create `knip.json`:
 
@@ -85,7 +96,7 @@ Create `knip.json`:
 
 Set `entry` to your actual entry points. Add `ignore` and `ignoreDependencies` as needed.
 
-### 5. Package Scripts
+### 6. Package Scripts
 
 Add to `package.json`:
 
@@ -94,18 +105,20 @@ Add to `package.json`:
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
     "prepare": "husky"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx}": ["eslint"]
+    "src/**/*.{ts,tsx}": ["prettier --write", "eslint"]
   }
 }
 ```
 
-### 6. Pre-commit Hook
+### 7. Pre-commit Hook
 
 ```bash
 npx husky init
@@ -162,7 +175,7 @@ The package includes these as dependencies (you don't install them):
 
 Your project installs separately (as devDependencies):
 
-- `eslint@^9`, `oxlint`, `knip`, `madge` — CLI tools invoked by npm scripts (ESLint pinned to v9; v10 has breaking plugin incompatibilities)
+- `eslint@^9`, `prettier`, `oxlint`, `knip`, `madge` — CLI tools invoked by npm scripts (ESLint pinned to v9; v10 has breaking plugin incompatibilities)
 - `husky`, `lint-staged` — pre-commit hook infrastructure
 - `typescript` — peer dependency (>= 5)
 

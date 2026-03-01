@@ -57,16 +57,18 @@ async function runLintHook() {
       stdio: ["pipe", "pipe", "pipe"],
     });
   } catch (e) {
-    // eslint failed — write output to stderr, exit 2 for Claude Code feedback
-    const output = e.stdout ? e.stdout.toString() : "";
-    const errOutput = e.stderr ? e.stderr.toString() : "";
-    if (output) {
-      process.stderr.write(output);
-    }
-    if (errOutput) {
-      process.stderr.write(errOutput);
-    }
-    process.exit(2);
+    // eslint failed — output JSON so Claude sees the errors, but exit 0
+    // so the edit is not reverted. Lint is enforced at pre-commit time.
+    const output = e.stdout ? e.stdout.toString().trim() : "";
+    const errOutput = e.stderr ? e.stderr.toString().trim() : "";
+    const lintErrors = [output, errOutput].filter(Boolean).join("\n");
+    const hookOutput = JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse",
+        additionalContext: `Lint errors in ${filePath} (edit was saved, fix before committing):\n${lintErrors}`,
+      },
+    });
+    process.stdout.write(hookOutput + "\n");
   }
 }
 

@@ -6,7 +6,8 @@
   "exports": {
     "./eslint": "./eslint.config.mjs",
     "./tsconfig.base.json": "./tsconfig.base.json",
-    "./knip-base.json": "./knip-base.json"
+    "./knip-base.json": "./knip-base.json",
+    "./prettier": "./prettier.config.mjs"
   },
   "bin": {
     "vibe-check": "./bin/vibe-check.mjs",
@@ -14,6 +15,7 @@
   },
   "files": [
     "eslint.config.mjs",
+    "prettier.config.mjs",
     "tsconfig.base.json",
     "knip-base.json",
     "CONVENTIONS.md",
@@ -35,11 +37,27 @@
     "eslint-plugin-import-x": "^4.16.1",
     "eslint-plugin-n": "^17.23.2",
     "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-unicorn": "^63.0.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-unicorn": "^63.0.0",
+    "prettier": "^3.5.3",
+    "typescript": ">=5",
     "typescript-eslint": "^8.55.0"
   },
+  "devDependencies": {
+    "patch-package": "^8.0.0"
+  },
   "license": "ISC",
-  "author": "Ian Bicking"
+  "author": "Ian Bicking",
+  "scripts": {
+    "postinstall": "patch-package",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "lint:oxlint": "oxlint -A no-unused-vars",
+    "lint:knip": "knip",
+    "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "prepare": "husky"
+  }
 }

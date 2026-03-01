@@ -50,6 +50,8 @@ async function main() {
   const scripts = {
     typecheck: "tsc --noEmit",
     lint: "eslint src/",
+    format: "prettier --write src/",
+    "format:check": "prettier --check src/",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
@@ -79,6 +81,16 @@ async function main() {
       `import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";\nexport default vibeCheck({ react: ${reactOpt} });\n`
     );
     created.push("Created eslint.config.mjs");
+  }
+
+  // 3b. Write prettier.config.mjs
+  const prettierPath = join(cwd, "prettier.config.mjs");
+  if (!existsSync(prettierPath)) {
+    writeFileSync(
+      prettierPath,
+      `export { default } from "@ianbicking/personal-vibe-check/prettier";\n`
+    );
+    created.push("Created prettier.config.mjs");
   }
 
   // 4. Write tsconfig.json
@@ -118,6 +130,7 @@ async function main() {
   // Pin versions where needed for compatibility
   const toolDeps = {
     eslint: "^9",
+    prettier: null,
     oxlint: null,
     knip: null,
     madge: null,
@@ -138,7 +151,7 @@ async function main() {
   if (!pkg["lint-staged"]) {
     const freshPkg = readJson(pkgPath);
     freshPkg["lint-staged"] = {
-      "src/**/*.{ts,tsx}": ["eslint"],
+      "src/**/*.{ts,tsx}": ["prettier --write", "eslint"],
     };
     writeJson(pkgPath, freshPkg);
     created.push("Added lint-staged config to package.json");

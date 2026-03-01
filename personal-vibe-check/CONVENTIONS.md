@@ -9,6 +9,7 @@ Run checks after writing code. The build tool (esbuild) does NOT do type checkin
 ```bash
 npm run typecheck    # TypeScript errors
 npm run lint         # ESLint errors
+npm run format:check # Prettier formatting check (or `npm run format` to auto-fix)
 npm run lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
 npm run lint:knip    # Dead code detector (unused files, exports, dependencies)
 npm run lint:circular  # Circular dependency detector (madge)
@@ -49,8 +50,10 @@ When suppressing these rules, add a comment explaining why.
 
 ## Code Style
 
-- **Semicolons**: always (enforced by eslint)
-- **Quotes**: double quotes (enforced by eslint)
+Prettier handles formatting (indentation, line wrapping, spacing) automatically. It runs on staged files at pre-commit via lint-staged — no need to run it manually during development.
+
+- **Semicolons**: always (enforced by eslint and prettier)
+- **Quotes**: double quotes (enforced by eslint and prettier)
 - **No optional chaining** (`?.`): use explicit null checks for clarity
 - **No default parameters**: handle defaults explicitly in function body
 - **Max 2 positional parameters**: functions with more must use a named params object:
