@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Auto-deploy to server after each commit.
+# Runs in background so it doesn't block the commit.
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+echo "[post-commit] Deploying to server..."
+"$REPO_DIR/deploy/deploy.sh" &>"$REPO_DIR/deploy/.last-deploy.log" &
+disown
+echo "[post-commit] Deploy started in background (log: deploy/.last-deploy.log)"

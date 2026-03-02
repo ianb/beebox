@@ -23,6 +23,14 @@ import { Bot } from "grammy";
 import { isOwner, isAuthEnabled } from "../auth.js";
 import { loadTelegramConfig } from "../../connectors/telegram.js";
 
+async function loadPublicUrl(boxRoot: string): Promise<string | undefined> {
+  try {
+    const boxJson = JSON.parse(await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8"));
+    if (boxJson.publicUrl) return boxJson.publicUrl;
+  } catch { /* ignore */ }
+  return process.env.PUBLIC_URL ?? undefined;
+}
+
 function addOwnerCheck(server: FastifyInstance) {
   server.addHook("preHandler", async (request, reply) => {
     if (isAuthEnabled() && !isOwner(request)) {
@@ -142,11 +150,7 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   server.get("/api/admin/telegram-status", async () => {
     const config = await loadTelegramConfig(boxRoot);
     if (!config) {
-      let publicUrl: string | undefined;
-      try {
-        const boxJson = JSON.parse(await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8"));
-        publicUrl = boxJson.publicUrl;
-      } catch { /* ignore */ }
+      const publicUrl = await loadPublicUrl(boxRoot);
       return { configured: false, publicUrl, boxSlug };
     }
 
@@ -196,12 +200,7 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
       JSON.stringify({ botToken, webhookSecret }, null, 2) + "\n",
     );
 
-    let publicUrl: string | undefined;
-    try {
-      const boxJson = JSON.parse(await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8"));
-      publicUrl = boxJson.publicUrl;
-    } catch { /* ignore */ }
-
+    const publicUrl = await loadPublicUrl(boxRoot);
     let webhookUrl: string | null = null;
     if (publicUrl) {
       webhookUrl = `${publicUrl}/webhook/${boxSlug}/telegram`;
