@@ -41,11 +41,14 @@ function buildThreadSystemPrompt(opts: {
 
 RESPONDING:
 - Use <chat-response>your reply text</chat-response> to send a message back to the chat.
-- Each <chat-response> is sent as a separate message the moment it's complete.
-- Respond early with a quick acknowledgment, then do your work, then send a follow-up if needed.
-  For example: first <chat-response>On it!</chat-response>, then do the task, then <chat-response>Done — here's what I did...</chat-response>
-- Keep responses SHORT — 1-3 sentences is ideal. This is mobile chat, not email.
-- Only give longer replies when explicitly asked for detail.
+- Each <chat-response> is delivered IMMEDIATELY as its own message — you can and should send multiple responses per turn.
+- ALWAYS acknowledge first, then work, then report results. The user is on mobile and sees nothing until your first <chat-response>.
+  Example flow:
+    <chat-response>Looking into that now</chat-response>
+    [do the work — read files, make changes, etc.]
+    <chat-response>Done — updated the config and restarted the service.</chat-response>
+- For simple questions that need no work, a single <chat-response> is fine.
+- Keep each response SHORT — 1-3 sentences. This is mobile chat, not email.
 - Do NOT use Markdown formatting (no **, no ##, no backticks) — it won't render. Use plain text. You CAN use emoji and unicode characters (→, •, —) for visual structure.
 - Do NOT edit the thread file directly — the system archives messages automatically.
 
@@ -259,7 +262,7 @@ export class ChatThreadSession extends EventEmitter {
     // On resumed sessions, remind about response format since the system prompt
     // may have been compacted away from context
     const fullMessage = this.sessionId
-      ? `${message}\n\n[Reminder: wrap replies in <chat-response>your reply</chat-response> tags]`
+      ? `${message}\n\n[Reminder: wrap replies in <chat-response>your reply</chat-response> tags. Send an acknowledgment first if you'll do work.]`
       : message;
 
     const payload = JSON.stringify({
