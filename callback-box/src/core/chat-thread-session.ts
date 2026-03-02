@@ -179,6 +179,8 @@ export class ChatThreadSession extends EventEmitter {
   }
 
   private handleMessage(msg: ChatMessage): void {
+    log("msg", `type=${msg.type}${msg.type === "assistant" ? ` blocks=${msg.message?.content?.length ?? 0}` : ""}`);
+
     // Capture session ID from first message
     if (msg.session_id && !this.sessionId) {
       this.sessionId = msg.session_id;
@@ -201,7 +203,7 @@ export class ChatThreadSession extends EventEmitter {
     if (msg.type === "result") {
       // Final check for any remaining responses in the accumulated text
       this.checkForResponses();
-      log("done", `Turn complete, is_error: ${msg.is_error}`);
+      log("done", `Turn complete, is_error: ${msg.is_error}, turnText length: ${this.turnText.length}${this.turnText.length > 0 ? `, text: ${this.turnText.slice(0, 200)}` : ""}`);
       this.busy = false;
       this.emit("done", msg);
       if (this.turnResolve) {
@@ -254,11 +256,17 @@ export class ChatThreadSession extends EventEmitter {
     this.busy = true;
     this.turnText = "";
 
+    // On resumed sessions, remind about response format since the system prompt
+    // may have been compacted away from context
+    const fullMessage = this.sessionId
+      ? `${message}\n\n[Reminder: wrap replies in <chat-response>your reply</chat-response> tags]`
+      : message;
+
     const payload = JSON.stringify({
       type: "user",
       message: {
         role: "user",
-        content: [{ type: "text", text: message }],
+        content: [{ type: "text", text: fullMessage }],
       },
     });
 
