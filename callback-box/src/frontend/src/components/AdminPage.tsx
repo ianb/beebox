@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { getApiBase } from "../api.js";
 
 interface ClaudeStatus {
   loggedIn?: boolean;
@@ -123,7 +124,10 @@ function ClaudeCodeSection() {
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-4">Claude Code</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-lg font-semibold text-warm-800">Claude Code</h2>
+          <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">System-wide</span>
+        </div>
         <p className="text-sm text-warm-600">Checking status...</p>
       </div>
     );
@@ -131,7 +135,10 @@ function ClaudeCodeSection() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Claude Code</h2>
+      <div className="flex items-center gap-2 mb-2">
+        <h2 className="text-lg font-semibold text-warm-800">Claude Code</h2>
+        <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">System-wide</span>
+      </div>
       <p className="text-sm text-warm-700 mb-4">
         Claude Code runs background agents (scheduler, reactor). Authenticate with
         your Anthropic account to enable these features.
@@ -224,13 +231,13 @@ interface TelegramStatus {
   botUsername?: string;
   botFirstName?: string;
   webhookUrl?: string | null;
-  maskedToken?: string;
+  botToken?: string;
   publicUrl?: string;
   boxSlug?: string;
   error?: string;
 }
 
-function TelegramSection({ boxSlug }: { boxSlug: string }) {
+function TelegramSection({ apiBase }: { apiBase: string }) {
   const [status, setStatus] = useState<TelegramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -240,7 +247,7 @@ function TelegramSection({ boxSlug }: { boxSlug: string }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const resp = await fetch(`/api/admin/telegram-status?box=${boxSlug}`);
+      const resp = await fetch(`${apiBase}/admin/telegram-status`);
       if (!resp.ok) throw new Error(`Status check failed: ${resp.status}`);
       const data: TelegramStatus = await resp.json();
       setStatus(data);
@@ -250,7 +257,7 @@ function TelegramSection({ boxSlug }: { boxSlug: string }) {
       setError((err as Error).message);
       return null;
     }
-  }, [boxSlug]);
+  }, [apiBase]);
 
   useEffect(() => {
     fetchStatus().finally(() => setLoading(false));
@@ -262,7 +269,7 @@ function TelegramSection({ boxSlug }: { boxSlug: string }) {
     setError(null);
 
     try {
-      const resp = await fetch(`/api/admin/telegram-setup?box=${boxSlug}`, {
+      const resp = await fetch(`${apiBase}/admin/telegram-setup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ botToken: botToken.trim() }),
@@ -285,7 +292,7 @@ function TelegramSection({ boxSlug }: { boxSlug: string }) {
     setError(null);
 
     try {
-      const resp = await fetch(`/api/admin/telegram-disconnect?box=${boxSlug}`, { method: "POST" });
+      const resp = await fetch(`${apiBase}/admin/telegram-disconnect`, { method: "POST" });
       const data = await resp.json();
       if (!data.success) {
         throw new Error(data.error || "Disconnect failed");
@@ -322,10 +329,15 @@ function TelegramSection({ boxSlug }: { boxSlug: string }) {
             {status.botUsername ? (
               <span className="text-green-700 ml-2">as @{status.botUsername}</span>
             ) : null}
-            {status.maskedToken ? (
-              <span className="text-warm-500 ml-2">(token: {status.maskedToken})</span>
-            ) : null}
           </div>
+
+          {/* Bot token (copyable for moving between boxes) */}
+          {status.botToken ? (
+            <div className="mb-4 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-700">
+              <span className="font-medium">Token:</span>{" "}
+              <code className="bg-warm-200 px-1 rounded text-xs break-all select-all">{status.botToken}</code>
+            </div>
+          ) : null}
 
           {/* Webhook info */}
           {status.webhookUrl ? (
@@ -399,7 +411,7 @@ function TelegramSection({ boxSlug }: { boxSlug: string }) {
   );
 }
 
-function AllowedEmailsSection({ boxSlug }: { boxSlug: string }) {
+function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
   const [emails, setEmails] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -408,7 +420,7 @@ function AllowedEmailsSection({ boxSlug }: { boxSlug: string }) {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const resp = await fetch(`/api/admin/box-config?box=${boxSlug}`);
+      const resp = await fetch(`${apiBase}/admin/box-config`);
       if (!resp.ok) throw new Error(`Failed to load config: ${resp.status}`);
       const data = await resp.json();
       setEmails(data.allowedEmails ?? []);
@@ -416,7 +428,7 @@ function AllowedEmailsSection({ boxSlug }: { boxSlug: string }) {
     } catch (err) {
       setError((err as Error).message);
     }
-  }, [boxSlug]);
+  }, [apiBase]);
 
   useEffect(() => {
     setLoading(true);
@@ -427,7 +439,7 @@ function AllowedEmailsSection({ boxSlug }: { boxSlug: string }) {
     setSaving(true);
     setError(null);
     try {
-      const resp = await fetch(`/api/admin/box-config?box=${boxSlug}`, {
+      const resp = await fetch(`${apiBase}/admin/box-config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ allowedEmails: updated }),
@@ -523,54 +535,24 @@ function AllowedEmailsSection({ boxSlug }: { boxSlug: string }) {
 }
 
 export function AdminPage() {
-  const [boxes, setBoxes] = useState<Array<{ slug: string }>>([]);
-  const [selectedBox, setSelectedBox] = useState<string>("");
-
-  useEffect(() => {
-    fetch("/api/admin/boxes")
-      .then((r) => r.json())
-      .then((data) => {
-        const boxList = data.boxes ?? [];
-        setBoxes(boxList);
-        if (boxList.length > 0) {
-          setSelectedBox((prev) => prev || boxList[0].slug);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const { boxSlug } = useParams<{ boxSlug: string }>();
+  const apiBase = getApiBase();
 
   return (
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <Link to="/" className="text-plum hover:text-plum-dark text-sm">
+          <Link to={`/${boxSlug}/`} className="text-plum hover:text-plum-dark text-sm">
             &larr; Back
           </Link>
         </div>
 
-        <div className="flex items-center gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-warm-900">Admin</h1>
-          {boxes.length > 1 ? (
-            <select
-              value={selectedBox}
-              onChange={(e) => setSelectedBox(e.target.value)}
-              className="rounded-lg border border-warm-400 px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold"
-            >
-              {boxes.map((b) => (
-                <option key={b.slug} value={b.slug}>{b.slug}</option>
-              ))}
-            </select>
-          ) : null}
-        </div>
+        <h1 className="text-2xl font-bold text-warm-900 mb-6">Admin</h1>
 
         <div className="space-y-6">
           <ClaudeCodeSection />
-          {selectedBox ? (
-            <>
-              <AllowedEmailsSection key={`emails-${selectedBox}`} boxSlug={selectedBox} />
-              <TelegramSection key={`telegram-${selectedBox}`} boxSlug={selectedBox} />
-            </>
-          ) : null}
+          <AllowedEmailsSection apiBase={apiBase} />
+          <TelegramSection apiBase={apiBase} />
         </div>
       </div>
     </div>

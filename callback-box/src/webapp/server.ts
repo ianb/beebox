@@ -23,7 +23,7 @@ import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerAuthRoutes } from "./routes/auth.js";
-import { registerAdminRoutes } from "./routes/admin.js";
+import { registerSystemAdminRoutes, registerBoxAdminRoutes } from "./routes/admin.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
@@ -85,8 +85,8 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   if (isAuthEnabled()) {
     await server.register(registerAuthRoutes, { boxes });
   }
-  // Admin routes are always registered (owner check is skipped when auth is disabled)
-  await server.register((instance) => registerAdminRoutes(instance, boxes));
+  // System-wide admin routes (Claude Code auth)
+  await server.register(registerSystemAdminRoutes);
 
   // Root-level box list endpoint (filtered by user access when auth enabled)
   server.get("/api/boxes", async (request) => {
@@ -160,6 +160,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerCalendarRoutes(instance, box.boxRoot);
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
 
       // Serve static frontend files within this prefix
       if (frontendExists) {

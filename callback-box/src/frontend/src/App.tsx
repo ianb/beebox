@@ -49,9 +49,16 @@ function AppNav() {
 
   useEffect(() => {
     fetchBoxes().then((result) => setBoxes(result.boxes));
-    fetch("/auth/me").then((r) => r.ok ? r.json() : null).then((data) => {
+    fetch("/auth/me").then((r) => {
+      if (r.status === 404) {
+        // Auth not enabled — treat as owner
+        setShowAdmin(true);
+        return null;
+      }
+      return r.ok ? r.json() : null;
+    }).then((data) => {
       if (data?.isOwner) setShowAdmin(true);
-    }).catch(() => {});
+    }).catch(() => { setShowAdmin(true); });
   }, []);
 
   useEffect(() => {
@@ -74,7 +81,7 @@ function AppNav() {
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
     { to: `${base}/settings`, label: "Settings", match: (p: string) => p.startsWith(`${base}/settings`) },
-    ...(showAdmin ? [{ to: "/admin", label: "Admin", match: (p: string) => p === "/admin" }] : []),
+    ...(showAdmin ? [{ to: `${base}/admin`, label: "Admin", match: (p: string) => p === `${base}/admin` }] : []),
   ];
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";
@@ -307,7 +314,6 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<BoxRedirect />} />
-      <Route path="/admin" element={<AdminPage />} />
       <Route path="/:boxSlug/print/*" element={<PrintBriefView />} />
       <Route path="/:boxSlug" element={<AppLayout />}>
         <Route path="questions" element={<QuestionsPage />} />
@@ -316,6 +322,7 @@ export default function App() {
         <Route path="history/:hash?" element={<HistoryPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="admin" element={<AdminPage />} />
         <Route path="card/*" element={<CardViewPage />} />
         <Route index element={<DashboardPage />} />
         <Route path="*" element={<DashboardPage />} />
