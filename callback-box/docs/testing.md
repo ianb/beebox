@@ -119,6 +119,77 @@ Dry run: `cb scenario run <name> --dry-run`
 | `tick-basic` | Scheduled script listing, dry-run, execution, skip-if-recently-run |
 | `tick-chain` | `create-after-success` chaining between scheduled scripts across ticks |
 
+### Creating a New Scenario
+
+Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/` with its own git repo as the test box.
+
+**Directory structure:**
+```
+~/src/boxes/scenarios/my-scenario/
+  scenario.yaml      # step definitions (required)
+  stubs.yaml         # time/HTTP stubs (optional)
+  stubs/             # stub response files (optional)
+    feed.xml
+    article.html
+  setup.md           # human-readable description of what this tests
+  box/               # the git repo — a real box initialized with cb init
+    box/inbox/       # pre-seeded test data
+    config/          # connector configs, schedules, etc.
+    ...
+```
+
+**Steps to create:**
+
+1. **Create the directory and initialize a box:**
+   ```bash
+   mkdir -p ~/src/boxes/scenarios/my-scenario/box
+   cd ~/src/boxes/scenarios/my-scenario/box
+   git init
+   cb init .
+   ```
+
+2. **Seed the box with test data.** Put cards in `box/inbox/`, configure connectors in `config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
+
+3. **Write `scenario.yaml`** with steps. Each step runs a shell command (usually a `cb` command) and validates the result. See the format description above.
+
+4. **Write `stubs.yaml`** if your scenario involves HTTP (connector syncs, article fetches). Freeze time with `time:` to make timestamps deterministic. Put response files in `stubs/`.
+
+5. **Write `setup.md`** describing what the scenario tests, what stubs are used, and what the expected outcome is. This is for humans, not the runner.
+
+6. **Test it:**
+   ```bash
+   cb scenario run my-scenario --dry-run   # verify steps parse correctly
+   cb scenario run my-scenario             # run for real
+   ```
+
+**Design principles for scenarios:**
+
+- **Each scenario tests one pipeline or behavior.** Don't combine unrelated features. `intake-basic` tests intake jobs only; `news-basic` tests news processing only.
+- **Seed the minimal data needed.** The `intake-basic` box has just 2 memos in inbox — enough to verify the behavior, not so much that agent processing is slow or unpredictable.
+- **Use `--skip-*` flags** on `cb wakeup` to isolate phases when you don't need the full wakeup cycle.
+- **Use checkpoints** on steps that are expensive (agent runs). This lets you re-run later steps without re-running expensive earlier ones: `cb scenario run my-scenario --from after-wakeup`.
+- **Prefer `script:` validations** for structural checks (files exist, XML contains expected content). Use `prompt:` validations only for things that require judgment (quality of generated text, correct interpretation of ambiguous input).
+- **`prompt:` validations cost money.** Each one invokes a Claude agent with up to 5 turns / $0.50. Use them sparingly.
+
+### Managing Scenarios
+
+**Inspecting a failed run:** The test branch `test/<name>/<timestamp>` is preserved after the run. Check it out to see the state at failure:
+```bash
+cd ~/src/boxes/scenarios/my-scenario/box
+git branch                        # list test branches
+git checkout test/my-scenario/... # inspect the failed state
+git checkout main                 # return to clean state
+```
+
+**Cleaning up old test branches:**
+```bash
+git branch | grep 'test/' | xargs git branch -D
+```
+
+**Updating a scenario's test data:** Edit files in the box on `main`, commit, then re-run. The runner always starts from a clean `main`.
+
+**Scenarios are git repos** — you can use standard git operations. The box inside each scenario is a real box; `cb` commands work normally when you `cd` into it.
+
 ## 3. Knowledge Audits
 
 **Location:** Tests in `src/dev/knowledge-audits.yaml`, runner in `src/dev/knowledge-audit.ts`, reports in `src/dev/reports/`
@@ -186,3 +257,7 @@ Create `~/src/boxes/scenarios/<name>/` with `scenario.yaml` and optionally `stub
 
 ### New knowledge audit
 Add entries to `src/dev/knowledge-audits.yaml`. Run with `--filter <id>` to test individually.
+
+## Known Gaps
+
+See [testing-gaps.md](testing-gaps.md) for a working document tracking areas where test coverage is missing and plans for addressing them. Key gaps: API route tests, frontend tests, chat session behavioral tests.

@@ -19,7 +19,7 @@ test("Schema registry contains expected types", async (t) => {
 });
 
 test("createSchemaRegistry returns valid registry", async (t) => {
-  const registry = createSchemaRegistry();
+  const registry = await createSchemaRegistry();
   t.ok(registry.get("memo"));
   t.ok(registry.get("question"));
 });
