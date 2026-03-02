@@ -84,8 +84,9 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   // Register auth routes (login, callback, logout, me) when auth is enabled
   if (isAuthEnabled()) {
     await server.register(registerAuthRoutes, { boxes });
-    await server.register(registerAdminRoutes);
   }
+  // Admin routes are always registered (owner check is skipped when auth is disabled)
+  await server.register((instance) => registerAdminRoutes(instance, boxes));
 
   // Root-level box list endpoint (filtered by user access when auth enabled)
   server.get("/api/boxes", async (request) => {

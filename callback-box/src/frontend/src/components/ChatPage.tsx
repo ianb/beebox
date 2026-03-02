@@ -619,6 +619,13 @@ export function ChatPage() {
     speechPlayback.stop();
   }, [speechPlayback]);
 
+  // Keep textarea focused whenever it's available for input
+  useEffect(() => {
+    if (!streaming && !isTranscribing) {
+      textareaRef.current?.focus();
+    }
+  }, [streaming, isTranscribing]);
+
   // Escape key cancels transcription
   useEffect(() => {
     if (!isTranscribing) return;
