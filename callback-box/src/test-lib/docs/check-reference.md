@@ -113,21 +113,113 @@ await t.check(async (print) => {
 
 ## Wildcards
 
-Use `___` in the expected string to match any text:
+Wildcards in the expected string match variable text. There are two syntaxes:
+
+### Guillemet wildcards (preferred)
+
+Use `«»` delimiters with typed matchers and extractions:
+
+```ts
+t.check(timestamp, "created «date»");           // matches ISO date
+t.check(record, '{"id": «uuid», "count": «int»}');  // typed fields
+t.check(logLine, "commit «hash» by «author»");  // named captures
+```
+
+| Pattern | Matches | Name |
+|---|---|---|
+| `«*»` | anything | positional only |
+| `«date»` | ISO date/datetime (`2026-03-02`, `2026-03-02T20:00:00Z`) | `date` |
+| `«uuid»` | UUID (`550e8400-e29b-41d4-a716-446655440000`) | `uuid` |
+| `«int»` | integer (`42`, `-5`) | `int` |
+| `«number»` | number (`3.14`, `-5`, `1.5e-10`) | `number` |
+| `«string»` | quoted string (`"hello"`, `'world'`, with escapes) | `string` |
+| `«name»` | anything (unknown type) | `name` |
+| `«name=type»` | type's pattern | `name` |
+| `«name=*»` | anything | `name` |
+
+When a name matches a known type (`date`, `uuid`, `int`, `number`, `string`), the type's regex is used. Unknown names match anything — `«hash»` is equivalent to `«hash=*»`.
+
+### Legacy `___` wildcards
+
+The triple-underscore syntax still works:
 
 ```ts
 t.check(timestamp, "2026-___");              // matches any suffix
-t.check(commitLine, "___ initial commit");   // matches any prefix
 t.check(logLine, "commit ___ by ___");       // multiple wildcards
-```
-
-Named wildcards like `___date___` and `___hash___` work the same way but are self-documenting:
-
-```ts
-t.check(logEntry, "[___date___] commit ___hash___: initial commit");
+t.check(logEntry, "___date___ commit ___hash___: initial commit");
 ```
 
 Both `___` and `___name___` match any sequence of characters including newlines.
+
+## Extractions
+
+All wildcards capture the text they match. `check()` and `t.check()` return an extractions object with positional and named access:
+
+```ts
+const ext = t.check(logLine, "commit «hash» at «date»");
+ext[0]     // "abc123"       — positional
+ext[1]     // "2026-03-02"   — positional
+ext.hash   // "abc123"       — named
+ext.date   // "2026-03-02"   — named
+ext.length // 2
+```
+
+Named captures via `«name=type»`:
+
+```ts
+const ext = t.check(range, "from «start=date» to «end=date»");
+ext.start  // "2026-01-01"
+ext.end    // "2026-12-31"
+```
+
+When no wildcards are present, returns an empty array (length 0).
+
+Async check returns a promise of extractions:
+
+```ts
+const ext = await t.check(asyncValue, "count: «int»");
+ext.int  // "42"
+```
+
+`inspect()` includes extractions in the result:
+
+```ts
+const r = inspect(line, "commit «hash»");
+r.extractions.hash  // "abc123"
+```
+
+On failure, `extractions` is an empty array.
+
+## Wildcards in JSON
+
+Wildcards work well for skipping fields in JSON objects. The only requirement is that the literal fragments you include must appear in the same order as the actual output (`JSON.stringify` field order is deterministic):
+
+```ts
+// Skip volatile fields, check the ones you care about:
+t.check(body.briefs[0], `{«*»
+  "relativePath": "box/output/briefs/2026-03-01_test.news-brief.card",
+  "title": "Test Brief",
+  "date": "2026-03-01",«*»
+  "read": false
+}`);
+```
+
+**Important:** Put wildcards on the same line as the preceding text (e.g., `{«*»` or `"2026-03-01",«*»`), not on their own indented line. A wildcard on its own line like:
+
+```
+  "date": "2026-03-01",
+  «*»
+  "read": false
+```
+
+adds an extra `\n  ` before AND after the wildcard in the regex. If the fields are adjacent in the actual JSON (nothing to skip), the pattern requires two `\n  ` sequences where only one exists, and the match fails. Keeping wildcards inline avoids this:
+
+```
+  "date": "2026-03-01",«*»
+  "read": false
+```
+
+Fields must appear in their actual order — if `"date"` comes before `"read"` in the JSON, the expected string must list them in that order too.
 
 ## Serializers
 
@@ -175,39 +267,8 @@ import "./helpers/check-serializers.js";
 t.check(res, `200\n{\n  "success": true\n}`);
 
 // With wildcards for volatile fields:
-t.check(res, `200\n___"items": []___`);
+t.check(res, `200\n«*»"items": []«*»`);
 ```
-
-### Wildcards in JSON
-
-Wildcards match any characters including newlines (via `[\s\S]*` — greedy with backtracking), so they work well for skipping fields in JSON objects. The only requirement is that the literal fragments you include must appear in the same order as the actual output (`JSON.stringify` field order is deterministic):
-
-```ts
-// Skip volatile fields, check the ones you care about:
-t.check(body.briefs[0], `{___
-  "relativePath": "box/output/briefs/2026-03-01_test.news-brief.card",
-  "title": "Test Brief",
-  "date": "2026-03-01",___
-  "read": false
-}`);
-```
-
-**Important:** Put `___` on the same line as the preceding text (e.g., `{___` or `"2026-03-01",___`), not on its own indented line. A `___` on its own line like:
-
-```
-  "date": "2026-03-01",
-  ___
-  "read": false
-```
-
-adds an extra `\n  ` before AND after the wildcard in the regex. If the fields are adjacent in the actual JSON (nothing to skip), the pattern requires two `\n  ` sequences where only one exists, and the match fails. Keeping `___` inline avoids this:
-
-```
-  "date": "2026-03-01",___
-  "read": false
-```
-
-Fields must appear in their actual order — if `"date"` comes before `"read"` in the JSON, the expected string must list them in that order too.
 
 ## Options
 
@@ -235,21 +296,25 @@ t.check(messyOutput, {
 import { inspect } from "../src/test-lib/check.js";
 
 const r = inspect("actual", "expected");
-r.pass;     // false
-r.diff;     // the visual diff string
-r.actual;   // "actual"
-r.expected; // "expected"
-r.message;  // "check failed"
+r.pass;         // false
+r.diff;         // the visual diff string
+r.actual;       // "actual"
+r.expected;     // "expected"
+r.message;      // "check failed"
+r.extractions;  // [] (empty on failure)
 ```
 
 Useful for testing the diff format itself, or for programmatic comparison where you don't want assertion failures.
 
 ## Standalone check()
 
-The standalone `check()` (from `check.js`, not `tap-check.js`) throws `CheckError` on mismatch instead of calling `t.fail()`. Use this in non-tap contexts or when you need to catch failures yourself:
+The standalone `check()` (from `check.js`, not `tap-check.js`) throws `CheckError` on mismatch instead of calling `t.fail()`. Returns extractions on success:
 
 ```ts
 import { check, CheckError } from "../src/test-lib/check.js";
+
+const ext = check(result, "id: «uuid»");
+ext.uuid;  // the matched UUID
 
 try {
   check(result, "expected");
@@ -267,11 +332,11 @@ try {
 ```ts
 // Tap integration (preferred in tests)
 import "../src/test-lib/tap-check.js";
-t.check(actual: unknown, expected: string | CheckOptions): void | Promise<void>
+t.check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
 
-// Standalone (throws on mismatch)
+// Standalone (throws on mismatch, returns extractions on match)
 import { check } from "../src/test-lib/check.js";
-check(actual: unknown, expected: string | CheckOptions): void | Promise<void>
+check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
 
 // Non-throwing
 import { inspect } from "../src/test-lib/check.js";
@@ -282,8 +347,19 @@ serialize(value: unknown): string
 registerSerializer(fn: (value: unknown) => string | null): void
 
 // Types
+type Extractions = string[] & Record<string, string>
 type PrintFn = (text: string) => void
 interface CheckOptions { expected: string; normalizeWhitespace?: boolean; label?: string }
-interface CheckResult { pass: boolean; actual: string; expected: string; diff: string | null; message: string }
+interface CheckResult { pass: boolean; actual: string; expected: string; diff: string | null; message: string; extractions: Extractions }
 class CheckError extends Error { diff: string; found: string; wanted: string }
+
+// Wildcard types (built-in)
+// «date»    — ISO date/datetime
+// «uuid»    — UUID
+// «int»     — integer
+// «number»  — number (int, decimal, scientific)
+// «string»  — quoted string ("..." or '...')
+// «*»       — anything
+// «name»    — anything (unknown name), captured as "name"
+// «name=type» — typed capture with custom name
 ```

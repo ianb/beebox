@@ -58,41 +58,140 @@ export function serialize(value: unknown): string {
 
 // ── Wildcards ────────────────────────────────────────────────────────────────
 
+/** Typed wildcard patterns — known type names map to regex fragments. */
+const WILDCARD_TYPES: Record<string, string> = {
+  date: "\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?Z?)?",
+  uuid: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+  int: "-?\\d+",
+  number: "-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?",
+  string: "(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')",
+};
+
+/** Extractions: an array of positional captures with named properties. */
+export type Extractions = string[] & Record<string, string>;
+
+function emptyExtractions(): Extractions {
+  return [] as unknown as Extractions;
+}
+
+/** Parsed wildcard token metadata. */
+interface WildcardToken {
+  /** Regex pattern for this wildcard's capturing group */
+  pattern: string;
+  /** Name to assign this capture (null = positional only) */
+  name: string | null;
+}
+
+/**
+ * Parse a wildcard token's inner content (between «» or from ___ syntax).
+ *
+ * Syntax:  «*»           → anything, no name
+ *          «date»        → known type, name defaults to "date"
+ *          «hash»        → unknown type → anything, named "hash"
+ *          «start=date»  → named "start", typed as date
+ *          «val=*»       → named "val", anything
+ *
+ * Legacy:  ___           → anything, no name
+ *          ___name___    → same as «name»
+ */
+function parseWildcardToken(content: string): WildcardToken {
+  // Legacy bare ___
+  if (content === "") {
+    return { pattern: "[\\s\\S]*", name: null };
+  }
+
+  // Check for name=type syntax
+  const eqIdx = content.indexOf("=");
+  if (eqIdx !== -1) {
+    const name = content.slice(0, eqIdx);
+    const typeName = content.slice(eqIdx + 1);
+    const pattern = typeName === "*" ? "[\\s\\S]*" : WILDCARD_TYPES[typeName] ?? "[\\s\\S]*";
+    return { pattern, name: name || null };
+  }
+
+  // Explicit "anything"
+  if (content === "*") {
+    return { pattern: "[\\s\\S]*", name: null };
+  }
+
+  // Known type — use its pattern, default name to the type name
+  if (content in WILDCARD_TYPES) {
+    return { pattern: WILDCARD_TYPES[content]!, name: content };
+  }
+
+  // Unknown name — match anything, use as name
+  return { pattern: "[\\s\\S]*", name: content };
+}
+
+interface MatchResult {
+  matched: boolean;
+  diff: string | null;
+  extractions: Extractions;
+}
+
 /**
  * Match actual text against an expected pattern that may contain wildcards.
  *
- * `___` matches any sequence of characters (including empty).
- * Named wildcards like `___date___` also match any sequence but
- * are labeled in error output for clarity.
+ * Guillemet wildcards: «*», «date», «name=type», etc.
+ * Legacy wildcards: ___, ___name___
  *
- * Returns null on match, or a diagnostic string on mismatch.
+ * Returns a MatchResult with extractions on success.
  */
-function matchWithWildcards(actual: string, expected: string): string | null {
+function matchWithWildcards(actual: string, expected: string): MatchResult {
   // Fast path: no wildcards
-  if (!expected.includes("___")) {
-    if (actual === expected) return null;
-    return buildDiff(actual, expected);
+  if (!expected.includes("___") && !expected.includes("«")) {
+    if (actual === expected) return { matched: true, diff: null, extractions: emptyExtractions() };
+    return { matched: false, diff: buildDiff(actual, expected), extractions: emptyExtractions() };
   }
 
-  // Split expected on wildcard tokens, preserving the token names
-  // Matches ___name___ (named) or ___ (bare)
-  const parts = expected.split(/(___\w+___|___)/);
-  // Build a regex: literal parts are escaped, wildcards become [\s\S]*
+  // Split expected on wildcard tokens (guillemets and legacy ___)
+  const parts = expected.split(/(«[^»]*»|___\w+___|___)/);
+  const tokens: WildcardToken[] = [];
+
   let pattern = "^";
   for (const part of parts) {
-    if (/^___(\w+___)?$/.test(part)) {
-      pattern += "([\\s\\S]*)";
-    } else {
+    // Guillemet wildcard: «content»
+    if (part.startsWith("«") && part.endsWith("»")) {
+      const content = part.slice(1, -1);
+      const token = parseWildcardToken(content);
+      tokens.push(token);
+      pattern += `(${token.pattern})`;
+    }
+    // Legacy ___ or ___name___
+    else if (/^___(\w+___)?$/.test(part)) {
+      // Extract name from ___name___ or null for bare ___
+      const innerMatch = part.match(/^___(\w+)___$/);
+      const content = innerMatch ? innerMatch[1]! : "";
+      const token = parseWildcardToken(content);
+      tokens.push(token);
+      pattern += `(${token.pattern})`;
+    }
+    // Literal text
+    else {
       pattern += escapeRegex(part);
     }
   }
   pattern += "$";
 
   const re = new RegExp(pattern);
-  if (re.test(actual)) return null;
+  const match = re.exec(actual);
 
-  // No match — show what we expected vs what we got
-  return buildDiff(actual, expected);
+  if (!match) {
+    return { matched: false, diff: buildDiff(actual, expected), extractions: emptyExtractions() };
+  }
+
+  // Build extractions from capture groups
+  const extractions = emptyExtractions();
+  let groupIdx = 1;
+  for (const token of tokens) {
+    const value = match[groupIdx++] ?? "";
+    extractions.push(value);
+    if (token.name !== null && !(token.name in extractions)) {
+      (extractions as Record<string, string>)[token.name] = value;
+    }
+  }
+
+  return { matched: true, diff: null, extractions };
 }
 
 function escapeRegex(s: string): string {
@@ -202,7 +301,7 @@ export interface CheckOptions {
  * // Wildcards
  * check(logEntry, `[___date___] commit ___hash___: initial commit`);
  */
-export function check(actual: unknown, expected: string | CheckOptions): void | Promise<void> {
+export function check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions> {
   if (typeof actual === "function") {
     const lines: string[] = [];
     const print: PrintFn = (text: string) => lines.push(text);
@@ -210,19 +309,18 @@ export function check(actual: unknown, expected: string | CheckOptions): void | 
 
     if (returnValue instanceof Promise) {
       return returnValue.then((value) => {
-        throwIfFailed(buildPrinterOutput(lines, value), { expected, caller: check });
+        return throwIfFailed(buildPrinterOutput(lines, value), { expected, caller: check });
       });
     }
 
-    throwIfFailed(buildPrinterOutput(lines, returnValue), { expected, caller: check });
-    return;
+    return throwIfFailed(buildPrinterOutput(lines, returnValue), { expected, caller: check });
   }
 
   if (actual instanceof Promise) {
     return actual.then((value) => throwIfFailed(value, { expected, caller: check }));
   }
 
-  throwIfFailed(actual, { expected, caller: check });
+  return throwIfFailed(actual, { expected, caller: check });
 }
 
 /** The print function passed to check() callbacks */
@@ -239,9 +337,9 @@ function buildPrinterOutput(lines: string[], returnValue: unknown): string {
   return parts.join("\n");
 }
 
-function throwIfFailed(actual: unknown, opts: { expected: string | CheckOptions; caller: (...args: never[]) => unknown }): void {
+function throwIfFailed(actual: unknown, opts: { expected: string | CheckOptions; caller: (...args: never[]) => unknown }): Extractions {
   const result = compare(actual, opts.expected);
-  if (result.pass) return;
+  if (result.pass) return result.extractions;
 
   const err = new CheckError(result.message, { diff: result.diff!, found: result.actual, wanted: result.expected });
   if (Error.captureStackTrace) {
@@ -266,6 +364,8 @@ export interface CheckResult {
   diff: string | null;
   /** Full message (includes label and diff) on failure, empty on pass */
   message: string;
+  /** Captured wildcard values (positional + named) */
+  extractions: Extractions;
 }
 
 /**
@@ -322,10 +422,10 @@ function compare(actual: unknown, expected: string | CheckOptions): CheckResult 
     expectedStr = normalizeWS(expectedStr);
   }
 
-  const diff = matchWithWildcards(actualStr, expectedStr);
+  const result = matchWithWildcards(actualStr, expectedStr);
 
-  if (diff === null) {
-    return { pass: true, actual: actualStr, expected: expectedStr, diff: null, message: "" };
+  if (result.matched) {
+    return { pass: true, actual: actualStr, expected: expectedStr, diff: null, message: "", extractions: result.extractions };
   }
 
   const label = opts?.label ? ` (${opts.label})` : "";
@@ -333,8 +433,9 @@ function compare(actual: unknown, expected: string | CheckOptions): CheckResult 
     pass: false,
     actual: actualStr,
     expected: expectedStr,
-    diff,
+    diff: result.diff,
     message: `check failed${label}`,
+    extractions: emptyExtractions(),
   };
 }
 

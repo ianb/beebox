@@ -1,5 +1,5 @@
 import { test } from "tap";
-import { check, inspect, CheckError, registerSerializer } from "../src/test-lib/check.js";
+import { check, inspect, CheckError, registerSerializer, type Extractions, type CheckResult } from "../src/test-lib/check.js";
 import "../src/test-lib/tap-check.js";
 
 // ── Standalone check() — throwing API ──
@@ -177,14 +177,12 @@ test("async function with print()", async (t) => {
 // ── inspect() — non-throwing result ──
 
 test("inspect returns pass on match", async (t) => {
-  const r = inspect("hello", "hello");
-  t.check(r, `{
-  "pass": true,
-  "actual": "hello",
-  "expected": "hello",
-  "diff": null,
-  "message": ""
-}`);
+  const r = inspect("hello", "hello") as CheckResult;
+  t.equal(r.pass, true);
+  t.equal(r.actual, "hello");
+  t.equal(r.expected, "hello");
+  t.equal(r.diff, null);
+  t.equal(r.extractions.length, 0);
 });
 
 test("inspect returns diff on single-line mismatch", async (t) => {
@@ -251,12 +249,169 @@ test("inspect with printer function", async (t) => {
 });
 
 test("inspect with async function", async (t) => {
-  const r = await inspect(async (_print) => "async value", "async value");
-  t.check(r, `{
-  "pass": true,
-  "actual": "async value",
-  "expected": "async value",
-  "diff": null,
-  "message": ""
-}`);
+  const r = await inspect(async (_print) => "async value", "async value") as CheckResult;
+  t.equal(r.pass, true);
+  t.equal(r.actual, "async value");
+});
+
+// ── Guillemet wildcards ──
+
+test("«*» matches anything", async (t) => {
+  t.check("hello world 123", "hello «*» 123");
+});
+
+test("«*» extractions are positional", async (t) => {
+  const ext = t.check("a X b Y c", "a «*» b «*» c");
+  t.equal(ext[0], "X");
+  t.equal(ext[1], "Y");
+  t.equal(ext.length, 2);
+});
+
+test("«*» matches empty string", async (t) => {
+  const ext = t.check("ab", "a«*»b");
+  t.equal(ext[0], "");
+});
+
+test("«*» matches across newlines", async (t) => {
+  const ext = t.check("start\nmiddle\nend", "start«*»end");
+  t.equal(ext[0], "\nmiddle\n");
+});
+
+// ── Named extractions ──
+
+test("«name» captures as name (unknown type)", async (t) => {
+  const ext = t.check("commit abc123 done", "commit «hash» done");
+  t.equal(ext.hash, "abc123");
+  t.equal(ext[0], "abc123");
+});
+
+test("«name=*» captures anything with name", async (t) => {
+  const ext = t.check("id: xyz", "id: «val=*»");
+  t.equal(ext.val, "xyz");
+});
+
+test("duplicate names use first match", async (t) => {
+  const ext = t.check("a X b Y c", "a «thing» b «thing» c");
+  t.equal(ext.thing, "X", "named access gets first match");
+  t.equal(ext[0], "X");
+  t.equal(ext[1], "Y");
+});
+
+// ── Typed matchers ──
+
+test("«date» matches ISO datetime", async (t) => {
+  const ext = t.check("created 2026-03-02T20:00:00Z", "created «date»");
+  t.equal(ext.date, "2026-03-02T20:00:00Z");
+});
+
+test("«date» matches date-only", async (t) => {
+  const ext = t.check("on 2026-03-02", "on «date»");
+  t.equal(ext.date, "2026-03-02");
+});
+
+test("«date» rejects non-dates", async (t) => {
+  const r = inspect("created not-a-date", "created «date»");
+  t.equal((r as { pass: boolean }).pass, false);
+});
+
+test("«uuid» matches UUIDs", async (t) => {
+  const ext = t.check("id: 550e8400-e29b-41d4-a716-446655440000", "id: «uuid»");
+  t.equal(ext.uuid, "550e8400-e29b-41d4-a716-446655440000");
+});
+
+test("«int» matches integers", async (t) => {
+  const ext = t.check("count: 42", "count: «int»");
+  t.equal(ext.int, "42");
+});
+
+test("«int» matches negative integers", async (t) => {
+  const ext = t.check("offset: -5", "offset: «int»");
+  t.equal(ext.int, "-5");
+});
+
+test("«number» matches decimals", async (t) => {
+  const ext = t.check("pi: 3.14", "pi: «number»");
+  t.equal(ext.number, "3.14");
+});
+
+test("«number» matches scientific notation", async (t) => {
+  const ext = t.check("tiny: 1.5e-10", "tiny: «number»");
+  t.equal(ext.number, "1.5e-10");
+});
+
+test("«string» matches double-quoted strings", async (t) => {
+  const ext = t.check('name: "Alice"', "name: «string»");
+  t.equal(ext.string, '"Alice"');
+});
+
+test("«string» matches single-quoted strings", async (t) => {
+  const ext = t.check("name: 'Bob'", "name: «string»");
+  t.equal(ext.string, "'Bob'");
+});
+
+test("«string» handles escaped quotes", async (t) => {
+  const ext = t.check('say: "he said \\"hi\\""', "say: «string»");
+  t.equal(ext.string, '"he said \\"hi\\""');
+});
+
+// ── Named + typed ──
+
+test("«name=date» captures typed with custom name", async (t) => {
+  const ext = t.check("from 2026-01-01 to 2026-12-31", "from «start=date» to «end=date»");
+  t.equal(ext.start, "2026-01-01");
+  t.equal(ext.end, "2026-12-31");
+  t.equal(ext[0], "2026-01-01");
+  t.equal(ext[1], "2026-12-31");
+});
+
+test("«count=int» captures integer with custom name", async (t) => {
+  const ext = t.check("items: 5, pages: 2", "items: «items=int», pages: «pages=int»");
+  t.equal(ext.items, "5");
+  t.equal(ext.pages, "2");
+});
+
+// ── Backward compat with ___ ──
+
+test("___ still works as «*»", async (t) => {
+  t.check("hello world", "hello ___");
+});
+
+test("___name___ still works and extracts", async (t) => {
+  const ext = t.check("commit abc123", "commit ___hash___");
+  t.equal(ext.hash, "abc123");
+});
+
+test("___ returns positional extractions", async (t) => {
+  const ext = t.check("a X b Y c", "a ___ b ___ c");
+  t.equal(ext[0], "X");
+  t.equal(ext[1], "Y");
+});
+
+// ── Mixed guillemet and ___ ──
+
+test("guillemets and ___ can be mixed", async (t) => {
+  const ext = t.check("2026-03-02 hello abc123", "«date» ___ ___hash___");
+  t.equal(ext.date, "2026-03-02");
+  t.equal(ext.hash, "abc123");
+});
+
+// ── Async extractions ──
+
+test("async check returns extractions", async (t) => {
+  const ext = await t.check(Promise.resolve("count: 42"), "count: «int»");
+  t.equal(ext.int, "42");
+});
+
+// ── Extractions from standalone check() ──
+
+test("standalone check() returns extractions", async (t) => {
+  const ext = check("hello 42 world", "hello «n=int» world");
+  t.equal((ext as Extractions).n, "42");
+});
+
+// ── No wildcards returns empty extractions ──
+
+test("no wildcards returns empty extractions", async (t) => {
+  const ext = t.check("hello", "hello");
+  t.equal(ext.length, 0);
 });

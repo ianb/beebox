@@ -13,23 +13,23 @@
  */
 
 import { TestBase } from "@tapjs/core";
-import { inspect, type CheckOptions, type CheckResult } from "./check.js";
+import { inspect, type CheckOptions, type CheckResult, type Extractions } from "./check.js";
 
 declare module "@tapjs/core" {
   interface TestBase {
     check(
       actual: unknown,
       expected: string | CheckOptions,
-    ): void | Promise<void>;
+    ): Extractions | Promise<Extractions>;
   }
 }
 
-function report(t: TestBase, result: CheckResult): void {
+function report(t: TestBase, result: CheckResult): Extractions {
   t.currentAssert = t.check;
 
   if (result.pass) {
     t.pass(result.message || "check passed");
-    return;
+    return result.extractions;
   }
 
   t.fail(result.message, {
@@ -37,14 +37,15 @@ function report(t: TestBase, result: CheckResult): void {
     found: result.actual,
     wanted: result.expected,
   });
+  return result.extractions;
 }
 
-TestBase.prototype.check = function tapCheck(actual: unknown, expected: string | CheckOptions): void | Promise<void> {
+TestBase.prototype.check = function tapCheck(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions> {
   const result = inspect(actual, expected);
 
   if (result instanceof Promise) {
     return result.then((r) => report(this, r));
   }
 
-  report(this, result);
+  return report(this, result);
 };
