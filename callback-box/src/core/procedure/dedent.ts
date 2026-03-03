@@ -28,13 +28,14 @@ export function dedent(text: string): string {
   }
 
   if (minIndent === Infinity || minIndent === 0) {
-    return stripped.trimEnd();
+    // Still trim trailing whitespace per line
+    return lines.map((l) => l.trimEnd()).join("\n").trimEnd();
   }
 
-  // Remove common indentation
+  // Remove common indentation and trailing whitespace per line
   const dedented = lines.map((line) => {
     if (line.trim().length === 0) return "";
-    return line.slice(minIndent);
+    return line.slice(minIndent).trimEnd();
   });
 
   return dedented.join("\n").trimEnd();

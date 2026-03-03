@@ -11,3 +11,5 @@ paths:
 - `=> value` on one line = single-line result; `=>` alone = multi-line result until blank line or end of block
 - No `=>` means "just run, check it doesn't throw"
 - `t.check()` wildcards work in expected values: `«*»` (anything), `«date»`, `«int»`, `«name»`, `«name=type»`
+- Trailing newlines on string results are automatically trimmed (code blocks can't express trailing newlines)
+- Prose between code blocks is ignored — use it to document behavior

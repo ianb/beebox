@@ -172,6 +172,9 @@ export function generateTestSource(markdown, filePath) {
   const out = [];
 
   out.push('import { test } from "tap";');
+  // Trim trailing newlines from string results — doctest expected values
+  // can't express trailing newlines since code blocks naturally trim them.
+  out.push("function __trim(v) { return typeof v === 'string' ? v.replace(/\\n+$/, '') : v; }");
   out.push("");
 
   // Insert setup blocks at module scope
@@ -196,7 +199,7 @@ export function generateTestSource(markdown, filePath) {
 
       if (ex.expected !== null) {
         out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
-        out.push(`  await t.check(${ex.expression}, ${JSON.stringify(ex.expected)});`);
+        out.push(`  await t.check(__trim(${ex.expression}), ${JSON.stringify(ex.expected)});`);
         out.push(`});`);
       } else {
         out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
