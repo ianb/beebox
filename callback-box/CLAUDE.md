@@ -101,22 +101,41 @@ All detailed documentation lives in `docs/`. **When you add a new doc, update th
 | docs/IMPLEMENTATION.md | Technical implementation guide—*how* to build it |
 | docs/EXAMPLE_FILES.md | Concrete examples of cards, schemas, CLI usage |
 | docs/procedure-implementation.md | Procedure engine: definitions, runs, steps, validation, CLI usage |
+| docs/testing.md | Testing philosophy, doctests, scenarios, knowledge audits, service fakes |
+| docs/testing-gaps.md | Working document: coverage status, what's tested, what's not |
+| docs/connectors.md | Connector architecture, inventory, service injection, writing new connectors |
+| docs/scheduler.md | Scheduled scripts: cron-like execution, budgets, chains |
+| docs/adding-schemas.md | How to add a new card type with Zod schema |
+| docs/agent-knowledge.md | Knowledge taxonomy and audit test design |
+| docs/stack-decisions.md | Technology choices and rationale |
+| docs/state-management-comparison.md | Frontend state management options analysis |
+| docs/design-card-views.md | Card view rendering design |
+| docs/prompt-logging.md | CB_LOG_PROMPTS and session logging |
+| docs/telegram-setup.md | Telegram bot setup guide |
+| docs/gmail-setup.md | Gmail IMAP setup guide |
+| docs/google-setup.md | Google OAuth/API setup guide |
 
 When adding a doc to `docs/`, add it to the Doc Map above. One topic per document.
 
 ## Services
 
-External dependencies (Telegram, Google Calendar, Raindrop, OpenAI, etc.) are wrapped in typed service interfaces with real and fake implementations. Fakes are injected in tests via `makeTestServer({ services: { ... } })`. Full docs: `src/services/CLAUDE.md`.
+Every external dependency (API, library, CLI tool) is wrapped in a typed service interface with three parts: an interface (the subset we use), a real factory (thin wrapper), and a fake factory (domain-specific in-memory implementation for tests). The `Services` container groups all services and is threaded through the server to routes and connectors. Full docs: `src/services/CLAUDE.md`.
+
+Key pattern: fakes have observable state (`.sent[]`, `.bookmarks[]`, `.connected`) and domain-specific constructors (`createFakeTelegram({ username: "bot" })`). Call logging via `withCallLog(service)` records method calls for test assertions.
+
+## Connectors
+
+Connectors sync external services with the box filesystem. Each implements `Connector.sync()` — pull data in, optionally push data out, commit changes. Service-injected connectors accept an optional service parameter for testing. See `docs/connectors.md` for the full inventory and architecture, `src/connectors/CLAUDE.md` for quick reference.
 
 ## Testing
 
-`npm test` runs tap. Two kinds of tests in `test/`:
+`npm test` runs tap. Tests in `test/` include doctests (`.doctest.md`), traditional tests (`.test.ts`), plus scenario tests and knowledge audits for integration/agent testing. Full guide: `docs/testing.md`. Doctest syntax: `.claude/rules/doctest.md`.
 
-- **`.doctest.md`** — Executable docs for pure functions. Syntax in `.claude/rules/doctest.md`.
-- **`.test.ts`** — Traditional tests for anything needing server/filesystem/complex setup.
+Three testing tiers:
+- **Pure function doctests** — import and call directly
+- **Route doctests** — `makeTestServer({ services: { ... } })` with Fastify `inject()`
+- **Connector/filesystem doctests** — `makeTmpBox({ git: true })` with service fakes
 
 Use `t.check(actual, expected)` for string comparisons with wildcards (`«date»`, `«*»`, etc.). Ref: `src/test-lib/docs/check-reference.md`.
-
-@THINKING_CLAUDE.md
 
 @CONVENTIONS.md

@@ -108,6 +108,114 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 | `test/speech-keywords.doctest.md` | Voice command keyword detection (frontend) |
 | `test/print.doctest.md` | `print()` function in doctests (meta-test) |
 | `test/procedure-engine.doctest.md` | Procedure engine: shell steps, precheck skip/fail, validation, agent mock, fallback commits |
+| `test/git.doctest.md` | Git command helpers (init, commit, log, diff, status, branches, tags) |
+| `test/time.doctest.md` | Stubbable time utilities (CB_TIME env, stubs.yaml, caching) |
+| `test/routes-calendar.doctest.md` | Calendar config routes (list available, get/save config) |
+| `test/service-call-log.doctest.md` | Generic `withCallLog()` wrapper for recording method calls |
+| `test/service-telegram.doctest.md` | Telegram service fake (outbox, webhook, polling) |
+| `test/service-raindrop.doctest.md` | Raindrop service fake (collections, bookmarks, CRUD) |
+| `test/service-google-calendar.doctest.md` | Google Calendar service fake (calendars, events) |
+| `test/service-openai-audio.doctest.md` | OpenAI audio service fake (transcription, TTS) |
+| `test/service-dropbox-relay.doctest.md` | Dropbox relay service fake (channels, messages) |
+| `test/service-imap.doctest.md` | IMAP service fake (connect, search, fetch) |
+| `test/connector-telegram.doctest.md` | Telegram connector: extractMessage, webhook processing, full sync, outbound send |
+| `test/connector-raindrop.doctest.md` | Raindrop connector: pull, update, push bookmark sync |
+
+## Testing with Service Fakes
+
+External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full service layer docs: `src/services/CLAUDE.md`.
+
+### Pattern
+
+Every external service has three parts:
+
+1. **Interface** — the subset of the API we actually use
+2. **Real factory** — thin wrapper around the library, created from config
+3. **Fake factory** — domain-specific in-memory implementation for tests
+
+```typescript
+// Create a fake with domain-specific constructor params
+const tg = createFakeTelegram({ username: "test_bot" });
+
+// Fakes have observable state
+await tg.sendMessage(123, "hello");
+tg.sent.length  // => 1
+tg.sent[0].text // => "hello"
+```
+
+### Injecting into routes
+
+Pass fakes via `makeTestServer({ services: { ... } })`:
+
+```typescript
+const tg = createFakeTelegram({ username: "my_bot" });
+const ctx = await makeTestServer({ services: { telegram: tg } });
+// Routes that use telegram will get the fake
+const res = await ctx.request({ method: "GET", url: "/api/admin/telegram-status" });
+// Inspect what the route did via the fake's state
+tg.sent  // messages the route sent
+```
+
+### Injecting into connectors
+
+Pass fakes to connector factory functions:
+
+```typescript
+const rd = createFakeRaindrop({ collections: [...], bookmarks: [...] });
+const connector = createRaindropConnector(box.root, rd);
+const result = await connector.sync();
+// The connector used the fake instead of hitting the real API
+```
+
+### Call logging
+
+Wrap any fake with `withCallLog()` to record method calls:
+
+```typescript
+const tg = withCallLog(createFakeTelegram({ username: "bot" }));
+await tg.sendMessage(123, "hello");
+printCalls(tg.callLog);
+// => sendMessage(123, "hello")
+```
+
+### Available fakes
+
+| Service | Factory | Key constructor params | Observable state |
+|---------|---------|----------------------|-----------------|
+| Telegram | `createFakeTelegram()` | `{ username }` | `.sent[]`, `.webhookUrl` |
+| Claude CLI | `createFakeClaudeCli()` | `{ loggedIn? }` | `.loggedIn` |
+| Google Calendar | `createFakeGoogleCalendar()` | `{ calendars?, events? }` | `.calendars[]`, `.events[]` |
+| Raindrop | `createFakeRaindrop()` | `{ collections?, bookmarks? }` | `.collections[]`, `.bookmarks[]` |
+| OpenAI Audio | `createFakeOpenAIAudio()` | `{ transcriptionText? }` | `.calls[]` |
+| IMAP | `createFakeImap()` | `{ messages? }` | `.connected`, `.lockedMailbox` |
+| Dropbox Relay | `createFakeDropboxRelay()` | `{ messages? }` | `.channels[]`, `.messages[]` |
+| Capture Relay | `createFakeCaptureRelay()` | `{ sessions?, manifests? }` | `.sessions[]` |
+| Google Auth | `createFakeGoogleAuth()` | `{ accessToken? }` | — |
+
+### Connector testing pattern
+
+Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake, and run `sync()`:
+
+```typescript
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+await box.seed("config/connectors/telegram.secret.json", JSON.stringify({...}));
+box.commitAll("add config");
+
+const tg = createFakeTelegram({ username: "bot", updates: [...] });
+const connector = createTelegramConnector(box.root, tg);
+const result = await connector.sync();
+// Check result.created, result.updated, result.pushed
+// Check tg.sent for outbound messages
+await box.cleanup();
+```
+
+### Doctest limitations
+
+- **No `import type`** in setup blocks — the loader doesn't support it. Import value exports only.
+- **No `!.`** (non-null assertion) — use `?.` instead.
+- **No TypeScript type annotations** in test blocks — only in setup blocks.
 
 ## 2. Traditional TAP Tests
 
