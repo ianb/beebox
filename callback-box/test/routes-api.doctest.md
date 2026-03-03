@@ -243,3 +243,98 @@ res.body.entries.length >= 1
 ``` cleanup
 await ctx.cleanup();
 ```
+
+## Questions
+
+`GET /api/questions` returns question cards with enriched prompt data:
+
+```
+const ctx = await makeTestServer();
+await ctx.seed(
+  "box/questions/ask.question.card",
+  '<question status="pending"><prompt>What color?</prompt><input type="select"><option id="red">Red</option><option id="blue">Blue</option></input></question>\n',
+);
+ctx.commitAll("seed question");
+const res = await ctx.request({ method: "GET", url: "/api/questions" });
+res.statusCode
+=> 200
+```
+
+``` continue
+res.body.items.length
+=> 1
+
+res.body.items[0].prompt
+=> What color?
+```
+
+``` continue
+Array.isArray(res.body.items[0].options)
+=> true
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
+Empty box returns empty question list:
+
+```
+const ctx = await makeTestServer();
+const res = await ctx.request({ method: "GET", url: "/api/questions" });
+res.body.items.length
+=> 0
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
+## Agent context
+
+`GET /api/context` returns context for agent decision-making:
+
+```
+const ctx = await makeTestServer();
+const res = await ctx.request({ method: "GET", url: "/api/context" });
+res.statusCode
+=> 200
+```
+
+``` continue
+typeof res.body.summary
+=> string
+
+Array.isArray(res.body.pendingQuestions)
+=> true
+
+typeof res.body.inboxCount
+=> number
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
+With a pending question, it appears in context:
+
+```
+const ctx = await makeTestServer();
+await ctx.seed(
+  "box/questions/ctx-q.question.card",
+  '<question status="pending"><prompt>Deploy now?</prompt></question>\n',
+);
+ctx.commitAll("seed question");
+const res = await ctx.request({ method: "GET", url: "/api/context" });
+res.body.pendingQuestions.length
+=> 1
+```
+
+``` continue
+res.body.pendingQuestions[0].prompt
+=> Deploy now?
+```
+
+``` cleanup
+await ctx.cleanup();
+```

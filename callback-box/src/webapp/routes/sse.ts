@@ -61,31 +61,36 @@ export async function registerSseRoutes(
     }
   }
 
-  // Start file watcher
+  // Start file watcher lazily on first SSE client connection
   const watchPath = path.join(boxRoot, "box");
 
-  watcher = watch(watchPath, {
-    persistent: true,
-    ignoreInitial: true,
-    ignored: /(^|[/\\])\../,
-  });
-
-  watcher.on("all", (event, filePath) => {
-    const relativePath = path.relative(boxRoot, filePath);
-    broadcastEvent("file-change", {
-      event,
-      path: relativePath,
-      timestamp: new Date().toISOString(),
+  function ensureWatcher(): void {
+    if (watcher) return;
+    watcher = watch(watchPath, {
+      persistent: true,
+      ignoreInitial: true,
+      ignored: /(^|[/\\])\../,
     });
-  });
 
-  watcher.on("error", (error) => {
-    console.error("File watcher error:", error);
-  });
+    watcher.on("all", (event, filePath) => {
+      const relativePath = path.relative(boxRoot, filePath);
+      broadcastEvent("file-change", {
+        event,
+        path: relativePath,
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    watcher.on("error", (error) => {
+      console.error("File watcher error:", error);
+    });
+  }
 
   // GET /api/events - SSE endpoint
   server.get("/api/events", (request, reply) => {
     const clientId = `client-${++clientIdCounter}`;
+
+    ensureWatcher();
 
     reply.hijack();
 
