@@ -26,8 +26,8 @@ These modules have been converted from traditional tests or newly written as doc
 - `src/cli/lib/time.ts` — Stubbable time utilities (CB_TIME env, stubs.yaml, caching)
 - **Route tests** — scheduler, admin, core API, briefs, commands, history, actions, calendar
 - `src/core/procedure/engine.ts` — Full execution lifecycle: shell steps, precheck skip/fail, validation severity, dry run, step filtering, agent mock (via DI), fallback commits, error cases
-- **Service fakes** — Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, call-log
-- **Connector tests** — Telegram (polling, webhook processing, outbound send), Raindrop (pull, push, two-way sync)
+- **Service fakes** — Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Feed Fetcher, call-log
+- **Connector tests** — Telegram (polling, webhook processing, outbound send), Raindrop (pull, push, two-way sync), RSS (pull, dedup, Atom, error handling)
 
 ### Covered by traditional tests
 
@@ -41,7 +41,6 @@ These modules have been converted from traditional tests or newly written as doc
 
 These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest helpers:
 
-- **Route: `commands.ts`** remaining — Streaming execute endpoint
 - **Route: `actions.ts`** remaining — Wakeup (runs full cycle), voice-memo (multipart upload)
 - **Route: `auth.ts`** — Needs `GoogleAuthService` injection into the route (currently uses `new OAuth2Client()` and `process.env` directly). Service fake exists but route not yet wired.
 
@@ -51,7 +50,7 @@ These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest hel
 - **Scheduler** (`src/core/scheduler.ts`) — Orchestrates connectors, wakeup, and tick. Important to test but needs design discussion about what to inject and at what level. The individual pieces it calls are already tested; the scheduler's value is in the orchestration logic.
 - **WebSocket/SSE routes** — Would benefit from abstractions that let us test the underlying logic without actual WebSocket connections. Don't jump into this yet; needs design discussion about what the testable abstraction looks like.
 - **Admin routes** — DONE. All 8/8 endpoints tested via service fakes (Telegram + Claude Code).
-- **Connectors** — Service fakes exist for Telegram and Raindrop. Connector-level sync tests can use `makeTmpBox({ git: true })` with injected fakes. RSS connector could use HTTP-level stubs since the HTTP interface is what's being tested. Dropbox/capture connectors are being removed (see below).
+- **Connectors** — Service fakes exist for Telegram, Raindrop, and RSS (FeedFetcher). All three have connector-level sync tests using `makeTmpBox({ git: true })` with injected fakes. Dropbox/capture connectors are being removed (see below).
 
 ### Being removed / deprioritized
 
@@ -80,7 +79,7 @@ Prefer injecting at the service/function level over HTTP-level interception:
 
 ## 1. API Route Tests
 
-**Status:** In progress — 44 of 52 endpoints tested (85%)
+**Status:** In progress — 46 of 52 endpoints tested (88%)
 **Priority:** High — deterministic, fast, covers fragile code
 
 Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer()` from `test/helpers/doctest-server.ts`. Under the hood this uses Fastify's `inject()` — no socket server, no network. The helper provides `.inject()` (returns `"status\njson"` for `check()`) and `.request()` (returns `{ statusCode, body }` for programmatic access).
@@ -95,7 +94,7 @@ Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer(
 | `api.ts` | 12/12 | 100% | Complete |
 | `briefs.ts` | 7/7 | 100% | Complete (legacy `/api/edition` endpoints removed) |
 | `admin.ts` | 8/8 | 100% | Complete (Telegram + Claude Code via service fakes) |
-| `commands.ts` | 3/5 | 60% | List, details, error cases; streaming execute not tested |
+| `commands.ts` | 5/5 | 100% | Complete (streaming execute tested via `executeCommandStreaming()` abstraction) |
 | `history.ts` | 3/3 | 100% | Complete |
 | `actions.ts` | 2/4 | 50% | Answer, create; wakeup/voice-memo need integration work |
 | `chat.ts` | 0/8 | 0% | Needs Claude session injection |
@@ -173,6 +172,30 @@ Test routes as pure functions: state-in → render → extract available actions
 
 This requires refactoring route handlers to separate the pure logic from the Fastify wiring, but it's the right long-term direction.
 
+### Time as a service
+
+Currently `getBoxTime(boxRoot?)` / `getBoxTimeISO(boxRoot?)` are free functions stubbed via `CB_TIME` env var or `stubs.yaml`. This works for scenario testing but is implicit global state. A `TimeService` would make time injection explicit:
+
+```typescript
+interface TimeService {
+  now(): Date;
+  isoNow(): string;
+}
+
+// Fake with settable/advanceable clock
+function createFakeTime(initial?: string): FakeTimeService {
+  let current = new Date(initial ?? "2024-01-01T00:00:00Z");
+  return {
+    now: () => current,
+    isoNow: () => current.toISOString(),
+    set: (iso: string) => { current = new Date(iso); },
+    advance: (ms: number) => { current = new Date(current.getTime() + ms); },
+  };
+}
+```
+
+The challenge is threading it through — `getBoxTimeISO()` is called from 40+ files as a free function. Options: (1) pass as parameter everywhere (invasive), (2) add to existing context objects (`CommandContext`, connector constructors), (3) keep env-var approach for production, add service as alternative injection for doctests. The env-var stub already works for scenarios; the service would mainly benefit doctests needing fine-grained time control (e.g., scheduling tests that advance time between steps). There are also ~70 direct `new Date()` calls — most legitimate (auth, perf timing, logging) but some card/job creation should arguably go through the stubbable clock.
+
 ### Assertive logging
 
 Soft assertions in production code that surface through the logging system. In tests, an error harness catches unexpected logged errors and fails the test. This turns the logging system into a passive testing layer.
@@ -200,3 +223,4 @@ Rendered output includes markup (`data-source` attributes) indicating where each
 - **2026-03-03:** Service layer for external dependencies. Created `src/services/` with typed interfaces, real implementations, and domain-specific fakes for Telegram and Claude CLI. Generic `withCallLog()` wrapper records method calls on fakes for test assertions. `Services` container threaded through `server.ts` → route registration → test helpers. Admin routes now 8/8 (100%) — Telegram status/setup/disconnect and Claude Code status/login/logout all testable via fakes. Added `rootRequest()` to test server for root-level (non-box-prefixed) routes. Total: 580 tests across 33 files.
 - **2026-03-03:** Remaining service definitions: Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Google Auth, Capture Relay. All with domain-specific fakes and doctests. Services threaded through calendar, pairing, and chat routes. Telegram and Raindrop connectors wired to accept injected services. Total: 627 tests across 36 files.
 - **2026-03-03:** Calendar route tests (3/3 endpoints) and connector-level tests for Telegram and Raindrop. Connectors tested using `makeTmpBox({ git: true })` + service fakes, exercising full sync cycles (polling, webhook processing, outbound send, two-way bookmark sync). Dropbox relay deprioritized — being removed in favor of XState architecture.
+- **2026-03-03:** RSS connector service injection + tests. Created `FeedFetcherService` with fake that returns canned XML. RSS connector wired to accept injected fetcher. 4 test sections: pull (RSS 2.0), deduplication, Atom feed support, fetch error handling. Extracted `executeCommandStreaming()` from the streaming execute route — testable abstraction that emits `OutputLine` messages via callback. commands.ts now 5/5 (100%). Total: 699 tests across 41 files.

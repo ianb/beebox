@@ -26,12 +26,50 @@ interface ExecuteBody {
 /**
  * Output line for streaming command execution.
  */
-interface OutputLine {
+export interface OutputLine {
   type: "output" | "result";
   text?: string;
   success?: boolean;
   data?: unknown;
   error?: string;
+}
+
+/**
+ * Execute a command, emitting OutputLine messages via the callback.
+ *
+ * Returns the final result. This is the testable core of streaming command
+ * execution — the route handler just wires `emit` to SSE format.
+ */
+export async function executeCommandStreaming(options: {
+  command: string;
+  args: Record<string, unknown>;
+  boxRoot: string;
+  emit: (line: OutputLine) => void;
+}): Promise<OutputLine> {
+  const { command, args, boxRoot, emit } = options;
+
+  const ctx: CommandContext = {
+    boxRoot,
+    write: (text: string) => emit({ type: "output", text }),
+    writeLine: (text: string) => emit({ type: "output", text }),
+  };
+
+  try {
+    const result = await runCommand({ name: command, args: args ?? {}, ctx });
+    const resultLine: OutputLine = result.success
+      ? { type: "result", success: true, data: result.data }
+      : { type: "result", success: false, data: result.data, error: result.error ?? "Unknown error" };
+    emit(resultLine);
+    return resultLine;
+  } catch (error) {
+    const errorLine: OutputLine = {
+      type: "result",
+      success: false,
+      error: (error as Error).message,
+    };
+    emit(errorLine);
+    return errorLine;
+  }
 }
 
 interface RegisterCommandRoutesOptions {
@@ -95,41 +133,19 @@ export async function registerCommandRoutes(
       reply.raw.setHeader("Cache-Control", "no-cache");
       reply.raw.setHeader("Connection", "keep-alive");
 
-      // Create streaming context
-      const ctx: CommandContext = {
+      const resultLine = await executeCommandStreaming({
+        command,
+        args: args ?? {},
         boxRoot,
-        write: (text: string) => {
-          const line: OutputLine = { type: "output", text };
-          reply.raw.write(`data: ${JSON.stringify(line)}\n\n`);
-        },
-        writeLine: (text: string) => {
-          const line: OutputLine = { type: "output", text };
-          reply.raw.write(`data: ${JSON.stringify(line)}\n\n`);
-        },
-      };
+        emit: (line) => reply.raw.write(`data: ${JSON.stringify(line)}\n\n`),
+      });
 
-      try {
-        const result = await runCommand({ name: command, args: args ?? {}, ctx });
-
-        // Send final result
-        const resultLine: OutputLine = result.success
-          ? { type: "result", success: true, data: result.data }
-          : { type: "result", success: false, data: result.data, error: result.error ?? "Unknown error" };
-        reply.raw.write(`data: ${JSON.stringify(resultLine)}\n\n`);
-
-        // Broadcast command completion event
+      if (resultLine.type === "result") {
         broadcastEvent("command-complete", {
           command,
-          success: result.success,
+          success: resultLine.success ?? false,
           timestamp: new Date().toISOString(),
         });
-      } catch (error) {
-        const errorLine: OutputLine = {
-          type: "result",
-          success: false,
-          error: (error as Error).message,
-        };
-        reply.raw.write(`data: ${JSON.stringify(errorLine)}\n\n`);
       }
 
       reply.raw.end();

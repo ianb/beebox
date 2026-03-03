@@ -23,8 +23,9 @@ import { createNewsItemTemplate } from "../schemas/news-item.js";
 import { createNewsJobTemplate } from "../schemas/news-job.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
-import { boxFetch } from "../cli/lib/fetch.js";
 import { safeFilename } from "./chat-utils.js";
+import type { FeedFetcherService } from "../services/feed-fetcher.js";
+import { createFeedFetcherService } from "../services/feed-fetcher.js";
 
 interface FeedConfig {
   url: string;
@@ -194,9 +195,11 @@ class RssConnector implements Connector {
   triggeredBy?: string;
 
   private boxRoot: string;
+  private fetcher: FeedFetcherService;
 
-  constructor(boxRoot: string) {
+  constructor(boxRoot: string, fetcher?: FeedFetcherService) {
     this.boxRoot = boxRoot;
+    this.fetcher = fetcher ?? createFeedFetcherService();
   }
 
   private configPath(): string {
@@ -248,7 +251,7 @@ class RssConnector implements Connector {
 
     for (const feed of config.feeds) {
       try {
-        const response = await boxFetch(feed.url);
+        const response = await this.fetcher.fetch(feed.url);
         if (!response.ok) {
           errors.push(`Failed to fetch ${feed.url}: ${response.status}`);
           continue;
@@ -368,8 +371,8 @@ class RssConnector implements Connector {
 /**
  * Create and register the RSS connector for a box.
  */
-export function createRssConnector(boxRoot: string): Connector {
-  const connector = new RssConnector(boxRoot);
+export function createRssConnector(boxRoot: string, fetcher?: FeedFetcherService): Connector {
+  const connector = new RssConnector(boxRoot, fetcher);
   registerConnector(connector);
   return connector;
 }
