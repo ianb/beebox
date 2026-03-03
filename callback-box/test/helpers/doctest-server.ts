@@ -10,7 +10,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
-import { createTestServer, TEST_SLUG } from "./test-server.js";
+import { createTestServer, TEST_SLUG, type TestServerOptions } from "./test-server.js";
 
 export { TEST_SLUG } from "./test-server.js";
 
@@ -32,6 +32,8 @@ export interface TestServer {
   inject(opts: InjectOpts): Promise<string>;
   /** Inject and return { statusCode, body } for programmatic access. */
   request(opts: InjectOpts): Promise<InjectResult>;
+  /** Like request() but without the box slug prefix — for root-level routes. */
+  rootRequest(opts: InjectOpts): Promise<InjectResult>;
   /** Write a card file into the test box. */
   seed(relativePath: string, content: string): Promise<void>;
   /** Read a file from the test box. */
@@ -42,8 +44,8 @@ export interface TestServer {
   cleanup(): Promise<void>;
 }
 
-export async function makeTestServer(): Promise<TestServer> {
-  const ctx = await createTestServer();
+export async function makeTestServer(opts?: TestServerOptions): Promise<TestServer> {
+  const ctx = await createTestServer(opts);
   const BASE = `/${TEST_SLUG}`;
 
   return {
@@ -56,6 +58,17 @@ export async function makeTestServer(): Promise<TestServer> {
       const reqOpts: { method: string; url: string; payload?: unknown } = {
         method: opts.method,
         url: `${BASE}${opts.url}`,
+      };
+      if (opts.payload !== undefined) {
+        reqOpts.payload = opts.payload;
+      }
+      const res = await ctx.server.inject(reqOpts);
+      return { statusCode: res.statusCode, body: res.json() };
+    },
+    async rootRequest(opts: InjectOpts) {
+      const reqOpts: { method: string; url: string; payload?: unknown } = {
+        method: opts.method,
+        url: opts.url,
       };
       if (opts.payload !== undefined) {
         reqOpts.payload = opts.payload;

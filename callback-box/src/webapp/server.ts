@@ -27,6 +27,7 @@ import { registerSystemAdminRoutes, registerBoxAdminRoutes } from "./routes/admi
 import { isAuthEnabled, getSessionEmail, getOwnerEmail } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
+import type { Services } from "../services/index.js";
 
 export const DEFAULT_PORT = 3210;
 
@@ -41,6 +42,8 @@ export interface ServerOptions {
   boxes?: BoxSpec[] | undefined;
   /** @deprecated Use boxes instead */
   boxRoot?: string | undefined;
+  /** External service implementations — pass fakes in tests */
+  services?: Services | undefined;
 }
 
 export interface ServerContext {
@@ -86,7 +89,9 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     await server.register(registerAuthRoutes, { boxes });
   }
   // System-wide admin routes (Claude Code auth)
-  await server.register(registerSystemAdminRoutes);
+  await server.register(async (instance) => {
+    await registerSystemAdminRoutes(instance, options.services ?? {});
+  });
 
   // Root-level box list endpoint (filtered by user access when auth enabled)
   server.get("/api/boxes", async (request) => {
@@ -160,7 +165,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerCalendarRoutes(instance, box.boxRoot);
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
-      await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
+      await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
 
       // Serve static frontend files within this prefix
       if (frontendExists) {

@@ -14,14 +14,15 @@
  *   POST /api/admin/box-config — update box config fields
  */
 
-import { spawn, execFile } from "node:child_process";
 import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { Bot } from "grammy";
 import { isOwner, isAuthEnabled } from "../auth.js";
 import { loadTelegramConfig } from "../../connectors/telegram.js";
+import type { Services } from "../../services/index.js";
+import { createTelegramService } from "../../services/telegram.js";
+import { createClaudeCliService } from "../../services/claude-cli.js";
 
 async function loadPublicUrl(boxRoot: string): Promise<string | undefined> {
   try {
@@ -42,110 +43,41 @@ function addOwnerCheck(server: FastifyInstance) {
 /**
  * System-wide admin routes (Claude Code auth). Registered at root level.
  */
-export async function registerSystemAdminRoutes(server: FastifyInstance) {
+export async function registerSystemAdminRoutes(server: FastifyInstance, services: Services = {}) {
   addOwnerCheck(server);
 
+  const claude = services.claudeCli ?? createClaudeCliService();
+
   server.get("/api/admin/claude-status", async () => {
-    return new Promise<Record<string, unknown>>((resolve) => {
-      execFile("claude", ["auth", "status"], { timeout: 10000 }, (err, stdout) => {
-        const output = stdout || "";
-        try {
-          const parsed = JSON.parse(output);
-          resolve(parsed);
-        } catch {
-          const result = err
-            ? { loggedIn: false, error: err.message }
-            : { loggedIn: false, raw: output };
-          resolve(result);
-        }
-      });
-    });
+    return claude.authStatus();
   });
 
-  let activeLogin: { process: ReturnType<typeof spawn>; authUrl: string | null } | null = null;
-
   server.post("/api/admin/claude-login", async (_request, reply) => {
-    if (activeLogin) {
-      if (activeLogin.authUrl) {
-        return { authUrl: activeLogin.authUrl, status: "waiting" };
-      }
-      return { status: "starting" };
-    }
-
     const ownerEmail = process.env.CB_OWNER_EMAIL;
-    const args = ["auth", "login"];
-    if (ownerEmail) {
-      args.push("--email", ownerEmail);
+    const result = await claude.authLogin(ownerEmail);
+    if (result.authUrl) {
+      return { authUrl: result.authUrl, status: "waiting" };
     }
-
-    const child = spawn("claude", args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, BROWSER: "echo" },
-    });
-
-    let authUrl: string | null = null;
-    let output = "";
-
-    activeLogin = { process: child, authUrl: null };
-
-    child.stdout.on("data", (data: Buffer) => {
-      output += data.toString();
-      const urlMatch = output.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/);
-      if (urlMatch && !authUrl) {
-        authUrl = urlMatch[1]!;
-        activeLogin!.authUrl = authUrl;
-      }
-    });
-
-    child.stderr.on("data", (data: Buffer) => {
-      output += data.toString();
-      const urlMatch = output.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/);
-      if (urlMatch && !authUrl) {
-        authUrl = urlMatch[1]!;
-        activeLogin!.authUrl = authUrl;
-      }
-    });
-
-    child.on("close", () => {
-      activeLogin = null;
-    });
-
-    for (let i = 0; i < 20; i++) {
-      if (authUrl) {
-        return { authUrl, status: "waiting" };
-      }
-      await new Promise((r) => setTimeout(r, 500));
-    }
-
-    if (authUrl) {
-      return { authUrl, status: "waiting" };
-    }
-
-    child.kill();
-    activeLogin = null;
-    return reply.status(500).send({ error: "Failed to get auth URL", output });
+    return reply.status(500).send({ error: result.error ?? "Failed to get auth URL" });
   });
 
   server.post("/api/admin/claude-logout", async () => {
-    return new Promise<{ success: boolean; error?: string }>((resolve) => {
-      execFile("claude", ["auth", "logout"], { timeout: 10000 }, (err) => {
-        if (err) {
-          resolve({ success: false, error: err.message });
-        } else {
-          resolve({ success: true });
-        }
-      });
-    });
+    return claude.authLogout();
   });
 }
 
 /**
  * Per-box admin routes (Telegram, box config). Registered under each box prefix.
  */
-export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot, boxSlug }: { boxRoot: string; boxSlug: string }) {
+export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot, boxSlug, services = {} }: { boxRoot: string; boxSlug: string; services?: Services }) {
   addOwnerCheck(server);
 
   // --- Telegram connector management ---
+
+  /** Get or create a TelegramService for a given bot token */
+  function getTelegram(botToken: string) {
+    return services.telegram ?? createTelegramService(botToken);
+  }
 
   server.get("/api/admin/telegram-status", async () => {
     const config = await loadTelegramConfig(boxRoot);
@@ -155,10 +87,10 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     }
 
     try {
-      const bot = new Bot(config.botToken);
+      const tg = getTelegram(config.botToken);
       const [me, webhookInfo] = await Promise.all([
-        bot.api.getMe(),
-        bot.api.getWebhookInfo(),
+        tg.getMe(),
+        tg.getWebhookInfo(),
       ]);
       return {
         configured: true,
@@ -184,10 +116,10 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
       return reply.status(400).send({ error: "botToken is required" });
     }
 
-    const bot = new Bot(botToken);
+    const tg = getTelegram(botToken);
     let me;
     try {
-      me = await bot.api.getMe();
+      me = await tg.getMe();
     } catch (err) {
       return reply.status(400).send({ error: `Invalid bot token: ${(err as Error).message}` });
     }
@@ -205,7 +137,7 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     if (publicUrl) {
       webhookUrl = `${publicUrl}/webhook/${boxSlug}/telegram`;
       try {
-        await bot.api.setWebhook(webhookUrl, {
+        await tg.setWebhook(webhookUrl, {
           secret_token: webhookSecret,
           allowed_updates: ["message", "edited_message"],
         });
@@ -232,8 +164,8 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     const config = await loadTelegramConfig(boxRoot);
     if (config) {
       try {
-        const bot = new Bot(config.botToken);
-        await bot.api.deleteWebhook();
+        const tg = getTelegram(config.botToken);
+        await tg.deleteWebhook();
       } catch { /* best effort */ }
     }
 

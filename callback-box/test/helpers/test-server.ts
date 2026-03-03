@@ -21,6 +21,7 @@ import { execSync } from "node:child_process";
 import type { FastifyInstance } from "fastify";
 import { initBox } from "../../src/core/box.js";
 import { createServer } from "../../src/webapp/server.js";
+import type { Services } from "../../src/services/index.js";
 
 export const TEST_SLUG = "test";
 
@@ -30,7 +31,11 @@ export interface TestServerContext {
   cleanup: () => Promise<void>;
 }
 
-export async function createTestServer(): Promise<TestServerContext> {
+export interface TestServerOptions {
+  services?: Services;
+}
+
+export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
   const tmpDir = await mkdtemp(join(tmpdir(), "cb-route-test-"));
 
   // Initialize box with git
@@ -39,6 +44,7 @@ export async function createTestServer(): Promise<TestServerContext> {
   // Create server pointing at this temp box
   const server = await createServer({
     boxes: [{ slug: TEST_SLUG, boxRoot: tmpDir }],
+    services: opts?.services,
   });
 
   return {

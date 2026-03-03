@@ -73,7 +73,7 @@ Prefer injecting at the service/function level over HTTP-level interception:
 
 ## 1. API Route Tests
 
-**Status:** In progress — 35 of 52 endpoints tested (67%)
+**Status:** In progress — 41 of 52 endpoints tested (79%)
 **Priority:** High — deterministic, fast, covers fragile code
 
 Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer()` from `test/helpers/doctest-server.ts`. Under the hood this uses Fastify's `inject()` — no socket server, no network. The helper provides `.inject()` (returns `"status\njson"` for `check()`) and `.request()` (returns `{ statusCode, body }` for programmatic access).
@@ -87,7 +87,7 @@ Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer(
 | `scheduler.ts` | 5/5 | 100% | Complete |
 | `api.ts` | 12/12 | 100% | Complete |
 | `briefs.ts` | 7/7 | 100% | Complete (legacy `/api/edition` endpoints removed) |
-| `admin.ts` | 2/8 | 25% | Box-config only; Telegram/Claude Code endpoints need mocking |
+| `admin.ts` | 8/8 | 100% | Complete (Telegram + Claude Code via service fakes) |
 | `commands.ts` | 3/5 | 60% | List, details, error cases; streaming execute not tested |
 | `history.ts` | 3/3 | 100% | Complete |
 | `actions.ts` | 2/4 | 50% | Answer, create; wakeup/voice-memo need integration work |
@@ -190,3 +190,4 @@ Rendered output includes markup (`data-source` attributes) indicating where each
 - **2026-03-03:** Procedure engine tested via doctests with agent DI. Added `options.runAgent` to `ProcedureOptions` for injecting a mock agent runner. 12 tests cover: shell execution, precheck skip/fail, validation warn/abort, dry run, step filtering, agent context verification (precheck pass-output, directive, model mapping), fallback commits. Total: 496 tests across 28 files.
 - **2026-03-03:** Added git.ts doctests (14 tests covering all exported functions) and completed api.ts route coverage (added `/api/questions`, `/api/context`). api.ts now 12/12 (100%). Total: 530 tests across 30 files.
 - **2026-03-03:** Removed 4 legacy `/api/edition/*` endpoints from briefs.ts (no frontend references). Added time.ts doctests (8 tests covering env var override, stubs.yaml, caching, cache clearing). briefs.ts now 7/7 (100%). Total: 540 tests across 31 files.
+- **2026-03-03:** Service layer for external dependencies. Created `src/services/` with typed interfaces, real implementations, and domain-specific fakes for Telegram and Claude CLI. Generic `withCallLog()` wrapper records method calls on fakes for test assertions. `Services` container threaded through `server.ts` → route registration → test helpers. Admin routes now 8/8 (100%) — Telegram status/setup/disconnect and Claude Code status/login/logout all testable via fakes. Added `rootRequest()` to test server for root-level (non-box-prefixed) routes. Total: 580 tests across 33 files.
