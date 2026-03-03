@@ -4,13 +4,16 @@ Write tests using `check(actual, expected)` alongside tap. `check()` compares ev
 
 ```ts
 import { test } from "tap";
-import { check } from "../src/test-lib/check.js";
+import { checker } from "../src/test-lib/tap-check.js";
 ```
 
 ## Write a test
 
+Create a `check` function bound to the test context with `checker(t)`. This routes failures through tap's assertion system for clean diagnostics:
+
 ```ts
 test("safeFilename strips special characters", async (t) => {
+  const check = checker(t);
   check(safeFilename("Hello World!"), "Hello_World");
   check(safeFilename(""), "untitled");
 });
@@ -20,6 +23,7 @@ Objects are serialized as pretty-printed JSON:
 
 ```ts
 test("getStatus on clean repo", async (t) => {
+  const check = checker(t);
   await check(getStatus(boxRoot), `{
   "staged": [],
   "modified": [],
@@ -35,6 +39,7 @@ When `actual` is a function, it receives a `print` callback. Printed lines + the
 
 ```ts
 test("creating a card modifies git status", async (t) => {
+  const check = checker(t);
   await check(async (print) => {
     await fs.writeFile(path.join(boxRoot, "box/inbox/test.card"), content);
     print("wrote: box/inbox/test.card");
@@ -75,5 +80,6 @@ See [check-reference.md](check-reference.md) for:
 
 - **Serializers** — register custom value-to-string converters for domain types (GitStatus, Card, etc.) so tests read naturally instead of showing raw JSON
 - **Options** — `normalizeWhitespace` for messy output, `label` for identifying checks in error messages
-- **Error handling** — `CheckError` class, stack trace behavior, how it integrates with test runners
+- **inspect()** — non-throwing variant that returns `{ pass, actual, expected, diff }` for programmatic use
+- **Standalone check()** — the throwing API for non-tap contexts
 - **API summary** — full type signatures

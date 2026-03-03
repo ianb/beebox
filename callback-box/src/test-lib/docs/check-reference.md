@@ -4,8 +4,18 @@
 
 It coexists with tap's `t.equal()`/`t.same()` — use `check()` when you care about "does this look right as text?", use tap for structural equality.
 
+## Setup
+
+Use `checker(t)` to create a check function bound to the tap test context. This routes failures through `t.fail()` so diffs render cleanly in tap's YAML diagnostics:
+
 ```ts
-import { check } from "../src/test-lib/check.js";
+import { test } from "tap";
+import { checker } from "../src/test-lib/tap-check.js";
+
+test("example", async (t) => {
+  const check = checker(t);
+  check(someValue, "expected output");
+});
 ```
 
 ## Basic usage
@@ -25,25 +35,33 @@ check({ name: "Alice", age: 30 }, `{
 
 Non-string values are serialized automatically — objects become pretty-printed JSON, primitives use `String()`. See [Serializers](#serializers) for customization.
 
-On mismatch, `check()` throws a `CheckError` with a visual diff:
+On mismatch, the diff appears in tap's YAML diagnostics:
 
 ```
-check failed
-expected: "Hello_World"
-  actual: "hello_world"
-  ~~~~~~~~^
+not ok 1 - check failed
+  ---
+  diff: |-
+    expected: "Hello_World"
+      actual: "hello_world"
+      ~~~~~~~~^
+  found: hello_world
+  wanted: Hello_World
+  source: |
+      check(result, "Hello_World");
+      --^
+  ...
 ```
 
 Multi-line mismatches get a line-by-line diff:
 
 ```
-check failed
-expected vs actual:
-    {
-  -   "name": "Bob",
-  +   "name": "Alice",
-      "age": 30
-    }
+  diff: |-
+    expected vs actual:
+        {
+      -   "name": "Bob",
+      +   "name": "Alice",
+          "age": 30
+        }
 ```
 
 ## Promises
@@ -163,20 +181,37 @@ check(messyOutput, {
 | `normalizeWhitespace` | `boolean` | Collapse tabs/spaces to single space, trim each line |
 | `label` | `string` | Added to error message for identification |
 
-## Error handling
+## inspect()
 
-`check()` throws `CheckError` (extends `Error`) on mismatch. The stack trace points at the caller, not at `check()` itself. This works with any test runner that treats thrown errors as failures — tap, node:test, etc.
+`inspect()` is the non-throwing variant — same comparison logic, returns a result object instead of failing:
 
 ```ts
-import { CheckError } from "../src/test-lib/check.js";
+import { inspect } from "../src/test-lib/check.js";
+
+const r = inspect("actual", "expected");
+r.pass;     // false
+r.diff;     // the visual diff string
+r.actual;   // "actual"
+r.expected; // "expected"
+r.message;  // "check failed"
+```
+
+Useful for testing the diff format itself, or for programmatic comparison where you don't want assertion failures.
+
+## Standalone check()
+
+The standalone `check()` (from `check.js`, not `tap-check.js`) throws `CheckError` on mismatch instead of calling `t.fail()`. Use this in non-tap contexts or when you need to catch failures yourself:
+
+```ts
+import { check, CheckError } from "../src/test-lib/check.js";
 
 try {
   check(result, "expected");
 } catch (err) {
   if (err instanceof CheckError) {
-    // Test assertion failure — err.message has the diff
-  } else {
-    // Unexpected error — something else went wrong
+    err.diff;    // visual diff string
+    err.found;   // serialized actual value
+    err.wanted;  // expected string
   }
 }
 ```
@@ -184,13 +219,18 @@ try {
 ## API summary
 
 ```ts
-// Core
-check(actual: unknown, expected: string): void
-check(actual: unknown, expected: CheckOptions): void
+// Tap integration (preferred in tests)
+import { checker } from "../src/test-lib/tap-check.js";
+const check = checker(t);
+check(actual: unknown, expected: string | CheckOptions): void | Promise<void>
 
-// With promises (returns Promise when actual is a Promise or async function)
-check(actual: Promise<unknown>, expected: string): Promise<void>
-check(actual: (print: PrintFn) => Promise<unknown>, expected: string): Promise<void>
+// Standalone (throws on mismatch)
+import { check } from "../src/test-lib/check.js";
+check(actual: unknown, expected: string | CheckOptions): void | Promise<void>
+
+// Non-throwing
+import { inspect } from "../src/test-lib/check.js";
+inspect(actual: unknown, expected: string | CheckOptions): CheckResult | Promise<CheckResult>
 
 // Serializers
 serialize(value: unknown): string
@@ -198,6 +238,8 @@ registerSerializer(fn: (value: unknown) => string | null): void
 
 // Types
 type PrintFn = (text: string) => void
+type CheckFn = (actual: unknown, expected: string | CheckOptions) => void | Promise<void>
 interface CheckOptions { expected: string; normalizeWhitespace?: boolean; label?: string }
-class CheckError extends Error {}
+interface CheckResult { pass: boolean; actual: string; expected: string; diff: string | null; message: string }
+class CheckError extends Error { diff: string; found: string; wanted: string }
 ```

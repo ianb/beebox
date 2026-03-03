@@ -204,34 +204,29 @@ export interface CheckOptions {
  */
 export function check(actual: unknown, expected: string | CheckOptions): void | Promise<void> {
   if (typeof actual === "function") {
-    return callWithPrinter(actual as (print: PrintFn) => unknown, expected);
+    const lines: string[] = [];
+    const print: PrintFn = (text: string) => lines.push(text);
+    const returnValue = (actual as (print: PrintFn) => unknown)(print);
+
+    if (returnValue instanceof Promise) {
+      return returnValue.then((value) => {
+        throwIfFailed(buildPrinterOutput(lines, value), { expected, caller: check });
+      });
+    }
+
+    throwIfFailed(buildPrinterOutput(lines, returnValue), { expected, caller: check });
+    return;
   }
 
   if (actual instanceof Promise) {
-    return actual.then((value) => compareAndThrow(value, expected));
+    return actual.then((value) => throwIfFailed(value, { expected, caller: check }));
   }
 
-  compareAndThrow(actual, expected);
+  throwIfFailed(actual, { expected, caller: check });
 }
 
 /** The print function passed to check() callbacks */
 export type PrintFn = (text: string) => void;
-
-function callWithPrinter(fn: (print: PrintFn) => unknown, expected: string | CheckOptions): void | Promise<void> {
-  const lines: string[] = [];
-  const print: PrintFn = (text: string) => lines.push(text);
-  const returnValue = fn(print);
-
-  if (returnValue instanceof Promise) {
-    return returnValue.then((value) => {
-      const actualStr = buildPrinterOutput(lines, value);
-      compareAndThrow(actualStr, expected);
-    });
-  }
-
-  const actualStr = buildPrinterOutput(lines, returnValue);
-  compareAndThrow(actualStr, expected);
-}
 
 function buildPrinterOutput(lines: string[], returnValue: unknown): string {
   const parts: string[] = [...lines];
@@ -244,13 +239,13 @@ function buildPrinterOutput(lines: string[], returnValue: unknown): string {
   return parts.join("\n");
 }
 
-function compareAndThrow(actual: unknown, expected: string | CheckOptions): void {
-  const result = compare(actual, expected);
+function throwIfFailed(actual: unknown, opts: { expected: string | CheckOptions; caller: (...args: never[]) => unknown }): void {
+  const result = compare(actual, opts.expected);
   if (result.pass) return;
 
-  const err = new CheckError(result.message);
+  const err = new CheckError(result.message, { diff: result.diff!, found: result.actual, wanted: result.expected });
   if (Error.captureStackTrace) {
-    Error.captureStackTrace(err, compareAndThrow);
+    Error.captureStackTrace(err, opts.caller);
   }
   throw err;
 }
@@ -339,7 +334,7 @@ function compare(actual: unknown, expected: string | CheckOptions): CheckResult 
     actual: actualStr,
     expected: expectedStr,
     diff,
-    message: `check failed${label}\n${diff}`,
+    message: `check failed${label}`,
   };
 }
 
@@ -352,8 +347,15 @@ function normalizeWS(s: string): string {
  * vs unexpected exceptions.
  */
 export class CheckError extends Error {
-  constructor(message: string) {
+  diff: string;
+  found: string;
+  wanted: string;
+
+  constructor(message: string, result: { diff: string; found: string; wanted: string }) {
     super(message);
     this.name = "CheckError";
+    this.diff = result.diff;
+    this.found = result.found;
+    this.wanted = result.wanted;
   }
 }
