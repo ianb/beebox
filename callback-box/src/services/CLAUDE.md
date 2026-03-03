@@ -118,5 +118,7 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |
 | `dropbox-relay.ts` | `DropboxRelayService` | `createDropboxRelayService({ url, apiKey, channelKey })` | `createFakeDropboxRelay({ messages? })` |
 | `capture-relay.ts` | `CaptureRelayService` | `createCaptureRelayService({ url, apiKey })` | `createFakeCaptureRelay({ sessions?, manifests? })` |
+| `feed-fetcher.ts` | `FeedFetcherService` | `createFeedFetcherService()` | `createFakeFeedFetcher({ feeds? })` |
+| `article-fetcher.ts` | `ArticleFetcherService` | `createArticleFetcherService()` | `createFakeArticleFetcher(articles?)` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |
 | `index.ts` | `Services` container | — | Barrel exports all of the above |
