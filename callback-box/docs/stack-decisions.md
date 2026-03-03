@@ -1018,7 +1018,7 @@ Alternative: `rehype-prism` uses Prism instead of highlight.js. Either works —
 | **ky** | Bare `fetch()` with no retry or error normalization | `src/cli/lib/fetch.ts`, connector fetch calls |
 | **sanitize-filename** | Duplicate hand-rolled `safeFilename()` functions | `src/connectors/rss.ts`, `src/connectors/gmail.ts` |
 | **proper-lockfile** | Two separate file-locking implementations | `src/cli/lib/lock.ts`, `src/core/schedule-state.ts` |
-| **execa** | Duplicate `execFile` wrappers with manual error handling | `src/core/procedure/shell.ts`, `src/cli/lib/git.ts` |
+| **execa** ✅ | Duplicate `execFile` wrappers with manual error handling | `src/core/procedure/shell.ts`, `src/cli/lib/git.ts` |
 
 ### Why these and not others
 
@@ -1043,8 +1043,8 @@ These are in the current package.json but should be removed as part of the stack
 
 | Package | Reason to remove |
 |---|---|
-| **mobx, mobx-react-lite, mobx-state-tree** | Decision 1 chose XState. These are evaluation remnants. Remove as pages migrate. |
-| **zustand** | Same — evaluation remnant from the state management comparison. |
+| ~~**mobx, mobx-react-lite, mobx-state-tree**~~ | ✅ Removed. Decision 1 chose XState; these were evaluation remnants. |
+| ~~**zustand**~~ | ✅ Removed. Evaluation remnant from the state management comparison. |
 | **xml2js** | Cardworks handles all XML card parsing. xml2js should not be used directly. |
 | **chokidar** | Decision 8 chose @parcel/watcher. Remove once file watching is migrated. |
 | **highlight.js** (direct usage) | Decision 22 moves highlighting into the remark pipeline via rehype-highlight. The package stays as a transitive dependency of rehype-highlight, but direct imports should be replaced. |

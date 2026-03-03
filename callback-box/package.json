@@ -69,6 +69,7 @@
     "chokidar": "^5.0.0",
     "commander": "^13.0.0",
     "cron-parser": "^5.5.0",
+    "execa": "^9.6.1",
     "fastify": "^5.7.2",
     "google-auth-library": "^10.5.0",
     "grammy": "^1.40.1",

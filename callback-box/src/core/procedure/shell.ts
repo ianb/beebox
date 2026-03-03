@@ -5,10 +5,7 @@
  * with the CHECK_SKIP environment variable set.
  */
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { execa, type ExecaError } from "execa";
 
 /** Exit code that signals "skip this step" */
 export const CHECK_SKIP_CODE = 75;
@@ -32,7 +29,7 @@ export async function runShell(
   script: string
 ): Promise<ShellResult> {
   try {
-    const { stdout, stderr } = await execFileAsync("bash", ["-c", script], {
+    const { stdout, stderr } = await execa("bash", ["-c", script], {
       cwd: boxRoot,
       env: {
         ...process.env,
@@ -47,19 +44,13 @@ export async function runShell(
       stderr: stderr.trimEnd(),
       skipped: false,
     };
-  } catch (error: unknown) {
-    const execError = error as {
-      code?: number;
-      stdout?: string;
-      stderr?: string;
-      message: string;
-    };
-
-    const exitCode = execError.code ?? 1;
+  } catch (error) {
+    const execError = error as ExecaError;
+    const exitCode = execError.exitCode ?? 1;
     return {
       exitCode,
-      stdout: (execError.stdout ?? "").trimEnd(),
-      stderr: (execError.stderr ?? "").trimEnd(),
+      stdout: (execError.stdout as string ?? "").trimEnd(),
+      stderr: (execError.stderr as string ?? "").trimEnd(),
       skipped: exitCode === CHECK_SKIP_CODE,
     };
   }

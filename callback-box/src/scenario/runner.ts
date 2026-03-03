@@ -17,6 +17,7 @@ import {
   commit,
   stageAll,
   getCurrentBranch,
+  clean,
 } from "../cli/lib/git.js";
 import { loadFetchStubs, clearFetchStubs, installStrictFetch, uninstallStrictFetch, type FetchStub } from "../cli/lib/fetch.js";
 import { loadScenario, loadStubs, getScenarioDir, getBoxRoot } from "./loader.js";
@@ -193,7 +194,7 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   const stubs = await loadStubs(name);
 
   // Pre-flight: clean gitignored files from previous runs (e.g. rss-state.json)
-  await runShell(boxRoot, "git clean -fXd");
+  await clean(boxRoot, { gitignored: true, directories: true });
 
   // Pre-flight checks
   const currentBranch = await getCurrentBranch(boxRoot);

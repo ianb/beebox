@@ -4,10 +4,7 @@
  * Git is the state engine - a change hasn't "happened" until it's committed.
  */
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { execa, type ExecaError } from "execa";
 
 export interface GitCommitOptions {
   message: string;
@@ -38,12 +35,10 @@ async function git(
   args: string[]
 ): Promise<{ stdout: string; stderr: string }> {
   try {
-    return await execFileAsync("git", args, { cwd });
-  } catch (error: unknown) {
-    const execError = error as { stderr?: string; stdout?: string; message: string };
-    const stderr = execError.stderr ?? "";
-    const stdout = execError.stdout ?? "";
-    throw new Error(`Git error: ${stderr || stdout || execError.message}`);
+    return await execa("git", args, { cwd });
+  } catch (error) {
+    const e = error as ExecaError;
+    throw new Error(`Git error: ${e.stderr || e.stdout || e.message}`);
   }
 }
 
@@ -399,4 +394,25 @@ export async function getCommitDiff(
       return "";
     }
   }
+}
+
+/**
+ * Get the current HEAD commit hash.
+ */
+export async function getHead(boxRoot: string): Promise<string> {
+  const { stdout } = await git(boxRoot, ["rev-parse", "HEAD"]);
+  return stdout.trim();
+}
+
+/**
+ * Remove untracked files from the working tree.
+ */
+export async function clean(
+  boxRoot: string,
+  opts: { gitignored?: boolean; directories?: boolean } = {}
+): Promise<void> {
+  const args = ["clean", "-f"];
+  if (opts.gitignored) args.push("-X");
+  if (opts.directories) args.push("-d");
+  await git(boxRoot, args);
 }

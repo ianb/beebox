@@ -14,6 +14,7 @@ import {
   getStatus,
   stageAll,
   commit,
+  getHead,
 } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import { dedent } from "./dedent.js";
@@ -848,13 +849,7 @@ async function ensureGitClean(params: EnsureGitCleanParams): Promise<string> {
   }
 
   // Git is clean — get the latest commit ref
-  const { execFile } = await import("node:child_process");
-  const { promisify } = await import("node:util");
-  const execFileAsync = promisify(execFile);
-  const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
-    cwd: boxRoot,
-  });
-  return stdout.trim();
+  return await getHead(boxRoot);
 }
 
 /**
