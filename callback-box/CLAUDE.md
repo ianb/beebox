@@ -104,6 +104,10 @@ All detailed documentation lives in `docs/`. **When you add a new doc, update th
 
 When adding a doc to `docs/`, add it to the Doc Map above. One topic per document.
 
+## Services
+
+External dependencies (Telegram, Google Calendar, Raindrop, OpenAI, etc.) are wrapped in typed service interfaces with real and fake implementations. Fakes are injected in tests via `makeTestServer({ services: { ... } })`. Full docs: `src/services/CLAUDE.md`.
+
 ## Testing
 
 `npm test` runs tap. Two kinds of tests in `test/`:
