@@ -1,0 +1,1065 @@
+# Stack Decisions
+
+A living document recording conscious technology choices for the Callback Box frontend and related systems. Each decision captures the reasoning, the alternatives considered, and the principles that guided the choice.
+
+## Guiding Principles
+
+These principles emerged from the state management evaluation and apply broadly to future stack decisions.
+
+### Introspectability / Enumerability
+
+Can you programmatically see what the system *can do*? A system that declares its structure as data — not just as imperative code — enables tooling, analysis, and understanding at a higher level. XState's state graph, where you can enumerate every reachable state and every path through the machine, is the gold standard for this. Prefer systems that are self-describing over systems where behavior is buried in opaque functions.
+
+### Well-Typedness (Meaningful, Not Ceremonial)
+
+Types should tell you something useful, not just satisfy the compiler. A type system that catches "you sent an event that doesn't exist in this state" is meaningful. A type system that requires `as Instance<typeof Model>` casts to bridge between your API layer and your state layer is ceremonial. Prefer types that guide you toward correct code over types that require workarounds.
+
+### Accessibility to Tooling
+
+Can external tools — CLI scripts, test harnesses, CI checks, an AI agent — interact with the system programmatically? This means: can you inject state from outside? Can you observe state changes? Can you validate inputs? Can you record and replay interactions? The more a system exposes itself to programmatic manipulation, the more leverage you get from tooling.
+
+### Unidirectional Data Flow (State In, UI Out)
+
+For any given state of the application, you should be able to hand it a JSON blob and get exactly that UI rendered. This isn't just for testing — it's a development workflow. It means mocking is built into the architecture, not bolted on. Effects and data fetching happen on the side, not interleaved with rendering.
+
+### Isolation / Modularity
+
+Branches of state should be self-contained. A component's state shouldn't need to know where it lives in the tree. Mutations should be scoped — a sub-system modifies itself without the root having to understand every detail. Communication between modules should be explicit (events, not shared mutable references).
+
+### Ecosystem Health
+
+Is the project alive and growing? Is there a company or committed team behind it? What's the bus factor? A declining or maintenance-mode project is a risk, even if the code is solid today. Prefer projects with active development, growing adoption, and clear stewardship.
+
+### Minimal Distance from Intuitive
+
+How far is the framework from what you'd write without it? Every step away from the "obvious" approach is a learning cost and a potential source of bugs. This doesn't mean "pick the simplest thing" — it means the complexity should pay for itself. Generators that exist to work around a framework limitation (MST's `flow`) are bad distance. State machines that prevent impossible states (XState's transitions) are good distance.
+
+### Power / Leverage
+
+What can you do with this system that you *couldn't* do without it? If the framework just reorganizes code you'd write anyway, it's low leverage. If it enables fundamentally new capabilities — exhaustive state exploration, event sourcing, runtime validation, structured undo/redo — it's high leverage. The best frameworks make hard things possible, not just easy things slightly easier.
+
+---
+
+## Decision 1: Frontend State Management — XState
+
+**Decided:** 2026-03-02
+**Choice:** XState v5
+**Runner-up:** MobX-State-Tree (MST)
+**Also considered:** Zustand
+**Not considered:** Redux (too old/verbose), Valtio (proxy-based, no snapshot restore), Jotai (atomic, wrong model)
+
+### What we were looking for
+
+A state management approach for the React frontend that supports unidirectional data flow — give the app a JSON state blob, get the rendered UI out. Not just for testing but as a development workflow: a CGI-style renderer that takes a route + state and produces HTML. This requires state to be serializable, inspectable, and separable from rendering.
+
+### How we evaluated
+
+Built real implementations of the HistoryPage (commit browser with sidebar, timeline, detail view) using three frameworks alongside the original `useState`-based version. All four render identically — same Sidebar, CommitTimeline, CommitDetail components. The differences are entirely in how state is defined, mutated, and observed.
+
+Also built a CGI-style renderer (`src/dev/render-page.tsx`) that takes a framework name + state fixture and outputs rendered HTML via React SSR. This validated the "state blob in, UI out" approach — a presentational component receives state as props and renders, bypassing store plumbing entirely.
+
+### Evaluation dimensions
+
+| Dimension | Zustand | MST | XState | Notes |
+|---|---|---|---|---|
+| Typing / state quality | 1 | 3 | 2 | MST has runtime types; XState has typed events + state constraints |
+| Distance from intuitive | 3 | 2 | 2 | Zustand is closest to raw useState; MST/XState require new mental models |
+| Isolation / modularity | 2 | 3 | 3 | Zustand's flat stores are awkward to coordinate; MST/XState have tree/actor models |
+| Power features | 1 | 3 | 3 | MST: snapshots, patches, validation. XState: state graph, event sourcing, model-based testing |
+| Ecosystem health | 2 | 1 | 3 | XState: 3.8M weekly downloads, growing. MST: 130K, flat. Zustand: healthy but less relevant |
+| Composability | 2 | 2 | 2 | All handle it; none dramatically better |
+| **Total** | **11** | **14** | **15** | |
+
+### Why XState over MST
+
+MST scored higher on typing (runtime type validation, Zod-like `validate()`) and had impressive data-level power features (JSON Patches, action recording, inverse patches for undo). But several factors tipped toward XState:
+
+**Ecosystem trajectory.** XState has 30x MST's download volume and is actively growing. MST hasn't released in over a year. XState's creator (David Khourshid) commits weekly; MST's original creator stepped back in 2018.
+
+**Structural introspection.** XState machines are data — you can enumerate all states, all transitions, all paths. `@xstate/graph` does exhaustive state exploration: find every reachable state, verify no dead ends, generate test paths. MST can observe *effects* of actions (via patches) but can't introspect *what actions are possible* without running them.
+
+**Event model.** `send({ type: "SELECT", hash: "abc" })` is a serializable, self-documenting event. Every state change has a name and payload. This enables record/replay, event sourcing, and makes transitions explicit. MST's action calls are function invocations — less inspectable, less replayable.
+
+**Impossible states are impossible.** XState's state nodes constrain what events are accepted in each state. You can't `LOAD_MORE` from the `error` state — the machine won't accept it. This is a compile-time and runtime guarantee, not just a convention.
+
+**MST's ergonomic costs.** Generators (`flow/yield`) for all async actions, with manual type annotations on every `yield`. `as Instance<>` casts at API boundaries. `.slice()` needed to pass MST arrays to non-observer components. These are friction points that exist because of framework limitations, not because they make the code better.
+
+### What XState asks of us
+
+- **Think in state charts.** Each page's behavior is modeled as states + transitions, not ad-hoc boolean flags.
+- **Events, not function calls.** UI triggers `send({ type: "EVENT" })`, not `store.doThing()`.
+- **Loading is a state, not a flag.** Async operations are modeled as state nodes with invoked actors, not `setLoading(true/false)`.
+- **Pair with a data-fetching library.** XState manages client state and orchestration; server state (API data, caching, pagination) should use TanStack Query or similar. This split is endorsed by both ecosystems.
+
+### What we lose vs MST
+
+- Runtime type validation of state blobs (`Model.validate()`) — would need Zod schemas separately
+- JSON Patch emission for every mutation — would need custom middleware
+- Built-in undo/redo via inverse patches
+- `applySnapshot()` for hot-reloading state (XState has `getPersistedSnapshot()` but it's more involved)
+
+### Stately ecosystem pieces we'll use
+
+- **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is overkill. Same `send()` API, so upgrading to a full machine later is smooth.
+- **@xstate/graph** — Exhaustive state exploration and test path generation. Core to the testing strategy.
+- **@statelyai/inspect** — Runtime debugging via `inspect` callback on `createActor()`. Sees every event and transition. Will wire this into a debug panel / event logger.
+- **@statelyai/agent** — Not a dependency, but the *pattern* of using Zod schemas as event validators for external input (LLM actions, user events, API responses) is directly relevant. Borrow the pattern, don't import the library.
+
+### Open questions
+
+- What's the right granularity — one machine per page? Per feature? Per app?
+- How do we handle the URL ↔ state synchronization? Routable states (v5.28.0) are machine-internal only — still need a URL router.
+
+### Implementation artifacts
+
+- `src/frontend/src/stores/history-xstate.ts` — XState machine for the history page
+- `src/frontend/src/components/HistoryPageXState.tsx` — XState-powered component
+- `src/frontend/src/dev/state-fixtures.ts` — State fixtures for testing/rendering
+- `src/frontend/src/dev/render-page.tsx` — CGI renderer (state blob → HTML)
+- `docs/state-management-comparison.md` — Detailed comparison document with code examples
+
+---
+
+## Decision 2: API Layer — tRPC
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (discussed, not built/benchmarked)
+**Choice:** tRPC
+**Alternative considered:** OpenAPI with code generation (better for polyglot backends)
+**Current state:** Fastify REST with TypeScript generics, 64 routes across 13 files, no runtime validation
+
+### What we were looking for
+
+End-to-end type safety between client and server. Types that are enforced consistently, with runtime validation (Zod) deriving from the same schemas used for typing. Introspection and self-documentation — an agent should be able to discover what API procedures exist and what their types are.
+
+### Why tRPC
+
+- **End-to-end types without code generation.** Client code gets full type inference from server procedure definitions. No manually keeping `api.ts` interfaces in sync with route handlers.
+- **Zod validation is first-class.** Input schemas are Zod objects that provide both TypeScript types and runtime validation. The current codebase has Zod installed but uses manual `if (!body.field)` checks in routes.
+- **Introspectable.** An agent can inspect the router definition to see all available procedures and their exact input/output types programmatically. This aligns with the Introspectability principle.
+- **Works with existing Fastify.** tRPC has a Fastify adapter — can be mounted alongside existing routes for incremental migration.
+
+### What tRPC asks of us
+
+- **TypeScript on both sides.** tRPC only works when client and server share a TypeScript project or monorepo. This is already the case (frontend imports types from `../api`).
+- **Procedure-based thinking.** Routes become `query` (read) and `mutation` (write) procedures, not GET/POST endpoints. Conceptually similar but the vocabulary changes.
+- **Migration.** 64 existing REST routes need to be migrated incrementally. The Fastify adapter allows tRPC and REST routes to coexist during transition.
+
+### Concerns to investigate
+
+- **SSE/streaming.** The current codebase uses `reply.hijack()` for streaming chat responses and command output. tRPC supports subscriptions over WebSockets, but the SSE streaming pattern (chat chunks, command output) may need a different approach. This is the biggest unknown.
+- **File uploads.** Some endpoints accept `multipart/form-data` (voice memos). tRPC doesn't natively handle multipart — these may need to stay as regular Fastify routes.
+- **Incremental adoption.** Can we mount tRPC on `/api/trpc` alongside existing `/api/*` routes and migrate one route file at a time?
+
+---
+
+## Decision 3: Data Fetching — TanStack Query
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (consensus from state management research, not independently evaluated)
+**Choice:** TanStack Query (React Query)
+**Current state:** Manual `fetch()` calls in `api.ts` with typed wrapper functions
+
+### Why TanStack Query
+
+All three state management frameworks (Zustand, MST, XState) converged on the same recommendation: use a dedicated data-fetching library for server state. TanStack Query provides:
+
+- **Automatic caching and deduplication** — multiple components requesting the same data share one fetch
+- **Loading/error states** — `isLoading`, `error`, `isFetching` without manual boolean tracking
+- **Background refetching** — stale data is served while fresh data loads
+- **Pagination** — `useInfiniteQuery` for scroll-to-load patterns (like the commit timeline)
+- **Mutations** with optimistic updates and rollback
+
+### Relationship to XState and tRPC
+
+The three form a clear separation:
+
+| Concern | Tool |
+|---|---|
+| Server state (fetching, caching, sync) | TanStack Query |
+| Client state (UI mode, selections, workflows) | XState |
+| API contract (types, validation) | tRPC |
+
+TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed hooks that combine tRPC's type safety with Query's caching. This is a well-tested pairing.
+
+### Concerns to investigate
+
+- **SSE streams.** TanStack Query is request/response oriented. The file-watcher SSE, chat streaming, and command output streaming are different patterns that Query doesn't handle. These may stay outside Query.
+- **Relationship with XState actors.** When an XState machine invokes a fetch actor, should that go through TanStack Query's cache, or directly? Need to decide whether XState or Query "owns" the fetch for each case.
+
+---
+
+## Decision 4: Routing — TanStack Router
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (brief discussion, not evaluated against principles)
+**Choice:** TanStack Router
+**Current state:** React Router v7 (`react-router-dom@^7.13.0`)
+**Alternative:** Stay with React Router
+
+### Why TanStack Router
+
+- **Same ecosystem as TanStack Query.** Consistent philosophy, designed to integrate with Query's data loading.
+- **Type-safe route parameters.** Route params and search params are typed, reducing runtime errors.
+- **Data loaders.** Routes can declare data requirements that load before rendering, integrating with the API layer.
+
+### Concerns and open questions
+
+- **Migration cost.** React Router v7 is well-established in the codebase with 15+ routes. Migration requires touching every route definition and every `useParams`/`useNavigate` call.
+- **XState routable states.** Investigated: XState v5.28.0's "routable states" are a machine-internal feature for jumping to any marked state via `{ type: "xstate.route", to: "#stateId" }`. They have **no URL awareness** — no path matching, no params, no `pushState`. A URL router is still needed regardless. Routable states are useful for within-machine navigation but don't replace React Router or TanStack Router.
+- **Maturity.** TanStack Router is newer and less battle-tested than React Router. The type safety story is compelling but the ecosystem is smaller.
+- **Is this worth the migration?** React Router v7 works fine. The improvement is type safety on route params and loader integration. If tRPC already types the API layer, how much additional value does typed routing add?
+
+---
+
+## Decision 5: Backend Server — Fastify (keep)
+
+**Decided:** 2026-03-02
+**Rigor:** Low (no alternatives seriously considered)
+**Choice:** Fastify v5 (already in use)
+**Current state:** 13 route files, WebSocket support, SSE via `reply.hijack()`
+
+### Why keep Fastify
+
+- Already in use with a mature route structure.
+- Good TypeScript support with generic route types.
+- tRPC has a Fastify adapter for incremental migration.
+- Supports WebSockets (`@fastify/websocket`) and SSE.
+- Performance is strong. Plugin architecture is clean.
+
+### If we needed to reconsider
+
+Hono would be the alternative — lighter, designed for edge/serverless environments (Cloudflare Workers, Lambda). If serverless deployment becomes a goal, Hono's portability advantage would matter. For now, Fastify on Node.js is fine.
+
+---
+
+## Decision 6: Component System — Tailwind + Custom Components
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (discussed approach, not evaluated alternatives)
+**Choice:** Tailwind CSS with a custom component library, documented via JSDoc
+**Current state:** Tailwind is already in use; components exist but aren't cataloged
+
+### Approach
+
+Build a custom component library rather than adopting a third-party component library (Radix, shadcn, etc.). Tailwind's utility-class isolation works well with agentic development — components are self-contained, composable, and don't depend on global CSS state.
+
+### Component discoverability
+
+The challenge: an agent creating UI tends to reinvent the same component repeatedly rather than reusing existing ones. A catalog/registry helps the agent know what already exists.
+
+**Approach chosen:** JSDoc documentation on component files, with a build-time extraction script that generates a queryable index. Components are documented at the source, and agents get a compiled registry they can search.
+
+**Not chosen:** Storybook. It's a visual browser for humans, not a semantic index for agents. Agents need to understand component purpose, props, and usage constraints — not interact with a rendered preview. Storybook's maintenance overhead (writing stories for every component) doesn't pay for itself in an agentic workflow.
+
+### Open questions
+
+- What format for the JSDoc annotations? Standard JSDoc tags, or a custom structured format?
+- How does the extraction/indexing script work? TypeDoc, custom parser, or something else?
+- Should the registry include usage examples, or just props and descriptions?
+
+---
+
+## Decision 7: Schema Validation — Zod (keep/expand)
+
+**Decided:** 2026-03-02
+**Rigor:** Low (already in use, natural fit with tRPC)
+**Choice:** Zod
+**Current state:** Zod is installed (`zod@^3.24.0`) but underused — most validation is manual `if` checks
+
+### Why Zod
+
+- Already a dependency.
+- First-class integration with tRPC (procedure inputs are Zod schemas).
+- Derives TypeScript types from schemas (`z.infer<typeof schema>`), eliminating type duplication.
+- Provides runtime validation with structured error messages.
+- Fills the gap left by choosing XState over MST — MST had built-in `Model.validate()`, but XState's context is unvalidated. Zod schemas can validate XState context shapes.
+
+### Zod + XState integration pattern
+
+Investigated: no dedicated library needed, but clear patterns exist:
+- Define context schema in Zod, use `z.infer<>` as the type in `setup({ types })` — single source of truth.
+- Validate persisted snapshots with `contextSchema.safeParse(raw)` before restoring actors.
+- Validate events before sending — wrap `actor.send()`. Stately's own `@statelyai/agent` library does exactly this: LLM-generated events are validated against Zod schemas before the machine accepts them.
+- No XState middleware hook for automatic context validation on every transition — validation is explicit in `assign` actions or guards.
+
+### Alternatives considered
+
+- **Typia** — The "types-first" dream: a TypeScript compiler transformer that generates runtime validators from standard TS interfaces. No schema DSL. Your types *are* the validators. Tradeoff: requires `ts-patch` or bundler plugin for the compiler transform. Intellectually appealing but adds build complexity.
+- **Valibot** — Same schema-first paradigm as Zod but tree-shakeable (up to 95% smaller bundles). Drop-in alternative if Zod's size becomes a concern.
+- **ArkType** — Syntax resembles TypeScript (`"string | number"`) but is still a string-based DSL, not actual TS types. Fast (100x Zod claimed) but a different mental model.
+- **TypeBox** — Produces JSON Schema objects. Best for OpenAPI/Fastify interop and cross-language schema sharing. More verbose than Zod.
+
+Zod wins on ecosystem integration (tRPC, XState agent library) and existing adoption in the codebase.
+
+### What needs to happen
+
+- Define Zod schemas for API inputs/outputs (currently just TypeScript interfaces in `api.ts`).
+- Use Zod schemas as the single source of truth for types, replacing manual interface definitions.
+- Validate XState machine context when loading persisted snapshots.
+- Define event schemas for XState machines where events come from external sources (user input, API responses, agent actions).
+
+---
+
+## Decision 8: File-Based Storage with Queryable Index
+
+**Status:** Directional — design settled, build when needed
+**Current state:** Files (XML cards) are canonical storage. Git provides history. No structured index.
+
+### The need
+
+Structured files (cards) need to be queryable — find all files of a type, query attributes across files, extract and assemble documents from multiple sources. Currently this requires reading and parsing files at query time. A previous attempt at SQLite indexing was abandoned because keeping the index in sync with file changes was painful — especially around schema migrations and edge cases.
+
+### Approach: Ephemeral SQLite index, rebuilt from source files
+
+No off-the-shelf library exists for this. Contentlayer, Velite, Content Collections, and Astro Content Layer all handle static site content at build time, not runtime-watched file trees. TinaCMS comes closest — it builds an ephemeral SQLite index from Git-backed files and treats it as a derived cache — but it's tightly coupled to its own CMS stack.
+
+The architecture is build-your-own with proven components:
+
+**@parcel/watcher** for file watching. Key feature: `getEventsSince(dir, snapshotPath)` takes a saved snapshot and returns all changes since that snapshot was taken. This means after a process restart, a `git pull`, or a `git checkout`, the watcher can catch up on missed changes without a full rescan. Saves a snapshot to disk periodically, so even if the server was off during a `git` operation, it knows what changed.
+
+**better-sqlite3** for the index database. Synchronous API (no async overhead for reads), WAL mode for concurrent access, fast enough for the scale of data involved (thousands of cards, not millions).
+
+**Zod schemas** define the shape of each collection. `z.infer<>` provides TypeScript types for query results.
+
+### Key design decisions
+
+**Ephemeral index model.** The SQLite database is a derived artifact, never a source of truth. Schema change = drop the database and rebuild from files. This eliminates the migration pain entirely — no ALTER TABLE, no version tracking, no data transforms. Files in Git are the source of truth; the index is a disposable cache.
+
+**Central files table + domain tables joined by file path.** A `files` table tracks source file metadata (path, mtime, content hash). Each domain table (e.g., `inbox_cards`, `news_items`, `card_references`) has a foreign key back to the files table. When a file changes: delete all rows referencing that file across all domain tables, re-parse, re-insert. This makes the delete-on-change behavior clean and universal regardless of how many tables a single file populates.
+
+**Transform functions per table.** Each table is defined by: a glob pattern (which files to watch), a CREATE TABLE statement (self-documenting SQL), and a transform function `(path, content) => Record[]` that parses a file and returns zero or more rows. Returning an empty array means "this file doesn't produce records for this table" — a natural way to skip files that don't match. One file can feed multiple tables through separate transform registrations.
+
+**Content hashing for efficient resync.** Store file mtime + content hash in the files table. During a full resync (startup, or when @parcel/watcher's snapshot is too old), skip files whose mtime + hash match. Only re-parse files that actually changed.
+
+**SQL types live in SQL, Zod types live in TypeScript.** Each table has an explicit CREATE TABLE statement — no Zod-to-DDL magic. Zod schemas validate and type query results on the way out. Two definitions to keep in sync, but both are simple and co-located in the same table registration.
+
+### Investigated and set aside
+
+**Dolt** — A MySQL-compatible database with Git-like version control (branches, merges, diffs, blame at the row level). Technically impressive, built on Prolly Trees for efficient structural sharing. But it doesn't fit this use case:
+- Not embeddable from Node.js — it's a standalone Go binary (or hosted service). Would require running a separate database server.
+- Stores data in its own opaque format, not as files on disk. This breaks the filesystem-as-state principle — you can't `cat` a row or have agents read/write data as files.
+- Essentially a Git *replacement* for relational data, not a Git *companion*. Our data is already in Git as files; Dolt would be a parallel versioning system.
+- Worth keeping in mind if the project ever needs a versioned relational database (e.g., for structured data that doesn't map well to files). But for indexing file-based cards, SQLite is the right tool.
+
+**In-memory-only index** — Simpler but doesn't persist across restarts. With @parcel/watcher's snapshot feature, SQLite can catch up quickly on restart, so the persistence cost is low and the query flexibility is much higher.
+
+### Principles that apply
+
+- **Introspectability** — the index should be queryable by agents (what card types exist? what attributes are common?)
+- **Well-typedness** — queries should return typed results via Zod-inferred types, not raw JSON
+- **Files remain canonical** — the index is derived, never the source of truth. Drop and rebuild is always safe.
+- **Minimal distance from intuitive** — @parcel/watcher + better-sqlite3 + Zod are all straightforward, well-documented libraries. No framework magic.
+
+---
+
+## Decision 9: Resource Subscription Service
+
+**Status:** Directional — design settled, build when needed
+**Current state:** SSE file watcher exists but is ad-hoc. No general resource subscription pattern.
+
+### The need
+
+Clients viewing a file or resource need to know when it changes — typically because an agent committed, or the user edited something, or a background process updated state. This isn't collaborative editing (two people typing in the same document). It's **reactive views on committed state**: something changed a file, now push that update to anyone viewing it.
+
+### The abstraction
+
+A resource subscription service where a client says "I want this resource" and gets back:
+1. The current content, parsed into a typed representation
+2. A subscription that notifies when the resource changes, with the new content
+
+The server knows how to parse different file types into their typed representations:
+- **Cards** (`.card` XML files) → structured JSON via Cardworks parser
+- **JSON files** → parsed JSON
+- **JSONL files** → array of parsed JSON lines
+- **Other files** → raw text or binary, depending on type
+
+### How the pieces fit together
+
+```
+file watcher (@parcel/watcher)
+    │
+    ├──→ SQLite index update (Decision 8)
+    │
+    └──→ client notification
+            │
+            ├──→ SSE/subscription channel: "resource X changed"
+            │
+            └──→ TanStack Query cache invalidation → re-fetch → UI updates
+```
+
+One file watcher pipeline, two consumers: the queryable index and client notifications. The file watcher is the shared engine underneath.
+
+**tRPC** defines the typed contract: "give me this resource as parsed data." The return type varies by file type — a card query returns a card schema, a JSON file returns its parsed shape.
+
+**TanStack Query** on the client handles caching, deduplication, and re-fetching when invalidated. The subscription channel tells Query which queries to invalidate (medium granularity: "these files changed," not "here's the full new content" and not "something changed somewhere").
+
+**SSE** (existing) or **tRPC subscriptions** carry the invalidation signals. The current SSE infrastructure already does a version of this — the question is whether to formalize it through tRPC's subscription model or keep SSE as a separate channel.
+
+**ETag-style versioning.** The content hash from the files table (Decision 8) doubles as a version identifier. Client holds the hash from the last response and sends it on reconnect — server returns 304 (not modified) if the hash still matches, or the new content if it doesn't. This makes reconnection cheap: no full re-fetch of unchanged resources after a network hiccup or page reload.
+
+### What this is NOT
+
+- **Not collaborative editing.** No CRDTs, no OT, no conflict resolution. Changes come through commits (agents) or saves (user). The server is always authoritative.
+- **Not a database sync engine.** Unlike ElectricSQL or Zero, we're not syncing table rows to the client. We're notifying that a file-based resource changed and letting the client re-fetch it.
+- **Not Firebase.** Firebase/Firestore own the data and provide real-time sync as a service. Here, files in Git own the data; we're building a notification layer on top. Same UX goal (UI stays current), different architecture (files are canonical).
+
+### Investigated and set aside (for now)
+
+**Full collaborative editing (Yjs, Automerge, CRDTs)** — The dominant approach for real-time co-editing. Yjs has bindings for every major editor (ProseMirror, TipTap, CodeMirror, Monaco). But CRDTs store state in opaque binary formats, which conflicts with files-as-source-of-truth. The hard problem is reconciling CRDT state with external file changes (agent commits). Not needed for the current use case — agents do batch edits and commit, they don't live-edit alongside users. If true co-editing is ever needed, **Yjs + Hocuspocus** (TipTap's self-hosted WebSocket server with file load/save hooks) is the most pragmatic path.
+
+**Hosted sync services (Firebase, Liveblocks, Supabase Realtime)** — Provide real-time sync as a service, but data lives in their systems. Wrong fit when files in Git are the source of truth.
+
+**Server reconciliation without CRDTs (Weidner's approach)** — Interesting idea: if you have a central server, just order operations server-side without CRDT overhead. Worth revisiting if we ever need finer-grained sync than commit-level.
+
+### Principles that apply
+
+- **Files remain canonical** — the subscription service is a read-through notification layer, not a data store
+- **Introspectability** — typed resource representations make it easy for agents and tools to query current state
+- **Well-typedness** — tRPC + Zod ensure the parsed representations are typed end-to-end
+
+---
+
+## Decision 10: Git Operations — simple-git
+
+**Decided:** 2026-03-02
+**Rigor:** Low (clear winner from landscape review)
+**Choice:** simple-git
+**Current state:** Raw `child_process` shell-outs to `git` CLI
+
+### Why simple-git
+
+- **Typed output parsing.** `log()` returns parsed commit objects, `status()` returns a structured status object, `diff()` returns parsed hunks. Eliminates hand-written `--format=...` strings and stdout parsing.
+- **11M weekly downloads**, actively maintained (last release Feb 2026). The dominant git library for Node.js.
+- **`.raw()` escape hatch** — anything without a dedicated method (including worktree operations) passes through to the git binary directly. Never blocked by missing API coverage.
+- **Same performance as shell-out** — it spawns the real `git` binary, so hooks fire, worktrees work, and every git feature is available.
+
+### What we investigated
+
+- **isomorphic-git** — Pure JS reimplementation. Worktrees broken, no hooks, no rebase, slower than CLI. Its value is browser-side git, not server-side.
+- **nodegit** — libgit2 native bindings. Last npm release 6 years ago. Dead.
+- **dugite** — GitHub Desktop's wrapper. No structured output parsing; bundles a git binary (pointless on a controlled server).
+
+### What simple-git doesn't add
+
+No new capability over the git CLI. It's a convenience layer: TypeScript types + structured parsing + promise API. The git binary does all the work.
+
+---
+
+## Decision 11: Authorization — Typed Principals + CASL
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (library chosen, implementation pattern designed, not built)
+**Choice:** CASL for authorization rules, typed Principal union for identity
+**Current state:** `getSessionEmail()` returns `string | null`, scattered `allowedEmails.includes()` checks
+
+### The model
+
+A discriminated union representing who is making a request:
+
+```typescript
+type Principal =
+  | { type: "human"; email: string; isOwner: boolean }
+  | { type: "agent"; keyId: string; agentId: string; scopes: string[] }
+  | { type: "system" }
+  | { type: "anonymous" };
+```
+
+Resolved early in the Fastify request lifecycle: check for `Authorization: Bearer` header (agent), then session cookie (human), then anonymous.
+
+### Why CASL
+
+- **6KB, isomorphic, fully typed.** Defines abilities as `(action, subject)` tuples with optional conditions. Replaces scattered permission checks with `ability.can('write', 'Card')`.
+- **Framework-agnostic.** Works with Fastify, no adapter needed.
+- **Separates who from what.** Principal resolution is one function; ability definition is another. Extend either independently.
+
+### API keys for agents
+
+Store hashed tokens in box config (consistent with filesystem-as-state). On inbound requests with `Authorization: Bearer`, hash the token, look up the key, resolve to an agent principal with scopes. No database needed.
+
+### What we investigated and set aside
+
+- **better-auth** — Most complete auth framework with Fastify support, includes API keys with rate-limiting. But it wants to own the user database, conflicting with filesystem-as-state. The current hand-rolled HMAC cookie auth works correctly.
+- **casbin / permify** — Full policy engines. Overkill for a system with one owner and a small allowlist.
+- **oso** — Deprecated (company pivoted to hosted SaaS).
+- **Auth.js** — No Fastify support.
+- **Lucia** — Deprecated as a framework; companion libraries Arctic (OAuth client) and Oslo (auth primitives) remain active and worth knowing about.
+
+### What stays the same
+
+Current session auth (HMAC-signed cookies, Google OAuth) is fine. No framework switch needed for authentication — just formalize the principal model and add CASL for authorization.
+
+---
+
+## Decision 12: Agent Invocation — Anthropic Agent SDK
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (research complete, adoption pending)
+**Choice:** `@anthropic-ai/claude-agent-sdk`
+**Current state:** Spawning `claude` CLI as a subprocess, parsing stdout
+
+### What the Agent SDK is
+
+Not just an API client — it wraps the Claude Code binary and provides a typed programmatic interface. Same execution model as the CLI (tool loops, file operations, context management), but with structured IPC instead of stdout parsing.
+
+### Key capabilities over CLI subprocess
+
+- **Typed message stream.** `query()` returns an async generator of `SDKMessage` objects — no stdout parsing.
+- **Hooks.** `PreToolUse` / `PostToolUse` — intercept, block, or modify every tool call before execution. Can audit and gate git operations, redirect file paths, inject context.
+- **In-process MCP tools.** Define custom tools as TypeScript functions with Zod input schemas. Expose box APIs (query inbox, read cards, check status) without running a separate MCP server process.
+- **Session resume.** `resume: sessionId` picks up where a previous invocation left off with full context.
+- **File checkpointing.** `enableFileCheckpointing` + `rewindFiles()` — roll back file changes to a prior state without relying on git.
+- **Structured output.** `outputFormat: { type: 'json_schema', schema }` — enforce typed JSON results from agent runs.
+- **Subagents.** Define named agents with their own tools, models, and prompts. Parent delegates via the `Task` tool.
+
+### What it doesn't provide
+
+No workflow orchestration, job queuing, state machines, or retry logic. Those remain ours (procedure engine, scheduler). The SDK is a cleaner agent runner, not a higher-level framework.
+
+### Immediate value
+
+1. Replace ad-hoc stdout parsing with typed message streams
+2. `PreToolUse` hooks to audit/gate agent actions before they execute
+3. In-process MCP tools for box-specific operations (Zod-typed, no external process)
+4. Session resume for long-running or interrupted agent tasks
+
+---
+
+## Decision 13: Tracing and Logging — Pino + OpenTelemetry + Jaeger
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (landscape reviewed, approach chosen, not built)
+**Choice:** Pino for structured logs, OpenTelemetry for spans/traces, Jaeger for visualization
+**Current state:** `console.log` / ad-hoc logging, no tracing
+
+### The need
+
+Understanding what code did during an operation — a wakeup cycle, an agent run, a request chain. Not production monitoring dashboards; developer tooling for understanding code flow, timing, and causality. The ability to add annotations to code and then see them, filter them, and drill into specific traces.
+
+### The stack
+
+**Pino** for structured log output. Fastify's built-in logger. Child loggers stamp context (request ID, agent run ID, operation type) on every message without threading context through function signatures. Pipe through `pino-pretty` in dev for readable terminal output.
+
+**OpenTelemetry** for spans and traces. Auto-instrumentation catches every Fastify request and every outbound HTTP call for free. Manual spans wrap the things we care about — wakeup cycle phases, agent invocations, procedure steps, connector calls — with typed attributes (model name, card count, operation type). Spans have parent-child structure and timing, giving a Gantt chart view of what called what and how long each step took.
+
+**`@opentelemetry/instrumentation-pino`** bridges the two: auto-injects `trace_id` into every Pino log record. Logs and spans are correlated — find a log line, jump to its trace.
+
+**Jaeger** (all-in-one Docker container) for trace visualization. Single container, ephemeral storage, web UI at `localhost:16686`. Search traces by service, operation, time range, or tags. Drill into a trace to see the span timeline. If persistence matters later, swap to SigNoz (Docker Compose, ClickHouse-backed, logs+traces in one UI).
+
+### Setup cost
+
+- 4 npm packages (`@opentelemetry/sdk-node`, `@opentelemetry/api`, `@opentelemetry/auto-instrumentations-node`, `@opentelemetry/exporter-trace-otlp-http`)
+- 15-line `instrumentation.ts` loaded via `--import`
+- `docker run -p 16686:16686 -p 4318:4318 jaegertracing/jaeger:latest`
+
+### The process boundary gap
+
+`child_process.spawn()` is a process boundary OTel doesn't cross automatically. Agent invocations via CLI appear as disconnected traces. Fix: inject `TRACEPARENT` env var when spawning, extract in the child. The Agent SDK's hooks (Decision 12) may provide a cleaner injection point.
+
+### What we investigated
+
+- **winston** — Legacy, slower than Pino, string-interpolation style. No OTel integration.
+- **AsyncLocalStorage DIY** — Can build lightweight trace IDs without OTel, but no span visualization. Good for just stamping trace IDs on logs; not enough for understanding timing and causality.
+- **Grafana Tempo** — More powerful but requires multiple containers. Worth it later if we want metrics + logs + traces correlated.
+- **SigNoz** — Best all-in-one option (ClickHouse-backed, persistent). Upgrade path from Jaeger when we want persistence.
+
+### Assertive errors — errors come to you, not the other way around
+
+The default for logging is passive — errors go into a stream and someone has to look. For this project, errors should be assertive: they actively surface to whoever or whatever triggered the operation.
+
+**In tests:** A test helper hooks into Pino at the start of each test and collects error-level log entries. After the test's own assertions pass, the helper asserts the error collection is empty. Silent errors — code that catches an exception, logs it, and continues — become test failures. Expected errors can be explicitly allowlisted per test.
+
+**In agent development workflows:** When an agent invokes something (the CGI renderer, a CLI command, a server request), errors logged during that invocation should surface as a clear message back to the agent. Options:
+- A CLI tool like `cb check-errors --since=<timestamp>` that queries recent error-level logs and returns them as structured output. The agent calls this after running commands, or it's wired into a post-invocation hook.
+- The CGI renderer and similar tools write errors to stderr in a structured format (JSON lines) that the agent naturally sees in tool output.
+- The Agent SDK's `PostToolUse` hook (Decision 12) could automatically check for new errors after each tool execution and inject them as context.
+
+The point: agents don't see terminal colors. They need errors surfaced as text in their message stream — either automatically via hooks, or via a lightweight "any errors since I last checked?" query.
+
+**In interactive dev:** Pino transport that pushes error-level logs to the frontend via SSE. A toast or banner appears: "Error in wakeup cycle — [trace link]". On the server, optionally notify via Telegram for errors that happen outside a watched session.
+
+**The principle: errors are assertive, not passive.** You shouldn't have to go looking for them.
+
+### Principles that apply
+
+- **Introspectability** — traces are queryable structured data, not opaque text streams
+- **Accessibility to tooling** — OTel is the open standard; any compliant backend can consume the data
+- **Minimal distance from intuitive** — Pino is `logger.info({ key: 'value' }, 'message')`. OTel's span API is verbose but mechanical, wrappable in a small helper.
+- **Assertive errors** — errors surface to the caller, whether that's a test runner, an agent, or a human watching the UI
+
+---
+
+## Decision 14: Testing Strategy — TAP + Doctest + Snapshot Testing
+
+**Decided:** 2026-03-02
+**Rigor:** Deep (extensive discussion of philosophy and mechanics, library research)
+**Choice:** TAP protocol via jstap/node:test, doctest-style inline tests, custom `expect()` with display serializers
+**Current state:** jstap for existing tests, no inline/doctest testing
+
+### Philosophy: testing for agents, not just humans
+
+Tests serve different purposes in an agent-driven workflow than in traditional development:
+
+1. **Types already act as smoke tests.** TypeScript catches most of the errors that simple unit tests would catch. The incremental value of a test that just confirms "this function returns a string" is near zero when the type system already enforces it.
+
+2. **Tests force decomposition.** The real value of writing tests is that untestable code is a design smell. If you can't test a function in isolation, it's doing too much. Tests are a forcing function for good architecture — even when the test itself rarely fails.
+
+3. **Tests are documentation.** A test that shows how to use a function, with realistic inputs and readable output, is better documentation than a JSDoc paragraph. Doctest-style testing makes this explicit: the example IS the test.
+
+4. **Agents read test output.** TAP (Test Anything Protocol) is a text protocol that agents parse naturally. Fancy terminal UIs (Vitest's default, Jest's watch mode) are designed for humans staring at a terminal. TAP is `ok 1 - test name` or `not ok 2 - test name` followed by YAML diagnostics. An agent reads this, understands what failed, and acts on it.
+
+### Test runner: TAP protocol
+
+**jstap** is currently in use and handles TypeScript adequately. **node:test** (built into Node.js) also outputs TAP natively. Either works. The key commitment is to the TAP protocol, not a specific runner — any runner that outputs TAP is compatible with the tooling.
+
+**Not Vitest.** Vitest is excellent for humans but its value is in the interactive terminal experience, which agents don't benefit from. TAP's simplicity is the feature.
+
+**Not BDD.** No `describe`/`it`/`should` ceremony. Tests are functions with names. `test("loading a card returns parsed XML", ...)` — direct, no nesting.
+
+### Doctest-style inline testing
+
+Two complementary modes, both generating `.test.ts` files that run through the normal TAP runner:
+
+**Mode 1: JSDoc `@example` blocks.** Tests live in the source file, next to the function they document. The `//=>` syntax specifies expected output:
+
+```typescript
+/**
+ * @example
+ * displayCard(loadCard("box/inbox/task.card"))
+ * //=> Card {
+ * //=>   id: ___
+ * //=>   title: "Buy groceries"
+ * //=>   tags: ["shopping", "home"]
+ * //=> }
+ */
+```
+
+An extractor (inspired by gen-jet's approach, but simpler) parses the JSDoc AST, pairs expressions with `//=>` output, wraps them in `test()` + `expect()`, and writes a `.test.ts` file. The containing module's exports are automatically in scope.
+
+**Mode 2: Markdown literate tests.** A `.md` file is both documentation and a test suite. Code blocks tagged `ts test` are extracted and run. An `expected` block following a test block provides the expected output:
+
+````markdown
+```ts setup
+import { loadCard } from "../src/core/card";
+const displayCard = (c: Card) => `${c.title} (${c.priority})`;
+```
+
+```ts test "loading a card"
+displayCard(loadCard("box/inbox/task.card"))
+```
+```expected
+Buy groceries (normal)
+```
+````
+
+Setup blocks run once and their bindings are available to all subsequent test blocks. HTML comment directives (invisible in rendered markdown) can control accumulation and teardown, following phmdoctest's pattern.
+
+Both modes generate typed TypeScript test files. Type errors in examples surface immediately at generation time.
+
+### The `expect()` function
+
+A single custom function that handles all assertion patterns:
+
+```typescript
+// Simple string comparison (whitespace-normalized, wildcard-aware)
+expect(displayCard(card), "Card { title: 'Groceries' }");
+
+// Promise-returning expression (auto-awaited)
+expect(fetchAndDisplay(id), "Card { title: 'Groceries' }");
+
+// Printer function for capturing side effects
+expect(printer => {
+  const result = processInbox(printer);
+  printer.print(`Processed: ${result.count}`);
+}, "Processed: 3");
+
+// Matcher object for options
+expect(displayCard(card), {
+  match: "Card { id: ___ }",
+  ordered: false,
+});
+```
+
+The printer pattern provides isolation automatically — the function receives a fresh printer, prints what it wants, and the collected output is what gets matched. No global state, no mock `console.log`.
+
+### Wildcards and matching
+
+`___` matches any single value (an ID, a timestamp, anything you don't care about). Typed variants like `___date___` or `___uuid___` can validate the shape while ignoring the specific value.
+
+Matching is whitespace-insensitive by default — leading/trailing whitespace and indentation differences don't cause failures. This keeps expected output readable without requiring exact formatting.
+
+On failure, TAP diagnostics include a diff:
+
+```
+not ok 1 - loading a card
+  ---
+  expected: |
+    Card { title: "Buy groceries", tags: ["shopping", "home"] }
+  actual: |
+    Card { title: "Buy groceries", tags: ["shopping"] }
+  ...
+```
+
+### Display serializers
+
+The biggest investment in this testing approach is **display functions** — purpose-built string representations of domain types. Not `JSON.stringify`, not `util.inspect` — human/agent-readable representations designed to be tested against:
+
+```typescript
+displayCard(card)
+// Card { title: "Buy groceries", priority: "normal", tags: ["shopping"] }
+
+displayInbox(inbox)
+// Inbox (3 items) [
+//   "Buy groceries" (normal)
+//   "Fix login bug" (urgent)
+//   "Read article" (low)
+// ]
+```
+
+Display functions are regular typed functions — `displayCard(card: Card): string`. They can be defined in the module, in the test file, or inline in a markdown setup block. They show what matters for understanding, not every field.
+
+This follows the Python doctest philosophy: create great string representations, then test by comparing strings. You don't say "expect the length to be 42" — you print the thing and match the output.
+
+### Snapshot as interactive agent tool
+
+The "view snapshot" concept extends beyond testing. An agent can request a snapshot of any rendered view at any time — during development, during debugging, during a procedure run. The snapshot shows the current state as the display serializers render it, with source document tracing (see below) showing where data came from. This makes the rendered UI inspectable and actionable for agents, not just for test assertions.
+
+### Source document tracing
+
+Rendered output includes provenance annotations showing where data came from:
+
+```html
+<span data-source="box/inbox/task-123.card:title">Buy groceries</span>
+```
+
+This can be a formal file reference (`data-source-file="box/inbox/task-123.card"`) or an informal description for agent consumption (`data-source-desc="grocery task from inbox"`). Both are useful — formal for programmatic tracing, informal for agent understanding. Annotations are hand-curated throughout the codebase.
+
+For testing, you can assert provenance: "this rendered value came from this file." For agents, they can point at rendered output and trace back to what to edit.
+
+### HTML simplification for agent consumption
+
+Full rendered HTML is noisy — classes, wrapper divs, script bundles, styling attributes. Agents need a simplified view:
+
+- **Strip noise** — Remove style attributes, CSS classes, script tags, wrapper divs that exist only for layout.
+- **Preserve semantics** — Keep ARIA roles, data attributes, semantic HTML elements.
+- **Component-level view** — Some components are better shown as their invocation (`<CardPreview card="task-123" priority="urgent" />`) rather than their full HTML expansion. Components can opt into this with an annotation. Structural components expand; leaf/atomic components show as tags with props.
+- **Action extraction** — From ARIA roles and interactive elements, extract what actions are available: "click Submit", "type in Search field", "select from Priority dropdown". This is the CGI-style testing pattern — render state, extract available actions, verify they match expectations.
+
+### No mock libraries
+
+Mocking is built into the code through explicit dependency injection, not bolted on by a test library. Functions that depend on external services take an options/context object:
+
+```typescript
+function processInbox(options: { loadCard?: typeof defaultLoadCard } = {}) {
+  const { loadCard = defaultLoadCard } = options;
+  // ...
+}
+```
+
+Tests pass real implementations that use temp directories, or simplified implementations that return fixed data. The injectable boundary is part of the public API — a design constraint that forces explicit dependency thinking.
+
+For external services (Telegram, OpenAI, etc.), thin adapter layers provide the injection point. Tests swap the adapter.
+
+### Self-describing services with scenarios
+
+Services export their own test scenarios — semantically meaningful configurations, not random fuzzer inputs:
+
+```typescript
+export const scenarios = {
+  "empty inbox": () => ({ cards: [], filters: {} }),
+  "inbox with urgent items": () => ({
+    cards: [makeCard({ priority: "urgent" }), makeCard()],
+    filters: {}
+  }),
+  "filtered view": () => ({
+    cards: [makeCard({ tag: "work" }), makeCard({ tag: "personal" })],
+    filters: { tag: "work" }
+  }),
+};
+```
+
+Scenarios can use base-state-plus-patch patterns to avoid restating everything. They're agent-curated (agents understand the use cases they're building for) rather than human-curated. The test runner discovers scenarios and checks properties against each one.
+
+Property testing via fast-check is available for the *properties* side ("no matter which scenario, the count badge matches the actual number of visible items") while scenarios provide the meaningful inputs.
+
+### Knowledge audits — acceptance testing for documentation
+
+An existing pattern in the codebase (`src/dev/knowledge-audit.ts`) that tests what the agent knows rather than what the system does. Tests are defined in YAML with a prompt, expected knowledge level, and behavioral checks:
+
+```yaml
+- id: box-structure-inbox
+  prompt: "Where would you look for unprocessed incoming items?"
+  expected_level: knows_directly
+  correct_contains: ["box/inbox"]
+```
+
+Nine knowledge levels from "knows directly" (in loaded context) through "discoverable" (findable by searching) to "does not know." The audit runs each prompt against the agent, captures the session transcript, checks what files were read and what the response contained, and generates a report.
+
+This is a documentation-centric acceptance test pattern: it catches documentation gaps, verifies information architecture, and distinguishes between knowledge levels. It belongs in the testing strategy because it's a form of acceptance testing, but for agent capabilities rather than system behavior.
+
+### Principles that apply
+
+- **Introspectability** — Self-describing services, scenario exports, display serializers all make the system inspectable
+- **Accessibility to tooling** — TAP output is machine-readable; agents parse it naturally
+- **Unidirectional data flow** — State → render → snapshot → extract actions mirrors the CGI-style pattern
+- **Minimal distance from intuitive** — `expect(actual, expected)` is the simplest possible assertion API
+
+---
+
+## Decision 15: Markdown Parsing — remark/unified
+
+**Decided:** 2026-03-02
+**Rigor:** Compared 5 libraries against specific requirements
+**Choice:** remark/unified ecosystem
+**Also considered:** marked, markdown-it, micromark, MDX
+
+### Why remark
+
+The decision was driven by three specific requirements:
+
+**Source position tracking.** Every AST node in remark/unified's mdast includes `position: { start: { line, column, offset }, end: { line, column, offset } }`. This is native to the format, not a plugin. marked has no position tracking. markdown-it has basic `[line_begin, line_end]` maps but no column info. Only remark provides full source mapping out of the box.
+
+Position tracking is needed for:
+- Source document tracing in rendered output (Decision 14) — mapping rendered content back to source lines
+- Doctest extraction — error messages that point to the exact line in the markdown file
+- Future: click-to-edit features where rendered output links back to source
+
+**KaTeX/LaTeX support.** `remark-math` for parsing + `rehype-katex` for rendering. Well-maintained plugins in the unified ecosystem.
+
+**Code block extraction for literate testing.** `remark-code-blocks` and the AST structure make it straightforward to find fenced code blocks with their language tags, metadata, and exact source positions. This is the foundation for the markdown literate testing in Decision 14.
+
+### Tradeoffs
+
+- **Larger than marked.** marked is ~20KB with zero deps. remark with plugins is significantly larger. Acceptable because we need the AST features, not just HTML output.
+- **Learning curve.** The unified ecosystem (remark for markdown, rehype for HTML, mdast/hast for ASTs) has more concepts than marked's straightforward `marked.parse()`. But the plugin architecture pays off when you need to do non-trivial things with the AST.
+- **Plugin composition.** Math support requires composing `remark-math` + `rehype-katex` rather than a single extension. More modular but more setup.
+
+### What we use it for
+
+- **Rendering markdown content** in the frontend (card bodies, documentation, chat messages)
+- **Extracting code blocks** for the literate testing system (Decision 14)
+- **Source position mapping** for tracing rendered output back to source files
+- **LaTeX rendering** for mathematical content in cards
+
+---
+
+## Decision 16: Keyboard Shortcuts — react-hotkeys-hook
+
+**Decided:** 2026-03-02
+**Rigor:** Low (prior positive experience)
+**Choice:** react-hotkeys-hook
+**Future:** cmdk for command palette (⌘K pattern)
+
+### Why react-hotkeys-hook
+
+Good prior experience with it. React-native hook API: `useHotkeys('ctrl+s', handler)`. Wraps hotkeys-js, handles focus scoping, works with React's lifecycle. Lightweight, well-maintained.
+
+**cmdk** (command palette) is a natural complement for the future — the ⌘K pattern for discoverability of actions. Not needed immediately but worth keeping in mind as the action surface grows.
+
+---
+
+## Decision 17: Icons — Phosphor Icons
+
+**Decided:** 2026-03-02
+**Rigor:** Low (reviewed options)
+**Choice:** Phosphor Icons
+**Also considered:** Lucide, Heroicons, Tabler Icons
+
+### Why Phosphor
+
+7000+ icons across 6 weights (thin, light, regular, bold, fill, duotone). The weight system is the differentiator — same icon at different visual weights means consistent styling without hunting for alternatives. Tree-shakeable React components.
+
+Heroicons (from the Tailwind team) has only ~300 icons — too small a set. Lucide is solid but Phosphor's weight variants and larger set win.
+
+---
+
+## Decision 18: Speech Recognition — Mistral Voxtra
+
+**Decided:** 2026-03-02
+**Rigor:** Low (based on usage experience)
+**Choice:** Mistral Voxtral for speech-to-text
+**Current state:** Whisper via the Thinking Machine frontend
+
+### Why Voxtral
+
+Good results in practice. For any speech recognition work beyond the current Whisper integration, Voxtral is the preferred model.
+
+---
+
+## Decision 19: Acceptance Testing — Extend Knowledge Audit Framework
+
+**Decided:** 2026-03-02
+**Rigor:** Directional (approach chosen, not built)
+**Choice:** Extend the existing knowledge audit framework to include action/task audits
+**Not chosen:** Playwright, Cypress, or other browser automation frameworks
+
+### The existing pattern
+
+The knowledge audit (`src/dev/knowledge-audit.ts`) tests what agents know — prompts in YAML, behavioral checks on the transcript, reports with expected vs actual knowledge levels. This pattern generalizes naturally to action audits: "can the agent do X?" not just "does the agent know X?"
+
+### Extension: task completion audits
+
+Same YAML-driven structure, but the prompt asks the agent to *do* something, and the checks verify the result:
+
+```yaml
+- id: create-memo-card
+  prompt: "Create a memo card titled 'Test' in the inbox"
+  expected_outcome: file_created
+  check_path: "box/inbox/*.card"
+  check_contains: ["<title>Test</title>"]
+  tags: [actions, cards]
+```
+
+The framework runs the prompt, lets the agent act, then checks filesystem state, git status, or other observable outcomes. Same report format — expected behavior, actual behavior, automated checks, assessment field.
+
+### Screenshots
+
+Lightweight screenshot capability for visual verification — a CLI tool that renders a page and outputs an image, not a persistent browser session. Useful for visual regression checks and for agents to verify rendered output. Not Playwright's full browser automation; something closer to a headless single-shot capture.
+
+### Not Playwright
+
+Playwright is designed for browser automation test suites with selectors, waits, and interaction sequences. That's the wrong model here — we're testing agent capabilities, not UI click paths. The CGI-style render pattern (Decision 14) handles UI testing without a browser. Playwright's overhead and complexity don't pay off.
+
+**Puppeteer** may be useful later for a different purpose: automating the agent itself (driving browser interactions on behalf of the user). That's an automation tool, not a testing framework.
+
+---
+
+## Decision 20: Dev Runner — Overmind + node --watch
+
+**Decided:** 2026-03-02
+**Rigor:** Deep (researched zombie process issues, signal propagation, alternatives)
+**Choice:** Overmind (Procfile-based process manager) + `node --watch --import tsx`
+**Current state:** `cb serve --dev` spawns `tsx --watch`, separate Vite dev server
+
+### The problem
+
+The current dev setup suffers from zombie child processes. Root causes:
+
+1. **tsx --watch + npm = broken signals.** npm v10.3+ changed how it sends SIGINT to process groups. tsx's watcher doesn't get a chance to let the child exit gracefully, prints "Previous process hasn't exited yet. Force killing..." and leaves orphans (tsx issue #586, open since 2024).
+2. **No process group management.** When the server spawns sub-processes (agent invocations, git operations), killing the parent leaves grandchildren alive. Node's `child_process.kill()` only signals the direct child, not descendants.
+3. **Agent edit storms.** An agent making 20 file edits in 5 seconds triggers 20 watcher restarts. Each restart that doesn't clean up properly compounds the zombie problem.
+
+### The solution
+
+**Overmind** is a Go-based process manager that runs each Procfile entry in its own tmux session. Proper signal propagation, individual process restart, and real job control.
+
+```
+# Procfile.dev
+backend: node --watch --import tsx ./src/webapp/server.ts
+frontend: npx vite dev
+```
+
+`overmind start -f Procfile.dev` runs both. `overmind restart backend` restarts just the server. Ctrl+C kills everything cleanly because tmux sessions have proper job control.
+
+**`node --watch --import tsx`** instead of `tsx watch`. Uses Node's native watcher while tsx handles TypeScript compilation. Simpler process tree — no tsx wrapper process between you and your server.
+
+**Key rules:**
+- Never run watch commands through `npm run` — invoke binaries directly to avoid signal propagation breakage
+- The Procfile approach does this naturally
+
+### Agent edit debouncing
+
+May not be needed immediately — `node --watch` already has some built-in debouncing. If it becomes a problem, two options:
+- **Lock file sentinel**: Agent creates `.editing` before bulk changes, removes when done. Watcher skips restarts while file exists.
+- **Configurable debounce**: 2-second delay after last file change before restarting.
+
+### Investigated and set aside
+
+- **tsx --watch** — Broken signal handling when run through npm (issue #586). Running directly works but is fragile.
+- **node --watch alone** — Hardcoded SIGTERM instead of SIGINT (Node issue #49321). Servers that do graceful shutdown on SIGINT don't clean up properly.
+- **concurrently** — Popular but has its own orphaned process issues (issue #67). Shell-spawned commands may fork to different PIDs than what concurrently tracks.
+- **turbo dev** — Graceful shutdown is an open issue (#4274). Good for build orchestration, rough edges for dev servers.
+- **ts-node-dev** — Long-standing issue where child processes are not killed on restart (issue #79).
+- **Bash trap script** — `trap 'kill 0' EXIT` works for simple cases but no colored output, no individual restart, no attach-to-process.
+
+---
+
+## Decision 21: Page Transitions — View Transitions API
+
+**Decided:** 2026-03-02
+**Rigor:** Low (browser API is the obvious choice)
+**Choice:** View Transitions API (browser-native)
+**Future:** Motion library if CSS can't express what's needed
+
+### Why View Transitions API
+
+Baseline as of October 2025 — supported in Chrome, Edge, Firefox 133+, Safari 18+. Zero JavaScript, pure CSS `::view-transition-*` pseudo-elements. TanStack Router has built-in support (`defaultViewTransition: true`). React itself has an experimental `<ViewTransition>` component heading toward stable.
+
+No library to install, no bundle size, no API to learn beyond CSS. Start here. Add **Motion** (Framer Motion's successor, same team, lighter bundle) only if CSS transitions can't express what's needed.
+
+---
+
+## Decision 22: Syntax Highlighting — rehype-highlight (or rehype-prism)
+
+**Decided:** 2026-03-02
+**Rigor:** Low (follows from Decision 15)
+**Choice:** rehype-highlight (wraps highlight.js) within the remark/unified pipeline
+**Current state:** highlight.js used directly in the frontend
+
+### Why rehype-highlight
+
+Since Decision 15 chose remark/unified for markdown parsing, syntax highlighting should run inside the same pipeline rather than as a separate post-processing step. `rehype-highlight` wraps highlight.js and integrates with the remark→rehype rendering chain. highlight.js is already installed, so this adds integration rather than a new dependency.
+
+Alternative: `rehype-prism` uses Prism instead of highlight.js. Either works — highlight.js has broader language coverage, Prism has a more modern plugin architecture. Since highlight.js is already in the project, rehype-highlight is the path of least resistance.
+
+---
+
+## Decision 23: Utility Libraries — Replace Hand-Rolled Code
+
+**Decided:** 2026-03-02
+**Rigor:** Low (code scan identified patterns, libraries are obvious replacements)
+
+### Replacements
+
+| Library | Replaces | Where |
+|---|---|---|
+| **html-entities** | Regex-based HTML stripping and entity decoding | `src/connectors/rss.ts` (lines 150-162) |
+| **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | `src/cli/lib/time.ts`, scattered across connectors and CLI |
+| **ky** | Bare `fetch()` with no retry or error normalization | `src/cli/lib/fetch.ts`, connector fetch calls |
+| **sanitize-filename** | Duplicate hand-rolled `safeFilename()` functions | `src/connectors/rss.ts`, `src/connectors/gmail.ts` |
+| **proper-lockfile** | Two separate file-locking implementations | `src/cli/lib/lock.ts`, `src/core/schedule-state.ts` |
+| **execa** | Duplicate `execFile` wrappers with manual error handling | `src/core/procedure/shell.ts`, `src/cli/lib/git.ts` |
+
+### Why these and not others
+
+Each replaces code that was written because the project needed the functionality before choosing a library. The hand-rolled versions work but have gaps:
+
+- **html-entities** handles edge cases (named entities, surrogate pairs) the regex approach misses
+- **date-fns** is tree-shakable, so you pay only for the functions you use — no "import the whole library" penalty
+- **ky** adds retry with backoff (critical for connectors hitting rate-limited APIs) while staying close to native fetch
+- **sanitize-filename** handles platform-specific reserved names and characters the custom functions miss
+- **proper-lockfile** handles stale lock detection and race conditions the custom implementations don't
+- **execa** gives process group cleanup (kill child trees), better error messages, and streaming — directly relevant to the zombie process issues in Decision 20
+
+### Why ky over ofetch
+
+Both are modern fetch wrappers with retry support. ky is ~3KB gzipped (ofetch is ~64KB), stays closer to native fetch semantics, and doesn't try to be a framework. Sindre Sorhus maintains it actively. The "minimal distance from intuitive" principle applies here — ky adds what's missing from fetch without reinventing the API.
+
+---
+
+## Dependencies to remove (migration cleanup)
+
+These are in the current package.json but should be removed as part of the stack migration:
+
+| Package | Reason to remove |
+|---|---|
+| **mobx, mobx-react-lite, mobx-state-tree** | Decision 1 chose XState. These are evaluation remnants. Remove as pages migrate. |
+| **zustand** | Same — evaluation remnant from the state management comparison. |
+| **xml2js** | Cardworks handles all XML card parsing. xml2js should not be used directly. |
+| **chokidar** | Decision 8 chose @parcel/watcher. Remove once file watching is migrated. |
+| **highlight.js** (direct usage) | Decision 22 moves highlighting into the remark pipeline via rehype-highlight. The package stays as a transitive dependency of rehype-highlight, but direct imports should be replaced. |
+
+---
+
+## Decisions not yet made
+
+| Area | Notes | Status |
+|---|---|---|
+| Build tooling | Vite (keep) | No reason to change |
+| Full-text search | BM25 ranking (e.g., MiniSearch, Orama, or SQLite FTS5). Fancier than keyword search. | To research |
+| Embedding / vector search | Orama (`@orama/orama`) already used in ske with OpenAI `text-embedding-3-small` (512 dims). Supports both full-text and vector similarity search with persistence. Could reuse the same setup. | Future |
+| Token usage tracking | Log usage via Pino (or direct writes) — token counts from API responses, tagged with context (agent run, box, task). Custom visualizer/reporter on top. Cost-per-token mapping is fuzzy (varies by model, changes over time) but approximate is fine. No external service needed. | Future |
+| Retell.ai integration | AI phone call service — future connector for voice interactions | Future |
+| agentmail.to integration | Email service designed for agents — potential connector | Future |
+| WebTiles | Embeddable widget framework for embedding box views in other contexts | Future |
+| Documentation indexing | Framework for making all docs (code docs, box docs, guides) work together as a searchable, cross-referenced corpus | To think about |
