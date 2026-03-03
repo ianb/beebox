@@ -6,28 +6,29 @@ It coexists with tap's `t.equal()`/`t.same()` — use `check()` when you care ab
 
 ## Setup
 
-Use `checker(t)` to create a check function bound to the tap test context. This routes failures through `t.fail()` so diffs render cleanly in tap's YAML diagnostics:
+Import `tap-check.js` to add `t.check()` to all tap test objects. It patches `TestBase.prototype` via declaration merging and routes failures through `t.fail()` for clean YAML diagnostics:
 
 ```ts
 import { test } from "tap";
-import { checker } from "../src/test-lib/tap-check.js";
+import "../src/test-lib/tap-check.js";
 
 test("example", async (t) => {
-  const check = checker(t);
-  check(someValue, "expected output");
+  t.check(someValue, "expected output");
 });
 ```
+
+The import is needed for TypeScript types. At runtime, `t.check()` is also loaded automatically via `.taprc`'s `--import` node-arg.
 
 ## Basic usage
 
 Pass any value and the expected string:
 
 ```ts
-check(safeFilename("Hello World!"), "Hello_World");
+t.check(safeFilename("Hello World!"), "Hello_World");
 
-check(42, "42");
+t.check(42, "42");
 
-check({ name: "Alice", age: 30 }, `{
+t.check({ name: "Alice", age: 30 }, `{
   "name": "Alice",
   "age": 30
 }`);
@@ -47,8 +48,8 @@ not ok 1 - check failed
   found: hello_world
   wanted: Hello_World
   source: |
-      check(result, "Hello_World");
-      --^
+      t.check(result, "Hello_World");
+      ----^
   ...
 ```
 
@@ -69,7 +70,7 @@ Multi-line mismatches get a line-by-line diff:
 When `actual` is a Promise, `check()` returns a Promise. Await it:
 
 ```ts
-await check(getStatus(boxRoot), `{
+await t.check(getStatus(boxRoot), `{
   "staged": [],
   "modified": [],
   "untracked": [],
@@ -82,7 +83,7 @@ await check(getStatus(boxRoot), `{
 When `actual` is a function, it receives a `print` callback as its first argument. Printed lines become part of the "actual" string, followed by the serialized return value (if non-void):
 
 ```ts
-check((print) => {
+t.check((print) => {
   writeFileSync("test.txt", "hello");
   print("wrote: test.txt");
   return readFileSync("test.txt", "utf-8");
@@ -97,7 +98,7 @@ This is the pattern for testing side effects — the function does something, `p
 Async functions work too:
 
 ```ts
-await check(async (print) => {
+await t.check(async (print) => {
   await writeCard(boxRoot, "inbox/test.card", content);
   print("created: inbox/test.card");
   return await getStatus(boxRoot);
@@ -115,15 +116,15 @@ await check(async (print) => {
 Use `___` in the expected string to match any text:
 
 ```ts
-check(timestamp, "2026-___");              // matches any suffix
-check(commitLine, "___ initial commit");   // matches any prefix
-check(logLine, "commit ___ by ___");       // multiple wildcards
+t.check(timestamp, "2026-___");              // matches any suffix
+t.check(commitLine, "___ initial commit");   // matches any prefix
+t.check(logLine, "commit ___ by ___");       // multiple wildcards
 ```
 
 Named wildcards like `___date___` and `___hash___` work the same way but are self-documenting:
 
 ```ts
-check(logEntry, "[___date___] commit ___hash___: initial commit");
+t.check(logEntry, "[___date___] commit ___hash___: initial commit");
 ```
 
 Both `___` and `___name___` match any sequence of characters including newlines.
@@ -157,8 +158,8 @@ registerSerializer((value) => {
 });
 
 // Now tests read naturally:
-check(await getStatus(boxRoot), "git: clean");
-check(await getStatus(boxRoot), "git: modified: box/inbox/test.card");
+t.check(await getStatus(boxRoot), "git: clean");
+t.check(await getStatus(boxRoot), "git: modified: box/inbox/test.card");
 ```
 
 Return `null` from a serializer to pass through to the next one.
@@ -168,7 +169,7 @@ Return `null` from a serializer to pass through to the next one.
 Pass a `CheckOptions` object as the second argument instead of a string:
 
 ```ts
-check(messyOutput, {
+t.check(messyOutput, {
   expected: "hello world",
   normalizeWhitespace: true,  // collapse whitespace runs, trim
   label: "greeting output",   // appears in error messages
@@ -220,9 +221,8 @@ try {
 
 ```ts
 // Tap integration (preferred in tests)
-import { checker } from "../src/test-lib/tap-check.js";
-const check = checker(t);
-check(actual: unknown, expected: string | CheckOptions): void | Promise<void>
+import "../src/test-lib/tap-check.js";
+t.check(actual: unknown, expected: string | CheckOptions): void | Promise<void>
 
 // Standalone (throws on mismatch)
 import { check } from "../src/test-lib/check.js";
@@ -238,7 +238,6 @@ registerSerializer(fn: (value: unknown) => string | null): void
 
 // Types
 type PrintFn = (text: string) => void
-type CheckFn = (actual: unknown, expected: string | CheckOptions) => void | Promise<void>
 interface CheckOptions { expected: string; normalizeWhitespace?: boolean; label?: string }
 interface CheckResult { pass: boolean; actual: string; expected: string; diff: string | null; message: string }
 class CheckError extends Error { diff: string; found: string; wanted: string }

@@ -1,21 +1,20 @@
 # Testing with check()
 
-Write tests using `check(actual, expected)` alongside tap. `check()` compares everything as strings — values are serialized, then matched against an expected string with optional wildcards.
+Write tests using `t.check(actual, expected)` alongside tap. `check()` compares everything as strings — values are serialized, then matched against an expected string with optional wildcards.
 
 ```ts
 import { test } from "tap";
-import { checker } from "../src/test-lib/tap-check.js";
+import "../src/test-lib/tap-check.js";
 ```
+
+The import adds `t.check()` to all tap test objects. It's also loaded automatically via `.taprc` so the import is only needed for TypeScript types.
 
 ## Write a test
 
-Create a `check` function bound to the test context with `checker(t)`. This routes failures through tap's assertion system for clean diagnostics:
-
 ```ts
 test("safeFilename strips special characters", async (t) => {
-  const check = checker(t);
-  check(safeFilename("Hello World!"), "Hello_World");
-  check(safeFilename(""), "untitled");
+  t.check(safeFilename("Hello World!"), "Hello_World");
+  t.check(safeFilename(""), "untitled");
 });
 ```
 
@@ -23,8 +22,7 @@ Objects are serialized as pretty-printed JSON:
 
 ```ts
 test("getStatus on clean repo", async (t) => {
-  const check = checker(t);
-  await check(getStatus(boxRoot), `{
+  await t.check(getStatus(boxRoot), `{
   "staged": [],
   "modified": [],
   "untracked": [],
@@ -39,8 +37,7 @@ When `actual` is a function, it receives a `print` callback. Printed lines + the
 
 ```ts
 test("creating a card modifies git status", async (t) => {
-  const check = checker(t);
-  await check(async (print) => {
+  await t.check(async (print) => {
     await fs.writeFile(path.join(boxRoot, "box/inbox/test.card"), content);
     print("wrote: box/inbox/test.card");
     return await getStatus(boxRoot);
@@ -59,15 +56,15 @@ test("creating a card modifies git status", async (t) => {
 `___` matches any text. Named wildcards like `___hash___` are self-documenting:
 
 ```ts
-check(commitOutput, "___hash___ initial commit");
-check(logLine, "[___date___] ___author___: created card");
+t.check(commitOutput, "___hash___ initial commit");
+t.check(logLine, "[___date___] ___author___: created card");
 ```
 
 ## When to use check() vs tap assertions
 
 | Use | For |
 |---|---|
-| `check(val, "expected")` | String-shaped output, rendered content, JSON structures, side-effect sequences |
+| `t.check(val, "expected")` | String-shaped output, rendered content, JSON structures, side-effect sequences |
 | `t.equal(a, b)` | Exact value equality (numbers, booleans, specific strings) |
 | `t.same(a, b)` | Deep structural equality where you care about the shape, not the text |
 | `t.ok(condition)` | Boolean conditions |
