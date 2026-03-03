@@ -25,6 +25,8 @@ import { stageFiles, commit } from "../cli/lib/git.js";
 import { createOrAppendIntakeJob } from "./intake-utils.js";
 import { saveTransientState } from "./transient-state.js";
 import { safeFilename } from "./chat-utils.js";
+import type { RaindropService } from "../services/raindrop.js";
+import { createRaindropService } from "../services/raindrop.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -63,116 +65,6 @@ interface RaindropBookmark {
   created: string;
   lastUpdate: string;
   collection: { $id: number };
-}
-
-interface RaindropCollection {
-  _id: number;
-  title: string;
-}
-
-// ─── API Client ─────────────────────────────────────────────────────────────
-
-const API_BASE = "https://api.raindrop.io/rest/v1";
-
-/**
- * Parameters for raindropFetch
- */
-interface RaindropFetchParams {
-  token: string;
-  endpoint: string;
-  options?: RequestInit;
-}
-
-async function raindropFetch(
-  params: RaindropFetchParams
-): Promise<unknown> {
-  const { token, endpoint, options = {} } = params;
-  const url = `${API_BASE}${endpoint}`;
-  const resp = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => "");
-    throw new Error(`Raindrop API ${resp.status}: ${resp.statusText} - ${body}`);
-  }
-  return resp.json();
-}
-
-async function fetchCollections(token: string): Promise<RaindropCollection[]> {
-  const data = (await raindropFetch({ token, endpoint: "/collections" })) as {
-    items: RaindropCollection[];
-  };
-  return data.items || [];
-}
-
-async function fetchAllBookmarks(token: string): Promise<RaindropBookmark[]> {
-  const all: RaindropBookmark[] = [];
-  let page = 0;
-  while (true) {
-    const data = (await raindropFetch({
-      token,
-      endpoint: `/raindrops/0?page=${page}&perpage=50`,
-    })) as { items: RaindropBookmark[] };
-    if (!data.items || data.items.length === 0) break;
-    all.push(...data.items);
-    if (data.items.length < 50) break;
-    page++;
-  }
-  return all;
-}
-
-async function createRaindrop(
-  token: string,
-  payload: {
-    link: string;
-    title?: string;
-    tags?: string[];
-    note?: string;
-    collection?: { $id: number };
-  }
-): Promise<RaindropBookmark> {
-  const data = (await raindropFetch({
-    token,
-    endpoint: "/raindrop",
-    options: {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-  })) as { item: RaindropBookmark };
-  return data.item;
-}
-
-/**
- * Parameters for updateRaindrop
- */
-interface UpdateRaindropParams {
-  token: string;
-  id: number;
-  payload: Partial<{
-    title: string;
-    link: string;
-    tags: string[];
-    note: string;
-    collection: { $id: number };
-  }>;
-}
-
-async function updateRaindrop(params: UpdateRaindropParams): Promise<RaindropBookmark> {
-  const { token, id, payload } = params;
-  const data = (await raindropFetch({
-    token,
-    endpoint: `/raindrop/${id}`,
-    options: {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    },
-  })) as { item: RaindropBookmark };
-  return data.item;
 }
 
 // ─── Utilities ──────────────────────────────────────────────────────────────
@@ -406,9 +298,16 @@ class RaindropConnector implements Connector {
   triggeredBy?: string;
 
   private boxRoot: string;
+  private raindropService: RaindropService | undefined;
 
-  constructor(boxRoot: string) {
+  constructor(boxRoot: string, raindropService?: RaindropService) {
     this.boxRoot = boxRoot;
+    this.raindropService = raindropService;
+  }
+
+  /** Get the Raindrop service, using injected service or creating from token. */
+  private getRaindrop(token: string): RaindropService {
+    return this.raindropService ?? createRaindropService(token);
   }
 
   private configPath(): string {
@@ -460,14 +359,15 @@ class RaindropConnector implements Connector {
 
     try {
       // Refresh collection cache
-      const collections = await fetchCollections(config.token);
+      const svc = this.getRaindrop(config.token);
+      const collections = await svc.listCollections();
       state.collections = { Unsorted: -1 };
       for (const c of collections) {
         state.collections[c.title] = c._id;
       }
 
       // ── Push phase ──
-      const pushResult = await this.pushLocalChanges(config.token, state);
+      const pushResult = await this.pushLocalChanges(svc, state);
       pushed.push(...pushResult.pushed);
       errors.push(...pushResult.errors);
 
@@ -486,7 +386,7 @@ class RaindropConnector implements Connector {
       }
 
       // ── Pull phase ──
-      const pullResult = await this.pullRemoteChanges(config.token, state);
+      const pullResult = await this.pullRemoteChanges(svc, state);
       created.push(...pullResult.created);
       updated.push(...pullResult.updated);
       errors.push(...pullResult.errors);
@@ -551,7 +451,7 @@ class RaindropConnector implements Connector {
   }
 
   private async pushLocalChanges(
-    token: string,
+    svc: RaindropService,
     state: RaindropState
   ): Promise<{
     pushed: string[];
@@ -594,7 +494,7 @@ class RaindropConnector implements Connector {
         if (!raindropId) {
           // New card — create in Raindrop
           const collId = state.collections[fields.collection] ?? -1;
-          const payload: Parameters<typeof createRaindrop>[1] = {
+          const payload: Partial<RaindropBookmark> = {
             link: fields.link,
             title: fields.title,
             collection: { $id: collId },
@@ -602,7 +502,7 @@ class RaindropConnector implements Connector {
           if (fields.tags.length > 0) payload.tags = fields.tags;
           if (fields.note) payload.note = fields.note;
 
-          const created = await createRaindrop(token, payload);
+          const created = await svc.createBookmark(payload);
           const newId = String(created._id);
 
           // Rewrite card with raindrop-id
@@ -665,11 +565,7 @@ class RaindropConnector implements Connector {
             });
 
             if (Object.keys(diff).length > 0) {
-              await updateRaindrop({
-                token,
-                id: Number(raindropId),
-                payload: diff,
-              });
+              await svc.updateBookmark(Number(raindropId), diff);
 
               entry.lastSyncedHash = hash;
               entry.syncedFields = { ...fields };
@@ -709,7 +605,7 @@ class RaindropConnector implements Connector {
   }
 
   private async pullRemoteChanges(
-    token: string,
+    svc: RaindropService,
     state: RaindropState
   ): Promise<{
     created: string[];
@@ -733,7 +629,16 @@ class RaindropConnector implements Connector {
       collIdToName[id] = name;
     }
 
-    const remoteBookmarks = await fetchAllBookmarks(token);
+    // Paginate through all bookmarks
+    const remoteBookmarks: RaindropBookmark[] = [];
+    let page = 0;
+    while (true) {
+      const items = await svc.listBookmarks(0, { page, perpage: 50 });
+      if (items.length === 0) break;
+      remoteBookmarks.push(...items);
+      if (items.length < 50) break;
+      page++;
+    }
     const remoteIds = new Set<string>();
 
     for (const rb of remoteBookmarks) {
@@ -822,8 +727,8 @@ class RaindropConnector implements Connector {
 /**
  * Create and register the Raindrop connector for a box.
  */
-export function createRaindropConnector(boxRoot: string): Connector {
-  const connector = new RaindropConnector(boxRoot);
+export function createRaindropConnector(boxRoot: string, raindrop?: RaindropService): Connector {
+  const connector = new RaindropConnector(boxRoot, raindrop);
   registerConnector(connector);
   return connector;
 }

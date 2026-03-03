@@ -19,7 +19,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { Bot } from "grammy";
 import { type ElementNode } from "cardworks";
 import {
   registerConnector,
@@ -39,6 +38,8 @@ import {
   ensureParticipant,
 } from "./chat-utils.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
+import type { TelegramService } from "../services/telegram.js";
+import { createTelegramService } from "../services/telegram.js";
 
 export interface TelegramConfig {
   botToken: string;
@@ -150,9 +151,16 @@ class TelegramConnector implements Connector {
   triggeredBy?: string;
 
   private boxRoot: string;
+  private telegramService: TelegramService | undefined;
 
-  constructor(boxRoot: string) {
+  constructor(boxRoot: string, telegramService?: TelegramService) {
     this.boxRoot = boxRoot;
+    this.telegramService = telegramService;
+  }
+
+  /** Get the Telegram service, using injected service or creating from token. */
+  private getTelegram(botToken: string): TelegramService {
+    return this.telegramService ?? createTelegramService(botToken);
   }
 
   async sync(): Promise<SyncResult> {
@@ -221,7 +229,7 @@ class TelegramConnector implements Connector {
     updated: string[];
     jobs: string[];
   }> {
-    const bot = new Bot(config.botToken);
+    const tg = this.getTelegram(config.botToken);
     const state = await loadTransientState<TelegramState>({
       boxRoot: this.boxRoot,
       connectorName: "telegram",
@@ -229,7 +237,7 @@ class TelegramConnector implements Connector {
     });
 
     // Must delete webhook before calling getUpdates
-    await bot.api.deleteWebhook({ drop_pending_updates: false });
+    await tg.deleteWebhook({ drop_pending_updates: false });
 
     const allThreads = new Set<string>();
     const allPeopleFiles: string[] = [];
@@ -238,7 +246,7 @@ class TelegramConnector implements Connector {
 
     // Drain all pending updates
     while (true) {
-      const updates = await bot.api.getUpdates(
+      const updates = await tg.getUpdates(
         offset != null
           ? { offset, limit: 100, timeout: 0 }
           : { limit: 100, timeout: 0 }
@@ -406,8 +414,8 @@ class TelegramConnector implements Connector {
     const boxSlug = path.basename(this.boxRoot);
     const webhookUrl = `${publicUrl}/webhook/${boxSlug}/telegram`;
 
-    const bot = new Bot(config.botToken);
-    await bot.api.setWebhook(webhookUrl, {
+    const tg = this.getTelegram(config.botToken);
+    await tg.setWebhook(webhookUrl, {
       secret_token: config.webhookSecret,
       allowed_updates: ["message", "edited_message"],
     });
@@ -482,7 +490,7 @@ class TelegramConnector implements Connector {
 
     if (threadPaths.length === 0) return [];
 
-    const bot = new Bot(config.botToken);
+    const tg = this.getTelegram(config.botToken);
     const pushed: string[] = [];
 
     for (const relThread of threadPaths) {
@@ -503,7 +511,7 @@ class TelegramConnector implements Connector {
           const text = msg.text?.trim();
           if (!text) continue;
 
-          const result = await bot.api.sendMessage(chatId, text);
+          const result = await tg.sendMessage(chatId, text);
           const sentAt = new Date().toISOString();
 
           await stampSentMessage({
@@ -595,8 +603,8 @@ function parseDuration(dur: string): number | null {
 /**
  * Create and register the Telegram connector for a box.
  */
-export function createTelegramConnector(boxRoot: string): Connector {
-  const connector = new TelegramConnector(boxRoot);
+export function createTelegramConnector(boxRoot: string, telegram?: TelegramService): Connector {
+  const connector = new TelegramConnector(boxRoot, telegram);
   registerConnector(connector);
   return connector;
 }
