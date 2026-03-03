@@ -1,7 +1,9 @@
 /**
- * Sync command - Sync data with connectors.
+ * Connector sync command - Sync data with connectors.
  *
- * This is the core logic shared by both CLI and web API.
+ * This is a lightweight command that only runs connector sync.
+ * The full wakeup flow (preprocessing, triage, intake jobs, reactor, etc.)
+ * lives in src/cli/commands/wakeup.ts.
  */
 
 import {
@@ -94,7 +96,7 @@ async function executeSync(
 
 // Register the command
 registerCommand({
-  name: "wakeup",
+  name: "connector-sync",
   description: "Sync data with connectors",
   args: [
     {

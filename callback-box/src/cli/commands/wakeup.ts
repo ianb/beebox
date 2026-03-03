@@ -348,7 +348,7 @@ async function runTriageFeedback(boxRoot: string): Promise<number> {
  * guide-revision job if any are found.
  * Returns the job file path, or null if no job was needed.
  */
-async function createGuideRevisionJobIfNeeded(boxRoot: string): Promise<string | null> {
+export async function createGuideRevisionJobIfNeeded(boxRoot: string): Promise<string | null> {
   const unprocessed = await getUnprocessedBriefs(boxRoot);
   if (unprocessed.length === 0) return null;
 
@@ -420,7 +420,7 @@ async function createGuideRevisionJobIfNeeded(boxRoot: string): Promise<string |
  * Scan inbox for items not referenced by any pending job and create
  * intake jobs for them. Returns the number of items covered.
  */
-async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<number> {
+export async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<number> {
   // Subdirectories with their own pipelines — skip these
   const EXCLUDED_SUBDIRS = ["news", "feedback", "editions"];
 

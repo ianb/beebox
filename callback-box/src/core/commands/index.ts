@@ -6,7 +6,7 @@
 
 // Import commands to register them
 import "./create.js";
-import "./wakeup.js";
+import "./connector-sync.js";
 import "./answer.js";
 import "./trash.js";
 import "./move.js";

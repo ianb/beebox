@@ -28,6 +28,7 @@ These modules have been converted from traditional tests or newly written as doc
 - `src/core/procedure/engine.ts` — Full execution lifecycle: shell steps, precheck skip/fail, validation severity, dry run, step filtering, agent mock (via DI), fallback commits, error cases
 - **Service fakes** — Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Feed Fetcher, call-log
 - **Connector tests** — Telegram (polling, webhook processing, outbound send), Raindrop (pull, push, two-way sync), RSS (pull, dedup, Atom, error handling)
+- **Wakeup helpers** — `createIntakeJobsForUnjobbed()` (unjobbed detection, dedup, priority separation, excluded subdirs), `createGuideRevisionJobIfNeeded()` (feedback detection, dedup, guide path inclusion)
 
 ### Covered by traditional tests
 
@@ -41,7 +42,8 @@ These modules have been converted from traditional tests or newly written as doc
 
 These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest helpers:
 
-- **Route: `actions.ts`** remaining — Wakeup (runs full cycle), voice-memo (multipart upload)
+- **Route: `actions.ts`** remaining — Wakeup route (delegates to `connector-sync` command), voice-memo (multipart upload). The wakeup route itself is thin wiring; the heavy logic is in `cb wakeup` CLI phases, of which intake-jobs and guide-revision are now tested.
+- **Wakeup orchestration** — `runPreprocessors()` needs loader/preaction system (which calls OpenAI for transcription). `runTriageFeedback()` needs agent injection. Neither is testable without service work. The orchestration itself is linear (run phases A through H in order) — not high-value to test as a unit.
 - **Route: `auth.ts`** — Needs `GoogleAuthService` injection into the route (currently uses `new OAuth2Client()` and `process.env` directly). Service fake exists but route not yet wired.
 
 ### Need new helpers or design work
@@ -224,3 +226,4 @@ Rendered output includes markup (`data-source` attributes) indicating where each
 - **2026-03-03:** Remaining service definitions: Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Google Auth, Capture Relay. All with domain-specific fakes and doctests. Services threaded through calendar, pairing, and chat routes. Telegram and Raindrop connectors wired to accept injected services. Total: 627 tests across 36 files.
 - **2026-03-03:** Calendar route tests (3/3 endpoints) and connector-level tests for Telegram and Raindrop. Connectors tested using `makeTmpBox({ git: true })` + service fakes, exercising full sync cycles (polling, webhook processing, outbound send, two-way bookmark sync). Dropbox relay deprioritized — being removed in favor of XState architecture.
 - **2026-03-03:** RSS connector service injection + tests. Created `FeedFetcherService` with fake that returns canned XML. RSS connector wired to accept injected fetcher. 4 test sections: pull (RSS 2.0), deduplication, Atom feed support, fetch error handling. Extracted `executeCommandStreaming()` from the streaming execute route — testable abstraction that emits `OutputLine` messages via callback. commands.ts now 5/5 (100%). Total: 699 tests across 41 files.
+- **2026-03-03:** Renamed `core/commands/wakeup.ts` → `connector-sync.ts` (command name `connector-sync`) to distinguish from the full `cb wakeup` CLI orchestrator. Exported and tested wakeup helper functions: `createIntakeJobsForUnjobbed()` (unjobbed detection, dedup via job refs, priority separation, excluded subdirs) and `createGuideRevisionJobIfNeeded()` (feedback detection, dedup, guide path). `runPreprocessors` and `runTriageFeedback` left untested — need service injection for loader/preactions and agent runner respectively. Total: 718 tests across 42 files.

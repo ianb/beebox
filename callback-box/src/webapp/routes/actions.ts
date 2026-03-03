@@ -70,7 +70,7 @@ export async function registerActionRoutes(
     };
 
     try {
-      const result = await runCommand({ name: "wakeup", args: { dryRun }, ctx });
+      const result = await runCommand({ name: "connector-sync", args: { dryRun }, ctx });
 
       // Broadcast completion
       broadcastEvent("wakeup-complete", {
