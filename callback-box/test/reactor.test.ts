@@ -46,7 +46,7 @@ test("createNewsJobTemplate generates valid XML", async (t) => {
     ],
   });
 
-  t.check(template, `<news-job created="___" source="rss-connector">
+  t.check(template, `<news-job created="«date»" source="rss-connector">
   <description>3 new items from RSS feeds</description>
   <item ref="box/inbox/news/item1.news-item.card" />
   <item ref="box/inbox/news/item2.news-item.card" />
@@ -62,7 +62,7 @@ test("createNewsJobTemplate escapes special characters", async (t) => {
     items: ['path/with"quotes.card'],
   });
 
-  t.check(template, `<news-job created="___" source="test">
+  t.check(template, `<news-job created="«date»" source="test">
   <description>Items with &lt;special&gt; &amp; chars</description>
   <item ref="path/with&quot;quotes.card" />
 </news-job>
@@ -141,7 +141,7 @@ test("createIntakeJobTemplate generates valid XML", async (t) => {
     ],
   });
 
-  t.check(template, `<intake-job status="pending" created="___" source="capture-connector" priority="normal">
+  t.check(template, `<intake-job status="pending" created="«date»" source="capture-connector" priority="normal">
   <description>Triage 2 new capture sessions</description>
   <item ref="box/inbox/capture-1/session.capture-session.card" />
   <item ref="box/inbox/capture-2/session.capture-session.card" />
@@ -157,7 +157,7 @@ test("createIntakeJobTemplate supports low priority", async (t) => {
     priority: "low",
   });
 
-  t.check(template, `<intake-job status="pending" created="___" source="raindrop-connector" priority="low">
+  t.check(template, `<intake-job status="pending" created="«date»" source="raindrop-connector" priority="low">
   <description>Triage bookmarks</description>
   <item ref="box/inbox/bookmark.bookmark.card" />
 </intake-job>
@@ -171,7 +171,7 @@ test("createIntakeJobTemplate escapes special characters", async (t) => {
     items: ['path/with"quotes.card'],
   });
 
-  t.check(template, `<intake-job status="pending" created="___" source="test" priority="normal">
+  t.check(template, `<intake-job status="pending" created="«date»" source="test" priority="normal">
   <description>Items with &lt;special&gt; &amp; chars</description>
   <item ref="path/with&quot;quotes.card" />
 </intake-job>
@@ -213,7 +213,7 @@ test("createCalendarReviewJobTemplate generates valid XML for new events", async
     ],
   });
 
-  t.check(template, `<calendar-review-job status="pending" created="___" source="google-calendar" priority="normal">
+  t.check(template, `<calendar-review-job status="pending" created="«date»" source="google-calendar" priority="normal">
   <description>2 calendar changes to review</description>
   <change action="new" ref="store/calendar/2026-02-25_abc.ics">Dentist appointment</change>
   <change action="updated" ref="store/calendar/2026-02-22_def.ics">Standup — time changed</change>
@@ -231,7 +231,7 @@ test("createCalendarReviewJobTemplate handles deleted events with ICS", async (t
     ],
   });
 
-  t.check(template, `<calendar-review-job status="pending" created="___" source="google-calendar" priority="normal">
+  t.check(template, `<calendar-review-job status="pending" created="«date»" source="google-calendar" priority="normal">
   <description>1 deletion</description>
   <change action="deleted">
     Cancelled meeting
@@ -253,7 +253,7 @@ test("createCalendarReviewJobTemplate supports priority", async (t) => {
     priority: "low",
   });
 
-  t.check(template, `<calendar-review-job status="pending" created="___" source="google-calendar" priority="low">
+  t.check(template, `<calendar-review-job status="pending" created="«date»" source="google-calendar" priority="low">
   <description>test</description>
   <change action="new">test</change>
 </calendar-review-job>
@@ -276,7 +276,7 @@ test("createOrAppendIntakeJob creates a new job card", async (t) => {
     t.ok(relPath.endsWith(".intake.job.card"), "should have intake.job.card extension");
 
     const content = await readFile(join(tmpDir, relPath), "utf-8");
-    t.check(content, `<intake-job status="pending" created="___" source="test-connector" priority="normal">
+    t.check(content, `<intake-job status="pending" created="«date»" source="test-connector" priority="normal">
   <description>Triage 1 item</description>
   <item ref="box/inbox/item1.memo.card" />
 </intake-job>
@@ -308,7 +308,7 @@ test("createOrAppendIntakeJob appends to existing job from same source", async (
     t.equal(relPath1, relPath2, "should return same path (appended, not new)");
 
     const content = await readFile(join(tmpDir, relPath2), "utf-8");
-    t.check(content, `<intake-job status="pending" created="___" source="test-connector" priority="normal">
+    t.check(content, `<intake-job status="pending" created="«date»" source="test-connector" priority="normal">
   <description>Triage 2 items</description>
   <item ref="box/inbox/item1.memo.card" />
   <item ref="box/inbox/item2.memo.card" />

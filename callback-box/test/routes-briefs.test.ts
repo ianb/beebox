@@ -37,7 +37,7 @@ test("GET /api/briefs returns empty when no briefs exist", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/briefs` });
-    t.check(res, `200\n___"briefs": []___`);
+    t.check(res, `200\n«*»"briefs": []«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -58,10 +58,10 @@ test("GET /api/briefs lists unread briefs from box/output/briefs/", async (t) =>
     const body = res.json();
     t.equal(body.briefs.length, 1);
     // field order: path, relativePath, title, date, byline, read, readReason
-    t.check(body.briefs[0], `{___
+    t.check(body.briefs[0], `{«*»
   "relativePath": "box/output/briefs/2026-03-01_test.news-brief.card",
   "title": "Test Brief",
-  "date": "2026-03-01",___
+  "date": "2026-03-01",«*»
   "read": false
 }`);
   } finally {
@@ -136,13 +136,13 @@ test("GET /api/brief/:path loads a brief", async (t) => {
   "title": "Test Brief",
   "date": "2026-03-01",
   "byline": "A test brief for route testing",
-  "content": {___
+  "content": {«*»
     "sections": [
-      {___
-        "heading": "First Section"___
+      {«*»
+        "heading": "First Section"«*»
       }
-    ]___
-  }___
+    ]«*»
+  }«*»
 }`);
   } finally {
     await ctx.cleanup();
@@ -177,12 +177,11 @@ test("POST /api/brief/mark-read moves brief to archive", async (t) => {
       url: `${BASE}/api/brief/mark-read`,
       payload: { briefPath: "box/output/briefs/2026-03-01_test.news-brief.card" },
     });
-    t.check(res, `200\n___"success": true,\n  "newPath": "___store/archive/briefs/___"___`);
+    const ext = t.check(res, `200\n«*»"success": true,\n  "newPath": "«newPath»"«*»`);
 
-    // Verify the file actually moved
-    const body = res.json();
-    const archivedContent = await readFile(join(ctx.boxRoot, body.newPath), "utf-8");
-    t.check(archivedContent, `___read-at="___" read-reason="user"___`);
+    // Verify the file actually moved — newPath extracted from response
+    const archivedContent = await readFile(join(ctx.boxRoot, ext.newPath), "utf-8");
+    t.check(archivedContent, `«*»read-at="«date»" read-reason="user"«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -246,12 +245,11 @@ test("POST /api/brief/complete-reading applies feedback and archives", async (t)
         itemFeedback: [{ id: "s1", feedback: "thumbs-up" }],
       },
     });
-    t.check(res, `200\n___"success": true,\n  "newPath": "___store/archive/briefs/___"___`);
+    const ext = t.check(res, `200\n«*»"success": true,\n  "newPath": "«newPath»"«*»`);
 
-    // Verify feedback attributes were written
-    const body = res.json();
-    const content = await readFile(join(ctx.boxRoot, body.newPath), "utf-8");
-    t.check(content, `___overall-rating="great"___read-reason="user"___selected-reactions="interesting-topic"___user-feedback="thumbs-up"___`);
+    // Verify feedback attributes were written — newPath extracted from response
+    const content = await readFile(join(ctx.boxRoot, ext.newPath), "utf-8");
+    t.check(content, `«*»overall-rating="great"«*»read-reason="user"«*»selected-reactions="interesting-topic"«*»user-feedback="thumbs-up"«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -292,7 +290,7 @@ test("POST /api/brief/feedback creates feedback card and commits", async (t) => 
         comment: "Great section!",
       },
     });
-    t.check(res, `200\n___"success": true___"isVoice": false___`);
+    t.check(res, `200\n«*»"success": true«*»"isVoice": false«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -304,7 +302,7 @@ test("GET /api/news-guide/reactions returns empty when no guide exists", async (
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/news-guide/reactions` });
-    t.check(res, `200\n___"reactions": []___`);
+    t.check(res, `200\n«*»"reactions": []«*»`);
   } finally {
     await ctx.cleanup();
   }

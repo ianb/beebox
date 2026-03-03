@@ -19,7 +19,7 @@ test("GET /api/admin/box-config returns defaults when no config exists", async (
     t.check(res, `200
 {
   "boxSlug": "${TEST_SLUG}",
-  "allowedEmails": []___
+  "allowedEmails": []«*»
 }`);
   } finally {
     await ctx.cleanup();

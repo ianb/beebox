@@ -31,7 +31,7 @@ test("GET /api/inbox returns empty array for empty inbox", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/inbox` });
-    t.check(res, `200\n___"items": []___`);
+    t.check(res, `200\n«*»"items": []«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -71,9 +71,9 @@ test("GET /api/card/* loads a card", async (t) => {
 {
   "path": "box/inbox/hello.memo.card",
   "tagName": "memo",
-  ___
+  «*»
   "element": {
-    "tagName": "memo"___
+    "tagName": "memo"«*»
   }
 }`);
   } finally {
@@ -108,7 +108,7 @@ test("PATCH /api/card/* applies set-attr op", async (t) => {
       },
     });
     // field order: path, tagName, status, version, xml, element
-    t.check(res, `200\n___"status": "processed"___"element":___"status": "processed"___`);
+    t.check(res, `200\n«*»"status": "processed"«*»"element":«*»"status": "processed"«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -128,12 +128,12 @@ test("GET /api/browse/* lists directory contents", async (t) => {
     t.check(res, `200
 {
   "path": "box/inbox",
-  ___
+  «*»
   "cards": [
     {
       "relativePath": "box/inbox/browse-test.memo.card",
-      ___
-      "tagName": "memo"___
+      «*»
+      "tagName": "memo"«*»
     }
   ]
 }`);
@@ -178,7 +178,7 @@ test("debug-log POST/GET/DELETE cycle", async (t) => {
 
     // GET entries — field order: ts, level, message
     const getRes = await ctx.server.inject({ method: "GET", url: `${BASE}/api/debug-log` });
-    t.check(getRes, `200\n___"level": "info",\n      "message": "test message"___`);
+    t.check(getRes, `200\n«*»"level": "info",\n      "message": "test message"«*»`);
 
     // DELETE entries
     const delRes = await ctx.server.inject({ method: "DELETE", url: `${BASE}/api/debug-log` });

@@ -16,7 +16,7 @@ test("GET /api/scheduler/log returns empty for no log file", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/scheduler/log` });
-    t.check(res, `200\n___"entries": []___`);
+    t.check(res, `200\n«*»"entries": []«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -70,7 +70,7 @@ test("GET /api/schedules returns empty when no schedules dir", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/schedules` });
-    t.check(res, `200\n___"schedules": []___`);
+    t.check(res, `200\n«*»"schedules": []«*»`);
   } finally {
     await ctx.cleanup();
   }
@@ -98,9 +98,9 @@ test("GET /api/schedules lists scheduled script cards", async (t) => {
     {
       "name": "test-echo",
       "description": "Echo test",
-      ___
+      «*»
       "scheduleType": "cron",
-      "enabled": true___
+      "enabled": true«*»
     }
   ]
 }`);

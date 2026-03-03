@@ -37,7 +37,7 @@ test("createMemoTemplate generates valid XML structure", async (t) => {
   const template = createMemoTemplate("Test content", "test-source");
 
   t.check(template, `<memo status="new">
-  <created>___</created>
+  <created>«date»</created>
   <content>Test content</content>
   <source>test-source</source>
 </memo>
@@ -47,7 +47,7 @@ test("createMemoTemplate generates valid XML structure", async (t) => {
 test("createMemoTemplate escapes special characters", async (t) => {
   const template = createMemoTemplate("Test <content> & more");
   t.check(template, `<memo status="new">
-  <created>___</created>
+  <created>«date»</created>
   <content>Test &lt;content&gt; &amp; more</content>
 </memo>
 `);
@@ -56,7 +56,7 @@ test("createMemoTemplate escapes special characters", async (t) => {
 test("createMemoTemplate works without source", async (t) => {
   const template = createMemoTemplate("Just content");
   t.check(template, `<memo status="new">
-  <created>___</created>
+  <created>«date»</created>
   <content>Just content</content>
 </memo>
 `);
