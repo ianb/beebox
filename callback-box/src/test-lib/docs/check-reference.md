@@ -139,18 +139,6 @@ t.check(logLine, "commit «hash» by «author»");  // named captures
 
 When a name matches a known type (`date`, `uuid`, `int`, `number`, `string`), the type's regex is used. Unknown names match anything — `«hash»` is equivalent to `«hash=*»`.
 
-### Legacy `___` wildcards
-
-The triple-underscore syntax still works:
-
-```ts
-t.check(timestamp, "2026-___");              // matches any suffix
-t.check(logLine, "commit ___ by ___");       // multiple wildcards
-t.check(logEntry, "___date___ commit ___hash___: initial commit");
-```
-
-Both `___` and `___name___` match any sequence of characters including newlines.
-
 ## Extractions
 
 All wildcards capture the text they match. `check()` and `t.check()` return an extractions object with positional and named access:

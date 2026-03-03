@@ -83,23 +83,15 @@ interface WildcardToken {
 }
 
 /**
- * Parse a wildcard token's inner content (between «» or from ___ syntax).
+ * Parse a wildcard token's inner content (between «»).
  *
  * Syntax:  «*»           → anything, no name
  *          «date»        → known type, name defaults to "date"
  *          «hash»        → unknown type → anything, named "hash"
  *          «start=date»  → named "start", typed as date
  *          «val=*»       → named "val", anything
- *
- * Legacy:  ___           → anything, no name
- *          ___name___    → same as «name»
  */
 function parseWildcardToken(content: string): WildcardToken {
-  // Legacy bare ___
-  if (content === "") {
-    return { pattern: "[\\s\\S]*", name: null };
-  }
-
   // Check for name=type syntax
   const eqIdx = content.indexOf("=");
   if (eqIdx !== -1) {
@@ -133,19 +125,18 @@ interface MatchResult {
  * Match actual text against an expected pattern that may contain wildcards.
  *
  * Guillemet wildcards: «*», «date», «name=type», etc.
- * Legacy wildcards: ___, ___name___
  *
  * Returns a MatchResult with extractions on success.
  */
 function matchWithWildcards(actual: string, expected: string): MatchResult {
   // Fast path: no wildcards
-  if (!expected.includes("___") && !expected.includes("«")) {
+  if (!expected.includes("«")) {
     if (actual === expected) return { matched: true, diff: null, extractions: emptyExtractions() };
     return { matched: false, diff: buildDiff(actual, expected), extractions: emptyExtractions() };
   }
 
-  // Split expected on wildcard tokens (guillemets and legacy ___)
-  const parts = expected.split(/(«[^»]*»|___\w+___|___)/);
+  // Split expected on guillemet wildcard tokens
+  const parts = expected.split(/(«[^»]*»)/);
   const tokens: WildcardToken[] = [];
 
   let pattern = "^";
@@ -153,15 +144,6 @@ function matchWithWildcards(actual: string, expected: string): MatchResult {
     // Guillemet wildcard: «content»
     if (part.startsWith("«") && part.endsWith("»")) {
       const content = part.slice(1, -1);
-      const token = parseWildcardToken(content);
-      tokens.push(token);
-      pattern += `(${token.pattern})`;
-    }
-    // Legacy ___ or ___name___
-    else if (/^___(\w+___)?$/.test(part)) {
-      // Extract name from ___name___ or null for bare ___
-      const innerMatch = part.match(/^___(\w+)___$/);
-      const content = innerMatch ? innerMatch[1]! : "";
       const token = parseWildcardToken(content);
       tokens.push(token);
       pattern += `(${token.pattern})`;
@@ -272,7 +254,7 @@ export interface CheckOptions {
  *  - A function — called, return value serialized and compared
  *    (if the function returns a Promise, that's awaited too)
  *
- * `expected` is always a string, and may contain `___` wildcards.
+ * `expected` is always a string, and may contain `«»` wildcards.
  *
  * Throws a CheckError on mismatch with a visual diff.
  *
@@ -299,7 +281,7 @@ export interface CheckOptions {
  *
  * @example
  * // Wildcards
- * check(logEntry, `[___date___] commit ___hash___: initial commit`);
+ * check(logEntry, `[«date»] commit «hash»: initial commit`);
  */
 export function check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions> {
   if (typeof actual === "function") {

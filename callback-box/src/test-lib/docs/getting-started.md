@@ -53,11 +53,11 @@ test("creating a card modifies git status", async (t) => {
 
 ## Use wildcards for volatile values
 
-`___` matches any text. Named wildcards like `___hash___` are self-documenting:
+`«»` wildcards match variable text. Named and typed wildcards are self-documenting:
 
 ```ts
-t.check(commitOutput, "___hash___ initial commit");
-t.check(logLine, "[___date___] ___author___: created card");
+t.check(commitOutput, "«hash» initial commit");
+t.check(logLine, "[«date»] «author»: created card");
 ```
 
 ## When to use check() vs tap assertions

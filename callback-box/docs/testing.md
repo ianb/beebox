@@ -76,6 +76,13 @@ await isValidBox(tmp)
 | `test/routes-admin.doctest.md` | Box config admin API |
 | `test/routes-api.doctest.md` | Core data API (status, inbox, cards, browse, news, debug-log, activity) |
 | `test/routes-briefs.doctest.md` | News brief reading workflow API |
+| `test/routes-commands.doctest.md` | Command listing, details, sync execution, error cases |
+| `test/routes-history.doctest.md` | Git commit log, diffs, session log |
+| `test/routes-actions.doctest.md` | Answer question, create card, validation |
+| `test/parse-tags.doctest.md` | XML-like tag parsing (frontend) |
+| `test/patmatch.doctest.md` | Keyword pattern matching (frontend) |
+| `test/speech-parsing.doctest.md` | Speech tag extraction for TTS (frontend) |
+| `test/speech-keywords.doctest.md` | Voice command keyword detection (frontend) |
 
 ## 2. Traditional TAP Tests
 

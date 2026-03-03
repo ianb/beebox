@@ -62,23 +62,23 @@ test("multi-line diff shows line-by-line", async (t) => {
 
 // ── Wildcards ──
 
-test("___ wildcard matches any text", async (t) => {
-  t.check("hello world 123", "hello ___ 123");
-  t.check("hello  123", "hello ___ 123"); // empty match
+test("«*» wildcard matches any text", async (t) => {
+  t.check("hello world 123", "hello «*» 123");
+  t.check("hello  123", "hello «*» 123"); // empty match
 });
 
-test("named wildcard ___foo___ matches any text", async (t) => {
-  t.check("2026-03-02T20:00:00Z commit abc123: initial", "___date___ commit ___hash___: initial");
+test("named wildcard matches any text", async (t) => {
+  t.check("2026-03-02T20:00:00Z commit abc123: initial", "«date» commit «hash»: initial");
 });
 
 test("wildcard mismatch still fails", async (t) => {
-  const r = inspect("hello world", "goodbye ___");
+  const r = inspect("hello world", "goodbye «*»");
   t.equal((r as { pass: boolean }).pass, false);
 });
 
 test("multiple wildcards in sequence", async (t) => {
-  t.check("start MIDDLE end", "start ___ end");
-  t.check("a:b:c", "a___c");
+  t.check("start MIDDLE end", "start «*» end");
+  t.check("a:b:c", "a«*»c");
 });
 
 // ── Serialization ──
@@ -219,9 +219,9 @@ test("inspect shows extra lines", async (t) => {
 });
 
 test("inspect with wildcards shows pattern on mismatch", async (t) => {
-  const r = inspect("hello world", "goodbye ___");
+  const r = inspect("hello world", "goodbye «*»");
   t.equal((r as { pass: boolean }).pass, false);
-  t.check((r as { diff: string }).diff, `expected: "goodbye ___"
+  t.check((r as { diff: string }).diff, `expected: "goodbye «*»"
   actual: "hello world"
   ~~~~~~~~~~~^`);
 });
@@ -368,31 +368,6 @@ test("«count=int» captures integer with custom name", async (t) => {
   const ext = t.check("items: 5, pages: 2", "items: «items=int», pages: «pages=int»");
   t.equal(ext.items, "5");
   t.equal(ext.pages, "2");
-});
-
-// ── Backward compat with ___ ──
-
-test("___ still works as «*»", async (t) => {
-  t.check("hello world", "hello ___");
-});
-
-test("___name___ still works and extracts", async (t) => {
-  const ext = t.check("commit abc123", "commit ___hash___");
-  t.equal(ext.hash, "abc123");
-});
-
-test("___ returns positional extractions", async (t) => {
-  const ext = t.check("a X b Y c", "a ___ b ___ c");
-  t.equal(ext[0], "X");
-  t.equal(ext[1], "Y");
-});
-
-// ── Mixed guillemet and ___ ──
-
-test("guillemets and ___ can be mixed", async (t) => {
-  const ext = t.check("2026-03-02 hello abc123", "«date» ___ ___hash___");
-  t.equal(ext.date, "2026-03-02");
-  t.equal(ext.hash, "abc123");
 });
 
 // ── Async extractions ──
