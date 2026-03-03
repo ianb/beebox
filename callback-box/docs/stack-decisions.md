@@ -1016,7 +1016,7 @@ Alternative: `rehype-prism` uses Prism instead of highlight.js. Either works —
 | **html-entities** | Regex-based HTML stripping and entity decoding | `src/connectors/rss.ts` (lines 150-162) |
 | **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | `src/cli/lib/time.ts`, scattered across connectors and CLI |
 | **ky** | Bare `fetch()` with no retry or error normalization | `src/cli/lib/fetch.ts`, connector fetch calls |
-| **sanitize-filename** | Duplicate hand-rolled `safeFilename()` functions | `src/connectors/rss.ts`, `src/connectors/gmail.ts` |
+| **sanitize-filename** ✅ | Four duplicate `safeFilename()` → consolidated into `chat-utils.ts` | `src/connectors/rss.ts`, `src/connectors/raindrop.ts`, `src/connectors/dropbox.ts`, `src/connectors/chat-utils.ts` |
 | **proper-lockfile** | Two separate file-locking implementations | `src/cli/lib/lock.ts`, `src/core/schedule-state.ts` |
 | **execa** ✅ | Duplicate `execFile` wrappers with manual error handling | `src/core/procedure/shell.ts`, `src/cli/lib/git.ts` |
 

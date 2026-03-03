@@ -24,6 +24,7 @@ import { createNewsJobTemplate } from "../schemas/news-job.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 import { boxFetch } from "../cli/lib/fetch.js";
+import { safeFilename } from "./chat-utils.js";
 
 interface FeedConfig {
   url: string;
@@ -161,15 +162,7 @@ function stripHtml(html: string): string {
     .slice(0, 500); // Limit summary length
 }
 
-/**
- * Generate a safe filename from a title.
- */
-function safeFilename(title: string): string {
-  return title
-    .replace(/[^\d\sA-Za-z-]/g, "")
-    .replace(/\s+/g, "_")
-    .slice(0, 50);
-}
+
 
 function buildRssCommitMessage(feedNotes: Map<string, string[]>): string {
   let total = 0;

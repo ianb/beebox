@@ -24,6 +24,7 @@ import { createBookmarkTemplate } from "../schemas/bookmark.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { createOrAppendIntakeJob } from "./intake-utils.js";
 import { saveTransientState } from "./transient-state.js";
+import { safeFilename } from "./chat-utils.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -226,14 +227,7 @@ function computeFieldDiff(
   return diff;
 }
 
-function safeFilename(text: string): string {
-  return (
-    text
-      .replace(/[^\d\sA-Za-z-]/g, "")
-      .replace(/\s+/g, "_")
-      .slice(0, 50) || "Bookmark"
-  );
-}
+
 
 /** Extract sync-relevant fields from a parsed bookmark card. */
 function extractFieldsFromCard(root: ElementNode): BookmarkFields {
@@ -626,7 +620,7 @@ class RaindropConnector implements Connector {
           const newContent = createBookmarkTemplate(templateOpts);
 
           // Rename file to include raindrop ID
-          const newFilename = `${safeFilename(fields.title)}_${newId}.bookmark.card`;
+          const newFilename = `${safeFilename(fields.title, "Bookmark")}_${newId}.bookmark.card`;
           const newPath = path.join(dir, newFilename);
           await fs.writeFile(newPath, newContent);
           if (newPath !== cardPath) {
@@ -760,7 +754,7 @@ class RaindropConnector implements Connector {
 
       if (!entry) {
         // New remote bookmark — create local card
-        const filename = `${safeFilename(rb.title)}_${id}.bookmark.card`;
+        const filename = `${safeFilename(rb.title, "Bookmark")}_${id}.bookmark.card`;
         const cardPath = path.join(dir, filename);
         const relPath = path.relative(this.boxRoot, cardPath);
 
@@ -778,7 +772,7 @@ class RaindropConnector implements Connector {
         pullNotes.push({ action: "new", title: rb.title, collection: collName });
       } else if (rb.lastUpdate > (entry.raindropUpdated || "")) {
         // Remote changed since last sync — overwrite local card
-        const filename = `${safeFilename(rb.title)}_${id}.bookmark.card`;
+        const filename = `${safeFilename(rb.title, "Bookmark")}_${id}.bookmark.card`;
         const cardPath = path.join(dir, filename);
         const relPath = path.relative(this.boxRoot, cardPath);
 

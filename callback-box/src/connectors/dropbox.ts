@@ -36,6 +36,7 @@ import { createRecordTemplate } from "../schemas/record.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { createOrAppendIntakeJob } from "./intake-utils.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
+import { safeFilename } from "./chat-utils.js";
 
 export interface DropboxConfig {
   workerUrl: string;
@@ -73,13 +74,7 @@ function parseSavePageMessage(data: unknown): SavePageMessage | null {
   return null;
 }
 
-function safeFilename(text: string): string {
-  return text
-    .replace(/[^\d\sA-Za-z-]/g, "")
-    .replace(/\s+/g, "_")
-    .slice(0, 50)
-    || "Memo";
-}
+
 
 const TYPE_LABELS: Record<string, string> = {
   record: "Saved page",
@@ -180,7 +175,7 @@ class DropboxConnector implements Connector {
           await fs.mkdir(dir, { recursive: true });
           const extMap = { "news-item": "news-item.card", memo: "memo.card", record: "record.card" } as const;
           const ext = extMap[result.type];
-          const baseName = `${safeFilename(label)}_${timestamp}`;
+          const baseName = `${safeFilename(label, "Memo")}_${timestamp}`;
           const filename = `${baseName}.${ext}`;
           const cardPath = path.join(dir, filename);
 

@@ -22,12 +22,12 @@ import { getBoxTimeISO } from "../cli/lib/time.js";
  * Safe filename: strip non-alphanumeric (except spaces and hyphens),
  * replace spaces with underscores, max 50 chars.
  */
-export function safeFilename(text: string): string {
+export function safeFilename(text: string, fallback = "untitled"): string {
   return (
     text
       .replace(/[^\d\sA-Za-z-]/g, "")
       .replace(/\s+/g, "_")
-      .slice(0, 50) || "chat"
+      .slice(0, 50) || fallback
   );
 }
 
