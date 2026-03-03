@@ -204,6 +204,15 @@ When you create a new document in `docs/`:
 
 Keep docs focused. One topic per document. Cross-reference rather than duplicate.
 
+## Testing
+
+`npm test` runs tap. Two kinds of tests in `test/`:
+
+- **`.doctest.md`** — Executable docs for pure functions. Syntax in `.claude/rules/doctest.md`.
+- **`.test.ts`** — Traditional tests for anything needing server/filesystem/complex setup.
+
+Use `t.check(actual, expected)` for string comparisons with wildcards (`«date»`, `«*»`, etc.). Ref: `src/test-lib/docs/check-reference.md`.
+
 @THINKING_CLAUDE.md
 
 @CONVENTIONS.md
