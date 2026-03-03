@@ -190,3 +190,44 @@ step2()
   const testCount = (source.match(/\btest\(/g) || []).length;
   t.equal(testCount, 1, "should have one test function");
 });
+
+test("generateTestSource: print() is available per test", async (t) => {
+  const md = `\`\`\`
+print("hello");
+print("world");
+42
+=> hello
+world
+42
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  // Each test should get its own __prints and print
+  t.ok(source.includes("const __prints = []"), "should declare __prints");
+  t.ok(source.includes("const print = "), "should declare print");
+  // Check should use __withPrints
+  t.ok(source.includes("__withPrints(__prints,"), "should drain prints in check");
+});
+
+test("generateTestSource: separate tests get separate print scopes", async (t) => {
+  const md = `\`\`\`
+print("first");
+1
+=> first
+1
+\`\`\`
+
+\`\`\`
+print("second");
+2
+=> second
+2
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  // Two tests, each with their own __prints
+  const printDecls = (source.match(/const __prints = \[\]/g) || []).length;
+  t.equal(printDecls, 2, "each test should have its own __prints");
+});

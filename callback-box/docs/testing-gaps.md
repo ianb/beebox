@@ -23,6 +23,7 @@ These modules have been converted from traditional tests or newly written as doc
 - `src/frontend/src/lib/speech-parsing.ts` — Speech tag extraction for TTS
 - `src/frontend/src/lib/speech-keywords.ts` — Voice command keyword detection
 - **Route tests** — scheduler, admin, core API, briefs, commands, history, actions
+- `src/core/procedure/engine.ts` — Full execution lifecycle: shell steps, precheck skip/fail, validation severity, dry run, step filtering, agent mock (via DI), fallback commits, error cases
 
 ### Covered by traditional tests
 
@@ -47,7 +48,7 @@ These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest hel
 ### Need new helpers or design work
 
 - **Connectors** (`src/connectors/rss.ts`, `raindrop.ts`, `google-calendar.ts`, `gmail.ts`, `capture.ts`) — Need dependency injection for HTTP calls. Preferred approach: inject at the service level (pass a fetch function or API client), not intercept at the HTTP level. Some cases (like RSS where you're testing "fetch this URL and parse the result") make sense to test at the HTTP level. Build helpers as needed.
-- **Procedure engine** (`src/core/procedure/engine.ts`) — Step-parsing logic is doctest-able. The storytelling format — showing a procedure running step by step with prose explaining what's happening — is a natural fit. Statefulness between steps is the main challenge; `continue` blocks help.
+- **Procedure engine** (`src/core/procedure/engine.ts`) — DONE. Shell steps, precheck, validation, and agent mocking all covered. Agent runner injected via `options.runAgent` parameter. See `test/procedure-engine.doctest.md`.
 - **Scheduler** (`src/core/scheduler.ts`) — Orchestrates connectors, wakeup, and tick. Important to test but needs design discussion about what to inject and at what level. The individual pieces it calls are already tested; the scheduler's value is in the orchestration logic.
 - **WebSocket/SSE routes** — Would benefit from abstractions that let us test the underlying logic without actual WebSocket connections. Don't jump into this yet; needs design discussion about what the testable abstraction looks like.
 - **Admin routes** remaining (`admin.ts`) — Telegram/Claude Code endpoints need service injection.
@@ -187,3 +188,5 @@ Rendered output includes markup (`data-source` attributes) indicating where each
 - **2026-03-03:** Added `cleanup` block type to doctests (uses `t.teardown()`). Converted all route tests, reactor/intake-utils tests, and schema registry tests from `.test.ts` to `.doctest.md`. Created shared helpers: `doctest-helpers.ts` (filesystem) and `doctest-server.ts` (Fastify inject). Only `check.test.ts` and `doctest.test.ts` remain as traditional tests (circular dependency).
 - **2026-03-03:** Module assessment completed. Identified frontend pure functions, remaining route endpoints, and CLI time/git utils as next targets. Dependency injection preferred over HTTP stubs — inject at the service level, not the network level. Agent invocation isn't testable by automated means (success criteria require agent judgment). Chat sessions worth exploring but need abstraction work first. CLI commands should stay thin so we test their pieces, not the commands themselves.
 - **2026-03-03:** Added 7 new doctest files: 4 frontend pure functions (parseTags, patmatch, speech-parsing, speech-keywords) and 3 route files (commands, history, actions). Frontend files import directly from `src/frontend/src/lib/` via tsx — works fine since they're pure TypeScript with no browser dependencies. Route coverage up to 55% (31/56 endpoints). Total: 471 tests across 25 files.
+- **2026-03-03:** Added `print()` to doctests — scope-local function per test, accumulates lines that drain into the next `=>` assertion. Enables narrative/storytelling style tests. Also added `print.doctest.md` as a meta-test.
+- **2026-03-03:** Procedure engine tested via doctests with agent DI. Added `options.runAgent` to `ProcedureOptions` for injecting a mock agent runner. 12 tests cover: shell execution, precheck skip/fail, validation warn/abort, dry run, step filtering, agent context verification (precheck pass-output, directive, model mapping), fallback commits. Total: 496 tests across 28 files.

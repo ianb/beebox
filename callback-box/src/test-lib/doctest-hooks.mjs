@@ -214,7 +214,7 @@ function emitExamples(out, examples, indent = "  ") {
       for (const line of setup) {
         out.push(`${indent}${line}`);
       }
-      out.push(`${indent}await t.check(__trim(${expr}), ${JSON.stringify(ex.expected)});`);
+      out.push(`${indent}await t.check(__withPrints(__prints, ${expr}), ${JSON.stringify(ex.expected)});`);
     } else {
       // No assertion — just run the statements
       for (const line of ex.expression.split("\n")) {
@@ -250,6 +250,17 @@ export function generateTestSource(markdown, filePath) {
   // Trim trailing newlines from string results — doctest expected values
   // can't express trailing newlines since code blocks naturally trim them.
   out.push("function __trim(v) { return typeof v === 'string' ? v.replace(/\\n+$/, '') : v; }");
+  // Drain accumulated print() lines and combine with expression result.
+  // When no prints accumulated, falls through to __trim (same as before).
+  out.push("function __withPrints(prints, value) {");
+  out.push("  if (prints.length === 0) return __trim(value);");
+  out.push("  const lines = prints.splice(0);");
+  out.push("  if (value !== undefined && value !== null) {");
+  out.push("    if (typeof value === 'string') { lines.push(value.replace(/\\n+$/, '')); }");
+  out.push("    else { try { lines.push(JSON.stringify(value, null, 2)); } catch { lines.push(String(value)); } }");
+  out.push("  }");
+  out.push("  return lines.join('\\n');");
+  out.push("}");
   out.push("");
 
   // Insert setup blocks at module scope
@@ -313,6 +324,8 @@ export function generateTestSource(markdown, filePath) {
 
       out.push(`// ${fileName}:${block.line}`);
       out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
+      out.push(`  const __prints = [];`);
+      out.push(`  const print = (s) => void __prints.push(String(s));`);
       testOpen = true;
 
       // Emit any pending cleanup as teardown

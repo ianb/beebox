@@ -51,6 +51,29 @@ await isValidBox(tmp)
 - ```` ``` cleanup ```` blocks register teardown code via `t.teardown()` — runs after the test even on failure
 - Lines ending with `;` are statements; the last non-`;` line is the checked expression
 - Setup blocks run at module scope for imports and helpers
+- `print()` — scope-local function for building narrative output (see below)
+
+**`print()` for storytelling:**
+
+Each test gets its own `print` function. Lines accumulate and drain into the next `=>` assertion, combined with the expression result. Useful for building up narrative output across multiple steps:
+
+````markdown
+```
+const result = await runProcedure(params);
+print(`status: ${result.success}`);
+for (const step of steps) {
+  print(`${step.id}: ${step.status}`);
+};
+"done"
+=>
+status: true
+fetch: completed
+analyze: skipped
+done
+```
+````
+
+When `print()` isn't called, behavior is unchanged — the expression result is checked directly. `print()` returns void, so `print("last line")` as the expression adds the line without appending an extra value.
 
 **Shared helpers:**
 - `test/helpers/doctest-helpers.ts` — `makeTmpBox()` for filesystem tests. Returns `.root`, `.list()`, `.read()`, `.write()`, `.cleanup()`. All output is relative paths (no temp dir names in expected output).
@@ -83,6 +106,8 @@ await isValidBox(tmp)
 | `test/patmatch.doctest.md` | Keyword pattern matching (frontend) |
 | `test/speech-parsing.doctest.md` | Speech tag extraction for TTS (frontend) |
 | `test/speech-keywords.doctest.md` | Voice command keyword detection (frontend) |
+| `test/print.doctest.md` | `print()` function in doctests (meta-test) |
+| `test/procedure-engine.doctest.md` | Procedure engine: shell steps, precheck skip/fail, validation, agent mock, fallback commits |
 
 ## 2. Traditional TAP Tests
 

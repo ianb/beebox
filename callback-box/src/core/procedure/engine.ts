@@ -9,7 +9,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createElement, serialize, parseXml, type ElementNode } from "cardworks";
-import { runAgent, type AgentOptions } from "../agent.js";
+import { runAgent as defaultRunAgent, type AgentOptions, type AgentResult } from "../agent.js";
 import {
   getStatus,
   stageAll,
@@ -28,6 +28,9 @@ const MODEL_MAP: Record<string, string> = {
   opus: "claude-opus-4-6",
 };
 
+/** Function signature matching runAgent — injectable for testing */
+export type AgentRunner = (options: AgentOptions) => Promise<AgentResult>;
+
 export interface ProcedureOptions {
   dryRun?: boolean;
   force?: boolean;
@@ -35,6 +38,8 @@ export interface ProcedureOptions {
   step?: string;
   /** Runtime directive string passed to procedure agents */
   directive?: string;
+  /** Override the agent runner (default: runAgent from agent.ts) */
+  runAgent?: AgentRunner;
 }
 
 // ─── Types for parsed procedure definitions ───────────────────────────
@@ -190,6 +195,7 @@ export async function startProcedure(
       runCardPath,
       relProcedurePath,
       ...(options.directive && { directive: options.directive }),
+      ...(options.runAgent && { runAgent: options.runAgent }),
     });
 
     if (result === "failed") {
@@ -467,6 +473,7 @@ interface ExecuteStepParams {
   runCardPath: string;
   relProcedurePath: string;
   directive?: string;
+  runAgent?: AgentRunner;
 }
 
 /**
@@ -600,7 +607,8 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
       agentOpts.model = MODEL_MAP[agent.model] ?? agent.model;
     }
 
-    const agentResult = await runAgent(agentOpts);
+    const invokeAgent = params.runAgent ?? defaultRunAgent;
+    const agentResult = await invokeAgent(agentOpts);
 
     sessionId = agentResult.sessionId;
 
