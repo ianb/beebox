@@ -8,6 +8,9 @@ import { FileView } from "./components/FileView";
 import { NewsPage } from "./components/NewsPage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
 import { HistoryPage } from "./components/HistoryPage";
+import { HistoryPageZustand } from "./components/HistoryPageZustand";
+import { HistoryPageMST } from "./components/HistoryPageMST";
+import { HistoryPageXState } from "./components/HistoryPageXState";
 import { SettingsPage } from "./components/SettingsPage";
 import { BrowsePage } from "./components/BrowsePage";
 import { DashboardPage } from "./components/DashboardPage";
@@ -320,6 +323,9 @@ export default function App() {
         <Route path="news/*" element={<NewsPageWrapper />} />
         <Route path="browse/*" element={<BrowsePageWrapper />} />
         <Route path="history/:hash?" element={<HistoryPage />} />
+        <Route path="history-zustand/:hash?" element={<HistoryPageZustand />} />
+        <Route path="history-mst/:hash?" element={<HistoryPageMST />} />
+        <Route path="history-xstate/:hash?" element={<HistoryPageXState />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="admin" element={<AdminPage />} />
