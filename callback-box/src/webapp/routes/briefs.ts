@@ -226,26 +226,6 @@ export async function registerBriefRoutes(
     return { briefs };
   });
 
-  // Legacy endpoint for backwards compatibility
-  server.get("/api/editions", async () => {
-    const briefInfos = await findBriefs(boxRoot);
-    const editions: BriefSummary[] = [];
-
-    for (const info of briefInfos) {
-      const summary = await loadBriefSummary({
-        boxRoot,
-        briefPath: info.path,
-        read: info.read,
-        ...(info.readReason && { readReason: info.readReason }),
-      });
-      if (summary) {
-        editions.push(summary);
-      }
-    }
-
-    return { editions };
-  });
-
   // GET /api/brief/:path - Get a specific brief
   server.get<{ Params: { path: string } }>(
     "/api/brief/:path",
@@ -258,22 +238,6 @@ export async function registerBriefRoutes(
         const message = (err as Error).message;
         const status = message.includes("ENOENT") ? 404 : 500;
         return reply.status(status).send({ error: `Failed to load brief: ${message}` });
-      }
-    }
-  );
-
-  // Legacy endpoint
-  server.get<{ Params: { path: string } }>(
-    "/api/edition/:path",
-    async (request, reply) => {
-      const relativePath = decodeURIComponent(request.params.path);
-      try {
-        const edition = await loadBrief(boxRoot, relativePath);
-        return { edition };
-      } catch (err) {
-        const message = (err as Error).message;
-        const status = message.includes("ENOENT") ? 404 : 500;
-        return reply.status(status).send({ error: `Failed to load edition: ${message}` });
       }
     }
   );
@@ -406,28 +370,6 @@ export async function registerBriefRoutes(
     return { success: true, path: feedbackPath, isVoice };
   });
 
-  // Legacy endpoint
-  server.post<{
-    Body: {
-      editionPath: string;
-      targetId: string;
-      comment?: string;
-      audioData?: string;
-      audioMimeType?: string;
-    };
-  }>("/api/edition/feedback", {
-    bodyLimit: 50 * 1024 * 1024,
-  }, async (request, _reply) => {
-    const { editionPath, targetId, comment, audioData, audioMimeType } = request.body ?? {};
-    // Redirect to new endpoint
-    request.body = { briefPath: editionPath, targetId, comment, audioData, audioMimeType } as unknown as typeof request.body;
-    return server.inject({
-      method: "POST",
-      url: "/api/brief/feedback",
-      payload: { briefPath: editionPath, targetId, comment, audioData, audioMimeType },
-    });
-  });
-
   // POST /api/brief/query-response - Submit a query response
   server.post<{
     Body: {
@@ -496,26 +438,6 @@ export async function registerBriefRoutes(
     });
 
     return { success: true, path: responsePath, isVoice };
-  });
-
-  // Legacy endpoint
-  server.post<{
-    Body: {
-      editionPath: string;
-      queryId: string;
-      response?: string;
-      audioData?: string;
-      audioMimeType?: string;
-    };
-  }>("/api/edition/query-response", {
-    bodyLimit: 50 * 1024 * 1024,
-  }, async (request, _reply) => {
-    const { editionPath, queryId, response, audioData, audioMimeType } = request.body ?? {};
-    return server.inject({
-      method: "POST",
-      url: "/api/brief/query-response",
-      payload: { briefPath: editionPath, queryId, response, audioData, audioMimeType },
-    });
   });
 
   // GET /api/news-guide/reactions - Get reader reactions from the guide

@@ -23,6 +23,7 @@ These modules have been converted from traditional tests or newly written as doc
 - `src/frontend/src/lib/speech-parsing.ts` — Speech tag extraction for TTS
 - `src/frontend/src/lib/speech-keywords.ts` — Voice command keyword detection
 - `src/cli/lib/git.ts` — Git command helpers (init, commit, log, diff, status, branches, tags, etc.)
+- `src/cli/lib/time.ts` — Stubbable time utilities (CB_TIME env, stubs.yaml, caching)
 - **Route tests** — scheduler, admin, core API, briefs, commands, history, actions
 - `src/core/procedure/engine.ts` — Full execution lifecycle: shell steps, precheck skip/fail, validation severity, dry run, step filtering, agent mock (via DI), fallback commits, error cases
 
@@ -32,15 +33,13 @@ These modules have been converted from traditional tests or newly written as doc
 
 ### Ready for doctests now (pure logic, no dependencies)
 
-These are pure functions that can be tested immediately with no helpers or mocking:
-
-- **`src/cli/lib/time.ts`** — Time parsing/formatting utilities
+*(None remaining)*
 
 ### Ready for doctests with existing helpers
 
 These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest helpers:
 
-- **Route: `briefs.ts`** remaining — Legacy endpoints, `query-response`
+
 - **Route: `commands.ts`** remaining — Streaming execute endpoint
 - **Route: `actions.ts`** remaining — Wakeup (runs full cycle), voice-memo (multipart upload)
 
@@ -74,7 +73,7 @@ Prefer injecting at the service/function level over HTTP-level interception:
 
 ## 1. API Route Tests
 
-**Status:** In progress — 33 of 56 endpoints tested (59%)
+**Status:** In progress — 35 of 52 endpoints tested (67%)
 **Priority:** High — deterministic, fast, covers fragile code
 
 Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer()` from `test/helpers/doctest-server.ts`. Under the hood this uses Fastify's `inject()` — no socket server, no network. The helper provides `.inject()` (returns `"status\njson"` for `check()`) and `.request()` (returns `{ statusCode, body }` for programmatic access).
@@ -87,7 +86,7 @@ Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer(
 |---|---|---|---|
 | `scheduler.ts` | 5/5 | 100% | Complete |
 | `api.ts` | 12/12 | 100% | Complete |
-| `briefs.ts` | 7/11 | 64% | Missing legacy endpoints, `query-response` |
+| `briefs.ts` | 7/7 | 100% | Complete (legacy `/api/edition` endpoints removed) |
 | `admin.ts` | 2/8 | 25% | Box-config only; Telegram/Claude Code endpoints need mocking |
 | `commands.ts` | 3/5 | 60% | List, details, error cases; streaming execute not tested |
 | `history.ts` | 3/3 | 100% | Complete |
@@ -190,3 +189,4 @@ Rendered output includes markup (`data-source` attributes) indicating where each
 - **2026-03-03:** Added `print()` to doctests — scope-local function per test, accumulates lines that drain into the next `=>` assertion. Enables narrative/storytelling style tests. Also added `print.doctest.md` as a meta-test.
 - **2026-03-03:** Procedure engine tested via doctests with agent DI. Added `options.runAgent` to `ProcedureOptions` for injecting a mock agent runner. 12 tests cover: shell execution, precheck skip/fail, validation warn/abort, dry run, step filtering, agent context verification (precheck pass-output, directive, model mapping), fallback commits. Total: 496 tests across 28 files.
 - **2026-03-03:** Added git.ts doctests (14 tests covering all exported functions) and completed api.ts route coverage (added `/api/questions`, `/api/context`). api.ts now 12/12 (100%). Total: 530 tests across 30 files.
+- **2026-03-03:** Removed 4 legacy `/api/edition/*` endpoints from briefs.ts (no frontend references). Added time.ts doctests (8 tests covering env var override, stubs.yaml, caching, cache clearing). briefs.ts now 7/7 (100%). Total: 540 tests across 31 files.
