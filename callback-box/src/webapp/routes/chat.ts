@@ -11,6 +11,7 @@ import type { FastifyInstance } from "fastify";
 import { ChatSession, type ChatMessage } from "../../core/chat-session.js";
 import { WebSocket as WsWebSocket } from "ws";
 import type { BroadcastEventFn } from "./sse.js";
+import type { OpenAIAudioService } from "../../services/openai-audio.js";
 
 interface SendBody {
   message: string;
@@ -20,6 +21,7 @@ interface RegisterChatRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
   broadcastEvent: BroadcastEventFn;
+  openaiAudio?: OpenAIAudioService | undefined;
 }
 
 /**
@@ -28,7 +30,7 @@ interface RegisterChatRoutesOptions {
 export async function registerChatRoutes(
   options: RegisterChatRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, broadcastEvent } = options;
+  const { server, boxRoot, broadcastEvent, openaiAudio } = options;
   // Create singleton ChatSession for this box
   const chatSession = new ChatSession(boxRoot);
 
@@ -189,12 +191,23 @@ export async function registerChatRoutes(
   server.post<{ Body: { text: string; instructions?: string; voice?: string } }>(
     "/api/chat/tts",
     async (request, reply) => {
+      const { text, instructions, voice } = request.body;
+      const resolvedVoice = voice && VALID_TTS_VOICES.includes(voice) ? voice : "marin";
+
+      if (openaiAudio) {
+        // Use injected service (tests or explicit config)
+        const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };
+        if (instructions) ttsOpts.instructions = instructions;
+        const result = await openaiAudio.textToSpeech(text, ttsOpts);
+        reply.header("Content-Type", result.contentType);
+        return reply.send(result.audio);
+      }
+
+      // Fallback: direct API call
       const apiKey = process.env.THINKING_OPENAI_API_KEY;
       if (!apiKey) {
         return reply.status(500).send({ error: "TTS API key not configured" });
       }
-      const { text, instructions, voice } = request.body;
-      const resolvedVoice = voice && VALID_TTS_VOICES.includes(voice) ? voice : "marin";
       const response = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {

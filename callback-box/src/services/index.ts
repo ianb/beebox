@@ -9,6 +9,15 @@
 
 import type { TelegramService } from "./telegram.js";
 import type { ClaudeCliService } from "./claude-cli.js";
+import type { GoogleAuthService } from "./google-auth.js";
+import type { GoogleCalendarService } from "./google-calendar.js";
+import type { RaindropService } from "./raindrop.js";
+import type { ImapService } from "./imap.js";
+import type { OpenAIAudioService } from "./openai-audio.js";
+import type { DropboxRelayService } from "./dropbox-relay.js";
+import type { CaptureRelayService } from "./capture-relay.js";
+
+// ─── Re-exports ─────────────────────────────────────────────────────────────
 
 export type { TelegramService } from "./telegram.js";
 export {
@@ -22,6 +31,48 @@ export {
   createFakeClaudeCli,
 } from "./claude-cli.js";
 
+export type { GoogleAuthService } from "./google-auth.js";
+export {
+  createGoogleAuthService,
+  createFakeGoogleAuth,
+} from "./google-auth.js";
+
+export type { GoogleCalendarService, CalendarListEntry, CalendarEvent, EventsListResult } from "./google-calendar.js";
+export {
+  createGoogleCalendarService,
+  createFakeGoogleCalendar,
+} from "./google-calendar.js";
+
+export type { RaindropService, RaindropCollection, RaindropBookmark } from "./raindrop.js";
+export {
+  createRaindropService,
+  createFakeRaindrop,
+} from "./raindrop.js";
+
+export type { ImapService, ImapMessage, ImapEnvelope } from "./imap.js";
+export {
+  createImapService,
+  createFakeImap,
+} from "./imap.js";
+
+export type { OpenAIAudioService, TranscriptionResult, TTSResult } from "./openai-audio.js";
+export {
+  createOpenAIAudioService,
+  createFakeOpenAIAudio,
+} from "./openai-audio.js";
+
+export type { DropboxRelayService, ChannelCredentials, RelayMessage } from "./dropbox-relay.js";
+export {
+  createDropboxRelayService,
+  createFakeDropboxRelay,
+} from "./dropbox-relay.js";
+
+export type { CaptureRelayService, CaptureSession, CaptureManifest } from "./capture-relay.js";
+export {
+  createCaptureRelayService,
+  createFakeCaptureRelay,
+} from "./capture-relay.js";
+
 export type { CallEntry, WithCallLog } from "./call-log.js";
 export { withCallLog, printCalls } from "./call-log.js";
 
@@ -30,12 +81,11 @@ export { withCallLog, printCalls } from "./call-log.js";
 export interface Services {
   telegram?: TelegramService | undefined;
   claudeCli?: ClaudeCliService | undefined;
-  // Future services:
-  // calendar?: GoogleCalendarService;
-  // raindrop?: RaindropService;
-  // imap?: ImapService;
-  // openaiAudio?: OpenAIAudioService;
-  // dropboxRelay?: DropboxRelayService;
-  // captureRelay?: CaptureRelayService;
-  // googleAuth?: GoogleAuthService;
+  googleAuth?: GoogleAuthService | undefined;
+  calendar?: GoogleCalendarService | undefined;
+  raindrop?: RaindropService | undefined;
+  imap?: ImapService | undefined;
+  openaiAudio?: OpenAIAudioService | undefined;
+  dropboxRelay?: DropboxRelayService | undefined;
+  captureRelay?: CaptureRelayService | undefined;
 }

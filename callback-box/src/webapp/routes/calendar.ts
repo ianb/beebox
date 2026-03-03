@@ -14,25 +14,37 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "../../connectors/calendar-config.js";
+import type { GoogleCalendarService } from "../../services/google-calendar.js";
+
+interface CalendarRoutesOptions {
+  server: FastifyInstance;
+  boxRoot: string;
+  calendar?: GoogleCalendarService | undefined;
+}
 
 export async function registerCalendarRoutes(
-  server: FastifyInstance,
-  boxRoot: string
+  options: CalendarRoutesOptions,
 ): Promise<void> {
+  const { server, boxRoot, calendar } = options;
+
   // GET /api/calendar/available — all calendars from Google, with sync status
   server.get("/api/calendar/available", async (_request, reply) => {
-    const auth = await getGoogleAuth(boxRoot);
-    if (!auth) {
-      return reply
-        .status(503)
-        .send({ error: "Google auth not configured. Run: cb google-auth" });
+    let available;
+    if (calendar) {
+      available = await calendar.listCalendars();
+    } else {
+      const auth = await getGoogleAuth(boxRoot);
+      if (!auth) {
+        return reply
+          .status(503)
+          .send({ error: "Google auth not configured. Run: cb google-auth" });
+      }
+      available = await fetchAvailableCalendars(auth);
     }
 
     const config = await loadCalendarConfig(boxRoot);
     const syncList = config.calendars || ["primary"];
     const syncing = new Set(syncList);
-
-    const available = await fetchAvailableCalendars(auth);
 
     // "primary" is an alias for the user's main calendar
     const primaryId = available.find((c) => c.primary)?.id;

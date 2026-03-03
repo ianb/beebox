@@ -7,8 +7,8 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { createChannel, generatePairingCode } from "callback-dropbox/client";
 import type { DropboxConfig } from "../../connectors/dropbox.js";
+import type { DropboxRelayService } from "../../services/dropbox-relay.js";
 
 function configPath(boxRoot: string): string {
   return path.join(boxRoot, "config/connectors/dropbox.secret.json");
@@ -33,10 +33,23 @@ interface PairBody {
   workerUrl: string;
 }
 
+interface PairingRoutesOptions {
+  server: FastifyInstance;
+  boxRoot: string;
+  dropboxRelay?: DropboxRelayService | undefined;
+}
+
 export async function registerPairingRoutes(
-  server: FastifyInstance,
-  boxRoot: string
+  options: PairingRoutesOptions,
 ): Promise<void> {
+  const { server, boxRoot, dropboxRelay } = options;
+
+  function getRelay(): DropboxRelayService {
+    if (dropboxRelay) return dropboxRelay;
+    // Lazy default: import the real implementation
+    throw new Error("DropboxRelayService not provided and no default available at route level");
+  }
+
   // GET /api/dropbox/status
   server.get("/api/dropbox/status", async () => {
     const config = await loadConfig(boxRoot);
@@ -61,8 +74,9 @@ export async function registerPairingRoutes(
     const normalizedUrl = workerUrl.replace(/\/$/, "");
 
     try {
-      const { channelId, apiKey, channelKey } = await createChannel(normalizedUrl);
-      const { code, expiresAt } = await generatePairingCode({
+      const relay = getRelay();
+      const { channelId, apiKey, channelKey } = await relay.createChannel(normalizedUrl);
+      const { code, expiresAt } = await relay.generatePairingCode({
         workerUrl: normalizedUrl,
         apiKey,
         channelId,
