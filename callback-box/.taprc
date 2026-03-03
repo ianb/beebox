@@ -3,5 +3,7 @@ plugin:
 node-arg:
   - --import=tsx
   - --import=./src/test-lib/tap-check.ts
+  - --import=./src/test-lib/doctest-loader.ts
 include:
   - test/**/*.test.ts
+  - test/**/*.doctest.md
