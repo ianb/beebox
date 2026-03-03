@@ -6,7 +6,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import YAML from "yaml";
-import { runAgent } from "../../core/agent.js";
+import { createAgent } from "../../core/agent.js";
 import {
   getSessionLogPath,
   parseSessionLog,
@@ -81,15 +81,18 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     ? `${test.style}. ${test.prompt}`
     : test.prompt;
 
-  const result = await runAgent({
+  const agent = createAgent({
+    name: "knowledge-audit",
+    ...(onOutput && { onOutput }),
+  });
+  const result = await agent.invoke({
     boxRoot,
     systemPrompt: `WORKING DIRECTORY: ${boxRoot}`,
     prompt,
     maxTurns: 10,
-    onOutput,
   });
 
-  const behavior = await extractBehavior(boxRoot, result.sessionId);
+  const behavior = await extractBehavior(boxRoot, agent.sessionId);
   const checks = runChecks(test, behavior);
 
   return { test, sessionId: result.sessionId, behavior, checks };

@@ -30,9 +30,9 @@ import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { expireOldBriefs } from "../../core/housekeeping.js";
-import { getTranscribedFeedbackCards, buildTriagePrompt } from "../../core/commands/triage-feedback.js";
+import { getTranscribedFeedbackCards, buildFeedbackTriagePrompt } from "../../core/commands/triage-feedback.js";
 import { getUnprocessedBriefs } from "../../core/commands/process-feedback.js";
-import { runAgent, ensureAgentCommitted } from "../../core/agent.js";
+import { createAgent, ensureAgentCommitted } from "../../core/agent.js";
 import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job.js";
 import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
@@ -312,26 +312,23 @@ async function runTriageFeedback(boxRoot: string): Promise<number> {
   const paths = feedbackCards.join("\n  - ");
   console.log(`  Found ${feedbackCards.length} feedback card(s) to triage`);
 
-  const result = await runAgent({
+  const agent = createAgent({
+    name: "triage",
+    onOutput: (text) => process.stdout.write(text),
+  });
+
+  const result = await agent.invoke({
     boxRoot,
-    systemPrompt: buildTriagePrompt(boxRoot),
+    systemPrompt: buildFeedbackTriagePrompt(boxRoot),
     prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
     model: "claude-haiku-4-5-20251001",
     maxTurns: 10,
-    onOutput: (text) => process.stdout.write(text),
   });
 
   if (result.success) {
     await ensureAgentCommitted({
       boxRoot,
-      agentResult: result,
-      agentOptions: {
-        boxRoot,
-        systemPrompt: buildTriagePrompt(boxRoot),
-        prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
-        model: "claude-haiku-4-5-20251001",
-        maxTurns: 10,
-      },
+      agent,
       fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
       fallbackTrailers: { "Triggered-By": "cb wakeup", Phase: "triage-feedback" },
       onOutput: (text) => process.stdout.write(text),

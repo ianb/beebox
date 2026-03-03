@@ -34,7 +34,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { runAgent, ensureAgentCommitted } from "../agent.js";
+import { createAgent, ensureAgentCommitted, type Agent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
@@ -58,6 +58,8 @@ export interface ProcessNewsArgs {
   dryRun?: boolean;
   /** Force even if another process is running */
   force?: boolean;
+  /** Injected agent — if not provided, creates a real Claude agent per phase. */
+  agent?: Agent;
 }
 
 /**
@@ -110,7 +112,7 @@ async function loadGuideContent(boxRoot: string): Promise<string | null> {
  * Build the system prompt for agent-driven news triage.
  * The agent uses cb ls to see items and cb rm to trash uninteresting ones.
  */
-function buildTriagePrompt(opts: {
+function buildNewsTriagePrompt(opts: {
   guideContent: string | null;
   selectCount: number;
   boxRoot: string;
@@ -501,11 +503,14 @@ async function executeProcessNews(
 
           ctx.writeLine(fmt.info("Starting triage agent..."));
           ctx.writeLine("");
-          const triageResult = await runAgent({
-            boxRoot: ctx.boxRoot,
-            systemPrompt: buildTriagePrompt({ guideContent, selectCount, boxRoot: ctx.boxRoot }),
-            prompt: `Triage the ${inboxItems.length} news items in box/inbox/news/. Keep the best ${selectCount}.`,
+          const triageAgent = processArgs.agent ?? createAgent({
+            name: "news-triage",
             onOutput: (text) => ctx.write(text),
+          });
+          const triageResult = await triageAgent.invoke({
+            boxRoot: ctx.boxRoot,
+            systemPrompt: buildNewsTriagePrompt({ guideContent, selectCount, boxRoot: ctx.boxRoot }),
+            prompt: `Triage the ${inboxItems.length} news items in box/inbox/news/. Keep the best ${selectCount}.`,
             model: "claude-haiku-4-5-20251001",
             maxTurns: 10,
           });
@@ -514,25 +519,19 @@ async function executeProcessNews(
           if (triageResult.success) {
             ctx.writeLine(fmt.ok("Triage complete"));
             results.push({ phase: "triage", success: true, message: "Agent triage complete" });
+
+            // Ensure commit happened
+            await ensureAgentCommitted({
+              boxRoot: ctx.boxRoot,
+              agent: triageAgent,
+              fallbackMessage: `Triage ${inboxItems.length} news items`,
+              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageAgent.sessionId },
+              onOutput: (text) => ctx.write(text),
+            });
           } else {
             ctx.writeLine(fmt.fail(`Triage error: ${triageResult.error}`));
             results.push({ phase: "triage", success: false, message: triageResult.error ?? "Failed" });
           }
-
-          // Ensure commit happened
-          await ensureAgentCommitted({
-            boxRoot: ctx.boxRoot,
-            agentResult: triageResult,
-            agentOptions: {
-              boxRoot: ctx.boxRoot,
-              systemPrompt: buildTriagePrompt({ guideContent, selectCount, boxRoot: ctx.boxRoot }),
-              prompt: `Triage the ${inboxItems.length} news items in box/inbox/news/. Keep the best ${selectCount}.`,
-              maxTurns: 10,
-            },
-            fallbackMessage: `Triage ${inboxItems.length} news items`,
-            fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageResult.sessionId },
-            onOutput: (text) => ctx.write(text),
-          });
         }
       }
       ctx.writeLine("");
@@ -597,11 +596,14 @@ async function executeProcessNews(
           const paths = itemsToAnalyze.join("\n  - ");
           ctx.writeLine(fmt.info("Starting Claude Code agent..."));
           ctx.writeLine("");
-          const analyzeResult = await runAgent({
+          const analyzeAgent = processArgs.agent ?? createAgent({
+            name: "news-analyze",
+            onOutput: (text) => ctx.write(text),
+          });
+          const analyzeResult = await analyzeAgent.invoke({
             boxRoot: ctx.boxRoot,
             systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
             prompt: `Please analyze these news items:\n  - ${paths}`,
-            onOutput: (text) => ctx.write(text),
             maxTurns: 20,
           });
           ctx.writeLine("");
@@ -609,25 +611,19 @@ async function executeProcessNews(
           if (analyzeResult.success) {
             ctx.writeLine(fmt.ok("Agent finished successfully"));
             results.push({ phase: "analyze", success: true, message: `Analyzed ${itemsToAnalyze.length} items` });
+
+            // Retry if agent didn't commit, then fallback
+            await ensureAgentCommitted({
+              boxRoot: ctx.boxRoot,
+              agent: analyzeAgent,
+              fallbackMessage: `Analyze ${itemsToAnalyze.length} news items`,
+              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeAgent.sessionId },
+              onOutput: (text) => ctx.write(text),
+            });
           } else {
             ctx.writeLine(fmt.fail(`Agent error: ${analyzeResult.error}`));
             results.push({ phase: "analyze", success: false, message: analyzeResult.error ?? "Failed" });
           }
-
-          // Retry if agent didn't commit, then fallback
-          await ensureAgentCommitted({
-            boxRoot: ctx.boxRoot,
-            agentResult: analyzeResult,
-            agentOptions: {
-              boxRoot: ctx.boxRoot,
-              systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
-              prompt: `Please analyze these news items:\n  - ${paths}`,
-              maxTurns: 20,
-            },
-            fallbackMessage: `Analyze ${itemsToAnalyze.length} news items`,
-            fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeResult.sessionId },
-            onOutput: (text) => ctx.write(text),
-          });
         }
       }
       ctx.writeLine("");
@@ -650,11 +646,14 @@ async function executeProcessNews(
         } else {
           ctx.writeLine(fmt.info("Starting Claude Code agent..."));
           ctx.writeLine("");
-          const briefResult = await runAgent({
+          const briefAgent = processArgs.agent ?? createAgent({
+            name: "news-brief",
+            onOutput: (text) => ctx.write(text),
+          });
+          const briefResult = await briefAgent.invoke({
             boxRoot: ctx.boxRoot,
             systemPrompt: buildBriefPrompt(ctx.boxRoot),
             prompt: "Please create a news brief from the items in box/pool/news/",
-            onOutput: (text) => ctx.write(text),
             maxTurns: 40,
           });
           ctx.writeLine("");
@@ -662,25 +661,19 @@ async function executeProcessNews(
           if (briefResult.success) {
             ctx.writeLine(fmt.ok("Agent finished successfully"));
             results.push({ phase: "brief", success: true, message: "Brief created" });
+
+            // Retry if agent didn't commit, then fallback
+            await ensureAgentCommitted({
+              boxRoot: ctx.boxRoot,
+              agent: briefAgent,
+              fallbackMessage: "Create news brief",
+              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefAgent.sessionId },
+              onOutput: (text) => ctx.write(text),
+            });
           } else {
             ctx.writeLine(fmt.fail(`Agent error: ${briefResult.error}`));
             results.push({ phase: "brief", success: false, message: briefResult.error ?? "Failed" });
           }
-
-          // Retry if agent didn't commit, then fallback
-          await ensureAgentCommitted({
-            boxRoot: ctx.boxRoot,
-            agentResult: briefResult,
-            agentOptions: {
-              boxRoot: ctx.boxRoot,
-              systemPrompt: buildBriefPrompt(ctx.boxRoot),
-              prompt: "Please create a news brief from the items in box/pool/news/",
-              maxTurns: 40,
-            },
-            fallbackMessage: "Create news brief",
-            fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefResult.sessionId },
-            onOutput: (text) => ctx.write(text),
-          });
         }
       }
       ctx.writeLine("");
@@ -768,4 +761,4 @@ registerCommand({
   execute: executeProcessNews,
 });
 
-export { executeProcessNews };
+export { executeProcessNews, getNewsFromDir, buildNewsTriagePrompt, buildAnalyzePrompt, buildBriefPrompt };

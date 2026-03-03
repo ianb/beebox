@@ -33,6 +33,8 @@ export interface AgentInvokeOptions {
   model?: string;
   /** Maximum agent turns (default: 20). */
   maxTurns?: number;
+  /** Whether to run in dry-run mode (no side effects). */
+  dryRun?: boolean;
 }
 
 /**
@@ -49,14 +51,19 @@ export interface Agent {
 
 /**
  * Create a real agent that spawns Claude Code.
+ *
+ * If `resume` is true, the first invoke() resumes an existing session
+ * (requires `sessionId` from a previous run).
  */
 export function createAgent(options: {
   name: string;
   sessionId?: string;
+  /** If true, first invoke() resumes the given sessionId. */
+  resume?: boolean;
   onOutput?: (text: string) => void;
 }): Agent {
   const sessionId = options.sessionId ?? randomUUID();
-  let invocationCount = 0;
+  let invocationCount = options.resume ? 1 : 0;
 
   return {
     name: options.name,
@@ -72,6 +79,7 @@ export function createAgent(options: {
         onOutput: options.onOutput,
         model: opts.model,
         maxTurns: opts.maxTurns,
+        dryRun: opts.dryRun,
         sessionId,
         resume: isResume,
       });
@@ -88,12 +96,8 @@ Do NOT leave changes uncommitted. Commit now.`;
 
 export interface EnsureCommittedOptions {
   boxRoot: string;
-  /** Agent interface — preferred. If provided, used for retry invocation. */
-  agent?: Agent;
-  /** @deprecated Use agent instead — needed for legacy callers. */
-  agentResult?: AgentResult;
-  /** @deprecated Use agent instead — needed for legacy callers. */
-  agentOptions?: AgentOptions;
+  /** Agent to resume for commit retry. */
+  agent: Agent;
   /** Fallback commit message if retry also fails */
   fallbackMessage: string;
   /** Trailers for fallback commit */
@@ -108,7 +112,7 @@ export interface EnsureCommittedOptions {
  * create a fallback commit marked with Fallback: true.
  */
 export async function ensureAgentCommitted(options: EnsureCommittedOptions): Promise<void> {
-  const { boxRoot, fallbackMessage, fallbackTrailers, onOutput } = options;
+  const { boxRoot, agent, fallbackMessage, fallbackTrailers, onOutput } = options;
 
   const status = await getStatus(boxRoot);
   // Only care about staged/modified files — untracked files (lock files, pending
@@ -117,22 +121,11 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
 
   // Retry: resume the same session with a nudge to commit
   onOutput?.(fmt.dim("  (Agent didn't commit — resuming session to request commit...)\n"));
-  if (options.agent) {
-    await options.agent.invoke({
-      boxRoot,
-      prompt: COMMIT_NUDGE_PROMPT,
-      maxTurns: 5,
-    });
-  } else {
-    // Legacy path — uses raw runAgent with agentOptions
-    await runAgent({
-      ...options.agentOptions!,
-      sessionId: options.agentResult!.sessionId,
-      resume: true,
-      prompt: COMMIT_NUDGE_PROMPT,
-      maxTurns: 5,
-    });
-  }
+  await agent.invoke({
+    boxRoot,
+    prompt: COMMIT_NUDGE_PROMPT,
+    maxTurns: 5,
+  });
 
   const retryStatus = await getStatus(boxRoot);
   if (retryStatus.staged.length === 0 && retryStatus.modified.length === 0) {

@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { parseXml, type ElementNode } from "cardworks";
 import { schemas } from "../schemas/registry.js";
-import { runAgent, ensureAgentCommitted, type AgentOptions } from "./agent.js";
+import { createAgent, ensureAgentCommitted } from "./agent.js";
 import { generateDocs } from "./generate-docs.js";
 import { startProcedure } from "./procedure/engine.js";
 import { finishJob } from "./finish-job.js";
@@ -314,23 +314,24 @@ async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean> {
     }
 
     const systemPrompt = buildReactorSystemPrompt(boxRoot);
-    const agentOptions: AgentOptions = {
+    const agent = createAgent({
+      name: "reactor-chat",
+      sessionId,
+      resume,
+      ...(onLog && { onOutput: onLog }),
+    });
+
+    onLog?.("\n");
+    const agentResult = await agent.invoke({
       boxRoot,
       systemPrompt,
       prompt: userPrompt,
-      onOutput: onLog,
       maxTurns: 10,
-      sessionId,
-      resume,
-    };
-
-    onLog?.("\n");
-    const agentResult = await runAgent(agentOptions);
+    });
 
     await ensureAgentCommitted({
       boxRoot,
-      agentResult,
-      agentOptions,
+      agent,
       fallbackMessage: "Reactor: chat agent work (fallback commit)",
       fallbackTrailers: { Phase: "reactor" },
       ...(onLog ? { onOutput: onLog } : {}),
@@ -379,20 +380,21 @@ async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolean> {
 
   onLog?.("\n");
   const maxTurns = typeFilter ? 10 : 30;
-  const agentOptions: AgentOptions = {
+  const agent = createAgent({
+    name: "reactor-batch",
+    ...(onLog && { onOutput: onLog }),
+  });
+
+  const agentResult = await agent.invoke({
     boxRoot,
     systemPrompt,
     prompt: userPrompt,
-    onOutput: onLog,
     maxTurns,
-  };
-
-  const agentResult = await runAgent(agentOptions);
+  });
 
   await ensureAgentCommitted({
     boxRoot,
-    agentResult,
-    agentOptions,
+    agent,
     fallbackMessage: "Reactor: agent work (fallback commit)",
     fallbackTrailers: { Phase: "reactor" },
     ...(onLog ? { onOutput: onLog } : {}),
@@ -593,7 +595,7 @@ function extractThreadRef(xmlContent: string): string | null {
   return match ? match[1]! : null;
 }
 
-function buildReactorSystemPrompt(boxRoot: string): string {
+export function buildReactorSystemPrompt(boxRoot: string): string {
   return `You are processing jobs in a Callback Box.
 
 WORKING DIRECTORY: ${boxRoot}
@@ -626,7 +628,7 @@ For each job:
 - \`cb finish\` only deletes the job file — make sure your work is committed first`;
 }
 
-function buildReactorUserPrompt(jobPaths: string[], jobDescriptions: string[]): string {
+export function buildReactorUserPrompt(jobPaths: string[], jobDescriptions: string[]): string {
   return `Please process the following ${jobPaths.length} job(s):
 
 ${jobDescriptions.join("\n\n")}

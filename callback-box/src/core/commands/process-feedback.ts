@@ -22,7 +22,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { runAgent, ensureAgentCommitted } from "../agent.js";
+import { createAgent, ensureAgentCommitted, type Agent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { fmt } from "../../cli/lib/format.js";
 
@@ -34,6 +34,8 @@ export interface ProcessFeedbackArgs {
   dryRun?: boolean;
   /** Force even if another process is running */
   force?: boolean;
+  /** Injected agent — if not provided, creates a real Claude agent. */
+  agent?: Agent;
 }
 
 /**
@@ -297,11 +299,14 @@ async function executeProcessFeedback(
     ctx.writeLine(fmt.info("Starting Claude Code agent..."));
     ctx.writeLine("");
 
-    const result = await runAgent({
+    const agent = processArgs.agent ?? createAgent({
+      name: "guide-revision",
+      onOutput: (text) => ctx.write(text),
+    });
+    const result = await agent.invoke({
       boxRoot: ctx.boxRoot,
       systemPrompt: buildGuideRevisionPrompt(ctx.boxRoot),
       prompt: `Please process feedback from these briefs and revise the guide:\n  - ${paths}`,
-      onOutput: (text) => ctx.write(text),
     });
     ctx.writeLine("");
 
@@ -311,14 +316,9 @@ async function executeProcessFeedback(
       // Retry if agent didn't commit, then fallback
       await ensureAgentCommitted({
         boxRoot: ctx.boxRoot,
-        agentResult: result,
-        agentOptions: {
-          boxRoot: ctx.boxRoot,
-          systemPrompt: buildGuideRevisionPrompt(ctx.boxRoot),
-          prompt: `Please process feedback from these briefs and revise the guide:\n  - ${paths}`,
-        },
+        agent,
         fallbackMessage: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
-        fallbackTrailers: { "Triggered-By": "cb process-feedback", Session: result.sessionId },
+        fallbackTrailers: { "Triggered-By": "cb process-feedback", Session: agent.sessionId },
         onOutput: (text) => ctx.write(text),
       });
 
@@ -361,4 +361,4 @@ registerCommand({
   execute: executeProcessFeedback,
 });
 
-export { executeProcessFeedback, getUnprocessedBriefs };
+export { executeProcessFeedback, getUnprocessedBriefs, buildGuideRevisionPrompt };

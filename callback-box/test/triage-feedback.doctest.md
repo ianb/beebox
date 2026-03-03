@@ -17,7 +17,7 @@ import type { CommandContext } from "../src/core/command-runner.js";
 import {
   executeTriageFeedback,
   getTranscribedFeedbackCards,
-  buildTriagePrompt,
+  buildFeedbackTriagePrompt,
 } from "../src/core/commands/triage-feedback.js";
 function makeCtx(boxRoot: string): CommandContext {
   return {
@@ -68,7 +68,7 @@ box/inbox/feedback/card1.feedback.card
 box/inbox/feedback/card2.feedback.card
 ```
 
-## buildTriagePrompt
+## buildFeedbackTriagePrompt
 
 ### Produces the expected system prompt
 
@@ -77,7 +77,7 @@ as documentation — `«codeblock»` matches triple backticks, `«blankline»`
 matches empty lines.
 
 ```
-print(buildTriagePrompt("/test/box"));
+print(buildFeedbackTriagePrompt("/test/box"));
 =>
 You are triaging user feedback on news briefs in a Callback Box.
 «blankline»

@@ -7,7 +7,7 @@
 
 import * as path from "node:path";
 import { runShell } from "../core/procedure/shell.js";
-import { runAgent } from "../core/agent.js";
+import { createAgent } from "../core/agent.js";
 import {
   getStatus,
   createBranch,
@@ -97,12 +97,12 @@ async function runValidation(params: RunValidationParams): Promise<ValidationRes
       };
     }
 
-    const result = await runAgent({
+    const agent = createAgent({ name: "scenario-validator" });
+    const result = await agent.invoke({
       boxRoot,
       systemPrompt: VALIDATION_SYSTEM_PROMPT,
       prompt: check.prompt,
       maxTurns: 5,
-      maxCost: 0.5,
     });
 
     const firstLine = result.output.split("\n")[0]?.trim().toUpperCase() ?? "";

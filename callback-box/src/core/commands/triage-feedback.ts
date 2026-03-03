@@ -77,7 +77,7 @@ async function getTranscribedFeedbackCards(boxRoot: string): Promise<string[]> {
 /**
  * Build the system prompt for feedback triage.
  */
-function buildTriagePrompt(boxRoot: string): string {
+function buildFeedbackTriagePrompt(boxRoot: string): string {
   return `You are triaging user feedback on news briefs in a Callback Box.
 
 WORKING DIRECTORY: ${boxRoot}
@@ -286,7 +286,7 @@ async function executeTriageFeedback(
 
     const result = await agent.invoke({
       boxRoot: ctx.boxRoot,
-      systemPrompt: buildTriagePrompt(ctx.boxRoot),
+      systemPrompt: buildFeedbackTriagePrompt(ctx.boxRoot),
       prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
     });
     ctx.writeLine("");
@@ -342,4 +342,4 @@ registerCommand({
   execute: executeTriageFeedback,
 });
 
-export { executeTriageFeedback, getTranscribedFeedbackCards, buildTriagePrompt };
+export { executeTriageFeedback, getTranscribedFeedbackCards, buildFeedbackTriagePrompt };

@@ -8,7 +8,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
-import { runAgent } from "../../core/agent.js";
+import { createAgent } from "../../core/agent.js";
 
 export const promptCommand = new Command("prompt")
   .description("Run Claude Code with a prompt in the agent environment")
@@ -35,20 +35,25 @@ export const promptCommand = new Command("prompt")
       // (which @-includes the agent guide) and .claude/rules/
       const systemPrompt = `WORKING DIRECTORY: ${boxRoot}`;
 
-      const result = await runAgent({
+      const sessionId = options.resume ?? options.sessionId;
+      const agent = createAgent({
+        name: "prompt",
+        ...(sessionId && { sessionId }),
+        ...(options.resume && { resume: true }),
+        onOutput: (text) => process.stdout.write(text),
+      });
+
+      const result = await agent.invoke({
         boxRoot,
         systemPrompt,
         prompt,
         maxTurns: parseInt(options.maxTurns, 10),
-        model: options.model,
-        dryRun: options.dryRun,
-        sessionId: options.resume ?? options.sessionId,
-        resume: options.resume ? true : undefined,
-        onOutput: (text) => process.stdout.write(text),
+        ...(options.model && { model: options.model }),
+        ...(options.dryRun && { dryRun: true }),
       });
 
       // Print session ID for follow-up inspection
-      console.log(`\n\nSession: ${result.sessionId}`);
+      console.log(`\n\nSession: ${agent.sessionId}`);
       if (!result.success) {
         console.error(`Exit code: ${result.exitCode}`);
         if (result.error) console.error(result.error);
