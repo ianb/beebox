@@ -3,6 +3,7 @@
  */
 
 import { test } from "tap";
+import "../src/test-lib/tap-check.js";
 import {
   parseDuration,
   parseBudget,
@@ -267,11 +268,11 @@ test("createScheduledScriptTemplate: cron with on-wakeup", async (t) => {
     runs: "cb wakeup --connector rss",
     source: "Check RSS feeds",
   });
-  t.ok(template.includes('cron="0 6 * * *"'));
-  t.ok(template.includes('not-before="4h"'));
-  t.ok(template.includes('on-wakeup="true"'));
-  t.ok(template.includes("<runs>cb wakeup --connector rss</runs>"));
-  t.ok(template.includes("<source>Check RSS feeds</source>"));
+  t.check(template, `<scheduled-script cron="0 6 * * *" not-before="4h" on-wakeup="true">
+  <runs>cb wakeup --connector rss</runs>
+  <source>Check RSS feeds</source>
+</scheduled-script>
+`);
 });
 
 test("createScheduledScriptTemplate: at with once", async (t) => {
@@ -280,9 +281,10 @@ test("createScheduledScriptTemplate: at with once", async (t) => {
     once: true,
     runs: "scripts/remind.sh",
   });
-  t.ok(template.includes('at="2026-03-01T09:00:00Z"'));
-  t.ok(template.includes('once="true"'));
-  t.notOk(template.includes("source"));
+  t.check(template, `<scheduled-script at="2026-03-01T09:00:00Z" once="true">
+  <runs>scripts/remind.sh</runs>
+</scheduled-script>
+`);
 });
 
 test("createScheduledScriptTemplate: source with ref", async (t) => {
@@ -292,8 +294,11 @@ test("createScheduledScriptTemplate: source with ref", async (t) => {
     source: "Calendar deadline",
     sourceRef: "store/calendar/event.ics",
   });
-  t.ok(template.includes('ref="store/calendar/event.ics"'));
-  t.ok(template.includes("Calendar deadline</source>"));
+  t.check(template, `<scheduled-script cron="0 * * * *">
+  <runs>echo hi</runs>
+  <source ref="store/calendar/event.ics">Calendar deadline</source>
+</scheduled-script>
+`);
 });
 
 test("createScheduledScriptTemplate: minimal (wakeup only)", async (t) => {
@@ -301,9 +306,10 @@ test("createScheduledScriptTemplate: minimal (wakeup only)", async (t) => {
     onWakeup: true,
     runs: "cb wakeup --connector capture",
   });
-  t.ok(template.includes('on-wakeup="true"'));
-  t.notOk(template.includes("cron"));
-  t.notOk(template.includes("at="));
+  t.check(template, `<scheduled-script on-wakeup="true">
+  <runs>cb wakeup --connector capture</runs>
+</scheduled-script>
+`);
 });
 
 // ============================================

@@ -7,6 +7,7 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { test } from "tap";
+import "../src/test-lib/tap-check.js";
 import { createOrAppendIntakeJob } from "../src/connectors/intake-utils.js";
 import { createCalendarReviewJobTemplate } from "../src/schemas/calendar-review-job.js";
 import {
@@ -45,12 +46,13 @@ test("createNewsJobTemplate generates valid XML", async (t) => {
     ],
   });
 
-  t.ok(template.includes("<news-job"), "should have news-job root element");
-  t.ok(template.includes('source="rss-connector"'), "should have source attribute");
-  t.ok(template.includes("<description>3 new items from RSS feeds</description>"), "should have description");
-  t.ok(template.includes('ref="box/inbox/news/item1.news-item.card"'), "should have item refs");
-  t.ok(template.includes('ref="box/inbox/news/item2.news-item.card"'), "should have second item ref");
-  t.ok(template.includes("</news-job>"), "should close news-job element");
+  t.check(template, `<news-job created="___" source="rss-connector">
+  <description>3 new items from RSS feeds</description>
+  <item ref="box/inbox/news/item1.news-item.card" />
+  <item ref="box/inbox/news/item2.news-item.card" />
+  <item ref="box/inbox/news/item3.news-item.card" />
+</news-job>
+`);
 });
 
 test("createNewsJobTemplate escapes special characters", async (t) => {
@@ -60,9 +62,11 @@ test("createNewsJobTemplate escapes special characters", async (t) => {
     items: ['path/with"quotes.card'],
   });
 
-  t.ok(template.includes("&lt;special&gt;"), "should escape < and > in description");
-  t.ok(template.includes("&amp;"), "should escape & in description");
-  t.ok(template.includes("&quot;"), "should escape quotes in ref attributes");
+  t.check(template, `<news-job created="___" source="test">
+  <description>Items with &lt;special&gt; &amp; chars</description>
+  <item ref="path/with&quot;quotes.card" />
+</news-job>
+`);
 });
 
 test("createNewsJobTemplate uses provided created timestamp", async (t) => {
@@ -137,14 +141,12 @@ test("createIntakeJobTemplate generates valid XML", async (t) => {
     ],
   });
 
-  t.ok(template.includes("<intake-job"), "should have intake-job root element");
-  t.ok(template.includes('status="pending"'), "should have pending status");
-  t.ok(template.includes('source="capture-connector"'), "should have source attribute");
-  t.ok(template.includes('priority="normal"'), "should default to normal priority");
-  t.ok(template.includes("<description>Triage 2 new capture sessions</description>"), "should have description");
-  t.ok(template.includes('ref="box/inbox/capture-1/session.capture-session.card"'), "should have first item ref");
-  t.ok(template.includes('ref="box/inbox/capture-2/session.capture-session.card"'), "should have second item ref");
-  t.ok(template.includes("</intake-job>"), "should close intake-job element");
+  t.check(template, `<intake-job status="pending" created="___" source="capture-connector" priority="normal">
+  <description>Triage 2 new capture sessions</description>
+  <item ref="box/inbox/capture-1/session.capture-session.card" />
+  <item ref="box/inbox/capture-2/session.capture-session.card" />
+</intake-job>
+`);
 });
 
 test("createIntakeJobTemplate supports low priority", async (t) => {
@@ -155,7 +157,11 @@ test("createIntakeJobTemplate supports low priority", async (t) => {
     priority: "low",
   });
 
-  t.ok(template.includes('priority="low"'), "should have low priority");
+  t.check(template, `<intake-job status="pending" created="___" source="raindrop-connector" priority="low">
+  <description>Triage bookmarks</description>
+  <item ref="box/inbox/bookmark.bookmark.card" />
+</intake-job>
+`);
 });
 
 test("createIntakeJobTemplate escapes special characters", async (t) => {
@@ -165,9 +171,11 @@ test("createIntakeJobTemplate escapes special characters", async (t) => {
     items: ['path/with"quotes.card'],
   });
 
-  t.ok(template.includes("&lt;special&gt;"), "should escape < and > in description");
-  t.ok(template.includes("&amp;"), "should escape & in description");
-  t.ok(template.includes("&quot;"), "should escape quotes in ref attributes");
+  t.check(template, `<intake-job status="pending" created="___" source="test" priority="normal">
+  <description>Items with &lt;special&gt; &amp; chars</description>
+  <item ref="path/with&quot;quotes.card" />
+</intake-job>
+`);
 });
 
 test("intake job filename pattern", async (t) => {
@@ -205,14 +213,12 @@ test("createCalendarReviewJobTemplate generates valid XML for new events", async
     ],
   });
 
-  t.ok(template.includes("<calendar-review-job"), "should have root element");
-  t.ok(template.includes('source="google-calendar"'), "should have source");
-  t.ok(template.includes("<description>2 calendar changes to review</description>"), "should have description");
-  t.ok(template.includes('action="new"'), "should have new action");
-  t.ok(template.includes('action="updated"'), "should have updated action");
-  t.ok(template.includes('ref="store/calendar/2026-02-25_abc.ics"'), "should have ref for new event");
-  t.ok(template.includes("Dentist appointment"), "should have summary text");
-  t.ok(template.includes("</calendar-review-job>"), "should close root element");
+  t.check(template, `<calendar-review-job status="pending" created="___" source="google-calendar" priority="normal">
+  <description>2 calendar changes to review</description>
+  <change action="new" ref="store/calendar/2026-02-25_abc.ics">Dentist appointment</change>
+  <change action="updated" ref="store/calendar/2026-02-22_def.ics">Standup — time changed</change>
+</calendar-review-job>
+`);
 });
 
 test("createCalendarReviewJobTemplate handles deleted events with ICS", async (t) => {
@@ -225,10 +231,18 @@ test("createCalendarReviewJobTemplate handles deleted events with ICS", async (t
     ],
   });
 
-  t.ok(template.includes('action="deleted"'), "should have deleted action");
-  t.ok(template.includes("<ics>"), "should have ics element");
-  t.ok(template.includes("BEGIN:VCALENDAR"), "should contain ICS content");
-  t.ok(!template.includes('ref='), "deleted events without ref should have no ref attr");
+  t.check(template, `<calendar-review-job status="pending" created="___" source="google-calendar" priority="normal">
+  <description>1 deletion</description>
+  <change action="deleted">
+    Cancelled meeting
+    <ics>BEGIN:VCALENDAR
+BEGIN:VEVENT
+SUMMARY:Cancelled
+END:VEVENT
+END:VCALENDAR</ics>
+  </change>
+</calendar-review-job>
+`);
 });
 
 test("createCalendarReviewJobTemplate supports priority", async (t) => {
@@ -239,7 +253,11 @@ test("createCalendarReviewJobTemplate supports priority", async (t) => {
     priority: "low",
   });
 
-  t.ok(template.includes('priority="low"'), "should support low priority");
+  t.check(template, `<calendar-review-job status="pending" created="___" source="google-calendar" priority="low">
+  <description>test</description>
+  <change action="new">test</change>
+</calendar-review-job>
+`);
 });
 
 // --- Intake Utils ---
@@ -258,9 +276,11 @@ test("createOrAppendIntakeJob creates a new job card", async (t) => {
     t.ok(relPath.endsWith(".intake.job.card"), "should have intake.job.card extension");
 
     const content = await readFile(join(tmpDir, relPath), "utf-8");
-    t.ok(content.includes('source="test-connector"'), "should have source");
-    t.ok(content.includes("<description>Triage 1 item</description>"), "should have description");
-    t.ok(content.includes('ref="box/inbox/item1.memo.card"'), "should have item ref");
+    t.check(content, `<intake-job status="pending" created="___" source="test-connector" priority="normal">
+  <description>Triage 1 item</description>
+  <item ref="box/inbox/item1.memo.card" />
+</intake-job>
+`);
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
   }
@@ -288,9 +308,12 @@ test("createOrAppendIntakeJob appends to existing job from same source", async (
     t.equal(relPath1, relPath2, "should return same path (appended, not new)");
 
     const content = await readFile(join(tmpDir, relPath2), "utf-8");
-    t.ok(content.includes('ref="box/inbox/item1.memo.card"'), "should still have first item");
-    t.ok(content.includes('ref="box/inbox/item2.memo.card"'), "should have appended second item");
-    t.ok(content.includes("<description>Triage 2 items</description>"), "should have updated description");
+    t.check(content, `<intake-job status="pending" created="___" source="test-connector" priority="normal">
+  <description>Triage 2 items</description>
+  <item ref="box/inbox/item1.memo.card" />
+  <item ref="box/inbox/item2.memo.card" />
+</intake-job>
+`);
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
   }

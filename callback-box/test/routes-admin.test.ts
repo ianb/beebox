@@ -5,6 +5,8 @@
  */
 
 import { test } from "tap";
+import "../src/test-lib/tap-check.js";
+import "./helpers/check-serializers.js";
 import { createTestServer, TEST_SLUG } from "./helpers/test-server.js";
 
 const BASE = `/${TEST_SLUG}`;
@@ -30,10 +32,14 @@ test("POST /api/admin/box-config saves allowedEmails", async (t) => {
       url: `${BASE}/api/admin/box-config`,
       payload: { allowedEmails: ["alice@example.com", "bob@example.com"] },
     });
-    t.equal(postRes.statusCode, 200);
-    const postBody = postRes.json();
-    t.equal(postBody.success, true);
-    t.same(postBody.allowedEmails, ["alice@example.com", "bob@example.com"]);
+    t.check(postRes, `200
+{
+  "success": true,
+  "allowedEmails": [
+    "alice@example.com",
+    "bob@example.com"
+  ]
+}`);
 
     // Verify persisted via GET
     const getRes = await ctx.server.inject({ method: "GET", url: `${BASE}/api/admin/box-config` });
@@ -52,9 +58,14 @@ test("POST /api/admin/box-config filters out invalid emails", async (t) => {
       url: `${BASE}/api/admin/box-config`,
       payload: { allowedEmails: ["valid@example.com", "not-an-email", "", "also@valid.org"] },
     });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.same(body.allowedEmails, ["valid@example.com", "also@valid.org"], "should filter non-email strings");
+    t.check(res, `200
+{
+  "success": true,
+  "allowedEmails": [
+    "valid@example.com",
+    "also@valid.org"
+  ]
+}`);
   } finally {
     await ctx.cleanup();
   }

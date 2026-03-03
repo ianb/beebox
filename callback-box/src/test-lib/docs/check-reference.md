@@ -164,6 +164,35 @@ t.check(await getStatus(boxRoot), "git: modified: box/inbox/test.card");
 
 Return `null` from a serializer to pass through to the next one.
 
+### HTTP response serializer
+
+For route tests, `test/helpers/check-serializers.ts` registers a serializer for Fastify `inject()` responses that formats them as `statusCode\n{json body}`:
+
+```ts
+import "./helpers/check-serializers.js";
+
+// Check status + body in one assertion:
+t.check(res, `200\n{\n  "success": true\n}`);
+
+// With wildcards for volatile fields:
+t.check(res, `200\n___"items": []___`);
+```
+
+### When wildcards work well (and when they don't)
+
+Wildcards shine for **linear text** with isolated volatile parts — timestamps in XML templates, hashes in commit output, prefixes/suffixes:
+
+```ts
+// Good: one volatile field in otherwise literal XML
+t.check(template, `<memo status="new">
+  <created>___</created>
+  <content>Test content</content>
+</memo>
+`);
+```
+
+Wildcards are **not a good fit** for skipping arbitrary fields in JSON objects. Because `___` matches any characters (including newlines), patterns like `{ ___ "title": "X" ___ "read": false ___ }` are fragile — they depend on field ordering and the non-greedy matching can produce surprising results. For complex JSON with many volatile fields, field-by-field `t.equal()` is clearer.
+
 ## Options
 
 Pass a `CheckOptions` object as the second argument instead of a string:

@@ -6,6 +6,8 @@
 
 /* eslint-disable security/detect-non-literal-fs-filename */
 import { test } from "tap";
+import "../src/test-lib/tap-check.js";
+import "./helpers/check-serializers.js";
 import { createTestServer, seedCard, commitAll, TEST_SLUG } from "./helpers/test-server.js";
 
 const BASE = `/${TEST_SLUG}`;
@@ -29,10 +31,7 @@ test("GET /api/inbox returns empty array for empty inbox", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/inbox` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.ok(Array.isArray(body.items), "items should be an array");
-    t.equal(body.items.length, 0, "should be empty");
+    t.check(res, `200\n___"items": []___`);
   } finally {
     await ctx.cleanup();
   }
@@ -146,12 +145,13 @@ test("GET /api/news-status returns counts", async (t) => {
     });
 
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/news-status` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.inbox, 1, "should count 1 news item in inbox");
-    t.equal(body.pool, 0);
-    t.equal(body.archive, 0);
-    t.equal(body.trash, 0);
+    t.check(res, `200
+{
+  "inbox": 1,
+  "pool": 0,
+  "archive": 0,
+  "trash": 0
+}`);
   } finally {
     await ctx.cleanup();
   }

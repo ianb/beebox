@@ -9,6 +9,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "tap";
+import "../src/test-lib/tap-check.js";
+import "./helpers/check-serializers.js";
 import { createTestServer, seedCard, commitAll, TEST_SLUG } from "./helpers/test-server.js";
 
 const BASE = `/${TEST_SLUG}`;
@@ -35,9 +37,7 @@ test("GET /api/briefs returns empty when no briefs exist", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/briefs` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.same(body.briefs, []);
+    t.check(res, `200\n___"briefs": []___`);
   } finally {
     await ctx.cleanup();
   }
@@ -176,8 +176,7 @@ test("POST /api/brief/mark-read moves brief to archive", async (t) => {
 
     // Verify the file actually moved
     const archivedContent = await readFile(join(ctx.boxRoot, body.newPath), "utf-8");
-    t.ok(archivedContent.includes('read-reason="user"'), "should have read-reason attr");
-    t.ok(archivedContent.includes("read-at="), "should have read-at attr");
+    t.check(archivedContent, `___read-at="___" read-reason="user"___`);
   } finally {
     await ctx.cleanup();
   }
@@ -248,10 +247,7 @@ test("POST /api/brief/complete-reading applies feedback and archives", async (t)
 
     // Verify feedback attributes were written
     const content = await readFile(join(ctx.boxRoot, body.newPath), "utf-8");
-    t.ok(content.includes('overall-rating="great"'), "should have overall rating");
-    t.ok(content.includes('read-reason="user"'), "should have read reason");
-    t.ok(content.includes('selected-reactions="interesting-topic"'), "should have reactions");
-    t.ok(content.includes('user-feedback="thumbs-up"'), "should have thumbs-up on section s1");
+    t.check(content, `___overall-rating="great"___read-reason="user"___selected-reactions="interesting-topic"___user-feedback="thumbs-up"___`);
   } finally {
     await ctx.cleanup();
   }
@@ -292,10 +288,7 @@ test("POST /api/brief/feedback creates feedback card and commits", async (t) => 
         comment: "Great section!",
       },
     });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.success, true);
-    t.equal(body.isVoice, false);
+    t.check(res, `200\n___"success": true___"isVoice": false___`);
   } finally {
     await ctx.cleanup();
   }
@@ -307,9 +300,7 @@ test("GET /api/news-guide/reactions returns empty when no guide exists", async (
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/news-guide/reactions` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.same(body.reactions, []);
+    t.check(res, `200\n___"reactions": []___`);
   } finally {
     await ctx.cleanup();
   }

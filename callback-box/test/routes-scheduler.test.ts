@@ -6,6 +6,8 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "tap";
+import "../src/test-lib/tap-check.js";
+import "./helpers/check-serializers.js";
 import { createTestServer, TEST_SLUG } from "./helpers/test-server.js";
 
 const BASE = `/${TEST_SLUG}`;
@@ -14,9 +16,7 @@ test("GET /api/scheduler/log returns empty for no log file", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/scheduler/log` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.same(body.entries, []);
+    t.check(res, `200\n___"entries": []___`);
   } finally {
     await ctx.cleanup();
   }
@@ -70,9 +70,7 @@ test("GET /api/schedules returns empty when no schedules dir", async (t) => {
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/schedules` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.same(body.schedules, []);
+    t.check(res, `200\n___"schedules": []___`);
   } finally {
     await ctx.cleanup();
   }

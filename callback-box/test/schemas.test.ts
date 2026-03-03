@@ -3,6 +3,7 @@
  */
 
 import { test } from "tap";
+import "../src/test-lib/tap-check.js";
 import {
   MemoSchema,
   QuestionSchema,
@@ -35,23 +36,30 @@ test("QuestionSchema has correct tag name", async (t) => {
 test("createMemoTemplate generates valid XML structure", async (t) => {
   const template = createMemoTemplate("Test content", "test-source");
 
-  t.ok(template.includes("<memo status=\"new\">"));
-  t.ok(template.includes("<content>Test content</content>"));
-  t.ok(template.includes("<source>test-source</source>"));
-  t.ok(template.includes("<created>"));
-  t.ok(template.includes("</memo>"));
+  t.check(template, `<memo status="new">
+  <created>___</created>
+  <content>Test content</content>
+  <source>test-source</source>
+</memo>
+`);
 });
 
 test("createMemoTemplate escapes special characters", async (t) => {
   const template = createMemoTemplate("Test <content> & more");
-  t.ok(template.includes("&lt;content&gt;"));
-  t.ok(template.includes("&amp;"));
+  t.check(template, `<memo status="new">
+  <created>___</created>
+  <content>Test &lt;content&gt; &amp; more</content>
+</memo>
+`);
 });
 
 test("createMemoTemplate works without source", async (t) => {
   const template = createMemoTemplate("Just content");
-  t.ok(!template.includes("<source>"));
-  t.ok(template.includes("<content>Just content</content>"));
+  t.check(template, `<memo status="new">
+  <created>___</created>
+  <content>Just content</content>
+</memo>
+`);
 });
 
 test("createSelectQuestionTemplate generates valid XML structure", async (t) => {
@@ -64,13 +72,15 @@ test("createSelectQuestionTemplate generates valid XML structure", async (t) => 
     ],
   });
 
-  t.ok(template.includes("<question status=\"pending\">"));
-  t.ok(template.includes("<memo>Context here</memo>"));
-  t.ok(template.includes("<prompt>What do you want?</prompt>"));
-  t.ok(template.includes('<option id="a">Choice A</option>'));
-  t.ok(template.includes('<option id="b">Choice B</option>'));
-  t.ok(template.includes('<input type="select">'));
-  t.ok(template.includes("</question>"));
+  t.check(template, `<question status="pending">
+  <memo>Context here</memo>
+  <prompt>What do you want?</prompt>
+  <input type="select">
+    <option id="a">Choice A</option>
+    <option id="b">Choice B</option>
+  </input>
+</question>
+`);
 });
 
 test("createSelectQuestionTemplate escapes special characters", async (t) => {
@@ -80,8 +90,12 @@ test("createSelectQuestionTemplate escapes special characters", async (t) => {
     options: [{ id: "a", label: "Option <A>" }],
   });
 
-  t.ok(template.includes("&lt;special&gt;"));
-  t.ok(template.includes("&amp;"));
-  // Quotes in text content don't need escaping (only in attributes)
-  t.ok(template.includes("\"this\""));
+  t.check(template, `<question status="pending">
+  <memo>Context with &lt;special&gt; &amp; chars</memo>
+  <prompt>What's "this"?</prompt>
+  <input type="select">
+    <option id="a">Option &lt;A&gt;</option>
+  </input>
+</question>
+`);
 });
