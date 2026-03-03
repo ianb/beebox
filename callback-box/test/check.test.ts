@@ -1,5 +1,5 @@
 import { test } from "tap";
-import { check, CheckError, serialize, registerSerializer } from "../src/test-lib/check.js";
+import { check, inspect, CheckError, serialize, registerSerializer } from "../src/test-lib/check.js";
 
 test("check passes on exact match", async (t) => {
   check("hello", "hello"); // should not throw
@@ -201,4 +201,93 @@ test("function mismatch throws CheckError", async (t) => {
     () => check((_print) => "got", "want"),
     { name: "CheckError" },
   );
+});
+
+// ── inspect() — non-throwing result ──
+
+test("inspect returns pass on match", async (t) => {
+  const r = inspect("hello", "hello");
+  check(r, `{
+  "pass": true,
+  "actual": "hello",
+  "expected": "hello",
+  "diff": null,
+  "message": ""
+}`);
+});
+
+test("inspect returns diff on single-line mismatch", async (t) => {
+  const r = inspect("got this", "want this");
+  // Use inspect's own fields to verify the diff format
+  t.equal((r as { pass: boolean }).pass, false);
+  check((r as { diff: string }).diff, `expected: "want this"
+  actual: "got this"
+  ~~~~~~~~~~~^`);
+});
+
+test("inspect returns diff on multi-line mismatch", async (t) => {
+  const r = inspect("line1\nchanged\nline3", "line1\noriginal\nline3");
+  check((r as { diff: string }).diff, `expected vs actual:
+    line1
+  - changed
+  + original
+    line3`);
+});
+
+test("inspect shows missing lines", async (t) => {
+  const r = inspect("only one", "only one\nextra line");
+  check((r as { diff: string }).diff, `expected vs actual:
+    only one
+  + extra line`);
+});
+
+test("inspect shows extra lines", async (t) => {
+  const r = inspect("line1\nextra\nline3", "line1\nline3");
+  check((r as { diff: string }).diff, `expected vs actual:
+    line1
+  - extra
+  + line3
+  - line3`);
+});
+
+test("inspect with wildcards shows pattern on mismatch", async (t) => {
+  const r = inspect("hello world", "goodbye ___");
+  t.equal((r as { pass: boolean }).pass, false);
+  // The diff shows the wildcard pattern vs actual
+  check((r as { diff: string }).diff, `expected: "goodbye ___"
+  actual: "hello world"
+  ~~~~~~~~~~~^`);
+});
+
+test("inspect on objects shows JSON diff", async (t) => {
+  const r = inspect({ a: 1, b: 2 }, `{
+  "a": 1,
+  "b": 3
+}`);
+  check((r as { diff: string }).diff, `expected vs actual:
+    {
+      "a": 1,
+  -   "b": 2
+  +   "b": 3
+    }`);
+});
+
+test("inspect with printer function", async (t) => {
+  const r = inspect((print) => {
+    print("did something");
+    return "result";
+  }, "did something\nwrong");
+  t.equal((r as { pass: boolean }).pass, false);
+  check((r as { actual: string }).actual, "did something\nresult");
+});
+
+test("inspect with async function", async (t) => {
+  const r = await inspect(async (_print) => "async value", "async value");
+  check(r, `{
+  "pass": true,
+  "actual": "async value",
+  "expected": "async value",
+  "diff": null,
+  "message": ""
+}`);
 });

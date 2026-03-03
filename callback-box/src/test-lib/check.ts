@@ -245,6 +245,71 @@ function buildPrinterOutput(lines: string[], returnValue: unknown): string {
 }
 
 function compareAndThrow(actual: unknown, expected: string | CheckOptions): void {
+  const result = compare(actual, expected);
+  if (result.pass) return;
+
+  const err = new CheckError(result.message);
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(err, compareAndThrow);
+  }
+  throw err;
+}
+
+// ── Inspect ──────────────────────────────────────────────────────────────────
+
+/**
+ * Result of comparing actual vs expected, without throwing.
+ */
+export interface CheckResult {
+  /** Whether the check passed */
+  pass: boolean;
+  /** The serialized actual value */
+  actual: string;
+  /** The expected string (after normalization if applicable) */
+  expected: string;
+  /** Diff text on failure, null on pass */
+  diff: string | null;
+  /** Full message (includes label and diff) on failure, empty on pass */
+  message: string;
+}
+
+/**
+ * Same as check() but returns a result instead of throwing.
+ * Use this to examine diffs programmatically or to test check() itself.
+ *
+ * @example
+ * const r = inspect("actual", "expected");
+ * console.log(r.pass);    // false
+ * console.log(r.diff);    // the visual diff
+ * console.log(r.actual);  // "actual"
+ */
+export function inspect(actual: unknown, expected: string | CheckOptions): CheckResult | Promise<CheckResult> {
+  if (typeof actual === "function") {
+    const lines: string[] = [];
+    const print: PrintFn = (text: string) => lines.push(text);
+    const returnValue = (actual as (print: PrintFn) => unknown)(print);
+
+    if (returnValue instanceof Promise) {
+      return returnValue.then((value) => {
+        const actualStr = buildPrinterOutput(lines, value);
+        return compare(actualStr, expected);
+      });
+    }
+
+    const actualStr = buildPrinterOutput(lines, returnValue);
+    return compare(actualStr, expected);
+  }
+
+  if (actual instanceof Promise) {
+    return actual.then((value) => compare(value, expected));
+  }
+
+  return compare(actual, expected);
+}
+
+// ── Core comparison ──────────────────────────────────────────────────────────
+
+function compare(actual: unknown, expected: string | CheckOptions): CheckResult {
   let opts: CheckOptions | undefined;
   let expectedStr: string;
 
@@ -262,19 +327,20 @@ function compareAndThrow(actual: unknown, expected: string | CheckOptions): void
     expectedStr = normalizeWS(expectedStr);
   }
 
-  const diagnostic = matchWithWildcards(actualStr, expectedStr);
-  if (diagnostic === null) return;
+  const diff = matchWithWildcards(actualStr, expectedStr);
 
-  const label = opts?.label ? ` (${opts.label})` : "";
-  const err = new CheckError(`check failed${label}\n${diagnostic}`);
-
-  // Remove check() itself from the stack trace so the error
-  // points at the caller's line
-  if (Error.captureStackTrace) {
-    Error.captureStackTrace(err, compareAndThrow);
+  if (diff === null) {
+    return { pass: true, actual: actualStr, expected: expectedStr, diff: null, message: "" };
   }
 
-  throw err;
+  const label = opts?.label ? ` (${opts.label})` : "";
+  return {
+    pass: false,
+    actual: actualStr,
+    expected: expectedStr,
+    diff,
+    message: `check failed${label}\n${diff}`,
+  };
 }
 
 function normalizeWS(s: string): string {
