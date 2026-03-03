@@ -15,10 +15,12 @@ test("GET /api/admin/box-config returns defaults when no config exists", async (
   const ctx = await createTestServer();
   try {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/admin/box-config` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.same(body.allowedEmails, [], "should default to empty array");
-    t.equal(body.boxSlug, TEST_SLUG);
+    // field order: boxSlug, allowedEmails, publicUrl
+    t.check(res, `200
+{
+  "boxSlug": "${TEST_SLUG}",
+  "allowedEmails": []___
+}`);
   } finally {
     await ctx.cleanup();
   }

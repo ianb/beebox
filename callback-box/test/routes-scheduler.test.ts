@@ -91,13 +91,19 @@ test("GET /api/schedules lists scheduled script cards", async (t) => {
     );
 
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/schedules` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.schedules.length, 1);
-    t.equal(body.schedules[0].name, "test-echo");
-    t.equal(body.schedules[0].description, "Echo test");
-    t.equal(body.schedules[0].scheduleType, "cron");
-    t.equal(body.schedules[0].enabled, true);
+    // field order: name, description, schedule, scheduleType, enabled, ...
+    t.check(res, `200
+{
+  "schedules": [
+    {
+      "name": "test-echo",
+      "description": "Echo test",
+      ___
+      "scheduleType": "cron",
+      "enabled": true___
+    }
+  ]
+}`);
   } finally {
     await ctx.cleanup();
   }

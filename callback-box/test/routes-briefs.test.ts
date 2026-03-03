@@ -57,10 +57,13 @@ test("GET /api/briefs lists unread briefs from box/output/briefs/", async (t) =>
     t.equal(res.statusCode, 200);
     const body = res.json();
     t.equal(body.briefs.length, 1);
-    t.equal(body.briefs[0].title, "Test Brief");
-    t.equal(body.briefs[0].read, false);
-    t.equal(body.briefs[0].date, "2026-03-01");
-    t.ok(body.briefs[0].relativePath.includes("2026-03-01_test.news-brief.card"));
+    // field order: path, relativePath, title, date, byline, read, readReason
+    t.check(body.briefs[0], `{___
+  "relativePath": "box/output/briefs/2026-03-01_test.news-brief.card",
+  "title": "Test Brief",
+  "date": "2026-03-01",___
+  "read": false
+}`);
   } finally {
     await ctx.cleanup();
   }
@@ -129,13 +132,18 @@ test("GET /api/brief/:path loads a brief", async (t) => {
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/brief/${encodedPath}` });
     t.equal(res.statusCode, 200);
     const body = res.json();
-    t.equal(body.brief.title, "Test Brief");
-    t.equal(body.brief.date, "2026-03-01");
-    t.equal(body.brief.byline, "A test brief for route testing");
-    t.ok(body.brief.content, "should have content");
-    t.ok(body.brief.content.sections, "should have sections");
-    t.equal(body.brief.content.sections.length, 1);
-    t.equal(body.brief.content.sections[0].heading, "First Section");
+    t.check(body.brief, `{
+  "title": "Test Brief",
+  "date": "2026-03-01",
+  "byline": "A test brief for route testing",
+  "content": {___
+    "sections": [
+      {___
+        "heading": "First Section"___
+      }
+    ]___
+  }___
+}`);
   } finally {
     await ctx.cleanup();
   }
@@ -169,12 +177,10 @@ test("POST /api/brief/mark-read moves brief to archive", async (t) => {
       url: `${BASE}/api/brief/mark-read`,
       payload: { briefPath: "box/output/briefs/2026-03-01_test.news-brief.card" },
     });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.success, true);
-    t.ok(body.newPath.includes("store/archive/briefs/"), "should move to archive");
+    t.check(res, `200\n___"success": true,\n  "newPath": "___store/archive/briefs/___"___`);
 
     // Verify the file actually moved
+    const body = res.json();
     const archivedContent = await readFile(join(ctx.boxRoot, body.newPath), "utf-8");
     t.check(archivedContent, `___read-at="___" read-reason="user"___`);
   } finally {
@@ -240,12 +246,10 @@ test("POST /api/brief/complete-reading applies feedback and archives", async (t)
         itemFeedback: [{ id: "s1", feedback: "thumbs-up" }],
       },
     });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.success, true);
-    t.ok(body.newPath.includes("store/archive/briefs/"));
+    t.check(res, `200\n___"success": true,\n  "newPath": "___store/archive/briefs/___"___`);
 
     // Verify feedback attributes were written
+    const body = res.json();
     const content = await readFile(join(ctx.boxRoot, body.newPath), "utf-8");
     t.check(content, `___overall-rating="great"___read-reason="user"___selected-reactions="interesting-topic"___user-feedback="thumbs-up"___`);
   } finally {

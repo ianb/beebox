@@ -178,20 +178,36 @@ t.check(res, `200\n{\n  "success": true\n}`);
 t.check(res, `200\n___"items": []___`);
 ```
 
-### When wildcards work well (and when they don't)
+### Wildcards in JSON
 
-Wildcards shine for **linear text** with isolated volatile parts — timestamps in XML templates, hashes in commit output, prefixes/suffixes:
+Wildcards match any characters including newlines (via `[\s\S]*` — greedy with backtracking), so they work well for skipping fields in JSON objects. The only requirement is that the literal fragments you include must appear in the same order as the actual output (`JSON.stringify` field order is deterministic):
 
 ```ts
-// Good: one volatile field in otherwise literal XML
-t.check(template, `<memo status="new">
-  <created>___</created>
-  <content>Test content</content>
-</memo>
-`);
+// Skip volatile fields, check the ones you care about:
+t.check(body.briefs[0], `{___
+  "relativePath": "box/output/briefs/2026-03-01_test.news-brief.card",
+  "title": "Test Brief",
+  "date": "2026-03-01",___
+  "read": false
+}`);
 ```
 
-Wildcards are **not a good fit** for skipping arbitrary fields in JSON objects. Because `___` matches any characters (including newlines), patterns like `{ ___ "title": "X" ___ "read": false ___ }` are fragile — they depend on field ordering and the non-greedy matching can produce surprising results. For complex JSON with many volatile fields, field-by-field `t.equal()` is clearer.
+**Important:** Put `___` on the same line as the preceding text (e.g., `{___` or `"2026-03-01",___`), not on its own indented line. A `___` on its own line like:
+
+```
+  "date": "2026-03-01",
+  ___
+  "read": false
+```
+
+adds an extra `\n  ` before AND after the wildcard in the regex. If the fields are adjacent in the actual JSON (nothing to skip), the pattern requires two `\n  ` sequences where only one exists, and the match fails. Keeping `___` inline avoids this:
+
+```
+  "date": "2026-03-01",___
+  "read": false
+```
+
+Fields must appear in their actual order — if `"date"` comes before `"read"` in the JSON, the expected string must list them in that order too.
 
 ## Options
 

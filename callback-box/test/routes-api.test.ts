@@ -66,13 +66,16 @@ test("GET /api/card/* loads a card", async (t) => {
     });
 
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/card/box/inbox/hello.memo.card` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.tagName, "memo");
-    t.equal(body.path, "box/inbox/hello.memo.card");
-    t.ok(body.xml, "should have xml");
-    t.ok(body.element, "should have element tree");
-    t.equal(body.element.tagName, "memo");
+    // field order: path, tagName, status, version, xml, element
+    t.check(res, `200
+{
+  "path": "box/inbox/hello.memo.card",
+  "tagName": "memo",
+  ___
+  "element": {
+    "tagName": "memo"___
+  }
+}`);
   } finally {
     await ctx.cleanup();
   }
@@ -104,9 +107,8 @@ test("PATCH /api/card/* applies set-attr op", async (t) => {
         ops: [{ op: "set-attr", attr: "status", value: "processed" }],
       },
     });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.element.attrs.status, "processed", "status should be updated");
+    // field order: path, tagName, status, version, xml, element
+    t.check(res, `200\n___"status": "processed"___"element":___"status": "processed"___`);
   } finally {
     await ctx.cleanup();
   }
@@ -122,13 +124,19 @@ test("GET /api/browse/* lists directory contents", async (t) => {
     });
 
     const res = await ctx.server.inject({ method: "GET", url: `${BASE}/api/browse/box/inbox` });
-    t.equal(res.statusCode, 200);
-    const body = res.json();
-    t.equal(body.path, "box/inbox");
-    t.ok(Array.isArray(body.cards), "should have cards array");
-    const found = body.cards.find((c: { relativePath: string }) => c.relativePath === "box/inbox/browse-test.memo.card");
-    t.ok(found, "should find the seeded card");
-    t.equal(found.tagName, "memo");
+    // field order in cards: relativePath, name, type, tagName, status
+    t.check(res, `200
+{
+  "path": "box/inbox",
+  ___
+  "cards": [
+    {
+      "relativePath": "box/inbox/browse-test.memo.card",
+      ___
+      "tagName": "memo"___
+    }
+  ]
+}`);
   } finally {
     await ctx.cleanup();
   }
@@ -168,13 +176,9 @@ test("debug-log POST/GET/DELETE cycle", async (t) => {
     });
     t.equal(postRes.statusCode, 200);
 
-    // GET entries
+    // GET entries — field order: ts, level, message
     const getRes = await ctx.server.inject({ method: "GET", url: `${BASE}/api/debug-log` });
-    t.equal(getRes.statusCode, 200);
-    const body = getRes.json();
-    t.equal(body.entries.length, 1);
-    t.equal(body.entries[0].message, "test message");
-    t.equal(body.entries[0].level, "info");
+    t.check(getRes, `200\n___"level": "info",\n      "message": "test message"___`);
 
     // DELETE entries
     const delRes = await ctx.server.inject({ method: "DELETE", url: `${BASE}/api/debug-log` });
