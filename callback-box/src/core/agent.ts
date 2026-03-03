@@ -16,6 +16,69 @@ import { createWriteStream, type WriteStream } from "node:fs";
 import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit } from "../cli/lib/git.js";
 
+// ─── Agent interface ─────────────────────────────────────────────────
+
+/**
+ * Options passed to Agent.invoke() by the calling code.
+ * The agent doesn't know these ahead of time — they're provided
+ * by the command that uses the agent.
+ */
+export interface AgentInvokeOptions {
+  boxRoot: string;
+  /** System prompt — provided on first invoke, omitted on resume. */
+  systemPrompt?: string;
+  /** User prompt for this invocation. */
+  prompt: string;
+  /** Model override (e.g., "claude-haiku-4-5-20251001"). */
+  model?: string;
+  /** Maximum agent turns (default: 20). */
+  maxTurns?: number;
+}
+
+/**
+ * A named agent with session lifecycle.
+ *
+ * First invoke() starts a new session with the system prompt.
+ * Subsequent invoke() calls resume the same session (no system prompt).
+ */
+export interface Agent {
+  readonly name: string;
+  readonly sessionId: string;
+  invoke(options: AgentInvokeOptions): Promise<AgentResult>;
+}
+
+/**
+ * Create a real agent that spawns Claude Code.
+ */
+export function createAgent(options: {
+  name: string;
+  sessionId?: string;
+  onOutput?: (text: string) => void;
+}): Agent {
+  const sessionId = options.sessionId ?? randomUUID();
+  let invocationCount = 0;
+
+  return {
+    name: options.name,
+    sessionId,
+    async invoke(opts: AgentInvokeOptions): Promise<AgentResult> {
+      const isResume = invocationCount > 0;
+      invocationCount++;
+
+      return runAgent({
+        boxRoot: opts.boxRoot,
+        systemPrompt: opts.systemPrompt ?? "",
+        prompt: opts.prompt,
+        onOutput: options.onOutput,
+        model: opts.model,
+        maxTurns: opts.maxTurns,
+        sessionId,
+        resume: isResume,
+      });
+    },
+  };
+}
+
 const COMMIT_NUDGE_PROMPT = `IMPORTANT: You have uncommitted changes in the working directory. Please:
 
 1. Review the current state of your work (git status, check files)
@@ -25,9 +88,12 @@ Do NOT leave changes uncommitted. Commit now.`;
 
 export interface EnsureCommittedOptions {
   boxRoot: string;
-  agentResult: AgentResult;
-  /** Original agent options (for resuming the session) */
-  agentOptions: AgentOptions;
+  /** Agent interface — preferred. If provided, used for retry invocation. */
+  agent?: Agent;
+  /** @deprecated Use agent instead — needed for legacy callers. */
+  agentResult?: AgentResult;
+  /** @deprecated Use agent instead — needed for legacy callers. */
+  agentOptions?: AgentOptions;
   /** Fallback commit message if retry also fails */
   fallbackMessage: string;
   /** Trailers for fallback commit */
@@ -42,7 +108,7 @@ export interface EnsureCommittedOptions {
  * create a fallback commit marked with Fallback: true.
  */
 export async function ensureAgentCommitted(options: EnsureCommittedOptions): Promise<void> {
-  const { boxRoot, agentResult, agentOptions, fallbackMessage, fallbackTrailers, onOutput } = options;
+  const { boxRoot, fallbackMessage, fallbackTrailers, onOutput } = options;
 
   const status = await getStatus(boxRoot);
   // Only care about staged/modified files — untracked files (lock files, pending
@@ -51,13 +117,22 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
 
   // Retry: resume the same session with a nudge to commit
   onOutput?.(fmt.dim("  (Agent didn't commit — resuming session to request commit...)\n"));
-  await runAgent({
-    ...agentOptions,
-    sessionId: agentResult.sessionId,
-    resume: true,
-    prompt: COMMIT_NUDGE_PROMPT,
-    maxTurns: 5,
-  });
+  if (options.agent) {
+    await options.agent.invoke({
+      boxRoot,
+      prompt: COMMIT_NUDGE_PROMPT,
+      maxTurns: 5,
+    });
+  } else {
+    // Legacy path — uses raw runAgent with agentOptions
+    await runAgent({
+      ...options.agentOptions!,
+      sessionId: options.agentResult!.sessionId,
+      resume: true,
+      prompt: COMMIT_NUDGE_PROMPT,
+      maxTurns: 5,
+    });
+  }
 
   const retryStatus = await getStatus(boxRoot);
   if (retryStatus.staged.length === 0 && retryStatus.modified.length === 0) {

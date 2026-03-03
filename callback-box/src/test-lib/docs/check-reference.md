@@ -133,6 +133,8 @@ t.check(logLine, "commit «hash» by «author»");  // named captures
 | `«int»` | integer (`42`, `-5`) | `int` |
 | `«number»` | number (`3.14`, `-5`, `1.5e-10`) | `number` |
 | `«string»` | quoted string (`"hello"`, `'world'`, with escapes) | `string` |
+| `«codeblock»` | triple backticks (`` ``` ``), use `«codeblock»xml` to match `` ```xml `` | `codeblock` |
+| `«blankline»` | empty line (use in multi-line `=>` blocks where a real blank line would end the block) | `blankline` |
 | `«name»` | anything (unknown type) | `name` |
 | `«name=type»` | type's pattern | `name` |
 | `«name=*»` | anything | `name` |

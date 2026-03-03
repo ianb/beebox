@@ -67,7 +67,7 @@ These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest hel
 ### Fine without tests
 
 - **CLI commands** (`src/cli/commands/*.ts`, ~35 files) — Thin glue code. Keep commands small so we're testing the pieces they call, not the commands themselves.
-- **Agent invocation** (`src/core/agent.ts`) — The success criteria aren't objective — you'd need the agent itself to judge whether it worked. Not amenable to automated testing.
+- **Agent invocation** (`src/core/agent.ts`) — `Agent` interface, `createAgent()`, `createFakeAgent()` now exist. `triage-feedback` wired as first consumer. Remaining commands (`process-news`, `process-feedback`, `reactor`) still use raw `runAgent()` and can be migrated to the Agent interface for testability.
 - **OAuth** (`src/connectors/google-auth.ts`) — Standard OAuth flow, simpler without tests.
 
 ### Dependency injection approach
@@ -198,6 +198,10 @@ function createFakeTime(initial?: string): FakeTimeService {
 
 The challenge is threading it through — `getBoxTimeISO()` is called from 40+ files as a free function. Options: (1) pass as parameter everywhere (invasive), (2) add to existing context objects (`CommandContext`, connector constructors), (3) keep env-var approach for production, add service as alternative injection for doctests. The env-var stub already works for scenarios; the service would mainly benefit doctests needing fine-grained time control (e.g., scheduling tests that advance time between steps). There are also ~70 direct `new Date()` calls — most legitimate (auth, perf timing, logging) but some card/job creation should arguably go through the stubbable clock.
 
+### TypeScript in doctest code blocks — DONE
+
+The doctest loader now pipes generated source through esbuild's `transformSync` (loader: "ts") before returning it to Node. This means `import type`, type annotations, and all TypeScript syntax work in both setup blocks and test code blocks.
+
 ### Assertive logging
 
 Soft assertions in production code that surface through the logging system. In tests, an error harness catches unexpected logged errors and fails the test. This turns the logging system into a passive testing layer.
@@ -227,3 +231,4 @@ Rendered output includes markup (`data-source` attributes) indicating where each
 - **2026-03-03:** Calendar route tests (3/3 endpoints) and connector-level tests for Telegram and Raindrop. Connectors tested using `makeTmpBox({ git: true })` + service fakes, exercising full sync cycles (polling, webhook processing, outbound send, two-way bookmark sync). Dropbox relay deprioritized — being removed in favor of XState architecture.
 - **2026-03-03:** RSS connector service injection + tests. Created `FeedFetcherService` with fake that returns canned XML. RSS connector wired to accept injected fetcher. 4 test sections: pull (RSS 2.0), deduplication, Atom feed support, fetch error handling. Extracted `executeCommandStreaming()` from the streaming execute route — testable abstraction that emits `OutputLine` messages via callback. commands.ts now 5/5 (100%). Total: 699 tests across 41 files.
 - **2026-03-03:** Renamed `core/commands/wakeup.ts` → `connector-sync.ts` (command name `connector-sync`) to distinguish from the full `cb wakeup` CLI orchestrator. Exported and tested wakeup helper functions: `createIntakeJobsForUnjobbed()` (unjobbed detection, dedup via job refs, priority separation, excluded subdirs) and `createGuideRevisionJobIfNeeded()` (feedback detection, dedup, guide path). `runPreprocessors` and `runTriageFeedback` left untested — need service injection for loader/preactions and agent runner respectively. Total: 718 tests across 42 files.
+- **2026-03-03:** Agent testing infrastructure. Created `Agent` interface (`src/core/agent.ts`) with `createAgent()` (real, spawns Claude Code) and `createFakeAgent()` (`test/helpers/fake-agent.ts`). Agent has name, sessionId, and `invoke()` — first call starts session with system prompt, subsequent calls resume. FakeAgent records all invocations and has `printLog()` for structured output. `ensureAgentCommitted()` updated to accept `Agent` (backward-compatible with legacy `agentOptions`/`agentResult`). Wired into `triage-feedback.ts` as first consumer via `args.agent`. Tests cover: prompt builder verification, happy path (agent commits), no-op (no cards), agent failure, retry-then-fallback (agent doesn't commit), retry-succeeds. Total: 755 tests across 43 files.

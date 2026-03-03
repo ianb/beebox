@@ -65,6 +65,8 @@ const WILDCARD_TYPES: Record<string, string> = {
   int: "-?\\d+",
   number: "-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?",
   string: "(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')",
+  codeblock: "```",
+  blankline: "",
 };
 
 /** Extractions: an array of positional captures with named properties. */

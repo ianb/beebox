@@ -18,7 +18,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { runAgent, ensureAgentCommitted } from "../agent.js";
+import { createAgent, ensureAgentCommitted, type Agent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { fmt } from "../../cli/lib/format.js";
 
@@ -30,6 +30,8 @@ export interface TriageFeedbackArgs {
   dryRun?: boolean;
   /** Force even if another process is running */
   force?: boolean;
+  /** Injected agent — if not provided, creates a real Claude agent. */
+  agent?: Agent;
 }
 
 /**
@@ -214,7 +216,7 @@ GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers 
  */
 async function executeTriageFeedback(
   ctx: CommandContext,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<CommandResult> {
   const triageArgs = args as TriageFeedbackArgs;
   const dryRun = triageArgs.dryRun ?? false;
@@ -276,11 +278,16 @@ async function executeTriageFeedback(
     ctx.writeLine(fmt.info("Starting Claude Code agent..."));
     ctx.writeLine("");
 
-    const result = await runAgent({
+    // Create or use injected agent
+    const agent = triageArgs.agent ?? createAgent({
+      name: "triage",
+      onOutput: (text) => ctx.write(text),
+    });
+
+    const result = await agent.invoke({
       boxRoot: ctx.boxRoot,
       systemPrompt: buildTriagePrompt(ctx.boxRoot),
       prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
-      onOutput: (text) => ctx.write(text),
     });
     ctx.writeLine("");
 
@@ -290,14 +297,9 @@ async function executeTriageFeedback(
       // Retry if agent didn't commit, then fallback
       await ensureAgentCommitted({
         boxRoot: ctx.boxRoot,
-        agentResult: result,
-        agentOptions: {
-          boxRoot: ctx.boxRoot,
-          systemPrompt: buildTriagePrompt(ctx.boxRoot),
-          prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
-        },
+        agent,
         fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
-        fallbackTrailers: { "Triggered-By": "cb triage-feedback", Session: result.sessionId },
+        fallbackTrailers: { "Triggered-By": "cb triage-feedback", Session: agent.sessionId },
         onOutput: (text) => ctx.write(text),
       });
 

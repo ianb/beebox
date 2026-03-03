@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { basename } from "node:path";
+import { transformSync } from "esbuild";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
 
@@ -28,8 +29,13 @@ export async function load(url, context, nextLoad) {
   if (url.endsWith(".doctest.md")) {
     const filePath = fileURLToPath(url);
     const markdown = readFileSync(filePath, "utf-8");
-    const source = generateTestSource(markdown, filePath);
-    return { format: "module", source, shortCircuit: true };
+    const tsSource = generateTestSource(markdown, filePath);
+    const { code } = transformSync(tsSource, {
+      loader: "ts",
+      format: "esm",
+      sourcefile: filePath,
+    });
+    return { format: "module", source: code, shortCircuit: true };
   }
   return nextLoad(url, context);
 }
