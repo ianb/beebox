@@ -627,7 +627,7 @@ Two complementary modes, both generating `.test.ts` files that run through the n
  * @example
  * displayCard(loadCard("box/inbox/task.card"))
  * //=> Card {
- * //=>   id: ___
+ * //=>   id: «*»
  * //=>   title: "Buy groceries"
  * //=>   tags: ["shopping", "home"]
  * //=> }
@@ -675,7 +675,7 @@ expect(printer => {
 
 // Matcher object for options
 expect(displayCard(card), {
-  match: "Card { id: ___ }",
+  match: "Card { id: «*» }",
   ordered: false,
 });
 ```
@@ -684,7 +684,7 @@ The printer pattern provides isolation automatically — the function receives a
 
 ### Wildcards and matching
 
-`___` matches any single value (an ID, a timestamp, anything you don't care about). Typed variants like `___date___` or `___uuid___` can validate the shape while ignoring the specific value.
+`«*»` matches any text. Typed variants like `«date»` or `«uuid»` validate the shape while ignoring the specific value. Named variants like `«hash»` capture the matched text for further assertions.
 
 Matching is whitespace-insensitive by default — leading/trailing whitespace and indentation differences don't cause failures. This keeps expected output readable without requiring exact formatting.
 
