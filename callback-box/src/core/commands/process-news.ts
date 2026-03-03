@@ -39,6 +39,7 @@ import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import { fetchAllNewsItems } from "./fetch-all-news.js";
+import type { ArticleFetcherService } from "../../services/article-fetcher.js";
 
 /**
  * Arguments for the process-news command.
@@ -60,6 +61,8 @@ export interface ProcessNewsArgs {
   force?: boolean;
   /** Injected agent — if not provided, creates a real Claude agent per phase. */
   agent?: Agent;
+  /** Injected article fetcher for the fetch phase. */
+  articleFetcher?: ArticleFetcherService;
 }
 
 /**
@@ -556,6 +559,7 @@ async function executeProcessNews(
             concurrency: 5,
             onProgress: (msg) => ctx.writeLine(msg),
           },
+          ...(processArgs.articleFetcher && { articleFetcher: processArgs.articleFetcher }),
         });
 
         // Commit fetched content

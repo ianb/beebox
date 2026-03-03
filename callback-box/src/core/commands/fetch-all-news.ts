@@ -17,6 +17,7 @@ import { executeFetchNews } from "./fetch-news.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { type ElementNode } from "cardworks";
+import type { ArticleFetcherService } from "../../services/article-fetcher.js";
 
 /**
  * Result of fetching all news items.
@@ -55,6 +56,8 @@ export interface FetchAllNewsItemsParams {
     concurrency?: number;
     onProgress?: (msg: string) => void;
   };
+  /** Injected article fetcher — if not provided, uses the real fetchArticle. */
+  articleFetcher?: ArticleFetcherService;
 }
 
 /**
@@ -66,7 +69,7 @@ export interface FetchAllNewsItemsParams {
 export async function fetchAllNewsItems(
   params: FetchAllNewsItemsParams
 ): Promise<FetchAllResult> {
-  const { boxRoot, dir, options } = params;
+  const { boxRoot, dir, options, articleFetcher } = params;
   const concurrency = options?.concurrency ?? 5;
   const onProgress = options?.onProgress;
 
@@ -131,6 +134,7 @@ export async function fetchAllNewsItems(
         const fetchResult = await executeFetchNews(ctx, {
           path: currentPath,
           commit: false,
+          ...(articleFetcher && { articleFetcher }),
         });
 
         if (fetchResult.success) {

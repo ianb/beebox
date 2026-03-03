@@ -19,6 +19,7 @@ import { createLoader } from "../../cli/lib/loader.js";
 import { getBoxTimeISO } from "../../cli/lib/time.js";
 import { boxFetch } from "../../cli/lib/fetch.js";
 import { serialize, createElement, type ElementNode } from "cardworks";
+import type { ArticleFetcherService } from "../../services/article-fetcher.js";
 
 /**
  * Arguments for the fetch-news command.
@@ -30,6 +31,8 @@ export interface FetchNewsArgs {
   commit?: boolean;
   /** Timeout in milliseconds */
   timeout?: number;
+  /** Injected article fetcher — if not provided, uses the real fetchArticle. */
+  articleFetcher?: ArticleFetcherService;
 }
 
 // Initialize turndown with sensible defaults
@@ -218,7 +221,10 @@ async function executeFetchNews(
   ctx.writeLine(`Fetching: ${url}`);
 
   try {
-    const { markdown, finalUrl } = await fetchArticle(url, timeout);
+    const fetcher = fetchArgs.articleFetcher;
+    const { markdown, finalUrl } = fetcher
+      ? await fetcher.fetch(url, timeout)
+      : await fetchArticle(url, timeout);
 
     // Create content element using createElement helper
     const contentAttrs: Record<string, unknown> = {
@@ -357,4 +363,4 @@ registerCommand({
   execute: executeFetchNews,
 });
 
-export { executeFetchNews };
+export { executeFetchNews, fetchArticle };

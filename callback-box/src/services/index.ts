@@ -17,6 +17,7 @@ import type { OpenAIAudioService } from "./openai-audio.js";
 import type { DropboxRelayService } from "./dropbox-relay.js";
 import type { CaptureRelayService } from "./capture-relay.js";
 import type { FeedFetcherService } from "./feed-fetcher.js";
+import type { ArticleFetcherService } from "./article-fetcher.js";
 
 // ─── Re-exports ─────────────────────────────────────────────────────────────
 
@@ -80,6 +81,12 @@ export {
   createFakeFeedFetcher,
 } from "./feed-fetcher.js";
 
+export type { ArticleFetcherService, ArticleFetchResult } from "./article-fetcher.js";
+export {
+  createArticleFetcherService,
+  createFakeArticleFetcher,
+} from "./article-fetcher.js";
+
 export type { CallEntry, WithCallLog } from "./call-log.js";
 export { withCallLog, printCalls } from "./call-log.js";
 
@@ -96,4 +103,5 @@ export interface Services {
   dropboxRelay?: DropboxRelayService | undefined;
   captureRelay?: CaptureRelayService | undefined;
   feedFetcher?: FeedFetcherService | undefined;
+  articleFetcher?: ArticleFetcherService | undefined;
 }
