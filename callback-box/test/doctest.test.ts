@@ -129,12 +129,64 @@ foo("hello")
   t.ok(source.includes("test.doctest.md:"), "should reference source file");
 });
 
-test("generateTestSource: no-assertion block generates pass", async (t) => {
+test("generateTestSource: no-assertion block generates runnable test", async (t) => {
   const md = `\`\`\`
 doStuff()
 \`\`\`
 `;
 
   const source = generateTestSource(md, "/test.doctest.md");
-  t.ok(source.includes("t.pass"), "should use t.pass for no-assertion blocks");
+  t.ok(source.includes("doStuff()"), "should include the statement");
+  t.ok(source.includes("test("), "should generate a test function");
+});
+
+test("generateTestSource: cleanup after test emits t.teardown()", async (t) => {
+  const md = `\`\`\`
+const x = setup()
+x.value
+=> 42
+\`\`\`
+
+\`\`\` cleanup
+await x.destroy();
+\`\`\`
+
+\`\`\`
+const y = other()
+y.name
+=> hello
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  // Cleanup declared after first test attaches to first test via t.teardown()
+  t.ok(source.includes("t.teardown("), "should have teardown");
+  t.ok(source.includes("await x.destroy()"), "should include cleanup code");
+  // Second test should NOT have the cleanup
+  const teardownCount = (source.match(/t\.teardown/g) || []).length;
+  t.equal(teardownCount, 1, "cleanup should only apply to one test");
+});
+
+test("generateTestSource: cleanup before test emits t.teardown()", async (t) => {
+  const md = `\`\`\` cleanup
+await cleanup();
+\`\`\`
+
+\`\`\`
+step1()
+=> a
+\`\`\`
+
+\`\`\` continue
+step2()
+=> b
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  t.ok(source.includes("t.teardown("), "should have teardown");
+  t.ok(source.includes("await cleanup()"), "should include cleanup");
+  // Both steps should be in the same test (continue)
+  const testCount = (source.match(/\btest\(/g) || []).length;
+  t.equal(testCount, 1, "should have one test function");
 });

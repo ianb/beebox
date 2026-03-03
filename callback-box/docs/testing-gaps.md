@@ -1,13 +1,50 @@
 # Testing Gaps — Working Document
 
-Tracking areas where test coverage is missing or thin, and plans for addressing each.
+Tracking areas where test coverage is missing or thin, and plans for addressing each. Also captures the broader testing vision from design discussions.
+
+## Module Assessment
+
+Assessment of where each area of the codebase stands for testing, and what approach fits.
+
+### Already covered by doctests
+
+These modules have been converted from traditional tests or newly written as doctests:
+
+- `src/core/box.ts` — `initBox()`, directory structure, `isValidBox()`, `findBoxRoot()`, metadata
+- `src/schemas/*.ts` — Schema registry, all card template generators (memo, question, news-job, intake-job, calendar-review-job)
+- `src/connectors/calendar-utils.ts` — ICS parsing, event formatting, timespan parsing, date filtering
+- `src/connectors/intake-utils.ts` — `createOrAppendIntakeJob()` create, append, multi-source
+- `src/core/chat-response-extraction` logic — Streaming `<chat-response>` tag extraction
+- `src/core/scheduled-script.ts` — `isDue()`, `isDueForWakeup()`, `isWithinBudget()`, templates
+- `src/core/schedule-state.ts` — `pruneRecentRuns()`, `recordRun()`
+- `src/cli/lib/format.ts` — `stripAnsi()`
+- **Route tests** — scheduler, admin, core API, briefs (all converted from `.test.ts` to `.doctest.md`)
+
+### Covered by traditional tests
+
+- `test/check.test.ts` / `test/doctest.test.ts` — Meta-tests for the test infrastructure. These must stay as traditional tests (circular dependency — doctests use `check()` and the doctest parser).
+
+### Good candidates for doctest expansion
+
+- **Connectors** (`src/connectors/*.ts`) — With the right helpers and mocking, connector logic should work well as doctests. Needs helpers for stubbing HTTP responses.
+- **Procedure engine** (`src/core/procedure/engine.ts`) — Step-parsing logic is doctest-able. The storytelling format — showing a procedure running step by step with prose explaining what's happening — is a natural fit. Statefulness between steps is the main challenge; `continue` blocks help.
+- **WebSocket/SSE routes** — Would benefit from abstractions that let us test the underlying logic without actual WebSocket connections. Don't jump into this yet; needs design discussion about what the testable abstraction looks like.
+
+### Fine without tests
+
+- **CLI commands** (`src/cli/commands/*.ts`, ~35 files) — Thin glue code. Documentation-first, maybe smoke tests, but thorough testing isn't valuable here.
+- **Agent invocation** (`src/core/agent.ts`) — Spawns Claude Code subprocesses. No meaningful output to check in isolation.
+- **OAuth** (`src/connectors/google-auth.ts`) — Standard OAuth flow, simpler without tests.
+- **Chat sessions** (`chat-session.ts`, `chat-session-pool.ts`, `chat-thread-session.ts`) — Long-lived subprocess management. Uncertain what's testable without running Claude. Maybe integration tests, needs more thought.
 
 ## 1. API Route Tests
 
 **Status:** In progress — 19 of 56 endpoints tested (34%)
 **Priority:** High — deterministic, fast, covers fragile code
 
-Uses Fastify's `inject()` method with a shared test helper (`test/helpers/test-server.ts`) that creates a temp box, initializes git, and boots a server. Tests live in `test/routes-*.test.ts`.
+Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer()` from `test/helpers/doctest-server.ts`. Under the hood this uses Fastify's `inject()` — no socket server, no network. The helper provides `.inject()` (returns `"status\njson"` for `check()`) and `.request()` (returns `{ statusCode, body }` for programmatic access).
+
+**Direction:** Long-term goal is CGI-style testing — state-in → render → check output — without even Fastify. This would mean refactoring route handlers to separate pure logic from Fastify wiring. Current approach works well enough for now.
 
 **Current coverage:**
 
@@ -26,170 +63,86 @@ Uses Fastify's `inject()` method with a shared test helper (`test/helpers/test-s
 | `calendar.ts` | 0/3 | 0% | External API (Google Calendar) |
 | `auth.ts` | 0/4 | 0% | External API (Google OAuth) |
 
-**Remaining locally testable endpoints** (no external APIs):
-- `GET /api/questions`, `GET /api/context` (api.ts)
-- `GET /api/history`, `GET /api/history/diff/:hash`, `GET /api/history/session/:sessionId` (history.ts)
-- `GET /api/commands/list`, `GET /api/commands/:name` (commands.ts)
-- `POST /api/actions/answer`, `POST /api/actions/create` (actions.ts)
-
-**Open question:** How to handle routes with external dependencies (Telegram, Claude, Google OAuth)? Options: mock at the fetch level, inject mock service implementations, or dependency-inject service objects into route registration.
+**Open question:** How to handle routes with external dependencies? Preferred approach is built-in dependency injection (not mock libraries). Service objects passed to route registration, replaced with test implementations in tests.
 
 ## 2. Frontend Tests
 
-**Status:** Not started — needs infrastructure + architecture changes first
-**Priority:** Medium — important but requires upfront decisions
+**Status:** Not started — needs architecture changes first
+**Priority:** Medium
 
-### Current state
+No test infrastructure exists. The React frontend has ~15 page components and ~10 utility modules.
 
-No test infrastructure exists: no test runner (vitest/jest), no testing library, no mock setup. The React frontend has ~15 page components and ~10 utility modules.
+### What's testable today
 
-### What's testable today (no refactoring needed)
-
-Pure utility functions in `src/frontend/lib/`:
-- **`parseTags.ts`** (~130 lines) — XML-like tag parser, returns structured `TagType` objects. Pure function, no I/O.
-- **`speech-parsing.ts`** (~80 lines) — Extracts speech segments from text, validates voice names. Pure function.
-- **`patmatch.ts`** — Pattern matching utility. Pure function.
-- **`earcons.ts`** — Sound effect helper (partially pure).
-
-These could be tested with plain TAP unit tests today, same as the existing `chat-response-extraction.test.ts`.
-
-### What needs refactoring to test
-
-Components tightly couple data fetching with rendering. Every page does `useEffect → fetch → setState → render` inline. This means you can't render a component without either mocking fetch or running a real server.
-
-**Example pattern (current):**
-```tsx
-function QuestionsPage() {
-  const [questions, setQuestions] = useState([]);
-  useEffect(() => { fetchQuestions().then(setQuestions); }, []);
-  return <div>{questions.map(q => <QuestionCard q={q} />)}</div>;
-}
-```
-
-To test `QuestionCard` in isolation, you'd need to extract it and pass data as props. To test the page, you'd need MSW or a fetch mock.
+Pure utility functions in `src/frontend/lib/` — `parseTags.ts`, `speech-parsing.ts`, `patmatch.ts` — could be doctests right now.
 
 ### Architecture direction: unidirectional data flow
 
-The goal isn't just testability — it's a development pattern where the entire UI is a pure function of a state object. For any given state, you hand the app a JSON blob and it renders exactly that. This makes testing, development, and debugging the same activity.
+Components currently couple data fetching with rendering (`useEffect → fetch → setState → render`). The goal is to separate these so the UI is a pure function of a state object:
 
-**What this looks like:**
-- A store (context + reducer, or similar) holds the full app state as a plain object
-- Components are pure functions of state — they receive data as props, emit actions
-- An effect/action layer handles API calls, SSE subscriptions, etc. and updates the store
-- No `useEffect → fetch → setState` inside components
+- A store holds the full app state as a plain object
+- Components receive data as props, emit actions
+- An effect layer handles API calls and updates the store
+- Testing = passing a state slice to a component, no mocking needed
 
-**What this enables:**
-- **Testing without mocking** — render any component by passing it a state slice. No fetch mocks, no MSW, no server needed.
-- **State snapshots** — capture real app state, replay it locally for debugging or visual review.
-- **State catalog** — build a collection of interesting states (empty inbox, 50 unread briefs, error states) for development and visual regression.
-- **Agent-friendly development** — an agent can construct a state blob to see what the UI looks like without running the server.
-
-**What needs to change:**
-- Lift state out of components into a shared store
-- Replace inline `useEffect → fetch` patterns with store actions/effects
-- Components become presentational — data in, callbacks out
-- SSE events and API responses update the store, not individual component state
-
-This is a significant refactoring but the current code isn't that far off — most pages already fetch into local state and pass down as props. The main change is lifting that state up one level.
-
-### Suggested progression
-
-1. Add vitest + utility tests for `parseTags`, `speech-parsing` (quick win, no refactoring)
-2. Design the state shape and store pattern for one page (e.g., DashboardPage)
-3. Refactor that page to unidirectional data flow
-4. Add component tests that just pass state slices — no mocking needed
-5. Expand to other pages
+This enables state snapshots, a state catalog for development, and agent-friendly debugging.
 
 ## 3. Chat Session Behavioral Tests
 
-**Status:** Needs design — partially covered by existing unit tests
-**Priority:** Medium — the acknowledge-first pattern is critical to UX
+**Status:** Partially covered — extraction logic is doctest'd, pipeline is not
+**Priority:** Medium
 
-### What exists
+The `<chat-response>` extraction logic is well tested in doctests. What's not tested: the full pipeline from incoming message through session management to response delivery.
 
-- **`chat-response-extraction.test.ts`** — 9 tests covering the regex extraction logic, multi-chunk assembly, partial tags, acknowledge-then-report pattern. This is solid.
-- The system has two distinct session types:
-  - **ChatSession** (web UI) — streams everything back via SSE, no structured extraction
-  - **ChatThreadSession** (Telegram) — extracts `<chat-response>` tags for immediate delivery, uses acknowledge-first pattern
+Testable without Claude: session pool rotation, session persistence, thread file operations, stream parsing, typing indicators. These could be doctests with appropriate helpers.
 
-### What's testable without Claude
+What requires Claude (or a substitute): whether the agent actually uses `<chat-response>` tags, acknowledges first, etc. Options: mock Claude subprocess for pipeline testing, periodic live validation for behavioral testing.
 
-Pure logic that doesn't need agent output:
+## 4. Broader Vision
 
-| Component | What to test | Approach |
-|---|---|---|
-| Session pool rotation | Age/message-count thresholds trigger new session | Unit test with mock clock |
-| Session persistence | JSON store read/write, resume vs. fresh decision | Unit test with temp files |
-| Thread file operations | Message append, XML stamping, participant management | Unit test with temp files |
-| Stream parsing | JSONL parsing, message type dispatch, session ID capture | Unit test with mock stream |
-| Typing indicator | Start/stop timing, cleanup on error | Unit test with mock timers |
+Ideas from design discussions that haven't been implemented yet:
 
-### What requires Claude (or a substitute)
+### Self-describing services
 
-The interesting behavioral questions — does the agent actually acknowledge first? does it use `<chat-response>` tags? — require running a real agent or a convincing mock.
+Services export metadata alongside their functions — description, examples, and semantic properties. Tests and documentation get generated from these:
 
-**Approach options:**
-
-1. **`cb chat-test` CLI command** — A new command that sends a message through ChatThreadSession, waits for responses, validates structure, then exits. Could be used as a scenario step (`run: cb chat-test "summarize the inbox"`). Pros: integrates with existing scenario system. Cons: still costs money per run (agent call), still non-deterministic.
-
-2. **Scenario `chat:` step type** — Extend the scenario runner to support `chat: "message text"` steps with special validations like `response-count: 2` or `first-response-within: 5s`. More structured than a shell command. Cons: significant runner changes.
-
-3. **Mock Claude subprocess** — Replace `cb-claude` with a script that emits predetermined stream-json output. Tests the full pipeline (message → session → extraction → delivery) with deterministic output. Pros: fast, free, deterministic. Cons: doesn't test whether the real agent follows the system prompt.
-
-4. **Periodic live validation** — Run a real chat interaction (via Telegram or API) as part of a scheduled health check, not a test suite. Validate that `<chat-response>` tags appear in the thread file. Pros: tests real behavior. Cons: not a test you run in CI.
-
-**Recommendation:** Option 3 (mock subprocess) for the pipeline mechanics, option 1 or 4 for periodic real-agent validation.
-
-## 4. Scenario System Extensions
-
-**Status:** Working well for CLI pipelines, limited for interactive features
-**Priority:** Low-medium — worth thinking about but not urgent
-
-### Current capabilities
-
-The scenario system tests full CLI pipelines: connector sync → wakeup → reactor → output. It handles time progression, HTTP stubs, git state, and three validation types (committed, script, prompt). Six scenarios exist covering intake, news processing, scheduled scripts, and time-gated behavior.
-
-### Limitations
-
-- **Shell-only execution** — only `run: <command>` steps. Can't directly test chat interactions, API calls, or frontend behavior.
-- **No per-step setup/teardown** — each scenario is a clean-slate run from `main`.
-- **Prompt validations are expensive** — $0.50 each, 5 turns max. Used sparingly.
-- **Static HTTP stubs** — file-based responses can't simulate streaming, latency, or connection failures.
-
-### Possible extensions
-
-| Extension | Value | Effort | Notes |
-|---|---|---|---|
-| `chat:` step type | Test chat sessions in pipeline context | Medium | Needs ChatThreadSession integration in runner |
-| `api:` step type | Test API endpoints in scenario context | Low | Could use Fastify inject or curl |
-| `inject:` step type | Seed files/data between steps | Low | Currently done via shell `run:` steps |
-| Mock subprocess support | Deterministic agent output | Medium | Replace `cb-claude` with scripted responses |
-| Parallel step groups | Test concurrent operations | High | Significant runner redesign |
-
-These are ideas, not commitments. The current system covers the most important pipelines well.
-
-## 5. Connector Webhook Integration
-
-**Status:** Not started — overlaps with API route tests and chat session tests
-**Priority:** Low-medium
-
-Testing that incoming webhooks (Telegram update JSON) get properly routed to chat sessions and produce responses. The Telegram route does: validate secret → parse update → append to thread → route to session pool → deliver responses.
-
-Most of this chain could be tested by injecting a webhook payload via Fastify `inject()` if we had a way to mock the ChatSessionPool (so it doesn't spawn a real Claude process). This is really a dependency injection question for the route tests.
-
-## 6. Post-Deploy Smoke Test
-
-**Status:** Not started
-**Priority:** Low — nice to have, currently manual
-
-After `deploy.sh` runs, verify the server came up healthy. Could be as simple as adding to the deploy script:
-
-```bash
-sleep 2
-curl -sf https://server/$SLUG/api/status || echo "WARNING: health check failed"
+```typescript
+export const cardParser = {
+  parse: (xml: string) => Card,
+  description: "Parses XML card files into typed Card objects",
+  examples: [
+    { input: '<task status="open">Do thing</task>',
+      output: { type: "task", status: "open", text: "Do thing" } },
+  ],
+  properties: [
+    "parse(serialize(card)) deep-equals card",
+    "parse always returns a Card with a non-empty type field",
+  ],
+};
 ```
 
-The `/api/status` endpoint already returns box state and counts — a successful response confirms the server is running and can read the box.
+### Property testing
+
+Semantically meaningful invariants, not random fuzzing. Properties come from self-describing services:
+- `parse(serialize(card))` deep-equals `card`
+- Every card has a non-empty type field
+- `isDue()` returns false for disabled scripts regardless of other parameters
+
+Use fast-check for random input generation, but the properties themselves should be meaningful statements about the code's behavior.
+
+### CGI-style route testing
+
+Test routes as pure functions: state-in → render → extract available actions → state + action → new state. No server, no browser, no DOM. Walk through as a sequence of states and actions.
+
+This requires refactoring route handlers to separate the pure logic from the Fastify wiring, but it's the right long-term direction.
+
+### Assertive logging
+
+Soft assertions in production code that surface through the logging system. In tests, an error harness catches unexpected logged errors and fails the test. This turns the logging system into a passive testing layer.
+
+### Source document tracing
+
+Rendered output includes markup (`data-source` attributes) indicating where each piece of data came from. Makes debugging easier and enables assertions about data provenance.
 
 ---
 
@@ -197,4 +150,7 @@ The `/api/status` endpoint already returns box state and counts — a successful
 
 *(Record decisions about approaches as they're made)*
 
-- **2026-03-02:** API route tests implemented using Fastify `inject()` + shared test helper. Pattern established: `createTestServer()` → `server.inject()` → assertions → `cleanup()`. Test files: `routes-api.test.ts`, `routes-admin.test.ts`, `routes-scheduler.test.ts`, `routes-briefs.test.ts`.
+- **2026-03-02:** API route tests implemented using Fastify `inject()` + shared test helper. Pattern established: `createTestServer()` → `server.inject()` → assertions → `cleanup()`.
+- **2026-03-03:** Doctest system built. Converted box, schemas, calendar-utils, chat-response-extraction, scheduled-script, schedule-state, format tests to doctests. Traditional tests kept for meta-testing (check, doctest), route integration, and filesystem-heavy reactor tests.
+- **2026-03-03:** `___` wildcard syntax removed in favor of guillemet `«»` wildcards with typed matchers and extractions.
+- **2026-03-03:** Added `cleanup` block type to doctests (uses `t.teardown()`). Converted all route tests, reactor/intake-utils tests, and schema registry tests from `.test.ts` to `.doctest.md`. Created shared helpers: `doctest-helpers.ts` (filesystem) and `doctest-server.ts` (Fastify inject). Only `check.test.ts` and `doctest.test.ts` remain as traditional tests (circular dependency).

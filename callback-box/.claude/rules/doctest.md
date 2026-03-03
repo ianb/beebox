@@ -7,9 +7,12 @@ paths:
 
 - ` ```ts setup ` blocks run at module scope (imports, helpers)
 - Regular ` ``` ` blocks contain examples: `expression` then `=> expected`
-- Multiple examples per block OK — separate with blank lines
+- Multiple examples per block OK — separate with blank lines. **Examples in a block share scope** (variables persist)
+- ` ``` continue ` blocks append to the previous block's scope — use for prose between code sections that share variables
+- ` ``` cleanup ` blocks register teardown code via `t.teardown()` — runs after the current test even on failure. Place after the code that creates the resource to clean up.
 - `=> value` on one line = single-line result; `=>` alone = multi-line result until blank line or end of block
-- No `=>` means "just run, check it doesn't throw"
+- No `=>` means "just run" — use for setup statements within a block
+- Lines ending with `;` before a check expression are emitted as statements (e.g., `const x = foo();` then `x.length` then `=> 5`)
 - `t.check()` wildcards work in expected values: `«*»` (anything), `«date»`, `«int»`, `«name»`, `«name=type»`
 - Trailing newlines on string results are automatically trimmed (code blocks can't express trailing newlines)
 - Prose between code blocks is ignored — use it to document behavior

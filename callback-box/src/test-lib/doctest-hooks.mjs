@@ -161,12 +161,87 @@ export function parseExample(content) {
 // ── Generator ───────────────────────────────────────────────────────────────
 
 /**
+ * Split a multi-line expression into setup statements and a check expression.
+ *
+ * Lines ending with `;` are setup statements. The remaining lines
+ * (from the last `;`-terminated line onward) form the expression to check.
+ *
+ * Example:
+ *   "const x = foo();\nx.length" → { setup: ["const x = foo();"], expr: "x.length" }
+ *   "createTemplate({\n  a: 1,\n})" → { setup: [], expr: "createTemplate({\n  a: 1,\n})" }
+ */
+function splitExpression(expression) {
+  const lines = expression.split("\n");
+  if (lines.length === 1) {
+    return { setup: [], expr: expression };
+  }
+
+  // Find the last line ending with ;
+  let lastSemi = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trimEnd().endsWith(";")) {
+      lastSemi = i;
+    }
+  }
+
+  if (lastSemi === -1) {
+    // No semicolons — whole thing is one expression
+    return { setup: [], expr: expression };
+  }
+
+  const setup = lines.slice(0, lastSemi + 1);
+  const exprPart = lines.slice(lastSemi + 1).join("\n").trim();
+
+  if (!exprPart) {
+    // All lines end with ; — last line is the expression (strip trailing ;)
+    const last = setup.pop();
+    return { setup, expr: last.replace(/;\s*$/, "") };
+  }
+
+  return { setup, expr: exprPart };
+}
+
+/**
+ * Emit examples into the output array (shared by normal and continue blocks).
+ * @param {string} indent - indentation prefix (default "  ")
+ */
+function emitExamples(out, examples, indent = "  ") {
+  for (const ex of examples) {
+    if (!ex.expression) continue;
+
+    if (ex.expected !== null) {
+      const { setup, expr } = splitExpression(ex.expression);
+      for (const line of setup) {
+        out.push(`${indent}${line}`);
+      }
+      out.push(`${indent}await t.check(__trim(${expr}), ${JSON.stringify(ex.expected)});`);
+    } else {
+      // No assertion — just run the statements
+      for (const line of ex.expression.split("\n")) {
+        out.push(`${indent}${line}`);
+      }
+    }
+  }
+}
+
+/**
  * Generate a tap test module source from parsed markdown.
+ *
+ * Each code block becomes one test function. Examples within a block
+ * share scope, so variables declared in one example are visible to later ones.
+ * This enables "story" style tests where state builds up across assertions.
+ *
+ * Blocks with `continue` in their info string (e.g., ```ts continue or
+ * ``` continue) append to the previous test function, allowing prose
+ * between code sections that share variables.
+ *
+ * Blocks with `cleanup` in their info string declare cleanup code that
+ * runs after the current test (and any continue blocks) in a finally block.
+ * Cleanup applies from the point it's declared until a new non-continue
+ * test begins.
  */
 export function generateTestSource(markdown, filePath) {
   const blocks = parseCodeBlocks(markdown);
-  const setupBlocks = blocks.filter((b) => b.info.includes("setup"));
-  const exampleBlocks = blocks.filter((b) => !b.info.includes("setup"));
 
   const fileName = basename(filePath);
   const out = [];
@@ -178,38 +253,84 @@ export function generateTestSource(markdown, filePath) {
   out.push("");
 
   // Insert setup blocks at module scope
-  for (const block of setupBlocks) {
+  for (const block of blocks) {
+    if (!block.info.includes("setup")) continue;
     out.push(`// --- setup (${fileName}:${block.line}) ---`);
     out.push(block.content);
     out.push("");
   }
 
   // Generate test cases from example blocks
-  for (const block of exampleBlocks) {
-    const examples = parseExamples(block.content);
+  // All examples in a block share one test scope (variables persist)
+  // "continue" blocks append to the previous test scope
+  // "cleanup" blocks register teardown via t.teardown()
+  let testOpen = false;
+  let pendingCleanup = []; // cleanup lines waiting for a test to attach to
 
-    for (const ex of examples) {
-      if (!ex.expression) continue;
+  function closeTest() {
+    if (!testOpen) return;
+    out.push(`});`);
+    out.push("");
+    testOpen = false;
+  }
 
-      const label = ex.expression.split("\n")[0].trim();
-      const line = block.line + ex.lineOffset;
-      const testName = `${fileName}:${line} — ${label}`;
+  for (const block of blocks) {
+    if (block.info.includes("setup")) continue;
 
-      out.push(`// ${fileName}:${line}`);
+    const isContinue = block.info.includes("continue");
+    const isCleanup = block.info.includes("cleanup");
 
-      if (ex.expected !== null) {
-        out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
-        out.push(`  await t.check(__trim(${ex.expression}), ${JSON.stringify(ex.expected)});`);
-        out.push(`});`);
+    if (isCleanup) {
+      if (testOpen) {
+        // Emit teardown inline in the current test
+        out.push(`  t.teardown(async () => {`);
+        for (const line of block.content.split("\n")) {
+          out.push(`    ${line}`);
+        }
+        out.push(`  });`);
       } else {
-        out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
-        out.push(`  ${ex.expression};`);
-        out.push(`  t.pass("did not throw");`);
-        out.push(`});`);
+        // Save for the next test
+        for (const line of block.content.split("\n")) {
+          pendingCleanup.push(line);
+        }
       }
-      out.push("");
+      continue;
+    }
+
+    const examples = parseExamples(block.content);
+    if (examples.length === 0) continue;
+
+    if (isContinue && testOpen) {
+      // Append to the open test function
+      out.push(`  // --- continue (${fileName}:${block.line}) ---`);
+      emitExamples(out, examples);
+    } else {
+      // Close previous test if open
+      closeTest();
+
+      const firstLabel = examples[0].expression.split("\n")[0].trim();
+      const testName = `${fileName}:${block.line} — ${firstLabel}`;
+
+      out.push(`// ${fileName}:${block.line}`);
+      out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
+      testOpen = true;
+
+      // Emit any pending cleanup as teardown
+      if (pendingCleanup.length > 0) {
+        out.push(`  t.teardown(async () => {`);
+        for (const line of pendingCleanup) {
+          out.push(`    ${line}`);
+        }
+        out.push(`  });`);
+        pendingCleanup = [];
+      }
+
+      emitExamples(out, examples);
     }
   }
+
+  // Close final test
+  closeTest();
 
   return out.join("\n");
 }

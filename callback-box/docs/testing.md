@@ -1,44 +1,96 @@
 # Testing
 
-This project has three distinct testing approaches, each suited to different levels of verification.
+## Testing Philosophy
 
-## 1. TAP Unit Tests
+Tests serve three purposes in this project, in order of importance:
+
+1. **Forcing decomposition** — Making something testable creates clean boundaries. Writing a test first helps identify a function's purpose and isolate it from its surroundings.
+2. **Documentation** — Tests as literate documents that tell a story about how things work. Doctests are the primary format: readable markdown that happens to be executable.
+3. **Regression anchors** — Specific bug prevention at the moment of a fix.
+
+What tests are NOT for: validating types (the type system does that), achieving coverage percentages, or comprehensive verification for its own sake. Types with strict settings already act as smoke tests for structural correctness.
+
+**Key principles:**
+- **No mock libraries.** Injectability should be built into code. Prefer dependency injection over mocking frameworks.
+- **No server spin-up for testing.** Route tests use Fastify's `inject()`, not a running server. State-in → render → check output.
+- **TAP over fancy test runners.** TAP's text protocol is agent-readable and zero-dependency.
+- **Doctests are the default.** If it can be explained with examples in markdown, it should be a doctest. Traditional `.test.ts` files are for things that genuinely need complex setup or meta-testing.
+
+## 1. Doctests
+
+**Location:** `test/*.doctest.md`
+**Runner:** TAP with a custom Node.js loader (`src/test-lib/doctest-hooks.mjs`)
+**Run:** `npm test` (runs alongside traditional tests)
+
+Doctest files are executable markdown documents. The prose explains behavior; fenced code blocks contain examples that are run as tests. A Node.js loader hook transforms them into TAP tests at runtime.
+
+**When to use:** The default for most testing. Pure functions, template generators, stateful sequences with setup helpers, anything where showing examples is more readable than `t.equal()` assertions.
+
+**Syntax:** See `.claude/rules/doctest.md` for the full reference.
+
+````markdown
+```ts setup
+import { initBox, isValidBox } from "../src/core/box.js";
+```
+
+## Creating a box
+
+`initBox` creates the directory structure:
+
+```
+const tmp = await makeTmpDir();
+await initBox(tmp, { skipGit: true });
+await isValidBox(tmp)
+=> true
+```
+````
+
+**Features:**
+- `t.check()` wildcards in expected values: `«*»` (anything), `«date»`, `«int»`, `«name»`, `«name=type»`
+- ```` ``` continue ```` blocks share scope with the previous block (for prose between related code)
+- ```` ``` cleanup ```` blocks register teardown code via `t.teardown()` — runs after the test even on failure
+- Lines ending with `;` are statements; the last non-`;` line is the checked expression
+- Setup blocks run at module scope for imports and helpers
+
+**Shared helpers:**
+- `test/helpers/doctest-helpers.ts` — `makeTmpBox()` for filesystem tests. Returns `.root`, `.list()`, `.read()`, `.write()`, `.cleanup()`. All output is relative paths (no temp dir names in expected output).
+- `test/helpers/doctest-server.ts` — `makeTestServer()` for route tests. Returns `.inject()` (string for check), `.request()` (parsed object), `.seed()`, `.read()`, `.commitAll()`, `.cleanup()`. Uses Fastify `inject()` internally — no socket server.
+
+**Current doctest files:**
+
+| File | Tests |
+|------|-------|
+| `test/box.doctest.md` | `initBox()`, directory structure, `isValidBox()`, `findBoxRoot()`, metadata |
+| `test/schemas.doctest.md` | Schema registry, card templates (memo, question, news-job, intake-job, calendar-review-job) |
+| `test/intake-utils.doctest.md` | `createOrAppendIntakeJob()` — create, append, multi-source |
+| `test/calendar-utils.doctest.md` | ICS parsing, event formatting, timespan parsing, date filtering |
+| `test/chat-response-extraction.doctest.md` | `<chat-response>` streaming extraction, chunking, multiline |
+| `test/chat-utils.doctest.md` | Chat utilities |
+| `test/scheduled-script.doctest.md` | `isDue()`, `isDueForWakeup()`, `isWithinBudget()`, template generation |
+| `test/schedule-state.doctest.md` | `pruneRecentRuns()`, `recordRun()` |
+| `test/format.doctest.md` | `stripAnsi()` |
+| `test/dedent.doctest.md` | `dedent()` |
+| `test/serialize.doctest.md` | Value serialization |
+| `test/paths.doctest.md` | Card name parsing |
+| `test/routes-scheduler.doctest.md` | Scheduler log and schedules listing API |
+| `test/routes-admin.doctest.md` | Box config admin API |
+| `test/routes-api.doctest.md` | Core data API (status, inbox, cards, browse, news, debug-log, activity) |
+| `test/routes-briefs.doctest.md` | News brief reading workflow API |
+
+## 2. Traditional TAP Tests
 
 **Location:** `test/*.test.ts`
 **Runner:** [tap](https://node-tap.org/) v21 with tsx
-**Run:** `npm test` or `npm run test:watch`
+**Run:** `npm test`
 
-Unit tests verify individual functions and logic in isolation — template generation, XML parsing, filename patterns, regex extraction. They don't invoke agents or the CLI.
+Reserved for things that would be circular as doctests: testing the test infrastructure itself.
 
-**When to use:** Testing pure logic, parsers, template generators, schema registration, utility functions. Fast, deterministic, no external dependencies.
+**Current files:**
 
-**Example:**
-```typescript
-import { test } from "tap";
-import { createNewsJobTemplate } from "../src/schemas/news-job.js";
-
-test("createNewsJobTemplate escapes special characters", async (t) => {
-  const template = createNewsJobTemplate({
-    source: "test",
-    description: "Items with <special> & chars",
-    items: ['path/with"quotes.card'],
-  });
-  t.ok(template.includes("&lt;special&gt;"), "should escape < and >");
-  t.ok(template.includes("&amp;"), "should escape &");
-});
-```
-
-**Files:**
 | File | Tests |
 |------|-------|
-| `test/box.test.ts` | `initBox()`, `isValidBox()`, `findBoxRoot()`, box metadata |
-| `test/paths.test.ts` | `parseCardName()`, `buildCardName()`, `isCardFile()`, constants |
-| `test/schemas.test.ts` | Schema registry, memo/question templates, XML escaping |
-| `test/reactor.test.ts` | News/intake/calendar-review job schemas and templates, `createOrAppendIntakeJob()` |
-| `test/scheduled-script.test.ts` | Duration/budget parsing, `isDue()`, cron scheduling |
-| `test/chat-response-extraction.test.ts` | `<chat-response>` tag streaming extraction |
-
-Tests use temporary directories from `os.tmpdir()` and clean up in `finally` blocks.
+| `test/check.test.ts` | Wildcard matching, extractions, diff output, serializers, inspect() |
+| `test/doctest.test.ts` | Doctest parser and generator (meta-testing) |
 
 ## 2. Scenario Tests
 
@@ -249,8 +301,11 @@ Also enforces directory structure rules (e.g., trick scripts must be in subdirec
 
 ## Adding New Tests
 
-### New unit test
-Create `test/<name>.test.ts`, import from `tap`, follow existing patterns. Runs automatically with `npm test`.
+### New doctest (preferred)
+Create `test/<name>.doctest.md`. Write prose explaining the behavior, with fenced code blocks containing examples. See `.claude/rules/doctest.md` for syntax. Runs automatically with `npm test`.
+
+### New traditional test
+Create `test/<name>.test.ts`, import from `tap`. Use for route integration tests, meta-tests, or anything needing complex setup that doesn't read well as documentation.
 
 ### New scenario
 Create `~/src/boxes/scenarios/<name>/` with `scenario.yaml` and optionally `stubs.yaml` + `stubs/` directory. Test with `cb scenario run <name> --dry-run` first.
@@ -258,6 +313,11 @@ Create `~/src/boxes/scenarios/<name>/` with `scenario.yaml` and optionally `stub
 ### New knowledge audit
 Add entries to `src/dev/knowledge-audits.yaml`. Run with `--filter <id>` to test individually.
 
-## Known Gaps
+## Future Directions
 
-See [testing-gaps.md](testing-gaps.md) for a working document tracking areas where test coverage is missing and plans for addressing them. Key gaps: API route tests, frontend tests, chat session behavioral tests.
+See [testing-gaps.md](testing-gaps.md) for detailed plans. Key ideas:
+
+- **Self-describing services** — Services export `description`, `examples`, and `properties` alongside their functions. Tests get generated from these.
+- **Property testing** — Semantically meaningful invariants (like `parse(serialize(card)) === card`), not random fuzzing.
+- **CGI-style route testing** — Test routes as pure state→output functions rather than spinning up servers.
+- **Assertive logging** — Soft assertions in production code that surface through the logging system, caught by an error harness in tests.
