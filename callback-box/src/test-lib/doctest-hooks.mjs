@@ -6,7 +6,7 @@
  *
  * Format:
  *   - ```ts setup blocks are inserted at module scope (imports, helpers)
- *   - ``` blocks contain one example each: expression => expected
+ *   - ``` blocks contain examples: expression => expected (multiple per block OK)
  *   - check() is always available (via tap-check.ts --import)
  */
 
@@ -71,58 +71,91 @@ export function parseCodeBlocks(markdown) {
 }
 
 /**
- * Parse an example block into expression and expected value.
+ * Parse one or more examples from a code block.
  *
- * Format:
+ * Single-line result:
  *   expression
- *   => expected (single line)
+ *   => expected
  *
+ * Multi-line result (=> alone, continues until blank line or end of block):
  *   expression
  *   =>
- *   expected (multi-line, rest of block)
+ *   line 1
+ *   line 2
  *
- *   expression (no => means "just run, don't assert")
+ * Multiple examples in one block (separated by blank lines):
+ *   foo("a")
+ *   => 1
+ *
+ *   foo("b")
+ *   => 2
+ *
+ * No => means "just run, check it doesn't throw".
+ *
+ * Returns array of { expression, expected, lineOffset } where lineOffset
+ * is the 0-based offset of the expression within the block.
  */
-export function parseExample(content) {
+export function parseExamples(content) {
   const lines = content.split("\n");
-  let arrowIndex = -1;
+  const examples = [];
+  let i = 0;
 
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i] === "=>" || lines[i].startsWith("=> ")) {
-      arrowIndex = i;
-      break;
+  while (i < lines.length) {
+    // Skip blank lines between examples
+    if (lines[i].trim() === "") {
+      i++;
+      continue;
+    }
+
+    // Collect expression lines (everything until => or end of content)
+    const exprStart = i;
+    const exprLines = [];
+    while (i < lines.length && lines[i] !== "=>" && !lines[i].startsWith("=> ") && lines[i].trim() !== "") {
+      exprLines.push(lines[i]);
+      i++;
+    }
+
+    if (exprLines.length === 0) {
+      i++;
+      continue;
+    }
+
+    const expression = exprLines.join("\n").trim().replace(/;\s*$/, "");
+
+    // Check for => arrow
+    if (i < lines.length && (lines[i] === "=>" || lines[i].startsWith("=> "))) {
+      const arrowLine = lines[i];
+      i++;
+
+      if (arrowLine.startsWith("=> ")) {
+        // Single-line result: "=> value"
+        examples.push({ expression, expected: arrowLine.slice(3), lineOffset: exprStart });
+      } else {
+        // Multi-line result: collect until blank line or end of block
+        const expectedLines = [];
+        while (i < lines.length && lines[i].trim() !== "") {
+          expectedLines.push(lines[i]);
+          i++;
+        }
+        examples.push({
+          expression,
+          expected: expectedLines.join("\n").replace(/\s+$/, ""),
+          lineOffset: exprStart,
+        });
+      }
+    } else {
+      // No => — just run, no assertion
+      examples.push({ expression, expected: null, lineOffset: exprStart });
     }
   }
 
-  if (arrowIndex === -1) {
-    // No expected value — just run the expression
-    return { expression: content.trim(), expected: null };
-  }
+  return examples;
+}
 
-  const expression = lines
-    .slice(0, arrowIndex)
-    .join("\n")
-    .trim()
-    .replace(/;\s*$/, ""); // strip trailing semicolon
-
-  const arrowLine = lines[arrowIndex];
-  let expected;
-
-  if (arrowLine === "=>") {
-    // Multi-line: everything after => line
-    expected = lines.slice(arrowIndex + 1).join("\n");
-  } else {
-    // Single-line: "=> value", possibly with more lines
-    expected = arrowLine.slice(3); // "=> ".length === 3
-    if (arrowIndex + 1 < lines.length) {
-      expected += "\n" + lines.slice(arrowIndex + 1).join("\n");
-    }
-  }
-
-  // Trim trailing whitespace but preserve internal structure
-  expected = expected.replace(/\s+$/, "");
-
-  return { expression, expected };
+// Backward compat — parse a single example (used by tests)
+export function parseExample(content) {
+  const examples = parseExamples(content);
+  return examples[0] || { expression: "", expected: null };
 }
 
 // ── Generator ───────────────────────────────────────────────────────────────
@@ -150,27 +183,29 @@ export function generateTestSource(markdown, filePath) {
 
   // Generate test cases from example blocks
   for (const block of exampleBlocks) {
-    const { expression, expected } = parseExample(block.content);
-    if (!expression) continue;
+    const examples = parseExamples(block.content);
 
-    // Use first line of expression as test label
-    const label = expression.split("\n")[0].trim();
-    const testName = `${fileName}:${block.line} — ${label}`;
+    for (const ex of examples) {
+      if (!ex.expression) continue;
 
-    out.push(`// ${fileName}:${block.line}`);
+      const label = ex.expression.split("\n")[0].trim();
+      const line = block.line + ex.lineOffset;
+      const testName = `${fileName}:${line} — ${label}`;
 
-    if (expected !== null) {
-      out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
-      out.push(`  await t.check(${expression}, ${JSON.stringify(expected)});`);
-      out.push(`});`);
-    } else {
-      // No expected value — just run, check it doesn't throw
-      out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
-      out.push(`  ${expression};`);
-      out.push(`  t.pass("did not throw");`);
-      out.push(`});`);
+      out.push(`// ${fileName}:${line}`);
+
+      if (ex.expected !== null) {
+        out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
+        out.push(`  await t.check(${ex.expression}, ${JSON.stringify(ex.expected)});`);
+        out.push(`});`);
+      } else {
+        out.push(`test(${JSON.stringify(testName)}, async (t) => {`);
+        out.push(`  ${ex.expression};`);
+        out.push(`  t.pass("did not throw");`);
+        out.push(`});`);
+      }
+      out.push("");
     }
-    out.push("");
   }
 
   return out.join("\n");

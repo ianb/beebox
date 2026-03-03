@@ -7,6 +7,7 @@ import "../src/test-lib/tap-check.js";
 import {
   parseCodeBlocks,
   parseExample,
+  parseExamples,
   generateTestSource,
 } from "../src/test-lib/doctest-hooks.mjs";
 
@@ -74,6 +75,37 @@ test("parseExample: multi-line expression", async (t) => {
   const result = parseExample('foo(\n  "a",\n  "b"\n)\n=> result');
   t.equal(result.expression, 'foo(\n  "a",\n  "b"\n)');
   t.equal(result.expected, "result");
+});
+
+test("parseExamples: multiple single-line examples in one block", async (t) => {
+  const examples = parseExamples('foo("a")\n=> 1\n\nfoo("b")\n=> 2\n\nfoo("c")\n=> 3');
+  t.equal(examples.length, 3);
+  t.equal(examples[0].expression, 'foo("a")');
+  t.equal(examples[0].expected, "1");
+  t.equal(examples[1].expression, 'foo("b")');
+  t.equal(examples[1].expected, "2");
+  t.equal(examples[2].expression, 'foo("c")');
+  t.equal(examples[2].expected, "3");
+});
+
+test("parseExamples: mixed single and multi-line", async (t) => {
+  const examples = parseExamples('quick()\n=> yes\n\nslow()\n=>\nline 1\nline 2');
+  t.equal(examples.length, 2);
+  t.equal(examples[0].expected, "yes");
+  t.equal(examples[1].expected, "line 1\nline 2");
+});
+
+test("parseExamples: multi-line ends at blank line", async (t) => {
+  const examples = parseExamples('a()\n=>\nfoo\nbar\n\nb()\n=> baz');
+  t.equal(examples.length, 2);
+  t.equal(examples[0].expected, "foo\nbar");
+  t.equal(examples[1].expected, "baz");
+});
+
+test("parseExamples: tracks lineOffset", async (t) => {
+  const examples = parseExamples('foo()\n=> 1\n\nbar()\n=> 2');
+  t.equal(examples[0].lineOffset, 0);
+  t.equal(examples[1].lineOffset, 3);
 });
 
 test("generateTestSource produces valid test module", async (t) => {
