@@ -7,6 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import ky from "ky";
 import type { OAuth2Client } from "google-auth-library";
 
 export interface CalendarConfig {
@@ -74,25 +75,19 @@ export async function fetchAvailableCalendars(
   let pageToken: string | undefined;
 
   do {
-    const url = new URL(
-      "https://www.googleapis.com/calendar/v3/users/me/calendarList"
-    );
+    const searchParams: Record<string, string> = {};
     if (pageToken) {
-      url.searchParams.set("pageToken", pageToken);
+      searchParams["pageToken"] = pageToken;
     }
 
     const accessToken = (await auth.getAccessToken()).token;
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to list calendars: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = (await response.json()) as CalendarListResponse;
+    const data = await ky
+      .get("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
+        searchParams,
+        headers: { Authorization: `Bearer ${accessToken}` },
+        retry: 2,
+      })
+      .json<CalendarListResponse>();
 
     if (data.items) {
       for (const item of data.items) {

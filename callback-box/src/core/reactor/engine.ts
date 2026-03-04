@@ -19,6 +19,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import lockfile from "proper-lockfile";
 import { createAgent as realCreateAgent } from "../agent.js";
 import { generateDocs } from "../generate-docs.js";
 import { fmt } from "../../cli/lib/format.js";
@@ -248,32 +249,30 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
 
 // ─── Reactor lock ─────────────────────────────────────────────────────
 
-/**
- * Try to acquire a PID-based lock file. Returns true if acquired.
- * Stale locks (dead PIDs) are automatically cleaned up.
- */
-async function acquireReactorLock(lockFile: string): Promise<boolean> {
-  try {
-    const content = await fs.readFile(lockFile, "utf-8");
-    const pid = parseInt(content.trim(), 10);
-    if (!isNaN(pid)) {
-      try {
-        process.kill(pid, 0); // Check if process is alive
-        return false; // Process is alive — lock is held
-      } catch {
-        // Process is dead — stale lock, clean up and proceed
-      }
-    }
-  } catch {
-    // No lock file — proceed
-  }
+const REACTOR_LOCK_STALE_MS = 10 * 60 * 1000; // 10 minutes
 
-  await fs.writeFile(lockFile, String(process.pid));
-  return true;
+/**
+ * Acquire a lock using proper-lockfile (atomic mkdir-based).
+ * Stale locks are automatically cleaned up after REACTOR_LOCK_STALE_MS.
+ */
+async function acquireReactorLock(lockPath: string): Promise<boolean> {
+  // Ensure the lock file exists (proper-lockfile requires it)
+  await fs.writeFile(lockPath, "", { flag: "a" });
+
+  try {
+    await lockfile.lock(lockPath, { stale: REACTOR_LOCK_STALE_MS, retries: 0 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-async function releaseReactorLock(lockFile: string): Promise<void> {
-  await fs.unlink(lockFile).catch(() => {});
+async function releaseReactorLock(lockPath: string): Promise<void> {
+  try {
+    await lockfile.unlock(lockPath);
+  } catch {
+    // Already unlocked or lock file missing
+  }
 }
 
 function sleep(ms: number): Promise<void> {

@@ -2,6 +2,7 @@
  * Audio transcription using Mistral Voxtral API.
  */
 
+import ky, { type HTTPError } from "ky";
 import type {
   TranscribeAudioParams,
   TranscriptionResult,
@@ -87,33 +88,29 @@ export async function transcribeAudioVoxtral(
   const body = Buffer.concat(formParts);
 
   try {
-    const response = await fetch(VOXTRAL_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-      },
-      body,
-    });
-
-    if (!response.ok) {
-      const error = await parseErrorResponse(response);
-      throw error;
-    }
-
-    const result = (await response.json()) as {
-      text: string;
-      duration?: number;
-      language?: string;
-      segments?: Array<{
+    const result = await ky
+      .post(VOXTRAL_ENDPOINT, {
+        body,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        },
+        retry: 0,
+        timeout: 60_000,
+      })
+      .json<{
         text: string;
-        start: number;
-        end: number;
-        speaker?: string;
-      }>;
-      words?: Array<{ word: string; start: number; end: number }>;
-      usage?: { total_seconds: number };
-    };
+        duration?: number;
+        language?: string;
+        segments?: Array<{
+          text: string;
+          start: number;
+          end: number;
+          speaker?: string;
+        }>;
+        words?: Array<{ word: string; start: number; end: number }>;
+        usage?: { total_seconds: number };
+      }>();
 
     // Voxtral may return duration via usage.total_seconds or segments
     const lastSegment = result.segments?.[result.segments.length - 1];
@@ -146,6 +143,13 @@ export async function transcribeAudioVoxtral(
   } catch (error) {
     if (isTranscriptionError(error)) {
       throw error;
+    }
+
+    // ky HTTPError — parse the response for error details
+    const httpErr = error as HTTPError;
+    if (httpErr.response) {
+      const parsed = await parseErrorResponse(httpErr.response);
+      throw parsed;
     }
 
     const transcriptionError: TranscriptionError = {

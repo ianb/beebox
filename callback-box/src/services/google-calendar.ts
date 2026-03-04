@@ -5,6 +5,7 @@
  * Fake maintains in-memory events.
  */
 
+import ky, { type HTTPError } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -63,19 +64,29 @@ export interface GoogleCalendarService {
 // ─── Real implementation ─────────────────────────────────────────────────────
 
 export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCalendarService {
+  const api = ky.create({
+    prefixUrl: "https://www.googleapis.com/calendar/v3",
+    retry: 2,
+    hooks: {
+      beforeRequest: [
+        async (request) => {
+          const token = await auth.getAccessToken();
+          request.headers.set("Authorization", `Bearer ${token}`);
+        },
+      ],
+    },
+  });
+
   return {
     async listCalendars() {
       const items: CalendarListEntry[] = [];
       let pageToken: string | undefined;
       do {
-        const url = new URL("https://www.googleapis.com/calendar/v3/users/me/calendarList");
-        if (pageToken) url.searchParams.set("pageToken", pageToken);
-        const token = await auth.getAccessToken();
-        const res = await fetch(url.toString(), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Calendar API error: ${res.status} ${await res.text()}`);
-        const data = await res.json() as { items?: CalendarListEntry[]; nextPageToken?: string };
+        const searchParams: Record<string, string> = {};
+        if (pageToken) searchParams["pageToken"] = pageToken;
+        const data = await api
+          .get("users/me/calendarList", { searchParams })
+          .json<{ items?: CalendarListEntry[]; nextPageToken?: string }>();
         if (data.items) items.push(...data.items);
         pageToken = data.nextPageToken;
       } while (pageToken);
@@ -83,51 +94,38 @@ export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCale
     },
 
     async listEvents(calendarId, opts) {
-      const url = new URL(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-      );
+      const searchParams: Record<string, string> = {
+        singleEvents: "false",
+        maxResults: "2500",
+      };
       if (opts?.syncToken) {
-        url.searchParams.set("syncToken", opts.syncToken);
+        searchParams["syncToken"] = opts.syncToken;
       } else {
-        if (opts?.timeMin) url.searchParams.set("timeMin", opts.timeMin);
-        if (opts?.timeMax) url.searchParams.set("timeMax", opts.timeMax);
+        if (opts?.timeMin) searchParams["timeMin"] = opts.timeMin;
+        if (opts?.timeMax) searchParams["timeMax"] = opts.timeMax;
       }
-      url.searchParams.set("singleEvents", "false");
-      url.searchParams.set("maxResults", "2500");
-      if (opts?.pageToken) url.searchParams.set("pageToken", opts.pageToken);
+      if (opts?.pageToken) searchParams["pageToken"] = opts.pageToken;
 
-      const token = await auth.getAccessToken();
-      const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`Calendar API error: ${res.status} ${await res.text()}`);
-      return res.json() as Promise<EventsListResult>;
+      return api
+        .get(`calendars/${encodeURIComponent(calendarId)}/events`, { searchParams })
+        .json<EventsListResult>();
     },
 
     async insertEvent(calendarId, event) {
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
-      const token = await auth.getAccessToken();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(event),
-      });
-      if (!res.ok) throw new Error(`Calendar API error: ${res.status} ${await res.text()}`);
-      return res.json() as Promise<CalendarEvent>;
+      return api
+        .post(`calendars/${encodeURIComponent(calendarId)}/events`, { json: event })
+        .json<CalendarEvent>();
     },
 
     async deleteEvent(calendarId, eventId) {
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`;
-      const token = await auth.getAccessToken();
-      const res = await fetch(url, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok && res.status !== 410) {
-        throw new Error(`Calendar API error: ${res.status} ${await res.text()}`);
+      try {
+        await api.delete(
+          `calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+        );
+      } catch (err) {
+        // 410 Gone means already deleted — not an error
+        if ((err as HTTPError).response?.status === 410) return;
+        throw err;
       }
     },
   };

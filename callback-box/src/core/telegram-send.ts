@@ -3,6 +3,8 @@
  * Used by the chat session pool to send responses immediately.
  */
 
+import ky from "ky";
+
 export interface TelegramSendResult {
   messageId: number;
 }
@@ -16,23 +18,14 @@ export async function sendTelegramMessage(opts: {
   text: string;
 }): Promise<TelegramSendResult> {
   const { botToken, chatId, text } = opts;
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  });
+  const data = await ky
+    .post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      json: { chat_id: chatId, text },
+      retry: 2,
+    })
+    .json<{ ok: boolean; result: { message_id: number } }>();
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Telegram sendMessage failed (${res.status}): ${body}`);
-  }
-
-  const data = (await res.json()) as {
-    ok: boolean;
-    result: { message_id: number };
-  };
   return { messageId: data.result.message_id };
 }
 
@@ -43,11 +36,9 @@ export async function sendTypingIndicator(opts: {
   botToken: string;
   chatId: string | number;
 }): Promise<void> {
-  const url = `https://api.telegram.org/bot${opts.botToken}/sendChatAction`;
-  await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: opts.chatId, action: "typing" }),
+  await ky.post(`https://api.telegram.org/bot${opts.botToken}/sendChatAction`, {
+    json: { chat_id: opts.chatId, action: "typing" },
+    retry: 0,
   });
 }
 

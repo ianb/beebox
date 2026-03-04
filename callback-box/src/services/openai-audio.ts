@@ -5,6 +5,8 @@
  * Fake records calls and returns placeholder responses.
  */
 
+import ky from "ky";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface TranscriptionResult {
@@ -37,6 +39,13 @@ export interface OpenAIAudioService {
 // ─── Real implementation ─────────────────────────────────────────────────────
 
 export function createOpenAIAudioService(apiKey: string): OpenAIAudioService {
+  const api = ky.create({
+    prefixUrl: "https://api.openai.com/v1",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    retry: 2,
+    timeout: 60_000,
+  });
+
   return {
     async transcribe(audio, opts) {
       const boundary = `----formdata-${Date.now()}`;
@@ -61,42 +70,24 @@ export function createOpenAIAudioService(apiKey: string): OpenAIAudioService {
 
       parts.push(Buffer.from(`--${boundary}--\r\n`));
 
-      const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        },
+      const data = await api.post("audio/transcriptions", {
         body: Buffer.concat(parts),
-      });
+        headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
+      }).json<{ text: string; duration: number; language: string }>();
 
-      if (!res.ok) {
-        throw new Error(`OpenAI transcription error: ${res.status} ${await res.text()}`);
-      }
-
-      const data = await res.json() as { text: string; duration: number; language: string };
       return { text: data.text, duration: data.duration, language: data.language };
     },
 
     async textToSpeech(text, opts) {
-      const res = await fetch("https://api.openai.com/v1/audio/speech", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
+      const res = await api.post("audio/speech", {
+        json: {
           model: "gpt-4o-mini-tts-2025-03-20",
           input: text,
           voice: opts?.voice ?? "alloy",
           response_format: "mp3",
           instructions: opts?.instructions ?? "Fast and concise, but with a friendly lilting tone.",
-        }),
+        },
       });
-
-      if (!res.ok) {
-        throw new Error(`OpenAI TTS error: ${res.status} ${await res.text()}`);
-      }
 
       const arrayBuffer = await res.arrayBuffer();
       return { audio: Buffer.from(arrayBuffer), contentType: "audio/mpeg" };

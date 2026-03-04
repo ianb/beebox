@@ -13,6 +13,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { decode } from "html-entities";
 import { parseStringPromise } from "xml2js";
 import {
   registerConnector,
@@ -147,17 +148,10 @@ function getFirstText(el: unknown): string | undefined {
 }
 
 /**
- * Strip HTML tags from text.
+ * Strip HTML tags and decode entities from text.
  */
 function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  return decode(html.replace(/<[^>]*>/g, ""))
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 500); // Limit summary length

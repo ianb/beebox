@@ -11,13 +11,13 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 5 | [Fastify (keep)](#decision-5-backend-server--fastify-keep) | Already in use, no change needed. |
 | 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | 931 tests, 53 files. Doctest system built. DI pattern established. |
+| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | All adopted: execa, date-fns, html-entities, sanitize-filename, proper-lockfile, ky. |
 | 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | In use via react-markdown + remark-gfm. |
 
 ### Up next
 
 | # | Decision | Status | Notes |
 |---|---|---|---|
-| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | **Partial** | execa ✅, date-fns ✅. Remaining (html-entities, sanitize-filename, ky, proper-lockfile) are small individual tasks. |
 | 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | **Partial** | Installed, used in services/tests. Expanding to API inputs preps for tRPC. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **Planned** | Foundational — changes how all frontend state works. Do before other frontend stack changes. |
 | 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **Planned** | Depends on Zod schemas (#7). Mount alongside Fastify, migrate incrementally. |
@@ -955,10 +955,10 @@ Not started. highlight.js is used directly. Moving it into the remark pipeline v
 |---|---|---|
 | **execa** | Duplicate `execFile` wrappers with manual error handling | ✅ Done — used in `procedure/shell.ts` and `cli/lib/git.ts` |
 | **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | ✅ Done — used in 40+ files |
-| **html-entities** | Regex-based HTML stripping and entity decoding in `rss.ts` | Not adopted |
-| **sanitize-filename** | Multiple duplicate `safeFilename()` functions | Not adopted — `safeFilename()` still duplicated across 4+ connector files |
-| **proper-lockfile** | Two separate file-locking implementations | Not adopted |
-| **ky** | Bare `fetch()` with no retry or error normalization | Not adopted |
+| **html-entities** | Regex-based HTML stripping and entity decoding in `rss.ts` | ✅ Done — `decode()` replaces 6 hardcoded entity regexes in `stripHtml()` |
+| **sanitize-filename** | Multiple duplicate `safeFilename()` functions | ✅ Done — wraps sanitize-filename with existing alphanumeric/underscore/50-char constraints |
+| **proper-lockfile** | Two separate file-locking implementations | ✅ Done — atomic mkdir-based locking in lock.ts, schedule-state.ts, engine.ts |
+| **ky** | Bare `fetch()` with no retry or error normalization | ✅ Done — 10 files migrated, retry + timeout for external APIs |
 
 ### Why these and not others
 

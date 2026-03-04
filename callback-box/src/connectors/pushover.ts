@@ -13,6 +13,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import ky from "ky";
 import { glob } from "glob";
 import { parseXml, type ElementNode } from "cardworks";
 import {
@@ -133,14 +134,11 @@ class PushoverConnector implements Connector {
         if (html === "1") form.set("html", "1");
 
         // Send the notification
-        const response = await fetch(PUSHOVER_API_URL, {
-          method: "POST",
-          body: form,
-        });
+        const responseBody = await ky
+          .post(PUSHOVER_API_URL, { body: form, retry: 2 })
+          .json<{ status?: number; request?: string; errors?: string[] }>();
 
-        const responseBody = await response.json() as { status?: number; request?: string; errors?: string[] };
-
-        if (response.ok && responseBody.status === 1) {
+        if (responseBody.status === 1) {
           // Success — update card with response info
           const sentAt = new Date().toISOString();
           const requestId = responseBody.request ?? "unknown";
@@ -171,7 +169,7 @@ class PushoverConnector implements Connector {
           pushed.push(cardRelPath);
         } else {
           // Failure — update card with error
-          const errorMsg = responseBody.errors?.join("; ") ?? `HTTP ${response.status}`;
+          const errorMsg = responseBody.errors?.join("; ") ?? "Unknown Pushover error";
           const updatedContent = content.replace(
             /status="pending"/,
             "status=\"failed\""

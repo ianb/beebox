@@ -10,6 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import sanitize from "sanitize-filename";
 import { parseXml, escapeAttr, type ElementNode } from "cardworks";
 import {
   createChatThreadTemplate,
@@ -19,12 +20,12 @@ import { createChatJobTemplate } from "../schemas/chat-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 
 /**
- * Safe filename: strip non-alphanumeric (except spaces and hyphens),
- * replace spaces with underscores, max 50 chars.
+ * Safe filename: sanitize for platform safety, strip non-alphanumeric
+ * (except spaces and hyphens), replace spaces with underscores, max 50 chars.
  */
 export function safeFilename(text: string, fallback = "untitled"): string {
   return (
-    text
+    sanitize(text)
       .replace(/[^\d\sA-Za-z-]/g, "")
       .replace(/\s+/g, "_")
       .slice(0, 50) || fallback

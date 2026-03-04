@@ -7,6 +7,7 @@
  * GET  /api/chat/status    - Check session status
  */
 
+import ky from "ky";
 import type { FastifyInstance } from "fastify";
 import { ChatSession, type ChatMessage } from "../../core/chat-session.js";
 import { WebSocket as WsWebSocket } from "ws";
@@ -208,13 +209,8 @@ export async function registerChatRoutes(
       if (!apiKey) {
         return reply.status(500).send({ error: "TTS API key not configured" });
       }
-      const response = await fetch("https://api.openai.com/v1/audio/speech", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
+      const response = await ky.post("https://api.openai.com/v1/audio/speech", {
+        json: {
           model: "gpt-4o-mini-tts-2025-03-20",
           input: text,
           voice: resolvedVoice,
@@ -222,12 +218,11 @@ export async function registerChatRoutes(
           instructions:
             instructions ||
             "Fast and concise, but with a friendly lilting tone.",
-        }),
+        },
+        headers: { Authorization: `Bearer ${apiKey}` },
+        retry: 2,
+        timeout: 30_000,
       });
-      if (!response.ok) {
-        const err = await response.text();
-        return reply.status(response.status).send({ error: err });
-      }
       reply.header("Content-Type", "audio/mpeg");
       return reply.send(response.body);
     }

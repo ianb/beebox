@@ -5,6 +5,8 @@
  * Fake maintains in-memory collections and bookmarks.
  */
 
+import ky from "ky";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface RaindropCollection {
@@ -37,47 +39,34 @@ export interface RaindropService {
 // ─── Real implementation ─────────────────────────────────────────────────────
 
 export function createRaindropService(token: string): RaindropService {
-  const BASE = "https://api.raindrop.io/rest/v1";
-
-  async function apiFetch(endpoint: string, init?: RequestInit) {
-    const res = await fetch(`${BASE}${endpoint}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        ...init?.headers,
-      },
-    });
-    if (!res.ok) throw new Error(`Raindrop API error: ${res.status} ${await res.text()}`);
-    return res.json();
-  }
+  const api = ky.create({
+    prefixUrl: "https://api.raindrop.io/rest/v1",
+    headers: { Authorization: `Bearer ${token}` },
+    retry: 2,
+  });
 
   return {
     async listCollections() {
-      const data = await apiFetch("/collections") as { items: RaindropCollection[] };
+      const data = await api.get("collections").json<{ items: RaindropCollection[] }>();
       return data.items;
     },
 
     async listBookmarks(collectionId, opts) {
       const page = opts?.page ?? 0;
       const perpage = opts?.perpage ?? 50;
-      const data = await apiFetch(`/raindrops/${collectionId}?page=${page}&perpage=${perpage}`) as { items: RaindropBookmark[] };
+      const data = await api
+        .get(`raindrops/${collectionId}`, { searchParams: { page, perpage } })
+        .json<{ items: RaindropBookmark[] }>();
       return data.items;
     },
 
     async createBookmark(bookmark) {
-      const data = await apiFetch("/raindrop", {
-        method: "POST",
-        body: JSON.stringify(bookmark),
-      }) as { item: RaindropBookmark };
+      const data = await api.post("raindrop", { json: bookmark }).json<{ item: RaindropBookmark }>();
       return data.item;
     },
 
     async updateBookmark(id, fields) {
-      const data = await apiFetch(`/raindrop/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(fields),
-      }) as { item: RaindropBookmark };
+      const data = await api.put(`raindrop/${id}`, { json: fields }).json<{ item: RaindropBookmark }>();
       return data.item;
     },
   };

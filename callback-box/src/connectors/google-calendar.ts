@@ -16,6 +16,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import ky, { type HTTPError } from "ky";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import type { OAuth2Client } from "google-auth-library";
@@ -1040,24 +1041,27 @@ class GoogleCalendarConnector implements Connector {
     opts: { calendarId: string; googleEventId: string },
   ): Promise<boolean> {
     const { calendarId, googleEventId } = opts;
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`;
     const accessToken = (await auth.getAccessToken()).token;
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
 
-    if (response.status === 204 || response.status === 410) {
-      return true; // Deleted or already gone
+    try {
+      await ky.delete(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          retry: 2,
+        },
+      );
+      return true;
+    } catch (err) {
+      const status = (err as HTTPError).response?.status;
+      if (status === 410) return true; // Already gone
+      if (status) {
+        const text = await (err as HTTPError).response.text();
+        console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
+        return false;
+      }
+      throw err;
     }
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.warn(`  API error deleting from ${calendarId}: ${response.status} ${text}`);
-      return false;
-    }
-
-    return true;
   }
 
   /**
@@ -1069,24 +1073,28 @@ class GoogleCalendarConnector implements Connector {
     opts: { calendarId: string; event: GoogleCalendarEvent },
   ): Promise<GoogleCalendarEvent | null> {
     const { calendarId, event } = opts;
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
     const accessToken = (await auth.getAccessToken()).token;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(event),
-    });
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.warn(`  API error pushing to ${calendarId}: ${response.status} ${text}`);
-      return null;
+    try {
+      return await ky
+        .post(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+          {
+            json: event,
+            headers: { Authorization: `Bearer ${accessToken}` },
+            retry: 2,
+          },
+        )
+        .json<GoogleCalendarEvent>();
+    } catch (err) {
+      const status = (err as HTTPError).response?.status;
+      if (status) {
+        const text = await (err as HTTPError).response.text();
+        console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
+        return null;
+      }
+      throw err;
     }
-
-    return (await response.json()) as GoogleCalendarEvent;
   }
 
   private async fetchEvents(
@@ -1097,12 +1105,13 @@ class GoogleCalendarConnector implements Connector {
     let pageToken: string | undefined;
 
     do {
-      const url = new URL(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
-      );
+      const searchParams: Record<string, string> = {
+        singleEvents: "false",
+        maxResults: "2500",
+      };
 
       if (syncToken) {
-        url.searchParams.set("syncToken", syncToken);
+        searchParams["syncToken"] = syncToken;
       } else {
         // Full sync: use time window to limit results
         const now = new Date();
@@ -1110,28 +1119,25 @@ class GoogleCalendarConnector implements Connector {
         timeMin.setDate(timeMin.getDate() - syncDaysBack);
         const timeMax = new Date(now);
         timeMax.setDate(timeMax.getDate() + syncDaysForward);
-        url.searchParams.set("timeMin", timeMin.toISOString());
-        url.searchParams.set("timeMax", timeMax.toISOString());
+        searchParams["timeMin"] = timeMin.toISOString();
+        searchParams["timeMax"] = timeMax.toISOString();
       }
 
-      url.searchParams.set("singleEvents", "false");
-      url.searchParams.set("maxResults", "2500");
       if (pageToken) {
-        url.searchParams.set("pageToken", pageToken);
+        searchParams["pageToken"] = pageToken;
       }
 
       const accessToken = (await auth.getAccessToken()).token;
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `${response.status} ${response.statusText}: ${await response.text()}`
-        );
-      }
-
-      const data = (await response.json()) as GoogleCalendarListResponse;
+      const data = await ky
+        .get(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+          {
+            searchParams,
+            headers: { Authorization: `Bearer ${accessToken}` },
+            retry: 2,
+          },
+        )
+        .json<GoogleCalendarListResponse>();
 
       if (data.items) {
         allEvents.push(...data.items);

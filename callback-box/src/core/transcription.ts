@@ -4,6 +4,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import ky, { type HTTPError } from "ky";
 import { transcribeAudioVoxtral } from "./transcription-voxtral.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
@@ -160,26 +161,22 @@ async function transcribeAudioWhisper(
   const body = Buffer.concat(formParts);
 
   try {
-    const response = await fetch(OPENAI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-      },
-      body,
-    });
-
-    if (!response.ok) {
-      const error = await parseErrorResponse(response);
-      throw error;
-    }
-
-    const result = (await response.json()) as {
-      text: string;
-      duration: number;
-      language: string;
-      words?: Array<{ word: string; start: number; end: number }>;
-    };
+    const result = await ky
+      .post(OPENAI_ENDPOINT, {
+        body,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        },
+        retry: 0, // Caller handles retry based on permanent vs transient
+        timeout: 60_000,
+      })
+      .json<{
+        text: string;
+        duration: number;
+        language: string;
+        words?: Array<{ word: string; start: number; end: number }>;
+      }>();
 
     if (options?.wordTimestamps && result.words) {
       return {
@@ -202,6 +199,13 @@ async function transcribeAudioWhisper(
   } catch (error) {
     if (isTranscriptionError(error)) {
       throw error;
+    }
+
+    // ky HTTPError — parse the response for error details
+    const httpErr = error as HTTPError;
+    if (httpErr.response) {
+      const parsed = await parseErrorResponse(httpErr.response);
+      throw parsed;
     }
 
     // Network or other errors are intermittent

@@ -7,6 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import lockfile from "proper-lockfile";
 
 export interface RunRecord {
   ts: string;
@@ -100,6 +101,8 @@ export function recordRun(
 
 // --- Lock files for running script tracking ---
 
+const SCRIPT_LOCK_STALE_MS = 10 * 60 * 1000; // 10 minutes
+
 export interface ScriptLock {
   pid: number;
   startedAt: string;
@@ -107,7 +110,7 @@ export interface ScriptLock {
   lockGroup?: string;
 }
 
-function lockFile(boxRoot: string, scriptName: string): string {
+function lockFilePath(boxRoot: string, scriptName: string): string {
   return path.join(stateDir(boxRoot), `${scriptName}.lock`);
 }
 
@@ -116,57 +119,69 @@ export async function acquireScriptLock(
 ): Promise<void> {
   const dir = stateDir(opts.boxRoot);
   await fs.mkdir(dir, { recursive: true });
+  const lockPath = lockFilePath(opts.boxRoot, opts.scriptName);
+
+  // Ensure the lock file exists (proper-lockfile requires it)
+  await fs.writeFile(lockPath, "", { flag: "a" });
+  await lockfile.lock(lockPath, { stale: SCRIPT_LOCK_STALE_MS, retries: 0 });
+
+  // Write metadata to the lock file
   const lock: ScriptLock = {
     pid: process.pid,
     startedAt: new Date().toISOString(),
     triggeredBy: opts.triggeredBy,
     ...(opts.lockGroup ? { lockGroup: opts.lockGroup } : {}),
   };
-  await fs.writeFile(lockFile(opts.boxRoot, opts.scriptName), JSON.stringify(lock) + "\n");
+  await fs.writeFile(lockPath, JSON.stringify(lock) + "\n");
 }
 
 export async function releaseScriptLock(
   opts: { boxRoot: string; scriptName: string },
 ): Promise<void> {
+  const lockPath = lockFilePath(opts.boxRoot, opts.scriptName);
   try {
-    await fs.unlink(lockFile(opts.boxRoot, opts.scriptName));
+    await lockfile.unlock(lockPath);
   } catch {
-    // Already removed or never created
+    // Already unlocked or lock file missing
   }
+  await fs.unlink(lockPath).catch(() => {});
 }
 
 /**
- * Read all lock files, verify PIDs are alive, remove stale locks.
+ * Read all lock files, check if locks are held, remove stale locks.
  * Returns a map of scriptName → ScriptLock for currently running scripts.
  */
 export async function loadRunningScripts(boxRoot: string): Promise<Map<string, ScriptLock>> {
   const dir = stateDir(boxRoot);
   const running = new Map<string, ScriptLock>();
 
-  let files: string[];
+  let entries: string[];
   try {
-    files = (await fs.readdir(dir)).filter((f) => f.endsWith(".lock"));
+    entries = await fs.readdir(dir);
   } catch {
     return running;
   }
 
-  for (const file of files) {
-    const scriptName = file.replace(".lock", "");
-    try {
-      const content = await fs.readFile(path.join(dir, file), "utf-8");
-      const lock = JSON.parse(content) as ScriptLock;
+  const lockFiles = entries.filter((f) => f.endsWith(".lock") && !f.endsWith(".lock.lock"));
 
-      // Check if PID is still alive
-      try {
-        process.kill(lock.pid, 0);
-        running.set(scriptName, lock);
-      } catch {
-        // Process is dead — stale lock, clean up
-        await fs.unlink(path.join(dir, file)).catch(() => {});
+  for (const file of lockFiles) {
+    const scriptName = file.replace(".lock", "");
+    const fullPath = path.join(dir, file);
+
+    try {
+      const isLocked = await lockfile.check(fullPath, { stale: SCRIPT_LOCK_STALE_MS });
+      if (!isLocked) {
+        // Stale or released — clean up
+        await fs.unlink(fullPath).catch(() => {});
+        continue;
       }
+
+      const content = await fs.readFile(fullPath, "utf-8");
+      const lock = JSON.parse(content) as ScriptLock;
+      running.set(scriptName, lock);
     } catch {
-      // Malformed lock file, remove it
-      await fs.unlink(path.join(dir, file)).catch(() => {});
+      // Malformed lock file or check failed — clean up
+      await fs.unlink(fullPath).catch(() => {});
     }
   }
 
