@@ -28,6 +28,8 @@ export interface FakeAgentInvocation {
   prompt: string;
   /** Whether this was a resumed session. */
   resumed: boolean;
+  /** Full invoke options for detailed assertions (model, maxTurns, etc.). */
+  options: AgentInvokeOptions;
   /** Result returned by the act function. */
   result: AgentResult;
 }
@@ -91,6 +93,7 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
         systemPrompt: resumed ? null : (opts.systemPrompt ?? null),
         prompt: opts.prompt,
         resumed,
+        options: opts,
         result,
       });
 

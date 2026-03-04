@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { parseXml, type ElementNode } from "cardworks";
 import { schemas } from "../schemas/registry.js";
-import { createAgent, ensureAgentCommitted } from "./agent.js";
+import { createAgent as realCreateAgent, ensureAgentCommitted } from "./agent.js";
 import { generateDocs } from "./generate-docs.js";
 import { startProcedure } from "./procedure/engine.js";
 import { finishJob } from "./finish-job.js";
@@ -45,6 +45,8 @@ export interface ReactorOptions {
   /** Reset all persisted chat sessions before processing */
   resetSessions?: boolean | undefined;
   onLog?: ((text: string) => void) | undefined;
+  /** Agent factory — override for testing. Defaults to the real createAgent(). */
+  createAgent?: typeof realCreateAgent | undefined;
 }
 
 export interface ReactorResult {
@@ -78,6 +80,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     type: typeFilter,
     resetSessions: shouldResetSessions = false,
     onLog,
+    createAgent: agentFactory = realCreateAgent,
   } = options;
 
   // Acquire lock — prevent concurrent reactor runs
@@ -200,7 +203,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     // Process remaining agent jobs
     let cycleSuccess = true;
     if (agentJobs.length > 0) {
-      const jobOpts: ProcessJobsOptions = { jobs: agentJobs, boxRoot, dryRun, typeFilter, onLog };
+      const jobOpts: ProcessJobsOptions = { jobs: agentJobs, boxRoot, dryRun, typeFilter, onLog, createAgent: agentFactory };
       if (typeFilter === "chat") {
         // Chat jobs: process individually with per-thread session reuse
         cycleSuccess = await processChatJobs(jobOpts);
@@ -282,6 +285,7 @@ interface ProcessJobsOptions {
   dryRun: boolean;
   typeFilter?: string | undefined;
   onLog?: ((text: string) => void) | undefined;
+  createAgent: typeof realCreateAgent;
 }
 
 /**
@@ -314,7 +318,7 @@ async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean> {
     }
 
     const systemPrompt = buildReactorSystemPrompt(boxRoot);
-    const agent = createAgent({
+    const agent = opts.createAgent({
       name: "reactor-chat",
       sessionId,
       resume,
@@ -380,7 +384,7 @@ async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolean> {
 
   onLog?.("\n");
   const maxTurns = typeFilter ? 10 : 30;
-  const agent = createAgent({
+  const agent = opts.createAgent({
     name: "reactor-batch",
     ...(onLog && { onOutput: onLog }),
   });

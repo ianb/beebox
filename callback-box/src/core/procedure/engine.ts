@@ -9,7 +9,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createElement, serialize, parseXml, type ElementNode } from "cardworks";
-import { runAgent as defaultRunAgent, type AgentOptions, type AgentResult } from "../agent.js";
+import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
 import {
   getStatus,
   stageAll,
@@ -28,8 +28,8 @@ const MODEL_MAP: Record<string, string> = {
   opus: "claude-opus-4-6",
 };
 
-/** Function signature matching runAgent — injectable for testing */
-export type AgentRunner = (options: AgentOptions) => Promise<AgentResult>;
+/** Agent factory type — matches createAgent() signature */
+export type AgentFactory = typeof realCreateAgent;
 
 export interface ProcedureOptions {
   dryRun?: boolean;
@@ -38,8 +38,8 @@ export interface ProcedureOptions {
   step?: string;
   /** Runtime directive string passed to procedure agents */
   directive?: string;
-  /** Override the agent runner (default: runAgent from agent.ts) */
-  runAgent?: AgentRunner;
+  /** Override the agent factory (default: createAgent from agent.ts) */
+  createAgent?: AgentFactory;
 }
 
 // ─── Types for parsed procedure definitions ───────────────────────────
@@ -195,7 +195,7 @@ export async function startProcedure(
       runCardPath,
       relProcedurePath,
       ...(options.directive && { directive: options.directive }),
-      ...(options.runAgent && { runAgent: options.runAgent }),
+      ...(options.createAgent && { createAgent: options.createAgent }),
     });
 
     if (result === "failed") {
@@ -473,7 +473,7 @@ interface ExecuteStepParams {
   runCardPath: string;
   relProcedurePath: string;
   directive?: string;
-  runAgent?: AgentRunner;
+  createAgent?: AgentFactory;
 }
 
 /**
@@ -580,8 +580,8 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
   let runStdout: string | undefined;
 
   // Execute agents
-  for (const agent of step.run.agents) {
-    ctx.writeLine(fmt.dim(`  Running agent${agent.model ? ` (${agent.model})` : ""}...`));
+  for (const agentDef of step.run.agents) {
+    ctx.writeLine(fmt.dim(`  Running agent${agentDef.model ? ` (${agentDef.model})` : ""}...`));
 
     // Build context block
     const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
@@ -594,23 +594,27 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
       ...(params.directive && { directive: params.directive }),
     });
 
-    const systemPrompt = contextBlock + "\n\n" + agent.prompt;
+    const systemPrompt = contextBlock + "\n\n" + agentDef.prompt;
 
-    const agentOpts: AgentOptions = {
+    const agentFactory = params.createAgent ?? realCreateAgent;
+    const agent = agentFactory({
+      name: `procedure-${procedure.name}-${step.id}`,
+      onOutput: (text) => ctx.write(text),
+    });
+
+    const invokeOpts: AgentInvokeOptions = {
       boxRoot,
       systemPrompt,
       prompt: `Execute the ${step.id} step of the ${procedure.name} procedure. Follow the instructions in your system prompt.`,
-      onOutput: (text) => ctx.write(text),
-      maxTurns: agent.maxTurns ?? 20,
+      maxTurns: agentDef.maxTurns ?? 20,
     };
-    if (agent.model) {
-      agentOpts.model = MODEL_MAP[agent.model] ?? agent.model;
+    if (agentDef.model) {
+      invokeOpts.model = MODEL_MAP[agentDef.model] ?? agentDef.model;
     }
 
-    const invokeAgent = params.runAgent ?? defaultRunAgent;
-    const agentResult = await invokeAgent(agentOpts);
+    const agentResult = await agent.invoke(invokeOpts);
 
-    sessionId = agentResult.sessionId;
+    sessionId = agent.sessionId;
 
     if (!agentResult.success) {
       ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error ?? "unknown error"}`));

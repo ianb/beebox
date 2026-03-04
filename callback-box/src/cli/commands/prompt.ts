@@ -1,7 +1,7 @@
 /**
  * cb prompt - Run Claude Code with a prompt in the agent's environment.
  *
- * Thin wrapper around runAgent() that lets you ask questions or give
+ * Thin wrapper around createAgent() that lets you ask questions or give
  * instructions to the agent in exactly the same context it normally
  * runs (same box root, plugins, rules, agent guide).
  */

@@ -6,6 +6,7 @@ tracking state in run cards, and handling various step outcomes.
 ```ts setup
 import { startProcedure } from "../src/core/procedure/engine.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { createFakeAgent } from "./helpers/fake-agent.js";
 import { parseXml } from "cardworks";
 import { execSync } from "node:child_process";
 ```
@@ -362,8 +363,8 @@ await box.cleanup();
 
 ## Agent step with mock runner
 
-The `runAgent` option lets tests replace the real Claude Code subprocess
-with a mock that simulates agent behavior.
+The `createAgent` option lets tests replace the real Claude Code subprocess
+with a fake agent that simulates agent behavior.
 
 ```
 const box = await makeTmpBox({ git: true });
@@ -384,35 +385,39 @@ await box.write("config/procedures/agent-test.procedure.card", `
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add agent-test procedure");
 
-// Mock agent: captures what it receives, writes a file, commits
-const agentCalls = [];
-const mockAgent = async (opts) => {
-  agentCalls.push(opts);
-  // Simulate agent work: write a file and commit
-  await box.write("box/output/agent-result.txt", "processed 3 items");
-  box.commitAll("Agent: process items");
-  return { success: true, output: "Done", exitCode: 0, sessionId: "mock-session-1" };
+// Fake agent: captures what it receives, writes a file, commits
+let fakeAgent;
+const mockCreateAgent = (opts) => {
+  fakeAgent = createFakeAgent({
+    name: opts.name,
+    act: async ({ boxRoot }) => {
+      await box.write("box/output/agent-result.txt", "processed 3 items");
+      box.commitAll("Agent: process items");
+      return { success: true, output: "Done" };
+    },
+  });
+  return fakeAgent;
 };
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({
   ctx,
   procedureNameOrPath: "agent-test",
-  options: { runAgent: mockAgent },
+  options: { createAgent: mockCreateAgent },
 });
 print(`success: ${result.success}`);
 
 // Agent was called exactly once
-print(`agent calls: ${agentCalls.length}`);
+print(`agent calls: ${fakeAgent.invocations.length}`);
 
 // The system prompt includes the context block with precheck output
-const systemPrompt = agentCalls[0].systemPrompt;
+const systemPrompt = fakeAgent.invocations[0].systemPrompt;
 print(`has precheck output: ${systemPrompt.includes("3 items to process")}`);
 print(`has step ref: ${systemPrompt.includes("agent-step")}`);
 print(`has agent instructions: ${systemPrompt.includes("Process the items")}`);
 
 // Model was mapped from friendly name
-print(`model: ${agentCalls[0].model}`);
+print(`model: ${fakeAgent.invocations[0].options.model}`);
 
 // Agent's file was preserved
 const agentFile = await box.read("box/output/agent-result.txt");
@@ -448,20 +453,23 @@ await box.write("config/procedures/directed.procedure.card", `
 `);
 box.commitAll("Add directed procedure");
 
-const agentCalls = [];
-const mockAgent = async (opts) => {
-  agentCalls.push(opts);
-  return { success: true, output: "", exitCode: 0, sessionId: "mock-2" };
+let fakeAgent;
+const mockCreateAgent = (opts) => {
+  fakeAgent = createFakeAgent({
+    name: opts.name,
+    act: async () => ({ success: true }),
+  });
+  return fakeAgent;
 };
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 await startProcedure({
   ctx,
   procedureNameOrPath: "directed",
-  options: { directive: "Focus on technical content", runAgent: mockAgent },
+  options: { directive: "Focus on technical content", createAgent: mockCreateAgent },
 });
 
-const prompt = agentCalls[0].systemPrompt;
+const prompt = fakeAgent.invocations[0].systemPrompt;
 print(`has directive: ${prompt.includes("<directive>")}`);
 print(`directive text: ${prompt.includes("Focus on technical content")}`);
 =>
@@ -493,18 +501,21 @@ await box.write("config/procedures/messy.procedure.card", `
 `);
 box.commitAll("Add messy procedure");
 
-// Mock agent that writes a file but doesn't commit
-const mockAgent = async (opts) => {
-  await box.write("box/output/uncommitted.txt", "forgot to commit this");
-  // Deliberately NOT committing
-  return { success: true, output: "", exitCode: 0, sessionId: "mock-3" };
-};
+// Fake agent that writes a file but doesn't commit
+const mockCreateAgent = (opts) => createFakeAgent({
+  name: opts.name,
+  act: async ({ boxRoot }) => {
+    await box.write("box/output/uncommitted.txt", "forgot to commit this");
+    // Deliberately NOT committing
+    return { success: true };
+  },
+});
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({
   ctx,
   procedureNameOrPath: "messy",
-  options: { runAgent: mockAgent },
+  options: { createAgent: mockCreateAgent },
 });
 print(`success: ${result.success}`);
 

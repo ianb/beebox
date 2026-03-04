@@ -1,5 +1,5 @@
 /**
- * Knowledge Audit runner — executes audit prompts against a box via runAgent()
+ * Knowledge Audit runner — executes audit prompts against a box via createAgent()
  * and parses session transcripts to extract agent behavior.
  */
 

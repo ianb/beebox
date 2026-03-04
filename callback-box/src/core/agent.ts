@@ -280,7 +280,7 @@ function stopPromptLogger(logger: { proxy: ChildProcess; logStream: WriteStream 
   logger.logStream.end();
 }
 
-export interface AgentOptions {
+interface AgentOptions {
   /** Box root directory */
   boxRoot: string;
   /** System prompt to prepend */
@@ -316,7 +316,7 @@ export interface AgentResult {
  *
  * Returns when the agent completes or errors.
  */
-export async function runAgent(options: AgentOptions): Promise<AgentResult> {
+async function runAgent(options: AgentOptions): Promise<AgentResult> {
   const {
     boxRoot,
     systemPrompt,
