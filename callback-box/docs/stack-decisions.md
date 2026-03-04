@@ -21,7 +21,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 
 | # | Decision | Status | Notes |
 |---|---|---|---|
-| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **Planned** | Foundational — changes how all frontend state works. Do before other frontend stack changes. |
+| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **In progress** | First migration: `useVoiceRecorder`. Patterns established for callback actors, serializable context, thin hook wrappers. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
 | 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
 | 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
@@ -156,7 +156,15 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 
 Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. The comparison document (`docs/state-management-comparison.md`) still exists. Zustand and MST were removed from package.json.
 
-To start adoption: pick one page, model its state as an XState machine, wire it up. The history page is the original evaluation target but any page with complex state transitions (chat, commands) would also be a good candidate.
+**First migration: `useVoiceRecorder`** — `src/frontend/src/machines/voiceRecorderMachine.ts`. A 3-state machine (idle → requestingMic → recording → uploading) that manages the voice recording lifecycle.
+
+Patterns established:
+- **Callback actors own non-serializable resources.** MediaRecorder + MediaStream live inside a `fromCallback` actor's closure, not in context. The actor receives `STOP` commands via `receive()`, sends `RECORDER_STOPPED` with the assembled Blob back to the parent. Cleanup function releases all resources on state exit.
+- **Context stays serializable.** Only `error`, `duration`, `startTime`, and `onComplete` (input). No browser API objects.
+- **`fromCallback` for recurring timers.** Duration ticker uses `setInterval` inside a callback actor with a cleanup return. Auto-cleaned when the recording state exits.
+- **`fromPromise` for one-shot async.** Mic permission request and upload/completion callback are invoked promises with `onDone`/`onError`.
+- **Thin hook wrapper.** `useVoiceRecorder` hook preserves the original public interface (`state`, `error`, `duration`, `startRecording`, `stopRecording`). Components consuming it needed zero changes. The hook maps machine states to the simpler `RecordingState` type.
+- **Granularity: per-feature.** The machine covers one hook's behavior, not a whole page. This keeps machines focused and testable.
 
 ---
 
