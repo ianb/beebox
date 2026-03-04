@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useMachine } from "@xstate/react";
+import { useSSRMachine } from "./useSSRMachine";
 import {
   realtimeTranscriptionMachine,
   type TranscriptionState,
@@ -36,7 +36,7 @@ export interface UseRealtimeTranscriptionResult {
 export function useRealtimeTranscription(
   options?: UseRealtimeTranscriptionOptions
 ): UseRealtimeTranscriptionResult {
-  const [snapshot, send] = useMachine(realtimeTranscriptionMachine);
+  const [snapshot, send] = useSSRMachine(realtimeTranscriptionMachine);
   const optionsRef = useRef(options);
   useEffect(() => {
     optionsRef.current = options;

@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useMachine } from "@xstate/react";
+import { useSSRMachine } from "../hooks/useSSRMachine";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import TextareaAutosize from "react-textarea-autosize";
@@ -350,7 +350,7 @@ function StreamingMessage({ text }: { text: string }) {
 }
 
 export function ChatPage() {
-  const [snapshot, send] = useMachine(chatMachine);
+  const [snapshot, send] = useSSRMachine(chatMachine);
   const { messages, streamText, streamTools, error, sessionId, processRunning } = snapshot.context;
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");

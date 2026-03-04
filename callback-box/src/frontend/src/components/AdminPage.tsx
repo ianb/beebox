@@ -4,13 +4,13 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useMachine } from "@xstate/react";
+import { useSSRMachine } from "../hooks/useSSRMachine";
 import { Link, useParams } from "react-router-dom";
 import { getApiBase } from "../api.js";
 import { claudeAuthMachine } from "../machines/claudeAuthMachine.js";
 
 function ClaudeCodeSection() {
-  const [snapshot, send] = useMachine(claudeAuthMachine);
+  const [snapshot, send] = useSSRMachine(claudeAuthMachine);
   const { status, error, authUrl } = snapshot.context;
   const isLoading = snapshot.matches("loading");
   const isStarting = snapshot.matches("starting");

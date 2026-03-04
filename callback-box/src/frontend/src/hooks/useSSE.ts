@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useRef, useCallback, useMemo } from "react";
-import { useMachine } from "@xstate/react";
+import { useSSRMachine } from "./useSSRMachine";
 import { sseMachine, type SSEEvent } from "../machines/sseMachine";
 
 export type { SSEEvent };
@@ -23,7 +23,7 @@ export interface UseSSEReturn {
 
 export function useSSE(url: string, options: UseSSEOptions = {}): UseSSEReturn {
   const input = useMemo(() => ({ url }), [url]);
-  const [snapshot, send] = useMachine(sseMachine, { input });
+  const [snapshot, send] = useSSRMachine(sseMachine, { input });
 
   const optionsRef = useRef(options);
   useEffect(() => {

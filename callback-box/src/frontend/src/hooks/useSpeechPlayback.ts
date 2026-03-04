@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useCallback, useRef, useMemo } from "react";
-import { useMachine } from "@xstate/react";
+import { useSSRMachine } from "./useSSRMachine";
 import { speechPlaybackMachine } from "../machines/speechPlaybackMachine";
 import { getTTSClient } from "../lib/tts-client";
 import type { SpeechSegment } from "../lib/speech-parsing";
@@ -28,7 +28,7 @@ export interface SpeechPlaybackOptions {
 
 export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayback {
   const input = useMemo(() => ({ onComplete: options?.onComplete }), [options?.onComplete]);
-  const [snapshot, send] = useMachine(speechPlaybackMachine, { input });
+  const [snapshot, send] = useSSRMachine(speechPlaybackMachine, { input });
   const playedMessagesRef = useRef<Set<string>>(new Set());
   const ttsClient = getTTSClient();
 

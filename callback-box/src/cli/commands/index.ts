@@ -37,3 +37,4 @@ export { promptCommand } from "./prompt.js";
 export { sessionCommand } from "./session.js";
 export { schedulerCommand } from "./scheduler.js";
 export { lsCommand } from "./ls.js";
+export { renderCommand } from "./render.js";

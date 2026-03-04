@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { useMachine } from "@xstate/react";
+import { useSSRMachine } from "./useSSRMachine";
 import {
   voiceRecorderMachine,
   type VoiceRecordingResult,
@@ -47,7 +47,7 @@ export function useVoiceRecorder({
   onComplete,
 }: UseVoiceRecorderOptions): UseVoiceRecorderReturn {
   const input = useMemo(() => ({ onComplete }), [onComplete]);
-  const [snapshot, send] = useMachine(voiceRecorderMachine, { input });
+  const [snapshot, send] = useSSRMachine(voiceRecorderMachine, { input });
 
   // Map machine states to the simpler RecordingState
   const state: RecordingState = snapshot.matches("recording")
