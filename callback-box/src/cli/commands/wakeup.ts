@@ -37,7 +37,7 @@ import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job
 import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { runOnWakeupScripts } from "./tick-utils.js";
-import { runReactor } from "../../core/reactor.js";
+import { runReactor } from "../../core/reactor/index.js";
 
 export const wakeupCommand = new Command("wakeup")
   .description("Sync data with connectors")

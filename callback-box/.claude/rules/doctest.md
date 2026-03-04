@@ -14,7 +14,7 @@ paths:
 - No `=>` means "just run" — use for setup statements within a block
 - Lines ending with `;` before a check expression are emitted as statements (e.g., `const x = foo();` then `x.length` then `=> 5`)
 - `t.check()` wildcards work in expected values: `«*»` (anything), `«date»`, `«int»`, `«codeblock»` (matches ` ``` `), `«blankline»` (matches empty line in multi-line output), `«name»`, `«name=type»`
-- String results are compared literally — `=> Agent crashed` matches the string `"Agent crashed"`. To test exact whitespace or distinguish types, use `JSON.stringify()`: `JSON.stringify(result.error)` then `=> "Agent crashed"`
+- **IMPORTANT: String results are compared literally WITHOUT quotes** — `=> Agent crashed` matches the string `"Agent crashed"`. Writing `=> "Agent crashed"` (with quotes) would expect the string `'"Agent crashed"'` (with literal quote characters). To test exact whitespace or distinguish types, use `JSON.stringify()`: `JSON.stringify(result.error)` then `=> "Agent crashed"`
 - Trailing newlines on string results are automatically trimmed (code blocks can't express trailing newlines)
 - `print("text")` accumulates lines; they drain into the next `=>` assertion combined with the expression result. Scope-local per test — concurrent tests don't interfere. Use for narrative output across multiple steps.
 - Prose between code blocks is ignored — use it to document behavior
