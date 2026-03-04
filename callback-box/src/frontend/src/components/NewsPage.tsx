@@ -5,45 +5,36 @@
  * Supports comments, query responses (text and voice).
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { NewsIndex, type BriefSummary } from "./NewsIndex";
 import {
   NewsBriefView,
   type NewsBriefData,
-  type GuideReaction,
   type BriefReaction,
 } from "./NewsBriefView";
 import { Sidebar } from "./Sidebar";
-import {
-  submitBriefFeedback,
-  submitQueryResponse,
-  getGuideReactions,
-  completeReading,
-  getApiBase,
-} from "../api";
+import { trpc } from "../lib/trpc";
+
+/**
+ * Convert a Blob to base64 string.
+ */
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 /**
  * Extended brief data including curation reactions.
  */
 interface BriefWithReactions extends NewsBriefData {
   briefReactions: BriefReaction[];
-}
-
-/**
- * Fetch a full brief from the API.
- */
-async function fetchBrief(path: string): Promise<BriefWithReactions> {
-  const response = await fetch(`${getApiBase()}/brief/${encodeURIComponent(path)}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch brief");
-  }
-  const data = await response.json();
-  // Extract brief reactions from curation
-  const briefReactions: BriefReaction[] = data.brief.curation?.briefReactions ?? [];
-  return {
-    ...data.brief,
-    briefReactions,
-  };
 }
 
 interface NewsPageProps {
@@ -57,69 +48,49 @@ interface NewsPageProps {
 
 export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPageProps) {
   const [selectedSummary, setSelectedSummary] = useState<BriefSummary | null>(null);
-  const [brief, setBrief] = useState<BriefWithReactions | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [guideReactions, setGuideReactions] = useState<GuideReaction[]>([]);
   const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
-  // Fetch guide reactions on mount
-  useEffect(() => {
-    getGuideReactions()
-      .then((data) => {
-        setGuideReactions(data.reactions);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch guide reactions:", err);
-      });
-  }, []);
+  // The path to fetch — either from selection or initial URL
+  const briefPath = selectedSummary?.relativePath ?? initialPath ?? null;
 
-  // Load initial brief if path provided
-  useEffect(() => {
-    if (initialPath) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(true);
-      fetchBrief(initialPath)
-        .then((data) => {
-          setBrief(data);
-          // Briefs in box/output/briefs/ are unread; those in store/archive/briefs/ are read
-          const isUnread = initialPath.includes("box/output/briefs/");
-          setSelectedSummary({
-            path: initialPath,
-            relativePath: initialPath,
-            title: data.title,
-            date: data.date,
-            byline: data.byline,
-            read: !isUnread,
-          });
-          setLoading(false);
-        })
-        .catch((err) => {
-          setError(err.message);
-          setLoading(false);
-        });
-    }
-  }, [initialPath]);
+  // Fetch brief data
+  const briefQuery = trpc.briefs.get.useQuery(
+    { path: briefPath! },
+    { enabled: !!briefPath }
+  );
 
-  // Handle brief selection - no longer auto-marks as read
+  // Fetch guide reactions
+  const guideReactionsQuery = trpc.briefs.guideReactions.useQuery();
+
+  // Mutations
+  const feedbackMutation = trpc.briefs.feedback.useMutation();
+  const queryResponseMutation = trpc.briefs.queryResponse.useMutation();
+  const completeReadingMutation = trpc.briefs.completeReading.useMutation();
+
+  const utils = trpc.useUtils();
+
+  // Derive brief with reactions from query data
+  const briefData: BriefWithReactions | null = briefQuery.data
+    ? {
+        ...briefQuery.data.brief,
+        briefReactions: (briefQuery.data.brief as { curation?: { briefReactions?: BriefReaction[] } }).curation?.briefReactions ?? [],
+      }
+    : null;
+
+  const guideReactions = guideReactionsQuery.data?.reactions ?? [];
+
+  // Determine read status for initial path
+  const isUnread = selectedSummary
+    ? !selectedSummary.read
+    : initialPath
+      ? initialPath.includes("box/output/briefs/")
+      : false;
+
+  // Handle brief selection
   const handleSelect = useCallback(
     (summary: BriefSummary) => {
       setSelectedSummary(summary);
-      setLoading(true);
-      setError(null);
-
-      // Notify parent of navigation
       onNavigate?.(summary.relativePath);
-
-      fetchBrief(summary.relativePath)
-        .then((data) => {
-          setBrief(data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          setError(err.message);
-          setLoading(false);
-        });
     },
     [onNavigate]
   );
@@ -131,15 +102,14 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
       selectedReactions: Array<{ id: string; source: "guide" | "brief" }>;
       itemFeedback: Array<{ id: string; feedback: "thumbs-up" | "thumbs-down" }>;
     }) => {
-      if (!selectedSummary) return;
+      if (!briefPath) return;
 
-      const result = await completeReading({
-        briefPath: selectedSummary.relativePath,
+      const result = await completeReadingMutation.mutateAsync({
+        briefPath,
         overallRating: data.overallRating,
         selectedReactions: data.selectedReactions,
         itemFeedback: data.itemFeedback,
       });
-      console.log("Reading completed with feedback");
 
       // Update the summary to show as read with new archived path
       setSelectedSummary((prev) => prev ? {
@@ -151,93 +121,85 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
 
       // Refresh the sidebar list
       setSidebarRefreshKey((k) => k + 1);
+      utils.briefs.invalidate();
     },
-    [selectedSummary]
+    [briefPath, completeReadingMutation, utils.briefs]
   );
 
   // Handle text comment submission
   const handleComment = useCallback(
     (targetId: string, comment: string) => {
-      if (!selectedSummary) return;
+      if (!briefPath) return;
 
-      submitBriefFeedback({
-        briefPath: selectedSummary.relativePath,
+      feedbackMutation.mutate({
+        briefPath,
         targetId,
         comment,
-      })
-        .then(() => {
-          console.log("Feedback submitted:", targetId);
-        })
-        .catch((err) => {
-          console.error("Failed to submit feedback:", err);
-        });
+      });
     },
-    [selectedSummary]
+    [briefPath, feedbackMutation]
   );
 
   // Handle voice comment submission
   const handleVoiceComment = useCallback(
     async (targetId: string, audioBlob: Blob) => {
-      if (!selectedSummary) return;
+      if (!briefPath) return;
 
-      await submitBriefFeedback({
-        briefPath: selectedSummary.relativePath,
+      const audioData = await blobToBase64(audioBlob);
+      await feedbackMutation.mutateAsync({
+        briefPath,
         targetId,
-        audioBlob,
+        audioData,
+        audioMimeType: audioBlob.type,
       });
-      console.log("Voice feedback submitted:", targetId);
     },
-    [selectedSummary]
+    [briefPath, feedbackMutation]
   );
 
   // Handle text query response
   const handleQueryResponse = useCallback(
     (queryId: string, response: string) => {
-      if (!selectedSummary) return;
+      if (!briefPath) return;
 
-      submitQueryResponse({
-        briefPath: selectedSummary.relativePath,
+      queryResponseMutation.mutate({
+        briefPath,
         queryId,
         response,
-      })
-        .then(() => {
-          console.log("Query response submitted:", queryId);
-        })
-        .catch((err) => {
-          console.error("Failed to submit query response:", err);
-        });
+      });
     },
-    [selectedSummary]
+    [briefPath, queryResponseMutation]
   );
 
   // Handle voice query response
   const handleVoiceQueryResponse = useCallback(
     async (queryId: string, audioBlob: Blob) => {
-      if (!selectedSummary) return;
+      if (!briefPath) return;
 
-      await submitQueryResponse({
-        briefPath: selectedSummary.relativePath,
+      const audioData = await blobToBase64(audioBlob);
+      await queryResponseMutation.mutateAsync({
+        briefPath,
         queryId,
-        audioBlob,
+        audioData,
+        audioMimeType: audioBlob.type,
       });
-      console.log("Voice query response submitted:", queryId);
     },
-    [selectedSummary]
+    [briefPath, queryResponseMutation]
   );
 
   const handleBack = useCallback(() => {
     setSelectedSummary(null);
-    setBrief(null);
     onNavigate?.(null);
   }, [onNavigate]);
 
-  const hasDetail = Boolean(brief || loading || error);
+  const loading = briefQuery.isLoading && !!briefPath;
+  const error = briefQuery.error?.message ?? null;
+  const hasDetail = Boolean(briefData || loading || error);
 
   return (
     <div className="h-full flex">
       {/* Sidebar with index */}
       <Sidebar title="News Briefs" detailSelected={hasDetail}>
-        <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path} refreshKey={sidebarRefreshKey} />
+        <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path ?? initialPath} refreshKey={sidebarRefreshKey} />
       </Sidebar>
 
       {/* Main content — hidden on mobile when no detail selected */}
@@ -250,7 +212,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
           <div className="flex items-center justify-center h-full">
             <div className="text-red-600">Error: {error}</div>
           </div>
-        ) : brief ? (
+        ) : briefData ? (
           <div>
             <button
               onClick={handleBack}
@@ -262,16 +224,16 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
               Back to briefs
             </button>
             <NewsBriefView
-              brief={brief}
-              briefPath={selectedSummary?.relativePath}
+              brief={briefData}
+              briefPath={briefPath ?? undefined}
               onComment={handleComment}
               onVoiceComment={handleVoiceComment}
               onQueryResponse={handleQueryResponse}
               onVoiceQueryResponse={handleVoiceQueryResponse}
               onSourceClick={onSourceClick}
               guideReactions={guideReactions}
-              briefReactions={brief.briefReactions}
-              onCompleteReading={selectedSummary && !selectedSummary.read ? handleCompleteReading : undefined}
+              briefReactions={briefData.briefReactions}
+              onCompleteReading={isUnread ? handleCompleteReading : undefined}
             />
           </div>
         ) : (

@@ -2,41 +2,23 @@
  * Activity log showing recent git commits.
  */
 
-import { useEffect, useState } from "react";
-import { getLog, type LogEntry } from "../api";
+import { trpc } from "../lib/trpc";
 
 interface ActivityLogProps {
   refreshKey: number;
 }
 
-export function ActivityLog({ refreshKey }: ActivityLogProps) {
-  const [entries, setEntries] = useState<LogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function ActivityLog({ refreshKey: _refreshKey }: ActivityLogProps) {
+  const { data, isLoading, error } = trpc.status.activity.useQuery({ count: 20 });
 
-  useEffect(() => {
-    const fetchLog = async () => {
-      try {
-        setLoading(true);
-        const data = await getLog(20);
-        setEntries(data.entries);
-        setError(null);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const entries = data?.entries ?? [];
 
-    fetchLog();
-  }, [refreshKey]);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="p-4 text-warm-600">Loading...</div>;
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">Error: {error}</div>;
+    return <div className="p-4 text-red-600">Error: {error.message}</div>;
   }
 
   if (entries.length === 0) {

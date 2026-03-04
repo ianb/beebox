@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * News item card schema - RSS/Atom feed items.
  *

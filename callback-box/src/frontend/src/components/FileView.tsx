@@ -5,8 +5,8 @@
  * defaults to the highest-priority one, and lets the user toggle between them.
  */
 
-import { useEffect, useState } from "react";
-import { getCard, type CardResponse } from "../api";
+import { useState, useMemo } from "react";
+import { trpc } from "../lib/trpc";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 
 interface FileViewProps {
@@ -14,41 +14,32 @@ interface FileViewProps {
 }
 
 export function FileView({ path }: FileViewProps) {
-  const [data, setData] = useState<FileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const isCard = path.endsWith(".card");
+  const { data: card, isLoading: loading, error: queryError } = trpc.card.get.useQuery(
+    { path },
+    { enabled: isCard }
+  );
   const [activeRendererName, setActiveRendererName] = useState<string | null>(null);
 
-  useEffect(() => {
-    setActiveRendererName(null);
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // For now, only .card files are supported via the existing API
-        if (path.endsWith(".card")) {
-          const card: CardResponse = await getCard(path);
-          setData({
-            path: card.path,
-            tagName: card.tagName,
-            attrs: card.element?.attrs,
-            element: card.element,
-            xml: card.xml,
-            version: card.version,
-            status: card.status,
-          });
-        } else {
-          setData({ path });
-        }
-        setError(null);
-      } catch (err) {
-        setError((err as Error).message);
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [path]);
+  const error = queryError?.message ?? null;
+
+  const data: FileData | null = useMemo(() => {
+    if (isCard && card) {
+      return {
+        path: card.path,
+        tagName: card.tagName,
+        attrs: card.element?.attrs,
+        element: card.element,
+        xml: card.xml,
+        version: card.version,
+        status: card.status,
+      };
+    }
+    if (!isCard) {
+      return { path };
+    }
+    return null;
+  }, [isCard, card, path]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;

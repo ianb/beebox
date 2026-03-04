@@ -2,25 +2,16 @@
  * Questions page — view and answer pending questions.
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { getQuestions, getApiBase, type CardInfo } from "../api";
+import { getApiBase } from "../api";
+import { trpc } from "../lib/trpc";
 import { useSSE } from "../hooks/useSSE";
 import { QuestionForm } from "./QuestionForm";
 
 export function QuestionsPage() {
-  const [questions, setQuestions] = useState<CardInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.status.questions.useQuery();
 
-  const fetchQuestions = useCallback(async () => {
-    try {
-      const resp = await getQuestions();
-      setQuestions(resp.items);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const questions = data?.items ?? [];
 
   useSSE(`${getApiBase()}/events`, {
     onEvent: (event) => {
@@ -29,19 +20,15 @@ export function QuestionsPage() {
         event.event === "card-created" ||
         event.event === "file-change"
       ) {
-        fetchQuestions();
+        utils.status.questions.invalidate();
       }
     },
   });
 
-  useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
-
   const pending = questions.filter((q) => q.status === "pending");
   const answered = questions.filter((q) => q.status !== "pending");
 
-  if (loading) {
+  if (isLoading) {
     return <div className="p-8 text-warm-600">Loading...</div>;
   }
 
@@ -60,7 +47,7 @@ export function QuestionsPage() {
               <QuestionForm
                 key={q.path}
                 question={q}
-                onAnswered={fetchQuestions}
+                onAnswered={() => utils.status.questions.invalidate()}
               />
             ))}
           </div>

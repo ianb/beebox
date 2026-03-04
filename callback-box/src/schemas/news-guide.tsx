@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * News guide schema - the theory of user for news curation.
  *
@@ -15,7 +16,7 @@
  * user feedback on those editions.
  */
 
-import { element, serialize, type ElementNode } from "cardworks";
+import { element, type ElementNode } from "cardworks";
 import { z } from "zod";
 
 /**

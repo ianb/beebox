@@ -3,7 +3,10 @@
  */
 
 import { useState } from "react";
-import type { ScheduleInfo, SchedulerLogEntry } from "../../api";
+import type { RouterOutput } from "../../lib/trpc";
+
+type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
+type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
 
 interface ScheduleOverviewProps {
   schedules: ScheduleInfo[];

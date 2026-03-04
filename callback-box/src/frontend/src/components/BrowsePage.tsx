@@ -4,11 +4,13 @@
  * Sidebar with directory listing + card detail panel.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { FileView } from "./FileView";
-import { getBrowse, type BrowseResponse, type BrowseCardInfo } from "../api";
+import { trpc, type RouterOutput } from "../lib/trpc";
+
+type BrowseCard = RouterOutput["status"]["browse"]["cards"][number];
 
 interface BrowsePageProps {
   /** Current directory path from URL splat (e.g., "store/recipes") */
@@ -19,26 +21,8 @@ interface BrowsePageProps {
 
 export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   const { boxSlug } = useParams();
-  const [data, setData] = useState<BrowseResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedCard, setSelectedCard] = useState<BrowseCardInfo | null>(null);
-
-  const fetchDir = useCallback(async (dirPath: string) => {
-    setLoading(true);
-    setSelectedCard(null);
-    try {
-      const result = await getBrowse(dirPath);
-      setData(result);
-    } catch (err) {
-      console.error("Failed to browse:", err);
-      setData({ path: dirPath, dirs: [], cards: [] });
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchDir(currentPath); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [currentPath, fetchDir]);
+  const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: currentPath });
+  const [selectedCard, setSelectedCard] = useState<BrowseCard | null>(null);
 
   // Build breadcrumb segments
   const segments = currentPath ? currentPath.split("/").filter(Boolean) : [];

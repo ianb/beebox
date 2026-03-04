@@ -5,12 +5,12 @@
  * Links are rendered as footnotes. Designed to look like a newspaper/newsletter.
  */
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { NewsBriefData, Section, Excerpt, Expando } from "./types";
-import { getApiBase } from "../../api";
+import { trpc } from "../../lib/trpc";
 
 /**
  * Collects all links from the brief for footnote rendering.
@@ -107,27 +107,14 @@ function PrintSection({
 export function PrintBriefView() {
   const { boxSlug, "*": briefPath } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [brief, setBrief] = useState<NewsBriefData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const largePrint = searchParams.get("large") === "1";
 
-  useEffect(() => {
-    if (!briefPath) return;
-    fetch(`${getApiBase()}/brief/${encodeURIComponent(briefPath)}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to fetch brief");
-        return r.json();
-      })
-      .then((data) => {
-        setBrief(data.brief);
-        setLoading(false);
-      })
-      .catch((e) => {
-        setError(e.message);
-        setLoading(false);
-      });
-  }, [briefPath]);
+  const briefQuery = trpc.briefs.get.useQuery(
+    { path: briefPath! },
+    { enabled: !!briefPath }
+  );
+
+  const brief = briefQuery.data?.brief as NewsBriefData | undefined;
 
   useEffect(() => {
     if (!brief) return;
@@ -141,8 +128,8 @@ export function PrintBriefView() {
   }, [brief]);
 
   if (!briefPath) return <div className="print-error">No brief path</div>;
-  if (loading) return <div className="print-loading">Loading...</div>;
-  if (error) return <div className="print-error">Error: {error}</div>;
+  if (briefQuery.isLoading) return <div className="print-loading">Loading...</div>;
+  if (briefQuery.error) return <div className="print-error">Error: {briefQuery.error.message}</div>;
   if (!brief) return null;
 
   const interactiveUrl = `/${boxSlug}/news/${briefPath}`;

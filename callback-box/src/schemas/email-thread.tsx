@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Email thread card schema - Gmail thread envelopes.
  *

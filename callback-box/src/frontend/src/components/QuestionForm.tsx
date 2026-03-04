@@ -3,7 +3,8 @@
  */
 
 import { useState } from "react";
-import { answerQuestion, type CardInfo } from "../api";
+import { trpc } from "../lib/trpc";
+import type { CardInfo } from "../api";
 
 interface QuestionFormProps {
   question: CardInfo;
@@ -13,8 +14,12 @@ interface QuestionFormProps {
 export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [textAnswer, setTextAnswer] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const answerMutation = trpc.actions.answer.useMutation({
+    onSuccess: () => onAnswered(),
+    onError: (err) => setError(err.message),
+  });
 
   const hasOptions = question.options && question.options.length > 0;
 
@@ -27,22 +32,14 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
       return;
     }
 
-    try {
-      setSubmitting(true);
-      setError(null);
+    setError(null);
 
-      // For select questions, find the option ID
-      const selectedId = hasOptions
-        ? String.fromCodePoint(97 + (question.options?.indexOf(selectedOption) ?? 0))
-        : undefined;
+    // For select questions, find the option ID
+    const selectedId = hasOptions
+      ? String.fromCodePoint(97 + (question.options?.indexOf(selectedOption) ?? 0))
+      : undefined;
 
-      await answerQuestion({ questionPath: question.relativePath, answer, selectedId });
-      onAnswered();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
+    answerMutation.mutate({ questionPath: question.relativePath, answer, selectedId });
   };
 
   return (
@@ -89,10 +86,10 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
 
         <button
           type="submit"
-          disabled={submitting || (!selectedOption && !textAnswer)}
+          disabled={answerMutation.isPending || (!selectedOption && !textAnswer)}
           className="btn btn-primary w-full"
         >
-          {submitting ? "Submitting..." : "Submit Answer"}
+          {answerMutation.isPending ? "Submitting..." : "Submit Answer"}
         </button>
       </form>
     </div>

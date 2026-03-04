@@ -2,8 +2,7 @@
  * Status bar showing system state and connection status.
  */
 
-import { useEffect, useState } from "react";
-import { getStatus, type StatusResponse } from "../api";
+import { trpc } from "../lib/trpc";
 
 interface StatusBarProps {
   connected: boolean;
@@ -11,26 +10,7 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ connected, onRefresh }: StatusBarProps) {
-  const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchStatus = async () => {
-    try {
-      setLoading(true);
-      const data = await getStatus();
-      setStatus(data);
-      setError(null);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStatus();
-  }, []);
+  const { data: status, isLoading, error, refetch } = trpc.status.status.useQuery();
 
   return (
     <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
@@ -67,18 +47,18 @@ export function StatusBar({ connected, onRefresh }: StatusBarProps) {
         {/* Refresh button */}
         <button
           onClick={() => {
-            fetchStatus();
+            refetch();
             onRefresh();
           }}
           className="btn btn-secondary text-sm"
-          disabled={loading}
+          disabled={isLoading}
         >
-          {loading ? "Loading..." : "Refresh"}
+          {isLoading ? "Loading..." : "Refresh"}
         </button>
       </div>
 
       {error ? <div className="absolute top-full left-0 right-0 bg-red-100 text-red-800 px-4 py-2 text-sm">
-          Error: {error}
+          Error: {error.message}
         </div> : null}
     </div>
   );

@@ -4,7 +4,9 @@
  */
 
 import { Link, useParams } from "react-router-dom";
-import type { CardInfo } from "../../api";
+import type { RouterOutput } from "../../lib/trpc";
+
+type CardInfo = RouterOutput["status"]["questions"]["items"][number];
 
 interface AttentionCardsProps {
   questions: CardInfo[];

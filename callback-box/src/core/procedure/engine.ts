@@ -762,7 +762,7 @@ interface ExecuteValidationParams {
  * Execute validation phase.
  */
 async function executeValidation(params: ExecuteValidationParams): Promise<{ status: string; stdout?: string; review?: string }> {
-  const { ctx, boxRoot, step, _procedure, _procedureCardPath, _runCardPath, _relProcedurePath, _gitRef } = params;
+  const { ctx, boxRoot, step } = params;
   const validate = step.validate!;
   const { phase, severity } = validate;
   let status = "pass";

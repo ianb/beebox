@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Image card schema - photos from capture sessions.
  *

@@ -18,10 +18,10 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 
 | # | Decision | Status | Notes |
 |---|---|---|---|
-| 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | **Partial** | Installed, used in services/tests. Expanding to API inputs preps for tRPC. |
+| 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | **Done (via tRPC)** | All tRPC input schemas use Zod. No manual validation in new API code. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **Planned** | Foundational — changes how all frontend state works. Do before other frontend stack changes. |
-| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **In progress** | Infrastructure done. Fastify adapter mounted. history.ts migrated (3 procedures). 60+ routes remaining. |
-| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **In progress** | Installed alongside tRPC. History page uses `useInfiniteQuery` for pagination, `useQuery` for diffs. |
+| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **Nearly complete** | 12 routers, ~50 procedures. Only SSE streaming, file uploads, WebSocket, OAuth remain as REST. |
+| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **Nearly complete** | All migrated components use tRPC hooks (which wrap TanStack Query). `api.ts` reduced to streaming/upload functions. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
 | 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
 | 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
@@ -166,7 +166,7 @@ To start adoption: pick one page, model its state as an XState machine, wire it 
 **Rigor:** Directional (discussed, not built/benchmarked)
 **Choice:** tRPC
 **Alternative considered:** OpenAPI with code generation (better for polyglot backends)
-**Current state:** Fastify REST with TypeScript generics, 64 routes across 13 files, no runtime validation
+**Current state:** Nearly complete — 12 tRPC routers with ~50 procedures. REST retained only for SSE streaming, file uploads, WebSocket, and OAuth.
 
 ### Why tRPC
 
@@ -181,26 +181,56 @@ To start adoption: pick one page, model its state as an XState machine, wire it 
 - **Procedure-based thinking.** Routes become `query` (read) and `mutation` (write) procedures, not GET/POST endpoints. Conceptually similar but the vocabulary changes.
 - **Migration.** 64 existing REST routes need to be migrated incrementally. The Fastify adapter allows tRPC and REST routes to coexist during transition.
 
-### Concerns to investigate
+### Concerns resolved
 
-- **SSE/streaming.** The current codebase uses `reply.hijack()` for streaming chat responses and command output. tRPC supports subscriptions over WebSockets, but the SSE streaming pattern (chat chunks, command output) may need a different approach. This is the biggest unknown.
-- **File uploads.** Some endpoints accept `multipart/form-data` (voice memos). tRPC doesn't natively handle multipart — these may need to stay as regular Fastify routes.
-- **Incremental adoption.** Can we mount tRPC on `/api/trpc` alongside existing `/api/*` routes and migrate one route file at a time?
+- **SSE/streaming.** Stays as REST. Chat send, command execute, file-watcher events all use SSE patterns that tRPC doesn't handle. These live in `api.ts` alongside `getApiBase()`. Not worth migrating — tRPC subscriptions use WebSocket which is a different transport.
+- **File uploads.** Stay as REST. Voice memos (`createVoiceMemo`) and file uploads (`uploadFile`) use `multipart/form-data`. Brief feedback with audio converts Blob→base64 and sends through tRPC (acceptable for small audio clips).
+- **Incremental adoption.** Worked perfectly. tRPC mounted at `/:boxSlug/api/trpc` alongside REST at `/:boxSlug/api/*`. Both coexist — old REST routes still registered but frontend no longer calls them for migrated endpoints.
 
 ### Implementation notes
 
-**Started.** tRPC v11 (`@trpc/server@11.11.0`) installed. Infrastructure in place:
+**Infrastructure:**
 - `src/webapp/trpc/trpc.ts` — initTRPC with context
-- `src/webapp/trpc/context.ts` — TrpcContext (boxRoot, broadcastEvent, services)
-- `src/webapp/trpc/router.ts` — Root appRouter, exports `AppRouter` type
+- `src/webapp/trpc/context.ts` — TrpcContext: `{ boxRoot, boxSlug, broadcastEvent, services, chatSession }`
+- `src/webapp/trpc/router.ts` — Root appRouter merging 12 sub-routers, exports `AppRouter` type
 - Fastify adapter registered per-box at `/:boxSlug/api/trpc`
-- Frontend: `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query` installed, TrpcProvider wraps app
+- Frontend: `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query` in TrpcProvider
 
-**First migration: `history.ts`** (3 procedures: list, diff, sessionLog). Both REST and tRPC endpoints coexist. Frontend HistoryPage, CommitDetail, SessionLog components migrated to tRPC hooks. Pagination uses cursor-based pattern with `useInfiniteQuery`.
+**Routers (12):**
 
-**Type sharing:** Frontend imports `type { AppRouter }` via tsconfig paths alias `@backend/*` → `../webapp/*`. Type-only import, stripped at build time — Vite needs no config change.
+| Router | Procedures | Notes |
+|--------|-----------|-------|
+| `history` | list, diff, sessionLog | Cursor-based pagination with `useInfiniteQuery` |
+| `status` | status, inbox, questions, context, activity, newsStatus, browse | Bulk of the dashboard data |
+| `card` | get, patch | Patch uses Zod discriminated union for ops |
+| `scheduler` | log, schedules | Explicit return interfaces needed (see lessons) |
+| `calendar` | available, config, updateConfig | Uses `ctx.services.calendar` |
+| `pairing` | status, pair | Uses `ctx.services.dropboxRelay` |
+| `actions` | wakeup, answer, create | Mutations with `ctx.broadcastEvent` |
+| `briefs` | list, get, markRead, feedback, queryResponse, guideReactions, completeReading | Largest router; audio as base64 |
+| `chat` | history, status, interrupt, reset, voiceConfig | Streaming `chat.send` stays REST |
+| `commands` | list, get, executeSync | Streaming `execute` stays REST |
+| `debugLog` | get, submit, clear | In-memory log store |
+| `admin` | telegramStatus/Setup/Disconnect, boxConfig, updateBoxConfig, claudeStatus/Login/Logout | Uses multiple services |
 
-**Remaining:** ~60 routes across 12 files. SSE streaming (chat/send, commands/execute) stays REST for now. File uploads, WebSocket, OAuth, webhooks stay REST permanently.
+**Type sharing:** Frontend imports `type { AppRouter }` via relative path. `RouterOutput` helper type (`inferRouterOutputs<AppRouter>`) provides inferred types for component props — eliminates manually duplicated interfaces.
+
+**What stays REST permanently:**
+- SSE streaming: `chat/send`, `commands/execute`, `/api/events` (file watcher)
+- File uploads: `actions/create-voice-memo`, `/upload`
+- WebSocket: `transcribe-ws`
+- OAuth: `auth.ts`
+- Webhooks: `telegram.ts`
+- TTS proxy: `chat/tts`
+
+**Frontend `api.ts`** reduced from ~815 lines to ~250 lines. Contains only `getApiBase()`, SSE/streaming functions, file upload functions, and legacy type exports.
+
+### Lessons learned
+
+- **Define explicit return interfaces** when procedures return complex data. TypeScript's inference breaks down with index signatures (`[key: string]: unknown`), conditional spreads (`...(flag ? {x} : {})`), and `[] as Array<Record<string, unknown>>` fallbacks. All of these produce `unknown` or `{}` on the frontend via `RouterOutput`.
+- **tRPC manages query keys.** Don't pass `queryKey` in tRPC hook options — use `utils.X.invalidate()` for cache busting.
+- **`as const` casts on string literals** are needed when backend types use `string` but the frontend expects a union (e.g., `sentiment: r.sentiment as "positive" | "negative" | "neutral"`). Better to fix the upstream type, but casting works when the source type comes from a parser.
+- **`@jsxImportSource` pragma required on schema `.tsx` files.** The frontend's `@backend/*` path alias causes TypeScript to follow the full backend import chain, including `src/schemas/*.tsx` files that use cardworks custom JSX. Without per-file `/** @jsxImportSource cardworks/jsx */` pragmas, the frontend typecheck applies `react-jsx` to those files and reports hundreds of false errors. The cardworks `package.json` also needed a `./jsx/jsx-dev-runtime` export entry.
 
 ---
 
@@ -209,7 +239,7 @@ To start adoption: pick one page, model its state as an XState machine, wire it 
 **Decided:** 2026-03-02
 **Rigor:** Directional (consensus from state management research, not independently evaluated)
 **Choice:** TanStack Query (React Query)
-**Current state:** Manual `fetch()` calls in `api.ts` with typed wrapper functions
+**Current state:** All tRPC-migrated components use TanStack Query via `@trpc/react-query` hooks. Manual fetch only for SSE streaming and file uploads.
 
 ### Why TanStack Query
 
@@ -240,7 +270,14 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 
 ### Implementation notes
 
-**Started.** `@tanstack/react-query` installed as a peer of `@trpc/react-query`. Adopted alongside tRPC — the `TrpcProvider` in `src/frontend/src/lib/trpc-provider.tsx` wraps the app with both QueryClientProvider and trpc.Provider. History page components use `useInfiniteQuery` for paginated lists (cursor-based) and `useQuery` for single-item fetches.
+**Fully adopted** via `@trpc/react-query`. The `TrpcProvider` in `src/frontend/src/lib/trpc-provider.tsx` wraps the app with both QueryClientProvider and trpc.Provider.
+
+**Patterns in use:**
+- `useQuery` — most data fetching (status, inbox, card details, briefs, schedules, etc.)
+- `useInfiniteQuery` — paginated history with cursor-based pagination
+- `useMutation` — all write operations (answer questions, create memos, submit feedback, etc.)
+- `utils.X.invalidate()` — cache busting after mutations or SSE events
+- SSE event handler in DashboardPage calls `utils.status.invalidate()` + `utils.scheduler.invalidate()` on file-change events, bridging the SSE push with Query's cache
 
 ---
 

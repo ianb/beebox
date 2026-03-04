@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { createCard } from "../api";
+import { trpc } from "../lib/trpc";
 
 interface CreateMemoProps {
   onCreated: () => void;
@@ -11,8 +11,15 @@ interface CreateMemoProps {
 
 export function CreateMemo({ onCreated }: CreateMemoProps) {
   const [content, setContent] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const createMutation = trpc.actions.create.useMutation({
+    onSuccess: () => {
+      setContent("");
+      onCreated();
+    },
+    onError: (err) => setError(err.message),
+  });
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,25 +30,15 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
       return;
     }
 
-    try {
-      setSubmitting(true);
-      setError(null);
+    setError(null);
 
-      // Generate a name from timestamp
-      const now = new Date();
-      const name = `Memo_${now.toISOString().replace(/[.:]/g, "-").slice(0, 19)}`;
-      const path = `box/inbox/${name}.memo.card`;
+    // Generate a name from timestamp
+    const now = new Date();
+    const name = `Memo_${now.toISOString().replace(/[.:]/g, "-").slice(0, 19)}`;
+    const cardPath = `box/inbox/${name}.memo.card`;
 
-      await createCard({ path, template: "memo", args: { content: trimmed } });
-
-      setContent("");
-      onCreated();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }, [content, onCreated]);
+    createMutation.mutate({ path: cardPath, template: "memo", args: { content: trimmed } });
+  }, [content, createMutation]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -58,7 +55,7 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
             onChange={handleChange}
             placeholder="What's on your mind?"
             className="input w-full h-32 resize-none"
-            disabled={submitting}
+            disabled={createMutation.isPending}
           />
         </div>
 
@@ -68,10 +65,10 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
 
         <button
           type="submit"
-          disabled={submitting || !content.trim()}
+          disabled={createMutation.isPending || !content.trim()}
           className="btn btn-primary w-full"
         >
-          {submitting ? "Creating..." : "Create Memo"}
+          {createMutation.isPending ? "Creating..." : "Create Memo"}
         </button>
       </form>
     </div>

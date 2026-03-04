@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Capture session card schema - groups images and audio from a capture session.
  *

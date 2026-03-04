@@ -3,7 +3,10 @@
  */
 
 import { Link, useParams } from "react-router-dom";
-import type { LogEntry, SchedulerLogEntry } from "../../api";
+import type { RouterOutput } from "../../lib/trpc";
+
+type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
+type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
 
 interface RecentActivityProps {
   commits: LogEntry[];

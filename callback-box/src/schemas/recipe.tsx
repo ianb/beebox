@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Recipe card schema — structured recipes with multi-section support,
  * inline ingredient references, and scaling.

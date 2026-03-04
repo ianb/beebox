@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * News summary card schema - compiled digest of news items.
  *

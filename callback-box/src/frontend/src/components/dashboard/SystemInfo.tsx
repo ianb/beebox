@@ -2,7 +2,9 @@
  * System info — compact footer with box metadata.
  */
 
-import type { StatusResponse } from "../../api";
+import type { RouterOutput } from "../../lib/trpc";
+
+type StatusResponse = RouterOutput["status"]["status"];
 
 interface SystemInfoProps {
   status: StatusResponse | null;

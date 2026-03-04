@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Email message card schema - individual email message metadata.
  *

@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * News brief card schema - a curated narrative digest of news.
  *

@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Personality card schema — agent identity, role, tone, and boxholder knowledge.
  *
@@ -14,9 +15,7 @@ import { z } from "zod";
 import {
   ConfidenceLevel,
   BeliefSource,
-  Experiment,
   Experiments,
-  ContextNote,
   ContextNotes,
   type ExperimentStatus,
 } from "./guide.js";

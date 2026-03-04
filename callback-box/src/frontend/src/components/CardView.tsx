@@ -6,8 +6,8 @@
  * - XML view: Syntax-highlighted raw XML
  */
 
-import { useEffect, useState, useMemo } from "react";
-import { getCard, type CardResponse } from "../api";
+import { useState, useMemo } from "react";
+import { trpc } from "../lib/trpc";
 import { CardTreeView } from "./CardTreeView";
 import hljs from "highlight.js/lib/core";
 import xml from "highlight.js/lib/languages/xml";
@@ -42,35 +42,15 @@ interface CardViewProps {
 }
 
 export function CardView({ path, defaultView = "tree" }: CardViewProps) {
-  const [card, setCard] = useState<CardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: card, isLoading, error } = trpc.card.get.useQuery({ path });
   const [viewMode, setViewMode] = useState<ViewMode>(defaultView);
 
-  useEffect(() => {
-    const fetchCard = async () => {
-      try {
-        setLoading(true);
-        const data = await getCard(path);
-        setCard(data);
-        setError(null);
-      } catch (err) {
-        setError((err as Error).message);
-        setCard(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCard();
-  }, [path]);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="p-4 text-warm-600">Loading...</div>;
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">Error: {error}</div>;
+    return <div className="p-4 text-red-600">Error: {error.message}</div>;
   }
 
   if (!card) {

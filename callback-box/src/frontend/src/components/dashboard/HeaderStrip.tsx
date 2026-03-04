@@ -3,7 +3,9 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import type { StatusResponse } from "../../api";
+import type { RouterOutput } from "../../lib/trpc";
+
+type StatusResponse = RouterOutput["status"]["status"];
 
 interface HeaderStripProps {
   status: StatusResponse | null;

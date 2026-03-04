@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Record card schema - generic extracted units from capture sessions.
  *

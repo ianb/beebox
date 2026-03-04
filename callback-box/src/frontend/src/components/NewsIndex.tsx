@@ -5,21 +5,10 @@
  * Unread briefs are shown with bold titles, read briefs are dimmer.
  */
 
-import { useState, useEffect } from "react";
-import { getApiBase } from "../api";
+import { useEffect } from "react";
+import { trpc, type RouterOutput } from "../lib/trpc";
 
-/**
- * Brief metadata for the index.
- */
-export interface BriefSummary {
-  path: string;
-  relativePath: string;
-  title: string;
-  date: string;
-  byline: string;
-  read: boolean;
-  readReason?: "user" | "expired";
-}
+export type BriefSummary = RouterOutput["briefs"]["list"]["briefs"][number];
 
 interface NewsIndexProps {
   /** Called when user selects a brief */
@@ -28,18 +17,6 @@ interface NewsIndexProps {
   selectedPath?: string;
   /** Increment to trigger a refresh of the brief list */
   refreshKey?: number;
-}
-
-/**
- * Fetch the list of news briefs from the API.
- */
-async function fetchBriefs(): Promise<BriefSummary[]> {
-  const response = await fetch(`${getApiBase()}/briefs`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch briefs");
-  }
-  const data = await response.json();
-  return data.briefs;
 }
 
 /**
@@ -64,23 +41,19 @@ function formatDate(dateStr: string): string {
 }
 
 export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps) {
-  const [briefs, setBriefs] = useState<BriefSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const utils = trpc.useUtils();
+  const briefsQuery = trpc.briefs.list.useQuery();
 
+  // Refetch when refreshKey changes
   useEffect(() => {
-    fetchBriefs()
-      .then((data) => {
-        setBriefs(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [refreshKey]);
+    if (refreshKey !== undefined && refreshKey > 0) {
+      utils.briefs.list.invalidate();
+    }
+  }, [refreshKey, utils.briefs.list]);
 
-  if (loading) {
+  const briefs = briefsQuery.data?.briefs;
+
+  if (briefsQuery.isLoading) {
     return (
       <div className="p-8 text-center text-warm-600">
         Loading briefs...
@@ -88,15 +61,15 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
     );
   }
 
-  if (error) {
+  if (briefsQuery.error) {
     return (
       <div className="p-8 text-center text-red-600">
-        Error: {error}
+        Error: {briefsQuery.error.message}
       </div>
     );
   }
 
-  if (briefs.length === 0) {
+  if (!briefs || briefs.length === 0) {
     return (
       <div className="p-8 text-center text-warm-600">
         <p className="mb-2">No news briefs yet.</p>

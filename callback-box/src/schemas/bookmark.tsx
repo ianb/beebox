@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Bookmark card schema - Raindrop.io bookmarks.
  *

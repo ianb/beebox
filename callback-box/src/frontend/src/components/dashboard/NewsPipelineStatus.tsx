@@ -4,7 +4,9 @@
  */
 
 import { Link, useParams } from "react-router-dom";
-import type { NewsStatusResponse } from "../../api";
+import type { RouterOutput } from "../../lib/trpc";
+
+type NewsStatusResponse = RouterOutput["status"]["newsStatus"];
 
 interface NewsPipelineStatusProps {
   newsStatus: NewsStatusResponse;

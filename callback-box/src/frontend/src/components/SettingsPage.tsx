@@ -2,57 +2,31 @@
  * Settings page with dropbox pairing UI and calendar configuration.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
-import {
-  getDropboxStatus,
-  createPairing,
-  getAvailableCalendars,
-  getCalendarConfig,
-  putCalendarConfig,
-  type DropboxStatus,
-  type PairResult,
-  type AvailableCalendar,
-  type CalendarConfig,
-} from "../api";
+import { trpc, type RouterOutput } from "../lib/trpc";
+
+type AvailableCalendar = RouterOutput["calendar"]["available"][number];
 
 function CalendarSection() {
-  const [calendars, setCalendars] = useState<AvailableCalendar[] | null>(null);
-  const [config, setConfig] = useState<CalendarConfig | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const calendarsQuery = trpc.calendar.available.useQuery();
+  const configQuery = trpc.calendar.config.useQuery();
+  const updateMutation = trpc.calendar.updateConfig.useMutation();
+  const utils = trpc.useUtils();
 
-  const load = useCallback(async () => {
-    try {
-      const [available, cfg] = await Promise.all([
-        getAvailableCalendars(),
-        getCalendarConfig(),
-      ]);
-      setCalendars(available);
-      setConfig(cfg);
-      setError(null);
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const calendars = calendarsQuery.data;
+  const config = configQuery.data;
+  const error = calendarsQuery.error?.message ?? configQuery.error?.message ?? null;
 
   const toggleCalendar = async (cal: AvailableCalendar) => {
     if (!config) return;
-    setSaving(true);
 
     const currentList = config.calendars || ["primary"];
-    // Use the actual ID (resolve "primary" alias)
     const calId = cal.primary && cal.resolvedId ? cal.resolvedId : cal.id;
-    // Also check if "primary" alias is in the list and this is the primary calendar
     const isCurrentlySyncing = cal.syncing;
 
     let newList: string[];
     if (isCurrentlySyncing) {
-      // Remove — filter both the real ID and "primary" alias
       newList = currentList.filter((id) => {
         if (id === calId) return false;
         if (cal.primary && id === "primary") return false;
@@ -63,16 +37,10 @@ function CalendarSection() {
     }
 
     try {
-      const newConfig = { ...config, calendars: newList };
-      await putCalendarConfig(newConfig);
-      setConfig(newConfig);
-      // Refresh to get updated syncing flags
-      const available = await getAvailableCalendars();
-      setCalendars(available);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSaving(false);
+      await updateMutation.mutateAsync({ ...config, calendars: newList });
+      utils.calendar.invalidate();
+    } catch {
+      // error handled by mutation state
     }
   };
 
@@ -120,7 +88,7 @@ function CalendarSection() {
               type="checkbox"
               checked={cal.syncing}
               onChange={() => toggleCalendar(cal)}
-              disabled={saving}
+              disabled={updateMutation.isPending}
               className="rounded border-warm-400 text-plum focus:ring-gold"
             />
             <span className="flex-1 min-w-0">
@@ -149,25 +117,23 @@ function CalendarSection() {
 
 export function SettingsPage() {
   const { boxSlug } = useParams();
-  const [status, setStatus] = useState<DropboxStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [workerUrl, setWorkerUrl] = useState("");
-  const [pairing, setPairing] = useState(false);
-  const [pairResult, setPairResult] = useState<PairResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const statusQuery = trpc.pairing.status.useQuery();
+  const pairMutation = trpc.pairing.pair.useMutation();
+  const utils = trpc.useUtils();
+  const [workerUrlOverride, setWorkerUrlOverride] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    getDropboxStatus()
-      .then((s) => {
-        setStatus(s);
-        if (s.workerUrl) setWorkerUrl(s.workerUrl);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const status = statusQuery.data;
+  const loading = statusQuery.isLoading;
+  const error = statusQuery.error?.message ?? pairMutation.error?.message ?? null;
 
+  // Use local override if user has edited, otherwise fall back to server value
+  const serverUrl = status && "workerUrl" in status ? (status.workerUrl ?? "") : "";
+  const workerUrl = workerUrlOverride ?? serverUrl;
+  const setWorkerUrl = (v: string) => setWorkerUrlOverride(v);
+
+  // Clean up countdown timer on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -176,13 +142,9 @@ export function SettingsPage() {
 
   const handlePair = async () => {
     if (!workerUrl.trim()) return;
-    setError(null);
-    setPairing(true);
-    setPairResult(null);
 
     try {
-      const result = await createPairing(workerUrl.trim());
-      setPairResult(result);
+      const result = await pairMutation.mutateAsync({ workerUrl: workerUrl.trim() });
 
       // Start countdown
       const expiresMs = new Date(result.expiresAt).getTime() - Date.now();
@@ -200,12 +162,9 @@ export function SettingsPage() {
       }, 1000);
 
       // Refresh status
-      const newStatus = await getDropboxStatus();
-      setStatus(newStatus);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setPairing(false);
+      utils.pairing.status.invalidate();
+    } catch {
+      // error handled by mutation state
     }
   };
 
@@ -216,6 +175,8 @@ export function SettingsPage() {
       </div>
     );
   }
+
+  const pairResult = pairMutation.data;
 
   return (
     <div className="h-full bg-warm-50 overflow-auto">
@@ -239,7 +200,7 @@ export function SettingsPage() {
           </p>
 
           {/* Current status */}
-          {status?.paired ? (
+          {status && "paired" in status && status.paired ? (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
               <span className="font-medium text-green-800">Connected</span>
               <span className="text-green-700 ml-2">to {status.workerUrl}</span>
@@ -267,12 +228,12 @@ export function SettingsPage() {
           {/* Pair button */}
           <button
             onClick={handlePair}
-            disabled={pairing || !workerUrl.trim()}
+            disabled={pairMutation.isPending || !workerUrl.trim()}
             className="btn btn-primary"
           >
-            {pairing
+            {pairMutation.isPending
               ? "Creating..."
-              : status?.paired
+              : status && "paired" in status && status.paired
                 ? "Generate New Pairing Code"
                 : "Generate Pairing Code"}
           </button>

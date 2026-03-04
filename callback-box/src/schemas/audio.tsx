@@ -1,3 +1,4 @@
+/** @jsxImportSource cardworks/jsx */
 /**
  * Audio card schema - audio clips from capture sessions.
  *
