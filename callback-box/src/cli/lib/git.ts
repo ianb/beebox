@@ -4,7 +4,22 @@
  * Git is the state engine - a change hasn't "happened" until it's committed.
  */
 
-import { execa, type ExecaError } from "execa";
+import { simpleGit, CleanOptions } from "simple-git";
+
+/** Shape of our custom git log format. */
+interface GitLogFormat {
+  hash: string;
+  date: string;
+  subject: string;
+  body: string;
+}
+
+const LOG_FORMAT: GitLogFormat = {
+  hash: "%H",
+  date: "%aI",
+  subject: "%s",
+  body: "%b",
+};
 
 export interface GitCommitOptions {
   message: string;
@@ -28,21 +43,6 @@ export interface GitStatus {
 }
 
 /**
- * Run a git command in the given directory.
- */
-async function git(
-  cwd: string,
-  args: string[]
-): Promise<{ stdout: string; stderr: string }> {
-  try {
-    return await execa("git", args, { cwd });
-  } catch (error) {
-    const e = error as ExecaError;
-    throw new Error(`Git error: ${e.stderr || e.stdout || e.message}`);
-  }
-}
-
-/**
  * Initialize a new git repository.
  *
  * @param boxRoot - Directory to initialize
@@ -52,7 +52,7 @@ export async function initRepo(
   boxRoot: string,
   initialBranch = "main"
 ): Promise<void> {
-  await git(boxRoot, ["init", "-b", initialBranch]);
+  await simpleGit(boxRoot).raw(["init", "-b", initialBranch]);
 }
 
 /**
@@ -60,8 +60,7 @@ export async function initRepo(
  */
 export async function isRepo(dir: string): Promise<boolean> {
   try {
-    await git(dir, ["rev-parse", "--git-dir"]);
-    return true;
+    return await simpleGit(dir).checkIsRepo();
   } catch {
     return false;
   }
@@ -71,40 +70,18 @@ export async function isRepo(dir: string): Promise<boolean> {
  * Get the status of the repository.
  */
 export async function getStatus(boxRoot: string): Promise<GitStatus> {
-  const { stdout } = await git(boxRoot, ["status", "--porcelain"]);
+  const status = await simpleGit(boxRoot).status();
 
-  const staged: string[] = [];
-  const modified: string[] = [];
-  const untracked: string[] = [];
-
-  for (const line of stdout.split("\n")) {
-    if (!line) continue;
-
-    const indexStatus = line[0];
-    const workingStatus = line[1];
-    const filePath = line.slice(3);
-
-    // Staged changes (index has changes)
-    if (indexStatus && indexStatus !== " " && indexStatus !== "?") {
-      staged.push(filePath);
-    }
-
-    // Working tree changes
-    if (workingStatus === "M" || workingStatus === "D") {
-      modified.push(filePath);
-    }
-
-    // Untracked files
-    if (indexStatus === "?" && workingStatus === "?") {
-      untracked.push(filePath);
-    }
-  }
+  // simple-git separates modified and deleted; our GitStatus combines
+  // all working-tree changes (modifications + deletions) into `modified`
+  // to match the original porcelain parsing behavior.
+  const modified = [...status.modified, ...status.deleted.filter((f) => !status.staged.includes(f))];
 
   return {
-    staged,
+    staged: status.staged,
     modified,
-    untracked,
-    clean: staged.length === 0 && modified.length === 0 && untracked.length === 0,
+    untracked: status.not_added,
+    clean: status.isClean(),
   };
 }
 
@@ -116,14 +93,14 @@ export async function getStatus(boxRoot: string): Promise<GitStatus> {
  */
 export async function stageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await git(boxRoot, ["add", "--", ...paths]);
+  await simpleGit(boxRoot).add(paths);
 }
 
 /**
  * Stage all changes.
  */
 export async function stageAll(boxRoot: string): Promise<void> {
-  await git(boxRoot, ["add", "-A"]);
+  await simpleGit(boxRoot).raw(["add", "-A"]);
 }
 
 /**
@@ -147,15 +124,13 @@ export async function commit(
     }
   }
 
-  const commitArgs = ["commit", "-m", message];
-  if (options.amend) {
-    commitArgs.push("--amend");
-  }
-  await git(boxRoot, commitArgs);
+  const git = simpleGit(boxRoot);
+  const commitArgs = options.amend ? ["--amend"] : [];
+  await git.commit(message, commitArgs);
 
   // Get the commit hash
-  const { stdout } = await git(boxRoot, ["rev-parse", "HEAD"]);
-  return stdout.trim();
+  const hash = await git.revparse(["HEAD"]);
+  return hash.trim();
 }
 
 /**
@@ -169,46 +144,26 @@ export async function getLog(
   boxRoot: string,
   count = 10
 ): Promise<GitLogEntry[]> {
-  const format = "%H%x00%aI%x00%s%x00%b%x00";
+  if (count === 0) return [];
 
   try {
-    const { stdout } = await git(boxRoot, [
-      "log",
-      `-${count}`,
-      `--format=${format}`,
-    ]);
+    const result = await simpleGit(boxRoot).log<GitLogFormat>({
+      maxCount: count,
+      format: LOG_FORMAT,
+    });
 
-    const entries: GitLogEntry[] = [];
-    const commits = stdout.split(String.fromCodePoint(0) + "\n").filter(Boolean);
+    return result.all.map((entry) => {
+      const body = entry.body?.trim() || undefined;
+      const trailers = parseTrailers(body);
 
-    for (const commitText of commits) {
-      const parts = commitText.split("\u0000");
-      if (parts.length < 3) continue;
-
-      const [hash, date, subject, body] = parts;
-
-      // Parse trailers from body
-      const trailers: Record<string, string> = {};
-      if (body) {
-        const lines = body.trim().split("\n");
-        for (const line of lines) {
-          const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
-          if (match) {
-            trailers[match[1]!] = match[2]!;
-          }
-        }
-      }
-
-      entries.push({
-        hash: hash!,
-        date: date!,
-        subject: subject!,
-        body: body?.trim() || undefined,
+      return {
+        hash: entry.hash,
+        date: entry.date,
+        subject: entry.subject,
+        body,
         trailers: Object.keys(trailers).length > 0 ? trailers : undefined,
-      });
-    }
-
-    return entries;
+      };
+    });
   } catch {
     // No commits yet
     return [];
@@ -226,17 +181,16 @@ export async function getDiff(
   boxRoot: string,
   staged = false
 ): Promise<string> {
-  const args = staged ? ["diff", "--cached"] : ["diff"];
-  const { stdout } = await git(boxRoot, args);
-  return stdout;
+  const args = staged ? ["--cached"] : [];
+  return await simpleGit(boxRoot).diff(args);
 }
 
 /**
  * Get the current branch name.
  */
 export async function getCurrentBranch(boxRoot: string): Promise<string> {
-  const { stdout } = await git(boxRoot, ["branch", "--show-current"]);
-  return stdout.trim();
+  const branch = await simpleGit(boxRoot).branch();
+  return branch.current;
 }
 
 /**
@@ -244,7 +198,7 @@ export async function getCurrentBranch(boxRoot: string): Promise<string> {
  */
 export async function hasCommits(boxRoot: string): Promise<boolean> {
   try {
-    await git(boxRoot, ["rev-parse", "HEAD"]);
+    await simpleGit(boxRoot).revparse(["HEAD"]);
     return true;
   } catch {
     return false;
@@ -255,28 +209,28 @@ export async function hasCommits(boxRoot: string): Promise<boolean> {
  * Create and switch to a new branch.
  */
 export async function createBranch(boxRoot: string, name: string): Promise<void> {
-  await git(boxRoot, ["checkout", "-b", name]);
+  await simpleGit(boxRoot).checkoutLocalBranch(name);
 }
 
 /**
  * Switch to an existing branch.
  */
 export async function checkoutBranch(boxRoot: string, name: string): Promise<void> {
-  await git(boxRoot, ["checkout", name]);
+  await simpleGit(boxRoot).checkout(name);
 }
 
 /**
  * Create a lightweight tag.
  */
 export async function createTag(boxRoot: string, name: string): Promise<void> {
-  await git(boxRoot, ["tag", name]);
+  await simpleGit(boxRoot).tag([name]);
 }
 
 /**
  * Delete a tag.
  */
 export async function deleteTag(boxRoot: string, name: string): Promise<void> {
-  await git(boxRoot, ["tag", "-d", name]);
+  await simpleGit(boxRoot).tag(["-d", name]);
 }
 
 /**
@@ -309,60 +263,30 @@ export async function getLogPaginated(
   params: GetLogPaginatedParams
 ): Promise<GitLogEntryExtended[]> {
   const { boxRoot, count = 50, offset = 0 } = params;
-  const format = "%H%x00%aI%x00%s%x00%b%x00";
 
   try {
-    const args = [
-      "log",
-      `-${count}`,
-      `--format=${format}`,
-    ];
+    const logOptions: Record<string, unknown> = {
+      maxCount: count,
+      format: LOG_FORMAT,
+    };
     if (offset > 0) {
-      args.push(`--skip=${offset}`);
+      logOptions["--skip"] = offset;
     }
 
-    const { stdout } = await git(boxRoot, args);
+    const result = await simpleGit(boxRoot).log<GitLogFormat>(logOptions);
 
-    const entries: GitLogEntryExtended[] = [];
-    const commits = stdout.split(String.fromCodePoint(0) + "\n").filter(Boolean);
+    return result.all.map((entry) => {
+      const body = entry.body?.trim() || undefined;
+      const trailers = parseTrailersMulti(body);
 
-    for (const commitText of commits) {
-      const parts = commitText.split("\u0000");
-      if (parts.length < 3) continue;
-
-      const [hash, date, subject, body] = parts;
-
-      // Parse trailers from body, collecting multi-value keys
-      const trailers: Record<string, string | string[]> = {};
-      if (body) {
-        const lines = body.trim().split("\n");
-        for (const line of lines) {
-          const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
-          if (match) {
-            const key = match[1]!;
-            const value = match[2]!;
-            const existing = trailers[key];
-            if (existing === undefined) {
-              trailers[key] = value;
-            } else if (Array.isArray(existing)) {
-              existing.push(value);
-            } else {
-              trailers[key] = [existing, value];
-            }
-          }
-        }
-      }
-
-      entries.push({
-        hash: hash!,
-        date: date!,
-        subject: subject!,
-        body: body?.trim() || undefined,
+      return {
+        hash: entry.hash,
+        date: entry.date,
+        subject: entry.subject,
+        body,
         trailers: Object.keys(trailers).length > 0 ? trailers : undefined,
-      });
-    }
-
-    return entries;
+      };
+    });
   } catch {
     // No commits yet
     return [];
@@ -380,16 +304,14 @@ export async function getCommitDiff(
   boxRoot: string,
   hash: string
 ): Promise<string> {
+  const git = simpleGit(boxRoot);
   try {
     // Try normal diff against parent, with low rename threshold
-    // to detect moves even when content changes significantly (e.g. analyze phase)
-    const { stdout } = await git(boxRoot, ["diff", "-M10", `${hash}~1`, hash]);
-    return stdout;
+    return await git.diff(["-M10", `${hash}~1`, hash]);
   } catch {
     // Probably the initial commit with no parent
     try {
-      const { stdout } = await git(boxRoot, ["show", "-M10", "--format=", hash]);
-      return stdout;
+      return await git.raw(["show", "-M10", "--format=", hash]);
     } catch {
       return "";
     }
@@ -400,8 +322,8 @@ export async function getCommitDiff(
  * Get the current HEAD commit hash.
  */
 export async function getHead(boxRoot: string): Promise<string> {
-  const { stdout } = await git(boxRoot, ["rev-parse", "HEAD"]);
-  return stdout.trim();
+  const hash = await simpleGit(boxRoot).revparse(["HEAD"]);
+  return hash.trim();
 }
 
 /**
@@ -411,8 +333,51 @@ export async function clean(
   boxRoot: string,
   opts: { gitignored?: boolean; directories?: boolean } = {}
 ): Promise<void> {
-  const args = ["clean", "-f"];
-  if (opts.gitignored) args.push("-X");
-  if (opts.directories) args.push("-d");
-  await git(boxRoot, args);
+  const modes: CleanOptions[] = [CleanOptions.FORCE];
+  if (opts.gitignored) modes.push(CleanOptions.IGNORED_ONLY);
+  if (opts.directories) modes.push(CleanOptions.RECURSIVE);
+  await simpleGit(boxRoot).clean(modes);
+}
+
+// --- Internal helpers ---
+
+/**
+ * Parse git trailers from a commit body (single-value).
+ */
+function parseTrailers(body: string | undefined): Record<string, string> {
+  const trailers: Record<string, string> = {};
+  if (!body) return trailers;
+
+  for (const line of body.split("\n")) {
+    const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
+    if (match) {
+      trailers[match[1]!] = match[2]!;
+    }
+  }
+  return trailers;
+}
+
+/**
+ * Parse git trailers from a commit body (multi-value).
+ */
+function parseTrailersMulti(body: string | undefined): Record<string, string | string[]> {
+  const trailers: Record<string, string | string[]> = {};
+  if (!body) return trailers;
+
+  for (const line of body.split("\n")) {
+    const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
+    if (match) {
+      const key = match[1]!;
+      const value = match[2]!;
+      const existing = trailers[key];
+      if (existing === undefined) {
+        trailers[key] = value;
+      } else if (Array.isArray(existing)) {
+        existing.push(value);
+      } else {
+        trailers[key] = [existing, value];
+      }
+    }
+  }
+  return trailers;
 }

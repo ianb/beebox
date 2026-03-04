@@ -1,6 +1,48 @@
 # Stack Decisions
 
-A living document recording conscious technology choices for the Callback Box frontend and related systems. Each decision captures the reasoning, the alternatives considered, and the principles that guided the choice.
+Technology choices for Callback Box. Each decision includes reasoning and alternatives considered. The status table below tracks what's actually implemented vs. planned.
+
+## Status Summary
+
+### Done
+
+| # | Decision | Notes |
+|---|---|---|
+| 5 | [Fastify (keep)](#decision-5-backend-server--fastify-keep) | Already in use, no change needed. |
+| 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
+| 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | 931 tests, 53 files. Doctest system built. DI pattern established. |
+| 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | In use via react-markdown + remark-gfm. |
+
+### Up next
+
+| # | Decision | Status | Notes |
+|---|---|---|---|
+| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | **Partial** | execa ✅, date-fns ✅. Remaining (html-entities, sanitize-filename, ky, proper-lockfile) are small individual tasks. |
+| 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | **Partial** | Installed, used in services/tests. Expanding to API inputs preps for tRPC. |
+| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **Planned** | Foundational — changes how all frontend state works. Do before other frontend stack changes. |
+| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **Planned** | Depends on Zod schemas (#7). Mount alongside Fastify, migrate incrementally. |
+| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **Planned** | Pairs with tRPC. Can also adopt independently (replace useEffect→fetch→setState). |
+| 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
+| 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
+| 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
+
+### Deferred
+
+| # | Decision | Notes |
+|---|---|---|
+| 4 | [TanStack Router](#decision-4-routing--tanstack-router) | React Router v7 works fine. Value unclear. |
+| 8 | [SQLite file index](#decision-8-file-based-storage-with-queryable-index) | Build when query-time parsing is a bottleneck. |
+| 9 | [Resource subscription](#decision-9-resource-subscription-service) | Depends on #8. Current SSE works. |
+| 11 | [CASL authorization](#decision-11-authorization--typed-principals--casl) | Build when agent API keys are needed. |
+| 13 | [Pino + OTel + Jaeger](#decision-13-tracing-and-logging--pino--opentelemetry--jaeger) | Still console.log. Build when debugging becomes painful. |
+| 16 | [react-hotkeys-hook](#decision-16-keyboard-shortcuts--react-hotkeys-hook) | Add when shortcuts are needed. |
+| 17 | [Phosphor Icons](#decision-17-icons--phosphor-icons) | Add when icon surface grows. |
+| 18 | [Mistral Voxtral](#decision-18-speech-recognition--mistral-voxtra) | Note for future model preference. |
+| 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Zombie processes are tolerable. Adopt when painful enough. |
+| 21 | [View Transitions API](#decision-21-page-transitions--view-transitions-api) | Pure CSS, no dependency. Add when transitions are desired. |
+| 22 | [rehype-highlight](#decision-22-syntax-highlighting--rehype-highlight-or-rehype-prism) | Do when touching the markdown pipeline for other reasons. |
+
+---
 
 ## Guiding Principles
 
@@ -110,13 +152,11 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 - What's the right granularity — one machine per page? Per feature? Per app?
 - How do we handle the URL ↔ state synchronization? Routable states (v5.28.0) are machine-internal only — still need a URL router.
 
-### Implementation artifacts
+### Implementation notes
 
-- `src/frontend/src/stores/history-xstate.ts` — XState machine for the history page
-- `src/frontend/src/components/HistoryPageXState.tsx` — XState-powered component
-- `src/frontend/src/dev/state-fixtures.ts` — State fixtures for testing/rendering
-- `src/frontend/src/dev/render-page.tsx` — CGI renderer (state blob → HTML)
-- `docs/state-management-comparison.md` — Detailed comparison document with code examples
+Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. The comparison document (`docs/state-management-comparison.md`) still exists. Zustand and MST were removed from package.json.
+
+To start adoption: pick one page, model its state as an XState machine, wire it up. The history page is the original evaluation target but any page with complex state transitions (chat, commands) would also be a good candidate.
 
 ---
 
@@ -127,10 +167,6 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 **Choice:** tRPC
 **Alternative considered:** OpenAPI with code generation (better for polyglot backends)
 **Current state:** Fastify REST with TypeScript generics, 64 routes across 13 files, no runtime validation
-
-### What we were looking for
-
-End-to-end type safety between client and server. Types that are enforced consistently, with runtime validation (Zod) deriving from the same schemas used for typing. Introspection and self-documentation — an agent should be able to discover what API procedures exist and what their types are.
 
 ### Why tRPC
 
@@ -150,6 +186,10 @@ End-to-end type safety between client and server. Types that are enforced consis
 - **SSE/streaming.** The current codebase uses `reply.hijack()` for streaming chat responses and command output. tRPC supports subscriptions over WebSockets, but the SSE streaming pattern (chat chunks, command output) may need a different approach. This is the biggest unknown.
 - **File uploads.** Some endpoints accept `multipart/form-data` (voice memos). tRPC doesn't natively handle multipart — these may need to stay as regular Fastify routes.
 - **Incremental adoption.** Can we mount tRPC on `/api/trpc` alongside existing `/api/*` routes and migrate one route file at a time?
+
+### Implementation notes
+
+Not started. No tRPC dependency in package.json. The natural first step is to mount a tRPC router alongside existing Fastify routes and migrate one simple route file (e.g., `api.ts` which is 100% tested) as a proof of concept. SSE streaming compatibility is the biggest risk — investigate before committing to full migration.
 
 ---
 
@@ -187,6 +227,10 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 - **SSE streams.** TanStack Query is request/response oriented. The file-watcher SSE, chat streaming, and command output streaming are different patterns that Query doesn't handle. These may stay outside Query.
 - **Relationship with XState actors.** When an XState machine invokes a fetch actor, should that go through TanStack Query's cache, or directly? Need to decide whether XState or Query "owns" the fetch for each case.
 
+### Implementation notes
+
+Not started. No dependency in package.json. Adopting TanStack Query independently of tRPC is straightforward — replace `useEffect → fetch → setState` patterns with `useQuery` hooks one component at a time. This could be done before or after tRPC.
+
 ---
 
 ## Decision 4: Routing — TanStack Router
@@ -210,6 +254,10 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 - **Maturity.** TanStack Router is newer and less battle-tested than React Router. The type safety story is compelling but the ecosystem is smaller.
 - **Is this worth the migration?** React Router v7 works fine. The improvement is type safety on route params and loader integration. If tRPC already types the API layer, how much additional value does typed routing add?
 
+### Implementation notes
+
+Deferred. React Router v7 is working. Migration cost is high relative to benefit, especially if tRPC provides the type safety that matters most. Revisit only if TanStack Router's loader integration proves compelling when adopting TanStack Query.
+
 ---
 
 ## Decision 5: Backend Server — Fastify (keep)
@@ -230,6 +278,10 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 ### If we needed to reconsider
 
 Hono would be the alternative — lighter, designed for edge/serverless environments (Cloudflare Workers, Lambda). If serverless deployment becomes a goal, Hono's portability advantage would matter. For now, Fastify on Node.js is fine.
+
+### Implementation notes
+
+Done. No action needed.
 
 ---
 
@@ -257,6 +309,10 @@ The challenge: an agent creating UI tends to reinvent the same component repeate
 - What format for the JSDoc annotations? Standard JSDoc tags, or a custom structured format?
 - How does the extraction/indexing script work? TypeDoc, custom parser, or something else?
 - Should the registry include usage examples, or just props and descriptions?
+
+### Implementation notes
+
+Tailwind is in use. The component catalog/registry (JSDoc extraction, queryable index) is not built. This is low priority until agents are regularly creating UI components and duplicating existing ones becomes a real problem.
 
 ---
 
@@ -298,6 +354,10 @@ Zod wins on ecosystem integration (tRPC, XState agent library) and existing adop
 - Use Zod schemas as the single source of truth for types, replacing manual interface definitions.
 - Validate XState machine context when loading persisted snapshots.
 - Define event schemas for XState machines where events come from external sources (user input, API responses, agent actions).
+
+### Implementation notes
+
+Zod is installed and used in service definitions and test helpers. Expansion to API route validation is natural but blocked on or best done alongside tRPC migration (Decision 2), since tRPC makes Zod schemas the input definition format. Could also expand independently by adding `.safeParse()` to existing Fastify route handlers.
 
 ---
 
@@ -344,12 +404,9 @@ The architecture is build-your-own with proven components:
 
 **In-memory-only index** — Simpler but doesn't persist across restarts. With @parcel/watcher's snapshot feature, SQLite can catch up quickly on restart, so the persistence cost is low and the query flexibility is much higher.
 
-### Principles that apply
+### Implementation notes
 
-- **Introspectability** — the index should be queryable by agents (what card types exist? what attributes are common?)
-- **Well-typedness** — queries should return typed results via Zod-inferred types, not raw JSON
-- **Files remain canonical** — the index is derived, never the source of truth. Drop and rebuild is always safe.
-- **Minimal distance from intuitive** — @parcel/watcher + better-sqlite3 + Zod are all straightforward, well-documented libraries. No framework magic.
+Not started. No dependencies installed (@parcel/watcher, better-sqlite3). Build when query-time file parsing becomes a bottleneck or when the resource subscription service (Decision 9) needs a solid foundation. The current approach of reading/parsing files at query time works for the current scale.
 
 ---
 
@@ -412,11 +469,9 @@ One file watcher pipeline, two consumers: the queryable index and client notific
 
 **Server reconciliation without CRDTs (Weidner's approach)** — Interesting idea: if you have a central server, just order operations server-side without CRDT overhead. Worth revisiting if we ever need finer-grained sync than commit-level.
 
-### Principles that apply
+### Implementation notes
 
-- **Files remain canonical** — the subscription service is a read-through notification layer, not a data store
-- **Introspectability** — typed resource representations make it easy for agents and tools to query current state
-- **Well-typedness** — tRPC + Zod ensure the parsed representations are typed end-to-end
+Not started. Depends on Decision 8 (file index) for the file watcher infrastructure. The current ad-hoc SSE watcher works for the current use case. Build when the frontend needs fine-grained resource subscriptions.
 
 ---
 
@@ -425,7 +480,7 @@ One file watcher pipeline, two consumers: the queryable index and client notific
 **Decided:** 2026-03-02
 **Rigor:** Low (clear winner from landscape review)
 **Choice:** simple-git
-**Current state:** Raw `child_process` shell-outs to `git` CLI
+**Current state:** execa-based shell-outs to `git` CLI (previously raw `child_process`)
 
 ### Why simple-git
 
@@ -443,6 +498,10 @@ One file watcher pipeline, two consumers: the queryable index and client notific
 ### What simple-git doesn't add
 
 No new capability over the git CLI. It's a convenience layer: TypeScript types + structured parsing + promise API. The git binary does all the work.
+
+### Implementation notes
+
+Adopted. `src/cli/lib/git.ts` rewritten from execa shell-outs to simple-git. All exported types and function signatures preserved — no caller changes needed (~30 importing files). Eliminated manual `--format` string parsing for log/status. Trailer parsing retained since simple-git doesn't parse git trailers. One edge case: simple-git's `modified` excludes working-tree deletions (unlike porcelain `D` status), so `deleted` files are merged into `modified` to match original behavior.
 
 ---
 
@@ -489,6 +548,10 @@ Store hashed tokens in box config (consistent with filesystem-as-state). On inbo
 
 Current session auth (HMAC-signed cookies, Google OAuth) is fine. No framework switch needed for authentication — just formalize the principal model and add CASL for authorization.
 
+### Implementation notes
+
+Not started. The Principal type and CASL rules can be added without changing the auth flow. First step: define the Principal type, add a Fastify hook that resolves the principal from request headers/cookies, and replace one `allowedEmails.includes()` check with `ability.can()`. Build when agent API keys become needed.
+
 ---
 
 ## Decision 12: Agent Invocation — Anthropic Agent SDK
@@ -522,6 +585,10 @@ No workflow orchestration, job queuing, state machines, or retry logic. Those re
 2. `PreToolUse` hooks to audit/gate agent actions before they execute
 3. In-process MCP tools for box-specific operations (Zod-typed, no external process)
 4. Session resume for long-running or interrupted agent tasks
+
+### Implementation notes
+
+Not started. Not in package.json. The current subprocess approach works and is well-tested (Agent interface, createAgent/createFakeAgent, ensureAgentCommitted). The SDK would replace the internals of `createAgent()` — the `Agent` interface and test infrastructure would remain unchanged. Main motivation: hooks and MCP tools, not just cleaner IPC.
 
 ---
 
@@ -580,12 +647,9 @@ The point: agents don't see terminal colors. They need errors surfaced as text i
 
 **The principle: errors are assertive, not passive.** You shouldn't have to go looking for them.
 
-### Principles that apply
+### Implementation notes
 
-- **Introspectability** — traces are queryable structured data, not opaque text streams
-- **Accessibility to tooling** — OTel is the open standard; any compliant backend can consume the data
-- **Minimal distance from intuitive** — Pino is `logger.info({ key: 'value' }, 'message')`. OTel's span API is verbose but mechanical, wrappable in a small helper.
-- **Assertive errors** — errors surface to the caller, whether that's a test runner, an agent, or a human watching the UI
+Not started. No dependencies installed. The Pino part is low-friction (Fastify has built-in Pino support — set `logger: true` in server options). OTel is more involved but mechanical. Could adopt Pino alone first without the full OTel stack. The assertive errors pattern is independent of the logging library choice.
 
 ---
 
@@ -594,7 +658,7 @@ The point: agents don't see terminal colors. They need errors surfaced as text i
 **Decided:** 2026-03-02
 **Rigor:** Deep (extensive discussion of philosophy and mechanics, library research)
 **Choice:** TAP protocol via jstap/node:test, doctest-style inline tests, custom `expect()` with display serializers
-**Current state:** jstap for existing tests, no inline/doctest testing
+**Current state:** 931 tests across 53 files, doctests are the primary test format
 
 ### Philosophy: testing for agents, not just humans
 
@@ -616,193 +680,38 @@ Tests serve different purposes in an agent-driven workflow than in traditional d
 
 **Not BDD.** No `describe`/`it`/`should` ceremony. Tests are functions with names. `test("loading a card returns parsed XML", ...)` — direct, no nesting.
 
-### Doctest-style inline testing
+### Doctest-style testing
 
-Two complementary modes, both generating `.test.ts` files that run through the normal TAP runner:
+Markdown literate tests (`.doctest.md`) are the primary test format. Code blocks with setup, test, and cleanup sections. Expected output via `=>` assertions. TypeScript supported via esbuild transform.
 
-**Mode 1: JSDoc `@example` blocks.** Tests live in the source file, next to the function they document. The `//=>` syntax specifies expected output:
-
-```typescript
-/**
- * @example
- * displayCard(loadCard("box/inbox/task.card"))
- * //=> Card {
- * //=>   id: «*»
- * //=>   title: "Buy groceries"
- * //=>   tags: ["shopping", "home"]
- * //=> }
- */
-```
-
-An extractor (inspired by gen-jet's approach, but simpler) parses the JSDoc AST, pairs expressions with `//=>` output, wraps them in `test()` + `expect()`, and writes a `.test.ts` file. The containing module's exports are automatically in scope.
-
-**Mode 2: Markdown literate tests.** A `.md` file is both documentation and a test suite. Code blocks tagged `ts test` are extracted and run. An `expected` block following a test block provides the expected output:
-
-````markdown
-```ts setup
-import { loadCard } from "../src/core/card";
-const displayCard = (c: Card) => `${c.title} (${c.priority})`;
-```
-
-```ts test "loading a card"
-displayCard(loadCard("box/inbox/task.card"))
-```
-```expected
-Buy groceries (normal)
-```
-````
-
-Setup blocks run once and their bindings are available to all subsequent test blocks. HTML comment directives (invisible in rendered markdown) can control accumulation and teardown, following phmdoctest's pattern.
-
-Both modes generate typed TypeScript test files. Type errors in examples surface immediately at generation time.
-
-### The `expect()` function
-
-A single custom function that handles all assertion patterns:
-
-```typescript
-// Simple string comparison (whitespace-normalized, wildcard-aware)
-expect(displayCard(card), "Card { title: 'Groceries' }");
-
-// Promise-returning expression (auto-awaited)
-expect(fetchAndDisplay(id), "Card { title: 'Groceries' }");
-
-// Printer function for capturing side effects
-expect(printer => {
-  const result = processInbox(printer);
-  printer.print(`Processed: ${result.count}`);
-}, "Processed: 3");
-
-// Matcher object for options
-expect(displayCard(card), {
-  match: "Card { id: «*» }",
-  ordered: false,
-});
-```
-
-The printer pattern provides isolation automatically — the function receives a fresh printer, prints what it wants, and the collected output is what gets matched. No global state, no mock `console.log`.
-
-### Wildcards and matching
-
-`«*»` matches any text. Typed variants like `«date»` or `«uuid»` validate the shape while ignoring the specific value. Named variants like `«hash»` capture the matched text for further assertions.
-
-Matching is whitespace-insensitive by default — leading/trailing whitespace and indentation differences don't cause failures. This keeps expected output readable without requiring exact formatting.
-
-On failure, TAP diagnostics include a diff:
-
-```
-not ok 1 - loading a card
-  ---
-  expected: |
-    Card { title: "Buy groceries", tags: ["shopping", "home"] }
-  actual: |
-    Card { title: "Buy groceries", tags: ["shopping"] }
-  ...
-```
+Infrastructure includes:
+- `makeTmpBox()` — temp directory with optional git init
+- `makeTestServer()` — Fastify inject, no network
+- `createFakeAgent()` — records invocations, configurable responses
+- `print()` — accumulates lines for multi-line assertions
+- Wildcards: `«string»`, `«number»`, `«codeblock»`, `«blankline»`, extractions
 
 ### Display serializers
 
-The biggest investment in this testing approach is **display functions** — purpose-built string representations of domain types. Not `JSON.stringify`, not `util.inspect` — human/agent-readable representations designed to be tested against:
-
-```typescript
-displayCard(card)
-// Card { title: "Buy groceries", priority: "normal", tags: ["shopping"] }
-
-displayInbox(inbox)
-// Inbox (3 items) [
-//   "Buy groceries" (normal)
-//   "Fix login bug" (urgent)
-//   "Read article" (low)
-// ]
-```
-
-Display functions are regular typed functions — `displayCard(card: Card): string`. They can be defined in the module, in the test file, or inline in a markdown setup block. They show what matters for understanding, not every field.
-
-This follows the Python doctest philosophy: create great string representations, then test by comparing strings. You don't say "expect the length to be 42" — you print the thing and match the output.
-
-### Snapshot as interactive agent tool
-
-The "view snapshot" concept extends beyond testing. An agent can request a snapshot of any rendered view at any time — during development, during debugging, during a procedure run. The snapshot shows the current state as the display serializers render it, with source document tracing (see below) showing where data came from. This makes the rendered UI inspectable and actionable for agents, not just for test assertions.
-
-### Source document tracing
-
-Rendered output includes provenance annotations showing where data came from:
-
-```html
-<span data-source="box/inbox/task-123.card:title">Buy groceries</span>
-```
-
-This can be a formal file reference (`data-source-file="box/inbox/task-123.card"`) or an informal description for agent consumption (`data-source-desc="grocery task from inbox"`). Both are useful — formal for programmatic tracing, informal for agent understanding. Annotations are hand-curated throughout the codebase.
-
-For testing, you can assert provenance: "this rendered value came from this file." For agents, they can point at rendered output and trace back to what to edit.
-
-### HTML simplification for agent consumption
-
-Full rendered HTML is noisy — classes, wrapper divs, script bundles, styling attributes. Agents need a simplified view:
-
-- **Strip noise** — Remove style attributes, CSS classes, script tags, wrapper divs that exist only for layout.
-- **Preserve semantics** — Keep ARIA roles, data attributes, semantic HTML elements.
-- **Component-level view** — Some components are better shown as their invocation (`<CardPreview card="task-123" priority="urgent" />`) rather than their full HTML expansion. Components can opt into this with an annotation. Structural components expand; leaf/atomic components show as tags with props.
-- **Action extraction** — From ARIA roles and interactive elements, extract what actions are available: "click Submit", "type in Search field", "select from Priority dropdown". This is the CGI-style testing pattern — render state, extract available actions, verify they match expectations.
+Purpose-built string representations of domain types for testing. Not `JSON.stringify`, not `util.inspect` — human/agent-readable representations designed to be tested against.
 
 ### No mock libraries
 
-Mocking is built into the code through explicit dependency injection, not bolted on by a test library. Functions that depend on external services take an options/context object:
+Mocking is built into the code through explicit dependency injection, not bolted on by a test library. Functions that depend on external services take an options/context object. Service fakes exist for all external dependencies (Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, etc.).
 
-```typescript
-function processInbox(options: { loadCard?: typeof defaultLoadCard } = {}) {
-  const { loadCard = defaultLoadCard } = options;
-  // ...
-}
-```
+### Not yet implemented from original vision
 
-Tests pass real implementations that use temp directories, or simplified implementations that return fixed data. The injectable boundary is part of the public API — a design constraint that forces explicit dependency thinking.
+- **JSDoc `@example` extraction** — Mode 1 (inline doctests in source files) is not built. All tests are Mode 2 (markdown files).
+- **Self-describing services with scenarios** — Services don't export test scenarios yet.
+- **Property testing via fast-check** — Not adopted.
+- **Snapshot as interactive agent tool** — Not built.
+- **Source document tracing** (`data-source` attributes) — Not built.
+- **HTML simplification for agent consumption** — Not built.
+- **Knowledge audits** — Framework exists (`src/dev/knowledge-audit.ts`) but not expanded to task completion audits.
 
-For external services (Telegram, OpenAI, etc.), thin adapter layers provide the injection point. Tests swap the adapter.
+### Implementation notes
 
-### Self-describing services with scenarios
-
-Services export their own test scenarios — semantically meaningful configurations, not random fuzzer inputs:
-
-```typescript
-export const scenarios = {
-  "empty inbox": () => ({ cards: [], filters: {} }),
-  "inbox with urgent items": () => ({
-    cards: [makeCard({ priority: "urgent" }), makeCard()],
-    filters: {}
-  }),
-  "filtered view": () => ({
-    cards: [makeCard({ tag: "work" }), makeCard({ tag: "personal" })],
-    filters: { tag: "work" }
-  }),
-};
-```
-
-Scenarios can use base-state-plus-patch patterns to avoid restating everything. They're agent-curated (agents understand the use cases they're building for) rather than human-curated. The test runner discovers scenarios and checks properties against each one.
-
-Property testing via fast-check is available for the *properties* side ("no matter which scenario, the count badge matches the actual number of visible items") while scenarios provide the meaningful inputs.
-
-### Knowledge audits — acceptance testing for documentation
-
-An existing pattern in the codebase (`src/dev/knowledge-audit.ts`) that tests what the agent knows rather than what the system does. Tests are defined in YAML with a prompt, expected knowledge level, and behavioral checks:
-
-```yaml
-- id: box-structure-inbox
-  prompt: "Where would you look for unprocessed incoming items?"
-  expected_level: knows_directly
-  correct_contains: ["box/inbox"]
-```
-
-Nine knowledge levels from "knows directly" (in loaded context) through "discoverable" (findable by searching) to "does not know." The audit runs each prompt against the agent, captures the session transcript, checks what files were read and what the response contained, and generates a report.
-
-This is a documentation-centric acceptance test pattern: it catches documentation gaps, verifies information architecture, and distinguishes between knowledge levels. It belongs in the testing strategy because it's a form of acceptance testing, but for agent capabilities rather than system behavior.
-
-### Principles that apply
-
-- **Introspectability** — Self-describing services, scenario exports, display serializers all make the system inspectable
-- **Accessibility to tooling** — TAP output is machine-readable; agents parse it naturally
-- **Unidirectional data flow** — State → render → snapshot → extract actions mirrors the CGI-style pattern
-- **Minimal distance from intuitive** — `expect(actual, expected)` is the simplest possible assertion API
+Core doctest system is **done** and working well. 931 tests across 53 files. See `docs/testing-gaps.md` for detailed coverage status. The remaining items from the original vision are future enhancements, not blockers.
 
 ---
 
@@ -836,10 +745,13 @@ Position tracking is needed for:
 
 ### What we use it for
 
-- **Rendering markdown content** in the frontend (card bodies, documentation, chat messages)
-- **Extracting code blocks** for the literate testing system (Decision 14)
+- **Rendering markdown content** in the frontend (card bodies, documentation, chat messages) — via `react-markdown` + `remark-gfm`
+- **Extracting code blocks** for the literate testing system (Decision 14) — custom doctest loader
 - **Source position mapping** for tracing rendered output back to source files
-- **LaTeX rendering** for mathematical content in cards
+
+### Implementation notes
+
+Done. `react-markdown` and `remark-gfm` are in the frontend package.json and used in ~8 components. The doctest loader uses the AST for code block extraction. KaTeX integration is available but may not be actively used yet.
 
 ---
 
@@ -856,6 +768,10 @@ Good prior experience with it. React-native hook API: `useHotkeys('ctrl+s', hand
 
 **cmdk** (command palette) is a natural complement for the future — the ⌘K pattern for discoverability of actions. Not needed immediately but worth keeping in mind as the action surface grows.
 
+### Implementation notes
+
+Not started. Not in package.json. Low priority — add when keyboard shortcuts become needed.
+
 ---
 
 ## Decision 17: Icons — Phosphor Icons
@@ -871,6 +787,10 @@ Good prior experience with it. React-native hook API: `useHotkeys('ctrl+s', hand
 
 Heroicons (from the Tailwind team) has only ~300 icons — too small a set. Lucide is solid but Phosphor's weight variants and larger set win.
 
+### Implementation notes
+
+Not started. Not in package.json. Currently using custom/inline SVG icons. Adopt when the icon surface area grows enough to warrant a library.
+
 ---
 
 ## Decision 18: Speech Recognition — Mistral Voxtra
@@ -883,6 +803,10 @@ Heroicons (from the Tailwind team) has only ~300 icons — too small a set. Luci
 ### Why Voxtral
 
 Good results in practice. For any speech recognition work beyond the current Whisper integration, Voxtral is the preferred model.
+
+### Implementation notes
+
+N/A — this is a model preference note, not a library decision. Current Whisper integration works. Voxtral is the recommendation if/when adding server-side transcription.
 
 ---
 
@@ -921,6 +845,10 @@ Lightweight screenshot capability for visual verification — a CLI tool that re
 Playwright is designed for browser automation test suites with selectors, waits, and interaction sequences. That's the wrong model here — we're testing agent capabilities, not UI click paths. The CGI-style render pattern (Decision 14) handles UI testing without a browser. Playwright's overhead and complexity don't pay off.
 
 **Puppeteer** may be useful later for a different purpose: automating the agent itself (driving browser interactions on behalf of the user). That's an automation tool, not a testing framework.
+
+### Implementation notes
+
+Partial. `src/dev/knowledge-audit.ts` and `src/dev/knowledge-audits.yaml` exist and work. Task completion audits (the extension) are not built. Screenshot capability is not built. Expand when agent behavioral testing becomes a priority.
 
 ---
 
@@ -972,6 +900,10 @@ May not be needed immediately — `node --watch` already has some built-in debou
 - **ts-node-dev** — Long-standing issue where child processes are not killed on restart (issue #79).
 - **Bash trap script** — `trap 'kill 0' EXIT` works for simple cases but no colored output, no individual restart, no attach-to-process.
 
+### Implementation notes
+
+Not started. No Procfile exists. Overmind requires tmux and is installed via `brew install overmind`. The zombie process problem is real but tolerable in practice — adopt when it becomes enough of a pain point.
+
 ---
 
 ## Decision 21: Page Transitions — View Transitions API
@@ -986,6 +918,10 @@ May not be needed immediately — `node --watch` already has some built-in debou
 Baseline as of October 2025 — supported in Chrome, Edge, Firefox 133+, Safari 18+. Zero JavaScript, pure CSS `::view-transition-*` pseudo-elements. TanStack Router has built-in support (`defaultViewTransition: true`). React itself has an experimental `<ViewTransition>` component heading toward stable.
 
 No library to install, no bundle size, no API to learn beyond CSS. Start here. Add **Motion** (Framer Motion's successor, same team, lighter bundle) only if CSS transitions can't express what's needed.
+
+### Implementation notes
+
+Not started. Pure CSS — add when page transitions become desired. No dependency needed.
 
 ---
 
@@ -1002,6 +938,10 @@ Since Decision 15 chose remark/unified for markdown parsing, syntax highlighting
 
 Alternative: `rehype-prism` uses Prism instead of highlight.js. Either works — highlight.js has broader language coverage, Prism has a more modern plugin architecture. Since highlight.js is already in the project, rehype-highlight is the path of least resistance.
 
+### Implementation notes
+
+Not started. highlight.js is used directly. Moving it into the remark pipeline via rehype-highlight is a small refactor — do it when touching the markdown rendering pipeline for other reasons.
+
 ---
 
 ## Decision 23: Utility Libraries — Replace Hand-Rolled Code
@@ -1011,25 +951,23 @@ Alternative: `rehype-prism` uses Prism instead of highlight.js. Either works —
 
 ### Replacements
 
-| Library | Replaces | Where |
+| Library | Replaces | Status |
 |---|---|---|
-| **html-entities** | Regex-based HTML stripping and entity decoding | `src/connectors/rss.ts` (lines 150-162) |
-| **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | `src/cli/lib/time.ts`, scattered across connectors and CLI |
-| **ky** | Bare `fetch()` with no retry or error normalization | `src/cli/lib/fetch.ts`, connector fetch calls |
-| **sanitize-filename** ✅ | Four duplicate `safeFilename()` → consolidated into `chat-utils.ts` | `src/connectors/rss.ts`, `src/connectors/raindrop.ts`, `src/connectors/dropbox.ts`, `src/connectors/chat-utils.ts` |
-| **proper-lockfile** | Two separate file-locking implementations | `src/cli/lib/lock.ts`, `src/core/schedule-state.ts` |
-| **execa** ✅ | Duplicate `execFile` wrappers with manual error handling | `src/core/procedure/shell.ts`, `src/cli/lib/git.ts` |
+| **execa** | Duplicate `execFile` wrappers with manual error handling | ✅ Done — used in `procedure/shell.ts` and `cli/lib/git.ts` |
+| **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | ✅ Done — used in 40+ files |
+| **html-entities** | Regex-based HTML stripping and entity decoding in `rss.ts` | Not adopted |
+| **sanitize-filename** | Multiple duplicate `safeFilename()` functions | Not adopted — `safeFilename()` still duplicated across 4+ connector files |
+| **proper-lockfile** | Two separate file-locking implementations | Not adopted |
+| **ky** | Bare `fetch()` with no retry or error normalization | Not adopted |
 
 ### Why these and not others
 
 Each replaces code that was written because the project needed the functionality before choosing a library. The hand-rolled versions work but have gaps:
 
 - **html-entities** handles edge cases (named entities, surrogate pairs) the regex approach misses
-- **date-fns** is tree-shakable, so you pay only for the functions you use — no "import the whole library" penalty
 - **ky** adds retry with backoff (critical for connectors hitting rate-limited APIs) while staying close to native fetch
 - **sanitize-filename** handles platform-specific reserved names and characters the custom functions miss
 - **proper-lockfile** handles stale lock detection and race conditions the custom implementations don't
-- **execa** gives process group cleanup (kill child trees), better error messages, and streaming — directly relevant to the zombie process issues in Decision 20
 
 ### Why ky over ofetch
 
@@ -1038,8 +976,6 @@ Both are modern fetch wrappers with retry support. ky is ~3KB gzipped (ofetch is
 ---
 
 ## Dependencies to remove (migration cleanup)
-
-These are in the current package.json but should be removed as part of the stack migration:
 
 | Package | Reason to remove |
 |---|---|

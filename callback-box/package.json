@@ -78,6 +78,7 @@
     "mailparser": "^3.9.3",
     "open": "^11.0.0",
     "rrule": "^2.8.1",
+    "simple-git": "^3.32.3",
     "turndown": "^7.2.2",
     "xml2js": "^0.6.2",
     "yaml": "^2.7.0",
