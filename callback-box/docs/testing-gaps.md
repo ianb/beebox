@@ -1,242 +1,95 @@
 # Testing Gaps — Working Document
 
-Tracking areas where test coverage is missing or thin, and plans for addressing each. Also captures the broader testing vision from design discussions.
+Current status as of 2026-03-03: **931 tests across 53 files**. Route coverage: 46/52 endpoints (88%).
 
-## Module Assessment
+## Current Coverage Summary
 
-Assessment of where each area of the codebase stands for testing, and what approach fits.
+### Doctests (53 files)
 
-### Already covered by doctests
+**Core modules:** box.ts, schemas, calendar-utils, intake-utils, chat-response-extraction, scheduled-script.ts, schedule-state.ts, chat-session.ts (state/persistence only), session.ts (log parsing), procedure engine (shell + agent DI), reactor (unit + integration with fake agents), scheduler utilities
 
-These modules have been converted from traditional tests or newly written as doctests:
+**CLI utilities:** format.ts, git.ts, time.ts
 
-- `src/core/box.ts` — `initBox()`, directory structure, `isValidBox()`, `findBoxRoot()`, metadata
-- `src/schemas/*.ts` — Schema registry, all card template generators (memo, question, news-job, intake-job, calendar-review-job)
-- `src/connectors/calendar-utils.ts` — ICS parsing, event formatting, timespan parsing, date filtering
-- `src/connectors/intake-utils.ts` — `createOrAppendIntakeJob()` create, append, multi-source
-- `src/core/chat-response-extraction` logic — Streaming `<chat-response>` tag extraction
-- `src/core/scheduled-script.ts` — `isDue()`, `isDueForWakeup()`, `isWithinBudget()`, templates
-- `src/core/schedule-state.ts` — `pruneRecentRuns()`, `recordRun()`, `loadScriptState()`/`saveScriptState()` round-trip, lock file acquire/release/load, lock-group, stale lock cleanup
-- `src/core/chat-session.ts` — Session ID persistence (load/save/corrupt/reset), state accessors, getHistory (no session, missing log)
-- `src/cli/lib/session.ts` — `getSessionLogPath()`, `getSessionDir()`, `parseSessionLog()` (empty, entries, filtering, pagination), `transformContent()` (text, tool_use, tool_result, thinking, redacted), `summarizeToolInput()`, `summarizeToolResult()`
-- `src/cli/lib/format.ts` — `stripAnsi()`
-- `src/frontend/src/lib/parseTags.ts` — XML-like tag parsing
-- `src/frontend/src/lib/patmatch.ts` — Keyword pattern matching
-- `src/frontend/src/lib/speech-parsing.ts` — Speech tag extraction for TTS
-- `src/frontend/src/lib/speech-keywords.ts` — Voice command keyword detection
-- `src/cli/lib/git.ts` — Git command helpers (init, commit, log, diff, status, branches, tags, etc.)
-- `src/cli/lib/time.ts` — Stubbable time utilities (CB_TIME env, stubs.yaml, caching)
-- **Route tests** — scheduler, admin, core API, briefs, commands, history, actions, calendar
-- `src/core/procedure/engine.ts` — Full execution lifecycle: shell steps, precheck skip/fail, validation severity, dry run, step filtering, agent mock (via DI), fallback commits, error cases. Split into `procedure-engine.doctest.md` (shell-only) and `procedure-agent.doctest.md` (agent injection).
-- `src/core/reactor/` — Reactor module (job orchestration): job discovery, procedure detection, prompt building, job descriptions, batch/chat processing with fake agents, procedure trampoline, lock management, multi-cycle behavior. Split into `reactor.doctest.md` (unit) and `reactor-integration.doctest.md` (integration with fake agents).
-- **Service fakes** — Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Feed Fetcher, Article Fetcher, call-log
-- **Connector tests** — Telegram (polling, webhook processing, outbound send), Raindrop (pull, push, two-way sync), RSS (pull, dedup, Atom, error handling)
-- **Wakeup helpers** — `createIntakeJobsForUnjobbed()` (unjobbed detection, dedup, priority separation, excluded subdirs), `createGuideRevisionJobIfNeeded()` (feedback detection, dedup, guide path inclusion)
+**Frontend pure functions:** parseTags, patmatch, speech-parsing, speech-keywords
 
-### Covered by traditional tests
+**Routes (46/52 endpoints):** scheduler (5/5), api (12/12), briefs (7/7), admin (8/8), commands (5/5), history (3/3), actions (2/4), calendar (3/3)
 
-- `test/check.test.ts` / `test/doctest.test.ts` — Meta-tests for the test infrastructure. These must stay as traditional tests (circular dependency — doctests use `check()` and the doctest parser).
+**Connectors:** Telegram (polling, webhook, outbound), Raindrop (pull, push, two-way sync), RSS (pull, dedup, Atom, errors)
 
-### Ready for doctests now (pure logic, no dependencies)
+**Wakeup helpers:** createIntakeJobsForUnjobbed, createGuideRevisionJobIfNeeded
 
-*(None remaining)*
+**Service fakes:** Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Feed Fetcher, Article Fetcher, call-log — all with domain-specific fakes + `withCallLog()` wrapper
 
-### Ready for doctests with existing helpers
+**Agent testing:** `Agent` interface with `createAgent`/`createFakeAgent`, used by triage-feedback, process-feedback, process-news, reactor, procedure engine
 
-These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest helpers:
+### Traditional tests (2 files)
 
-- **Route: `actions.ts`** remaining — Wakeup route (delegates to `connector-sync` command), voice-memo (multipart upload). The wakeup route itself is thin wiring; the heavy logic is in `cb wakeup` CLI phases, of which intake-jobs and guide-revision are now tested.
-- **Wakeup orchestration** — `runPreprocessors()` needs loader/preaction system (which calls OpenAI for transcription). `runTriageFeedback()` now has agent injection and is tested. The orchestration itself is linear (run phases A through H in order) — not high-value to test as a unit.
-- **Route: `auth.ts`** — Needs `GoogleAuthService` injection into the route (currently uses `new OAuth2Client()` and `process.env` directly). Service fake exists but route not yet wired.
+- `check.test.ts` / `doctest.test.ts` — Meta-tests for test infrastructure (circular dependency prevents doctests)
 
-### Need new helpers or design work
+## Remaining Gaps
 
-- **Procedure engine** (`src/core/procedure/engine.ts`) — DONE. Shell steps, precheck, validation, and agent mocking all covered. Agent injected via `options.createAgent` factory parameter. See `test/procedure-engine.doctest.md` and `test/procedure-agent.doctest.md`.
-- **Reactor** (`src/core/reactor/`) — DONE. Split from single 680-line file into directory. Agent injected via `ReactorOptions.createAgent` factory. Subprocess calls (`cb wakeup`, `cb finalize`) run for real on test boxes — they gracefully no-op. See `test/reactor.doctest.md` (unit) and `test/reactor-integration.doctest.md` (integration).
-- **Scheduler** (`src/core/scheduler.ts`) — Utility functions tested (`boxLogFile`, `isBox`). The daemon loop (`runScheduler`) is an infinite loop with signal handlers — not suitable for doctests. Config load/save use a global path, skipped for isolation reasons. The individual pieces the scheduler calls (tick, schedule evaluation, state) are well tested.
-- **WebSocket/SSE routes** — Would benefit from abstractions that let us test the underlying logic without actual WebSocket connections. Don't jump into this yet; needs design discussion about what the testable abstraction looks like.
-- **Admin routes** — DONE. All 8/8 endpoints tested via service fakes (Telegram + Claude Code).
-- **Connectors** — Service fakes exist for Telegram, Raindrop, and RSS (FeedFetcher). All three have connector-level sync tests using `makeTmpBox({ git: true })` with injected fakes. Dropbox/capture connectors are being removed (see below).
+### Route endpoints not yet tested (6 endpoints)
 
-### Being removed / deprioritized
+| Route | Endpoints | Blocker |
+|---|---|---|
+| `chat.ts` | 0/8 | SSE streaming (send), WebSocket (transcribe-ws). Session state and log parsing are tested separately. |
+| `sse.ts` | 0/1 | SSE stream testing approach needed |
+| `auth.ts` | 0/4 | Route uses `new OAuth2Client()` + `process.env` directly. Service fake exists but route not wired for injection. |
+| `actions.ts` | 2 remaining | Wakeup route (thin wiring to connector-sync), voice-memo (multipart upload, deprioritized) |
 
-- **Dropbox relay** (`src/connectors/dropbox.ts`, `src/connectors/capture.ts`, `src/webapp/routes/pairing.ts`) — Dropbox relay is being removed in favor of XState-based architecture. No point writing tests for code that's going away.
-- **Voice memo** (`actions.ts` voice-memo endpoint) — Low priority, deprioritized alongside Dropbox removal.
+### Chat subprocess pipeline
 
-### Needs exploration — not ready yet
+`ChatSession.send()`, `interrupt()`, event streaming — all depend on spawning a real Claude subprocess. State management, session ID persistence, and history retrieval are tested. To test the pipeline: either mock the subprocess or build a testable abstraction layer.
 
-- **Chat sessions** (`chat-session.ts`, `chat-session-pool.ts`, `chat-thread-session.ts`) — Long-lived subprocess management. `ChatSession` state management (constructor, session ID persistence, corrupt file handling, reset, getHistory) tested via doctests. The subprocess-dependent parts (send, interrupt, event streaming) need Claude or a mock subprocess. Pool rotation and thread file operations still untested.
-- **Frontend component testing** — A whole separate discussion. Needs architecture changes (unidirectional data flow) before component testing is practical. See §2 below.
+`chat-session-pool.ts` (pool rotation) and `chat-thread-session.ts` (thread file operations) are untested.
 
-### Fine without tests
+### Frontend components
 
-- **CLI commands** (`src/cli/commands/*.ts`, ~35 files) — Thin glue code. Keep commands small so we're testing the pieces they call, not the commands themselves.
-- **Agent invocation** (`src/core/agent.ts`) — `Agent` interface, `createAgent()`, `createFakeAgent()` exist. All commands (`triage-feedback`, `process-feedback`, `process-news`) accept injected agents and are tested via fake agents. The reactor and procedure engine accept `createAgent` factory overrides for testing. `runAgent()` is internal to `agent.ts` (not exported). Reactor integration tests exercise the full factory→invoke→ensureCommitted flow.
-- **OAuth** (`src/connectors/google-auth.ts`) — Standard OAuth flow, simpler without tests.
+~15 page components coupling data fetching with rendering. Needs architecture shift to unidirectional data flow (store → props → render) before component testing is practical. Pure utility functions are already covered.
 
-### Dependency injection approach
+### Wakeup orchestration
 
-Prefer injecting at the service/function level over HTTP-level interception:
+`runPreprocessors()` needs OpenAI service injection for transcription. The orchestration itself is linear (phases A-H) — low value as a unit test. Individual phases (intake-jobs, guide-revision, triage-feedback) are tested.
 
-- Pass API clients or fetch functions as parameters
-- Route handlers receive service objects that can be replaced in tests
-- HTTP-level stubs are appropriate when the HTTP interface *is* the thing being tested (e.g., RSS feed parsing)
-- No mock libraries — injectability should be built into the code
+### Not worth testing
 
-## 1. API Route Tests
+- **CLI commands** (~35 files) — Thin glue. Test the pieces they call.
+- **Agent invocation internals** — `runAgent()` is private; all consumers use injected `Agent` interface.
+- **OAuth** — Standard flow.
+- **Scheduler daemon loop** — Infinite loop with signal handlers. Utility functions tested; the pieces it calls (schedule evaluation, state) are well tested.
+- **Dropbox relay / capture** — Being removed.
 
-**Status:** In progress — 46 of 52 endpoints tested (88%) + supporting logic for chat
-**Priority:** High — deterministic, fast, covers fragile code
+## Design Approach
 
-Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer()` from `test/helpers/doctest-server.ts`. Under the hood this uses Fastify's `inject()` — no socket server, no network. The helper provides `.inject()` (returns `"status\njson"` for `check()`) and `.request()` (returns `{ statusCode, body }` for programmatic access).
+### Dependency injection
 
-**Direction:** Long-term goal is CGI-style testing — state-in → render → check output — without even Fastify. This would mean refactoring route handlers to separate pure logic from Fastify wiring. Current approach works well enough for now.
+Inject at the service/function level, not HTTP-level. Service objects passed to route registration, replaced with fakes in tests. No mock libraries — injectability built into the code.
 
-**Current coverage:**
+### Doctest infrastructure
 
-| Route file | Tested | Total | Notes |
-|---|---|---|---|
-| `scheduler.ts` | 5/5 | 100% | Complete |
-| `api.ts` | 12/12 | 100% | Complete |
-| `briefs.ts` | 7/7 | 100% | Complete (legacy `/api/edition` endpoints removed) |
-| `admin.ts` | 8/8 | 100% | Complete (Telegram + Claude Code via service fakes) |
-| `commands.ts` | 5/5 | 100% | Complete (streaming execute tested via `executeCommandStreaming()` abstraction) |
-| `history.ts` | 3/3 | 100% | Complete |
-| `actions.ts` | 2/4 | 50% | Answer, create; wakeup/voice-memo need integration work |
-| `chat.ts` | 0/8 | 0% | Session state tested separately; route endpoints need Fastify+SSE |
-| `sse.ts` | 0/1 | 0% | Needs SSE stream testing approach |
-| `calendar.ts` | 3/3 | 100% | Complete (Google Calendar via service fake) |
-| `pairing.ts` | — | — | Being removed (Dropbox relay → XState migration) |
-| `auth.ts` | 0/4 | 0% | Route not yet wired for service injection |
+- `makeTestServer()` — Fastify `inject()`, no network
+- `makeTmpBox()` — Temp directory with optional git init
+- `createFakeAgent()` — Records invocations, configurable responses
+- `print()` — Accumulates lines for multi-line assertions
+- TypeScript support via esbuild transform in loader
+- Wildcards: `«string»`, `«number»`, `«codeblock»`, `«blankline»`, extractions
 
-**Approach for external dependencies:** Built-in dependency injection (not mock libraries). Service objects passed to route registration, replaced with test implementations in tests. Prefer injecting at the service level; HTTP-level stubs only when the HTTP interface is the thing being tested.
+## Future Ideas
 
-## 2. Frontend Tests
+These are design directions discussed but not yet implemented:
 
-**Status:** Pure utility functions covered; component testing needs architecture changes
-**Priority:** Medium
-
-The React frontend has ~15 page components and ~10 utility modules. Pure utility functions (`parseTags`, `patmatch`, `speech-parsing`, `speech-keywords`) are now tested as doctests — they import directly from `src/frontend/src/lib/` via tsx since they have no browser dependencies. Component testing is a separate challenge.
-
-### Architecture direction: unidirectional data flow
-
-Components currently couple data fetching with rendering (`useEffect → fetch → setState → render`). The goal is to separate these so the UI is a pure function of a state object:
-
-- A store holds the full app state as a plain object
-- Components receive data as props, emit actions
-- An effect layer handles API calls and updates the store
-- Testing = passing a state slice to a component, no mocking needed
-
-This enables state snapshots, a state catalog for development, and agent-friendly debugging.
-
-## 3. Chat Session Behavioral Tests
-
-**Status:** Partially covered — extraction logic, session state, and session log parsing are doctest'd; subprocess pipeline is not
-**Priority:** Medium
-
-The `<chat-response>` extraction logic is well tested in doctests. `ChatSession` state management (constructor, persistence, reset, history) and the full `parseSessionLog` pipeline are now covered. What's not tested: the subprocess pipeline (send/interrupt/event streaming), pool rotation, thread file operations.
-
-What requires Claude (or a substitute): whether the agent actually uses `<chat-response>` tags, acknowledges first, etc. Options: mock Claude subprocess for pipeline testing, periodic live validation for behavioral testing.
-
-## 4. Broader Vision
-
-Ideas from design discussions that haven't been implemented yet:
-
-### Self-describing services
-
-Services export metadata alongside their functions — description, examples, and semantic properties. Tests and documentation get generated from these:
-
-```typescript
-export const cardParser = {
-  parse: (xml: string) => Card,
-  description: "Parses XML card files into typed Card objects",
-  examples: [
-    { input: '<task status="open">Do thing</task>',
-      output: { type: "task", status: "open", text: "Do thing" } },
-  ],
-  properties: [
-    "parse(serialize(card)) deep-equals card",
-    "parse always returns a Card with a non-empty type field",
-  ],
-};
-```
-
-### Property testing
-
-Semantically meaningful invariants, not random fuzzing. Properties come from self-describing services:
-- `parse(serialize(card))` deep-equals `card`
-- Every card has a non-empty type field
-- `isDue()` returns false for disabled scripts regardless of other parameters
-
-Use fast-check for random input generation, but the properties themselves should be meaningful statements about the code's behavior.
-
-### CGI-style route testing
-
-Test routes as pure functions: state-in → render → extract available actions → state + action → new state. No server, no browser, no DOM. Walk through as a sequence of states and actions.
-
-This requires refactoring route handlers to separate the pure logic from the Fastify wiring, but it's the right long-term direction.
-
-### Time as a service
-
-Currently `getBoxTime(boxRoot?)` / `getBoxTimeISO(boxRoot?)` are free functions stubbed via `CB_TIME` env var or `stubs.yaml`. This works for scenario testing but is implicit global state. A `TimeService` would make time injection explicit:
-
-```typescript
-interface TimeService {
-  now(): Date;
-  isoNow(): string;
-}
-
-// Fake with settable/advanceable clock
-function createFakeTime(initial?: string): FakeTimeService {
-  let current = new Date(initial ?? "2024-01-01T00:00:00Z");
-  return {
-    now: () => current,
-    isoNow: () => current.toISOString(),
-    set: (iso: string) => { current = new Date(iso); },
-    advance: (ms: number) => { current = new Date(current.getTime() + ms); },
-  };
-}
-```
-
-The challenge is threading it through — `getBoxTimeISO()` is called from 40+ files as a free function. Options: (1) pass as parameter everywhere (invasive), (2) add to existing context objects (`CommandContext`, connector constructors), (3) keep env-var approach for production, add service as alternative injection for doctests. The env-var stub already works for scenarios; the service would mainly benefit doctests needing fine-grained time control (e.g., scheduling tests that advance time between steps). There are also ~70 direct `new Date()` calls — most legitimate (auth, perf timing, logging) but some card/job creation should arguably go through the stubbable clock.
-
-### TypeScript in doctest code blocks — DONE
-
-The doctest loader now pipes generated source through esbuild's `transformSync` (loader: "ts") before returning it to Node. This means `import type`, type annotations, and all TypeScript syntax work in both setup blocks and test code blocks.
-
-### Assertive logging
-
-Soft assertions in production code that surface through the logging system. In tests, an error harness catches unexpected logged errors and fails the test. This turns the logging system into a passive testing layer.
-
-### Source document tracing
-
-Rendered output includes markup (`data-source` attributes) indicating where each piece of data came from. Makes debugging easier and enables assertions about data provenance.
-
----
+- **CGI-style route testing** — Routes as pure functions: state-in → render → check. Requires separating logic from Fastify wiring.
+- **Self-describing services** — Services export metadata (description, examples, properties) for test/doc generation.
+- **Property testing** — Semantically meaningful invariants via fast-check (e.g., `parse(serialize(x)) === x`).
+- **Time as a service** — Replace `getBoxTimeISO()` free function (called from 40+ files) with injectable `TimeService`. Current env-var stub works for scenarios.
+- **Assertive logging** — Soft assertions in production surfaced through logging; test harness catches unexpected errors.
+- **Source document tracing** — `data-source` attributes in rendered output for data provenance.
 
 ## Decisions Log
 
-*(Record decisions about approaches as they're made)*
-
-- **2026-03-02:** API route tests implemented using Fastify `inject()` + shared test helper. Pattern established: `createTestServer()` → `server.inject()` → assertions → `cleanup()`.
-- **2026-03-03:** Doctest system built. Converted box, schemas, calendar-utils, chat-response-extraction, scheduled-script, schedule-state, format tests to doctests. Traditional tests kept for meta-testing (check, doctest), route integration, and filesystem-heavy reactor tests.
-- **2026-03-03:** `___` wildcard syntax removed in favor of guillemet `«»` wildcards with typed matchers and extractions.
-- **2026-03-03:** Added `cleanup` block type to doctests (uses `t.teardown()`). Converted all route tests, reactor/intake-utils tests, and schema registry tests from `.test.ts` to `.doctest.md`. Created shared helpers: `doctest-helpers.ts` (filesystem) and `doctest-server.ts` (Fastify inject). Only `check.test.ts` and `doctest.test.ts` remain as traditional tests (circular dependency).
-- **2026-03-03:** Module assessment completed. Identified frontend pure functions, remaining route endpoints, and CLI time/git utils as next targets. Dependency injection preferred over HTTP stubs — inject at the service level, not the network level. Agent invocation isn't testable by automated means (success criteria require agent judgment). Chat sessions worth exploring but need abstraction work first. CLI commands should stay thin so we test their pieces, not the commands themselves.
-- **2026-03-03:** Added 7 new doctest files: 4 frontend pure functions (parseTags, patmatch, speech-parsing, speech-keywords) and 3 route files (commands, history, actions). Frontend files import directly from `src/frontend/src/lib/` via tsx — works fine since they're pure TypeScript with no browser dependencies. Route coverage up to 55% (31/56 endpoints). Total: 471 tests across 25 files.
-- **2026-03-03:** Added `print()` to doctests — scope-local function per test, accumulates lines that drain into the next `=>` assertion. Enables narrative/storytelling style tests. Also added `print.doctest.md` as a meta-test.
-- **2026-03-03:** Procedure engine tested via doctests with agent DI. Added `options.createAgent` factory to `ProcedureOptions` for injecting fake agents. 12 tests cover: shell execution, precheck skip/fail, validation warn/abort, dry run, step filtering, agent context verification (precheck pass-output, directive, model mapping), fallback commits. Total: 496 tests across 28 files.
-- **2026-03-03:** Added git.ts doctests (14 tests covering all exported functions) and completed api.ts route coverage (added `/api/questions`, `/api/context`). api.ts now 12/12 (100%). Total: 530 tests across 30 files.
-- **2026-03-03:** Removed 4 legacy `/api/edition/*` endpoints from briefs.ts (no frontend references). Added time.ts doctests (8 tests covering env var override, stubs.yaml, caching, cache clearing). briefs.ts now 7/7 (100%). Total: 540 tests across 31 files.
-- **2026-03-03:** Service layer for external dependencies. Created `src/services/` with typed interfaces, real implementations, and domain-specific fakes for Telegram and Claude CLI. Generic `withCallLog()` wrapper records method calls on fakes for test assertions. `Services` container threaded through `server.ts` → route registration → test helpers. Admin routes now 8/8 (100%) — Telegram status/setup/disconnect and Claude Code status/login/logout all testable via fakes. Added `rootRequest()` to test server for root-level (non-box-prefixed) routes. Total: 580 tests across 33 files.
-- **2026-03-03:** Remaining service definitions: Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Google Auth, Capture Relay. All with domain-specific fakes and doctests. Services threaded through calendar, pairing, and chat routes. Telegram and Raindrop connectors wired to accept injected services. Total: 627 tests across 36 files.
-- **2026-03-03:** Calendar route tests (3/3 endpoints) and connector-level tests for Telegram and Raindrop. Connectors tested using `makeTmpBox({ git: true })` + service fakes, exercising full sync cycles (polling, webhook processing, outbound send, two-way bookmark sync). Dropbox relay deprioritized — being removed in favor of XState architecture.
-- **2026-03-03:** RSS connector service injection + tests. Created `FeedFetcherService` with fake that returns canned XML. RSS connector wired to accept injected fetcher. 4 test sections: pull (RSS 2.0), deduplication, Atom feed support, fetch error handling. Extracted `executeCommandStreaming()` from the streaming execute route — testable abstraction that emits `OutputLine` messages via callback. commands.ts now 5/5 (100%). Total: 699 tests across 41 files.
-- **2026-03-03:** Renamed `core/commands/wakeup.ts` → `connector-sync.ts` (command name `connector-sync`) to distinguish from the full `cb wakeup` CLI orchestrator. Exported and tested wakeup helper functions: `createIntakeJobsForUnjobbed()` (unjobbed detection, dedup via job refs, priority separation, excluded subdirs) and `createGuideRevisionJobIfNeeded()` (feedback detection, dedup, guide path). `runPreprocessors` and `runTriageFeedback` left untested — need service injection for loader/preactions and agent runner respectively. Total: 718 tests across 42 files.
-- **2026-03-03:** Agent testing infrastructure. Created `Agent` interface (`src/core/agent.ts`) with `createAgent()` (real, spawns Claude Code) and `createFakeAgent()` (`test/helpers/fake-agent.ts`). Agent has name, sessionId, and `invoke()` — first call starts session with system prompt, subsequent calls resume. FakeAgent records all invocations (including full `AgentInvokeOptions`) and has `printLog()` for structured output. `ensureAgentCommitted()` accepts `Agent`. Wired into `triage-feedback.ts` as first consumer via `args.agent`. Tests cover: prompt builder verification, happy path (agent commits), no-op (no cards), agent failure, retry-then-fallback (agent doesn't commit), retry-succeeds. Total: 755 tests across 43 files.
-- **2026-03-03:** Added `ArticleFetcherService` — wraps the article fetch pipeline (URL → HTML → markdown) as a service. Fake supports exact/wildcard URL matching, redirect simulation (`finalUrl`), and error injection (status codes). Wired through `fetch-news.ts` → `fetch-all-news.ts` → `process-news.ts`. Doctest covers fake behavior. Total: 829 tests across 47 files.
-- **2026-03-03:** All agent call sites converted to `createAgent()` + `agent.invoke()` pattern. Removed legacy `agentOptions`/`agentResult` backward compatibility from `ensureAgentCommitted()`. Added agent injection (`agent?: Agent`) to `process-feedback` and `process-news` commands. Exported prompt builders from `process-news.ts` and `reactor.ts`. Added TypeScript support in doctests (esbuild transform in loader). New doctest wildcards: `«codeblock»` (matches triple backticks), `«blankline»` (matches empty lines in multi-line expected output). Three new doctest files: `process-feedback` (happy path, no briefs, failure, fallback commit, dry run), `process-news` (per-phase isolation via `*Only` flags, prompt verification), `reactor` (prompt builders). Total: 819 tests across 46 files.
-- **2026-03-03:** Made `runAgent()` and `AgentOptions` private in `agent.ts`. Converted procedure engine from `runAgent` to `createAgent` factory. All agent consumers now use the `Agent` interface — using the old internal interface is a type error. Total: 829 tests across 47 files.
-- **2026-03-03:** Reactor restructured from single 680-line `reactor.ts` into `src/core/reactor/` directory with 9 source files, DESIGN.md (architecture/rationale), and CLAUDE.md (agent context). Added 50 new tests: job discovery (priority sorting, type filter), procedure detection (ref/directive extraction, error recovery), job descriptions (ref inlining, schema instructions), batch processing (single/multi job, dry run, skipLowPriority), chat processing (per-thread sessions, separate agents), procedure trampoline (bypasses agent), lock management (concurrent/stale), multi-cycle behavior. Split test files: `reactor.doctest.md` (unit) + `reactor-integration.doctest.md` (fake agent integration), `procedure-engine.doctest.md` (shell-only) + `procedure-agent.doctest.md` (agent injection). Total: 879 tests across 49 files.
-- **2026-03-03:** Extended scheduler/schedule subsystem tests. Added `schedule-state.doctest.md` tests for state persistence (load/save round-trip), lock files (acquire/release/load, lock-group, stale lock cleanup). Created `scheduler.doctest.md` for utility functions (`boxLogFile`, `isBox`). Daemon loop and config load/save skipped (infinite loop, global paths). Total: 891 tests across 51 files.
-- **2026-03-03:** Chat session and session log parsing tests. `chat-session.doctest.md`: ChatSession constructor, session ID persistence (load, corrupt file, reset), getHistory (no session, missing log file). `chat-routes.doctest.md`: `getSessionLogPath`/`getSessionDir` path encoding, `parseSessionLog` (empty, user+assistant entries, tool-only filtering, non-user/assistant filtering, pagination), `transformContent` (all block types including redacted thinking), `summarizeToolInput` (7 tool types), `summarizeToolResult`, TTS voice validation logic. Total: 931 tests across 53 files.
+- **2026-03-02:** Route test pattern established: Fastify `inject()` + `createTestServer()` helper.
+- **2026-03-03:** Doctest system built and adopted as primary test format. Converted all existing tests except meta-tests (circular dependency). Added `cleanup` blocks, `print()`, TypeScript support, guillemet wildcards.
+- **2026-03-03:** Service layer created (`src/services/`) with typed interfaces, real implementations, and domain-specific fakes. `withCallLog()` wrapper for test assertions. Services threaded through server → route registration → test helpers.
+- **2026-03-03:** Agent interface (`createAgent`/`createFakeAgent`) adopted across all agent consumers. `runAgent()` made private. Procedure engine and reactor both accept `createAgent` factory overrides.
+- **2026-03-03:** Reactor restructured from single 680-line file into `src/core/reactor/` directory (9 source files + DESIGN.md + CLAUDE.md).
+- **2026-03-03:** Coverage milestone: 931 tests across 53 files. 46/52 route endpoints (88%). All connectors (Telegram, Raindrop, RSS) tested with service fakes.
