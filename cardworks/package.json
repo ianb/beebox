@@ -13,6 +13,10 @@
     "./jsx/jsx-runtime": {
       "import": "./dist/jsx/jsx-runtime.js",
       "types": "./dist/jsx/jsx-runtime.d.ts"
+    },
+    "./jsx/jsx-dev-runtime": {
+      "import": "./dist/jsx/jsx-runtime.js",
+      "types": "./dist/jsx/jsx-runtime.d.ts"
     }
   },
   "scripts": {
