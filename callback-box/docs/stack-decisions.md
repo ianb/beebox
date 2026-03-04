@@ -20,8 +20,8 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 |---|---|---|---|
 | 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | **Done (via tRPC)** | All tRPC input schemas use Zod. No manual validation in new API code. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **Planned** | Foundational — changes how all frontend state works. Do before other frontend stack changes. |
-| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **Nearly complete** | 12 routers, ~50 procedures. Only SSE streaming, file uploads, WebSocket, OAuth remain as REST. |
-| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **Nearly complete** | All migrated components use tRPC hooks (which wrap TanStack Query). `api.ts` reduced to streaming/upload functions. |
+| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **Done** | 12 routers, ~50 procedures. SSE streaming, file uploads, WebSocket, OAuth remain as REST (by design). |
+| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **Done** | All tRPC-migrated components use TanStack Query via `@trpc/react-query` hooks. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
 | 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
 | 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
@@ -215,15 +215,21 @@ To start adoption: pick one page, model its state as an XState machine, wire it 
 
 **Type sharing:** Frontend imports `type { AppRouter }` via relative path. `RouterOutput` helper type (`inferRouterOutputs<AppRouter>`) provides inferred types for component props — eliminates manually duplicated interfaces.
 
-**What stays REST permanently:**
-- SSE streaming: `chat/send`, `commands/execute`, `/api/events` (file watcher)
-- File uploads: `actions/create-voice-memo`, `/upload`
-- WebSocket: `transcribe-ws`
-- OAuth: `auth.ts`
-- Webhooks: `telegram.ts`
-- TTS proxy: `chat/tts`
+**What stays REST (and why):**
 
-**Frontend `api.ts`** reduced from ~815 lines to ~250 lines. Contains only `getApiBase()`, SSE/streaming functions, file upload functions, and legacy type exports.
+| Endpoint | Why not tRPC |
+|----------|-------------|
+| `chat/send` | SSE streaming — tRPC is request/response; this streams Claude's response chunks progressively. tRPC subscriptions exist but require WebSocket transport, which is a different architecture. |
+| `commands/execute` | SSE streaming — streams command stdout/stderr as it runs. Same constraint as chat. |
+| `/api/events` | SSE file-watcher — long-lived connection pushing file-change events. Could use tRPC subscriptions eventually. |
+| `actions/create-voice-memo` | Multipart file upload — tRPC doesn't handle `multipart/form-data`. Audio blob sent as FormData. |
+| `/upload` | Multipart file upload — same constraint. Generic file upload endpoint. |
+| `transcribe-ws` | WebSocket — bidirectional audio streaming to Mistral. tRPC subscriptions are one-directional (server→client). |
+| `auth.ts` | OAuth redirect flows — browser redirects, not API calls. No request/response to model. |
+| `telegram.ts` | Inbound webhook — Telegram POSTs to us. External caller, not our frontend. |
+| `chat/tts` | Binary proxy — streams audio bytes from TTS service. tRPC is JSON-only. |
+
+**Frontend `api.ts`** reduced from ~815 lines to ~250 lines. Contains only `getApiBase()`, SSE/streaming functions, file upload functions, and legacy type exports. These functions use manual `fetch()` (not TanStack Query) because TanStack Query is designed for cacheable request/response patterns — SSE streams, file uploads, and long-lived connections don't fit that model.
 
 ### Lessons learned
 
@@ -239,7 +245,7 @@ To start adoption: pick one page, model its state as an XState machine, wire it 
 **Decided:** 2026-03-02
 **Rigor:** Directional (consensus from state management research, not independently evaluated)
 **Choice:** TanStack Query (React Query)
-**Current state:** All tRPC-migrated components use TanStack Query via `@trpc/react-query` hooks. Manual fetch only for SSE streaming and file uploads.
+**Current state:** Done. All request/response API calls use TanStack Query via `@trpc/react-query` hooks.
 
 ### Why TanStack Query
 
@@ -263,9 +269,14 @@ The three form a clear separation:
 
 TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed hooks that combine tRPC's type safety with Query's caching. This is a well-tested pairing.
 
+### What doesn't use TanStack Query (and why)
+
+- **SSE streams** (`sendChatMessage`, `executeCommand`, `/api/events`). TanStack Query is request/response oriented — it caches a response and refetches on invalidation. SSE streams are long-lived connections that push data incrementally. These use raw `fetch()` with `ReadableStream` parsing instead.
+- **File uploads** (`createVoiceMemo`, `uploadFile`). These are fire-and-forget POSTs with `FormData`. No caching or refetching behavior needed — a simple `fetch()` call is sufficient.
+- **Chat status/history/interrupt/reset** (`getChatStatus`, `getChatHistory`, etc.). These *could* use TanStack Query (they're normal request/response), but they're tightly coupled to the chat SSE flow and managed by the chat component's own state. Moving them to Query would split the chat state across two systems for no benefit.
+
 ### Concerns to investigate
 
-- **SSE streams.** TanStack Query is request/response oriented. The file-watcher SSE, chat streaming, and command output streaming are different patterns that Query doesn't handle. These may stay outside Query.
 - **Relationship with XState actors.** When an XState machine invokes a fetch actor, should that go through TanStack Query's cache, or directly? Need to decide whether XState or Query "owns" the fetch for each case.
 
 ### Implementation notes
