@@ -1,9 +1,20 @@
 # Schedule State
 
-Pure functions for managing scheduled script run records. `pruneRecentRuns` removes old entries from a time window. `recordRun` appends a run and prunes in one step.
+Functions for managing scheduled script run records, state persistence,
+and lock files.
 
 ```ts setup
-import { pruneRecentRuns, recordRun } from "../src/core/schedule-state.js";
+import {
+  pruneRecentRuns,
+  recordRun,
+  loadScriptState,
+  saveScriptState,
+  acquireScriptLock,
+  releaseScriptLock,
+  loadRunningScripts,
+} from "../src/core/schedule-state.js";
+import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import * as fs from "node:fs/promises";
 ```
 
 ## pruneRecentRuns
@@ -79,4 +90,141 @@ state2.recentRuns.length
 
 state2.recentRuns[0].ts
 => 2026-03-01T12:00:00Z
+```
+
+## loadScriptState / saveScriptState
+
+### Loading nonexistent state returns empty
+
+```
+const box = await makeTmpBox();
+const state = await loadScriptState(box.root, "nonexistent");
+print(`lastRun: ${state.lastRun}`);
+print(`lastResult: ${state.lastResult}`);
+print(`runCount: ${state.runCount}`);
+=>
+lastRun: null
+lastResult: null
+runCount: 0
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+### Save then load round-trips
+
+```
+const box = await makeTmpBox();
+const saved = {
+  lastRun: "2025-01-15T06:00:00Z",
+  lastResult: "success",
+  lastError: null,
+  runCount: 3,
+  recentRuns: [{ ts: "2025-01-15T06:00:00Z", durationMs: 1500 }],
+};
+await saveScriptState({ boxRoot: box.root, scriptName: "test-script", state: saved });
+const loaded = await loadScriptState(box.root, "test-script");
+print(`lastRun: ${loaded.lastRun}`);
+print(`lastResult: ${loaded.lastResult}`);
+print(`runCount: ${loaded.runCount}`);
+print(`recentRuns: ${loaded.recentRuns.length}`);
+=>
+lastRun: 2025-01-15T06:00:00Z
+lastResult: success
+runCount: 3
+recentRuns: 1
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## Lock files
+
+### Acquire and load shows running script
+
+```
+const box = await makeTmpBox();
+await acquireScriptLock({ boxRoot: box.root, scriptName: "my-script", triggeredBy: "schedule" });
+const running = await loadRunningScripts(box.root);
+print(`running: ${running.size}`);
+print(`has my-script: ${running.has("my-script")}`);
+const lock = running.get("my-script");
+print(`triggeredBy: ${lock.triggeredBy}`);
+=>
+running: 1
+has my-script: true
+triggeredBy: schedule
+```
+
+``` cleanup
+await releaseScriptLock({ boxRoot: box.root, scriptName: "my-script" });
+await box.cleanup();
+```
+
+### Release removes from running
+
+```
+const box = await makeTmpBox();
+await acquireScriptLock({ boxRoot: box.root, scriptName: "temp", triggeredBy: "test" });
+await releaseScriptLock({ boxRoot: box.root, scriptName: "temp" });
+const running = await loadRunningScripts(box.root);
+running.size
+=> 0
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+### Lock with lock-group
+
+```
+const box = await makeTmpBox();
+await acquireScriptLock({ boxRoot: box.root, scriptName: "grouped", triggeredBy: "schedule", lockGroup: "agents" });
+const running = await loadRunningScripts(box.root);
+const lock = running.get("grouped");
+print(`lockGroup: ${lock.lockGroup}`);
+=>
+lockGroup: agents
+```
+
+``` cleanup
+await releaseScriptLock({ boxRoot: box.root, scriptName: "grouped" });
+await box.cleanup();
+```
+
+### Stale lock (dead PID) is cleaned up
+
+```
+const box = await makeTmpBox();
+const stateDir = box.root + "/config/schedules/.state";
+await fs.mkdir(stateDir, { recursive: true });
+await fs.writeFile(stateDir + "/dead-script.lock", JSON.stringify({
+  pid: 99999999,
+  startedAt: "2025-01-15T06:00:00Z",
+  triggeredBy: "test",
+}) + "\n");
+
+const running = await loadRunningScripts(box.root);
+running.size
+=> 0
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+### No state directory returns empty map
+
+```
+const box = await makeTmpBox();
+const running = await loadRunningScripts(box.root);
+running.size
+=> 0
+```
+
+``` cleanup
+await box.cleanup();
 ```
