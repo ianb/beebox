@@ -7,21 +7,13 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useMachine } from "@xstate/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import TextareaAutosize from "react-textarea-autosize";
-import {
-  getApiBase,
-  getChatHistory,
-  getChatStatus,
-  sendChatMessage,
-  interruptChat,
-  resetChatSession,
-  type SessionEntry,
-  type SessionContentBlock,
-} from "../api";
+import { getApiBase, type SessionEntry, type SessionContentBlock } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
-import { useSpeechPlayback, type SpeechPlayback } from "../hooks/useSpeechPlayback";
+import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
 import { hasAssistantSpeech, parseAllSpeechTags, VALID_VOICES } from "../lib/speech-parsing";
 import { getTTSClient } from "../lib/tts-client";
 import { unlockAudioContext } from "../lib/audio-context";
@@ -30,6 +22,7 @@ import "ldrs/react/Grid.css";
 import { sendSound, tick, recordingStart } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 import { DebugLogPanel, enableDebugLogCapture } from "./DebugLog";
+import { chatMachine } from "../machines/chatMachine.js";
 
 // Start capturing console logs immediately so we don't miss early messages
 enableDebugLogCapture();
@@ -357,42 +350,36 @@ function StreamingMessage({ text }: { text: string }) {
 }
 
 export function ChatPage() {
-  const [messages, setMessages] = useState<SessionEntry[]>([]);
+  const [snapshot, send] = useMachine(chatMachine);
+  const { messages, streamText, streamTools, error, sessionId, processRunning } = snapshot.context;
+  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
+  const isLoading = snapshot.matches("loading");
+
   const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [streamText, setStreamText] = useState("");
-  const [streamTools, setStreamTools] = useState<SessionContentBlock[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [processRunning, setProcessRunning] = useState(false);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const turnTakingRef = useRef(false);
-  const streamingRef = useRef(false);
   const transcriptionRef = useRef<{ start: () => void } | null>(null);
-  const speechPlaybackRef = useRef<SpeechPlayback | null>(null);
   const stopTickRef = useRef<(() => void) | null>(null);
+  const prevStateRef = useRef<string>("loading");
+  const speechPlayedRef = useRef(false);
+
+  // Track machine state for use in stable callbacks
+  const machineStateRef = useRef(snapshot.value);
+  useEffect(() => {
+    machineStateRef.current = snapshot.value;
+  });
 
   const speechPlayback = useSpeechPlayback({
     onComplete: () => {
-      if (turnTakingRef.current && !streamingRef.current) {
+      if (turnTakingRef.current && machineStateRef.current !== "streaming") {
         recordingStart.play();
         transcriptionRef.current?.start();
       }
     },
   });
-
-  const refreshStatus = useCallback(() => {
-    getChatStatus()
-      .then((s) => {
-        setSessionId(s.sessionId);
-        setProcessRunning(s.running);
-      })
-      .catch(() => {});
-  }, []);
 
   // Load voice config from personality on mount
   useEffect(() => {
@@ -410,143 +397,57 @@ export function ChatPage() {
       .catch(() => {});
   }, []);
 
-  // Load history and status on mount
+  // Handle state transitions: speech playback on result, mic restart after refresh
   useEffect(() => {
-    let cancelled = false;
-    getChatHistory()
-      .then((result) => {
-        if (!cancelled) {
-          setMessages(result.entries);
-          setSessionId(result.sessionId);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err.message);
-          setLoading(false);
-        }
-      });
-    refreshStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshStatus]);
+    const current = snapshot.value as string;
+    const prev = prevStateRef.current;
+    prevStateRef.current = current;
+
+    // streaming → refreshing: play speech, stop tick
+    if (current === "refreshing" && prev === "streaming") {
+      if (stopTickRef.current) {
+        stopTickRef.current();
+        stopTickRef.current = null;
+      }
+      const hasSpeech = hasAssistantSpeech(snapshot.context.streamText);
+      speechPlayedRef.current = hasSpeech;
+      if (hasSpeech) {
+        const segments = parseAllSpeechTags(snapshot.context.streamText);
+        speechPlayback.playSegments({
+          messageId: `stream-${Date.now()}`,
+          segments,
+        });
+      }
+    }
+
+    // refreshing → idle: restart mic for non-speech responses
+    if (current === "idle" && prev === "refreshing") {
+      if (!speechPlayedRef.current && turnTakingRef.current) {
+        recordingStart.play();
+        transcriptionRef.current?.start();
+      }
+    }
+  }, [snapshot.value, snapshot.context.streamText, speechPlayback]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamText]);
 
-  const doSend = useCallback(async (wrapped: string) => {
-    streamingRef.current = true;
-    setStreaming(true);
-    setStreamText("");
-    setStreamTools([]);
-    setError(null);
-
-    const userEntry: SessionEntry = {
-      uuid: `user-${Date.now()}`,
-      type: "user",
-      timestamp: new Date().toISOString(),
-      content: [{ type: "text", text: wrapped }],
-    };
-    setMessages((prev) => [...prev, userEntry]);
-
-    try {
-      let accumulatedText = "";
-
-      await sendChatMessage({
-        message: wrapped,
-        onMessage: (msg) => {
-          const type = msg.type as string;
-
-          if (type === "busy") {
-            setError("Agent is busy with another request");
-            setStreaming(false);
-            return;
-          }
-
-          if (type === "error") {
-            setError((msg.error as string) || "Unknown error");
-            setStreaming(false);
-            return;
-          }
-
-          if (type === "assistant") {
-            const message = msg.message as {
-              content?: Array<{ type: string; text?: string; name?: string; id?: string }>;
-            } | undefined;
-            if (message?.content) {
-              for (const block of message.content) {
-                if (block.type === "text" && block.text) {
-                  accumulatedText += block.text;
-                  setStreamText(accumulatedText);
-                } else if (block.type === "tool_use") {
-                  setStreamTools((prev) => [
-                    ...prev,
-                    {
-                      type: "tool_use",
-                      toolName: block.name,
-                      toolId: block.id,
-                      inputSummary: block.name ?? "",
-                    },
-                  ]);
-                }
-              }
-            }
-          }
-
-          if (type === "result") {
-            // Stop waiting tick
-            if (stopTickRef.current) {
-              stopTickRef.current();
-              stopTickRef.current = null;
-            }
-            // Auto-play speech before refreshing history
-            if (hasAssistantSpeech(accumulatedText)) {
-              const segments = parseAllSpeechTags(accumulatedText);
-              speechPlaybackRef.current?.playSegments({
-                messageId: `stream-${Date.now()}`,
-                segments,
-              });
-            }
-            const hasSpeech = hasAssistantSpeech(accumulatedText);
-            getChatHistory()
-              .then((result) => {
-                setMessages(result.entries);
-              })
-              .catch(() => {})
-              .finally(() => {
-                streamingRef.current = false;
-                setStreaming(false);
-                setStreamText("");
-                setStreamTools([]);
-                // For non-speech responses, auto-restart mic now
-                // (speech responses restart mic via onComplete callback)
-                if (!hasSpeech && turnTakingRef.current) {
-                  recordingStart.play();
-                  transcriptionRef.current?.start();
-                }
-              });
-          }
-        },
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Send failed");
-      setStreaming(false);
-      setStreamText("");
-      setStreamTools([]);
-    }
-  }, []);
+  const doSend = useCallback(
+    (wrapped: string) => {
+      send({ type: "SEND", message: wrapped });
+    },
+    [send]
+  );
 
   const handleSend = useCallback(() => {
     const text = input.trim();
-    if (!text || streaming) return;
+    if (!text || isStreaming) return;
     unlockAudioContext();
     setInput("");
     doSend(`<typed local-time="${localTime()}">${text}</typed>`);
-  }, [input, streaming, doSend]);
+  }, [input, isStreaming, doSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -559,27 +460,16 @@ export function ChatPage() {
   );
 
   const handleInterrupt = useCallback(() => {
-    interruptChat().catch(() => {});
-  }, []);
+    send({ type: "INTERRUPT" });
+  }, [send]);
 
   const handleNewSession = useCallback(() => {
-    resetChatSession()
-      .then(() => {
-        setMessages([]);
-        setSessionId(null);
-        setProcessRunning(false);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to reset session");
-      });
-  }, []);
+    send({ type: "NEW_SESSION" });
+  }, [send]);
 
   const handleStopProcess = useCallback(() => {
-    interruptChat()
-      .then(() => refreshStatus())
-      .catch(() => {});
-  }, [refreshStatus]);
+    send({ type: "INTERRUPT" });
+  }, [send]);
 
   // Realtime transcription with voice keyword spotting
   const transcription = useRealtimeTranscription({
@@ -603,7 +493,6 @@ export function ChatPage() {
   });
   useEffect(() => {
     transcriptionRef.current = transcription;
-    speechPlaybackRef.current = speechPlayback;
   });
   const isTranscribing =
     transcription.state === "connecting" ||
@@ -621,10 +510,10 @@ export function ChatPage() {
 
   // Keep textarea focused whenever it's available for input
   useEffect(() => {
-    if (!streaming && !isTranscribing) {
+    if (!isStreaming && !isTranscribing) {
       textareaRef.current?.focus();
     }
-  }, [streaming, isTranscribing]);
+  }, [isStreaming, isTranscribing]);
 
   // Escape key cancels transcription
   useEffect(() => {
@@ -638,7 +527,7 @@ export function ChatPage() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isTranscribing, transcription]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center text-warm-500">
         Loading chat...
@@ -657,7 +546,7 @@ export function ChatPage() {
           onStopProcess={handleStopProcess}
           sessionId={sessionId}
           running={processRunning}
-          busy={streaming}
+          busy={isStreaming}
           debugView={debugView}
           onToggleDebugView={() => setDebugView((v) => !v)}
           showDebugLog={showDebugLog}
@@ -666,7 +555,7 @@ export function ChatPage() {
       </div>
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto py-4 pl-2 sm:pl-4 space-y-1">
-        {messages.length === 0 && !streaming ? (
+        {messages.length === 0 && !isStreaming ? (
           <div className="flex items-center justify-center h-full text-warm-500 text-sm">
             Start a conversation with your box assistant.
           </div>
@@ -678,7 +567,7 @@ export function ChatPage() {
             <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
           )
         )}
-        {streaming ? (
+        {snapshot.matches("streaming") ? (
           <div>
             <StreamingMessage text={streamText} />
             {streamTools.length > 0 ? (
@@ -696,7 +585,7 @@ export function ChatPage() {
         <div className="px-4 py-2 bg-rose-50 border-t border-rose-light text-rose-dark text-sm">
           {error || transcription.error}
           <button
-            onClick={() => setError(null)}
+            onClick={() => send({ type: "DISMISS_ERROR" })}
             className="ml-2 text-rose hover:text-rose-dark"
           >
             dismiss
@@ -721,10 +610,10 @@ export function ChatPage() {
               }
             }}
             onKeyDown={handleKeyDown}
-            disabled={streaming || isTranscribing}
+            disabled={isStreaming || isTranscribing}
             readOnly={isTranscribing}
             placeholder={
-              streaming
+              isStreaming
                 ? "Working..."
                 : isTranscribing
                   ? "Listening..."
@@ -746,7 +635,7 @@ export function ChatPage() {
               </svg>
             </button>
           ) : null}
-          {streaming ? (
+          {isStreaming ? (
             <button
               onClick={handleInterrupt}
               className="flex-shrink-0 px-4 py-2 bg-rose text-white rounded-lg hover:bg-rose-dark text-sm font-medium"
@@ -796,7 +685,7 @@ export function ChatPage() {
             <>
               <button
                 onClick={async () => { turnTakingRef.current = true; unlockAudioContext(); await recordingStart.play().started; transcription.start(); }}
-                disabled={streaming}
+                disabled={isStreaming}
                 className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50 disabled:text-warm-400 disabled:hover:bg-transparent"
                 title="Voice input"
               >

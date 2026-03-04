@@ -16,12 +16,12 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | 931 tests, 53 files. Doctest system built. DI pattern established. |
 | 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | In use via react-markdown + remark-gfm. |
 | 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | All adopted: execa, date-fns, html-entities, sanitize-filename, proper-lockfile, ky. |
+| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated. 5 machine files (~1050 lines), replaced ~30 useState + ~15 useRef hooks. |
 
 ### Up next
 
 | # | Decision | Status | Notes |
 |---|---|---|---|
-| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **In progress** | First migration: `useVoiceRecorder`. Patterns established for callback actors, serializable context, thin hook wrappers. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
 | 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
 | 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
@@ -156,15 +156,35 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 
 Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. The comparison document (`docs/state-management-comparison.md`) still exists. Zustand and MST were removed from package.json.
 
-**First migration: `useVoiceRecorder`** — `src/frontend/src/machines/voiceRecorderMachine.ts`. A 3-state machine (idle → requestingMic → recording → uploading) that manages the voice recording lifecycle.
+### Machines
 
-Patterns established:
-- **Callback actors own non-serializable resources.** MediaRecorder + MediaStream live inside a `fromCallback` actor's closure, not in context. The actor receives `STOP` commands via `receive()`, sends `RECORDER_STOPPED` with the assembled Blob back to the parent. Cleanup function releases all resources on state exit.
-- **Context stays serializable.** Only `error`, `duration`, `startTime`, and `onComplete` (input). No browser API objects.
-- **`fromCallback` for recurring timers.** Duration ticker uses `setInterval` inside a callback actor with a cleanup return. Auto-cleaned when the recording state exits.
-- **`fromPromise` for one-shot async.** Mic permission request and upload/completion callback are invoked promises with `onDone`/`onError`.
-- **Thin hook wrapper.** `useVoiceRecorder` hook preserves the original public interface (`state`, `error`, `duration`, `startRecording`, `stopRecording`). Components consuming it needed zero changes. The hook maps machine states to the simpler `RecordingState` type.
-- **Granularity: per-feature.** The machine covers one hook's behavior, not a whole page. This keeps machines focused and testable.
+All machines live in `src/frontend/src/machines/`. Each owns one feature's lifecycle.
+
+| Machine | File | States | Resources owned |
+|---|---|---|---|
+| voiceRecorderMachine | `voiceRecorderMachine.ts` | idle → requestingMic → recording → uploading | MediaRecorder, MediaStream (callback actor) |
+| realtimeTranscriptionMachine | `realtimeTranscriptionMachine.ts` | idle → connecting → recording → finalizing | WebSocket, AudioContext, MediaStream, AudioWorkletNode (single callback actor) |
+| speechPlaybackMachine | `speechPlaybackMachine.ts` | idle → playing | TTS client (promise actor per segment sequence) |
+| sseMachine | `sseMachine.ts` | connecting → connected / waiting → reconnect | EventSource (callback actor), auto-reconnect via `after` delay |
+| claudeAuthMachine | `claudeAuthMachine.ts` | loading → idle → starting → polling / loggingOut | Poll interval (callback actor), 3-min timeout |
+| chatMachine | `chatMachine.ts` | loading → idle ⇄ streaming → refreshing → idle, plus resetting | SSE fetch stream (callback actor) |
+
+### Patterns established
+
+- **Callback actors own non-serializable resources.** MediaRecorder, WebSocket, AudioContext, EventSource, fetch ReadableStream — all live inside `fromCallback` actor closures, not in context. Actors receive commands via `receive()`, send events back via `sendBack()`. Cleanup functions release resources on state exit.
+- **Context stays serializable.** Only strings, numbers, booleans, arrays, and plain objects. No browser API objects in context.
+- **`fromCallback` for long-lived resources.** WebSocket connections, SSE streams, polling intervals, timers — anything that produces events over time.
+- **`fromPromise` for one-shot async.** Mic permission, fetch calls, file uploads, API requests with a single result.
+- **`after` delays for timeouts/reconnects.** SSE reconnect (5s), transcription finalization timeout (5s), auth poll timeout (3min).
+- **Thin hook wrappers preserve public interfaces.** `useVoiceRecorder`, `useRealtimeTranscription`, `useSpeechPlayback`, `useSSE` all preserve their original return types. Components consuming them needed zero changes.
+- **Direct `useMachine` for page-level machines.** `ChatPage` and `AdminPage.ClaudeCodeSection` use `useMachine()` directly since only one component consumes each.
+- **Granularity: per-feature.** Each machine covers one hook or one component's behavior. Machines are focused and independently testable.
+
+### Deferred: parent orchestrator for voice turn-taking
+
+ChatPage coordinates three independent machines (chat, transcription, speech playback) for voice turn-taking: transcription → send message → stream response → play speech → restart transcription. Currently this coordination uses refs (`turnTakingRef`, `transcriptionRef`, `machineStateRef`) and a `useEffect` that detects state transitions (`streaming → refreshing → idle`).
+
+This works but is the one area where the machine boundaries leak — each machine doesn't know about the others, so the component bridges them imperatively. A parent orchestrator machine could model the full turn-taking cycle as explicit states, making the flow visible and testable. Defer until: the turn-taking logic gets more complex (e.g., barge-in detection, multi-turn conversation policies, concurrent voice + text input).
 
 ---
 
