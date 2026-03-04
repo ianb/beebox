@@ -1,13 +1,12 @@
 /**
- * React hook for Server-Sent Events subscription.
+ * React hook for Server-Sent Events subscription via XState.
  */
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
+import { useMachine } from "@xstate/react";
+import { sseMachine, type SSEEvent } from "../machines/sseMachine";
 
-export interface SSEEvent {
-  event: string;
-  data: unknown;
-}
+export type { SSEEvent };
 
 export interface UseSSEOptions {
   onEvent?: (event: SSEEvent) => void;
@@ -23,85 +22,40 @@ export interface UseSSEReturn {
 }
 
 export function useSSE(url: string, options: UseSSEOptions = {}): UseSSEReturn {
-  const [connected, setConnected] = useState(false);
-  const [lastEvent, setLastEvent] = useState<SSEEvent | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
+  const input = useMemo(() => ({ url }), [url]);
+  const [snapshot, send] = useMachine(sseMachine, { input });
 
-  // Store callbacks in refs to avoid reconnection on callback changes
   const optionsRef = useRef(options);
-  optionsRef.current = options;
+  useEffect(() => {
+    optionsRef.current = options;
+  });
 
-  const connect = useCallback(() => {
-    // Clean up any existing connection
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
+  const connected = snapshot.matches("connected");
+  const { lastEvent } = snapshot.context;
 
-    const eventSource = new EventSource(url);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onopen = () => {
-      setConnected(true);
+  // Fire callbacks on state transitions
+  const prevConnectedRef = useRef(false);
+  useEffect(() => {
+    if (connected && !prevConnectedRef.current) {
       optionsRef.current.onConnect?.();
-    };
-
-    eventSource.onerror = (error) => {
-      setConnected(false);
-      optionsRef.current.onError?.(error);
+    } else if (!connected && prevConnectedRef.current) {
       optionsRef.current.onDisconnect?.();
-
-      // Auto-reconnect after 5 seconds
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
-      }, 5000);
-    };
-
-    // Handle specific event types
-    const eventTypes = [
-      "connected",
-      "ping",
-      "file-change",
-      "wakeup-start",
-      "wakeup-complete",
-      "question-answered",
-      "card-created",
-    ];
-
-    for (const eventType of eventTypes) {
-      eventSource.addEventListener(eventType, (event) => {
-        const sseEvent: SSEEvent = {
-          event: eventType,
-          data: JSON.parse((event as MessageEvent).data),
-        };
-        setLastEvent(sseEvent);
-        optionsRef.current.onEvent?.(sseEvent);
-      });
     }
-  }, [url]); // Only reconnect when URL changes
+    prevConnectedRef.current = connected;
+  }, [connected]);
+
+  // Fire onEvent when lastEvent changes
+  const prevLastEventRef = useRef(lastEvent);
+  useEffect(() => {
+    if (lastEvent && lastEvent !== prevLastEventRef.current) {
+      optionsRef.current.onEvent?.(lastEvent);
+    }
+    prevLastEventRef.current = lastEvent;
+  }, [lastEvent]);
 
   const reconnect = useCallback(() => {
-    connect();
-  }, [connect]);
-
-  useEffect(() => {
-    connect();
-
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-    };
-  }, [connect]);
+    send({ type: "RECONNECT" });
+  }, [send]);
 
   return { connected, lastEvent, reconnect };
 }

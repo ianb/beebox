@@ -3,125 +3,22 @@
  * Shows Claude Code auth status and lets the owner authenticate/logout.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useMachine } from "@xstate/react";
 import { Link, useParams } from "react-router-dom";
 import { getApiBase } from "../api.js";
-
-interface ClaudeStatus {
-  loggedIn?: boolean;
-  email?: string;
-  error?: string;
-  raw?: string;
-  // claude auth status may return various fields
-  [key: string]: unknown;
-}
-
-interface LoginResult {
-  authUrl?: string;
-  status?: string;
-  error?: string;
-  output?: string;
-}
+import { claudeAuthMachine } from "../machines/claudeAuthMachine.js";
 
 function ClaudeCodeSection() {
-  const [status, setStatus] = useState<ClaudeStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [loginState, setLoginState] = useState<"idle" | "starting" | "waiting" | "polling">("idle");
-  const [authUrl, setAuthUrl] = useState<string | null>(null);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [snapshot, send] = useMachine(claudeAuthMachine);
+  const { status, error, authUrl } = snapshot.context;
+  const isLoading = snapshot.matches("loading");
+  const isStarting = snapshot.matches("starting");
+  const isPolling = snapshot.matches("polling");
+  const isLoggingOut = snapshot.matches("loggingOut");
+  const isIdle = snapshot.matches("idle");
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const resp = await fetch("/api/admin/claude-status");
-      if (!resp.ok) throw new Error(`Status check failed: ${resp.status}`);
-      const data: ClaudeStatus = await resp.json();
-      setStatus(data);
-      setError(null);
-      return data;
-    } catch (err) {
-      setError((err as Error).message);
-      return null;
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStatus().finally(() => setLoading(false));
-  }, [fetchStatus]);
-
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
-
-  const handleLogin = async () => {
-    setLoginState("starting");
-    setAuthUrl(null);
-    setError(null);
-
-    try {
-      const resp = await fetch("/api/admin/claude-login", { method: "POST" });
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({ error: resp.statusText }));
-        throw new Error(data.error || "Login failed");
-      }
-      const result: LoginResult = await resp.json();
-
-      if (result.authUrl) {
-        setAuthUrl(result.authUrl);
-        setLoginState("polling");
-
-        // Poll for completion
-        if (pollRef.current) clearInterval(pollRef.current);
-        pollRef.current = setInterval(async () => {
-          const s = await fetchStatus();
-          if (s?.loggedIn) {
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
-            setLoginState("idle");
-            setAuthUrl(null);
-          }
-        }, 3000);
-
-        // Stop polling after 3 minutes
-        setTimeout(() => {
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-            setLoginState("idle");
-          }
-        }, 180000);
-      } else {
-        setError(result.error || "No auth URL received");
-        setLoginState("idle");
-      }
-    } catch (err) {
-      setError((err as Error).message);
-      setLoginState("idle");
-    }
-  };
-
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    setError(null);
-
-    try {
-      const resp = await fetch("/api/admin/claude-logout", { method: "POST" });
-      const data = await resp.json();
-      if (!data.success) {
-        throw new Error(data.error || "Logout failed");
-      }
-      await fetchStatus();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoggingOut(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -162,7 +59,7 @@ function ClaudeCodeSection() {
       )}
 
       {/* Auth URL display */}
-      {authUrl && loginState === "polling" ? (
+      {authUrl && isPolling ? (
         <div className="mb-4 p-4 bg-iris-50 border border-iris-100 rounded">
           <p className="text-sm text-plum mb-2">
             Complete authentication in a new tab:
@@ -192,31 +89,29 @@ function ClaudeCodeSection() {
       <div className="flex gap-3">
         {!status?.loggedIn ? (
           <button
-            onClick={handleLogin}
-            disabled={loginState !== "idle"}
+            onClick={() => send({ type: "LOGIN" })}
+            disabled={!isIdle}
             className="btn btn-primary"
           >
-            {loginState === "starting"
+            {isStarting
               ? "Starting..."
-              : loginState === "polling"
+              : isPolling
                 ? "Waiting..."
                 : "Authenticate Claude Code"}
           </button>
         ) : null}
         {status?.loggedIn ? (
           <button
-            onClick={handleLogout}
-            disabled={loggingOut}
+            onClick={() => send({ type: "LOGOUT" })}
+            disabled={isLoggingOut}
             className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
           >
-            {loggingOut ? "Logging out..." : "Log Out"}
+            {isLoggingOut ? "Logging out..." : "Log Out"}
           </button>
         ) : null}
         <button
-          onClick={() => {
-            setLoading(true);
-            fetchStatus().finally(() => setLoading(false));
-          }}
+          onClick={() => send({ type: "REFRESH" })}
+          disabled={isLoading}
           className="btn bg-warm-100 text-warm-700 hover:bg-warm-200"
         >
           Refresh
