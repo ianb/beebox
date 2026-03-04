@@ -8,20 +8,20 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 
 | # | Decision | Notes |
 |---|---|---|
+| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | 12 routers, ~50 procedures. SSE streaming, file uploads, WebSocket, OAuth remain as REST (by design). |
+| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | All tRPC-migrated components use TanStack Query via `@trpc/react-query` hooks. |
 | 5 | [Fastify (keep)](#decision-5-backend-server--fastify-keep) | Already in use, no change needed. |
+| 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | All tRPC input schemas use Zod. No manual validation in new API code. |
 | 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | 931 tests, 53 files. Doctest system built. DI pattern established. |
-| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | All adopted: execa, date-fns, html-entities, sanitize-filename, proper-lockfile, ky. |
 | 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | In use via react-markdown + remark-gfm. |
+| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | All adopted: execa, date-fns, html-entities, sanitize-filename, proper-lockfile, ky. |
 
 ### Up next
 
 | # | Decision | Status | Notes |
 |---|---|---|---|
-| 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | **Done (via tRPC)** | All tRPC input schemas use Zod. No manual validation in new API code. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **Planned** | Foundational — changes how all frontend state works. Do before other frontend stack changes. |
-| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **Done** | 12 routers, ~50 procedures. SSE streaming, file uploads, WebSocket, OAuth remain as REST (by design). |
-| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **Done** | All tRPC-migrated components use TanStack Query via `@trpc/react-query` hooks. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
 | 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
 | 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
