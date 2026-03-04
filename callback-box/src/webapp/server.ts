@@ -24,6 +24,9 @@ import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerSystemAdminRoutes, registerBoxAdminRoutes } from "./routes/admin.js";
+import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
+import { appRouter } from "./trpc/router.js";
+import type { TrpcContext } from "./trpc/context.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
@@ -156,6 +159,20 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
 
       // Register all routes for this box
       const { broadcastEvent } = await registerSseRoutes(instance, box.boxRoot);
+
+      // Mount tRPC router alongside REST routes
+      await instance.register(fastifyTRPCPlugin<typeof appRouter>, {
+        prefix: "/api/trpc",
+        trpcOptions: {
+          router: appRouter,
+          createContext: (): TrpcContext => ({
+            boxRoot: box.boxRoot,
+            broadcastEvent,
+            services: options.services ?? {},
+          }),
+        },
+      });
+
       await registerApiRoutes(instance, box.boxRoot);
       await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
       await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });

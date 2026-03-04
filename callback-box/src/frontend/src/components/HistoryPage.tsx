@@ -5,9 +5,10 @@
  * URL reflects selected commit: /history/:hash
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getHistory, type HistoryCommit } from "../api";
+import type { HistoryCommit } from "../api";
+import { trpc } from "../lib/trpc";
 import { Sidebar } from "./Sidebar";
 import { CommitTimeline } from "./CommitTimeline";
 import { CommitDetail } from "./CommitDetail";
@@ -17,42 +18,37 @@ const PAGE_SIZE = 50;
 export function HistoryPage() {
   const { hash: urlHash } = useParams<{ hash?: string }>();
   const navigate = useNavigate();
-  const [commits, setCommits] = useState<HistoryCommit[]>([]);
   const [selectedCommit, setSelectedCommit] = useState<HistoryCommit | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
 
-  const loadCommits = useCallback(async (offset: number) => {
-    try {
-      setLoading(true);
-      const result = await getHistory(PAGE_SIZE, offset);
-      if (offset === 0) {
-        setCommits(result.commits);
-        // Auto-select from URL hash, or first commit
-        if (urlHash) {
-          const match = result.commits.find((c) => c.hash.startsWith(urlHash));
-          if (match) {
-            setSelectedCommit(match);
-          } else if (result.commits.length > 0) {
-            setSelectedCommit(result.commits[0]);
-          }
-        } else if (result.commits.length > 0) {
-          setSelectedCommit(result.commits[0]);
-        }
-      } else {
-        setCommits((prev) => [...prev, ...result.commits]);
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    trpc.history.list.useInfiniteQuery(
+      { count: PAGE_SIZE },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
       }
-      setHasMore(result.commits.length === PAGE_SIZE);
-    } catch (err) {
-      console.error("Failed to load history:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [urlHash]);
+    );
 
-  useEffect(() => {
-    loadCommits(0);
-  }, [loadCommits]);
+  const commits = useMemo(
+    () => data?.pages.flatMap((p) => p.commits) ?? [],
+    [data]
+  );
+
+  // Auto-select when initial data arrives (setState during render — React-approved pattern)
+  const [prevFirstPage, setPrevFirstPage] = useState(data?.pages[0]);
+  const firstPage = data?.pages[0];
+  if (firstPage !== prevFirstPage) {
+    setPrevFirstPage(firstPage);
+    if (firstPage && firstPage.commits.length > 0) {
+      if (urlHash) {
+        const match = firstPage.commits.find((c) => c.hash.startsWith(urlHash));
+        setSelectedCommit(match ?? firstPage.commits[0]);
+      } else {
+        setSelectedCommit(firstPage.commits[0]);
+      }
+    }
+  }
+
+  const loading = isLoading || isFetchingNextPage;
 
   const handleSelect = (commit: HistoryCommit) => {
     setSelectedCommit(commit);
@@ -60,7 +56,7 @@ export function HistoryPage() {
   };
 
   const handleLoadMore = () => {
-    loadCommits(commits.length);
+    fetchNextPage();
   };
 
   const hasDetail = Boolean(selectedCommit);
@@ -73,7 +69,7 @@ export function HistoryPage() {
           selectedHash={selectedCommit?.hash || null}
           onSelect={handleSelect}
           onLoadMore={handleLoadMore}
-          hasMore={hasMore}
+          hasMore={hasNextPage ?? false}
           loading={loading}
         />
       </Sidebar>

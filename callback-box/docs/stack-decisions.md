@@ -20,8 +20,8 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 |---|---|---|---|
 | 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | **Partial** | Installed, used in services/tests. Expanding to API inputs preps for tRPC. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | **Planned** | Foundational — changes how all frontend state works. Do before other frontend stack changes. |
-| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **Planned** | Depends on Zod schemas (#7). Mount alongside Fastify, migrate incrementally. |
-| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **Planned** | Pairs with tRPC. Can also adopt independently (replace useEffect→fetch→setState). |
+| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | **In progress** | Infrastructure done. Fastify adapter mounted. history.ts migrated (3 procedures). 60+ routes remaining. |
+| 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | **In progress** | Installed alongside tRPC. History page uses `useInfiniteQuery` for pagination, `useQuery` for diffs. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
 | 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
 | 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
@@ -189,7 +189,18 @@ To start adoption: pick one page, model its state as an XState machine, wire it 
 
 ### Implementation notes
 
-Not started. No tRPC dependency in package.json. The natural first step is to mount a tRPC router alongside existing Fastify routes and migrate one simple route file (e.g., `api.ts` which is 100% tested) as a proof of concept. SSE streaming compatibility is the biggest risk — investigate before committing to full migration.
+**Started.** tRPC v11 (`@trpc/server@11.11.0`) installed. Infrastructure in place:
+- `src/webapp/trpc/trpc.ts` — initTRPC with context
+- `src/webapp/trpc/context.ts` — TrpcContext (boxRoot, broadcastEvent, services)
+- `src/webapp/trpc/router.ts` — Root appRouter, exports `AppRouter` type
+- Fastify adapter registered per-box at `/:boxSlug/api/trpc`
+- Frontend: `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query` installed, TrpcProvider wraps app
+
+**First migration: `history.ts`** (3 procedures: list, diff, sessionLog). Both REST and tRPC endpoints coexist. Frontend HistoryPage, CommitDetail, SessionLog components migrated to tRPC hooks. Pagination uses cursor-based pattern with `useInfiniteQuery`.
+
+**Type sharing:** Frontend imports `type { AppRouter }` via tsconfig paths alias `@backend/*` → `../webapp/*`. Type-only import, stripped at build time — Vite needs no config change.
+
+**Remaining:** ~60 routes across 12 files. SSE streaming (chat/send, commands/execute) stays REST for now. File uploads, WebSocket, OAuth, webhooks stay REST permanently.
 
 ---
 
@@ -229,7 +240,7 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 
 ### Implementation notes
 
-Not started. No dependency in package.json. Adopting TanStack Query independently of tRPC is straightforward — replace `useEffect → fetch → setState` patterns with `useQuery` hooks one component at a time. This could be done before or after tRPC.
+**Started.** `@tanstack/react-query` installed as a peer of `@trpc/react-query`. Adopted alongside tRPC — the `TrpcProvider` in `src/frontend/src/lib/trpc-provider.tsx` wraps the app with both QueryClientProvider and trpc.Provider. History page components use `useInfiniteQuery` for paginated lists (cursor-based) and `useQuery` for single-item fetches.
 
 ---
 

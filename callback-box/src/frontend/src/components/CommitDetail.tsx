@@ -3,10 +3,11 @@
  * Uses a tabbed interface: Commit | Diff (N) | New (N) | Moved (N) | Session
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { getCommitDiff, type HistoryCommit } from "../api";
+import type { HistoryCommit } from "../api";
+import { trpc } from "../lib/trpc";
 import { SessionLog } from "./SessionLog";
 import { CardTreeView, type ElementNode } from "./CardTreeView";
 
@@ -323,34 +324,22 @@ function MovedTab({ files }: { files: DiffFile[] }) {
 type TabId = "commit" | "diff" | "new" | "moved" | "session";
 
 export function CommitDetail({ commit }: CommitDetailProps) {
-  const [diff, setDiff] = useState<string | null>(null);
-  const [diffLoading, setDiffLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("commit");
 
   const sessionId = trailerString(commit.trailers?.Session);
   const bodyText = commit.body ? stripTrailers(commit.body) : "";
 
-  // Track commit hash to reset state on change
-  const [loadedHash, setLoadedHash] = useState<string | null>(null);
-  if (loadedHash !== commit.hash) {
-    setLoadedHash(commit.hash);
-    setDiff(null);
-    setDiffLoading(true);
+  // Reset tab when commit changes
+  const [prevHash, setPrevHash] = useState(commit.hash);
+  if (prevHash !== commit.hash) {
+    setPrevHash(commit.hash);
     setActiveTab("commit");
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    getCommitDiff(commit.hash)
-      .then((result) => {
-        if (!cancelled) setDiff(result.diff);
-      })
-      .catch((err) => console.error("Failed to load diff:", err))
-      .finally(() => {
-        if (!cancelled) setDiffLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [commit.hash]);
+  const { data: diffData, isLoading: diffLoading } = trpc.history.diff.useQuery(
+    { hash: commit.hash }
+  );
+  const diff = diffData?.diff ?? null;
 
   // Parse diff into categories
   const { editedFiles, newFiles, movedFiles, deletedFiles } = useMemo(() => {

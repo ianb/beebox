@@ -2,8 +2,9 @@
  * SessionLog - Renders a Claude Code session chat log.
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { getSessionLog, type SessionEntry, type SessionContentBlock } from "../api";
+import { useState, useMemo } from "react";
+import type { SessionContentBlock } from "../api";
+import { trpc } from "../lib/trpc";
 
 interface SessionLogProps {
   sessionId: string;
@@ -62,7 +63,7 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
 /**
  * Render a single session entry (user or assistant message).
  */
-function EntryView({ entry }: { entry: SessionEntry }) {
+function EntryView({ entry }: { entry: { uuid: string; type: string; timestamp: string; content: SessionContentBlock[] } }) {
   const isUser = entry.type === "user";
 
   // Group tool_use and tool_result blocks together
@@ -71,14 +72,6 @@ function EntryView({ entry }: { entry: SessionEntry }) {
     // Skip standalone tool_result blocks (they're shown with their tool_use)
     if (block.type === "tool_result") continue;
     groupedContent.push(block);
-  }
-
-  // Find tool results for each tool use
-  const toolResults = new Map<string, SessionContentBlock>();
-  for (const block of entry.content) {
-    if (block.type === "tool_result" && block.toolUseId) {
-      toolResults.set(block.toolUseId, block);
-    }
   }
 
   return (
@@ -101,34 +94,24 @@ function EntryView({ entry }: { entry: SessionEntry }) {
 }
 
 export function SessionLog({ sessionId }: SessionLogProps) {
-  const [entries, setEntries] = useState<SessionEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [found, setFound] = useState(true);
-
-  const loadEntries = useCallback(async (offset = 0) => {
-    try {
-      setLoading(true);
-      const result = await getSessionLog({ sessionId, offset, limit: 100 });
-      setFound(result.found);
-      if (offset === 0) {
-        setEntries(result.entries);
-      } else {
-        setEntries((prev) => [...prev, ...result.entries]);
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    trpc.history.sessionLog.useInfiniteQuery(
+      { sessionId, limit: 100 },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
       }
-      setHasMore(result.hasMore);
-      setTotal(result.total);
-    } catch (err) {
-      console.error("Failed to load session log:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId]);
+    );
 
-  useEffect(() => {
-    loadEntries(0);
-  }, [loadEntries]);
+  const firstPage = data?.pages[0];
+  const found = firstPage?.found ?? true;
+  const total = firstPage?.total ?? 0;
+
+  const entries = useMemo(
+    () => data?.pages.flatMap((p) => p.entries) ?? [],
+    [data]
+  );
+
+  const loading = isLoading || isFetchingNextPage;
 
   if (!found) {
     return (
@@ -149,8 +132,8 @@ export function SessionLog({ sessionId }: SessionLogProps) {
         ))}
       </div>
       {loading ? <div className="p-3 text-sm text-warm-500">Loading...</div> : null}
-      {hasMore && !loading ? <button
-          onClick={() => loadEntries(entries.length)}
+      {hasNextPage && !loading ? <button
+          onClick={() => fetchNextPage()}
           className="w-full p-2 text-sm text-plum hover:bg-iris-50 border-t"
         >
           Load more ({total - entries.length} remaining)
