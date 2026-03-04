@@ -17,6 +17,8 @@ These modules have been converted from traditional tests or newly written as doc
 - `src/core/chat-response-extraction` logic — Streaming `<chat-response>` tag extraction
 - `src/core/scheduled-script.ts` — `isDue()`, `isDueForWakeup()`, `isWithinBudget()`, templates
 - `src/core/schedule-state.ts` — `pruneRecentRuns()`, `recordRun()`, `loadScriptState()`/`saveScriptState()` round-trip, lock file acquire/release/load, lock-group, stale lock cleanup
+- `src/core/chat-session.ts` — Session ID persistence (load/save/corrupt/reset), state accessors, getHistory (no session, missing log)
+- `src/cli/lib/session.ts` — `getSessionLogPath()`, `getSessionDir()`, `parseSessionLog()` (empty, entries, filtering, pagination), `transformContent()` (text, tool_use, tool_result, thinking, redacted), `summarizeToolInput()`, `summarizeToolResult()`
 - `src/cli/lib/format.ts` — `stripAnsi()`
 - `src/frontend/src/lib/parseTags.ts` — XML-like tag parsing
 - `src/frontend/src/lib/patmatch.ts` — Keyword pattern matching
@@ -63,7 +65,7 @@ These can use `makeTestServer()` or `makeTmpBox()` from the existing doctest hel
 
 ### Needs exploration — not ready yet
 
-- **Chat sessions** (`chat-session.ts`, `chat-session-pool.ts`, `chat-thread-session.ts`) — Long-lived subprocess management. The testable parts (pool rotation, session persistence, thread file operations) should be separated from the Claude-dependent parts. Worth exploring what abstractions make this testable.
+- **Chat sessions** (`chat-session.ts`, `chat-session-pool.ts`, `chat-thread-session.ts`) — Long-lived subprocess management. `ChatSession` state management (constructor, session ID persistence, corrupt file handling, reset, getHistory) tested via doctests. The subprocess-dependent parts (send, interrupt, event streaming) need Claude or a mock subprocess. Pool rotation and thread file operations still untested.
 - **Frontend component testing** — A whole separate discussion. Needs architecture changes (unidirectional data flow) before component testing is practical. See §2 below.
 
 ### Fine without tests
@@ -83,7 +85,7 @@ Prefer injecting at the service/function level over HTTP-level interception:
 
 ## 1. API Route Tests
 
-**Status:** In progress — 46 of 52 endpoints tested (88%)
+**Status:** In progress — 46 of 52 endpoints tested (88%) + supporting logic for chat
 **Priority:** High — deterministic, fast, covers fragile code
 
 Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer()` from `test/helpers/doctest-server.ts`. Under the hood this uses Fastify's `inject()` — no socket server, no network. The helper provides `.inject()` (returns `"status\njson"` for `check()`) and `.request()` (returns `{ statusCode, body }` for programmatic access).
@@ -101,7 +103,7 @@ Route tests are now doctests (`test/routes-*.doctest.md`) using `makeTestServer(
 | `commands.ts` | 5/5 | 100% | Complete (streaming execute tested via `executeCommandStreaming()` abstraction) |
 | `history.ts` | 3/3 | 100% | Complete |
 | `actions.ts` | 2/4 | 50% | Answer, create; wakeup/voice-memo need integration work |
-| `chat.ts` | 0/8 | 0% | Needs Claude session injection |
+| `chat.ts` | 0/8 | 0% | Session state tested separately; route endpoints need Fastify+SSE |
 | `sse.ts` | 0/1 | 0% | Needs SSE stream testing approach |
 | `calendar.ts` | 3/3 | 100% | Complete (Google Calendar via service fake) |
 | `pairing.ts` | — | — | Being removed (Dropbox relay → XState migration) |
@@ -129,12 +131,10 @@ This enables state snapshots, a state catalog for development, and agent-friendl
 
 ## 3. Chat Session Behavioral Tests
 
-**Status:** Partially covered — extraction logic is doctest'd, pipeline is not
+**Status:** Partially covered — extraction logic, session state, and session log parsing are doctest'd; subprocess pipeline is not
 **Priority:** Medium
 
-The `<chat-response>` extraction logic is well tested in doctests. What's not tested: the full pipeline from incoming message through session management to response delivery.
-
-Testable without Claude: session pool rotation, session persistence, thread file operations, stream parsing, typing indicators. These could be doctests with appropriate helpers.
+The `<chat-response>` extraction logic is well tested in doctests. `ChatSession` state management (constructor, persistence, reset, history) and the full `parseSessionLog` pipeline are now covered. What's not tested: the subprocess pipeline (send/interrupt/event streaming), pool rotation, thread file operations.
 
 What requires Claude (or a substitute): whether the agent actually uses `<chat-response>` tags, acknowledges first, etc. Options: mock Claude subprocess for pipeline testing, periodic live validation for behavioral testing.
 
@@ -239,3 +239,4 @@ Rendered output includes markup (`data-source` attributes) indicating where each
 - **2026-03-03:** Made `runAgent()` and `AgentOptions` private in `agent.ts`. Converted procedure engine from `runAgent` to `createAgent` factory. All agent consumers now use the `Agent` interface — using the old internal interface is a type error. Total: 829 tests across 47 files.
 - **2026-03-03:** Reactor restructured from single 680-line `reactor.ts` into `src/core/reactor/` directory with 9 source files, DESIGN.md (architecture/rationale), and CLAUDE.md (agent context). Added 50 new tests: job discovery (priority sorting, type filter), procedure detection (ref/directive extraction, error recovery), job descriptions (ref inlining, schema instructions), batch processing (single/multi job, dry run, skipLowPriority), chat processing (per-thread sessions, separate agents), procedure trampoline (bypasses agent), lock management (concurrent/stale), multi-cycle behavior. Split test files: `reactor.doctest.md` (unit) + `reactor-integration.doctest.md` (fake agent integration), `procedure-engine.doctest.md` (shell-only) + `procedure-agent.doctest.md` (agent injection). Total: 879 tests across 49 files.
 - **2026-03-03:** Extended scheduler/schedule subsystem tests. Added `schedule-state.doctest.md` tests for state persistence (load/save round-trip), lock files (acquire/release/load, lock-group, stale lock cleanup). Created `scheduler.doctest.md` for utility functions (`boxLogFile`, `isBox`). Daemon loop and config load/save skipped (infinite loop, global paths). Total: 891 tests across 51 files.
+- **2026-03-03:** Chat session and session log parsing tests. `chat-session.doctest.md`: ChatSession constructor, session ID persistence (load, corrupt file, reset), getHistory (no session, missing log file). `chat-routes.doctest.md`: `getSessionLogPath`/`getSessionDir` path encoding, `parseSessionLog` (empty, user+assistant entries, tool-only filtering, non-user/assistant filtering, pagination), `transformContent` (all block types including redacted thinking), `summarizeToolInput` (7 tool types), `summarizeToolResult`, TTS voice validation logic. Total: 931 tests across 53 files.
