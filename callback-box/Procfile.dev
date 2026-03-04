@@ -1,0 +1,2 @@
+backend: node --watch --import tsx ./src/webapp/server.ts ~/src/boxes/test1
+frontend: npx vite dev --config src/frontend/vite.config.ts

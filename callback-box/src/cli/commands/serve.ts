@@ -56,62 +56,38 @@ export const serveCommand = new Command("serve")
     const boxes = resolveBoxes(boxDirs);
 
     if (options.dev) {
-      // Run with tsx --watch for auto-reload
-      const srcFile = path.resolve(
-        import.meta.dirname,
-        "../../../src/cli/index.ts"
-      );
+      // exec into node --watch with tsx loader, bypassing the CLI wrapper.
+      // Uses node's native watcher (not tsx --watch) for proper signal handling.
+      const projectDir = path.resolve(import.meta.dirname, "../../..");
+      const serverTs = path.join(projectDir, "src/webapp/server.ts");
+      const srcDir = path.join(projectDir, "src");
+      const resolvedDirs = boxDirs.map((d) => path.resolve(d));
 
       const args = [
-        "--watch", srcFile, "serve",
-        "--port", String(port),
-        "--host", options.host,
-        ...boxDirs,
+        "--watch",
+        `--watch-path=${srcDir}`,
+        "--import", "tsx",
+        serverTs,
+        ...resolvedDirs,
       ];
 
-      console.log(`Starting dev server with auto-reload on http://${options.host}:${port}`);
-
-      const tsconfigPath = path.resolve(import.meta.dirname, "../../../tsconfig.json");
-
-      const child = spawn("npx", ["tsx", ...args], {
-        stdio: "inherit",
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          TSX_TSCONFIG_PATH: tsconfigPath,
-        },
-      });
-
-      const cleanup = () => {
-        if (child.pid && !child.killed) {
-          try {
-            child.kill("SIGTERM");
-          } catch {
-            // Already dead
-          }
-        }
+      // Set PORT/HOST as env vars for the server entry point
+      const env = {
+        ...process.env,
+        PORT: String(port),
+        HOST: options.host,
       };
 
-      process.on("SIGINT", () => {
-        cleanup();
-      });
+      // Spawn node --watch and forward signals for clean shutdown.
+      // stdio: "inherit" makes the child own the terminal.
+      const child = spawn(process.execPath, args, { stdio: "inherit", env });
 
-      process.on("SIGTERM", () => {
-        cleanup();
-        process.exit(0);
-      });
+      // Forward signals to child
+      const forward = (sig: NodeJS.Signals) => child.kill(sig);
+      process.on("SIGINT", () => forward("SIGINT"));
+      process.on("SIGTERM", () => forward("SIGTERM"));
 
-      process.on("exit", cleanup);
-
-      child.on("error", (err) => {
-        console.error("Failed to start dev server:", err.message);
-        process.exit(1);
-      });
-
-      child.on("exit", (code) => {
-        process.exit(code ?? 0);
-      });
-
+      child.on("exit", (code) => process.exit(code ?? 0));
       return;
     }
 

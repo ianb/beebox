@@ -17,6 +17,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | In use via react-markdown + remark-gfm. |
 | 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | All adopted: execa, date-fns, html-entities, sanitize-filename, proper-lockfile, ky. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated. 5 machine files (~1050 lines), replaced ~30 useState + ~15 useRef hooks. |
+| 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Procfile.dev + standalone server.ts entry point. `cb serve --dev` uses node --watch directly. |
 
 ### Up next
 
@@ -38,7 +39,6 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 16 | [react-hotkeys-hook](#decision-16-keyboard-shortcuts--react-hotkeys-hook) | Add when shortcuts are needed. |
 | 17 | [Phosphor Icons](#decision-17-icons--phosphor-icons) | Add when icon surface grows. |
 | 18 | [Mistral Voxtral](#decision-18-speech-recognition--mistral-voxtra) | Note for future model preference. |
-| 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Zombie processes are tolerable. Adopt when painful enough. |
 | 21 | [View Transitions API](#decision-21-page-transitions--view-transitions-api) | Pure CSS, no dependency. Add when transitions are desired. |
 | 22 | [rehype-highlight](#decision-22-syntax-highlighting--rehype-highlight-or-rehype-prism) | Do when touching the markdown pipeline for other reasons. |
 
@@ -989,7 +989,24 @@ May not be needed immediately — `node --watch` already has some built-in debou
 
 ### Implementation notes
 
-Not started. No Procfile exists. Overmind requires tmux and is installed via `brew install overmind`. The zombie process problem is real but tolerable in practice — adopt when it becomes enough of a pain point.
+**Done.** Three entry points, all using `node --watch --import tsx` directly (no `npx tsx --watch`):
+
+1. **`cb serve --dev [dirs...]`** — spawns `node --watch` with signal forwarding. Accepts same port/host/dir args as production mode.
+2. **`Procfile.dev`** — for Overmind: `overmind start -f Procfile.dev` runs backend + vite frontend together. Edit box dirs in the file.
+3. **`.thinking/services/cb-serve`** — shell script with `exec` for Thinking Machine's ServiceManager.
+
+`server.ts` has a standalone entry point that accepts box dirs as argv and PORT/HOST as env vars, so all three approaches use it directly without the CLI wrapper.
+
+```bash
+# Option A: CLI (backend only)
+cb serve --dev ~/src/boxes/test1
+
+# Option B: Overmind (backend + frontend)
+brew install overmind  # one-time, requires tmux
+cd callback-box && overmind start -f Procfile.dev
+overmind restart backend    # restart just the server
+overmind connect backend    # attach to tmux session
+```
 
 ---
 

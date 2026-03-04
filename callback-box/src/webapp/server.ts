@@ -377,7 +377,20 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
   }
 }
 
-// Allow running directly
+// Allow running directly: node --import tsx ./src/webapp/server.ts [boxDirs...]
+// Supports PORT and HOST env vars (standard Procfile convention).
 if (import.meta.url.endsWith(process.argv[1]?.replace(/^file:\/\//, "") ?? "")) {
-  startServer();
+  const dirs = process.argv.slice(2);
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : undefined;
+  const host = process.env.HOST || undefined;
+
+  const boxes: BoxSpec[] | undefined =
+    dirs.length > 0
+      ? dirs.map((dir) => {
+          const boxRoot = path.resolve(dir);
+          return { slug: path.basename(boxRoot), boxRoot };
+        })
+      : undefined;
+
+  startServer({ port, host, boxes });
 }
