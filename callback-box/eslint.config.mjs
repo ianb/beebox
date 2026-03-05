@@ -1,6 +1,6 @@
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 export default [
-  ...vibeCheck({ react: false, ignores: ["src/frontend/**"] }),
+  ...vibeCheck({ react: false, ignores: ["src/frontend/**", "**/*.mjs"] }),
   {
     rules: {
       "no-optional-chaining/no-optional-chaining": "off",

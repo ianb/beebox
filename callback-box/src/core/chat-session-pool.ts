@@ -12,6 +12,14 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { ChatThreadSession } from "./chat-thread-session.js";
 
+function getPublicUrl(): string {
+  return process.env.CB_PUBLIC_URL || process.env.PUBLIC_URL || "";
+}
+
+function getBoxSlug(boxRoot: string): string {
+  return path.basename(boxRoot);
+}
+
 const SESSIONS_FILE = ".callback-box/chat-thread-sessions.json";
 
 /** Max messages before rotating to a fresh session */
@@ -95,8 +103,19 @@ export class ChatSessionPool {
     };
     session.on("chat-response", handleResponse);
 
+    // Append session link info if the session ID is known (resumed sessions)
+    const currentSessionId = session.getSessionId();
+    let enrichedMessage = message;
+    if (currentSessionId) {
+      const publicUrl = getPublicUrl();
+      const boxSlug = getBoxSlug(this.boxRoot);
+      if (publicUrl) {
+        enrichedMessage += `\n\n[Session link: ${publicUrl}/${boxSlug}/chat?session=${currentSessionId} — share this if the user asks to follow along with what you're doing.]`;
+      }
+    }
+
     try {
-      await session.send(message);
+      await session.send(enrichedMessage);
 
       // Update store after successful turn
       const record = store[threadRef];

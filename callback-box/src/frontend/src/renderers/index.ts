@@ -73,5 +73,5 @@ export function getRenderers(filePath: string, data: FileData): FileRenderer[] {
       return false;
     })
     .map(r => r.renderer)
-    .sort((a, b) => b.priority - a.priority);
+    .toSorted((a, b) => b.priority - a.priority);
 }

@@ -7,12 +7,19 @@
  * GET  /api/chat/status    - Check session status
  */
 
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import ky from "ky";
 import type { FastifyInstance } from "fastify";
 import { ChatSession, type ChatMessage } from "../../core/chat-session.js";
 import { WebSocket as WsWebSocket } from "ws";
 import type { BroadcastEventFn } from "./sse.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
+import {
+  listSessions,
+  getSessionLogPath,
+  parseSessionLog,
+} from "../../cli/lib/session.js";
 
 interface SendBody {
   message: string;
@@ -145,8 +152,98 @@ export async function registerChatRoutes(
   );
 
   // GET /api/chat/history - Load conversation history
-  server.get("/api/chat/history", async () => {
-    return chatSession.getHistory();
+  // Optional ?session=<id> to view any session's history (read-only)
+  server.get<{ Querystring: { session?: string } }>("/api/chat/history", async (request) => {
+    const sessionId = request.query.session;
+    if (!sessionId) {
+      return chatSession.getHistory();
+    }
+    // Load from JSONL file directly
+    const logPath = getSessionLogPath(boxRoot, sessionId);
+    try {
+      const { entries } = await parseSessionLog({ logPath });
+      return { sessionId, entries };
+    } catch (_e) {
+      return { sessionId, entries: [] };
+    }
+  });
+
+  // GET /api/chat/sessions - List all known sessions with metadata
+  server.get("/api/chat/sessions", async () => {
+    const activeSessionId = chatSession.getSessionId();
+
+    // Source 1: Interactive chat session
+    const knownSessions = new Map<string, { source: string; label: string; lastUsedAt: string; isActive: boolean }>();
+    if (activeSessionId) {
+      knownSessions.set(activeSessionId, {
+        source: "chat",
+        label: "Chat",
+        lastUsedAt: new Date().toISOString(),
+        isActive: true,
+      });
+    }
+
+    // Source 2: Telegram thread sessions
+    const threadSessionsPath = path.join(boxRoot, ".callback-box/chat-thread-sessions.json");
+    try {
+      const data = await fs.readFile(threadSessionsPath, "utf-8");
+      const threadSessions = JSON.parse(data) as Record<string, { sessionId: string; lastUsedAt: string; messageCount: number }>;
+      for (const [threadRef, record] of Object.entries(threadSessions)) {
+        if (!knownSessions.has(record.sessionId)) {
+          // Extract a label from the thread ref (e.g., "box/inbox/telegram/family-group/thread.chat.card" → "telegram/family-group")
+          const parts = threadRef.split("/");
+          const telegramIdx = parts.indexOf("telegram");
+          const label = telegramIdx !== -1 ? parts.slice(telegramIdx + 1, -1).join("/") || "Telegram" : threadRef;
+          knownSessions.set(record.sessionId, {
+            source: "telegram",
+            label: `Telegram: ${label}`,
+            lastUsedAt: record.lastUsedAt,
+            isActive: false,
+          });
+        }
+      }
+    } catch (_e) {
+      // No telegram sessions
+    }
+
+    // Source 3: Reactor chat sessions
+    const reactorSessionsPath = path.join(boxRoot, ".callback-box/chat-sessions.json");
+    try {
+      const data = await fs.readFile(reactorSessionsPath, "utf-8");
+      const reactorSessions = JSON.parse(data) as Record<string, { sessionId: string; lastUsedAt: string; messageCount: number }>;
+      for (const [threadRef, record] of Object.entries(reactorSessions)) {
+        if (!knownSessions.has(record.sessionId)) {
+          knownSessions.set(record.sessionId, {
+            source: "reactor",
+            label: `Reactor: ${threadRef}`,
+            lastUsedAt: record.lastUsedAt,
+            isActive: false,
+          });
+        }
+      }
+    } catch (_e) {
+      // No reactor sessions
+    }
+
+    // Source 4: All JSONL files (catches sessions not tracked above)
+    const allSessions = await listSessions(boxRoot);
+    for (const s of allSessions) {
+      if (!knownSessions.has(s.sessionId)) {
+        knownSessions.set(s.sessionId, {
+          source: "unknown",
+          label: s.sessionId.slice(0, 12),
+          lastUsedAt: s.mtime.toISOString(),
+          isActive: false,
+        });
+      }
+    }
+
+    // Sort by lastUsedAt descending
+    const sessions = [...knownSessions.entries()]
+      .map(([sessionId, meta]) => ({ sessionId, ...meta }))
+      .toSorted((a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime());
+
+    return { sessions };
   });
 
   // POST /api/chat/interrupt - Interrupt current turn

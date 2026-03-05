@@ -64,7 +64,12 @@ CAPABILITIES:
 
 COMMIT DISCIPLINE:
 - If you make file changes, commit them with a descriptive message.
-- Include a Session trailer in commits.`;
+- Include a Session trailer in commits.
+
+SESSION LINK:
+- Each message includes a session link that lets the user view your work in a web browser.
+- If the user asks to see what you're doing or follow along, share this link via <chat-response>.
+- Do NOT share it proactively — only when asked.`;
 }
 
 export class ChatThreadSession extends EventEmitter {

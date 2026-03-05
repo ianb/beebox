@@ -46,7 +46,7 @@ export function QueryPrompt({
   return (
     <div className="my-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
       <p className="font-medium text-amber-900 mb-2">{query.prompt}</p>
-      {query.text && <p className="text-sm text-amber-700 mb-3">{query.text}</p>}
+      {query.text ? <p className="text-sm text-amber-700 mb-3">{query.text}</p> : null}
       {showVoice ? (
         <InlineVoiceRecorder
           onComplete={handleVoiceComplete}
@@ -69,7 +69,7 @@ export function QueryPrompt({
             >
               Submit
             </button>
-            {onVoiceResponse && (
+            {onVoiceResponse ? (
               <button
                 onClick={() => setShowVoice(true)}
                 className="px-4 py-2 border border-amber-300 text-amber-800 text-sm rounded hover:bg-amber-100 flex items-center gap-1"
@@ -77,7 +77,7 @@ export function QueryPrompt({
                 <MicrophoneIcon className="w-4 h-4" />
                 Voice Response
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       )}

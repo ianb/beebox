@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit && cd src/frontend && npx tsc --noEmit",
     "typecheck:frontend": "cd src/frontend && npm run typecheck",
     "typecheck:all": "npm run typecheck && npm run typecheck:frontend",
-    "lint": "tsc --noEmit",
+    "lint": "eslint src/ && cd src/frontend && npx eslint src/",
     "start": "node dist/webapp/server.js",
     "cli": "node dist/cli/index.js",
     "test": "tap",
@@ -92,7 +92,10 @@
     "zod": "^3.24.0"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx}": [
+    "src/frontend/src/**/*.{ts,tsx,js}": [
+      "eslint --config src/frontend/eslint.config.mjs"
+    ],
+    "src/!(frontend)/**/*.ts": [
       "eslint"
     ]
   }

@@ -24,6 +24,7 @@ class PcmProcessor extends AudioWorkletProcessor {
     const ratio = sampleRate / TARGET_SAMPLE_RATE;
 
     // Downsample via linear interpolation
+    // eslint-disable-next-line unicorn/no-for-loop -- AudioWorkletProcessor may not support for-of on Float32Array
     for (let i = 0; i < sourceData.length; i++) {
       const targetIndex = i / ratio;
       const idx = Math.floor(targetIndex);
@@ -43,7 +44,7 @@ class PcmProcessor extends AudioWorkletProcessor {
       const int16 = new Int16Array(CHUNK_SAMPLES);
       for (let i = 0; i < CHUNK_SAMPLES; i++) {
         const s = Math.max(-1, Math.min(1, this._buffer[i]));
-        int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
 
       this.port.postMessage(
