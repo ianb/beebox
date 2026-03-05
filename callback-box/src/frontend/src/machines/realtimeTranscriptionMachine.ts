@@ -244,6 +244,14 @@ export const realtimeTranscriptionMachine = setup({
           target: "idle",
           actions: "setError",
         },
+        SERVER_ERROR: {
+          target: "idle",
+          actions: "setError",
+        },
+        WS_CLOSED: {
+          target: "idle",
+          actions: assign({ error: "Connection closed before transcription started" }),
+        },
         SETUP_ERROR: {
           target: "idle",
           actions: "setError",

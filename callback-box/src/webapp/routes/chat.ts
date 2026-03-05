@@ -246,14 +246,16 @@ export async function registerChatRoutes(
       const queued: string[] = [];
       let mistralReady = false;
 
-      console.log("[transcribe-ws] Browser connected, opening Mistral WebSocket...");
+      const keyPrefix = apiKey.slice(0, 8);
+      console.log(`[transcribe-ws] Browser connected. Key: ${keyPrefix}..., model: ${mistralModel}`);
+      console.log(`[transcribe-ws] Connecting to ${mistralUrl}`);
 
       const mistral = new WsWebSocket(mistralUrl, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
 
       mistral.on("open", () => {
-        console.log("[transcribe-ws] Mistral connected, waiting for session.created...");
+        console.log("[transcribe-ws] Mistral WebSocket open, waiting for session.created...");
         // Mistral sends session.created automatically; no session.update needed.
         // Mark ready immediately — queued audio will be flushed.
         mistralReady = true;
@@ -273,16 +275,19 @@ export async function registerChatRoutes(
       });
 
       mistral.on("error", (err) => {
-        console.error("[transcribe-ws] Mistral error:", err.message);
+        console.error(`[transcribe-ws] Mistral error: ${err.message}`);
         if (socket.readyState === socket.OPEN) {
-          socket.send(JSON.stringify({ type: "error", error: `Mistral: ${err.message}` }));
+          socket.send(JSON.stringify({ type: "error", error: `Transcription failed: ${err.message}` }));
           socket.close(1011, "Mistral error");
         }
       });
 
       mistral.on("close", (code, reason) => {
-        console.log(`[transcribe-ws] Mistral closed: ${code} ${reason.toString()}`);
+        const reasonStr = reason.toString() || "(no reason)";
+        console.log(`[transcribe-ws] Mistral closed: code=${code} reason=${reasonStr}`);
         if (socket.readyState === socket.OPEN) {
+          // Send error to client so it knows transcription failed
+          socket.send(JSON.stringify({ type: "error", error: `Transcription connection closed (code ${code})` }));
           socket.close(1000, "Mistral closed");
         }
       });
