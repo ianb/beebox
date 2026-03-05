@@ -69,8 +69,21 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
     );
   }
 
-  // Always write .gitattributes (LFS rules)
-  const gitattributes = `# Track frozen page captures in Git LFS
+  // Always write .gitattributes (LFS rules for binary files)
+  const gitattributes = `# Audio files (voice memos, recordings)
+*.m4a filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+
+# Images
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.heic filter=lfs diff=lfs merge=lfs -text
+
+# Frozen page captures
 *.frozen filter=lfs diff=lfs merge=lfs -text
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitattributes"), gitattributes);
