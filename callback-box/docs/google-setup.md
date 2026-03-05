@@ -41,7 +41,7 @@ Go to **APIs & Services → Credentials**:
 2. Application type: **Web application** (not Desktop)
 3. Name: "Callback Box" (or anything)
 4. Under **Authorized redirect URIs**, add the URIs for your setup:
-   - **Web (recommended):** `https://<your-server>/<boxSlug>/api/admin/google-oauth/callback`
+   - **Web (recommended):** `https://<your-server>/auth/google-services/callback`
    - **CLI:** `http://localhost:8976/oauth/callback`
 5. Click **Create**
 6. Copy the **Client ID** and **Client Secret** — set them as `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` env vars on the server (these are the same credentials used for app login)
@@ -94,7 +94,7 @@ cb calendar upcoming
 
 ### `redirect_uri_mismatch`
 
-The redirect URI in your OAuth client must exactly match the one you're using. For CLI: `http://localhost:8976/oauth/callback`. For web: `https://<your-server>/<boxSlug>/api/admin/google-oauth/callback`. Check for trailing slashes or `https` vs `http`.
+The redirect URI in your OAuth client must exactly match the one you're using. For CLI: `http://localhost:8976/oauth/callback`. For web: `https://<your-server>/auth/google-services/callback`. Check for trailing slashes or `https` vs `http`.
 
 ### Token expired / invalid_grant
 

@@ -23,7 +23,7 @@ import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerAuthRoutes } from "./routes/auth.js";
-import { registerSystemAdminRoutes, registerBoxAdminRoutes } from "./routes/admin.js";
+import { registerSystemAdminRoutes, registerBoxAdminRoutes, registerGoogleServicesCallback } from "./routes/admin.js";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
@@ -95,6 +95,10 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   // System-wide admin routes (Claude Code auth)
   await server.register(async (instance) => {
     await registerSystemAdminRoutes(instance, options.services ?? {});
+  });
+  // Root-level Google Services OAuth callback (single redirect URI for all boxes)
+  await server.register(async (instance) => {
+    await registerGoogleServicesCallback(instance, { boxes });
   });
 
   // Build info — written by deploy.sh, shows what's deployed

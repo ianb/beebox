@@ -12,7 +12,6 @@
  *   POST /api/admin/telegram-disconnect — remove Telegram config
  *   GET  /api/admin/google-status — Google OAuth status
  *   POST /api/admin/google-setup — save credentials, get auth URL
- *   GET  /api/admin/google-oauth/callback — OAuth callback from Google
  *   POST /api/admin/google-disconnect — remove Google tokens
  *   GET  /api/admin/box-config — box config (allowedEmails, publicUrl)
  *   POST /api/admin/box-config — update box config fields
@@ -68,6 +67,51 @@ export async function registerSystemAdminRoutes(server: FastifyInstance, service
 
   server.post("/api/admin/claude-logout", async () => {
     return claude.authLogout();
+  });
+}
+
+/**
+ * Root-level Google Services OAuth callback. Registered at root so one redirect URI
+ * works for all boxes — the box slug is passed via the OAuth `state` parameter.
+ *
+ *   GET /auth/google-services/callback — OAuth callback from Google
+ */
+export async function registerGoogleServicesCallback(server: FastifyInstance, { boxes }: { boxes: Array<{ slug: string; boxRoot: string }> }) {
+  server.get("/auth/google-services/callback", async (request, reply) => {
+    const { code, state } = request.query as { code?: string; state?: string };
+    const boxSlug = state || "";
+    const box = boxes.find((b) => b.slug === boxSlug);
+
+    if (!box) {
+      return reply.status(400).send({ error: `Unknown box: ${boxSlug}` });
+    }
+
+    if (!code) {
+      return reply.redirect(`/${boxSlug}/admin?google=error&message=No+code+received`);
+    }
+
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return reply.redirect(`/${boxSlug}/admin?google=error&message=OAuth+not+configured`);
+    }
+
+    const publicUrl = await loadPublicUrl(box.boxRoot);
+    const redirectUri = `${publicUrl || "http://localhost:3210"}/auth/google-services/callback`;
+    const oauth2Client = createOAuth2Client({ clientId, clientSecret, redirectUri });
+
+    try {
+      const { tokens } = await oauth2Client.getToken(code);
+      const updates: Partial<GoogleSecretConfig> = {};
+      if (tokens.refresh_token) updates.refreshToken = tokens.refresh_token;
+      if (tokens.access_token) updates.accessToken = tokens.access_token;
+      if (tokens.expiry_date) updates.tokenExpiry = new Date(tokens.expiry_date).toISOString();
+      await saveGoogleSecret(box.boxRoot, updates);
+      return reply.redirect(`/${boxSlug}/admin?google=connected`);
+    } catch (err) {
+      const message = encodeURIComponent((err as Error).message);
+      return reply.redirect(`/${boxSlug}/admin?google=error&message=${message}`);
+    }
   });
 }
 
@@ -194,7 +238,7 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   }
 
   function getGoogleRedirectUri(publicUrl: string | undefined): string {
-    return `${publicUrl || "http://localhost:3210"}/${boxSlug}/api/admin/google-oauth/callback`;
+    return `${publicUrl || "http://localhost:3210"}/auth/google-services/callback`;
   }
 
   server.get("/api/admin/google-status", async () => {
@@ -227,38 +271,10 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
       access_type: "offline",
       scope: GOOGLE_SCOPES,
       prompt: "consent",
+      state: boxSlug,
     });
 
     return { authUrl };
-  });
-
-  server.get("/api/admin/google-oauth/callback", async (request, reply) => {
-    const { code } = request.query as { code?: string };
-    if (!code) {
-      return reply.redirect(`/${boxSlug}/admin?google=error&message=No+code+received`);
-    }
-
-    const creds = getGoogleOAuthCreds();
-    if (!creds) {
-      return reply.redirect(`/${boxSlug}/admin?google=error&message=OAuth+not+configured`);
-    }
-
-    const publicUrl = await loadPublicUrl(boxRoot);
-    const redirectUri = getGoogleRedirectUri(publicUrl);
-    const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
-
-    try {
-      const { tokens } = await oauth2Client.getToken(code);
-      const updates: Partial<GoogleSecretConfig> = {};
-      if (tokens.refresh_token) updates.refreshToken = tokens.refresh_token;
-      if (tokens.access_token) updates.accessToken = tokens.access_token;
-      if (tokens.expiry_date) updates.tokenExpiry = new Date(tokens.expiry_date).toISOString();
-      await saveGoogleSecret(boxRoot, updates);
-      return reply.redirect(`/${boxSlug}/admin?google=connected`);
-    } catch (err) {
-      const message = encodeURIComponent((err as Error).message);
-      return reply.redirect(`/${boxSlug}/admin?google=error&message=${message}`);
-    }
   });
 
   server.post("/api/admin/google-disconnect", async () => {
