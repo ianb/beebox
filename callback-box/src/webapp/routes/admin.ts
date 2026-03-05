@@ -289,12 +289,13 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
 
   server.get("/api/admin/box-config", async () => {
     const configPath = path.join(boxRoot, "config/box.json");
+    const ownerEmail = process.env.CB_OWNER_EMAIL || null;
     try {
       const raw = await fs.readFile(configPath, "utf-8");
       const config = JSON.parse(raw);
-      return { boxSlug, allowedEmails: config.allowedEmails ?? [], publicUrl: config.publicUrl ?? null };
+      return { boxSlug, allowedEmails: config.allowedEmails ?? [], publicUrl: config.publicUrl ?? null, ownerEmail };
     } catch {
-      return { boxSlug, allowedEmails: [], publicUrl: null };
+      return { boxSlug, allowedEmails: [], publicUrl: null, ownerEmail };
     }
   });
 

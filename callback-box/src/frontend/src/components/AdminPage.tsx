@@ -308,6 +308,7 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
 
 function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
   const [emails, setEmails] = useState<string[]>([]);
+  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
@@ -319,6 +320,7 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
       if (!resp.ok) throw new Error(`Failed to load config: ${resp.status}`);
       const data = await resp.json();
       setEmails(data.allowedEmails ?? []);
+      setOwnerEmail(data.ownerEmail ?? null);
       setError(null);
     } catch (err) {
       setError((err as Error).message);
@@ -380,6 +382,13 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
       <p className="text-sm text-warm-700 mb-4">
         Email addresses that can access this box. Leave empty to allow all authenticated users.
       </p>
+
+      {ownerEmail ? (
+        <div className="mb-4 p-2 bg-warm-50 border border-warm-200 rounded text-sm flex items-center gap-2">
+          <span className="flex-1 text-warm-800">{ownerEmail}</span>
+          <span className="text-xs text-warm-500">owner — always has access</span>
+        </div>
+      ) : null}
 
       {emails.length > 0 ? (
         <div className="mb-4 space-y-2">
