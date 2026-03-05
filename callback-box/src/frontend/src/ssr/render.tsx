@@ -176,7 +176,7 @@ interface PrefetchOptions {
   routePath: string;
 }
 
-async function prefetchData(opts: PrefetchOptions): Promise<QueryClient> {
+async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: QueryClient; caller: ReturnType<typeof appRouter.createCaller> }> {
   const { boxRoot, slug, routePath } = opts;
   const ctx: TrpcContext = {
     boxRoot,

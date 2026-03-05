@@ -7,3 +7,4 @@ dist/
 .thinking/
 .thinking/local/
 .tap/
+deploy-info.json

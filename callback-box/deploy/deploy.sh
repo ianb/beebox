@@ -29,6 +29,8 @@ RSYNC_OPTS=(-az --delete
   --exclude '.env'
   --exclude '.thinking/'
   --exclude '.claude/'
+  --exclude 'deploy-info.json'
+  --exclude 'deploy-history.json'
 )
 
 # Build frontend locally (fast — already has node_modules)
@@ -58,6 +60,48 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     npm install --no-audit --no-fund
   fi
 REMOTE
+
+# Write deploy info (git hashes + timestamp)
+echo "Writing deploy info..."
+DEPLOY_INFO=$(cat <<INFOEOF
+{
+  "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "commits": {
+$(for repo in cardworks callback-dropbox callback-box; do
+  local_path="$MONO_DIR/$repo/"
+  if [[ -d "$local_path/.git" ]]; then
+    hash=$(cd "$local_path" && git rev-parse --short HEAD)
+    subject=$(cd "$local_path" && git log -1 --format=%s)
+    echo "    \"$repo\": { \"hash\": \"$hash\", \"subject\": \"$subject\" },"
+  fi
+done)
+    "_": null
+  }
+}
+INFOEOF
+)
+ssh "root@$SERVER_IP" "cat > $INSTALL_DIR/callback-box/deploy-info.json" <<< "$DEPLOY_INFO"
+
+# Append to deploy history (keep last 20 entries)
+ssh "root@$SERVER_IP" bash -s <<HISTEOF
+  HIST_FILE="$INSTALL_DIR/callback-box/deploy-history.json"
+  if [[ -f "\$HIST_FILE" ]]; then
+    # Prepend new entry, keep last 20
+    node -e "
+      const fs = require('fs');
+      const hist = JSON.parse(fs.readFileSync('\$HIST_FILE', 'utf-8'));
+      const entry = JSON.parse(fs.readFileSync('$INSTALL_DIR/callback-box/deploy-info.json', 'utf-8'));
+      hist.unshift(entry);
+      fs.writeFileSync('\$HIST_FILE', JSON.stringify(hist.slice(0, 20), null, 2));
+    "
+  else
+    node -e "
+      const fs = require('fs');
+      const entry = JSON.parse(fs.readFileSync('$INSTALL_DIR/callback-box/deploy-info.json', 'utf-8'));
+      fs.writeFileSync('\$HIST_FILE', JSON.stringify([entry], null, 2));
+    "
+  fi
+HISTEOF
 
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then

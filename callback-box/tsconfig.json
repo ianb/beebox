@@ -4,7 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "jsx": "react-jsx",
-    "jsxImportSource": "cardworks/jsx",
+    "jsxImportSource": "react",
     "strict": true,
     "noImplicitAny": true,
     "noUncheckedIndexedAccess": true,

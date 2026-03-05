@@ -97,6 +97,22 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     await registerSystemAdminRoutes(instance, options.services ?? {});
   });
 
+  // Build info — written by deploy.sh, shows what's deployed
+  const deployInfoDir = path.join(import.meta.dirname, "../..");
+  server.get("/api/build-info", async () => {
+    try {
+      const raw = fs.readFileSync(path.join(deployInfoDir, "deploy-info.json"), "utf-8");
+      const current = JSON.parse(raw);
+      let history: unknown[] = [];
+      try {
+        history = JSON.parse(fs.readFileSync(path.join(deployInfoDir, "deploy-history.json"), "utf-8"));
+      } catch (_e) { /* no history yet */ }
+      return { current, history };
+    } catch (_e) {
+      return { error: "No deploy info available" };
+    }
+  });
+
   // Root-level box list endpoint (filtered by user access when auth enabled)
   server.get("/api/boxes", async (request) => {
     if (isAuthEnabled()) {
