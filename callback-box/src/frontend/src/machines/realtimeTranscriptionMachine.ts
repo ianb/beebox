@@ -227,104 +227,96 @@ export const realtimeTranscriptionMachine = setup({
     idle: {
       on: {
         START: {
-          target: "connecting",
+          target: "active",
           actions: "clearTranscript",
         },
       },
     },
-    connecting: {
+    active: {
+      // Actor lives across connecting → recording → finalizing
       invoke: {
         id: "transcriber",
         src: "transcriptionActor",
         input: {},
       },
+      initial: "connecting",
       on: {
-        WS_CONNECTED: "recording",
-        WS_ERROR: {
-          target: "idle",
-          actions: "setError",
-        },
+        // Events that return to idle from any active substate
         SERVER_ERROR: {
           target: "idle",
           actions: "setError",
         },
-        WS_CLOSED: {
-          target: "idle",
-          actions: assign({ error: "Connection closed before transcription started" }),
-        },
-        SETUP_ERROR: {
+        WS_ERROR: {
           target: "idle",
           actions: "setError",
         },
-        CANCEL: {
-          target: "idle",
-          actions: "clearTranscript",
-        },
+        WS_CLOSED: "idle",
       },
-    },
-    recording: {
-      on: {
-        TEXT_DELTA: {
-          actions: "appendDelta",
-        },
-        STOP: {
-          target: "finalizing",
-          actions: ({ system }) => {
-            const transcriber = system.get("transcriber");
-            if (transcriber) {
-              transcriber.send({ type: "STOP" });
-            }
-          },
-        },
-        CANCEL: {
-          target: "idle",
-          actions: [
-            "clearTranscript",
-            ({ system }) => {
-              const transcriber = system.get("transcriber");
-              if (transcriber) {
-                transcriber.send({ type: "CANCEL" });
-              }
+      states: {
+        connecting: {
+          on: {
+            WS_CONNECTED: "recording",
+            SETUP_ERROR: {
+              target: "#realtimeTranscription.idle",
+              actions: "setError",
             },
-          ],
-        },
-        TRANSCRIPTION_DONE: {
-          target: "idle",
-          actions: "setFinalTranscript",
-        },
-        SERVER_ERROR: {
-          target: "idle",
-          actions: "setError",
-        },
-        WS_CLOSED: "idle",
-        WS_ERROR: {
-          target: "idle",
-          actions: "setError",
-        },
-      },
-    },
-    finalizing: {
-      after: {
-        FINALIZE_TIMEOUT: {
-          target: "idle",
-          actions: () => {
-            console.warn("[realtime-transcription] Timed out waiting for transcription.done");
+            CANCEL: {
+              target: "#realtimeTranscription.idle",
+              actions: "clearTranscript",
+            },
           },
         },
-      },
-      on: {
-        TEXT_DELTA: {
-          actions: "appendDelta",
+        recording: {
+          on: {
+            TEXT_DELTA: {
+              actions: "appendDelta",
+            },
+            STOP: {
+              target: "finalizing",
+              actions: ({ system }) => {
+                const transcriber = system.get("transcriber");
+                if (transcriber) {
+                  transcriber.send({ type: "STOP" });
+                }
+              },
+            },
+            CANCEL: {
+              target: "#realtimeTranscription.idle",
+              actions: [
+                "clearTranscript",
+                ({ system }) => {
+                  const transcriber = system.get("transcriber");
+                  if (transcriber) {
+                    transcriber.send({ type: "CANCEL" });
+                  }
+                },
+              ],
+            },
+            TRANSCRIPTION_DONE: {
+              target: "#realtimeTranscription.idle",
+              actions: "setFinalTranscript",
+            },
+          },
         },
-        TRANSCRIPTION_DONE: {
-          target: "idle",
-          actions: "setFinalTranscript",
+        finalizing: {
+          after: {
+            FINALIZE_TIMEOUT: {
+              target: "#realtimeTranscription.idle",
+              actions: () => {
+                console.warn("[realtime-transcription] Timed out waiting for transcription.done");
+              },
+            },
+          },
+          on: {
+            TEXT_DELTA: {
+              actions: "appendDelta",
+            },
+            TRANSCRIPTION_DONE: {
+              target: "#realtimeTranscription.idle",
+              actions: "setFinalTranscript",
+            },
+          },
         },
-        SERVER_ERROR: {
-          target: "idle",
-          actions: "setError",
-        },
-        WS_CLOSED: "idle",
       },
     },
   },

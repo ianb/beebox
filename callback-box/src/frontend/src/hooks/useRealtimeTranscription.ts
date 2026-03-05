@@ -44,12 +44,12 @@ export function useRealtimeTranscription(
   const doneResolveRef = useRef<((text: string) => void) | null>(null);
   const prevTranscriptRef = useRef("");
 
-  // Map machine state to TranscriptionState
-  const state: TranscriptionState = snapshot.matches("recording")
+  // Map machine state to TranscriptionState (nested under "active" parent)
+  const state: TranscriptionState = snapshot.matches({ active: "recording" })
     ? "recording"
-    : snapshot.matches("finalizing")
+    : snapshot.matches({ active: "finalizing" })
       ? "finalizing"
-      : snapshot.matches("connecting")
+      : snapshot.matches({ active: "connecting" })
         ? "connecting"
         : "idle";
 
