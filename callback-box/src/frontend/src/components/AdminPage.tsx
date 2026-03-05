@@ -430,9 +430,8 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
 }
 
 interface GoogleStatus {
-  configured: boolean;
+  available: boolean;
   hasTokens: boolean;
-  clientId?: string;
   scopes: string[];
 }
 
@@ -440,8 +439,6 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
   const [status, setStatus] = useState<GoogleStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -482,33 +479,21 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleConnect = async (reauth: boolean) => {
+  const handleAuthorize = async () => {
     setConnecting(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      const body: Record<string, string> = {};
-      if (!reauth) {
-        if (!clientId.trim() || !clientSecret.trim()) {
-          setError("Client ID and secret are required");
-          setConnecting(false);
-          return;
-        }
-        body.clientId = clientId.trim();
-        body.clientSecret = clientSecret.trim();
-      }
-
       const resp = await fetch(`${apiBase}/admin/google-setup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: "{}",
       });
       const data = await resp.json();
       if (!resp.ok) {
         throw new Error(data.error || "Setup failed");
       }
-      // Redirect to Google consent
       window.location.href = data.authUrl;
     } catch (err) {
       setError((err as Error).message);
@@ -544,11 +529,16 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
     );
   }
 
+  // Don't show section if Google OAuth isn't configured on the server
+  if (status && !status.available) {
+    return null;
+  }
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Services</h2>
       <p className="text-sm text-warm-700 mb-4">
-        Connect Google Calendar, Gmail, and Drive. Requires a Google Cloud OAuth client.
+        Connect your Google account for Calendar, Gmail, and Drive access.
       </p>
 
       {successMessage ? (
@@ -557,18 +547,15 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
         </div>
       ) : null}
 
-      {status && status.configured && status.hasTokens ? (
+      {status && status.hasTokens ? (
         <>
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
             <span className="font-medium text-green-800">Connected</span>
-            {status.clientId ? (
-              <span className="text-green-700 ml-2">({status.clientId})</span>
-            ) : null}
           </div>
 
           <div className="flex gap-3">
             <button
-              onClick={() => handleConnect(true)}
+              onClick={handleAuthorize}
               disabled={connecting}
               className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
             >
@@ -583,74 +570,14 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
             </button>
           </div>
         </>
-      ) : status && status.configured && !status.hasTokens ? (
-        <>
-          <div className="mb-4 p-3 bg-warm-50 border border-warm-300 rounded text-sm text-warm-700">
-            Credentials configured ({status.clientId}) but not yet authorized.
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleConnect(true)}
-              disabled={connecting}
-              className="btn btn-primary"
-            >
-              {connecting ? "Redirecting..." : "Authorize"}
-            </button>
-            <button
-              onClick={handleDisconnect}
-              disabled={disconnecting}
-              className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
-            >
-              {disconnecting ? "Removing..." : "Remove Credentials"}
-            </button>
-          </div>
-        </>
       ) : (
-        <>
-          <div className="mb-4 p-4 bg-warm-50 border border-warm-200 rounded text-sm text-warm-800">
-            <p className="font-medium mb-2">Setup steps:</p>
-            <ol className="list-decimal list-inside space-y-1.5">
-              <li>Create a project in <strong>Google Cloud Console</strong></li>
-              <li>Enable Calendar, Gmail, and Drive APIs</li>
-              <li>Create an <strong>OAuth 2.0 Client ID</strong> (Web application)</li>
-              <li>Add the redirect URI shown below to <strong>Authorized redirect URIs</strong></li>
-              <li>Paste the Client ID and Secret below</li>
-            </ol>
-          </div>
-
-          <div className="mb-4 p-3 bg-iris-50 border border-iris-100 rounded text-sm text-plum">
-            <span className="font-medium">Redirect URI:</span>{" "}
-            <code className="bg-warm-200 px-1 rounded text-xs break-all select-all">
-              {window.location.origin}/{window.location.pathname.split("/")[1]}/api/admin/google-oauth/callback
-            </code>
-          </div>
-
-          <div className="space-y-2 mb-4">
-            <input
-              type="text"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="Client ID"
-              className="w-full rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-            />
-            <input
-              type="password"
-              value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
-              placeholder="Client Secret"
-              className="w-full rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-            />
-          </div>
-
-          <button
-            onClick={() => handleConnect(false)}
-            disabled={connecting || !clientId.trim() || !clientSecret.trim()}
-            className="btn btn-primary"
-          >
-            {connecting ? "Connecting..." : "Connect"}
-          </button>
-        </>
+        <button
+          onClick={handleAuthorize}
+          disabled={connecting}
+          className="btn btn-primary"
+        >
+          {connecting ? "Redirecting..." : "Connect Google Account"}
+        </button>
       )}
 
       {error ? (

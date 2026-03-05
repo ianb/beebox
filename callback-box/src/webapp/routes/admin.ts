@@ -183,40 +183,45 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   });
 
   // --- Google Services OAuth ---
+  // Reuses the same Google OAuth client as login (GOOGLE_OAUTH_CLIENT_ID/SECRET env vars)
+  // but requests broader scopes for Calendar, Gmail, Drive access.
+
+  function getGoogleOAuthCreds(): { clientId: string; clientSecret: string } | null {
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    if (!clientId || !clientSecret) return null;
+    return { clientId, clientSecret };
+  }
+
+  function getGoogleRedirectUri(publicUrl: string | undefined): string {
+    return `${publicUrl || "http://localhost:3210"}/${boxSlug}/api/admin/google-oauth/callback`;
+  }
 
   server.get("/api/admin/google-status", async () => {
-    const secret = await loadGoogleSecret(boxRoot);
-    if (!secret || !secret.clientId) {
-      return { configured: false, hasTokens: false, scopes: GOOGLE_SCOPES };
+    const creds = getGoogleOAuthCreds();
+    if (!creds) {
+      return { available: false, hasTokens: false, scopes: GOOGLE_SCOPES };
     }
+    const secret = await loadGoogleSecret(boxRoot);
     return {
-      configured: true,
-      hasTokens: !!secret.refreshToken,
-      clientId: secret.clientId.slice(0, 20) + "...",
+      available: true,
+      hasTokens: !!(secret && secret.refreshToken),
       scopes: GOOGLE_SCOPES,
     };
   });
 
-  server.post("/api/admin/google-setup", async (request, reply) => {
-    const body = request.body as { clientId?: string; clientSecret?: string };
-    let clientId = body.clientId;
-    let clientSecret = body.clientSecret;
-
-    if (!clientId || !clientSecret) {
-      // Re-auth: use existing credentials
-      const existing = await loadGoogleSecret(boxRoot);
-      if (!existing || !existing.clientId || !existing.clientSecret) {
-        return reply.status(400).send({ error: "Client ID and secret are required" });
-      }
-      clientId = existing.clientId;
-      clientSecret = existing.clientSecret;
+  server.post("/api/admin/google-setup", async (_request, reply) => {
+    const creds = getGoogleOAuthCreds();
+    if (!creds) {
+      return reply.status(400).send({ error: "Google OAuth not configured (GOOGLE_OAUTH_CLIENT_ID/SECRET env vars missing)" });
     }
 
-    await saveGoogleSecret(boxRoot, { clientId, clientSecret });
+    // Save client credentials to google.secret.json so connectors can use them
+    await saveGoogleSecret(boxRoot, { clientId: creds.clientId, clientSecret: creds.clientSecret });
 
     const publicUrl = await loadPublicUrl(boxRoot);
-    const redirectUri = `${publicUrl || "http://localhost:3210"}/${boxSlug}/api/admin/google-oauth/callback`;
-    const oauth2Client = createOAuth2Client({ clientId, clientSecret, redirectUri });
+    const redirectUri = getGoogleRedirectUri(publicUrl);
+    const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
 
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: "offline",
@@ -233,14 +238,14 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
       return reply.redirect(`/${boxSlug}/admin?google=error&message=No+code+received`);
     }
 
-    const secret = await loadGoogleSecret(boxRoot);
-    if (!secret || !secret.clientId || !secret.clientSecret) {
-      return reply.redirect(`/${boxSlug}/admin?google=error&message=No+credentials+configured`);
+    const creds = getGoogleOAuthCreds();
+    if (!creds) {
+      return reply.redirect(`/${boxSlug}/admin?google=error&message=OAuth+not+configured`);
     }
 
     const publicUrl = await loadPublicUrl(boxRoot);
-    const redirectUri = `${publicUrl || "http://localhost:3210"}/${boxSlug}/api/admin/google-oauth/callback`;
-    const oauth2Client = createOAuth2Client({ clientId: secret.clientId, clientSecret: secret.clientSecret, redirectUri });
+    const redirectUri = getGoogleRedirectUri(publicUrl);
+    const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
 
     try {
       const { tokens } = await oauth2Client.getToken(code);
@@ -257,13 +262,10 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   });
 
   server.post("/api/admin/google-disconnect", async () => {
-    const secret = await loadGoogleSecret(boxRoot);
-    if (secret) {
-      // Overwrite with only credentials (saveGoogleSecret merges, so write directly)
-      const configPath = path.join(boxRoot, "config/connectors/google.secret.json");
-      const kept: GoogleSecretConfig = { clientId: secret.clientId, clientSecret: secret.clientSecret };
-      await fs.writeFile(configPath, JSON.stringify(kept, null, 2));
-    }
+    const configPath = path.join(boxRoot, "config/connectors/google.secret.json");
+    try {
+      await fs.unlink(configPath);
+    } catch (_e) { /* already gone */ }
     return { success: true };
   });
 

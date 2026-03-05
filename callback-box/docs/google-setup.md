@@ -44,15 +44,15 @@ Go to **APIs & Services → Credentials**:
    - **Web (recommended):** `https://<your-server>/<boxSlug>/api/admin/google-oauth/callback`
    - **CLI:** `http://localhost:8976/oauth/callback`
 5. Click **Create**
-6. Copy the **Client ID** and **Client Secret**
+6. Copy the **Client ID** and **Client Secret** — set them as `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` env vars on the server (these are the same credentials used for app login)
 
 ## 5. Authorize Callback Box
 
 ### Option A: Web Admin (recommended)
 
 1. Go to your box's **Admin** page
-2. In the **Google Services** section, paste your Client ID and Client Secret
-3. Click **Connect** — you'll be redirected to Google for authorization
+2. In the **Google Services** section, click **Connect Google Account**
+3. You'll be redirected to Google for authorization
 4. After approving, you'll be redirected back to the Admin page
 
 ### Option B: CLI

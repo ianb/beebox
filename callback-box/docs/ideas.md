@@ -50,6 +50,9 @@ The iOS Shortcut share flow currently only handles URLs (opens a browser page wi
 
 The chat UI should let you view other active or recent agent sessions (e.g., the Telegram bot's session). A Telegram `/status` command (yes, Telegram bots support slash commands) could reply with a link like `https://box.example.com/<box>/chat?session=<sessionId>`. Opening that link would show the full session: tool calls, intermediate reasoning, file edits — all the stuff that doesn't fit in the Telegram message stream. This would make it much easier to debug or follow along with what the agent is doing in response to Telegram messages.
 
+### Per-user Google OAuth tokens
+
+Currently Google connector tokens are stored per-box in a single `google.secret.json`. Any box user should be able to connect their own Google account. This means per-user token storage (e.g., keyed by email), knowing which user's tokens to use for which operations, and the OAuth callback tracking which user initiated the flow.
 ### Session output critique tool
 
 A tool that extracts all command-line output from a Claude Code session, then a separate agent critiques it: which output was useful, which was long-winded, incomplete, or misdirecting. Useful for improving agent behavior and identifying patterns where the agent wastes time or goes in circles.
