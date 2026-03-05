@@ -104,16 +104,20 @@ All detailed documentation lives in `docs/`. **When you add a new doc, update th
 | docs/testing.md | Testing philosophy, doctests, scenarios, knowledge audits, service fakes |
 | docs/testing-gaps.md | Working document: coverage status, what's tested, what's not |
 | docs/connectors.md | Connector architecture, inventory, service injection, writing new connectors |
-| docs/scheduler.md | Scheduled scripts: cron-like execution, budgets, chains |
+| docs/scheduler.md | Background tick daemon: launchd/systemd setup, multi-box scheduling |
 | docs/adding-schemas.md | How to add a new card type with Zod schema |
 | docs/agent-knowledge.md | Knowledge taxonomy and audit test design |
 | docs/stack-decisions.md | Technology choices and rationale |
 | docs/state-management-comparison.md | Frontend state management options analysis |
-| docs/design-card-views.md | Card view rendering design |
-| docs/prompt-logging.md | CB_LOG_PROMPTS and session logging |
+| docs/design-card-views.md | Card view plugin system: pluggable renderers, directory browsing, validated patches |
+| docs/prompt-logging.md | Capturing and debugging agent API traffic (system prompts, loaded context) |
 | docs/telegram-setup.md | Telegram bot setup guide |
 | docs/gmail-setup.md | Gmail IMAP setup guide |
 | docs/google-setup.md | Google OAuth/API setup guide |
+| docs/ideas.md | Feature ideas and backlog |
+| docs/adding-api-endpoints.md | How to add new tRPC API endpoints |
+| docs/TESTING-NEWS-PROCEDURE.md | Step-by-step walkthrough: testing news processing end-to-end |
+| docs/doc-graph.md | Auto-generated documentation cross-reference report |
 
 When adding a doc to `docs/`, add it to the Doc Map above. One topic per document.
 
@@ -136,6 +140,6 @@ Three testing tiers:
 - **Route doctests** — `makeTestServer({ services: { ... } })` with Fastify `inject()`
 - **Connector/filesystem doctests** — `makeTmpBox({ git: true })` with service fakes
 
-Use `t.check(actual, expected)` for string comparisons with wildcards (`«date»`, `«*»`, etc.). Ref: `src/test-lib/docs/check-reference.md`.
+Use `t.check(actual, expected)` for string comparisons with wildcards (`«date»`, `«*»`, etc.). Start with `src/test-lib/docs/getting-started.md`, full reference: `src/test-lib/docs/check-reference.md`.
 
 @CONVENTIONS.md

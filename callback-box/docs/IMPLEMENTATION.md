@@ -222,7 +222,7 @@ Simple sync actions (for connectors without push support):
 </scheduled>
 ```
 
-See EXAMPLE_FILES.md for full RRULE format reference.
+See EXAMPLE_FILES.md for RRULE examples and other card/schema samples.
 
 Schedules can also be embedded in other cards. The tailing phase finds all schedule entries, calculates the next wakeup time, and archives one-time tasks that have no remaining future occurrences.
 
