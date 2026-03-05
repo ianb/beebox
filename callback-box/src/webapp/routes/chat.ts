@@ -246,16 +246,13 @@ export async function registerChatRoutes(
       const queued: string[] = [];
       let mistralReady = false;
 
-      const keyPrefix = apiKey.slice(0, 8);
-      console.log(`[transcribe-ws] Browser connected. Key: ${keyPrefix}..., model: ${mistralModel}`);
-      console.log(`[transcribe-ws] Connecting to ${mistralUrl}`);
+      console.log(`[transcribe-ws] Session started (key: ${apiKey.slice(0, 8)}..., model: ${mistralModel})`);
 
       const mistral = new WsWebSocket(mistralUrl, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
 
       mistral.on("open", () => {
-        console.log("[transcribe-ws] Mistral WebSocket open, waiting for session.created...");
         // Mistral sends session.created automatically; no session.update needed.
         // Mark ready immediately — queued audio will be flushed.
         mistralReady = true;
@@ -266,11 +263,8 @@ export async function registerChatRoutes(
       });
 
       mistral.on("message", (data) => {
-        const text = data.toString();
-        const truncated = text.length > 200 ? text.slice(0, 200) + "…" : text;
-        console.log("[transcribe-ws] Mistral→Browser:", truncated);
         if (socket.readyState === socket.OPEN) {
-          socket.send(text);
+          socket.send(data.toString());
         }
       });
 
@@ -295,8 +289,6 @@ export async function registerChatRoutes(
       // Browser → Mistral
       socket.on("message", (data) => {
         const text = data.toString();
-        const truncated = text.length > 200 ? text.slice(0, 200) + "…" : text;
-        console.log("[transcribe-ws] Browser→Mistral:", truncated);
         if (mistralReady && mistral.readyState === WsWebSocket.OPEN) {
           mistral.send(text);
         } else {
