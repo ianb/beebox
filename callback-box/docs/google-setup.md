@@ -40,13 +40,22 @@ Go to **APIs & Services → Credentials**:
 1. Click **Create Credentials → OAuth 2.0 Client ID**
 2. Application type: **Web application** (not Desktop)
 3. Name: "Callback Box" (or anything)
-4. Under **Authorized redirect URIs**, add: `http://localhost:8976/oauth/callback`
+4. Under **Authorized redirect URIs**, add the URIs for your setup:
+   - **Web (recommended):** `https://<your-server>/<boxSlug>/api/admin/google-oauth/callback`
+   - **CLI:** `http://localhost:8976/oauth/callback`
 5. Click **Create**
 6. Copy the **Client ID** and **Client Secret**
 
 ## 5. Authorize Callback Box
 
-Run the auth command:
+### Option A: Web Admin (recommended)
+
+1. Go to your box's **Admin** page
+2. In the **Google Services** section, paste your Client ID and Client Secret
+3. Click **Connect** — you'll be redirected to Google for authorization
+4. After approving, you'll be redirected back to the Admin page
+
+### Option B: CLI
 
 ```bash
 cb google-auth --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
@@ -85,7 +94,7 @@ cb calendar upcoming
 
 ### `redirect_uri_mismatch`
 
-The redirect URI in your OAuth client must exactly match `http://localhost:8976/oauth/callback`. Check for trailing slashes or `https` vs `http`.
+The redirect URI in your OAuth client must exactly match the one you're using. For CLI: `http://localhost:8976/oauth/callback`. For web: `https://<your-server>/<boxSlug>/api/admin/google-oauth/callback`. Check for trailing slashes or `https` vs `http`.
 
 ### Token expired / invalid_grant
 

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSSRMachine } from "../hooks/useSSRMachine";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getApiBase } from "../api.js";
 import { claudeAuthMachine } from "../machines/claudeAuthMachine.js";
 
@@ -429,6 +429,239 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
   );
 }
 
+interface GoogleStatus {
+  configured: boolean;
+  hasTokens: boolean;
+  clientId?: string;
+  scopes: string[];
+}
+
+function GoogleServicesSection({ apiBase }: { apiBase: string }) {
+  const [status, setStatus] = useState<GoogleStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const resp = await fetch(`${apiBase}/admin/google-status`);
+      if (!resp.ok) throw new Error(`Status check failed: ${resp.status}`);
+      const data: GoogleStatus = await resp.json();
+      setStatus(data);
+      setError(null);
+      return data;
+    } catch (err) {
+      setError((err as Error).message);
+      return null;
+    }
+  }, [apiBase]);
+
+  useEffect(() => {
+    fetchStatus().finally(() => setLoading(false));
+  }, [fetchStatus]);
+
+  // Handle redirect back from Google OAuth
+  useEffect(() => {
+    const googleParam = searchParams.get("google");
+    if (googleParam === "connected") {
+      setSuccessMessage("Google services connected successfully.");
+      searchParams.delete("google");
+      setSearchParams(searchParams, { replace: true });
+      fetchStatus();
+    } else if (googleParam === "error") {
+      const message = searchParams.get("message") || "Authorization failed";
+      setError(message);
+      searchParams.delete("google");
+      searchParams.delete("message");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleConnect = async (reauth: boolean) => {
+    setConnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const body: Record<string, string> = {};
+      if (!reauth) {
+        if (!clientId.trim() || !clientSecret.trim()) {
+          setError("Client ID and secret are required");
+          setConnecting(false);
+          return;
+        }
+        body.clientId = clientId.trim();
+        body.clientSecret = clientSecret.trim();
+      }
+
+      const resp = await fetch(`${apiBase}/admin/google-setup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || "Setup failed");
+      }
+      // Redirect to Google consent
+      window.location.href = data.authUrl;
+    } catch (err) {
+      setError((err as Error).message);
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const resp = await fetch(`${apiBase}/admin/google-disconnect`, { method: "POST" });
+      const data = await resp.json();
+      if (!data.success) {
+        throw new Error(data.error || "Disconnect failed");
+      }
+      await fetchStatus();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-warm-800 mb-4">Google Services</h2>
+        <p className="text-sm text-warm-600">Checking status...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Services</h2>
+      <p className="text-sm text-warm-700 mb-4">
+        Connect Google Calendar, Gmail, and Drive. Requires a Google Cloud OAuth client.
+      </p>
+
+      {successMessage ? (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+          {successMessage}
+        </div>
+      ) : null}
+
+      {status && status.configured && status.hasTokens ? (
+        <>
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
+            <span className="font-medium text-green-800">Connected</span>
+            {status.clientId ? (
+              <span className="text-green-700 ml-2">({status.clientId})</span>
+            ) : null}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleConnect(true)}
+              disabled={connecting}
+              className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
+            >
+              {connecting ? "Redirecting..." : "Re-authorize"}
+            </button>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
+            >
+              {disconnecting ? "Disconnecting..." : "Disconnect"}
+            </button>
+          </div>
+        </>
+      ) : status && status.configured && !status.hasTokens ? (
+        <>
+          <div className="mb-4 p-3 bg-warm-50 border border-warm-300 rounded text-sm text-warm-700">
+            Credentials configured ({status.clientId}) but not yet authorized.
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleConnect(true)}
+              disabled={connecting}
+              className="btn btn-primary"
+            >
+              {connecting ? "Redirecting..." : "Authorize"}
+            </button>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
+            >
+              {disconnecting ? "Removing..." : "Remove Credentials"}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="mb-4 p-4 bg-warm-50 border border-warm-200 rounded text-sm text-warm-800">
+            <p className="font-medium mb-2">Setup steps:</p>
+            <ol className="list-decimal list-inside space-y-1.5">
+              <li>Create a project in <strong>Google Cloud Console</strong></li>
+              <li>Enable Calendar, Gmail, and Drive APIs</li>
+              <li>Create an <strong>OAuth 2.0 Client ID</strong> (Web application)</li>
+              <li>Add the redirect URI shown below to <strong>Authorized redirect URIs</strong></li>
+              <li>Paste the Client ID and Secret below</li>
+            </ol>
+          </div>
+
+          <div className="mb-4 p-3 bg-iris-50 border border-iris-100 rounded text-sm text-plum">
+            <span className="font-medium">Redirect URI:</span>{" "}
+            <code className="bg-warm-200 px-1 rounded text-xs break-all select-all">
+              {window.location.origin}/{window.location.pathname.split("/")[1]}/api/admin/google-oauth/callback
+            </code>
+          </div>
+
+          <div className="space-y-2 mb-4">
+            <input
+              type="text"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="Client ID"
+              className="w-full rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+            />
+            <input
+              type="password"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              placeholder="Client Secret"
+              className="w-full rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+            />
+          </div>
+
+          <button
+            onClick={() => handleConnect(false)}
+            disabled={connecting || !clientId.trim() || !clientSecret.trim()}
+            className="btn btn-primary"
+          >
+            {connecting ? "Connecting..." : "Connect"}
+          </button>
+        </>
+      )}
+
+      {error ? (
+        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function AdminPage() {
   const { boxSlug } = useParams<{ boxSlug: string }>();
   const apiBase = getApiBase();
@@ -447,6 +680,7 @@ export function AdminPage() {
         <div className="space-y-6">
           <ClaudeCodeSection />
           <AllowedEmailsSection apiBase={apiBase} />
+          <GoogleServicesSection apiBase={apiBase} />
           <TelegramSection apiBase={apiBase} />
         </div>
       </div>

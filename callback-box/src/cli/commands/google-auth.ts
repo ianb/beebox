@@ -57,7 +57,7 @@ export const googleAuthCommand = new Command("google-auth")
       // Save client credentials immediately
       await saveGoogleSecret(boxRoot, { clientId, clientSecret });
 
-      const oauth2Client = createOAuth2Client(clientId, clientSecret);
+      const oauth2Client = createOAuth2Client({ clientId, clientSecret });
 
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",

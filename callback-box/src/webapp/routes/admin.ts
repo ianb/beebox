@@ -10,6 +10,10 @@
  *   GET  /api/admin/telegram-status — Telegram connector status
  *   POST /api/admin/telegram-setup — save bot token, register webhook
  *   POST /api/admin/telegram-disconnect — remove Telegram config
+ *   GET  /api/admin/google-status — Google OAuth status
+ *   POST /api/admin/google-setup — save credentials, get auth URL
+ *   GET  /api/admin/google-oauth/callback — OAuth callback from Google
+ *   POST /api/admin/google-disconnect — remove Google tokens
  *   GET  /api/admin/box-config — box config (allowedEmails, publicUrl)
  *   POST /api/admin/box-config — update box config fields
  */
@@ -20,6 +24,7 @@ import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { isOwner, isAuthEnabled } from "../auth.js";
 import { loadTelegramConfig } from "../../connectors/telegram.js";
+import { loadGoogleSecret, saveGoogleSecret, createOAuth2Client, GOOGLE_SCOPES, type GoogleSecretConfig } from "../../connectors/google-auth.js";
 import type { Services } from "../../services/index.js";
 import { createTelegramService } from "../../services/telegram.js";
 import { createClaudeCliService } from "../../services/claude-cli.js";
@@ -174,6 +179,91 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
       await fs.unlink(configPath);
     } catch { /* already gone */ }
 
+    return { success: true };
+  });
+
+  // --- Google Services OAuth ---
+
+  server.get("/api/admin/google-status", async () => {
+    const secret = await loadGoogleSecret(boxRoot);
+    if (!secret || !secret.clientId) {
+      return { configured: false, hasTokens: false, scopes: GOOGLE_SCOPES };
+    }
+    return {
+      configured: true,
+      hasTokens: !!secret.refreshToken,
+      clientId: secret.clientId.slice(0, 20) + "...",
+      scopes: GOOGLE_SCOPES,
+    };
+  });
+
+  server.post("/api/admin/google-setup", async (request, reply) => {
+    const body = request.body as { clientId?: string; clientSecret?: string };
+    let clientId = body.clientId;
+    let clientSecret = body.clientSecret;
+
+    if (!clientId || !clientSecret) {
+      // Re-auth: use existing credentials
+      const existing = await loadGoogleSecret(boxRoot);
+      if (!existing || !existing.clientId || !existing.clientSecret) {
+        return reply.status(400).send({ error: "Client ID and secret are required" });
+      }
+      clientId = existing.clientId;
+      clientSecret = existing.clientSecret;
+    }
+
+    await saveGoogleSecret(boxRoot, { clientId, clientSecret });
+
+    const publicUrl = await loadPublicUrl(boxRoot);
+    const redirectUri = `${publicUrl || "http://localhost:3210"}/${boxSlug}/api/admin/google-oauth/callback`;
+    const oauth2Client = createOAuth2Client({ clientId, clientSecret, redirectUri });
+
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: "offline",
+      scope: GOOGLE_SCOPES,
+      prompt: "consent",
+    });
+
+    return { authUrl };
+  });
+
+  server.get("/api/admin/google-oauth/callback", async (request, reply) => {
+    const { code } = request.query as { code?: string };
+    if (!code) {
+      return reply.redirect(`/${boxSlug}/admin?google=error&message=No+code+received`);
+    }
+
+    const secret = await loadGoogleSecret(boxRoot);
+    if (!secret || !secret.clientId || !secret.clientSecret) {
+      return reply.redirect(`/${boxSlug}/admin?google=error&message=No+credentials+configured`);
+    }
+
+    const publicUrl = await loadPublicUrl(boxRoot);
+    const redirectUri = `${publicUrl || "http://localhost:3210"}/${boxSlug}/api/admin/google-oauth/callback`;
+    const oauth2Client = createOAuth2Client({ clientId: secret.clientId, clientSecret: secret.clientSecret, redirectUri });
+
+    try {
+      const { tokens } = await oauth2Client.getToken(code);
+      const updates: Partial<GoogleSecretConfig> = {};
+      if (tokens.refresh_token) updates.refreshToken = tokens.refresh_token;
+      if (tokens.access_token) updates.accessToken = tokens.access_token;
+      if (tokens.expiry_date) updates.tokenExpiry = new Date(tokens.expiry_date).toISOString();
+      await saveGoogleSecret(boxRoot, updates);
+      return reply.redirect(`/${boxSlug}/admin?google=connected`);
+    } catch (err) {
+      const message = encodeURIComponent((err as Error).message);
+      return reply.redirect(`/${boxSlug}/admin?google=error&message=${message}`);
+    }
+  });
+
+  server.post("/api/admin/google-disconnect", async () => {
+    const secret = await loadGoogleSecret(boxRoot);
+    if (secret) {
+      // Overwrite with only credentials (saveGoogleSecret merges, so write directly)
+      const configPath = path.join(boxRoot, "config/connectors/google.secret.json");
+      const kept: GoogleSecretConfig = { clientId: secret.clientId, clientSecret: secret.clientSecret };
+      await fs.writeFile(configPath, JSON.stringify(kept, null, 2));
+    }
     return { success: true };
   });
 

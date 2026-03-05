@@ -19,7 +19,7 @@ export interface GoogleSecretConfig {
   tokenExpiry?: string;
 }
 
-const REDIRECT_URI = "http://localhost:8976/oauth/callback";
+const DEFAULT_REDIRECT_URI = "http://localhost:8976/oauth/callback";
 
 /** All scopes we request during auth */
 export const GOOGLE_SCOPES = [
@@ -79,7 +79,7 @@ export async function getGoogleAuth(
   const client = new OAuth2Client(
     secret.clientId,
     secret.clientSecret,
-    REDIRECT_URI
+    DEFAULT_REDIRECT_URI
   );
 
   client.setCredentials({
@@ -112,8 +112,7 @@ export async function getGoogleAuth(
  * Create a new OAuth2Client for the auth flow (before we have tokens).
  */
 export function createOAuth2Client(
-  clientId: string,
-  clientSecret: string
+  { clientId, clientSecret, redirectUri }: { clientId: string; clientSecret: string; redirectUri?: string }
 ): OAuth2Client {
-  return new OAuth2Client(clientId, clientSecret, REDIRECT_URI);
+  return new OAuth2Client(clientId, clientSecret, redirectUri || DEFAULT_REDIRECT_URI);
 }

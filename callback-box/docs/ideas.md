@@ -42,6 +42,14 @@ When processing image cards, extract the date taken from EXIF data (DateTimeOrig
 
 The feedback confirmation messages ("Got it, I'll keep that in mind") feel like they come from a service, but they're actually queuing work for the agent. The agent can't directly respond in real-time, but it could edit a "translation file" of UI phrases to make them sound more like its own voice. This would let the agent personalize how the system communicates, even in places where it can't respond dynamically.
 
+### Share-to-box for images and files
+
+The iOS Shortcut share flow currently only handles URLs (opens a browser page with query params). For images, files, and plain text, the shortcut would need to POST data directly to an upload API endpoint using the "Get Contents of URL" action. The `cb create` command already supports `--attachment` and `--attachment-mimetype`, so the backend card creation works — what's needed is a simple HTTP upload endpoint (multipart POST → create card with attachment, no SSE). This would let the share shortcut accept any share sheet type, not just URLs.
+
+### Jump into agent sessions from chat
+
+The chat UI should let you view other active or recent agent sessions (e.g., the Telegram bot's session). A Telegram `/status` command (yes, Telegram bots support slash commands) could reply with a link like `https://box.example.com/<box>/chat?session=<sessionId>`. Opening that link would show the full session: tool calls, intermediate reasoning, file edits — all the stuff that doesn't fit in the Telegram message stream. This would make it much easier to debug or follow along with what the agent is doing in response to Telegram messages.
+
 ### Session output critique tool
 
 A tool that extracts all command-line output from a Claude Code session, then a separate agent critiques it: which output was useful, which was long-winded, incomplete, or misdirecting. Useful for improving agent behavior and identifying patterns where the agent wastes time or goes in circles.

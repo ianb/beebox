@@ -145,6 +145,14 @@ function AppNav() {
               {link.label}
             </Link>
           ))}
+          <div className="border-t border-white/20 mt-1 pt-1">
+            <button
+              onClick={() => { setMenuOpen(false); window.location.reload(); }}
+              className="w-full text-left px-3 py-2 rounded text-white/70 hover:bg-white/10 transition-colors"
+            >
+              Reload
+            </button>
+          </div>
         </div>
       ) : null}
       {/* Desktop: inline links */}
