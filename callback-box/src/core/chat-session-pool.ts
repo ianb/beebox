@@ -103,19 +103,8 @@ export class ChatSessionPool {
     };
     session.on("chat-response", handleResponse);
 
-    // Append session link info if the session ID is known (resumed sessions)
-    const currentSessionId = session.getSessionId();
-    let enrichedMessage = message;
-    if (currentSessionId) {
-      const publicUrl = getPublicUrl();
-      const boxSlug = getBoxSlug(this.boxRoot);
-      if (publicUrl) {
-        enrichedMessage += `\n\n[Session link: ${publicUrl}/${boxSlug}/chat?session=${currentSessionId} — share this if the user asks to follow along with what you're doing.]`;
-      }
-    }
-
     try {
-      await session.send(enrichedMessage);
+      await session.send(message);
 
       // Update store after successful turn
       const record = store[threadRef];
@@ -161,11 +150,16 @@ export class ChatSessionPool {
       }
     }
 
+    const publicUrl = getPublicUrl();
+    const boxSlug = getBoxSlug(this.boxRoot);
+    const sessionViewBaseUrl = publicUrl ? `${publicUrl}/${boxSlug}/chat` : undefined;
+
     const session = new ChatThreadSession({
       boxRoot: this.boxRoot,
       threadRef,
       chatDescription,
       sessionId,
+      sessionViewBaseUrl,
     });
 
     // Capture session ID when assigned (for new sessions)

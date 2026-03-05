@@ -28,6 +28,8 @@ export interface ChatThreadSessionOptions {
   threadRef: string;
   chatDescription: string;
   sessionId?: string | undefined;
+  /** Base URL for session viewer links, e.g. "https://example.com/mybox/chat" */
+  sessionViewBaseUrl?: string | undefined;
 }
 
 /**
@@ -36,6 +38,7 @@ export interface ChatThreadSessionOptions {
 function buildThreadSystemPrompt(opts: {
   threadRef: string;
   chatDescription: string;
+  sessionViewBaseUrl?: string | undefined;
 }): string {
   return `You are in CHAT_THREAD_MODE — a persistent conversational session for "${opts.chatDescription}".
 
@@ -66,9 +69,10 @@ COMMIT DISCIPLINE:
 - If you make file changes, commit them with a descriptive message.
 - Include a Session trailer in commits.
 
-SESSION LINK:
-- Each message includes a session link that lets the user view your work in a web browser.
-- If the user asks to see what you're doing or follow along, share this link via <chat-response>.
+SESSION LINK:${opts.sessionViewBaseUrl ? `
+- This session can be viewed at: ${opts.sessionViewBaseUrl}?session=SESSION_ID
+  (The actual session ID will be assigned after your first response.)` : ""}
+- If the user asks to see what you're doing or follow along, share the session link via <chat-response>.
 - Do NOT share it proactively — only when asked.`;
 }
 
@@ -78,6 +82,7 @@ export class ChatThreadSession extends EventEmitter {
   private boxRoot: string;
   private threadRef: string;
   private chatDescription: string;
+  private sessionViewBaseUrl: string | undefined;
   private busy = false;
   private turnResolve: (() => void) | null = null;
   /** Accumulated text from current assistant turn, for <chat-response> extraction */
@@ -89,6 +94,7 @@ export class ChatThreadSession extends EventEmitter {
     this.threadRef = opts.threadRef;
     this.chatDescription = opts.chatDescription;
     this.sessionId = opts.sessionId ?? null;
+    this.sessionViewBaseUrl = opts.sessionViewBaseUrl;
   }
 
   private startProcess(): void {
@@ -116,6 +122,7 @@ export class ChatThreadSession extends EventEmitter {
       const prompt = buildThreadSystemPrompt({
         threadRef: this.threadRef,
         chatDescription: this.chatDescription,
+        sessionViewBaseUrl: this.sessionViewBaseUrl,
       });
       args.push("--append-system-prompt", prompt);
     }
@@ -266,9 +273,14 @@ export class ChatThreadSession extends EventEmitter {
 
     // On resumed sessions, remind about response format since the system prompt
     // may have been compacted away from context
-    const fullMessage = this.sessionId
-      ? `${message}\n\n[Reminder: wrap replies in <chat-response>your reply</chat-response> tags. Send an acknowledgment first if you'll do work.]`
-      : message;
+    let fullMessage = message;
+    if (this.sessionId) {
+      let reminder = "[Reminder: wrap replies in <chat-response>your reply</chat-response> tags. Send an acknowledgment first if you'll do work.]";
+      if (this.sessionViewBaseUrl) {
+        reminder += `\n[Session link: ${this.sessionViewBaseUrl}?session=${this.sessionId}]`;
+      }
+      fullMessage = `${message}\n\n${reminder}`;
+    }
 
     const payload = JSON.stringify({
       type: "user",
