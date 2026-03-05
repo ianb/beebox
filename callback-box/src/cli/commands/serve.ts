@@ -80,7 +80,7 @@ export const serveCommand = new Command("serve")
 
       // Spawn node --watch and forward signals for clean shutdown.
       // stdio: "inherit" makes the child own the terminal.
-      const child = spawn(process.execPath, args, { stdio: "inherit", env });
+      const child = spawn(process.execPath, args, { stdio: "inherit", env, cwd: projectDir });
 
       // Forward signals to child
       const forward = (sig: NodeJS.Signals) => child.kill(sig);
