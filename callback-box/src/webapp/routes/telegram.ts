@@ -61,9 +61,9 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
 
     try {
       // Append message to thread, commit (skip job creation — we handle directly)
-      const threadRef = await processWebhookUpdate({ boxRoot, update, skipJob: true });
+      const result = await processWebhookUpdate({ boxRoot, update, skipJob: true });
 
-      if (threadRef) {
+      if (result) {
         broadcastEvent("cards-changed", { source: "telegram" });
 
         const chatDescription = extracted.msg.chat.title ?? extracted.senderName;
@@ -72,10 +72,11 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
         handleChatMessage({
           pool,
           boxRoot,
-          threadRef,
+          threadRef: result.threadRef,
           chatDescription,
           messageText: extracted.text,
           senderName: extracted.senderName,
+          senderRef: result.personRef,
           chatId,
           botToken: config.botToken,
           broadcastEvent,
@@ -100,6 +101,7 @@ interface HandleChatMessageOptions {
   chatDescription: string;
   messageText: string;
   senderName: string;
+  senderRef: string | null;
   chatId: number;
   botToken: string;
   broadcastEvent: BroadcastEventFn;
@@ -111,7 +113,7 @@ interface HandleChatMessageOptions {
  * agent's output stream — the agent may continue working after responding.
  */
 async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> {
-  const { pool, boxRoot, threadRef, chatDescription, messageText, senderName, chatId, botToken, broadcastEvent } = opts;
+  const { pool, boxRoot, threadRef, chatDescription, messageText, senderName, senderRef, chatId, botToken, broadcastEvent } = opts;
   const slug = path.basename(path.dirname(threadRef));
 
   // Show "typing..." indicator until agent responds or turn ends
@@ -155,10 +157,14 @@ async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> 
     }
   };
 
+  // Wrap message with sender identity so the agent knows who's talking
+  const refAttr = senderRef ? ` ref="${senderRef}"` : "";
+  const wrappedMessage = `<chat-message from="${senderName}"${refAttr}>${messageText}</chat-message>`;
+
   try {
     await pool.send({
       threadRef,
-      message: messageText,
+      message: wrappedMessage,
       chatDescription,
       onResponse,
     });

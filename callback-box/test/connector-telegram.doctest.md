@@ -80,7 +80,8 @@ const update = {
     text: "Hi from Telegram!",
   },
 };
-const threadPath = await processWebhookUpdate({ boxRoot: box.root, update, skipJob: true });
+const result = await processWebhookUpdate({ boxRoot: box.root, update, skipJob: true });
+const threadPath = result.threadRef;
 threadPath
 => store/chat/telegram/Alice/thread.chat-thread.card
 ```

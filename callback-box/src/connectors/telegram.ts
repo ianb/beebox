@@ -332,6 +332,7 @@ class TelegramConnector implements Connector {
     threadRelPath: string;
     newThread: boolean;
     personFile: string | null;
+    personRef: string | null;
   } | null> {
     const extracted = extractMessage(update);
     if (!extracted) return null;
@@ -399,7 +400,7 @@ class TelegramConnector implements Connector {
       },
     });
 
-    return { threadRelPath, newThread, personFile };
+    return { threadRelPath, newThread, personFile, personRef };
   }
 
   /**
@@ -619,7 +620,7 @@ export async function processWebhookUpdate(opts: {
   update: TelegramUpdate;
   /** When true, skip chat job creation (caller handles response directly) */
   skipJob?: boolean | undefined;
-}): Promise<string | null> {
+}): Promise<{ threadRef: string; personRef: string | null } | null> {
   const { boxRoot, update, skipJob } = opts;
 
   // Load state for chat mappings
@@ -669,5 +670,5 @@ export async function processWebhookUpdate(opts: {
     await saveTransientState({ boxRoot, connectorName: "telegram", data: state });
   }
 
-  return result.threadRelPath;
+  return { threadRef: result.threadRelPath, personRef: result.personRef };
 }
