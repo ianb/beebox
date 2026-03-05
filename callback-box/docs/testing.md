@@ -453,6 +453,24 @@ Create `~/src/boxes/scenarios/<name>/` with `scenario.yaml` and optionally `stub
 ### New knowledge audit
 Add entries to `src/dev/knowledge-audits.yaml`. Run with `--filter <id>` to test individually.
 
+## Periodic Checks
+
+Not automated — run these occasionally and fix what they find.
+
+### Documentation graph
+
+`npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans and broken links. Review description quality at each reference site. Fix issues, regenerate, commit.
+
+### Supplemental linters
+
+These catch issues the pre-commit hook doesn't:
+
+```bash
+npm run lint:oxlint    # Ambiguous constructors, useless spreads, identical branches
+npm run lint:knip      # Unused files, exports, dependencies
+npm run lint:circular  # Value-import circular dependencies (type-only cycles are OK)
+```
+
 ## Future Directions
 
 See [testing-gaps.md](testing-gaps.md) for detailed plans. Key ideas:
