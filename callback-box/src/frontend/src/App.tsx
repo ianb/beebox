@@ -14,6 +14,7 @@ import { DashboardPage } from "./components/DashboardPage";
 import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./components/QuestionsPage";
 import { AdminPage } from "./components/AdminPage";
+import { SharePage } from "./components/SharePage";
 
 interface BoxesResult {
   boxes: Array<{ slug: string; name: string }>;
@@ -314,7 +315,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<BoxRedirect />} />
+      <Route path="/share" element={<ShareRedirect />} />
       <Route path="/:boxSlug/print/*" element={<PrintBriefView />} />
+      <Route path="/:boxSlug/share" element={<SharePage />} />
       <Route path="/:boxSlug" element={<AppLayout />}>
         <Route path="questions" element={<QuestionsPage />} />
         <Route path="news/*" element={<NewsPageWrapper />} />
@@ -329,4 +332,54 @@ export default function App() {
       </Route>
     </Routes>
   );
+}
+
+/**
+ * Redirect /share?params to /:boxSlug/share?params.
+ * Picks the first available box (or shows selector if multiple).
+ */
+function ShareRedirect() {
+  const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBoxes().then((result) => {
+      setBoxes(result.boxes);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen bg-warm-50 flex items-center justify-center"><span className="text-warm-600">Loading...</span></div>;
+  }
+
+  // Preserve query params when redirecting
+  const search = window.location.search;
+
+  if (boxes.length === 1) {
+    return <Navigate to={`/${boxes[0].slug}/share${search}`} replace />;
+  }
+
+  if (boxes.length > 1) {
+    return (
+      <div className="min-h-screen bg-warm-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <h1 className="text-xl font-bold text-warm-800 mb-4 text-center">Save to which box?</h1>
+          <div className="space-y-3">
+            {boxes.map((box) => (
+              <a
+                key={box.slug}
+                href={`/${box.slug}/share${search}`}
+                className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-gold hover:shadow transition-all"
+              >
+                <span className="text-lg font-medium text-plum">{box.name}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="p-8 text-warm-600">No boxes available.</div>;
 }

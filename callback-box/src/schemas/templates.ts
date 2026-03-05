@@ -25,6 +25,7 @@ import { createInitialGuideTemplate } from "./guide.js";
 import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
 import { createScheduledScriptTemplate } from "./scheduled-script.js";
+import { createBookmarkTemplate } from "./bookmark.js";
 
 /**
  * Template definition with typed arguments.
@@ -369,5 +370,30 @@ registerTemplate({
     if (args.source) opts.source = args.source;
     if (args["lock-group"]) opts.lockGroup = args["lock-group"];
     return createScheduledScriptTemplate(opts);
+  },
+});
+
+registerTemplate({
+  name: "bookmark",
+  description: "A bookmark/link card",
+  cardTypes: ["bookmark"],
+  defaultForTypes: ["bookmark"],
+  argsSchema: z.object({
+    title: z.string().describe("Bookmark title"),
+    link: z.string().url().describe("URL to bookmark"),
+    note: z.string().optional().describe("User note about the link"),
+    collection: z.string().optional().describe("Collection name (default: Unsorted)"),
+    tags: z.array(z.string()).optional().describe("Tags for the bookmark"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createBookmarkTemplate>[0] = {
+      title: args.title,
+      link: args.link,
+    };
+    if (args.note) opts.note = args.note;
+    if (args.collection) opts.collection = args.collection;
+    if (args.tags) opts.tags = args.tags;
+    opts.created = new Date().toISOString();
+    return createBookmarkTemplate(opts);
   },
 });

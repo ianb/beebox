@@ -6,14 +6,18 @@ The schema system registers card types, provides template generators, and valida
 import {
   MemoSchema,
   QuestionSchema,
+  BookmarkSchema,
   createMemoTemplate,
   createSelectQuestionTemplate,
+  createBookmarkTemplate,
   createSchemaRegistry,
   getCardTypes,
+  getDefaultTemplate,
 } from "../src/schemas/index.js";
 import { createNewsJobTemplate } from "../src/schemas/news-job.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../src/schemas/calendar-review-job.js";
+import { parseXml } from "cardworks";
 ```
 
 ## Schema Registry
@@ -35,6 +39,9 @@ getCardTypes().includes("intake-job")
 
 getCardTypes().includes("calendar-review-job")
 => true
+
+getCardTypes().includes("bookmark")
+=> true
 ```
 
 Schemas have a `tagName` matching the XML element:
@@ -45,6 +52,9 @@ MemoSchema.tagName
 
 QuestionSchema.tagName
 => question
+
+BookmarkSchema.tagName
+=> bookmark
 ```
 
 The full registry is available via `createSchemaRegistry()`:
@@ -138,6 +148,79 @@ createSelectQuestionTemplate({
     <option id="a">Option &lt;A&gt;</option>
   </input>
 </question>
+```
+
+## Bookmark
+
+A bookmark card captures a link with optional note and tags:
+
+```
+createBookmarkTemplate({
+  title: "Example Article",
+  link: "https://example.com/article",
+  note: "Worth reading",
+  tags: ["dev", "typescript"],
+  created: "2026-01-15T10:00:00Z",
+})
+=>
+<bookmark collection="Unsorted">
+  <title>Example Article</title>
+  <link>https://example.com/article</link>
+  <note>Worth reading</note>
+  <tags>
+    <tag>dev</tag>
+    <tag>typescript</tag>
+  </tags>
+  <created>2026-01-15T10:00:00Z</created>
+</bookmark>
+```
+
+Minimal bookmark (just title and link):
+
+```
+createBookmarkTemplate({
+  title: "Simple Link",
+  link: "https://example.com",
+})
+=>
+<bookmark collection="Unsorted">
+  <title>Simple Link</title>
+  <link>https://example.com</link>
+</bookmark>
+```
+
+The bookmark template generates schema-valid XML:
+
+```
+const xml = createBookmarkTemplate({
+  title: "Test",
+  link: "https://example.com",
+  note: "A note",
+  created: "2026-01-15T10:00:00Z",
+});
+const node = await parseXml(xml, "test.bookmark.card");
+const result = BookmarkSchema.safeParse(node);
+result.success
+=> true
+```
+
+The bookmark template is registered as the default for the `bookmark` card type:
+
+```
+const tmpl = getDefaultTemplate("bookmark");
+tmpl !== undefined
+=> true
+```
+
+``` continue
+tmpl.name
+=> bookmark
+```
+
+``` continue
+const generated = tmpl.generate({ title: "Via Template", link: "https://example.com" });
+generated.includes("<title>Via Template</title>")
+=> true
 ```
 
 ## News Job
