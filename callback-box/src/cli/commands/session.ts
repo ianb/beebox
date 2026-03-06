@@ -18,6 +18,7 @@ import {
   type SessionEntry,
   type SessionContentBlock,
 } from "../lib/session.js";
+import { generateSessionReport } from "../../dev/lib/session-report.js";
 
 /**
  * Format a tool_use block as a compact one-liner.
@@ -88,6 +89,7 @@ export const sessionCommand = new Command("session")
   .option("--latest", "Show the most recent session")
   .option("--list", "List recent sessions")
   .option("--full", "Show tool results too")
+  .option("--tool-report", "Generate critique-friendly report (includes Bash output)")
   .option("--raw", "Dump raw JSONL")
   .action(
     async (
@@ -96,6 +98,7 @@ export const sessionCommand = new Command("session")
         latest?: boolean;
         list?: boolean;
         full?: boolean;
+        toolReport?: boolean;
         raw?: boolean;
       }
     ) => {
@@ -144,6 +147,13 @@ export const sessionCommand = new Command("session")
       if (options.raw) {
         const content = fs.readFileSync(logPath, "utf-8");
         process.stdout.write(content);
+        return;
+      }
+
+      // --tool-report: generate critique-friendly report
+      if (options.toolReport) {
+        const report = await generateSessionReport({ logPath });
+        process.stdout.write(report);
         return;
       }
 
