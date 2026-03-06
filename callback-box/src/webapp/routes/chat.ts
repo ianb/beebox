@@ -13,6 +13,7 @@ import ky from "ky";
 import type { FastifyInstance } from "fastify";
 import { ChatSession, type ChatMessage } from "../../core/chat-session.js";
 import { WebSocket as WsWebSocket } from "ws";
+import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { BroadcastEventFn } from "./sse.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import {
@@ -329,10 +330,10 @@ export async function registerChatRoutes(
   server.get(
     "/api/chat/transcribe-ws",
     { websocket: true },
-    (socket) => {
-      const apiKey = process.env.CALLBACK_MISTRAL_API_KEY;
+    async (socket) => {
+      const apiKey = await getMistralApiKey(boxRoot);
       if (!apiKey) {
-        console.error("[transcribe-ws] CALLBACK_MISTRAL_API_KEY not set");
+        console.error("[transcribe-ws] Mistral API key not found");
         socket.send(JSON.stringify({ type: "error", error: "Mistral API key not configured" }));
         socket.close(1008, "API key not configured");
         return;

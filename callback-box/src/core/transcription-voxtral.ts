@@ -9,6 +9,7 @@ import type {
   DetailedTranscriptionResult,
   TranscriptionError,
 } from "./transcription.js";
+import { getMistralApiKey } from "./mistral-key.js";
 
 const VOXTRAL_ENDPOINT = "https://api.mistral.ai/v1/audio/transcriptions";
 const VOXTRAL_MODEL = "voxtral-mini-latest";
@@ -19,12 +20,12 @@ const VOXTRAL_MODEL = "voxtral-mini-latest";
 export async function transcribeAudioVoxtral(
   params: TranscribeAudioParams
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
-  const { audioBuffer, filename, prompt, options } = params;
-  const apiKey = process.env["CALLBACK_MISTRAL_API_KEY"];
+  const { audioBuffer, filename, prompt, options, boxRoot } = params;
+  const apiKey = await getMistralApiKey(boxRoot);
   if (!apiKey) {
     const error: TranscriptionError = {
       message:
-        "CALLBACK_MISTRAL_API_KEY environment variable is required for Voxtral transcription",
+        "Mistral API key not found (checked config/connectors/mistral.secret.json and CALLBACK_MISTRAL_API_KEY env var)",
       permanent: true,
       code: "missing_api_key",
     };
