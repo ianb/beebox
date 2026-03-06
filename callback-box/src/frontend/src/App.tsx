@@ -15,6 +15,7 @@ import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./components/QuestionsPage";
 import { AdminPage } from "./components/AdminPage";
 import { SharePage } from "./components/SharePage";
+import { CapturePage } from "./components/CapturePage";
 
 interface BoxesResult {
   boxes: Array<{ slug: string; name: string }>;
@@ -81,6 +82,7 @@ function AppNav() {
     { to: `${base}/news`, label: "News", match: (p: string) => p.startsWith(`${base}/news`) },
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
+    { to: `${base}/capture`, label: "Capture", match: (p: string) => p.startsWith(`${base}/capture`) },
     { to: `${base}/settings`, label: "Settings", match: (p: string) => p.startsWith(`${base}/settings`) },
     ...(showAdmin ? [{ to: `${base}/admin`, label: "Admin", match: (p: string) => p === `${base}/admin` }] : []),
   ];
@@ -332,6 +334,7 @@ export default function App() {
         <Route path="browse/*" element={<BrowsePageWrapper />} />
         <Route path="history/:hash?" element={<HistoryPage />} />
         <Route path="chat" element={<ChatPage />} />
+        <Route path="capture" element={<CapturePage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="card/*" element={<CardViewPage />} />

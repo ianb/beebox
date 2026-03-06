@@ -24,6 +24,7 @@ import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerSystemAdminRoutes, registerBoxAdminRoutes, registerGoogleServicesCallback } from "./routes/admin.js";
+import { registerCaptureRoutes } from "./routes/capture.js";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
@@ -208,6 +209,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent, openaiAudio: options.services?.openaiAudio });
       await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
+      await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
 
       // Serve static frontend files within this prefix
       if (frontendExists) {

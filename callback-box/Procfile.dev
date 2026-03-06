@@ -1,2 +1,2 @@
-backend: node --watch --import tsx ./src/webapp/server.ts ~/src/boxes/test1
-frontend: npx vite dev --config src/frontend/vite.config.ts
+backend: PORT=3211 node --watch --import tsx ./src/webapp/server.ts ~/src/boxes/hearthside ~/src/boxes/test1
+frontend: cd src/frontend && npx vite dev
