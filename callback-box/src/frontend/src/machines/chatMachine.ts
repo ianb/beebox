@@ -101,6 +101,7 @@ const streamActor = fromCallback(
                   text?: string;
                   name?: string;
                   id?: string;
+                  input?: Record<string, unknown>;
                 }>;
               }
             | undefined;
@@ -115,6 +116,7 @@ const streamActor = fromCallback(
                     type: "tool_use",
                     toolName: block.name,
                     toolId: block.id,
+                    input: block.input,
                     inputSummary: block.name ?? "",
                   },
                 });

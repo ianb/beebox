@@ -85,6 +85,17 @@ export async function listSessions(
   return sessions;
 }
 
+/** User messages that are internal Claude Code plumbing, not real user input */
+const plumbingPatterns = [
+  /^Tool loaded\.$/,
+  /^Todos have been modified/,
+];
+
+function isPlumbingMessage(text: string): boolean {
+  const trimmed = text.trim();
+  return plumbingPatterns.some((p) => p.test(trimmed));
+}
+
 /**
  * Summarize tool input for compact display.
  */
@@ -223,12 +234,16 @@ export async function parseSessionLog(
 
     const content = transformContent(message.content);
 
-    // Skip user entries that only contain tool_result blocks (API plumbing)
+    // Skip user entries that are API plumbing (tool_result blocks, "Tool loaded." etc.)
     if (raw.type === "user") {
-      const hasRealContent = content.some(
+      const textBlocks = content.filter(
         (block) => block.type === "text" && block.text?.trim()
       );
-      if (!hasRealContent) continue;
+      if (textBlocks.length === 0) continue;
+      const allPlumbing = textBlocks.every(
+        (block) => isPlumbingMessage(block.text || "")
+      );
+      if (allPlumbing) continue;
     }
 
     // Skip assistant entries with no visible content

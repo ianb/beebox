@@ -68,46 +68,244 @@ function stripSpeechTags(content: string): string {
 }
 
 /**
- * Render a tool use block (collapsed by default).
+ * Human-readable description of a single tool call.
+ */
+const toolDescribers: Record<string, (input: Record<string, unknown>, block: SessionContentBlock) => string> = {
+  Read: (input) => {
+    const p = String(input.file_path || "");
+    return p ? `Read ${shortPath(p)}` : "Read a file";
+  },
+  Edit: (input) => {
+    const p = String(input.file_path || "");
+    return p ? `Edited ${shortPath(p)}` : "Edited a file";
+  },
+  Write: (input) => {
+    const p = String(input.file_path || "");
+    return p ? `Wrote ${shortPath(p)}` : "Wrote a file";
+  },
+  Bash: (input) => {
+    if (input.description) return `Ran script: ${String(input.description)}`;
+    const cmd = String(input.command || "");
+    const first = cmd.split("\n")[0];
+    if (!first) return "Ran a command";
+    return `Ran script: ${first.length > 60 ? `${first.substring(0, 57)}...` : first}`;
+  },
+  Grep: (input) => `Searched for "${input.pattern || ""}"`,
+  Glob: (input) => `Found files matching ${input.pattern || "..."}`,
+  TodoWrite: () => "Updated task list",
+  Agent: (input) => String(input.description || "Delegated a task"),
+  Task: (input) => String(input.description || "Delegated a task"),
+};
+
+/** Tools that are boring enough to not need an expandable details view */
+const nonExpandableTools = new Set(["Read", "Glob"]);
+
+function describeToolCall(block: SessionContentBlock): string {
+  const input = block.input || {};
+  const describer = toolDescribers[block.toolName || ""];
+  if (describer) return describer(input, block);
+  return block.inputSummary || block.toolName || "Tool call";
+}
+
+function shortPath(p: string): string {
+  const parts = p.split("/");
+  if (parts.length <= 2) return p;
+  return parts.slice(-2).join("/");
+}
+
+/**
+ * Summarize an activity group (thinking + tools) for the collapsed header.
+ */
+function summarizeActivity(parts: Array<{ type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }>): string {
+  const segments: string[] = [];
+  let hasThinking = false;
+
+  const counts: Record<string, number> = {};
+  for (const part of parts) {
+    if (part.type === "thinking") {
+      hasThinking = true;
+    } else if (part.tools) {
+      for (const tool of part.tools) {
+        const category = toolCategory(tool.toolName || "");
+        counts[category] = (counts[category] || 0) + 1;
+      }
+    }
+  }
+
+  if (hasThinking) segments.push("thinking");
+
+  for (const [category, count] of Object.entries(counts)) {
+    if (count === 1) {
+      segments.push(categorySingular(category));
+    } else {
+      segments.push(`${categoryVerb(category)} ${count} ${categoryPlural(category)}`);
+    }
+  }
+
+  return segments.join(", ") || "working";
+}
+
+function toolCategory(name: string): string {
+  switch (name) {
+    case "Read": return "read";
+    case "Edit":
+    case "Write": return "edit";
+    case "Bash": return "command";
+    case "Grep":
+    case "Glob": return "search";
+    case "Agent":
+    case "Task": return "task";
+    case "TodoWrite": return "todo";
+    default: return "tool";
+  }
+}
+
+function categorySingular(cat: string): string {
+  switch (cat) {
+    case "read": return "read a file";
+    case "edit": return "edited a file";
+    case "command": return "ran a command";
+    case "search": return "searched code";
+    case "task": return "delegated a task";
+    case "todo": return "updated tasks";
+    default: return "used a tool";
+  }
+}
+
+function categoryVerb(cat: string): string {
+  switch (cat) {
+    case "read": return "read";
+    case "edit": return "edited";
+    case "command": return "ran";
+    case "search": return "searched";
+    case "task": return "delegated";
+    default: return "used";
+  }
+}
+
+function categoryPlural(cat: string): string {
+  switch (cat) {
+    case "read": return "files";
+    case "edit": return "files";
+    case "command": return "commands";
+    case "search": return "searches";
+    case "task": return "tasks";
+    default: return "tools";
+  }
+}
+
+/**
+ * Render a single tool call — expandable for interesting tools, plain text for boring ones.
+ */
+function ToolDetail({ block }: { block: SessionContentBlock }) {
+  const input = block.input;
+  const description = describeToolCall(block);
+
+  if (nonExpandableTools.has(block.toolName || "")) {
+    return <div className="py-0.5">{description}</div>;
+  }
+
+  return (
+    <details className="group/tool">
+      <summary className="cursor-pointer list-none flex items-center gap-1 hover:text-warm-700 py-0.5">
+        <span className="text-warm-500 group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
+        <span>{description}</span>
+      </summary>
+      {input ? (
+        <pre className="mt-1 mb-1 ml-3 text-[11px] text-warm-500 bg-warm-50 rounded p-2 overflow-x-auto max-h-40 whitespace-pre-wrap">
+          {JSON.stringify(input, null, 2)}
+        </pre>
+      ) : null}
+    </details>
+  );
+}
+
+function countToolCalls(parts: Array<{ type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }>): number {
+  let count = 0;
+  for (const part of parts) {
+    if (part.type === "thinking") {
+      count++;
+    } else if (part.tools) {
+      count += part.tools.length;
+    }
+  }
+  return count;
+}
+
+function ActivityGroupInner({ parts }: { parts: Array<{ type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }> }) {
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.type === "thinking" ? (
+          <details key={i} className="group/think">
+            <summary className="cursor-pointer list-none flex items-center gap-1 text-plum hover:text-plum-dark py-0.5">
+              <span className="group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
+              thinking
+            </summary>
+            <div className="mt-1 text-xs text-warm-600 whitespace-pre-wrap max-h-60 overflow-auto ml-3">
+              {part.text}
+            </div>
+          </details>
+        ) : (
+          part.tools?.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} />)
+        )
+      )}
+    </>
+  );
+}
+
+/**
+ * Render a collapsible activity group (thinking + tool calls).
+ * Single-item groups render the item directly without a wrapper.
+ */
+export function ActivityGroup({ parts }: { parts: Array<{ type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }> }) {
+  if (parts.length === 0) return null;
+
+  const totalItems = countToolCalls(parts);
+
+  // Single item: render directly without the collapsible group wrapper
+  if (totalItems === 1) {
+    return (
+      <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
+        <ActivityGroupInner parts={parts} />
+      </div>
+    );
+  }
+
+  const summary = summarizeActivity(parts);
+
+  return (
+    <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
+      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-warm-600 hover:text-warm-700">
+        <span className="text-warm-500 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
+        <span>{summary}</span>
+      </summary>
+      <div className="mt-1 text-xs text-warm-600 leading-tight ml-1">
+        <ActivityGroupInner parts={parts} />
+      </div>
+    </details>
+  );
+}
+
+/**
+ * Render a flat tool list (used during streaming when we don't have full context).
  */
 export function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
   if (blocks.length === 0) return null;
+  const summary = summarizeActivity([{ type: "tools", tools: blocks }]);
   return (
-    <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-400">
+    <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
+      <div className="flex items-center gap-1 text-warm-600 mb-1">
+        <span className="text-[10px]">&#9654;</span>
+        <span>{summary}…</span>
+      </div>
       {blocks.map((block, i) => (
-        <details key={i} className="group">
-          <summary className="cursor-pointer list-none flex items-center gap-1 hover:text-warm-700">
-            <span className="text-warm-500 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
-            <span className="font-medium text-warm-700">{block.toolName}</span>
-            {block.inputSummary && block.inputSummary !== block.toolName ? (
-              <span className="ml-0.5">{block.inputSummary}</span>
-            ) : null}
-          </summary>
-          {block.input ? (
-            <pre className="mt-1 mb-1 ml-3 text-[11px] text-warm-500 bg-warm-50 rounded p-2 overflow-x-auto max-h-40 whitespace-pre-wrap">
-              {JSON.stringify(block.input, null, 2)}
-            </pre>
-          ) : null}
-        </details>
+        <ToolDetail key={i} block={block} />
       ))}
     </div>
   );
 }
 
-function ThinkingBlock({ text }: { text: string }) {
-  if (!text) return null;
-  return (
-    <details className="group my-1 ml-2 pl-2 border-l border-plum-100">
-      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-plum hover:text-plum-dark">
-        <span className="group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
-        thinking
-      </summary>
-      <div className="mt-1 text-xs text-warm-600 whitespace-pre-wrap max-h-60 overflow-auto">
-        {text}
-      </div>
-    </details>
-  );
-}
 
 /**
  * Render markdown content with prose styling.
@@ -170,41 +368,72 @@ export function UserMessage({ entries, debugView }: { entries: SessionEntry[]; d
 /**
  * Render a group of consecutive assistant messages merged together.
  */
-export function AssistantMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
-  const parts: Array<{ type: "text" | "tools" | "thinking"; text?: string; tools?: SessionContentBlock[] }> = [];
+interface AssistantPart { type: "text" | "tools" | "thinking"; text?: string; tools?: SessionContentBlock[] }
+interface TextGroup { kind: "text"; text: string }
+interface ActivityGroupData { kind: "activity"; parts: AssistantPart[] }
 
+/**
+ * Group consecutive non-text parts (thinking, tools) into activity groups,
+ * separated by text parts which render as normal markdown.
+ */
+function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | ActivityGroupData> {
+  const flat: AssistantPart[] = [];
   for (const entry of entries) {
     for (const block of entry.content) {
       if (block.type === "thinking") {
-        parts.push({ type: "thinking", text: block.text });
+        flat.push({ type: "thinking", text: block.text });
       } else if (block.type === "text" && block.text?.trim()) {
-        parts.push({ type: "text", text: block.text });
+        flat.push({ type: "text", text: block.text });
       } else if (block.type === "tool_use") {
-        const last = parts[parts.length - 1];
+        const last = flat[flat.length - 1];
         if (last && last.type === "tools") {
           last.tools!.push(block);
         } else {
-          parts.push({ type: "tools", tools: [block] });
+          flat.push({ type: "tools", tools: [block] });
         }
       }
     }
   }
 
+  const grouped: Array<TextGroup | ActivityGroupData> = [];
+  let activityBuf: AssistantPart[] = [];
+
+  function flushActivity() {
+    if (activityBuf.length > 0) {
+      grouped.push({ kind: "activity", parts: activityBuf });
+      activityBuf = [];
+    }
+  }
+
+  for (const part of flat) {
+    if (part.type === "text") {
+      flushActivity();
+      grouped.push({ kind: "text", text: part.text || "" });
+    } else {
+      activityBuf.push(part);
+    }
+  }
+  flushActivity();
+
+  return grouped;
+}
+
+export function AssistantMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
+  const grouped = groupIntoParts(entries);
+
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
-      {parts.map((part, i) =>
-        part.type === "thinking" ? (
-          <ThinkingBlock key={i} text={part.text ?? ""} />
-        ) : part.type === "text" ? (
+      {grouped.map((group, i) =>
+        group.kind === "text" ? (
           debugView ? (
             <pre key={i} className="font-mono text-xs whitespace-pre-wrap bg-warm-50 text-warm-800 p-2 rounded">
-              {part.text ?? ""}
+              {group.text}
             </pre>
           ) : (
-            <MarkdownContent key={i} text={part.text ?? ""} />
+            <MarkdownContent key={i} text={group.text} />
           )
         ) : (
-          <ToolList key={i} blocks={part.tools ?? []} />
+          <ActivityGroup key={i} parts={group.parts} />
         )
       )}
     </div>
