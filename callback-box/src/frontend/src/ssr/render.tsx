@@ -216,8 +216,6 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
     queries.push({ key: queryKey(["status", "browse"], { path: browsePath }), fn: () => caller.status.browse({ path: browsePath }) });
   } else if (pagePath.startsWith("history")) {
     queries.push({ key: queryKey(["status", "activity"], { count: 20 }), fn: () => caller.status.activity({ count: 20 }) });
-  } else if (pagePath === "settings") {
-    queries.push({ key: queryKey(["pairing", "status"]), fn: () => caller.pairing.status() });
   }
 
   // Fetch all in parallel, ignore failures

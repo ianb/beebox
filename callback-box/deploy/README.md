@@ -40,7 +40,7 @@ What it does:
 
 Installs everything on Ubuntu 24.04:
 - System packages (git, Node.js 22, nginx)
-- Clones and builds: cardworks → callback-dropbox → callback-box
+- Clones and builds: cardworks → callback-box
 - Symlinks `cb` CLI to `/usr/local/bin/`
 - Installs Claude Code CLI
 - Creates systemd services for web server and scheduler
@@ -65,7 +65,7 @@ Each box is served at `https://box.example.com/<box-name>/`.
 
 ### `rebuild.sh` — Pull latest code and rebuild
 
-Pulls all three repos (cardworks, callback-dropbox, callback-box), rebuilds, and restarts services.
+Pulls both repos (cardworks, callback-box), rebuilds, and restarts services.
 
 ```bash
 ./deploy/rebuild.sh
@@ -88,7 +88,6 @@ Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations o
 ```
 /opt/callback/              # Source code
   cardworks/
-  callback-dropbox/
   callback-box/
 /root/boxes/                # Box data (each is a git repo)
   test1/

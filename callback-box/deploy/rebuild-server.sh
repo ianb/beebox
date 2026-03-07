@@ -8,18 +8,13 @@ set -euo pipefail
 INSTALL_DIR="/opt/callback"
 
 echo "=== Pulling latest code ==="
-for repo in cardworks callback-dropbox callback-box; do
+for repo in cardworks callback-box; do
   echo "  $repo..."
   cd "$INSTALL_DIR/$repo" && git pull --ff-only
 done
 
 echo "=== Rebuilding cardworks ==="
 cd "$INSTALL_DIR/cardworks"
-npm install --no-audit --no-fund
-npm run build
-
-echo "=== Rebuilding callback-dropbox ==="
-cd "$INSTALL_DIR/callback-dropbox"
 npm install --no-audit --no-fund
 npm run build
 

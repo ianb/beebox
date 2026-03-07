@@ -65,7 +65,6 @@
     "@types/turndown": "^5.0.6",
     "@types/ws": "^8.18.1",
     "ansi-to-html": "^0.7.2",
-    "callback-dropbox": "file:../callback-dropbox",
     "cardworks": "file:../cardworks",
     "chalk": "^5.6.2",
     "cheerio": "^1.2.0",

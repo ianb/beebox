@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ── Config ──────────────────────────────────────────────────────────
 REPO_BASE="git@github.com:ianb"
-REPOS=(cardworks callback-dropbox callback-box)
+REPOS=(cardworks callback-box)
 INSTALL_DIR="/opt/callback"
 CB_USER="callback"
 CB_HOME="/home/$CB_USER"
@@ -62,11 +62,6 @@ done
 # ── Install and build in dependency order ───────────────────────────
 echo "Building cardworks..."
 cd "$INSTALL_DIR/cardworks"
-npm install --no-audit --no-fund
-npm run build
-
-echo "Building callback-dropbox..."
-cd "$INSTALL_DIR/callback-dropbox"
 npm install --no-audit --no-fund
 npm run build
 

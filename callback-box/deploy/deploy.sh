@@ -40,7 +40,7 @@ if [[ "$SKIP_FRONTEND" != true ]]; then
 fi
 
 # Sync all three repos
-for repo in cardworks callback-dropbox callback-box; do
+for repo in cardworks callback-box; do
   local_path="$MONO_DIR/$repo/"
   if [[ ! -d "$local_path" ]]; then
     echo "  $repo: not found at $local_path, skipping"
@@ -67,7 +67,7 @@ DEPLOY_INFO=$(cat <<INFOEOF
 {
   "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "commits": {
-$(for repo in cardworks callback-dropbox callback-box; do
+$(for repo in cardworks callback-box; do
   local_path="$MONO_DIR/$repo/"
   if [[ -d "$local_path/.git" ]]; then
     hash=$(cd "$local_path" && git rev-parse --short HEAD)

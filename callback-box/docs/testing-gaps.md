@@ -18,7 +18,7 @@ Current status as of 2026-03-03: **931 tests across 53 files**. Route coverage: 
 
 **Wakeup helpers:** createIntakeJobsForUnjobbed, createGuideRevisionJobIfNeeded
 
-**Service fakes:** Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, Dropbox Relay, IMAP, Feed Fetcher, Article Fetcher, call-log — all with domain-specific fakes + `withCallLog()` wrapper
+**Service fakes:** Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, IMAP, Feed Fetcher, Article Fetcher, call-log — all with domain-specific fakes + `withCallLog()` wrapper
 
 **Agent testing:** `Agent` interface with `createAgent`/`createFakeAgent`, used by triage-feedback, process-feedback, process-news, reactor, procedure engine
 
@@ -57,7 +57,6 @@ Current status as of 2026-03-03: **931 tests across 53 files**. Route coverage: 
 - **Agent invocation internals** — `runAgent()` is private; all consumers use injected `Agent` interface.
 - **OAuth** — Standard flow.
 - **Scheduler daemon loop** — Infinite loop with signal handlers. Utility functions tested; the pieces it calls (schedule evaluation, state) are well tested.
-- **Dropbox relay / capture** — Being removed.
 
 ## Design Approach
 

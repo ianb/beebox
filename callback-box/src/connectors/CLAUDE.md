@@ -24,9 +24,7 @@ See `src/services/CLAUDE.md` for the full service layer documentation: interface
 
 These connectors use library-specific types that don't cleanly map to our service abstractions:
 
-- **dropbox.ts** — uses `callback-dropbox/client` with `DecryptedMessage`, Zod schemas for message validation
-- **capture.ts** — uses `callback-dropbox/client` `CaptureClient` with `downloadFile` (not in service interface)
 - **gmail.ts** — uses `imapflow` with library-specific message types and `mailparser` for MIME parsing
 - **google-calendar.ts** — uses `getGoogleAuth()` + direct REST calls with ICS parsing via `ical.js`
 
-Service definitions exist for all of these in `src/services/` (imap.ts, dropbox-relay.ts, capture-relay.ts, google-calendar.ts) but the connector wiring hasn't been done yet because the type gaps are larger.
+Service definitions exist for both of these in `src/services/` (imap.ts, google-calendar.ts), but the connector wiring hasn't been done yet because the type gaps are larger.

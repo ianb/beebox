@@ -27,8 +27,6 @@ Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, error?
 | RSS | `rss.ts` | `news-item` | Pull only | No (HTTP stubs) |
 | Google Calendar | `google-calendar.ts` | `.ics` files | Pull only | Not yet wired |
 | Gmail | `gmail.ts` | `email-thread` | Pull only | Not yet wired |
-| Dropbox relay | `dropbox.ts` | messages | Pull only | Not yet wired (planned removal) |
-| Capture | `capture.ts` | sessions | Pull only | Not yet wired (planned removal) |
 
 ## Lifecycle
 

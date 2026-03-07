@@ -156,9 +156,9 @@ export type Record = z.infer<typeof RecordSchema>;
  */
 export function createRecordTemplate(options: {
   name: string;
-  description?: string;
-  content?: string;
-  sources?: Array<{ ref: string; text?: string }>;
+  description?: string | undefined;
+  content?: string | undefined;
+  sources?: Array<{ ref: string; text?: string | undefined }> | undefined;
 }): string {
   const record = (
     <record status="draft">

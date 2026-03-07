@@ -1,7 +1,7 @@
 /**
  * Capture page — audio recording + photo capture.
  *
- * Ported from callback-dropbox CaptureView. Sessions accumulate files
+ * Ported from the legacy capture view. Sessions accumulate files
  * and finalize into inbox cards. Device preferences stored in localStorage.
  */
 

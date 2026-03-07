@@ -1,7 +1,7 @@
 /**
  * Intake job card schema - a job to triage new inbox items.
  *
- * Created by connectors (capture, dropbox, raindrop) when new items arrive,
+ * Created by connectors (raindrop, rss, etc.) when new items arrive,
  * or by `cb wakeup` for UI-created memos and other unjobbed inbox items.
  * Processed by the reactor agent, which triages each item.
  */

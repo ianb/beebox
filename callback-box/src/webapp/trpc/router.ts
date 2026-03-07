@@ -4,7 +4,6 @@ import { statusRouter } from "./routers/status.js";
 import { cardRouter } from "./routers/card.js";
 import { schedulerRouter } from "./routers/scheduler.js";
 import { calendarRouter } from "./routers/calendar.js";
-import { pairingRouter } from "./routers/pairing.js";
 import { actionsRouter } from "./routers/actions.js";
 import { briefsRouter } from "./routers/briefs.js";
 import { chatRouter } from "./routers/chat.js";
@@ -18,7 +17,6 @@ export const appRouter = router({
   card: cardRouter,
   scheduler: schedulerRouter,
   calendar: calendarRouter,
-  pairing: pairingRouter,
   actions: actionsRouter,
   briefs: briefsRouter,
   chat: chatRouter,

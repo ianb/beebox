@@ -152,12 +152,12 @@ export function createVoiceMemoTemplate(): string {
 }
 
 /**
- * Template for creating a memo card from a dropbox message (browser context).
+ * Template for creating a memo card from the browser extension (legacy dropbox name).
  */
 export function createDropboxMemoTemplate(options: {
   content: string;
-  timestamp?: string;
-  context?: { url?: string; title?: string; selectedText?: string };
+  timestamp?: string | undefined;
+  context?: { url?: string | undefined; title?: string | undefined; selectedText?: string | undefined } | undefined;
 }): string {
   const created = options.timestamp || new Date().toISOString();
   let contextElement = "";

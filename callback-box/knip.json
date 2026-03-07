@@ -19,7 +19,6 @@
   "ignoreDependencies": [
     "@ianbicking/personal-vibe-check",
     "@parcel/markdown-ansi",
-    "ansi-to-html",
-    "callback-dropbox"
+    "ansi-to-html"
   ]
 }

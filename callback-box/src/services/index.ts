@@ -14,8 +14,6 @@ import type { GoogleCalendarService } from "./google-calendar.js";
 import type { RaindropService } from "./raindrop.js";
 import type { ImapService } from "./imap.js";
 import type { OpenAIAudioService } from "./openai-audio.js";
-import type { DropboxRelayService } from "./dropbox-relay.js";
-import type { CaptureRelayService } from "./capture-relay.js";
 import type { FeedFetcherService } from "./feed-fetcher.js";
 import type { ArticleFetcherService } from "./article-fetcher.js";
 
@@ -63,18 +61,6 @@ export {
   createFakeOpenAIAudio,
 } from "./openai-audio.js";
 
-export type { DropboxRelayService, ChannelCredentials, RelayMessage } from "./dropbox-relay.js";
-export {
-  createDropboxRelayService,
-  createFakeDropboxRelay,
-} from "./dropbox-relay.js";
-
-export type { CaptureRelayService, CaptureSession, CaptureManifest } from "./capture-relay.js";
-export {
-  createCaptureRelayService,
-  createFakeCaptureRelay,
-} from "./capture-relay.js";
-
 export type { FeedFetcherService, FeedResponse } from "./feed-fetcher.js";
 export {
   createFeedFetcherService,
@@ -100,8 +86,6 @@ export interface Services {
   raindrop?: RaindropService | undefined;
   imap?: ImapService | undefined;
   openaiAudio?: OpenAIAudioService | undefined;
-  dropboxRelay?: DropboxRelayService | undefined;
-  captureRelay?: CaptureRelayService | undefined;
   feedFetcher?: FeedFetcherService | undefined;
   articleFetcher?: ArticleFetcherService | undefined;
 }

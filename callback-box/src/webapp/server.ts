@@ -17,11 +17,11 @@ import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerBriefRoutes } from "./routes/briefs.js";
 import { registerHistoryRoutes } from "./routes/history.js";
-import { registerPairingRoutes } from "./routes/pairing.js";
 import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
+import { registerClerkRoutes } from "./routes/clerk.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerSystemAdminRoutes, registerBoxAdminRoutes, registerGoogleServicesCallback } from "./routes/admin.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
@@ -74,6 +74,28 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       level: "warn",
     },
     trustProxy: true,
+  });
+
+  server.addHook("onSend", (request, reply, payload, done) => {
+    const origin = request.headers.origin;
+    if (origin && origin.startsWith("chrome-extension://")) {
+      reply.header("Access-Control-Allow-Origin", origin);
+      reply.header("Access-Control-Allow-Credentials", "true");
+      reply.header("Vary", "Origin");
+    }
+    done(null, payload);
+  });
+
+  server.options("/api/boxes", async (request, reply) => {
+    const origin = request.headers.origin;
+    if (origin && origin.startsWith("chrome-extension://")) {
+      reply.header("Access-Control-Allow-Origin", origin);
+      reply.header("Access-Control-Allow-Credentials", "true");
+      reply.header("Access-Control-Allow-Headers", "Content-Type");
+    }
+    return reply
+      .header("Access-Control-Allow-Methods", "GET,OPTIONS")
+      .send();
   });
 
   // Register cookie support (used for auth sessions)
@@ -204,12 +226,12 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
       await registerBriefRoutes(instance, box.boxRoot);
       await registerHistoryRoutes(instance, box.boxRoot);
-      await registerPairingRoutes({ server: instance, boxRoot: box.boxRoot, dropboxRelay: options.services?.dropboxRelay });
       await registerCalendarRoutes({ server: instance, boxRoot: box.boxRoot, calendar: options.services?.calendar });
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent, openaiAudio: options.services?.openaiAudio });
       await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
       await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
 
       // Serve static frontend files within this prefix
       if (frontendExists) {

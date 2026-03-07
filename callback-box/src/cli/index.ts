@@ -28,7 +28,6 @@ import {
   triageFeedbackCommand,
   procedureCommand,
   initRulesCommand,
-  pairCommand,
   transcribeCapturesCommand,
   assembleTimelineCommand,
   googleAuthCommand,
@@ -75,7 +74,6 @@ program.addCommand(processFeedbackCommand);
 program.addCommand(triageFeedbackCommand);
 program.addCommand(procedureCommand);
 program.addCommand(initRulesCommand);
-program.addCommand(pairCommand);
 program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);
 program.addCommand(googleAuthCommand);

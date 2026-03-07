@@ -235,7 +235,6 @@ This works but is the one area where the machine boundaries leak — each machin
 | `card` | get, patch | Patch uses Zod discriminated union for ops |
 | `scheduler` | log, schedules | Explicit return interfaces needed (see lessons) |
 | `calendar` | available, config, updateConfig | Uses `ctx.services.calendar` |
-| `pairing` | status, pair | Uses `ctx.services.dropboxRelay` |
 | `actions` | wakeup, answer, create | Mutations with `ctx.broadcastEvent` |
 | `briefs` | list, get, markRead, feedback, queryResponse, guideReactions, completeReading | Largest router; audio as base64 |
 | `chat` | history, status, interrupt, reset, voiceConfig | Streaming `chat.send` stays REST |

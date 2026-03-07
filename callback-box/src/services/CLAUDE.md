@@ -116,8 +116,6 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `raindrop.ts` | `RaindropService` | `createRaindropService(token)` | `createFakeRaindrop({ collections?, bookmarks? })` |
 | `imap.ts` | `ImapService` | `createImapService({ host, port, user, pass })` | `createFakeImap({ messages? })` |
 | `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |
-| `dropbox-relay.ts` | `DropboxRelayService` | `createDropboxRelayService({ url, apiKey, channelKey })` | `createFakeDropboxRelay({ messages? })` |
-| `capture-relay.ts` | `CaptureRelayService` | `createCaptureRelayService({ url, apiKey })` | `createFakeCaptureRelay({ sessions?, manifests? })` |
 | `feed-fetcher.ts` | `FeedFetcherService` | `createFeedFetcherService()` | `createFakeFeedFetcher({ feeds? })` |
 | `article-fetcher.ts` | `ArticleFetcherService` | `createArticleFetcherService()` | `createFakeArticleFetcher(articles?)` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |

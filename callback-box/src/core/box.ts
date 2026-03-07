@@ -410,22 +410,6 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     source: "Sync calendar changes hourly",
   },
   {
-    name: "check-captures",
-    description: "Process new photo/screen captures from the capture directory",
-    notBefore: "5m",
-    onWakeup: true,
-    runs: "cb wakeup --connector capture",
-    source: "Process new captures on wakeup",
-  },
-  {
-    name: "check-dropbox",
-    description: "Relay browser notifications via Dropbox message passing",
-    notBefore: "5m",
-    onWakeup: true,
-    runs: "cb wakeup --connector dropbox",
-    source: "Sync Dropbox messages on wakeup",
-  },
-  {
     name: "check-raindrop",
     description: "Sync saved bookmarks from Raindrop.io",
     cron: "0 */6 * * *",
@@ -783,4 +767,3 @@ async function installSchemasGuide(boxRoot: string): Promise<void> {
     await fs.writeFile(claudeMdPath, SCHEMAS_CLAUDE_MD);
   }
 }
-

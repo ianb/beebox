@@ -46,11 +46,6 @@ const CONNECTORS: ConnectorInfo[] = [
     description: "Syncs bookmarks with Raindrop.io.",
   },
   {
-    name: "dropbox",
-    produces: ["memo"],
-    description: "Relays browser notifications via Dropbox.",
-  },
-  {
     name: "gmail",
     produces: ["email-thread", "email-message"],
     description: "Pulls emails from Gmail via IMAP. Creates thread directories with message cards and body text files.",

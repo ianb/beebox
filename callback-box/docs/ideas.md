@@ -22,13 +22,13 @@ Agent writes `.callback-box/agent-failure.json` with `{ reason, phase, sessionId
 
 The chat frontend's system prompt should instruct the assistant to use jobs to start tasks rather than executing them synchronously. Also provide it with docs and CLI query tools to check: what's currently running, what's scheduled to run, when something last ran.
 
-### Documentation graph
+### Documentation graph — IMPLEMENTED
 
-Build a graph of all docs (stack-decisions, testing-gaps, generated docs, CLAUDE.md files, memory files, etc.), detect orphans, visualize cross-references. Ensure no doc is unreachable and understand the reference structure.
+Implemented as `docs/doc-graph.md` (auto-generated cross-reference report). See CLAUDE.md Doc Map.
 
 ### Voice keyword for photo capture
 
-Add a keyword trigger during voice input (especially the Dropbox long recording mode) that captures a photo from the camera. Useful for annotating voice notes with visual context.
+Add a keyword trigger during voice input (especially the Clerk long recording mode) that captures a photo from the camera. Useful for annotating voice notes with visual context.
 
 ### Image card EXIF date extraction
 

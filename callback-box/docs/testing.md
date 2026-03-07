@@ -102,6 +102,7 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 | `test/routes-commands.doctest.md` | Command listing, details, sync execution, error cases |
 | `test/routes-history.doctest.md` | Git commit log, diffs, session log |
 | `test/routes-actions.doctest.md` | Answer question, create card, validation |
+| `test/routes-clerk.doctest.md` | Clerk extension API (memo, save-to-brief, save-page, tabs, actions) |
 | `test/parse-tags.doctest.md` | XML-like tag parsing (frontend) |
 | `test/patmatch.doctest.md` | Keyword pattern matching (frontend) |
 | `test/speech-parsing.doctest.md` | Speech tag extraction for TTS (frontend) |
@@ -116,7 +117,6 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 | `test/service-raindrop.doctest.md` | Raindrop service fake (collections, bookmarks, CRUD) |
 | `test/service-google-calendar.doctest.md` | Google Calendar service fake (calendars, events) |
 | `test/service-openai-audio.doctest.md` | OpenAI audio service fake (transcription, TTS) |
-| `test/service-dropbox-relay.doctest.md` | Dropbox relay service fake (channels, messages) |
 | `test/service-imap.doctest.md` | IMAP service fake (connect, search, fetch) |
 | `test/connector-telegram.doctest.md` | Telegram connector: extractMessage, webhook processing, full sync, outbound send |
 | `test/connector-raindrop.doctest.md` | Raindrop connector: pull, update, push bookmark sync |
@@ -188,7 +188,6 @@ printCalls(tg.callLog);
 | Raindrop | `createFakeRaindrop()` | `{ collections?, bookmarks? }` | `.collections[]`, `.bookmarks[]` |
 | OpenAI Audio | `createFakeOpenAIAudio()` | `{ transcriptionText? }` | `.calls[]` |
 | IMAP | `createFakeImap()` | `{ messages? }` | `.connected`, `.lockedMailbox` |
-| Dropbox Relay | `createFakeDropboxRelay()` | `{ messages? }` | `.channels[]`, `.messages[]` |
 | Capture Relay | `createFakeCaptureRelay()` | `{ sessions?, manifests? }` | `.sessions[]` |
 | Google Auth | `createFakeGoogleAuth()` | `{ accessToken? }` | — |
 
