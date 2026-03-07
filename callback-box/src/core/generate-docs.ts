@@ -1003,9 +1003,9 @@ Job cards can trigger a procedure directly using the \`<procedure>\` element:
 
 \`\`\`xml
 <some-job-type>
-  <procedure ref="process-news">
-    <directive>Focus on technology stories</directive>
-  </procedure>
+<procedure ref="process-news">
+<directive>Focus on technology stories</directive>
+</procedure>
 </some-job-type>
 \`\`\`
 
@@ -1025,42 +1025,38 @@ The engine enforces a clean git state between steps. Every step's work is commit
 
 \`\`\`xml
 <procedure name="my-procedure">
-  <description>What this procedure does</description>
-
-  <step id="first-step">
-    <description>Human-readable description of this step</description>
-
-    <precheck>
-      <shell>
-        # Exit 0 to proceed, exit $CHECK_SKIP to skip
-        count=$(ls box/inbox/*.card 2>/dev/null | wc -l)
-        if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
-        echo "Found $count items"
-      </shell>
-      <why>Explanation of when/why this step should be skipped</why>
-    </precheck>
-
-    <run>
-      <agent model="haiku" max-turns="20">
-        Agent prompt goes here. The engine prepends context
-        (date, procedure name, step ID, working directory).
-      </agent>
-    </run>
-
-    <validate severity="review">
-      <shell>
-        # Exit 0 = pass, non-zero = fail
-        remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
-        echo "Remaining: $remaining"
-        [ "$remaining" -eq 0 ]
-      </shell>
-      <instruction>
-        Natural language description of what success looks like.
-        A model evaluates the git diff against this instruction.
-      </instruction>
-      <why>Why this validation matters</why>
-    </validate>
-  </step>
+<description>What this procedure does</description>
+<step id="first-step">
+<description>Human-readable description of this step</description>
+<precheck>
+<shell>
+# Exit 0 to proceed, exit $CHECK_SKIP to skip
+count=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
+echo "Found $count items"
+</shell>
+<why>Explanation of when/why this step should be skipped</why>
+</precheck>
+<run>
+<agent model="haiku" max-turns="20">
+Agent prompt goes here. The engine prepends context
+(date, procedure name, step ID, working directory).
+</agent>
+</run>
+<validate severity="review">
+<shell>
+# Exit 0 = pass, non-zero = fail
+remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+echo "Remaining: $remaining"
+[ "$remaining" -eq 0 ]
+</shell>
+<instruction>
+Natural language description of what success looks like.
+A model evaluates the git diff against this instruction.
+</instruction>
+<why>Why this validation matters</why>
+</validate>
+</step>
 </procedure>
 \`\`\`
 
@@ -1079,7 +1075,7 @@ Shell scripts run in the box root via \`bash -c\`. Three outcomes:
 
 \`\`\`xml
 <agent model="haiku" max-turns="25">
-  Prompt text here...
+Prompt text here...
 </agent>
 \`\`\`
 
@@ -1094,7 +1090,7 @@ Add \`pass-output="true"\` to a precheck to include its stdout in the agent's co
 
 \`\`\`xml
 <precheck pass-output="true">
-  <shell>echo "Items to process: 5"</shell>
+<shell>echo "Items to process: 5"</shell>
 </precheck>
 \`\`\`
 

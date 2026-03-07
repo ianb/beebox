@@ -77,8 +77,8 @@ export function createChatJobTemplate(options: {
 }): string {
   const created = options.created ?? new Date().toISOString();
   return `<chat-job status="pending" created="${escapeAttr(created)}">
-  <description>${escapeText(options.description)}</description>
-  <thread ref="${escapeAttr(options.threadRef)}" />
+<description>${escapeText(options.description)}</description>
+<thread ref="${escapeAttr(options.threadRef)}" />
 </chat-job>
 `;
 }

@@ -37,9 +37,9 @@ export const ImageText = element("text", {
  * Example:
  * ```xml
  * <image status="analyzed" has-text="true">
- *   <filename name="photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
- *   <description>Whiteboard with project timeline and milestones</description>
- *   <text source="whiteboard">## Project Timeline\n- Phase 1: Jan-Feb\n- Phase 2: Mar-Apr</text>
+ * <filename name="photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
+ * <description>Whiteboard with project timeline and milestones</description>
+ * <text source="whiteboard">## Project Timeline\n- Phase 1: Jan-Feb\n- Phase 2: Mar-Apr</text>
  * </image>
  * ```
  */

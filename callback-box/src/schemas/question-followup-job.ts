@@ -38,10 +38,10 @@ const FollowupAnswer = element("answer", {
  * Example:
  * ```xml
  * <question-followup-job status="pending" created="2026-02-26T12:00:00Z" source="question-answer">
- *   <description>Follow up on answered question: Should I include tech news?</description>
- *   <question-ref ref="box/questions/tech-news.question.card" />
- *   <directive>Update config/news.guide.card to include or exclude tech category</directive>
- *   <answer>yes</answer>
+ * <description>Follow up on answered question: Should I include tech news?</description>
+ * <question-ref ref="box/questions/tech-news.question.card" />
+ * <directive>Update config/news.guide.card to include or exclude tech category</directive>
+ * <answer>yes</answer>
  * </question-followup-job>
  * ```
  */
@@ -88,10 +88,10 @@ export function createQuestionFollowupJobTemplate(options: {
   const created = options.created ?? new Date().toISOString();
 
   return `<question-followup-job status="pending" created="${escapeAttr(created)}" source="question-answer">
-  <description>${escapeText(options.description)}</description>
-  <question-ref ref="${escapeAttr(options.questionRef)}" />
-  <directive>${escapeText(options.directive)}</directive>
-  <answer>${escapeText(options.answer)}</answer>
+<description>${escapeText(options.description)}</description>
+<question-ref ref="${escapeAttr(options.questionRef)}" />
+<directive>${escapeText(options.directive)}</directive>
+<answer>${escapeText(options.answer)}</answer>
 </question-followup-job>
 `;
 }

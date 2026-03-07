@@ -39,15 +39,15 @@ export const TelegramMessageError = element("error", {
  * Example (pending):
  * ```xml
  * <telegram-message status="pending" chat-id="-1001234567890">
- *   <text>Hello from the box!</text>
+ * <text>Hello from the box!</text>
  * </telegram-message>
  * ```
  *
  * Example (with reply):
  * ```xml
  * <telegram-message status="pending" chat-id="-1001234567890">
- *   <text>Sure, I'll pick you up at 3!</text>
- *   <reply-to>12345</reply-to>
+ * <text>Sure, I'll pick you up at 3!</text>
+ * <reply-to>12345</reply-to>
  * </telegram-message>
  * ```
  */
@@ -85,7 +85,7 @@ To send a message to a Telegram chat, create a card in \`box/output/\` with the 
 ## Example
 \`\`\`xml
 <telegram-message status="pending" chat-id="-1001234567890">
-  <text>Dinner is ready!</text>
+<text>Dinner is ready!</text>
 </telegram-message>
 \`\`\``,
 });
@@ -103,9 +103,9 @@ export function createTelegramMessageTemplate(options: {
   const parts: string[] = [
     `<telegram-message status="pending" chat-id="${escapeAttr(options.chatId)}">`,
   ];
-  parts.push(`  <text>${escapeText(options.text)}</text>`);
+  parts.push(`<text>${escapeText(options.text)}</text>`);
   if (options.replyTo !== undefined) {
-    parts.push(`  <reply-to>${options.replyTo}</reply-to>`);
+    parts.push(`<reply-to>${options.replyTo}</reply-to>`);
   }
   parts.push("</telegram-message>");
   parts.push("");

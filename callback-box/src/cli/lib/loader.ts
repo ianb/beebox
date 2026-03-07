@@ -30,7 +30,7 @@ export async function createLoader(
   const loaderOptions: CardLoaderOptions = {
     schemas: await createSchemaRegistry(boxRoot),
     requireVersion: options.requireVersion ?? false,
-    indent: options.indent ?? true,
+    indent: options.indent ?? false,
   };
 
   return new CardLoader(boxRoot, loaderOptions);
@@ -58,7 +58,7 @@ export async function createMemoryLoader(
   return new MemoryCardLoader(projectRoot, {
     schemas: await createSchemaRegistry(),
     requireVersion: options.requireVersion ?? false,
-    indent: options.indent ?? true,
+    indent: options.indent ?? false,
     files,
   });
 }

@@ -525,47 +525,39 @@ export function createInitialGuideTemplate(_options: InitialGuideOptions = {}): 
 
   // Use raw XML string to include comments - JSX doesn't support XML comments
   return `<news-guide version="1.0.0">
-  <updated-at>${now}</updated-at>
-
-  <!-- INTERESTS: Topics the reader cares about. Infer from:
-       - What news sources they've subscribed to
-       - What types of articles are in the pool
-       - Common themes in their feed selection
-       Use confidence="hypothesis" for initial guesses. -->
-  <interests>
-    <!-- Example: <topic confidence="hypothesis" source="inferred">Topic name</topic> -->
-  </interests>
-
-  <!-- DISINTERESTS: What to avoid. Infer from:
-       - Topics conspicuously absent from their feeds
-       - Types of content that seem off-brand
-       Start empty - better to include too much than wrongly exclude. -->
-  <disinterests>
-  </disinterests>
-
-  <!-- PREFERENCES: How to present content. Start with sensible defaults:
-       - depth: balance of surface vs technical detail
-       - tone: conversational, informative, not breathless or alarmist
-       - format: how to structure editions -->
-  <preferences>
-    <preference aspect="tone" confidence="low" source="default">
-      Informative and curious. Direct headlines that say what happened,
-      not clickbait that hides the point. Trust the reader's intelligence.
-    </preference>
-  </preferences>
-
-  <!-- CONTEXT: Temporary situational notes that affect curation.
-       E.g., "Conference season", "Following specific news story" -->
-  <context-notes>
-  </context-notes>
-
-  <!-- EXPERIMENTS: Ways to test what works. Start with one about calibration. -->
-  <experiments>
-    <experiment id="exp-initial" status="active" created-at="${now}">
-      <hypothesis>Initial interests need calibration through reader feedback</hypothesis>
-      <approach>Present diverse content, note what gets engagement vs gets skipped</approach>
-    </experiment>
-  </experiments>
+<updated-at>${now}</updated-at>
+<!-- INTERESTS: Topics the reader cares about. Infer from:
+     - What news sources they've subscribed to
+     - What types of articles are in the pool
+     - Common themes in their feed selection
+     Use confidence="hypothesis" for initial guesses. -->
+<interests>
+<!-- Example: <topic confidence="hypothesis" source="inferred">Topic name</topic> -->
+</interests>
+<!-- DISINTERESTS: What to avoid. Infer from:
+     - Topics conspicuously absent from their feeds
+     - Types of content that seem off-brand
+     Start empty - better to include too much than wrongly exclude. -->
+<disinterests>
+</disinterests>
+<!-- PREFERENCES: How to present content. Start with sensible defaults:
+     - depth: balance of surface vs technical detail
+     - tone: conversational, informative, not breathless or alarmist
+     - format: how to structure editions -->
+<preferences>
+<preference aspect="tone" confidence="low" source="default">Informative and curious. Direct headlines that say what happened, not clickbait that hides the point. Trust the reader's intelligence.</preference>
+</preferences>
+<!-- CONTEXT: Temporary situational notes that affect curation.
+     E.g., "Conference season", "Following specific news story" -->
+<context-notes>
+</context-notes>
+<!-- EXPERIMENTS: Ways to test what works. Start with one about calibration. -->
+<experiments>
+<experiment id="exp-initial" status="active" created-at="${now}">
+<hypothesis>Initial interests need calibration through reader feedback</hypothesis>
+<approach>Present diverse content, note what gets engagement vs gets skipped</approach>
+</experiment>
+</experiments>
 </news-guide>
 `;
 }

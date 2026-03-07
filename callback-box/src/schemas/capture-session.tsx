@@ -77,23 +77,23 @@ export const SessionTranscript = element("transcript", {
  * Example:
  * ```xml
  * <capture-session status="intake-complete" session-id="abc123">
- *   <time start="2024-01-15T10:00:00Z" end="2024-01-15T10:15:00Z" duration="15m0s" />
- *   <images>
- *     <image-ref file="photo-001-whiteboard.image.card" />
- *     <image-ref file="photo-002-diagram.image.card" />
- *   </images>
- *   <audio-clips>
- *     <audio-ref file="audio-001.audio.card" />
- *   </audio-clips>
- *   <purpose>User is planning the Q2 project timeline and capturing whiteboard notes</purpose>
- *   <transcript>
- *     <text>So let me walk through the timeline we've got here...</text>
- *     <image ref="photo-001-whiteboard.image.card" description="Whiteboard with Q2 milestones" filename="photo-001-whiteboard.jpg" />
- *     <text>And then phase two starts in March.</text>
- *     <silence duration="15s" />
- *     <text>OK let me get a photo of this diagram too.</text>
- *     <image ref="photo-002-diagram.image.card" description="Architecture diagram" filename="photo-002-diagram.jpg" />
- *   </transcript>
+ * <time start="2024-01-15T10:00:00Z" end="2024-01-15T10:15:00Z" duration="15m0s" />
+ * <images>
+ * <image-ref file="photo-001-whiteboard.image.card" />
+ * <image-ref file="photo-002-diagram.image.card" />
+ * </images>
+ * <audio-clips>
+ * <audio-ref file="audio-001.audio.card" />
+ * </audio-clips>
+ * <purpose>User is planning the Q2 project timeline and capturing whiteboard notes</purpose>
+ * <transcript>
+ * <text>So let me walk through the timeline we've got here...</text>
+ * <image ref="photo-001-whiteboard.image.card" description="Whiteboard with Q2 milestones" filename="photo-001-whiteboard.jpg" />
+ * <text>And then phase two starts in March.</text>
+ * <silence duration="15s" />
+ * <text>OK let me get a photo of this diagram too.</text>
+ * <image ref="photo-002-diagram.image.card" description="Architecture diagram" filename="photo-002-diagram.jpg" />
+ * </transcript>
  * </capture-session>
  * ```
  */

@@ -20,7 +20,7 @@ export const EmailFrom = element("from", {
  * Recipient address(es).
  */
 export const EmailTo = element("to", {
-  text: z.string(),
+  text: z.string().optional(),
 });
 
 /**
@@ -48,7 +48,7 @@ export const EmailMessageSubject = element("subject", {
  * Short preview of the message body (safe for agent context).
  */
 export const EmailSnippet = element("snippet", {
-  text: z.string(),
+  text: z.string().optional(),
 });
 
 /**
@@ -85,12 +85,12 @@ export const EmailAttachments = element("attachments", {
  * Example:
  * ```xml
  * <email-message message-id="<unique@gmail.com>" thread-id="abc123">
- *   <from>alice@example.com</from>
- *   <to>bob@example.com</to>
- *   <date>2026-02-15T10:00:00Z</date>
- *   <subject>Weekend plans</subject>
- *   <snippet>Hey, are you free Saturday...</snippet>
- *   <body-file>msg-001.body.txt</body-file>
+ * <from>alice@example.com</from>
+ * <to>bob@example.com</to>
+ * <date>2026-02-15T10:00:00Z</date>
+ * <subject>Weekend plans</subject>
+ * <snippet>Hey, are you free Saturday...</snippet>
+ * <body-file>msg-001.body.txt</body-file>
  * </email-message>
  * ```
  */

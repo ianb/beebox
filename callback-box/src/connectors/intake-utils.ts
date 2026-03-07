@@ -106,7 +106,7 @@ async function appendToIntakeJob(
 
   // Build new item elements
   const newItemElements = opts.items
-    .map((ref) => `  <item ref="${escapeAttr(ref)}" />`)
+    .map((ref) => `<item ref="${escapeAttr(ref)}" />`)
     .join("\n");
 
   // Insert new items before the closing tag

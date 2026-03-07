@@ -85,26 +85,26 @@ export const RecipeSection = element("section", {
  * Example:
  * ```xml
  * <recipe>
- *   <title>Pasta alla Norma</title>
- *   <description>A classic Sicilian pasta with fried eggplant and ricotta salata.</description>
- *   <yield amount="4">4 servings</yield>
- *   <source>Marcella Hazan, Essentials of Classic Italian Cooking</source>
- *   <image src="norma.jpg" />
- *   <tags><tag>pasta</tag><tag>sicilian</tag></tags>
- *   <notes>The eggplant can be grilled instead of fried.</notes>
+ * <title>Pasta alla Norma</title>
+ * <description>A classic Sicilian pasta with fried eggplant and ricotta salata.</description>
+ * <yield amount="4">4 servings</yield>
+ * <source>Marcella Hazan, Essentials of Classic Italian Cooking</source>
+ * <image src="norma.jpg" />
+ * <tags><tag>pasta</tag><tag>sicilian</tag></tags>
+ * <notes>The eggplant can be grilled instead of fried.</notes>
  *
- *   <section name="Sauce">
- *     <notes>This sauce works on its own too.</notes>
- *     <ingredients>
- *       <ing amount="1" unit="28oz can">San Marzano tomatoes</ing>
- *       <ing amount="3" unit="cloves">garlic</ing>
- *       <ing>fresh basil</ing>
- *     </ingredients>
- *     <steps>
- *       <step>Sauté @{garlic} in @{olive oil}, add crushed @{San Marzano tomatoes}.</step>
- *       <step>Add @{eggplant}{1 cup} to the sauce with torn @basil.</step>
- *     </steps>
- *   </section>
+ * <section name="Sauce">
+ * <notes>This sauce works on its own too.</notes>
+ * <ingredients>
+ * <ing amount="1" unit="28oz can">San Marzano tomatoes</ing>
+ * <ing amount="3" unit="cloves">garlic</ing>
+ * <ing>fresh basil</ing>
+ * </ingredients>
+ * <steps>
+ * <step>Sauté @{garlic} in @{olive oil}, add crushed @{San Marzano tomatoes}.</step>
+ * <step>Add @{eggplant}{1 cup} to the sauce with torn @basil.</step>
+ * </steps>
+ * </section>
  * </recipe>
  * ```
  */

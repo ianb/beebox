@@ -36,32 +36,32 @@ Every step has three optional phases: **precheck**, **run**, **validate**. All u
 
 ```xml
 <step id="triage">
-  <description>Review inbox items and trash uninteresting ones</description>
+<description>Review inbox items and trash uninteresting ones</description>
 
-  <precheck>
-    <shell>
-      count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
-      if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
-      echo "Found $count items to triage"
-    </shell>
-    <why>Nothing to do if inbox is empty</why>
-  </precheck>
+<precheck>
+<shell>
+count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
+echo "Found $count items to triage"
+</shell>
+<why>Nothing to do if inbox is empty</why>
+</precheck>
 
-  <run>
-    <agent model="haiku" max-turns="20">
-      Your agent prompt here...
-    </agent>
-  </run>
+<run>
+<agent model="haiku" max-turns="20">
+Your agent prompt here...
+</agent>
+</run>
 
-  <validate severity="review">
-    <shell>
-      count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
-      echo "Inbox: $count items"
-    </shell>
-    <instruction>
-      Every item should have an explicit keep or trash decision.
-    </instruction>
-  </validate>
+<validate severity="review">
+<shell>
+count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+echo "Inbox: $count items"
+</shell>
+<instruction>
+Every item should have an explicit keep or trash decision.
+</instruction>
+</validate>
 </step>
 ```
 

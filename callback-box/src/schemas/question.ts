@@ -105,28 +105,28 @@ export const QuestionDirective = element("directive", {
  * Pending example:
  * ```xml
  * <question status="pending" answered-by="news-curation">
- *   <memo>Context about what's being asked</memo>
- *   <prompt>What should I do?</prompt>
- *   <input type="select">
- *     <option id="a">Option A</option>
- *     <option id="b">Option B</option>
- *   </input>
- *   <directive>Update the news guide based on the user's preference</directive>
+ * <memo>Context about what's being asked</memo>
+ * <prompt>What should I do?</prompt>
+ * <input type="select">
+ * <option id="a">Option A</option>
+ * <option id="b">Option B</option>
+ * </input>
+ * <directive>Update the news guide based on the user's preference</directive>
  * </question>
  * ```
  *
  * Answered example:
  * ```xml
  * <question status="answered" answered-by="news-curation">
- *   <memo>Context about what's being asked</memo>
- *   <prompt>What should I do?</prompt>
- *   <input type="select">
- *     <option id="a">Option A</option>
- *     <option id="b">Option B</option>
- *   </input>
- *   <answer selected="a">Option A</answer>
- *   <answered-at>2024-01-15T11:00:00Z</answered-at>
- *   <answered-via>web</answered-via>
+ * <memo>Context about what's being asked</memo>
+ * <prompt>What should I do?</prompt>
+ * <input type="select">
+ * <option id="a">Option A</option>
+ * <option id="b">Option B</option>
+ * </input>
+ * <answer selected="a">Option A</answer>
+ * <answered-at>2024-01-15T11:00:00Z</answered-at>
+ * <answered-via>web</answered-via>
  * </question>
  * ```
  */
@@ -187,16 +187,16 @@ export function createSelectQuestionTemplate(
 ): string {
   const { memo, prompt, options, directive } = params;
   const optionsXml = options
-    .map(opt => `    <option id="${escapeAttr(opt.id)}">${escapeText(opt.label)}</option>`)
+    .map(opt => `<option id="${escapeAttr(opt.id)}">${escapeText(opt.label)}</option>`)
     .join("\n");
-  const directiveXml = directive ? `\n  <directive>${escapeText(directive)}</directive>` : "";
+  const directiveXml = directive ? `\n<directive>${escapeText(directive)}</directive>` : "";
 
   return `<question status="pending">
-  <memo>${escapeText(memo)}</memo>
-  <prompt>${escapeText(prompt)}</prompt>
-  <input type="select">
+<memo>${escapeText(memo)}</memo>
+<prompt>${escapeText(prompt)}</prompt>
+<input type="select">
 ${optionsXml}
-  </input>${directiveXml}
+</input>${directiveXml}
 </question>
 `;
 }
@@ -212,11 +212,11 @@ interface CreateQuestionTemplateParams {
  */
 export function createTextQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const { memo, prompt, directive } = params;
-  const directiveXml = directive ? `\n  <directive>${escapeText(directive)}</directive>` : "";
+  const directiveXml = directive ? `\n<directive>${escapeText(directive)}</directive>` : "";
   return `<question status="pending">
-  <memo>${escapeText(memo)}</memo>
-  <prompt>${escapeText(prompt)}</prompt>
-  <input type="text" />${directiveXml}
+<memo>${escapeText(memo)}</memo>
+<prompt>${escapeText(prompt)}</prompt>
+<input type="text" />${directiveXml}
 </question>
 `;
 }
@@ -226,11 +226,11 @@ export function createTextQuestionTemplate(params: CreateQuestionTemplateParams)
  */
 export function createConfirmQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const { memo, prompt, directive } = params;
-  const directiveXml = directive ? `\n  <directive>${escapeText(directive)}</directive>` : "";
+  const directiveXml = directive ? `\n<directive>${escapeText(directive)}</directive>` : "";
   return `<question status="pending">
-  <memo>${escapeText(memo)}</memo>
-  <prompt>${escapeText(prompt)}</prompt>
-  <input type="confirm" />${directiveXml}
+<memo>${escapeText(memo)}</memo>
+<prompt>${escapeText(prompt)}</prompt>
+<input type="confirm" />${directiveXml}
 </question>
 `;
 }

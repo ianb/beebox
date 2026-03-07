@@ -28,11 +28,13 @@ Cards are the core data format. They are XML files validated by Zod schemas via 
 
 ```xml
 <memo status="new">
-  <created>2024-01-15T10:00:00Z</created>
-  <content>Some text</content>
-  <source>text</source>
+<created>2024-01-15T10:00:00Z</created>
+<content>Some text</content>
+<source>text</source>
 </memo>
 ```
+
+**Formatting**: Card XML is flat — no indentation at any nesting level. Text content within elements should use one long line per paragraph, not soft-wrapped at 80 columns. This keeps diffs clean and avoids re-wrapping on edits.
 
 **Schemas can include `instructions`** — prose embedded in the schema definition that tells agents how to handle that card type. These instructions are injected into agent context when processing cards.
 

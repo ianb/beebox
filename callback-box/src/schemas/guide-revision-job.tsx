@@ -94,11 +94,11 @@ export function createGuideRevisionJobTemplate(options: {
   const created = options.created ?? new Date().toISOString();
   const guideAttr = options.guide ? ` guide="${escapeAttr(options.guide)}"` : "";
   const briefElements = options.briefs
-    .map((ref) => `  <brief ref="${escapeAttr(ref)}" />`)
+    .map((ref) => `<brief ref="${escapeAttr(ref)}" />`)
     .join("\n");
 
   return `<guide-revision-job created="${created}" source="${escapeAttr(options.source)}"${guideAttr}>
-  <description>${escapeText(options.description)}</description>
+<description>${escapeText(options.description)}</description>
 ${briefElements}
 </guide-revision-job>
 `;

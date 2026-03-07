@@ -75,22 +75,22 @@ For quick reference, a single-message thread:
 
 ```xml
 <email-thread status="new">
-  <source type="imap"/>
-  <subject>Meeting tomorrow?</subject>
-  <participants>
-    <participant>alice@example.com</participant>
-    <participant>me@example.com</participant>
-  </participants>
-  <messages>
-    <message id="abc123@mail.example.com">
-      <from>alice@example.com</from>
-      <date>2024-01-15T10:30:00Z</date>
-      <body>
-        Hi! Are you free tomorrow at 2pm for a quick sync?
-        - Alice
-      </body>
-    </message>
-  </messages>
+<source type="imap"/>
+<subject>Meeting tomorrow?</subject>
+<participants>
+<participant>alice@example.com</participant>
+<participant>me@example.com</participant>
+</participants>
+<messages>
+<message id="abc123@mail.example.com">
+<from>alice@example.com</from>
+<date>2024-01-15T10:30:00Z</date>
+<body>
+Hi! Are you free tomorrow at 2pm for a quick sync?
+- Alice
+</body>
+</message>
+</messages>
 </email-thread>
 ```
 
@@ -98,21 +98,21 @@ For quick reference, a single-message thread:
 
 ```xml
 <email-reply status="draft">
-  <!-- Payload -->
-  <to>alice@example.com</to>
-  <subject>Re: Meeting tomorrow?</subject>
-  <body>
-    Hi Alice,
+<!-- Payload -->
+<to>alice@example.com</to>
+<subject>Re: Meeting tomorrow?</subject>
+<body>
+Hi Alice,
 
-    Yes, 2pm works for me! I'll send a calendar invite.
+Yes, 2pm works for me! I'll send a calendar invite.
 
-    Thanks!
-  </body>
+Thanks!
+</body>
 
-  <!-- Authorization (required by email-reply schema) -->
-  <source ref="/store/archive/processed/Email_From_Alice.email.card"/>
-  <recipient-relationship>known-contact</recipient-relationship>
-  <user-intent>User asked to confirm the meeting in voice memo from 2024-01-15</user-intent>
+<!-- Authorization (required by email-reply schema) -->
+<source ref="/store/archive/processed/Email_From_Alice.email.card"/>
+<recipient-relationship>known-contact</recipient-relationship>
+<user-intent>User asked to confirm the meeting in voice memo from 2024-01-15</user-intent>
 </email-reply>
 ```
 
@@ -122,22 +122,22 @@ Questions can reference multiple cards as context—the UI should display these 
 
 ```xml
 <question status="pending">
-  <session>.claude/sessions/abc123.jsonl</session>
-  <context>
-    <ref path="/box/inbox/Email_From_Alice.email-thread.card" role="subject"/>
-    <ref path="/box/resources/contacts/Alice_Smith.contact.card" role="related"/>
-  </context>
-  <memo>
-    Alice is asking about a meeting tomorrow at 2pm. I can accept,
-    but I want to confirm which project this is for since she's
-    involved in multiple ongoing projects.
-  </memo>
-  <prompt>Which project is this meeting about?</prompt>
-  <input type="select-or-text">
-    <option id="website">Website redesign</option>
-    <option id="api">API integration</option>
-    <option id="planning">Q1 planning</option>
-  </input>
+<session>.claude/sessions/abc123.jsonl</session>
+<context>
+<ref path="/box/inbox/Email_From_Alice.email-thread.card" role="subject"/>
+<ref path="/box/resources/contacts/Alice_Smith.contact.card" role="related"/>
+</context>
+<memo>
+Alice is asking about a meeting tomorrow at 2pm. I can accept,
+but I want to confirm which project this is for since she's
+involved in multiple ongoing projects.
+</memo>
+<prompt>Which project is this meeting about?</prompt>
+<input type="select-or-text">
+<option id="website">Website redesign</option>
+<option id="api">API integration</option>
+<option id="planning">Q1 planning</option>
+</input>
 </question>
 ```
 
@@ -145,25 +145,25 @@ Questions can reference multiple cards as context—the UI should display these 
 
 ```xml
 <question status="answered">
-  <session>.claude/sessions/abc123.jsonl</session>
-  <context>
-    <ref path="/box/inbox/Email_From_Alice.email-thread.card" role="subject"/>
-    <ref path="/box/resources/contacts/Alice_Smith.contact.card" role="related"/>
-  </context>
-  <memo>
-    Alice is asking about a meeting tomorrow at 2pm. I can accept,
-    but I want to confirm which project this is for since she's
-    involved in multiple ongoing projects.
-  </memo>
-  <prompt>Which project is this meeting about?</prompt>
-  <input type="select-or-text">
-    <option id="website">Website redesign</option>
-    <option id="api">API integration</option>
-    <option id="planning">Q1 planning</option>
-  </input>
-  <answer selected="website">Website redesign</answer>
-  <answered-at>2024-01-15T11:45:00Z</answered-at>
-  <answered-via>web</answered-via>
+<session>.claude/sessions/abc123.jsonl</session>
+<context>
+<ref path="/box/inbox/Email_From_Alice.email-thread.card" role="subject"/>
+<ref path="/box/resources/contacts/Alice_Smith.contact.card" role="related"/>
+</context>
+<memo>
+Alice is asking about a meeting tomorrow at 2pm. I can accept,
+but I want to confirm which project this is for since she's
+involved in multiple ongoing projects.
+</memo>
+<prompt>Which project is this meeting about?</prompt>
+<input type="select-or-text">
+<option id="website">Website redesign</option>
+<option id="api">API integration</option>
+<option id="planning">Q1 planning</option>
+</input>
+<answer selected="website">Website redesign</answer>
+<answered-at>2024-01-15T11:45:00Z</answered-at>
+<answered-via>web</answered-via>
 </question>
 ```
 
@@ -173,22 +173,22 @@ Confirmations are questions where the agent has a proposed action and wants appr
 
 ```xml
 <question status="pending" type="confirmation">
-  <session>.claude/sessions/def456.jsonl</session>
-  <context>
-    <ref path="/box/inbox/Email_From_Alice.email-thread.card" role="subject"/>
-    <ref path="/box/commands/Reply_To_Alice.email-reply.card" role="proposed-action"/>
-  </context>
-  <memo>
-    I've drafted a reply accepting the meeting. The reply confirms 2pm
-    tomorrow and mentions the website redesign project.
-  </memo>
-  <prompt>Should I send this reply?</prompt>
-  <input type="select">
-    <option id="yes">Yes, send it</option>
-    <option id="yes-always">Yes, and don't ask for replies to Alice</option>
-    <option id="no">No, let me edit it first</option>
-    <option id="discard">No, discard the draft</option>
-  </input>
+<session>.claude/sessions/def456.jsonl</session>
+<context>
+<ref path="/box/inbox/Email_From_Alice.email-thread.card" role="subject"/>
+<ref path="/box/commands/Reply_To_Alice.email-reply.card" role="proposed-action"/>
+</context>
+<memo>
+I've drafted a reply accepting the meeting. The reply confirms 2pm
+tomorrow and mentions the website redesign project.
+</memo>
+<prompt>Should I send this reply?</prompt>
+<input type="select">
+<option id="yes">Yes, send it</option>
+<option id="yes-always">Yes, and don't ask for replies to Alice</option>
+<option id="no">No, let me edit it first</option>
+<option id="discard">No, discard the draft</option>
+</input>
 </question>
 ```
 
@@ -198,14 +198,14 @@ The "yes-always" option teaches the system to escalate trust for this pattern.
 
 ```xml
 <memo status="new">
-  <source type="audio" file="Voice_Memo_2024-01-15.m4a"/>
-  <recorded>2024-01-15T08:15:00Z</recorded>
-  <duration>45s</duration>
-  <transcript>
-    Reminder to follow up with the design team about the new
-    mockups. Also need to review the budget proposal before
-    Friday's meeting.
-  </transcript>
+<source type="audio" file="Voice_Memo_2024-01-15.m4a"/>
+<recorded>2024-01-15T08:15:00Z</recorded>
+<duration>45s</duration>
+<transcript>
+Reminder to follow up with the design team about the new
+mockups. Also need to review the budget proposal before
+Friday's meeting.
+</transcript>
 </memo>
 ```
 
@@ -213,24 +213,24 @@ The "yes-always" option teaches the system to escalate trust for this pattern.
 
 ```xml
 <calendar>
-  <source type="google-calendar" calendar-id="primary"/>
-  <last-sync>2024-01-15T12:00:00Z</last-sync>
-  <events>
-    <event id="evt_abc123">
-      <title>Team standup</title>
-      <start>2024-01-16T09:00:00Z</start>
-      <end>2024-01-16T09:30:00Z</end>
-      <recurring>weekly</recurring>
-    </event>
-    <event id="evt_def456">
-      <title>Meeting with Alice</title>
-      <start>2024-01-16T14:00:00Z</start>
-      <end>2024-01-16T15:00:00Z</end>
-      <attendees>
-        <attendee>alice@example.com</attendee>
-      </attendees>
-    </event>
-  </events>
+<source type="google-calendar" calendar-id="primary"/>
+<last-sync>2024-01-15T12:00:00Z</last-sync>
+<events>
+<event id="evt_abc123">
+<title>Team standup</title>
+<start>2024-01-16T09:00:00Z</start>
+<end>2024-01-16T09:30:00Z</end>
+<recurring>weekly</recurring>
+</event>
+<event id="evt_def456">
+<title>Meeting with Alice</title>
+<start>2024-01-16T14:00:00Z</start>
+<end>2024-01-16T15:00:00Z</end>
+<attendees>
+<attendee>alice@example.com</attendee>
+</attendees>
+</event>
+</events>
 </calendar>
 ```
 
@@ -241,11 +241,11 @@ Contacts are individual cards in `/box/resources/contacts/`, making them easy to
 ```xml
 <!-- /box/resources/contacts/Alice_Smith.contact.card -->
 <contact>
-  <name>Alice Smith</name>
-  <email>alice@example.com</email>
-  <phone>+1-555-123-4567</phone>
-  <relationship>colleague</relationship>
-  <notes>Works on website redesign project. Prefers morning meetings.</notes>
+<name>Alice Smith</name>
+<email>alice@example.com</email>
+<phone>+1-555-123-4567</phone>
+<relationship>colleague</relationship>
+<notes>Works on website redesign project. Prefers morning meetings.</notes>
 </contact>
 ```
 
@@ -253,8 +253,8 @@ Commands can reference contacts directly:
 
 ```xml
 <email-reply status="draft">
-  <to ref="/box/resources/contacts/Alice_Smith.contact.card"/>
-  <!-- ... -->
+<to ref="/box/resources/contacts/Alice_Smith.contact.card"/>
+<!-- ... -->
 </email-reply>
 ```
 
@@ -264,21 +264,21 @@ Emails are presented as threads. A thread may contain one or more messages:
 
 ```xml
 <email-thread status="new">
-  <subject>Meeting tomorrow?</subject>
-  <participants>
-    <participant ref="/box/resources/contacts/Alice_Smith.contact.card"/>
-    <participant>me@example.com</participant>
-  </participants>
-  <messages>
-    <message id="abc123@mail.example.com">
-      <from>alice@example.com</from>
-      <date>2024-01-15T10:30:00Z</date>
-      <body>
-        Hi! Are you free tomorrow at 2pm for a quick sync?
-        - Alice
-      </body>
-    </message>
-  </messages>
+<subject>Meeting tomorrow?</subject>
+<participants>
+<participant ref="/box/resources/contacts/Alice_Smith.contact.card"/>
+<participant>me@example.com</participant>
+</participants>
+<messages>
+<message id="abc123@mail.example.com">
+<from>alice@example.com</from>
+<date>2024-01-15T10:30:00Z</date>
+<body>
+Hi! Are you free tomorrow at 2pm for a quick sync?
+- Alice
+</body>
+</message>
+</messages>
 </email-thread>
 ```
 
@@ -286,9 +286,9 @@ If a thread continues after being processed, the new message references the old 
 
 ```xml
 <email-thread status="new">
-  <continues ref="/store/archive/processed/Meeting_Tomorrow.email-thread.card"/>
-  <subject>Re: Meeting tomorrow?</subject>
-  <!-- new messages only -->
+<continues ref="/store/archive/processed/Meeting_Tomorrow.email-thread.card"/>
+<subject>Re: Meeting tomorrow?</subject>
+<!-- new messages only -->
 </email-thread>
 ```
 
@@ -296,22 +296,22 @@ If a thread continues after being processed, the new message references the old 
 
 ```xml
 <calendar-event status="ready">
-  <!-- Payload -->
-  <action>create</action>
-  <title>Sync with Alice - Website redesign</title>
-  <start>2024-01-16T14:00:00Z</start>
-  <end>2024-01-16T15:00:00Z</end>
-  <attendees>
-    <attendee>alice@example.com</attendee>
-  </attendees>
-  <description>
-    Quick sync on website redesign progress.
-  </description>
+<!-- Payload -->
+<action>create</action>
+<title>Sync with Alice - Website redesign</title>
+<start>2024-01-16T14:00:00Z</start>
+<end>2024-01-16T15:00:00Z</end>
+<attendees>
+<attendee>alice@example.com</attendee>
+</attendees>
+<description>
+Quick sync on website redesign progress.
+</description>
 
-  <!-- Authorization -->
-  <source ref="/box/inbox/Email_From_Alice.email.card"/>
-  <conflicts-checked>true</conflicts-checked>
-  <user-intent>User confirmed via web UI after reviewing email</user-intent>
+<!-- Authorization -->
+<source ref="/box/inbox/Email_From_Alice.email.card"/>
+<conflicts-checked>true</conflicts-checked>
+<user-intent>User confirmed via web UI after reviewing email</user-intent>
 </calendar-event>
 ```
 
@@ -319,15 +319,15 @@ If a thread continues after being processed, the new message references the old 
 
 ```xml
 <notification status="ready">
-  <!-- Payload -->
-  <title>Meeting in 15 minutes</title>
-  <body>Sync with Alice - Website redesign at 2:00 PM</body>
-  <channel>push</channel>
+<!-- Payload -->
+<title>Meeting in 15 minutes</title>
+<body>Sync with Alice - Website redesign at 2:00 PM</body>
+<channel>push</channel>
 
-  <!-- Authorization -->
-  <source ref="/box/resources/calendar.card"/>
-  <urgency>routine</urgency>
-  <reason>Scheduled reminder for upcoming calendar event</reason>
+<!-- Authorization -->
+<source ref="/box/resources/calendar.card"/>
+<urgency>routine</urgency>
+<reason>Scheduled reminder for upcoming calendar event</reason>
 </notification>
 ```
 
@@ -335,14 +335,14 @@ If a thread continues after being processed, the new message references the old 
 
 ```xml
 <sms status="draft">
-  <!-- Payload -->
-  <to>+1-555-123-4567</to>
-  <body>Running 10 min late to our 2pm meeting. See you soon!</body>
+<!-- Payload -->
+<to>+1-555-123-4567</to>
+<body>Running 10 min late to our 2pm meeting. See you soon!</body>
 
-  <!-- Authorization -->
-  <source ref="/box/inbox/Voice_Memo_Running_Late.memo.card"/>
-  <recipient-relationship>known-contact</recipient-relationship>
-  <user-intent>User dictated this message in voice memo</user-intent>
+<!-- Authorization -->
+<source ref="/box/inbox/Voice_Memo_Running_Late.memo.card"/>
+<recipient-relationship>known-contact</recipient-relationship>
+<user-intent>User dictated this message in voice memo</user-intent>
 </sms>
 ```
 
@@ -352,21 +352,21 @@ For webhooks or API integrations:
 
 ```xml
 <http-request status="hold">
-  <!-- Payload -->
-  <method>POST</method>
-  <url>https://api.example.com/webhooks/task-complete</url>
-  <headers>
-    <header name="Content-Type">application/json</header>
-  </headers>
-  <body content-type="json">
-    {"task_id": "123", "status": "complete", "notes": "Reviewed and approved"}
-  </body>
+<!-- Payload -->
+<method>POST</method>
+<url>https://api.example.com/webhooks/task-complete</url>
+<headers>
+<header name="Content-Type">application/json</header>
+</headers>
+<body content-type="json">
+{"task_id": "123", "status": "complete", "notes": "Reviewed and approved"}
+</body>
 
-  <!-- Authorization -->
-  <source ref="/box/inbox/Task_Review_Request.card"/>
-  <endpoint-trust>configured-integration</endpoint-trust>
-  <data-sensitivity>internal</data-sensitivity>
-  <user-intent>Completing task procedure triggered by incoming request</user-intent>
+<!-- Authorization -->
+<source ref="/box/inbox/Task_Review_Request.card"/>
+<endpoint-trust>configured-integration</endpoint-trust>
+<data-sensitivity>internal</data-sensitivity>
+<user-intent>Completing task procedure triggered by incoming request</user-intent>
 </http-request>
 ```
 
@@ -377,21 +377,21 @@ After successful execution, commands move to `/store/archive/done/` with results
 ```xml
 <!-- /store/archive/done/Reply_To_Alice.email-reply.card -->
 <email-reply status="done">
-  <!-- Original payload -->
-  <to>alice@example.com</to>
-  <subject>Re: Meeting tomorrow?</subject>
-  <body>Hi Alice, Yes, 2pm works for me!</body>
+<!-- Original payload -->
+<to>alice@example.com</to>
+<subject>Re: Meeting tomorrow?</subject>
+<body>Hi Alice, Yes, 2pm works for me!</body>
 
-  <!-- Original authorization -->
-  <source ref="/store/archive/processed/Email_From_Alice.email.card"/>
-  <recipient-relationship>known-contact</recipient-relationship>
-  <user-intent>User confirmed meeting in voice memo</user-intent>
+<!-- Original authorization -->
+<source ref="/store/archive/processed/Email_From_Alice.email.card"/>
+<recipient-relationship>known-contact</recipient-relationship>
+<user-intent>User confirmed meeting in voice memo</user-intent>
 
-  <!-- Execution result (added by connector) -->
-  <result status="success">
-    <executed-at>2024-01-15T12:30:00Z</executed-at>
-    <message-id>def456@mail.example.com</message-id>
-  </result>
+<!-- Execution result (added by connector) -->
+<result status="success">
+<executed-at>2024-01-15T12:30:00Z</executed-at>
+<message-id>def456@mail.example.com</message-id>
+</result>
 </email-reply>
 ```
 
@@ -400,18 +400,18 @@ After successful execution, commands move to `/store/archive/done/` with results
 ```xml
 <!-- /store/archive/failed/Send_SMS.sms.card -->
 <sms status="failed">
-  <to>+1-555-123-4567</to>
-  <body>Running late!</body>
+<to>+1-555-123-4567</to>
+<body>Running late!</body>
 
-  <source ref="/box/inbox/Voice_Memo.memo.card"/>
-  <recipient-relationship>known-contact</recipient-relationship>
-  <user-intent>User dictated message</user-intent>
+<source ref="/box/inbox/Voice_Memo.memo.card"/>
+<recipient-relationship>known-contact</recipient-relationship>
+<user-intent>User dictated message</user-intent>
 
-  <!-- Failure result -->
-  <result status="failed">
-    <executed-at>2024-01-15T13:00:00Z</executed-at>
-    <error>SMS gateway returned 402: Insufficient credits</error>
-  </result>
+<!-- Failure result -->
+<result status="failed">
+<executed-at>2024-01-15T13:00:00Z</executed-at>
+<error>SMS gateway returned 402: Insufficient credits</error>
+</result>
 </sms>
 ```
 
@@ -421,13 +421,13 @@ Uses iCalendar RRULE format (RFC 5545) for recurrence:
 
 ```xml
 <scheduled status="active">
-  <rrule>FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</rrule>
-  <time>09:00</time>
-  <agent>daily-triage</agent>
-  <prompt>
-    Review the inbox and prepare a daily digest. Summarize new items,
-    flag anything urgent, and draft the morning email summary.
-  </prompt>
+<rrule>FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</rrule>
+<time>09:00</time>
+<agent>daily-triage</agent>
+<prompt>
+Review the inbox and prepare a daily digest. Summarize new items,
+flag anything urgent, and draft the morning email summary.
+</prompt>
 </scheduled>
 ```
 
@@ -437,13 +437,13 @@ One-time tasks use a simple datetime. After execution, the tailing phase archive
 
 ```xml
 <scheduled status="pending">
-  <at>2024-01-20T14:00:00</at>
-  <agent>meeting-prep</agent>
-  <prompt>
-    Prepare materials for the Q1 planning meeting. Review related
-    emails and compile discussion points.
-  </prompt>
-  <requires ref="/box/inbox/Q1_Planning_Thread.email.card"/>
+<at>2024-01-20T14:00:00</at>
+<agent>meeting-prep</agent>
+<prompt>
+Prepare materials for the Q1 planning meeting. Review related
+emails and compile discussion points.
+</prompt>
+<requires ref="/box/inbox/Q1_Planning_Thread.email.card"/>
 </scheduled>
 ```
 
@@ -453,8 +453,8 @@ For connectors that don't have push/webhook support, polling can be scheduled. T
 
 ```xml
 <scheduled status="active">
-  <rrule>FREQ=MINUTELY;INTERVAL=15</rrule>
-  <action>cb pull email</action>
+<rrule>FREQ=MINUTELY;INTERVAL=15</rrule>
+<action>cb pull email</action>
 </scheduled>
 ```
 
@@ -466,21 +466,21 @@ Cards can include scheduling directly:
 
 ```xml
 <daily-digest>
-  <rrule>FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</rrule>
-  <time>09:00</time>
-  <agent>digest-sender</agent>
-  <prompt>
-    Compile and send the daily digest email using the template below.
-  </prompt>
-  <template>
-    Here's your daily summary:
-    - {{ inbox_count }} items in inbox
-    - {{ pending_commands }} pending commands
-    - {{ upcoming_events }} events today
-  </template>
-  <recipients>
-    <recipient>me@example.com</recipient>
-  </recipients>
+<rrule>FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</rrule>
+<time>09:00</time>
+<agent>digest-sender</agent>
+<prompt>
+Compile and send the daily digest email using the template below.
+</prompt>
+<template>
+Here's your daily summary:
+- {{ inbox_count }} items in inbox
+- {{ pending_commands }} pending commands
+- {{ upcoming_events }} events today
+</template>
+<recipients>
+<recipient>me@example.com</recipient>
+</recipients>
 </daily-digest>
 ```
 
@@ -511,25 +511,25 @@ The `<time>` element specifies the time of day (for DAILY/WEEKLY/MONTHLY rules).
 
 ```xml
 <connector type="email">
-  <imap>
-    <host>imap.example.com</host>
-    <port>993</port>
-    <username>me@example.com</username>
-    <!-- password stored in system keychain, referenced by id -->
-    <credential keychain="email-imap"/>
-  </imap>
-  <smtp>
-    <host>smtp.example.com</host>
-    <port>587</port>
-    <username>me@example.com</username>
-    <credential keychain="email-smtp"/>
-  </smtp>
-  <filters>
-    <folders>
-      <folder>INBOX</folder>
-    </folders>
-    <max-age-days>7</max-age-days>
-  </filters>
+<imap>
+<host>imap.example.com</host>
+<port>993</port>
+<username>me@example.com</username>
+<!-- password stored in system keychain, referenced by id -->
+<credential keychain="email-imap"/>
+</imap>
+<smtp>
+<host>smtp.example.com</host>
+<port>587</port>
+<username>me@example.com</username>
+<credential keychain="email-smtp"/>
+</smtp>
+<filters>
+<folders>
+<folder>INBOX</folder>
+</folders>
+<max-age-days>7</max-age-days>
+</filters>
 </connector>
 ```
 
@@ -537,12 +537,12 @@ The `<time>` element specifies the time of day (for DAILY/WEEKLY/MONTHLY rules).
 
 ```xml
 <connector type="google-calendar">
-  <calendar-id>primary</calendar-id>
-  <credential keychain="google-oauth"/>
-  <sync>
-    <future-days>30</future-days>
-    <past-days>7</past-days>
-  </sync>
+<calendar-id>primary</calendar-id>
+<credential keychain="google-oauth"/>
+<sync>
+<future-days>30</future-days>
+<past-days>7</past-days>
+</sync>
 </connector>
 ```
 

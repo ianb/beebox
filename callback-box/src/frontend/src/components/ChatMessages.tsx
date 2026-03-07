@@ -370,7 +370,8 @@ export function UserMessage({ entries, debugView }: { entries: SessionEntry[]; d
  */
 interface AssistantPart { type: "text" | "tools" | "thinking"; text?: string; tools?: SessionContentBlock[] }
 interface TextGroup { kind: "text"; text: string }
-interface ActivityGroupData { kind: "activity"; parts: AssistantPart[] }
+interface ActivityPart { type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }
+interface ActivityGroupData { kind: "activity"; parts: ActivityPart[] }
 
 /**
  * Group consecutive non-text parts (thinking, tools) into activity groups,
@@ -396,7 +397,7 @@ function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | ActivityGrou
   }
 
   const grouped: Array<TextGroup | ActivityGroupData> = [];
-  let activityBuf: AssistantPart[] = [];
+  let activityBuf: ActivityPart[] = [];
 
   function flushActivity() {
     if (activityBuf.length > 0) {
@@ -410,7 +411,7 @@ function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | ActivityGrou
       flushActivity();
       grouped.push({ kind: "text", text: part.text || "" });
     } else {
-      activityBuf.push(part);
+      activityBuf.push(part as ActivityPart);
     }
   }
   flushActivity();

@@ -110,17 +110,17 @@ export function createCalendarReviewJobTemplate(options: {
     .map((c) => {
       const refAttr = c.ref ? ` ref="${escapeAttr(c.ref)}"` : "";
       if (c.action === "deleted" && c.icsContent) {
-        return `  <change action="deleted"${refAttr}>
-    ${escapeText(c.summary)}
-    <ics>${escapeText(c.icsContent)}</ics>
-  </change>`;
+        return `<change action="deleted"${refAttr}>
+${escapeText(c.summary)}
+<ics>${escapeText(c.icsContent)}</ics>
+</change>`;
       }
-      return `  <change action="${c.action}"${refAttr}>${escapeText(c.summary)}</change>`;
+      return `<change action="${c.action}"${refAttr}>${escapeText(c.summary)}</change>`;
     })
     .join("\n");
 
   return `<calendar-review-job status="pending" created="${created}" source="${escapeAttr(options.source)}" priority="${priority}">
-  <description>${escapeText(options.description)}</description>
+<description>${escapeText(options.description)}</description>
 ${changeElements}
 </calendar-review-job>
 `;

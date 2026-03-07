@@ -77,21 +77,21 @@ export const MemoTranscriptionError = element("transcription-error", {
  * Text memo example:
  * ```xml
  * <memo status="new">
- *   <created>2024-01-15T10:00:00Z</created>
- *   <content>Test content here</content>
- *   <source>text</source>
+ * <created>2024-01-15T10:00:00Z</created>
+ * <content>Test content here</content>
+ * <source>text</source>
  * </memo>
  * ```
  *
  * Voice memo example (after transcription):
  * ```xml
  * <memo status="new">
- *   <created>2024-01-15T10:00:00Z</created>
- *   <content></content>
- *   <source>voice</source>
- *   <transcription language="en" transcribed-at="2024-01-15T10:01:00Z">
- *     The transcribed text goes here.
- *   </transcription>
+ * <created>2024-01-15T10:00:00Z</created>
+ * <content></content>
+ * <source>voice</source>
+ * <transcription language="en" transcribed-at="2024-01-15T10:01:00Z">
+ * The transcribed text goes here.
+ * </transcription>
  * </memo>
  * ```
  */
@@ -128,11 +128,11 @@ export type Memo = z.infer<typeof MemoSchema>;
  */
 export function createMemoTemplate(content: string, source?: string): string {
   const now = new Date().toISOString();
-  const sourceElement = source ? `\n  <source>${escapeText(source)}</source>` : "";
+  const sourceElement = source ? `\n<source>${escapeText(source)}</source>` : "";
 
   return `<memo status="new">
-  <created>${now}</created>
-  <content>${escapeText(content)}</content>${sourceElement}
+<created>${now}</created>
+<content>${escapeText(content)}</content>${sourceElement}
 </memo>
 `;
 }
@@ -144,9 +144,9 @@ export function createVoiceMemoTemplate(): string {
   const now = new Date().toISOString();
 
   return `<memo status="new">
-  <created>${now}</created>
-  <content></content>
-  <source>voice</source>
+<created>${now}</created>
+<content></content>
+<source>voice</source>
 </memo>
 `;
 }
@@ -166,13 +166,13 @@ export function createDropboxMemoTemplate(options: {
     if (options.context.url) attrs.push(` url="${escapeAttr(options.context.url)}"`);
     if (options.context.title) attrs.push(` title="${escapeAttr(options.context.title)}"`);
     const text = options.context.selectedText ? escapeText(options.context.selectedText) : "";
-    contextElement = `\n  <context${attrs.join("")}>${text}</context>`;
+    contextElement = `\n<context${attrs.join("")}>${text}</context>`;
   }
 
   return `<memo status="new">
-  <created>${created}</created>
-  <content>${escapeText(options.content)}</content>
-  <source>dropbox</source>${contextElement}
+<created>${created}</created>
+<content>${escapeText(options.content)}</content>
+<source>dropbox</source>${contextElement}
 </memo>
 `;
 }

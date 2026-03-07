@@ -80,7 +80,7 @@ To send a message to the Telegram chat, create a card in `box/output/`:
 
 ```xml
 <telegram-message status="pending" chat-id="-1001234567890">
-  <text>Hello from the box!</text>
+<text>Hello from the box!</text>
 </telegram-message>
 ```
 
@@ -96,8 +96,8 @@ To reply to a specific message, add a `<reply-to>` element with the message ID:
 
 ```xml
 <telegram-message status="pending" chat-id="-1001234567890">
-  <text>Got it, thanks!</text>
-  <reply-to>12345</reply-to>
+<text>Got it, thanks!</text>
+<reply-to>12345</reply-to>
 </telegram-message>
 ```
 
@@ -115,13 +115,13 @@ The memo cards include Telegram metadata on the `<context>` element:
 
 ```xml
 <memo status="new">
-  <created>2026-02-26T13:00:00.000Z</created>
-  <content>Hey dad, can you pick me up at 3?</content>
-  <source>telegram</source>
-  <context telegram-chat-id="-1001234567890"
-          telegram-message-id="456"
-          telegram-sender="Alice"
-          telegram-sender-id="789">Family Group</context>
+<created>2026-02-26T13:00:00.000Z</created>
+<content>Hey dad, can you pick me up at 3?</content>
+<source>telegram</source>
+<context telegram-chat-id="-1001234567890"
+telegram-message-id="456"
+telegram-sender="Alice"
+telegram-sender-id="789">Family Group</context>
 </memo>
 ```
 

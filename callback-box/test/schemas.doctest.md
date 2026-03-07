@@ -80,9 +80,9 @@ A memo captures a piece of content, optionally with a source:
 createMemoTemplate("Test content", "test-source")
 =>
 <memo status="new">
-  <created>«date»</created>
-  <content>Test content</content>
-  <source>test-source</source>
+<created>«date»</created>
+<content>Test content</content>
+<source>test-source</source>
 </memo>
 ```
 
@@ -92,8 +92,8 @@ Source is optional:
 createMemoTemplate("Just content")
 =>
 <memo status="new">
-  <created>«date»</created>
-  <content>Just content</content>
+<created>«date»</created>
+<content>Just content</content>
 </memo>
 ```
 
@@ -103,8 +103,8 @@ Special characters in content are XML-escaped:
 createMemoTemplate("Test <content> & more")
 =>
 <memo status="new">
-  <created>«date»</created>
-  <content>Test &lt;content&gt; &amp; more</content>
+<created>«date»</created>
+<content>Test &lt;content&gt; &amp; more</content>
 </memo>
 ```
 
@@ -123,12 +123,12 @@ createSelectQuestionTemplate({
 })
 =>
 <question status="pending">
-  <memo>Context here</memo>
-  <prompt>What do you want?</prompt>
-  <input type="select">
-    <option id="a">Choice A</option>
-    <option id="b">Choice B</option>
-  </input>
+<memo>Context here</memo>
+<prompt>What do you want?</prompt>
+<input type="select">
+<option id="a">Choice A</option>
+<option id="b">Choice B</option>
+</input>
 </question>
 ```
 
@@ -142,11 +142,11 @@ createSelectQuestionTemplate({
 })
 =>
 <question status="pending">
-  <memo>Context with &lt;special&gt; &amp; chars</memo>
-  <prompt>What's "this"?</prompt>
-  <input type="select">
-    <option id="a">Option &lt;A&gt;</option>
-  </input>
+<memo>Context with &lt;special&gt; &amp; chars</memo>
+<prompt>What's "this"?</prompt>
+<input type="select">
+<option id="a">Option &lt;A&gt;</option>
+</input>
 </question>
 ```
 
@@ -164,14 +164,14 @@ createBookmarkTemplate({
 })
 =>
 <bookmark collection="Unsorted">
-  <title>Example Article</title>
-  <link>https://example.com/article</link>
-  <note>Worth reading</note>
-  <tags>
-    <tag>dev</tag>
-    <tag>typescript</tag>
-  </tags>
-  <created>2026-01-15T10:00:00Z</created>
+<title>Example Article</title>
+<link>https://example.com/article</link>
+<note>Worth reading</note>
+<tags>
+<tag>dev</tag>
+<tag>typescript</tag>
+</tags>
+<created>2026-01-15T10:00:00Z</created>
 </bookmark>
 ```
 
@@ -184,8 +184,8 @@ createBookmarkTemplate({
 })
 =>
 <bookmark collection="Unsorted">
-  <title>Simple Link</title>
-  <link>https://example.com</link>
+<title>Simple Link</title>
+<link>https://example.com</link>
 </bookmark>
 ```
 
@@ -239,10 +239,10 @@ createNewsJobTemplate({
 })
 =>
 <news-job created="«date»" source="rss-connector">
-  <description>3 new items from RSS feeds</description>
-  <item ref="box/inbox/news/item1.news-item.card" />
-  <item ref="box/inbox/news/item2.news-item.card" />
-  <item ref="box/inbox/news/item3.news-item.card" />
+<description>3 new items from RSS feeds</description>
+<item ref="box/inbox/news/item1.news-item.card" />
+<item ref="box/inbox/news/item2.news-item.card" />
+<item ref="box/inbox/news/item3.news-item.card" />
 </news-job>
 ```
 
@@ -256,8 +256,8 @@ createNewsJobTemplate({
 })
 =>
 <news-job created="«date»" source="test">
-  <description>Items with &lt;special&gt; &amp; chars</description>
-  <item ref="path/with&quot;quotes.card" />
+<description>Items with &lt;special&gt; &amp; chars</description>
+<item ref="path/with&quot;quotes.card" />
 </news-job>
 ```
 
@@ -288,9 +288,9 @@ createIntakeJobTemplate({
 })
 =>
 <intake-job status="pending" created="«date»" source="capture-connector" priority="normal">
-  <description>Triage 2 new capture sessions</description>
-  <item ref="box/inbox/capture-1/session.capture-session.card" />
-  <item ref="box/inbox/capture-2/session.capture-session.card" />
+<description>Triage 2 new capture sessions</description>
+<item ref="box/inbox/capture-1/session.capture-session.card" />
+<item ref="box/inbox/capture-2/session.capture-session.card" />
 </intake-job>
 ```
 
@@ -305,8 +305,8 @@ createIntakeJobTemplate({
 })
 =>
 <intake-job status="pending" created="«date»" source="raindrop-connector" priority="low">
-  <description>Triage bookmarks</description>
-  <item ref="box/inbox/bookmark.bookmark.card" />
+<description>Triage bookmarks</description>
+<item ref="box/inbox/bookmark.bookmark.card" />
 </intake-job>
 ```
 
@@ -325,9 +325,9 @@ createCalendarReviewJobTemplate({
 })
 =>
 <calendar-review-job status="pending" created="«date»" source="google-calendar" priority="normal">
-  <description>2 calendar changes to review</description>
-  <change action="new" ref="store/calendar/2026-02-25_abc.ics">Dentist appointment</change>
-  <change action="updated" ref="store/calendar/2026-02-22_def.ics">Standup — time changed</change>
+<description>2 calendar changes to review</description>
+<change action="new" ref="store/calendar/2026-02-25_abc.ics">Dentist appointment</change>
+<change action="updated" ref="store/calendar/2026-02-22_def.ics">Standup — time changed</change>
 </calendar-review-job>
 ```
 
@@ -343,15 +343,15 @@ createCalendarReviewJobTemplate({
 })
 =>
 <calendar-review-job status="pending" created="«date»" source="google-calendar" priority="normal">
-  <description>1 deletion</description>
-  <change action="deleted">
-    Cancelled meeting
-    <ics>BEGIN:VCALENDAR
+<description>1 deletion</description>
+<change action="deleted">
+Cancelled meeting
+<ics>BEGIN:VCALENDAR
 BEGIN:VEVENT
 SUMMARY:Cancelled
 END:VEVENT
 END:VCALENDAR</ics>
-  </change>
+</change>
 </calendar-review-job>
 ```
 
@@ -366,7 +366,7 @@ createCalendarReviewJobTemplate({
 })
 =>
 <calendar-review-job status="pending" created="«date»" source="google-calendar" priority="low">
-  <description>test</description>
-  <change action="new">test</change>
+<description>test</description>
+<change action="new">test</change>
 </calendar-review-job>
 ```

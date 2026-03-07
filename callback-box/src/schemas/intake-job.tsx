@@ -69,11 +69,11 @@ export function createIntakeJobTemplate(options: {
   const created = options.created ?? new Date().toISOString();
   const priority = options.priority ?? "normal";
   const itemElements = options.items
-    .map((ref) => `  <item ref="${escapeAttr(ref)}" />`)
+    .map((ref) => `<item ref="${escapeAttr(ref)}" />`)
     .join("\n");
 
   return `<intake-job status="pending" created="${created}" source="${escapeAttr(options.source)}" priority="${priority}">
-  <description>${escapeText(options.description)}</description>
+<description>${escapeText(options.description)}</description>
 ${itemElements}
 </intake-job>
 `;

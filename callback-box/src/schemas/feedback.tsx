@@ -71,7 +71,7 @@ export const FeedbackTranscription = element("transcription", {
     language: z.string().optional(),
     "transcribed-at": z.string().datetime({ offset: true }).optional(),
   },
-  text: z.string(),
+  text: z.string().optional(),
 });
 
 /**
@@ -93,23 +93,23 @@ export const FeedbackTranscriptionError = element("transcription-error", {
  * Example (text query response):
  * ```xml
  * <feedback type="query-response">
- *   <target ref="box/output/editions/2026-02-01_news.news-edition.card#q1" />
- *   <source>text</source>
- *   <response>I'm most interested in the AI safety developments.</response>
- *   <timestamp>2026-02-01T18:48:52.641Z</timestamp>
+ * <target ref="box/output/editions/2026-02-01_news.news-edition.card#q1" />
+ * <source>text</source>
+ * <response>I'm most interested in the AI safety developments.</response>
+ * <timestamp>2026-02-01T18:48:52.641Z</timestamp>
  * </feedback>
  * ```
  *
  * Example (voice feedback, after transcription):
  * ```xml
  * <feedback type="edition">
- *   <target ref="box/output/editions/2026-02-01_news.news-edition.card#s1" />
- *   <source>voice</source>
- *   <comment></comment>
- *   <timestamp>2026-02-01T18:48:52.641Z</timestamp>
- *   <transcription language="en" transcribed-at="2026-02-01T18:49:00.000Z">
- *     This section was really helpful, especially the part about...
- *   </transcription>
+ * <target ref="box/output/editions/2026-02-01_news.news-edition.card#s1" />
+ * <source>voice</source>
+ * <comment></comment>
+ * <timestamp>2026-02-01T18:48:52.641Z</timestamp>
+ * <transcription language="en" transcribed-at="2026-02-01T18:49:00.000Z">
+ * This section was really helpful, especially the part about...
+ * </transcription>
  * </feedback>
  * ```
  */

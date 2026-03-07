@@ -27,8 +27,8 @@ path.startsWith("box/jobs/") && path.endsWith(".intake.job.card")
 await box.read(path)
 =>
 <intake-job status="pending" created="«date»" source="test-connector" priority="normal">
-  <description>Triage 1 item</description>
-  <item ref="box/inbox/item1.memo.card" />
+<description>Triage 1 item</description>
+<item ref="box/inbox/item1.memo.card" />
 </intake-job>
 ```
 
@@ -64,9 +64,9 @@ The updated file contains both items with the new description:
 await box.read(path2)
 =>
 <intake-job status="pending" created="«date»" source="test-connector" priority="normal">
-  <description>Triage 2 items</description>
-  <item ref="box/inbox/item1.memo.card" />
-  <item ref="box/inbox/item2.memo.card" />
+<description>Triage 2 items</description>
+<item ref="box/inbox/item1.memo.card" />
+<item ref="box/inbox/item2.memo.card" />
 </intake-job>
 ```
 

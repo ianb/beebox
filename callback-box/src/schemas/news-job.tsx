@@ -76,11 +76,11 @@ export function createNewsJobTemplate(options: {
 }): string {
   const created = options.created ?? new Date().toISOString();
   const itemElements = options.items
-    .map((ref) => `  <item ref="${escapeAttr(ref)}" />`)
+    .map((ref) => `<item ref="${escapeAttr(ref)}" />`)
     .join("\n");
 
   return `<news-job created="${created}" source="${escapeAttr(options.source)}">
-  <description>${escapeText(options.description)}</description>
+<description>${escapeText(options.description)}</description>
 ${itemElements}
 </news-job>
 `;

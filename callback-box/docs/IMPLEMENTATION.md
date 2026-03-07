@@ -196,10 +196,10 @@ Schedules use [iCalendar RRULE](https://icalendar.org/iCalendar-RFC-5545/3-3-10-
 
 ```xml
 <scheduled status="active">
-  <rrule>FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</rrule>
-  <time>09:00</time>
-  <agent>daily-triage</agent>
-  <prompt>Review the inbox and prepare a daily digest.</prompt>
+<rrule>FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</rrule>
+<time>09:00</time>
+<agent>daily-triage</agent>
+<prompt>Review the inbox and prepare a daily digest.</prompt>
 </scheduled>
 ```
 
@@ -207,9 +207,9 @@ One-time future tasks use `<at>` with ISO datetime:
 
 ```xml
 <scheduled status="pending">
-  <at>2024-01-20T14:00:00</at>
-  <agent>meeting-prep</agent>
-  <prompt>Prepare materials for Q1 planning meeting.</prompt>
+<at>2024-01-20T14:00:00</at>
+<agent>meeting-prep</agent>
+<prompt>Prepare materials for Q1 planning meeting.</prompt>
 </scheduled>
 ```
 
@@ -217,8 +217,8 @@ Simple sync actions (for connectors without push support):
 
 ```xml
 <scheduled status="active">
-  <rrule>FREQ=MINUTELY;INTERVAL=15</rrule>
-  <action>cb pull email</action>
+<rrule>FREQ=MINUTELY;INTERVAL=15</rrule>
+<action>cb pull email</action>
 </scheduled>
 ```
 

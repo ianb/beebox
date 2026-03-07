@@ -33,14 +33,26 @@ export const AudioTranscript = element("transcript", {
 });
 
 /**
+ * Child element for transcription error (added when transcription fails).
+ */
+export const AudioTranscriptionError = element("transcription-error", {
+  attrs: {
+    permanent: z.enum(["true", "false"]),
+    code: z.string().optional(),
+    "attempted-at": z.string().datetime({ offset: true }).optional(),
+  },
+  text: z.string(),
+});
+
+/**
  * Audio card schema.
  *
  * Example:
  * ```xml
  * <audio status="new">
- *   <filename name="audio-001.webm" recorded="2024-01-15T10:00:00Z" source="microphone" />
- *   <summary></summary>
- *   <transcript></transcript>
+ * <filename name="audio-001.webm" recorded="2024-01-15T10:00:00Z" source="microphone" />
+ * <summary></summary>
+ * <transcript></transcript>
  * </audio>
  * ```
  */
@@ -53,6 +65,7 @@ export const AudioSchema = element("audio", {
       AudioFilename,
       AudioSummary,
       AudioTranscript,
+      AudioTranscriptionError,
     ])
   ),
   instructions: `# Handling Audio Clips

@@ -69,39 +69,6 @@ export const UserComment = element("user-comment", {
 });
 
 /**
- * Expando element - collapsible content for deeper exploration.
- *
- * The agent uses these to offer more detail without cluttering
- * the main narrative. User can expand to see more.
- *
- * Example:
- * ```xml
- * <expando title="Technical details" id="exp1">
- *   The implementation uses a novel approach where...
- *
- *   > "We found that by combining X with Y, we achieved Z"
- *   > — Lead researcher
- * </expando>
- * ```
- */
-export const Expando = element("expando", {
-  attrs: {
-    /** Title shown when collapsed */
-    title: z.string(),
-    /** Optional ID for feedback targeting */
-    id: z.string().optional(),
-    /** Whether to start expanded (default: false) */
-    expanded: z.boolean().optional(),
-    /** User feedback on this expando (set when reading is completed) */
-    "user-feedback": z.enum(["thumbs-up", "thumbs-down"]).optional(),
-  },
-  /** Can contain user comments (integrated feedback) */
-  children: z.array(UserComment).optional(),
-  /** Markdown content shown when expanded */
-  text: z.string(),
-});
-
-/**
  * Excerpt element - a direct quote from a source article.
  *
  * Use excerpts to let the original author's voice come through,
@@ -149,6 +116,39 @@ export const Query = element("query", {
     id: z.string().optional(),
   },
   /** Optional helper text explaining the query */
+  text: z.string().optional(),
+});
+
+/**
+ * Expando element - collapsible content for deeper exploration.
+ *
+ * The agent uses these to offer more detail without cluttering
+ * the main narrative. User can expand to see more.
+ *
+ * Example:
+ * ```xml
+ * <expando title="Technical details" id="exp1">
+ *   The implementation uses a novel approach where...
+ *
+ *   > "We found that by combining X with Y, we achieved Z"
+ *   > — Lead researcher
+ * </expando>
+ * ```
+ */
+export const Expando = element("expando", {
+  attrs: {
+    /** Title shown when collapsed */
+    title: z.string(),
+    /** Optional ID for feedback targeting */
+    id: z.string().optional(),
+    /** Whether to start expanded (default: false) */
+    expanded: z.boolean().optional(),
+    /** User feedback on this expando (set when reading is completed) */
+    "user-feedback": z.enum(["thumbs-up", "thumbs-down"]).optional(),
+  },
+  /** Can contain excerpts, queries, and user comments */
+  children: z.array(z.union([Excerpt, Query, UserComment])).optional(),
+  /** Markdown content shown when expanded (may be absent if content is mixed) */
   text: z.string().optional(),
 });
 
@@ -314,7 +314,7 @@ export const BriefReaction = element("brief-reaction", {
 export const Curation = element("curation", {
   attrs: {
     /** Timestamp of the guide version used */
-    "guide-version": z.string().datetime({ offset: true }).optional(),
+    "guide-version": z.string().optional(),
   },
   children: z.array(
     z.union([

@@ -65,19 +65,19 @@ export const PushoverMessageError = element("error", {
  * Example (pending):
  * ```xml
  * <pushover-message status="pending">
- *   <message>Don't forget to check the garden</message>
- *   <title>Reminder</title>
- *   <sound>magic</sound>
+ * <message>Don't forget to check the garden</message>
+ * <title>Reminder</title>
+ * <sound>magic</sound>
  * </pushover-message>
  * ```
  *
  * Example (sent):
  * ```xml
  * <pushover-message status="sent">
- *   <message>Don't forget to check the garden</message>
- *   <title>Reminder</title>
- *   <sound>magic</sound>
- *   <response sent-at="2026-02-22T10:00:00Z" request-id="abc123" />
+ * <message>Don't forget to check the garden</message>
+ * <title>Reminder</title>
+ * <sound>magic</sound>
+ * <response sent-at="2026-02-22T10:00:00Z" request-id="abc123" />
  * </pushover-message>
  * ```
  */
@@ -123,9 +123,9 @@ To send a push notification, create a card in \`box/output/\` with the \`.pushov
 ## Example
 \`\`\`xml
 <pushover-message status="pending">
-  <message>Build completed successfully</message>
-  <title>CI Notification</title>
-  <sound>magic</sound>
+<message>Build completed successfully</message>
+<title>CI Notification</title>
+<sound>magic</sound>
 </pushover-message>
 \`\`\``,
 });
@@ -145,13 +145,13 @@ export function createPushoverMessageTemplate(options: {
   html?: boolean;
 }): string {
   const parts: string[] = ["<pushover-message status=\"pending\">"];
-  parts.push(`  <message>${escapeText(options.message)}</message>`);
-  if (options.title) parts.push(`  <title>${escapeText(options.title)}</title>`);
-  if (options.url) parts.push(`  <url>${escapeText(options.url)}</url>`);
-  if (options.urlTitle) parts.push(`  <url-title>${escapeText(options.urlTitle)}</url-title>`);
-  if (options.priority !== undefined) parts.push(`  <priority>${options.priority}</priority>`);
-  if (options.sound) parts.push(`  <sound>${escapeText(options.sound)}</sound>`);
-  if (options.html) parts.push("  <html>1</html>");
+  parts.push(`<message>${escapeText(options.message)}</message>`);
+  if (options.title) parts.push(`<title>${escapeText(options.title)}</title>`);
+  if (options.url) parts.push(`<url>${escapeText(options.url)}</url>`);
+  if (options.urlTitle) parts.push(`<url-title>${escapeText(options.urlTitle)}</url-title>`);
+  if (options.priority !== undefined) parts.push(`<priority>${options.priority}</priority>`);
+  if (options.sound) parts.push(`<sound>${escapeText(options.sound)}</sound>`);
+  if (options.html) parts.push("<html>1</html>");
   parts.push("</pushover-message>");
   parts.push("");
   return parts.join("\n");
