@@ -9,7 +9,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { schemas } from "../../schemas/registry.js";
-import { ensureAgentCommitted } from "../agent.js";
+import { ensureAgentCommitted, captureBaseline } from "../agent.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
 
@@ -46,6 +46,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
     ...(onLog && { onOutput: onLog }),
   });
 
+  const baseline = await captureBaseline(boxRoot);
   const agentResult = await agent.invoke({
     boxRoot,
     systemPrompt,
@@ -56,6 +57,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
   await ensureAgentCommitted({
     boxRoot,
     agent,
+    baseline,
     fallbackMessage: "Reactor: agent work (fallback commit)",
     fallbackTrailers: { Phase: "reactor" },
     ...(onLog ? { onOutput: onLog } : {}),

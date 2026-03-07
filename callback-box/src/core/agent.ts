@@ -14,7 +14,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { createWriteStream, type WriteStream } from "node:fs";
 import { fmt } from "../cli/lib/format.js";
-import { getStatus, stageAll, commit } from "../cli/lib/git.js";
+import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
 
 // ─── Agent interface ─────────────────────────────────────────────────
 
@@ -104,6 +104,29 @@ export interface EnsureCommittedOptions {
   fallbackTrailers: Record<string, string>;
   /** Callback for status messages */
   onOutput?: (text: string) => void;
+  /** Baseline git status from before the agent ran — used to distinguish
+   *  pre-existing untracked files from agent-created ones. */
+  baseline?: GitStatus;
+}
+
+/**
+ * Check whether a git status has changes beyond what existed before the agent ran.
+ * Staged and modified files are always considered agent changes.
+ * Untracked files are only considered if they weren't already untracked before.
+ */
+function hasNewChanges(status: GitStatus, baseline: GitStatus): boolean {
+  if (status.staged.length > 0 || status.modified.length > 0) return true;
+  const baselineSet = new Set(baseline.untracked);
+  return status.untracked.some((f) => !baselineSet.has(f));
+}
+
+/**
+ * Capture a baseline snapshot of git status before the agent runs.
+ * Pass the result to `ensureAgentCommitted` so it can distinguish
+ * pre-existing untracked files from agent-created ones.
+ */
+export async function captureBaseline(boxRoot: string): Promise<GitStatus> {
+  return getStatus(boxRoot);
 }
 
 /**
@@ -113,11 +136,10 @@ export interface EnsureCommittedOptions {
  */
 export async function ensureAgentCommitted(options: EnsureCommittedOptions): Promise<void> {
   const { boxRoot, agent, fallbackMessage, fallbackTrailers, onOutput } = options;
+  const baseline = options.baseline ?? { staged: [], modified: [], untracked: [], clean: true };
 
   const status = await getStatus(boxRoot);
-  // Only care about staged/modified files — untracked files (lock files, pending
-  // jobs, etc.) are not the agent's uncommitted work.
-  if (status.staged.length === 0 && status.modified.length === 0) return;
+  if (!hasNewChanges(status, baseline)) return;
 
   // Retry: resume the same session with a nudge to commit
   onOutput?.(fmt.dim("  (Agent didn't commit — resuming session to request commit...)\n"));
@@ -128,7 +150,7 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
   });
 
   const retryStatus = await getStatus(boxRoot);
-  if (retryStatus.staged.length === 0 && retryStatus.modified.length === 0) {
+  if (!hasNewChanges(retryStatus, baseline)) {
     onOutput?.(fmt.ok("  Agent committed on retry\n"));
     return;
   }

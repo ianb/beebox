@@ -11,7 +11,7 @@
  * the next message starts fresh.
  */
 
-import { ensureAgentCommitted } from "../agent.js";
+import { ensureAgentCommitted, captureBaseline } from "../agent.js";
 import {
   loadChatSessions,
   saveChatSessions,
@@ -62,6 +62,7 @@ export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean
     });
 
     onLog?.("\n");
+    const baseline = await captureBaseline(boxRoot);
     const agentResult = await agent.invoke({
       boxRoot,
       systemPrompt,
@@ -72,6 +73,7 @@ export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean
     await ensureAgentCommitted({
       boxRoot,
       agent,
+      baseline,
       fallbackMessage: "Reactor: chat agent work (fallback commit)",
       fallbackTrailers: { Phase: "reactor" },
       ...(onLog ? { onOutput: onLog } : {}),

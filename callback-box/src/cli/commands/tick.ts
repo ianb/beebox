@@ -25,6 +25,7 @@ import {
   loadRunningScripts,
 } from "../../core/schedule-state.js";
 import { handleCreateAfterSuccess } from "./tick-utils.js";
+import { stageAll, commit, getStatus } from "../lib/git.js";
 
 const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h default pruning window
@@ -213,6 +214,19 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       if (parsed.once) {
         await fs.unlink(cardPath);
         if (!options.quiet) console.log(`  Deleted one-shot script: ${file}`);
+      }
+
+      // Commit housekeeping changes (once deletion, createAfterSuccess files)
+      const postStatus = await getStatus(boxRoot);
+      if (!postStatus.clean) {
+        await stageAll(boxRoot);
+        const parts: string[] = [];
+        if (parsed.once) parts.push(`remove one-shot ${scriptName}`);
+        if (parsed.createAfterSuccess.length > 0) parts.push(`chain ${parsed.createAfterSuccess.map((c) => path.basename(c.path)).join(", ")}`);
+        await commit(boxRoot, {
+          message: `Tick: ${parts.join(", ") || "housekeeping"}`,
+          trailers: { "Triggered-By": "cb tick" },
+        });
       }
     } catch (err) {
       const wallElapsed = Date.now() - wallStart;

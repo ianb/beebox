@@ -17,9 +17,7 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { createRssConnector } from "../../connectors/rss.js";
-import { createDropboxConnector } from "../../connectors/dropbox.js";
 import { createRaindropConnector } from "../../connectors/raindrop.js";
-import { createCaptureConnector } from "../../connectors/capture.js";
 import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createPushoverConnector } from "../../connectors/pushover.js";
@@ -32,7 +30,7 @@ import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { expireOldBriefs } from "../../core/housekeeping.js";
 import { getTranscribedFeedbackCards, buildFeedbackTriagePrompt } from "../../core/commands/triage-feedback.js";
 import { getUnprocessedBriefs } from "../../core/commands/process-feedback.js";
-import { createAgent, ensureAgentCommitted } from "../../core/agent.js";
+import { createAgent, ensureAgentCommitted, captureBaseline } from "../../core/agent.js";
 import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job.js";
 import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
@@ -111,9 +109,7 @@ export const wakeupCommand = new Command("wakeup")
 
     // Initialize connectors
     createRssConnector(boxRoot);
-    createDropboxConnector(boxRoot);
     createRaindropConnector(boxRoot);
-    createCaptureConnector(boxRoot);
     createGmailConnector(boxRoot);
     createGoogleCalendarConnector(boxRoot);
     createPushoverConnector(boxRoot);
@@ -317,6 +313,7 @@ async function runTriageFeedback(boxRoot: string): Promise<number> {
     onOutput: (text) => process.stdout.write(text),
   });
 
+  const baseline = await captureBaseline(boxRoot);
   const result = await agent.invoke({
     boxRoot,
     systemPrompt: buildFeedbackTriagePrompt(boxRoot),
@@ -329,6 +326,7 @@ async function runTriageFeedback(boxRoot: string): Promise<number> {
     await ensureAgentCommitted({
       boxRoot,
       agent,
+      baseline,
       fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
       fallbackTrailers: { "Triggered-By": "cb wakeup", Phase: "triage-feedback" },
       onOutput: (text) => process.stdout.write(text),

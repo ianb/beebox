@@ -18,7 +18,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { createAgent, ensureAgentCommitted, type Agent } from "../agent.js";
+import { createAgent, ensureAgentCommitted, captureBaseline, type Agent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { fmt } from "../../cli/lib/format.js";
 
@@ -284,6 +284,7 @@ async function executeTriageFeedback(
       onOutput: (text) => ctx.write(text),
     });
 
+    const baseline = await captureBaseline(ctx.boxRoot);
     const result = await agent.invoke({
       boxRoot: ctx.boxRoot,
       systemPrompt: buildFeedbackTriagePrompt(ctx.boxRoot),
@@ -298,6 +299,7 @@ async function executeTriageFeedback(
       await ensureAgentCommitted({
         boxRoot: ctx.boxRoot,
         agent,
+        baseline,
         fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
         fallbackTrailers: { "Triggered-By": "cb triage-feedback", Session: agent.sessionId },
         onOutput: (text) => ctx.write(text),

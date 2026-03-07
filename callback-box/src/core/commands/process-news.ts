@@ -34,7 +34,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { createAgent, ensureAgentCommitted, type Agent } from "../agent.js";
+import { createAgent, ensureAgentCommitted, captureBaseline, type Agent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
@@ -510,6 +510,7 @@ async function executeProcessNews(
             name: "news-triage",
             onOutput: (text) => ctx.write(text),
           });
+          const triageBaseline = await captureBaseline(ctx.boxRoot);
           const triageResult = await triageAgent.invoke({
             boxRoot: ctx.boxRoot,
             systemPrompt: buildNewsTriagePrompt({ guideContent, selectCount, boxRoot: ctx.boxRoot }),
@@ -527,6 +528,7 @@ async function executeProcessNews(
             await ensureAgentCommitted({
               boxRoot: ctx.boxRoot,
               agent: triageAgent,
+              baseline: triageBaseline,
               fallbackMessage: `Triage ${inboxItems.length} news items`,
               fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageAgent.sessionId },
               onOutput: (text) => ctx.write(text),
@@ -604,6 +606,7 @@ async function executeProcessNews(
             name: "news-analyze",
             onOutput: (text) => ctx.write(text),
           });
+          const analyzeBaseline = await captureBaseline(ctx.boxRoot);
           const analyzeResult = await analyzeAgent.invoke({
             boxRoot: ctx.boxRoot,
             systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
@@ -620,6 +623,7 @@ async function executeProcessNews(
             await ensureAgentCommitted({
               boxRoot: ctx.boxRoot,
               agent: analyzeAgent,
+              baseline: analyzeBaseline,
               fallbackMessage: `Analyze ${itemsToAnalyze.length} news items`,
               fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeAgent.sessionId },
               onOutput: (text) => ctx.write(text),
@@ -654,6 +658,7 @@ async function executeProcessNews(
             name: "news-brief",
             onOutput: (text) => ctx.write(text),
           });
+          const briefBaseline = await captureBaseline(ctx.boxRoot);
           const briefResult = await briefAgent.invoke({
             boxRoot: ctx.boxRoot,
             systemPrompt: buildBriefPrompt(ctx.boxRoot),
@@ -670,6 +675,7 @@ async function executeProcessNews(
             await ensureAgentCommitted({
               boxRoot: ctx.boxRoot,
               agent: briefAgent,
+              baseline: briefBaseline,
               fallbackMessage: "Create news brief",
               fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefAgent.sessionId },
               onOutput: (text) => ctx.write(text),

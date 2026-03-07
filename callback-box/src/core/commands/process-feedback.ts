@@ -22,7 +22,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { createAgent, ensureAgentCommitted, type Agent } from "../agent.js";
+import { createAgent, ensureAgentCommitted, captureBaseline, type Agent } from "../agent.js";
 import { acquireLock, releaseLock, getLockInfo } from "../../cli/lib/lock.js";
 import { fmt } from "../../cli/lib/format.js";
 
@@ -303,6 +303,7 @@ async function executeProcessFeedback(
       name: "guide-revision",
       onOutput: (text) => ctx.write(text),
     });
+    const baseline = await captureBaseline(ctx.boxRoot);
     const result = await agent.invoke({
       boxRoot: ctx.boxRoot,
       systemPrompt: buildGuideRevisionPrompt(ctx.boxRoot),
@@ -317,6 +318,7 @@ async function executeProcessFeedback(
       await ensureAgentCommitted({
         boxRoot: ctx.boxRoot,
         agent,
+        baseline,
         fallbackMessage: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
         fallbackTrailers: { "Triggered-By": "cb process-feedback", Session: agent.sessionId },
         onOutput: (text) => ctx.write(text),
