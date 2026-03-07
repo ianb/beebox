@@ -4,7 +4,7 @@ import type { ElementNode, MixedContent, MixedComment } from "../parser/provenan
  * Options for XML serialization.
  */
 export interface SerializeOptions {
-  /** Indentation string (default: "  " - two spaces) */
+  /** Indentation string (default: "" - no indentation) */
   indent?: string;
   /** Whether to include XML declaration (default: false) */
   xmlDeclaration?: boolean;
@@ -42,7 +42,7 @@ export function serialize(
   node: ElementNode,
   options: SerializeOptions = {}
 ): string {
-  const indent = options.indent ?? "  ";
+  const indent = options.indent ?? "";
   const lines: string[] = [];
 
   if (options.xmlDeclaration) {

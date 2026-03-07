@@ -22,14 +22,14 @@ function formatIssues(issues: ZodIssue[], lines: string[], node?: unknown): void
     if (issue.code === "invalid_union") {
       formatUnionError(issue, lines, node);
     } else {
-      formatSimpleIssue(issue, lines);
+      formatSimpleIssue(issue, lines, node);
     }
   }
 }
 
-function formatSimpleIssue(issue: ZodIssue, lines: string[]): void {
-  const path = issue.path.length > 0 ? issue.path.join(".") : "(root)";
-  lines.push(`  ${path}: ${issue.message}`);
+function formatSimpleIssue(issue: ZodIssue, lines: string[], rootNode?: unknown): void {
+  const pathStr = issue.path.length > 0 ? formatPath(issue.path, rootNode) : "(root)";
+  lines.push(formatErrorLine(pathStr, issue.message, rootNode, issue.path));
 }
 
 /**
@@ -56,8 +56,8 @@ function formatUnionError(issue: ZodIssue & { code: "invalid_union" }, lines: st
     // Can't determine the tag name — fall back to showing what's expected
     const expectedTags = collectExpectedTagNames(unionErrors);
     if (expectedTags.length > 0) {
-      const path = issue.path.length > 0 ? issue.path.join(".") : "(root)";
-      lines.push(`  ${path}: Invalid value, expected one of: <${expectedTags.join(">, <")}>`);
+      const path = issue.path.length > 0 ? formatPath(issue.path, rootNode) : "(root)";
+      lines.push(formatErrorLine(path, `Invalid value, expected one of: <${expectedTags.join(">, <")}>`, rootNode, issue.path));
     } else {
       formatSimpleIssue(issue, lines);
     }
@@ -70,11 +70,11 @@ function formatUnionError(issue: ZodIssue & { code: "invalid_union" }, lines: st
   if (matchingBranchIndex === -1) {
     // No branch matches this tag name — it's an unexpected element
     const expectedTags = collectExpectedTagNames(unionErrors);
-    const path = formatPath(issue.path);
+    const path = formatPath(issue.path, rootNode);
     if (expectedTags.length > 0) {
-      lines.push(`  ${path}: Unexpected element <${actualTagName}>, expected one of: <${expectedTags.join(">, <")}>`);
+      lines.push(formatErrorLine(path, `Unexpected element <${actualTagName}>, expected one of: <${expectedTags.join(">, <")}>`, rootNode, issue.path));
     } else {
-      lines.push(`  ${path}: Unexpected element <${actualTagName}>`);
+      lines.push(formatErrorLine(path, `Unexpected element <${actualTagName}>`, rootNode, issue.path));
     }
     return;
   }
@@ -89,7 +89,7 @@ function formatUnionError(issue: ZodIssue & { code: "invalid_union" }, lines: st
   if (relevantIssues.length === 0) {
     // The matching branch succeeded on everything except... shouldn't happen,
     // but if it does, show the raw issue
-    formatSimpleIssue(issue, lines);
+    formatSimpleIssue(issue, lines, rootNode);
     return;
   }
 
@@ -100,8 +100,8 @@ function formatUnionError(issue: ZodIssue & { code: "invalid_union" }, lines: st
       formatUnionError(subIssue, lines, rootNode);
     } else {
       const fullPath = [...issue.path, ...subIssue.path];
-      const pathStr = formatPath(fullPath);
-      lines.push(`  ${pathStr}: ${subIssue.message}`);
+      const pathStr = formatPath(fullPath, rootNode);
+      lines.push(formatErrorLine(pathStr, subIssue.message, rootNode, fullPath));
     }
   }
 }
@@ -124,6 +124,33 @@ function getTagName(node: unknown): string | undefined {
     if (typeof tn === "string") return tn;
   }
   return undefined;
+}
+
+/**
+ * Get the line number of the deepest node in the path that has location info.
+ */
+function getLineNumber(rootNode: unknown, path: (string | number)[]): number | undefined {
+  if (rootNode == null) return undefined;
+  let lastLine: number | undefined;
+  for (let i = 0; i <= path.length; i++) {
+    const node = resolveNodeAtPath(rootNode, path.slice(0, i));
+    if (node != null && typeof node === "object" && "location" in node) {
+      const loc = (node as { location: { startLine?: number } }).location;
+      if (loc.startLine && loc.startLine > 0) {
+        lastLine = loc.startLine;
+      }
+    }
+  }
+  return lastLine;
+}
+
+/**
+ * Format an error line with optional line number prefix.
+ */
+function formatErrorLine(pathStr: string, message: string, rootNode?: unknown, path?: (string | number)[]): string {
+  const line = rootNode && path ? getLineNumber(rootNode, path) : undefined;
+  const prefix = line ? `line ${String(line)}: ` : "";
+  return `  ${prefix}${pathStr}: ${message}`;
 }
 
 /**
@@ -194,19 +221,37 @@ function collectExpectedTagNames(unionErrors: ZodError[]): string[] {
 }
 
 /**
- * Format a Zod path for display.
- * Converts ["children", 2, "attrs", "id"] to "children[2].attrs.id"
+ * Format a Zod path for display, annotating children indices with tag names.
+ *
+ * Without node: children[4].children[2].children[1].text
+ * With node:    <content>.<section>.<expando>.text
  */
-function formatPath(path: (string | number)[]): string {
+function formatPath(path: (string | number)[], rootNode?: unknown): string {
   if (path.length === 0) return "(root)";
   let result = "";
-  for (const segment of path) {
+  for (let i = 0; i < path.length; i++) {
+    const segment = path[i];
     if (typeof segment === "number") {
-      result += `[${String(segment)}]`;
+      // Look up the actual node to get its tagName
+      const nodeAtPath = rootNode
+        ? resolveNodeAtPath(rootNode, path.slice(0, i + 1))
+        : undefined;
+      const tag = getTagName(nodeAtPath);
+      if (tag) {
+        if (result !== "") {
+          result += ".";
+        }
+        result += `<${tag}>`;
+      } else {
+        result += `[${String(segment)}]`;
+      }
+    } else if (segment === "children" && rootNode) {
+      // Skip "children" when we have a root node — tag names are more readable
+      continue;
     } else if (result === "") {
-      result = segment;
+      result = String(segment);
     } else {
-      result += `.${segment}`;
+      result += `.${String(segment)}`;
     }
   }
   return result;
