@@ -1,7 +1,5 @@
 # Coding Conventions
 
-Add these to your project's CLAUDE.md (or equivalent AI assistant instructions).
-
 ## Type Checking and Linting
 
 Run checks after writing code. The build tool (esbuild) does NOT do type checking or linting — it just strips types. A pre-commit hook runs both automatically.
