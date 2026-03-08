@@ -12,12 +12,21 @@ import type { SessionEntry, SessionContentBlock } from "../api";
 /**
  * Render user message text with keyword pills (e.g. send-message).
  */
-function UserMessageText({ text }: { text: string }) {
-  const stripped = text
+/**
+ * Strip system-injected tags from user message text for display.
+ */
+function stripUserDisplayTags(text: string): string {
+  return text
     .replace(/<typed[^>]*>/gi, "")
     .replace(/<\/typed>/gi, "")
     .replace(/<speech[^>]*>/gi, "")
-    .replace(/<\/speech>/gi, "");
+    .replace(/<\/speech>/gi, "")
+    .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
+    .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "");
+}
+
+function UserMessageText({ text }: { text: string }) {
+  const stripped = stripUserDisplayTags(text);
 
   const parts: Array<{ type: "text"; value: string } | { type: "send"; phrase: string }> = [];
   const tagRe = /<send-message\s+phrase="([^"]*?)"\s*\/>/gi;
@@ -64,6 +73,8 @@ function stripSpeechTags(content: string): string {
   let result = content.replace(/<instructions>[\S\s]*?<\/instructions>/gi, "");
   result = result.replace(/<speech[^>]*>/gi, "");
   result = result.replace(/<\/speech>/gi, "");
+  result = result.replace(/<schedule[\S\s]*?<\/schedule>/gi, "");
+  result = result.replace(/<cancel-schedule[^>]*>/gi, "");
   return result.trim();
 }
 
@@ -342,6 +353,15 @@ export function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "
  * Render a user message bubble.
  */
 export function UserMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
+  // Hide schedule-fired messages entirely in normal view (they're system-injected)
+  if (!debugView) {
+    const allTexts = entries.flatMap((e) =>
+      e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
+    );
+    const allEmpty = allTexts.every((t) => stripUserDisplayTags(t).trim() === "");
+    if (allEmpty) return null;
+  }
+
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
       <div className="rounded-l-2xl bg-iris text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px]">

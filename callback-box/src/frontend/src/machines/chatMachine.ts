@@ -32,7 +32,9 @@ type ChatEvent =
   | { type: "STREAM_BUSY" }
   | { type: "STREAM_ERROR"; error: string }
   | { type: "STREAM_RESULT" }
-  | { type: "STREAM_FAILED"; error: string };
+  | { type: "STREAM_FAILED"; error: string }
+  | { type: "REFRESH" }
+  | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null };
 
 // -- Context --
 
@@ -164,6 +166,15 @@ export const chatMachine = setup({
     sessionId: null,
     processRunning: false,
   },
+  on: {
+    // Global handler: directly set messages from any state (used by server-push updates)
+    SET_MESSAGES: {
+      actions: assign(({ event }) => ({
+        messages: event.messages,
+        sessionId: event.sessionId,
+      })),
+    },
+  },
   states: {
     loading: {
       invoke: {
@@ -207,6 +218,7 @@ export const chatMachine = setup({
           })),
         },
         NEW_SESSION: "resetting",
+        REFRESH: "refreshing",
         DISMISS_ERROR: {
           actions: assign({ error: null }),
         },

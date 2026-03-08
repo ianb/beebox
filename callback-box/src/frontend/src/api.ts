@@ -18,6 +18,20 @@ export function getApiBase(): string {
   return `/${firstSegment}/api`;
 }
 
+/**
+ * Get the base URL for EventSource (SSE) connections.
+ * In dev mode, connects directly to the Fastify backend (port 3211) to bypass
+ * Vite's dev proxy which unreliably handles long-lived SSE connections.
+ * In production, uses the same origin as the page.
+ */
+export function getEventSourceBase(): string {
+  if (import.meta.env.DEV) {
+    const firstSegment = window.location.pathname.split("/")[1] || "";
+    return `http://${window.location.hostname}:3211/${firstSegment}/api`;
+  }
+  return getApiBase();
+}
+
 // --- Types still imported by components ---
 
 export interface CardInfo {
