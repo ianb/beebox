@@ -66,6 +66,12 @@ THREAD ARCHIVE:
 - You can Read this file if you need to look back at earlier messages.
 - New messages from the user are provided in your prompt; you don't need to re-read the thread for the latest message.
 
+SCHEDULING:
+- Use <schedule in="duration" label="name">message content</schedule> to set a short-term timer (minutes to hours).
+- When it fires, you'll receive a <schedule-fired> message — respond normally via <chat-response>.
+- Cancel with <cancel-schedule label="name"/>
+- For longer-term reminders or recurring tasks, create a job card instead.
+
 CAPABILITIES:
 - You have full access to read and modify files in this box.
 - For large tasks (multi-file changes, research, long operations): create a job card in box/jobs/ rather than doing everything inline.
@@ -93,6 +99,8 @@ export class ChatThreadSession extends EventEmitter {
   private turnResolve: (() => void) | null = null;
   /** Accumulated text from current assistant turn, for <chat-response> extraction */
   private turnText = "";
+  /** Full turn text (not sliced by chat-response extraction) for schedule parsing */
+  private fullTurnText = "";
 
   constructor(opts: ChatThreadSessionOptions) {
     super();
@@ -214,6 +222,7 @@ export class ChatThreadSession extends EventEmitter {
       for (const block of msg.message.content) {
         if (block.type === "text" && block.text) {
           this.turnText += block.text;
+          this.fullTurnText += block.text;
           this.checkForResponses();
         }
       }
@@ -226,6 +235,7 @@ export class ChatThreadSession extends EventEmitter {
       this.checkForResponses();
       log("done", `Turn complete, is_error: ${msg.is_error}, turnText length: ${this.turnText.length}${this.turnText.length > 0 ? `, text: ${this.turnText.slice(0, 200)}` : ""}`);
       this.busy = false;
+      this.emit("turn-text", this.fullTurnText);
       this.emit("done", msg);
       if (this.turnResolve) {
         this.turnResolve();
@@ -276,6 +286,7 @@ export class ChatThreadSession extends EventEmitter {
 
     this.busy = true;
     this.turnText = "";
+    this.fullTurnText = "";
 
     // On resumed sessions, remind about response format since the system prompt
     // may have been compacted away from context

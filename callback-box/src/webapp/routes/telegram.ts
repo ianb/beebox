@@ -116,23 +116,17 @@ async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> 
   const { pool, boxRoot, threadRef, chatDescription, messageText, senderName, senderRef, chatId, botToken, eventBus } = opts;
   const slug = path.basename(path.dirname(threadRef));
 
-  // Show "typing..." indicator until agent responds or turn ends
-  const stopTyping = startTypingIndicator({ botToken, chatId });
-
-  const onResponse = async (text: string) => {
-    // Stop typing indicator once first response arrives
-    stopTyping();
-
-    // Send to Telegram immediately
+  // Persistent delivery callback — sends to Telegram + archives.
+  // Stored by the pool for reuse when schedules fire.
+  const deliverResponse = async (text: string) => {
     let messageId: string | undefined;
     try {
       const sent = await sendTelegramMessage({ botToken, chatId, text });
       messageId = String(sent.messageId);
     } catch (err) {
-      console.error(`[telegram-webhook] Failed to send response: ${err}`);
+      console.error(`[telegram] Failed to send response: ${err}`);
     }
 
-    // Archive to thread file
     try {
       await appendMessageToThread({
         boxRoot,
@@ -147,14 +141,21 @@ async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> 
 
       await stageFiles(boxRoot, [threadRef]);
       await commit(boxRoot, {
-        message: `Chat response to ${senderName} in ${slug}`,
+        message: `Chat response in ${slug}`,
         trailers: { "Sent-By": "telegram-chat-pool" },
       });
 
       eventBus.emit("cards-changed", { source: "telegram" });
     } catch (err) {
-      console.error(`[telegram-webhook] Failed to archive response in ${slug}: ${err}`);
+      console.error(`[telegram] Failed to archive response in ${slug}: ${err}`);
     }
+  };
+
+  // Show "typing..." indicator until agent responds or turn ends
+  const stopTyping = startTypingIndicator({ botToken, chatId });
+  const onResponse = async (text: string) => {
+    stopTyping();
+    await deliverResponse(text);
   };
 
   // Wrap message with sender identity so the agent knows who's talking
@@ -167,6 +168,7 @@ async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> 
       message: wrappedMessage,
       chatDescription,
       onResponse,
+      deliverResponse,
     });
   } finally {
     // Ensure typing indicator is stopped even if send fails

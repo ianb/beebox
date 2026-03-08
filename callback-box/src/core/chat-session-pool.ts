@@ -11,6 +11,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { ChatThreadSession } from "./chat-thread-session.js";
+import {
+  ChatScheduleManager,
+  parseScheduleTags,
+  parseCancelScheduleTags,
+} from "./chat-schedules.js";
 
 function getPublicUrl(): string {
   return process.env.CB_PUBLIC_URL || process.env.PUBLIC_URL || "";
@@ -42,6 +47,9 @@ function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatSessionPool:${context}]`, ...args);
 }
 
+/** Callback to deliver a response to the external channel (e.g., Telegram). Stored per-thread for schedule fires. */
+type DeliverResponse = (text: string) => void | Promise<void>;
+
 export interface SendOptions {
   /** Thread file relative path (key for session lookup) */
   threadRef: string;
@@ -50,7 +58,9 @@ export interface SendOptions {
   /** Human-readable chat description (e.g., "Ian Bicking") */
   chatDescription: string;
   /** Called immediately when each <chat-response> is intercepted from the stream */
-  onResponse?: ((text: string) => void | Promise<void>) | undefined;
+  onResponse?: DeliverResponse | undefined;
+  /** Persistent delivery callback — stored per-thread for schedule-fired responses */
+  deliverResponse?: DeliverResponse | undefined;
 }
 
 export interface SendResult {
@@ -64,6 +74,10 @@ export class ChatSessionPool {
   private boxRoot: string;
   private store: SessionStore | null = null;
   private active: ChatThreadSession | null = null;
+  private scheduleManagers: Map<string, ChatScheduleManager> = new Map();
+  private deliveryCallbacks: Map<string, DeliverResponse> = new Map();
+  /** chatDescription per thread, needed when schedule fires without a user message */
+  private threadDescriptions: Map<string, string> = new Map();
 
   constructor(boxRoot: string) {
     this.boxRoot = boxRoot;
@@ -74,8 +88,14 @@ export class ChatSessionPool {
    * Returns the collected <chat-response> texts.
    */
   async send(opts: SendOptions): Promise<SendResult> {
-    const { threadRef, message, chatDescription, onResponse } = opts;
+    const { threadRef, message, chatDescription, onResponse, deliverResponse } = opts;
     const store = await this.loadStore();
+
+    // Store delivery callback and description for schedule fires
+    if (deliverResponse) {
+      this.deliveryCallbacks.set(threadRef, deliverResponse);
+    }
+    this.threadDescriptions.set(threadRef, chatDescription);
 
     // If there's an active session for a different thread, park it
     if (this.active && this.active.getThreadRef() !== threadRef) {
@@ -147,6 +167,12 @@ export class ChatSessionPool {
       } else {
         log("activate", `Session expired for ${threadRef}, starting fresh`);
         delete store[threadRef];
+        // Clear schedules for expired session
+        const manager = this.scheduleManagers.get(threadRef);
+        if (manager) {
+          manager.stopAll();
+          this.scheduleManagers.delete(threadRef);
+        }
       }
     }
 
@@ -175,6 +201,27 @@ export class ChatSessionPool {
       });
     });
 
+    // Parse schedule tags from each turn's full text
+    session.on("turn-text", (text: string) => {
+      const newSchedules = parseScheduleTags(text);
+      if (newSchedules.length > 0) {
+        const manager = this.getOrCreateScheduleManager(threadRef);
+        for (const s of newSchedules) {
+          manager.addSchedule(s);
+        }
+      }
+
+      const cancels = parseCancelScheduleTags(text);
+      if (cancels.length > 0) {
+        const manager = this.scheduleManagers.get(threadRef);
+        if (manager) {
+          for (const label of cancels) {
+            manager.cancelByLabel(label);
+          }
+        }
+      }
+    });
+
     // Handle unexpected close
     session.on("close", () => {
       if (this.active === session) {
@@ -183,6 +230,60 @@ export class ChatSessionPool {
     });
 
     return session;
+  }
+
+  /**
+   * Get or create a ChatScheduleManager for a thread.
+   */
+  private getOrCreateScheduleManager(threadRef: string): ChatScheduleManager {
+    let manager = this.scheduleManagers.get(threadRef);
+    if (manager) return manager;
+
+    // Derive a safe filename from threadRef
+    const safeKey = threadRef.replace(/[/\\]/g, "_").replace(/\.card$/, "");
+    const schedulesFile = `.callback-box/thread-schedules/${safeKey}.json`;
+
+    manager = new ChatScheduleManager(this.boxRoot, {
+      schedulesFile,
+      onFire: ({ schedule }) => {
+        this.handleScheduleFire(threadRef, schedule).catch((err) => {
+          log("schedule-error", `Failed to fire schedule for ${threadRef}: ${err}`);
+        });
+      },
+    });
+    this.scheduleManagers.set(threadRef, manager);
+    return manager;
+  }
+
+  /**
+   * Handle a schedule firing: send the fired message to the thread session,
+   * deliver responses via the stored delivery callback.
+   */
+  private async handleScheduleFire(
+    threadRef: string,
+    schedule: { label: string; content: string; createdAt: string },
+  ): Promise<void> {
+    const firedAt = new Date().toISOString();
+    const firedMessage = [
+      `<schedule-fired label="${schedule.label}" scheduled-at="${schedule.createdAt}" fired-at="${firedAt}">`,
+      schedule.content,
+      "",
+      `A scheduled timer "${schedule.label}" has fired. Respond via <chat-response>.`,
+      "</schedule-fired>",
+    ].join("\n");
+
+    const chatDescription = this.threadDescriptions.get(threadRef) || "chat";
+    const deliverResponse = this.deliveryCallbacks.get(threadRef);
+
+    log("schedule-fire", `Firing "${schedule.label}" for ${threadRef}`);
+
+    await this.send({
+      threadRef,
+      message: firedMessage,
+      chatDescription,
+      onResponse: deliverResponse,
+      deliverResponse,
+    });
   }
 
   /**
@@ -253,12 +354,16 @@ export class ChatSessionPool {
   }
 
   /**
-   * Stop all sessions and clear state.
+   * Stop all sessions, schedules, and clear state.
    */
   stop(): void {
     if (this.active) {
       this.active.stop();
       this.active = null;
     }
+    for (const manager of this.scheduleManagers.values()) {
+      manager.stopAll();
+    }
+    this.scheduleManagers.clear();
   }
 }
