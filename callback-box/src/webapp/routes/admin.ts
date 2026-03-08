@@ -79,25 +79,34 @@ export async function registerSystemAdminRoutes(server: FastifyInstance, service
 export async function registerGoogleServicesCallback(server: FastifyInstance, { boxes }: { boxes: Array<{ slug: string; boxRoot: string }> }) {
   server.get("/auth/google-services/callback", async (request, reply) => {
     const { code, state } = request.query as { code?: string; state?: string };
-    const boxSlug = state || "";
+    // State format: "boxSlug" or "boxSlug:returnPath"
+    const colonIdx = (state || "").indexOf(":");
+    const boxSlug = colonIdx !== -1 ? (state || "").slice(0, colonIdx) : (state || "");
+    const returnPath = colonIdx !== -1 ? (state || "").slice(colonIdx + 1) : "admin";
     const box = boxes.find((b) => b.slug === boxSlug);
 
     if (!box) {
       return reply.status(400).send({ error: `Unknown box: ${boxSlug}` });
     }
 
+    const returnUrl = `/${boxSlug}/${returnPath}`;
+
     if (!code) {
-      return reply.redirect(`/${boxSlug}/admin?google=error&message=No+code+received`);
+      return reply.redirect(`${returnUrl}?google=error&message=No+code+received`);
     }
 
-    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    // Get credentials from env vars or google.secret.json
+    const secret = await loadGoogleSecret(box.boxRoot);
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID || (secret && secret.clientId);
+    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET || (secret && secret.clientSecret);
     if (!clientId || !clientSecret) {
-      return reply.redirect(`/${boxSlug}/admin?google=error&message=OAuth+not+configured`);
+      return reply.redirect(`${returnUrl}?google=error&message=OAuth+not+configured`);
     }
 
-    const publicUrl = await loadPublicUrl(box.boxRoot);
-    const redirectUri = `${publicUrl || "http://localhost:3210"}/auth/google-services/callback`;
+    // Derive redirect URI from the actual request URL (this IS the redirect endpoint)
+    const proto = request.headers["x-forwarded-proto"] || request.protocol;
+    const host = request.headers["x-forwarded-host"] || request.hostname;
+    const redirectUri = `${proto}://${host}/auth/google-services/callback`;
     const oauth2Client = createOAuth2Client({ clientId, clientSecret, redirectUri });
 
     try {
@@ -107,10 +116,10 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       if (tokens.access_token) updates.accessToken = tokens.access_token;
       if (tokens.expiry_date) updates.tokenExpiry = new Date(tokens.expiry_date).toISOString();
       await saveGoogleSecret(box.boxRoot, updates);
-      return reply.redirect(`/${boxSlug}/admin?google=connected`);
+      return reply.redirect(`${returnUrl}?google=connected`);
     } catch (err) {
       const message = encodeURIComponent((err as Error).message);
-      return reply.redirect(`/${boxSlug}/admin?google=error&message=${message}`);
+      return reply.redirect(`${returnUrl}?google=error&message=${message}`);
     }
   });
 }
@@ -227,22 +236,23 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   });
 
   // --- Google Services OAuth ---
-  // Reuses the same Google OAuth client as login (GOOGLE_OAUTH_CLIENT_ID/SECRET env vars)
-  // but requests broader scopes for Calendar, Gmail, Drive access.
+  // Uses GOOGLE_OAUTH_CLIENT_ID/SECRET env vars, falling back to
+  // config/connectors/google.secret.json (set up via `cb google-auth`).
 
-  function getGoogleOAuthCreds(): { clientId: string; clientSecret: string } | null {
-    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-    if (!clientId || !clientSecret) return null;
-    return { clientId, clientSecret };
-  }
+  async function getGoogleOAuthCreds(): Promise<{ clientId: string; clientSecret: string } | null> {
+    const envId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const envSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    if (envId && envSecret) return { clientId: envId, clientSecret: envSecret };
 
-  function getGoogleRedirectUri(publicUrl: string | undefined): string {
-    return `${publicUrl || "http://localhost:3210"}/auth/google-services/callback`;
+    const secret = await loadGoogleSecret(boxRoot);
+    if (secret && secret.clientId && secret.clientSecret) {
+      return { clientId: secret.clientId, clientSecret: secret.clientSecret };
+    }
+    return null;
   }
 
   server.get("/api/admin/google-status", async () => {
-    const creds = getGoogleOAuthCreds();
+    const creds = await getGoogleOAuthCreds();
     if (!creds) {
       return { available: false, hasTokens: false, scopes: GOOGLE_SCOPES };
     }
@@ -254,24 +264,29 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     };
   });
 
-  server.post("/api/admin/google-setup", async (_request, reply) => {
-    const creds = getGoogleOAuthCreds();
+  server.post("/api/admin/google-setup", async (request, reply) => {
+    const body = (request.body || {}) as { returnPath?: string; origin?: string };
+    const creds = await getGoogleOAuthCreds();
     if (!creds) {
-      return reply.status(400).send({ error: "Google OAuth not configured (GOOGLE_OAUTH_CLIENT_ID/SECRET env vars missing)" });
+      return reply.status(400).send({ error: "Google OAuth not configured. Set GOOGLE_OAUTH_CLIENT_ID/SECRET env vars or run: cb google-auth" });
     }
 
     // Save client credentials to google.secret.json so connectors can use them
     await saveGoogleSecret(boxRoot, { clientId: creds.clientId, clientSecret: creds.clientSecret });
 
-    const publicUrl = await loadPublicUrl(boxRoot);
-    const redirectUri = getGoogleRedirectUri(publicUrl);
+    // Use the caller's origin so the redirect goes back to where the user actually is
+    const baseUrl = body.origin || await loadPublicUrl(boxRoot) || "http://localhost:3210";
+    const redirectUri = `${baseUrl}/auth/google-services/callback`;
     const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
+
+    // State format: "boxSlug" or "boxSlug:returnPath"
+    const stateValue = body.returnPath ? `${boxSlug}:${body.returnPath}` : boxSlug;
 
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: "offline",
       scope: GOOGLE_SCOPES,
       prompt: "consent",
-      state: boxSlug,
+      state: stateValue,
     });
 
     return { authUrl };

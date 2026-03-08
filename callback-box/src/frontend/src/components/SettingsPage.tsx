@@ -2,8 +2,10 @@
  * Settings page with calendar configuration and sharing tips.
  */
 
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { trpc, type RouterOutput } from "../lib/trpc";
+import { getApiBase } from "../api";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
 
@@ -52,6 +54,7 @@ function CalendarSection() {
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
           {error}
         </div>
+        <GoogleReconnectButton />
       </div>
     );
   }
@@ -110,6 +113,49 @@ function CalendarSection() {
           </label>
         ))}
       </div>
+    </div>
+  );
+}
+
+function GoogleReconnectButton() {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleReconnect = async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const resp = await fetch(`${getApiBase()}/admin/google-setup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnPath: "settings", origin: window.location.origin }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        setErr(data.error || "Failed to start auth");
+        return;
+      }
+      const data = await resp.json() as { authUrl: string };
+      window.location.href = data.authUrl;
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-3">
+      <button
+        onClick={handleReconnect}
+        disabled={loading}
+        className="px-3 py-1.5 bg-plum text-white text-sm rounded hover:bg-plum-dark disabled:opacity-50"
+      >
+        {loading ? "Connecting..." : "Reconnect Google Account"}
+      </button>
+      {err ? (
+        <p className="mt-1 text-xs text-rose-600">{err}</p>
+      ) : null}
     </div>
   );
 }
