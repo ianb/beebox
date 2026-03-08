@@ -7,7 +7,8 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "@tanstack/react-router";
+import { href } from "../lib/routing";
 import { getChatHistory, getChatSessions, type SessionEntry, type ChatSessionInfo } from "../api";
 import { UserMessage, AssistantMessage, groupMessages } from "./ChatMessages";
 
@@ -29,12 +30,12 @@ function relativeTime(dateStr: string): string {
  * Session list dropdown — shows all known sessions.
  */
 export function SessionListButton() {
+  const { boxSlug } = useParams({ strict: false });
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState<ChatSessionInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [searchParams] = useSearchParams();
-  const currentSessionId = searchParams.get("session");
+  const currentSessionId = new URLSearchParams(window.location.search).get("session");
 
   useEffect(() => {
     if (!open) return;
@@ -78,11 +79,11 @@ export function SessionListButton() {
           ) : (
             sessions.map((s) => {
               const isViewing = currentSessionId === s.sessionId;
-              const href = s.isActive ? "chat" : `chat?session=${s.sessionId}`;
+              const linkTo = s.isActive ? `/${boxSlug}/chat` : `/${boxSlug}/chat?session=${s.sessionId}`;
               return (
                 <Link
                   key={s.sessionId}
-                  to={href}
+                  to={href(linkTo)}
                   onClick={() => setOpen(false)}
                   className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50 font-medium" : ""}`}
                 >
@@ -125,6 +126,7 @@ export function SessionViewer({ sessionId }: { sessionId: string }) {
 }
 
 function SessionViewerInner({ sessionId }: { sessionId: string }) {
+  const { boxSlug } = useParams({ strict: false });
   const [state, setState] = useState<ViewerState>({ messages: [], loading: true, error: null });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -161,7 +163,7 @@ function SessionViewerInner({ sessionId }: { sessionId: string }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
         <span>Viewing session (read-only)</span>
-        <Link to="chat" className="ml-auto text-iris hover:text-iris-dark font-medium">
+        <Link to={href(`/${boxSlug}/chat`)} className="ml-auto text-iris hover:text-iris-dark font-medium">
           Go to active chat &rarr;
         </Link>
       </div>

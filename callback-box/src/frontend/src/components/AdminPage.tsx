@@ -5,7 +5,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSSRMachine } from "../hooks/useSSRMachine";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "@tanstack/react-router";
+import { href } from "../lib/routing";
 import { getApiBase } from "../api.js";
 import { claudeAuthMachine } from "../machines/claudeAuthMachine.js";
 
@@ -450,7 +451,6 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -473,18 +473,16 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
 
   // Handle redirect back from Google OAuth
   useEffect(() => {
-    const googleParam = searchParams.get("google");
+    const params = new URLSearchParams(window.location.search);
+    const googleParam = params.get("google");
     if (googleParam === "connected") {
       setSuccessMessage("Google services connected successfully.");
-      searchParams.delete("google");
-      setSearchParams(searchParams, { replace: true });
+      window.history.replaceState(null, "", window.location.pathname);
       fetchStatus();
     } else if (googleParam === "error") {
-      const message = searchParams.get("message") || "Authorization failed";
+      const message = params.get("message") || "Authorization failed";
       setError(message);
-      searchParams.delete("google");
-      searchParams.delete("message");
-      setSearchParams(searchParams, { replace: true });
+      window.history.replaceState(null, "", window.location.pathname);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -599,14 +597,14 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
 }
 
 export function AdminPage() {
-  const { boxSlug } = useParams<{ boxSlug: string }>();
+  const { boxSlug } = useParams({ strict: false });
   const apiBase = getApiBase();
 
   return (
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <Link to={`/${boxSlug}/`} className="text-plum hover:text-plum-dark text-sm">
+          <Link to={href(`/${boxSlug}/`)} className="text-plum hover:text-plum-dark text-sm">
             &larr; Back
           </Link>
         </div>

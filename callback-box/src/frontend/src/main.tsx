@@ -1,15 +1,15 @@
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import App from "./App";
+import { RouterProvider } from "@tanstack/react-router";
 import { TrpcProvider } from "./lib/trpc-provider";
+import { createAppRouter } from "./router";
 import "./index.css";
 import "./renderers/setup";
 
+const router = createAppRouter();
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <TrpcProvider>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </TrpcProvider>
 );
 

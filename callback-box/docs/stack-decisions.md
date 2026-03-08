@@ -18,6 +18,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | All adopted: execa, date-fns, html-entities, sanitize-filename, proper-lockfile, ky. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated. 5 machine files (~1050 lines), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
 | 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Procfile.dev + standalone server.ts entry point. `cb serve --dev` uses node --watch directly. |
+| 4 | [TanStack Router](#decision-4-routing--tanstack-router) | Code-based route tree, typed params, `href()` helper for dynamic paths. Replaced react-router-dom. |
 
 ### Up next
 
@@ -31,7 +32,6 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 
 | # | Decision | Notes |
 |---|---|---|
-| 4 | [TanStack Router](#decision-4-routing--tanstack-router) | React Router v7 works fine. Value unclear. |
 | 8 | [SQLite file index](#decision-8-file-based-storage-with-queryable-index) | Build when query-time parsing is a bottleneck. |
 | 9 | [Resource subscription](#decision-9-resource-subscription-service) | Depends on #8. Current SSE works. |
 | 11 | [CASL authorization](#decision-11-authorization--typed-principals--casl) | Build when agent API keys are needed. |
@@ -326,7 +326,7 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 **Decided:** 2026-03-02
 **Rigor:** Directional (brief discussion, not evaluated against principles)
 **Choice:** TanStack Router
-**Current state:** React Router v7 (`react-router-dom@^7.13.0`)
+**Current state:** Implemented. `@tanstack/react-router@^1.166.3`. Code-based route tree in `src/frontend/src/router.tsx`.
 **Alternative:** Stay with React Router
 
 ### Why TanStack Router

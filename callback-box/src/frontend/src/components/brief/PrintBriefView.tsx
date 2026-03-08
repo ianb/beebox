@@ -5,8 +5,9 @@
  * Links are rendered as footnotes. Designed to look like a newspaper/newsletter.
  */
 
-import { useEffect } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { NewsBriefData, Section, Excerpt, Expando } from "./types";
@@ -105,9 +106,10 @@ function PrintSection({
 }
 
 export function PrintBriefView() {
-  const { boxSlug, "*": briefPath } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const largePrint = searchParams.get("large") === "1";
+  const { boxSlug, _splat: briefPath } = useParams({ strict: false });
+  const [largePrint, setLargePrint] = useState(
+    new URLSearchParams(window.location.search).get("large") === "1"
+  );
 
   const briefQuery = trpc.briefs.get.useQuery(
     { path: briefPath! },
@@ -153,18 +155,10 @@ export function PrintBriefView() {
     <>
     <style>{`@page { @bottom-left { content: "News Brief — ${shortDate}"; font-family: Georgia, "Times New Roman", Times, serif; font-size: 9pt; color: #999; } }`}</style>
     <nav className="print-nav">
-      <Link to={interactiveUrl}>&larr; Back to interactive view</Link>
+      <Link to={href(interactiveUrl)}>&larr; Back to interactive view</Link>
       <span style={{ float: "right" }}>
         <button
-          onClick={() => {
-            const next = new URLSearchParams(searchParams);
-            if (largePrint) {
-              next.delete("large");
-            } else {
-              next.set("large", "1");
-            }
-            setSearchParams(next);
-          }}
+          onClick={() => setLargePrint(!largePrint)}
           style={{ background: "none", border: "none", cursor: "pointer", color: "#555", fontSize: 13, textDecoration: "underline" }}
         >
           {largePrint ? "Standard type" : "Large type"}

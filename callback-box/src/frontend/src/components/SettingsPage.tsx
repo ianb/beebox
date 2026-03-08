@@ -3,7 +3,8 @@
  */
 
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "@tanstack/react-router";
+import { href } from "../lib/routing";
 import { trpc, type RouterOutput } from "../lib/trpc";
 import { getApiBase } from "../api";
 
@@ -195,7 +196,7 @@ function ShortcutSteps({ boxSlug, shareUrl }: { boxSlug: string; shareUrl: strin
 }
 
 function ShareShortcutSection() {
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
   const origin = window.location.origin;
   const boxShareUrl = `${origin}/${boxSlug}/share`;
   const generalShareUrl = `${origin}/share`;
@@ -257,13 +258,13 @@ function GeneralOption({ shareUrl }: { shareUrl: string }) {
 }
 
 export function SettingsPage() {
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
 
   return (
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <Link to={`/${boxSlug}/`} className="text-plum hover:text-plum-dark text-sm">
+          <Link to={href(`/${boxSlug}/`)} className="text-plum hover:text-plum-dark text-sm">
             &larr; Back to Dashboard
           </Link>
         </div>

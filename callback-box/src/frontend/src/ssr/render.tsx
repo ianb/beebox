@@ -19,11 +19,11 @@
 import { setRoute } from "./setup";
 import * as path from "node:path";
 import { renderToString } from "react-dom/server";
-import { StaticRouter } from "react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { load as cheerioLoad } from "cheerio";
 import { trpc } from "../lib/trpc";
-import App from "../App";
+import { createAppRouter } from "../router";
 import { SSRStateContext, type SSRStateMap } from "../hooks/useSSRMachine";
 import { appRouter } from "../../../webapp/trpc/router.js";
 import {
@@ -337,13 +337,15 @@ async function main() {
     links: [],
   });
 
+  const memoryHistory = createMemoryHistory({ initialEntries: [fullRoute] });
+  const router = createAppRouter({ history: memoryHistory });
+  await router.load();
+
   const html = renderToString(
     <trpc.Provider client={trpcClient as never} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <SSRStateContext.Provider value={ssrState}>
-          <StaticRouter location={fullRoute}>
-            <App />
-          </StaticRouter>
+          <RouterProvider router={router} />
         </SSRStateContext.Provider>
       </QueryClientProvider>
     </trpc.Provider>,

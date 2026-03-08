@@ -2,7 +2,8 @@
  * Recent activity — interleaved git commits and scheduler events.
  */
 
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
@@ -30,13 +31,13 @@ function timeAgo(ts: string | number): string {
 }
 
 function CommitRow({ commit }: { commit: LogEntry }) {
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
   const phase = commit.trailers?.["Phase"];
   return (
     <div className="py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-sm text-warm-900 truncate">
-          <Link to={`/${boxSlug}/history/${commit.hash}`} className="hover:text-plum">
+          <Link to={href(`/${boxSlug}/history/${commit.hash}`)} className="hover:text-plum">
             {commit.subject}
           </Link>
         </div>
@@ -90,7 +91,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
 }
 
 export function RecentActivity({ commits, ticks }: RecentActivityProps) {
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
   // Only include ticks that had activity
   const activeTicks = ticks.filter(
     (t) => t.result && (t.result.ran > 0 || t.result.errors > 0),
@@ -118,7 +119,7 @@ export function RecentActivity({ commits, ticks }: RecentActivityProps) {
     <div className="card">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-warm-700">Recent Activity</h3>
-        <Link to={`/${boxSlug}/history`} className="text-xs text-plum hover:text-plum-dark">
+        <Link to={href(`/${boxSlug}/history`)} className="text-xs text-plum hover:text-plum-dark">
           All history &rarr;
         </Link>
       </div>

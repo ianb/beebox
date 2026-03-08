@@ -5,7 +5,8 @@
  */
 
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "@tanstack/react-router";
+import { href } from "../lib/routing";
 import { Sidebar } from "./Sidebar";
 import { FileView } from "./FileView";
 import { trpc, type RouterOutput } from "../lib/trpc";
@@ -20,7 +21,7 @@ interface BrowsePageProps {
 }
 
 export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
   const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: currentPath });
   const [selectedCard, setSelectedCard] = useState<BrowseCard | null>(null);
 
@@ -139,7 +140,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 Back
               </button>
               <Link
-                to={`/${boxSlug}/card/${selectedCard.relativePath}`}
+                to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
                 className="text-plum hover:text-plum-dark text-sm"
               >
                 Open full view &rarr;

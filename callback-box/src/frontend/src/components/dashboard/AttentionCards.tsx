@@ -3,7 +3,8 @@
  * Hidden entirely if both are zero.
  */
 
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
 
 type CardInfo = RouterOutput["status"]["questions"]["items"][number];
@@ -14,7 +15,7 @@ interface AttentionCardsProps {
 }
 
 export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
   const pendingQuestions = questions.filter((q) => q.status === "pending");
 
   if (pendingQuestions.length === 0 && inboxCount === 0) {
@@ -38,7 +39,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
             {pendingQuestions.slice(0, 5).map((q) => (
               <li key={q.path} className="text-sm">
                 <Link
-                  to={`/${boxSlug}/card/${q.relativePath}`}
+                  to={href(`/${boxSlug}/card/${q.relativePath}`)}
                   className="text-plum hover:text-plum-dark hover:underline"
                 >
                   {q.prompt || q.name}
@@ -65,7 +66,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
               </span>
             </h3>
             <Link
-              to={`/${boxSlug}/browse/box/inbox`}
+              to={href(`/${boxSlug}/browse/box/inbox`)}
               className="text-xs text-plum hover:text-plum-dark"
             >
               Browse &rarr;

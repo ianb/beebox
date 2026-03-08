@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { useSSE } from "../hooks/useSSE";
-import { getApiBase } from "../api";
+import { getEventSourceBase } from "../api";
 import { trpc } from "../lib/trpc";
 import { HeaderStrip } from "./dashboard/HeaderStrip";
 import { AttentionCards } from "./dashboard/AttentionCards";
@@ -30,7 +30,7 @@ export function DashboardPage() {
     utils.scheduler.invalidate();
   };
 
-  const { connected } = useSSE(`${getApiBase()}/events`, {
+  const { connected } = useSSE(`${getEventSourceBase()}/events`, {
     onEvent: (event) => {
       if (
         event.event === "file-change" ||

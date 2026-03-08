@@ -6,7 +6,8 @@
  */
 
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "@tanstack/react-router";
+import { href } from "../lib/routing";
 import type { HistoryCommit } from "../api";
 import { trpc } from "../lib/trpc";
 import { Sidebar } from "./Sidebar";
@@ -16,7 +17,9 @@ import { CommitDetail } from "./CommitDetail";
 const PAGE_SIZE = 50;
 
 export function HistoryPage() {
-  const { hash: urlHash } = useParams<{ hash?: string }>();
+  const params = useParams({ strict: false }) as { hash?: string; boxSlug: string };
+  const urlHash = params.hash;
+  const boxSlug = params.boxSlug;
   const navigate = useNavigate();
   const [selectedCommit, setSelectedCommit] = useState<HistoryCommit | null>(null);
 
@@ -52,7 +55,7 @@ export function HistoryPage() {
 
   const handleSelect = (commit: HistoryCommit) => {
     setSelectedCommit(commit);
-    navigate(commit.hash.substring(0, 8), { replace: true });
+    navigate({ to: href(`/${boxSlug}/history/${commit.hash.substring(0, 8)}`), replace: true });
   };
 
   const handleLoadMore = () => {

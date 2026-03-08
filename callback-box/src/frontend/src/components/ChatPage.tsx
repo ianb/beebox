@@ -10,10 +10,10 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+// search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase } from "../api";
+import { getApiBase, getEventSourceBase, type SessionEntry } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
 import { hasAssistantSpeech, parseAllSpeechTags, VALID_VOICES } from "../lib/speech-parsing";
@@ -21,15 +21,71 @@ import { getTTSClient } from "../lib/tts-client";
 import { unlockAudioContext } from "../lib/audio-context";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
-import { sendSound, tick, recordingStart } from "../lib/earcons";
+import { sendSound, tick, recordingStart, alarm } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 import { DebugLogPanel, enableDebugLogCapture } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, ToolList, MarkdownContent, groupMessages } from "./ChatMessages";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
+import { useSSE, type SSEEvent } from "../hooks/useSSE";
+import type { ChatSchedule } from "../../../core/chat-schedules";
 
 // Start capturing console logs immediately so we don't miss early messages
 enableDebugLogCapture();
+
+/**
+ * Countdown pill showing time remaining for an active schedule.
+ */
+function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSchedule; onCancel: () => void; onFired?: () => void }) {
+  const [remaining, setRemaining] = useState("");
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    const update = () => {
+      const ms = new Date(schedule.firesAt).getTime() - Date.now();
+      if (ms <= 0) {
+        setRemaining("now");
+        if (!firedRef.current) {
+          firedRef.current = true;
+          onFired?.();
+        }
+        return;
+      }
+      const totalSec = Math.ceil(ms / 1000);
+      if (totalSec >= 3600) {
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        setRemaining(m > 0 ? `${h}h ${m}m` : `${h}h`);
+      } else if (totalSec >= 60) {
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        setRemaining(s > 0 ? `${m}m ${s}s` : `${m}m`);
+      } else {
+        setRemaining(`${totalSec}s`);
+      }
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [schedule.firesAt, onFired]);
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/15 text-gold-dark text-xs font-medium border border-gold/30">
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {schedule.label}: {remaining}
+      {schedule.alarm ? " 🔔" : null}
+      <button
+        onClick={onCancel}
+        className="ml-0.5 text-gold-dark/60 hover:text-gold-dark"
+        title="Cancel schedule"
+      >
+        {"\u00D7"}
+      </button>
+    </span>
+  );
+}
 
 /**
  * Format the current local time as HH:MM for the typed tag.
@@ -150,8 +206,7 @@ function StreamingMessage({ text }: { text: string }) {
 }
 
 export function ChatPage() {
-  const [searchParams] = useSearchParams();
-  const viewSessionId = searchParams.get("session");
+  const viewSessionId = new URLSearchParams(window.location.search).get("session");
 
   // If viewing a specific session, render read-only viewer
   if (viewSessionId) {
@@ -170,6 +225,7 @@ function InteractiveChat() {
   const [input, setInput] = useState("");
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
+  const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const turnTakingRef = useRef(false);
@@ -192,6 +248,88 @@ function InteractiveChat() {
       }
     },
   });
+
+  // Poll active schedules and listen for schedule-fired events
+  const fetchSchedules = useCallback(() => {
+    fetch(`${getApiBase()}/chat/schedules`)
+      .then((r) => r.json())
+      .then((data: { schedules: ChatSchedule[] }) => {
+        setActiveSchedules(data.schedules);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Poll schedules on mount + after each turn completes
+  useEffect(() => {
+    fetchSchedules();
+  }, [messages, fetchSchedules]);
+
+  // Poll for history updates when a schedule has fired (fallback for SSE)
+  const prevMessageCountRef = useRef(messages.length);
+  useEffect(() => {
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length]);
+
+  useEffect(() => {
+    if (activeSchedules.length === 0) return;
+    if (isStreaming) return; // Don't poll while user is streaming
+
+    const checkAndPoll = () => {
+      const now = Date.now();
+      const anyFired = activeSchedules.some(
+        (s) => new Date(s.firesAt).getTime() <= now
+      );
+      if (!anyFired) return;
+
+      fetch(`${getApiBase()}/chat/history`)
+        .then((r) => r.json())
+        .then((data: { entries: SessionEntry[]; sessionId: string | null }) => {
+          // Only update if message count actually changed
+          if (data.entries.length !== prevMessageCountRef.current) {
+            send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
+          }
+          fetchSchedules();
+        })
+        .catch(() => {});
+    };
+
+    // Start polling every 3 seconds
+    const id = setInterval(checkAndPoll, 3000);
+    // Also check immediately
+    checkAndPoll();
+    return () => clearInterval(id);
+  }, [activeSchedules, send, fetchSchedules, isStreaming]);
+
+  // Handle SSE events: schedule-fired (alarm/TTS) and chat-history (server push)
+  useSSE(`${getEventSourceBase()}/events`, {
+    onEvent: useCallback((event: SSEEvent) => {
+      if (event.event === "schedule-fired") {
+        const data = event.data as { label: string; alarm: boolean; announce: string | null };
+        if (data.alarm) {
+          alarm.play();
+        }
+        if (data.announce) {
+          const tts = getTTSClient();
+          tts.speak(data.announce).catch(() => {});
+        }
+        fetchSchedules();
+      } else if (event.event === "chat-history") {
+        const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
+        send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
+        fetchSchedules();
+      }
+    }, [fetchSchedules, send]),
+  });
+
+  const handleCancelSchedule = useCallback((label: string) => {
+    fetch(`${getApiBase()}/chat/schedules/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label }),
+    })
+      .then(() => fetchSchedules())
+      .catch(() => {});
+  }, [fetchSchedules]);
 
   // Load voice config from personality on mount
   useEffect(() => {
@@ -403,6 +541,25 @@ function InteractiveChat() {
           >
             dismiss
           </button>
+        </div>
+      ) : null}
+
+      {/* Active schedules */}
+      {activeSchedules.length > 0 ? (
+        <div className="px-4 py-1.5 border-t border-warm-300 bg-warm-50 flex flex-wrap gap-1.5">
+          {activeSchedules.map((s) => (
+            <SchedulePill
+              key={s.id}
+              schedule={s}
+              onCancel={() => handleCancelSchedule(s.label)}
+              onFired={() => {
+                if (s.alarm) alarm.play();
+                if (s.announce) {
+                  getTTSClient().speak(s.announce).catch(() => {});
+                }
+              }}
+            />
+          ))}
         </div>
       ) : null}
 

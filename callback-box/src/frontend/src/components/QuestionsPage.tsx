@@ -2,7 +2,7 @@
  * Questions page — view and answer pending questions.
  */
 
-import { getApiBase } from "../api";
+import { getEventSourceBase } from "../api";
 import { trpc } from "../lib/trpc";
 import { useSSE } from "../hooks/useSSE";
 import { QuestionForm } from "./QuestionForm";
@@ -13,7 +13,7 @@ export function QuestionsPage() {
 
   const questions = data?.items ?? [];
 
-  useSSE(`${getApiBase()}/events`, {
+  useSSE(`${getEventSourceBase()}/events`, {
     onEvent: (event) => {
       if (
         event.event === "question-answered" ||

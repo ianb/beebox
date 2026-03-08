@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "@tanstack/react-router";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 
 type ShareState = "ready" | "saving" | "saved" | "error";
@@ -39,7 +39,7 @@ function extractText(params: URLSearchParams): string {
 }
 
 export function SharePage() {
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
   const params = new URLSearchParams(window.location.search);
   const sharedUrl = extractUrl(params);
   const sharedTitle = params.get("title") || "";

@@ -1,21 +1,16 @@
 /**
- * Main App component for Callback Box frontend.
+ * App shell components: layout, navigation, redirects, and wrapper pages.
+ *
+ * Extracted from the old App.tsx. These are used by the route tree in router.tsx.
  */
 
-import { Routes, Route, useNavigate, useParams, useLocation, Link, Outlet, Navigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { Link, Outlet, useParams, useNavigate, useRouterState } from "@tanstack/react-router";
 import { FileView } from "./components/FileView";
 import { NewsPage } from "./components/NewsPage";
-import { PrintBriefView } from "./components/brief/PrintBriefView";
-import { HistoryPage } from "./components/HistoryPage";
-import { SettingsPage } from "./components/SettingsPage";
 import { BrowsePage } from "./components/BrowsePage";
-import { DashboardPage } from "./components/DashboardPage";
-import { ChatPage } from "./components/ChatPage";
-import { QuestionsPage } from "./components/QuestionsPage";
-import { AdminPage } from "./components/AdminPage";
-import { SharePage } from "./components/SharePage";
-import { CapturePage } from "./components/CapturePage";
+
+import { href } from "./lib/routing";
 
 interface BoxesResult {
   boxes: Array<{ slug: string; name: string }>;
@@ -31,7 +26,7 @@ async function fetchBoxes(): Promise<BoxesResult> {
     if (!resp.ok) return { boxes: [] };
     const data = await resp.json();
     return { boxes: data.boxes ?? [], authRequired: data.authRequired };
-  } catch {
+  } catch (_e) {
     return { boxes: [] };
   }
 }
@@ -42,8 +37,8 @@ async function fetchBoxes(): Promise<BoxesResult> {
  * On desktop: shows all links inline.
  */
 function AppNav() {
-  const location = useLocation();
-  const { boxSlug } = useParams();
+  const { boxSlug } = useParams({ strict: false });
+  const location = useRouterState({ select: (s) => s.location });
   const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
   const [showAdmin, setShowAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,7 +54,7 @@ function AppNav() {
       }
       return r.ok ? r.json() : null;
     }).then((data) => {
-      if (data?.isOwner) setShowAdmin(true);
+      if (data && data.isOwner) setShowAdmin(true);
     }).catch(() => { setShowAdmin(true); });
   }, []);
 
@@ -181,9 +176,9 @@ function AppNav() {
 /**
  * Layout wrapper with navigation.
  */
-function AppLayout() {
+export function AppLayout() {
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen h-[100dvh] flex flex-col">
       <AppNav />
       <div className="flex-1 min-h-0">
         <Outlet />
@@ -195,18 +190,18 @@ function AppLayout() {
 /**
  * News page wrapper with route parameters.
  */
-function NewsPageWrapper() {
+export function NewsPageWrapper() {
   const navigate = useNavigate();
-  const { boxSlug, "*": briefPath } = useParams();
+  const { boxSlug, _splat: briefPath } = useParams({ strict: false });
 
   return (
     <NewsPage
       initialPath={briefPath}
       onNavigate={(path) => {
         if (path) {
-          navigate(`/${boxSlug}/news/${path}`);
+          navigate({ to: href(`/${boxSlug}/news/${path}`) });
         } else {
-          navigate(`/${boxSlug}/news`);
+          navigate({ to: href(`/${boxSlug}/news`) });
         }
       }}
     />
@@ -216,15 +211,15 @@ function NewsPageWrapper() {
 /**
  * Browse page wrapper with route parameters.
  */
-function BrowsePageWrapper() {
+export function BrowsePageWrapper() {
   const navigate = useNavigate();
-  const { boxSlug, "*": browsePath } = useParams();
+  const { boxSlug, _splat: browsePath } = useParams({ strict: false });
 
   return (
     <BrowsePage
       currentPath={browsePath}
       onNavigate={(path) => {
-        navigate(path ? `/${boxSlug}/browse/${path}` : `/${boxSlug}/browse`);
+        navigate({ to: href(path ? `/${boxSlug}/browse/${path}` : `/${boxSlug}/browse`) });
       }}
     />
   );
@@ -233,8 +228,8 @@ function BrowsePageWrapper() {
 /**
  * Card viewer page wrapper.
  */
-function CardViewPage() {
-  const { boxSlug, "*": cardPath } = useParams();
+export function CardViewPage() {
+  const { boxSlug, _splat: cardPath } = useParams({ strict: false });
 
   if (!cardPath) {
     return <div className="p-8 text-warm-600">No card path specified</div>;
@@ -244,7 +239,7 @@ function CardViewPage() {
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-4xl mx-auto py-8 px-4">
         <div className="mb-4">
-          <Link to={`/${boxSlug}`} className="text-plum hover:text-plum-dark">
+          <Link to={href(`/${boxSlug}`)} className="text-plum hover:text-plum-dark">
             &larr; Back to Dashboard
           </Link>
         </div>
@@ -259,7 +254,8 @@ function CardViewPage() {
 /**
  * Root page: if one box, redirect; if multiple, show links.
  */
-function BoxRedirect() {
+export function BoxRedirect() {
+  const navigate = useNavigate();
   const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
   const [authRequired, setAuthRequired] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -271,6 +267,12 @@ function BoxRedirect() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!loading && boxes.length === 1) {
+      navigate({ to: "/$boxSlug", params: { boxSlug: boxes[0]!.slug }, replace: true });
+    }
+  }, [loading, boxes, navigate]);
 
   if (loading) {
     return <div className="p-8 text-warm-600">Loading...</div>;
@@ -294,7 +296,7 @@ function BoxRedirect() {
   }
 
   if (boxes.length === 1) {
-    return <Navigate to={`/${boxes[0].slug}/`} replace />;
+    return <div className="p-8 text-warm-600">Redirecting...</div>;
   }
 
   return (
@@ -305,7 +307,7 @@ function BoxRedirect() {
           {boxes.map((box) => (
             <Link
               key={box.slug}
-              to={`/${box.slug}/`}
+              to={href(`/${box.slug}/`)}
               className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-gold hover:shadow transition-all"
             >
               <span className="text-lg font-medium text-plum">{box.name}</span>
@@ -319,37 +321,11 @@ function BoxRedirect() {
 }
 
 /**
- * Main App with routing.
- */
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<BoxRedirect />} />
-      <Route path="/share" element={<ShareRedirect />} />
-      <Route path="/:boxSlug/print/*" element={<PrintBriefView />} />
-      <Route path="/:boxSlug/share" element={<SharePage />} />
-      <Route path="/:boxSlug" element={<AppLayout />}>
-        <Route path="questions" element={<QuestionsPage />} />
-        <Route path="news/*" element={<NewsPageWrapper />} />
-        <Route path="browse/*" element={<BrowsePageWrapper />} />
-        <Route path="history/:hash?" element={<HistoryPage />} />
-        <Route path="chat" element={<ChatPage />} />
-        <Route path="capture" element={<CapturePage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="admin" element={<AdminPage />} />
-        <Route path="card/*" element={<CardViewPage />} />
-        <Route index element={<DashboardPage />} />
-        <Route path="*" element={<DashboardPage />} />
-      </Route>
-    </Routes>
-  );
-}
-
-/**
  * Redirect /share?params to /:boxSlug/share?params.
  * Picks the first available box (or shows selector if multiple).
  */
-function ShareRedirect() {
+export function ShareRedirect() {
+  const navigate = useNavigate();
   const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
 
@@ -360,15 +336,21 @@ function ShareRedirect() {
     });
   }, []);
 
+  // Preserve query params when redirecting
+  const search = window.location.search;
+
+  useEffect(() => {
+    if (!loading && boxes.length === 1) {
+      navigate({ to: href(`/${boxes[0]!.slug}/share${search}`), replace: true });
+    }
+  }, [loading, boxes, navigate, search]);
+
   if (loading) {
     return <div className="min-h-screen bg-warm-50 flex items-center justify-center"><span className="text-warm-600">Loading...</span></div>;
   }
 
-  // Preserve query params when redirecting
-  const search = window.location.search;
-
   if (boxes.length === 1) {
-    return <Navigate to={`/${boxes[0].slug}/share${search}`} replace />;
+    return <div className="min-h-screen bg-warm-50 flex items-center justify-center"><span className="text-warm-600">Redirecting...</span></div>;
   }
 
   if (boxes.length > 1) {
