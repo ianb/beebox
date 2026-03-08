@@ -5,6 +5,7 @@
  *
  * The EventSource lives in a callback actor's closure.
  * Auto-reconnects after 5 seconds on error.
+ * Tracks lastEventId for replay on reconnect via Last-Event-ID header.
  */
 
 import { setup, assign, fromCallback } from "xstate";
@@ -12,6 +13,7 @@ import { setup, assign, fromCallback } from "xstate";
 export interface SSEEvent {
   event: string;
   data: unknown;
+  id?: string;
 }
 
 type SSEMachineEvent =
@@ -24,6 +26,7 @@ type SSEMachineEvent =
 interface SSEMachineContext {
   url: string;
   lastEvent: SSEEvent | null;
+  lastEventId: string;
 }
 
 const EVENT_TYPES = [
@@ -32,12 +35,19 @@ const EVENT_TYPES = [
   "file-change",
   "wakeup-start",
   "wakeup-complete",
+  "wakeup-error",
   "question-answered",
   "card-created",
+  "cards-changed",
+  "command-complete",
+  "schedule-fired",
+  "chat-complete",
+  "chat-history",
 ];
 
 interface SSEActorInput {
   url: string;
+  lastEventId: string;
 }
 
 const sseActor = fromCallback<
@@ -45,7 +55,17 @@ const sseActor = fromCallback<
   SSEActorInput,
   SSEMachineEvent
 >(({ sendBack, input }) => {
-  const eventSource = new EventSource(input.url);
+  // Build URL with lastEventId query param for replay on reconnect.
+  // The server reads the Last-Event-ID header (sent automatically by
+  // EventSource on its own reconnects) but since our state machine
+  // creates a fresh EventSource each time, we pass it as a query param too.
+  let url = input.url;
+  if (input.lastEventId && input.lastEventId !== "0") {
+    const sep = url.includes("?") ? "&" : "?";
+    url = `${url}${sep}lastEventId=${input.lastEventId}`;
+  }
+
+  const eventSource = new EventSource(url);
 
   eventSource.onopen = () => {
     sendBack({ type: "CONNECTED" });
@@ -57,9 +77,11 @@ const sseActor = fromCallback<
 
   for (const eventType of EVENT_TYPES) {
     eventSource.addEventListener(eventType, (event) => {
+      const me = event as MessageEvent;
       const sseEvent: SSEEvent = {
         event: eventType,
-        data: JSON.parse((event as MessageEvent).data),
+        data: JSON.parse(me.data),
+        id: me.lastEventId || undefined,
       };
       sendBack({ type: "EVENT", sseEvent });
     });
@@ -84,43 +106,49 @@ export const sseMachine = setup({
   },
 }).createMachine({
   id: "sse",
-  initial: "connecting",
+  initial: "active",
   context: ({ input }) => ({
     url: input.url,
     lastEvent: null,
+    lastEventId: "0",
   }),
+  on: {
+    EVENT: {
+      actions: assign(({ context, event }) => ({
+        lastEvent: event.sseEvent,
+        lastEventId: event.sseEvent.id || context.lastEventId,
+      })),
+    },
+  },
   states: {
-    connecting: {
+    active: {
       invoke: {
         id: "eventSource",
         src: "sseActor",
-        input: ({ context }) => ({ url: context.url }),
+        input: ({ context }) => ({ url: context.url, lastEventId: context.lastEventId }),
+      },
+      initial: "connecting",
+      states: {
+        connecting: {
+          on: {
+            CONNECTED: "connected",
+          },
+        },
+        connected: {},
       },
       on: {
-        CONNECTED: "connected",
-        ERROR: "waiting",
-        EVENT: {
-          actions: assign(({ event }) => ({ lastEvent: event.sseEvent })),
-        },
-      },
-    },
-    connected: {
-      on: {
-        EVENT: {
-          actions: assign(({ event }) => ({ lastEvent: event.sseEvent })),
-        },
         ERROR: "waiting",
         DISCONNECT: "disconnected",
       },
     },
     waiting: {
       after: {
-        RECONNECT_DELAY: "connecting",
+        RECONNECT_DELAY: "active",
       },
     },
     disconnected: {
       on: {
-        RECONNECT: "connecting",
+        RECONNECT: "active",
       },
     },
   },

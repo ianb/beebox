@@ -14,13 +14,18 @@ import type { FastifyInstance } from "fastify";
 import { ChatSession, type ChatMessage } from "../../core/chat-session.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
-import type { BroadcastEventFn } from "./sse.js";
+import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import {
   listSessions,
   getSessionLogPath,
   parseSessionLog,
 } from "../../cli/lib/session.js";
+import {
+  ChatScheduleManager,
+  parseScheduleTags,
+  parseCancelScheduleTags,
+} from "../../core/chat-schedules.js";
 
 interface SendBody {
   message: string;
@@ -29,7 +34,7 @@ interface SendBody {
 interface RegisterChatRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
-  broadcastEvent: BroadcastEventFn;
+  eventBus: EventBus;
   openaiAudio?: OpenAIAudioService | undefined;
 }
 
@@ -39,9 +44,67 @@ interface RegisterChatRoutesOptions {
 export async function registerChatRoutes(
   options: RegisterChatRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, broadcastEvent, openaiAudio } = options;
+  const { server, boxRoot, eventBus, openaiAudio } = options;
   // Create singleton ChatSession for this box
   const chatSession = new ChatSession(boxRoot);
+
+  // Schedule manager — fires schedules back into the chat session
+  const scheduleManager = new ChatScheduleManager(boxRoot, {
+    onFire({ schedule }) {
+      // Broadcast a schedule-fired event so the frontend can play alarms/TTS
+      eventBus.emit("schedule-fired", {
+        id: schedule.id,
+        label: schedule.label,
+        alarm: schedule.alarm,
+        announce: schedule.announce,
+      });
+
+      // Inject a message into the chat session to wake the agent
+      const firedAt = new Date().toISOString();
+      const firedMessage = [
+        "<schedule-fired label=\"" + schedule.label + "\" scheduled-at=\"" + schedule.createdAt + "\" fired-at=\"" + firedAt + "\">",
+        schedule.content,
+        "",
+        "A scheduled timer \"" + schedule.label + "\" has fired. Respond if you have something useful to say.",
+        "</schedule-fired>",
+      ].join("\n");
+
+      // Listen for the agent's response to complete, then push the
+      // full history to the frontend via SSE so it can display the reply.
+      const onScheduleDone = () => {
+        chatSession.getHistory()
+          .then((history) => {
+            eventBus.emit("chat-history", {
+              entries: history.entries,
+              sessionId: history.sessionId,
+            });
+          })
+          .catch((_e) => {});
+      };
+      chatSession.once("done", onScheduleDone);
+
+      const sent = chatSession.send(firedMessage);
+      if (!sent) {
+        chatSession.removeListener("done", onScheduleDone);
+      }
+    },
+  });
+
+
+  // Listen for completed turns to parse schedule/cancel tags
+  chatSession.on("turn-text", (text: string) => {
+    // Process <schedule> tags
+    const newSchedules = parseScheduleTags(text);
+    for (const s of newSchedules) {
+      scheduleManager.addSchedule(s);
+    }
+
+    // Process <cancel-schedule> tags
+    const cancels = parseCancelScheduleTags(text);
+    for (const label of cancels) {
+      scheduleManager.cancelByLabel(label);
+    }
+  });
 
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody }>(
@@ -51,7 +114,6 @@ export async function registerChatRoutes(
       const { message } = body;
 
       if (!message) {
-        console.log("[chat:send] Missing message in body:", JSON.stringify(body));
         return reply.status(400).send({ error: "message is required" });
       }
 
@@ -93,7 +155,7 @@ export async function registerChatRoutes(
         };
 
         const onDone = () => {
-          broadcastEvent("chat-complete", {
+          eventBus.emit("chat-complete", {
             timestamp: new Date().toISOString(),
           });
           finish();
@@ -135,8 +197,14 @@ export async function registerChatRoutes(
           resolve();
         });
 
+        // Append active schedule info so the agent knows what's pending
+        const pendingInfo = scheduleManager.formatPendingForPrompt();
+        const fullMessage = pendingInfo
+          ? message + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
+          : message;
+
         // Send the message
-        const sent = chatSession.send(message);
+        const sent = chatSession.send(fullMessage);
         if (!sent) {
           cleanup();
           reply.raw.write(
@@ -261,6 +329,21 @@ export async function registerChatRoutes(
       busy: chatSession.isBusy(),
     };
   });
+
+  // GET /api/chat/schedules - List active schedules
+  server.get("/api/chat/schedules", async () => {
+    return { schedules: scheduleManager.getActive() };
+  });
+
+  // POST /api/chat/schedules/cancel - Cancel a schedule by label
+  server.post<{ Body: { label: string } }>(
+    "/api/chat/schedules/cancel",
+    async (request) => {
+      const { label } = request.body;
+      const cancelled = scheduleManager.cancelByLabel(label);
+      return { ok: cancelled };
+    }
+  );
 
   // POST /api/chat/reset - Reset session (start fresh)
   server.post("/api/chat/reset", async () => {

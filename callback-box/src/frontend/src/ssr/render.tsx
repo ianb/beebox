@@ -181,7 +181,7 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
   const ctx: TrpcContext = {
     boxRoot,
     boxSlug: slug,
-    broadcastEvent: () => {},
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {} as Services,
     chatSession: new ChatSession(boxRoot),
   };

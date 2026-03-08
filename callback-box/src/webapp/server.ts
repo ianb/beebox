@@ -13,6 +13,7 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import { registerApiRoutes } from "./routes/api.js";
 import { registerSseRoutes } from "./routes/sse.js";
+import { createEventBus } from "../core/event-bus.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerBriefRoutes } from "./routes/briefs.js";
@@ -76,6 +77,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     trustProxy: true,
   });
 
+  // eslint-disable-next-line max-params -- Fastify onSend hook requires 4 params
   server.addHook("onSend", (request, reply, payload, done) => {
     const origin = request.headers.origin;
     if (origin && origin.startsWith("chrome-extension://")) {
@@ -179,6 +181,10 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
 
   // Register each box under its slug prefix
   for (const box of boxes) {
+    // One EventBus per box — shared by main routes and webhook routes
+    const eventBus = createEventBus(box.boxRoot, { pollInterval: 1000 });
+    eventBus.prune(new Date(Date.now() - 24 * 60 * 60 * 1000));
+
     await server.register(async (instance) => {
       // Per-box auth check: verify session and box-level access
       if (isAuthEnabled()) {
@@ -201,9 +207,10 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
         });
       }
 
-      // Register all routes for this box
-      const { broadcastEvent } = await registerSseRoutes(instance, box.boxRoot);
       const chatSession = new ChatSession(box.boxRoot);
+
+      // Register SSE route (subscribes clients to EventBus)
+      await registerSseRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
 
       // Mount tRPC router alongside REST routes
       await instance.register(fastifyTRPCPlugin<typeof appRouter>, {
@@ -213,7 +220,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
           createContext: (): TrpcContext => ({
             boxRoot: box.boxRoot,
             boxSlug: box.slug,
-            broadcastEvent,
+            eventBus,
             services: options.services ?? {},
             chatSession,
           }),
@@ -222,15 +229,15 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
 
       // REST routes that can't move to tRPC (SSE streaming, file uploads, WebSocket)
       await registerApiRoutes(instance, box.boxRoot);
-      await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
-      await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+      await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
       await registerBriefRoutes(instance, box.boxRoot);
       await registerHistoryRoutes(instance, box.boxRoot);
       await registerCalendarRoutes({ server: instance, boxRoot: box.boxRoot, calendar: options.services?.calendar });
       await registerSchedulerRoutes(instance, box.boxRoot);
-      await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent, openaiAudio: options.services?.openaiAudio });
+      await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio });
       await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
-      await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
       await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
 
       // Serve static frontend files within this prefix
@@ -246,9 +253,9 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
 
     // Register webhooks at /webhook/<slug>/ — outside auth so external
     // services (Telegram, etc.) can reach them without Cloudflare Access.
+    // Shares the same EventBus as the main routes above.
     await server.register(async (instance) => {
-      const { broadcastEvent } = await registerSseRoutes(instance, box.boxRoot);
-      await registerTelegramRoutes({ server: instance, boxRoot: box.boxRoot, broadcastEvent });
+      await registerTelegramRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
     }, { prefix: `/webhook/${box.slug}` });
   }
 

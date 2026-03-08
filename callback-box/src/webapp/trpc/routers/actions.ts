@@ -7,7 +7,7 @@ export const actionsRouter = router({
   wakeup: publicProcedure
     .input(z.object({ dryRun: z.boolean().default(false) }))
     .mutation(async ({ input, ctx }) => {
-      ctx.broadcastEvent("wakeup-start", {
+      ctx.eventBus.emit("wakeup-start", {
         timestamp: new Date().toISOString(),
         dryRun: input.dryRun,
       });
@@ -22,7 +22,7 @@ export const actionsRouter = router({
       try {
         const result = await runCommand({ name: "connector-sync", args: { dryRun: input.dryRun }, ctx: cmdCtx });
 
-        ctx.broadcastEvent("wakeup-complete", {
+        ctx.eventBus.emit("wakeup-complete", {
           timestamp: new Date().toISOString(),
           success: result.success,
           phases: (result.data as { phases?: unknown })?.phases,
@@ -43,7 +43,7 @@ export const actionsRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        ctx.broadcastEvent("wakeup-error", {
+        ctx.eventBus.emit("wakeup-error", {
           timestamp: new Date().toISOString(),
           error: (error as Error).message,
         });
@@ -86,7 +86,7 @@ export const actionsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: result.error ?? "Failed to answer" });
       }
 
-      ctx.broadcastEvent("question-answered", {
+      ctx.eventBus.emit("question-answered", {
         path: input.questionPath,
         answer: input.answer,
         selectedId: input.selectedId,
@@ -126,7 +126,7 @@ export const actionsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: result.error ?? "Failed to create card" });
       }
 
-      ctx.broadcastEvent("card-created", {
+      ctx.eventBus.emit("card-created", {
         path: input.path,
         template: input.template,
         timestamp: new Date().toISOString(),

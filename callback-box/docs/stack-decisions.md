@@ -221,7 +221,7 @@ This works but is the one area where the machine boundaries leak — each machin
 
 **Infrastructure:**
 - `src/webapp/trpc/trpc.ts` — initTRPC with context
-- `src/webapp/trpc/context.ts` — TrpcContext: `{ boxRoot, boxSlug, broadcastEvent, services, chatSession }`
+- `src/webapp/trpc/context.ts` — TrpcContext: `{ boxRoot, boxSlug, eventBus, services, chatSession }`
 - `src/webapp/trpc/router.ts` — Root appRouter merging 12 sub-routers, exports `AppRouter` type
 - Fastify adapter registered per-box at `/:boxSlug/api/trpc`
 - Frontend: `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query` in TrpcProvider
@@ -235,7 +235,7 @@ This works but is the one area where the machine boundaries leak — each machin
 | `card` | get, patch | Patch uses Zod discriminated union for ops |
 | `scheduler` | log, schedules | Explicit return interfaces needed (see lessons) |
 | `calendar` | available, config, updateConfig | Uses `ctx.services.calendar` |
-| `actions` | wakeup, answer, create | Mutations with `ctx.broadcastEvent` |
+| `actions` | wakeup, answer, create | Mutations with `ctx.eventBus.emit()` |
 | `briefs` | list, get, markRead, feedback, queryResponse, guideReactions, completeReading | Largest router; audio as base64 |
 | `chat` | history, status, interrupt, reset, voiceConfig | Streaming `chat.send` stays REST |
 | `commands` | list, get, executeSync | Streaming `execute` stays REST |

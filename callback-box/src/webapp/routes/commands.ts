@@ -16,7 +16,7 @@ import {
   getCommand,
   type CommandContext,
 } from "../../core/commands/index.js";
-import type { BroadcastEventFn } from "./sse.js";
+import type { EventBus } from "../../core/event-bus.js";
 
 interface ExecuteBody {
   command: string;
@@ -75,7 +75,7 @@ export async function executeCommandStreaming(options: {
 interface RegisterCommandRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
-  broadcastEvent: BroadcastEventFn;
+  eventBus: EventBus;
 }
 
 /**
@@ -84,7 +84,7 @@ interface RegisterCommandRoutesOptions {
 export async function registerCommandRoutes(
   options: RegisterCommandRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, broadcastEvent } = options;
+  const { server, boxRoot, eventBus } = options;
   // GET /api/commands/list - List available commands
   server.get("/api/commands/list", async () => {
     const commands = listCommands();
@@ -141,7 +141,7 @@ export async function registerCommandRoutes(
       });
 
       if (resultLine.type === "result") {
-        broadcastEvent("command-complete", {
+        eventBus.emit("command-complete", {
           command,
           success: resultLine.success ?? false,
           timestamp: new Date().toISOString(),
@@ -180,7 +180,7 @@ export async function registerCommandRoutes(
         const result = await runCommand({ name: command, args: args ?? {}, ctx });
 
         // Broadcast command completion event
-        broadcastEvent("command-complete", {
+        eventBus.emit("command-complete", {
           command,
           success: result.success,
           timestamp: new Date().toISOString(),

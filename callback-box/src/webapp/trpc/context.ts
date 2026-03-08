@@ -1,11 +1,11 @@
-import type { BroadcastEventFn } from "../routes/sse.js";
+import type { EventBus } from "../../core/event-bus.js";
 import type { Services } from "../../services/index.js";
 import type { ChatSession } from "../../core/chat-session.js";
 
 export interface TrpcContext {
   boxRoot: string;
   boxSlug: string;
-  broadcastEvent: BroadcastEventFn;
+  eventBus: EventBus;
   services: Services;
   chatSession: ChatSession;
 }

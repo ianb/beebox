@@ -32,7 +32,7 @@ export const myRouter = router({
       filter: z.string().optional(),
     }))
     .query(async ({ input, ctx }) => {
-      // ctx.boxRoot, ctx.services, ctx.broadcastEvent, etc.
+      // ctx.boxRoot, ctx.services, ctx.eventBus, etc.
       const items = await loadItems(ctx.boxRoot, input.count);
       return { items };
     }),
@@ -45,7 +45,7 @@ export const myRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const path = await saveThing(ctx.boxRoot, input);
-      ctx.broadcastEvent({ type: "file-change" }); // notify SSE clients
+      ctx.eventBus.emit("file-change", { path }); // notify SSE clients
       return { success: true, path };
     }),
 });
@@ -53,7 +53,7 @@ export const myRouter = router({
 
 **Queries** are for reading data. They can be cached, deduplicated, and refetched automatically.
 
-**Mutations** are for writes/side effects. They don't cache. Use `ctx.broadcastEvent()` if other clients should see the change.
+**Mutations** are for writes/side effects. They don't cache. Use `ctx.eventBus.emit()` if other clients should see the change.
 
 ### 2. Register the Router
 
@@ -120,7 +120,7 @@ Every procedure receives `ctx` with:
 |-------|------|-------------|
 | `ctx.boxRoot` | `string` | Absolute path to the box directory |
 | `ctx.boxSlug` | `string` | URL slug for the box (e.g., `"test1"`) |
-| `ctx.broadcastEvent` | `(event) => void` | Send SSE event to connected clients |
+| `ctx.eventBus` | `EventBus` | SQLite-backed event bus for SSE notifications (see `src/core/event-bus.ts`) |
 | `ctx.services` | `Services` | Injected services (calendar, telegram, dropbox, claude CLI) |
 | `ctx.chatSession` | `ChatSession` | Per-box chat session singleton |
 

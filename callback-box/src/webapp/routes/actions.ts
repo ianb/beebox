@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { randomUUID } from "node:crypto";
-import type { BroadcastEventFn } from "./sse.js";
+import type { EventBus } from "../../core/event-bus.js";
 import {
   runCommand,
   type CommandContext,
@@ -35,7 +35,7 @@ interface CreateBody {
 interface RegisterActionRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
-  broadcastEvent: BroadcastEventFn;
+  eventBus: EventBus;
 }
 
 /**
@@ -44,13 +44,13 @@ interface RegisterActionRoutesOptions {
 export async function registerActionRoutes(
   options: RegisterActionRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, broadcastEvent } = options;
+  const { server, boxRoot, eventBus } = options;
   // POST /api/actions/wakeup - Trigger processing
   server.post<{ Body: WakeupBody }>("/api/actions/wakeup", async (request, reply) => {
     const dryRun = request.body?.dryRun ?? false;
 
     // Broadcast that wakeup is starting
-    broadcastEvent("wakeup-start", {
+    eventBus.emit("wakeup-start", {
       timestamp: new Date().toISOString(),
       dryRun,
     });
@@ -73,7 +73,7 @@ export async function registerActionRoutes(
       const result = await runCommand({ name: "connector-sync", args: { dryRun }, ctx });
 
       // Broadcast completion
-      broadcastEvent("wakeup-complete", {
+      eventBus.emit("wakeup-complete", {
         timestamp: new Date().toISOString(),
         success: result.success,
         phases: (result.data as { phases?: unknown })?.phases,
@@ -95,7 +95,7 @@ export async function registerActionRoutes(
         logs,
       };
     } catch (error) {
-      broadcastEvent("wakeup-error", {
+      eventBus.emit("wakeup-error", {
         timestamp: new Date().toISOString(),
         error: (error as Error).message,
       });
@@ -142,7 +142,7 @@ export async function registerActionRoutes(
       }
 
       // Broadcast the change
-      broadcastEvent("question-answered", {
+      eventBus.emit("question-answered", {
         path: questionPath,
         answer,
         selectedId,
@@ -196,7 +196,7 @@ export async function registerActionRoutes(
       }
 
       // Broadcast
-      broadcastEvent("card-created", {
+      eventBus.emit("card-created", {
         path: cardPath,
         template,
         timestamp: new Date().toISOString(),
@@ -282,7 +282,7 @@ export async function registerActionRoutes(
       const resultData = result.data as { cardPath: string; attachmentPath?: string };
 
       // Broadcast
-      broadcastEvent("card-created", {
+      eventBus.emit("card-created", {
         path: resultData.cardPath,
         template: "voice-memo",
         audioPath: resultData.attachmentPath,

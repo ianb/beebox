@@ -30,7 +30,7 @@ export function useSSE(url: string, options: UseSSEOptions = {}): UseSSEReturn {
     optionsRef.current = options;
   });
 
-  const connected = snapshot.matches("connected");
+  const connected = snapshot.matches({ active: "connected" });
   const { lastEvent } = snapshot.context;
 
   // Fire callbacks on state transitions

@@ -10,7 +10,7 @@
 
 import * as path from "node:path";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import type { BroadcastEventFn } from "./sse.js";
+import type { EventBus } from "../../core/event-bus.js";
 import {
   loadTelegramConfig,
   processWebhookUpdate,
@@ -25,11 +25,11 @@ import { stageFiles, commit } from "../../cli/lib/git.js";
 interface RegisterTelegramRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
-  broadcastEvent: BroadcastEventFn;
+  eventBus: EventBus;
 }
 
 export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions): Promise<void> {
-  const { server, boxRoot, broadcastEvent } = opts;
+  const { server, boxRoot, eventBus } = opts;
 
   // Singleton pool for this box
   const pool = new ChatSessionPool(boxRoot);
@@ -64,7 +64,7 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
       const result = await processWebhookUpdate({ boxRoot, update, skipJob: true });
 
       if (result) {
-        broadcastEvent("cards-changed", { source: "telegram" });
+        eventBus.emit("cards-changed", { source: "telegram" });
 
         const chatDescription = extracted.msg.chat.title ?? extracted.senderName;
 
@@ -79,7 +79,7 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
           senderRef: result.personRef,
           chatId,
           botToken: config.botToken,
-          broadcastEvent,
+          eventBus,
         }).catch((err) => {
           console.error(`[telegram-webhook] Pool handling failed: ${err}`);
         });
@@ -104,7 +104,7 @@ interface HandleChatMessageOptions {
   senderRef: string | null;
   chatId: number;
   botToken: string;
-  broadcastEvent: BroadcastEventFn;
+  eventBus: EventBus;
 }
 
 /**
@@ -113,7 +113,7 @@ interface HandleChatMessageOptions {
  * agent's output stream — the agent may continue working after responding.
  */
 async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> {
-  const { pool, boxRoot, threadRef, chatDescription, messageText, senderName, senderRef, chatId, botToken, broadcastEvent } = opts;
+  const { pool, boxRoot, threadRef, chatDescription, messageText, senderName, senderRef, chatId, botToken, eventBus } = opts;
   const slug = path.basename(path.dirname(threadRef));
 
   // Show "typing..." indicator until agent responds or turn ends
@@ -151,7 +151,7 @@ async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> 
         trailers: { "Sent-By": "telegram-chat-pool" },
       });
 
-      broadcastEvent("cards-changed", { source: "telegram" });
+      eventBus.emit("cards-changed", { source: "telegram" });
     } catch (err) {
       console.error(`[telegram-webhook] Failed to archive response in ${slug}: ${err}`);
     }

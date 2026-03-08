@@ -1,65 +1,28 @@
 /**
  * Server-Sent Events for live updates.
+ *
+ * Thin adapter over EventBus — subscribes each SSE client to the bus
+ * with Last-Event-ID replay for reconnecting clients.
  */
 
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { watch, type FSWatcher } from "chokidar";
 import * as path from "node:path";
+import type { EventBus } from "../../core/event-bus.js";
 
-interface SSEClient {
-  id: string;
-  reply: FastifyReply;
-}
-
-export type BroadcastEventFn = (event: string, data: unknown) => void;
-
-export interface SseRouteResult {
-  broadcastEvent: BroadcastEventFn;
-}
-
-/**
- * Parameters for sendEvent
- */
-interface SendEventParams {
-  reply: FastifyReply;
-  event: string;
-  data: unknown;
-}
-
-/**
- * Send an SSE event to a client.
- */
-function sendEvent(params: SendEventParams): void {
-  const { reply, event, data } = params;
-  if (!reply.raw.writable) return;
-
-  const payload = JSON.stringify(data);
-  reply.raw.write(`event: ${event}\n`);
-  reply.raw.write(`data: ${payload}\n\n`);
+interface RegisterSseRoutesOptions {
+  server: FastifyInstance;
+  boxRoot: string;
+  eventBus: EventBus;
 }
 
 /**
  * Register SSE routes on the Fastify server.
- * Returns a broadcastEvent function scoped to this box's clients.
+ * Uses EventBus for event dispatch and replay.
  */
-export async function registerSseRoutes(
-  server: FastifyInstance,
-  boxRoot: string
-): Promise<SseRouteResult> {
-  let clients: SSEClient[] = [];
+export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise<void> {
+  const { server, boxRoot, eventBus } = opts;
   let watcher: FSWatcher | null = null;
-  let clientIdCounter = 0;
-
-  function broadcastEvent(event: string, data: unknown): void {
-    const payload = JSON.stringify(data);
-    const message = `event: ${event}\ndata: ${payload}\n\n`;
-
-    for (const client of clients) {
-      if (client.reply.raw.writable) {
-        client.reply.raw.write(message);
-      }
-    }
-  }
 
   // Start file watcher lazily on first SSE client connection
   const watchPath = path.join(boxRoot, "box");
@@ -72,10 +35,10 @@ export async function registerSseRoutes(
       ignored: /(^|[/\\])\../,
     });
 
-    watcher.on("all", (event, filePath) => {
+    watcher.on("all", (fsEvent, filePath) => {
       const relativePath = path.relative(boxRoot, filePath);
-      broadcastEvent("file-change", {
-        event,
+      eventBus.emitTransient("file-change", {
+        event: fsEvent,
         path: relativePath,
         timestamp: new Date().toISOString(),
       });
@@ -88,33 +51,51 @@ export async function registerSseRoutes(
 
   // GET /api/events - SSE endpoint
   server.get("/api/events", (request, reply) => {
-    const clientId = `client-${++clientIdCounter}`;
+    // Support Last-Event-ID from header (browser auto-reconnect) or query param (our state machine)
+    const query = request.query as Record<string, string>;
+    const lastEventId = Number(request.headers["last-event-id"]) || Number(query.lastEventId) || 0;
 
     ensureWatcher();
 
     reply.hijack();
 
-    reply.raw.writeHead(200, {
+    // In dev mode the frontend connects directly to Fastify (port 3211)
+    // from Vite (port 3210), so we need CORS headers on the hijacked response.
+    const origin = request.headers.origin;
+    const headers: Record<string, string> = {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+    };
+    if (origin) {
+      headers["Access-Control-Allow-Origin"] = origin;
+    }
+
+    reply.raw.writeHead(200, headers);
+
+    // Subscribe to EventBus — replays missed events, then streams live
+    const sub = eventBus.subscribe({
+      afterId: lastEventId,
+      listener: (busEvent) => {
+        if (!reply.raw.writable) return;
+        // Use event ID for persistent events; skip id: for transient (negative ID)
+        const idLine = busEvent.id > 0 ? `id: ${busEvent.id}\n` : "";
+        const payload = JSON.stringify(busEvent.data);
+        reply.raw.write(`${idLine}event: ${busEvent.event}\ndata: ${payload}\n\n`);
+      },
     });
-
-    sendEvent({ reply, event: "connected", data: { clientId } });
-
-    const client: SSEClient = { id: clientId, reply };
-    clients.push(client);
 
     const pingInterval = setInterval(() => {
       if (reply.raw.writable) {
-        sendEvent({ reply, event: "ping", data: { timestamp: new Date().toISOString() } });
+        const payload = JSON.stringify({ timestamp: new Date().toISOString() });
+        reply.raw.write(`event: ping\ndata: ${payload}\n\n`);
       } else {
         clearInterval(pingInterval);
       }
     }, 30000);
 
     request.raw.on("close", () => {
-      clients = clients.filter((c) => c.id !== clientId);
+      sub.unsubscribe();
       clearInterval(pingInterval);
     });
   });
@@ -125,8 +106,5 @@ export async function registerSseRoutes(
       await watcher.close();
       watcher = null;
     }
-    clients = [];
   });
-
-  return { broadcastEvent };
 }

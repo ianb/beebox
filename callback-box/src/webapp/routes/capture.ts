@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { randomUUID } from "node:crypto";
-import type { BroadcastEventFn } from "./sse.js";
+import type { EventBus } from "../../core/event-bus.js";
 import {
   runCommand,
   type CommandContext,
@@ -36,13 +36,13 @@ const sessions = new Map<string, CaptureSession>();
 interface RegisterCaptureRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
-  broadcastEvent: BroadcastEventFn;
+  eventBus: EventBus;
 }
 
 export async function registerCaptureRoutes(
   options: RegisterCaptureRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, broadcastEvent } = options;
+  const { server, boxRoot, eventBus } = options;
 
   // POST /api/capture/sessions — create a new capture session
   server.post("/api/capture/sessions", async (_request, _reply) => {
@@ -251,7 +251,7 @@ export async function registerCaptureRoutes(
 
     // Broadcast
     for (const cardPath of createdCards) {
-      broadcastEvent("card-created", {
+      eventBus.emit("card-created", {
         path: cardPath,
         template: "capture",
         timestamp: now.toISOString(),

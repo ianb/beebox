@@ -52,7 +52,7 @@ export const commandsRouter = router({
 
       const result = await runCommand({ name: input.command, args: input.args, ctx: cmdCtx });
 
-      ctx.broadcastEvent("command-complete", {
+      ctx.eventBus.emit("command-complete", {
         command: input.command,
         success: result.success,
         timestamp: new Date().toISOString(),
