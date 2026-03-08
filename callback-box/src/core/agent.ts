@@ -12,7 +12,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { createWriteStream, type WriteStream } from "node:fs";
+import { createWriteStream, appendFileSync, type WriteStream } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
 
@@ -71,6 +72,15 @@ export function createAgent(options: {
     async invoke(opts: AgentInvokeOptions): Promise<AgentResult> {
       const isResume = invocationCount > 0;
       invocationCount++;
+
+      // Log to session manifest on first invocation
+      if (invocationCount === 1) {
+        appendSessionManifest(opts.boxRoot, {
+          sessionId,
+          task: options.name,
+          timestamp: new Date().toISOString(),
+        });
+      }
 
       return runAgent({
         boxRoot: opts.boxRoot,
@@ -162,6 +172,22 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
     message: fallbackMessage,
     trailers: { ...fallbackTrailers, Fallback: "true" },
   });
+}
+
+// ─── Session manifest ─────────────────────────────────────────────────
+
+const MANIFEST_REL_PATH = "store/usage/session-manifest.jsonl";
+
+interface ManifestEntry {
+  sessionId: string;
+  task: string;
+  timestamp: string;
+}
+
+function appendSessionManifest(boxRoot: string, entry: ManifestEntry): void {
+  const manifestPath = path.join(boxRoot, MANIFEST_REL_PATH);
+  mkdirSync(path.dirname(manifestPath), { recursive: true });
+  appendFileSync(manifestPath, JSON.stringify(entry) + "\n");
 }
 
 // Get the path to the cb wrapper scripts so we can add them to PATH

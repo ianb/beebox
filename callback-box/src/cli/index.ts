@@ -45,6 +45,7 @@ import {
   lsCommand,
   renderCommand,
   formatCommand,
+  usageCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -92,6 +93,7 @@ program.addCommand(schedulerCommand);
 program.addCommand(lsCommand);
 program.addCommand(renderCommand);
 program.addCommand(formatCommand);
+program.addCommand(usageCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)
