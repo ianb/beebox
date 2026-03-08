@@ -84,6 +84,8 @@ plugins/          Claude Code plugins (card-validator hook)
 - **Don't invent card XML formats.** Every card type has a schema. Read it in `src/schemas/` before creating or modifying cards. The schema's `element()` call defines exactly what attributes and children are valid.
 - **Service fakes are domain-specific**, not generic mocks. They have real in-memory state. Read existing fakes before writing new ones.
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Use `cb commit` which handles validation.
+- **Fix errors as you find them.** If you encounter lint, type, or test errors — even pre-existing ones from previous work — fix them. Don't leave broken windows.
+- **Leave the repo clean when committing.** If there's uncommitted work, make enough commits to leave everything in a clean state. Don't leave half-done changes lying around.
 
 ## Improving These Instructions
 
