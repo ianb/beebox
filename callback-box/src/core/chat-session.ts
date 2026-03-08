@@ -72,12 +72,35 @@ BEHAVIOR:
 - For large tasks (multi-file changes, research, long operations): create a job card
   in box/jobs/ rather than doing everything inline
 - For small tasks (quick lookups, single edits, answers): just do them directly
-- Use <speech> tags for parts you want spoken aloud via TTS
-- Keep speech short (1-3 sentences). Use text outside speech for details.
 - If the user speaks (<speech> input), always respond with speech
 - If the user types (<typed> input), speech is optional
 
-SPEECH OUTPUT:
+OUTPUT FORMAT:
+Your response has two channels:
+1. **Speech** — text inside <speech> tags is spoken aloud via TTS.
+2. **Display text** — everything outside <speech> tags is shown visually in the chat UI but NOT spoken.
+
+Use speech as the primary conversational response (1-3 sentences). Use display text to supplement with details that would be too verbose to speak: lists, step-by-step instructions, formatted data, links, tables. Display text supports Markdown (bold, headers, lists, code blocks, tables).
+
+Example:
+  <speech>Here's a pasta carbonara recipe — pretty simple, about 30 minutes.</speech>
+
+  ## Pasta Carbonara
+  - 200g spaghetti
+  - 100g guanciale, diced
+  - 2 egg yolks + 1 whole egg
+  - 50g pecorino, finely grated
+  - Black pepper
+
+  1. Cook pasta in salted water
+  2. Crisp guanciale in a dry pan
+  3. Whisk eggs with cheese and pepper
+  4. Toss hot pasta with guanciale, then egg mixture off heat
+  5. Add pasta water to loosen, serve immediately
+
+Not every response needs display text — for simple conversational replies, speech alone is fine. Use display text when the response genuinely benefits from visual structure.
+
+SPEECH:
 - Wrap spoken text in <speech> tags.
 - Optionally add <instructions> after the text (before </speech>) when the delivery matters — tone, pacing, emphasis on specific words or phrases. Don't add instructions for normal conversational speech; only when something notable is called for.
 - Instructions can be general ("Warm and slow") or targeted ("Emphasize the word 'never', pause before 'but'").
@@ -95,7 +118,25 @@ CONTEXT:
 - This is a Callback Box — an agent-managed workspace
 - box/inbox/ has pending items, box/jobs/ has queued tasks
 - config/ has configuration, schedules, procedures
-- Use cb commands for operations: cb wakeup, cb create, etc.`;
+- Use cb commands for operations: cb wakeup, cb create, etc.
+
+SCHEDULING:
+- Use <schedule> to set a timer that will wake you up later:
+  <schedule in="20m" label="rice timer" alarm="1" announce="check rice timer">Tell Ian to check the rice</schedule>
+- in: duration until firing (e.g. "5m", "1h", "30s"). Precision is to the nearest minute.
+- label: short name shown in UI and used for cancellation
+- alarm="1": play an alarm sound when it fires (omit for silent)
+- announce="text": text spoken aloud via TTS when it fires
+- Content inside the tag is context injected back to you when the schedule fires.
+- When a schedule fires, you receive a <schedule-fired> message. Respond if you have something useful to say.
+- To cancel a pending schedule: <cancel-schedule label="rice timer" />
+- You'll see active schedules listed in user messages so you know what's pending.
+- Use schedules proactively, not just for explicit timer requests. Good uses:
+  - Remind or follow up if the user doesn't respond after a while
+  - Check back on a topic you discussed ("How did that meeting go?")
+  - Encourage or nudge the user about something they mentioned wanting to do
+  - Monitor something over time (set a schedule, check, set another)
+  - Any situation where you'd want to "come back to this later"`;
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatSession:${context}]`, ...args);
@@ -106,6 +147,7 @@ export class ChatSession extends EventEmitter {
   private sessionId: string | null = null;
   private boxRoot: string;
   private busy = false;
+  private turnText = "";
 
   constructor(boxRoot: string) {
     super();
@@ -247,12 +289,26 @@ export class ChatSession extends EventEmitter {
       this.saveSessionId(this.sessionId);
     }
 
+    // Accumulate assistant text for schedule parsing
+    if (msg.type === "assistant" && msg.message) {
+      for (const block of msg.message.content) {
+        if (block.type === "text" && block.text) {
+          this.turnText += block.text;
+        }
+      }
+    }
+
     this.emit("message", msg);
 
     if (msg.type === "result") {
       log("done", `Turn complete, is_error: ${msg.is_error}`);
+      const completedText = this.turnText;
+      this.turnText = "";
       this.busy = false;
       this.emit("done", msg);
+      if (completedText) {
+        this.emit("turn-text", completedText);
+      }
     }
   }
 
@@ -276,6 +332,7 @@ export class ChatSession extends EventEmitter {
     }
 
     this.busy = true;
+    this.turnText = "";
 
     const payload = JSON.stringify({
       type: "user",

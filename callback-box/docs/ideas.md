@@ -45,6 +45,10 @@ The iOS Shortcut share flow currently only handles URLs (opens a browser page wi
 ### Per-user Google OAuth tokens
 
 Currently Google connector tokens are stored per-box in a single `google.secret.json`. Any box user should be able to connect their own Google account. This means per-user token storage (e.g., keyed by email), knowing which user's tokens to use for which operations, and the OAuth callback tracking which user initiated the flow.
+### Chat supplementary text — IMPLEMENTED
+
+Updated `CHAT_SYSTEM_PROMPT` in `chat-session.ts` to describe two-channel output: `<speech>` tags for TTS, and markdown display text outside speech for visual details. Frontend already supported this (ReactMarkdown rendering + speech tag stripping).
+
 ### Session output critique tool — IMPLEMENTED
 
 Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques for usage.
