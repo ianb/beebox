@@ -45,6 +45,7 @@ jobFiles.length
 const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
 content.includes('ref="box/inbox/note1.memo.card"')
 => true
+
 content.includes('ref="box/inbox/note2.task.card"')
 => true
 ```
@@ -102,6 +103,7 @@ const job1 = await readFile(join(box.root, "box/jobs", jobFiles[1]), "utf-8");
 const allContent = job0 + job1;
 allContent.includes("note.memo.card")
 => true
+
 allContent.includes("snap.capture-session.card")
 => true
 ```
@@ -172,8 +174,10 @@ typeof jobPath
 const content = await readFile(join(box.root, jobPath), "utf-8");
 content.includes("guide-revision-job")
 => true
+
 content.includes('ref="store/archive/briefs/2026-02-14_tech.news-brief.card"')
 => true
+
 content.includes('source="feedback-sync"')
 => true
 

@@ -84,6 +84,7 @@ const fetcher = createFakeArticleFetcher([]);
 const error = await fetcher.fetch("https://unknown.com/page").catch((e: any) => e);
 error.message
 => HTTP 404: Not Found
+
 error.statusCode
 => 404
 ```
@@ -98,6 +99,7 @@ const fetcher = createFakeArticleFetcher([
 const error = await fetcher.fetch("https://example.com/down").catch((e: any) => e);
 error.message
 => HTTP 503
+
 error.statusCode
 => 503
 ```

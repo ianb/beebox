@@ -24,10 +24,13 @@ import * as path from "node:path";
 const prompt = buildReactorSystemPrompt("/test/box");
 prompt.includes("WORKING DIRECTORY: /test/box")
 => true
+
 prompt.includes("processing jobs in a Callback Box")
 => true
+
 prompt.includes("cb finish")
 => true
+
 prompt.includes("DO NOT re-read these")
 => true
 ```
@@ -44,10 +47,13 @@ const prompt = buildReactorUserPrompt(
 );
 prompt.includes("2 job(s)")
 => true
+
 prompt.includes("do thing 1")
 => true
+
 prompt.includes("do thing 2")
 => true
+
 prompt.includes("cb finish")
 => true
 ```
@@ -61,6 +67,7 @@ const prompt = buildReactorUserPrompt(
 );
 prompt.includes("1 job(s)")
 => true
+
 prompt.includes("solo task")
 => true
 ```
@@ -79,13 +86,17 @@ await box.write("box/jobs/task-c.job.card", `<job priority="low"><description>Lo
 const cards = await findJobCards(jobsDir);
 cards.length
 => 3
+
 // Normal priority comes first
 cards[0].priority
 => normal
+
 cards[1].priority
 => low
+
 cards[2].priority
 => low
+
 await box.cleanup();
 ```
 
@@ -100,12 +111,14 @@ await box.write("box/jobs/digest.news.job.card", `<news-job><description>News</d
 const chatOnly = await findJobCards(jobsDir, "chat");
 chatOnly.length
 => 1
+
 chatOnly[0].file
 => msg1.chat.job.card
 
 const all = await findJobCards(jobsDir);
 all.length
 => 2
+
 await box.cleanup();
 ```
 
@@ -117,6 +130,7 @@ await fs.mkdir(path.join(box.root, "box/jobs"), { recursive: true });
 const cards = await findJobCards(path.join(box.root, "box/jobs"));
 cards.length
 => 0
+
 await box.cleanup();
 ```
 
@@ -150,6 +164,7 @@ const result = await detectProcedureInJob(
 );
 result.procedureRef
 => summarize
+
 result.directive
 => Focus on key points
 ```
@@ -192,8 +207,10 @@ const desc = await buildJobDescription(
 );
 desc.includes("*(low priority)*")
 => true
+
 desc.includes("Do something")
 => true
+
 desc.includes("```xml")
 => true
 ```
@@ -215,8 +232,10 @@ const desc = await buildJobDescription(
 );
 desc.includes("Hello world")
 => true
+
 desc.includes("#### store/threads/t1.card")
 => true
+
 await box.cleanup();
 ```
 
@@ -235,6 +254,7 @@ const desc = await buildJobDescription(
 // Should not crash, just omit the missing ref
 desc.includes("Process")
 => true
+
 // The ref section header should not appear (file doesn't exist)
 desc.includes("#### store/items/missing.card")
 => false

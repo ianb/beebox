@@ -97,20 +97,28 @@ The prompt is parameterized by boxRoot. Key sections verified here.
 const prompt = buildGuideRevisionPrompt("/test/box");
 prompt.startsWith("You are revising the news guide")
 => true
+
 prompt.includes("WORKING DIRECTORY: /test/box")
 => true
+
 prompt.includes("STEP 1 - READ THE GUIDE")
 => true
+
 prompt.includes("STEP 2 - READ EACH BRIEF")
 => true
+
 prompt.includes("STEP 3 - SYNTHESIZE ALL FEEDBACK")
 => true
+
 prompt.includes("STEP 4 - UPDATE THE GUIDE")
 => true
+
 prompt.includes("STEP 5 - MARK BRIEFS AS PROCESSED")
 => true
+
 prompt.includes("STEP 6 - COMMIT WITH DETAILED MESSAGE")
 => true
+
 prompt.includes("Do NOT add Co-Authored-By")
 => true
 ```
@@ -147,6 +155,7 @@ const agent = createFakeAgent({
 const result = await executeProcessFeedback(makeCtx(box.root), { agent, force: true });
 result.success
 => true
+
 result.data.processed
 => 1
 
@@ -158,6 +167,7 @@ agent.invocations.length
 const inv = agent.invocations[0];
 inv.systemPrompt.startsWith("You are revising the news guide")
 => true
+
 inv.systemPrompt.includes("WORKING DIRECTORY: " + box.root)
 => true
 
@@ -197,6 +207,7 @@ result.data.processed
 const inv = agent.invocations[0];
 inv.prompt.includes("2026-02-03_ai.news-brief.card")
 => true
+
 inv.prompt.includes("2026-02-04_tech.news-brief.card")
 => true
 ```
@@ -224,6 +235,7 @@ const agent = createFakeAgent({
 const result = await executeProcessFeedback(makeCtx(box.root), { agent, force: true });
 result.success
 => true
+
 result.data.processed
 => 0
 
@@ -252,6 +264,7 @@ const agent = createFakeAgent({
 const result = await executeProcessFeedback(makeCtx(box.root), { agent, force: true });
 result.success
 => false
+
 result.error
 => Agent crashed
 ```
@@ -300,6 +313,7 @@ agent.invocations.length
 // Second invocation was a resume
 agent.invocations[1].resumed
 => true
+
 agent.invocations[1].systemPrompt
 => null
 
@@ -329,8 +343,10 @@ const agent = createFakeAgent({
 const result = await executeProcessFeedback(makeCtx(box.root), { agent, force: true, dryRun: true });
 result.success
 => true
+
 result.data.dryRun
 => true
+
 result.data.processed
 => 0
 

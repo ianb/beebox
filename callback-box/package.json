@@ -50,6 +50,7 @@
     "lint-staged": "^16.2.7",
     "madge": "^8.0.0",
     "oxlint": "^1.47.0",
+    "agent-doctest": "file:../agent-doctest",
     "tap": "^21.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0"

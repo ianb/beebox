@@ -68,8 +68,10 @@ const prompt = buildNewsTriagePrompt({
 });
 prompt.includes("WORKING DIRECTORY: /test/box")
 => true
+
 prompt.includes("<guide>AI, security</guide>")
 => true
+
 prompt.includes("select the 15 most interesting")
 => true
 ```
@@ -92,8 +94,10 @@ prompt.includes("general interest criteria")
 const prompt = buildAnalyzePrompt("/test/box");
 prompt.includes("WORKING DIRECTORY: /test/box")
 => true
+
 prompt.includes("STEP 1 - READ AND ANALYZE")
 => true
+
 prompt.includes("cb mv")
 => true
 ```
@@ -104,10 +108,13 @@ prompt.includes("cb mv")
 const prompt = buildBriefPrompt("/test/box");
 prompt.includes("WORKING DIRECTORY: /test/box")
 => true
+
 prompt.includes("STEP 0 - READ OR CREATE THE USER GUIDE")
 => true
+
 prompt.includes("STEP 3 - CREATE THE BRIEF")
 => true
+
 prompt.includes("Do NOT add Co-Authored-By")
 => true
 ```
@@ -323,6 +330,7 @@ const result = await executeProcessNews(makeCtx(box.root), {
 // Triage failure is reported
 result.data.results[0].phase
 => triage
+
 result.data.results[0].success
 => false
 

@@ -252,6 +252,7 @@ agent.invocations.length
 const inv = agent.invocations[0];
 inv.systemPrompt.startsWith("You are triaging user feedback")
 => true
+
 inv.systemPrompt.includes("WORKING DIRECTORY: " + box.root)
 => true
 
@@ -286,6 +287,7 @@ const agent = createFakeAgent({
 const result = await executeTriageFeedback(makeCtx(box.root), { agent, force: true });
 result.success
 => true
+
 result.data.processed
 => 0
 
@@ -315,6 +317,7 @@ const agent = createFakeAgent({
 const result = await executeTriageFeedback(makeCtx(box.root), { agent, force: true });
 result.success
 => false
+
 result.error
 => Agent crashed
 ```
@@ -361,6 +364,7 @@ agent.invocations.length
 // Second invocation was a resume (no system prompt, continued session)
 agent.invocations[1].resumed
 => true
+
 agent.invocations[1].systemPrompt
 => null
 
@@ -424,6 +428,7 @@ agent.invocations.length
 const log = execSync("git log --oneline -1", { cwd: box.root, encoding: "utf-8" });
 log.includes("retry")
 => true
+
 log.includes("Fallback")
 => false
 ```

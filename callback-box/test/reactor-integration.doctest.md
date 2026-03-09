@@ -42,8 +42,10 @@ const result = await runReactor({
 
 result.success
 => true
+
 result.jobsProcessed
 => 1
+
 result.jobsRemaining
 => 0
 
@@ -58,6 +60,7 @@ fakeAgent.invocations[0].systemPrompt.includes(box.root)
 // User prompt includes job content
 fakeAgent.invocations[0].prompt.includes("Write a haiku")
 => true
+
 await box.cleanup();
 ```
 
@@ -94,10 +97,13 @@ result.jobsProcessed
 // Single agent session (one invocation with both jobs)
 fakeAgent.invocations.length
 => 1
+
 fakeAgent.invocations[0].prompt.includes("Task one")
 => true
+
 fakeAgent.invocations[0].prompt.includes("Task two")
 => true
+
 await box.cleanup();
 ```
 
@@ -122,8 +128,10 @@ const result = await runReactor({
 
 agentCreated
 => false
+
 result.jobsProcessed
 => 0
+
 await box.cleanup();
 ```
 
@@ -148,8 +156,10 @@ const result = await runReactor({
 
 agentCreated
 => false
+
 result.jobsRemaining
 => 1
+
 await box.cleanup();
 ```
 
@@ -184,14 +194,17 @@ const result = await runReactor({
 
 result.success
 => true
+
 result.jobsProcessed
 => 1
 
 // Agent was created with a session ID
 agents.length
 => 1
+
 agents[0].invocations[0].prompt.includes("Reply to user")
 => true
+
 await box.cleanup();
 ```
 
@@ -231,6 +244,7 @@ result.jobsProcessed
 // Each chat job got its own agent
 agents.length
 => 2
+
 await box.cleanup();
 ```
 
@@ -266,12 +280,16 @@ const result = await runReactor({
 // Procedure ran without creating an agent
 agentCreated
 => false
+
 result.success
 => true
+
 result.jobsProcessed
 => 1
+
 result.jobsRemaining
 => 0
+
 await box.cleanup();
 ```
 
@@ -330,6 +348,7 @@ const result = await runReactor({
 // Stale lock was cleaned up and reactor ran
 result.jobsProcessed
 => 1
+
 await box.cleanup();
 ```
 
@@ -368,10 +387,13 @@ const result = await runReactor({
 
 result.jobsProcessed
 => 2
+
 result.jobsRemaining
 => 0
+
 // Two cycles were needed
 cycle
 => 2
+
 await box.cleanup();
 ```

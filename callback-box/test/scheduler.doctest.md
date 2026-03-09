@@ -18,6 +18,7 @@ import * as path from "node:path";
 const result = boxLogFile("/home/user/boxes/test");
 result.endsWith(".callback-box/scheduler.jsonl")
 => true
+
 result.startsWith("/home/user/boxes/test/")
 => true
 ```

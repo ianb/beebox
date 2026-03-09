@@ -1,6 +1,6 @@
 import { test } from "tap";
-import { check, inspect, CheckError, registerSerializer, type Extractions, type CheckResult } from "../src/test-lib/check.js";
-import "../src/test-lib/tap-check.js";
+import { check, inspect, CheckError, registerSerializer, type Extractions, type CheckResult } from "agent-doctest/check";
+import "agent-doctest/tap";
 
 // ── Standalone check() — throwing API ──
 

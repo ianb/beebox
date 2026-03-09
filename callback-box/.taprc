@@ -1,10 +1,9 @@
 plugin:
   - "!@tapjs/typescript"
-coverage: false
 node-arg:
   - --import=tsx
-  - --import=./src/test-lib/tap-check.ts
-  - --import=./src/test-lib/doctest-loader.ts
+  - --import=agent-doctest/tap
+  - --import=agent-doctest/loader
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md

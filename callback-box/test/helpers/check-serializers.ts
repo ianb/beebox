@@ -4,7 +4,7 @@
  * Import alongside tap-check.js in any test that checks Fastify inject responses.
  */
 
-import { registerSerializer } from "../../src/test-lib/check.js";
+import { registerSerializer } from "agent-doctest/check";
 
 /**
  * Serialize Fastify inject() response as "statusCode\n{json body}".

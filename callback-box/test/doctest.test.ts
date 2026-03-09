@@ -3,13 +3,13 @@
  */
 
 import { test } from "tap";
-import "../src/test-lib/tap-check.js";
+import "agent-doctest/tap";
 import {
   parseCodeBlocks,
   parseExample,
   parseExamples,
   generateTestSource,
-} from "../src/test-lib/doctest-hooks.mjs";
+} from "agent-doctest/hooks";
 
 test("parseCodeBlocks extracts fenced code blocks", async (t) => {
   const md = `# Title
