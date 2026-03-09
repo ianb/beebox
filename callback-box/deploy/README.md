@@ -89,17 +89,17 @@ Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations o
 /opt/callback/              # Source code
   cardworks/
   callback-box/
-/root/boxes/                # Box data (each is a git repo)
+/home/callback/boxes/       # Box data (each is a git repo)
   test1/
   hearth/
-/root/.env                  # Environment variables (API keys)
+/home/callback/.env         # Environment variables (API keys)
 /usr/local/bin/cb           # CLI symlink
 /usr/local/bin/cb-rebuild   # Rebuild shortcut
 ```
 
 ## Systemd services
 
-- `callback-serve` — Web server serving all boxes in `/root/boxes/`
+- `callback-serve` — Web server serving all boxes in `/home/callback/boxes/`
 - `callback-scheduler` — Scheduler daemon for periodic tasks
 
 ```bash
@@ -115,7 +115,7 @@ journalctl -u callback-scheduler -f
 systemctl restart callback-serve callback-scheduler
 ```
 
-## Environment variables (`/root/.env`)
+## Environment variables (`/home/callback/.env`)
 
 ```
 # Required
@@ -143,7 +143,7 @@ Auth is opt-in. When `GOOGLE_OAUTH_CLIENT_ID` is set, all box access requires lo
 1. Go to [Google Cloud Console - Credentials](https://console.cloud.google.com/apis/credentials?project=callback-box)
 2. Create an **OAuth 2.0 Client ID** (Web application type)
 3. Add authorized redirect URI: `https://box.example.com/auth/callback`
-4. Add to `/root/.env`:
+4. Add to `/home/callback/.env`:
    ```
    GOOGLE_OAUTH_CLIENT_ID=...
    GOOGLE_OAUTH_CLIENT_SECRET=...
@@ -172,7 +172,7 @@ Per-box secrets go in each box's `config/connectors/` directory:
 ```bash
 # SSH in and create secrets
 ./deploy/ssh-server.sh
-cd /root/boxes/hearth/config/connectors/
+cd /home/callback/boxes/hearth/config/connectors/
 echo '{"botToken":"...","webhookSecret":"..."}' > telegram.secret.json
 ```
 

@@ -113,6 +113,7 @@ Keep additions concise. One line preventing a mistake is better than a paragraph
 | Connectors | `docs/connectors.md` |
 | Procedures | `docs/procedure-implementation.md` |
 | Deployment | `deploy/README.md` |
+| Adding a box | `docs/adding-a-box.md` |
 | Feature ideas | `docs/ideas.md` |
 
 @CONVENTIONS.md

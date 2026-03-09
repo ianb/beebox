@@ -58,13 +58,17 @@ echo "Adding box '$BOX_NAME' from $REPO..."
 ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<REMOTE
 set -euo pipefail
 
+# Clone/pull as root (su drops the SSH agent socket, breaking agent
+# forwarding), then chown to the callback user.
 if [[ -d "$BOX_PATH" ]]; then
   echo "Box already exists at $BOX_PATH, pulling latest..."
-  su - $CB_USER -c "cd '$BOX_PATH' && git pull --ff-only"
+  cd "$BOX_PATH" && git pull --ff-only
 else
   echo "Cloning $REPO to $BOX_PATH..."
-  su - $CB_USER -c "mkdir -p '$BOXES_DIR' && git clone '$REPO' '$BOX_PATH'"
+  mkdir -p "$BOXES_DIR"
+  git clone "$REPO" "$BOX_PATH"
 fi
+chown -R $CB_USER:$CB_USER "$BOX_PATH"
 
 # Register with scheduler
 su - $CB_USER -c "cb scheduler add '$BOX_PATH'" 2>/dev/null && echo "Registered with scheduler" || echo "Already registered with scheduler"
