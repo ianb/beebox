@@ -13,14 +13,18 @@ Static paths match exactly:
 
 ```
 matchRoute("/api/users", "/api/users")
-=> { "params": {} }
+=>
+{
+  "params": {}
+}
 ```
 
 Path parameters are extracted by name:
 
 ```
 matchRoute("/api/users/42/posts", "/api/users/:id/posts")
-=> {
+=>
+{
   "params": {
     "id": "42"
   }
