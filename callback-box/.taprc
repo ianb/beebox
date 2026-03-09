@@ -1,5 +1,6 @@
 plugin:
   - "!@tapjs/typescript"
+coverage: false
 node-arg:
   - --import=tsx
   - --import=./src/test-lib/tap-check.ts

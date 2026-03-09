@@ -267,7 +267,11 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
   ]);
 
   // Compile guides and generate job-type rules
-  await compileGuides(boxRoot, debug);
+  const guides = await compileGuides(boxRoot, debug);
+
+  // Rewrite agent guide now that we have guide summaries
+  await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
+    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allSchemas, personalitySection, guides }), debug }));
 
   await ensureClaudeMdInclude(boxRoot);
 
@@ -278,14 +282,16 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
 /**
  * Scan config/*.guide.card, compile each, and generate job-type rules.
  * Also scan per-chat guide cards in store/chat/ directories.
+ * Returns summaries of config-level guides (for inclusion in agent guide).
  */
-async function compileGuides(boxRoot: string, debug: boolean): Promise<void> {
+async function compileGuides(boxRoot: string, debug: boolean): Promise<GuideSummary[]> {
   const rulesDir = join(boxRoot, ".claude/rules");
   await mkdir(rulesDir, { recursive: true });
 
   const ctx = { boxRoot, rulesDir, debug };
-  await compileConfigGuides(ctx);
+  const guides = await compileConfigGuides(ctx);
   await compileChatGuides(ctx);
+  return guides;
 }
 
 interface GuideCompileContext {
@@ -295,23 +301,36 @@ interface GuideCompileContext {
 }
 
 /**
- * Compile config/*.guide.card and generate job-type rules.
+ * Summary of a compiled guide, for inclusion in the agent guide.
  */
-async function compileConfigGuides(ctx: GuideCompileContext): Promise<void> {
+export interface GuideSummary {
+  name: string;
+  guidePath: string;
+  compiledPath: string;
+  appliesTo: string;
+  jobTypes: string[];
+}
+
+/**
+ * Compile config/*.guide.card and generate job-type rules.
+ * Returns summaries of all compiled guides.
+ */
+async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSummary[]> {
   const { boxRoot, rulesDir, debug } = ctx;
   const configDir = join(boxRoot, "config");
   let files: string[];
   try {
     files = await readdir(configDir);
   } catch {
-    return;
+    return [];
   }
 
   const guideFiles = files.filter((f) => f.endsWith(".guide.card"));
-  if (guideFiles.length === 0) return;
+  if (guideFiles.length === 0) return [];
 
   // job-type → list of { guidePath, appliesTo, compiledPath }
   const jobTypeMap = new Map<string, Array<{ guidePath: string; appliesTo: string; compiledPath: string }>>();
+  const allGuides: GuideSummary[] = [];
 
   for (const filename of guideFiles) {
     const guidePath = `config/${filename}`;
@@ -329,6 +348,14 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<void> {
         join(boxRoot, compiledPath),
         withDocId({ relativePath: compiledPath, content: compiled, debug })
       );
+
+      allGuides.push({
+        name: guideName,
+        guidePath,
+        compiledPath,
+        appliesTo: parsed.appliesTo ?? "",
+        jobTypes: parsed.jobTypes,
+      });
 
       // Collect job-type mappings
       for (const jobType of parsed.jobTypes) {
@@ -368,6 +395,8 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<void> {
 
     await writeFile(join(rulesDir, ruleFilename), lines.join("\n"));
   }
+
+  return allGuides;
 }
 
 /**
@@ -502,6 +531,7 @@ interface AgentGuideOptions {
   procedures: ProcedureSummary[];
   allSchemas?: ElementSchema[];
   personalitySection?: string | undefined;
+  guides?: GuideSummary[];
 }
 
 function generateAgentGuide(options: AgentGuideOptions): string {
@@ -561,6 +591,24 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     }
     lines.push("");
     lines.push("Run with `cb procedure run <name>`. Read `docs/generated/procedures.md` before writing or modifying procedures.");
+    lines.push("");
+  }
+
+  // Guides section
+  const { guides = [] } = options;
+  if (guides.length > 0) {
+    lines.push(
+      "## Guides",
+      "",
+      "Guides contain the boxholder's preferences for how you handle specific domains.",
+      "They define interaction patterns, pacing, and actions you wouldn't know from general knowledge.",
+      "**Read the guide before acting** — even if you know the domain, the guide tells you how this user wants it done.",
+      "",
+    );
+    for (const g of guides) {
+      const note = g.appliesTo ? ` — ${g.appliesTo}` : "";
+      lines.push(`- **${g.name}**${note} → \`${g.compiledPath}\``);
+    }
     lines.push("");
   }
 

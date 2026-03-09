@@ -149,15 +149,58 @@ tests:
 
   - id: list-guides
     prompt: "What guides exist in this box and what do they do?"
-    expected_level: discoverable
-    watch_for: "Lists config/ directory to find guide cards"
+    expected_level: knows_directly
+    watch_for: "Names guides from the Guides section of the agent guide without filesystem search"
     tags: [guides]
+    notes: >
+      Updated from discoverable: agent guide now lists all guide cards with
+      their applies-to descriptions. Agent should know this directly.
 
   - id: modify-news-triage
     prompt: "If I wanted to change how news items are triaged, what would I modify?"
-    expected_level: discoverable
-    watch_for: "Finds the news guide card in config/ and understands guide→rules compilation"
+    expected_level: knows_about
+    watch_for: "Knows about the news guide from agent guide, reads the compiled guide for details"
+    should_read: ["docs/generated/news-guide.md"]
     tags: [guides]
+    notes: >
+      Updated from discoverable: agent guide now lists the news guide and its
+      compiled path. Agent should follow the pointer to read the compiled guide.
+
+  - id: cooking-guide-awareness
+    prompt: "I want to make pasta tonight. Can you help me cook?"
+    expected_level: knows_about
+    watch_for: "Reads the cooking guide before launching into recipe help"
+    should_read: ["docs/generated/cooking-guide.md"]
+    tags: [guides, cooking]
+    notes: >
+      The agent guide lists the cooking guide with applies-to text about cooking.
+      When cooking comes up in conversation, the agent should read the compiled
+      guide to learn the interaction pattern (step-by-step pacing, two-channel
+      output, ingredient gathering flow).
+
+  - id: cooking-recipe-lookup
+    prompt: "Do I have any recipes saved? What can I make?"
+    expected_level: knows_directly
+    watch_for: "Checks store/recipes/ for recipe cards — a straight file search, no guide needed"
+    tags: [cooking, recipes]
+    notes: >
+      This is a simple lookup task. The agent knows recipes live in store/recipes/
+      from the agent guide directory layout. Reading the cooking guide would be
+      over-doing it here.
+
+  - id: cooking-follow-recipe-pattern
+    prompt: "Walk me through making the carbonara recipe."
+    expected_level: knows_about
+    watch_for: "Reads cooking guide to learn the interaction pattern (plan, ingredients, step-by-step pacing) before searching for the recipe"
+    should_read: ["docs/generated/cooking-guide.md"]
+    tags: [guides, cooking, recipes]
+    notes: >
+      "Walk me through" is an interactive cooking session — exactly what the
+      cooking guide's Follow Recipe action covers. The guide instructs specific
+      pacing behavior (plan first, gather ingredients, step-by-step with two-channel
+      output) that differs from the default "dump everything" approach. The agent
+      should read the guide to know HOW to walk through the recipe, not just
+      find the recipe file.
 
   # === Tricks ===
 
