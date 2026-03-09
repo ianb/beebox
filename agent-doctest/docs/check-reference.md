@@ -122,7 +122,7 @@ Use `«»` delimiters with typed matchers and extractions:
 ```ts
 t.check(timestamp, "created «date»");           // matches ISO date
 t.check(record, '{"id": «uuid», "count": «int»}');  // typed fields
-t.check(logLine, "commit «hash» by «author»");  // named captures
+t.check(logLine, "commit «hash=*» by «author=*»");  // named captures
 ```
 
 | Pattern | Matches | Name |
@@ -135,22 +135,21 @@ t.check(logLine, "commit «hash» by «author»");  // named captures
 | `«string»` | quoted string (`"hello"`, `'world'`, with escapes) | `string` |
 | `«codeblock»` | triple backticks (`` ``` ``), use `«codeblock»xml` to match `` ```xml `` | `codeblock` |
 | `«blankline»` | empty line (use in multi-line `=>` blocks where a real blank line would end the block) | `blankline` |
-| `«name»` | anything (unknown type) | `name` |
-| `«name=type»` | type's pattern | `name` |
 | `«name=*»` | anything | `name` |
+| `«name=type»` | type's pattern | `name` |
 
-When a name matches a known type (`date`, `uuid`, `int`, `number`, `string`), the type's regex is used. Unknown names match anything — `«hash»` is equivalent to `«hash=*»`.
+When a token matches a known type (`date`, `uuid`, `int`, `number`, `string`), the type's regex is used and it captures with that name. Unknown tokens (like `«hash»`) match anything but are anonymous — use `«hash=*»` for named capture.
 
 ## Extractions
 
 All wildcards capture the text they match. `check()` and `t.check()` return an extractions object with positional and named access:
 
 ```ts
-const ext = t.check(logLine, "commit «hash» at «date»");
+const ext = t.check(logLine, "commit «hash=*» at «date»");
 ext[0]     // "abc123"       — positional
 ext[1]     // "2026-03-02"   — positional
-ext.hash   // "abc123"       — named
-ext.date   // "2026-03-02"   — named
+ext.hash   // "abc123"       — named (via =*)
+ext.date   // "2026-03-02"   — named (known type)
 ext.length // 2
 ```
 
@@ -174,7 +173,7 @@ ext.int  // "42"
 `inspect()` includes extractions in the result:
 
 ```ts
-const r = inspect(line, "commit «hash»");
+const r = inspect(line, "commit «hash=*»");
 r.extractions.hash  // "abc123"
 ```
 
@@ -350,6 +349,6 @@ class CheckError extends Error { diff: string; found: string; wanted: string }
 // «number»  — number (int, decimal, scientific)
 // «string»  — quoted string ("..." or '...')
 // «*»       — anything
-// «name»    — anything (unknown name), captured as "name"
+// «name=*»  — anything, captured as "name"
 // «name=type» — typed capture with custom name
 ```

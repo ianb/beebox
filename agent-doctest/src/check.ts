@@ -89,7 +89,7 @@ interface WildcardToken {
  *
  * Syntax:  «*»           → anything, no name
  *          «date»        → known type, name defaults to "date"
- *          «hash»        → unknown type → anything, named "hash"
+ *          «hash»        → unknown token → anything, anonymous (use «hash=*» for named)
  *          «start=date»  → named "start", typed as date
  *          «val=*»       → named "val", anything
  */
@@ -113,8 +113,8 @@ function parseWildcardToken(content: string): WildcardToken {
     return { pattern: WILDCARD_TYPES[content]!, name: content };
   }
 
-  // Unknown name — match anything, use as name
-  return { pattern: "[\\s\\S]*", name: content };
+  // Unknown token — treat as anonymous wildcard (use «name=*» for named capture)
+  return { pattern: "[\\s\\S]*", name: null };
 }
 
 interface MatchResult {
@@ -283,7 +283,7 @@ export interface CheckOptions {
  *
  * @example
  * // Wildcards
- * check(logEntry, `[«date»] commit «hash»: initial commit`);
+ * check(logEntry, `[«date»] commit «hash=*»: initial commit`);
  */
 export function check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions> {
   if (typeof actual === "function") {

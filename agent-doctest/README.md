@@ -213,7 +213,7 @@ Use `«»` wildcards for volatile values:
 ```ts
 t.check(output, "created «date»");              // ISO date
 t.check(record, '{"id": «uuid»}');              // UUID
-t.check(line, "commit «hash» by «author»");     // named captures
+t.check(line, "commit «hash=*» by «author=*»");  // named captures
 t.check(response, '{"count": «int»}');           // integer
 ```
 
@@ -225,7 +225,9 @@ t.check(response, '{"count": «int»}');           // integer
 | `«int»` | integer | `int` |
 | `«number»` | number (decimal, scientific) | `number` |
 | `«string»` | quoted string | `string` |
-| `«name»` | anything | `name` |
+| `«blankline»` | empty string (literal blank line) | — |
+| `«codeblock»` | triple backticks | — |
+| `«name=*»` | anything | `name` |
 | `«name=type»` | type's pattern | `name` |
 
 ### Extractions
@@ -233,7 +235,7 @@ t.check(response, '{"count": «int»}');           // integer
 Wildcards capture matched text, returned from `t.check()`:
 
 ```ts
-const ext = t.check(line, "commit «hash» at «date»");
+const ext = t.check(line, "commit «hash=*» at «date»");
 ext.hash   // "abc123"
 ext.date   // "2026-03-02"
 ext[0]     // "abc123" (positional)

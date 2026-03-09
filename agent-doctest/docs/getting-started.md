@@ -56,8 +56,8 @@ test("creating a card modifies git status", async (t) => {
 `«»` wildcards match variable text. Named and typed wildcards are self-documenting:
 
 ```ts
-t.check(commitOutput, "«hash» initial commit");
-t.check(logLine, "[«date»] «author»: created card");
+t.check(commitOutput, "«hash=*» initial commit");
+t.check(logLine, "[«date»] «author=*»: created card");
 ```
 
 ## When to use check() vs tap assertions
