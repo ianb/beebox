@@ -1,0 +1,25 @@
+{
+  "name": "agent-doctest",
+  "version": "0.1.0",
+  "description": "Markdown doctest runner for tap — write tests as executable documentation",
+  "type": "module",
+  "exports": {
+    "./check": "./src/check.ts",
+    "./tap": "./src/tap-check.ts",
+    "./loader": "./src/doctest-loader.ts",
+    "./hooks": "./src/doctest-hooks.mjs"
+  },
+  "peerDependencies": {
+    "@tapjs/core": ">=4.0.0",
+    "esbuild": ">=0.20.0",
+    "tap": ">=21.0.0"
+  },
+  "files": [
+    "src/"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ianb/agent-doctest.git"
+  }
+}
