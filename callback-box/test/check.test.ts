@@ -68,7 +68,7 @@ test("«*» wildcard matches any text", async (t) => {
 });
 
 test("named wildcard matches any text", async (t) => {
-  t.check("2026-03-02T20:00:00Z commit abc123: initial", "«date» commit «hash»: initial");
+  t.check("2026-03-02T20:00:00Z commit abc123: initial", "«date» commit «hash=*»: initial");
 });
 
 test("wildcard mismatch still fails", async (t) => {
@@ -279,8 +279,14 @@ test("«*» matches across newlines", async (t) => {
 
 // ── Named extractions ──
 
-test("«name» captures as name (unknown type)", async (t) => {
+test("«name» without =type is anonymous (positional only)", async (t) => {
   const ext = t.check("commit abc123 done", "commit «hash» done");
+  t.equal(ext.hash, undefined);
+  t.equal(ext[0], "abc123");
+});
+
+test("«name=*» captures with name", async (t) => {
+  const ext = t.check("commit abc123 done", "commit «hash=*» done");
   t.equal(ext.hash, "abc123");
   t.equal(ext[0], "abc123");
 });
@@ -291,7 +297,7 @@ test("«name=*» captures anything with name", async (t) => {
 });
 
 test("duplicate names use first match", async (t) => {
-  const ext = t.check("a X b Y c", "a «thing» b «thing» c");
+  const ext = t.check("a X b Y c", "a «thing=*» b «thing=*» c");
   t.equal(ext.thing, "X", "named access gets first match");
   t.equal(ext[0], "X");
   t.equal(ext[1], "Y");
