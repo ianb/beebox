@@ -2,27 +2,27 @@
 
 Write tests as executable markdown. Each fenced code block becomes a [tap](https://node-tap.org/) test case. Prose between blocks is documentation.
 
-```markdown
+````markdown
 # String utilities
 
-` ```ts setup `
+```ts setup
 import { capitalize } from "../src/strings.js";
-` ``` `
+```
 
 Capitalizes the first letter:
 
-` ``` `
+```
 capitalize("hello")
 => Hello
-` ``` `
+```
 
 Works with empty strings:
 
-` ``` `
+```
 capitalize("")
 =>
-` ``` `
 ```
+````
 
 ## Install
 
@@ -56,31 +56,31 @@ Files ending in `.doctest.md` are transformed into tap test modules at load time
 
 ` ```ts setup ` blocks run at module scope — use for imports and shared helpers:
 
-```markdown
-` ```ts setup `
+````markdown
+```ts setup
 import { readFile } from "node:fs/promises";
 
 function fixture(name) {
   return readFile(`test/fixtures/${name}`, "utf-8");
 }
-` ``` `
 ```
+````
 
 ### Examples
 
 Regular ` ``` ` blocks contain examples. An expression followed by `=>` is checked against the expected value:
 
-```markdown
-` ``` `
+````markdown
+```
 1 + 1
 => 2
-` ``` `
 ```
+````
 
 Multiple examples in one block share scope (variables persist). Separate with blank lines:
 
-```markdown
-` ``` `
+````markdown
+```
 const list = [3, 1, 2];
 list.sort();
 list.length
@@ -88,109 +88,109 @@ list.length
 
 list.join(", ")
 => 1, 2, 3
-` ``` `
 ```
+````
 
 ### Multi-line expected values
 
 Expected output continues on subsequent lines until a blank line or end of block:
 
-```markdown
-` ``` `
+````markdown
+```
 JSON.stringify({ a: 1, b: 2 }, null, 2)
 => {
   "a": 1,
   "b": 2
 }
-` ``` `
 ```
+````
 
 `=>` on its own line works the same way — expected starts on the next line:
 
-```markdown
-` ``` `
+````markdown
+```
 JSON.stringify({ a: 1, b: 2 }, null, 2)
 =>
 {
   "a": 1,
   "b": 2
 }
-` ``` `
 ```
+````
 
 ### Statements
 
 Lines ending with `;` are run as setup statements. The last non-semicolon expression is checked:
 
-```markdown
-` ``` `
+````markdown
+```
 const data = JSON.parse('{"x": 1}');
 data.x
 => 1
-` ``` `
 ```
+````
 
 ### No assertion
 
 Blocks without `=>` just verify the code doesn't throw:
 
-```markdown
-` ``` `
+````markdown
+```
 const map = new Map();
 map.set("key", "value");
-` ``` `
 ```
+````
 
 ### Continue blocks
 
 ` ``` continue ` appends to the previous block's scope — use prose between code that shares variables:
 
-```markdown
-` ``` `
+````markdown
+```
 const counter = { value: 0 };
 counter.value
 => 0
-` ``` `
+```
 
 Increment and check:
 
-` ``` continue `
+``` continue
 counter.value += 1;
 counter.value
 => 1
-` ``` `
 ```
+````
 
 ### Cleanup blocks
 
 ` ``` cleanup ` registers teardown code via `t.teardown()`:
 
-```markdown
-` ``` `
+````markdown
+```
 const server = await startServer();
 server.port
 => 3000
-` ``` `
-
-` ``` cleanup `
-await server.close();
-` ``` `
 ```
+
+``` cleanup
+await server.close();
+```
+````
 
 ### print()
 
 Each test gets a `print()` function. Printed lines drain into the next `=>` assertion:
 
-```markdown
-` ``` `
+````markdown
+```
 print("step 1");
 print("step 2");
 "done"
 => step 1
 step 2
 done
-` ``` `
 ```
+````
 
 ## check() — String comparison
 
