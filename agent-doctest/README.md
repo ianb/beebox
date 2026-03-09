@@ -3,24 +3,72 @@
 Write tests as executable markdown. Each fenced code block becomes a [tap](https://node-tap.org/) test case. Prose between blocks is documentation.
 
 ````markdown
-# String utilities
+# URL routing
 
 ```ts setup
-import { capitalize } from "../src/strings.js";
+import { matchRoute } from "../src/router.js";
 ```
 
-Capitalizes the first letter:
+Static paths match exactly:
 
 ```
-capitalize("hello")
-=> Hello
+matchRoute("/api/users", "/api/users")
+=> { "params": {} }
 ```
 
-Works with empty strings:
+Path parameters are extracted by name:
 
 ```
-capitalize("")
-=>
+matchRoute("/api/users/42/posts", "/api/users/:id/posts")
+=> {
+  "params": {
+    "id": "42"
+  }
+}
+```
+
+No match returns null:
+
+```
+matchRoute("/api/users", "/api/posts")
+=> null
+```
+````
+
+Or test something with side effects — `print()` captures output alongside return values:
+
+````markdown
+# HTTP client with retries
+
+```ts setup
+import { fetchRetry } from "../src/http.js";
+import { createTestServer } from "../src/test-helpers.js";
+
+const server = createTestServer();
+```
+
+Retries on failure, logging each attempt:
+
+```
+let failures = 2;
+server.handle("/data", (req) => {
+  if (failures-- > 0) return { status: 503 };
+  return { status: 200, body: { result: "ok" } };
+});
+
+await fetchRetry(server.url("/data"), {
+  retries: 3,
+  onRetry: (attempt, err) => print(`attempt ${attempt}: ${err.status}`),
+});
+=> attempt 1: 503
+attempt 2: 503
+{
+  "result": "ok"
+}
+```
+
+``` cleanup
+server.close();
 ```
 ````
 

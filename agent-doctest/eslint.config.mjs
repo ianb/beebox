@@ -6,7 +6,6 @@ export default [
       "no-optional-chaining/no-optional-chaining": "off",
       "default/no-default-params": "off",
       "max-params": ["error", 2],
-      "max-lines": "off",
       "max-lines-per-function": "off",
       "error/require-custom-error": "off",
       "error/no-generic-error": "off",
