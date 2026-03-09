@@ -295,22 +295,39 @@ ext[0]     // "abc123" (positional)
 
 ### Custom serializers
 
-Register domain-specific serializers for readable assertions:
+By default, objects serialize as `JSON.stringify(value, null, 2)`. Custom serializers let you control how domain objects render, so assertions read naturally instead of dumping raw JSON:
 
 ```ts
 import { registerSerializer } from "agent-doctest/check";
 
+class User {
+  constructor(public name: string, public email: string, public role: string) {}
+}
+
 registerSerializer((value) => {
-  if (value && typeof value === "object" && "statusCode" in value) {
-    const r = value as { statusCode: number; json: () => unknown };
-    return `${r.statusCode}\n${JSON.stringify(r.json(), null, 2)}`;
+  if (value instanceof User) {
+    return `${value.name} <${value.email}> [${value.role}]`;
   }
   return null;
 });
-
-// Now in tests:
-t.check(response, `200\n{ "success": true }`);
 ```
+
+Now tests read like documentation:
+
+````markdown
+```
+db.getUser("alice")
+=> Alice <alice@example.com> [admin]
+```
+
+```
+db.listUsers()
+=> Alice <alice@example.com> [admin]
+Bob <bob@example.com> [member]
+```
+````
+
+Without the serializer, you'd be asserting against a wall of JSON. The serializer turns opaque objects into a format that makes intent obvious and diffs readable.
 
 ## Exports
 
