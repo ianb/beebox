@@ -2,6 +2,20 @@
 
 Write tests as executable markdown. Each fenced code block becomes a [tap](https://node-tap.org/) test case. Prose between blocks is documentation.
 
+## Why
+
+When agents write code, they naturally want to explain what they built — the intent, the edge cases, the design choices. agent-doctest gives that explanation a place to live as automated tests.
+
+A `.doctest.md` file is a story about how the code works, with code blocks that also serve as tests. The code is embedded in the story, not the other way around — unlike comments in a test file, the narrative comes first and the examples illustrate it. The result reads like reference documentation but stays honest because it breaks when the code changes.
+
+Compared to typical BDD-style tests, the output is more complete and more pleasant to work with. You get real narrative flow instead of `describe`/`it` nesting, and the test file itself is something you'd actually want to read.
+
+## Status
+
+This is an experiment. Conceived by [Ian Bicking](https://ianbicking.org) ([bsky](https://bsky.app/profile/ianbicking.org)), written entirely by Claude Code. Fork it and explore what you want to do with it — I'd love to hear what you learn.
+
+## Examples
+
 ````markdown
 # URL routing
 
