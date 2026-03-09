@@ -133,22 +133,22 @@ export function parseExamples(content) {
       const arrowLine = lines[i];
       i++;
 
+      // Collect expected lines until blank line or end of block.
+      // If "=> value", the first line of expected is on the arrow line itself.
+      // If "=>" alone, expected starts on the next line.
+      const expectedLines = [];
       if (arrowLine.startsWith("=> ")) {
-        // Single-line result: "=> value"
-        examples.push({ expression, expected: arrowLine.slice(3), lineOffset: exprStart });
-      } else {
-        // Multi-line result: collect until blank line or end of block
-        const expectedLines = [];
-        while (i < lines.length && lines[i].trim() !== "") {
-          expectedLines.push(lines[i]);
-          i++;
-        }
-        examples.push({
-          expression,
-          expected: expectedLines.join("\n").replace(/\s+$/, ""),
-          lineOffset: exprStart,
-        });
+        expectedLines.push(arrowLine.slice(3));
       }
+      while (i < lines.length && lines[i].trim() !== "") {
+        expectedLines.push(lines[i]);
+        i++;
+      }
+      examples.push({
+        expression,
+        expected: expectedLines.join("\n").replace(/\s+$/, ""),
+        lineOffset: exprStart,
+      });
     } else {
       // No => — just run, no assertion
       examples.push({ expression, expected: null, lineOffset: exprStart });

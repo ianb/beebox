@@ -4,7 +4,7 @@ Write tests using `t.check(actual, expected)` alongside tap. `check()` compares 
 
 ```ts
 import { test } from "tap";
-import "../src/test-lib/tap-check.js";
+import "agent-doctest/tap";
 ```
 
 The import adds `t.check()` to all tap test objects. It's also loaded automatically via `.taprc` so the import is only needed for TypeScript types.

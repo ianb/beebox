@@ -10,7 +10,7 @@ Import `tap-check.js` to add `t.check()` to all tap test objects. It patches `Te
 
 ```ts
 import { test } from "tap";
-import "../src/test-lib/tap-check.js";
+import "agent-doctest/tap";
 
 test("example", async (t) => {
   t.check(someValue, "expected output");
@@ -224,7 +224,7 @@ Values are converted to strings for comparison using a chain of serializers. The
 Register domain-specific serializers for readable test output:
 
 ```ts
-import { registerSerializer } from "../src/test-lib/check.js";
+import { registerSerializer } from "agent-doctest/check";
 
 registerSerializer((value) => {
   if (value && typeof value === "object" && "staged" in value && "clean" in value) {
@@ -283,7 +283,7 @@ t.check(messyOutput, {
 `inspect()` is the non-throwing variant — same comparison logic, returns a result object instead of failing:
 
 ```ts
-import { inspect } from "../src/test-lib/check.js";
+import { inspect } from "agent-doctest/check";
 
 const r = inspect("actual", "expected");
 r.pass;         // false
@@ -301,7 +301,7 @@ Useful for testing the diff format itself, or for programmatic comparison where 
 The standalone `check()` (from `check.js`, not `tap-check.js`) throws `CheckError` on mismatch instead of calling `t.fail()`. Returns extractions on success:
 
 ```ts
-import { check, CheckError } from "../src/test-lib/check.js";
+import { check, CheckError } from "agent-doctest/check";
 
 const ext = check(result, "id: «uuid»");
 ext.uuid;  // the matched UUID
@@ -321,15 +321,15 @@ try {
 
 ```ts
 // Tap integration (preferred in tests)
-import "../src/test-lib/tap-check.js";
+import "agent-doctest/tap";
 t.check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
 
 // Standalone (throws on mismatch, returns extractions on match)
-import { check } from "../src/test-lib/check.js";
+import { check } from "agent-doctest/check";
 check(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions>
 
 // Non-throwing
-import { inspect } from "../src/test-lib/check.js";
+import { inspect } from "agent-doctest/check";
 inspect(actual: unknown, expected: string | CheckOptions): CheckResult | Promise<CheckResult>
 
 // Serializers

@@ -10,7 +10,7 @@ paths:
 - Multiple examples per block OK — separate with blank lines. **Examples in a block share scope** (variables persist)
 - ` ``` continue ` blocks append to the previous block's scope — use for prose between code sections that share variables
 - ` ``` cleanup ` blocks register teardown code via `t.teardown()` — runs after the current test even on failure. Place after the code that creates the resource to clean up.
-- `=> value` on one line = single-line result; `=>` alone = multi-line result until blank line or end of block
+- `=> value` starts the expected result on the same line; continues on subsequent lines until a blank line or end of block. `=>` alone starts expected on the next line. Both forms work the same way — **a blank line always separates examples**
 - No `=>` means "just run" — use for setup statements within a block
 - Lines ending with `;` before a check expression are emitted as statements (e.g., `const x = foo();` then `x.length` then `=> 5`)
 - `t.check()` wildcards work in expected values: `«*»` (anything), `«date»`, `«int»`, `«codeblock»` (matches ` ``` `), `«blankline»` (matches empty line in multi-line output), `«name»`, `«name=type»`

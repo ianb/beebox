@@ -9,13 +9,29 @@
     "./loader": "./src/doctest-loader.ts",
     "./hooks": "./src/doctest-hooks.mjs"
   },
+  "scripts": {
+    "test": "tap",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "@ianbicking/personal-vibe-check": "file:../../personal-vibe-check",
+    "@tapjs/core": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^9.39.2",
+    "tap": "^21.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  },
   "peerDependencies": {
     "@tapjs/core": ">=4.0.0",
     "esbuild": ">=0.20.0",
     "tap": ">=21.0.0"
   },
   "files": [
-    "src/"
+    "src/",
+    "docs/"
   ],
   "license": "MIT",
   "repository": {
