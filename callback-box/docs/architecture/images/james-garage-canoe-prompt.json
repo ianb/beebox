@@ -1,0 +1,10 @@
+{
+  "prompt": "James in the garage, working on the canoe. It's half-built, propped on sawhorses, strips of cedar clamped along the hull. He's focused, measuring something carefully. Behind him: a bike hanging from hooks, a chest freezer, a pedal steel guitar case gathering dust in the corner. A phone on a shelf shows a notification he hasn't noticed. Warm overhead light, sawdust on the floor.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:53:47.926Z",
+  "promptHash": "f4c5233081f70942",
+  "references": [
+    "images/james-portrait.png"
+  ]
+}

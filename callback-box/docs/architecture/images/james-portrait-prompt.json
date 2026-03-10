@@ -1,0 +1,7 @@
+{
+  "prompt": "Full-body portrait of James Lund, a 44-year-old white man standing in his driveway next to a garage. He's 6'1\", lean and slightly long-limbed, with sandy brown hair that's thinning a bit on top, kept short. Light blue eyes behind rectangular wire-frame glasses. A few days of stubble. He's wearing a faded gray t-shirt, olive green cargo pants with a tape measure clipped to the pocket, and scuffed New Balance sneakers. His hands are relaxed at his sides. His expression is gentle and slightly amused, like someone just said something interesting. Overcast morning light, a Minnesota bungalow garage behind him.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:48:37.685Z",
+  "promptHash": "38805b3ad6e177d8"
+}

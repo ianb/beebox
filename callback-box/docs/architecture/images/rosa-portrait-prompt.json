@@ -1,0 +1,7 @@
+{
+  "prompt": "Full-body portrait of Rosa Vega, a 74-year-old Mexican woman standing in a bright kitchen. She's 5'2\", small-framed but upright, with white hair cut short and practical. Brown skin, deep brown eyes, reading glasses hanging from a chain around her neck. She's wearing a denim jacket over a striped blouse, dark slacks, and comfortable walking shoes. She's holding a newspaper in one hand, folded to the crossword. Her expression is direct and a little wry — not sweet, not soft, just present and paying attention. Morning light from a window, a potted plant on the counter behind her.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:48:44.738Z",
+  "promptHash": "ec012b19bfa2715e"
+}

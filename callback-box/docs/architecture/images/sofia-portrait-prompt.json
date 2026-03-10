@@ -1,0 +1,7 @@
+{
+  "prompt": "Full-body portrait of Sofia Lund-Vega, an 11-year-old mixed-race girl (Latina mother, white father) standing in a backyard garden. She's 4'11\", athletic build from swimming, with long straight dark brown hair in a single braid down her back. Brown eyes, light brown skin with a few freckles across her nose. She's wearing a teal zip-up hoodie over a one-piece swimsuit (the straps just visible at the neckline), gray jogger pants, and rainbow-striped slides. She's holding a composition notebook against her chest with one arm. Her expression is direct and slightly evaluating — the look of a kid deciding whether what you just said is actually true. Afternoon light in a backyard garden with tomato cages and marigolds behind her.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:09:10.651Z",
+  "promptHash": "7042d397d0b28f7b"
+}

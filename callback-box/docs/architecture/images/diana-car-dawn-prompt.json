@@ -1,0 +1,10 @@
+{
+  "prompt": "Diana in her car in a parking lot, engine off, using the ten minutes between dropping off Sofia at swim practice and a morning meeting to record a voice memo on her phone. Her other hand holds coffee. The back seat has a reusable grocery bag, a binder from a school board meeting, and Sofia's swim bag that didn't make it inside. It's still dark out. 5:45am.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:54:06.976Z",
+  "promptHash": "70f672e66d56e72f",
+  "references": [
+    "images/diana-portrait.png"
+  ]
+}

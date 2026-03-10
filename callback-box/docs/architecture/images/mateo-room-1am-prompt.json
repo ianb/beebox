@@ -1,0 +1,10 @@
+{
+  "prompt": "Mateo in his room at 1am, lit mostly by his monitor. He's got headphones on, a bass guitar across his lap, and a music production app on the screen. But on a second tab, barely visible, is a Google Doc — his sci-fi story. His phone on the bed shows a cascade of Discord notifications. The room is messy in a teenage way — clothes, cables, a band poster for a group nobody's heard of.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:53:57.480Z",
+  "promptHash": "cd2e0fd23e923bf3",
+  "references": [
+    "images/mateo-portrait.png"
+  ]
+}

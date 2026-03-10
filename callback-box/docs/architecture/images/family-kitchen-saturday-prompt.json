@@ -1,0 +1,14 @@
+{
+  "prompt": "The Lund-Vega family in their South Minneapolis kitchen on a Saturday morning. Diana (42, Latina, warm and slightly frazzled) is standing at the counter looking at her phone with one hand and stirring something on the stove with the other. James (44, white, friendly, wearing scrubs from an overnight shift) is sitting at the table with coffee, half-asleep, a bike helmet on the table next to him. Mateo (16, mixed race, lanky, headphones around his neck) is leaning against the doorframe in a hoodie, clearly just woke up, squinting at the light. Sofia (11, mixed race, still in a swimsuit with a towel over her shoulders, hair wet) is at the table with a notebook open, writing something while eating cereal. Rosa (74, Mexican, small, dignified, wearing a cardigan) is visible through the back door in the garden, bending carefully to check on her tomato plants. The kitchen is lived-in — magnets on the fridge, a swim meet schedule pinned to a corkboard, a sourdough starter in a jar on the counter. Morning light through the window. A 1920s bungalow kitchen, updated but not fancy.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:53:27.132Z",
+  "promptHash": "abaf4e0f8475451e",
+  "references": [
+    "images/diana-portrait.png",
+    "images/james-portrait.png",
+    "images/mateo-portrait.png",
+    "images/sofia-portrait.png",
+    "images/rosa-portrait.png"
+  ]
+}

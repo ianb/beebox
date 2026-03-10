@@ -1,0 +1,7 @@
+{
+  "prompt": "Full-body portrait of Mateo Lund-Vega, a 16-year-old mixed-race teenage boy (Latina mother, white father) standing on a front porch. He's 5'10\" and still growing into his frame — lanky, narrow shoulders, big hands. Dark brown wavy hair that falls past his ears, brown eyes, light brown skin, the start of a patchy attempt at sideburns. He's wearing an oversized black hoodie with a small band logo on the chest, slim black jeans, and beat-up white Vans. Black headphones hang around his neck. His posture is slightly slouched, weight on one foot, arms crossed loosely. His expression is neutral-to-skeptical, the default face of a teenager who just woke up. Late morning light on a residential porch with a bike leaning against the railing.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:09:03.300Z",
+  "promptHash": "3cb502cd8b5b24b5"
+}

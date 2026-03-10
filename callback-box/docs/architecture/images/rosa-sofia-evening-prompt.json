@@ -1,0 +1,11 @@
+{
+  "prompt": "Rosa and Sofia at the kitchen table in the evening. Rosa is telling a story, hands moving expressively, a cup of tea in front of her. Sofia is across from her with her journal open, writing while listening. On the table between them is a phone showing a voice message from Rosa's sister. The light is warm and low. Rosa looks animated but a little tired around the eyes — it's evening. Sofia's handwriting is visible in the journal, a mix of English words and Spanish phrases. There's a plate of conchas between them.",
+  "style": "Colored pencil illustration on cream-colored drawing paper with heavy tooth.\nThe illustration features a naïve, flattening perspective, intentionally lacking\ncorrect 3D depth. The characters show visible wax bloom and obvious, directional\npencil strokes. The overall style is reminiscent of outsider art for children.\n\nFacial features are minimalist and shorthand: noses and mouths are suggested by\nsingle, shaky pencil strokes rather than shaded forms. Avoid all facial rendering\nor realistic skin gradients; faces should appear flat and two-dimensional, with\nfeatures drawn as simple, crude icons on a waxy surface.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-10T20:53:38.570Z",
+  "promptHash": "3e6d71e0b153f0f2",
+  "references": [
+    "images/rosa-portrait.png",
+    "images/sofia-portrait.png"
+  ]
+}

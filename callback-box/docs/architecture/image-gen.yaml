@@ -1,0 +1,22 @@
+# Image generation config for architecture docs illustrations
+#
+# Style prefix is prepended to every image prompt.
+# Character portraits (type:character) use this style directly.
+# Scene images will also use it, plus character reference images for consistency.
+
+style: |
+  Colored pencil illustration on cream-colored drawing paper with heavy tooth.
+  The illustration features a naïve, flattening perspective, intentionally lacking
+  correct 3D depth. The characters show visible wax bloom and obvious, directional
+  pencil strokes. The overall style is reminiscent of outsider art for children.
+
+  Facial features are minimalist and shorthand: noses and mouths are suggested by
+  single, shaky pencil strokes rather than shaded forms. Avoid all facial rendering
+  or realistic skin gradients; faces should appear flat and two-dimensional, with
+  features drawn as simple, crude icons on a waxy surface.
+
+# Gemini model to use
+model: gemini-2.5-flash-image
+
+# Environment variable for API key
+apiKeyEnv: SKE_GEMINI_API_KEY

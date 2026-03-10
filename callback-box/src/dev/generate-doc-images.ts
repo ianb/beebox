@@ -4,14 +4,18 @@
  *
  * Scans docs/architecture/*.md for image prompts in the format:
  *   ![type:character Name | prompt description](images/filename.png)
+ *   ![Diana James | scene description](images/scene.png)
  *
- * Combines prompts with the style prefix from docs/architecture/image-gen.yaml
- * and generates images using Google's Gemini API.
+ * Character portraits (type:character) are generated with the style prefix only.
+ * Scene images include character portrait references so the model can match
+ * appearances — names in the tag are matched to character portraits.
  *
  * Usage:
- *   npm run generate:doc-images           # generate missing images
- *   npm run generate:doc-images -- --force # regenerate all images
- *   npm run generate:doc-images -- --dry-run # show what would be generated
+ *   npm run generate:doc-images                    # generate missing character images
+ *   npm run generate:doc-images -- --type=all      # generate all image types
+ *   npm run generate:doc-images -- --type=scene    # generate scene images only
+ *   npm run generate:doc-images -- --force         # regenerate all
+ *   npm run generate:doc-images -- --dry-run       # show what would be generated
  */
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -26,6 +30,10 @@ import { parse as parseYaml } from "yaml";
 // Types
 // ---------------------------------------------------------------------------
 
+type PromptPart =
+  | { type: "text"; text: string }
+  | { type: "image"; buffer: Buffer; mimeType: string };
+
 interface ImageGenConfig {
   style: string;
   model: string;
@@ -33,7 +41,7 @@ interface ImageGenConfig {
 }
 
 interface ImagePrompt {
-  /** e.g. "type:character" or character names like "Diana James" */
+  /** e.g. "type:character Diana" or "Diana James Mateo" */
   tag: string;
   /** The prompt text after the pipe */
   prompt: string;
@@ -45,6 +53,8 @@ interface ImagePrompt {
   isCharacter: boolean;
   /** Character name if isCharacter */
   characterName: string | null;
+  /** Character names referenced (for scene images) */
+  referencedCharacters: string[];
 }
 
 interface ImageMetadata {
@@ -53,6 +63,7 @@ interface ImageMetadata {
   model: string;
   generatedAt: string;
   promptHash: string;
+  references: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -69,11 +80,10 @@ function loadConfig(): ImageGenConfig {
   const raw = parseYaml(readFileSync(configPath, "utf8")) as Record<string, unknown>;
   return {
     style: String(raw.style || "").trim(),
-    model: String(raw.model || "gemini-2.5-flash-preview-05-20"),
+    model: String(raw.model || "gemini-2.5-flash-image"),
     apiKeyEnv: String(raw.apiKeyEnv || "GEMINI_KEY"),
   };
 }
-
 
 // ---------------------------------------------------------------------------
 // Markdown parsing
@@ -101,9 +111,14 @@ function parseImagePrompts(mdPath: string, content: string): ImagePrompt[] {
 
     const isCharacter = tag.startsWith("type:character");
     let characterName: string | null = null;
+    let referencedCharacters: string[] = [];
+
     if (isCharacter) {
       // "type:character Diana" -> "Diana"
       characterName = tag.replace("type:character", "").trim() || null;
+    } else {
+      // Scene image: tag is space-separated character names like "Diana James"
+      referencedCharacters = tag.split(/\s+/).filter((s) => s.length > 0);
     }
 
     prompts.push({
@@ -113,6 +128,7 @@ function parseImagePrompts(mdPath: string, content: string): ImagePrompt[] {
       sourceFile: mdPath,
       isCharacter,
       characterName,
+      referencedCharacters,
     });
   }
 
@@ -120,20 +136,36 @@ function parseImagePrompts(mdPath: string, content: string): ImagePrompt[] {
 }
 
 // ---------------------------------------------------------------------------
+// Character portrait index
+// ---------------------------------------------------------------------------
+
+/** Map from character name (e.g. "Diana") to absolute image path */
+function buildCharacterIndex(allPrompts: ImagePrompt[]): Map<string, string> {
+  const index = new Map<string, string>();
+  for (const p of allPrompts) {
+    if (p.isCharacter && p.characterName) {
+      index.set(p.characterName, path.join(DOCS_DIR, p.imagePath));
+    }
+  }
+  return index;
+}
+
+// ---------------------------------------------------------------------------
 // Metadata (for up-to-date checking)
 // ---------------------------------------------------------------------------
 
-function metadataPath(imagePath: string): string {
+function getMetadataPath(imagePath: string): string {
   const ext = path.extname(imagePath);
   return imagePath.substring(0, imagePath.length - ext.length) + "-prompt.json";
 }
 
-function promptHash(style: string, prompt: string): string {
-  return createHash("sha256").update(`${style}\n---\n${prompt}`).digest("hex").substring(0, 16);
+function computePromptHash(prompt: string, { style, references }: { style: string; references: string[] }): string {
+  const refStr = references.toSorted().join(",");
+  return createHash("sha256").update(`${style}\n---\n${prompt}\n---\n${refStr}`).digest("hex").substring(0, 16);
 }
 
 async function readMetadata(imagePath: string): Promise<ImageMetadata | null> {
-  const metaPath = metadataPath(imagePath);
+  const metaPath = getMetadataPath(imagePath);
   if (!existsSync(metaPath)) return null;
   try {
     const raw = await readFile(metaPath, "utf8");
@@ -144,7 +176,7 @@ async function readMetadata(imagePath: string): Promise<ImageMetadata | null> {
 }
 
 async function writeMetadata(imagePath: string, metadata: ImageMetadata): Promise<void> {
-  await writeFile(metadataPath(imagePath), JSON.stringify(metadata, null, 2), "utf8");
+  await writeFile(getMetadataPath(imagePath), JSON.stringify(metadata, null, 2), "utf8");
 }
 
 // ---------------------------------------------------------------------------
@@ -152,14 +184,32 @@ async function writeMetadata(imagePath: string, metadata: ImageMetadata): Promis
 // ---------------------------------------------------------------------------
 
 async function generateImage(
-  prompt: string,
+  prompt: string | PromptPart[],
   { model, apiKey }: { model: string; apiKey: string },
 ): Promise<Buffer | null> {
   const ai = new GoogleGenAI({ apiKey });
 
+  let contents: string | Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>;
+
+  if (typeof prompt === "string") {
+    contents = prompt;
+  } else {
+    contents = prompt.map((part) => {
+      if (part.type === "text") {
+        return { text: part.text };
+      }
+      return {
+        inlineData: {
+          mimeType: part.mimeType,
+          data: part.buffer.toString("base64"),
+        },
+      };
+    });
+  }
+
   const response = await ai.models.generateContent({
     model,
-    contents: prompt,
+    contents,
     config: {
       responseModalities: ["TEXT", "IMAGE"],
     },
@@ -180,6 +230,44 @@ async function generateImage(
   return null;
 }
 
+/**
+ * Build a multipart prompt with character reference images for a scene.
+ */
+async function buildScenePrompt(
+  scenePrompt: string,
+  { style, referencedCharacters, characterIndex }: { style: string; referencedCharacters: string[]; characterIndex: Map<string, string> },
+): Promise<{ prompt: string | PromptPart[]; refPaths: string[] }> {
+  const refParts: PromptPart[] = [];
+  const refPaths: string[] = [];
+
+  // Collect available character references
+  for (const name of referencedCharacters) {
+    const portraitPath = characterIndex.get(name);
+    if (!portraitPath || !existsSync(portraitPath)) {
+      console.log(`    warning: no portrait for "${name}", skipping reference`);
+      continue;
+    }
+    const imageBuffer = await readFile(portraitPath);
+    refParts.push({ type: "text", text: `\nReference image for ${name}:` });
+    refParts.push({ type: "image", buffer: imageBuffer, mimeType: "image/png" });
+    refPaths.push(portraitPath);
+  }
+
+  // If no references available, fall back to plain text
+  if (refParts.length === 0) {
+    return { prompt: `${style}\n\n${scenePrompt}`, refPaths: [] };
+  }
+
+  // Build multipart: references first, then the generation prompt
+  const parts: PromptPart[] = [
+    { type: "text", text: "The following are character reference images. Use them to accurately depict the characters in the scene that follows.\n" },
+    ...refParts,
+    { type: "text", text: `\n\nNow generate a new image in this style and scene. Match the characters to their reference images above. Do NOT include any text or labels in the image.\n\n${style}\n\n${scenePrompt}` },
+  ];
+
+  return { prompt: parts, refPaths };
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -188,8 +276,8 @@ async function main() {
   const args = process.argv.slice(2);
   const force = args.includes("--force");
   const dryRun = args.includes("--dry-run");
-  const filterType = args.find((a) => a.startsWith("--type="));
-  const typeFilter = filterType ? filterType.split("=")[1] : "character";
+  const filterArg = args.find((a) => a.startsWith("--type="));
+  const typeFilter = filterArg ? filterArg.split("=")[1] : "character";
 
   const config = loadConfig();
 
@@ -199,7 +287,7 @@ async function main() {
     process.exit(1);
   }
 
-  // Find all markdown files
+  // Find all markdown files and parse prompts
   const mdFiles = await glob("*.md", { cwd: DOCS_DIR });
   const allPrompts: ImagePrompt[] = [];
 
@@ -210,13 +298,20 @@ async function main() {
     allPrompts.push(...prompts);
   }
 
-  // Filter to type:character only (for now)
-  const filtered = typeFilter === "all"
-    ? allPrompts
-    : allPrompts.filter((p) => {
-      if (typeFilter === "character") return p.isCharacter;
-      return p.tag.startsWith(`type:${typeFilter}`);
-    });
+  // Build character portrait index (needed for scene generation)
+  const characterIndex = buildCharacterIndex(allPrompts);
+
+  // Filter prompts
+  let filtered: ImagePrompt[];
+  if (typeFilter === "all") {
+    filtered = allPrompts;
+  } else if (typeFilter === "character") {
+    filtered = allPrompts.filter((p) => p.isCharacter);
+  } else if (typeFilter === "scene") {
+    filtered = allPrompts.filter((p) => !p.isCharacter);
+  } else {
+    filtered = allPrompts.filter((p) => p.tag.startsWith(`type:${typeFilter}`));
+  }
 
   if (filtered.length === 0) {
     console.log("No image prompts found matching filter.");
@@ -224,13 +319,19 @@ async function main() {
   }
 
   console.log(`Found ${filtered.length} image prompt(s) (filter: ${typeFilter})`);
+  if (!dryRun && typeFilter !== "character" && characterIndex.size > 0) {
+    console.log(`Character references available: ${[...characterIndex.keys()].join(", ")}`);
+  }
 
   let generated = 0;
   let skipped = 0;
 
   for (const entry of filtered) {
     const absImagePath = path.join(DOCS_DIR, entry.imagePath);
-    const hash = promptHash(config.style, entry.prompt);
+
+    // For scenes, include reference portrait paths in the hash
+    const refNames = entry.isCharacter ? [] : entry.referencedCharacters;
+    const hash = computePromptHash(entry.prompt, { style: config.style, references: refNames });
 
     // Check if up to date
     if (!force && existsSync(absImagePath)) {
@@ -242,11 +343,14 @@ async function main() {
       }
     }
 
-    const fullPrompt = `${config.style}\n\n${entry.prompt}`;
-
     if (dryRun) {
       console.log(`\n  would generate: ${entry.imagePath}`);
-      console.log(`  character: ${entry.characterName || "(none)"}`);
+      if (entry.isCharacter) {
+        console.log(`  type: character (${entry.characterName})`);
+      } else {
+        console.log("  type: scene");
+        console.log(`  characters: ${entry.referencedCharacters.join(", ") || "(none)"}`);
+      }
       console.log(`  prompt: ${entry.prompt.substring(0, 120)}...`);
       continue;
     }
@@ -256,7 +360,28 @@ async function main() {
     // Ensure output directory exists
     await mkdir(path.dirname(absImagePath), { recursive: true });
 
-    const imageBuffer = await generateImage(fullPrompt, {
+    // Build the prompt
+    let prompt: string | PromptPart[];
+    let refPaths: string[] = [];
+
+    if (entry.isCharacter) {
+      // Character portrait: style + prompt, plain text
+      prompt = `${config.style}\n\n${entry.prompt}`;
+    } else {
+      // Scene image: include character reference images
+      const result = await buildScenePrompt(entry.prompt, {
+        style: config.style,
+        referencedCharacters: entry.referencedCharacters,
+        characterIndex,
+      });
+      prompt = result.prompt;
+      refPaths = result.refPaths;
+      if (refPaths.length > 0) {
+        console.log(`    with references: ${entry.referencedCharacters.join(", ")}`);
+      }
+    }
+
+    const imageBuffer = await generateImage(prompt, {
       model: config.model,
       apiKey: apiKey!,
     });
@@ -275,6 +400,7 @@ async function main() {
       model: config.model,
       generatedAt: new Date().toISOString(),
       promptHash: hash,
+      references: refPaths.map((p) => path.relative(DOCS_DIR, p)),
     };
     await writeMetadata(absImagePath, metadata);
 
