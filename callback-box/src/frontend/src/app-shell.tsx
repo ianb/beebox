@@ -9,6 +9,7 @@ import { Link, Outlet, useParams, useNavigate, useRouterState } from "@tanstack/
 import { FileView } from "./components/FileView";
 import { NewsPage } from "./components/NewsPage";
 import { BrowsePage } from "./components/BrowsePage";
+import { useCurrentUser, type CurrentUser } from "./hooks/useCurrentUser";
 
 import { href } from "./lib/routing";
 
@@ -32,7 +33,101 @@ async function fetchBoxes(): Promise<BoxesResult> {
 }
 
 /**
- * App-wide navigation bar with box switcher.
+ * Profile avatar + dropdown menu (Settings, Admin, Logout).
+ */
+function ProfileMenu({ user, boxSlug }: { user: CurrentUser | null; boxSlug: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const location = useRouterState({ select: (s) => s.location });
+  const base = `/${boxSlug}`;
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // When no auth, render nothing — nav links handle Settings/Admin directly
+  if (!user) return null;
+
+  const initial = (user.name || user.email)[0]!.toUpperCase();
+  const isOnSettings = location.pathname.startsWith(`${base}/settings`);
+  const isOnAdmin = location.pathname === `${base}/admin`;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 rounded-full hover:ring-2 hover:ring-white/30 transition-all"
+        title={user.name}
+      >
+        {user.picture ? (
+          <img
+            src={user.picture}
+            alt=""
+            className="w-7 h-7 rounded-full"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span className="w-7 h-7 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
+            {initial}
+          </span>
+        )}
+      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm">
+          <div className="px-3 py-2 border-b border-warm-100">
+            <div className="font-medium text-warm-900 truncate">{user.name}</div>
+            <div className="text-xs text-warm-500 truncate">{user.email}</div>
+          </div>
+
+          <Link
+            to={href(`${base}/settings`)}
+            onClick={() => setOpen(false)}
+            className={`block px-3 py-2 transition-colors ${
+              isOnSettings
+                ? "bg-warm-100 text-warm-900 font-medium"
+                : "text-warm-700 hover:bg-warm-50"
+            }`}
+          >
+            Settings
+          </Link>
+
+          {user.isOwner ? (
+            <Link
+              to={href(`${base}/admin`)}
+              onClick={() => setOpen(false)}
+              className={`block px-3 py-2 transition-colors ${
+                isOnAdmin
+                  ? "bg-warm-100 text-warm-900 font-medium"
+                  : "text-warm-700 hover:bg-warm-50"
+              }`}
+            >
+              Admin
+            </Link>
+          ) : null}
+
+          <div className="border-t border-warm-100 mt-1 pt-1">
+            <a
+              href="/auth/logout"
+              className="block px-3 py-2 text-warm-700 hover:bg-warm-50 transition-colors"
+            >
+              Sign out
+            </a>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * App-wide navigation bar with box switcher and profile menu.
  * On mobile: shows current page name + hamburger menu.
  * On desktop: shows all links inline.
  */
@@ -40,22 +135,20 @@ function AppNav() {
   const { boxSlug } = useParams({ strict: false });
   const location = useRouterState({ select: (s) => s.location });
   const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
-  const [showAdmin, setShowAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const currentUser = useCurrentUser();
 
+  // Determine if admin should show (owner or no auth)
+  const [noAuth, setNoAuth] = useState(false);
   useEffect(() => {
     fetchBoxes().then((result) => setBoxes(result.boxes));
     fetch("/auth/me").then((r) => {
       if (r.status === 404) {
-        // Auth not enabled — treat as owner
-        setShowAdmin(true);
-        return null;
+        setNoAuth(true);
       }
-      return r.ok ? r.json() : null;
-    }).then((data) => {
-      if (data && data.isOwner) setShowAdmin(true);
-    }).catch(() => { setShowAdmin(true); });
+      return null;
+    }).catch(() => { setNoAuth(true); });
   }, []);
 
   useEffect(() => {
@@ -78,8 +171,11 @@ function AppNav() {
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
     { to: `${base}/capture`, label: "Capture", match: (p: string) => p.startsWith(`${base}/capture`) },
-    { to: `${base}/settings`, label: "Settings", match: (p: string) => p.startsWith(`${base}/settings`) },
-    ...(showAdmin ? [{ to: `${base}/admin`, label: "Admin", match: (p: string) => p === `${base}/admin` }] : []),
+    // When no auth, show Settings/Admin as regular nav links (profile menu handles them otherwise)
+    ...(noAuth ? [
+      { to: `${base}/settings`, label: "Settings", match: (p: string) => p.startsWith(`${base}/settings`) },
+      { to: `${base}/admin`, label: "Admin", match: (p: string) => p === `${base}/admin` },
+    ] : []),
   ];
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";
@@ -109,21 +205,24 @@ function AppNav() {
           <span className="text-white/60">/</span>
           <span className="font-medium">{currentLabel}</span>
         </div>
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="p-1.5 rounded hover:bg-white/10"
-          aria-label="Menu"
-        >
-          {menuOpen ? (
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 5l10 10M15 5L5 15" />
-            </svg>
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 5h14M3 10h14M3 15h14" />
-            </svg>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <ProfileMenu user={noAuth ? null : currentUser} boxSlug={boxSlug || ""} />
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-1.5 rounded hover:bg-white/10"
+            aria-label="Menu"
+          >
+            {menuOpen ? (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 5l10 10M15 5L5 15" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 5h14M3 10h14M3 15h14" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
       {/* Mobile dropdown */}
       {menuOpen ? (
@@ -152,7 +251,7 @@ function AppNav() {
           </div>
         </div>
       ) : null}
-      {/* Desktop: inline links */}
+      {/* Desktop: inline links + profile */}
       <div className="hidden sm:flex items-center gap-5 px-4 py-2 text-sm">
         {boxSelector}
         {links.map((link) => (
@@ -168,6 +267,9 @@ function AppNav() {
             {link.label}
           </Link>
         ))}
+        <div className="ml-auto">
+          <ProfileMenu user={noAuth ? null : currentUser} boxSlug={boxSlug || ""} />
+        </div>
       </div>
     </nav>
   );

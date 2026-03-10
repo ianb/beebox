@@ -81,6 +81,7 @@ export async function registerAuthRoutes(
 
       let email: string;
       let displayName: string;
+      let picture: string | undefined;
       try {
         const ticket = await oauth2Client.verifyIdToken({
           idToken,
@@ -92,13 +93,14 @@ export async function registerAuthRoutes(
         }
         email = payload.email;
         displayName = payload.name || email;
+        picture = payload.picture;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.error("[auth] ID token verification failed:", message);
         return reply.status(500).send({ error: `Token verification failed: ${message}` });
       }
 
-      const sessionValue = signSession({ email, name: displayName });
+      const sessionValue = signSession({ email, name: displayName, ...(picture ? { picture } : {}) });
       const returnTo = request.query.state || "/";
 
       return reply
@@ -139,6 +141,12 @@ export async function registerAuthRoutes(
       }
     }
 
-    return { email: user.email, name: user.name, isOwner: user.email === ownerEmail, boxes: accessibleBoxes };
+    return {
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+      isOwner: user.email === ownerEmail,
+      boxes: accessibleBoxes,
+    };
   });
 }

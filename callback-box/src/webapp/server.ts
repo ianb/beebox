@@ -195,7 +195,12 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
           }
           const email = getSessionEmail(request);
           if (!email) {
-            return reply.status(401).send({ error: "Not authenticated" });
+            // For API/SSE requests, return 401 JSON. For page navigations, redirect to login.
+            const isApi = request.url.includes("/api/") || request.url.includes("/events");
+            if (isApi) {
+              return reply.status(401).send({ error: "Not authenticated" });
+            }
+            return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
           }
           const ownerEmail = getOwnerEmail();
           if (email !== ownerEmail) {
@@ -278,6 +283,15 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       // For API routes under box slugs that weren't matched
       if (/^\/[^/]+\/api\//.test(url)) {
         return reply.status(404).send({ error: "Not found" });
+      }
+
+      // Auth wall: if auth is enabled and user isn't logged in, redirect to login
+      // (except for root "/" which shows its own login UI, and /auth/* routes)
+      if (isAuthEnabled() && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
+        const email = getSessionEmail(request);
+        if (!email) {
+          return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(url)}`);
+        }
       }
 
       // SPA fallback: serve index.html

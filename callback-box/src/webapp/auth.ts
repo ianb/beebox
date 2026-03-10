@@ -49,6 +49,7 @@ export function getPublicUrl(): string {
 export interface SessionUser {
   email: string;
   name: string;
+  picture?: string;
 }
 
 /**
@@ -58,6 +59,7 @@ export function signSession(user: SessionUser): string {
   const payload = JSON.stringify({
     email: user.email,
     name: user.name,
+    ...(user.picture ? { picture: user.picture } : {}),
     exp: Date.now() + SESSION_MAX_AGE_MS,
   });
   const sig = crypto
@@ -97,7 +99,7 @@ export function verifySession(cookie: string): SessionUser | null {
     const data = JSON.parse(payload);
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
     if (typeof data.email !== "string") return null;
-    return { email: data.email, name: data.name || data.email };
+    return { email: data.email, name: data.name || data.email, picture: data.picture };
   } catch {
     return null;
   }

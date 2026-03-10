@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 export interface CurrentUser {
   email: string;
   name: string;
+  picture?: string;
   isOwner: boolean;
 }
 
@@ -20,9 +21,9 @@ export function useCurrentUser(): CurrentUser | null {
         if (!r.ok) return null;
         return r.json();
       })
-      .then((data: { email: string; name: string; isOwner: boolean } | null) => {
+      .then((data: { email: string; name: string; picture?: string; isOwner: boolean } | null) => {
         if (data) {
-          setUser({ email: data.email, name: data.name, isOwner: data.isOwner });
+          setUser({ email: data.email, name: data.name, picture: data.picture, isOwner: data.isOwner });
         }
       })
       .catch(() => {
