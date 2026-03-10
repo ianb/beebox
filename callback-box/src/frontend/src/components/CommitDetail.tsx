@@ -53,6 +53,7 @@ interface DiffFile {
   path: string;
   meta: string[];
   hunks: string[];
+  binary: boolean;
   move?: { basename: string; fromDir: string; toDir: string };
 }
 
@@ -69,7 +70,7 @@ function parseDiff(diff: string): DiffFile[] {
       }
       renameFrom = null;
       renameTo = null;
-      current = { path: extractFilePath(line), meta: [], hunks: [] };
+      current = { path: extractFilePath(line), meta: [], hunks: [], binary: false };
       files.push(current);
     } else if (!current) {
       continue;
@@ -81,6 +82,8 @@ function parseDiff(diff: string): DiffFile[] {
       current.meta.push("new file");
     } else if (line.startsWith("deleted file ")) {
       current.meta.push("deleted");
+    } else if (line.startsWith("Binary files ") && line.endsWith(" differ")) {
+      current.binary = true;
     } else if (
       line.startsWith("index ") ||
       line.startsWith("similarity ") ||
@@ -181,6 +184,43 @@ function domToElementNode(el: Element): ElementNode {
   };
 }
 
+// --- Binary file rendering ---
+
+const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+const AUDIO_EXTS = [".webm", ".m4a", ".mp3", ".wav", ".ogg"];
+
+function getFileExt(filePath: string): string {
+  const dot = filePath.lastIndexOf(".");
+  return dot !== -1 ? filePath.substring(dot).toLowerCase() : "";
+}
+
+function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
+  const ext = getFileExt(file.path);
+  const blobUrl = `api/history/blob/${hash}/${file.path}`;
+
+  if (IMAGE_EXTS.includes(ext)) {
+    return (
+      <div className="px-3 py-2">
+        <img src={blobUrl} alt={file.path} className="max-w-full max-h-96 rounded" />
+      </div>
+    );
+  }
+
+  if (AUDIO_EXTS.includes(ext)) {
+    return (
+      <div className="px-3 py-2">
+        <audio controls src={blobUrl} className="w-full max-w-md">
+          <track kind="captions" />
+        </audio>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 py-2 text-xs text-warm-500 italic">Binary file</div>
+  );
+}
+
 // --- Trailer helpers ---
 
 function stripTrailers(body: string): string {
@@ -219,7 +259,7 @@ function CommitTab({ commit, bodyText }: { commit: HistoryCommit; bodyText: stri
   );
 }
 
-function DiffTab({ files }: { files: DiffFile[] }) {
+function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
   if (files.length === 0) {
     return <div className="text-sm text-warm-500 italic p-4">No edited files</div>;
   }
@@ -234,30 +274,34 @@ function DiffTab({ files }: { files: DiffFile[] }) {
               <span key={mi} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">{m}</span>
             ))}
           </div>
-          <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words">
-            {file.hunks.map((line, i) => {
-              let className = "text-warm-700";
-              if (line.startsWith("+")) {
-                className = "text-green-700 bg-green-50";
-              } else if (line.startsWith("-")) {
-                className = "text-red-700 bg-red-50";
-              } else if (line.startsWith("@@")) {
-                className = "text-purple-500 text-[10px]";
-              }
-              return (
-                <div key={i} className={className}>
-                  {line}
-                </div>
-              );
-            })}
-          </pre>
+          {file.binary ? (
+            <BinaryFilePreview file={file} hash={hash} />
+          ) : (
+            <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words">
+              {file.hunks.map((line, i) => {
+                let className = "text-warm-700";
+                if (line.startsWith("+")) {
+                  className = "text-green-700 bg-green-50";
+                } else if (line.startsWith("-")) {
+                  className = "text-red-700 bg-red-50";
+                } else if (line.startsWith("@@")) {
+                  className = "text-purple-500 text-[10px]";
+                }
+                return (
+                  <div key={i} className={className}>
+                    {line}
+                  </div>
+                );
+              })}
+            </pre>
+          )}
         </div>
       ))}
     </div>
   );
 }
 
-function NewFilesTab({ files }: { files: DiffFile[] }) {
+function NewFilesTab({ files, hash }: { files: DiffFile[]; hash: string }) {
   if (files.length === 0) {
     return <div className="text-sm text-warm-500 italic p-4">No new files</div>;
   }
@@ -266,7 +310,7 @@ function NewFilesTab({ files }: { files: DiffFile[] }) {
     <div className="divide-y divide-warm-300">
       {files.map((file, fi) => {
         const isCard = file.path.endsWith(".card");
-        const content = file.hunks.some((h) => h.trim()) ? extractNewFileContent(file.hunks) : null;
+        const content = !file.binary && file.hunks.some((h) => h.trim()) ? extractNewFileContent(file.hunks) : null;
         const cardElement = isCard && content ? parseXmlToElementNode(content) : null;
 
         return (
@@ -274,7 +318,9 @@ function NewFilesTab({ files }: { files: DiffFile[] }) {
             <div className="px-3 py-1.5 bg-green-50 flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-green-800">{file.path}</span>
             </div>
-            {cardElement ? (
+            {file.binary ? (
+              <BinaryFilePreview file={file} hash={hash} />
+            ) : cardElement ? (
               <CardTreeView element={cardElement} />
             ) : content ? (
               <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words text-warm-700">
@@ -412,10 +458,10 @@ export function CommitDetail({ commit }: CommitDetailProps) {
         {activeTab === "diff" && (
           diffLoading
             ? <div className="text-sm text-warm-500 italic p-4">Loading...</div>
-            : <DiffTab files={[...editedFiles, ...deletedFiles]} />
+            : <DiffTab files={[...editedFiles, ...deletedFiles]} hash={commit.hash} />
         )}
         {activeTab === "new" && (
-          <NewFilesTab files={newFiles} />
+          <NewFilesTab files={newFiles} hash={commit.hash} />
         )}
         {activeTab === "moved" && (
           <MovedTab files={movedFiles} />
