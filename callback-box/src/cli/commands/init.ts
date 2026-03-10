@@ -77,7 +77,8 @@ export const initCommand = new Command("init")
       // Install default scheduled scripts
       const schedules = await installSchedules(resolve(targetPath));
       if (schedules.length > 0) {
-        console.log(`\nInstalled ${schedules.length} schedule(s) in config/schedules/`);
+        console.log(`\nInstalled ${schedules.length} schedule(s) in config/schedules/ (disabled by default)`);
+        console.log("  Enable by setting enabled=\"true\" after configuring connector secrets.");
         for (const s of schedules) {
           console.log(`  ${s}`);
         }

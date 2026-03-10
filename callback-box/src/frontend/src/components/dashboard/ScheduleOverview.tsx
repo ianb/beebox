@@ -3,6 +3,7 @@
  */
 
 import { useState } from "react";
+import { trpc } from "../../lib/trpc";
 import type { RouterOutput } from "../../lib/trpc";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
@@ -40,17 +41,45 @@ function BudgetIndicator({ budget }: { budget: { limitMs: number; windowMs: numb
   );
 }
 
+function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
+  const utils = trpc.useUtils();
+  const mutation = trpc.scheduler.setEnabled.useMutation({
+    onSuccess() {
+      utils.scheduler.schedules.invalidate();
+    },
+  });
+
+  return (
+    <button
+      onClick={() => mutation.mutate({ name, enabled: !enabled })}
+      disabled={mutation.isPending}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+        enabled ? "bg-warm-600" : "bg-warm-300"
+      } ${mutation.isPending ? "opacity-50" : ""}`}
+      title={enabled ? "Disable schedule" : "Enable schedule"}
+    >
+      <span
+        className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+          enabled ? "translate-x-4.5" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
   return (
     <tr className={!s.enabled ? "opacity-50" : ""}>
       <td className="py-2 pr-3">
-        <span className="font-medium text-warm-900">{s.name}</span>
-        {s.description ? (
-          <span className="block text-xs text-warm-600">{s.description}</span>
-        ) : null}
-        {!s.enabled ? (
-          <span className="ml-1 text-xs text-warm-500">(disabled)</span>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <EnableToggle name={s.name} enabled={s.enabled} />
+          <div>
+            <span className="font-medium text-warm-900">{s.name}</span>
+            {s.description ? (
+              <span className="block text-xs text-warm-600">{s.description}</span>
+            ) : null}
+          </div>
+        </div>
       </td>
       <td className="py-2 pr-3 text-warm-700 font-mono text-xs">
         {s.schedule}

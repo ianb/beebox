@@ -368,6 +368,7 @@ interface DefaultSchedule {
   source: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   lockGroup?: string;
+  enabled?: boolean;
 }
 
 const DEFAULT_SCHEDULES: DefaultSchedule[] = [
@@ -377,6 +378,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 6,18 * * *",
     notBefore: "4h",
     onWakeup: true,
+    enabled: false,
     runs: "cb wakeup --connector rss",
     source: "Check RSS feeds twice daily and on wakeup",
     lockGroup: "news",
@@ -397,6 +399,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "*/15 * * * *",
     notBefore: "10m",
     onWakeup: true,
+    enabled: false,
     runs: "cb wakeup --connector gmail",
     source: "Check email frequently during active hours",
   },
@@ -406,6 +409,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 * * * *",
     notBefore: "30m",
     onWakeup: true,
+    enabled: false,
     runs: "cb wakeup --connector google-calendar",
     source: "Sync calendar changes hourly",
   },
@@ -415,6 +419,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 */6 * * *",
     notBefore: "2h",
     onWakeup: true,
+    enabled: false,
     runs: "cb wakeup --connector raindrop",
     source: "Sync bookmarks periodically",
   },
@@ -442,6 +447,7 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       ...(sched.onWakeup && { onWakeup: sched.onWakeup }),
       ...(sched.createAfterSuccess && { createAfterSuccess: sched.createAfterSuccess }),
       ...(sched.lockGroup && { lockGroup: sched.lockGroup }),
+      ...(sched.enabled === false && { enabled: false }),
       runs: sched.runs,
       description: sched.description,
       source: sched.source,

@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
+import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { boxLogFile } from "../../../core/scheduler.js";
 import { parseXml } from "cardworks";
@@ -12,6 +13,8 @@ import {
   type ScheduledScript,
 } from "../../../schemas/scheduled-script.js";
 import { loadScriptState, loadRunningScripts } from "../../../core/schedule-state.js";
+import { createLoader } from "../../../cli/lib/loader.js";
+import { stageFiles, commit } from "../../../cli/lib/git.js";
 
 /** Clean log entry type without index signature for tRPC serialization */
 export interface SchedulerLogEntry {
@@ -192,4 +195,41 @@ export const schedulerRouter = router({
 
     return { schedules };
   }),
+
+  setEnabled: publicProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      enabled: z.boolean(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const fileName = `${input.name}.scheduled-script.card`;
+      const relPath = path.join("config/schedules", fileName);
+      const fullPath = path.join(ctx.boxRoot, relPath);
+
+      try {
+        await fs.access(fullPath);
+      } catch {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
+      }
+
+      const loader = await createLoader(ctx.boxRoot);
+      const card = await loader.load(fullPath);
+
+      if (input.enabled) {
+        delete card.element.attrs.enabled;
+      } else {
+        card.element.attrs.enabled = "false";
+      }
+
+      await loader.save(card);
+
+      const action = input.enabled ? "Enable" : "Disable";
+      await stageFiles(ctx.boxRoot, [relPath]);
+      await commit(ctx.boxRoot, {
+        message: `${action} schedule: ${input.name}`,
+        trailers: { "Source": "webapp", "Endpoint": "scheduler.setEnabled" },
+      });
+
+      return { enabled: input.enabled };
+    }),
 });

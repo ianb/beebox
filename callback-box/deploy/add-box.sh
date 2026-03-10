@@ -60,6 +60,9 @@ set -euo pipefail
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
 # forwarding), then chown to the callback user.
+# Mark as safe.directory so root can operate on callback-owned repos.
+git config --global --add safe.directory "$BOX_PATH"
+
 if [[ -d "$BOX_PATH" ]]; then
   echo "Box already exists at $BOX_PATH, pulling latest..."
   cd "$BOX_PATH" && git pull --ff-only

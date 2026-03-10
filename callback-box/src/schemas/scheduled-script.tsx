@@ -365,6 +365,7 @@ export interface ScheduledScriptTemplateOptions {
   notBefore?: string;
   onWakeup?: boolean;
   once?: boolean;
+  enabled?: boolean;
   runs: string;
   description?: string;
   source?: string;
@@ -386,6 +387,7 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   if (options.notBefore) attrs.push(`not-before="${options.notBefore}"`);
   if (options.onWakeup) attrs.push(`on-wakeup="true"`);
   if (options.once) attrs.push(`once="true"`);
+  if (options.enabled === false) attrs.push(`enabled="false"`);
   if (options.budget) attrs.push(`budget="${options.budget}"`);
   if (options.lockGroup) attrs.push(`lock-group="${options.lockGroup}"`);
 
