@@ -5,6 +5,7 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
+import { cbSource } from "../../lib/source-tag";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -36,7 +37,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
   const { boxSlug } = useParams({ strict: false });
   const phase = commit.trailers?.["Phase"];
   return (
-    <div className="py-2 flex items-start justify-between gap-2">
+    <div className="py-2 flex items-start justify-between gap-2" {...cbSource("commit", commit.hash)}>
       <div className="min-w-0">
         <div className="text-sm text-warm-900 truncate">
           <Link to={href(`/${boxSlug}/history/${commit.hash}`)} className="hover:text-plum">
