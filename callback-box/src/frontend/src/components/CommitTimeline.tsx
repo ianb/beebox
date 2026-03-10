@@ -6,6 +6,7 @@
  */
 
 import { type HistoryCommit } from "../api";
+import { cbSource } from "../lib/source-tag";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -125,6 +126,7 @@ function CommitRow({
   return (
     <button
       onClick={onSelect}
+      {...cbSource("commit", commit.hash)}
       className={`w-full text-left px-3 py-2 hover:bg-warm-50 transition-colors ${
         isSelected ? "bg-iris-50 border-r-2 border-plum" : ""
       }`}

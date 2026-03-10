@@ -13,6 +13,7 @@ import {
   type BriefReaction,
 } from "./NewsBriefView";
 import { Sidebar } from "./Sidebar";
+import { cbSource } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";
 
 /**
@@ -213,7 +214,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
             <div className="text-red-600">Error: {error}</div>
           </div>
         ) : briefData ? (
-          <div>
+          <div {...(briefPath ? cbSource("card", briefPath) : {})}>
             <button
               onClick={handleBack}
               className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-plum hover:text-plum-dark"

@@ -55,3 +55,7 @@ npm run lint:circular  # Circular dependency detector (madge)
 - Use meaningful variable names
 - Files max 300 lines, functions max 150 lines (excluding blanks/comments)
 - **Only export what's needed**: don't export functions/constants only used within their own file. knip enforces this.
+
+## Data Source Tagging
+
+UI elements that display data from a known source (card, commit, session, etc.) must be tagged with `data-cb-source` attributes for traceability. Use the `cbSource()` and `cbSourceItem()` helpers from `src/frontend/src/lib/source-tag.ts`. Tag the outermost meaningful data boundary — not every inner element. See `docs/data-source-tagging.md` for the full convention.

@@ -11,6 +11,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { getChatHistory, getChatSessions, type SessionEntry, type ChatSessionInfo } from "../api";
 import { UserMessage, AssistantMessage, groupMessages } from "./ChatMessages";
+import { cbSource } from "../lib/source-tag";
 
 /**
  * Format a date string as relative time (e.g., "2h ago", "3d ago").
@@ -85,6 +86,7 @@ export function SessionListButton() {
                   key={s.sessionId}
                   to={href(linkTo)}
                   onClick={() => setOpen(false)}
+                  {...cbSource("session", s.sessionId)}
                   className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50 font-medium" : ""}`}
                 >
                   <div className="flex items-center gap-2">
@@ -155,7 +157,7 @@ function SessionViewerInner({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200">
+    <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200" {...cbSource("session", sessionId)}>
       {/* Viewer banner */}
       <div className="px-4 py-2 bg-warm-100 border-b border-warm-300 text-sm text-warm-700 flex items-center gap-2">
         <svg className="w-4 h-4 text-warm-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

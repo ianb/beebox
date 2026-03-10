@@ -7,6 +7,7 @@
 
 import { useEffect } from "react";
 import { trpc, type RouterOutput } from "../lib/trpc";
+import { cbSource } from "../lib/source-tag";
 
 export type BriefSummary = RouterOutput["briefs"]["list"]["briefs"][number];
 
@@ -84,6 +85,7 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
         <button
           key={brief.path}
           onClick={() => onSelect(brief)}
+          {...cbSource("card", brief.relativePath)}
           className={`w-full text-left p-4 hover:bg-warm-50 transition-colors ${
             selectedPath === brief.path ? "bg-iris-50 border-l-4 border-plum" : ""
           } ${brief.read ? "opacity-60" : ""}`}

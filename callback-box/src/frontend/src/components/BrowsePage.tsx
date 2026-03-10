@@ -10,6 +10,7 @@ import { href } from "../lib/routing";
 import { Sidebar } from "./Sidebar";
 import { FileView } from "./FileView";
 import { trpc, type RouterOutput } from "../lib/trpc";
+import { cbSource } from "../lib/source-tag";
 
 type BrowseCard = RouterOutput["status"]["browse"]["cards"][number];
 
@@ -71,6 +72,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
               {data.dirs.map((dir) => (
                 <button
                   key={dir}
+                  {...cbSource("dir", currentPath ? `${currentPath}/${dir}` : dir)}
                   onClick={() =>
                     onNavigate(currentPath ? `${currentPath}/${dir}` : dir)
                   }
@@ -90,6 +92,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 <button
                   key={card.relativePath}
                   onClick={() => setSelectedCard(card)}
+                  {...cbSource("card", card.relativePath)}
                   className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
                     selectedCard?.relativePath === card.relativePath
                       ? "bg-iris-50"

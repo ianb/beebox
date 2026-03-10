@@ -6,6 +6,7 @@ import { getEventSourceBase } from "../api";
 import { trpc } from "../lib/trpc";
 import { useSSE } from "../hooks/useSSE";
 import { QuestionForm } from "./QuestionForm";
+import { cbSource } from "../lib/source-tag";
 
 export function QuestionsPage() {
   const utils = trpc.useUtils();
@@ -47,6 +48,7 @@ export function QuestionsPage() {
               <QuestionForm
                 key={q.path}
                 question={q}
+                sourcePath={q.relativePath}
                 onAnswered={() => utils.status.questions.invalidate()}
               />
             ))}
@@ -63,6 +65,7 @@ export function QuestionsPage() {
                 <div
                   key={q.path}
                   className="p-3 bg-white rounded-lg border border-warm-200 opacity-60"
+                  {...cbSource("card", q.relativePath)}
                 >
                   <div className="text-sm font-medium text-warm-800">
                     {q.prompt || q.name}

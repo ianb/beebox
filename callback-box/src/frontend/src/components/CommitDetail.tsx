@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { HistoryCommit } from "../api";
 import { trpc } from "../lib/trpc";
+import { cbSource } from "../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { CardTreeView, type ElementNode } from "./CardTreeView";
 
@@ -380,7 +381,7 @@ export function CommitDetail({ commit }: CommitDetailProps) {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" {...cbSource("commit", commit.hash)}>
       {/* Tab bar */}
       <div className="flex border-b bg-warm-50 px-2 pt-1 gap-1 flex-shrink-0">
         {tabs.map((tab) => (

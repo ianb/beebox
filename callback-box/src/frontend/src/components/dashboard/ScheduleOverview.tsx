@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
 import type { RouterOutput } from "../../lib/trpc";
+import { cbSource } from "../../lib/source-tag";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -70,7 +71,7 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
 
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
   return (
-    <tr className={!s.enabled ? "opacity-50" : ""}>
+    <tr className={!s.enabled ? "opacity-50" : ""} {...cbSource("schedule", s.name)}>
       <td className="py-2 pr-3">
         <div className="flex items-center gap-2">
           <EnableToggle name={s.name} enabled={s.enabled} />

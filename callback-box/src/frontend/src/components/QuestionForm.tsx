@@ -4,14 +4,16 @@
 
 import { useState } from "react";
 import { trpc } from "../lib/trpc";
+import { cbSource } from "../lib/source-tag";
 import type { CardInfo } from "../api";
 
 interface QuestionFormProps {
   question: CardInfo;
   onAnswered: () => void;
+  sourcePath?: string;
 }
 
-export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
+export function QuestionForm({ question, onAnswered, sourcePath }: QuestionFormProps) {
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [textAnswer, setTextAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function QuestionForm({ question, onAnswered }: QuestionFormProps) {
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
+    <div className="p-4 bg-white rounded-lg shadow" {...(sourcePath ? cbSource("card", sourcePath) : {})}>
       <h3 className="text-lg font-bold text-warm-900 mb-2">{question.name}</h3>
       <p className="text-warm-700 mb-4">{question.prompt}</p>
 

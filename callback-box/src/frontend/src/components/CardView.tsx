@@ -9,6 +9,7 @@
 import { useState, useMemo } from "react";
 import { trpc } from "../lib/trpc";
 import { CardTreeView } from "./CardTreeView";
+import { cbSource } from "../lib/source-tag";
 import hljs from "highlight.js/lib/core";
 import xml from "highlight.js/lib/languages/xml";
 import "highlight.js/styles/github.css";
@@ -58,7 +59,7 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4" {...cbSource("card", path)}>
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div>

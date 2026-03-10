@@ -5,6 +5,7 @@
 import { getEventSourceBase } from "../api";
 import { trpc } from "../lib/trpc";
 import { useSSE } from "../hooks/useSSE";
+import { cbSource, cbSourceItem } from "../lib/source-tag";
 import type { RouterOutput } from "../lib/trpc";
 
 type TodoItemInfo = RouterOutput["todos"]["list"]["lists"][number]["items"][number];
@@ -18,7 +19,7 @@ function TodoItem(props: {
   const isDone = item.status === "done" || item.status === "cancelled";
 
   return (
-    <div className="py-1">
+    <div className="py-1" {...cbSourceItem(`item: ${item.name}`)}>
       <div className="flex items-start gap-2">
         <button
           onClick={() => onToggle(item.name, isDone ? "pending" : "done")}
@@ -94,7 +95,7 @@ function TodoListCard(props: {
   const completed = list.counts.done + list.counts.cancelled;
 
   return (
-    <div className="bg-white rounded-lg border border-warm-200 shadow-sm">
+    <div className="bg-white rounded-lg border border-warm-200 shadow-sm" {...cbSource("card", list.relativePath)}>
       <div className="px-4 py-3 border-b border-warm-100">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-warm-900">{list.name}</h2>

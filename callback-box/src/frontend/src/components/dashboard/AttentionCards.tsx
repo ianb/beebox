@@ -6,6 +6,7 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
+import { cbSource } from "../../lib/source-tag";
 
 type CardInfo = RouterOutput["status"]["questions"]["items"][number];
 
@@ -37,7 +38,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
           </div>
           <ul className="space-y-1">
             {pendingQuestions.slice(0, 5).map((q) => (
-              <li key={q.path} className="text-sm">
+              <li key={q.path} className="text-sm" {...cbSource("card", q.relativePath)}>
                 <Link
                   to={href(`/${boxSlug}/card/${q.relativePath}`)}
                   className="text-plum hover:text-plum-dark hover:underline"
