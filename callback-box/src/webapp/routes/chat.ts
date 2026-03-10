@@ -16,6 +16,7 @@ import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
+import { getSessionUser, type SessionUser } from "../auth.js";
 import {
   listSessions,
   getSessionLogPath,
@@ -106,6 +107,16 @@ export async function registerChatRoutes(
     }
   });
 
+  /**
+   * Inject user="Name" into the opening <typed> or <speech> tag of a message.
+   */
+  function injectUserAttr(message: string, user: SessionUser): string {
+    return message.replace(
+      /^(<(?:typed|speech)\b)([^>]*>)/,
+      `$1 user="${user.name.replace(/"/g, "&quot;")}"$2`
+    );
+  }
+
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody }>(
     "/api/chat/send",
@@ -116,6 +127,19 @@ export async function registerChatRoutes(
       if (!message) {
         return reply.status(400).send({ error: "message is required" });
       }
+
+      // Identify the sender from the session (may be null if auth is disabled)
+      const user = getSessionUser(request);
+
+      // Inject user attribution into the message
+      const attributed = user ? injectUserAttr(message, user) : message;
+
+      // Broadcast the user message to other clients via SSE
+      eventBus.emit("chat-user-message", {
+        message: attributed,
+        user: user ? { email: user.email, name: user.name } : null,
+        timestamp: new Date().toISOString(),
+      });
 
       // Hijack the response from Fastify so we control the socket directly.
       // Without this, Fastify fires request.raw "close" immediately and
@@ -129,10 +153,11 @@ export async function registerChatRoutes(
         "Connection": "keep-alive",
       });
 
-      // Check if busy
+      // If busy, queue the message for later delivery
       if (chatSession.isBusy()) {
+        chatSession.enqueue(attributed);
         reply.raw.write(
-          `data: ${JSON.stringify({ type: "busy" })}\n\n`
+          `data: ${JSON.stringify({ type: "queued" })}\n\n`
         );
         reply.raw.end();
         return;
@@ -200,8 +225,8 @@ export async function registerChatRoutes(
         // Append active schedule info so the agent knows what's pending
         const pendingInfo = scheduleManager.formatPendingForPrompt();
         const fullMessage = pendingInfo
-          ? message + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
-          : message;
+          ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
+          : attributed;
 
         // Send the message
         const sent = chatSession.send(fullMessage);

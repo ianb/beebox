@@ -25,6 +25,18 @@ function stripUserDisplayTags(text: string): string {
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "");
 }
 
+/**
+ * Extract user name from a session entry.
+ * Checks the entry's user field first, then parses from tag attributes.
+ */
+function getUserName(entry: SessionEntry): string | null {
+  if (entry.user) return entry.user;
+  const firstText = entry.content.find((b) => b.type === "text")?.text || "";
+  const match = firstText.match(/<(?:typed|speech)\b[^>]*\buser="([^"]*)"/);
+  if (match) return match[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
+  return null;
+}
+
 function UserMessageText({ text }: { text: string }) {
   const stripped = stripUserDisplayTags(text);
 
@@ -351,8 +363,9 @@ export function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "
 
 /**
  * Render a user message bubble.
+ * When currentUserName is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
+export function UserMessage({ entries, debugView, currentUserName }: { entries: SessionEntry[]; debugView?: boolean; currentUserName?: string }) {
   // Hide schedule-fired messages entirely in normal view (they're system-injected)
   if (!debugView) {
     const allTexts = entries.flatMap((e) =>
@@ -360,6 +373,35 @@ export function UserMessage({ entries, debugView }: { entries: SessionEntry[]; d
     );
     const allEmpty = allTexts.every((t) => stripUserDisplayTags(t).trim() === "");
     if (allEmpty) return null;
+  }
+
+  const senderName = getUserName(entries[0]);
+  const isOtherUser = senderName && currentUserName && senderName !== currentUserName;
+
+  if (isOtherUser) {
+    // Other user's message: left-aligned with name label
+    return (
+      <div className="pr-12 sm:pr-24 py-1">
+        <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
+        <div className="ml-3 sm:ml-6 rounded-r-2xl bg-plum text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit">
+          {entries.map((entry) =>
+            entry.content
+              .filter((b) => b.type === "text")
+              .map((block, i) =>
+                debugView ? (
+                  <pre key={`${entry.uuid}-${i}`} className="font-mono text-xs whitespace-pre-wrap">
+                    {block.text ?? ""}
+                  </pre>
+                ) : (
+                  <div key={`${entry.uuid}-${i}`} className="text-sm whitespace-pre-wrap">
+                    <UserMessageText text={block.text ?? ""} />
+                  </div>
+                )
+              )
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

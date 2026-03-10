@@ -33,6 +33,8 @@ export interface SessionEntry {
   type: "user" | "assistant";
   timestamp: string;
   content: SessionContentBlock[];
+  /** Display name of the sender (for user messages in multi-user chat) */
+  user?: string;
 }
 
 /**
@@ -249,11 +251,22 @@ export async function parseSessionLog(
     // Skip assistant entries with no visible content
     if (raw.type === "assistant" && content.length === 0) continue;
 
+    // Extract user="..." from <typed> or <speech> tags in user messages
+    let user: string | undefined;
+    if (raw.type === "user") {
+      const firstText = content.find((b) => b.type === "text")?.text || "";
+      const userMatch = firstText.match(/<(?:typed|speech)\b[^>]*\buser="([^"]*)"/);
+      if (userMatch && userMatch[1]) {
+        user = userMatch[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
+      }
+    }
+
     filtered.push({
       uuid: String(raw.uuid || ""),
       type: raw.type as "user" | "assistant",
       timestamp: String(raw.timestamp || ""),
       content,
+      ...(user ? { user } : {}),
     });
   }
 

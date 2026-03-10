@@ -30,11 +30,13 @@ type ChatEvent =
   | { type: "STREAM_TEXT"; text: string }
   | { type: "STREAM_TOOL"; tool: SessionContentBlock }
   | { type: "STREAM_BUSY" }
+  | { type: "STREAM_QUEUED" }
   | { type: "STREAM_ERROR"; error: string }
   | { type: "STREAM_RESULT" }
   | { type: "STREAM_FAILED"; error: string }
   | { type: "REFRESH" }
-  | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null };
+  | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
+  | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string };
 
 // -- Context --
 
@@ -84,6 +86,11 @@ const streamActor = fromCallback(
 
         if (type === "busy") {
           sendBack({ type: "STREAM_BUSY" });
+          return;
+        }
+
+        if (type === "queued") {
+          sendBack({ type: "STREAM_QUEUED" });
           return;
         }
 
@@ -174,6 +181,21 @@ export const chatMachine = setup({
         sessionId: event.sessionId,
       })),
     },
+    // Global handler: another user sent a message (via SSE broadcast)
+    OTHER_USER_MESSAGE: {
+      actions: assign(({ context, event }) => ({
+        messages: [
+          ...context.messages,
+          {
+            uuid: `other-${Date.now()}`,
+            type: "user" as const,
+            timestamp: event.timestamp,
+            content: [{ type: "text" as const, text: event.message }],
+            user: event.userName,
+          },
+        ],
+      })),
+    },
   },
   states: {
     loading: {
@@ -248,6 +270,10 @@ export const chatMachine = setup({
           actions: assign({
             error: "Agent is busy with another request",
           }),
+        },
+        STREAM_QUEUED: {
+          target: "idle",
+          // Message was queued — no error, it'll be sent when the current turn finishes
         },
         STREAM_ERROR: {
           target: "idle",

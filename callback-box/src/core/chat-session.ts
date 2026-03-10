@@ -113,6 +113,7 @@ SPEECH:
 INPUT FORMAT:
 - User messages are wrapped in <speech> or <typed> tags
 - local-time attribute shows the current time
+- user attribute identifies the sender (e.g., user="Ian Bicking") — multiple humans may participate in the same chat
 
 CONTEXT:
 - This is a Callback Box — an agent-managed workspace
@@ -148,6 +149,7 @@ export class ChatSession extends EventEmitter {
   private boxRoot: string;
   private busy = false;
   private turnText = "";
+  private messageQueue: string[] = [];
 
   constructor(boxRoot: string) {
     super();
@@ -309,7 +311,28 @@ export class ChatSession extends EventEmitter {
       if (completedText) {
         this.emit("turn-text", completedText);
       }
+      this.drainQueue();
     }
+  }
+
+  /**
+   * Queue a message for delivery after the current turn completes.
+   */
+  enqueue(message: string): void {
+    log("enqueue", `Queued message (${message.length} chars, queue size: ${this.messageQueue.length + 1})`);
+    this.messageQueue.push(message);
+  }
+
+  /**
+   * Send queued messages after a turn completes.
+   * Combines multiple queued messages into a single turn.
+   */
+  private drainQueue(): void {
+    if (this.messageQueue.length === 0) return;
+    const queued = this.messageQueue.splice(0);
+    const combined = queued.join("\n\n");
+    log("drain", `Sending ${queued.length} queued message(s)`);
+    this.send(combined);
   }
 
   /**

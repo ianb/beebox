@@ -87,6 +87,8 @@ export interface SessionEntry {
   type: "user" | "assistant";
   timestamp: string;
   content: SessionContentBlock[];
+  /** Display name of the sender (for user messages in multi-user chat) */
+  user?: string;
 }
 
 // --- Shared fetch helper ---

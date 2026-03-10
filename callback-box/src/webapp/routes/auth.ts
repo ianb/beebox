@@ -11,7 +11,7 @@ import type { FastifyInstance } from "fastify";
 import { OAuth2Client } from "google-auth-library";
 import {
   signSession,
-  getSessionEmail,
+  getSessionUser,
   getPublicUrl,
   getOwnerEmail,
   COOKIE_NAME,
@@ -40,7 +40,7 @@ export async function registerAuthRoutes(
     async (request, reply) => {
       const returnTo = request.query.returnTo || "/";
       const authorizeUrl = oauth2Client.generateAuthUrl({
-        scope: ["openid", "email"],
+        scope: ["openid", "email", "profile"],
         state: returnTo,
         prompt: "select_account",
       });
@@ -80,6 +80,7 @@ export async function registerAuthRoutes(
       }
 
       let email: string;
+      let displayName: string;
       try {
         const ticket = await oauth2Client.verifyIdToken({
           idToken,
@@ -90,13 +91,14 @@ export async function registerAuthRoutes(
           return reply.status(400).send({ error: "No email in token" });
         }
         email = payload.email;
+        displayName = payload.name || email;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.error("[auth] ID token verification failed:", message);
         return reply.status(500).send({ error: `Token verification failed: ${message}` });
       }
 
-      const sessionValue = signSession(email);
+      const sessionValue = signSession({ email, name: displayName });
       const returnTo = request.query.state || "/";
 
       return reply
@@ -118,8 +120,8 @@ export async function registerAuthRoutes(
   });
 
   server.get("/auth/me", async (request, reply) => {
-    const email = getSessionEmail(request);
-    if (!email) {
+    const user = getSessionUser(request);
+    if (!user) {
       return reply.status(401).send({ error: "Not authenticated" });
     }
 
@@ -127,16 +129,16 @@ export async function registerAuthRoutes(
     const ownerEmail = getOwnerEmail();
     const accessibleBoxes: string[] = [];
     for (const box of options.boxes) {
-      if (email === ownerEmail) {
+      if (user.email === ownerEmail) {
         accessibleBoxes.push(box.slug);
       } else {
         const config = await loadBoxConfig(box.boxRoot);
-        if (!config.allowedEmails?.length || config.allowedEmails.includes(email)) {
+        if (!config.allowedEmails?.length || config.allowedEmails.includes(user.email)) {
           accessibleBoxes.push(box.slug);
         }
       }
     }
 
-    return { email, isOwner: email === ownerEmail, boxes: accessibleBoxes };
+    return { email: user.email, name: user.name, isOwner: user.email === ownerEmail, boxes: accessibleBoxes };
   });
 }

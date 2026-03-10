@@ -28,6 +28,7 @@ import { chatMachine } from "../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, ToolList, MarkdownContent, groupMessages } from "./ChatMessages";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 import type { ChatSchedule } from "../../../core/chat-schedules";
 
 // Start capturing console logs immediately so we don't miss early messages
@@ -221,6 +222,7 @@ function InteractiveChat() {
   const { messages, streamText, streamTools, error, sessionId, processRunning } = snapshot.context;
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");
+  const currentUser = useCurrentUser();
 
   const [input, setInput] = useState("");
   const [debugView, setDebugView] = useState(false);
@@ -300,7 +302,7 @@ function InteractiveChat() {
     return () => clearInterval(id);
   }, [activeSchedules, send, fetchSchedules, isStreaming]);
 
-  // Handle SSE events: schedule-fired (alarm/TTS) and chat-history (server push)
+  // Handle SSE events: schedule-fired, chat-history, chat-user-message
   useSSE(`${getEventSourceBase()}/events`, {
     onEvent: useCallback((event: SSEEvent) => {
       if (event.event === "schedule-fired") {
@@ -317,8 +319,19 @@ function InteractiveChat() {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
+      } else if (event.event === "chat-user-message") {
+        // Another user sent a message — add it to our view if it's not from us
+        const data = event.data as { message: string; user: { email: string; name: string } | null; timestamp: string };
+        if (data.user && currentUser && data.user.email !== currentUser.email) {
+          send({
+            type: "OTHER_USER_MESSAGE",
+            message: data.message,
+            userName: data.user.name,
+            timestamp: data.timestamp,
+          });
+        }
       }
-    }, [fetchSchedules, send]),
+    }, [fetchSchedules, send, currentUser]),
   });
 
   const handleCancelSchedule = useCallback((label: string) => {
@@ -513,7 +526,7 @@ function InteractiveChat() {
         ) : null}
         {groupMessages(messages).map((group) =>
           group.type === "user" ? (
-            <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
+            <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserName={currentUser?.name} />
           ) : (
             <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
           )

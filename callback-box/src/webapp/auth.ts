@@ -46,12 +46,18 @@ export function getPublicUrl(): string {
   return process.env.CB_PUBLIC_URL || process.env.PUBLIC_URL || "http://localhost:3210";
 }
 
+export interface SessionUser {
+  email: string;
+  name: string;
+}
+
 /**
- * Create a signed session cookie value for the given email.
+ * Create a signed session cookie value for the given user.
  */
-export function signSession(email: string): string {
+export function signSession(user: SessionUser): string {
   const payload = JSON.stringify({
-    email,
+    email: user.email,
+    name: user.name,
     exp: Date.now() + SESSION_MAX_AGE_MS,
   });
   const sig = crypto
@@ -62,9 +68,9 @@ export function signSession(email: string): string {
 }
 
 /**
- * Verify a signed session cookie and return the email, or null if invalid/expired.
+ * Verify a signed session cookie and return the user, or null if invalid/expired.
  */
-export function verifySession(cookie: string): string | null {
+export function verifySession(cookie: string): SessionUser | null {
   const dotIndex = cookie.indexOf(".");
   if (dotIndex === -1) return null;
 
@@ -91,19 +97,26 @@ export function verifySession(cookie: string): string | null {
     const data = JSON.parse(payload);
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
     if (typeof data.email !== "string") return null;
-    return data.email;
+    return { email: data.email, name: data.name || data.email };
   } catch {
     return null;
   }
 }
 
 /**
- * Extract the authenticated email from a request's session cookie.
+ * Extract the authenticated user from a request's session cookie.
  */
-export function getSessionEmail(request: FastifyRequest): string | null {
+export function getSessionUser(request: FastifyRequest): SessionUser | null {
   const cookie = (request.cookies as Record<string, string | undefined>)?.[COOKIE_NAME];
   if (!cookie) return null;
   return verifySession(cookie);
+}
+
+/**
+ * Extract the authenticated email from a request's session cookie.
+ */
+export function getSessionEmail(request: FastifyRequest): string | null {
+  return getSessionUser(request)?.email ?? null;
 }
 
 /**
