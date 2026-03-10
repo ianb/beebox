@@ -185,7 +185,7 @@ export async function registerCaptureRoutes(
       if (firstAudio) {
         const tempPath = path.join(dir, firstAudio.name);
         const cardName = `Capture_${timestamp}`;
-        const cardPath = `box/inbox/${cardName}.memo.card`;
+        const cardPath = `box/inbox/${cardName}.voice-memo.card`;
 
         // Determine mimetype from extension
         const mimetype = firstAudio.name.endsWith(".webm") ? "audio/webm" : "audio/webm";
@@ -229,7 +229,7 @@ export async function registerCaptureRoutes(
       const tempPath = path.join(dir, photo.name);
       const ext = photo.name.endsWith(".png") ? "png" : "jpg";
       const cardName = `Photo_${timestamp}_${photo.name.replace(/\.[^.]+$/, "")}`;
-      const cardPath = `box/inbox/${cardName}.memo.card`;
+      const cardPath = `box/inbox/${cardName}.voice-memo.card`;
       const mimetype = ext === "png" ? "image/png" : "image/jpeg";
 
       const result = await runCommand({
