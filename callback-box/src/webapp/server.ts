@@ -244,7 +244,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio });
       await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
-      await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+      await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, eventBus });
       await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
 
       // Serve static frontend files within this prefix

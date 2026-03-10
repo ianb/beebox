@@ -1,8 +1,9 @@
 /**
  * Capture session routes — audio recording + photo capture from the web UI.
  *
- * Sessions accumulate files in a temp directory. On finalize, a memo card
- * is created in box/inbox/ with all files as attachments.
+ * Sessions accumulate files in a temp directory. Session metadata is stored
+ * as session.json inside the temp dir so it survives server restarts.
+ * On finalize, a memo card is created in box/inbox/ with all files as attachments.
  */
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -16,9 +17,9 @@ import {
   type CommandContext,
 } from "../../core/commands/index.js";
 
-interface CaptureSession {
+interface CaptureSessionData {
   id: string;
-  dir: string;
+  boxSlug: string;
   files: CaptureFile[];
   startedAt: string;
 }
@@ -30,33 +31,54 @@ interface CaptureFile {
   size: number;
 }
 
-// In-memory session store (sessions are short-lived)
-const sessions = new Map<string, CaptureSession>();
+const SESSION_BASE = path.join(os.tmpdir(), "callback-box-capture");
+
+function sessionDir(id: string): string {
+  return path.join(SESSION_BASE, id);
+}
+
+function sessionJsonPath(id: string): string {
+  return path.join(sessionDir(id), "session.json");
+}
+
+async function readSession(id: string): Promise<CaptureSessionData | null> {
+  try {
+    const raw = await fs.readFile(sessionJsonPath(id), "utf-8");
+    return JSON.parse(raw);
+  } catch (_e) {
+    return null;
+  }
+}
+
+async function writeSession(session: CaptureSessionData): Promise<void> {
+  await fs.writeFile(sessionJsonPath(session.id), JSON.stringify(session, null, 2));
+}
 
 interface RegisterCaptureRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
+  boxSlug: string;
   eventBus: EventBus;
 }
 
 export async function registerCaptureRoutes(
   options: RegisterCaptureRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, eventBus } = options;
+  const { server, boxRoot, boxSlug, eventBus } = options;
 
   // POST /api/capture/sessions — create a new capture session
   server.post("/api/capture/sessions", async (_request, _reply) => {
     const id = randomUUID();
-    const dir = path.join(os.tmpdir(), "callback-box-capture", id);
+    const dir = sessionDir(id);
     await fs.mkdir(dir, { recursive: true });
 
-    const session: CaptureSession = {
+    const session: CaptureSessionData = {
       id,
-      dir,
+      boxSlug,
       files: [],
       startedAt: new Date().toISOString(),
     };
-    sessions.set(id, session);
+    await writeSession(session);
 
     return { sessionId: id, startedAt: session.startedAt };
   });
@@ -65,7 +87,7 @@ export async function registerCaptureRoutes(
   server.post<{
     Params: { id: string };
   }>("/api/capture/sessions/:id/upload", async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
-    const session = sessions.get(request.params.id);
+    const session = await readSession(request.params.id);
     if (!session) {
       return reply.status(404).send({ error: "Session not found" });
     }
@@ -89,11 +111,12 @@ export async function registerCaptureRoutes(
       if (rawBody instanceof Buffer) {
         fileBuffer = rawBody;
       } else {
+        console.error(`[capture] No file data in upload for session ${session.id}, filename: ${filename}`);
         return reply.status(400).send({ error: "No file data received" });
       }
     }
 
-    const filePath = path.join(session.dir, filename);
+    const filePath = path.join(sessionDir(session.id), filename);
     await fs.writeFile(filePath, fileBuffer);
 
     session.files.push({
@@ -102,7 +125,9 @@ export async function registerCaptureRoutes(
       startedAt,
       size: fileBuffer.length,
     });
+    await writeSession(session);
 
+    console.log(`[capture] Uploaded ${filename} (${fileBuffer.length} bytes) to session ${session.id}`);
     return { success: true, filename, size: fileBuffer.length };
   });
 
@@ -110,12 +135,11 @@ export async function registerCaptureRoutes(
   server.delete<{
     Params: { id: string };
   }>("/api/capture/sessions/:id", async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
-    const session = sessions.get(request.params.id);
+    const session = await readSession(request.params.id);
     if (!session) {
       return reply.status(404).send({ error: "Session not found" });
     }
-    sessions.delete(session.id);
-    await cleanupDir(session.dir);
+    await cleanupDir(sessionDir(session.id));
     return { success: true };
   });
 
@@ -123,18 +147,18 @@ export async function registerCaptureRoutes(
   server.post<{
     Params: { id: string };
   }>("/api/capture/sessions/:id/finalize", async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
-    const session = sessions.get(request.params.id);
+    const session = await readSession(request.params.id);
     if (!session) {
       return reply.status(404).send({ error: "Session not found" });
     }
 
     if (session.files.length === 0) {
       // Nothing to do — clean up
-      sessions.delete(session.id);
-      await cleanupDir(session.dir);
+      await cleanupDir(sessionDir(session.id));
       return { success: true, cards: [] };
     }
 
+    const dir = sessionDir(session.id);
     const createdCards: string[] = [];
     const now = new Date();
     const timestamp = now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
@@ -153,11 +177,13 @@ export async function registerCaptureRoutes(
       (f) => !f.name.startsWith("audio-") && !f.name.startsWith("photo-")
     );
 
+    console.log(`[capture] Finalizing session ${session.id}: ${audioFiles.length} audio, ${photoFiles.length} photos, ${otherFiles.length} other`);
+
     // Create voice memo from audio files (use first chunk as the attachment)
     if (audioFiles.length > 0) {
       const firstAudio = audioFiles[0];
       if (firstAudio) {
-        const tempPath = path.join(session.dir, firstAudio.name);
+        const tempPath = path.join(dir, firstAudio.name);
         const cardName = `Capture_${timestamp}`;
         const cardPath = `box/inbox/${cardName}.memo.card`;
 
@@ -179,18 +205,20 @@ export async function registerCaptureRoutes(
         if (result.success) {
           const resultData = result.data as { cardPath: string };
           createdCards.push(resultData.cardPath);
+        } else {
+          console.error("[capture] Failed to create audio card:", result);
         }
 
         // Copy additional audio chunks alongside the card
         for (let i = 1; i < audioFiles.length; i++) {
           const chunk = audioFiles[i];
           if (!chunk) continue;
-          const srcPath = path.join(session.dir, chunk.name);
+          const srcPath = path.join(dir, chunk.name);
           const destPath = path.join(boxRoot, `box/inbox/${cardName}-${chunk.name}`);
           try {
             await fs.copyFile(srcPath, destPath);
           } catch (e) {
-            console.error(`Failed to copy audio chunk ${chunk.name}:`, e);
+            console.error(`[capture] Failed to copy audio chunk ${chunk.name}:`, e);
           }
         }
       }
@@ -198,7 +226,7 @@ export async function registerCaptureRoutes(
 
     // Create cards for photos
     for (const photo of photoFiles) {
-      const tempPath = path.join(session.dir, photo.name);
+      const tempPath = path.join(dir, photo.name);
       const ext = photo.name.endsWith(".png") ? "png" : "jpg";
       const cardName = `Photo_${timestamp}_${photo.name.replace(/\.[^.]+$/, "")}`;
       const cardPath = `box/inbox/${cardName}.memo.card`;
@@ -219,12 +247,14 @@ export async function registerCaptureRoutes(
       if (result.success) {
         const resultData = result.data as { cardPath: string };
         createdCards.push(resultData.cardPath);
+      } else {
+        console.error(`[capture] Failed to create photo card for ${photo.name}:`, result);
       }
     }
 
     // Handle other files similarly to photos
     for (const file of otherFiles) {
-      const tempPath = path.join(session.dir, file.name);
+      const tempPath = path.join(dir, file.name);
       const cardName = `Capture_${timestamp}_${file.name.replace(/\.[^.]+$/, "")}`;
       const cardPath = `box/inbox/${cardName}.memo.card`;
 
@@ -242,12 +272,13 @@ export async function registerCaptureRoutes(
       if (result.success) {
         const resultData = result.data as { cardPath: string };
         createdCards.push(resultData.cardPath);
+      } else {
+        console.error(`[capture] Failed to create card for ${file.name}:`, result);
       }
     }
 
     // Clean up
-    sessions.delete(session.id);
-    await cleanupDir(session.dir);
+    await cleanupDir(dir);
 
     // Broadcast
     for (const cardPath of createdCards) {
@@ -266,6 +297,6 @@ async function cleanupDir(dir: string): Promise<void> {
   try {
     await fs.rm(dir, { recursive: true, force: true });
   } catch (e) {
-    console.error(`Failed to clean up capture session dir ${dir}:`, e);
+    console.error(`[capture] Failed to clean up dir ${dir}:`, e);
   }
 }

@@ -204,7 +204,8 @@ export function CapturePage() {
         .then(() => {
           setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
         })
-        .catch((_e) => {
+        .catch((e) => {
+          console.error(`[capture] Photo upload failed (${filename}):`, e);
           setPhotoStates((prev) => { const next = [...prev]; next[index] = "failed"; return next; });
         });
       pendingUploads.current.push(p);
@@ -221,7 +222,8 @@ export function CapturePage() {
         .then(() => {
           setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "uploaded" } : c)));
         })
-        .catch((_e: Error) => {
+        .catch((e: Error) => {
+          console.error(`[capture] Audio upload failed (${filename}):`, e);
           setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "failed" } : c)));
         });
       pendingUploads.current.push(p);
