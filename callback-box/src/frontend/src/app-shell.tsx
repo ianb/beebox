@@ -213,51 +213,52 @@ function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebugLog: ()
 
   return (
     <nav className="bg-gradient-to-r from-iris-dark via-plum to-coral text-white flex-shrink-0 shadow-sm">
-      {/* Mobile: compact bar with hamburger */}
-      <div className="sm:hidden flex items-center justify-between px-3 py-2">
-        <div className="flex items-center gap-2">
-          {boxSelector}
-          <span className="text-white/60">/</span>
-          <span className="font-medium">{currentLabel}</span>
-        </div>
-        <div className="flex items-center gap-2" ref={menuRef}>
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="p-1.5 rounded hover:bg-white/10"
-            aria-label="Menu"
-          >
-            {menuOpen ? (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 5l10 10M15 5L5 15" />
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 5h14M3 10h14M3 15h14" />
-              </svg>
-            )}
-          </button>
-          <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
-        </div>
-      </div>
-      {/* Mobile dropdown */}
-      {menuOpen ? (
-        <div className="sm:hidden border-t border-white/20 px-3 py-2 flex flex-col gap-1">
-          {links.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              onClick={() => setMenuOpen(false)}
-              className={`px-3 py-2 rounded transition-colors ${
-                link.match(location.pathname)
-                  ? "bg-white/20 text-white font-medium"
-                  : "text-white/70 hover:bg-white/10"
-              }`}
+      {/* Mobile: compact bar with hamburger + dropdown */}
+      <div className="sm:hidden" ref={menuRef}>
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2">
+            {boxSelector}
+            <span className="text-white/60">/</span>
+            <span className="font-medium">{currentLabel}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-1.5 rounded hover:bg-white/10"
+              aria-label="Menu"
             >
-              {link.label}
-            </Link>
-          ))}
+              {menuOpen ? (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 5l10 10M15 5L5 15" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 5h14M3 10h14M3 15h14" />
+                </svg>
+              )}
+            </button>
+            <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
+          </div>
         </div>
-      ) : null}
+        {menuOpen ? (
+          <div className="border-t border-white/20 px-3 py-2 flex flex-col gap-1">
+            {links.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={() => setMenuOpen(false)}
+                className={`px-3 py-2 rounded transition-colors ${
+                  link.match(location.pathname)
+                    ? "bg-white/20 text-white font-medium"
+                    : "text-white/70 hover:bg-white/10"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        ) : null}
+      </div>
       {/* Desktop: inline links + profile */}
       <div className="hidden sm:flex items-center gap-5 px-4 py-2 text-sm">
         {boxSelector}
