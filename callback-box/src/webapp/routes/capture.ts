@@ -3,7 +3,9 @@
  *
  * Sessions accumulate files in a temp directory. Session metadata is stored
  * as session.json inside the temp dir so it survives server restarts.
- * On finalize, a memo card is created in box/inbox/ with all files as attachments.
+ * On finalize, a capture-session directory is created in box/inbox/ with
+ * audio.card, image.card, and capture-session.card files matching the
+ * structure expected by the process-captures procedure.
  */
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -12,11 +14,10 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { randomUUID } from "node:crypto";
 import type { EventBus } from "../../core/event-bus.js";
-import {
-  runCommand,
-  type CommandContext,
-} from "../../core/commands/index.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
+import { createAudioTemplate } from "../../schemas/audio.js";
+import { createImageTemplate } from "../../schemas/image.js";
+import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 
 interface CaptureSessionData {
   id: string;
@@ -144,7 +145,7 @@ export async function registerCaptureRoutes(
     return { success: true };
   });
 
-  // POST /api/capture/sessions/:id/finalize — create card(s) from session files
+  // POST /api/capture/sessions/:id/finalize — create capture-session directory
   server.post<{
     Params: { id: string };
   }>("/api/capture/sessions/:id/finalize", async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
@@ -154,166 +155,134 @@ export async function registerCaptureRoutes(
     }
 
     if (session.files.length === 0) {
-      // Nothing to do — clean up
       await cleanupDir(sessionDir(session.id));
       return { success: true, cards: [] };
     }
 
-    const dir = sessionDir(session.id);
-    const createdCards: string[] = [];
-    const filesToStage: string[] = [];
+    const tmpDir = sessionDir(session.id);
     const now = new Date();
-    const timestamp = now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
+    // Format: capture-YYYYMMDDTHHMM-shortId
+    const startDate = new Date(session.startedAt);
+    const datePart = startDate.toISOString().slice(0, 16).replace(/[:-]/g, "").replace("T", "T");
+    // e.g. 20260310T1924
+    const formattedDate = `${datePart.slice(0, 8)}T${datePart.slice(9, 13)}`;
+    const shortId = session.id.slice(0, 8);
+    const sessionDirName = `capture-${formattedDate}-${shortId}`;
+    const sessionRelDir = `box/inbox/${sessionDirName}`;
+    const sessionAbsDir = path.join(boxRoot, sessionRelDir);
 
-    const ctx: CommandContext = {
-      boxRoot,
-      write: () => {},
-      writeLine: () => {},
-    };
+    await fs.mkdir(sessionAbsDir, { recursive: true });
 
-    // Create one memo card per file for simplicity
-    // Audio chunks with the same prefix get grouped into a single card
     const audioFiles = session.files.filter((f) => f.name.startsWith("audio-"));
     const photoFiles = session.files.filter((f) => f.name.startsWith("photo-"));
-    const otherFiles = session.files.filter(
-      (f) => !f.name.startsWith("audio-") && !f.name.startsWith("photo-")
-    );
 
-    console.log(`[capture] Finalizing session ${session.id}: ${audioFiles.length} audio, ${photoFiles.length} photos, ${otherFiles.length} other`);
+    console.log(`[capture] Finalizing session ${session.id} → ${sessionDirName}: ${audioFiles.length} audio, ${photoFiles.length} photos`);
 
-    // Create voice memo from audio files (use first chunk as the attachment)
-    if (audioFiles.length > 0) {
-      const firstAudio = audioFiles[0];
-      if (firstAudio) {
-        const tempPath = path.join(dir, firstAudio.name);
-        const cardName = `Capture_${timestamp}`;
-        const cardPath = `box/inbox/${cardName}.voice-memo.card`;
+    const filesToStage: string[] = [];
+    const audioRefs: string[] = [];
+    const imageRefs: string[] = [];
+    let endedAt = session.startedAt;
 
-        // Determine mimetype from extension
-        const mimetype = firstAudio.name.endsWith(".webm") ? "audio/webm" : "audio/webm";
+    // Create audio cards + copy media files
+    for (const [i, file] of audioFiles.entries()) {
+      const idx = String(i + 1).padStart(3, "0");
+      const audioBasename = `audio-${idx}`;
+      const ext = file.name.endsWith(".webm") ? ".webm" : ".webm";
+      const mediaFilename = `${audioBasename}${ext}`;
+      const cardFilename = `${audioBasename}.audio.card`;
 
-        const result = await runCommand({
-          name: "create",
-          args: {
-            path: cardPath,
-            template: "voice-memo",
-            attachment: tempPath,
-            attachmentMimetype: mimetype,
-            commit: false,
-          },
-          ctx,
-        });
+      // Copy media file
+      const srcPath = path.join(tmpDir, file.name);
+      const destMediaPath = path.join(sessionAbsDir, mediaFilename);
+      await fs.copyFile(srcPath, destMediaPath);
+      filesToStage.push(`${sessionRelDir}/${mediaFilename}`);
 
-        if (result.success) {
-          const resultData = result.data as { cardPath: string; attachmentPath?: string };
-          createdCards.push(resultData.cardPath);
-          filesToStage.push(resultData.cardPath);
-          if (resultData.attachmentPath) {
-            filesToStage.push(resultData.attachmentPath);
-          }
-        } else {
-          console.error("[capture] Failed to create audio card:", result);
-        }
-
-        // Copy additional audio chunks alongside the card
-        for (let i = 1; i < audioFiles.length; i++) {
-          const chunk = audioFiles[i];
-          if (!chunk) continue;
-          const srcPath = path.join(dir, chunk.name);
-          const destPath = path.join(boxRoot, `box/inbox/${cardName}-${chunk.name}`);
-          try {
-            await fs.copyFile(srcPath, destPath);
-            filesToStage.push(`box/inbox/${cardName}-${chunk.name}`);
-          } catch (e) {
-            console.error(`[capture] Failed to copy audio chunk ${chunk.name}:`, e);
-          }
-        }
-      }
-    }
-
-    // Create cards for photos (use voice-memo template since it has no required text content)
-    for (const photo of photoFiles) {
-      const tempPath = path.join(dir, photo.name);
-      const ext = photo.name.endsWith(".png") ? "png" : "jpg";
-      const cardName = `Photo_${timestamp}_${photo.name.replace(/\.[^.]+$/, "")}`;
-      const cardPath = `box/inbox/${cardName}.voice-memo.card`;
-      const mimetype = ext === "png" ? "image/png" : "image/jpeg";
-
-      const result = await runCommand({
-        name: "create",
-        args: {
-          path: cardPath,
-          template: "voice-memo",
-          attachment: tempPath,
-          attachmentMimetype: mimetype,
-          commit: false,
-        },
-        ctx,
+      // Create audio card
+      const cardContent = createAudioTemplate({
+        recordedAt: file.startedAt,
+        source: file.source,
+        filename: mediaFilename,
       });
+      const destCardPath = path.join(sessionAbsDir, cardFilename);
+      await fs.writeFile(destCardPath, cardContent);
+      filesToStage.push(`${sessionRelDir}/${cardFilename}`);
+      audioRefs.push(cardFilename);
 
-      if (result.success) {
-        const resultData = result.data as { cardPath: string; attachmentPath?: string };
-        createdCards.push(resultData.cardPath);
-        filesToStage.push(resultData.cardPath);
-        if (resultData.attachmentPath) {
-          filesToStage.push(resultData.attachmentPath);
-        }
-      } else {
-        console.error(`[capture] Failed to create photo card for ${photo.name}:`, result);
+      // Track latest timestamp for session end
+      if (file.startedAt > endedAt) {
+        endedAt = file.startedAt;
       }
     }
 
-    // Handle other files similarly to photos
-    for (const file of otherFiles) {
-      const tempPath = path.join(dir, file.name);
-      const cardName = `Capture_${timestamp}_${file.name.replace(/\.[^.]+$/, "")}`;
-      const cardPath = `box/inbox/${cardName}.memo.card`;
+    // Create image cards + copy media files
+    for (const [i, file] of photoFiles.entries()) {
+      const idx = String(i + 1).padStart(3, "0");
+      const photoBasename = `photo-${idx}`;
+      const ext = file.name.endsWith(".png") ? ".png" : ".jpg";
+      const mediaFilename = `${photoBasename}${ext}`;
+      const cardFilename = `${photoBasename}.image.card`;
 
-      const result = await runCommand({
-        name: "create",
-        args: {
-          path: cardPath,
-          template: "memo",
-          attachment: tempPath,
-          commit: false,
-        },
-        ctx,
+      // Determine camera source from upload source header
+      const imageSource = file.source === "camera-environment" ? "camera-environment" : "camera-user";
+
+      // Copy media file
+      const srcPath = path.join(tmpDir, file.name);
+      const destMediaPath = path.join(sessionAbsDir, mediaFilename);
+      await fs.copyFile(srcPath, destMediaPath);
+      filesToStage.push(`${sessionRelDir}/${mediaFilename}`);
+
+      // Create image card
+      const cardContent = createImageTemplate({
+        capturedAt: file.startedAt,
+        source: imageSource,
+        filename: mediaFilename,
       });
+      const destCardPath = path.join(sessionAbsDir, cardFilename);
+      await fs.writeFile(destCardPath, cardContent);
+      filesToStage.push(`${sessionRelDir}/${cardFilename}`);
+      imageRefs.push(cardFilename);
 
-      if (result.success) {
-        const resultData = result.data as { cardPath: string; attachmentPath?: string };
-        createdCards.push(resultData.cardPath);
-        filesToStage.push(resultData.cardPath);
-        if (resultData.attachmentPath) {
-          filesToStage.push(resultData.attachmentPath);
-        }
-      } else {
-        console.error(`[capture] Failed to create card for ${file.name}:`, result);
+      if (file.startedAt > endedAt) {
+        endedAt = file.startedAt;
       }
     }
 
-    // Commit all created files in a single commit
+    // Create capture-session card
+    const sessionCardFilename = `${sessionDirName}.capture-session.card`;
+    const sessionCardContent = createCaptureSessionTemplate({
+      sessionId: session.id,
+      startedAt: session.startedAt,
+      endedAt,
+      imageRefs,
+      audioRefs,
+    });
+    const sessionCardPath = path.join(sessionAbsDir, sessionCardFilename);
+    await fs.writeFile(sessionCardPath, sessionCardContent);
+    filesToStage.push(`${sessionRelDir}/${sessionCardFilename}`);
+
+    // Single commit for the whole session
     if (filesToStage.length > 0) {
       await stageFiles(boxRoot, filesToStage);
       await commit(boxRoot, {
-        message: `Capture session: ${createdCards.length} card(s)`,
+        message: `Capture session: ${audioRefs.length} audio, ${imageRefs.length} photos`,
         trailers: { "Created-By": "capture" },
       });
     }
 
-    // Clean up
-    await cleanupDir(dir);
+    // Clean up temp dir
+    await cleanupDir(tmpDir);
+
+    const sessionCardRelPath = `${sessionRelDir}/${sessionCardFilename}`;
+    console.log(`[capture] Created capture session: ${sessionCardRelPath}`);
 
     // Broadcast
-    for (const cardPath of createdCards) {
-      eventBus.emit("card-created", {
-        path: cardPath,
-        template: "capture",
-        timestamp: now.toISOString(),
-      });
-    }
+    eventBus.emit("card-created", {
+      path: sessionCardRelPath,
+      template: "capture-session",
+      timestamp: now.toISOString(),
+    });
 
-    return { success: true, cards: createdCards };
+    return { success: true, cards: [sessionCardRelPath] };
   });
 }
 
