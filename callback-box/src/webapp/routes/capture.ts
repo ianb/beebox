@@ -18,6 +18,7 @@ import { stageFiles, commit } from "../../cli/lib/git.js";
 import { createAudioTemplate } from "../../schemas/audio.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
+import { createScheduledScriptTemplate } from "../../schemas/scheduled-script.js";
 
 interface CaptureSessionData {
   id: string;
@@ -269,6 +270,9 @@ export async function registerCaptureRoutes(
       });
     }
 
+    // Create one-shot scheduled script to trigger process-captures on next wakeup
+    await createProcessCapturesTrigger(boxRoot);
+
     // Clean up temp dir
     await cleanupDir(tmpDir);
 
@@ -292,4 +296,33 @@ async function cleanupDir(dir: string): Promise<void> {
   } catch (e) {
     console.error(`[capture] Failed to clean up dir ${dir}:`, e);
   }
+}
+
+/**
+ * Create a one-shot scheduled script that triggers process-captures
+ * on the next wakeup. Idempotent — skips if the trigger already exists
+ * (e.g. from a previous capture that hasn't been processed yet).
+ */
+async function createProcessCapturesTrigger(boxRoot: string): Promise<void> {
+  const triggerPath = path.join(boxRoot, "config/schedules/process-captures.scheduled-script.card");
+  try {
+    await fs.access(triggerPath);
+    // Already exists — the procedure will handle all pending sessions
+    console.log("[capture] process-captures trigger already exists, skipping");
+    return;
+  } catch {
+    // Doesn't exist, create it
+  }
+
+  const content = createScheduledScriptTemplate({
+    onWakeup: true,
+    once: true,
+    lockGroup: "captures",
+    runs: "cb procedure run process-captures",
+    description: "Process new capture sessions (auto-created by capture finalize)",
+  });
+
+  await fs.mkdir(path.dirname(triggerPath), { recursive: true });
+  await fs.writeFile(triggerPath, content);
+  console.log("[capture] Created process-captures trigger for next wakeup");
 }
