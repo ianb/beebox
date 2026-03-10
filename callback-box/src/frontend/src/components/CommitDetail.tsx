@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { HistoryCommit } from "../api";
 import { trpc } from "../lib/trpc";
+import { getApiBase } from "../api";
 import { cbSource } from "../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { CardTreeView, type ElementNode } from "./CardTreeView";
@@ -196,7 +197,7 @@ function getFileExt(filePath: string): string {
 
 function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
   const ext = getFileExt(file.path);
-  const blobUrl = `api/history/blob/${hash}/${file.path}`;
+  const blobUrl = `${getApiBase()}/history/blob/${hash}/${file.path}`;
 
   if (IMAGE_EXTS.includes(ext)) {
     return (
