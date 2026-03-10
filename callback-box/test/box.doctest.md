@@ -61,6 +61,7 @@ store/archive/failed
 store/archive/processed
 store/integrated
 store/recipes
+store/todos
 store/trash
 tricks
 tricks/lib

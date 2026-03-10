@@ -10,6 +10,7 @@ import { chatRouter } from "./routers/chat.js";
 import { commandsRouter } from "./routers/commands.js";
 import { debugLogRouter } from "./routers/debugLog.js";
 import { adminRouter } from "./routers/admin.js";
+import { todosRouter } from "./routers/todos.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -23,6 +24,7 @@ export const appRouter = router({
   commands: commandsRouter,
   debugLog: debugLogRouter,
   admin: adminRouter,
+  todos: todosRouter,
 });
 
 export type AppRouter = typeof appRouter;

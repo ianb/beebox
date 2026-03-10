@@ -169,6 +169,7 @@ function AppNav() {
     { to: `${base}/questions`, label: "Questions", match: (p: string) => p.startsWith(`${base}/questions`) },
     { to: `${base}/news`, label: "News", match: (p: string) => p.startsWith(`${base}/news`) },
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
+    { to: `${base}/todos`, label: "Todos", match: (p: string) => p.startsWith(`${base}/todos`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
     { to: `${base}/capture`, label: "Capture", match: (p: string) => p.startsWith(`${base}/capture`) },
     // When no auth, show Settings/Admin as regular nav links (profile menu handles them otherwise)

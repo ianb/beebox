@@ -26,6 +26,7 @@ import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
 import { createScheduledScriptTemplate } from "./scheduled-script.js";
 import { createBookmarkTemplate } from "./bookmark.js";
+import { createTodoListTemplate } from "./todo-list.js";
 
 /**
  * Template definition with typed arguments.
@@ -395,5 +396,31 @@ registerTemplate({
     if (args.tags) opts.tags = args.tags;
     opts.created = new Date().toISOString();
     return createBookmarkTemplate(opts);
+  },
+});
+
+registerTemplate({
+  name: "todo-list",
+  description: "A todo list card — human-oriented action items",
+  cardTypes: ["todo-list"],
+  defaultForTypes: ["todo-list"],
+  argsSchema: z.object({
+    name: z.string().describe("Display name for the todo list"),
+    details: z.string().optional().describe("Description of the list's purpose"),
+    items: z
+      .array(z.object({
+        name: z.string().describe("Item name"),
+        status: z.string().optional().describe("Item status (default: pending)"),
+      }))
+      .optional()
+      .describe("Initial items"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createTodoListTemplate>[0] = {
+      name: args.name,
+    };
+    if (args.details) opts.details = args.details;
+    if (args.items) opts.items = args.items;
+    return createTodoListTemplate(opts);
   },
 });

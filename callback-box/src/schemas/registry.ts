@@ -40,6 +40,7 @@ import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
+import { TodoListSchema } from "./todo-list.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -75,6 +76,7 @@ export const schemas: ElementSchema[] = [
   ChatJobSchema,
   PersonalitySchema,
   QuestionFollowupJobSchema,
+  TodoListSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
@@ -262,3 +264,4 @@ export { ChatThreadSchema } from "./chat-thread.js";
 export { ChatJobSchema } from "./chat-job.js";
 export { PersonalitySchema } from "./personality.js";
 export { QuestionFollowupJobSchema } from "./question-followup-job.js";
+export { TodoListSchema } from "./todo-list.js";

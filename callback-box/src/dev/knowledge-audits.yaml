@@ -400,3 +400,53 @@ tests:
       The agent shouldn't need to know the outbound mechanics to process
       a chat job — just write the response and commit. But understanding
       the flow helps debug issues. This is discoverable from connector docs.
+  # === Todo Lists ===
+
+  - id: todo-list-structure
+    prompt: "Show me the XML structure of a todo-list card."
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-todo-list.md before answering"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["<todo-list", "<item"]
+    tags: [cards, todos]
+
+  - id: todo-list-storage
+    prompt: "Where do todo lists live in the box?"
+    expected_level: knows_directly
+    watch_for: "Names store/todos/ directly from agent guide"
+    correct_contains: ["store/todos"]
+    tags: [todos, navigation]
+
+  - id: todo-list-lifecycle
+    prompt: "What happens to a todo list when all its items are done?"
+    expected_level: knows_about
+    watch_for: "Describes archiving to store/archive/done/ or store/archive/deferred/"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["archive"]
+    tags: [todos, lifecycle]
+
+  - id: todo-list-create
+    prompt: "Create a todo-list card for weekend errands with items: buy groceries, mow lawn, return library books."
+    expected_level: knows_about
+    watch_for: "Reads card docs, creates a .todo-list.card file in store/todos/ using cb create or direct write"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["todo-list", "store/todos"]
+    tags: [todos, cards]
+
+  - id: todo-list-nested-items
+    prompt: "Can todo items have sub-items? How does nesting work?"
+    expected_level: knows_about
+    watch_for: "Describes nested <item> elements within parent items"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["<item"]
+    tags: [todos, cards]
+
+  - id: todo-list-vs-job
+    prompt: "What's the difference between a todo list and a job card?"
+    expected_level: knows_about
+    watch_for: "Distinguishes human action items (todos) from agent work items (jobs)"
+    tags: [todos, jobs]
+    notes: >
+      This tests understanding that todos are for humans while jobs are
+      for agents. The agent should not confuse the two or suggest using
+      jobs for human tasks.

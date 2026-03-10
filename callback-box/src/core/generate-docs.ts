@@ -557,6 +557,7 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "| `store/archive/` | Processed/completed items |",
     "| `store/integrated/` | Feedback absorbed into guides |",
     "| `store/recipes/` | Recipe collection (subdirectories for organization) |",
+    "| `store/todos/` | Active todo lists — human action items |",
     "| `store/trash/` | Soft-deleted items |",
     "| `config/` | Box configuration |",
     "",
