@@ -15,6 +15,7 @@
  */
 export function getApiBase(): string {
   const firstSegment = window.location.pathname.split("/")[1] || "";
+  if (!firstSegment) return "/api";
   return `/${firstSegment}/api`;
 }
 

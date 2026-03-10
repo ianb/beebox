@@ -12,9 +12,16 @@ const queryClient = new QueryClient({
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${getApiBase()}/trpc`,
+      // Placeholder — the custom fetch rewrites the base per-request so
+      // the URL always reflects the current box slug, even after redirects.
+      url: "/api/trpc",
       fetch: async (url, options) => {
-        const response = await fetch(url, options);
+        const reqUrl = typeof url === "string" ? url : url.toString();
+        const trpcPath = reqUrl.indexOf("/api/trpc");
+        const fixedUrl = trpcPath !== -1
+          ? `${getApiBase()}/trpc${reqUrl.slice(trpcPath + "/api/trpc".length)}`
+          : reqUrl;
+        const response = await fetch(fixedUrl, options);
         if (response.status === 401) {
           const returnTo = encodeURIComponent(
             window.location.pathname + window.location.search
