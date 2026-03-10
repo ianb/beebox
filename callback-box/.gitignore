@@ -8,3 +8,4 @@ dist/
 .thinking/local/
 .tap/
 deploy-info.json
+src/dev/reports/
