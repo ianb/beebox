@@ -156,7 +156,8 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
           accessible.push({ slug: b.slug, name: b.slug });
         } else {
           const config = await loadBoxConfig(b.boxRoot);
-          if (!config.allowedEmails?.length || config.allowedEmails.includes(email)) {
+          // Only show boxes where user is explicitly allowed
+          if (config.allowedEmails?.length && config.allowedEmails.includes(email)) {
             accessible.push({ slug: b.slug, name: b.slug });
           }
         }
@@ -205,7 +206,8 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
           const ownerEmail = getOwnerEmail();
           if (email !== ownerEmail) {
             const config = await loadBoxConfig(box.boxRoot);
-            if (config.allowedEmails?.length && !config.allowedEmails.includes(email)) {
+            // If no allowedEmails configured, only the owner can access
+            if (!config.allowedEmails?.length || !config.allowedEmails.includes(email)) {
               return reply.status(403).send({ error: "Not authorized for this box" });
             }
           }

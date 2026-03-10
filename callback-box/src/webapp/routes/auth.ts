@@ -135,7 +135,8 @@ export async function registerAuthRoutes(
         accessibleBoxes.push(box.slug);
       } else {
         const config = await loadBoxConfig(box.boxRoot);
-        if (!config.allowedEmails?.length || config.allowedEmails.includes(user.email)) {
+        // Only show boxes where user is explicitly allowed
+        if (config.allowedEmails?.length && config.allowedEmails.includes(user.email)) {
           accessibleBoxes.push(box.slug);
         }
       }
