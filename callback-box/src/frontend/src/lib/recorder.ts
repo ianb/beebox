@@ -20,6 +20,7 @@ export class ChunkedRecorder {
   private chunkStartedAt: string = "";
   private onChunk: ChunkCallback;
   private deviceId: string | undefined;
+  private stopResolve: (() => void) | null = null;
 
   constructor(options: ChunkedRecorderOptions) {
     this.onChunk = options.onChunk;
@@ -60,15 +61,41 @@ export class ChunkedRecorder {
         this.chunkIndex++;
         this.chunkStartedAt = new Date().toISOString();
       }
+      // Resolve the stop promise after the final dataavailable fires
+      if (this.stopResolve) {
+        this.stopResolve();
+        this.stopResolve = null;
+      }
     };
 
     this.mediaRecorder.start(CHUNK_INTERVAL_MS);
+  }
+
+  /**
+   * Stop recording and return a promise that resolves after the final
+   * dataavailable event has fired (and onChunk has been called).
+   */
+  stopAsync(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") {
+        this.cleanup();
+        resolve();
+        return;
+      }
+      this.stopResolve = resolve;
+      this.mediaRecorder.stop();
+      this.cleanup();
+    });
   }
 
   stop(): void {
     if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
       this.mediaRecorder.stop();
     }
+    this.cleanup();
+  }
+
+  private cleanup(): void {
     if (this.stream) {
       for (const t of this.stream.getTracks()) t.stop();
       this.stream = null;

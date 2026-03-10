@@ -111,6 +111,7 @@ export function CapturePage() {
   const timerRef = useRef<number | null>(null);
   const recordStartRef = useRef<number>(0);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const pendingUploads = useRef<Promise<void>[]>([]);
 
   // Create session on mount + enumerate devices
   useEffect(() => {
@@ -195,16 +196,18 @@ export function CapturePage() {
   }
 
   const uploadPhoto = useCallback(
-    async ({ sessionId: sid, index, blob, startedAt, source }: UploadPhotoParams) => {
+    ({ sessionId: sid, index, blob, startedAt, source }: UploadPhotoParams) => {
       const ext = blob.type.includes("png") ? "png" : "jpg";
       const filename = `photo-${String(index + 1).padStart(3, "0")}.${ext}`;
       setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploading"; return next; });
-      try {
-        await uploadCaptureFile({ sessionId: sid, filename, blob, startedAt, source });
-        setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
-      } catch (_e) {
-        setPhotoStates((prev) => { const next = [...prev]; next[index] = "failed"; return next; });
-      }
+      const p = uploadCaptureFile({ sessionId: sid, filename, blob, startedAt, source })
+        .then(() => {
+          setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
+        })
+        .catch((_e) => {
+          setPhotoStates((prev) => { const next = [...prev]; next[index] = "failed"; return next; });
+        });
+      pendingUploads.current.push(p);
     },
     []
   );
@@ -214,13 +217,14 @@ export function CapturePage() {
       if (!sessionId) return;
       const filename = `audio-${String(index + 1).padStart(3, "0")}.webm`;
       setAudioChunks((prev) => [...prev, { index, state: "uploading" }]);
-      uploadCaptureFile({ sessionId, filename, blob, startedAt, source: "microphone" })
+      const p = uploadCaptureFile({ sessionId, filename, blob, startedAt, source: "microphone" })
         .then(() => {
           setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "uploaded" } : c)));
         })
         .catch((_e: Error) => {
           setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "failed" } : c)));
         });
+      pendingUploads.current.push(p);
     },
     [sessionId]
   );
@@ -326,7 +330,15 @@ export function CapturePage() {
     if (!sessionId || finalizing) return;
     setFinalizing(true);
     try {
-      if (recording && recorderRef.current) { recorderRef.current.stop(); recorderRef.current = null; setRecording(false); }
+      // Stop recorder and wait for the final dataavailable event to fire
+      if (recording && recorderRef.current) {
+        await recorderRef.current.stopAsync();
+        recorderRef.current = null;
+        setRecording(false);
+      }
+      // Wait for all in-flight uploads (audio chunks + photos) to complete
+      await Promise.all(pendingUploads.current);
+      pendingUploads.current = [];
       await finalizeCaptureSession(sessionId);
       setSessionId(null); setPhotoStates([]); setAudioChunks([]); setError(null); setFinalizing(false);
       try {
@@ -339,6 +351,7 @@ export function CapturePage() {
   const handleCancel = useCallback(async () => {
     if (!sessionId) return;
     if (recording && recorderRef.current) { recorderRef.current.stop(); recorderRef.current = null; setRecording(false); }
+    pendingUploads.current = [];
     if (cameraOn) { cameraRef.current.stop(); setCameraOn(false); }
     try {
       await cancelCaptureSession(sessionId);
