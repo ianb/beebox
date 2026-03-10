@@ -224,7 +224,7 @@ export async function registerCaptureRoutes(
       }
     }
 
-    // Create cards for photos
+    // Create cards for photos (use voice-memo template since it has no required text content)
     for (const photo of photoFiles) {
       const tempPath = path.join(dir, photo.name);
       const ext = photo.name.endsWith(".png") ? "png" : "jpg";
@@ -236,7 +236,7 @@ export async function registerCaptureRoutes(
         name: "create",
         args: {
           path: cardPath,
-          template: "memo",
+          template: "voice-memo",
           attachment: tempPath,
           attachmentMimetype: mimetype,
           commit: true,
