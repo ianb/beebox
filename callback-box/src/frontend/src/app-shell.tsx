@@ -10,8 +10,13 @@ import { FileView } from "./components/FileView";
 import { NewsPage } from "./components/NewsPage";
 import { BrowsePage } from "./components/BrowsePage";
 import { useCurrentUser, type CurrentUser } from "./hooks/useCurrentUser";
+import { enableDebugLogCapture, DebugLogPanel, useErrorCount, clearErrorCount } from "./components/DebugLog";
+import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 
 import { href } from "./lib/routing";
+
+// Start capturing console errors immediately so we never miss early failures
+enableDebugLogCapture();
 
 interface BoxesResult {
   boxes: Array<{ slug: string; name: string }>;
@@ -35,7 +40,7 @@ async function fetchBoxes(): Promise<BoxesResult> {
 /**
  * Profile avatar + dropdown menu (Settings, Admin, Logout).
  */
-function ProfileMenu({ user, boxSlug }: { user: CurrentUser | null; boxSlug: string }) {
+function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { user: CurrentUser | null; boxSlug: string; onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const location = useRouterState({ select: (s) => s.location });
@@ -51,10 +56,7 @@ function ProfileMenu({ user, boxSlug }: { user: CurrentUser | null; boxSlug: str
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // When no auth, render nothing — nav links handle Settings/Admin directly
-  if (!user) return null;
-
-  const initial = (user.name || user.email)[0]!.toUpperCase();
+  const initial = user ? (user.name || user.email)[0]!.toUpperCase() : null;
   const isOnSettings = location.pathname.startsWith(`${base}/settings`);
   const isOnAdmin = location.pathname === `${base}/admin`;
 
@@ -63,28 +65,35 @@ function ProfileMenu({ user, boxSlug }: { user: CurrentUser | null; boxSlug: str
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 rounded-full hover:ring-2 hover:ring-white/30 transition-all"
-        title={user.name}
+        title={user ? user.name : "Menu"}
       >
-        {user.picture ? (
+        {user && user.picture ? (
           <img
             src={user.picture}
             alt=""
             className="w-7 h-7 rounded-full"
             referrerPolicy="no-referrer"
           />
-        ) : (
+        ) : initial ? (
           <span className="w-7 h-7 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center">
             {initial}
           </span>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/80">
+            <circle cx="10" cy="10" r="7" />
+            <path d="M10 8.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM10 9.5c-2.5 0-4 1.5-4 3v.5h8v-.5c0-1.5-1.5-3-4-3z" fill="currentColor" stroke="none" />
+          </svg>
         )}
       </button>
 
       {open ? (
         <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm">
-          <div className="px-3 py-2 border-b border-warm-100">
-            <div className="font-medium text-warm-900 truncate">{user.name}</div>
-            <div className="text-xs text-warm-500 truncate">{user.email}</div>
-          </div>
+          {user ? (
+            <div className="px-3 py-2 border-b border-warm-100">
+              <div className="font-medium text-warm-900 truncate">{user.name}</div>
+              <div className="text-xs text-warm-500 truncate">{user.email}</div>
+            </div>
+          ) : null}
 
           <Link
             to={href(`${base}/settings`)}
@@ -98,33 +107,45 @@ function ProfileMenu({ user, boxSlug }: { user: CurrentUser | null; boxSlug: str
             Settings
           </Link>
 
-          {user.isOwner ? (
-            <Link
-              to={href(`${base}/admin`)}
-              onClick={() => setOpen(false)}
-              className={`block px-3 py-2 transition-colors ${
-                isOnAdmin
-                  ? "bg-warm-100 text-warm-900 font-medium"
-                  : "text-warm-700 hover:bg-warm-50"
-              }`}
-            >
-              Admin
-            </Link>
-          ) : null}
+          <Link
+            to={href(`${base}/admin`)}
+            onClick={() => setOpen(false)}
+            className={`block px-3 py-2 transition-colors ${
+              isOnAdmin
+                ? "bg-warm-100 text-warm-900 font-medium"
+                : "text-warm-700 hover:bg-warm-50"
+            }`}
+          >
+            Admin
+          </Link>
 
           <div className="border-t border-warm-100 mt-1 pt-1">
+            <button
+              onClick={() => { setOpen(false); onToggleSourceView(); }}
+              className="block w-full text-left px-3 py-2 text-warm-700 hover:bg-warm-50 transition-colors"
+            >
+              Source View
+            </button>
+            <button
+              onClick={() => { setOpen(false); onToggleDebugLog(); }}
+              className="block w-full text-left px-3 py-2 text-warm-700 hover:bg-warm-50 transition-colors"
+            >
+              Debug Log
+            </button>
             <button
               onClick={() => { setOpen(false); window.location.reload(); }}
               className="block w-full text-left px-3 py-2 text-warm-700 hover:bg-warm-50 transition-colors"
             >
               Reload
             </button>
-            <a
-              href="/auth/logout"
-              className="block px-3 py-2 text-warm-700 hover:bg-warm-50 transition-colors"
-            >
-              Sign out
-            </a>
+            {user ? (
+              <a
+                href="/auth/logout"
+                className="block px-3 py-2 text-warm-700 hover:bg-warm-50 transition-colors"
+              >
+                Sign out
+              </a>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -137,7 +158,7 @@ function ProfileMenu({ user, boxSlug }: { user: CurrentUser | null; boxSlug: str
  * On mobile: shows current page name + hamburger menu.
  * On desktop: shows all links inline.
  */
-function AppNav() {
+function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const { boxSlug } = useParams({ strict: false });
   const location = useRouterState({ select: (s) => s.location });
   const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
@@ -145,16 +166,8 @@ function AppNav() {
   const menuRef = useRef<HTMLDivElement>(null);
   const currentUser = useCurrentUser();
 
-  // Determine if admin should show (owner or no auth)
-  const [noAuth, setNoAuth] = useState(false);
   useEffect(() => {
     fetchBoxes().then((result) => setBoxes(result.boxes));
-    fetch("/auth/me").then((r) => {
-      if (r.status === 404) {
-        setNoAuth(true);
-      }
-      return null;
-    }).catch(() => { setNoAuth(true); });
   }, []);
 
   useEffect(() => {
@@ -178,11 +191,6 @@ function AppNav() {
     { to: `${base}/todos`, label: "Todos", match: (p: string) => p.startsWith(`${base}/todos`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
     { to: `${base}/capture`, label: "Capture", match: (p: string) => p.startsWith(`${base}/capture`) },
-    // When no auth, show Settings/Admin as regular nav links (profile menu handles them otherwise)
-    ...(noAuth ? [
-      { to: `${base}/settings`, label: "Settings", match: (p: string) => p.startsWith(`${base}/settings`) },
-      { to: `${base}/admin`, label: "Admin", match: (p: string) => p === `${base}/admin` },
-    ] : []),
   ];
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";
@@ -228,7 +236,7 @@ function AppNav() {
               </svg>
             )}
           </button>
-          <ProfileMenu user={noAuth ? null : currentUser} boxSlug={boxSlug || ""} />
+          <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
         </div>
       </div>
       {/* Mobile dropdown */}
@@ -266,8 +274,9 @@ function AppNav() {
             {link.label}
           </Link>
         ))}
-        <div className="ml-auto">
-          <ProfileMenu user={noAuth ? null : currentUser} boxSlug={boxSlug || ""} />
+        <div className="ml-auto flex items-center gap-2">
+          <ErrorBadge onToggleDebugLog={onToggleDebugLog} />
+          <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
         </div>
       </div>
     </nav>
@@ -275,15 +284,44 @@ function AppNav() {
 }
 
 /**
+ * Small red dot in the nav bar when console errors have occurred.
+ */
+function ErrorBadge({ onToggleDebugLog }: { onToggleDebugLog: () => void }) {
+  const errorCount = useErrorCount();
+  if (errorCount === 0) return null;
+  return (
+    <button
+      onClick={() => { clearErrorCount(); onToggleDebugLog(); }}
+      className="flex items-center gap-1 text-xs bg-red-500/80 text-white px-1.5 py-0.5 rounded-full hover:bg-red-600 transition-colors"
+      title={`${errorCount} error${errorCount !== 1 ? "s" : ""}`}
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-white" />
+      {errorCount}
+    </button>
+  );
+}
+
+/**
  * Layout wrapper with navigation.
  */
 export function AppLayout() {
+  const [showDebugLog, setShowDebugLog] = useState(false);
+  const sourceView = useSourceView();
+
+  const handleToggleSourceView = sourceView.toggle;
+  const handleCloseSourceView = sourceView.toggle;
+
   return (
     <div className="h-screen h-[100dvh] flex flex-col">
-      <AppNav />
+      <AppNav
+        onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
+        onToggleSourceView={handleToggleSourceView}
+      />
       <div className="flex-1 min-h-0">
         <Outlet />
       </div>
+      {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
+      <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
     </div>
   );
 }

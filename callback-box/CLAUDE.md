@@ -84,6 +84,7 @@ plugins/          Claude Code plugins (card-validator hook)
 - **Don't invent card XML formats.** Every card type has a schema. Read it in `src/schemas/` before creating or modifying cards. The schema's `element()` call defines exactly what attributes and children are valid.
 - **Service fakes are domain-specific**, not generic mocks. They have real in-memory state. Read existing fakes before writing new ones.
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Use `cb commit` which handles validation.
+- **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server. Read them with `curl https://box.example.com/<box>/api/debug-log` or check the log file at `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
 - **Fix errors as you find them.** If you encounter lint, type, or test errors — even pre-existing ones from previous work — fix them. Don't leave broken windows.
 - **Leave the repo clean when committing.** If there's uncommitted work, make enough commits to leave everything in a clean state. Don't leave half-done changes lying around.
 
@@ -114,6 +115,7 @@ Keep additions concise. One line preventing a mistake is better than a paragraph
 | Procedures | `docs/procedure-implementation.md` |
 | Deployment | `deploy/README.md` |
 | Adding a box | `docs/adding-a-box.md` |
+| Client debug log | `docs/client-debug-log.md` |
 | Feature ideas | `docs/ideas.md` |
 
 @CONVENTIONS.md

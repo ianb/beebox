@@ -23,16 +23,13 @@ import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { sendSound, tick, recordingStart, alarm } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
-import { DebugLogPanel, enableDebugLogCapture } from "./DebugLog";
+import { DebugLogPanel } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, ToolList, MarkdownContent, groupMessages } from "./ChatMessages";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import type { ChatSchedule } from "../../../core/chat-schedules";
-
-// Start capturing console logs immediately so we don't miss early messages
-enableDebugLogCapture();
 
 /**
  * Countdown pill showing time remaining for an active schedule.

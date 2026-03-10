@@ -1,8 +1,10 @@
 /**
  * On-screen debug log overlay + server-side log forwarding.
- * Captures console.log/warn/error messages and displays them
- * in a small scrollable panel. Also forwards them to /api/debug-log
- * so they can be read server-side (e.g., by an agent).
+ *
+ * Console errors and warnings are always captured and forwarded to the server
+ * (for persistent logging). The on-screen panel can be toggled independently.
+ * All console levels (log, info) are captured locally but only forwarded to
+ * the server when the debug panel is active.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -20,6 +22,9 @@ const listeners: Set<() => void> = new Set();
 let patched = false;
 let sendBuffer: Array<{ level: string; message: string }> = [];
 let sendTimer: ReturnType<typeof setTimeout> | null = null;
+let verboseForwarding = false;
+let errorCount = 0;
+const errorCountListeners: Set<() => void> = new Set();
 
 function flushToServer() {
   if (sendBuffer.length === 0) return;
@@ -34,6 +39,8 @@ function flushToServer() {
 }
 
 function queueForServer(level: string, message: string) {
+  // Always forward errors and warnings; forward log/info only in verbose mode
+  if (level !== "error" && level !== "warn" && !verboseForwarding) return;
   sendBuffer.push({ level, message });
   if (!sendTimer) {
     sendTimer = setTimeout(flushToServer, 500);
@@ -53,14 +60,63 @@ function patchConsole() {
       logEntries.push({ level, message, timestamp: Date.now() });
       if (logEntries.length > MAX_ENTRIES) logEntries.shift();
       queueForServer(level, message);
+      if (level === "error") {
+        errorCount++;
+        for (const fn of errorCountListeners) fn();
+      }
       for (const fn of listeners) fn();
     };
   }
+
+  // Capture unhandled errors and promise rejections
+  window.addEventListener("error", (event) => {
+    const message = `Uncaught: ${event.message} (${event.filename}:${event.lineno})`;
+    logEntries.push({ level: "error", message, timestamp: Date.now() });
+    if (logEntries.length > MAX_ENTRIES) logEntries.shift();
+    queueForServer("error", message);
+    errorCount++;
+    for (const fn of errorCountListeners) fn();
+    for (const fn of listeners) fn();
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason instanceof Error ? event.reason.message : String(event.reason);
+    const message = `Unhandled rejection: ${reason}`;
+    logEntries.push({ level: "error", message, timestamp: Date.now() });
+    if (logEntries.length > MAX_ENTRIES) logEntries.shift();
+    queueForServer("error", message);
+    errorCount++;
+    for (const fn of errorCountListeners) fn();
+    for (const fn of listeners) fn();
+  });
 }
 
-/** Call early (e.g., at app init) to start capturing logs even before the panel opens. */
+/** Call at app init to start capturing logs. Always captures errors/warns to server. */
 export function enableDebugLogCapture() {
   patchConsole();
+}
+
+/** Enable forwarding of all log levels (not just errors/warns) to the server. */
+export function setVerboseForwarding(enabled: boolean) {
+  verboseForwarding = enabled;
+}
+
+/** Hook that returns the current error count (since page load). */
+export function useErrorCount(): number {
+  const [count, setCount] = useState(errorCount);
+  useEffect(() => {
+    const fn = () => setCount(errorCount);
+    errorCountListeners.add(fn);
+    fn();
+    return () => { errorCountListeners.delete(fn); };
+  }, []);
+  return count;
+}
+
+/** Reset the error counter (e.g., when the user opens the debug panel). */
+export function clearErrorCount() {
+  errorCount = 0;
+  for (const fn of errorCountListeners) fn();
 }
 
 function useLogEntries(): LogEntry[] {
@@ -90,6 +146,11 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
+    setVerboseForwarding(true);
+    return () => setVerboseForwarding(false);
+  }, []);
+
+  useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [entries.length]);
 
@@ -114,7 +175,7 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
           className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
         <button onClick={clearLog} className="text-warm-500 hover:text-warm-700">Clear</button>
-        <button onClick={onClose} className="text-warm-500 hover:text-warm-700 font-bold">✕</button>
+        <button onClick={onClose} className="text-warm-500 hover:text-warm-700 font-bold">{"\u2715"}</button>
       </div>
       <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-1 font-mono text-[11px] leading-tight">
         {filtered.length === 0 ? (
