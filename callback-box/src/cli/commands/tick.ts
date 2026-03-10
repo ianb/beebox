@@ -14,6 +14,7 @@ import {
   parseScheduledScript,
   isDue,
   isWithinBudget,
+  checkMissingConnectors,
   type ScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import {
@@ -147,6 +148,17 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       skipCount++;
       scripts.push({ name: scriptName, status: "skipped" });
       continue;
+    }
+
+    // Requirements check: skip if required connectors are missing
+    if (parsed.requires) {
+      const missing = checkMissingConnectors(boxRoot, parsed.requires);
+      if (missing.length > 0) {
+        if (!options.quiet) console.log(`  Skipping ${scriptName}: missing connectors: ${missing.join(", ")}`);
+        skipCount++;
+        scripts.push({ name: scriptName, status: "skipped" });
+        continue;
+      }
     }
 
     // Budget check: skip if cumulative runtime within window is exceeded

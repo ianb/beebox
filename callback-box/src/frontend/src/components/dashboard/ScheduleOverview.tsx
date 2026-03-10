@@ -94,7 +94,11 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
         {s.lastRun ? timeAgo(s.lastRun) : "never"}
       </td>
       <td className="py-2">
-        {s.running ? (
+        {s.missingRequirements && s.missingRequirements.length > 0 ? (
+          <span className="text-amber-600 text-xs" title={`Missing: ${s.missingRequirements.join(", ")}`}>
+            &#9888; {s.missingRequirements.join(", ")}
+          </span>
+        ) : s.running ? (
           <RunningIndicator running={s.running} />
         ) : (
           <StatusIndicator lastResult={s.lastResult} lastError={s.lastError} />

@@ -369,6 +369,7 @@ interface DefaultSchedule {
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   lockGroup?: string;
   enabled?: boolean;
+  requires?: string[];
 }
 
 const DEFAULT_SCHEDULES: DefaultSchedule[] = [
@@ -382,6 +383,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     runs: "cb wakeup --connector rss",
     source: "Check RSS feeds twice daily and on wakeup",
     lockGroup: "news",
+    requires: [],
     createAfterSuccess: [{
       path: "config/schedules/process-news.scheduled-script.card",
       args: {
@@ -402,6 +404,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     enabled: false,
     runs: "cb wakeup --connector gmail",
     source: "Check email frequently during active hours",
+    requires: ["gmail"],
   },
   {
     name: "check-calendar",
@@ -412,6 +415,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     enabled: false,
     runs: "cb wakeup --connector google-calendar",
     source: "Sync calendar changes hourly",
+    requires: ["google"],
   },
   {
     name: "check-raindrop",
@@ -422,6 +426,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     enabled: false,
     runs: "cb wakeup --connector raindrop",
     source: "Sync bookmarks periodically",
+    requires: ["raindrop"],
   },
 ];
 
@@ -448,6 +453,7 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       ...(sched.createAfterSuccess && { createAfterSuccess: sched.createAfterSuccess }),
       ...(sched.lockGroup && { lockGroup: sched.lockGroup }),
       ...(sched.enabled === false && { enabled: false }),
+      ...(sched.requires && sched.requires.length > 0 && { requires: sched.requires }),
       runs: sched.runs,
       description: sched.description,
       source: sched.source,

@@ -12,6 +12,7 @@ import {
   parseScheduledScript,
   isDueForWakeup,
   isWithinBudget,
+  checkMissingConnectors,
   type ScheduledScript,
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
@@ -66,6 +67,15 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     const state = await loadScriptState(boxRoot, scriptName);
     if (!isDueForWakeup(parsed, { lastRun: state.lastRun, now })) {
       continue;
+    }
+
+    // Requirements check
+    if (parsed.requires) {
+      const missing = checkMissingConnectors(boxRoot, parsed.requires);
+      if (missing.length > 0) {
+        console.log(`  Skipping ${scriptName}: missing connectors: ${missing.join(", ")}`);
+        continue;
+      }
     }
 
     // Budget check

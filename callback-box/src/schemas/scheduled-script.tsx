@@ -8,6 +8,8 @@
  * The filename stem is the identity (e.g., check-email.scheduled-script.card).
  */
 
+import { accessSync } from "node:fs";
+import { join } from "node:path";
 import { element } from "cardworks";
 import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
@@ -40,6 +42,17 @@ export const CreateAfterSuccess = element("create-after-success", {
   text: z.string().optional(),
 });
 
+export const RequiresConnector = element("connector", {
+  attrs: {
+    /** Name of the connector config (maps to config/connectors/<name>.secret.json) */
+    name: z.string(),
+  },
+});
+
+export const Requires = element("requires", {
+  children: z.array(RequiresConnector),
+});
+
 // ============================================
 // Schema
 // ============================================
@@ -67,7 +80,7 @@ export const ScheduledScriptSchema = element("scheduled-script", {
     /** Lock group name — scripts in the same group won't run concurrently */
     "lock-group": z.string().optional(),
   },
-  children: z.array(z.union([Runs, ScriptSource, ScheduleDescription, CreateAfterSuccess])),
+  children: z.array(z.union([Runs, ScriptSource, ScheduleDescription, CreateAfterSuccess, Requires])),
   instructions: `# Scheduled Script Cards
 
 Scheduled scripts define commands to run on a schedule. They live in \`config/schedules/\`.
@@ -91,6 +104,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **<description>**: Optional. Human-readable summary of what this schedule does.
 - **<source>**: Optional. Why this schedule exists, with optional \`ref\` to a related card.
 - **<create-after-success path="...">**: Optional. Create a card at the given path after successful execution. Text content is key=value lines (one per line) passed as template args. Skipped if the target file already exists.
+- **<requires>**: Optional. Declares prerequisites. Contains \`<connector name="..." />\` children. The schedule won't run if any required connector's secret file (\`config/connectors/<name>.secret.json\`) is missing. Example: \`<requires><connector name="gmail" /></requires>\`.
 
 ## Guidelines
 - Set reasonable not-before values to prevent hammering external services.
@@ -103,6 +117,10 @@ export type ScheduledScript = z.infer<typeof ScheduledScriptSchema>;
 // ============================================
 // Parsed scheduled script
 // ============================================
+
+export interface ScheduleRequirements {
+  connectors: string[];
+}
 
 export interface ParsedScheduledScript {
   cron: string | undefined;
@@ -119,6 +137,7 @@ export interface ParsedScheduledScript {
   createAfterSuccess: Array<{ path: string; args: Record<string, string> }>;
   budget: { limitMs: number; windowMs: number } | undefined;
   lockGroup: string | undefined;
+  requires: ScheduleRequirements | undefined;
 }
 
 function buildSource(ref: string | undefined, text: string | undefined): { ref?: string; text?: string } {
@@ -138,6 +157,9 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
   const descEl = children.find((c) => c.tagName === "description");
   const sourceEl = children.find((c) => c.tagName === "source");
   const chainEls = children.filter((c) => c.tagName === "create-after-success");
+  const requiresEl = children.find((c) => c.tagName === "requires") as
+    | { tagName: string; children?: Array<{ tagName: string; attrs: Record<string, unknown> }> }
+    | undefined;
 
   const createAfterSuccess = chainEls.map((el) => {
     const args: Record<string, string> = {};
@@ -157,6 +179,16 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
 
   const budgetStr = script.attrs.budget as string | undefined;
 
+  let requires: ScheduleRequirements | undefined;
+  if (requiresEl && requiresEl.children) {
+    const connectors = requiresEl.children
+      .filter((c) => c.tagName === "connector")
+      .map((c) => c.attrs.name as string);
+    if (connectors.length > 0) {
+      requires = { connectors };
+    }
+  }
+
   return {
     cron: script.attrs.cron as string | undefined,
     at: script.attrs.at as string | undefined,
@@ -174,6 +206,7 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
     createAfterSuccess,
     budget: budgetStr ? parseBudget(budgetStr) : undefined,
     lockGroup: script.attrs["lock-group"] as string | undefined,
+    requires,
   };
 }
 
@@ -222,6 +255,27 @@ export function parseBudget(str: string): { limitMs: number; windowMs: number } 
     limitMs: parseDuration(str.slice(0, slash)),
     windowMs: parseDuration(str.slice(slash + 1)),
   };
+}
+
+// ============================================
+// Requirements checking
+// ============================================
+
+/**
+ * Check which required connectors are missing their secret files.
+ * Returns the list of connector names whose secret file is absent.
+ */
+export function checkMissingConnectors(boxRoot: string, requires: ScheduleRequirements): string[] {
+  const missing: string[] = [];
+  for (const name of requires.connectors) {
+    const secretPath = join(boxRoot, "config/connectors", `${name}.secret.json`);
+    try {
+      accessSync(secretPath);
+    } catch {
+      missing.push(name);
+    }
+  }
+  return missing;
 }
 
 // ============================================
@@ -373,6 +427,7 @@ export interface ScheduledScriptTemplateOptions {
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   budget?: string;
   lockGroup?: string;
+  requires?: string[];
 }
 
 /**
@@ -408,6 +463,11 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
       const lines = Object.entries(chain.args).map(([k, v]) => `${k}=${v}`).join("\n");
       children.push(`  <create-after-success path="${chain.path}">\n${lines}\n  </create-after-success>`);
     }
+  }
+
+  if (options.requires && options.requires.length > 0) {
+    const connectorEls = options.requires.map((name) => `<connector name="${name}" />`).join("");
+    children.push(`  <requires>${connectorEls}</requires>`);
   }
 
   return `<scheduled-script${attrStr}>\n${children.join("\n")}\n</scheduled-script>\n`;

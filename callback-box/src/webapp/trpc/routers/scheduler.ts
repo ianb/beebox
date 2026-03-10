@@ -10,6 +10,7 @@ import { parseXml } from "cardworks";
 import {
   parseScheduledScript,
   isWithinBudget,
+  checkMissingConnectors,
   type ScheduledScript,
 } from "../../../schemas/scheduled-script.js";
 import { loadScriptState, loadRunningScripts } from "../../../core/schedule-state.js";
@@ -52,6 +53,7 @@ export interface ScheduleEntry {
   once: boolean;
   budget?: { limitMs: number; windowMs: number; usedMs: number } | undefined;
   running?: { startedAt: string; triggeredBy: string } | undefined;
+  missingRequirements?: string[] | undefined;
 }
 
 export const schedulerRouter = router({
@@ -174,6 +176,10 @@ export const schedulerRouter = router({
 
       const lock = running.get(scriptName);
 
+      const missingReqs = parsed.requires
+        ? checkMissingConnectors(ctx.boxRoot, parsed.requires)
+        : undefined;
+
       schedules.push({
         name: scriptName,
         description: parsed.description,
@@ -190,6 +196,7 @@ export const schedulerRouter = router({
         once: parsed.once,
         budget: budgetInfo,
         running: lock ? { startedAt: lock.startedAt, triggeredBy: lock.triggeredBy } : undefined,
+        missingRequirements: missingReqs && missingReqs.length > 0 ? missingReqs : undefined,
       });
     }
 
