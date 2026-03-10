@@ -16,6 +16,7 @@ import {
   runCommand,
   type CommandContext,
 } from "../../core/commands/index.js";
+import { stageFiles, commit } from "../../cli/lib/git.js";
 
 interface CaptureSessionData {
   id: string;
@@ -160,6 +161,7 @@ export async function registerCaptureRoutes(
 
     const dir = sessionDir(session.id);
     const createdCards: string[] = [];
+    const filesToStage: string[] = [];
     const now = new Date();
     const timestamp = now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
 
@@ -197,14 +199,18 @@ export async function registerCaptureRoutes(
             template: "voice-memo",
             attachment: tempPath,
             attachmentMimetype: mimetype,
-            commit: true,
+            commit: false,
           },
           ctx,
         });
 
         if (result.success) {
-          const resultData = result.data as { cardPath: string };
+          const resultData = result.data as { cardPath: string; attachmentPath?: string };
           createdCards.push(resultData.cardPath);
+          filesToStage.push(resultData.cardPath);
+          if (resultData.attachmentPath) {
+            filesToStage.push(resultData.attachmentPath);
+          }
         } else {
           console.error("[capture] Failed to create audio card:", result);
         }
@@ -217,6 +223,7 @@ export async function registerCaptureRoutes(
           const destPath = path.join(boxRoot, `box/inbox/${cardName}-${chunk.name}`);
           try {
             await fs.copyFile(srcPath, destPath);
+            filesToStage.push(`box/inbox/${cardName}-${chunk.name}`);
           } catch (e) {
             console.error(`[capture] Failed to copy audio chunk ${chunk.name}:`, e);
           }
@@ -239,14 +246,18 @@ export async function registerCaptureRoutes(
           template: "voice-memo",
           attachment: tempPath,
           attachmentMimetype: mimetype,
-          commit: true,
+          commit: false,
         },
         ctx,
       });
 
       if (result.success) {
-        const resultData = result.data as { cardPath: string };
+        const resultData = result.data as { cardPath: string; attachmentPath?: string };
         createdCards.push(resultData.cardPath);
+        filesToStage.push(resultData.cardPath);
+        if (resultData.attachmentPath) {
+          filesToStage.push(resultData.attachmentPath);
+        }
       } else {
         console.error(`[capture] Failed to create photo card for ${photo.name}:`, result);
       }
@@ -264,17 +275,30 @@ export async function registerCaptureRoutes(
           path: cardPath,
           template: "memo",
           attachment: tempPath,
-          commit: true,
+          commit: false,
         },
         ctx,
       });
 
       if (result.success) {
-        const resultData = result.data as { cardPath: string };
+        const resultData = result.data as { cardPath: string; attachmentPath?: string };
         createdCards.push(resultData.cardPath);
+        filesToStage.push(resultData.cardPath);
+        if (resultData.attachmentPath) {
+          filesToStage.push(resultData.attachmentPath);
+        }
       } else {
         console.error(`[capture] Failed to create card for ${file.name}:`, result);
       }
+    }
+
+    // Commit all created files in a single commit
+    if (filesToStage.length > 0) {
+      await stageFiles(boxRoot, filesToStage);
+      await commit(boxRoot, {
+        message: `Capture session: ${createdCards.length} card(s)`,
+        trailers: { "Created-By": "capture" },
+      });
     }
 
     // Clean up

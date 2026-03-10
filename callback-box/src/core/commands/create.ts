@@ -190,6 +190,14 @@ function mimetypeToExtension(mimetype: string): string {
     "audio/m4a": ".m4a",
     "audio/mp4": ".m4a",
     "audio/flac": ".flac",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+    "image/heic": ".heic",
+    "image/heif": ".heif",
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
   };
   return map[mimetype] ?? ".bin";
 }
