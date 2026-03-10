@@ -12,6 +12,8 @@ type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
 interface ScheduleOverviewProps {
   schedules: ScheduleInfo[];
   recentTicks: SchedulerLogEntry[];
+  loading?: boolean;
+  error?: { message: string } | null;
 }
 
 function timeAgo(dateStr: string): string {
@@ -177,8 +179,26 @@ function TickResult({ result }: { result: NonNullable<SchedulerLogEntry["result"
   return <span>all skipped</span>;
 }
 
-export function ScheduleOverview({ schedules, recentTicks }: ScheduleOverviewProps) {
+export function ScheduleOverview({ schedules, recentTicks, loading, error }: ScheduleOverviewProps) {
   const [showTicks, setShowTicks] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="card">
+        <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
+        <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card">
+        <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
+        <p className="text-sm text-red-600">Failed to load: {error.message}</p>
+      </div>
+    );
+  }
 
   if (schedules.length === 0) {
     return (

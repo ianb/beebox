@@ -206,8 +206,7 @@ function AppNav() {
           <span className="text-white/60">/</span>
           <span className="font-medium">{currentLabel}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <ProfileMenu user={noAuth ? null : currentUser} boxSlug={boxSlug || ""} />
+        <div className="flex items-center gap-2" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="p-1.5 rounded hover:bg-white/10"
@@ -223,11 +222,12 @@ function AppNav() {
               </svg>
             )}
           </button>
+          <ProfileMenu user={noAuth ? null : currentUser} boxSlug={boxSlug || ""} />
         </div>
       </div>
       {/* Mobile dropdown */}
       {menuOpen ? (
-        <div ref={menuRef} className="sm:hidden border-t border-white/20 px-3 py-2 flex flex-col gap-1">
+        <div className="sm:hidden border-t border-white/20 px-3 py-2 flex flex-col gap-1">
           {links.map((link) => (
             <Link
               key={link.to}

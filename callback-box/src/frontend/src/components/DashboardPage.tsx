@@ -50,6 +50,11 @@ export function DashboardPage() {
   const questions = questionsQuery.data?.items ?? [];
   const newsStatus = newsStatusQuery.data ?? { inbox: 0, pool: 0, archive: 0, trash: 0 };
 
+  const schedulesLoading = schedulesQuery.isLoading || ticksQuery.isLoading;
+  const schedulesError = schedulesQuery.error || ticksQuery.error;
+  const activityLoading = commitsQuery.isLoading || ticksQuery.isLoading;
+  const activityError = commitsQuery.error || ticksQuery.error;
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <HeaderStrip
@@ -68,11 +73,15 @@ export function DashboardPage() {
           <ScheduleOverview
             schedules={schedules}
             recentTicks={ticks}
+            loading={schedulesLoading}
+            error={schedulesError}
           />
 
           <RecentActivity
             commits={commits}
             ticks={ticks}
+            loading={activityLoading}
+            error={activityError}
           />
 
           <NewsPipelineStatus newsStatus={newsStatus} />

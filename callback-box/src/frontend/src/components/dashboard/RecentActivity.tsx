@@ -12,6 +12,8 @@ type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
 interface RecentActivityProps {
   commits: LogEntry[];
   ticks: SchedulerLogEntry[];
+  loading?: boolean;
+  error?: { message: string } | null;
 }
 
 type ActivityItem =
@@ -90,7 +92,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
   );
 }
 
-export function RecentActivity({ commits, ticks }: RecentActivityProps) {
+export function RecentActivity({ commits, ticks, loading, error }: RecentActivityProps) {
   const { boxSlug } = useParams({ strict: false });
   // Only include ticks that had activity
   const activeTicks = ticks.filter(
@@ -124,7 +126,11 @@ export function RecentActivity({ commits, ticks }: RecentActivityProps) {
         </Link>
       </div>
 
-      {display.length === 0 ? (
+      {loading ? (
+        <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
+      ) : error ? (
+        <p className="text-sm text-red-600">Failed to load: {error.message}</p>
+      ) : display.length === 0 ? (
         <p className="text-sm text-warm-500">No recent activity</p>
       ) : (
         <div className="divide-y divide-warm-200">
