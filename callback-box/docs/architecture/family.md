@@ -6,7 +6,7 @@ These aren't archetypes. They're people with specific textures. When writing exa
 
 ## Diana Vega (42)
 
-![type:character Diana | Full-body portrait of Diana Vega, a 42-year-old Latina woman standing in a relaxed pose on a sidewalk in a residential Minneapolis neighborhood. She's 5'6", medium build, with thick dark brown hair pulled back in a low ponytail that's coming slightly loose. Warm brown skin, brown eyes, laugh lines. She's wearing a navy blue puffer vest over a rust-colored long-sleeve henley, dark jeans, and well-worn brown ankle boots. A canvas tote bag over one shoulder, phone in her back pocket. Her expression is warm and a little distracted, like she's already thinking about the next thing. Late afternoon autumn light.](images/diana-portrait.png)
+![type:character Diana | A woman standing on a sidewalk, autumn trees and houses behind her. Dark hair in a loose ponytail, brown skin. Navy puffer vest over a rust henley, jeans, brown boots. Canvas tote over one shoulder. Her face is drawn with just a few crayon marks — two dots for eyes, a short line for a mouth. No detailed facial features at all. The whole figure should look like it was colored in with wax crayons by a careful adult.](images/diana-portrait.png)
 
 Runs operations for a mid-size nonprofit that does immigrant services and community organizing. Her job bleeds into everything — she's on the board of Mateo's school, she organizes a monthly neighborhood potluck that started small and now involves 40 people, and she just agreed to coordinate a community mural project on 38th Street. She doesn't say no to things. It's not that she can't — it's that she genuinely believes she can fit it in, and she's usually almost right.
 
@@ -16,7 +16,7 @@ Warm. Competent. Slightly manic. Makes incredible pozole when she has time, whic
 
 ## James Lund (44)
 
-![type:character James | Full-body portrait of James Lund, a 44-year-old white man standing in his driveway next to a garage. He's 6'1", lean and slightly long-limbed, with sandy brown hair that's thinning a bit on top, kept short. Light blue eyes behind rectangular wire-frame glasses. A few days of stubble. He's wearing a faded gray t-shirt, olive green cargo pants with a tape measure clipped to the pocket, and scuffed New Balance sneakers. His hands are relaxed at his sides. His expression is gentle and slightly amused, like someone just said something interesting. Overcast morning light, a Minnesota bungalow garage behind him.](images/james-portrait.png)
+![type:character James | A tall, lean man standing in a driveway next to a garage. Sandy brown hair, thinning, kept short. Wire-frame glasses. Faded gray t-shirt, olive cargo pants with a tape measure clipped to the pocket, scuffed sneakers. His face is drawn with just a few crayon marks — two dots for eyes, a short line for a mouth. No detailed facial features. The whole figure should look like it was colored in with wax crayons by a careful adult. Overcast morning, a bungalow garage behind him.](images/james-portrait.png)
 
 Works as a radiology tech at Hennepin Healthcare. The job means shift work — sometimes days, sometimes evenings, occasional overnights. The schedule comes out two weeks ahead and it's never the same pattern twice. When he's on a run of evening shifts, he's the one doing school pickup but unavailable for dinner. When he's on days, he's home by 4 but wrecked. The schedule makes everything else harder to plan.
 
@@ -26,7 +26,7 @@ Gentle. Funny. The kind of person who'll spend 40 minutes explaining why a parti
 
 ## Mateo (16)
 
-![type:character Mateo | Full-body portrait of Mateo Lund-Vega, a 16-year-old mixed-race teenage boy (Latina mother, white father) standing on a front porch. He's 5'10" and still growing into his frame — lanky, narrow shoulders, big hands. Dark brown wavy hair that falls past his ears, brown eyes, light brown skin, the start of a patchy attempt at sideburns. He's wearing an oversized black hoodie with a small band logo on the chest, slim black jeans, and beat-up white Vans. Black headphones hang around his neck. His posture is slightly slouched, weight on one foot, arms crossed loosely. His expression is neutral-to-skeptical, the default face of a teenager who just woke up. Late morning light on a residential porch with a bike leaning against the railing.](images/mateo-portrait.png)
+![type:character Mateo | A lanky teenage boy standing on a front porch, slouching. Dark wavy hair past his ears, light brown skin. Oversized black hoodie, slim black jeans, beat-up white sneakers. Headphones around his neck. A bike leaning against the porch railing. His face is drawn with just a few crayon marks — two dots for eyes, a short line for a mouth. No detailed facial features. The whole figure should look like it was colored in with wax crayons by a careful adult.](images/mateo-portrait.png)
 
 Junior at South High. Plays bass in a band called Parking Ramp that practices in his friend Dev's basement. Their music is — well, they're 16. He's up until 1am most nights, partly Discord, partly messing around with music production software, partly group chats that are somehow urgent. Asleep until noon on weekends unless someone physically intervenes.
 
@@ -36,7 +36,7 @@ He's the one who'd use the system in ways nobody anticipated, if he used it at a
 
 ## Sofia (11)
 
-![type:character Sofia | Full-body portrait of Sofia Lund-Vega, an 11-year-old mixed-race girl (Latina mother, white father) standing in a backyard garden. She's 4'11", athletic build from swimming, with long straight dark brown hair in a single braid down her back. Brown eyes, light brown skin with a few freckles across her nose. She's wearing a teal zip-up hoodie over a one-piece swimsuit (the straps just visible at the neckline), gray jogger pants, and rainbow-striped slides. She's holding a composition notebook against her chest with one arm. Her expression is direct and slightly evaluating — the look of a kid deciding whether what you just said is actually true. Afternoon light in a backyard garden with tomato cages and marigolds behind her.](images/sofia-portrait.png)
+![type:character Sofia | An eleven-year-old girl, small, standing in a backyard garden. Dark brown hair in a braid, light brown skin. She is clearly a child, not a teenager. Teal zip hoodie over a swimsuit, gray jogger pants, rainbow slides. Holding a composition notebook against her chest. Tomato cages and marigolds behind her. Her face is drawn with just a few crayon marks — two dots for eyes, a short line for a mouth. No detailed facial features. The whole figure should look like it was colored in with wax crayons by a careful adult.](images/sofia-portrait.png)
 
 Sixth grade at Sanford Middle School. Competitive swimmer — practices at 5:30am Tuesday and Thursday at the Nokomis community pool, meets on weekends. This means Diana or James has to be up at 5:15 twice a week, which is a recurring source of household negotiation that gets extra complicated when James is on evening shifts.
 
@@ -46,7 +46,7 @@ Recently started cooking from YouTube videos, with mixed results and a lot of di
 
 ## Rosa Vega (74)
 
-![type:character Rosa | Full-body portrait of Rosa Vega, a 74-year-old Mexican woman standing in a bright kitchen. She's 5'2", small-framed but upright, with white hair cut short and practical. Brown skin, deep brown eyes, reading glasses hanging from a chain around her neck. She's wearing a denim jacket over a striped blouse, dark slacks, and comfortable walking shoes. She's holding a newspaper in one hand, folded to the crossword. Her expression is direct and a little wry — not sweet, not soft, just present and paying attention. Morning light from a window, a potted plant on the counter behind her.](images/rosa-portrait.png)
+![type:character Rosa | A small, upright older woman standing in a kitchen. White hair cut short, brown skin. Reading glasses on a chain around her neck. Denim jacket over a striped blouse, dark slacks, comfortable shoes. Holding a folded newspaper. Morning light from a window, a potted plant on the counter. Her face is drawn with just a few crayon marks — two dots for eyes, a short line for a mouth. No detailed facial features. The whole figure should look like it was colored in with wax crayons by a careful adult.](images/rosa-portrait.png)
 
 Diana's mother. Lives in the lower-level apartment (the bungalow has a walkout basement that was converted years ago). Grew up outside Oaxaca, met a Minnesotan who was teaching English through a church volunteer program in Mexico, came to Minnesota at 28. Widowed at 55. Stayed because by then her life was here — Diana, the grandkids, the neighborhood.
 

@@ -5,15 +5,20 @@
 # Scene images will also use it, plus character reference images for consistency.
 
 style: |
-  Colored pencil illustration on cream-colored drawing paper with heavy tooth.
-  The illustration features a naïve, flattening perspective, intentionally lacking
-  correct 3D depth. The characters show visible wax bloom and obvious, directional
-  pencil strokes. The overall style is reminiscent of outsider art for children.
+  Primitive colored pencil drawing on rough cream paper. Heavy wax crayon texture
+  with visible tooth marks from the paper. The style is raw and handmade, like
+  outsider art or a child's careful drawing — not polished, not cute, not digital-looking.
+  Think Henry Darger or Bill Traylor, not Pixar or Headspace.
 
-  Facial features are minimalist and shorthand: noses and mouths are suggested by
-  single, shaky pencil strokes rather than shaded forms. Avoid all facial rendering
-  or realistic skin gradients; faces should appear flat and two-dimensional, with
-  features drawn as simple, crude icons on a waxy surface.
+  Flat perspective with no attempt at 3D depth. Figures are slightly stiff and
+  frontal. Colors are laid down in rough, overlapping strokes with visible gaps
+  where the paper shows through. Edges are wobbly, not clean.
+
+  Faces are simple: dots or short lines for eyes, a single stroke for nose and
+  mouth. No smooth skin rendering, no expressive cartoon eyes, no blush or shading
+  on cheeks. The face should look drawn, not rendered.
+
+  The background fades to bare paper at the edges rather than filling the frame.
 
 # Gemini model to use
 model: gemini-2.5-flash-image

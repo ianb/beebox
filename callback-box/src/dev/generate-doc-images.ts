@@ -15,6 +15,7 @@
  *   npm run generate:doc-images -- --type=all      # generate all image types
  *   npm run generate:doc-images -- --type=scene    # generate scene images only
  *   npm run generate:doc-images -- --force         # regenerate all
+ *   npm run generate:doc-images -- --file=diana    # only images matching "diana"
  *   npm run generate:doc-images -- --dry-run       # show what would be generated
  */
 
@@ -278,6 +279,8 @@ async function main() {
   const dryRun = args.includes("--dry-run");
   const filterArg = args.find((a) => a.startsWith("--type="));
   const typeFilter = filterArg ? filterArg.split("=")[1] : "character";
+  const fileArg = args.find((a) => a.startsWith("--file="));
+  const fileFilter = fileArg ? fileArg.split("=")[1] : null;
 
   const config = loadConfig();
 
@@ -311,6 +314,12 @@ async function main() {
     filtered = allPrompts.filter((p) => !p.isCharacter);
   } else {
     filtered = allPrompts.filter((p) => p.tag.startsWith(`type:${typeFilter}`));
+  }
+
+  // Apply file name filter if provided
+  if (fileFilter) {
+    const lower = fileFilter.toLowerCase();
+    filtered = filtered.filter((p) => p.imagePath.toLowerCase().includes(lower));
   }
 
   if (filtered.length === 0) {
