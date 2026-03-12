@@ -19,13 +19,18 @@
  *   npm run generate:doc-images -- --dry-run       # show what would be generated
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { glob } from "glob";
 import { GoogleGenAI } from "@google/genai";
 import { parse as parseYaml } from "yaml";
+
+const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +42,7 @@ type PromptPart =
 
 interface ImageGenConfig {
   style: string;
+  diagramStyle: string;
   model: string;
   apiKeyEnv: string;
 }
@@ -52,6 +58,8 @@ interface ImagePrompt {
   sourceFile: string;
   /** Whether this is a character reference image */
   isCharacter: boolean;
+  /** Whether this is a diagram */
+  isDiagram: boolean;
   /** Character name if isCharacter */
   characterName: string | null;
   /** Character names referenced (for scene images) */
@@ -79,8 +87,10 @@ function loadConfig(): ImageGenConfig {
     throw new Error(`Config not found: ${configPath}`);
   }
   const raw = parseYaml(readFileSync(configPath, "utf8")) as Record<string, unknown>;
+  const style = String(raw.style || "").trim();
   return {
-    style: String(raw.style || "").trim(),
+    style,
+    diagramStyle: String(raw.diagramStyle || style).trim(),
     model: String(raw.model || "gemini-2.5-flash-image"),
     apiKeyEnv: String(raw.apiKeyEnv || "GEMINI_KEY"),
   };
@@ -111,13 +121,14 @@ function parseImagePrompts(mdPath: string, content: string): ImagePrompt[] {
     const prompt = altText.substring(pipeIdx + 1).trim();
 
     const isCharacter = tag.startsWith("type:character");
+    const isDiagram = tag.startsWith("type:diagram");
     let characterName: string | null = null;
     let referencedCharacters: string[] = [];
 
     if (isCharacter) {
       // "type:character Diana" -> "Diana"
       characterName = tag.replace("type:character", "").trim() || null;
-    } else {
+    } else if (!isDiagram) {
       // Scene image: tag is space-separated character names like "Diana James"
       referencedCharacters = tag.split(/\s+/).filter((s) => s.length > 0);
     }
@@ -128,6 +139,7 @@ function parseImagePrompts(mdPath: string, content: string): ImagePrompt[] {
       imagePath,
       sourceFile: mdPath,
       isCharacter,
+      isDiagram,
       characterName,
       referencedCharacters,
     });
@@ -160,9 +172,13 @@ function getMetadataPath(imagePath: string): string {
   return imagePath.substring(0, imagePath.length - ext.length) + "-prompt.json";
 }
 
-function computePromptHash(prompt: string, { style, references }: { style: string; references: string[] }): string {
+function computePromptHash(
+  prompt: string,
+  { style, references, mermaidSource }: { style: string; references: string[]; mermaidSource?: string },
+): string {
   const refStr = references.toSorted().join(",");
-  return createHash("sha256").update(`${style}\n---\n${prompt}\n---\n${refStr}`).digest("hex").substring(0, 16);
+  const mermaid = mermaidSource || "";
+  return createHash("sha256").update(`${style}\n---\n${prompt}\n---\n${refStr}\n---\n${mermaid}`).digest("hex").substring(0, 16);
 }
 
 async function readMetadata(imagePath: string): Promise<ImageMetadata | null> {
@@ -229,6 +245,73 @@ async function generateImage(
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Mermaid rendering (for diagrams)
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the path to the .mmd source file for a diagram image.
+ */
+function getMermaidPath(imagePath: string): string {
+  const ext = path.extname(imagePath);
+  return imagePath.substring(0, imagePath.length - ext.length) + ".mmd";
+}
+
+/**
+ * Get the path to the Mermaid-rendered backup image.
+ */
+function getMermaidBakPath(imagePath: string): string {
+  const ext = path.extname(imagePath);
+  return imagePath.substring(0, imagePath.length - ext.length) + ".mermaid.bak" + ext;
+}
+
+/**
+ * Render a .mmd file to PNG using the mermaid CLI (mmdc).
+ * Returns the PNG buffer, or null if mmdc is not available or rendering fails.
+ */
+async function renderMermaid(mmdPath: string): Promise<Buffer | null> {
+  const tmpOut = path.join(tmpdir(), `mermaid-${Date.now()}.png`);
+  try {
+    await execFileAsync("mmdc", [
+      "-i", mmdPath,
+      "-o", tmpOut,
+      "-w", "1024",
+      "-H", "768",
+      "--backgroundColor", "white",
+    ], { timeout: 30000 });
+    const buf = await readFile(tmpOut);
+    return buf;
+  } catch (e) {
+    const err = e as Error;
+    if ("code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+      console.error("    warning: mmdc not found. Install with: npm install -g @mermaid-js/mermaid-cli");
+    } else {
+      console.error(`    warning: mermaid render failed: ${err.message}`);
+    }
+    return null;
+  }
+}
+
+/**
+ * Build a multipart prompt for a diagram using a Mermaid-rendered reference image.
+ * The annotation is extra instructions from the markdown prompt text.
+ */
+function buildDiagramPrompt(
+  mermaidPng: Buffer,
+  { style, annotation }: { style: string; annotation: string },
+): PromptPart[] {
+  let instructions = `Here is a reference diagram showing the layout and text content I want. Reproduce this diagram with the EXACT SAME text labels, words, and layout structure, but restyle it in this art style:\n\n${style}\n\nIMPORTANT: Keep every word, label, and connection from the reference diagram exactly as shown. The text must be spelled correctly — copy it exactly from the reference. Change ONLY the visual style (hand-drawn, colored pencil, cream paper). Do NOT change any text content.`;
+
+  if (annotation) {
+    instructions += `\n\nAdditional notes about this diagram: ${annotation}`;
+  }
+
+  return [
+    { type: "text", text: instructions },
+    { type: "image", buffer: mermaidPng, mimeType: "image/png" },
+  ];
 }
 
 /**
@@ -311,7 +394,9 @@ async function main() {
   } else if (typeFilter === "character") {
     filtered = allPrompts.filter((p) => p.isCharacter);
   } else if (typeFilter === "scene") {
-    filtered = allPrompts.filter((p) => !p.isCharacter);
+    filtered = allPrompts.filter((p) => !p.isCharacter && !p.isDiagram);
+  } else if (typeFilter === "diagram") {
+    filtered = allPrompts.filter((p) => p.isDiagram);
   } else {
     filtered = allPrompts.filter((p) => p.tag.startsWith(`type:${typeFilter}`));
   }
@@ -339,8 +424,23 @@ async function main() {
     const absImagePath = path.join(DOCS_DIR, entry.imagePath);
 
     // For scenes, include reference portrait paths in the hash
-    const refNames = entry.isCharacter ? [] : entry.referencedCharacters;
-    const hash = computePromptHash(entry.prompt, { style: config.style, references: refNames });
+    const refNames = entry.isCharacter || entry.isDiagram ? [] : entry.referencedCharacters;
+    const effectiveStyle = entry.isDiagram ? config.diagramStyle : config.style;
+
+    // For diagrams, check for a .mmd source file and include it in the hash
+    let mermaidSource: string | null = null;
+    if (entry.isDiagram) {
+      const mmdPath = getMermaidPath(absImagePath);
+      if (existsSync(mmdPath)) {
+        mermaidSource = await readFile(mmdPath, "utf8");
+      }
+    }
+
+    const hash = computePromptHash(entry.prompt, {
+      style: effectiveStyle,
+      references: refNames,
+      ...(mermaidSource ? { mermaidSource } : {}),
+    });
 
     // Check if up to date
     if (!force && existsSync(absImagePath)) {
@@ -356,6 +456,9 @@ async function main() {
       console.log(`\n  would generate: ${entry.imagePath}`);
       if (entry.isCharacter) {
         console.log(`  type: character (${entry.characterName})`);
+      } else if (entry.isDiagram) {
+        const hasMermaid = mermaidSource !== null;
+        console.log(`  type: diagram (mermaid: ${hasMermaid ? "yes" : "no — text-only fallback"})`);
       } else {
         console.log("  type: scene");
         console.log(`  characters: ${entry.referencedCharacters.join(", ") || "(none)"}`);
@@ -369,6 +472,20 @@ async function main() {
     // Ensure output directory exists
     await mkdir(path.dirname(absImagePath), { recursive: true });
 
+    // Backup existing image before overwriting
+    if (existsSync(absImagePath)) {
+      const ext = path.extname(absImagePath);
+      const base = absImagePath.substring(0, absImagePath.length - ext.length);
+      // Find next backup number
+      let bakNum = 1;
+      while (existsSync(`${base}.${bakNum}.bak${ext}`)) {
+        bakNum++;
+      }
+      const bakPath = `${base}.${bakNum}.bak${ext}`;
+      await copyFile(absImagePath, bakPath);
+      console.log(`    backed up to: ${path.basename(bakPath)}`);
+    }
+
     // Build the prompt
     let prompt: string | PromptPart[];
     let refPaths: string[] = [];
@@ -376,6 +493,31 @@ async function main() {
     if (entry.isCharacter) {
       // Character portrait: style + prompt, plain text
       prompt = `${config.style}\n\n${entry.prompt}`;
+    } else if (entry.isDiagram && mermaidSource) {
+      // Diagram with Mermaid source: render → restyle pipeline
+      console.log("    rendering mermaid...");
+      const mmdPath = getMermaidPath(absImagePath);
+      const mermaidPng = await renderMermaid(mmdPath);
+
+      if (mermaidPng) {
+        // Save the Mermaid render as a .mermaid.bak.png for inspection
+        const mermaidBakPath = getMermaidBakPath(absImagePath);
+        await writeFile(mermaidBakPath, mermaidPng);
+        console.log(`    mermaid render saved: ${path.basename(mermaidBakPath)}`);
+
+        // Build multipart prompt with Mermaid reference image
+        prompt = buildDiagramPrompt(mermaidPng, {
+          style: config.diagramStyle,
+          annotation: entry.prompt,
+        });
+      } else {
+        // Mermaid render failed, fall back to text-only
+        console.log("    mermaid render failed, falling back to text-only");
+        prompt = `${config.diagramStyle}\n\n${entry.prompt}`;
+      }
+    } else if (entry.isDiagram) {
+      // Diagram without Mermaid: text-only fallback (original behavior)
+      prompt = `${config.diagramStyle}\n\n${entry.prompt}`;
     } else {
       // Scene image: include character reference images
       const result = await buildScenePrompt(entry.prompt, {
@@ -405,7 +547,7 @@ async function main() {
     // Write metadata
     const metadata: ImageMetadata = {
       prompt: entry.prompt,
-      style: config.style,
+      style: effectiveStyle,
       model: config.model,
       generatedAt: new Date().toISOString(),
       promptHash: hash,

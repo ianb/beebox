@@ -1,0 +1,27 @@
+graph TD
+    box["📦 the box"]
+
+    box --> boxdir["box/"]
+    box --> store["store/"]
+    box --> config["config/"]
+
+    boxdir --> inbox["inbox/"]
+    boxdir --> jobs["jobs/"]
+    boxdir --> questions["questions/"]
+
+    inbox --- in_email["📧 email"]
+    inbox --- in_voice["🎤 voice"]
+    inbox --- in_chat["💬 chat"]
+
+    jobs --- job1["process these"]
+
+    questions --- q1["❓"]
+
+    store --> archive["archive/"]
+    store --> calendar["calendar/"]
+    store --> recipes["recipes/"]
+
+    config --> connectors["connectors/"]
+    config --> procedures["procedures/"]
+
+    inbox -.-> |"processed & filed"| archive

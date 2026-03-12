@@ -20,6 +20,26 @@ style: |
 
   The background fades to bare paper at the edges rather than filling the frame.
 
+# Style for diagrams (type:diagram). Should feel like it belongs with the
+# illustrations but work as an information graphic — legible labels,
+# clear relationships, hand-drawn feel.
+diagramStyle: |
+  Hand-drawn diagram on rough cream paper, colored pencil and crayon.
+  The layout is flat and spatial — no 3D, no gradients, no drop shadows.
+  Boxes and shapes are drawn with wobbly, uneven lines in muted colors
+  (dusty blue, warm ochre, soft red, olive green). Arrows are hand-drawn
+  with visible pencil strokes, not straight or mechanical.
+
+  All text and labels must be in BLACK — high contrast against the cream
+  paper and colored shapes. Use a loose handwritten style, clearly legible
+  but not typeset. Text should be large enough to read easily. Keep labels short.
+
+  The overall feel is a whiteboard sketch redrawn carefully on nice paper —
+  organized and clear, but warm and handmade. Think of a diagram someone
+  drew to explain something to a friend, not a software architecture slide.
+
+  The background fades to bare paper at the edges. No borders or frames.
+
 # Gemini model to use
 model: gemini-2.5-flash-image
 

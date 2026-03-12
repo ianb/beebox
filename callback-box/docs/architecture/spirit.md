@@ -82,6 +82,16 @@ This philosophy runs deep. Cards are validated against schemas — we do want th
 
 The box degrades gracefully because it's designed around the assumption that things will be incomplete, late, contradictory, and in multiple languages. That's not a failure mode. That's Tuesday.
 
+## People aren't broken versions of their better selves
+
+There's a way of thinking about self-improvement that treats people as deficient — you're a slightly broken version of your aspirational self, and the gap between where you are and where you should be is the problem to solve. Pixar runs on this: the character has a flaw, the movie fixes it, credits roll. It's comforting but it introduces a deficiency model. You're defined by what you're not yet.
+
+The box should not think this way about its people. Diana at 5:45am in the car is not a disorganized person who needs better systems. She's a person running a complicated household who is, right now, doing something about it. James hasn't failed at keeping a build journal — he just hasn't had a way to do it that fits how he actually works. Rosa isn't losing her stories. She's telling them, in her own time, in her own language.
+
+The difference matters for how the system behaves. A deficiency-oriented system nags. It tracks what you haven't done. It measures you against goals you set in a more optimistic moment. A system that sees people as valuable *now* — whose value includes the fact that they keep getting better — holds things for you, surfaces them when they're useful, and doesn't judge when they sit untouched. The getting-better is part of who you are. It's not a destination you haven't reached.
+
+This also shapes the tone of the documentation. We're writing about real people with real lives that are messy and full of competing demands. Not people who are one insight away from having it all figured out. Not people whose lives will be transformed by the right app. People who are doing fine and could use a hand.
+
 ## It should feel possible
 
 The most important feeling the box should produce — in users, in developers, in anyone who encounters it — is *possibility*. Not "look at all the features." More like: "oh, I could make it do *that*?"
