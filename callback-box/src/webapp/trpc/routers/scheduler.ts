@@ -3,6 +3,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
+import { execSync } from "node:child_process";
+import { performance } from "node:perf_hooks";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { boxLogFile } from "../../../core/scheduler.js";
@@ -13,7 +15,15 @@ import {
   checkMissingConnectors,
   type ScheduledScript,
 } from "../../../schemas/scheduled-script.js";
-import { loadScriptState, loadRunningScripts } from "../../../core/schedule-state.js";
+import {
+  loadScriptState,
+  saveScriptState,
+  recordRun,
+  acquireScriptLock,
+  releaseScriptLock,
+  loadRunningScripts,
+} from "../../../core/schedule-state.js";
+import { handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
 import { createLoader } from "../../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 
@@ -238,5 +248,126 @@ export const schedulerRouter = router({
       });
 
       return { enabled: input.enabled };
+    }),
+
+  trigger: publicProcedure
+    .input(z.object({
+      name: z.string().min(1),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const fileName = `${input.name}.scheduled-script.card`;
+      const cardPath = path.join(ctx.boxRoot, "config/schedules", fileName);
+
+      let content: string;
+      try {
+        content = await fs.readFile(cardPath, "utf-8");
+      } catch {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
+      }
+
+      const root = await parseXml(content, fileName);
+      const parsed = parseScheduledScript(root as ScheduledScript);
+
+      if (!parsed.enabled) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Schedule "${input.name}" is disabled` });
+      }
+
+      // Check requirements
+      if (parsed.requires) {
+        const missing = checkMissingConnectors(ctx.boxRoot, parsed.requires);
+        if (missing.length > 0) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `Missing connectors: ${missing.join(", ")}`,
+          });
+        }
+      }
+
+      // Check lock conflicts
+      const running = await loadRunningScripts(ctx.boxRoot);
+      if (running.has(input.name)) {
+        throw new TRPCError({ code: "CONFLICT", message: `"${input.name}" is already running` });
+      }
+      if (parsed.lockGroup) {
+        const conflict = [...running.entries()].find(
+          ([name, lock]) => lock.lockGroup === parsed.lockGroup && name !== input.name
+        );
+        if (conflict) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Lock group "${parsed.lockGroup}" held by ${conflict[0]}`,
+          });
+        }
+      }
+
+      // Run the script
+      const SCRIPT_TIMEOUT = 10 * 60 * 1000;
+      const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
+      const SLEEP_THRESHOLD_MS = 5_000;
+      const now = new Date();
+      const state = await loadScriptState(ctx.boxRoot, input.name);
+
+      await acquireScriptLock({
+        boxRoot: ctx.boxRoot,
+        scriptName: input.name,
+        triggeredBy: "webapp-trigger",
+        ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}),
+      });
+
+      const wallStart = Date.now();
+      const monoStart = performance.now();
+      try {
+        execSync(parsed.runs, {
+          cwd: ctx.boxRoot,
+          stdio: "ignore",
+          timeout: SCRIPT_TIMEOUT,
+          env: { ...process.env, CB_TRIGGERED_BY: "webapp-trigger" },
+        });
+
+        const wallElapsed = Date.now() - wallStart;
+        const monoElapsed = performance.now() - monoStart;
+        const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
+        const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
+
+        state.lastRun = now.toISOString();
+        state.lastResult = "success";
+        state.lastError = null;
+        state.runCount++;
+        const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+        recordRun(state, {
+          record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
+          windowMs,
+          now,
+        });
+        await saveScriptState({ boxRoot: ctx.boxRoot, scriptName: input.name, state });
+
+        await handleCreateAfterSuccess({ boxRoot: ctx.boxRoot, parsed, scriptName: input.name });
+
+        return { success: true, durationMs };
+      } catch (err) {
+        const wallElapsed = Date.now() - wallStart;
+        const monoElapsed = performance.now() - monoStart;
+        const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
+        const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
+
+        state.lastRun = now.toISOString();
+        state.lastResult = "failure";
+        state.lastError = (err as Error).message;
+        state.runCount++;
+        const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
+        recordRun(state, {
+          record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
+          windowMs,
+          now,
+        });
+        await saveScriptState({ boxRoot: ctx.boxRoot, scriptName: input.name, state });
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: (err as Error).message,
+        });
+      } finally {
+        await releaseScriptLock({ boxRoot: ctx.boxRoot, scriptName: input.name });
+      }
     }),
 });

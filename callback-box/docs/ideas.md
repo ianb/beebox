@@ -49,6 +49,37 @@ Currently Google connector tokens are stored per-box in a single `google.secret.
 
 Updated `CHAT_SYSTEM_PROMPT` in `chat-session.ts` to describe two-channel output: `<speech>` tags for TTS, and markdown display text outside speech for visual details. Frontend already supported this (ReactMarkdown rendering + speech tag stripping).
 
+### Chat page improvements
+
+Several things for the chat page:
+
+- **Image paste/capture**: support pasting or capturing images directly in the chat input.
+- **Max width**: the chat page needs a max-width constraint and general layout cleanup.
+- **Rich text input**: consider using TenTap (or similar) for message composition.
+- **Capture-from-chat flow**: a button in chat that navigates to the capture page. When you finish the capture (hit checkmark), it returns to chat and inserts a reference to what was captured — not the content itself, just a link/reference to the capture.
+
+### Transcript processing as labeled sub-agents
+
+Two levels of transcript processing that map to different agent types:
+
+1. **Cleanup transcript** (sub-agent) — canonical, well-defined task. Takes raw transcription, cleans up false starts, repetitions, filler words. Preserves original language. Input/output are both text. This can have a standard implementation that works the same way every time.
+
+2. **Restructure into story/formatted text** (skill or procedure) — needs wide context, user preferences about voice and style, judgment about what to keep and what to cut. Not canonical — the rules depend on what Rosa (or whoever) wants. Better as a procedure with custom instructions per use case.
+
+The cleanup sub-agent could be used directly by the inbox processor. The restructure step would be set up by the user as a procedure, possibly chained: raw transcript → cleanup sub-agent → restructure procedure → finished piece.
+
+Key principle: the procedure should show its work. For restructuring, that means demonstrating which words are original vs. edited, with a well-aligned comparison between source and output. This makes the AI's edits auditable and keeps the result grounded in the original language.
+
+### Accountability / goal tracking
+
+Someone sets a personal goal — like drinking water 3 times a day, or practicing guitar — and messages the box when they do it. The box tracks check-ins throughout the day, then posts a summary to the group chat at the end of the day: did they hit their target or not? The family provides the accountability. The goal is a card, check-ins come through chat, and the end-of-day report is a scheduled procedure. Could be playful — streaks, encouragement from the box, family members commenting.
+
+### "Show everything" Markdown mode
+
+The `<Markdown>` component has a `showComments` prop (default off) that reveals HTML comments (`<!-- ... -->`) as styled inline text. This could be extended into a broader "show everything" toggle that exposes hidden structure in rendered documents — comments, metadata markers, processing annotations.
+
+For card-based documents this matters less (cards have explicit schemas), but for generated Markdown (briefs, summaries, agent output), comments are a natural place for agents to leave structured annotations — source attribution, confidence notes, revision markers — that are invisible by default but available on demand. The toggle could live in a debug/detail panel or as a per-view option.
+
 ### Session output critique tool — IMPLEMENTED
 
 Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques for usage.

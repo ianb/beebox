@@ -3,8 +3,7 @@
  */
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "../Markdown";
 import { MicrophoneIcon } from "../VoiceRecorder";
 import type { Section } from "./types";
 import { ThumbsFeedback } from "./ThumbsFeedback";
@@ -74,7 +73,7 @@ export function ContentSection({
             </span> : null}
         </div> : null}
       {section.text ? <div className="prose prose-sm max-w-none mb-4">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.text}</ReactMarkdown>
+          <Markdown>{section.text}</Markdown>
         </div> : null}
       {section.excerpts.map((excerpt, i) => (
         <ExcerptBlock key={i} excerpt={excerpt} />

@@ -5,8 +5,7 @@
  */
 
 import { useMemo } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "./Markdown";
 import type { SessionEntry, SessionContentBlock } from "../api";
 
 /**
@@ -340,7 +339,7 @@ function MarkdownContent({ text }: { text: string }) {
 
   return (
     <div className="prose prose-sm max-w-none">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>
+      <Markdown>{cleaned}</Markdown>
     </div>
   );
 }

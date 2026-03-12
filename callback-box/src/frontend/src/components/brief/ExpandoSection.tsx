@@ -3,8 +3,7 @@
  */
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "../Markdown";
 import { MicrophoneIcon } from "../VoiceRecorder";
 import type { Expando } from "./types";
 import { ThumbsFeedback } from "./ThumbsFeedback";
@@ -60,7 +59,7 @@ export function ExpandoSection({
       </button>
       {expanded ? <div className="px-4 pb-4">
           <div className="prose prose-sm max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{expando.text}</ReactMarkdown>
+            <Markdown>{expando.text}</Markdown>
           </div>
           {/* Comment affordance */}
           <div className="mt-4 pt-4 border-t border-iris-100">

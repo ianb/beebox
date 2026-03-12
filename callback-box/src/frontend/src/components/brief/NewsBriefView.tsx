@@ -8,8 +8,7 @@
 import { useState, useCallback } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "../Markdown";
 import { MicrophoneIcon } from "../VoiceRecorder";
 import type { NewsBriefData, GuideReaction, BriefReaction } from "./types";
 import { ContentSection } from "./ContentSection";
@@ -133,7 +132,7 @@ export function NewsBriefView({
       {/* Main content */}
       <div className="prose prose-lg max-w-none mb-8">
         {brief.content.text ? (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{brief.content.text}</ReactMarkdown>
+          <Markdown>{brief.content.text}</Markdown>
         ) : null}
 
         {brief.content.sections.map((section, i) => (

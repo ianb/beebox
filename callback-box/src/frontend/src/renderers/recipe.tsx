@@ -3,8 +3,7 @@
  */
 
 import { useState, type ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "../components/Markdown";
 // eslint-disable-next-line import-x/no-named-as-default
 import Fraction from "fraction.js";
 import type { RendererProps } from "./index";
@@ -157,7 +156,7 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
 
       {section.notes ? (
         <div className="mb-3 text-sm text-warm-700 italic">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.notes}</ReactMarkdown>
+          <Markdown>{section.notes}</Markdown>
         </div>
       ) : null}
 
@@ -192,9 +191,9 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
             {section.steps.map((step, i) => (
               <li key={i} className="leading-relaxed">
                 <span className="prose prose-sm inline max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: ({ children }) => children as React.ReactElement }}>
+                  <Markdown components={{ p: ({ children }) => children as React.ReactElement }}>
                     {renderIngredientRefs(step)}
-                  </ReactMarkdown>
+                  </Markdown>
                 </span>
               </li>
             ))}
@@ -270,7 +269,7 @@ function RecipeDetailView({ data }: RendererProps) {
         <div className="mt-6 p-4 bg-amber-50 rounded-lg">
           <h3 className="font-medium text-amber-800 mb-1">Notes</h3>
           <div className="prose prose-sm max-w-none text-amber-900">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{recipe.notes}</ReactMarkdown>
+            <Markdown>{recipe.notes}</Markdown>
           </div>
         </div>
       ) : null}

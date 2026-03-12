@@ -4,8 +4,7 @@
  */
 
 import { useState, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "./Markdown";
 import type { HistoryCommit } from "../api";
 import { trpc } from "../lib/trpc";
 import { getApiBase } from "../api";
@@ -254,7 +253,7 @@ function CommitTab({ commit, bodyText }: { commit: HistoryCommit; bodyText: stri
       </div>
       <h2 className="font-medium text-warm-900">{commit.subject}</h2>
       {bodyText ? <div className="mt-2 prose prose-sm max-w-none text-warm-700">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{bodyText}</ReactMarkdown>
+          <Markdown>{bodyText}</Markdown>
         </div> : null}
     </div>
   );

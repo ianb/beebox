@@ -69,45 +69,92 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
   );
 }
 
-function ScheduleRow({ s }: { s: ScheduleInfo }) {
+function TriggerButton({ name, enabled }: { name: string; enabled: boolean }) {
+  const utils = trpc.useUtils();
+  const mutation = trpc.scheduler.trigger.useMutation({
+    onSuccess() {
+      utils.scheduler.schedules.invalidate();
+    },
+    onError() {
+      utils.scheduler.schedules.invalidate();
+    },
+  });
+
   return (
-    <tr className={!s.enabled ? "opacity-50" : ""} {...cbSource("schedule", s.name)}>
-      <td className="py-2 pr-3">
-        <div className="flex items-center gap-2">
-          <EnableToggle name={s.name} enabled={s.enabled} />
-          <div>
-            <span className="font-medium text-warm-900">{s.name}</span>
-            {s.description ? (
-              <span className="block text-xs text-warm-600">{s.description}</span>
-            ) : null}
-          </div>
-        </div>
-      </td>
-      <td className="py-2 pr-3 text-warm-700 font-mono text-xs">
-        {s.schedule}
-        {s.onWakeup && s.scheduleType !== "wakeup-only" ? (
-          <span className="ml-1 text-warm-500">+wakeup</span>
+    <button
+      onClick={() => mutation.mutate({ name })}
+      disabled={mutation.isPending || !enabled}
+      className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+        mutation.isPending
+          ? "bg-warm-200 text-warm-500"
+          : "bg-warm-100 text-warm-700 hover:bg-warm-200"
+      } ${!enabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      title={!enabled ? "Schedule is disabled" : `Run ${name} now`}
+    >
+      {mutation.isPending ? "..." : "Run"}
+    </button>
+  );
+}
+
+function ScheduleNameCell({ s }: { s: ScheduleInfo }) {
+  return (
+    <div className="flex items-center gap-2">
+      <EnableToggle name={s.name} enabled={s.enabled} />
+      <div>
+        <span className="font-medium text-warm-900">{s.name}</span>
+        {s.description ? (
+          <span className="block text-xs text-warm-600">{s.description}</span>
         ) : null}
-        {s.notBefore ? (
-          <span className="ml-1 text-warm-500">&ge;{s.notBefore}</span>
-        ) : null}
-        {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
-      </td>
-      <td className="py-2 pr-3 text-warm-700 text-xs">
-        {s.lastRun ? timeAgo(s.lastRun) : "never"}
-      </td>
-      <td className="py-2">
-        {s.missingRequirements && s.missingRequirements.length > 0 ? (
-          <span className="text-amber-600 text-xs" title={`Missing: ${s.missingRequirements.join(", ")}`}>
-            &#9888; {s.missingRequirements.join(", ")}
-          </span>
-        ) : s.running ? (
-          <RunningIndicator running={s.running} />
-        ) : (
-          <StatusIndicator lastResult={s.lastResult} lastError={s.lastError} />
-        )}
-      </td>
-    </tr>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleRow({ s }: { s: ScheduleInfo }) {
+  const [showError, setShowError] = useState(false);
+
+  return (
+    <>
+      <tr className={!s.enabled ? "opacity-50" : ""} {...cbSource("schedule", s.name)}>
+        <td className="py-2 pr-3">
+          <ScheduleNameCell s={s} />
+        </td>
+        <td className="py-2 pr-3 text-warm-700 font-mono text-xs">
+          {s.schedule}
+          {s.onWakeup && s.scheduleType !== "wakeup-only" ? (
+            <span className="ml-1 text-warm-500">+wakeup</span>
+          ) : null}
+          {s.notBefore ? (
+            <span className="ml-1 text-warm-500">&ge;{s.notBefore}</span>
+          ) : null}
+          {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
+        </td>
+        <td className="py-2 pr-3 text-warm-700 text-xs">
+          {s.lastRun ? timeAgo(s.lastRun) : "never"}
+        </td>
+        <td className="py-2 pr-3">
+          {s.missingRequirements && s.missingRequirements.length > 0 ? (
+            <span className="text-amber-600 text-xs" title={`Missing: ${s.missingRequirements.join(", ")}`}>
+              &#9888; {s.missingRequirements.join(", ")}
+            </span>
+          ) : s.running ? (
+            <RunningIndicator running={s.running} />
+          ) : (
+            <StatusIndicator lastResult={s.lastResult} lastError={s.lastError} onToggleError={() => setShowError(!showError)} />
+          )}
+        </td>
+        <td className="py-2">
+          <TriggerButton name={s.name} enabled={s.enabled} />
+        </td>
+      </tr>
+      {showError && s.lastError ? (
+        <tr>
+          <td colSpan={5} className="pb-2 px-3">
+            <pre className="text-xs text-red-700 bg-red-50 rounded p-2 whitespace-pre-wrap break-words max-h-40 overflow-auto">{s.lastError}</pre>
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
 
@@ -121,6 +168,7 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
             <th className="pb-2 font-medium">Schedule</th>
             <th className="pb-2 font-medium">Last Run</th>
             <th className="pb-2 font-medium">Status</th>
+            <th className="pb-2 font-medium" />
           </tr>
         </thead>
         <tbody className="divide-y divide-warm-200">
@@ -143,15 +191,19 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
   );
 }
 
-function StatusIndicator({ lastResult, lastError }: { lastResult: "success" | "failure" | null; lastError: string | null }) {
+function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: "success" | "failure" | null; lastError: string | null; onToggleError?: () => void }) {
   if (lastResult === "success") {
     return <span className="text-green-600 text-xs">&#10003;</span>;
   }
   if (lastResult === "failure") {
     return (
-      <span className="text-red-600 text-xs" title={lastError ?? ""}>
-        &#10007; {lastError ? <span className="text-warm-600">{lastError.substring(0, 40)}</span> : null}
-      </span>
+      <button
+        onClick={onToggleError}
+        className="text-red-600 text-xs text-left hover:underline"
+        title={lastError ? "Click to expand error" : ""}
+      >
+        &#10007; {lastError ? <span className="text-warm-600">{lastError.substring(0, 60)}&#8230;</span> : null}
+      </button>
     );
   }
   return <span className="text-warm-500 text-xs">&mdash;</span>;

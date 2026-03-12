@@ -9,8 +9,7 @@
  */
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "./Markdown";
 
 /**
  * Element node from the API.
@@ -113,9 +112,9 @@ function ElementTree({ element, depth = 0 }: ElementTreeProps) {
       {!collapsed && hasContent ? <div className="mt-1">
           {/* Text content rendered as Markdown */}
           {element.text ? <div className="prose prose-sm max-w-none text-warm-700">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <Markdown>
                 {element.text}
-              </ReactMarkdown>
+              </Markdown>
             </div> : null}
 
           {/* Children */}

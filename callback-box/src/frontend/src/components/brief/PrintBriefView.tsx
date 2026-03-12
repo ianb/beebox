@@ -8,8 +8,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "../Markdown";
 import type { NewsBriefData, Section, Excerpt, Expando } from "./types";
 import { trpc } from "../../lib/trpc";
 
@@ -68,7 +67,7 @@ function PrintExpando({ expando }: { expando: Expando }) {
     <div className="print-expando">
       <h3 className="print-expando-title">{expando.title}</h3>
       <div className="print-prose">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{expando.text}</ReactMarkdown>
+        <Markdown>{expando.text}</Markdown>
       </div>
     </div>
   );
@@ -92,7 +91,7 @@ function PrintSection({
       ) : null}
       {section.text ? (
         <div className="print-prose">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.text}</ReactMarkdown>
+          <Markdown>{section.text}</Markdown>
         </div>
       ) : null}
       {section.excerpts.map((excerpt, i) => (
@@ -183,7 +182,7 @@ export function PrintBriefView() {
       {/* Intro text */}
       {brief.content.text ? (
         <div className="print-intro print-prose">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{brief.content.text}</ReactMarkdown>
+          <Markdown>{brief.content.text}</Markdown>
         </div>
       ) : null}
 
