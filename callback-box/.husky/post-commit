@@ -7,3 +7,18 @@ echo "[post-commit] Deploying to server..."
 "$REPO_DIR/deploy/deploy.sh" &>"$REPO_DIR/deploy/.last-deploy.log" &
 disown
 echo "[post-commit] Deploy started in background (log: deploy/.last-deploy.log)"
+
+# Clean up .bak.png files for images that were just committed
+committed_images=$(git diff-tree --no-commit-id --name-only -r HEAD -- 'docs/architecture/images/*.png' | grep -v '\.bak\.png$' || true)
+if [ -n "$committed_images" ]; then
+  for img in $committed_images; do
+    base="${img%.png}"
+    # Remove numbered backups (e.g. card-anatomy-diagram.1.bak.png)
+    for bak in "$REPO_DIR"/"${base}".*.bak.png; do
+      [ -f "$bak" ] && rm "$bak" && echo "[post-commit] Cleaned up $(basename "$bak")"
+    done
+    # Remove mermaid backup
+    mermaid_bak="$REPO_DIR/${base}.mermaid.bak.png"
+    [ -f "$mermaid_bak" ] && rm "$mermaid_bak" && echo "[post-commit] Cleaned up $(basename "$mermaid_bak")"
+  done
+fi
