@@ -8,6 +8,12 @@ import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
 
+function baseServerUrl(publicUrl: string): string {
+  const url = new URL(publicUrl);
+  url.pathname = url.pathname.replace(/\/[^/]+\/?$/, "");
+  return url.origin + url.pathname;
+}
+
 /**
  * Per-box admin router (Telegram, box config).
  */
@@ -79,7 +85,7 @@ export const adminRouter = router({
 
       let webhookUrl: string | null = null;
       if (publicUrl) {
-        webhookUrl = `${publicUrl}/webhook/${ctx.boxSlug}/telegram`;
+        webhookUrl = `${baseServerUrl(publicUrl)}/webhook/${ctx.boxSlug}/telegram`;
         try {
           await tg.setWebhook(webhookUrl, {
             secret_token: webhookSecret,

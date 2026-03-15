@@ -36,6 +36,17 @@ async function loadPublicUrl(boxRoot: string): Promise<string | undefined> {
   return process.env.PUBLIC_URL ?? undefined;
 }
 
+/**
+ * Extract the base server URL from a box's publicUrl by stripping the
+ * trailing path segment (the box slug). E.g.
+ * "https://box.example.com/ledger" → "https://box.example.com"
+ */
+function baseServerUrl(publicUrl: string): string {
+  const url = new URL(publicUrl);
+  url.pathname = url.pathname.replace(/\/[^/]+\/?$/, "");
+  return url.origin + url.pathname;
+}
+
 function addOwnerCheck(server: FastifyInstance) {
   server.addHook("preHandler", async (request, reply) => {
     if (isAuthEnabled() && !isOwner(request)) {
@@ -200,7 +211,7 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     const publicUrl = await loadPublicUrl(boxRoot);
     let webhookUrl: string | null = null;
     if (publicUrl) {
-      webhookUrl = `${publicUrl}/webhook/${boxSlug}/telegram`;
+      webhookUrl = `${baseServerUrl(publicUrl)}/webhook/${boxSlug}/telegram`;
       try {
         await tg.setWebhook(webhookUrl, {
           secret_token: webhookSecret,

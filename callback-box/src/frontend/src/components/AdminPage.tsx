@@ -271,6 +271,11 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
             <ol className="list-decimal list-inside space-y-1.5">
               <li>Open Telegram and message <strong>@BotFather</strong></li>
               <li>Send <code className="bg-warm-200 px-1 rounded">/newbot</code> and follow the prompts</li>
+              <li>
+                Disable privacy mode so the bot can see all group messages: send{" "}
+                <code className="bg-warm-200 px-1 rounded">/setprivacy</code> to @BotFather,
+                select your bot, and choose <strong>Disable</strong>
+              </li>
               <li>Copy the bot token (looks like <code className="bg-warm-200 px-1 rounded text-xs">123456:ABC-DEF...</code>)</li>
               <li>Paste it below</li>
             </ol>
