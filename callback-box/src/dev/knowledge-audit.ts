@@ -80,8 +80,9 @@ program
 
       // Print quick summary
       const passedContains = result.checks.containsChecks.every((c) => c.found);
+      const passedCards = result.checks.cardsContainChecks.every((c) => c.found);
       const passedReads = result.checks.shouldReadChecks.every((c) => c.wasRead);
-      const status = passedContains && passedReads ? "\u2713" : "\u2717";
+      const status = passedContains && passedCards && passedReads ? "\u2713" : "\u2717";
       console.log(`\n${status} ${test.id} — ${result.behavior.filesRead.length} files read, ${result.behavior.searches.length} searches`);
     }
 

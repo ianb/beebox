@@ -5,6 +5,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { createAgent } from "../../core/agent.js";
 import {
@@ -19,6 +20,7 @@ export interface AuditTest {
   expected_level: string;
   watch_for: string;
   correct_contains?: string[];
+  cards_contain?: string[];
   should_read?: string[];
   should_not_read?: string[];
   style?: string;
@@ -40,6 +42,7 @@ export interface AgentBehavior {
 
 export interface AutomatedChecks {
   containsChecks: Array<{ expected: string; found: boolean }>;
+  cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
 }
@@ -81,6 +84,9 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     ? `${test.style}. ${test.prompt}`
     : test.prompt;
 
+  // Snapshot card files before the agent runs (for cards_contain checks)
+  const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+
   const agent = createAgent({
     name: "knowledge-audit",
     ...(onOutput && { onOutput }),
@@ -92,8 +98,12 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     maxTurns: 10,
   });
 
+  // Snapshot card files after the agent runs
+  const cardsAfter = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+
   const behavior = await extractBehavior(boxRoot, agent.sessionId);
-  const checks = runChecks(test, behavior);
+  const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
+  const checks = runChecks(test, { behavior, newOrModifiedCards });
 
   return { test, sessionId: result.sessionId, behavior, checks };
 }
@@ -158,13 +168,73 @@ function categorizeToolUse(block: SessionContentBlock, acc: BehaviorAccumulator)
 }
 
 /**
+ * Snapshot all .card files in the box with their mtimes and content hashes.
+ */
+async function snapshotCardFiles(boxRoot: string): Promise<Map<string, string>> {
+  const snapshot = new Map<string, string>();
+  try {
+    // Use git ls-files for tracked cards, plus find for untracked
+    const output = execSync(
+      "find . -name '*.card' -type f -not -path './.git/*'",
+      { cwd: boxRoot, encoding: "utf-8" },
+    );
+    for (const line of output.trim().split("\n")) {
+      if (!line) continue;
+      const fullPath = path.join(boxRoot, line);
+      try {
+        const content = await fs.readFile(fullPath, "utf-8");
+        snapshot.set(line, content);
+      } catch (_e) {
+        // File may have been deleted between find and read
+      }
+    }
+  } catch (_e) {
+    // find command failed, return empty snapshot
+  }
+  return snapshot;
+}
+
+/**
+ * Find cards that are new or have different content compared to the before snapshot.
+ * Returns a map of relative path → new content.
+ */
+function findNewOrModifiedCards(
+  before: Map<string, string>,
+  after: Map<string, string>,
+): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const [filePath, content] of after) {
+    const oldContent = before.get(filePath);
+    if (oldContent === undefined || oldContent !== content) {
+      result.set(filePath, content);
+    }
+  }
+  return result;
+}
+
+/**
  * Run automated checks against the agent's behavior.
  */
-function runChecks(test: AuditTest, behavior: AgentBehavior): AutomatedChecks {
+interface RunChecksContext {
+  behavior: AgentBehavior;
+  newOrModifiedCards: Map<string, string>;
+}
+
+function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksContext): AutomatedChecks {
   const containsChecks = (test.correct_contains ?? []).map((expected) => ({
     expected,
     found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),
   }));
+
+  const cardsContainChecks = (test.cards_contain ?? []).map((expected) => {
+    const lowerExpected = expected.toLowerCase();
+    for (const [filePath, content] of newOrModifiedCards) {
+      if (content.toLowerCase().includes(lowerExpected)) {
+        return { expected, found: true, foundIn: filePath };
+      }
+    }
+    return { expected, found: false };
+  });
 
   const shouldReadChecks = (test.should_read ?? []).map((file) => ({
     file,
@@ -176,5 +246,5 @@ function runChecks(test: AuditTest, behavior: AgentBehavior): AutomatedChecks {
     wasRead: behavior.filesRead.some((f) => f.endsWith(file) || f.includes(file)),
   }));
 
-  return { containsChecks, shouldReadChecks, shouldNotReadChecks };
+  return { containsChecks, cardsContainChecks, shouldReadChecks, shouldNotReadChecks };
 }

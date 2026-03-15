@@ -450,3 +450,191 @@ tests:
       This tests understanding that todos are for humans while jobs are
       for agents. The agent should not confuse the two or suggest using
       jobs for human tasks.
+
+  # === Recording Knowledge ===
+
+  - id: claude-md-is-writable
+    prompt: "Is CLAUDE.md a file you can edit, or is it read-only configuration?"
+    expected_level: knows_directly
+    watch_for: "Clearly states it can and should be updated with new knowledge"
+    tags: [knowledge]
+
+  - id: incidental-person-where
+    prompt: "While processing a capture, you encounter a person named Dr. Martinez who is a doctor the boxholder saw once. Where do you record this?"
+    expected_level: knows_directly
+    watch_for: "Creates a contact record card — this is an individual item, not core context for CLAUDE.md"
+    correct_contains: ["record"]
+    tags: [knowledge, people]
+    notes: >
+      An incidental contact is just a record card. The agent should NOT add every
+      person to CLAUDE.md — only people central to the box's purpose.
+
+  - id: core-person-where
+    prompt: "You discover that this box is being used to manage things for the boxholder's mother, who is mentioned in many captures. CLAUDE.md doesn't mention her. What do you do?"
+    expected_level: knows_directly
+    watch_for: "Adds her to CLAUDE.md — she's central to the box's purpose, not just an incidental contact"
+    correct_contains: ["CLAUDE.md"]
+    tags: [knowledge, people]
+    notes: >
+      A person who is central to what the box is about belongs in CLAUDE.md as
+      core context. This is different from a random contact encountered in a capture.
+
+  - id: bank-account-where
+    prompt: "You found a bank statement for First National Bank, account ending 4521. Where does this information go?"
+    expected_level: knows_directly
+    watch_for: "Creates a record card — this is a discrete item, not background context for CLAUDE.md"
+    correct_contains: ["record"]
+    tags: [knowledge, organization]
+    notes: >
+      This tests that the agent does NOT put individual items into CLAUDE.md.
+      A bank account is a record card, not background context.
+
+  - id: processing-pattern-where
+    prompt: "You've noticed that voice memos from the boxholder always start with a location name. Where should you record this pattern?"
+    expected_level: knows_about
+    watch_for: "CLAUDE.md for the pattern observation, since it helps other agents process captures"
+    correct_contains: ["CLAUDE.md"]
+    tags: [knowledge, processing]
+
+  - id: user-prefers-terse
+    prompt: "The user has told you they prefer short, bullet-point responses over long paragraphs. Where in the box should this preference be captured so all agents respect it?"
+    expected_level: knows_directly
+    watch_for: "Personality card — this is about how the agent communicates, not situation context"
+    correct_contains: ["personality"]
+    tags: [knowledge, personality]
+
+  - id: triage-rule-where
+    prompt: "The user says 'always archive insurance documents, don't ask me about them.' Where does this go?"
+    expected_level: knows_directly
+    watch_for: "Intake guide — this is a processing rule, not background context"
+    correct_contains: ["guide"]
+    tags: [knowledge, guides]
+
+  - id: new-category-needed
+    prompt: "You keep finding vehicle-related records that don't fit the current archive categories. What do you do?"
+    expected_level: knows_about
+    watch_for: "Creates a new subdirectory AND updates the organization section in CLAUDE.md"
+    correct_contains: ["CLAUDE.md"]
+    tags: [knowledge, organization]
+
+  - id: knowledge-triage-test
+    prompt: "You just learned three things: (1) the box is being used to manage a move to a new city, (2) there's a savings account at Chase with $15k, (3) the boxholder prefers to be called by first name. Where in the box should each of these be stored so all agents can use them?"
+    expected_level: knows_directly
+    watch_for: "Moving context → CLAUDE.md (core situation), bank account → record card, name preference → personality card"
+    correct_contains: ["CLAUDE.md", "record", "personality"]
+    tags: [knowledge]
+    notes: >
+      This is the key integration test: can the agent correctly sort different
+      types of knowledge to different box files in a single decision?
+      The move is core situation context, the account is an individual item,
+      the name preference is communication style.
+
+  # === Don't Drop Important Information ===
+  #
+  # These tests simulate real processing scenarios where unexpected important
+  # information shows up alongside the expected content. The agent should handle
+  # both — not just the thing it was "supposed to" process.
+
+  - id: intake-unexpected-legal
+    prompt: >
+      You are processing an intake job. The item is a voice memo transcript:
+
+      "OK so I'm in the living room, there's the big brown couch, looks like it's in
+      decent shape. The coffee table has a scratch on it. Oh and I forgot to mention,
+      Mom called and said the lawyer wants us to sign the power of attorney paperwork
+      by Friday. Anyway, back to the room — there's a floor lamp in the corner..."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Creates household records for furniture AND separately handles the legal/POA deadline — doesn't just bury it in a furniture record"
+    cards_contain: ["power of attorney", "couch"]
+    tags: [drop-test, intake]
+    notes: >
+      The POA deadline is buried in a furniture walkthrough. The agent should
+      create furniture records AND either create a todo for the legal deadline,
+      ask a question about it, or create a separate record. The failure mode is
+      ignoring the legal mention or burying it in the couch record's notes.
+
+  - id: intake-unexpected-person
+    prompt: >
+      You are processing an intake job. The item is a memo about checking Dad's
+      mail. The memo says:
+
+      "Picked up Dad's mail today. Electric bill from PowerCo, $142. Water bill,
+      $38. There was also a letter from someone named Elias Ward in
+      Portland — looks like it might be a relative we didn't know about? Put
+      it on the kitchen counter. Also a credit card offer, junk."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Creates records for the bills AND flags the Elias Ward letter separately — a possible unknown relative is notable"
+    cards_contain: ["Elias Ward", "PowerCo"]
+    tags: [drop-test, intake]
+    notes: >
+      The bills are routine. The unknown possible relative is unexpected and
+      potentially important. The agent should not just file it as another
+      piece of mail — it should flag it somehow (question, note, separate
+      record with context about why it's notable).
+
+  - id: intake-account-number-in-narrative
+    prompt: >
+      You are processing an intake job. The item is a voice memo:
+
+      "I was on the phone with Fidelity today trying to get access to Dad's
+      investment account. The account number is 7X2-441893. They said we need
+      a death certificate or power of attorney to make any changes. The woman
+      I spoke to was Janet, extension 4412. She was really helpful."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Captures the account number, the access requirements, AND Janet's contact info — all three are important, not just the narrative"
+    cards_contain: ["7X2-441893", "Janet", "4412"]
+    tags: [drop-test, intake]
+    notes: >
+      Three distinct pieces of information: (1) account details, (2) what's
+      needed to get access, (3) a helpful contact. The agent should preserve
+      all of them in card files, not just create a vague record about "called Fidelity."
+
+  - id: chat-unexpected-ledger-info
+    prompt: >
+      You are processing a chat job. The chat thread has a new message from
+      a family member:
+
+      "Hey, just wanted to let you know I found a safe deposit box key in
+      Dad's desk drawer. It's from First National Bank. I put it in the
+      blue folder in the filing cabinet. Also, what time are we meeting
+      Saturday?"
+
+      How do you handle this message?
+    expected_level: knows_directly
+    watch_for: "Answers the Saturday question AND creates a record or note about the safe deposit box key — doesn't just answer the question and move on"
+    correct_contains: ["safe deposit"]
+    tags: [drop-test, chat]
+    notes: >
+      The Saturday question is the direct ask. The safe deposit box key is
+      important ledger information dropped casually. The agent should handle
+      both — responding to the question AND recording the key discovery somehow
+      (record card, memo, or at minimum noting it in the thread). This test
+      uses correct_contains (response check) since the chat agent may not
+      create files in a hypothetical response.
+
+  - id: intake-emotional-context
+    prompt: >
+      You are processing an intake job. The item is a voice memo:
+
+      "Going through the garage today. Found Dad's old workbench, still has
+      all his tools laid out the way he left them. His favorite hammer is
+      the one with the worn wooden handle — he used that thing for 40 years.
+      There's also a table saw, looks like a DeWalt, probably from the 90s.
+      And a bunch of hand tools in the red toolbox."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Creates inventory records for the tools AND preserves the sentimental context about the hammer — doesn't strip the emotional significance"
+    cards_contain: ["hammer", "40 years", "DeWalt"]
+    tags: [drop-test, intake]
+    notes: >
+      The ledger CLAUDE.md says to preserve notes and context about sentimental
+      significance. The hammer's story matters even though it's not "actionable."
+      The failure mode is creating a dry inventory record that loses the personal
+      meaning.

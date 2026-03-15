@@ -69,6 +69,10 @@ function formatTestResult(result: TestResult): string {
   for (const c of checks.containsChecks) {
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains "${c.expected}"`);
   }
+  for (const c of checks.cardsContainChecks) {
+    const detail = c.found && c.foundIn ? ` (in ${c.foundIn})` : "";
+    checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Card contains "${c.expected}"${detail}`);
+  }
   for (const c of checks.shouldReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2713" : "\u2717"} Read ${c.file}`);
   }
