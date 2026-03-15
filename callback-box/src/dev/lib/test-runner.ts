@@ -20,6 +20,7 @@ export interface AuditTest {
   expected_level: string;
   watch_for: string;
   correct_contains?: string[];
+  correct_contains_any?: string[];
   cards_contain?: string[];
   should_read?: string[];
   should_not_read?: string[];
@@ -42,6 +43,7 @@ export interface AgentBehavior {
 
 export interface AutomatedChecks {
   containsChecks: Array<{ expected: string; found: boolean }>;
+  containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
@@ -175,7 +177,7 @@ async function snapshotCardFiles(boxRoot: string): Promise<Map<string, string>> 
   try {
     // Use git ls-files for tracked cards, plus find for untracked
     const output = execSync(
-      "find . -name '*.card' -type f -not -path './.git/*'",
+      "find . -name \"*.card\" -type f -not -path \"./.git/*\"",
       { cwd: boxRoot, encoding: "utf-8" },
     );
     for (const line of output.trim().split("\n")) {
@@ -226,6 +228,13 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
     found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),
   }));
 
+  let containsAnyCheck: AutomatedChecks["containsAnyCheck"];
+  if (test.correct_contains_any) {
+    const lowerText = behavior.responseText.toLowerCase();
+    const matched = test.correct_contains_any.find((opt) => lowerText.includes(opt.toLowerCase()));
+    containsAnyCheck = { options: test.correct_contains_any, found: !!matched, matched: matched ?? undefined };
+  }
+
   const cardsContainChecks = (test.cards_contain ?? []).map((expected) => {
     const lowerExpected = expected.toLowerCase();
     for (const [filePath, content] of newOrModifiedCards) {
@@ -246,5 +255,5 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
     wasRead: behavior.filesRead.some((f) => f.endsWith(file) || f.includes(file)),
   }));
 
-  return { containsChecks, cardsContainChecks, shouldReadChecks, shouldNotReadChecks };
+  return { containsChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks };
 }

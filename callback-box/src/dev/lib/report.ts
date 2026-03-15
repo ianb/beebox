@@ -69,6 +69,11 @@ function formatTestResult(result: TestResult): string {
   for (const c of checks.containsChecks) {
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains "${c.expected}"`);
   }
+  if (checks.containsAnyCheck) {
+    const c = checks.containsAnyCheck;
+    const detail = c.found && c.matched ? ` (matched "${c.matched}")` : "";
+    checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains any of [${c.options.map((o) => `"${o}"`).join(", ")}]${detail}`);
+  }
   for (const c of checks.cardsContainChecks) {
     const detail = c.found && c.foundIn ? ` (in ${c.foundIn})` : "";
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Card contains "${c.expected}"${detail}`);
