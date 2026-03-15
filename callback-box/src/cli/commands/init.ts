@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, symlinkClaudeMemory } from "../../core/box.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, symlinkClaudeMemory } from "../../core/box.js";
 import { stageAll, commit } from "../lib/git.js";
 import { generateRules } from "./init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
@@ -73,6 +73,12 @@ export const initCommand = new Command("init")
       const personalityInstalled = await installPersonality(resolve(targetPath));
       if (personalityInstalled) {
         console.log("\nInstalled config/main.personality.card");
+      }
+
+      // Install root briefing card
+      const briefingInstalled = await installBriefing(resolve(targetPath));
+      if (briefingInstalled) {
+        console.log("\nInstalled briefing.briefing.card");
       }
 
       // Install default scheduled scripts

@@ -11,6 +11,7 @@ import { initRepo, isRepo } from "../cli/lib/git.js";
 import { createInitialGuideTemplate } from "../schemas/guide.js";
 import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";
+import { createBriefingTemplate } from "../schemas/briefing.js";
 
 const __dirname = import.meta.dirname;
 
@@ -343,6 +344,26 @@ export async function installPersonality(boxRoot: string): Promise<boolean> {
   } catch {
     // File doesn't exist — install template
     await fs.writeFile(targetPath, createInitialPersonalityTemplate());
+    return true;
+  }
+}
+
+/**
+ * Install the root briefing card template if missing.
+ *
+ * Every box gets a briefing.briefing.card at the root.
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installBriefing(boxRoot: string): Promise<boolean> {
+  const targetPath = path.join(boxRoot, "briefing.briefing.card");
+
+  try {
+    await fs.access(targetPath);
+    return false; // Already exists — don't overwrite
+  } catch {
+    // File doesn't exist — install template
+    await fs.writeFile(targetPath, createBriefingTemplate());
     return true;
   }
 }

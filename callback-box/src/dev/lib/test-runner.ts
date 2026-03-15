@@ -86,6 +86,13 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     ? `${test.style}. ${test.prompt}`
     : test.prompt;
 
+  // Save git state so we can restore after the test
+  const headBefore = execSync("git rev-parse HEAD", { cwd: boxRoot, encoding: "utf-8" }).trim();
+
+  // Clean any leftover memory files from previous runs
+  const memoryDir = path.join(boxRoot, ".claude", "memory");
+  await fs.rm(memoryDir, { recursive: true, force: true });
+
   // Snapshot card files before the agent runs (for cards_contain checks)
   const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
 
@@ -106,6 +113,10 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   const behavior = await extractBehavior(boxRoot, agent.sessionId);
   const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
   const checks = runChecks(test, { behavior, newOrModifiedCards });
+
+  // Restore box to pre-test state: reset commits and clean untracked files
+  execSync(`git reset --hard ${headBefore}`, { cwd: boxRoot, encoding: "utf-8" });
+  execSync("git clean -fd", { cwd: boxRoot, encoding: "utf-8" });
 
   return { test, sessionId: result.sessionId, behavior, checks };
 }

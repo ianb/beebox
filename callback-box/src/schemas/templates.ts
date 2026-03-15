@@ -27,6 +27,8 @@ import { createRecipeTemplate } from "./recipe.js";
 import { createScheduledScriptTemplate } from "./scheduled-script.js";
 import { createBookmarkTemplate } from "./bookmark.js";
 import { createTodoListTemplate } from "./todo-list.js";
+import { createBriefingTemplate } from "./briefing.js";
+import { createPersonTemplate } from "./person.js";
 
 /**
  * Template definition with typed arguments.
@@ -422,5 +424,34 @@ registerTemplate({
     if (args.details) opts.details = args.details;
     if (args.items) opts.items = args.items;
     return createTodoListTemplate(opts);
+  },
+});
+
+registerTemplate({
+  name: "briefing",
+  description: "A briefing card — core situational context for a box or directory",
+  cardTypes: ["briefing"],
+  defaultForTypes: ["briefing"],
+  argsSchema: z.object({}),
+  generate: () => createBriefingTemplate(),
+});
+
+registerTemplate({
+  name: "person",
+  description: "A person card — key people referenced from briefings",
+  cardTypes: ["person"],
+  defaultForTypes: ["person"],
+  argsSchema: z.object({
+    name: z.string().describe("Full name of the person"),
+    called: z.string().optional().describe("Alias or nickname"),
+    role: z.string().optional().describe("Relationship or function"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createPersonTemplate>[0] = {
+      name: args.name,
+    };
+    if (args.called) opts.called = args.called;
+    if (args.role) opts.role = args.role;
+    return createPersonTemplate(opts);
   },
 });

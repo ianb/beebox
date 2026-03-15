@@ -24,6 +24,9 @@ export const BOX_DIRS = {
   recipes: "store/recipes",
   todos: "store/todos",
 
+  // People
+  people: "people",
+
   // Configuration
   config: "config",
   connectors: "config/connectors",

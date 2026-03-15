@@ -124,13 +124,15 @@ export const PersonalitySchema = element("personality", {
   ),
   instructions: `# Handling Personality Cards
 
-A personality card defines who the agent is and who it works for (the **boxholder**).
+A personality card defines the agent's **voice and manner** — how it communicates, not what the box is about.
 
 There is one personality card per box at \`config/main.personality.card\`.
 
+**This card is about communication style ONLY.** Do NOT put situational context here. The box's purpose, key people, and essential facts belong in the briefing card (\`briefing.briefing.card\`). The personality card answers "how should I talk?" — the briefing card answers "what am I working on?"
+
 **Structure:**
 - \`<goes-by>\` — What the agent is called
-- \`<role>\` — The agent's purpose
+- \`<role>\` — The agent's general function (e.g., "Personal information aide"). This is about what the agent *does*, not what the box contains.
 - \`<boxholder>\` — Relational info about who the agent serves (\`<full-name>\`, \`<called>\`, \`<relationship>\` notes)
 - \`<speaking-voice>\` — TTS audio configuration (model, style instructions)
 - \`<tone>\` — How the agent writes (phrasing, formality, interaction style)
@@ -141,7 +143,7 @@ There is one personality card per box at \`config/main.personality.card\`.
 
 **Editing:** When editing traits, always rewrite the \`<description>\` paragraph to reflect the updated traits, experiments, and unresolved notes. The description is the compiled prose that job agents see — it should capture the overall vibe, not just list traits.
 
-**The boxholder section is relational**, not biographical. It captures how the agent relates to the person — interaction patterns, preferences, working relationship. Biographical details (job, family, deep interests) belong in separate reference documents.`,
+**The boxholder section is relational**, not biographical. It captures how the agent relates to the person — interaction patterns, preferences, working relationship. Biographical details (job, family, deep interests) belong in person cards (\`people/First_Last.person.card\`) or the briefing card.`,
 });
 
 export type Personality = z.infer<typeof PersonalitySchema>;
