@@ -417,7 +417,8 @@ class TelegramConnector implements Connector {
     // but webhook routes are at the server root, so strip the trailing path segment
     const baseUrl = new URL(publicUrl);
     baseUrl.pathname = baseUrl.pathname.replace(/\/[^/]+\/?$/, "");
-    const webhookUrl = `${baseUrl.origin}${baseUrl.pathname}/webhook/${boxSlug}/telegram`;
+    const basePath = baseUrl.pathname.replace(/\/+$/, "");
+    const webhookUrl = `${baseUrl.origin}${basePath}/webhook/${boxSlug}/telegram`;
 
     const tg = this.getTelegram(config.botToken);
     await tg.setWebhook(webhookUrl, {

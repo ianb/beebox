@@ -41,6 +41,12 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   // Initialize box with git
   await initBox(tmpDir);
 
+  // Create an initial commit so the box has history (matches makeTmpBox behavior)
+  execSync("git add -A && git commit --allow-empty -m init -q", {
+    cwd: tmpDir,
+    stdio: "pipe",
+  });
+
   // Create server pointing at this temp box
   const server = await createServer({
     boxes: [{ slug: TEST_SLUG, boxRoot: tmpDir }],
