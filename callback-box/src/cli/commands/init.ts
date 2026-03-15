@@ -6,6 +6,7 @@ import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, symlinkClaudeMemory } from "../../core/box.js";
+import { stageAll, commit } from "../lib/git.js";
 import { generateRules } from "./init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { parseXml } from "cardworks";
@@ -106,6 +107,19 @@ export const initCommand = new Command("init")
       console.log("Generated agent docs in .callback-box/ and docs/generated/");
       if (options.docidDebug) {
         console.log("  DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)");
+      }
+
+      // Commit everything (schedules, procedures, guides, rules, docs, etc.)
+      // on fresh init — initBox() only creates the git repo without committing.
+      if (!isUpdate && !options.skipGit) {
+        const resolved = resolve(targetPath);
+        await stageAll(resolved);
+        await commit(resolved, {
+          message: "Initialize callback box",
+          trailers: {
+            "Created-By": "cb init",
+          },
+        });
       }
 
       if (!isUpdate) {

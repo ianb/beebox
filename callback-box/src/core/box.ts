@@ -7,7 +7,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
-import { initRepo, stageAll, commit, isRepo } from "../cli/lib/git.js";
+import { initRepo, isRepo } from "../cli/lib/git.js";
 import { createInitialGuideTemplate } from "../schemas/guide.js";
 import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";
@@ -128,21 +128,14 @@ tricks/node_modules/
   // Install schemas guide CLAUDE.md if missing
   await installSchemasGuide(resolvedRoot);
 
-  // Initialize git repo (only on fresh init)
+  // Initialize git repo (only on fresh init) — don't commit yet;
+  // the init command installs more files (schedules, procedures, etc.)
+  // after this returns and commits everything together.
   if (!options.skipGit && !isUpdate) {
     const isExistingRepo = await isRepo(resolvedRoot);
     if (!isExistingRepo) {
       await initRepo(resolvedRoot, options.branch ?? "main");
     }
-
-    // Initial commit
-    await stageAll(resolvedRoot);
-    await commit(resolvedRoot, {
-      message: "Initialize callback box",
-      trailers: {
-        "Created-By": "cb init",
-      },
-    });
   }
 
   return { isUpdate };
