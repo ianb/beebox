@@ -54,6 +54,7 @@ config/connectors
 config/procedures
 config/schedules
 config/schemas
+people
 store
 store/archive
 store/archive/done
