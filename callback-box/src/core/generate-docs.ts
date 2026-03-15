@@ -717,6 +717,17 @@ function generateAgentGuide(options: AgentGuideOptions): string {
   lines.push("- Changes **how items are processed** → guide");
   lines.push("- Changes **how the agent communicates** → personality");
   lines.push("");
+  lines.push("### Don't drop unexpected information");
+  lines.push("");
+  lines.push("When processing an item, you may encounter important information that's outside the scope of your current task — a legal deadline buried in a furniture walkthrough, an unknown contact mentioned in passing, an account number in a casual note.");
+  lines.push("");
+  lines.push("**Don't ignore it.** Handle it based on context:");
+  lines.push("");
+  lines.push("- **In a chat conversation**: mention it naturally in your response. Don't hijack the conversation for an aside, but acknowledge it and note that it might need follow-up.");
+  lines.push("- **In a processing job** (intake, capture, etc.): create a question card in `box/questions/` asking the user what to do with it. If the source item needs to stay accessible, move it to `box/inbox/unhandled/` so it doesn't get lost.");
+  lines.push("- **If you're confident** about where it belongs (clear category, obvious action item), file it directly — create a record, todo, or other card in the right place.");
+  lines.push("");
+  lines.push("The worst outcome is silently discarding information that turns out to matter. When in doubt, ask.");
 
   if (personalitySection) {
     lines.push(personalitySection);
