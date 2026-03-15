@@ -453,54 +453,55 @@ tests:
 
   # === Recording Knowledge ===
 
-  - id: claude-md-is-writable
-    prompt: "Is CLAUDE.md a file you can edit, or is it read-only configuration?"
+  - id: briefing-is-writable
+    prompt: "The box has a briefing card at briefing.briefing.card. Is this a file you can edit, or is it generated configuration?"
     expected_level: knows_directly
-    watch_for: "Clearly states it can and should be updated with new knowledge"
+    watch_for: "Clearly states the briefing card can and should be updated with core context"
+    correct_contains: ["briefing"]
     tags: [knowledge]
 
   - id: incidental-person-where
     prompt: "While processing a capture, you encounter a person named Dr. Martinez who is a doctor the boxholder saw once. Where do you record this?"
     expected_level: knows_directly
-    watch_for: "Creates a contact record card — this is an individual item, not core context for CLAUDE.md"
+    watch_for: "Creates a contact record card — this is an individual item, not core context for the briefing"
     correct_contains: ["record"]
     tags: [knowledge, people]
     notes: >
       An incidental contact is just a record card. The agent should NOT add every
-      person to CLAUDE.md — only people central to the box's purpose.
+      person to the briefing — only people central to the box's purpose.
 
   - id: core-person-where
-    prompt: "The boxholder just told you: 'This whole box is for managing things for my mother, Helen. She's 82 and lives at 45 Pine Street.' CLAUDE.md currently says nothing about Helen or the purpose of the box. Where should you record this?"
+    prompt: "The boxholder just told you: 'This whole box is for managing things for my mother, Helen. She's 82 and lives at 45 Pine Street.' The briefing card currently says nothing about Helen or the purpose of the box. Where should you record this?"
     expected_level: knows_directly
-    watch_for: "Updates CLAUDE.md — this is core context about what the box is for and who it's about"
-    correct_contains: ["CLAUDE.md"]
+    watch_for: "Updates the briefing card — this is core context about what the box is for and who it's about. Should also create a person card."
+    correct_contains: ["briefing"]
     tags: [knowledge, people]
     notes: >
       The boxholder is explicitly telling you the purpose of the box and a key
-      person. This is the most clear-cut case for CLAUDE.md: it's the kind of
-      information every agent needs to understand the situation.
+      person. This is the most clear-cut case for the briefing card: purpose +
+      key-people. The agent should also mention creating people/Helen*.person.card.
 
   - id: individual-item-where
     prompt: "You processed a capture and found a vintage clock worth about $200 in the living room. Where does this go?"
     expected_level: knows_directly
-    watch_for: "Creates a record card — this is a discrete item, not background context for CLAUDE.md"
+    watch_for: "Creates a record card — this is a discrete item, not core context for the briefing"
     correct_contains: ["record"]
     tags: [knowledge, organization]
     notes: >
-      This tests that the agent does NOT put individual items into CLAUDE.md.
+      This tests that the agent does NOT put individual items into the briefing.
       A specific item belongs in a record card.
 
   - id: processing-pattern-where
     prompt: "You've noticed that voice memos from the boxholder always start with a location name. Where should you record this pattern?"
     expected_level: knows_about
-    watch_for: "Records it somewhere persistent — CLAUDE.md or the intake guide are both reasonable"
-    correct_contains_any: ["CLAUDE.md", "guide"]
+    watch_for: "Records it somewhere persistent — the briefing card's agent-needs-to-know or the intake guide are both reasonable"
+    correct_contains_any: ["briefing", "guide"]
     tags: [knowledge, processing]
     notes: >
-      Both CLAUDE.md and the intake guide are acceptable destinations. The pattern
-      is a processing observation (guides) but also general context (CLAUDE.md).
-      The test passes if either is mentioned. The failure would be not recording
-      it at all, or putting it in memory.
+      Both the briefing card (agent-needs-to-know) and the intake guide are
+      acceptable destinations. The pattern is a processing observation (guides)
+      but also general context (briefing). The test passes if either is mentioned.
+      The failure would be not recording it at all, or putting it in memory.
 
   - id: user-prefers-terse
     prompt: "The user has told you they prefer short, bullet-point responses over long paragraphs. Where in the box should this preference be captured so all agents respect it?"
@@ -519,25 +520,26 @@ tests:
   - id: new-category-needed
     prompt: "You keep finding vehicle-related records that don't fit the current archive categories. What do you do?"
     expected_level: knows_about
-    watch_for: "Creates a new subdirectory or asks about it — mentions updating documentation or CLAUDE.md if creating one"
-    correct_contains_any: ["CLAUDE.md", "subdirectory", "directory", "vehicles", "question"]
+    watch_for: "Creates a new subdirectory or asks about it — could add a directory briefing to explain the new category"
+    correct_contains_any: ["briefing", "subdirectory", "directory", "vehicles", "question"]
     tags: [knowledge, organization]
     notes: >
-      Either creating a directory and documenting it, or asking the user first,
-      are acceptable. The failure would be just jamming items into an ill-fitting
-      category without recognizing the problem.
+      Either creating a directory and documenting it (possibly with a directory
+      briefing), or asking the user first, are acceptable. The failure would be
+      just jamming items into an ill-fitting category without recognizing the problem.
 
   - id: knowledge-triage-test
     prompt: "You just learned three things: (1) the box is being used to settle the ledger of the boxholder's father, who recently passed away — everything in the box relates to his affairs, (2) there's a vintage guitar worth about $500 in the closet, (3) the boxholder prefers to be called by first name. Where in the box should each of these be stored so all agents can use them?"
     expected_level: knows_directly
-    watch_for: "Ledger purpose → CLAUDE.md (this is what the box IS, every agent needs it), guitar → record card, name preference → personality card"
-    correct_contains: ["CLAUDE.md", "record", "personality"]
+    watch_for: "Ledger purpose → briefing card (purpose + key-people), guitar → record card, name preference → personality card"
+    correct_contains: ["briefing", "record", "personality"]
     tags: [knowledge]
     notes: >
       This is the key integration test: can the agent correctly sort different
       types of knowledge to different box files in a single decision?
-      The ledger purpose is core situation context that frames everything,
-      the guitar is an individual item, the name preference is communication style.
+      The ledger purpose is core situation context (briefing card's purpose and
+      key-people fields), the guitar is an individual item, the name preference
+      is communication style.
 
   # === Don't Drop Important Information ===
   #
