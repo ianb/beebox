@@ -247,6 +247,11 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
     log(options, `Stub HTTP: ${stubs.http.length} pattern(s)`);
   }
 
+  // Ensure cb CLI is on PATH — use this repo's own bin/ directory
+  const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
+  const binDir = path.join(repoRoot, "bin");
+  process.env.PATH = `${binDir}:${process.env.PATH ?? ""}`;
+
   // Install strict fetch — all fetch() calls must match a stub or throw
   process.env.CB_STRICT_FETCH = "1";
   installStrictFetch();
