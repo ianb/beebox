@@ -12,6 +12,7 @@ import { ScheduleOverview } from "./dashboard/ScheduleOverview";
 import { RecentActivity } from "./dashboard/RecentActivity";
 import { NewsPipelineStatus } from "./dashboard/NewsPipelineStatus";
 import { SystemInfo } from "./dashboard/SystemInfo";
+import { HealthWarnings } from "./dashboard/HealthWarnings";
 import { ActionModal, type ActionType } from "./dashboard/ActionModal";
 
 export function DashboardPage() {
@@ -19,6 +20,7 @@ export function DashboardPage() {
 
   const utils = trpc.useUtils();
   const statusQuery = trpc.status.status.useQuery();
+  const healthQuery = trpc.health.check.useQuery();
   const schedulesQuery = trpc.scheduler.schedules.useQuery();
   const ticksQuery = trpc.scheduler.log.useQuery({ limit: 20, event: "tick" });
   const commitsQuery = trpc.status.activity.useQuery({ count: 15 });
@@ -65,6 +67,8 @@ export function DashboardPage() {
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto py-4 px-4 space-y-4">
+          <HealthWarnings health={healthQuery.data ?? null} />
+
           <AttentionCards
             questions={questions}
             inboxCount={status?.counts.inbox ?? 0}

@@ -11,6 +11,7 @@ import { commandsRouter } from "./routers/commands.js";
 import { debugLogRouter } from "./routers/debugLog.js";
 import { adminRouter } from "./routers/admin.js";
 import { todosRouter } from "./routers/todos.js";
+import { healthRouter } from "./routers/health.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -25,6 +26,7 @@ export const appRouter = router({
   debugLog: debugLogRouter,
   admin: adminRouter,
   todos: todosRouter,
+  health: healthRouter,
 });
 
 export type AppRouter = typeof appRouter;

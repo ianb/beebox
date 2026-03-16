@@ -115,4 +115,24 @@ echo "Box '$BOX_NAME' added."
 echo "  Path: $BOX_PATH"
 echo "  URL:  https://box.example.com/$BOX_NAME"
 echo "  Services restarted."
+
+# Wait for server to be ready, then run health check
+sleep 2
+HEALTH=\$(curl -sf "http://localhost:3210/$BOX_NAME/api/health" 2>/dev/null)
+if [ -z "\$HEALTH" ]; then
+  echo "  Health check: could not reach server (may still be starting)"
+elif echo "\$HEALTH" | grep -q '"status":"healthy"'; then
+  echo "  Health check: OK"
+else
+  echo "  Health check: issues detected"
+  # Show failed check messages
+  echo "\$HEALTH" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for c in data.get('checks', []):
+    if not c.get('ok'):
+        sev = 'ERROR' if c.get('severity') == 'error' else 'WARN'
+        print(f'    [{sev}] {c[\"message\"]}')
+" 2>/dev/null || echo "    (could not parse health response)"
+fi
 REMOTE

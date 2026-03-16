@@ -6,6 +6,7 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getSystemState, generateContext } from "../../core/state.js";
+import { runHealthChecks } from "../trpc/routers/health.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { parseCardName } from "../../cli/lib/paths.js";
 import { getLog } from "../../cli/lib/git.js";
@@ -125,6 +126,15 @@ export async function registerApiRoutes(
   server: FastifyInstance,
   boxRoot: string
 ): Promise<void> {
+  // GET /api/health - Health check (permissions, API keys)
+  server.get("/api/health", async () => {
+    const checks = await runHealthChecks(boxRoot);
+    const hasErrors = checks.some((c) => !c.ok && c.severity === "error");
+    const hasWarnings = checks.some((c) => !c.ok && c.severity === "warning");
+    const status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy";
+    return { status, checks };
+  });
+
   // GET /api/status - System state summary
   server.get("/api/status", async () => {
     const state = await getSystemState(boxRoot);
