@@ -23,6 +23,9 @@ tests:
     tags: [navigation, lifecycle]
 
   # === How Items Enter the Box ===
+  #
+  # Status (2026-03-16): All 5 pass. Agent knows input mechanisms directly
+  # from the new "How Items Enter the Box" section in the agent guide.
 
   - id: how-items-enter
     prompt: "How do items get into the box? What are the different ways things arrive?"
@@ -595,6 +598,11 @@ tests:
   # These tests simulate real processing scenarios where unexpected important
   # information shows up alongside the expected content. The agent should handle
   # both — not just the thing it was "supposed to" process.
+  #
+  # Status (2026-03-16): All 5 pass with max_turns: 20. Previously failed at
+  # 10 turns — agent identified the right things but ran out of turns creating
+  # cards. The intake-unexpected-person test also needed the cb create array
+  # args fix (agent couldn't pass options to question template).
 
   - id: intake-unexpected-legal
     prompt: >
