@@ -27,6 +27,7 @@ export interface AuditTest {
   style?: string;
   tags?: string[];
   notes?: string;
+  max_turns?: number;
 }
 
 export interface TestSuite {
@@ -104,7 +105,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     boxRoot,
     systemPrompt: `WORKING DIRECTORY: ${boxRoot}`,
     prompt,
-    maxTurns: 10,
+    maxTurns: test.max_turns ?? 10,
   });
 
   // Snapshot card files after the agent runs

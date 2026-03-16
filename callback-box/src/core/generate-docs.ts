@@ -720,6 +720,10 @@ function generateAgentGuide(options: AgentGuideOptions): string {
   }
 
   lines.push("");
+  lines.push("For array arguments (like question options), repeat the key: `options=\"Red\" options=\"Blue\"` or use JSON: `options='[\"Red\",\"Blue\"]'`");
+  lines.push("");
+  lines.push("**Two-step pattern:** For complex cards, create a minimal card first with `cb create`, then edit it to fill in details. This is often easier than getting all arguments right in one command. Example: `cb create box/questions/Q.question.card -t question-text memo=\"...\" prompt=\"...\"` then edit to add a `<directive>`.");
+  lines.push("");
   lines.push("Always run `cb validate <path>` after creating or editing a card.");
 
   lines.push("");

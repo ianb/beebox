@@ -69,15 +69,40 @@ export const createCommand = new Command("create")
       process.exit(1);
     }
 
-    // Parse key=value positional args
-    const parsedArgs: Record<string, string> = {};
+    // Parse key=value positional args.
+    // Values starting with [ are parsed as JSON arrays.
+    // Repeated keys are collected into arrays automatically.
+    const parsedArgs: Record<string, unknown> = {};
     for (const arg of kvArgs) {
       const eqIndex = arg.indexOf("=");
       if (eqIndex === -1) {
         console.error(`Error: invalid argument '${arg}'. Use key=value format.`);
         process.exit(1);
       }
-      parsedArgs[arg.slice(0, eqIndex)] = arg.slice(eqIndex + 1);
+      const key = arg.slice(0, eqIndex);
+      const raw = arg.slice(eqIndex + 1);
+
+      // Try JSON array parsing for values like '["a","b"]'
+      let value: unknown = raw;
+      if (raw.startsWith("[")) {
+        try {
+          value = JSON.parse(raw);
+        } catch {
+          // Not valid JSON, keep as string
+        }
+      }
+
+      // Repeated keys become arrays
+      if (key in parsedArgs) {
+        const existing = parsedArgs[key];
+        if (Array.isArray(existing)) {
+          existing.push(value);
+        } else {
+          parsedArgs[key] = [existing, value];
+        }
+      } else {
+        parsedArgs[key] = value;
+      }
     }
 
     try {

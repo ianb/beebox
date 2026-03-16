@@ -609,6 +609,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Creates household records for furniture AND separately handles the legal/POA deadline — doesn't just bury it in a furniture record"
     cards_contain: ["power of attorney", "couch"]
+    max_turns: 20
     tags: [drop-test, intake]
     notes: >
       The POA deadline is buried in a furniture walkthrough. The agent should
@@ -630,6 +631,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Creates records for the bills AND flags the Elias Ward letter separately — a possible unknown relative is notable"
     cards_contain: ["Elias Ward", "PowerCo"]
+    max_turns: 20
     tags: [drop-test, intake]
     notes: >
       The bills are routine. The unknown possible relative is unexpected and
@@ -650,6 +652,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Captures the account number, the access requirements, AND Janet's contact info — all three are important, not just the narrative"
     cards_contain: ["7X2-441893", "Janet", "4412"]
+    max_turns: 20
     tags: [drop-test, intake]
     notes: >
       Three distinct pieces of information: (1) account details, (2) what's
@@ -670,6 +673,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Answers the Saturday question AND creates a record or note about the safe deposit box key — doesn't just answer the question and move on"
     correct_contains: ["safe deposit"]
+    max_turns: 20
     tags: [drop-test, chat]
     notes: >
       The Saturday question is the direct ask. The safe deposit box key is
@@ -693,6 +697,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Creates inventory records for the tools AND preserves the sentimental context about the hammer — doesn't strip the emotional significance"
     cards_contain: ["hammer", "40 years", "DeWalt"]
+    max_turns: 20
     tags: [drop-test, intake]
     notes: >
       The ledger CLAUDE.md says to preserve notes and context about sentimental

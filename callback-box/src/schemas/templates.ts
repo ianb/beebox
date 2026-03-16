@@ -123,6 +123,10 @@ export function describeTemplateArgs(name: string): string {
     const defaultVal = getDefaultValue(zodSchema);
 
     let line = `  ${key}`;
+    const isArray = isArraySchema(zodSchema);
+    if (isArray) {
+      line += " (array — repeat key or use JSON: key='[\"a\",\"b\"]')";
+    }
     if (isOptional) {
       line += " (optional)";
     }
@@ -136,6 +140,17 @@ export function describeTemplateArgs(name: string): string {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Check if a Zod schema is an array type (possibly wrapped in optional/default).
+ */
+function isArraySchema(schema: z.ZodTypeAny): boolean {
+  if (schema instanceof z.ZodArray) return true;
+  if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
+    return isArraySchema((schema as z.ZodOptional<z.ZodTypeAny> | z.ZodDefault<z.ZodTypeAny>)._def.innerType);
+  }
+  return false;
 }
 
 /**
