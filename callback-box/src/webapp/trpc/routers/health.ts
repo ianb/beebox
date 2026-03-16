@@ -6,6 +6,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
@@ -111,14 +112,23 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     severity: "warning",
   });
 
-  // Anthropic key (needed for agent operations)
-  const anthropicKey = process.env["ANTHROPIC_API_KEY"] ?? null;
+  // Claude Code credentials (needed for agent operations — chat, reactor, procedures)
+  // Claude Code stores credentials in ~/.claude/.credentials.json (Linux) or Keychain (macOS)
+  const credsPath = path.join(os.homedir(), ".claude", ".credentials.json");
+  let hasClaudeCredentials = false;
+  try {
+    const creds = await fs.readFile(credsPath, "utf-8");
+    const parsed = JSON.parse(creds);
+    hasClaudeCredentials = !!(parsed.claudeAiOauth && parsed.claudeAiOauth.accessToken);
+  } catch {
+    // Not found or invalid
+  }
   checks.push({
-    name: "anthropic-api-key",
-    ok: anthropicKey !== null,
-    message: anthropicKey !== null
-      ? "Anthropic API key configured"
-      : "Anthropic API key not found — agent operations will not work. Set ANTHROPIC_API_KEY in .env",
+    name: "claude-credentials",
+    ok: hasClaudeCredentials,
+    message: hasClaudeCredentials
+      ? "Claude Code credentials configured"
+      : "Claude Code credentials not found — agent operations (chat, reactor, procedures) will not work. Run 'claude auth login' or copy credentials to ~/.claude/.credentials.json",
     severity: "error",
   });
 
