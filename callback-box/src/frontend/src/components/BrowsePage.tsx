@@ -9,13 +9,12 @@ import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { Sidebar } from "./Sidebar";
 import { FileView } from "./FileView";
-import { trpc, type RouterOutput } from "../lib/trpc";
+import { trpc } from "../lib/trpc";
 import { cbSource } from "../lib/source-tag";
 
-type BrowseCard = RouterOutput["status"]["browse"]["cards"][number];
 
 interface BrowsePageProps {
-  /** Current directory path from URL splat (e.g., "store/recipes") */
+  /** Current directory path from URL splat (e.g., "store/recipes" or "store/recipes/Foo.recipe.card") */
   currentPath?: string;
   /** Called when navigating to a directory */
   onNavigate: (path: string) => void;
@@ -23,17 +22,28 @@ interface BrowsePageProps {
 
 export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   const { boxSlug } = useParams({ strict: false });
-  const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: currentPath });
-  const [selectedCard, setSelectedCard] = useState<BrowseCard | null>(null);
 
-  // Build breadcrumb segments
-  const segments = currentPath ? currentPath.split("/").filter(Boolean) : [];
+  // If currentPath points to a card file, split into directory + card filename
+  const isCardPath = currentPath.endsWith(".card");
+  const dirPath = isCardPath ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
+  const initialCardFile = isCardPath ? currentPath : null;
+
+  const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: dirPath });
+  const [selectedCardPath, setSelectedCardPath] = useState<string | null>(initialCardFile);
+
+  // Derive selectedCard from the path + loaded data
+  const selectedCard = selectedCardPath && data
+    ? data.cards.find((c) => c.relativePath === selectedCardPath) || null
+    : null;
+
+  // Build breadcrumb segments from the directory path
+  const segments = dirPath ? dirPath.split("/").filter(Boolean) : [];
 
   const hasDetail = Boolean(selectedCard);
 
   return (
     <div className="h-full flex">
-      <Sidebar title="Browse" subtitle={currentPath || "/"} detailSelected={hasDetail}>
+      <Sidebar title="Browse" subtitle={dirPath || "/"} detailSelected={hasDetail}>
         <div className="flex flex-col">
           {/* Breadcrumbs */}
           <div className="px-3 py-2 border-b text-sm flex flex-wrap items-center gap-1">
@@ -72,9 +82,9 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
               {data.dirs.map((dir) => (
                 <button
                   key={dir}
-                  {...cbSource("dir", currentPath ? `${currentPath}/${dir}` : dir)}
+                  {...cbSource("dir", dirPath ? `${dirPath}/${dir}` : dir)}
                   onClick={() =>
-                    onNavigate(currentPath ? `${currentPath}/${dir}` : dir)
+                    onNavigate(dirPath ? `${dirPath}/${dir}` : dir)
                   }
                   className="w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200"
                 >
@@ -92,7 +102,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 <button
                   key={card.relativePath}
                   onClick={() => {
-                    setSelectedCard(card);
+                    setSelectedCardPath(card.relativePath);
                     window.history.replaceState(null, "", href(`/${boxSlug}/browse/${card.relativePath}`));
                   }}
                   {...cbSource("card", card.relativePath)}
@@ -137,7 +147,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
           <div className="max-w-4xl mx-auto py-4 sm:py-8">
             <div className="mb-4 px-4 flex items-center justify-between">
               <button
-                onClick={() => setSelectedCard(null)}
+                onClick={() => setSelectedCardPath(null)}
                 className="sm:hidden flex items-center gap-1 text-sm text-plum hover:text-plum-dark"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
