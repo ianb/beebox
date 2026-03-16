@@ -211,10 +211,13 @@ export const realtimeTranscriptionMachine = setup({
       const text = (event as { type: "TRANSCRIPTION_DONE"; text?: string }).text;
       return { transcript: text || context.transcript };
     }),
+    setTimeoutWarning: assign({
+      error: "Transcription timed out — partial text preserved",
+    }),
     eraseTranscript: assign({ transcript: "" }),
   },
   delays: {
-    FINALIZE_TIMEOUT: 5000,
+    FINALIZE_TIMEOUT: 10000,
   },
 }).createMachine({
   id: "realtimeTranscription",
@@ -241,7 +244,8 @@ export const realtimeTranscriptionMachine = setup({
       },
       initial: "connecting",
       on: {
-        // Events that return to idle from any active substate
+        // Events that return to idle from any active substate.
+        // Use setError so partial text is preserved.
         SERVER_ERROR: {
           target: "idle",
           actions: "setError",
@@ -302,9 +306,12 @@ export const realtimeTranscriptionMachine = setup({
           after: {
             FINALIZE_TIMEOUT: {
               target: "#realtimeTranscription.idle",
-              actions: () => {
-                console.warn("[realtime-transcription] Timed out waiting for transcription.done");
-              },
+              actions: [
+                () => {
+                  console.warn("[realtime-transcription] Timed out waiting for transcription.done");
+                },
+                "setTimeoutWarning",
+              ],
             },
           },
           on: {

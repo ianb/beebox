@@ -71,6 +71,14 @@ else
   mkdir -p "$BOXES_DIR"
   git clone "$REPO" "$BOX_PATH"
 fi
+
+# Run cb init to ensure all standard directories exist (e.g., people/)
+# and agent docs are up to date. Run as callback user so files get
+# correct ownership. Must chown first so callback can write.
+chown -R $CB_USER:$CB_USER "$BOX_PATH"
+echo "Running cb init to update box structure..."
+su - $CB_USER -c "cd '$BOX_PATH' && cb init . --skip-git" 2>&1 || echo "Warning: cb init failed (non-fatal)"
+# Re-chown in case cb init created files as root (shouldn't happen, but safe)
 chown -R $CB_USER:$CB_USER "$BOX_PATH"
 
 # Register with scheduler

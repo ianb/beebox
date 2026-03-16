@@ -459,6 +459,21 @@ function InteractiveChat() {
     transcription.state === "recording" ||
     transcription.state === "finalizing";
 
+  // When transcription ends with an error, preserve partial text into the input field.
+  // Uses queueMicrotask to avoid synchronous setState within the effect body.
+  const prevTranscribingRef = useRef(false);
+  useEffect(() => {
+    const wasTranscribing = prevTranscribingRef.current;
+    prevTranscribingRef.current = isTranscribing;
+    if (wasTranscribing && !isTranscribing && transcription.error && transcription.transcript.trim()) {
+      const partial = transcription.transcript.trim();
+      console.log("[chat] Preserved partial transcript on error:", partial.slice(0, 80));
+      queueMicrotask(() => {
+        setInput((prev) => (prev ? prev + " " + partial : partial));
+      });
+    }
+  }, [isTranscribing, transcription.error, transcription.transcript]);
+
   const handleCancelTranscription = useCallback(() => {
     turnTakingRef.current = false;
     transcription.cancel();

@@ -19,7 +19,7 @@ Go to GitHub and create a new private repo. Convention: `ianb/box-<name>`.
 cb init ~/src/boxes/<name>
 ```
 
-This creates the full box directory structure, installs default procedures/guides/schedules, generates agent docs, and makes an initial git commit.
+This creates the full box directory structure, installs default procedures/guides/schedules, generates agent docs, and makes an initial git commit. It also creates a seed `briefing.briefing.card` — fill this in with the box's purpose and key people.
 
 ### 3. Push to GitHub
 
@@ -42,9 +42,21 @@ This clones the repo on the server, registers it with the scheduler, rebuilds th
 
 The box is now live at `https://box.example.com/<name>/`.
 
-### 5. Configure access (optional)
+### 5. Fix file ownership
 
-To restrict who can access the box, edit `config/box.json` on the server:
+The deploy script clones as root and runs `chown -R callback:callback` on the box. However, if `cb init` is run again later (e.g., after a code update that adds new directories), it runs as the `callback` user but the code itself runs from `/opt/callback/` which is root-owned. New directories created by `cb init` (like `people/`) will be owned by root if the init happens during deploy rather than from the callback user.
+
+After deploying or running `cb init` on the server, verify ownership:
+
+```bash
+./deploy/ssh-server.sh "ls -la /home/callback/boxes/<name>/"
+# If anything is root-owned:
+./deploy/ssh-server.sh "chown -R callback:callback /home/callback/boxes/<name>/"
+```
+
+### 6. Configure access
+
+Edit `config/box.json` to restrict who can access the box:
 
 ```bash
 ./deploy/ssh-server.sh
@@ -53,21 +65,56 @@ vi /home/callback/boxes/<name>/config/box.json
 
 ```json
 {
+  "publicUrl": "https://box.example.com/<name>",
   "allowedEmails": ["ian@ianbicking.org"]
 }
 ```
 
 If `allowedEmails` is empty or missing, any authenticated user can access.
 
-### 6. Add connector secrets (optional)
+### 7. Copy connector secrets
+
+**This is easy to forget.** New boxes have no API keys — features like transcription will fail silently with "API key not configured." Secrets are per-box, stored in `config/connectors/`.
+
+Copy secrets from an existing box:
 
 ```bash
 ./deploy/ssh-server.sh
-cd /home/callback/boxes/<name>/config/connectors/
-echo '{"botToken":"..."}' > telegram.secret.json
+# See what secrets exist on other boxes
+ls /home/callback/boxes/*/config/connectors/*.secret.json
+
+# Copy what you need
+cp /home/callback/boxes/hearth/config/connectors/mistral.secret.json \
+   /home/callback/boxes/<name>/config/connectors/
+chown callback:callback /home/callback/boxes/<name>/config/connectors/*.secret.json
+chmod 600 /home/callback/boxes/<name>/config/connectors/*.secret.json
 ```
 
-Then restart: `systemctl restart callback-serve`
+Common secrets:
+- `mistral.secret.json` — `{"apiKey":"..."}` — needed for Voxtral transcription
+- `telegram.secret.json` — `{"botToken":"...","webhookSecret":"..."}` — needed for Telegram connector
+- Google connector tokens are per-box in `google.secret.json`
+
+Alternatively, set the `CALLBACK_MISTRAL_API_KEY` env var in `/home/callback/.env` to provide a server-wide default (but connector-specific secrets like Telegram must still be per-box).
+
+### 8. Fill in the briefing card
+
+The seed briefing card from `cb init` has placeholder content. Fill in:
+- `<purpose>` — what this box is for
+- `<key-people>` — who's involved (inline or referencing person cards in `people/`)
+- `<agent-needs-to-know>` — critical context the agent should always have
+
+Then run `cb wakeup` (or wait for the scheduler) to compile the briefing into agent docs.
+
+## Updating a deployed box
+
+Push changes to GitHub, then:
+
+```bash
+./deploy/add-box.sh ianb/box-<name> <name>
+```
+
+If the box already exists on the server, it pulls the latest instead of cloning.
 
 ## Troubleshooting
 
@@ -88,12 +135,14 @@ The `add-box.sh` script uses `-A` for SSH agent forwarding. If the clone fails w
 
 The systemd service lists boxes explicitly. If you added a box manually (not via `add-box.sh`), the service file won't include it. Either re-run `add-box.sh` or manually edit `/etc/systemd/system/callback-serve.service` on the server and restart.
 
-### Updating a deployed box
+### "API key not configured" errors
 
-Push changes to GitHub, then:
+The box is missing a secret file. See step 7 above. Check which secrets exist:
 
 ```bash
-./deploy/add-box.sh ianb/box-<name> <name>
+./deploy/ssh-server.sh "ls /home/callback/boxes/<name>/config/connectors/"
 ```
 
-If the box already exists on the server, it pulls the latest instead of cloning.
+### Permission denied writing to box directories
+
+Files or directories owned by root instead of `callback`. See step 5 above.
