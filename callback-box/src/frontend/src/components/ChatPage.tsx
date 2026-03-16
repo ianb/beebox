@@ -404,6 +404,7 @@ function InteractiveChat() {
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text || isStreaming) return;
+    turnTakingRef.current = false;
     unlockAudioContext();
     setInput("");
     doSend(`<typed local-time="${localTime()}">${text}</typed>`);
@@ -658,6 +659,7 @@ function InteractiveChat() {
               </button>
               <button
                 onClick={() => {
+                  turnTakingRef.current = false;
                   const text = transcription.transcript;
                   if (text) {
                     setInput((existing) => (existing ? existing + " " + text : text));
