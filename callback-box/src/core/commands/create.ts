@@ -18,6 +18,8 @@ import {
   getDefaultTemplate,
   getTemplateNames,
 } from "../../schemas/index.js";
+import { lintCards, formatLintResults } from "cardworks";
+import { createLoader } from "../../cli/lib/loader.js";
 
 /**
  * Arguments for the create command.
@@ -119,8 +121,27 @@ async function executeCreate(
   // Generate content from template
   const content = template.generate(parseResult.data);
 
-  // Write card file
-  await fs.writeFile(fullPath, content);
+  // Validate the generated content before writing by writing to a temp file
+  const tmpPath = `${fullPath}.tmp`;
+  await fs.writeFile(tmpPath, content);
+  try {
+    const loader = await createLoader(ctx.boxRoot);
+    const summary = await lintCards(loader, [tmpPath]);
+    if (summary.totalErrors > 0) {
+      const report = formatLintResults(summary);
+      await fs.unlink(tmpPath);
+      return {
+        success: false,
+        error: `Template produced invalid card:\n${report}`,
+      };
+    }
+  } catch (err) {
+    // Validation itself failed (e.g., unknown schema) — still write, but warn
+    ctx.writeLine(`Warning: could not validate card: ${(err as Error).message}`);
+  }
+
+  // Move temp file to final path
+  await fs.rename(tmpPath, fullPath);
 
   const relativePath = path.relative(ctx.boxRoot, fullPath);
   ctx.writeLine(`Created: ${relativePath}`);
