@@ -365,9 +365,9 @@ export function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "
 
 /**
  * Render a user message bubble.
- * When currentUserName is provided, messages from other users are styled differently.
+ * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserName }: { entries: SessionEntry[]; debugView?: boolean; currentUserName?: string }) {
+export function UserMessage({ entries, debugView, currentUserEmail }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string }) {
   // Hide schedule-fired messages entirely in normal view (they're system-injected)
   if (!debugView) {
     const allTexts = entries.flatMap((e) =>
@@ -378,7 +378,11 @@ export function UserMessage({ entries, debugView, currentUserName }: { entries: 
   }
 
   const senderName = getUserName(entries[0]);
-  const isOtherUser = senderName && currentUserName && senderName !== currentUserName;
+  const senderEmail = entries[0].userEmail;
+  // Compare by email if available (same user across devices), fall back to name
+  const isOtherUser = currentUserEmail
+    ? senderEmail ? senderEmail !== currentUserEmail : senderName ? senderName !== currentUserEmail : false
+    : false;
 
   if (isOtherUser) {
     // Other user's message: left-aligned with name label

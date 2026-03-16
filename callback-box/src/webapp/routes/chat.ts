@@ -113,7 +113,7 @@ export async function registerChatRoutes(
   function injectUserAttr(message: string, user: SessionUser): string {
     return message.replace(
       /^(<(?:typed|speech)\b)([^>]*>)/,
-      `$1 user="${user.name.replace(/"/g, "&quot;")}"$2`
+      `$1 user="${user.name.replace(/"/g, "&quot;")}" user-email="${user.email.replace(/"/g, "&quot;")}"$2`
     );
   }
 

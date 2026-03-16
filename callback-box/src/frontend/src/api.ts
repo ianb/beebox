@@ -90,6 +90,8 @@ export interface SessionEntry {
   content: SessionContentBlock[];
   /** Display name of the sender (for user messages in multi-user chat) */
   user?: string;
+  /** Email of the sender (for identity matching across devices) */
+  userEmail?: string;
 }
 
 // --- Shared fetch helper ---

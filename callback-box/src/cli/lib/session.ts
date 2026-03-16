@@ -35,6 +35,8 @@ export interface SessionEntry {
   content: SessionContentBlock[];
   /** Display name of the sender (for user messages in multi-user chat) */
   user?: string;
+  /** Email of the sender (for identity matching across devices) */
+  userEmail?: string;
 }
 
 /**
@@ -251,13 +253,18 @@ export async function parseSessionLog(
     // Skip assistant entries with no visible content
     if (raw.type === "assistant" && content.length === 0) continue;
 
-    // Extract user="..." from <typed> or <speech> tags in user messages
+    // Extract user="..." and user-email="..." from <typed> or <speech> tags in user messages
     let user: string | undefined;
+    let userEmail: string | undefined;
     if (raw.type === "user") {
       const firstText = content.find((b) => b.type === "text")?.text || "";
       const userMatch = firstText.match(/<(?:typed|speech)\b[^>]*\buser="([^"]*)"/);
       if (userMatch && userMatch[1]) {
         user = userMatch[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
+      }
+      const emailMatch = firstText.match(/<(?:typed|speech)\b[^>]*\buser-email="([^"]*)"/);
+      if (emailMatch && emailMatch[1]) {
+        userEmail = emailMatch[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
       }
     }
 
@@ -267,6 +274,7 @@ export async function parseSessionLog(
       timestamp: String(raw.timestamp || ""),
       content,
       ...(user ? { user } : {}),
+      ...(userEmail ? { userEmail } : {}),
     });
   }
 

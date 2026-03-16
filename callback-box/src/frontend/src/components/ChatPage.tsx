@@ -547,7 +547,7 @@ function InteractiveChat() {
         ) : null}
         {groupMessages(messages).map((group) =>
           group.type === "user" ? (
-            <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserName={currentUser?.name} />
+            <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
           ) : (
             <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
           )
