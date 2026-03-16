@@ -310,21 +310,24 @@ export function ActivityGroup({ parts }: { parts: Array<{ type: "thinking" | "to
 }
 
 /**
- * Render a flat tool list (used during streaming when we don't have full context).
+ * Render a collapsed tool list (used during streaming when we don't have full context).
+ * Shows as a collapsed summary matching the post-completion ActivityGroup style.
  */
 export function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
   if (blocks.length === 0) return null;
   const summary = summarizeActivity([{ type: "tools", tools: blocks }]);
   return (
-    <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
-      <div className="flex items-center gap-1 text-warm-600 mb-1">
-        <span className="text-[10px]">&#9654;</span>
+    <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
+      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-warm-600 hover:text-warm-700">
+        <span className="text-warm-500 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
         <span>{summary}…</span>
+      </summary>
+      <div className="mt-1 text-xs text-warm-600 leading-tight ml-1">
+        {blocks.map((block, i) => (
+          <ToolDetail key={i} block={block} />
+        ))}
       </div>
-      {blocks.map((block, i) => (
-        <ToolDetail key={i} block={block} />
-      ))}
-    </div>
+    </details>
   );
 }
 

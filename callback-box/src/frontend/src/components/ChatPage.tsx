@@ -490,6 +490,14 @@ function InteractiveChat() {
     }
   }, [isStreaming, isTranscribing]);
 
+  // Scroll textarea to bottom as transcript streams in
+  useEffect(() => {
+    if (isTranscribing && textareaRef.current) {
+      const el = textareaRef.current;
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [isTranscribing, transcription.transcript]);
+
   // Escape key cancels transcription
   useEffect(() => {
     if (!isTranscribing) return;
