@@ -197,7 +197,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
           const email = getSessionEmail(request);
           if (!email) {
             // For API/SSE requests, return 401 JSON. For page navigations, redirect to login.
-            const isApi = request.url.includes("/api/") || request.url.includes("/events");
+            const isApi = request.url.includes("/api/") || request.url.includes("/trpc/") || request.url.includes("/events");
             if (isApi) {
               return reply.status(401).send({ error: "Not authenticated" });
             }
