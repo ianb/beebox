@@ -34,6 +34,16 @@ Several things go wrong when adding a new box to the server that are easy to for
 
 Longer term: `add-box.sh` or a `cb deploy-check` command could verify: all standard dirs exist and are writable, required secrets are present, `cb validate` passes, and the web endpoint responds.
 
+## Ref path normalization
+
+Refs in cards use paths like `ref="../../../store/archive/Foo.record.card"` which are fragile and hard to read. Absolute refs (`ref="/store/archive/Foo.record.card"`) are already supported and preferred.
+
+Ideas for automatic normalization:
+- `cb validate --fix` could rewrite relative refs to absolute
+- `cb create` could resolve ref arguments to absolute paths before writing
+- The card loader could normalize refs on save (convert relative→absolute)
+- A lint rule could warn on relative refs that go above the card's parent directory
+
 ## Feature Ideas
 
 ### Agent "give up" mechanism
