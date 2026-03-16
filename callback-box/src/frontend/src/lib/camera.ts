@@ -1,5 +1,9 @@
 export type FacingMode = "user" | "environment";
 
+// Request the highest resolution the camera supports.
+// The browser picks the closest match to `ideal`.
+const HIGH_RES = { width: { ideal: 4096 }, height: { ideal: 3072 } };
+
 export class CameraCapture {
   private stream: MediaStream | null = null;
   private videoEl: HTMLVideoElement | null = null;
@@ -16,7 +20,7 @@ export class CameraCapture {
     this.videoEl = videoEl;
 
     this.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: this.facingMode },
+      video: { facingMode: this.facingMode, ...HIGH_RES },
       audio: false,
     });
 
@@ -31,7 +35,7 @@ export class CameraCapture {
     this.currentDeviceId = deviceId;
 
     this.stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId } },
+      video: { deviceId: { exact: deviceId }, ...HIGH_RES },
       audio: false,
     });
 
@@ -62,20 +66,34 @@ export class CameraCapture {
       return { blob: Promise.resolve(null), source: `camera-${this.facingMode}` };
     }
 
+    // Prefer ImageCapture API when available — it takes a full-resolution
+    // still photo from the camera sensor, which is typically much higher
+    // than the video stream resolution. Supported on Chrome/Android.
+    const track = this.stream ? this.stream.getVideoTracks()[0] : null;
+    if (track && typeof ImageCapture !== "undefined") {
+      const capture = new ImageCapture(track);
+      const blobPromise = capture.takePhoto()
+        .catch((_e) => {
+          // Fall back to canvas capture on failure
+          return this.canvasCapture();
+        });
+      return { blob: blobPromise, source: `camera-${this.facingMode}` };
+    }
+
+    return { blob: this.canvasCapture(), source: `camera-${this.facingMode}` };
+  }
+
+  private canvasCapture(): Promise<Blob | null> {
+    if (!this.videoEl) return Promise.resolve(null);
     const canvas = document.createElement("canvas");
     canvas.width = this.videoEl.videoWidth;
     canvas.height = this.videoEl.videoHeight;
     const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return { blob: Promise.resolve(null), source: `camera-${this.facingMode}` };
-    }
+    if (!ctx) return Promise.resolve(null);
     ctx.drawImage(this.videoEl, 0, 0);
-
-    const blobPromise = new Promise<Blob | null>((resolve) => {
+    return new Promise<Blob | null>((resolve) => {
       canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85);
     });
-
-    return { blob: blobPromise, source: `camera-${this.facingMode}` };
   }
 
   stop(): void {
