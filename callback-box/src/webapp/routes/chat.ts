@@ -30,6 +30,7 @@ import {
 
 interface SendBody {
   message: string;
+  messageId?: string;
 }
 
 interface RegisterChatRoutesOptions {
@@ -117,15 +118,46 @@ export async function registerChatRoutes(
     );
   }
 
+  // Track recently processed message IDs to prevent duplicate sends on retry.
+  // Map of messageId → timestamp. Pruned periodically.
+  const processedMessageIds = new Map<string, number>();
+  const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  function pruneMessageIds(): void {
+    const cutoff = Date.now() - MESSAGE_ID_TTL_MS;
+    for (const [id, ts] of processedMessageIds) {
+      if (ts < cutoff) processedMessageIds.delete(id);
+    }
+  }
+
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody }>(
     "/api/chat/send",
     async (request, reply) => {
       const body = request.body ?? {};
-      const { message } = body;
+      const { message, messageId } = body;
 
       if (!message) {
         return reply.status(400).send({ error: "message is required" });
+      }
+
+      // Deduplicate retries: if we've already processed this messageId,
+      // return success without re-sending to the agent
+      if (messageId) {
+        pruneMessageIds();
+        if (processedMessageIds.has(messageId)) {
+          console.log(`[chat] Duplicate message ${messageId}, skipping`);
+          reply.hijack();
+          reply.raw.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          });
+          reply.raw.write(`data: ${JSON.stringify({ type: "result", deduplicated: true })}\n\n`);
+          reply.raw.end();
+          return;
+        }
+        processedMessageIds.set(messageId, Date.now());
       }
 
       // Identify the sender from the session (may be null if auth is disabled)

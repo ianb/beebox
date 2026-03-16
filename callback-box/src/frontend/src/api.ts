@@ -270,23 +270,46 @@ export async function resetChatSession(): Promise<{ ok: boolean }> {
  * Send a chat message and stream the response via SSE.
  * Calls onMessage for each streamed JSON message from Claude.
  * Returns when the turn is complete.
+ *
+ * Retries once on network failure with a messageId to prevent duplicates.
  */
 export async function sendChatMessage(params: {
   message: string;
   onMessage: (msg: Record<string, unknown>) => void;
 }): Promise<void> {
   const { message, onMessage } = params;
-  const response = await fetch(`${getApiBase()}/chat/send`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
-  });
+  const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || "Chat send failed");
+  const attempt = async (_retry: boolean): Promise<Response> => {
+    const response = await fetch(`${getApiBase()}/chat/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, messageId }),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || "Chat send failed");
+    }
+
+    return response;
+  };
+
+  let response: Response;
+  try {
+    response = await attempt(false);
+  } catch (err) {
+    // Retry once on network errors (not HTTP errors — those already threw above).
+    // fetch() throws TypeError on network failure.
+    if (err instanceof TypeError) {
+      console.warn("[chat] Send failed with network error, retrying...", err.message);
+      await new Promise((r) => setTimeout(r, 2000));
+      response = await attempt(true);
+    } else {
+      throw err instanceof Error ? err : new Error(String(err));
+    }
   }
 
   const reader = response.body?.getReader();
