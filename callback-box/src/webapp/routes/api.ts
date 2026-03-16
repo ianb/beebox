@@ -385,6 +385,59 @@ export async function registerApiRoutes(
     }
   );
 
+  // GET /api/files/* - Serve raw box files (images, audio, etc.)
+  server.get<{ Params: { "*": string } }>(
+    "/api/files/*",
+    async (request, reply) => {
+      const reqPath = request.params["*"] || "";
+
+      // Security: resolve and ensure within boxRoot
+      const resolved = path.resolve(path.join(boxRoot, reqPath));
+      if (!resolved.startsWith(path.resolve(boxRoot))) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+
+      // Don't serve .card files or dotfiles through this endpoint
+      if (resolved.endsWith(".card") || path.basename(resolved).startsWith(".")) {
+        return reply.status(403).send({ error: "Use card API for card files" });
+      }
+
+      try {
+        const stat = await fs.stat(resolved);
+        if (!stat.isFile()) {
+          return reply.status(404).send({ error: "Not found" });
+        }
+
+        // Infer MIME type from extension
+        const ext = path.extname(resolved).toLowerCase();
+        const mimeTypes: Record<string, string> = {
+          ".jpg": "image/jpeg",
+          ".jpeg": "image/jpeg",
+          ".png": "image/png",
+          ".gif": "image/gif",
+          ".webp": "image/webp",
+          ".webm": "audio/webm",
+          ".mp4": "video/mp4",
+          ".m4a": "audio/mp4",
+          ".mp3": "audio/mpeg",
+          ".pdf": "application/pdf",
+          ".json": "application/json",
+          ".md": "text/markdown",
+          ".txt": "text/plain",
+        };
+        const contentType = mimeTypes[ext] || "application/octet-stream";
+
+        const content = await fs.readFile(resolved);
+        return reply
+          .header("Content-Type", contentType)
+          .header("Cache-Control", "public, max-age=3600")
+          .send(content);
+      } catch {
+        return reply.status(404).send({ error: "Not found" });
+      }
+    }
+  );
+
   // GET /api/news-status - News pipeline status by location
   server.get("/api/news-status", async () => {
     const [inboxCount, poolCount, archiveCount, trashCount] = await Promise.all([
