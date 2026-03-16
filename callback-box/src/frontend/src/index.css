@@ -65,6 +65,12 @@ body {
   content: none;
 }
 
+/* Wrap long lines in code blocks instead of overflowing */
+.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Highlight.js XML customizations - dim the angle brackets */
 .hljs-tag {
   color: #ccc;
