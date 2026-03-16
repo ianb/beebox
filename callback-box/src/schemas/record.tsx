@@ -81,7 +81,7 @@ export const RecordNotes = element("notes", {
  *   <name>Brown Leather Couch</name>
  *   <description>Three-seat sofa in the living room, purchased 2019</description>
  *   <sources>
- *     <source ref="capture-20260210T1430-Living_Room/session.capture-session.card" time="2:15">
+ *     <source ref="/box/inbox/capture-20260210T1430-Living_Room/session.capture-session.card" time="2:15">
  *       User points at the couch and describes its condition
  *     </source>
  *   </sources>
@@ -123,7 +123,7 @@ Records are generic extracted units — discrete things pulled from capture sess
 
 - **<content>**: IS the thing — the actual text of a document, recipe instructions, letter text, etc. Only use when the record represents textual content that should be preserved verbatim.
 
-- **<sources>**: References to where this record was extracted from. Each <source ref="..."> must include body text explaining WHY this source is relevant — not just a list of files. The ref attribute is a relative path to a card. The optional time attribute pinpoints a moment in a transcript.
+- **<sources>**: References to where this record was extracted from. Each <source ref="..."> must include body text explaining WHY this source is relevant — not just a list of files. Use **absolute paths** for refs (starting with /, e.g., ref="/box/inbox/capture-.../session.capture-session.card"). The optional time attribute pinpoints a moment in a transcript.
 
 - **<date value="...">**: A parseable date, year, or datetime in the value attribute. Body text explains what the date means ("Year purchased", "Date of letter", "Expiration"). Only include dates that are salient to this kind of record — don't extract every date you can find.
 

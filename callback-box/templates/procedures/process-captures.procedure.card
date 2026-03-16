@@ -459,7 +459,7 @@
           &lt;name&gt;Example Item Name&lt;/name&gt;
           &lt;description&gt;What this item is and its condition&lt;/description&gt;
           &lt;sources&gt;
-            &lt;source ref="path/to/session.capture-session.card" time="1:30"&gt;
+            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Name/session.capture-session.card" time="1:30"&gt;
               User describes this item while pointing at it
             &lt;/source&gt;
           &lt;/sources&gt;
