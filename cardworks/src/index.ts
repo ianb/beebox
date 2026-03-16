@@ -68,6 +68,7 @@ export {
   lintCard,
   lintCards,
   lintAll,
+  lintContent,
   formatLintResult,
   formatLintResults,
   formatLintResultsJson,

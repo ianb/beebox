@@ -245,6 +245,16 @@ export interface ICardLoader {
    * Check if any schemas are registered.
    */
   hasAnySchemas(): boolean;
+
+  /**
+   * Validate XML content in memory without writing to disk.
+   * Parses the XML and validates against the registered schema.
+   * Returns the parsed element on success, throws on failure.
+   *
+   * @param content - XML string to validate
+   * @param sourceName - Display name for error messages
+   */
+  validateContent(content: string, sourceName?: string): Promise<ElementNode>;
 }
 
 /**
@@ -424,6 +434,29 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   hasAnySchemas(): boolean {
     return !this.schemas.isEmpty();
+  }
+
+  /**
+   * Validate XML content in memory without writing to disk.
+   */
+  async validateContent(content: string, sourceName: string = "<inline>"): Promise<ElementNode> {
+    const node = await parseXml(content, sourceName);
+
+    const schema = this.schemas.get(node.tagName);
+    if (schema) {
+      const result = schema.safeParse(node);
+      if (!result.success) {
+        const formatted = formatValidationError(result.error, node);
+        throw new ValidationError(
+          `${sourceName}: Validation failed for <${node.tagName}>:\n${formatted}`,
+          sourceName,
+          node.tagName,
+          result.error
+        );
+      }
+    }
+
+    return node;
   }
 
   /**

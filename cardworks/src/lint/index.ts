@@ -2,6 +2,7 @@ export {
   lintCard,
   lintCards,
   lintAll,
+  lintContent,
   type LintIssue,
   type LintResult,
   type LintSummary,

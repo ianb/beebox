@@ -1,6 +1,7 @@
 import type { ICardLoader } from "../loader/loader.js";
 import type { ElementNode, Location } from "../parser/provenance.js";
 import { parseRef, parseRefs } from "../refs/parse-ref.js";
+import { parseXml } from "../parser/parse.js";
 
 /**
  * A lint issue (error or warning).
@@ -228,6 +229,54 @@ async function checkSingleRef(
       location,
     });
   }
+}
+
+/**
+ * Lint XML content in memory without writing to disk.
+ *
+ * Parses the XML and checks structure (well-formedness, duplicate IDs,
+ * unknown root tags). For full schema validation, use `lintCard` with
+ * a file path.
+ *
+ * @param loader - Card loader with registered schemas (for tag checking)
+ * @param content - XML string to validate
+ * @param sourceName - Display name for error messages (default: "<inline>")
+ */
+export async function lintContent(
+  loader: ICardLoader,
+  content: string,
+  sourceName: string = "<inline>"
+): Promise<LintResult> {
+  const errors: LintIssue[] = [];
+  const warnings: LintIssue[] = [];
+
+  try {
+    const node = await parseXml(content, sourceName);
+
+    // Check if schema exists
+    if (loader.hasAnySchemas() && !loader.hasSchema(node.tagName)) {
+      warnings.push({
+        type: "schema",
+        severity: "warning",
+        message: `Unknown root tag <${node.tagName}> (no schema registered)`,
+        location: node.location,
+      });
+    }
+
+    // Check for duplicate IDs
+    checkDuplicateIds(node, warnings);
+  } catch (e) {
+    if (e instanceof Error) {
+      const isParse = e.name === "ParseError";
+      errors.push({
+        type: isParse ? "parse" : "validation",
+        severity: "error",
+        message: e.message,
+      });
+    }
+  }
+
+  return { path: sourceName, errors, warnings };
 }
 
 /**
