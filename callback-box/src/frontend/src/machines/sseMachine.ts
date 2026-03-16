@@ -65,13 +65,26 @@ const sseActor = fromCallback<
     url = `${url}${sep}lastEventId=${input.lastEventId}`;
   }
 
+  console.log("[sse] Connecting to", url);
   const eventSource = new EventSource(url, { withCredentials: true });
 
   eventSource.onopen = () => {
+    console.log("[sse] Connected");
     sendBack({ type: "CONNECTED" });
   };
 
   eventSource.onerror = () => {
+    // EventSource.onerror provides no details. Log readyState and
+    // do a diagnostic fetch to surface the actual HTTP error.
+    const state = eventSource.readyState === EventSource.CLOSED ? "CLOSED" : "CONNECTING";
+    console.warn(`[sse] Connection error (readyState: ${state})`);
+    fetch(url, { credentials: "include" }).then((res) => {
+      if (!res.ok) {
+        console.warn(`[sse] Diagnostic fetch: ${res.status} ${res.statusText}`);
+      }
+    }).catch((err) => {
+      console.warn("[sse] Diagnostic fetch failed:", err.message);
+    });
     sendBack({ type: "ERROR" });
   };
 
