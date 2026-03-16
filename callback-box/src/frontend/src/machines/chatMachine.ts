@@ -181,6 +181,14 @@ export const chatMachine = setup({
         sessionId: event.sessionId,
       })),
     },
+    // Global handler: refresh history from any state (e.g., after SSE chat-complete)
+    REFRESH: {
+      target: ".refreshing",
+      actions: assign({
+        streamText: "",
+        streamTools: [],
+      }),
+    },
     // Global handler: another user sent a message (via SSE broadcast)
     OTHER_USER_MESSAGE: {
       actions: assign(({ context, event }) => ({
@@ -240,7 +248,6 @@ export const chatMachine = setup({
           })),
         },
         NEW_SESSION: "resetting",
-        REFRESH: "refreshing",
         DISMISS_ERROR: {
           actions: assign({ error: null }),
         },
@@ -285,7 +292,10 @@ export const chatMachine = setup({
         },
         STREAM_RESULT: "refreshing",
         STREAM_FAILED: {
-          target: "idle",
+          // Go to refreshing instead of idle — the agent may still be
+          // running on the server. Fetching history will pick up any
+          // response that completed while we were disconnected.
+          target: "refreshing",
           actions: assign(({ event }) => ({
             error: event.error,
             streamText: "",

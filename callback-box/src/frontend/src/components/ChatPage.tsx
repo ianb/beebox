@@ -316,6 +316,11 @@ function InteractiveChat() {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
+      } else if (event.event === "chat-complete") {
+        // Agent turn completed — refresh history to pick up the response.
+        // This catches cases where the send SSE stream was interrupted
+        // but the agent finished on the server.
+        send({ type: "REFRESH" });
       } else if (event.event === "chat-user-message") {
         // Another user sent a message — add it to our view if it's not from us
         const data = event.data as { message: string; user: { email: string; name: string } | null; timestamp: string };
