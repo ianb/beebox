@@ -10,10 +10,58 @@
  * - Image cards show their image inline
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Markdown } from "./Markdown";
 import { trpc } from "../lib/trpc";
 import { getApiBase } from "../api";
+
+/**
+ * Lightbox overlay for viewing images at full size.
+ */
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      onClick={onClose}
+    >
+      <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-full max-h-[85vh] rounded shadow-lg"
+        />
+        <div className="absolute top-2 right-2 flex gap-2">
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-white/90 hover:bg-white text-warm-700 rounded-full w-8 h-8 flex items-center justify-center shadow text-sm"
+            title="Open full size in new tab"
+          >
+            &#x2922;
+          </a>
+          <button
+            onClick={onClose}
+            className="bg-white/90 hover:bg-white text-warm-700 rounded-full w-8 h-8 flex items-center justify-center shadow text-sm"
+            title="Close"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 /**
  * Element node from the API.
@@ -80,6 +128,7 @@ function resolveRef(ref: string, cardPath: string): string {
  */
 function RefExpander({ refPath }: { refPath: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const query = trpc.card.get.useQuery(
     { path: refPath },
     { enabled: expanded }
@@ -115,11 +164,22 @@ function RefExpander({ refPath }: { refPath: string }) {
           ) : query.data ? (
             <div>
               {imageSrc ? (
-                <img
-                  src={imageSrc}
-                  alt={imageFilename || "Referenced image"}
-                  className="max-w-sm max-h-64 rounded border border-warm-300 mb-2"
-                />
+                <>
+                  <img
+                    src={imageSrc}
+                    alt={imageFilename || "Referenced image"}
+                    className="max-w-sm max-h-64 rounded border border-warm-300 mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setLightboxOpen(true)}
+                    title="Click to zoom"
+                  />
+                  {lightboxOpen ? (
+                    <ImageLightbox
+                      src={imageSrc}
+                      alt={imageFilename || "Referenced image"}
+                      onClose={() => setLightboxOpen(false)}
+                    />
+                  ) : null}
+                </>
               ) : null}
               <ElementTree
                 element={query.data.element as ElementNode}
