@@ -13,7 +13,24 @@ import { remarkComments, isCommentCode } from "../lib/remark-comments";
 const defaultPlugins = [remarkGfm];
 const pluginsWithComments = [remarkGfm, remarkComments];
 
+/** Open external links in new tabs */
+const baseComponents: Partial<Components> = {
+  a({ children, href: linkHref, ...props }) {
+    const isExternal = linkHref && (linkHref.startsWith("http://") || linkHref.startsWith("https://"));
+    return (
+      <a
+        href={linkHref}
+        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  },
+};
+
 const commentComponents: Partial<Components> = {
+  ...baseComponents,
   code({ children, ...props }) {
     const text = typeof children === "string" ? children : "";
     if (isCommentCode(text)) {
@@ -39,10 +56,10 @@ interface MarkdownProps {
 
 export function Markdown({ children, components, showComments }: MarkdownProps) {
   const plugins = showComments ? pluginsWithComments : defaultPlugins;
-  const baseComponents = showComments ? commentComponents : {};
+  const defaultBase = showComments ? commentComponents : baseComponents;
   const merged = components
-    ? { ...baseComponents, ...components }
-    : baseComponents;
+    ? { ...defaultBase, ...components }
+    : defaultBase;
 
   return (
     <ReactMarkdown

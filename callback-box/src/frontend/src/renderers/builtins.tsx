@@ -37,7 +37,7 @@ function XmlRenderer({ data }: RendererProps) {
 /** Structured card tree view */
 function TreeRenderer({ data }: RendererProps) {
   if (!data.element) return <div className="p-4 text-warm-600">No element data</div>;
-  return <CardTreeView element={data.element} />;
+  return <CardTreeView element={data.element} path={data.path} />;
 }
 
 // Register built-in renderers

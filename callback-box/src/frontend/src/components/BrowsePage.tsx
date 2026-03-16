@@ -91,7 +91,10 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
               {data.cards.map((card) => (
                 <button
                   key={card.relativePath}
-                  onClick={() => setSelectedCard(card)}
+                  onClick={() => {
+                    setSelectedCard(card);
+                    window.history.replaceState(null, "", href(`/${boxSlug}/browse/${card.relativePath}`));
+                  }}
                   {...cbSource("card", card.relativePath)}
                   className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
                     selectedCard?.relativePath === card.relativePath
