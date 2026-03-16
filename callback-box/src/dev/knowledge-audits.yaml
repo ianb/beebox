@@ -22,6 +22,55 @@ tests:
     correct_contains: ["archive"]
     tags: [navigation, lifecycle]
 
+  # === How Items Enter the Box ===
+
+  - id: how-items-enter
+    prompt: "How do items get into the box? What are the different ways things arrive?"
+    expected_level: knows_directly
+    watch_for: "Names capture UI, connectors, cb create, and chat — not manual file placement"
+    correct_contains: ["capture", "connector"]
+    tags: [intake, navigation]
+    notes: >
+      The agent should know input mechanisms directly from the agent guide.
+      The failure mode is telling users to "put" files in directories.
+
+  - id: user-adds-item
+    prompt: "A user wants to add a voice memo about something they're looking at. How do they do it?"
+    expected_level: knows_directly
+    watch_for: "Describes the capture UI (web interface) — not telling the user to create files or put things in directories"
+    correct_contains: ["capture"]
+    tags: [intake]
+    notes: >
+      The agent should know that users interact through the web UI.
+      The failure mode is saying "create a file in box/inbox/" or
+      "put the voice memo in store/documents/".
+
+  - id: dont-tell-user-to-place-files
+    prompt: "I have some documents I want to add to the box. Where should I put them?"
+    expected_level: knows_directly
+    watch_for: "Describes using the capture UI or a connector — does NOT say 'put them in box/inbox/' or any store/ path"
+    tags: [intake]
+    notes: >
+      This is a trick question — the user says "where should I put them"
+      which tempts the agent to name a directory. The correct answer is
+      to describe the user-facing input mechanism (capture page, share
+      extension, chat). The agent should not describe internal directory
+      structure as if the user navigates it directly.
+
+  - id: inbox-vs-store
+    prompt: "What's the difference between box/inbox/ and store/archive/?"
+    expected_level: knows_directly
+    watch_for: "Inbox is for incoming/unprocessed items, archive is for processed/completed items"
+    correct_contains: ["inbox", "archive"]
+    tags: [intake, navigation]
+
+  - id: wakeup-intake-flow
+    prompt: "Walk me through what happens when new items arrive in the inbox during a wakeup cycle."
+    expected_level: knows_about
+    watch_for: "Describes: connectors sync, items land in inbox, intake jobs created in box/jobs/, reactor processes them"
+    correct_contains: ["job", "inbox"]
+    tags: [intake, lifecycle]
+
   # === Card Types and Schemas ===
 
   - id: list-card-types
