@@ -174,34 +174,41 @@ export async function registerCaptureRoutes(
 
     await fs.mkdir(sessionAbsDir, { recursive: true });
 
-    const audioFiles = session.files.filter((f) => f.name.startsWith("audio-"));
+    const audioChunks = session.files.filter((f) => f.name.startsWith("audio-"));
     const photoFiles = session.files.filter((f) => f.name.startsWith("photo-"));
 
-    console.log(`[capture] Finalizing session ${session.id} → ${sessionDirName}: ${audioFiles.length} audio, ${photoFiles.length} photos`);
+    console.log(`[capture] Finalizing session ${session.id} → ${sessionDirName}: ${audioChunks.length} audio chunks, ${photoFiles.length} photos`);
 
     const filesToStage: string[] = [];
     const audioRefs: string[] = [];
     const imageRefs: string[] = [];
     let endedAt = session.startedAt;
 
-    // Create audio cards + copy media files
-    for (const [i, file] of audioFiles.entries()) {
-      const idx = String(i + 1).padStart(3, "0");
-      const audioBasename = `audio-${idx}`;
-      const ext = file.name.endsWith(".webm") ? ".webm" : ".webm";
-      const mediaFilename = `${audioBasename}${ext}`;
-      const cardFilename = `${audioBasename}.audio.card`;
+    // Concatenate audio chunks into a single file.
+    // MediaRecorder with timeslice produces chunks where only the first has
+    // the WebM/EBML header; subsequent chunks are raw Clusters. Concatenating
+    // them produces a valid WebM file. Individual chunks (except the first)
+    // are not playable or transcribable on their own.
+    if (audioChunks.length > 0) {
+      const mediaFilename = "audio-001.webm";
+      const cardFilename = "audio-001.audio.card";
 
-      // Copy media file
-      const srcPath = path.join(tmpDir, file.name);
+      // Concatenate all chunks in order
+      const chunkBuffers: Buffer[] = [];
+      for (const chunk of audioChunks) {
+        const srcPath = path.join(tmpDir, chunk.name);
+        chunkBuffers.push(await fs.readFile(srcPath));
+      }
+      const concatenated = Buffer.concat(chunkBuffers);
       const destMediaPath = path.join(sessionAbsDir, mediaFilename);
-      await fs.copyFile(srcPath, destMediaPath);
+      await fs.writeFile(destMediaPath, concatenated);
       filesToStage.push(`${sessionRelDir}/${mediaFilename}`);
 
-      // Create audio card
+      // Use the first chunk's timestamp as the recording start
+      const firstChunk = audioChunks[0]!;
       const cardContent = createAudioTemplate({
-        recordedAt: file.startedAt,
-        source: file.source,
+        recordedAt: firstChunk.startedAt,
+        source: firstChunk.source,
         filename: mediaFilename,
       });
       const destCardPath = path.join(sessionAbsDir, cardFilename);
@@ -209,9 +216,10 @@ export async function registerCaptureRoutes(
       filesToStage.push(`${sessionRelDir}/${cardFilename}`);
       audioRefs.push(cardFilename);
 
-      // Track latest timestamp for session end
-      if (file.startedAt > endedAt) {
-        endedAt = file.startedAt;
+      // Track latest chunk timestamp for session end
+      const lastChunk = audioChunks[audioChunks.length - 1]!;
+      if (lastChunk.startedAt > endedAt) {
+        endedAt = lastChunk.startedAt;
       }
     }
 
