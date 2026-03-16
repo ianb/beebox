@@ -521,9 +521,9 @@ function InteractiveChat() {
 
   return (
     <>
-    <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200">
+    <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden">
       {/* Header with debug controls */}
-      <div className="flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
+      <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
         <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
         <SessionListButton />
         <NewSessionButton onClick={handleNewSession} />
@@ -539,7 +539,7 @@ function InteractiveChat() {
         />
       </div>
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto py-4 pl-2 sm:pl-4 space-y-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 pl-2 sm:pl-4 space-y-1 min-w-0">
         {messages.length === 0 && !isStreaming ? (
           <div className="flex items-center justify-center h-full text-warm-500 text-sm">
             Start a conversation with your box assistant.
@@ -598,7 +598,7 @@ function InteractiveChat() {
       ) : null}
 
       {/* Input area */}
-      <div className="border-t border-warm-300 px-2 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
+      <div className="flex-shrink-0 border-t border-warm-300 px-2 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
         <div className="max-w-3xl mx-auto flex gap-1.5 sm:gap-2 items-center">
           {isTranscribing ? (
             <div className="flex-shrink-0 self-center">

@@ -385,7 +385,7 @@ export function UserMessage({ entries, debugView, currentUserName }: { entries: 
     return (
       <div className="pr-12 sm:pr-24 py-1">
         <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
-        <div className="ml-3 sm:ml-6 rounded-r-2xl bg-plum text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit">
+        <div className="ml-3 sm:ml-6 rounded-r-2xl bg-plum text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words">
           {entries.map((entry) =>
             entry.content
               .filter((b) => b.type === "text")
@@ -408,7 +408,7 @@ export function UserMessage({ entries, debugView, currentUserName }: { entries: 
 
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
-      <div className="rounded-l-2xl bg-iris text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px]">
+      <div className="rounded-l-2xl bg-iris text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words">
         {entries.map((entry) =>
           entry.content
             .filter((b) => b.type === "text")
@@ -487,7 +487,7 @@ export function AssistantMessage({ entries, debugView }: { entries: SessionEntry
   const grouped = groupIntoParts(entries);
 
   return (
-    <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
+    <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden">
       {grouped.map((group, i) =>
         group.kind === "text" ? (
           debugView ? (
