@@ -66,12 +66,19 @@ export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      // Disable nginx/proxy buffering so events stream immediately
+      "X-Accel-Buffering": "no",
     };
     if (origin) {
       headers["Access-Control-Allow-Origin"] = origin;
     }
 
     reply.raw.writeHead(200, headers);
+
+    // Send an immediate connected event so the client knows the stream is live.
+    // Without this, EventSource.onopen may not fire until the first real event
+    // or ping (up to 30s), leaving the UI showing "disconnected".
+    reply.raw.write(`event: connected\ndata: {"timestamp":"${new Date().toISOString()}"}\n\n`);
 
     // Subscribe to EventBus — replays missed events, then streams live
     const sub = eventBus.subscribe({
