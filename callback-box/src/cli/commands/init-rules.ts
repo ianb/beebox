@@ -13,7 +13,7 @@ import { resolve, join } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { schemas, loadBoxSchemas } from "../../schemas/registry.js";
 
-interface ConnectorRule {
+export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
   name: string;
   /** Glob patterns for paths: frontmatter */
@@ -25,7 +25,7 @@ interface ConnectorRule {
 /**
  * Static connector rules for non-card file types.
  */
-const connectorRules: ConnectorRule[] = [
+export const connectorRules: ConnectorRule[] = [
   {
     name: "connector-calendar",
     paths: ["store/calendar/**/*.ics"],

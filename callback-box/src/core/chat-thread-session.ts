@@ -35,7 +35,7 @@ export interface ChatThreadSessionOptions {
 /**
  * Build the system prompt for a chat thread session.
  */
-function buildThreadSystemPrompt(opts: {
+export function buildThreadSystemPrompt(opts: {
   threadRef: string;
   chatDescription: string;
   sessionViewBaseUrl?: string | undefined;

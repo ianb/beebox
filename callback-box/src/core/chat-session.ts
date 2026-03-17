@@ -62,7 +62,7 @@ export interface ChatMessage {
 
 const SESSION_FILE = ".callback-box/chat-session-id.json";
 
-const CHAT_SYSTEM_PROMPT = `You are in CALLBACK_BOX_CHAT_MODE.
+export const CHAT_SYSTEM_PROMPT = `You are in CALLBACK_BOX_CHAT_MODE.
 
 You are a conversational assistant for this Callback Box.
 

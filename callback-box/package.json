@@ -23,6 +23,7 @@
     "cli": "node dist/cli/index.js",
     "test": "tap",
     "knowledge-audit": "tsx src/dev/knowledge-audit.ts",
+    "prompt-report": "tsx src/dev/prompt-report.ts",
     "generate:doc-images": "tsx src/dev/generate-doc-images.ts",
     "test:watch": "tap --watch",
     "lint:oxlint": "oxlint -A no-unused-vars",

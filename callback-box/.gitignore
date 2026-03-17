@@ -13,3 +13,4 @@ src/dev/reports/
 *.bak.png
 *.mermaid.bak.png
 docs/architecture/images/*-prompt.json
+docs/prompts.md

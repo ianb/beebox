@@ -97,7 +97,7 @@ export function createAgent(options: {
   };
 }
 
-const COMMIT_NUDGE_PROMPT = `IMPORTANT: You have uncommitted changes in the working directory. Please:
+export const COMMIT_NUDGE_PROMPT = `IMPORTANT: You have uncommitted changes in the working directory. Please:
 
 1. Review the current state of your work (git status, check files)
 2. Commit everything with a descriptive message following the format in your original instructions
