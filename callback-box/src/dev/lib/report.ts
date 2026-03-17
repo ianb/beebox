@@ -84,6 +84,10 @@ function formatTestResult(result: TestResult): string {
   for (const c of checks.shouldNotReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2717" : "\u2713"} Did not read ${c.file}`);
   }
+  for (const c of checks.bashContainsChecks) {
+    const detail = c.found && c.matchedCommand ? ` (matched: "${c.matchedCommand}")` : "";
+    checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Bash command contains "${c.expected}"${detail}`);
+  }
 
   if (checkLines.length > 0) {
     lines.push("**Automated checks:**");

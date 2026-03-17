@@ -593,6 +593,44 @@ tests:
       key-people fields), the guitar is an individual item, the name preference
       is communication style.
 
+  # === Git History ===
+  #
+  # Status (2026-03-17): All 3 pass. Agents use git as first action for
+  # history questions. bash_contains checks "git" in command descriptions
+  # (summaries are human-readable, not literal commands, so "git log" is
+  # too specific). git-trailers answered from agent guide without running anything.
+
+  - id: git-history-first
+    prompt: "The process-captures procedure ran earlier today but I'm not sure what it did. Can you find out?"
+    expected_level: knows_directly
+    watch_for: "Runs git log as first action — not searching the filesystem for clues or reading procedure run cards"
+    bash_contains: ["git"]
+    tags: [git]
+    notes: >
+      The agent should reach for git log as the primary way to understand
+      what happened. The failure mode is searching for files, reading
+      procedure run directories, or saying "I don't have access to logs."
+
+  - id: git-trailers
+    prompt: "How can I find all commits from the news brief phase?"
+    expected_level: knows_directly
+    watch_for: "Uses git log --grep with the Phase trailer"
+    correct_contains: ["Phase"]
+    tags: [git]
+
+  - id: git-recent-activity
+    prompt: "What's been happening in this box recently?"
+    expected_level: knows_directly
+    watch_for: "Runs git log to show recent activity — not just listing directory contents"
+    bash_contains: ["git"]
+    tags: [git]
+    notes: >
+      The agent should use git log as a primary information source.
+      Supplementing with directory listings is fine, but git log should
+      come first. The bash_contains check uses "git" rather than "git log"
+      because bash command summaries are human-readable descriptions,
+      not the literal commands.
+
   # === Don't Drop Important Information ===
   #
   # These tests simulate real processing scenarios where unexpected important

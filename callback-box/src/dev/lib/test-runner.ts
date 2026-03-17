@@ -24,6 +24,7 @@ export interface AuditTest {
   cards_contain?: string[];
   should_read?: string[];
   should_not_read?: string[];
+  bash_contains?: string[];
   style?: string;
   tags?: string[];
   notes?: string;
@@ -48,6 +49,7 @@ export interface AutomatedChecks {
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
+  bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
 }
 
 export interface TestResult {
@@ -267,5 +269,11 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
     wasRead: behavior.filesRead.some((f) => f.endsWith(file) || f.includes(file)),
   }));
 
-  return { containsChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks };
+  const bashContainsChecks = (test.bash_contains ?? []).map((expected) => {
+    const lowerExpected = expected.toLowerCase();
+    const matched = behavior.bashCommands.find((cmd) => cmd.toLowerCase().includes(lowerExpected));
+    return { expected, found: !!matched, ...(matched && { matchedCommand: matched }) };
+  });
+
+  return { containsChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks, bashContainsChecks };
 }
