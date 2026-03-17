@@ -595,16 +595,15 @@ tests:
 
   # === Git History ===
   #
-  # Status (2026-03-17): All 3 pass. Agents use git as first action for
-  # history questions. bash_contains checks "git" in command descriptions
-  # (summaries are human-readable, not literal commands, so "git log" is
-  # too specific). git-trailers answered from agent guide without running anything.
+  # Status (2026-03-17): All 3 pass. Agents use git log as first action for
+  # history questions. bash_contains checks the actual command string (not
+  # the description). git-trailers answered from agent guide without running.
 
   - id: git-history-first
     prompt: "The process-captures procedure ran earlier today but I'm not sure what it did. Can you find out?"
     expected_level: knows_directly
     watch_for: "Runs git log as first action — not searching the filesystem for clues or reading procedure run cards"
-    bash_contains: ["git"]
+    bash_contains: ["git log"]
     tags: [git]
     notes: >
       The agent should reach for git log as the primary way to understand
@@ -622,14 +621,12 @@ tests:
     prompt: "What's been happening in this box recently?"
     expected_level: knows_directly
     watch_for: "Runs git log to show recent activity — not just listing directory contents"
-    bash_contains: ["git"]
+    bash_contains: ["git log"]
     tags: [git]
     notes: >
       The agent should use git log as a primary information source.
       Supplementing with directory listings is fine, but git log should
-      come first. The bash_contains check uses "git" rather than "git log"
-      because bash command summaries are human-readable descriptions,
-      not the literal commands.
+      come first.
 
   # === Don't Drop Important Information ===
   #

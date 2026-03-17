@@ -39,6 +39,8 @@ export interface AgentBehavior {
   filesRead: string[];
   searches: Array<{ tool: string; summary: string }>;
   bashCommands: string[];
+  /** Actual bash commands (not descriptions) for automated checks */
+  bashRawCommands: string[];
   responseText: string;
   responseLength: number;
 }
@@ -134,7 +136,7 @@ async function extractBehavior(
   const logPath = getSessionLogPath(boxRoot, sessionId);
   const { entries } = await parseSessionLog({ logPath });
 
-  const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [] };
+  const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
   const responseChunks: string[] = [];
 
   for (const entry of entries) {
@@ -163,6 +165,7 @@ interface BehaviorAccumulator {
   filesRead: string[];
   searches: Array<{ tool: string; summary: string }>;
   bashCommands: string[];
+  bashRawCommands: string[];
 }
 
 function categorizeToolUse(block: SessionContentBlock, acc: BehaviorAccumulator): void {
@@ -179,6 +182,10 @@ function categorizeToolUse(block: SessionContentBlock, acc: BehaviorAccumulator)
       break;
     case "Bash":
       if (summary) acc.bashCommands.push(summary);
+      if (block.input) {
+        const cmd = String(block.input.command ?? "");
+        if (cmd) acc.bashRawCommands.push(cmd);
+      }
       break;
   }
 }
@@ -271,7 +278,7 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
 
   const bashContainsChecks = (test.bash_contains ?? []).map((expected) => {
     const lowerExpected = expected.toLowerCase();
-    const matched = behavior.bashCommands.find((cmd) => cmd.toLowerCase().includes(lowerExpected));
+    const matched = behavior.bashRawCommands.find((cmd) => cmd.toLowerCase().includes(lowerExpected));
     return { expected, found: !!matched, ...(matched && { matchedCommand: matched }) };
   });
 
