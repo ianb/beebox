@@ -70,7 +70,11 @@ async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
     },
     body: formData,
   });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  if (!res.ok) {
+    let detail = "";
+    try { detail = await res.text(); } catch (_e) { /* ignore */ }
+    throw new Error(`Upload failed (${res.status}): ${detail || res.statusText}`);
+  }
 }
 
 async function finalizeCaptureSession(sessionId: string): Promise<void> {
@@ -204,8 +208,9 @@ export function CapturePage() {
         .then(() => {
           setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
         })
-        .catch((e) => {
-          console.error(`[capture] Photo upload failed (${filename}):`, e);
+        .catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error(`[capture] Photo upload failed (${filename}): ${msg}`);
           setPhotoStates((prev) => { const next = [...prev]; next[index] = "failed"; return next; });
         });
       pendingUploads.current.push(p);
@@ -322,6 +327,7 @@ export function CapturePage() {
 
   const photosUploaded = photoStates.filter((s) => s === "uploaded").length;
   const photosUploading = photoStates.filter((s) => s === "uploading").length;
+  const photosFailed = photoStates.filter((s) => s === "failed").length;
   const photoTotal = photoStates.length;
   const audioUploaded = audioChunks.filter((c) => c.state === "uploaded").length;
   const audioUploading = audioChunks.filter((c) => c.state === "uploading").length;
@@ -374,7 +380,7 @@ export function CapturePage() {
       <StatusBar
         recording={recording} recordingTime={recordingTime} formatTime={formatTime}
         audioTotal={audioTotal} audioUploading={audioUploading} audioUploaded={audioUploaded}
-        photoTotal={photoTotal} photosUploading={photosUploading} photosUploaded={photosUploaded}
+        photoTotal={photoTotal} photosUploading={photosUploading} photosUploaded={photosUploaded} photosFailed={photosFailed}
         showSettings={showSettings}
         onToggleSettings={() => setShowSettings((p) => !p)}
         onPickGallery={pickFromGallery}
@@ -453,7 +459,7 @@ export function CapturePage() {
 function StatusBar(props: {
   recording: boolean; recordingTime: number; formatTime: (s: number) => string;
   audioTotal: number; audioUploading: number; audioUploaded: number;
-  photoTotal: number; photosUploading: number; photosUploaded: number;
+  photoTotal: number; photosUploading: number; photosUploaded: number; photosFailed: number;
   showSettings: boolean;
   onToggleSettings: () => void; onPickGallery: () => void;
 }) {
@@ -481,6 +487,8 @@ function StatusBar(props: {
           <div className="flex items-center gap-1.5">
             {props.photosUploading > 0 ? (
               <><span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" /><span className="text-yellow-400">{props.photosUploaded}/{props.photoTotal}</span></>
+            ) : props.photosFailed > 0 ? (
+              <><span className="text-red-400">&#10007;</span><span className="text-red-400">{props.photosFailed} failed</span>{props.photosUploaded > 0 ? <span className="text-green-400">, {props.photosUploaded} ok</span> : null}</>
             ) : (
               <><span className="text-green-400">&#10003;</span><span className="text-green-400">{props.photoTotal} photos</span></>
             )}
