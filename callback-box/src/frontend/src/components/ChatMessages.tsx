@@ -337,15 +337,14 @@ export function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
 /**
  * Clickable image thumbnail that opens a lightbox on click.
  */
-function ChatImage(props: React.ImgHTMLAttributes<HTMLImageElement>) {
+function ChatImage({ src, alt }: { src: string; alt: string }) {
   const [lightbox, setLightbox] = useState(false);
-  const src = props.src || "";
-  const alt = props.alt || "";
 
   return (
     <>
       <img
-        {...props}
+        src={src}
+        alt={alt}
         className="max-w-xs max-h-64 rounded cursor-pointer hover:opacity-90 transition-opacity"
         onClick={() => setLightbox(true)}
         title="Click to zoom"
@@ -357,8 +356,62 @@ function ChatImage(props: React.ImgHTMLAttributes<HTMLImageElement>) {
   );
 }
 
+/**
+ * Extract image elements from a paragraph's children.
+ * Returns the list of {src, alt} if ALL children are images (or whitespace text),
+ * or null if the paragraph has non-image content.
+ */
+function extractImages(children: React.ReactNode): Array<{ src: string; alt: string }> | null {
+  const images: Array<{ src: string; alt: string }> = [];
+  const childArray = Array.isArray(children) ? children : [children];
+
+  for (const child of childArray) {
+    if (typeof child === "string" && child.trim() === "") continue;
+    if (
+      child !== null &&
+      typeof child === "object" &&
+      "type" in child &&
+      child.type === "img" &&
+      child.props
+    ) {
+      images.push({ src: child.props.src || "", alt: child.props.alt || "" });
+      continue;
+    }
+    return null;
+  }
+
+  return images.length > 0 ? images : null;
+}
+
+/**
+ * Paragraph override that detects image-only paragraphs and renders them
+ * as centered thumbnails (single) or a grid (multiple).
+ */
+function ChatParagraph({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+  const images = extractImages(children);
+
+  if (images) {
+    if (images.length === 1) {
+      return (
+        <div className="flex justify-center my-2">
+          <ChatImage src={images[0].src} alt={images[0].alt} />
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-2 gap-2 my-2 justify-items-center">
+        {images.map((img, i) => (
+          <ChatImage key={i} src={img.src} alt={img.alt} />
+        ))}
+      </div>
+    );
+  }
+
+  return <p {...props}>{children}</p>;
+}
+
 const chatMarkdownComponents: Partial<Components> = {
-  img: ChatImage,
+  p: ChatParagraph,
 };
 
 /**
