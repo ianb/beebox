@@ -237,16 +237,9 @@ export async function parseSessionLog(
       continue;
     }
 
-    // Handle compact_boundary system messages — emit as compaction entry
-    if (raw.type === "system" && raw.subtype === "compact_boundary") {
-      filtered.push({
-        uuid: String(raw.uuid || ""),
-        type: "compaction",
-        timestamp: String(raw.timestamp || ""),
-        content: [{ type: "text", text: "Conversation compacted" }],
-      });
-      continue;
-    }
+    // Skip compact_boundary system messages — the compaction summary user
+    // message that follows is the one we display
+    if (raw.type === "system" && raw.subtype === "compact_boundary") continue;
 
     // Only keep user and assistant entries
     if (raw.type !== "user" && raw.type !== "assistant") continue;
