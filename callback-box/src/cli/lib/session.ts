@@ -30,7 +30,7 @@ export interface SessionContentBlock {
  */
 export interface SessionEntry {
   uuid: string;
-  type: "user" | "assistant";
+  type: "user" | "assistant" | "compaction";
   timestamp: string;
   content: SessionContentBlock[];
   /** Display name of the sender (for user messages in multi-user chat) */
@@ -98,6 +98,13 @@ const plumbingPatterns = [
 function isPlumbingMessage(text: string): boolean {
   const trimmed = text.trim();
   return plumbingPatterns.some((p) => p.test(trimmed));
+}
+
+/** Detect compaction summary messages injected by Claude Code after context compaction */
+const COMPACTION_PREFIX = "This session is being continued from a previous conversation that ran out of context.";
+
+function isCompactionSummary(text: string): boolean {
+  return text.trimStart().startsWith(COMPACTION_PREFIX);
 }
 
 /**
@@ -230,6 +237,17 @@ export async function parseSessionLog(
       continue;
     }
 
+    // Handle compact_boundary system messages — emit as compaction entry
+    if (raw.type === "system" && raw.subtype === "compact_boundary") {
+      filtered.push({
+        uuid: String(raw.uuid || ""),
+        type: "compaction",
+        timestamp: String(raw.timestamp || ""),
+        content: [{ type: "text", text: "Conversation compacted" }],
+      });
+      continue;
+    }
+
     // Only keep user and assistant entries
     if (raw.type !== "user" && raw.type !== "assistant") continue;
 
@@ -248,6 +266,18 @@ export async function parseSessionLog(
         (block) => isPlumbingMessage(block.text || "")
       );
       if (allPlumbing) continue;
+
+      // Detect compaction summary messages (injected after context compaction)
+      const firstText = textBlocks[0]?.text || "";
+      if (isCompactionSummary(firstText)) {
+        filtered.push({
+          uuid: String(raw.uuid || ""),
+          type: "compaction",
+          timestamp: String(raw.timestamp || ""),
+          content,
+        });
+        continue;
+      }
     }
 
     // Skip assistant entries with no visible content

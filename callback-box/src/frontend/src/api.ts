@@ -87,7 +87,7 @@ export interface SessionContentBlock {
 
 export interface SessionEntry {
   uuid: string;
-  type: "user" | "assistant";
+  type: "user" | "assistant" | "compaction";
   timestamp: string;
   content: SessionContentBlock[];
   /** Display name of the sender (for user messages in multi-user chat) */

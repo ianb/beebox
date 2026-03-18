@@ -349,10 +349,15 @@ function MarkdownContent({ text }: { text: string }) {
 
 /**
  * Group consecutive messages by role for merged display.
+ * Compaction entries always get their own group (never merged).
  */
-export function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "assistant"; entries: SessionEntry[] }> {
-  const groups: Array<{ type: "user" | "assistant"; entries: SessionEntry[] }> = [];
+export function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }> {
+  const groups: Array<{ type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }> = [];
   for (const entry of entries) {
+    if (entry.type === "compaction") {
+      groups.push({ type: "compaction", entries: [entry] });
+      continue;
+    }
     const last = groups[groups.length - 1];
     if (last && last.type === entry.type) {
       last.entries.push(entry);
@@ -505,6 +510,31 @@ export function AssistantMessage({ entries, debugView }: { entries: SessionEntry
           <ActivityGroup key={i} parts={group.parts} />
         )
       )}
+    </div>
+  );
+}
+
+/**
+ * Render a compaction notification as a collapsed details element.
+ */
+export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
+  const text = entries
+    .flatMap((e) => e.content.filter((b) => b.type === "text").map((b) => b.text ?? ""))
+    .join("\n")
+    .trim();
+
+  return (
+    <div className="flex justify-center py-2">
+      <details className="text-xs text-warm-500 max-w-[80%]">
+        <summary className="cursor-pointer text-center hover:text-warm-600">
+          Context compacted
+        </summary>
+        {text && text !== "Conversation compacted" ? (
+          <div className="mt-2 text-left bg-warm-50 rounded p-3 text-warm-600 whitespace-pre-wrap max-h-60 overflow-auto">
+            {text}
+          </div>
+        ) : null}
+      </details>
     </div>
   );
 }

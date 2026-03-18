@@ -25,7 +25,7 @@ import { sendSound, tick, recordingStart, alarm } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 import { DebugLogPanel } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, ToolList, MarkdownContent, groupMessages } from "./ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownContent, groupMessages } from "./ChatMessages";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -551,7 +551,9 @@ function InteractiveChat() {
           </div>
         ) : null}
         {groupMessages(messages).map((group) =>
-          group.type === "user" ? (
+          group.type === "compaction" ? (
+            <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
+          ) : group.type === "user" ? (
             <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
           ) : (
             <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />

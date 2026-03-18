@@ -10,7 +10,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { getChatHistory, getChatSessions, type SessionEntry, type ChatSessionInfo } from "../api";
-import { UserMessage, AssistantMessage, groupMessages } from "./ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, groupMessages } from "./ChatMessages";
 import { cbSource } from "../lib/source-tag";
 
 /**
@@ -182,7 +182,9 @@ function SessionViewerInner({ sessionId }: { sessionId: string }) {
           </div>
         ) : null}
         {groupMessages(state.messages).map((group) =>
-          group.type === "user" ? (
+          group.type === "compaction" ? (
+            <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
+          ) : group.type === "user" ? (
             <UserMessage key={group.entries[0].uuid} entries={group.entries} />
           ) : (
             <AssistantMessage key={group.entries[0].uuid} entries={group.entries} />
