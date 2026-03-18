@@ -13,6 +13,7 @@ import { EventEmitter } from "node:events";
 import * as readline from "node:readline";
 import * as path from "node:path";
 import type { ChatMessage } from "./chat-session.js";
+import { buildTimezoneContext } from "../webapp/box-config.js";
 
 // Path to the cb-claude wrapper that auto-adds plugins
 const __dirname = import.meta.dirname;
@@ -111,7 +112,7 @@ export class ChatThreadSession extends EventEmitter {
     this.sessionViewBaseUrl = opts.sessionViewBaseUrl;
   }
 
-  private startProcess(): void {
+  private async startProcess(): Promise<void> {
     if (this.proc) {
       log("start", "Process already running");
       return;
@@ -133,11 +134,12 @@ export class ChatThreadSession extends EventEmitter {
 
     // System prompt only on new sessions (resume already has it)
     if (!this.sessionId) {
+      const tzContext = await buildTimezoneContext(this.boxRoot);
       const prompt = buildThreadSystemPrompt({
         threadRef: this.threadRef,
         chatDescription: this.chatDescription,
         sessionViewBaseUrl: this.sessionViewBaseUrl,
-      });
+      }) + tzContext;
       args.push("--append-system-prompt", prompt);
     }
 
@@ -271,13 +273,13 @@ export class ChatThreadSession extends EventEmitter {
    * Send a message and wait for the turn to complete.
    * Returns a promise that resolves when the agent finishes its turn.
    */
-  send(message: string): Promise<void> {
+  async send(message: string): Promise<void> {
     if (this.busy) {
-      return Promise.reject(new Error("Session is busy"));
+      throw new Error("Session is busy");
     }
 
     if (!this.proc) {
-      this.startProcess();
+      await this.startProcess();
     }
 
     if (!this.proc || !this.proc.stdin) {

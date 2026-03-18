@@ -52,7 +52,7 @@ export async function registerChatRoutes(
 
   // Schedule manager — fires schedules back into the chat session
   const scheduleManager = new ChatScheduleManager(boxRoot, {
-    onFire({ schedule }) {
+    async onFire({ schedule }) {
       // Broadcast a schedule-fired event so the frontend can play alarms/TTS
       eventBus.emit("schedule-fired", {
         id: schedule.id,
@@ -85,7 +85,7 @@ export async function registerChatRoutes(
       };
       chatSession.once("done", onScheduleDone);
 
-      const sent = chatSession.send(firedMessage);
+      const sent = await chatSession.send(firedMessage);
       if (!sent) {
         chatSession.removeListener("done", onScheduleDone);
       }
@@ -195,7 +195,26 @@ export async function registerChatRoutes(
         return;
       }
 
-      // Send the message and wait for the turn to complete.
+      // Append active schedule info so the agent knows what's pending
+      const pendingInfo = scheduleManager.formatPendingForPrompt();
+      const fullMessage = pendingInfo
+        ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
+        : attributed;
+
+      // Send the message (may start the process if not running)
+      const sent = await chatSession.send(fullMessage);
+      if (!sent) {
+        reply.raw.write(
+          `data: ${JSON.stringify({
+            type: "error",
+            error: "Failed to send message",
+          })}\n\n`
+        );
+        reply.raw.end();
+        return;
+      }
+
+      // Wait for the turn to complete.
       await new Promise<void>((resolve) => {
         const onMessage = (msg: ChatMessage) => {
           try {
@@ -253,26 +272,6 @@ export async function registerChatRoutes(
           cleanup();
           resolve();
         });
-
-        // Append active schedule info so the agent knows what's pending
-        const pendingInfo = scheduleManager.formatPendingForPrompt();
-        const fullMessage = pendingInfo
-          ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
-          : attributed;
-
-        // Send the message
-        const sent = chatSession.send(fullMessage);
-        if (!sent) {
-          cleanup();
-          reply.raw.write(
-            `data: ${JSON.stringify({
-              type: "error",
-              error: "Failed to send message",
-            })}\n\n`
-          );
-          reply.raw.end();
-          resolve();
-        }
       });
     }
   );

@@ -17,6 +17,7 @@ import {
   parseSessionLog,
   type SessionEntry,
 } from "../cli/lib/session.js";
+import { buildTimezoneContext } from "../webapp/box-config.js";
 
 // Path to the cb-claude wrapper that auto-adds plugins
 const __dirname = import.meta.dirname;
@@ -206,11 +207,14 @@ export class ChatSession extends EventEmitter {
   /**
    * Spawn the claude process with stream-json mode.
    */
-  private startProcess(): void {
+  private async startProcess(): Promise<void> {
     if (this.proc) {
       log("start", "Process already running");
       return;
     }
+
+    const tzContext = await buildTimezoneContext(this.boxRoot);
+    const systemPrompt = CHAT_SYSTEM_PROMPT + tzContext;
 
     const args = [
       "-p",
@@ -221,7 +225,7 @@ export class ChatSession extends EventEmitter {
       "--verbose",
       "--dangerously-skip-permissions",
       "--append-system-prompt",
-      CHAT_SYSTEM_PROMPT,
+      systemPrompt,
     ];
 
     if (this.sessionId) {
@@ -345,14 +349,14 @@ export class ChatSession extends EventEmitter {
    * Send a message to claude. Starts the process if not running.
    * Returns false if a turn is already in progress.
    */
-  send(message: string): boolean {
+  async send(message: string): Promise<boolean> {
     if (this.busy) {
       log("send", "Rejected — busy");
       return false;
     }
 
     if (!this.proc) {
-      this.startProcess();
+      await this.startProcess();
     }
 
     if (!this.proc || !this.proc.stdin) {

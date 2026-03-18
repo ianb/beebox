@@ -16,6 +16,7 @@ import { createWriteStream, appendFileSync, type WriteStream } from "node:fs";
 import { mkdirSync } from "node:fs";
 import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
+import { buildTimezoneContext } from "../webapp/box-config.js";
 
 // ─── Agent interface ─────────────────────────────────────────────────
 
@@ -375,6 +376,7 @@ async function runAgent(options: AgentOptions): Promise<AgentResult> {
   } = options;
 
   const sessionId = options.sessionId ?? randomUUID();
+  const tzContext = options.resume ? "" : await buildTimezoneContext(boxRoot);
 
   return new Promise((resolve) => {
     const args = [
@@ -399,7 +401,7 @@ async function runAgent(options: AgentOptions): Promise<AgentResult> {
     // Add system prompt with session tracking instruction (skip on resume — session already has it)
     if (!options.resume) {
       const sessionInstruction = `\n\nSESSION TRACKING: When making git commits, include this trailer:\n  Session: ${sessionId}\nAdd it after any other trailers in your commit messages.`;
-      const fullSystemPrompt = systemPrompt + sessionInstruction;
+      const fullSystemPrompt = systemPrompt + tzContext + sessionInstruction;
       if (fullSystemPrompt) {
         args.push("--append-system-prompt", fullSystemPrompt);
       }

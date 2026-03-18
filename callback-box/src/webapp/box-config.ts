@@ -10,9 +10,29 @@ import * as path from "node:path";
 export interface BoxConfig {
   publicUrl?: string;
   allowedEmails?: string[];
+  /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
+  timezone?: string;
 }
 
 const cache = new Map<string, { config: BoxConfig; mtime: number }>();
+
+/**
+ * Load the box timezone (or null if not configured).
+ */
+export async function loadBoxTimezone(boxRoot: string): Promise<string | null> {
+  const config = await loadBoxConfig(boxRoot);
+  return config.timezone ?? null;
+}
+
+/**
+ * Build a one-line timezone context string for agent prompts.
+ * Returns empty string if no timezone is configured.
+ */
+export async function buildTimezoneContext(boxRoot: string): Promise<string> {
+  const tz = await loadBoxTimezone(boxRoot);
+  if (!tz) return "";
+  return `\nTimezone: ${tz}`;
+}
 
 /**
  * Load box config from config/box.json, with simple mtime-based caching.
