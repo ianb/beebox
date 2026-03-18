@@ -4,8 +4,10 @@
  * Used by both the interactive ChatPage and the read-only SessionViewer.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Markdown } from "./Markdown";
+import { ImageLightbox } from "./ImageLightbox";
+import type { Components } from "react-markdown";
 import type { SessionEntry, SessionContentBlock } from "../api";
 
 /**
@@ -333,6 +335,33 @@ export function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
 
 
 /**
+ * Clickable image thumbnail that opens a lightbox on click.
+ */
+function ChatImage(props: React.ImgHTMLAttributes<HTMLImageElement>) {
+  const [lightbox, setLightbox] = useState(false);
+  const src = props.src || "";
+  const alt = props.alt || "";
+
+  return (
+    <>
+      <img
+        {...props}
+        className="max-w-xs max-h-64 rounded cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={() => setLightbox(true)}
+        title="Click to zoom"
+      />
+      {lightbox ? (
+        <ImageLightbox src={src} alt={alt} onClose={() => setLightbox(false)} />
+      ) : null}
+    </>
+  );
+}
+
+const chatMarkdownComponents: Partial<Components> = {
+  img: ChatImage,
+};
+
+/**
  * Render markdown content with prose styling.
  */
 function MarkdownContent({ text }: { text: string }) {
@@ -342,7 +371,7 @@ function MarkdownContent({ text }: { text: string }) {
 
   return (
     <div className="prose prose-sm max-w-none">
-      <Markdown>{cleaned}</Markdown>
+      <Markdown components={chatMarkdownComponents}>{cleaned}</Markdown>
     </div>
   );
 }
