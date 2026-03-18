@@ -56,24 +56,55 @@ interface UploadFileOptions {
   source: string;
 }
 
+const MAX_UPLOAD_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 1000;
+
 async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
   const { sessionId, filename, blob, startedAt, source } = options;
-  const formData = new FormData();
-  formData.append("file", blob, filename);
 
-  const res = await fetch(`${getApiBase()}/capture/sessions/${sessionId}/upload`, {
-    method: "POST",
-    headers: {
-      "X-Capture-Filename": filename,
-      "X-Capture-Started-At": startedAt,
-      "X-Capture-Source": source,
-    },
-    body: formData,
-  });
-  if (!res.ok) {
+  for (let attempt = 0; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      console.warn(`[capture] Retrying upload ${filename} (attempt ${attempt + 1}/${MAX_UPLOAD_RETRIES + 1}) after ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    const formData = new FormData();
+    formData.append("file", blob, filename);
+
+    let res: Response;
+    try {
+      res = await fetch(`${getApiBase()}/capture/sessions/${sessionId}/upload`, {
+        method: "POST",
+        headers: {
+          "X-Capture-Filename": filename,
+          "X-Capture-Started-At": startedAt,
+          "X-Capture-Source": source,
+        },
+        body: formData,
+      });
+    } catch (networkErr) {
+      // Network error (offline, DNS failure, etc.) — retry
+      if (attempt < MAX_UPLOAD_RETRIES) continue;
+      const msg = networkErr instanceof Error ? networkErr.message : String(networkErr);
+      throw new Error(`Upload failed (network error after ${MAX_UPLOAD_RETRIES + 1} attempts): ${msg}`);
+    }
+
+    if (res.ok) return;
+
+    // 4xx errors (except 408/429) are not retryable
+    if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+      let detail = "";
+      try { detail = await res.text(); } catch (_e) { /* ignore */ }
+      throw new Error(`Upload failed (${res.status}): ${detail || res.statusText}`);
+    }
+
+    // 5xx or 408/429 — retry
+    if (attempt < MAX_UPLOAD_RETRIES) continue;
+
     let detail = "";
     try { detail = await res.text(); } catch (_e) { /* ignore */ }
-    throw new Error(`Upload failed (${res.status}): ${detail || res.statusText}`);
+    throw new Error(`Upload failed (${res.status} after ${MAX_UPLOAD_RETRIES + 1} attempts): ${detail || res.statusText}`);
   }
 }
 
@@ -199,6 +230,9 @@ export function CapturePage() {
     source: string;
   }
 
+  // Track failed photo blobs so we can retry them
+  const failedPhotoData = useRef<Map<number, { blob: Blob; startedAt: string; source: string }>>(new Map());
+
   const uploadPhoto = useCallback(
     ({ sessionId: sid, index, blob, startedAt, source }: UploadPhotoParams) => {
       const ext = blob.type.includes("png") ? "png" : "jpg";
@@ -206,17 +240,28 @@ export function CapturePage() {
       setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploading"; return next; });
       const p = uploadCaptureFile({ sessionId: sid, filename, blob, startedAt, source })
         .then(() => {
+          failedPhotoData.current.delete(index);
           setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
         })
         .catch((e: unknown) => {
           const msg = e instanceof Error ? e.message : String(e);
           console.error(`[capture] Photo upload failed (${filename}): ${msg}`);
+          failedPhotoData.current.set(index, { blob, startedAt, source });
           setPhotoStates((prev) => { const next = [...prev]; next[index] = "failed"; return next; });
         });
       pendingUploads.current.push(p);
     },
     []
   );
+
+  const retryFailedUploads = useCallback(() => {
+    if (!sessionId) return;
+    const entries = Array.from(failedPhotoData.current.entries());
+    for (const [index, data] of entries) {
+      failedPhotoData.current.delete(index);
+      uploadPhoto({ sessionId, index, blob: data.blob, startedAt: data.startedAt, source: data.source });
+    }
+  }, [sessionId, uploadPhoto]);
 
   const handleChunk = useCallback(
     ({ blob, index, startedAt }: { blob: Blob; index: number; startedAt: string }) => {
@@ -349,6 +394,7 @@ export function CapturePage() {
       pendingUploads.current = [];
       await finalizeCaptureSession(sessionId);
       setSessionId(null); setPhotoStates([]); setAudioChunks([]); setError(null); setFinalizing(false);
+      failedPhotoData.current.clear();
       try {
         const result = await createCaptureSession();
         setSessionId(result.sessionId);
@@ -383,7 +429,7 @@ export function CapturePage() {
         photoTotal={photoTotal} photosUploading={photosUploading} photosUploaded={photosUploaded} photosFailed={photosFailed}
         showSettings={showSettings}
         onToggleSettings={() => setShowSettings((p) => !p)}
-        onPickGallery={pickFromGallery}
+        onPickGallery={pickFromGallery} onRetryFailed={retryFailedUploads}
       />
 
       {showSettings ? (
@@ -447,8 +493,8 @@ export function CapturePage() {
 
       <CaptureControls
         sessionId={sessionId} recording={recording} uploadsInProgress={uploadsInProgress} finalizing={finalizing}
-        hasContent={photoTotal > 0 || audioTotal > 0}
-        onDone={handleDone} onCancel={handleCancel} onToggleRecording={toggleRecording}
+        hasContent={photoTotal > 0 || audioTotal > 0} photosFailed={photosFailed}
+        onDone={handleDone} onCancel={handleCancel} onToggleRecording={toggleRecording} onRetryFailed={retryFailedUploads}
       />
     </div>
   );
@@ -461,7 +507,7 @@ function StatusBar(props: {
   audioTotal: number; audioUploading: number; audioUploaded: number;
   photoTotal: number; photosUploading: number; photosUploaded: number; photosFailed: number;
   showSettings: boolean;
-  onToggleSettings: () => void; onPickGallery: () => void;
+  onToggleSettings: () => void; onPickGallery: () => void; onRetryFailed: () => void;
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-gray-900/80 z-10">
@@ -488,7 +534,12 @@ function StatusBar(props: {
             {props.photosUploading > 0 ? (
               <><span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" /><span className="text-yellow-400">{props.photosUploaded}/{props.photoTotal}</span></>
             ) : props.photosFailed > 0 ? (
-              <><span className="text-red-400">&#10007;</span><span className="text-red-400">{props.photosFailed} failed</span>{props.photosUploaded > 0 ? <span className="text-green-400">, {props.photosUploaded} ok</span> : null}</>
+              <>
+                <span className="text-red-400">&#10007;</span>
+                <span className="text-red-400">{props.photosFailed} failed</span>
+                <button onClick={props.onRetryFailed} className="text-yellow-300 underline ml-1">retry</button>
+                {props.photosUploaded > 0 ? <span className="text-green-400">, {props.photosUploaded} ok</span> : null}
+              </>
             ) : (
               <><span className="text-green-400">&#10003;</span><span className="text-green-400">{props.photoTotal} photos</span></>
             )}
@@ -543,34 +594,44 @@ function DeviceSettings(props: {
 
 function CaptureControls(props: {
   sessionId: string | null; recording: boolean;
-  uploadsInProgress: boolean; finalizing: boolean; hasContent: boolean;
-  onDone: () => void; onCancel: () => void; onToggleRecording: () => void;
+  uploadsInProgress: boolean; finalizing: boolean; hasContent: boolean; photosFailed: number;
+  onDone: () => void; onCancel: () => void; onToggleRecording: () => void; onRetryFailed: () => void;
 }) {
+  const doneDisabled = !props.sessionId || props.uploadsInProgress || props.finalizing || !props.hasContent || props.photosFailed > 0;
   return (
-    <div className="flex items-center justify-around px-6 py-4 bg-gray-900/80">
-      <button onClick={props.onCancel} disabled={!props.sessionId || props.finalizing || !props.hasContent}
-        className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center disabled:opacity-30 active:bg-gray-600">
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      </button>
-      <button onClick={props.onToggleRecording} disabled={!props.sessionId}
-        className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-red-600" : ""}`}>
-        {props.recording ? <span className="w-7 h-7 bg-white rounded-sm" /> : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z" /><path d="M17 11a5 5 0 01-10 0H5a7 7 0 0014 0h-2z" />
-            <rect x="11" y="19" width="2" height="3" rx="1" /><rect x="8" y="21" width="8" height="2" rx="1" />
+    <div className="flex flex-col items-center bg-gray-900/80">
+      {props.photosFailed > 0 ? (
+        <div className="text-red-300 text-sm py-2 px-4 text-center">
+          {props.photosFailed} photo{props.photosFailed > 1 ? "s" : ""} failed to upload.{" "}
+          <button onClick={props.onRetryFailed} className="text-yellow-300 underline">Retry</button>
+          {" "}or discard the session.
+        </div>
+      ) : null}
+      <div className="flex items-center justify-around w-full px-6 py-4">
+        <button onClick={props.onCancel} disabled={!props.sessionId || props.finalizing || !props.hasContent}
+          className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center disabled:opacity-30 active:bg-gray-600">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
-        )}
-      </button>
-      <button onClick={props.onDone} disabled={!props.sessionId || props.uploadsInProgress || props.finalizing || !props.hasContent}
-        className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-30 active:bg-green-500">
-        {props.finalizing ? (
-          <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
-        )}
-      </button>
+        </button>
+        <button onClick={props.onToggleRecording} disabled={!props.sessionId}
+          className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-red-600" : ""}`}>
+          {props.recording ? <span className="w-7 h-7 bg-white rounded-sm" /> : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z" /><path d="M17 11a5 5 0 01-10 0H5a7 7 0 0014 0h-2z" />
+              <rect x="11" y="19" width="2" height="3" rx="1" /><rect x="8" y="21" width="8" height="2" rx="1" />
+            </svg>
+          )}
+        </button>
+        <button onClick={props.onDone} disabled={doneDisabled}
+          className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-30 active:bg-green-500">
+          {props.finalizing ? (
+            <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
