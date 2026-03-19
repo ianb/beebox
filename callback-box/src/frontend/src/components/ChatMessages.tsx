@@ -345,7 +345,7 @@ function ChatImage({ src, alt }: { src: string; alt: string }) {
       <img
         src={src}
         alt={alt}
-        className="max-w-xs max-h-64 rounded cursor-pointer hover:opacity-90 transition-opacity"
+        className="max-w-xs max-h-64 rounded shadow-md cursor-pointer hover:opacity-90 transition-opacity"
         onClick={() => setLightbox(true)}
         title="Click to zoom"
       />
