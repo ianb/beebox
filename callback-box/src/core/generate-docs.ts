@@ -18,7 +18,7 @@ import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "
 import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 import { parsePersonality, compilePersonality, compileSpeakingVoice, type Personality } from "../schemas/personality.js";
 import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefing.js";
-import { generateViewsDoc, generateViewsClaudeMd } from "./views-doc.js";
+import { generateViewsDoc } from "./views-doc.js";
 
 const AGENT_GUIDE_DIR = ".callback-box";
 const AGENT_GUIDE_FILE = "agent-guide.md";
@@ -243,7 +243,6 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
 
   await mkdir(join(boxRoot, AGENT_GUIDE_DIR), { recursive: true });
   await mkdir(join(boxRoot, DOCS_DIR), { recursive: true });
-  await mkdir(join(boxRoot, "views"), { recursive: true });
 
   const procedures = await scanProcedures(boxRoot);
 
@@ -263,8 +262,6 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       withDocId({ relativePath: `${DOCS_DIR}/connectors.md`, content: generateConnectorsDocs(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "views.md"),
       withDocId({ relativePath: `${DOCS_DIR}/views.md`, content: generateViewsDoc(), debug })),
-    writeFile(join(boxRoot, "views", "CLAUDE.md"),
-      withDocId({ relativePath: "views/CLAUDE.md", content: generateViewsClaudeMd(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     ...allSchemas

@@ -1,36 +1,8 @@
 /**
- * Generate views documentation for agents.
+ * Generate the views reference documentation for agents.
  *
- * Two outputs:
- * 1. `docs/generated/views.md` — full reference (read on demand)
- * 2. `views/CLAUDE.md` — auto-loaded when agent works in views/
+ * Called by generate-docs.ts to produce docs/generated/views.md.
  */
-
-/**
- * Short guide auto-loaded when agents work in the views/ directory.
- * Tells agents to read the full doc before implementing.
- */
-export function generateViewsClaudeMd(): string {
-  return `# Views Directory
-
-This directory contains agent-generated React components (.tsx files) that render in the browser.
-
-**IMPORTANT: Read \`docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
-
-## Quick Reference
-
-Each view must export:
-- \`name\` (string) — display name
-- \`description\` (string) — what the view shows
-- \`dependencies\` (string[]) — glob patterns for cards that affect rendering
-- \`modes\` (string[]) — \`"page"\`, \`"chat"\`, or both
-- \`default\` function component receiving \`{ cards, navigate, boxSlug }\`
-
-React is provided automatically — do not import it.
-
-Full documentation: \`docs/generated/views.md\`
-`;
-}
 
 export function generateViewsDoc(): string {
   return `# Views: Agent-Generated React Components

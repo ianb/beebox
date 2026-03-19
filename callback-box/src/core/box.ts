@@ -129,6 +129,9 @@ tricks/node_modules/
   // Install schemas guide CLAUDE.md if missing
   await installSchemasGuide(resolvedRoot);
 
+  // Install views CLAUDE.md if missing
+  await installViewsGuide(resolvedRoot);
+
   // Initialize git repo (only on fresh init) — don't commit yet;
   // the init command installs more files (schedules, procedures, etc.)
   // after this returns and commits everything together.
@@ -791,5 +794,35 @@ async function installSchemasGuide(boxRoot: string): Promise<void> {
   } catch {
     await fs.mkdir(path.join(boxRoot, "config/schemas"), { recursive: true });
     await fs.writeFile(claudeMdPath, SCHEMAS_CLAUDE_MD);
+  }
+}
+
+const VIEWS_CLAUDE_MD = `# Views Directory
+
+This directory contains agent-generated React components (.tsx files) that render in the browser.
+
+**IMPORTANT: Read \`docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
+
+## Quick Reference
+
+Each view must export:
+- \`name\` (string) — display name
+- \`description\` (string) — what the view shows
+- \`dependencies\` (string[]) — glob patterns for cards that affect rendering
+- \`modes\` (string[]) — \`"page"\`, \`"chat"\`, or both
+- \`default\` function component receiving \`{ cards, navigate, boxSlug }\`
+
+React is provided automatically — do not import it.
+
+Full documentation: \`docs/generated/views.md\`
+`;
+
+async function installViewsGuide(boxRoot: string): Promise<void> {
+  const claudeMdPath = path.join(boxRoot, "views/CLAUDE.md");
+  try {
+    await fs.access(claudeMdPath);
+  } catch {
+    await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
+    await fs.writeFile(claudeMdPath, VIEWS_CLAUDE_MD);
   }
 }
