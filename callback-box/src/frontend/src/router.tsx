@@ -21,6 +21,7 @@ import { SharePage } from "./components/SharePage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
 import { TodosPage } from "./components/TodosPage";
 import { AppLayout, BoxRedirect, ShareRedirect, CardViewPage, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
+import { ViewPage } from "./components/ViewPage";
 
 // --- Root route ---
 
@@ -145,6 +146,12 @@ const cardRoute = createRoute({
   component: CardViewPage,
 });
 
+const viewRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/views/$",
+  component: ViewPage,
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
@@ -174,6 +181,7 @@ const routeTree = rootRoute.addChildren([
     adminRoute,
     todosRoute,
     cardRoute,
+    viewRoute,
     boxCatchAllRoute,
   ]),
 ]);

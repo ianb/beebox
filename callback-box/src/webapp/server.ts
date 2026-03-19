@@ -23,6 +23,7 @@ import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerClerkRoutes } from "./routes/clerk.js";
+import { registerViewRoutes } from "./routes/views.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerSystemAdminRoutes, registerBoxAdminRoutes, registerGoogleServicesCallback } from "./routes/admin.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
@@ -249,6 +250,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
       await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, eventBus });
       await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
+      await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
 
       // Serve static frontend files within this prefix
       if (frontendExists) {

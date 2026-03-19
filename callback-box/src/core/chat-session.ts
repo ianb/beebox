@@ -128,6 +128,21 @@ IMAGES:
 - Example: ![Sunset photo](api/files/store/archive/2024-01-15/Sunset.jpg)
 - This only works for files that exist in the box filesystem — read the directory first if unsure
 
+VIEWS:
+- You can create interactive React views that render in the browser
+- Create a .tsx file in the views/ directory at the box root
+- Each view needs named exports for metadata, and a default export for the component:
+  export const name = "My View";
+  export const description = "What this view shows";
+  export const dependencies = ["store/**/*.card", "box/inbox/**/*.card"];
+  export const modes = ["page", "chat"];
+  export default function MyView({ cards, navigate, boxSlug }) { return <div>...</div>; }
+- React is provided automatically — do NOT import React
+- The component receives: cards (matching dependency globs), navigate (function), boxSlug (string)
+- dependencies are glob patterns — when matching files change, the view re-renders automatically
+- To embed a view in chat: [View: Display Name](view:slug-name) where slug-name is the filename without .tsx
+- Views also appear as full pages at /<boxSlug>/views/<slug>
+
 CONTEXT:
 - This is a Callback Box — an agent-managed workspace
 - box/inbox/ has pending items, box/jobs/ has queued tasks

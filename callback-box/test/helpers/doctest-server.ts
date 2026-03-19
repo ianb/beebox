@@ -25,6 +25,12 @@ export interface InjectResult {
   body: unknown;
 }
 
+export interface RawInjectResult {
+  statusCode: number;
+  payload: string;
+  headers: Record<string, string>;
+}
+
 export interface TestServer {
   /** Absolute path to the temp box root. */
   boxRoot: string;
@@ -34,6 +40,8 @@ export interface TestServer {
   request(opts: InjectOpts): Promise<InjectResult>;
   /** Like request() but without the box slug prefix — for root-level routes. */
   rootRequest(opts: InjectOpts): Promise<InjectResult>;
+  /** Inject and return raw { statusCode, payload, headers } — for non-JSON responses. */
+  rawRequest(opts: InjectOpts): Promise<RawInjectResult>;
   /** Write a card file into the test box. */
   seed(relativePath: string, content: string): Promise<void>;
   /** Read a file from the test box. */
@@ -64,6 +72,21 @@ export async function makeTestServer(opts?: TestServerOptions): Promise<TestServ
       }
       const res = await ctx.server.inject(reqOpts);
       return { statusCode: res.statusCode, body: res.json() };
+    },
+    async rawRequest(opts: InjectOpts) {
+      const reqOpts: { method: string; url: string; payload?: unknown } = {
+        method: opts.method,
+        url: `${BASE}${opts.url}`,
+      };
+      if (opts.payload !== undefined) {
+        reqOpts.payload = opts.payload;
+      }
+      const res = await ctx.server.inject(reqOpts);
+      return {
+        statusCode: res.statusCode,
+        payload: res.payload,
+        headers: res.headers as Record<string, string>,
+      };
     },
     async rootRequest(opts: InjectOpts) {
       const reqOpts: { method: string; url: string; payload?: unknown } = {

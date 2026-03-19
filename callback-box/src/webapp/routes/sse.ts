@@ -25,11 +25,11 @@ export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise
   let watcher: FSWatcher | null = null;
 
   // Start file watcher lazily on first SSE client connection
-  const watchPath = path.join(boxRoot, "box");
+  const watchPaths = [path.join(boxRoot, "box"), path.join(boxRoot, "views")];
 
   function ensureWatcher(): void {
     if (watcher) return;
-    watcher = watch(watchPath, {
+    watcher = watch(watchPaths, {
       persistent: true,
       ignoreInitial: true,
       ignored: /(^|[/\\])\../,

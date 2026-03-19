@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import { Markdown } from "./Markdown";
 import { ImageLightbox } from "./ImageLightbox";
+import { ViewRenderer } from "./ViewRenderer";
 import type { Components } from "react-markdown";
 import type { SessionEntry, SessionContentBlock } from "../api";
 
@@ -412,6 +413,13 @@ function ChatParagraph({ children, ...props }: React.HTMLAttributes<HTMLParagrap
 
 const chatMarkdownComponents: Partial<Components> = {
   p: ChatParagraph,
+  a({ href, children, ...props }) {
+    if (href && href.startsWith("view:")) {
+      const slug = href.slice("view:".length);
+      return <ViewRenderer slug={slug} mode="chat" />;
+    }
+    return <a href={href} {...props}>{children}</a>;
+  },
 };
 
 /**
