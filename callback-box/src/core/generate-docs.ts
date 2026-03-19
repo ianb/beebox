@@ -18,6 +18,7 @@ import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "
 import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 import { parsePersonality, compilePersonality, compileSpeakingVoice, type Personality } from "../schemas/personality.js";
 import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefing.js";
+import { generateViewsDoc } from "./views-doc.js";
 
 const AGENT_GUIDE_DIR = ".callback-box";
 const AGENT_GUIDE_FILE = "agent-guide.md";
@@ -259,6 +260,8 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
       withDocId({ relativePath: `${DOCS_DIR}/connectors.md`, content: generateConnectorsDocs(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "views.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/views.md`, content: generateViewsDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     ...allSchemas
@@ -693,6 +696,20 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "",
     "Custom scripts live in `tricks/scripts/`. Each trick is a directory with an `index.ts`.",
     "Run with `cb trick <name>`. See `tricks/scripts/CLAUDE.md` for how to write tricks.",
+    "",
+  );
+
+  // Views section
+  lines.push(
+    "## Views",
+    "",
+    "Views are React components (`.tsx` files) in the `views/` directory that render in the browser.",
+    "Use views to create dashboards, data summaries, interactive explorers, or any custom UI for box data.",
+    "",
+    "- Views appear as full pages at `/<box>/views/<slug>` and can be embedded in chat messages",
+    "- Each view declares metadata (name, description, dependencies, modes) as named exports",
+    "- Views re-render automatically when files matching their dependency globs change",
+    "- See `docs/generated/views.md` for the full format, examples, and API",
     "",
   );
 

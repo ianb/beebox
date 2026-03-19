@@ -282,6 +282,68 @@ cb prompt "What card types do you know about? Can you add new ones?"
 - **Expected level: Knows directly + Discoverable** — listing types is "knows directly" (agent guide); adding new ones are "discoverable" (requires finding `config/schemas/CLAUDE.md`)
 - Watch for: does it answer both parts? The second part is the interesting one.
 
+## 9. Views (Agent-Generated React Components)
+
+Views are a capability agents can use to create custom browser UIs. The agent should know views exist (directly), know how to create them (by reading the doc), and know how to embed them in chat.
+
+**Test prompts:**
+
+```
+cb prompt "I want a dashboard that shows all my todos. Can you make that?"
+```
+- **Expected level: Knows directly** — the agent guide lists views as a capability with a doc reference
+- Watch for: does it know to create a `.tsx` file in `views/`? Does it read `docs/generated/views.md` for the format, or guess?
+
+```
+cb prompt "What are views and how do they work?"
+```
+- **Expected level: Knows directly** — views are described in the agent guide
+- Watch for: does it explain the concept (TSX files, compiled server-side, rendered in browser) without reading docs?
+
+```
+cb prompt "How do I create a view that shows all record cards?"
+```
+- **Expected level: Knows about** — the agent guide references `docs/generated/views.md`; the agent should read it for the exact format
+- Watch for: does it read the views doc, or guess the file format? Key details to get right: named exports for metadata, default export for component, dependency globs, `ViewProps` shape
+
+```
+cb prompt "What views are available in this box?"
+```
+- **Expected level: Discoverable** — the agent should check the `views/` directory
+- Watch for: does it list the directory, or say "I don't know"?
+
+```
+cb prompt "Show me a summary of my inbox items."
+```
+- **Expected level: Knows directly (capability awareness)** — the agent should recognize this as a potential view use case
+- Watch for: does it offer to create a view, or just list files in text? Either is valid, but awareness of the view option shows the knowledge is working
+
+### Chat-Specific View Knowledge
+
+These test the interactive chat agent's knowledge (system prompt, not agent guide):
+
+```
+cb prompt "Can you show me a view in this chat?"
+```
+- **Expected level: Knows directly** — the chat system prompt describes the `[View: Name](view:slug)` syntax
+- Watch for: does it know the markdown link format for embedding views?
+
+```
+cb prompt "What views can you embed in chat messages?"
+```
+- **Expected level: Discoverable** — the agent should check `views/` to see what's available, then use the embed syntax
+- Watch for: does it check the directory and know which views have `"chat"` in their modes?
+
+### Expected Knowledge Levels Summary
+
+| Question | Level | Source |
+|----------|-------|--------|
+| Views exist as a capability | Knows directly | Agent guide |
+| How to create a view (format, API) | Knows about | `docs/generated/views.md` |
+| What views exist in this box | Discoverable | `views/` directory listing |
+| How to embed a view in chat | Knows directly | Chat system prompt |
+| When to suggest creating a view | Knows directly | Agent guide description |
+
 ---
 
 ## Future Test Categories (Not Yet Implemented)
