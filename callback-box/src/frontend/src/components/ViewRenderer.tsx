@@ -64,7 +64,10 @@ interface ViewModule {
   modes?: ViewMode[];
 }
 
-export function ViewRenderer({ slug, mode, params }: ViewRendererProps) {
+export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps) {
+  // Guard: strip any query string that leaked into the slug
+  const qIdx = rawSlug.indexOf("?");
+  const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
   const viewParams = params || {};
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
