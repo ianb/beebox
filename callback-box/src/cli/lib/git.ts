@@ -240,6 +240,7 @@ export interface FileStat {
   added: number;
   modified: number;
   deleted: number;
+  renamed: number;
   insertions: number;
   deletions: number;
 }
@@ -321,13 +322,13 @@ export async function getLogPaginated(
       const numstatByHash = parseHashGrouped(numstatRaw);
 
       for (const [hash, lines] of statusByHash) {
-        const stat: FileStat = { added: 0, modified: 0, deleted: 0, insertions: 0, deletions: 0 };
+        const stat: FileStat = { added: 0, modified: 0, deleted: 0, renamed: 0, insertions: 0, deletions: 0 };
         for (const line of lines) {
           const status = line[0];
           if (status === "A") stat.added++;
           else if (status === "M") stat.modified++;
           else if (status === "D") stat.deleted++;
-          else if (status === "R") { stat.added++; stat.deleted++; }
+          else if (status === "R") stat.renamed++;
         }
         // Sum line changes from numstat for modified files
         const numLines = numstatByHash.get(hash) || [];
