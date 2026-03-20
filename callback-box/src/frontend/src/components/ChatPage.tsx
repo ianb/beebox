@@ -375,10 +375,13 @@ function InteractiveChat() {
         stopTickRef.current();
         stopTickRef.current = null;
       }
-      const hasSpeech = hasAssistantSpeech(snapshot.context.streamText);
+      const currentStreamText = snapshot.context.streamText;
+      const hasSpeech = hasAssistantSpeech(currentStreamText);
+      console.log("[Chat] streaming→refreshing, streamText length:", currentStreamText.length, "hasSpeech:", hasSpeech);
       speechPlayedRef.current = hasSpeech;
       if (hasSpeech) {
-        const segments = parseAllSpeechTags(snapshot.context.streamText);
+        const segments = parseAllSpeechTags(currentStreamText);
+        console.log("[Chat] Playing", segments.length, "speech segments");
         speechPlayback.playSegments({
           messageId: `stream-${Date.now()}`,
           segments,
@@ -386,13 +389,31 @@ function InteractiveChat() {
       }
     }
 
-    // refreshing → idle: restart mic for non-speech responses
+    // refreshing → idle: play speech from history if not already played, restart mic
     if (current === "idle" && prev === "refreshing") {
+      console.log("[Chat] refreshing→idle, speechPlayed:", speechPlayedRef.current);
+      if (!speechPlayedRef.current) {
+        // Speech wasn't triggered from streamText (e.g., REFRESH path cleared it).
+        // Check the latest assistant message from history for speech tags.
+        const lastAssistant = snapshot.context.messages.toReversed().find((m) => m.type === "assistant");
+        if (lastAssistant) {
+          const text = lastAssistant.content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n");
+          if (hasAssistantSpeech(text)) {
+            const segments = parseAllSpeechTags(text);
+            speechPlayedRef.current = true;
+            speechPlayback.playSegments({
+              messageId: lastAssistant.uuid,
+              segments,
+            });
+          }
+        }
+      }
       if (!speechPlayedRef.current && turnTakingRef.current) {
         recordingStart.play();
         transcriptionRef.current?.start();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot.value, snapshot.context.streamText, speechPlayback]);
 
   // Scroll to bottom on new messages
