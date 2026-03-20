@@ -708,9 +708,9 @@ export function AssistantMessage({ entries, debugView, speechPlaying }: { entrie
   const isPlaying = speechPlaying === true;
 
   return (
-    <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden">
+    <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
       {hasSpeech && !debugView ? (
-        <div className="mb-1">
+        <div className="absolute right-2 top-2">
           <SpeechIcon playing={isPlaying} />
         </div>
       ) : null}
