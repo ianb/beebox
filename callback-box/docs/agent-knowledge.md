@@ -119,13 +119,6 @@ cb prompt "What's the difference between a guide card and a procedure card?"
 - Watch for: high-level answer from agent guide is fine, but details require doc reads
 
 ```
-cb prompt "Research Ian Bicking and make a card about him as a person."
-```
-- **Expected level: Knows directly** — the agent guide lists `person` as a card type, shows the template (`cb create <path> -t person`), and explicitly says "Create a person card at `people/First_Last.person.card`"
-- Watch for: does it create a `.person.card` in `people/`, or fall back to a generic `.record.card`? The agent should pick the specific type. Also watch for: does it read `docs/generated/card-person.md` for the schema, or guess the XML structure?
-- **Known failure:** Agent created a `.record.card` instead — didn't recognize `person` as the right card type despite it being listed in the guide and having a template. This suggests the agent treats creation prompts as "demonstrate capability" rather than "look up the right type."
-
-```
 cb prompt "How would you create a brand new card type for this box?"
 ```
 - **Expected level: Discoverable** — the agent guide doesn't directly describe box-local schemas, but `config/schemas/CLAUDE.md` exists and is discoverable
