@@ -9,6 +9,7 @@ import { Markdown } from "./Markdown";
 import { ImageLightbox } from "./ImageLightbox";
 import { ViewRenderer } from "./ViewRenderer";
 import type { Components } from "react-markdown";
+import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 
 /**
@@ -473,34 +474,73 @@ interface TaskNotification {
   taskId: string;
   status: string;
   summary: string;
+  outputFile?: string;
 }
 
 function parseTaskNotification(text: string): TaskNotification | null {
   const match = text.match(/<task-notification>[\S\s]*?<task-id>([^<]*)<\/task-id>[\S\s]*?<status>([^<]*)<\/status>[\S\s]*?<summary>([^<]*)<\/summary>[\S\s]*?<\/task-notification>/);
   if (!match) return null;
-  return { taskId: match[1]!, status: match[2]!, summary: match[3]! };
+  const outputMatch = text.match(/<output-file>([^<]*)<\/output-file>/);
+  return {
+    taskId: match[1]!,
+    status: match[2]!,
+    summary: match[3]!,
+    outputFile: outputMatch ? outputMatch[1] : undefined,
+  };
 }
 
 function TaskNotificationMessage({ notification }: { notification: TaskNotification }) {
   const [expanded, setExpanded] = useState(false);
+  const [output, setOutput] = useState<string | null>(null);
+  const [loadingOutput, setLoadingOutput] = useState(false);
   const statusColor = notification.status === "completed"
     ? "text-green-600"
     : notification.status === "error" ? "text-red-600" : "text-warm-600";
 
+  const handleExpand = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && output === null && notification.outputFile) {
+      setLoadingOutput(true);
+      fetch(`${getApiBase()}/task-output?file=${encodeURIComponent(notification.outputFile)}`)
+        .then((res) => {
+          if (res.ok) return res.text();
+          return null;
+        })
+        .then((text) => {
+          setOutput(text ?? "(output no longer available)");
+          setLoadingOutput(false);
+        })
+        .catch(() => {
+          setOutput("(failed to load output)");
+          setLoadingOutput(false);
+        });
+    }
+  };
+
   return (
-    <div className="flex justify-center py-1">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="text-xs text-warm-500 hover:text-warm-700 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
-      >
-        <span className={statusColor}>&#x25CF;</span>
-        Background task {notification.status}
-        <span className="text-warm-400">{expanded ? "▾" : "▸"}</span>
-      </button>
+    <div className="py-1">
+      <div className="flex justify-center">
+        <button
+          onClick={handleExpand}
+          className="text-xs text-warm-500 hover:text-warm-700 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
+        >
+          <span className={statusColor}>&#x25CF;</span>
+          {notification.summary}
+          <span className="text-warm-400">{expanded ? "▾" : "▸"}</span>
+        </button>
+      </div>
       {expanded ? (
-        <div className="absolute mt-7 bg-white border border-warm-200 rounded-lg shadow-sm p-2 text-xs text-warm-600 max-w-sm z-10">
-          <div>{notification.summary}</div>
-          <div className="text-warm-400 mt-1">Task: {notification.taskId}</div>
+        <div className="mx-4 mt-2 bg-warm-50 border border-warm-200 rounded-lg p-3 text-xs">
+          {loadingOutput ? (
+            <div className="text-warm-500 italic">Loading output...</div>
+          ) : output ? (
+            <pre className="whitespace-pre-wrap break-words text-warm-700 max-h-64 overflow-auto font-mono">
+              {output}
+            </pre>
+          ) : (
+            <div className="text-warm-500 italic">No output file</div>
+          )}
         </div>
       ) : null}
     </div>

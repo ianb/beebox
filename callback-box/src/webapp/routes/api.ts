@@ -438,6 +438,30 @@ export async function registerApiRoutes(
     }
   );
 
+  // GET /api/task-output - Read a background task output file
+  server.get<{ Querystring: { file?: string } }>(
+    "/api/task-output",
+    async (request, reply) => {
+      const filePath = request.query.file;
+      if (!filePath) {
+        return reply.status(400).send({ error: "Missing file parameter" });
+      }
+
+      // Security: only allow reading from tmp task output directories
+      const resolved = path.resolve(filePath);
+      if (!resolved.includes("/tasks/") || !resolved.startsWith("/private/tmp/") && !resolved.startsWith("/tmp/")) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+
+      try {
+        const content = await fs.readFile(resolved, "utf-8");
+        return reply.header("Content-Type", "text/plain").send(content);
+      } catch {
+        return reply.status(404).send({ error: "Output file not found" });
+      }
+    }
+  );
+
   // GET /api/news-status - News pipeline status by location
   server.get("/api/news-status", async () => {
     const [inboxCount, poolCount, archiveCount, trashCount] = await Promise.all([
