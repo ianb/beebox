@@ -689,7 +689,7 @@ function SpeechIcon({ playing }: { playing: boolean }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       className={`inline-block w-4 h-4 align-text-bottom ${
-        playing ? "text-plum animate-pulse" : "text-warm-300"
+        playing ? "text-plum animate-pulse" : "text-warm-400"
       }`}
     >
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
