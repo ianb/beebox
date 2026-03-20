@@ -240,6 +240,8 @@ export interface FileStat {
   added: number;
   modified: number;
   deleted: number;
+  insertions: number;
+  deletions: number;
 }
 
 export interface GitLogEntryExtended {
@@ -266,6 +268,27 @@ export interface GetLogPaginatedParams {
  * @param params - Parameters object
  * @returns Array of log entries
  */
+/**
+ * Parse git log output grouped by commit hash.
+ * Expects format: hash line, then data lines, then next hash, etc.
+ */
+function parseHashGrouped(raw: string): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  let currentHash: string | null = null;
+  let lines: string[] = [];
+  for (const line of raw.split("\n")) {
+    if (/^[\da-f]{40}$/.test(line)) {
+      if (currentHash) map.set(currentHash, lines);
+      currentHash = line;
+      lines = [];
+    } else if (currentHash && line.length > 0) {
+      lines.push(line);
+    }
+  }
+  if (currentHash) map.set(currentHash, lines);
+  return map;
+}
+
 export async function getLogPaginated(
   params: GetLogPaginatedParams
 ): Promise<GitLogEntryExtended[]> {
@@ -283,30 +306,40 @@ export async function getLogPaginated(
     const git = simpleGit(boxRoot);
     const result = await git.log<GitLogFormat>(logOptions);
 
-    // Fetch file stats (A/M/D counts) via --name-status
+    // Fetch file stats via --name-status (A/M/D) and --numstat (line counts)
     const statMap = new Map<string, FileStat>();
     try {
       const skipArgs = offset > 0 ? ["--skip", String(offset)] : [];
-      const raw = await git.raw([
-        "log", `--max-count=${count}`, ...skipArgs,
-        "--format=%H", "--name-status",
-      ]);
-      let currentHash: string | null = null;
-      let stat: FileStat = { added: 0, modified: 0, deleted: 0 };
-      for (const line of raw.split("\n")) {
-        if (/^[\da-f]{40}$/.test(line)) {
-          if (currentHash) statMap.set(currentHash, stat);
-          currentHash = line;
-          stat = { added: 0, modified: 0, deleted: 0 };
-        } else if (currentHash && line.length > 0) {
+      const baseArgs = ["log", `--max-count=${count}`, ...skipArgs, "--format=%H"];
+
+      // File statuses
+      const statusRaw = await git.raw([...baseArgs, "--name-status"]);
+      const statusByHash = parseHashGrouped(statusRaw);
+
+      // Line counts
+      const numstatRaw = await git.raw([...baseArgs, "--numstat"]);
+      const numstatByHash = parseHashGrouped(numstatRaw);
+
+      for (const [hash, lines] of statusByHash) {
+        const stat: FileStat = { added: 0, modified: 0, deleted: 0, insertions: 0, deletions: 0 };
+        for (const line of lines) {
           const status = line[0];
           if (status === "A") stat.added++;
           else if (status === "M") stat.modified++;
           else if (status === "D") stat.deleted++;
           else if (status === "R") { stat.added++; stat.deleted++; }
         }
+        // Sum line changes from numstat for modified files
+        const numLines = numstatByHash.get(hash) || [];
+        for (const nl of numLines) {
+          const parts = nl.split("\t");
+          if (parts.length >= 2 && parts[0] !== "-") {
+            stat.insertions += parseInt(parts[0]!, 10) || 0;
+            stat.deletions += parseInt(parts[1]!, 10) || 0;
+          }
+        }
+        statMap.set(hash, stat);
       }
-      if (currentHash) statMap.set(currentHash, stat);
     } catch {
       // stat data is optional — ignore failures
     }

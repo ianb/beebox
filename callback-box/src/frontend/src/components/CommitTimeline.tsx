@@ -105,24 +105,24 @@ function formatDuration(fromDate: string, toDate: string): string | null {
 }
 
 /**
- * Colored badges showing file add/modify/delete counts.
+ * Colored pill badges: "add N", "del N", "+X-Y in N" for modified files.
  */
-function FileStatBadges({ stat }: { stat: { added: number; modified: number; deleted: number } }) {
+function FileStatBadges({ stat }: { stat: { added: number; modified: number; deleted: number; insertions: number; deletions: number } }) {
   return (
     <>
       {stat.added > 0 ? (
-        <span className="text-[10px] px-1 py-0.5 rounded bg-green-100 text-green-700 font-medium">
-          +{stat.added}
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+          add {stat.added}
         </span>
       ) : null}
       {stat.modified > 0 ? (
-        <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
-          ~{stat.modified}
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+          +{stat.insertions}-{stat.deletions} in {stat.modified}
         </span>
       ) : null}
       {stat.deleted > 0 ? (
-        <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700 font-medium">
-          -{stat.deleted}
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+          del {stat.deleted}
         </span>
       ) : null}
     </>
