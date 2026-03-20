@@ -558,7 +558,7 @@ function InteractiveChat() {
           if (!showAllMessages) {
             // Find the start index that keeps the last N user messages
             let userCount = 0;
-            let cutIndex = messages.length;
+            let cutIndex = -1;
             for (let i = messages.length - 1; i >= 0; i--) {
               if (messages[i]!.type === "user") userCount++;
               if (userCount > MAX_USER_MESSAGES) {
