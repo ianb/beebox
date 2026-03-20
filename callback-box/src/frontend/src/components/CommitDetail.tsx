@@ -383,22 +383,40 @@ function MovedTab({ files }: { files: DiffFile[] }) {
   );
 }
 
+// --- Session toggle ---
+
+function SessionSection({ sessionId }: { sessionId: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="border-t border-warm-200">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-4 py-2 text-xs text-warm-500 hover:text-warm-700 text-left"
+      >
+        {expanded ? "▾" : "▸"} Session log
+      </button>
+      {expanded ? <SessionLog sessionId={sessionId} /> : null}
+    </div>
+  );
+}
+
+// --- Section header ---
+
+function SectionHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="px-4 py-1.5 bg-warm-50 border-b border-warm-200">
+      <span className="text-xs font-medium text-warm-600">{label}</span>
+      <span className="text-xs text-warm-400 ml-1">({count})</span>
+    </div>
+  );
+}
+
 // --- Main component ---
 
-type TabId = "commit" | "diff" | "new" | "moved" | "session";
-
 export function CommitDetail({ commit }: CommitDetailProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("commit");
-
   const sessionId = trailerString(commit.trailers?.Session);
   const bodyText = commit.body ? stripTrailers(commit.body) : "";
-
-  // Reset tab when commit changes
-  const [prevHash, setPrevHash] = useState(commit.hash);
-  if (prevHash !== commit.hash) {
-    setPrevHash(commit.hash);
-    setActiveTab("commit");
-  }
 
   const { data: diffData, isLoading: diffLoading } = trpc.history.diff.useQuery(
     { hash: commit.hash }
@@ -420,71 +438,41 @@ export function CommitDetail({ commit }: CommitDetailProps) {
     };
   }, [diff]);
 
-  // Build tab list — only show tabs with content (Commit always shows)
-  const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: "commit", label: "Commit" },
-  ];
-
-  if (diffLoading) {
-    tabs.push({ id: "diff", label: "Diff" });
-  } else if (diff !== null) {
-    if (editedFiles.length > 0 || deletedFiles.length > 0) {
-      tabs.push({ id: "diff", label: "Diff", count: editedFiles.length + deletedFiles.length });
-    }
-    if (newFiles.length > 0) {
-      tabs.push({ id: "new", label: "New", count: newFiles.length });
-    }
-    if (movedFiles.length > 0) {
-      tabs.push({ id: "moved", label: "Moved", count: movedFiles.length });
-    }
-  }
-
-  if (sessionId) {
-    tabs.push({ id: "session", label: "Session" });
-  }
-
   return (
-    <div className="h-full flex flex-col" {...cbSource("commit", commit.hash)}>
-      {/* Tab bar */}
-      <div className="flex border-b bg-warm-50 px-2 pt-1 gap-1 flex-shrink-0">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
-              activeTab === tab.id
-                ? "bg-white text-warm-900 border border-b-white border-warm-300 -mb-px"
-                : "text-warm-600 hover:text-warm-700 hover:bg-warm-100"
-            }`}
-          >
-            {tab.label}
-            {tab.count !== undefined && (
-              <span className={`ml-1 ${activeTab === tab.id ? "text-warm-600" : "text-warm-500"}`}>
-                ({tab.count})
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+    <div className="h-full overflow-auto" {...cbSource("commit", commit.hash)}>
+      {/* Commit info */}
+      <CommitTab commit={commit} bodyText={bodyText} />
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-auto">
-        {activeTab === "commit" && (
-          <CommitTab commit={commit} bodyText={bodyText} />
-        )}
-        {activeTab === "diff" && (
-          diffLoading
-            ? <div className="text-sm text-warm-500 italic p-4">Loading...</div>
-            : <DiffTab files={[...editedFiles, ...deletedFiles]} hash={commit.hash} />
-        )}
-        {activeTab === "new" && (
+      {/* Divider */}
+      <div className="border-t-2 border-warm-200" />
+
+      {/* Files */}
+      {diffLoading ? (
+        <div className="text-sm text-warm-500 italic p-4">Loading diff...</div>
+      ) : null}
+
+      {newFiles.length > 0 ? (
+        <>
+          <SectionHeader label="New" count={newFiles.length} />
           <NewFilesTab files={newFiles} hash={commit.hash} />
-        )}
-        {activeTab === "moved" && (
+        </>
+      ) : null}
+
+      {editedFiles.length > 0 || deletedFiles.length > 0 ? (
+        <>
+          <SectionHeader label="Changed" count={editedFiles.length + deletedFiles.length} />
+          <DiffTab files={[...editedFiles, ...deletedFiles]} hash={commit.hash} />
+        </>
+      ) : null}
+
+      {movedFiles.length > 0 ? (
+        <>
+          <SectionHeader label="Moved" count={movedFiles.length} />
           <MovedTab files={movedFiles} />
-        )}
-        {activeTab === "session" && sessionId ? <SessionLog sessionId={sessionId} /> : null}
-      </div>
+        </>
+      ) : null}
+
+      {sessionId ? <SessionSection sessionId={sessionId} /> : null}
     </div>
   );
 }
