@@ -136,12 +136,14 @@ VIEWS:
   export const description = "What this view shows";
   export const dependencies = ["store/**/*.card", "box/inbox/**/*.card"];
   export const modes = ["page", "chat"];
-  export default function MyView({ cards, navigate, boxSlug }) { return <div>...</div>; }
+  export default function MyView({ cards, navigate, boxSlug, params }) { return <div>...</div>; }
 - React is provided automatically — do NOT import React
-- The component receives: cards (matching dependency globs), navigate (function), boxSlug (string)
+- The component receives: cards (matching dependency globs), navigate (function), boxSlug (string), params (query parameters)
 - dependencies are glob patterns — when matching files change, the view re-renders automatically
-- To embed a view in chat: [View: Display Name](view:slug-name) where slug-name is the filename without .tsx
-- Views also appear as full pages at /<boxSlug>/views/<slug>
+- To embed a view in chat: [View: Display Name](view:slug-name?path=/) where slug-name is the filename without .tsx
+- Always include a path= parameter: path=/ for the whole box, or a specific path like path=store/archive/bills/
+- The view component receives path via params.path — use it to scope or filter what the view shows
+- Views also appear as full pages at /<boxSlug>/views/<slug>?path=/
 
 CONTEXT:
 - This is a Callback Box — an agent-managed workspace

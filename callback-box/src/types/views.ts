@@ -9,6 +9,8 @@ export interface ViewProps {
   cards: ViewCard[];
   navigate: (path: string) => void;
   boxSlug: string;
+  /** Query parameters from the view URL (e.g., path, custom filters). */
+  params: Record<string, string>;
 }
 
 export interface ViewCard {

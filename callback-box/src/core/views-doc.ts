@@ -32,7 +32,9 @@ export const description = "Summary of ledger assets and their status";
 export const dependencies = ["store/archive/**/*.record.card", "store/archive/**/*.memo.card"];
 export const modes = ["page", "chat"];
 
-export default function EstateOverview({ cards, navigate, boxSlug }) {
+export default function EstateOverview({ cards, navigate, boxSlug, params }) {
+  const viewPath = params.path || "/";
+  // Use viewPath to scope what the view shows
   const records = cards.filter(c => c.tagName === "record");
   const memos = cards.filter(c => c.tagName === "memo");
 
@@ -71,6 +73,7 @@ The default export receives a \`ViewProps\` object:
 | \`cards\` | ViewCard[] | All cards matching the dependency globs |
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
+| \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
 
 ### ViewCard Structure
 
@@ -101,6 +104,30 @@ Use glob patterns relative to the box root:
 - \`"store/todos/**/*.card"\` — all todo cards
 - \`"box/**/*.card"\` — everything in box/
 
+## Query Parameters (path and others)
+
+Views receive query parameters via \`params\`. The most important parameter is \`path\`, which scopes what the view shows.
+
+**Always provide a \`path\` parameter** when linking to or embedding a view:
+- \`path=/\` — the entire box
+- \`path=store/archive/bills/\` — a specific directory
+- \`path=store/archive/bills/Electric.record.card\` — a specific card
+
+The view component reads it from \`params.path\`:
+
+\`\`\`tsx
+export default function MyView({ cards, params }) {
+  const viewPath = params.path || "/";
+  // Filter cards by path, or use it as context
+  const filtered = viewPath === "/"
+    ? cards
+    : cards.filter(c => c.path.startsWith(viewPath));
+  // ...
+}
+\`\`\`
+
+You can also use custom query parameters for filtering, sorting, etc. — they all arrive in \`params\`.
+
 ## React
 
 React is provided automatically. **Do NOT import React** — the build system handles it. If you do write \`import React from "react"\`, it will still work (the compiler intercepts it), but it's unnecessary.
@@ -112,10 +139,10 @@ You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, 
 To embed a view in a chat message, use markdown link syntax with a \`view:\` URL:
 
 \`\`\`
-[View: Ledger Overview](view:ledger-overview)
+[View: Ledger Overview](view:ledger-overview?path=/)
 \`\`\`
 
-The slug is the filename without \`.tsx\`. The view renders inline in the chat with a link to the full page.
+The slug is the filename without \`.tsx\`. Always include \`?path=\` — use \`path=/\` for the whole box. The view renders inline in the chat with a link to the full page.
 
 Only views with \`"chat"\` in their \`modes\` array should be embedded in chat. Chat mode renders with a maximum height and scroll.
 

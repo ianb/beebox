@@ -415,8 +415,17 @@ const chatMarkdownComponents: Partial<Components> = {
   p: ChatParagraph,
   a({ href, children, node: _node, ...props }) {
     if (href && href.startsWith("view:")) {
-      const slug = href.slice("view:".length);
-      return <ViewRenderer slug={slug} mode="chat" />;
+      const rest = href.slice("view:".length);
+      const qIndex = rest.indexOf("?");
+      const slug = qIndex !== -1 ? rest.slice(0, qIndex) : rest;
+      const params: Record<string, string> = {};
+      if (qIndex !== -1) {
+        const search = new URLSearchParams(rest.slice(qIndex + 1));
+        for (const [key, value] of search.entries()) {
+          params[key] = value;
+        }
+      }
+      return <ViewRenderer slug={slug} mode="chat" params={params} />;
     }
     return <a href={href} {...props}>{children}</a>;
   },

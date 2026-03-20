@@ -810,7 +810,7 @@ Each view must export:
 - \`description\` (string) — what the view shows
 - \`dependencies\` (string[]) — glob patterns for cards that affect rendering
 - \`modes\` (string[]) — \`"page"\`, \`"chat"\`, or both
-- \`default\` function component receiving \`{ cards, navigate, boxSlug }\`
+- \`default\` function component receiving \`{ cards, navigate, boxSlug, params }\`
 
 React is provided automatically — do not import it.
 

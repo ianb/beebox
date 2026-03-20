@@ -32,6 +32,7 @@ interface ViewProps {
   cards: ViewCard[];
   navigate: (path: string) => void;
   boxSlug: string;
+  params: Record<string, string>;
 }
 
 type ViewMode = "page" | "chat";
@@ -51,6 +52,8 @@ if (!window.__cbReact) {
 interface ViewRendererProps {
   slug: string;
   mode: ViewMode;
+  /** Query parameters passed to the view component and cards API. */
+  params?: Record<string, string>;
 }
 
 interface ViewModule {
@@ -61,7 +64,8 @@ interface ViewModule {
   modes?: ViewMode[];
 }
 
-export function ViewRenderer({ slug, mode }: ViewRendererProps) {
+export function ViewRenderer({ slug, mode, params }: ViewRendererProps) {
+  const viewParams = params || {};
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
   const [mod, setMod] = useState<ViewModule | null>(null);
@@ -85,9 +89,12 @@ export function ViewRenderer({ slug, mode }: ViewRendererProps) {
     }
   }, [apiBase, slug]);
 
+  const paramsString = JSON.stringify(viewParams);
   const loadCards = useCallback(async () => {
     try {
-      const resp = await fetch(`${apiBase}/views/${slug}/cards`);
+      const qs = new URLSearchParams(viewParams).toString();
+      const url = qs ? `${apiBase}/views/${slug}/cards?${qs}` : `${apiBase}/views/${slug}/cards`;
+      const resp = await fetch(url);
       if (!resp.ok) {
         setError(`Failed to load cards: ${resp.status}`);
         return;
@@ -97,7 +104,8 @@ export function ViewRenderer({ slug, mode }: ViewRendererProps) {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [apiBase, slug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiBase, slug, paramsString]);
 
   // Initial load
   useEffect(() => {
@@ -166,16 +174,18 @@ export function ViewRenderer({ slug, mode }: ViewRendererProps) {
           cards={cards}
           navigate={viewNavigate}
           boxSlug={boxSlug || ""}
+          params={viewParams}
         />
       </ViewErrorBoundary>
       {mode === "chat" && Boolean(boxSlug) && (
         <div className="mt-2 text-right">
           <a
-            href={`/${boxSlug}/views/${slug}`}
+            href={`/${boxSlug}/views/${slug}${paramsString !== "{}" ? "?" + new URLSearchParams(viewParams).toString() : ""}`}
             className="text-sm text-blue-600 hover:text-blue-800"
             onClick={(e) => {
               e.preventDefault();
-              navigate({ to: `/${boxSlug}/views/${slug}` });
+              const qs = new URLSearchParams(viewParams).toString();
+              navigate({ to: `/${boxSlug}/views/${slug}${qs ? "?" + qs : ""}` });
             }}
           >
             Open full page &rarr;
