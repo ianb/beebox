@@ -105,6 +105,31 @@ function formatDuration(fromDate: string, toDate: string): string | null {
 }
 
 /**
+ * Colored badges showing file add/modify/delete counts.
+ */
+function FileStatBadges({ stat }: { stat: { added: number; modified: number; deleted: number } }) {
+  return (
+    <>
+      {stat.added > 0 ? (
+        <span className="text-[10px] px-1 py-0.5 rounded bg-green-100 text-green-700 font-medium">
+          +{stat.added}
+        </span>
+      ) : null}
+      {stat.modified > 0 ? (
+        <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+          ~{stat.modified}
+        </span>
+      ) : null}
+      {stat.deleted > 0 ? (
+        <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700 font-medium">
+          -{stat.deleted}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
  * Single commit row in the timeline.
  */
 function CommitRow({
@@ -144,9 +169,12 @@ function CommitRow({
       <div className="text-sm text-warm-800 truncate">
         {commit.subject}
       </div>
-      {triggeredBy ? <div className="text-[10px] text-warm-500 mt-0.5">
-          triggered by {triggeredBy}
-        </div> : null}
+      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+        {commit.fileStat ? <FileStatBadges stat={commit.fileStat} /> : null}
+        {triggeredBy ? <span className="text-[10px] text-warm-500">
+            {triggeredBy}
+          </span> : null}
+      </div>
     </button>
   );
 }

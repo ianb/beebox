@@ -236,12 +236,19 @@ export async function deleteTag(boxRoot: string, name: string): Promise<void> {
 /**
  * Extended log entry with multi-value trailer support.
  */
+export interface FileStat {
+  added: number;
+  modified: number;
+  deleted: number;
+}
+
 export interface GitLogEntryExtended {
   hash: string;
   date: string;
   subject: string;
   body?: string | undefined;
   trailers?: Record<string, string | string[]> | undefined;
+  fileStat?: FileStat | undefined;
 }
 
 /**
@@ -273,7 +280,36 @@ export async function getLogPaginated(
       logOptions["--skip"] = offset;
     }
 
-    const result = await simpleGit(boxRoot).log<GitLogFormat>(logOptions);
+    const git = simpleGit(boxRoot);
+    const result = await git.log<GitLogFormat>(logOptions);
+
+    // Fetch file stats (A/M/D counts) via --name-status
+    const statMap = new Map<string, FileStat>();
+    try {
+      const skipArgs = offset > 0 ? ["--skip", String(offset)] : [];
+      const raw = await git.raw([
+        "log", `--max-count=${count}`, ...skipArgs,
+        "--format=%H", "--name-status",
+      ]);
+      let currentHash: string | null = null;
+      let stat: FileStat = { added: 0, modified: 0, deleted: 0 };
+      for (const line of raw.split("\n")) {
+        if (/^[\da-f]{40}$/.test(line)) {
+          if (currentHash) statMap.set(currentHash, stat);
+          currentHash = line;
+          stat = { added: 0, modified: 0, deleted: 0 };
+        } else if (currentHash && line.length > 0) {
+          const status = line[0];
+          if (status === "A") stat.added++;
+          else if (status === "M") stat.modified++;
+          else if (status === "D") stat.deleted++;
+          else if (status === "R") { stat.added++; stat.deleted++; }
+        }
+      }
+      if (currentHash) statMap.set(currentHash, stat);
+    } catch {
+      // stat data is optional — ignore failures
+    }
 
     return result.all.map((entry) => {
       const body = entry.body?.trim() || undefined;
@@ -285,6 +321,7 @@ export async function getLogPaginated(
         subject: entry.subject,
         body,
         trailers: Object.keys(trailers).length > 0 ? trailers : undefined,
+        fileStat: statMap.get(entry.hash),
       };
     });
   } catch {

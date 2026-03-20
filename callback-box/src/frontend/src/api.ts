@@ -72,6 +72,7 @@ export interface HistoryCommit {
   subject: string;
   body?: string;
   trailers?: Record<string, string | string[]>;
+  fileStat?: { added: number; modified: number; deleted: number };
 }
 
 export interface SessionContentBlock {
