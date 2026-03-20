@@ -11,6 +11,7 @@ import { ViewRenderer } from "./ViewRenderer";
 import type { Components } from "react-markdown";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
+import { hasAssistantSpeech } from "../lib/speech-parsing";
 
 /**
  * Render user message text with keyword pills (e.g. send-message).
@@ -678,11 +679,41 @@ function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | ActivityGrou
   return grouped;
 }
 
-export function AssistantMessage({ entries, debugView }: { entries: SessionEntry[]; debugView?: boolean }) {
+function SpeechIcon({ playing }: { playing: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`inline-block w-4 h-4 align-text-bottom ${
+        playing ? "text-plum animate-pulse" : "text-warm-300"
+      }`}
+    >
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+  );
+}
+
+export function AssistantMessage({ entries, debugView, speechPlaying }: { entries: SessionEntry[]; debugView?: boolean; speechPlaying?: boolean }) {
   const grouped = groupIntoParts(entries);
+  const allText = entries.flatMap((e) =>
+    e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
+  ).join("\n");
+  const hasSpeech = hasAssistantSpeech(allText);
+  const isPlaying = speechPlaying === true;
 
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden">
+      {hasSpeech && !debugView ? (
+        <div className="mb-1">
+          <SpeechIcon playing={isPlaying} />
+        </div>
+      ) : null}
       {grouped.map((group, i) =>
         group.kind === "text" ? (
           debugView ? (

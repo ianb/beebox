@@ -583,15 +583,19 @@ function InteractiveChat() {
                   </button>
                 </div>
               ) : null}
-              {groupMessages(displayMessages).map((group) =>
-                group.type === "compaction" ? (
-                  <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
-                ) : group.type === "user" ? (
-                  <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
-                ) : (
-                  <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
-                )
-              )}
+              {(() => {
+                const groups = groupMessages(displayMessages);
+                const lastAssistantGroup = groups.findLast((g) => g.type === "assistant");
+                return groups.map((group) =>
+                  group.type === "compaction" ? (
+                    <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
+                  ) : group.type === "user" ? (
+                    <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
+                  ) : (
+                    <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} speechPlaying={Boolean(speechPlayback.isPlaying && group === lastAssistantGroup)} />
+                  )
+                );
+              })()}
             </>
           );
         })()}
