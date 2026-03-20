@@ -11,6 +11,7 @@ import { getApiBase } from "../api";
 import { cbSource } from "../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { CardTreeView, type ElementNode } from "./CardTreeView";
+import { ImageLightbox } from "./ImageLightbox";
 
 interface CommitDetailProps {
   commit: HistoryCommit;
@@ -212,13 +213,22 @@ function getFileExt(filePath: string): string {
 }
 
 function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const ext = getFileExt(file.path);
   const blobUrl = `${getApiBase()}/history/blob/${hash}/${file.path}`;
 
   if (IMAGE_EXTS.includes(ext)) {
     return (
       <div className="px-3 py-2">
-        <img src={blobUrl} alt={file.path} className="max-w-full max-h-96 rounded" />
+        <img
+          src={blobUrl}
+          alt={file.path}
+          className="max-w-full max-h-96 rounded cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => setLightboxSrc(blobUrl)}
+        />
+        {lightboxSrc ? (
+          <ImageLightbox src={lightboxSrc} alt={file.path} onClose={() => setLightboxSrc(null)} />
+        ) : null}
       </div>
     );
   }
