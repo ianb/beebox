@@ -42,6 +42,8 @@ type ChatEvent =
 
 interface ChatContext {
   messages: SessionEntry[];
+  /** Messages sent while agent was busy — preserved across refreshes until server catches up. */
+  pendingMessages: SessionEntry[];
   streamText: string;
   streamTools: SessionContentBlock[];
   error: string | null;
@@ -162,6 +164,48 @@ function queueMessageToBackend(message: string): void {
   }).catch(() => {}); // fire-and-forget
 }
 
+/**
+ * After fetching server history, filter out pending messages that the server
+ * has caught up to (by matching text content), then append remaining pending
+ * messages so they stay visible.
+ */
+function reconcilePending(params: {
+  serverMessages: SessionEntry[];
+  pendingMessages: SessionEntry[];
+}): { messages: SessionEntry[]; pendingMessages: SessionEntry[] } {
+  const { serverMessages, pendingMessages } = params;
+  if (pendingMessages.length === 0) {
+    return { messages: serverMessages, pendingMessages: [] };
+  }
+
+  // Extract text from the last N server user messages for matching
+  const serverUserTexts = new Set<string>();
+  for (let i = serverMessages.length - 1; i >= 0 && serverUserTexts.size < pendingMessages.length + 5; i--) {
+    const entry = serverMessages[i];
+    if (entry && entry.type === "user") {
+      const text = entry.content
+        .filter((b): b is { type: "text"; text: string } => b.type === "text")
+        .map((b) => b.text)
+        .join("");
+      serverUserTexts.add(text);
+    }
+  }
+
+  // Keep pending messages whose text isn't yet in server history
+  const stillPending = pendingMessages.filter((pm) => {
+    const pmText = pm.content
+      .filter((b): b is { type: "text"; text: string } => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    return !serverUserTexts.has(pmText);
+  });
+
+  return {
+    messages: [...serverMessages, ...stillPending],
+    pendingMessages: stillPending,
+  };
+}
+
 // -- Machine --
 
 export const chatMachine = setup({
@@ -180,6 +224,7 @@ export const chatMachine = setup({
   initial: "loading",
   context: {
     messages: [],
+    pendingMessages: [],
     streamText: "",
     streamTools: [],
     error: null,
@@ -189,10 +234,17 @@ export const chatMachine = setup({
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
     SET_MESSAGES: {
-      actions: assign(({ event }) => ({
-        messages: event.messages,
-        sessionId: event.sessionId,
-      })),
+      actions: assign(({ context, event }) => {
+        const reconciled = reconcilePending({
+          serverMessages: event.messages,
+          pendingMessages: context.pendingMessages,
+        });
+        return {
+          messages: reconciled.messages,
+          pendingMessages: reconciled.pendingMessages,
+          sessionId: event.sessionId,
+        };
+      }),
     },
     // Global handler: refresh history from any state (e.g., after SSE chat-complete)
     REFRESH: {
@@ -278,17 +330,18 @@ export const chatMachine = setup({
         SEND: {
           // Queue the message — don't interrupt the current stream
           actions: [
-            assign(({ context, event }) => ({
-              messages: [
-                ...context.messages,
-                {
-                  uuid: `user-${Date.now()}`,
-                  type: "user" as const,
-                  timestamp: new Date().toISOString(),
-                  content: [{ type: "text" as const, text: event.message }],
-                },
-              ],
-            })),
+            assign(({ context, event }) => {
+              const entry: SessionEntry = {
+                uuid: `user-${Date.now()}`,
+                type: "user" as const,
+                timestamp: new Date().toISOString(),
+                content: [{ type: "text" as const, text: event.message }],
+              };
+              return {
+                messages: [...context.messages, entry],
+                pendingMessages: [...context.pendingMessages, entry],
+              };
+            }),
             ({ event }) => queueMessageToBackend(event.message),
           ],
         },
@@ -343,17 +396,18 @@ export const chatMachine = setup({
       on: {
         SEND: {
           actions: [
-            assign(({ context, event }) => ({
-              messages: [
-                ...context.messages,
-                {
-                  uuid: `user-${Date.now()}`,
-                  type: "user" as const,
-                  timestamp: new Date().toISOString(),
-                  content: [{ type: "text" as const, text: event.message }],
-                },
-              ],
-            })),
+            assign(({ context, event }) => {
+              const entry: SessionEntry = {
+                uuid: `user-${Date.now()}`,
+                type: "user" as const,
+                timestamp: new Date().toISOString(),
+                content: [{ type: "text" as const, text: event.message }],
+              };
+              return {
+                messages: [...context.messages, entry],
+                pendingMessages: [...context.pendingMessages, entry],
+              };
+            }),
             ({ event }) => queueMessageToBackend(event.message),
           ],
         },
@@ -362,12 +416,19 @@ export const chatMachine = setup({
         src: "fetchHistory",
         onDone: {
           target: "idle",
-          actions: assign(({ event }) => ({
-            messages: event.output.entries,
-            sessionId: event.output.sessionId,
-            streamText: "",
-            streamTools: [],
-          })),
+          actions: assign(({ context, event }) => {
+            const reconciled = reconcilePending({
+              serverMessages: event.output.entries,
+              pendingMessages: context.pendingMessages,
+            });
+            return {
+              messages: reconciled.messages,
+              pendingMessages: reconciled.pendingMessages,
+              sessionId: event.output.sessionId,
+              streamText: "",
+              streamTools: [],
+            };
+          }),
         },
         onError: {
           target: "idle",
@@ -385,6 +446,7 @@ export const chatMachine = setup({
           target: "idle",
           actions: assign({
             messages: [],
+            pendingMessages: [],
             sessionId: null,
             processRunning: false,
             error: null,
