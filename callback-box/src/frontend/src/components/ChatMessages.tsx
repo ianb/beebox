@@ -467,18 +467,65 @@ export function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "
   return groups;
 }
 
+// --- Task notification handling ---
+
+interface TaskNotification {
+  taskId: string;
+  status: string;
+  summary: string;
+}
+
+function parseTaskNotification(text: string): TaskNotification | null {
+  const match = text.match(/<task-notification>[\S\s]*?<task-id>([^<]*)<\/task-id>[\S\s]*?<status>([^<]*)<\/status>[\S\s]*?<summary>([^<]*)<\/summary>[\S\s]*?<\/task-notification>/);
+  if (!match) return null;
+  return { taskId: match[1]!, status: match[2]!, summary: match[3]! };
+}
+
+function TaskNotificationMessage({ notification }: { notification: TaskNotification }) {
+  const [expanded, setExpanded] = useState(false);
+  const statusColor = notification.status === "completed"
+    ? "text-green-600"
+    : notification.status === "error" ? "text-red-600" : "text-warm-600";
+
+  return (
+    <div className="flex justify-center py-1">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="text-xs text-warm-500 hover:text-warm-700 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
+      >
+        <span className={statusColor}>&#x25CF;</span>
+        Background task {notification.status}
+        <span className="text-warm-400">{expanded ? "▾" : "▸"}</span>
+      </button>
+      {expanded ? (
+        <div className="absolute mt-7 bg-white border border-warm-200 rounded-lg shadow-sm p-2 text-xs text-warm-600 max-w-sm z-10">
+          <div>{notification.summary}</div>
+          <div className="text-warm-400 mt-1">Task: {notification.taskId}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
 export function UserMessage({ entries, debugView, currentUserEmail }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string }) {
+  const allTexts = entries.flatMap((e) =>
+    e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
+  );
+
   // Hide schedule-fired messages entirely in normal view (they're system-injected)
   if (!debugView) {
-    const allTexts = entries.flatMap((e) =>
-      e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
-    );
     const allEmpty = allTexts.every((t) => stripUserDisplayTags(t).trim() === "");
     if (allEmpty) return null;
+  }
+
+  // Show task-notification messages as collapsed system info
+  const taskNotification = parseTaskNotification(allTexts.join("\n"));
+  if (taskNotification && !debugView) {
+    return <TaskNotificationMessage notification={taskNotification} />;
   }
 
   const senderName = getUserName(entries[0]);
