@@ -409,12 +409,12 @@ function InteractiveChat() {
 
   const handleSend = useCallback(() => {
     const text = input.trim();
-    if (!text || isStreaming) return;
+    if (!text) return;
     turnTakingRef.current = false;
     unlockAudioContext();
     setInput("");
     doSend(`<typed local-time="${localTime()}">${text}</typed>`);
-  }, [input, isStreaming, doSend]);
+  }, [input, doSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -492,10 +492,10 @@ function InteractiveChat() {
 
   // Keep textarea focused whenever it's available for input
   useEffect(() => {
-    if (!isStreaming && !isTranscribing) {
+    if (!isTranscribing) {
       textareaRef.current?.focus();
     }
-  }, [isStreaming, isTranscribing]);
+  }, [isTranscribing]);
 
   // Scroll textarea to bottom as transcript streams in
   useEffect(() => {
@@ -661,14 +661,12 @@ function InteractiveChat() {
               }
             }}
             onKeyDown={handleKeyDown}
-            disabled={isStreaming || isTranscribing}
+            disabled={isTranscribing}
             readOnly={isTranscribing}
             placeholder={
-              isStreaming
-                ? "Working..."
-                : isTranscribing
-                  ? "Listening..."
-                  : "Type a message..."
+              isTranscribing
+                ? "Listening..."
+                : "Type a message..."
             }
             className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
             minRows={1}
@@ -687,12 +685,25 @@ function InteractiveChat() {
             </button>
           ) : null}
           {isStreaming ? (
-            <button
-              onClick={handleInterrupt}
-              className="flex-shrink-0 px-4 py-2 bg-rose text-white rounded-lg hover:bg-rose-dark text-sm font-medium"
-            >
-              Stop
-            </button>
+            <>
+              <button
+                onClick={handleInterrupt}
+                className="flex-shrink-0 p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
+                title="Stop agent"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                </svg>
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                Send
+              </button>
+            </>
           ) : isTranscribing ? (
             <>
               <button
@@ -737,8 +748,7 @@ function InteractiveChat() {
             <>
               <button
                 onClick={async () => { turnTakingRef.current = true; unlockAudioContext(); await recordingStart.play().started; transcription.start(); }}
-                disabled={isStreaming}
-                className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50 disabled:text-warm-400 disabled:hover:bg-transparent"
+                className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50"
                 title="Voice input"
               >
                 <MicrophoneIcon className="w-5 h-5" />

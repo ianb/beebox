@@ -149,6 +149,19 @@ const streamActor = fromCallback(
   }
 );
 
+/**
+ * Fire-and-forget: send a message to the backend knowing it will be queued.
+ * We don't need to track the SSE response — the backend enqueues it and
+ * the chat-complete SSE event will trigger a history refresh when the
+ * queued turn finishes.
+ */
+function queueMessageToBackend(message: string): void {
+  sendChatMessage({
+    message,
+    onMessage: () => {}, // ignore — will be "queued" then close
+  }).catch(() => {}); // fire-and-forget
+}
+
 // -- Machine --
 
 export const chatMachine = setup({
@@ -262,6 +275,23 @@ export const chatMachine = setup({
         }),
       },
       on: {
+        SEND: {
+          // Queue the message — don't interrupt the current stream
+          actions: [
+            assign(({ context, event }) => ({
+              messages: [
+                ...context.messages,
+                {
+                  uuid: `user-${Date.now()}`,
+                  type: "user" as const,
+                  timestamp: new Date().toISOString(),
+                  content: [{ type: "text" as const, text: event.message }],
+                },
+              ],
+            })),
+            ({ event }) => queueMessageToBackend(event.message),
+          ],
+        },
         STREAM_TEXT: {
           actions: assign(({ context, event }) => ({
             streamText: context.streamText + event.text,
@@ -310,6 +340,24 @@ export const chatMachine = setup({
       },
     },
     refreshing: {
+      on: {
+        SEND: {
+          actions: [
+            assign(({ context, event }) => ({
+              messages: [
+                ...context.messages,
+                {
+                  uuid: `user-${Date.now()}`,
+                  type: "user" as const,
+                  timestamp: new Date().toISOString(),
+                  content: [{ type: "text" as const, text: event.message }],
+                },
+              ],
+            })),
+            ({ event }) => queueMessageToBackend(event.message),
+          ],
+        },
+      },
       invoke: {
         src: "fetchHistory",
         onDone: {
