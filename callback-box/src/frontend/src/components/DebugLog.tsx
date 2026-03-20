@@ -38,9 +38,18 @@ function flushToServer() {
   }).catch(() => {});
 }
 
+function isNetworkNoise(message: string): boolean {
+  return /\bapi\/events\b/.test(message) ||
+    /\bERR_QUIC_PROTOCOL_ERROR\b/.test(message) ||
+    /\bapi\/debug-log\b/.test(message) ||
+    /\b\[sse] Diagnostic fetch\b/.test(message);
+}
+
 function queueForServer(level: string, message: string) {
   // Always forward errors and warnings; forward log/info only in verbose mode
   if (level !== "error" && level !== "warn" && !verboseForwarding) return;
+  // Don't forward SSE/network errors — they're expected during deploys
+  if (isNetworkNoise(message)) return;
   sendBuffer.push({ level, message });
   if (!sendTimer) {
     sendTimer = setTimeout(flushToServer, 500);
