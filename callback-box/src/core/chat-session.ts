@@ -18,6 +18,7 @@ import {
   type SessionEntry,
 } from "../cli/lib/session.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
+import { generateDocs } from "./generate-docs.js";
 
 // Path to the cb-claude wrapper that auto-adds plugins
 const __dirname = import.meta.dirname;
@@ -235,6 +236,9 @@ export class ChatSession extends EventEmitter {
       log("start", "Process already running");
       return;
     }
+
+    // Ensure agent docs are up to date (fast mtime-cached no-op if nothing changed)
+    await generateDocs(this.boxRoot);
 
     const tzContext = await buildTimezoneContext(this.boxRoot);
     const systemPrompt = CHAT_SYSTEM_PROMPT + tzContext;
