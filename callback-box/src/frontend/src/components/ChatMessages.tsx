@@ -388,7 +388,7 @@ function extractImages(children: React.ReactNode): Array<{ src: string; alt: str
  * Paragraph override that detects image-only paragraphs and renders them
  * as centered thumbnails (single) or a grid (multiple).
  */
-function ChatParagraph({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+function ChatParagraph({ children, node: _node, ...props }: React.HTMLAttributes<HTMLParagraphElement> & { node?: unknown }) {
   const images = extractImages(children);
 
   if (images) {
@@ -413,7 +413,7 @@ function ChatParagraph({ children, ...props }: React.HTMLAttributes<HTMLParagrap
 
 const chatMarkdownComponents: Partial<Components> = {
   p: ChatParagraph,
-  a({ href, children, ...props }) {
+  a({ href, children, node: _node, ...props }) {
     if (href && href.startsWith("view:")) {
       const slug = href.slice("view:".length);
       return <ViewRenderer slug={slug} mode="chat" />;

@@ -5,17 +5,28 @@
  * so HTML comments render as visible styled text instead of being stripped.
  */
 
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { remarkComments, isCommentCode } from "../lib/remark-comments";
+
+/**
+ * URL transform that preserves view: URLs (used for embedding views in chat)
+ * while delegating everything else to react-markdown's default sanitization.
+ */
+function viewUrlTransform(url: string): string {
+  if (url.startsWith("view:")) {
+    return url;
+  }
+  return defaultUrlTransform(url);
+}
 
 const defaultPlugins = [remarkGfm];
 const pluginsWithComments = [remarkGfm, remarkComments];
 
 /** Open external links in new tabs */
 const baseComponents: Partial<Components> = {
-  a({ children, href: linkHref, ...props }) {
+  a({ children, href: linkHref, node: _node, ...props }) {
     const isExternal = linkHref && (linkHref.startsWith("http://") || linkHref.startsWith("https://"));
     return (
       <a
@@ -31,7 +42,7 @@ const baseComponents: Partial<Components> = {
 
 const commentComponents: Partial<Components> = {
   ...baseComponents,
-  code({ children, ...props }) {
+  code({ children, node: _node, ...props }) {
     const text = typeof children === "string" ? children : "";
     if (isCommentCode(text)) {
       return (
@@ -65,6 +76,7 @@ export function Markdown({ children, components, showComments }: MarkdownProps) 
     <ReactMarkdown
       remarkPlugins={plugins}
       components={merged}
+      urlTransform={viewUrlTransform}
     >
       {children}
     </ReactMarkdown>
