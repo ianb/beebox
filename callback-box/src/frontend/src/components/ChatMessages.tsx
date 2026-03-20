@@ -679,9 +679,11 @@ function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | ActivityGrou
   return grouped;
 }
 
-function SpeechIcon({ playing }: { playing: boolean }) {
+function SpeechIcon({ playing, onStop }: { playing: boolean; onStop?: () => void }) {
   return (
     <svg
+      onClick={playing ? onStop : undefined}
+      role={playing ? "button" : undefined}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -689,7 +691,7 @@ function SpeechIcon({ playing }: { playing: boolean }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       className={`inline-block w-4 h-4 align-text-bottom ${
-        playing ? "text-plum animate-pulse" : "text-plum opacity-40"
+        playing ? "text-plum animate-pulse cursor-pointer" : "text-plum opacity-40"
       }`}
     >
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
@@ -699,7 +701,7 @@ function SpeechIcon({ playing }: { playing: boolean }) {
   );
 }
 
-export function AssistantMessage({ entries, debugView, speechPlaying }: { entries: SessionEntry[]; debugView?: boolean; speechPlaying?: boolean }) {
+export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpeech }: { entries: SessionEntry[]; debugView?: boolean; speechPlaying?: boolean; onStopSpeech?: () => void }) {
   const grouped = groupIntoParts(entries);
   const allText = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
@@ -711,7 +713,7 @@ export function AssistantMessage({ entries, debugView, speechPlaying }: { entrie
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
       {hasSpeech && !debugView ? (
         <div className="absolute right-2 top-2">
-          <SpeechIcon playing={isPlaying} />
+          <SpeechIcon playing={isPlaying} onStop={onStopSpeech} />
         </div>
       ) : null}
       {grouped.map((group, i) =>

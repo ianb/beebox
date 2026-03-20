@@ -592,7 +592,7 @@ function InteractiveChat() {
                   ) : group.type === "user" ? (
                     <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
                   ) : (
-                    <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} speechPlaying={Boolean(speechPlayback.isPlaying && group === lastAssistantGroup)} />
+                    <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} speechPlaying={Boolean(speechPlayback.isPlaying && group === lastAssistantGroup)} onStopSpeech={handleStopSpeech} />
                   )
                 );
               })()}
