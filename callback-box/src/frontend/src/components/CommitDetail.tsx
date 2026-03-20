@@ -102,7 +102,24 @@ function parseDiff(diff: string): DiffFile[] {
     finalizeRename({ file: current, from: renameFrom, to: renameTo });
   }
 
+  // Detect LFS pointer content and treat as binary
+  for (const file of files) {
+    if (!file.binary && isLfsPointer(file.hunks)) {
+      file.binary = true;
+      file.hunks = [];
+    }
+  }
+
   return files;
+}
+
+/**
+ * Detect Git LFS pointer content in diff hunks.
+ * LFS pointers are small text files starting with "version https://git-lfs.github.com/spec/v1".
+ */
+function isLfsPointer(hunks: string[]): boolean {
+  const added = hunks.filter((l) => l.startsWith("+")).map((l) => l.slice(1));
+  return added.some((l) => l.startsWith("version https://git-lfs.github.com/spec/v1"));
 }
 
 interface FinalizeRenameParams {
