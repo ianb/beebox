@@ -222,6 +222,7 @@ function InteractiveChat() {
   const currentUser = useCurrentUser();
 
   const [input, setInput] = useState("");
+  const [showAllMessages, setShowAllMessages] = useState(false);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
@@ -550,15 +551,50 @@ function InteractiveChat() {
             Start a conversation with your box assistant.
           </div>
         ) : null}
-        {groupMessages(messages).map((group) =>
-          group.type === "compaction" ? (
-            <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
-          ) : group.type === "user" ? (
-            <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
-          ) : (
-            <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
-          )
-        )}
+        {(() => {
+          const MAX_USER_MESSAGES = 10;
+          let displayMessages = messages;
+          let truncated = false;
+          if (!showAllMessages) {
+            // Find the start index that keeps the last N user messages
+            let userCount = 0;
+            let cutIndex = messages.length;
+            for (let i = messages.length - 1; i >= 0; i--) {
+              if (messages[i]!.type === "user") userCount++;
+              if (userCount > MAX_USER_MESSAGES) {
+                cutIndex = i + 1;
+                break;
+              }
+            }
+            if (cutIndex > 0) {
+              truncated = true;
+              displayMessages = messages.slice(cutIndex);
+            }
+          }
+          return (
+            <>
+              {truncated ? (
+                <div className="text-center py-2">
+                  <button
+                    onClick={() => setShowAllMessages(true)}
+                    className="text-sm text-plum hover:text-plum/80"
+                  >
+                    Show {messages.length - displayMessages.length} earlier messages
+                  </button>
+                </div>
+              ) : null}
+              {groupMessages(displayMessages).map((group) =>
+                group.type === "compaction" ? (
+                  <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
+                ) : group.type === "user" ? (
+                  <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
+                ) : (
+                  <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} />
+                )
+              )}
+            </>
+          );
+        })()}
         {snapshot.matches("streaming") ? (
           <div>
             <StreamingMessage text={streamText} />
