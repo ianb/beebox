@@ -164,10 +164,22 @@ function queueMessageToBackend(message: string): void {
   }).catch(() => {}); // fire-and-forget
 }
 
+/** Extract the text content from a session entry. */
+function entryText(entry: SessionEntry): string {
+  return entry.content
+    .filter((b): b is { type: "text"; text: string } => b.type === "text")
+    .map((b) => b.text)
+    .join("");
+}
+
 /**
  * After fetching server history, filter out pending messages that the server
- * has caught up to (by matching text content), then append remaining pending
- * messages so they stay visible.
+ * has caught up to, then append remaining pending messages so they stay visible.
+ *
+ * The backend's drainQueue() combines multiple queued messages into one turn
+ * (joined with \n\n), so we use substring matching: a pending message is
+ * considered delivered if its text appears as a substring of any recent
+ * server user message.
  */
 function reconcilePending(params: {
   serverMessages: SessionEntry[];
@@ -178,26 +190,20 @@ function reconcilePending(params: {
     return { messages: serverMessages, pendingMessages: [] };
   }
 
-  // Extract text from the last N server user messages for matching
-  const serverUserTexts = new Set<string>();
-  for (let i = serverMessages.length - 1; i >= 0 && serverUserTexts.size < pendingMessages.length + 5; i--) {
+  // Collect text from recent server user messages for substring matching
+  const serverUserTexts: string[] = [];
+  for (let i = serverMessages.length - 1; i >= 0 && serverUserTexts.length < pendingMessages.length + 5; i--) {
     const entry = serverMessages[i];
     if (entry && entry.type === "user") {
-      const text = entry.content
-        .filter((b): b is { type: "text"; text: string } => b.type === "text")
-        .map((b) => b.text)
-        .join("");
-      serverUserTexts.add(text);
+      serverUserTexts.push(entryText(entry));
     }
   }
 
-  // Keep pending messages whose text isn't yet in server history
+  // A pending message is delivered if its text is an exact match OR a
+  // substring of any recent server user message (handles combined messages)
   const stillPending = pendingMessages.filter((pm) => {
-    const pmText = pm.content
-      .filter((b): b is { type: "text"; text: string } => b.type === "text")
-      .map((b) => b.text)
-      .join("");
-    return !serverUserTexts.has(pmText);
+    const pmText = entryText(pm);
+    return !serverUserTexts.some((st) => st === pmText || st.includes(pmText));
   });
 
   return {
