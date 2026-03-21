@@ -747,3 +747,31 @@ tests:
       significance. The hammer's story matters even though it's not "actionable."
       The failure mode is creating a dry inventory record that loses the personal
       meaning.
+
+  # === Views in Chat ===
+  #
+  # These are chat-only features — the zoom/companion view system is only
+  # available in the chat context (system prompt in chat-session.ts).
+  # Non-chat agents (wakeup, jobs) should NOT know about these.
+
+  - id: view-zoom-companion
+    prompt: "I want to show the user a view that stays visible alongside the chat while they keep talking. How do I do that?"
+    expected_level: knows_directly
+    watch_for: "Mentions the zoom parameter on a view link without searching"
+    correct_contains: ["zoom"]
+    correct_contains_any: ["companion", "alongside", "panel"]
+    tags: [chat, views]
+    notes: >
+      The &zoom parameter on view links is documented in the chat system prompt.
+      Chat-only — non-chat agents won't have this in their prompt and should
+      not know about it.
+
+  - id: view-zoom-user-context
+    prompt: "If I open a companion view for the user, how will I know they're looking at it when they send their next message?"
+    expected_level: knows_directly
+    watch_for: "Mentions zoomed-view attribute on typed/speech tags"
+    correct_contains: ["zoomed-view"]
+    tags: [chat, views]
+    notes: >
+      When a companion view is open, user messages include a zoomed-view attribute.
+      Chat-only — this attribute is only added by the chat frontend.

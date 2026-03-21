@@ -413,37 +413,54 @@ function ChatParagraph({ children, node: _node, ...props }: React.HTMLAttributes
   return <p {...props}>{children}</p>;
 }
 
-const chatMarkdownComponents: Partial<Components> = {
-  p: ChatParagraph,
-  a({ href, children, node: _node, ...props }) {
-    if (href && href.startsWith("view:")) {
-      const rest = href.slice("view:".length);
-      const qIndex = rest.indexOf("?");
-      const slug = qIndex !== -1 ? rest.slice(0, qIndex) : rest;
-      const params: Record<string, string> = {};
-      if (qIndex !== -1) {
-        const search = new URLSearchParams(rest.slice(qIndex + 1));
-        for (const [key, value] of search.entries()) {
-          params[key] = value;
+export type OnZoomView = (view: { slug: string; params: Record<string, string>; label: string }) => void;
+
+function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components> {
+  return {
+    p: ChatParagraph,
+    a({ href, children, node: _node, ...props }) {
+      if (href && href.startsWith("view:")) {
+        const rest = href.slice("view:".length);
+        const qIndex = rest.indexOf("?");
+        const slug = qIndex !== -1 ? rest.slice(0, qIndex) : rest;
+        const params: Record<string, string> = {};
+        if (qIndex !== -1) {
+          const search = new URLSearchParams(rest.slice(qIndex + 1));
+          for (const [key, value] of search.entries()) {
+            params[key] = value;
+          }
         }
+        if (params.zoom !== undefined && onZoomView) {
+          const { zoom: _zoom, ...viewParams } = params;
+          const label = typeof children === "string" ? children : slug;
+          return (
+            <button
+              onClick={() => onZoomView({ slug, params: viewParams, label })}
+              className="text-plum hover:text-plum/80 underline cursor-pointer"
+            >
+              {children}
+            </button>
+          );
+        }
+        return <ViewRenderer slug={slug} mode="chat" params={params} />;
       }
-      return <ViewRenderer slug={slug} mode="chat" params={params} />;
-    }
-    return <a href={href} {...props}>{children}</a>;
-  },
-};
+      return <a href={href} {...props}>{children}</a>;
+    },
+  };
+}
 
 /**
  * Render markdown content with prose styling.
  */
-function MarkdownContent({ text }: { text: string }) {
+function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   const cleaned = useMemo(() => stripSpeechTags(text), [text]);
+  const components = useMemo(() => makeChatMarkdownComponents(onZoomView), [onZoomView]);
 
   if (!cleaned) return null;
 
   return (
     <div className="prose prose-sm max-w-none">
-      <Markdown components={chatMarkdownComponents}>{cleaned}</Markdown>
+      <Markdown components={components}>{cleaned}</Markdown>
     </div>
   );
 }
@@ -701,7 +718,7 @@ function SpeechIcon({ playing, onStop }: { playing: boolean; onStop?: () => void
   );
 }
 
-export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpeech }: { entries: SessionEntry[]; debugView?: boolean; speechPlaying?: boolean; onStopSpeech?: () => void }) {
+export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpeech, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; speechPlaying?: boolean; onStopSpeech?: () => void; onZoomView?: OnZoomView }) {
   const grouped = groupIntoParts(entries);
   const allText = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
@@ -723,7 +740,7 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
               {group.text}
             </pre>
           ) : (
-            <MarkdownContent key={i} text={group.text} />
+            <MarkdownContent key={i} text={group.text} onZoomView={onZoomView} />
           )
         ) : (
           <ActivityGroup key={i} parts={group.parts} />

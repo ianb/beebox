@@ -25,7 +25,8 @@ import { sendSound, tick, recordingStart, alarm } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 import { DebugLogPanel } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownContent, groupMessages } from "./ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownContent, groupMessages, type OnZoomView } from "./ChatMessages";
+import { ViewRenderer } from "./ViewRenderer";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -188,13 +189,182 @@ function ChatDebugMenu({
 }
 
 /**
+ * Companion view panel shown alongside chat when a view is zoomed.
+ */
+function CompanionViewPanel({ view, onClose }: { view: { slug: string; params: Record<string, string>; label: string }; onClose: () => void }) {
+  return (
+    <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-warm-300 bg-warm-50">
+        <span className="text-sm font-medium truncate">{view.label}</span>
+        <button
+          onClick={onClose}
+          className="ml-2 flex-shrink-0 p-1 text-warm-500 hover:text-warm-700 rounded hover:bg-warm-200"
+          title="Close companion view"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <ViewRenderer slug={view.slug} mode="page" params={view.params} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Chat input bar with textarea, voice controls, and send/interrupt buttons.
+ * Extracted to its own component to manage JSX nesting depth.
+ */
+function ChatInputBar({
+  textareaRef, input, setInput, isTranscribing, transcription,
+  handleKeyDown, handleSend, handleStopSpeech, handleInterrupt,
+  handleCancelTranscription, speechPlaying, isStreaming, turnTakingRef, doSend, zoomedViewAttr,
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  isTranscribing: boolean;
+  transcription: { transcript: string; start: () => void; stop: () => Promise<string> };
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+  handleSend: () => void;
+  handleStopSpeech: () => void;
+  handleInterrupt: () => void;
+  handleCancelTranscription: () => void;
+  speechPlaying: boolean;
+  isStreaming: boolean;
+  turnTakingRef: React.MutableRefObject<boolean>;
+  doSend: (wrapped: string) => void;
+  zoomedViewAttr: () => string;
+}) {
+  return (
+    <div className="flex-shrink-0 border-t border-warm-300 px-2 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
+      <div className="max-w-3xl mx-auto flex gap-1.5 sm:gap-2 items-center">
+        {isTranscribing ? (
+          <div className="flex-shrink-0 self-center">
+            <RecordingIndicator />
+          </div>
+        ) : null}
+        <TextareaAutosize
+          ref={textareaRef}
+          value={isTranscribing ? transcription.transcript : input}
+          onChange={(e) => {
+            if (!isTranscribing) {
+              setInput(e.target.value);
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          disabled={isTranscribing}
+          readOnly={isTranscribing}
+          placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+          className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+          minRows={1}
+          maxRows={8}
+        />
+        {speechPlaying ? (
+          <button
+            onClick={handleStopSpeech}
+            className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
+            title="Stop speaking (Esc)"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+            </svg>
+          </button>
+        ) : null}
+        {isStreaming ? (
+          <>
+            <button
+              onClick={handleInterrupt}
+              className="flex-shrink-0 p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
+              title="Stop agent"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+              </svg>
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
+            >
+              Send
+            </button>
+          </>
+        ) : isTranscribing ? (
+          <>
+            <button
+              onClick={handleCancelTranscription}
+              className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
+              title="Cancel (Esc)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                turnTakingRef.current = false;
+                const text = transcription.transcript;
+                if (text) {
+                  setInput((existing) => (existing ? existing + " " + text : text));
+                }
+                transcription.stop();
+              }}
+              className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50"
+              title="Edit before sending"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+            <button
+              onClick={async () => {
+                const finalText = await transcription.stop();
+                const text = finalText.trim();
+                if (text) {
+                  doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
+                }
+              }}
+              className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark text-sm font-medium"
+            >
+              Send
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={async () => { turnTakingRef.current = true; unlockAudioContext(); await recordingStart.play().started; transcription.start(); }}
+              className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50"
+              title="Voice input"
+            >
+              <MicrophoneIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
+            >
+              Send
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Streaming content being built up during a turn.
  */
-function StreamingMessage({ text }: { text: string }) {
+function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
       {text ? (
-        <MarkdownContent text={text} />
+        <MarkdownContent text={text} onZoomView={onZoomView} />
       ) : null}
       <div className="flex justify-center mt-6">
         <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
@@ -225,6 +395,11 @@ function InteractiveChat() {
   const [showAllMessages, setShowAllMessages] = useState(false);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
+  const [zoomedView, setZoomedView] = useState<{ slug: string; params: Record<string, string>; label: string } | null>(null);
+
+  const onZoomView = useCallback<OnZoomView>((view) => {
+    setZoomedView(view);
+  }, []);
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -407,14 +582,21 @@ function InteractiveChat() {
     [send]
   );
 
+  const zoomedViewAttr = useCallback(() => {
+    if (!zoomedView) return "";
+    const paramStr = Object.entries(zoomedView.params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+    const uri = paramStr ? `view:${zoomedView.slug}?${paramStr}` : `view:${zoomedView.slug}`;
+    return ` zoomed-view="${uri}"`;
+  }, [zoomedView]);
+
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text) return;
     turnTakingRef.current = false;
     unlockAudioContext();
     setInput("");
-    doSend(`<typed local-time="${localTime()}">${text}</typed>`);
-  }, [input, doSend]);
+    doSend(`<typed local-time="${localTime()}"${zoomedViewAttr()}>${text}</typed>`);
+  }, [input, doSend, zoomedViewAttr]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -445,7 +627,7 @@ function InteractiveChat() {
       if (text.trim()) {
         sendSound.play();
         stopTickRef.current = tick.repeatPlay(1000, 30000);
-        doSend(`<speech local-time="${localTime()}">${text}</speech>`);
+        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
       }
     },
     onKeywordCancel: () => {
@@ -527,7 +709,11 @@ function InteractiveChat() {
 
   return (
     <>
-    <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden">
+    <div className={`h-full flex ${zoomedView ? "flex-col md:flex-row" : "flex-col"} bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden`}>
+      {zoomedView ? (
+        <CompanionViewPanel view={zoomedView} onClose={() => setZoomedView(null)} />
+      ) : null}
+    <div className="flex-1 flex flex-col min-h-0 min-w-0">
       {/* Header with debug controls */}
       <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
         <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
@@ -592,7 +778,7 @@ function InteractiveChat() {
                   ) : group.type === "user" ? (
                     <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
                   ) : (
-                    <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} speechPlaying={Boolean(speechPlayback.isPlaying && group === lastAssistantGroup)} onStopSpeech={handleStopSpeech} />
+                    <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} speechPlaying={Boolean(speechPlayback.isPlaying && group === lastAssistantGroup)} onStopSpeech={handleStopSpeech} onZoomView={onZoomView} />
                   )
                 );
               })()}
@@ -601,7 +787,7 @@ function InteractiveChat() {
         })()}
         {snapshot.matches("streaming") ? (
           <div>
-            <StreamingMessage text={streamText} />
+            <StreamingMessage text={streamText} onZoomView={onZoomView} />
             {streamTools.length > 0 ? (
               <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
                 <ToolList blocks={streamTools} />
@@ -645,125 +831,24 @@ function InteractiveChat() {
       ) : null}
 
       {/* Input area */}
-      <div className="flex-shrink-0 border-t border-warm-300 px-2 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
-        <div className="max-w-3xl mx-auto flex gap-1.5 sm:gap-2 items-center">
-          {isTranscribing ? (
-            <div className="flex-shrink-0 self-center">
-              <RecordingIndicator />
-            </div>
-          ) : null}
-          <TextareaAutosize
-            ref={textareaRef}
-            value={isTranscribing ? transcription.transcript : input}
-            onChange={(e) => {
-              if (!isTranscribing) {
-                setInput(e.target.value);
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            disabled={isTranscribing}
-            readOnly={isTranscribing}
-            placeholder={
-              isTranscribing
-                ? "Listening..."
-                : "Type a message..."
-            }
-            className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
-            minRows={1}
-            maxRows={8}
-          />
-          {speechPlayback.isPlaying ? (
-            <button
-              onClick={handleStopSpeech}
-              className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
-              title="Stop speaking (Esc)"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-              </svg>
-            </button>
-          ) : null}
-          {isStreaming ? (
-            <>
-              <button
-                onClick={handleInterrupt}
-                className="flex-shrink-0 p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
-                title="Stop agent"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                </svg>
-              </button>
-              <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                Send
-              </button>
-            </>
-          ) : isTranscribing ? (
-            <>
-              <button
-                onClick={handleCancelTranscription}
-                className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
-                title="Cancel (Esc)"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              <button
-                onClick={() => {
-                  turnTakingRef.current = false;
-                  const text = transcription.transcript;
-                  if (text) {
-                    setInput((existing) => (existing ? existing + " " + text : text));
-                  }
-                  transcription.stop();
-                }}
-                className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50"
-                title="Edit before sending"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
-              <button
-                onClick={async () => {
-                  const finalText = await transcription.stop();
-                  const text = finalText.trim();
-                  if (text) {
-                    doSend(`<speech local-time="${localTime()}">${text}</speech>`);
-                  }
-                }}
-                className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark text-sm font-medium"
-              >
-                Send
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={async () => { turnTakingRef.current = true; unlockAudioContext(); await recordingStart.play().started; transcription.start(); }}
-                className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50"
-                title="Voice input"
-              >
-                <MicrophoneIcon className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                Send
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <ChatInputBar
+        textareaRef={textareaRef}
+        input={input}
+        setInput={setInput}
+        isTranscribing={isTranscribing}
+        transcription={transcription}
+        handleKeyDown={handleKeyDown}
+        handleSend={handleSend}
+        handleStopSpeech={handleStopSpeech}
+        handleInterrupt={handleInterrupt}
+        handleCancelTranscription={handleCancelTranscription}
+        speechPlaying={speechPlayback.isPlaying}
+        isStreaming={isStreaming}
+        turnTakingRef={turnTakingRef}
+        doSend={doSend}
+        zoomedViewAttr={zoomedViewAttr}
+      />
+    </div>
     </div>
     {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
     </>

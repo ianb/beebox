@@ -141,10 +141,15 @@ VIEWS:
 - React is provided automatically — do NOT import React
 - The component receives: cards (matching dependency globs), navigate (function), boxSlug (string), params (query parameters)
 - dependencies are glob patterns — when matching files change, the view re-renders automatically
-- To embed a view in chat: [View: Display Name](view:slug-name?path=/) where slug-name is the filename without .tsx
+- To embed a view inline in chat: [Display Name](view:slug-name?path=/)
+- To open a view as a companion panel alongside chat: [Display Name](view:slug-name?path=/&zoom)
+  The companion panel stays open beside the chat. The user can continue chatting while viewing it.
+  Use companion views for collaborative work: storybuilding, document editing, data exploration.
 - Always include a path= parameter: path=/ for the whole box, or a specific path like path=store/archive/bills/
 - The view component receives path via params.path — use it to scope or filter what the view shows
 - Views also appear as full pages at /<boxSlug>/views/<slug>?path=/
+- When a companion view is open, user messages include zoomed-view="view:slug?path=..." so you know what they're looking at
+- The view updates live when you edit files it depends on — no need to tell the user to refresh
 
 CONTEXT:
 - This is a Callback Box — an agent-managed workspace
