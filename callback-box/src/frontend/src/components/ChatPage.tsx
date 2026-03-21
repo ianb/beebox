@@ -30,6 +30,8 @@ import { ViewRenderer } from "./ViewRenderer";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { useParams } from "@tanstack/react-router";
+import { href } from "../lib/routing";
 import type { ChatSchedule } from "../../../core/chat-schedules";
 
 /**
@@ -214,13 +216,15 @@ function CompanionViewPanel({ view, onClose }: { view: { slug: string; params: R
 }
 
 /**
- * Chat input bar with textarea, voice controls, and send/interrupt buttons.
- * Extracted to its own component to manage JSX nesting depth.
+ * Unified input area: button bar + inline textarea on desktop, button bar only on mobile.
+ * On desktop (sm:+): [capture] [camera] [textarea...] [send] [stop] [voice] in one row.
+ * On mobile: [capture] [camera] [spacer] [stop] [keyboard] [voice] — textarea appears below when typing.
  */
-function ChatInputBar({
+function ChatInputArea({
   textareaRef, input, setInput, isTranscribing, transcription,
-  handleKeyDown, handleSend, handleStopSpeech, handleInterrupt,
-  handleCancelTranscription, speechPlaying, isStreaming, turnTakingRef, doSend, zoomedViewAttr,
+  handleKeyDown, handleSend, handleCancelTranscription,
+  onKeyboard, onVoice, speechPlaying, onStopSpeech,
+  isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -229,130 +233,264 @@ function ChatInputBar({
   transcription: { transcript: string; start: () => void; stop: () => Promise<string> };
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
-  handleStopSpeech: () => void;
-  handleInterrupt: () => void;
   handleCancelTranscription: () => void;
+  onKeyboard: () => void;
+  onVoice: () => void;
   speechPlaying: boolean;
+  onStopSpeech: () => void;
   isStreaming: boolean;
+  onInterrupt: () => void;
   turnTakingRef: React.MutableRefObject<boolean>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
 }) {
+  const { boxSlug } = useParams({ strict: false });
+  const captureHref = href(`/${boxSlug}/capture`);
+
+  const circleBtn = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
+
   return (
-    <div className="flex-shrink-0 border-t border-warm-300 px-2 sm:px-4 py-3 sm:py-4 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200">
-      <div className="max-w-3xl mx-auto flex gap-1.5 sm:gap-2 items-center">
-        {isTranscribing ? (
-          <div className="flex-shrink-0 self-center">
-            <RecordingIndicator />
-          </div>
-        ) : null}
-        <TextareaAutosize
-          ref={textareaRef}
-          value={isTranscribing ? transcription.transcript : input}
-          onChange={(e) => {
-            if (!isTranscribing) {
-              setInput(e.target.value);
-            }
-          }}
-          onKeyDown={handleKeyDown}
-          disabled={isTranscribing}
-          readOnly={isTranscribing}
-          placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-          className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
-          minRows={1}
-          maxRows={8}
-        />
+    <div className="flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2">
+      <div className="flex items-center gap-2">
+        {/* Left buttons */}
+        <a
+          href={captureHref}
+          className={`${circleBtn} bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+          title="Capture"
+        >
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </a>
+        <button
+          className={`${circleBtn} bg-warm-300 text-warm-500 cursor-not-allowed opacity-50`}
+          title="Camera (coming soon)"
+          disabled
+        >
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+
+        {/* Desktop: inline textarea + send button */}
+        <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
+          {isTranscribing ? (
+            <div className="flex-shrink-0 self-center">
+              <RecordingIndicator />
+            </div>
+          ) : null}
+          <TextareaAutosize
+            ref={textareaRef}
+            value={isTranscribing ? transcription.transcript : input}
+            onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
+            onKeyDown={handleKeyDown}
+            disabled={isTranscribing}
+            readOnly={isTranscribing}
+            placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+            className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600 min-w-0"
+            minRows={1}
+            maxRows={8}
+          />
+          {isTranscribing ? (
+            <>
+              <button
+                onClick={handleCancelTranscription}
+                className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50 flex-shrink-0"
+                title="Cancel (Esc)"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  turnTakingRef.current = false;
+                  const text = transcription.transcript;
+                  if (text) setInput((existing) => (existing ? existing + " " + text : text));
+                  transcription.stop();
+                }}
+                className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+                title="Edit before sending"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+              <button
+                onClick={async () => {
+                  const finalText = await transcription.stop();
+                  const text = finalText.trim();
+                  if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
+                }}
+                className={`${circleBtn} bg-gold text-white hover:bg-gold-dark`}
+                title="Send"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className={`${circleBtn} bg-gold text-white hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+              title="Send"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Mobile: spacer */}
+        <div className="flex-1 sm:hidden" />
+
+        {/* Shared: conditional stop buttons */}
         {speechPlaying ? (
           <button
-            onClick={handleStopSpeech}
-            className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
-            title="Stop speaking (Esc)"
+            onClick={onStopSpeech}
+            className={`${circleBtn} bg-rose-100 text-rose hover:bg-rose-200 active:bg-rose-300`}
+            title="Stop speaking"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
             </svg>
           </button>
         ) : null}
         {isStreaming ? (
-          <>
-            <button
-              onClick={handleInterrupt}
-              className="flex-shrink-0 p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
-              title="Stop agent"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-              </svg>
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Send
-            </button>
-          </>
-        ) : isTranscribing ? (
-          <>
-            <button
-              onClick={handleCancelTranscription}
-              className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50"
-              title="Cancel (Esc)"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <button
-              onClick={() => {
-                turnTakingRef.current = false;
-                const text = transcription.transcript;
-                if (text) {
-                  setInput((existing) => (existing ? existing + " " + text : text));
-                }
-                transcription.stop();
-              }}
-              className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50"
-              title="Edit before sending"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
-            <button
-              onClick={async () => {
-                const finalText = await transcription.stop();
-                const text = finalText.trim();
-                if (text) {
-                  doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
-                }
-              }}
-              className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark text-sm font-medium"
-            >
-              Send
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={async () => { turnTakingRef.current = true; unlockAudioContext(); await recordingStart.play().started; transcription.start(); }}
-              className="p-2 text-plum hover:text-plum-dark rounded-lg hover:bg-plum-50"
-              title="Voice input"
-            >
-              <MicrophoneIcon className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="flex-shrink-0 px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Send
-            </button>
-          </>
-        )}
+          <button
+            onClick={onInterrupt}
+            className={`${circleBtn} bg-rose-100 text-rose hover:bg-rose-200 active:bg-rose-300`}
+            title="Stop agent"
+          >
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+            </svg>
+          </button>
+        ) : null}
+
+        {/* Mobile-only: keyboard button */}
+        <button
+          onClick={onKeyboard}
+          className={`${circleBtn} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+          title="Type a message"
+        >
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="2" y="6" width="20" height="12" rx="2" strokeWidth={2} />
+            <path strokeLinecap="round" strokeWidth={2} d="M6 10h1M10 10h1M14 10h1M18 10h1M8 14h8" />
+          </svg>
+        </button>
+
+        {/* Voice button */}
+        <button
+          onClick={() => { unlockAudioContext(); onVoice(); }}
+          disabled={isTranscribing}
+          className={`${circleBtn} bg-plum text-white hover:bg-plum-dark active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
+          title="Voice input"
+        >
+          <MicrophoneIcon className="w-7 h-7" />
+        </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Mobile-only textarea row shown below the button bar when typing or transcribing.
+ */
+function MobileTextareaRow({
+  input, setInput, isTranscribing, transcription,
+  handleKeyDown, handleSend, handleCancelTranscription,
+  turnTakingRef, doSend, zoomedViewAttr,
+}: {
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  isTranscribing: boolean;
+  transcription: { transcript: string; start: () => void; stop: () => Promise<string> };
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+  handleSend: () => void;
+  handleCancelTranscription: () => void;
+  turnTakingRef: React.MutableRefObject<boolean>;
+  doSend: (wrapped: string) => void;
+  zoomedViewAttr: () => string;
+}) {
+  const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
+
+  return (
+    <div className="flex gap-2 items-center">
+      {isTranscribing ? (
+        <div className="flex-shrink-0 self-center">
+          <RecordingIndicator />
+        </div>
+      ) : null}
+      <TextareaAutosize
+        value={isTranscribing ? transcription.transcript : input}
+        onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
+        onKeyDown={handleKeyDown}
+        disabled={isTranscribing}
+        readOnly={isTranscribing}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+        className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        minRows={2}
+        maxRows={8}
+        autoFocus
+      />
+      {isTranscribing ? (
+        <>
+          <button
+            onClick={handleCancelTranscription}
+            className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50 flex-shrink-0"
+            title="Cancel (Esc)"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              turnTakingRef.current = false;
+              const text = transcription.transcript;
+              if (text) setInput((existing) => (existing ? existing + " " + text : text));
+              transcription.stop();
+            }}
+            className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+            title="Edit before sending"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          <button
+            onClick={async () => {
+              const finalText = await transcription.stop();
+              const text = finalText.trim();
+              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
+            }}
+            className={`${circleBtn} bg-gold text-white hover:bg-gold-dark`}
+            title="Send"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={handleSend}
+          disabled={!input.trim()}
+          className={`${circleBtn} bg-gold text-white hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+          title="Send"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -396,6 +534,8 @@ function InteractiveChat() {
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [zoomedView, setZoomedView] = useState<{ slug: string; params: Record<string, string>; label: string } | null>(null);
+  const [typingMode, setTypingMode] = useState(false);
+  const [typingLocked, setTypingLocked] = useState(false);
 
   const onZoomView = useCallback<OnZoomView>((view) => {
     setZoomedView(view);
@@ -596,7 +736,10 @@ function InteractiveChat() {
     unlockAudioContext();
     setInput("");
     doSend(`<typed local-time="${localTime()}"${zoomedViewAttr()}>${text}</typed>`);
-  }, [input, doSend, zoomedViewAttr]);
+    if (typingMode && !typingLocked) {
+      setTypingMode(false);
+    }
+  }, [input, doSend, zoomedViewAttr, typingMode, typingLocked]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -672,12 +815,16 @@ function InteractiveChat() {
     speechPlayback.stop();
   }, [speechPlayback]);
 
-  // Keep textarea focused whenever it's available for input
+  // Keep textarea focused when it's visible and available for input.
+  // On mobile (< sm), the textarea is only visible in typing mode or while transcribing.
   useEffect(() => {
-    if (!isTranscribing) {
-      textareaRef.current?.focus();
+    if (!isTranscribing && textareaRef.current) {
+      // Only focus if the textarea is actually visible (not hidden by mobile bar)
+      if (textareaRef.current.offsetParent !== null) {
+        textareaRef.current.focus();
+      }
     }
-  }, [isTranscribing]);
+  }, [isTranscribing, typingMode]);
 
   // Scroll textarea to bottom as transcript streams in
   useEffect(() => {
@@ -713,7 +860,7 @@ function InteractiveChat() {
       {zoomedView ? (
         <CompanionViewPanel view={zoomedView} onClose={() => setZoomedView(null)} />
       ) : null}
-    <div className="flex-1 flex flex-col min-h-0 min-w-0">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
       {/* Header with debug controls */}
       <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
         <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
@@ -830,8 +977,8 @@ function InteractiveChat() {
         </div>
       ) : null}
 
-      {/* Input area */}
-      <ChatInputBar
+      {/* Input area: single row on desktop, button bar + optional typing row on mobile */}
+      <ChatInputArea
         textareaRef={textareaRef}
         input={input}
         setInput={setInput}
@@ -839,15 +986,66 @@ function InteractiveChat() {
         transcription={transcription}
         handleKeyDown={handleKeyDown}
         handleSend={handleSend}
-        handleStopSpeech={handleStopSpeech}
-        handleInterrupt={handleInterrupt}
         handleCancelTranscription={handleCancelTranscription}
+        onKeyboard={() => setTypingMode(true)}
+        onVoice={async () => {
+          turnTakingRef.current = true;
+          await recordingStart.play().started;
+          transcription.start();
+        }}
         speechPlaying={speechPlayback.isPlaying}
+        onStopSpeech={handleStopSpeech}
         isStreaming={isStreaming}
+        onInterrupt={handleInterrupt}
         turnTakingRef={turnTakingRef}
         doSend={doSend}
         zoomedViewAttr={zoomedViewAttr}
       />
+      {/* Mobile typing row: shown below button bar when typing/transcribing */}
+      {(typingMode || isTranscribing) ? (
+        <div className="sm:hidden bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 pb-2">
+          {typingMode ? (
+            <div className="flex gap-1 justify-end pb-1">
+              <button
+                onClick={() => setTypingLocked((v) => !v)}
+                className="p-1.5 rounded-full bg-warm-200 text-warm-600 hover:bg-warm-300"
+                title={typingLocked ? "Unlock (close after send)" : "Lock open"}
+              >
+                {typingLocked ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={() => { setTypingMode(false); setTypingLocked(false); }}
+                className="p-1.5 rounded-full bg-warm-200 text-warm-600 hover:bg-warm-300"
+                title="Close keyboard"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
+          <MobileTextareaRow
+            input={input}
+            setInput={setInput}
+            isTranscribing={isTranscribing}
+            transcription={transcription}
+            handleKeyDown={handleKeyDown}
+            handleSend={handleSend}
+            handleCancelTranscription={handleCancelTranscription}
+            turnTakingRef={turnTakingRef}
+            doSend={doSend}
+            zoomedViewAttr={zoomedViewAttr}
+          />
+        </div>
+      ) : null}
     </div>
     </div>
     {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
