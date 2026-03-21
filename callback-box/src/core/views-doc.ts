@@ -142,9 +142,43 @@ To embed a view in a chat message, use markdown link syntax with a \`view:\` URL
 [View: Ledger Overview](view:ledger-overview?path=/)
 \`\`\`
 
-The slug is the filename without \`.tsx\`. Always include \`?path=\` — use \`path=/\` for the whole box. The view renders inline in the chat with a link to the full page.
+The slug is the filename without \`.tsx\`. Always include \`?path=\` — use \`path=/\` for the whole box. The view renders inline in the chat message with a link to the full page.
 
 Only views with \`"chat"\` in their \`modes\` array should be embedded in chat. Chat mode renders with a maximum height and scroll.
+
+### Inline vs Companion Views
+
+There are two ways views appear in chat:
+
+**Inline (default)** — the view renders inside the chat message, scrolls with the conversation:
+\`\`\`
+[Ledger Overview](view:ledger-overview?path=/)
+\`\`\`
+
+**Companion panel** — adding \`&zoom\` opens the view as a persistent side panel alongside the chat:
+\`\`\`
+[Ledger Overview](view:ledger-overview?path=/&zoom)
+\`\`\`
+
+The companion panel:
+- Stays visible while the user continues chatting (sticky — doesn't scroll away)
+- Shows side-by-side with chat on desktop, stacked on mobile
+- Has a close button — the user dismisses it when done
+- Updates live when underlying files change (same SSE mechanism as inline views)
+- If the agent writes another zoom link and the user clicks it, it replaces the current companion
+
+Use inline views for quick, one-off data displays within a conversation turn. Use companion views when the user needs to reference the view while continuing to talk — collaborative editing, storybuilding, reviewing a document, exploring data.
+
+### How the Agent Knows a Companion View is Open
+
+When a companion view is open, every user message includes a \`zoomed-view\` attribute:
+\`\`\`xml
+<typed zoomed-view="view:ledger-overview?path=/">What about the furniture?</typed>
+\`\`\`
+
+This tells the agent what the user is looking at, so it can tailor its responses. The attribute value is the full view URI (without \`&zoom\`).
+
+**Note:** Companion views are a chat-only feature. The \`&zoom\` parameter and \`zoomed-view\` attribute are only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't support them.
 
 ## Examples
 
