@@ -67,6 +67,7 @@ store/trash
 tricks
 tricks/lib
 tricks/scripts
+views
 ```
 
 The box marker file contains version metadata:
