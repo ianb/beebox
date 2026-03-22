@@ -225,6 +225,7 @@ function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
   isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr,
+  voicePaused, onUnpause,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -243,6 +244,8 @@ function ChatInputArea({
   turnTakingRef: React.MutableRefObject<boolean>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
+  voicePaused: boolean;
+  onUnpause: () => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const captureHref = href(`/${boxSlug}/capture`);
@@ -282,6 +285,7 @@ function ChatInputArea({
           ) : null}
           <TextareaAutosize
             ref={textareaRef}
+            autoFocus
             value={isTranscribing ? transcription.transcript : input}
             onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
             onKeyDown={handleKeyDown}
@@ -386,14 +390,27 @@ function ChatInputArea({
           </svg>
         </button>
 
-        {/* Voice button */}
+        {/* Voice button — shows paused state when recording is suspended for TTS */}
         <button
-          onClick={() => { unlockAudioContext(); onVoice(); }}
-          disabled={isTranscribing}
-          className={`${circleBtn} bg-plum text-white hover:bg-plum-dark active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed`}
-          title="Voice input"
+          onClick={() => {
+            if (voicePaused) {
+              onUnpause();
+            } else {
+              unlockAudioContext();
+              onVoice();
+            }
+          }}
+          disabled={isTranscribing ? !voicePaused : false}
+          className={`${circleBtn} ${voicePaused ? "bg-plum/50 text-white animate-pulse" : "bg-plum text-white hover:bg-plum-dark active:opacity-80"} disabled:opacity-50 disabled:cursor-not-allowed`}
+          title={voicePaused ? "Resume recording (stops speech)" : "Voice input"}
         >
-          <MicrophoneIcon className="w-7 h-7" />
+          {voicePaused ? (
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <MicrophoneIcon className="w-7 h-7" />
+          )}
         </button>
       </div>
     </div>
@@ -536,6 +553,9 @@ function InteractiveChat() {
   const [zoomedView, setZoomedView] = useState<{ slug: string; params: Record<string, string>; label: string } | null>(null);
   const [typingMode, setTypingMode] = useState(false);
   const [typingLocked, setTypingLocked] = useState(false);
+  // Tracks when voice recording is paused due to TTS playback
+  const [voicePaused, setVoicePaused] = useState(false);
+  const voicePausedRef = useRef(false);
 
   const onZoomView = useCallback<OnZoomView>((view) => {
     setZoomedView(view);
@@ -544,7 +564,7 @@ function InteractiveChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const turnTakingRef = useRef(false);
-  const transcriptionRef = useRef<{ start: () => void } | null>(null);
+  const transcriptionRef = useRef<{ start: () => void; cancel: () => void; state: string; transcript: string } | null>(null);
   const stopTickRef = useRef<(() => void) | null>(null);
   const prevStateRef = useRef<string>("loading");
   const speechPlayedRef = useRef(false);
@@ -557,7 +577,12 @@ function InteractiveChat() {
 
   const speechPlayback = useSpeechPlayback({
     onComplete: () => {
-      if (turnTakingRef.current && machineStateRef.current !== "streaming") {
+      // Resume recording if it was paused for TTS
+      if (voicePausedRef.current) {
+        voicePausedRef.current = false;
+        setVoicePaused(false);
+        transcriptionRef.current?.start();
+      } else if (turnTakingRef.current && machineStateRef.current !== "streaming") {
         recordingStart.play();
         transcriptionRef.current?.start();
       }
@@ -693,19 +718,36 @@ function InteractiveChat() {
       const hasSpeech = hasAssistantSpeech(snapshot.context.streamText);
       speechPlayedRef.current = hasSpeech;
       if (hasSpeech) {
-        const segments = parseAllSpeechTags(snapshot.context.streamText);
-        speechPlayback.playSegments({
-          messageId: `stream-${Date.now()}`,
-          segments,
-        });
+        // Suppress TTS if user has in-progress voice text
+        const hasActiveTranscript = transcriptionRef.current &&
+          transcriptionRef.current.transcript.trim().length > 0;
+        if (hasActiveTranscript) {
+          // Don't play speech — user is composing
+          speechPlayback.markAsPlayed(`stream-${Date.now()}`);
+        } else {
+          // Pause recording while TTS plays
+          if (transcriptionRef.current && transcriptionRef.current.state === "recording") {
+            voicePausedRef.current = true;
+            queueMicrotask(() => setVoicePaused(true));
+            transcriptionRef.current.cancel();
+          }
+          const segments = parseAllSpeechTags(snapshot.context.streamText);
+          speechPlayback.playSegments({
+            messageId: `stream-${Date.now()}`,
+            segments,
+          });
+        }
       }
     }
 
     // refreshing → idle: restart mic for non-speech responses
     if (current === "idle" && prev === "refreshing") {
       if (!speechPlayedRef.current && turnTakingRef.current) {
-        recordingStart.play();
-        transcriptionRef.current?.start();
+        // Only restart if not already recording (might be paused/resumed by TTS logic)
+        if (!voicePausedRef.current) {
+          recordingStart.play();
+          transcriptionRef.current?.start();
+        }
       }
     }
   }, [snapshot.value, snapshot.context.streamText, speechPlayback]);
@@ -766,12 +808,15 @@ function InteractiveChat() {
   // Realtime transcription with voice keyword spotting
   const transcription = useRealtimeTranscription({
     onKeywordSend: (text) => {
+      // Cancel current recording then immediately restart to keep mic open
       transcription.cancel();
       if (text.trim()) {
         sendSound.play();
         stopTickRef.current = tick.repeatPlay(1000, 30000);
         doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
       }
+      // Restart recording so the user can keep talking
+      transcription.start();
     },
     onKeywordCancel: () => {
       transcription.cancel();
@@ -1000,6 +1045,14 @@ function InteractiveChat() {
         turnTakingRef={turnTakingRef}
         doSend={doSend}
         zoomedViewAttr={zoomedViewAttr}
+        voicePaused={voicePaused ? speechPlayback.isPlaying : false}
+        onUnpause={() => {
+          // Abort speech and resume recording
+          speechPlayback.stop();
+          voicePausedRef.current = false;
+          setVoicePaused(false);
+          transcription.start();
+        }}
       />
       {/* Mobile typing row: shown below button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (
