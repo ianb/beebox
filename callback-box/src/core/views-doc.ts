@@ -134,17 +134,31 @@ React is provided automatically. **Do NOT import React** — the build system ha
 
 You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.
 
-## Embedding in Chat
+## Showing Files in Chat
 
-To embed a view in a chat message, use markdown link syntax with a \`view:\` URL:
+To show a file to the user, use a \`view:\` link with the file path:
 
 \`\`\`
-[View: Ledger Overview](view:ledger-overview?path=/)
+[Meeting Notes](view:store/notes/meeting.md)
+[Recipe](view:store/archive/Pasta.recipe.card)
 \`\`\`
 
-The slug is the filename without \`.tsx\`. Always include \`?path=\` — use \`path=/\` for the whole box. The view renders inline in the chat message with a link to the full page.
+The system automatically picks the right viewer based on file type:
+- \`.md\` files render as formatted Markdown
+- \`.card\` files use the card viewer (card-type-specific renderers if available, generic tree view otherwise)
+- Other files show as raw text
 
-Only views with \`"chat"\` in their \`modes\` array should be embedded in chat. Chat mode renders with a maximum height and scroll.
+To open as a companion panel alongside chat, add \`?zoom\`:
+\`\`\`
+[Meeting Notes](view:store/notes/meeting.md?zoom)
+\`\`\`
+
+To force a specific viewer, use \`?view=\`:
+\`\`\`
+[Raw XML](view:store/archive/Pasta.recipe.card?view=raw)
+\`\`\`
+
+**Note:** \`view:\` links are for file paths only. Do not use them for custom view slugs.
 
 ### Inline vs Companion Views
 
@@ -152,12 +166,12 @@ There are two ways views appear in chat:
 
 **Inline (default)** — the view renders inside the chat message, scrolls with the conversation:
 \`\`\`
-[Ledger Overview](view:ledger-overview?path=/)
+[Meeting Notes](view:store/notes/meeting.md)
 \`\`\`
 
-**Companion panel** — adding \`&zoom\` opens the view as a persistent side panel alongside the chat:
+**Companion panel** — adding \`?zoom\` opens the view as a persistent side panel alongside the chat:
 \`\`\`
-[Ledger Overview](view:ledger-overview?path=/&zoom)
+[Meeting Notes](view:store/notes/meeting.md?zoom)
 \`\`\`
 
 The companion panel:

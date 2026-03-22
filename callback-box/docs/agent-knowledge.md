@@ -325,8 +325,8 @@ These test the interactive chat agent's knowledge (system prompt, not agent guid
 ```
 cb prompt "Can you show me a view in this chat?"
 ```
-- **Expected level: Knows directly** — the chat system prompt describes the `[View: Name](view:slug)` syntax
-- Watch for: does it know the markdown link format for embedding views?
+- **Expected level: Knows directly** — the chat system prompt describes the `[Display Name](view:store/path/to/file.md)` syntax for files and `[Display Name](view:slug)` for custom views
+- Watch for: does it use path-first format for files, and slug format only for custom dashboard views?
 
 ```
 cb prompt "What views can you embed in chat messages?"

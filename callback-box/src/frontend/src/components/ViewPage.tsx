@@ -1,33 +1,56 @@
 /**
- * Full-page wrapper for a view, rendered at /$boxSlug/views/$slug.
+ * Full-page wrapper for a view, rendered at /$boxSlug/views/$viewPath.
  *
- * Query parameters from the URL (e.g., ?path=/store/archive) are
- * forwarded to the view component as params.
+ * File paths (containing "/" or a known extension) use the ViewDispatcher
+ * with built-in viewers. Plain slugs fall back to ViewRenderer for
+ * legacy agent-generated .tsx views.
  */
 
 import { useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
+import { parseViewUrl } from "../lib/view-url";
+import { ViewDispatcher } from "./ViewDispatcher";
 import { ViewRenderer } from "./ViewRenderer";
 
-export function ViewPage() {
-  const { _splat: slug } = useParams({ strict: false });
+const FILE_EXTENSIONS = new Set([".md", ".card", ".txt", ".json", ".xml", ".html", ".csv", ".tsv", ".yaml", ".yml"]);
 
-  const params = useMemo(() => {
-    const result: Record<string, string> = {};
+function looksLikeFilePath(value: string): boolean {
+  if (value.includes("/")) return true;
+  const dotIdx = value.lastIndexOf(".");
+  if (dotIdx > 0 && FILE_EXTENSIONS.has(value.slice(dotIdx))) return true;
+  return false;
+}
+
+export function ViewPage() {
+  const { _splat: splat } = useParams({ strict: false });
+
+  const parsed = useMemo(() => {
+    if (!splat) return null;
+    const qs = window.location.search;
+    const raw = qs ? `${splat}${qs}` : splat;
+    if (looksLikeFilePath(splat)) {
+      return { type: "file" as const, target: parseViewUrl(raw) };
+    }
+    // Plain slug — legacy custom view
+    const params: Record<string, string> = {};
     const search = new URLSearchParams(window.location.search);
     for (const [key, value] of search.entries()) {
-      result[key] = value;
+      params[key] = value;
     }
-    return result;
-  }, []);
+    return { type: "slug" as const, slug: splat, params };
+  }, [splat]);
 
-  if (!slug) {
+  if (!parsed) {
     return <div className="p-8 text-gray-500">No view specified.</div>;
   }
 
   return (
     <div className="p-4">
-      <ViewRenderer slug={slug} mode="page" params={params} />
+      {parsed.type === "file" ? (
+        <ViewDispatcher target={parsed.target} mode="page" />
+      ) : (
+        <ViewRenderer slug={parsed.slug} mode="page" params={parsed.params} />
+      )}
     </div>
   );
 }

@@ -7,8 +7,9 @@
 import { useMemo, useState } from "react";
 import { Markdown } from "./Markdown";
 import { ImageLightbox } from "./ImageLightbox";
-import { ViewRenderer } from "./ViewRenderer";
+import { ViewDispatcher } from "./ViewDispatcher";
 import type { Components } from "react-markdown";
+import { parseViewUrl, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
@@ -413,36 +414,26 @@ function ChatParagraph({ children, node: _node, ...props }: React.HTMLAttributes
   return <p {...props}>{children}</p>;
 }
 
-export type OnZoomView = (view: { slug: string; params: Record<string, string>; label: string }) => void;
+export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
 function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components> {
   return {
     p: ChatParagraph,
     a({ href, children, node: _node, ...props }) {
       if (href && href.startsWith("view:")) {
-        const rest = href.slice("view:".length);
-        const qIndex = rest.indexOf("?");
-        const slug = qIndex !== -1 ? rest.slice(0, qIndex) : rest;
-        const params: Record<string, string> = {};
-        if (qIndex !== -1) {
-          const search = new URLSearchParams(rest.slice(qIndex + 1));
-          for (const [key, value] of search.entries()) {
-            params[key] = value;
-          }
-        }
-        if (params.zoom !== undefined && onZoomView) {
-          const { zoom: _zoom, ...viewParams } = params;
-          const label = typeof children === "string" ? children : slug;
+        const target = parseViewUrl(href);
+        if (target.zoom && onZoomView) {
+          const label = typeof children === "string" ? children : target.path;
           return (
             <button
-              onClick={() => onZoomView({ slug, params: viewParams, label })}
+              onClick={() => onZoomView({ target: { ...target, zoom: false }, label })}
               className="text-plum hover:text-plum/80 underline cursor-pointer"
             >
               {children}
             </button>
           );
         }
-        return <ViewRenderer slug={slug} mode="chat" params={params} />;
+        return <ViewDispatcher target={target} mode="chat" />;
       }
       return <a href={href} {...props}>{children}</a>;
     },

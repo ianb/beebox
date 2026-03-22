@@ -26,7 +26,8 @@ import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 import { DebugLogPanel } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownContent, groupMessages, type OnZoomView } from "./ChatMessages";
-import { ViewRenderer } from "./ViewRenderer";
+import { ViewDispatcher } from "./ViewDispatcher";
+import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { useCurrentUser } from "../hooks/useCurrentUser";
@@ -193,7 +194,7 @@ function ChatDebugMenu({
 /**
  * Companion view panel shown alongside chat when a view is zoomed.
  */
-function CompanionViewPanel({ view, onClose }: { view: { slug: string; params: Record<string, string>; label: string }; onClose: () => void }) {
+function CompanionViewPanel({ view, onClose }: { view: { target: ViewTarget; label: string }; onClose: () => void }) {
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
       <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-warm-300 bg-warm-50">
@@ -209,7 +210,7 @@ function CompanionViewPanel({ view, onClose }: { view: { slug: string; params: R
         </button>
       </div>
       <div className="flex-1 overflow-auto">
-        <ViewRenderer slug={view.slug} mode="page" params={view.params} />
+        <ViewDispatcher target={view.target} mode="companion" />
       </div>
     </div>
   );
@@ -550,7 +551,7 @@ function InteractiveChat() {
   const [showAllMessages, setShowAllMessages] = useState(false);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
-  const [zoomedView, setZoomedView] = useState<{ slug: string; params: Record<string, string>; label: string } | null>(null);
+  const [zoomedView, setZoomedView] = useState<{ target: ViewTarget; label: string } | null>(null);
   const [typingMode, setTypingMode] = useState(false);
   const [typingLocked, setTypingLocked] = useState(false);
   // Tracks when voice recording is paused due to TTS playback
@@ -766,8 +767,7 @@ function InteractiveChat() {
 
   const zoomedViewAttr = useCallback(() => {
     if (!zoomedView) return "";
-    const paramStr = Object.entries(zoomedView.params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
-    const uri = paramStr ? `view:${zoomedView.slug}?${paramStr}` : `view:${zoomedView.slug}`;
+    const uri = `view:${serializeViewUrl(zoomedView.target)}`;
     return ` zoomed-view="${uri}"`;
   }, [zoomedView]);
 

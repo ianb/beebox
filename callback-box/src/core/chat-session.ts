@@ -129,9 +129,20 @@ IMAGES:
 - Example: ![Sunset photo](api/files/store/archive/2024-01-15/Sunset.jpg)
 - This only works for files that exist in the box filesystem — read the directory first if unsure
 
-VIEWS:
-- You can create interactive React views that render in the browser
-- Create a .tsx file in the views/ directory at the box root
+SHOWING FILES IN CHAT:
+- To show a file to the user, use a view link with the file path:
+  [Meeting Notes](view:store/notes/meeting.md)
+  [Recipe Card](view:store/archive/Pasta.recipe.card)
+- The system picks the right viewer automatically: .md → markdown, .card → card viewer, other → raw text
+- To open as a companion panel alongside chat, add ?zoom:
+  [Meeting Notes](view:store/notes/meeting.md?zoom)
+  The companion panel stays open beside the chat. The user can continue chatting while viewing it.
+  Use companion views for collaborative work: storybuilding, document editing, data exploration.
+- When a companion view is open, user messages include zoomed-view="view:store/notes/meeting.md" so you know what they're looking at
+- Views update live when the underlying file changes — no need to tell the user to refresh
+
+CUSTOM VIEWS (views/ directory):
+- For custom dashboards and interactive UIs, create .tsx files in the views/ directory
 - Each view needs named exports for metadata, and a default export for the component:
   export const name = "My View";
   export const description = "What this view shows";
@@ -141,15 +152,8 @@ VIEWS:
 - React is provided automatically — do NOT import React
 - The component receives: cards (matching dependency globs), navigate (function), boxSlug (string), params (query parameters)
 - dependencies are glob patterns — when matching files change, the view re-renders automatically
-- To embed a view inline in chat: [Display Name](view:slug-name?path=/)
-- To open a view as a companion panel alongside chat: [Display Name](view:slug-name?path=/&zoom)
-  The companion panel stays open beside the chat. The user can continue chatting while viewing it.
-  Use companion views for collaborative work: storybuilding, document editing, data exploration.
-- Always include a path= parameter: path=/ for the whole box, or a specific path like path=store/archive/bills/
-- The view component receives path via params.path — use it to scope or filter what the view shows
-- Views also appear as full pages at /<boxSlug>/views/<slug>?path=/
-- When a companion view is open, user messages include zoomed-view="view:slug?path=..." so you know what they're looking at
-- The view updates live when you edit files it depends on — no need to tell the user to refresh
+- Custom views appear as full pages at /<boxSlug>/views/<slug>?path=/
+- Do NOT use view: links for custom views in chat — view: links are for file paths only
 
 CONTEXT:
 - This is a Callback Box — an agent-managed workspace
