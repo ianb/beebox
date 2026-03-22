@@ -1,7 +1,7 @@
 <procedure name="process-captures">
   <description>
-    Process capture sessions through intake: transcribe audio, establish purpose,
-    describe images, assemble timeline, rename, extract records, and archive.
+    Process capture sessions through intake: transcribe audio, describe images,
+    summarize audio, assemble timeline, rename, extract records, and archive.
   </description>
 
   <step id="transcribe">
@@ -48,6 +48,71 @@
       </shell>
       <instruction>All audio cards should have status="transcribed" after this step.</instruction>
       <why>Later steps depend on all audio being transcribed with timing data.</why>
+    </validate>
+  </step>
+
+  <step id="describe-images">
+    <description>Analyze images with Gemini Flash (OCR, descriptions, EXIF, renaming)</description>
+
+    <precheck>
+      <shell>
+        found=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          for card in "$dir"*.image.card; do
+            [ -f "$card" ] || continue
+            if grep -q 'status="new"' "$card"; then
+              found=$((found + 1))
+            fi
+          done
+        done
+        if [ "$found" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $found image(s) to describe"
+      </shell>
+      <why>No images need description</why>
+    </precheck>
+
+    <run>
+      <shell>
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          cards=""
+          for card in "$dir"*.image.card; do
+            [ -f "$card" ] || continue
+            if grep -q 'status="new"' "$card"; then
+              cards="$cards $card"
+            fi
+          done
+          if [ -n "$cards" ]; then
+            cb describe-images $cards
+          fi
+        done
+        git add -A &amp;&amp; git commit -m "Describe images via Gemini Flash
+
+Triggered-By: cb procedure
+Phase: describe-images"
+      </shell>
+    </run>
+
+    <validate severity="warn">
+      <shell>
+        remaining=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          for card in "$dir"*.image.card; do
+            [ -f "$card" ] || continue
+            if grep -q 'status="new"' "$card"; then
+              remaining=$((remaining + 1))
+            fi
+          done
+        done
+        echo "Unprocessed images remaining: $remaining"
+        [ "$remaining" -eq 0 ]
+      </shell>
+      <instruction>All image cards should have status="analyzed" or "invalid".</instruction>
+      <why>The timeline assembly step needs all images processed.</why>
     </validate>
   </step>
 
@@ -107,176 +172,6 @@
     </run>
   </step>
 
-  <step id="purpose">
-    <description>Establish the purpose of each capture session from audio summaries</description>
-
-    <precheck>
-      <shell pass-output="true">
-        found=0
-        for dir in box/inbox/capture-*/; do
-          [ -d "$dir" ] || continue
-          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
-          [ -f "$session" ] || continue
-          # Skip if already has purpose with text content
-          if grep -qE '&lt;purpose&gt;.+&lt;/purpose&gt;' "$session"; then
-            continue
-          fi
-          # Check if there are audio clips with summaries (non-empty summary)
-          has_summaries=0
-          for card in "$dir"*.audio.card; do
-            [ -f "$card" ] || continue
-            if grep -q 'status="transcribed"' "$card" &amp;&amp; ! grep -q '&lt;summary/&gt;' "$card" &amp;&amp; grep -qE '&lt;summary&gt;.+&lt;/summary&gt;' "$card"; then
-              has_summaries=1
-              break
-            fi
-          done
-          if [ "$has_summaries" -eq 1 ]; then
-            echo "  Needs purpose: $session"
-            found=$((found + 1))
-          fi
-        done
-        if [ "$found" -eq 0 ]; then
-          exit $CHECK_SKIP
-        fi
-        echo "Found $found session(s) needing purpose"
-      </shell>
-      <why>No sessions need purpose established</why>
-    </precheck>
-
-    <run>
-      <agent model="opus" max-turns="10">
-        You are establishing the purpose of capture sessions.
-
-        YOUR TASK:
-        For each session card listed in the precheck output, synthesize the audio summaries
-        into a single &lt;purpose&gt; statement on the session card.
-
-        STEP 1 - READ CONTEXT:
-        For each session listed above:
-        1. Read the session card
-        2. Read all audio cards in the same directory (they have &lt;summary&gt; elements)
-
-        STEP 2 - WRITE PURPOSE:
-        The &lt;purpose&gt; element should be one sentence answering: "What is the user trying to do?"
-        This isn't a summary of what was said — it's an interpretation of the user's intent.
-
-        Examples:
-        - "User is documenting a whiteboard brainstorm about Q2 product roadmap"
-        - "User is capturing notes from a meeting about the API redesign"
-        - "User is recording observations while testing the new checkout flow"
-
-        Edit the session card to fill in the &lt;purpose&gt; element.
-
-        COMMIT (REQUIRED — do not skip):
-        ```bash
-        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
-        Establish session purposes
-
-        Triggered-By: cb procedure
-        Phase: purpose
-        EOF
-        )"
-        ```
-
-        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
-      </agent>
-    </run>
-  </step>
-
-  <step id="describe-images">
-    <description>Describe and rename all images across capture sessions</description>
-
-    <precheck>
-      <shell pass-output="true">
-        found=0
-        for dir in box/inbox/capture-*/; do
-          [ -d "$dir" ] || continue
-          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
-          purpose=""
-          if [ -f "$session" ]; then
-            purpose=$(sed -n 's/.*&lt;purpose&gt;\(.*\)&lt;\/purpose&gt;.*/\1/p' "$session" 2>/dev/null || true)
-          fi
-          for card in "$dir"*.image.card; do
-            [ -f "$card" ] || continue
-            if grep -q 'status="new"' "$card"; then
-              echo "  Image: $card"
-              found=$((found + 1))
-            fi
-          done
-          if [ -n "$purpose" ] &amp;&amp; [ "$found" -gt 0 ]; then
-            echo "  Session purpose: $purpose"
-          fi
-        done
-        if [ "$found" -eq 0 ]; then
-          exit $CHECK_SKIP
-        fi
-        echo "Found $found image(s) to describe"
-      </shell>
-      <why>No images need description</why>
-    </precheck>
-
-    <run>
-      <agent model="haiku" max-turns="35">
-        You are describing and organizing images from capture sessions.
-
-        YOUR TASK:
-        Process ALL images listed in the precheck output. For each image:
-        1. View the attached image file (same basename, e.g. photo-001.jpg for photo-001.image.card)
-        2. Write a one-sentence &lt;description&gt; — oriented toward telling a future agent what's useful
-        3. If the image contains readable text:
-           - Set has-text="true" on the &lt;image&gt; element
-           - Create &lt;text source="..."&gt; elements with the transcribed content in Markdown
-           - The source attribute describes what the text is on (e.g. "whiteboard", "business card", "screen")
-           - Multiple &lt;text&gt; elements are allowed for different text sources
-        4. If no text: set has-text="false"
-        5. Rename via cb mv to photo-NNN-short-name.image.card (keep the NNN prefix, add a descriptive slug)
-        6. Set status="analyzed" (or "invalid" for accidental/useless captures)
-
-        Use the session purpose (shown above) to inform your descriptions — focus on what's relevant
-        to the user's goal.
-
-        RENAMING:
-        ```
-        cb mv box/inbox/capture-.../photo-000.image.card box/inbox/capture-.../photo-000-whiteboard.image.card
-        ```
-
-        IMPORTANT: Process ALL images before committing. Do not commit after each image.
-
-        COMMIT (REQUIRED — do not skip):
-        ```bash
-        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
-        Describe images: &lt;N&gt; analyzed, &lt;M&gt; invalid
-
-        Triggered-By: cb procedure
-        Phase: describe-images
-        EOF
-        )"
-        ```
-
-        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
-      </agent>
-    </run>
-
-    <validate severity="warn">
-      <shell>
-        remaining=0
-        for dir in box/inbox/capture-*/; do
-          [ -d "$dir" ] || continue
-          for card in "$dir"*.image.card; do
-            [ -f "$card" ] || continue
-            if grep -q 'status="new"' "$card"; then
-              remaining=$((remaining + 1))
-            fi
-          done
-        done
-        echo "Unprocessed images remaining: $remaining"
-        [ "$remaining" -eq 0 ]
-      </shell>
-      <instruction>All image cards should have status="analyzed" or "invalid".</instruction>
-      <why>The timeline assembly step needs all images processed.</why>
-    </validate>
-  </step>
-
   <step id="assemble">
     <description>Assemble structured timeline from timing data and images</description>
 
@@ -326,7 +221,7 @@
   </step>
 
   <step id="rename">
-    <description>Rename session directories to descriptive names</description>
+    <description>Rename session directories to descriptive names and set intake-complete</description>
 
     <precheck>
       <shell pass-output="true">
@@ -335,18 +230,13 @@
           [ -d "$dir" ] || continue
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
-          # Has purpose with text content
-          has_purpose=0
-          if grep -qE '&lt;purpose&gt;.+&lt;/purpose&gt;' "$session"; then
-            has_purpose=1
-          fi
           # Check transcript has children (not empty)
           has_transcript=0
           if grep -q '&lt;text&gt;\|&lt;silence \|&lt;image ' "$session"; then
             has_transcript=1
           fi
           status=$(grep -oE 'status="[^"]*"' "$session" | head -1 | grep -oE '"[^"]*"' | tr -d '"')
-          if [ "$has_purpose" -eq 1 ] &amp;&amp; [ "$has_transcript" -eq 1 ] &amp;&amp; [ "$status" != "intake-complete" ]; then
+          if [ "$has_transcript" -eq 1 ] &amp;&amp; [ "$status" != "intake-complete" ] &amp;&amp; [ "$status" != "extracted" ]; then
             echo "  Ready: $dir"
             echo "  Session: $session"
             found=$((found + 1))
@@ -366,9 +256,10 @@
 
         YOUR TASK:
         For each session listed in the precheck output:
-        1. Read the session card to get the &lt;purpose&gt; and &lt;time start="..."&gt;
-        2. Choose a short descriptive name based on the purpose (2-4 words, underscores for spaces)
-        3. Rename the directory: capture-YYYYMMDDTHHMM-Session_Name/
+        1. Read the session card to get the &lt;transcript&gt; and &lt;time start="..."&gt;
+        2. Read the image cards in the same directory to see their descriptions
+        3. Choose a short descriptive name based on what was captured (2-4 words, underscores for spaces)
+        4. Rename the directory: capture-YYYYMMDDTHHMM-Session_Name/
            The date part comes from the session's start time.
 
         Use cb mv to rename:
@@ -376,7 +267,7 @@
         cb mv box/inbox/capture-20260211T1951-f26ffa35 box/inbox/capture-20260211T1951-Whiteboard_Planning
         ```
 
-        4. Set status="intake-complete" on the session card.
+        5. Set status="intake-complete" on the session card.
 
         COMMIT (REQUIRED — do not skip):
         ```bash
@@ -406,11 +297,6 @@
           [ -f "$session" ] || continue
           if grep -q 'status="intake-complete"' "$session"; then
             echo "  Session: $session"
-            # Show purpose for context
-            purpose=$(sed -n 's/.*&lt;purpose&gt;\(.*\)&lt;\/purpose&gt;.*/\1/p' "$session" 2>/dev/null || true)
-            if [ -n "$purpose" ]; then
-              echo "    Purpose: $purpose"
-            fi
             found=$((found + 1))
           fi
         done
@@ -434,7 +320,7 @@
         For each session listed above:
         1. Read the session card (the .capture-session.card file)
         2. Read the image cards in the same directory to understand what was captured
-        3. Consider the purpose and transcript content
+        3. Consider the transcript content and image descriptions
 
         STEP 2 - DECIDE AND WRITE SPEC:
         For each session, create a file called `extraction-spec.md` in the session directory.
@@ -575,7 +461,7 @@
 
         STEP 3 - CREATE CATALOG DIRECTORY:
         Create an output directory under store/catalogs/ with a descriptive name derived from
-        the session purpose. Use underscores and retain capitals:
+        the session content. Use underscores and retain capitals:
         ```bash
         mkdir -p store/catalogs/Descriptive_Name
         ```

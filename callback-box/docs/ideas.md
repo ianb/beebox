@@ -54,9 +54,21 @@ Agent writes `.callback-box/agent-failure.json` with `{ reason, phase, sessionId
 
 The chat frontend's system prompt should instruct the assistant to use jobs to start tasks rather than executing them synchronously. Also provide it with docs and CLI query tools to check: what's currently running, what's scheduled to run, when something last ran.
 
+### News brief output length
+
+The news brief generation pipeline produces overly long output. The brief should be shorter and more concise — a quick digest, not an exhaustive report. The analyze and brief prompts (`process-news.ts`) are both very large and could use a review for conciseness.
+
+### Automatic transcript handling in schema instructions
+
+Several card type instructions (memo, audio, capture-session) include details about transcription handling (checking for `<transcription>`, skipping untranscribed audio, etc.). This should ideally be handled automatically by the processing pipeline rather than requiring agents to understand transcription state. The schema instructions should focus on describing the card's content and structure, not transcription machinery.
+
 ### Documentation graph — IMPLEMENTED
 
 Implemented as `docs/doc-graph.md` (auto-generated cross-reference report). See CLAUDE.md Doc Map.
+
+### Speech playback timing
+
+Currently TTS speech doesn't play until the full response is complete (or at least a significant chunk). This means the "speak before doing work" pattern in the chat system prompt doesn't actually work as intended — the user hears the speech and sees the results at the same time, not speech-first. Investigate whether streaming partial speech playback is feasible so the user hears "Let me look into that" before tool calls start executing.
 
 ### Voice keyword for photo capture
 

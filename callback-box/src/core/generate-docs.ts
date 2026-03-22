@@ -9,6 +9,8 @@
  */
 
 import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import type { ZodTypeAny } from "zod";
 import { parseXml } from "cardworks";
@@ -19,6 +21,8 @@ import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 import { parsePersonality, compilePersonality, compileSpeakingVoice, type Personality } from "../schemas/personality.js";
 import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefing.js";
 import { generateViewsDoc } from "./views-doc.js";
+
+const execFileAsync = promisify(execFile);
 
 const AGENT_GUIDE_DIR = ".callback-box";
 const AGENT_GUIDE_FILE = "agent-guide.md";
@@ -60,6 +64,22 @@ const CONNECTORS: ConnectorInfo[] = [
 ];
 
 const DOCID_DEBUG_MARKER = ".callback-box/docid-debug";
+
+/**
+ * Get the current git commit hash of the callback-box repo.
+ * Returns null if git is unavailable or this isn't a git repo.
+ */
+async function getCallbackBoxCommit(): Promise<string | null> {
+  try {
+    const cbRoot = new URL("../../", import.meta.url);
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
+      cwd: cbRoot.pathname,
+    });
+    return stdout.trim();
+  } catch {
+    return null;
+  }
+}
 
 export interface GenerateDocsOptions {
   /** Add DOCID markers to each generated file for debugging prompt inclusion.
@@ -227,12 +247,17 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
  * Generate all agent documentation for a box.
  */
 export async function generateDocs(boxRoot: string, options: GenerateDocsOptions = {}): Promise<void> {
-  // Fast path: skip if no input files changed since last generation
+  // Fast path: skip if no input files changed and source code unchanged
   const markerPath = join(boxRoot, GENERATE_MARKER);
   const inputMtime = await newestInputMtime(boxRoot);
+  const currentCommit = await getCallbackBoxCommit();
   try {
     const markerStat = await stat(markerPath);
-    if (inputMtime > 0 && inputMtime <= markerStat.mtimeMs) {
+    const markerContent = await readFile(markerPath, "utf-8");
+    const storedCommit = markerContent.split("\n")[1] || null;
+    const mtimeUnchanged = inputMtime > 0 && inputMtime <= markerStat.mtimeMs;
+    const commitUnchanged = currentCommit !== null && storedCommit === currentCommit;
+    if (mtimeUnchanged && commitUnchanged) {
       return; // Nothing changed — skip regeneration
     }
   } catch {
@@ -286,7 +311,8 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
   await ensureClaudeMdIncludes(boxRoot, briefingPaths);
 
   // Write marker so next call can skip if nothing changed
-  await writeFile(markerPath, new Date().toISOString());
+  const commitLine = currentCommit ? `\n${currentCommit}` : "";
+  await writeFile(markerPath, new Date().toISOString() + commitLine);
 }
 
 /**
@@ -1076,6 +1102,19 @@ function generateCbCommands(): string {
     "Symmetric counterpart to `cb wakeup`. Sends any pending cards in `box/output/`",
     "(e.g. pushover notifications). Called automatically by the reactor after job processing,",
     "or run manually to flush output.",
+    "",
+    "## cb describe-images",
+    "",
+    "Analyze images using Gemini Flash — OCR, descriptions, EXIF extraction, and renaming.",
+    "",
+    "```",
+    "cb describe-images [--no-rename] <paths...>",
+    "```",
+    "",
+    "Pass image files (`.jpg`, `.png`) or image cards (`.image.card`). Multiple images",
+    "are sent as a batch so the model sees them together (better context for related images).",
+    "Extracts EXIF date to update the card's `captured` attribute. Creates image cards for",
+    "raw image files if none exists. Renames cards to descriptive names by default.",
     "",
     "## cb scenario",
     "",

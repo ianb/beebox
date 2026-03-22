@@ -152,19 +152,20 @@ export const QuestionSchema = element("question", {
     QuestionAnsweredAt,
     QuestionAnsweredVia,
   ])),
-  instructions: `# Handling Questions
+  instructions: `# Question Cards
 
-Questions interrupt the user. Every question you create costs the user's attention. Before creating one, ask yourself: can you make a reasonable decision without asking? If so, just decide.
+A question card asks the user something and routes the answer back for processing.
 
-The \`answered-by\` attribute routes the answer back to your agent. Always set it so the system knows where to deliver the response.
+Key elements:
+- \`<memo>\` — context explaining WHY you're asking, so the user can answer without looking anything up
+- \`<prompt>\` — the actual question
+- \`<input type="select|text|confirm">\` — answer format, with \`<option>\` children for select type
+- \`<directive>\` — what to do with the answer. The system creates a follow-up job using this text as instructions. Be specific: name files to edit, actions to take, decisions to apply. Without a directive, the answer goes nowhere.
+- \`<context ref="...">\` — links to related cards
 
-Always include a \`<directive>\` element describing what you'll do with the answer. When the user answers, the system creates a follow-up job using this directive as instructions. Be specific: name the files you'll edit, the action you'll take, or the decision you'll apply. Without a directive, the answer goes nowhere.
+The \`answered-by\` attribute identifies which agent handles the follow-up job when the user answers. Always set it.
 
-Provide enough context in <memo> that the user understands WHY you're asking without needing to look anything up. Include <context ref="..."> to link related cards.
-
-For select questions, make options mutually exclusive and cover the likely answers. For confirm questions, make the prompt unambiguous about what "yes" means.
-
-Don't create questions for things that can wait — batch related questions into one if possible.`,
+For select questions, make options mutually exclusive and cover the likely answers. For confirm questions, make the prompt unambiguous about what "yes" means.`,
 });
 
 export type Question = z.infer<typeof QuestionSchema>;

@@ -18,6 +18,7 @@ import "./triage-feedback.js";
 import "./procedure.js";
 import "./transcribe-captures.js";
 import "./assemble-timeline.js";
+import "./describe-images.js";
 import "./ls.js";
 import "./wakeup.js";
 

@@ -151,6 +151,40 @@ tests:
     correct_contains: ["cb validate"]
     tags: [cli]
 
+  # === Image Analysis ===
+
+  - id: describe-images-command
+    prompt: "I have some new image cards with status='new'. How do I analyze them?"
+    expected_level: knows_about
+    watch_for: "Mentions cb describe-images command — either from the card doc or cb-commands doc"
+    should_read: ["docs/generated/card-image.md"]
+    correct_contains: ["cb describe-images"]
+    tags: [cli, images]
+    notes: >
+      The agent should discover cb describe-images from the image card docs.
+      The failure mode is manually viewing each image and editing the card XML
+      instead of using the command.
+
+  - id: describe-images-batch
+    prompt: "I have 5 image cards from the same capture session. Should I process them one at a time or together?"
+    expected_level: knows_about
+    watch_for: "Recommends batching — passing multiple paths to cb describe-images for better context"
+    should_read: ["docs/generated/card-image.md"]
+    correct_contains: ["batch"]
+    tags: [images]
+    notes: >
+      The image card doc and cb-commands doc both mention that multiple images
+      are sent as a batch for better context. The failure mode is suggesting
+      one-at-a-time processing.
+
+  - id: image-exif-date
+    prompt: "Where does the captured date come from on image cards?"
+    expected_level: knows_about
+    watch_for: "Mentions EXIF data — the captured attribute is updated from the image file's EXIF DateTimeOriginal"
+    should_read: ["docs/generated/card-image.md"]
+    correct_contains: ["EXIF"]
+    tags: [images]
+
   # === Procedures ===
 
   - id: list-procedures

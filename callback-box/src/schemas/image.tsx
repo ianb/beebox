@@ -31,6 +31,16 @@ export const ImageText = element("text", {
   text: z.string().optional(),
 });
 
+export const ImageExif = element("exif", {
+  attrs: {
+    date: z.string().datetime({ offset: true }).optional(),
+    camera: z.string().optional(),
+    gps: z.string().optional(),
+    width: z.string().optional(),
+    height: z.string().optional(),
+  },
+});
+
 /**
  * Image card schema.
  *
@@ -53,23 +63,23 @@ export const ImageSchema = element("image", {
       ImageFilename,
       ImageDescription,
       ImageText,
+      ImageExif,
     ])
   ),
-  instructions: `# Handling Images
+  instructions: `# Image Cards
 
-Images are photos from capture sessions. Each image card has an attached image file (same basename, e.g. photo-001.jpg alongside photo-001.image.card).
+An image card represents a photo, typically from a capture session. The attached image file shares the card's basename (e.g. \`photo-001.jpg\` alongside \`photo-001.image.card\`).
 
-- **status="new"**: Just pulled from capture, not yet analyzed.
-- **status="analyzed"**: Description has been filled in after viewing the image.
-- **status="invalid"**: The image is a mistake — accidental capture, too blurry to be useful, or otherwise not meaningful content. Set this status and leave description empty or with a brief note about why it's invalid.
+Elements:
+- \`<filename>\` — the attached image file. The \`captured\` attribute is updated from EXIF data when available.
+- \`<description>\` — one-sentence summary of what's in the image (filled during analysis)
+- \`<text source="...">\` — transcribed text content from the image, if any (source describes what the text is on: "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements allowed for different sources.
+- \`<exif>\` — EXIF metadata extracted from the image file (date, camera, GPS, dimensions)
+- \`has-text\` attribute — "true" if the image contains readable text, "false" otherwise
 
-When analyzing:
-1. View the attached image file.
-2. Write a one-sentence \`<description>\` oriented toward telling a future agent what's useful in this image.
-3. If the image contains readable text, set \`has-text="true"\` and create one or more \`<text source="...">\` elements with the transcribed content in Markdown. The source attribute describes what the text is on (e.g. "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements are allowed for different text sources in the same image.
-4. If there's no text, set \`has-text="false"\`.
-5. Rename the card via \`cb mv\` to \`photo-NNN-short-name.image.card\` where the short name helps identify the content.
-6. Set status to "analyzed" (or "invalid" if it's not useful).`,
+Analysis is done by \`cb describe-images\`, which sends images to Gemini Flash for OCR, description, and document bounding boxes, and extracts EXIF metadata. Pass multiple image cards or image files to process them as a batch (provides better context when images are related). Use \`--no-rename\` to skip automatic renaming.
+
+Status: new (unanalyzed) → analyzed (description filled in) → invalid (accidental capture, too blurry, not useful).`,
 });
 
 export type Image = z.infer<typeof ImageSchema>;

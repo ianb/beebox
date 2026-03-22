@@ -110,15 +110,15 @@ export const MemoSchema = element("memo", {
       MemoTranscriptionError,
     ])
   ),
-  instructions: `# Handling Memos
+  instructions: `# Memo Cards
 
-Voice memos require transcription before they can be processed. Check for a <transcription> child element — if absent and <source> is "voice", the memo isn't ready yet. Skip it and move on.
+A memo is a text or voice note. It has a \`<content>\` element with the text, a \`<source>\` indicating origin ("text", "voice", "email", etc.), and optional \`<context ref="...">\` links to related cards.
 
-If a <transcription-error permanent="true"> exists, the audio cannot be transcribed. Don't retry — treat the memo as unprocessable and skip it.
+Voice memos have an attached audio file and a \`<transcription>\` child with the transcribed text. The \`<content>\` may be empty for voice memos — the transcription is the content. If \`<source>\` is "voice" and there's no \`<transcription>\`, the memo hasn't been transcribed yet.
 
-The <content> element may be empty for voice memos. That's expected — the transcription IS the content for voice memos.
+A \`<transcription-error permanent="true">\` means the audio cannot be transcribed — don't retry.
 
-Status transitions: new → processing → processed. Set status to "processing" before you start working on it, "processed" when done.`,
+Status: new → processing → processed.`,
 });
 
 export type Memo = z.infer<typeof MemoSchema>;

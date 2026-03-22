@@ -85,7 +85,6 @@ export const SessionTranscript = element("transcript", {
  * <audio-clips>
  * <audio-ref ref="audio-001.audio.card" />
  * </audio-clips>
- * <purpose>User is planning the Q2 project timeline and capturing whiteboard notes</purpose>
  * <transcript>
  * <text>So let me walk through the timeline we've got here...</text>
  * <image ref="photo-001-whiteboard.image.card" description="Whiteboard with Q2 milestones" filename="photo-001-whiteboard.jpg" />
@@ -118,7 +117,7 @@ A capture session groups images and audio clips from a single recording session 
 Elements:
 - \`<images>\` — contains \`<image ref="...">\` references to child image cards
 - \`<audio-clips>\` — contains \`<audio ref="...">\` references to child audio cards
-- \`<purpose>\` — one-sentence statement of what the user was doing, synthesized from audio
+- \`<purpose>\` — optional one-sentence statement of what the user was doing (legacy, no longer generated)
 - \`<transcript>\` — structured timeline combining speech and photos:
   - \`<text>\` — transcribed speech segments
   - \`<silence duration="Ns" />\` — gaps of 10+ seconds
@@ -126,7 +125,7 @@ Elements:
 
 The \`session-id\` attribute links back to the capture API.
 
-Status: new → transcribing → transcribed (audio done, ready for processing) → intake-complete (purpose established, images described) → extracted (records pulled into a catalog directory).`,
+Status: new → transcribing → transcribed (audio done, ready for processing) → intake-complete (images described, timeline assembled) → extracted (records pulled into a catalog directory).`,
 });
 
 export type CaptureSession = z.infer<typeof CaptureSessionSchema>;
@@ -175,7 +174,6 @@ export function createCaptureSessionTemplate(options: {
           <audio-ref ref={ref} />
         ))}
       </audio-clips>
-      <purpose></purpose>
       <transcript></transcript>
     </capture-session>
   );

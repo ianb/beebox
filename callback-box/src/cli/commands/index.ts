@@ -35,6 +35,7 @@ export { finalizeCommand } from "./finalize.js";
 export { promptCommand } from "./prompt.js";
 export { sessionCommand } from "./session.js";
 export { schedulerCommand } from "./scheduler.js";
+export { describeImagesCommand } from "./describe-images.js";
 export { lsCommand } from "./ls.js";
 export { renderCommand } from "./render.js";
 export { formatCommand } from "./format.js";

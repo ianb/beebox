@@ -68,14 +68,18 @@ export const AudioSchema = element("audio", {
       AudioTranscriptionError,
     ])
   ),
-  instructions: `# Handling Audio Clips
+  instructions: `# Audio Cards
 
-Audio clips are chunks from continuous recording in capture sessions. Each audio card has an attached audio file (same basename, e.g. audio-001.webm alongside audio-001.audio.card).
+An audio card represents a chunk of recorded speech from a capture session. The attached audio file shares the card's basename (e.g. \`audio-001.webm\` alongside \`audio-001.audio.card\`).
 
-- **status="new"**: Just pulled from capture, needs transcription. Will NOT have <transcript> or <summary> elements yet — these are added during transcription.
-- **status="transcribed"**: Has been transcribed. Will have <transcript> and <summary> elements.
+Elements:
+- \`<filename>\` — the attached audio file
+- \`<transcript>\` — full text transcription (added during transcription, absent when new)
+- \`<summary>\` — brief summary of what was said (added during transcription)
 
-If you see status="new" with no <transcript> element, the audio has NOT been transcribed yet. Do not treat it as empty — it needs to be transcribed first.`,
+Status: new (not yet transcribed, no \`<transcript>\` or \`<summary>\`) → transcribed (transcription complete).
+
+If status is "new" with no \`<transcript>\`, the audio hasn't been transcribed yet — don't treat it as empty content.`,
 });
 
 export type Audio = z.infer<typeof AudioSchema>;
