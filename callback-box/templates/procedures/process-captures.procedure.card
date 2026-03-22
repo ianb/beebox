@@ -1,7 +1,7 @@
 <procedure name="process-captures">
   <description>
     Process capture sessions through intake: transcribe audio, establish purpose,
-    describe images, assemble timeline, rename, and extract records.
+    describe images, assemble timeline, rename, extract records, and archive.
   </description>
 
   <step id="transcribe">
@@ -641,5 +641,86 @@
       <instruction>Extracted sessions must have status="extracted" and record cards in store/catalogs/.</instruction>
       <why>Extraction must produce actual record cards to be useful.</why>
     </validate>
+  </step>
+
+  <step id="archive">
+    <description>Archive fully-processed capture sessions out of inbox</description>
+
+    <precheck>
+      <shell>
+        found=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
+          [ -f "$session" ] || continue
+          status=$(grep -oE 'status="[^"]*"' "$session" | head -1 | grep -oE '"[^"]*"' | tr -d '"')
+          if [ "$status" = "extracted" ]; then
+            found=$((found + 1))
+          fi
+          # Also archive sessions whose extraction-spec says skip
+          spec="${dir}extraction-spec.md"
+          if [ -f "$spec" ] &amp;&amp; grep -q '^skip: true' "$spec" &amp;&amp; [ "$status" = "intake-complete" ]; then
+            found=$((found + 1))
+          fi
+        done
+        if [ "$found" -eq 0 ]; then
+          exit $CHECK_SKIP
+        fi
+        echo "Found $found session(s) to archive"
+      </shell>
+      <why>No sessions ready for archiving</why>
+    </precheck>
+
+    <run>
+      <shell>
+        mkdir -p store/archive/captures
+        moved=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
+          [ -f "$session" ] || continue
+          status=$(grep -oE 'status="[^"]*"' "$session" | head -1 | grep -oE '"[^"]*"' | tr -d '"')
+          archive=0
+          if [ "$status" = "extracted" ]; then
+            archive=1
+          fi
+          spec="${dir}extraction-spec.md"
+          if [ -f "$spec" ] &amp;&amp; grep -q '^skip: true' "$spec" &amp;&amp; [ "$status" = "intake-complete" ]; then
+            archive=1
+          fi
+          if [ "$archive" -eq 1 ]; then
+            dirname=$(basename "$dir")
+            cb mv "$dir" "store/archive/captures/$dirname"
+            moved=$((moved + 1))
+          fi
+        done
+        echo "Archived $moved capture session(s)"
+        git add -A &amp;&amp; git commit -m "Archive $moved processed capture session(s)
+
+Triggered-By: cb procedure
+Phase: archive"
+
+        # Check if there are still unprocessed captures — re-trigger if so
+        remaining=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          remaining=$((remaining + 1))
+        done
+        if [ "$remaining" -gt 0 ]; then
+          echo "Still $remaining capture session(s) in inbox — re-creating trigger"
+          trigger="config/schedules/process-captures.scheduled-script.card"
+          if [ ! -f "$trigger" ]; then
+            cb create "$trigger" --type scheduled-script -- \
+              runs="cb procedure run process-captures" \
+              description="Process remaining capture sessions (auto re-triggered)" \
+              on-wakeup=true once=true lock-group=captures
+            git add -A &amp;&amp; git commit -m "Re-trigger process-captures for remaining sessions
+
+Triggered-By: cb procedure
+Phase: archive"
+          fi
+        fi
+      </shell>
+    </run>
   </step>
 </procedure>
