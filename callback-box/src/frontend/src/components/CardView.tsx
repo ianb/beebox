@@ -58,6 +58,24 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
     return <div className="p-4 text-warm-600">Card not found</div>;
   }
 
+  // Validation error — show error banner, then tree view if parseable or raw text if not
+  if (card.validationError) {
+    return (
+      <div className="p-4" {...cbSource("card", path)}>
+        <h2 className="text-lg font-bold text-warm-900 mb-2">{card.path}</h2>
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+          <div className="text-sm font-medium text-red-800 mb-1">Validation Error</div>
+          <pre className="text-xs text-red-700 whitespace-pre-wrap break-words">{card.validationError}</pre>
+        </div>
+        {card.element ? (
+          <CardTreeView element={card.element} />
+        ) : (
+          <pre className="text-sm font-mono whitespace-pre-wrap bg-warm-100 rounded p-4 overflow-auto">{card.xml}</pre>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="p-4" {...cbSource("card", path)}>
       {/* Header */}

@@ -1,9 +1,10 @@
 import { z } from "zod";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { createLoader } from "../../../cli/lib/loader.js";
-import type { ElementNode } from "cardworks";
+import { parseXml, type ElementNode } from "cardworks";
 
 /**
  * JSON-safe element node for the frontend.
@@ -102,14 +103,49 @@ export const cardRouter = router({
           version: card.version,
           xml,
           element,
+          validationError: undefined as string | undefined,
         };
       } catch (error) {
         const msg = (error as Error).message;
         const isNotFound = msg.includes("ENOENT") || msg.includes("no such file");
-        throw new TRPCError({
-          code: isNotFound ? "NOT_FOUND" : "BAD_REQUEST",
-          message: isNotFound ? `Card not found: ${input.path}` : `Card validation failed: ${input.path}`,
-        });
+        if (isNotFound) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Card not found: ${input.path}`,
+          });
+        }
+
+        // Validation failed — parse XML without validation so we can still show the tree
+        let rawXml: string;
+        try {
+          rawXml = await fs.readFile(fullPath, "utf-8");
+        } catch {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Card validation failed: ${msg}`,
+          });
+        }
+
+        // Try to parse the raw XML into a tree (no schema validation)
+        let element: JsonElement | undefined;
+        let tagName: string | undefined;
+        try {
+          const parsed = await parseXml(rawXml, input.path);
+          element = sanitizeElement(parsed);
+          tagName = parsed.tagName;
+        } catch {
+          // XML itself is malformed — fall back to raw text only
+        }
+
+        return {
+          path: input.path,
+          tagName,
+          status: undefined as string | undefined,
+          version: undefined as string | undefined,
+          xml: rawXml,
+          element,
+          validationError: msg,
+        };
       }
     }),
 
