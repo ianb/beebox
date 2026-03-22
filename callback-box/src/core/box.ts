@@ -66,7 +66,7 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
     await fs.mkdir(path.join(resolvedRoot, "config"), { recursive: true });
     await fs.writeFile(
       transcriptionConfigPath,
-      JSON.stringify({ service: "whisper" }, null, 2) + "\n"
+      JSON.stringify({ service: "voxtral" }, null, 2) + "\n"
     );
   }
 

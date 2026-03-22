@@ -52,13 +52,13 @@ interface TranscriptionConfig {
 }
 
 async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
-  if (!boxRoot) return { service: "whisper" };
+  if (!boxRoot) return { service: "voxtral" };
   try {
     const configPath = path.join(boxRoot, "config/transcription.json");
     const content = await fs.readFile(configPath, "utf-8");
     return JSON.parse(content) as TranscriptionConfig;
   } catch {
-    return { service: "whisper" };
+    return { service: "voxtral" };
   }
 }
 
