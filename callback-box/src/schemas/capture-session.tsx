@@ -25,7 +25,7 @@ export const SessionTime = element("time", {
 
 export const SessionImageRef = element("image-ref", {
   attrs: {
-    file: z.string(),
+    ref: z.string(),
   },
 });
 
@@ -35,7 +35,7 @@ export const SessionImages = element("images", {
 
 export const SessionAudioRef = element("audio-ref", {
   attrs: {
-    file: z.string(),
+    ref: z.string(),
   },
 });
 
@@ -79,11 +79,11 @@ export const SessionTranscript = element("transcript", {
  * <capture-session status="intake-complete" session-id="abc123">
  * <time start="2024-01-15T10:00:00Z" end="2024-01-15T10:15:00Z" duration="15m0s" />
  * <images>
- * <image-ref file="photo-001-whiteboard.image.card" />
- * <image-ref file="photo-002-diagram.image.card" />
+ * <image-ref ref="photo-001-whiteboard.image.card" />
+ * <image-ref ref="photo-002-diagram.image.card" />
  * </images>
  * <audio-clips>
- * <audio-ref file="audio-001.audio.card" />
+ * <audio-ref ref="audio-001.audio.card" />
  * </audio-clips>
  * <purpose>User is planning the Q2 project timeline and capturing whiteboard notes</purpose>
  * <transcript>
@@ -111,27 +111,22 @@ export const CaptureSessionSchema = element("capture-session", {
       SessionTranscript,
     ])
   ),
-  instructions: `# Handling Capture Sessions
+  instructions: `# Capture Session Cards
 
-A capture session groups images and audio from a single recording session. All child cards (image and audio) live in the same directory.
+A capture session groups images and audio clips from a single recording session (e.g., a voice walkthrough with photos). All child cards live in the same directory.
 
-- **status="new"**: Just pulled, nothing processed yet.
-- **status="transcribing"**: Audio transcription is in progress.
-- **status="transcribed"**: All audio transcribed, ready for further processing.
-- **status="intake-complete"**: Fully processed — purpose established, images described, timeline assembled.
-- **status="extracted"**: Records have been extracted from this session into a catalog directory.
+Elements:
+- \`<images>\` — contains \`<image ref="...">\` references to child image cards
+- \`<audio-clips>\` — contains \`<audio ref="...">\` references to child audio cards
+- \`<purpose>\` — one-sentence statement of what the user was doing, synthesized from audio
+- \`<transcript>\` — structured timeline combining speech and photos:
+  - \`<text>\` — transcribed speech segments
+  - \`<silence duration="Ns" />\` — gaps of 10+ seconds
+  - \`<image ref="..." description="..." filename="..." />\` — where a photo was taken in the timeline
 
-The <images> and <audio-clips> containers hold references (relative file paths) to the child cards in this directory.
+The \`session-id\` attribute links back to the capture API.
 
-## Elements
-
-- **<purpose>**: One-sentence statement of what the user is trying to do in this session. Written by synthesizing audio summaries.
-- **<transcript>**: Structured timeline with children:
-  - \`<text>\`: Transcribed speech segments (no timestamps in text).
-  - \`<silence duration="Ns" />\`: Gaps of 10+ seconds between speech.
-  - \`<image ref="..." description="..." filename="..." />\`: Where a photo was taken in the timeline.
-
-The session-id attribute links back to the capture API for reference.`,
+Status: new → transcribing → transcribed (audio done, ready for processing) → intake-complete (purpose established, images described) → extracted (records pulled into a catalog directory).`,
 });
 
 export type CaptureSession = z.infer<typeof CaptureSessionSchema>;
@@ -172,12 +167,12 @@ export function createCaptureSessionTemplate(options: {
       <time start={options.startedAt} end={options.endedAt || undefined} duration={duration} />
       <images>
         {options.imageRefs.map((ref) => (
-          <image-ref file={ref} />
+          <image-ref ref={ref} />
         ))}
       </images>
       <audio-clips>
         {options.audioRefs.map((ref) => (
-          <audio-ref file={ref} />
+          <audio-ref ref={ref} />
         ))}
       </audio-clips>
       <purpose></purpose>
