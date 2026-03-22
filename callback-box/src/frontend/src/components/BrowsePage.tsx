@@ -81,10 +81,10 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
               {/* Directories */}
               {data.dirs.map((dir) => (
                 <button
-                  key={dir}
-                  {...cbSource("dir", dirPath ? `${dirPath}/${dir}` : dir)}
+                  key={dir.name}
+                  {...cbSource("dir", dirPath ? `${dirPath}/${dir.name}` : dir.name)}
                   onClick={() =>
-                    onNavigate(dirPath ? `${dirPath}/${dir}` : dir)
+                    onNavigate(dirPath ? `${dirPath}/${dir.name}` : dir.name)
                   }
                   className="w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200"
                 >
@@ -93,7 +93,10 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                       <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                     </svg>
                   </span>
-                  <span className="text-warm-900 font-medium text-sm">{dir}/</span>
+                  <span className="text-warm-900 font-medium text-sm flex-1">{dir.name}/</span>
+                  {dir.fileCount > 0 ? (
+                    <span className="text-xs text-warm-400">{dir.fileCount}</span>
+                  ) : null}
                 </button>
               ))}
 

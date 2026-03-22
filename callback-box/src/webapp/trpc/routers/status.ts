@@ -7,6 +7,19 @@ import { createLoader } from "../../../cli/lib/loader.js";
 import { parseCardName } from "../../../cli/lib/paths.js";
 import { getLog } from "../../../cli/lib/git.js";
 
+export interface BrowseDir {
+  name: string;
+  fileCount: number;
+}
+
+export interface BrowseCard {
+  relativePath: string;
+  name: string;
+  type: string;
+  tagName: string;
+  status?: string | undefined;
+}
+
 /**
  * Count news items in a directory.
  */
@@ -82,24 +95,32 @@ export const statusRouter = router({
       // Security: ensure we stay within boxRoot
       const resolved = path.resolve(targetDir);
       if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
-        return { path: input.path, dirs: [] as string[], cards: [] as Array<{ relativePath: string; name: string; type: string; tagName: string; status?: string | undefined }> };
+        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[] };
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
       try {
         entries = await fs.readdir(resolved, { withFileTypes: true });
       } catch {
-        return { path: input.path, dirs: [] as string[], cards: [] as Array<{ relativePath: string; name: string; type: string; tagName: string; status?: string | undefined }> };
+        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[] };
       }
 
-      const dirs: string[] = [];
-      const cards: Array<{ relativePath: string; name: string; type: string; tagName: string; status?: string | undefined }> = [];
+      const dirs: BrowseDir[] = [];
+      const cards: BrowseCard[] = [];
       const loader = await createLoader(ctx.boxRoot);
 
       for (const entry of entries) {
         if (entry.name.startsWith(".")) continue;
         if (entry.isDirectory()) {
-          dirs.push(entry.name);
+          const dirFullPath = path.join(resolved, entry.name);
+          let fileCount = 0;
+          try {
+            const subEntries = await fs.readdir(dirFullPath, { recursive: true });
+            fileCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
+          } catch {
+            // Can't read directory
+          }
+          dirs.push({ name: entry.name, fileCount });
           continue;
         }
         if (!entry.name.endsWith(".card")) continue;
@@ -123,7 +144,7 @@ export const statusRouter = router({
         }
       }
 
-      dirs.sort();
+      dirs.sort((a, b) => a.name.localeCompare(b.name));
       cards.sort((a, b) => a.name.localeCompare(b.name));
       return { path: input.path, dirs, cards };
     }),
