@@ -2,13 +2,13 @@
   "analyses": [
     {
       "index": 0,
-      "description": "A hand holds a small bottle of Johnson's Baby Oil, displaying the front label.",
-      "title": "Johnson_Baby_Oil_Front",
+      "description": "A person is holding a small bottle of Johnson's Baby Oil, showing the front label with product information.",
+      "title": "Johnson_Baby_Oil",
       "has_text": true,
       "text_blocks": [
         {
-          "source": "Bottle Label",
-          "text": "CLINICALLY MILDNESS PROVEN® Johnson's baby oil aceite para bebés locks in up to 10X more moisture* no parabens, phthalates or dyes Johnson & Johnson 3 FL OZ (89 mL) 30039123"
+          "source": "Baby oil bottle label",
+          "text": "CLINICALLY MILDNESS PROVEN Johnson's baby oil aceite para bebés locks in up to 10X more moisture* no parabens, phthalates or dyes Johnson&Johnson 3 FL OZ (89 mL) 30039123"
         }
       ],
       "invalid": false,
@@ -16,13 +16,13 @@
     },
     {
       "index": 1,
-      "description": "A hand holds a small bottle of Johnson's Baby Oil, displaying the back label with a barcode and product information.",
+      "description": "A person is holding a small bottle of Johnson's Baby Oil, showing the back label with a barcode and usage warnings.",
       "title": "Johnson_Baby_Oil_Back",
       "has_text": true,
       "text_blocks": [
         {
-          "source": "Bottle Label",
-          "text": "To Use: For external use only. If rash occurs, discontinue use. Keep out of children's reach to avoid drinking and accidental inhalation which can cause serious injury or death. Consult doctor if breathing problems occur. Johnson & Johnson Consumer Inc. Skillman, NJ 08558, U.S.A. Questions? 866-JNJ-BABY or www.johnsonsbaby.com Distributed in Canada by: Johnson & Johnson Inc. Markham, Ontario L3R 5L2 © J&JCI 2019 Made in U.S.A. with U.S. and imported ingredients Batch Code: 11612022 Use by: 04/2025 8137-004170 2 Johnson & Johnson"
+          "source": "Baby oil bottle label",
+          "text": "Johnson's baby oil For external use only. If rash or irritation develops, discontinue use and consult doctor. Keep out of reach of children to avoid accidental drinking and inhalation which can cause serious injury. If breathing problems occur, consult a doctor immediately. Do not use if quality seal is broken. Made in Canada Dist. by Johnson & Johnson Consumer Inc. Skillman, NJ 08558-9418 USA © J&JCI 2021 30039123 3 FL OZ (89 mL) 3 8137-004170 2"
         }
       ],
       "invalid": false,
@@ -30,12 +30,12 @@
     },
     {
       "index": 2,
-      "description": "A green and white braided charging cable with a white wall adapter is laid on a wooden table.",
+      "description": "A green camouflage-patterned charging cable is coiled next to a white Samsung wall adapter on a wooden table.",
       "title": "Charging_Cable_Adapter",
       "has_text": true,
       "text_blocks": [
         {
-          "source": "Wall Adapter",
+          "source": "Wall adapter",
           "text": "SAMSUNG"
         }
       ],
@@ -45,7 +45,7 @@
   ],
   "usage": {
     "prompt": 1016,
-    "output": 567,
-    "thinking": 717
+    "output": 535,
+    "thinking": 895
   }
 }

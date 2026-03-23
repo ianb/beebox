@@ -1,82 +1,67 @@
 {
-  "text": "Uh, here's some baby oil, and then also on the coffee table is the stretcher.",
-  "duration": 15.859999656677246,
-  "language": "english",
+  "text": "Here's some baby oil. And then also on the coffee table is...",
+  "duration": 15,
+  "language": "unknown",
   "words": [
     {
-      "word": "Uh",
-      "start": 1.2599999904632568,
-      "end": 2.200000047683716
-    },
-    {
-      "word": "here's",
-      "start": 2.3399999141693115,
-      "end": 2.619999885559082
+      "word": "Here's",
+      "start": 2.3,
+      "end": 2.6
     },
     {
       "word": "some",
-      "start": 2.619999885559082,
-      "end": 3.0199999809265137
+      "start": 2.6,
+      "end": 2.8
     },
     {
       "word": "baby",
-      "start": 3.0199999809265137,
-      "end": 3.200000047683716
+      "start": 2.9,
+      "end": 3.2
     },
     {
-      "word": "oil",
-      "start": 3.200000047683716,
-      "end": 3.7799999713897705
+      "word": "oil.",
+      "start": 3.2,
+      "end": 3.7
     },
     {
-      "word": "and",
-      "start": 3.819999933242798,
-      "end": 7.119999885559082
+      "word": "And",
+      "start": 6.9,
+      "end": 7
     },
     {
       "word": "then",
-      "start": 7.119999885559082,
-      "end": 7.300000190734863
+      "start": 7,
+      "end": 7.2
     },
     {
       "word": "also",
-      "start": 7.300000190734863,
-      "end": 7.699999809265137
+      "start": 7.3,
+      "end": 7.7
     },
     {
       "word": "on",
-      "start": 7.699999809265137,
-      "end": 8.140000343322754
+      "start": 7.8,
+      "end": 8
     },
     {
       "word": "the",
-      "start": 8.140000343322754,
-      "end": 8.880000114440918
+      "start": 8.1,
+      "end": 8.5
     },
     {
       "word": "coffee",
-      "start": 8.880000114440918,
-      "end": 9.779999732971191
+      "start": 9.4,
+      "end": 9.7
     },
     {
       "word": "table",
-      "start": 9.779999732971191,
-      "end": 10.180000305175781
+      "start": 9.8,
+      "end": 10.2
     },
     {
-      "word": "is",
-      "start": 10.180000305175781,
-      "end": 11.819999694824219
-    },
-    {
-      "word": "the",
-      "start": 11.819999694824219,
-      "end": 13.359999656677246
-    },
-    {
-      "word": "stretcher",
-      "start": 13.359999656677246,
-      "end": 13.859999656677246
+      "word": "is...",
+      "start": 10.3,
+      "end": 11
     }
   ]
 }

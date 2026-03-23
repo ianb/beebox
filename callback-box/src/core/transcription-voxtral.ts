@@ -66,7 +66,7 @@ export async function transcribeAudioVoxtral(
     formParts.push(
       Buffer.from(
         `--${boundary}\r\n` +
-          'Content-Disposition: form-data; name="timestamp_granularities[]"\r\n\r\n' +
+          'Content-Disposition: form-data; name="timestamp_granularities"\r\n\r\n' +
           "word\r\n"
       )
     );
@@ -102,37 +102,40 @@ export async function transcribeAudioVoxtral(
       .json<{
         text: string;
         duration?: number;
-        language?: string;
+        language?: string | null;
         segments?: Array<{
+          type?: string;
           text: string;
           start: number;
           end: number;
-          speaker?: string;
+          speaker_id?: string | null;
         }>;
-        words?: Array<{ word: string; start: number; end: number }>;
-        usage?: { total_seconds: number };
+        usage?: { prompt_audio_seconds?: number; total_seconds?: number };
       }>();
 
-    // Voxtral may return duration via usage.total_seconds or segments
+    // Voxtral returns duration via usage.prompt_audio_seconds or segments
     const lastSegment = result.segments?.[result.segments.length - 1];
     const duration =
       result.duration ??
+      result.usage?.prompt_audio_seconds ??
       result.usage?.total_seconds ??
       lastSegment?.end ??
       0;
 
     const language = result.language ?? "unknown";
 
-    if (options?.wordTimestamps && result.words) {
+    // With timestamp_granularities=["word"], each segment is a single word
+    if (options?.wordTimestamps && result.segments && result.segments.length > 0) {
+      const words = result.segments.map((s) => ({
+        word: s.text.trim(),
+        start: s.start,
+        end: s.end,
+      }));
       return {
         text: result.text,
         duration,
         language,
-        words: result.words.map((w) => ({
-          word: w.word,
-          start: w.start,
-          end: w.end,
-        })),
+        words,
       } as DetailedTranscriptionResult;
     }
 

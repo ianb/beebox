@@ -50,14 +50,10 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   const audioCardPath = join(captureDir, "audio-001.audio.card");
   const audioFilePath = join(captureDir, "audio-001.webm");
 
-  // Use whisper for recording — it reliably returns word timestamps
-  // (Voxtral doesn't always return them)
-  await box.write("config/transcription.json", JSON.stringify({ service: "whisper" }));
-
   const transcriptionResult = await replay.recordOrReplay(
     "transcription-audio-001",
     async () => {
-      t.comment("Recording: calling transcription API (whisper)...");
+      t.comment("Recording: calling transcription API...");
       const audioBuffer = await readFile(audioFilePath);
       return (await transcribeAudio({
         audioBuffer,
@@ -213,18 +209,12 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
 
   // ── Step 3: Assemble Timeline ──
 
-  // Commands assume CWD = boxRoot (as the CLI sets it)
-  const savedCwd = process.cwd();
-  process.chdir(box.root);
-
   const { ctx, getOutput } = createCollectorContext(box.root);
   const assembleResult = await runCommand({
     name: "assemble-timeline",
     args: {},
     ctx,
   });
-
-  process.chdir(savedCwd);
 
   t.comment(getOutput());
   if (assembleResult.error) t.comment(`Error: ${assembleResult.error}`);

@@ -58,10 +58,10 @@ registerCommand({
       const audioCards = files.filter((f) => f.endsWith(".audio.card"));
 
       for (const cardFile of audioCards) {
-        const cardRelPath = path.join("box/inbox", dir, cardFile);
+        const cardPath = path.join(inboxDir, dir, cardFile);
 
         // Load the card
-        const card = await loader.load(cardRelPath);
+        const card = await loader.load(cardPath);
         const element = card.element;
 
         // Skip if not status="new"

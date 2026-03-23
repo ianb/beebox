@@ -70,8 +70,8 @@ registerCommand({
       const sessionFile = files.find((f) => f.endsWith(".capture-session.card"));
       if (!sessionFile) continue;
 
-      const sessionRelPath = path.join("box/inbox", dir, sessionFile);
-      const sessionCard = await loader.load(sessionRelPath);
+      const sessionPath = path.join(dirPath, sessionFile);
+      const sessionCard = await loader.load(sessionPath);
       const sessionEl = sessionCard.element;
 
       // Check if already assembled (has structured transcript children)
@@ -90,7 +90,7 @@ registerCommand({
       const audioCards = files.filter((f) => f.endsWith(".audio.card"));
       let allAudioReady = true;
       for (const ac of audioCards) {
-        const acCard = await loader.load(path.join("box/inbox", dir, ac));
+        const acCard = await loader.load(path.join(dirPath, ac));
         if (acCard.element.attrs["status"] !== "transcribed") {
           allAudioReady = false;
           break;
@@ -105,7 +105,7 @@ registerCommand({
       const imageCards = files.filter((f) => f.endsWith(".image.card"));
       let allImagesReady = true;
       for (const ic of imageCards) {
-        const icCard = await loader.load(path.join("box/inbox", dir, ic));
+        const icCard = await loader.load(path.join(dirPath, ic));
         const status = icCard.element.attrs["status"] as string;
         if (status !== "analyzed" && status !== "invalid") {
           allImagesReady = false;
@@ -123,7 +123,7 @@ registerCommand({
       const allWords: TimedWord[] = [];
 
       for (const ac of audioCards) {
-        const acCard = await loader.load(path.join("box/inbox", dir, ac));
+        const acCard = await loader.load(path.join(dirPath, ac));
         const acChildren = acCard.element.children as ElementNode[];
         const filenameEl = acChildren.find((c) => c.tagName === "filename");
         if (!filenameEl) continue;
@@ -156,7 +156,7 @@ registerCommand({
       const allImages: TimedImage[] = [];
 
       for (const ic of imageCards) {
-        const icCard = await loader.load(path.join("box/inbox", dir, ic));
+        const icCard = await loader.load(path.join(dirPath, ic));
         const icEl = icCard.element;
         if (icEl.attrs["status"] === "invalid") continue;
 
