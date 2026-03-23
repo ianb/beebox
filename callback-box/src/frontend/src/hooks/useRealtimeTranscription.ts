@@ -56,6 +56,51 @@ export function useRealtimeTranscription(
 
   const { transcript, error } = snapshot.context;
 
+  // Screen Wake Lock: keep device awake while recording
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const isActive = state !== "idle";
+
+  useEffect(() => {
+    if (!isActive) {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+      return;
+    }
+    let cancelled = false;
+    navigator.wakeLock?.request("screen").then((sentinel) => {
+      if (cancelled) {
+        sentinel.release().catch(() => {});
+      } else {
+        wakeLockRef.current = sentinel;
+      }
+    }).catch((err) => {
+      console.warn("[realtime-transcription] Wake lock failed:", err);
+    });
+    return () => {
+      cancelled = true;
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+  }, [isActive]);
+
+  // Re-acquire wake lock when tab regains focus (browser releases it on hide)
+  useEffect(() => {
+    if (!isActive) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && wakeLockRef.current && wakeLockRef.current.released) {
+        navigator.wakeLock?.request("screen").then((sentinel) => {
+          wakeLockRef.current = sentinel;
+        }).catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isActive]);
+
   // Keyword detection: run when transcript changes
   useEffect(() => {
     if (transcript === prevTranscriptRef.current) return;
