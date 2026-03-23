@@ -31,6 +31,7 @@ export interface UseRealtimeTranscriptionResult {
   /** Stop recording and wait for final transcript. Returns the final text. */
   stop: () => Promise<string>;
   cancel: () => void;
+  dismissError: () => void;
 }
 
 export function useRealtimeTranscription(
@@ -111,5 +112,9 @@ export function useRealtimeTranscription(
     send({ type: "CANCEL" });
   }, [send]);
 
-  return { state, transcript, error, start, stop, cancel };
+  const dismissError = useCallback(() => {
+    send({ type: "DISMISS_ERROR" });
+  }, [send]);
+
+  return { state, transcript, error, start, stop, cancel, dismissError };
 }

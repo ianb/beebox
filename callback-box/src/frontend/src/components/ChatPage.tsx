@@ -232,7 +232,7 @@ function ChatInputArea({
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
-  transcription: { transcript: string; start: () => void; stop: () => Promise<string> };
+  transcription: { transcript: string; start: () => void; stop: () => Promise<string>; cancel: () => void };
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
@@ -312,8 +312,8 @@ function ChatInputArea({
                 onClick={() => {
                   turnTakingRef.current = false;
                   const text = transcription.transcript;
+                  transcription.cancel();
                   if (text) setInput((existing) => (existing ? existing + " " + text : text));
-                  transcription.stop();
                 }}
                 className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
                 title="Edit before sending"
@@ -323,9 +323,9 @@ function ChatInputArea({
                 </svg>
               </button>
               <button
-                onClick={async () => {
-                  const finalText = await transcription.stop();
-                  const text = finalText.trim();
+                onClick={() => {
+                  const text = transcription.transcript.trim();
+                  transcription.cancel();
                   if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
                 }}
                 className={`${circleBtn} bg-gold text-white hover:bg-gold-dark`}
@@ -429,7 +429,7 @@ function MobileTextareaRow({
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
-  transcription: { transcript: string; start: () => void; stop: () => Promise<string> };
+  transcription: { transcript: string; start: () => void; stop: () => Promise<string>; cancel: () => void };
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
@@ -995,7 +995,10 @@ function InteractiveChat() {
         <div className="px-4 py-2 bg-rose-50 border-t border-rose-light text-rose-dark text-sm">
           {error || transcription.error}
           <button
-            onClick={() => send({ type: "DISMISS_ERROR" })}
+            onClick={() => {
+              send({ type: "DISMISS_ERROR" });
+              transcription.dismissError();
+            }}
             className="ml-2 text-rose hover:text-rose-dark"
           >
             dismiss

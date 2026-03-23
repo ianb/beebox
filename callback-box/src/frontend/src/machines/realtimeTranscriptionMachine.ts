@@ -29,6 +29,7 @@ type TranscriptionEvent =
   | { type: "START" }
   | { type: "STOP" }
   | { type: "CANCEL" }
+  | { type: "DISMISS_ERROR" }
   | { type: "WS_CONNECTED" }
   | { type: "WS_ERROR"; message: string }
   | { type: "WS_CLOSED" }
@@ -232,6 +233,9 @@ export const realtimeTranscriptionMachine = setup({
         START: {
           target: "active",
           actions: "clearTranscript",
+        },
+        DISMISS_ERROR: {
+          actions: assign({ error: null }),
         },
       },
     },
