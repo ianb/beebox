@@ -1,0 +1,12 @@
+<capture-session status="new" session-id="1d088356-293b-4564-a476-e9f13a33ad79">
+<time start="2026-03-23T00:04:49.781Z" end="2026-03-23T00:05:22.785Z" duration="33s"/>
+<images>
+<image-ref ref="photo-001.image.card"/>
+<image-ref ref="photo-002.image.card"/>
+<image-ref ref="photo-003.image.card"/>
+</images>
+<audio-clips>
+<audio-ref ref="audio-001.audio.card"/>
+</audio-clips>
+<transcript/>
+</capture-session>

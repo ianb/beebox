@@ -1,0 +1,51 @@
+{
+  "analyses": [
+    {
+      "index": 0,
+      "description": "A hand holds a small bottle of Johnson's Baby Oil, displaying the front label.",
+      "title": "Johnson_Baby_Oil_Front",
+      "has_text": true,
+      "text_blocks": [
+        {
+          "source": "Bottle Label",
+          "text": "CLINICALLY MILDNESS PROVEN® Johnson's baby oil aceite para bebés locks in up to 10X more moisture* no parabens, phthalates or dyes Johnson & Johnson 3 FL OZ (89 mL) 30039123"
+        }
+      ],
+      "invalid": false,
+      "document_bbox": null
+    },
+    {
+      "index": 1,
+      "description": "A hand holds a small bottle of Johnson's Baby Oil, displaying the back label with a barcode and product information.",
+      "title": "Johnson_Baby_Oil_Back",
+      "has_text": true,
+      "text_blocks": [
+        {
+          "source": "Bottle Label",
+          "text": "To Use: For external use only. If rash occurs, discontinue use. Keep out of children's reach to avoid drinking and accidental inhalation which can cause serious injury or death. Consult doctor if breathing problems occur. Johnson & Johnson Consumer Inc. Skillman, NJ 08558, U.S.A. Questions? 866-JNJ-BABY or www.johnsonsbaby.com Distributed in Canada by: Johnson & Johnson Inc. Markham, Ontario L3R 5L2 © J&JCI 2019 Made in U.S.A. with U.S. and imported ingredients Batch Code: 11612022 Use by: 04/2025 8137-004170 2 Johnson & Johnson"
+        }
+      ],
+      "invalid": false,
+      "document_bbox": null
+    },
+    {
+      "index": 2,
+      "description": "A green and white braided charging cable with a white wall adapter is laid on a wooden table.",
+      "title": "Charging_Cable_Adapter",
+      "has_text": true,
+      "text_blocks": [
+        {
+          "source": "Wall Adapter",
+          "text": "SAMSUNG"
+        }
+      ],
+      "invalid": false,
+      "document_bbox": null
+    }
+  ],
+  "usage": {
+    "prompt": 1016,
+    "output": 567,
+    "thinking": 717
+  }
+}
