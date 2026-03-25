@@ -60,6 +60,39 @@ t.check(commitOutput, "«hash=*» initial commit");
 t.check(logLine, "[«date»] «author=*»: created card");
 ```
 
+## Test exceptions
+
+Use `t.checkThrows()` to assert that code throws with a specific error type:
+
+```ts
+test("rejects invalid input", async (t) => {
+  t.checkThrows(
+    () => parseDate("not-a-date"),
+    { expected: "RangeError", mode: "name" },
+  );
+});
+```
+
+Use `mode: "full"` to also check the error message:
+
+```ts
+t.checkThrows(
+  () => parseDate("not-a-date"),
+  { expected: "RangeError: Invalid date string", mode: "full" },
+);
+```
+
+In doctests, use the `=> throws` syntax:
+
+````markdown
+```
+parseDate("not-a-date")
+=> throws RangeError
+```
+````
+
+On failure, the caught error's stack trace is included in tap diagnostics.
+
 ## When to use check() vs tap assertions
 
 | Use | For |

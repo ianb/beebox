@@ -112,3 +112,32 @@ print("step 2");
 step 2
 done
 ```
+
+## Throws assertions
+
+Use `=> throws ErrorName` to assert that an expression throws:
+
+```
+JSON.parse("{bad json")
+=> throws SyntaxError
+```
+
+Include `: message` to also check the error message:
+
+```
+null.toString()
+=> throws TypeError: Cannot read properties of null (reading 'toString')
+```
+
+Non-throwing expressions fail the assertion:
+
+```ts setup
+function mustThrow(fn) {
+  try { fn(); return "did not throw"; } catch(_e) { return "threw"; }
+}
+```
+
+```
+mustThrow(() => { var x = 1 + 1; return x; })
+=> did not throw
+```

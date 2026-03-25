@@ -133,22 +133,33 @@ export function parseExamples(content) {
       const arrowLine = lines[i];
       i++;
 
-      // Collect expected lines until blank line or end of block.
-      // If "=> value", the first line of expected is on the arrow line itself.
-      // If "=>" alone, expected starts on the next line.
-      const expectedLines = [];
-      if (arrowLine.startsWith("=> ")) {
-        expectedLines.push(arrowLine.slice(3));
+      // Check for "=> throws ErrorName" or "=> throws ErrorName: message"
+      if (arrowLine.startsWith("=> throws ")) {
+        const throwsExpected = arrowLine.slice("=> throws ".length).trim();
+        examples.push({
+          expression,
+          expected: throwsExpected,
+          throws: true,
+          lineOffset: exprStart,
+        });
+      } else {
+        // Collect expected lines until blank line or end of block.
+        // If "=> value", the first line of expected is on the arrow line itself.
+        // If "=>" alone, expected starts on the next line.
+        const expectedLines = [];
+        if (arrowLine.startsWith("=> ")) {
+          expectedLines.push(arrowLine.slice(3));
+        }
+        while (i < lines.length && lines[i].trim() !== "") {
+          expectedLines.push(lines[i]);
+          i++;
+        }
+        examples.push({
+          expression,
+          expected: expectedLines.join("\n").replace(/\s+$/, ""),
+          lineOffset: exprStart,
+        });
       }
-      while (i < lines.length && lines[i].trim() !== "") {
-        expectedLines.push(lines[i]);
-        i++;
-      }
-      examples.push({
-        expression,
-        expected: expectedLines.join("\n").replace(/\s+$/, ""),
-        lineOffset: exprStart,
-      });
     } else {
       // No => — just run, no assertion
       examples.push({ expression, expected: null, lineOffset: exprStart });
@@ -215,7 +226,14 @@ function emitExamples(out, examples, indent = "  ") {
   for (const ex of examples) {
     if (!ex.expression) continue;
 
-    if (ex.expected !== null) {
+    if (ex.throws) {
+      const { setup, expr } = splitExpression(ex.expression);
+      for (const line of setup) {
+        out.push(`${indent}${line}`);
+      }
+      const mode = ex.expected.includes(":") ? "full" : "name";
+      out.push(`${indent}t.checkThrows(() => (${expr}), { expected: ${JSON.stringify(ex.expected)}, mode: ${JSON.stringify(mode)} });`);
+    } else if (ex.expected !== null) {
       const { setup, expr } = splitExpression(ex.expression);
       for (const line of setup) {
         out.push(`${indent}${line}`);

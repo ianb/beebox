@@ -1,7 +1,7 @@
 /**
  * Tap integration for check().
  *
- * Adds t.check() to all tap tests via prototype patching.
+ * Adds t.check() and t.checkThrows() to all tap tests via prototype patching.
  * Loaded automatically via `--import` in .taprc node-arg.
  *
  * Resolves @tapjs/core from the consuming project's node_modules
@@ -13,6 +13,7 @@
  *   test("example", async (t) => {
  *     t.check("actual", "expected");
  *     await t.check(asyncFn(), "expected");
+ *     t.checkThrows(() => badCall(), "ErrorName", "name");
  *   });
  */
 
@@ -37,6 +38,10 @@ declare module "@tapjs/core" {
       actual: unknown,
       expected: string | CheckOptions,
     ): Extractions | Promise<Extractions>;
+    checkThrows(
+      fn: () => unknown,
+      options: { expected: string; mode: "name" | "full" },
+    ): Extractions;
   }
 }
 
@@ -64,4 +69,50 @@ TestBase.prototype.check = function tapCheck(actual: unknown, expected: string |
   }
 
   return report(this, result);
+};
+
+/**
+ * Assert that fn() throws an error matching expected.
+ * mode="name" compares just error.name; mode="full" compares "ErrorName: message".
+ * On failure, includes the caught error's stack trace in diagnostics.
+ */
+TestBase.prototype.checkThrows = function tapCheckThrows(
+  fn: () => unknown,
+  { expected, mode }: { expected: string; mode: "name" | "full" },
+): Extractions {
+  (this as { currentAssert: unknown }).currentAssert = (this as { checkThrows: unknown }).checkThrows;
+
+  let caught: unknown = null;
+  let label: string;
+  try {
+    fn();
+    label = "(no error thrown)";
+  } catch (e: unknown) {
+    caught = e;
+    if (mode === "name") {
+      label = e instanceof Error ? e.name : String(e);
+    } else {
+      const name = e instanceof Error ? e.name : "Error";
+      const msg = e instanceof Error ? e.message : String(e);
+      label = `${name}: ${msg}`;
+    }
+  }
+
+  const result = inspect(label, expected) as CheckResult;
+
+  if (result.pass) {
+    this.pass("check passed");
+    return result.extractions;
+  }
+
+  const extra: Record<string, unknown> = {
+    diff: result.diff!,
+    found: result.actual,
+    wanted: result.expected,
+  };
+  if (caught instanceof Error && caught.stack) {
+    extra.stack = caught.stack;
+  }
+  this.fail(result.message, extra);
+  return result.extractions;
 };

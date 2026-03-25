@@ -17,4 +17,5 @@ paths:
 - **IMPORTANT: String results are compared literally WITHOUT quotes** — `=> Agent crashed` matches the string `"Agent crashed"`. Writing `=> "Agent crashed"` (with quotes) would expect the string `'"Agent crashed"'` (with literal quote characters). To test exact whitespace or distinguish types, use `JSON.stringify()`: `JSON.stringify(result.error)` then `=> "Agent crashed"`
 - Trailing newlines on string results are automatically trimmed (code blocks can't express trailing newlines)
 - `print("text")` accumulates lines; they drain into the next `=>` assertion combined with the expression result. Scope-local per test — concurrent tests don't interfere. Use for narrative output across multiple steps.
+- `=> throws ErrorName` asserts that the expression throws an error with the given name. `=> throws ErrorName: message` also checks the error message. On test failure, the caught error's stack trace is included in diagnostics
 - Prose between code blocks is ignored — use it to document behavior

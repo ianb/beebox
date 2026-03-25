@@ -210,6 +210,60 @@ world
   t.ok(source.includes("__withPrints(__prints,"), "should drain prints in check");
 });
 
+// ── Throws parsing ──────────────────────────────────────────────────────────
+
+test("parseExample: throws with error name only", async (t) => {
+  const result = parseExample("badCall()\n=> throws TypeError");
+  t.equal(result.expression, "badCall()");
+  t.equal(result.expected, "TypeError");
+  t.equal((result as { throws?: boolean }).throws, true);
+});
+
+test("parseExample: throws with error name and message", async (t) => {
+  const result = parseExample('badCall()\n=> throws RangeError: value out of range');
+  t.equal(result.expression, "badCall()");
+  t.equal(result.expected, "RangeError: value out of range");
+  t.equal((result as { throws?: boolean }).throws, true);
+});
+
+test("parseExamples: throws mixed with normal assertions", async (t) => {
+  const examples = parseExamples('good()\n=> 42\n\nbad()\n=> throws Error\n\nalso()\n=> fine');
+  t.equal(examples.length, 3);
+  t.equal(examples[0].expected, "42");
+  t.equal((examples[0] as { throws?: boolean }).throws, undefined);
+  t.equal(examples[1].expected, "Error");
+  t.equal((examples[1] as { throws?: boolean }).throws, true);
+  t.equal(examples[2].expected, "fine");
+  t.equal((examples[2] as { throws?: boolean }).throws, undefined);
+});
+
+test("generateTestSource: throws emits t.checkThrows", async (t) => {
+  const md = `\`\`\`
+badCall()
+=> throws TypeError
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  t.ok(source.includes("t.checkThrows("), "should use t.checkThrows");
+  t.ok(source.includes('"TypeError"'), "should include expected error name");
+  t.ok(source.includes('"name"'), "should use name mode for name-only");
+});
+
+test("generateTestSource: throws with message uses full mode", async (t) => {
+  const md = `\`\`\`
+badCall()
+=> throws RangeError: out of range
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  t.ok(source.includes("t.checkThrows("), "should use t.checkThrows");
+  t.ok(source.includes('"full"'), "should use full mode for name:message");
+});
+
+// ── Print scopes ────────────────────────────────────────────────────────────
+
 test("generateTestSource: separate tests get separate print scopes", async (t) => {
   const md = `\`\`\`
 print("first");
