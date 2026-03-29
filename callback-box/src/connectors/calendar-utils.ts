@@ -284,6 +284,34 @@ export function formatEvent(event: CalendarEvent): string {
 }
 
 /**
+ * Validate that non-all-day events in an ICS file have timezone info (TZID on DTSTART).
+ * Returns null if valid, or an error message string if invalid.
+ */
+export function validateIcsTimezone(content: string): string | null {
+  try {
+    const parsed = ICAL.parse(content);
+    const comp = new ICAL.Component(parsed);
+    const vevent = comp.getFirstSubcomponent("vevent");
+    if (!vevent) return "No VEVENT component found";
+
+    const dtstart = vevent.getFirstProperty("dtstart");
+    if (!dtstart) return "No DTSTART property found";
+
+    const dtValue = dtstart.getFirstValue() as ICAL.Time;
+    if (dtValue && dtValue.isDate) return null; // All-day event — no timezone needed
+
+    const tzid = dtstart.getParameter("tzid");
+    if (!tzid) {
+      return "Non-all-day event missing TZID on DTSTART. Include a VTIMEZONE component and TZID parameter (e.g., DTSTART;TZID=America/Chicago:20260401T140000).";
+    }
+
+    return null;
+  } catch (err: unknown) {
+    return `Failed to parse ICS: ${err}`;
+  }
+}
+
+/**
  * Parse a timespan string like "3d", "2w", "1m" into milliseconds from now.
  * Supports: Nd (days), Nw (weeks), Nm (months, approximated as 30d).
  * Plain number treated as days.

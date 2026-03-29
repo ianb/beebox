@@ -599,7 +599,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
   },
   calendar: {
     jobTypes: "calendar-review-job",
-    appliesTo: "Use when reviewing calendar event changes (new, updated, deleted)",
+    appliesTo: "Use when reviewing calendar event changes, or when creating/editing/deleting calendar events",
     actions: [
       {
         name: "Create Reminder",
@@ -610,6 +610,21 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
         name: "Note Change",
         when: "Significant change that user should know about (time/location change, cancellation)",
         instructions: "Create a memo card highlighting what changed and any needed adjustments",
+      },
+      {
+        name: "Create Event",
+        when: "User asks to add a new event to their calendar",
+        instructions: "Write a new .ics file in store/calendar/ with proper ICS format including VTIMEZONE and TZID. Use X-CB-CALENDAR-ID to target a specific calendar. The event will be pushed to Google Calendar on next sync.",
+      },
+      {
+        name: "Edit Event",
+        when: "User asks to change an existing calendar event (time, title, location, etc.)",
+        instructions: "Find the .ics file in store/calendar/ and edit the relevant properties. Changes are pushed to Google Calendar on next sync.",
+      },
+      {
+        name: "Delete Event",
+        when: "User asks to remove a calendar event",
+        instructions: "Add X-CB-DELETE:<reason> property to the .ics file. The event will be deleted from Google Calendar on next sync.",
       },
       {
         name: "Ignore",

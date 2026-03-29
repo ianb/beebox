@@ -321,7 +321,7 @@ tests:
   - id: outbound-notifications
     prompt: "How would outbound notifications work?"
     expected_level: knows_about
-    watch_for: "Mentions cb finalize and finds pushover connector"
+    watch_for: "Mentions cb finalize and finds notification connector"
     correct_contains: ["finalize"]
     tags: [connectors]
 
@@ -809,3 +809,47 @@ tests:
     notes: >
       When a companion view is open, user messages include a zoomed-view attribute.
       Chat-only — this attribute is only added by the chat frontend.
+
+  # === Calendar ===
+  #
+  # Status (2026-03-29): All 3 pass. Agent knows from agent guide that calendar
+  # sync is bidirectional — creates .ics files, describes editing, explains push.
+  # Before fix: agent thought calendar was read-only (0/3 pass).
+
+  - id: calendar-create-event
+    prompt: "I need to add a dentist appointment next Tuesday at 2pm to my calendar. Can you do that?"
+    expected_level: knows_about
+    watch_for: "Says yes and creates an .ics file in store/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
+    correct_contains: ["sync"]
+    max_turns: 15
+    tags: [calendar]
+    notes: >
+      The agent should know that calendar sync is bidirectional and that creating
+      a new .ics file in store/calendar/ will push it to Google Calendar on next
+      sync. The failure mode is saying "I can only read calendar events" or
+      suggesting the user create the event in Google Calendar directly.
+      The agent may actually create the file (good!) — the important thing is
+      it knows it CAN create events and mentions the sync behavior.
+
+  - id: calendar-edit-event
+    prompt: "How would I change the time of a calendar event? Say I have a dentist appointment and need to move it to 3pm."
+    expected_level: knows_about
+    watch_for: "Describes editing the .ics file in store/calendar/ — does NOT say calendar events can't be modified"
+    correct_contains: [".ics"]
+    tags: [calendar]
+    notes: >
+      This is a "how would you" question so the agent doesn't need to find
+      an actual event. It should describe the process: find the .ics file in
+      store/calendar/, edit the DTSTART/DTEND, and it'll sync on next cycle.
+      The failure mode is saying calendar events can't be modified locally.
+
+  - id: calendar-bidirectional
+    prompt: "If I create or edit a calendar event locally, will it sync to Google Calendar?"
+    expected_level: knows_directly
+    watch_for: "Says yes — sync is bidirectional, local changes push to Google on next sync"
+    correct_contains: ["two-way"]
+    tags: [calendar]
+    notes: >
+      Tests whether the agent understands the sync is two-way. The agent should
+      explain: new untracked .ics files get pushed, X-CB-DELETE marks events for
+      deletion, and edited tracked files get pushed back.

@@ -14,6 +14,7 @@
  * client-side. Filename format: {YYYY-MM-DD}_{shortId}.ics
  */
 
+import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky, { type HTTPError } from "ky";
@@ -32,6 +33,7 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "./calendar-config.js";
+import { validateIcsTimezone } from "./calendar-utils.js";
 import { stageFiles, commit, getStatus } from "../cli/lib/git.js";
 import {
   createCalendarReviewJobTemplate,
@@ -47,6 +49,8 @@ interface CalendarTransientState {
 interface EventFileEntry {
   filename: string;
   calendarId: string;
+  /** Hash of the ICS content last written by the connector (for detecting local edits) */
+  contentHash?: string;
 }
 
 interface CalendarState {
@@ -59,6 +63,11 @@ interface CalendarState {
 /** Get filename from eventFiles entry (handles legacy string format) */
 function getFilename(entry: string | EventFileEntry): string {
   return typeof entry === "string" ? entry : entry.filename;
+}
+
+/** Short content hash for detecting local edits to .ics files */
+function contentHash(content: string): string {
+  return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
 
 interface GoogleCalendarEvent {
@@ -90,6 +99,154 @@ interface GoogleCalendarListResponse {
   nextSyncToken?: string;
 }
 
+/**
+ * Parse local time parts from an ISO dateTime string (e.g., "2026-03-29T14:00:00-05:00").
+ * The time in the string IS the local time — we extract it directly without UTC conversion.
+ */
+function parseLocalTimeParts(dateTime: string): { year: number; month: number; day: number; hour: number; minute: number; second: number } | null {
+  const match = dateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+  if (!match) return null;
+  return {
+    year: parseInt(match[1]!, 10),
+    month: parseInt(match[2]!, 10),
+    day: parseInt(match[3]!, 10),
+    hour: parseInt(match[4]!, 10),
+    minute: parseInt(match[5]!, 10),
+    second: parseInt(match[6]!, 10),
+  };
+}
+
+/**
+ * Generate a VTIMEZONE component for an IANA timezone name.
+ * Uses Intl API to determine current-year offsets for STANDARD and DAYLIGHT.
+ */
+function generateVtimezone(tzid: string): ICAL.Component {
+  const vtimezone = new ICAL.Component("vtimezone");
+  vtimezone.updatePropertyWithValue("tzid", tzid);
+
+  // Sample offsets at mid-January (standard) and mid-July (daylight) of current year
+  const year = new Date().getFullYear();
+  const jan = new Date(year, 0, 15, 12, 0, 0);
+  const jul = new Date(year, 6, 15, 12, 0, 0);
+
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tzid,
+    timeZoneName: "shortOffset",
+    hour: "numeric",
+  });
+
+  function getOffsetMinutes(date: Date): number {
+    // Get UTC time and local time in the target timezone, compute difference
+    const utcParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      year: "numeric", month: "numeric", day: "numeric",
+      hour: "numeric", minute: "numeric", hour12: false,
+    }).formatToParts(date);
+    const tzParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tzid,
+      year: "numeric", month: "numeric", day: "numeric",
+      hour: "numeric", minute: "numeric", hour12: false,
+    }).formatToParts(date);
+
+    function toMinutes(parts: Intl.DateTimeFormatPart[]): number {
+      const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value || "0", 10);
+      return ((get("year") * 365 + get("month") * 31 + get("day")) * 24 + get("hour")) * 60 + get("minute");
+    }
+    return toMinutes(tzParts) - toMinutes(utcParts);
+  }
+
+  function formatOffset(minutes: number): string {
+    const sign = minutes >= 0 ? "+" : "-";
+    const abs = Math.abs(minutes);
+    const h = String(Math.floor(abs / 60)).padStart(2, "0");
+    const m = String(abs % 60).padStart(2, "0");
+    return `${sign}${h}${m}`;
+  }
+
+  function getTzName(date: Date): string {
+    const parts = fmt.formatToParts(date);
+    const tzPart = parts.find((p) => p.type === "timeZoneName");
+    return tzPart?.value || tzid;
+  }
+
+  const janOffset = getOffsetMinutes(jan);
+  const julOffset = getOffsetMinutes(jul);
+  const janName = getTzName(jan);
+  const julName = getTzName(jul);
+
+  if (janOffset === julOffset) {
+    // No DST — just STANDARD
+    const standard = new ICAL.Component("standard");
+    standard.updatePropertyWithValue("dtstart", ICAL.Time.fromDateTimeString("19700101T000000"));
+    standard.updatePropertyWithValue("tzoffsetfrom", formatOffset(janOffset));
+    standard.updatePropertyWithValue("tzoffsetto", formatOffset(janOffset));
+    standard.updatePropertyWithValue("tzname", janName);
+    vtimezone.addSubcomponent(standard);
+  } else {
+    // Has DST — determine which is standard vs daylight
+    const stdOffset = Math.min(janOffset, julOffset);
+    const dstOffset = Math.max(janOffset, julOffset);
+    const stdName = janOffset < julOffset ? janName : julName;
+    const dstName = janOffset < julOffset ? julName : janName;
+
+    // Northern hemisphere: standard starts in Nov, daylight in Mar
+    // Southern hemisphere: reversed
+    const northernHemisphere = julOffset > janOffset;
+
+    const standard = new ICAL.Component("standard");
+    standard.updatePropertyWithValue("dtstart",
+      ICAL.Time.fromDateTimeString(northernHemisphere ? "19701101T020000" : "19700401T030000"));
+    if (northernHemisphere) {
+      standard.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=11;BYDAY=1SU"));
+    } else {
+      standard.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=4;BYDAY=1SU"));
+    }
+    standard.updatePropertyWithValue("tzoffsetfrom", formatOffset(dstOffset));
+    standard.updatePropertyWithValue("tzoffsetto", formatOffset(stdOffset));
+    standard.updatePropertyWithValue("tzname", stdName);
+    vtimezone.addSubcomponent(standard);
+
+    const daylight = new ICAL.Component("daylight");
+    daylight.updatePropertyWithValue("dtstart",
+      ICAL.Time.fromDateTimeString(northernHemisphere ? "19700308T020000" : "19701004T020000"));
+    if (northernHemisphere) {
+      daylight.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=3;BYDAY=2SU"));
+    } else {
+      daylight.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=10;BYDAY=1SU"));
+    }
+    daylight.updatePropertyWithValue("tzoffsetfrom", formatOffset(stdOffset));
+    daylight.updatePropertyWithValue("tzoffsetto", formatOffset(dstOffset));
+    daylight.updatePropertyWithValue("tzname", dstName);
+    vtimezone.addSubcomponent(daylight);
+  }
+
+  return vtimezone;
+}
+
+/**
+ * Set a datetime property with timezone on a VEVENT component.
+ * Parses local time from the ISO string and sets TZID parameter.
+ */
+function setDateTimeWithTz(
+  vevent: ICAL.Component,
+  opts: { propName: string; dateTime: string; timeZone: string | undefined },
+): void {
+  const { propName, dateTime, timeZone } = opts;
+  const parts = parseLocalTimeParts(dateTime);
+  if (parts && timeZone) {
+    // Format as iCal datetime string: "20260401T140000"
+    const pad = (n: number, w: number) => String(n).padStart(w, "0");
+    const dtStr = `${pad(parts.year, 4)}${pad(parts.month, 2)}${pad(parts.day, 2)}T${pad(parts.hour, 2)}${pad(parts.minute, 2)}${pad(parts.second, 2)}`;
+    const dt = ICAL.Time.fromDateTimeString(dtStr);
+    const prop = vevent.updatePropertyWithValue(propName, dt);
+    prop.setParameter("tzid", timeZone);
+  } else {
+    // No timezone or unparseable — use JS Date conversion (UTC-based)
+    const dt = ICAL.Time.fromJSDate(new Date(dateTime), false);
+    vevent.updatePropertyWithValue(propName, dt);
+  }
+}
+
 function eventToIcs(
   event: GoogleCalendarEvent,
   opts: { calendarId: string; calendarName?: string; calendarRole?: string },
@@ -98,6 +255,14 @@ function eventToIcs(
   const comp = new ICAL.Component(["vcalendar", [], []]);
   comp.updatePropertyWithValue("prodid", "-//Callback Box//EN");
   comp.updatePropertyWithValue("version", "2.0");
+
+  // Collect timezones used by this event and add VTIMEZONE components
+  const timezones = new Set<string>();
+  if (event.start?.timeZone) timezones.add(event.start.timeZone);
+  if (event.end?.timeZone) timezones.add(event.end.timeZone);
+  for (const tz of timezones) {
+    comp.addSubcomponent(generateVtimezone(tz));
+  }
 
   const vevent = new ICAL.Component("vevent");
   comp.addSubcomponent(vevent);
@@ -115,8 +280,7 @@ function eventToIcs(
   // Start time
   if (event.start) {
     if (event.start.dateTime) {
-      const dt = ICAL.Time.fromJSDate(new Date(event.start.dateTime), false);
-      vevent.updatePropertyWithValue("dtstart", dt);
+      setDateTimeWithTz(vevent, { propName: "dtstart", dateTime: event.start.dateTime, timeZone: event.start.timeZone });
     } else if (event.start.date) {
       const dt = ICAL.Time.fromDateString(event.start.date);
       const prop = vevent.updatePropertyWithValue("dtstart", dt);
@@ -127,8 +291,7 @@ function eventToIcs(
   // End time
   if (event.end) {
     if (event.end.dateTime) {
-      const dt = ICAL.Time.fromJSDate(new Date(event.end.dateTime), false);
-      vevent.updatePropertyWithValue("dtend", dt);
+      setDateTimeWithTz(vevent, { propName: "dtend", dateTime: event.end.dateTime, timeZone: event.end.timeZone });
     } else if (event.end.date) {
       const dt = ICAL.Time.fromDateString(event.end.date);
       const prop = vevent.updatePropertyWithValue("dtend", dt);
@@ -264,22 +427,28 @@ function icsToGoogleEvent(content: string): (GoogleCalendarEvent & { _calendarId
     if (event.location) result.location = event.location;
 
     // Start time
-    const dtstart = vevent.getFirstPropertyValue("dtstart") as ICAL.Time | null;
+    const dtstartProp = vevent.getFirstProperty("dtstart");
+    const dtstart = dtstartProp ? (dtstartProp.getFirstValue() as ICAL.Time | null) : null;
     if (dtstart) {
       if (dtstart.isDate) {
         result.start = { date: dtstart.toString() };
       } else {
+        const startTzid = dtstartProp?.getParameter("tzid");
         result.start = { dateTime: dtstart.toJSDate().toISOString() };
+        if (startTzid) result.start.timeZone = String(startTzid);
       }
     }
 
     // End time
-    const dtend = vevent.getFirstPropertyValue("dtend") as ICAL.Time | null;
+    const dtendProp = vevent.getFirstProperty("dtend");
+    const dtend = dtendProp ? (dtendProp.getFirstValue() as ICAL.Time | null) : null;
     if (dtend) {
       if (dtend.isDate) {
         result.end = { date: dtend.toString() };
       } else {
+        const endTzid = dtendProp?.getParameter("tzid");
         result.end = { dateTime: dtend.toJSDate().toISOString() };
+        if (endTzid) result.end.timeZone = String(endTzid);
       }
     }
 
@@ -822,13 +991,52 @@ class GoogleCalendarConnector implements Connector {
       const relPath = path.relative(this.boxRoot, filePath);
       const eventStart = parseEventStart(event);
 
-      // Diff old vs new content for update notes
+      // Check for local edits before overwriting
       if (existingEntry) {
+        const storedHash = typeof existingEntry === "string" ? undefined : existingEntry.contentHash;
+        let localContent: string | undefined;
         try {
-          const oldContent = await fs.readFile(
+          localContent = await fs.readFile(
             path.join(calDir, oldName || filename), "utf-8"
           );
-          const changes = describeChanges(oldContent, icsContent);
+        } catch {
+          // File missing — proceed with write
+        }
+
+        if (localContent && storedHash && contentHash(localContent) !== storedHash) {
+          // Local file was edited — push local changes to Google instead of overwriting
+          const localEvent = icsToGoogleEvent(localContent);
+          if (localEvent) {
+            const entryCalId = typeof existingEntry === "string" ? icsOpts.calendarId : existingEntry.calendarId;
+            delete localEvent._calendarId;
+            const patchResult = await this.patchEvent(auth, {
+              calendarId: entryCalId,
+              googleEventId: event.id,
+              event: localEvent,
+            });
+            if (patchResult) {
+              // Patch succeeded — rewrite file from Google's response to normalize
+              const patchedIcs = eventToIcs(patchResult, icsOpts);
+              await fs.writeFile(filePath, patchedIcs);
+              state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs) };
+              updated.push(relPath);
+              const note: SyncNote = {
+                action: "pushed",
+                summary: `${localEvent.summary || filename} (local edit pushed)`,
+                ref: relPath,
+              };
+              if (eventStart) note.eventStart = eventStart;
+              notes.push(note);
+              continue;
+            }
+            // Patch failed — fall through to overwrite with Google's version
+            console.warn(`  Failed to push local edit for ${filename}, overwriting with Google version`);
+          }
+        }
+
+        // Normal update path: diff old vs new content for update notes
+        if (localContent) {
+          const changes = describeChanges(localContent, icsContent);
           if (changes.length > 0) {
             const note: SyncNote = {
               action: "updated",
@@ -840,8 +1048,7 @@ class GoogleCalendarConnector implements Connector {
             notes.push(note);
           }
           // If no visible changes, skip the note (just metadata refresh)
-        } catch {
-          // Old file unreadable — treat as simple update
+        } else {
           const note: SyncNote = {
             action: "updated",
             summary: event.summary || filename,
@@ -872,7 +1079,7 @@ class GoogleCalendarConnector implements Connector {
         created.push(relPath);
       }
 
-      state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId };
+      state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(icsContent) };
     }
 
     return { created, updated, deleted, notes };
@@ -916,6 +1123,13 @@ class GoogleCalendarConnector implements Connector {
           // Unparseable — delete orphan
           await fs.unlink(filePath);
           deleted.push(relPath);
+          continue;
+        }
+
+        // Validate timezone on non-all-day events
+        const tzError = validateIcsTimezone(content);
+        if (tzError) {
+          console.warn(`  Skipping ${file}: ${tzError}`);
           continue;
         }
 
@@ -1091,6 +1305,39 @@ class GoogleCalendarConnector implements Connector {
       if (status) {
         const text = await (err as HTTPError).response.text();
         console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Update an existing event in Google Calendar via the REST API (PATCH).
+   * Returns the updated event or null on failure.
+   */
+  private async patchEvent(
+    auth: OAuth2Client,
+    opts: { calendarId: string; googleEventId: string; event: GoogleCalendarEvent },
+  ): Promise<GoogleCalendarEvent | null> {
+    const { calendarId, googleEventId, event } = opts;
+    const accessToken = (await auth.getAccessToken()).token;
+
+    try {
+      return await ky
+        .patch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`,
+          {
+            json: event,
+            headers: { Authorization: `Bearer ${accessToken}` },
+            retry: 2,
+          },
+        )
+        .json<GoogleCalendarEvent>();
+    } catch (err) {
+      const status = (err as HTTPError).response?.status;
+      if (status) {
+        const text = await (err as HTTPError).response.text();
+        console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
         return null;
       }
       throw err;

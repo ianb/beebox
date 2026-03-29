@@ -23,9 +23,8 @@ Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, error?
 | Connector | File | Card types | Direction | Service-injected |
 |-----------|------|-----------|-----------|-----------------|
 | Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes |
-| Raindrop | `raindrop.ts` | `bookmark` | Two-way | Yes |
 | RSS | `rss.ts` | `news-item` | Pull only | No (HTTP stubs) |
-| Google Calendar | `google-calendar.ts` | `.ics` files | Pull only | Not yet wired |
+| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Not yet wired |
 | Gmail | `gmail.ts` | `email-thread` | Pull only | Not yet wired |
 
 ## Lifecycle
@@ -42,7 +41,6 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 
 Each connector reads its config from `config/connectors/`:
 - `telegram.secret.json` — `{ botToken, webhookSecret }`
-- `raindrop.secret.json` — `{ token }`
 - `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
 - `gmail.secret.json` — IMAP credentials
 
@@ -54,7 +52,6 @@ Connectors that call external APIs accept an optional service parameter:
 
 ```typescript
 export function createTelegramConnector(boxRoot: string, telegram?: TelegramService): Connector
-export function createRaindropConnector(boxRoot: string, raindrop?: RaindropService): Connector
 ```
 
 When no service is provided, connectors create real implementations from config files. When a fake is injected (in tests), all API calls go through the fake.
