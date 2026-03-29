@@ -785,7 +785,7 @@ Purpose-built string representations of domain types for testing. Not `JSON.stri
 
 ### No mock libraries
 
-Mocking is built into the code through explicit dependency injection, not bolted on by a test library. Functions that depend on external services take an options/context object. Service fakes exist for all external dependencies (Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, etc.).
+Mocking is built into the code through explicit dependency injection, not bolted on by a test library. Functions that depend on external services take an options/context object. Service fakes exist for all external dependencies (Telegram, Claude CLI, Google Calendar, OpenAI Audio, etc.).
 
 ### Not yet implemented from original vision
 

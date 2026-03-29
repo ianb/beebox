@@ -15,7 +15,6 @@ export {
   NewsBriefSchema,
   NewsGuideSchema,
   FeedbackSchema,
-  BookmarkSchema,
   ImageSchema,
   AudioSchema,
   CaptureSessionSchema,
@@ -41,7 +40,6 @@ export type { NewsSummary, NewsSummaryStatus } from "./news-summary.js";
 export type { NewsBrief } from "./news-brief.js";
 export type { NewsGuide } from "./news-guide.js";
 export type { Feedback } from "./feedback.js";
-export type { Bookmark } from "./bookmark.js";
 export type { Image, ImageStatus } from "./image.js";
 export type { Audio, AudioStatus } from "./audio.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
@@ -67,7 +65,6 @@ export {
 } from "./question.js";
 export { createNewsItemTemplate } from "./news-item.js";
 export { createNewsSummaryTemplate } from "./news-summary.js";
-export { createBookmarkTemplate } from "./bookmark.js";
 export { createImageTemplate } from "./image.js";
 export { createAudioTemplate } from "./audio.js";
 export { createCaptureSessionTemplate } from "./capture-session.js";

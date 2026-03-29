@@ -17,10 +17,8 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { createRssConnector } from "../../connectors/rss.js";
-import { createRaindropConnector } from "../../connectors/raindrop.js";
 import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
-import { createPushoverConnector } from "../../connectors/pushover.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { getAllConnectors } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
@@ -109,10 +107,8 @@ export const wakeupCommand = new Command("wakeup")
 
     // Initialize connectors
     createRssConnector(boxRoot);
-    createRaindropConnector(boxRoot);
     createGmailConnector(boxRoot);
     createGoogleCalendarConnector(boxRoot);
-    createPushoverConnector(boxRoot);
     createTelegramConnector(boxRoot);
 
     const connectors = getAllConnectors();

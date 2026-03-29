@@ -8,7 +8,6 @@ Connectors that call external APIs accept an optional service parameter in their
 
 ```typescript
 export function createTelegramConnector(boxRoot: string, telegram?: TelegramService): Connector
-export function createRaindropConnector(boxRoot: string, raindrop?: RaindropService): Connector
 ```
 
 When no service is provided, connectors create real implementations from config files at sync time. When a fake service is injected (in tests), all API calls go through the fake instead.
@@ -18,7 +17,6 @@ See `src/services/CLAUDE.md` for the full service layer documentation: interface
 ## Currently service-injected
 
 - **telegram.ts** — uses `TelegramService` (getUpdates, sendMessage, setWebhook, deleteWebhook)
-- **raindrop.ts** — uses `RaindropService` (listCollections, listBookmarks, createBookmark, updateBookmark)
 
 ## Not yet service-injected
 

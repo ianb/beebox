@@ -11,7 +11,6 @@ import type { TelegramService } from "./telegram.js";
 import type { ClaudeCliService } from "./claude-cli.js";
 import type { GoogleAuthService } from "./google-auth.js";
 import type { GoogleCalendarService } from "./google-calendar.js";
-import type { RaindropService } from "./raindrop.js";
 import type { ImapService } from "./imap.js";
 import type { OpenAIAudioService } from "./openai-audio.js";
 import type { FeedFetcherService } from "./feed-fetcher.js";
@@ -42,12 +41,6 @@ export {
   createGoogleCalendarService,
   createFakeGoogleCalendar,
 } from "./google-calendar.js";
-
-export type { RaindropService, RaindropCollection, RaindropBookmark } from "./raindrop.js";
-export {
-  createRaindropService,
-  createFakeRaindrop,
-} from "./raindrop.js";
 
 export type { ImapService, ImapMessage, ImapEnvelope } from "./imap.js";
 export {
@@ -83,7 +76,6 @@ export interface Services {
   claudeCli?: ClaudeCliService | undefined;
   googleAuth?: GoogleAuthService | undefined;
   calendar?: GoogleCalendarService | undefined;
-  raindrop?: RaindropService | undefined;
   imap?: ImapService | undefined;
   openaiAudio?: OpenAIAudioService | undefined;
   feedFetcher?: FeedFetcherService | undefined;

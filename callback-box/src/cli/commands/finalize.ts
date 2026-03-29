@@ -2,14 +2,13 @@
  * cb finalize - Post-processing phase for outbound connectors.
  *
  * Symmetric counterpart to `cb wakeup`. Runs after job processing
- * to flush outbound cards (e.g. pushover notifications in box/output/).
+ * to flush outbound cards (e.g. telegram messages in box/output/).
  *
  * Called by the reactor after all job cycles complete, or manually.
  */
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
-import { createPushoverConnector } from "../../connectors/pushover.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
@@ -22,7 +21,6 @@ export const finalizeCommand = new Command("finalize")
     console.log("[Finalize: running outbound connectors]");
 
     // Initialize connectors
-    createPushoverConnector(boxRoot);
     createTelegramConnector(boxRoot);
 
     const connectors = getAllConnectors();

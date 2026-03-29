@@ -31,7 +31,7 @@ prompt.includes("processing jobs in a Callback Box")
 prompt.includes("cb finish")
 => true
 
-prompt.includes("DO NOT re-read these")
+prompt.includes("do not need to re-read")
 => true
 ```
 

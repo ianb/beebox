@@ -14,11 +14,11 @@ Current status as of 2026-03-03: **931 tests across 53 files**. Route coverage: 
 
 **Routes (46/52 endpoints):** scheduler (5/5), api (12/12), briefs (7/7), admin (8/8), commands (5/5), history (3/3), actions (2/4), calendar (3/3)
 
-**Connectors:** Telegram (polling, webhook, outbound), Raindrop (pull, push, two-way sync), RSS (pull, dedup, Atom, errors)
+**Connectors:** Telegram (polling, webhook, outbound), RSS (pull, dedup, Atom, errors)
 
 **Wakeup helpers:** createIntakeJobsForUnjobbed, createGuideRevisionJobIfNeeded
 
-**Service fakes:** Telegram, Claude CLI, Google Calendar, Raindrop, OpenAI Audio, IMAP, Feed Fetcher, Article Fetcher, call-log — all with domain-specific fakes + `withCallLog()` wrapper
+**Service fakes:** Telegram, Claude CLI, Google Calendar, OpenAI Audio, IMAP, Feed Fetcher, Article Fetcher, call-log — all with domain-specific fakes + `withCallLog()` wrapper
 
 **Agent testing:** `Agent` interface with `createAgent`/`createFakeAgent`, used by triage-feedback, process-feedback, process-news, reactor, procedure engine
 
@@ -91,4 +91,4 @@ These are design directions discussed but not yet implemented:
 - **2026-03-03:** Service layer created (`src/services/`) with typed interfaces, real implementations, and domain-specific fakes. `withCallLog()` wrapper for test assertions. Services threaded through server → route registration → test helpers.
 - **2026-03-03:** Agent interface (`createAgent`/`createFakeAgent`) adopted across all agent consumers. `runAgent()` made private. Procedure engine and reactor both accept `createAgent` factory overrides.
 - **2026-03-03:** Reactor restructured from single 680-line file into `src/core/reactor/` directory (9 source files + DESIGN.md + CLAUDE.md).
-- **2026-03-03:** Coverage milestone: 931 tests across 53 files. 46/52 route endpoints (88%). All connectors (Telegram, Raindrop, RSS) tested with service fakes.
+- **2026-03-03:** Coverage milestone: 931 tests across 53 files. 46/52 route endpoints (88%). All connectors (Telegram, RSS) tested with service fakes.

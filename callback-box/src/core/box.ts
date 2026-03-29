@@ -434,17 +434,6 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     source: "Sync calendar changes hourly",
     requires: ["google"],
   },
-  {
-    name: "check-raindrop",
-    description: "Sync saved bookmarks from Raindrop.io",
-    cron: "0 */6 * * *",
-    notBefore: "2h",
-    onWakeup: true,
-    enabled: false,
-    runs: "cb wakeup --connector raindrop",
-    source: "Sync bookmarks periodically",
-    requires: ["raindrop"],
-  },
 ];
 
 /**

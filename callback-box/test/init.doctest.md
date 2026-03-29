@@ -51,7 +51,6 @@ await listFiles(tmp, "config/schedules")
 =>
 check-calendar.scheduled-script.card
 check-email.scheduled-script.card
-check-raindrop.scheduled-script.card
 check-rss.scheduled-script.card
 ```
 

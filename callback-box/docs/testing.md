@@ -114,12 +114,10 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 | `test/routes-calendar.doctest.md` | Calendar config routes (list available, get/save config) |
 | `test/service-call-log.doctest.md` | Generic `withCallLog()` wrapper for recording method calls |
 | `test/service-telegram.doctest.md` | Telegram service fake (outbox, webhook, polling) |
-| `test/service-raindrop.doctest.md` | Raindrop service fake (collections, bookmarks, CRUD) |
 | `test/service-google-calendar.doctest.md` | Google Calendar service fake (calendars, events) |
 | `test/service-openai-audio.doctest.md` | OpenAI audio service fake (transcription, TTS) |
 | `test/service-imap.doctest.md` | IMAP service fake (connect, search, fetch) |
 | `test/connector-telegram.doctest.md` | Telegram connector: extractMessage, webhook processing, full sync, outbound send |
-| `test/connector-raindrop.doctest.md` | Raindrop connector: pull, update, push bookmark sync |
 
 ## Testing with Service Fakes
 
@@ -156,17 +154,6 @@ const res = await ctx.request({ method: "GET", url: "/api/admin/telegram-status"
 tg.sent  // messages the route sent
 ```
 
-### Injecting into connectors
-
-Pass fakes to connector factory functions:
-
-```typescript
-const rd = createFakeRaindrop({ collections: [...], bookmarks: [...] });
-const connector = createRaindropConnector(box.root, rd);
-const result = await connector.sync();
-// The connector used the fake instead of hitting the real API
-```
-
 ### Call logging
 
 Wrap any fake with `withCallLog()` to record method calls:
@@ -185,7 +172,6 @@ printCalls(tg.callLog);
 | Telegram | `createFakeTelegram()` | `{ username }` | `.sent[]`, `.webhookUrl` |
 | Claude CLI | `createFakeClaudeCli()` | `{ loggedIn? }` | `.loggedIn` |
 | Google Calendar | `createFakeGoogleCalendar()` | `{ calendars?, events? }` | `.calendars[]`, `.events[]` |
-| Raindrop | `createFakeRaindrop()` | `{ collections?, bookmarks? }` | `.collections[]`, `.bookmarks[]` |
 | OpenAI Audio | `createFakeOpenAIAudio()` | `{ transcriptionText? }` | `.calls[]` |
 | IMAP | `createFakeImap()` | `{ messages? }` | `.connected`, `.lockedMailbox` |
 | Capture Relay | `createFakeCaptureRelay()` | `{ sessions?, manifests? }` | `.sessions[]` |

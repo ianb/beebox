@@ -20,7 +20,6 @@ import { NewsGuideSchema } from "./news-guide.js";
 import { FeedbackSchema } from "./feedback.js";
 import { ProcedureSchema } from "./procedure.js";
 import { ProcedureRunSchema } from "./procedure-run.js";
-import { BookmarkSchema } from "./bookmark.js";
 import { ImageSchema } from "./image.js";
 import { AudioSchema } from "./audio.js";
 import { CaptureSessionSchema } from "./capture-session.js";
@@ -34,7 +33,6 @@ import { IntakeJobSchema } from "./intake-job.js";
 import { CalendarReviewJobSchema } from "./calendar-review-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
-import { PushoverMessageSchema } from "./pushover-message.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
@@ -58,7 +56,6 @@ export const schemas: ElementSchema[] = [
   FeedbackSchema,
   ProcedureSchema,
   ProcedureRunSchema,
-  BookmarkSchema,
   ImageSchema,
   AudioSchema,
   CaptureSessionSchema,
@@ -72,7 +69,6 @@ export const schemas: ElementSchema[] = [
   CalendarReviewJobSchema,
   GuideSchema,
   ScheduledScriptSchema,
-  PushoverMessageSchema,
   TelegramMessageSchema,
   ChatThreadSchema,
   ChatJobSchema,
@@ -248,7 +244,6 @@ export { NewsGuideSchema } from "./news-guide.js";
 export { FeedbackSchema } from "./feedback.js";
 export { ProcedureSchema } from "./procedure.js";
 export { ProcedureRunSchema } from "./procedure-run.js";
-export { BookmarkSchema } from "./bookmark.js";
 export { ImageSchema } from "./image.js";
 export { AudioSchema } from "./audio.js";
 export { CaptureSessionSchema } from "./capture-session.js";
@@ -262,7 +257,6 @@ export { IntakeJobSchema } from "./intake-job.js";
 export { CalendarReviewJobSchema } from "./calendar-review-job.js";
 export { GuideSchema } from "./guide.js";
 export { ScheduledScriptSchema } from "./scheduled-script.js";
-export { PushoverMessageSchema } from "./pushover-message.js";
 export { TelegramMessageSchema } from "./telegram-message.js";
 export { ChatThreadSchema } from "./chat-thread.js";
 export { ChatJobSchema } from "./chat-job.js";

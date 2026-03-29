@@ -214,8 +214,8 @@ cb prompt "How does data get from RSS feeds into the inbox?"
 ```
 cb prompt "How would outbound notifications work?"
 ```
-- **Expected level: Knows about / Discoverable** — finalize command is in the agent guide; Pushover connector details require docs/config
-- Watch for: does it mention `cb finalize` and find the pushover connector?
+- **Expected level: Knows about / Discoverable** — finalize command is in the agent guide; notification connector details require docs/config
+- Watch for: does it mention `cb finalize` and find the notification connector?
 
 ## 8. Scheduled Tasks
 
@@ -364,11 +364,9 @@ Does the agent understand the guide→compile→rules pipeline? Can it trace how
 Does the agent know what connectors exist, how data flows in and out?
 
 - "How would I get notified when something important arrives?"
-  - Expected: finds outgoing connectors (pushover, etc.), knows about `cb finalize`
+  - Expected: finds outgoing connectors, knows about `cb finalize`
 - "What are all the ways data enters this box?"
   - Expected: traces RSS feeds, dropbox relay, manual inbox — from connector configs
-- "Can this box save a bookmark to Raindrop?"
-  - Expected: discovers raindrop connector in config, understands outgoing flow
 
 ### Routing Domain-Specific Inputs
 The generic triage agent gets something domain-specific. Can it figure out the right destination?
