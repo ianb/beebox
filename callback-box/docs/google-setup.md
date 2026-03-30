@@ -103,6 +103,7 @@ cb calendar upcoming
 | `gmail.compose` | Create drafts and send email |
 | `drive.readonly` | Read all Drive files |
 | `drive.file` | Read/write files created by the app |
+| `spreadsheets` | Read and write Google Sheets |
 
 ## Troubleshooting
 
