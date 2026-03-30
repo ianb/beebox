@@ -651,7 +651,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Read Spreadsheet",
         when: "User asks about data in a synced spreadsheet",
-        instructions: "Find the .drive-sheet.card file to understand structure (tabs, title). Then read the relevant CSV file(s) in the matching subdirectory. CSVs contain formulas, not computed values.",
+        instructions: "Find the .sheet.card file to understand structure (tabs, title). Then read the relevant CSV file(s) in the matching subdirectory. CSVs contain formulas, not computed values.",
       },
       {
         name: "Edit Spreadsheet",

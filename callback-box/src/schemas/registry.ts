@@ -41,7 +41,7 @@ import { QuestionFollowupJobSchema } from "./question-followup-job.js";
 import { TodoListSchema } from "./todo-list.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
-import { DriveSheetSchema } from "./drive-sheet.js";
+import { SheetSchema } from "./sheet.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -78,7 +78,7 @@ export const schemas: ElementSchema[] = [
   TodoListSchema,
   BriefingSchema,
   PersonSchema,
-  DriveSheetSchema,
+  SheetSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
@@ -267,4 +267,4 @@ export { QuestionFollowupJobSchema } from "./question-followup-job.js";
 export { TodoListSchema } from "./todo-list.js";
 export { BriefingSchema } from "./briefing.js";
 export { PersonSchema } from "./person.js";
-export { DriveSheetSchema } from "./drive-sheet.js";
+export { SheetSchema } from "./sheet.js";

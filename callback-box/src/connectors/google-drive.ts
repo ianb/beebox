@@ -2,7 +2,7 @@
  * Google Drive connector — syncs Drive files with the box filesystem.
  *
  * Two sync sources:
- * 1. Card-based: globs for *.drive-sheet.card (and future types) anywhere in the box.
+ * 1. Card-based: globs for *.sheet.card (and future types) anywhere in the box.
  *    The card's drive-id attribute IS the config — no separate mapping needed.
  * 2. Folder mounts: config/connectors/google-drive.json lists Drive folders to auto-sync.
  *    New files in mounted folders get cards created automatically.
@@ -26,6 +26,7 @@ import { createGoogleDriveService } from "../services/google-drive.js";
 import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
 import type { FileState } from "./drive-types.js";
+import { safeFilename } from "./chat-utils.js";
 
 // Ensure the sheets handler is registered
 import "./drive-handler-sheets.js";
@@ -264,7 +265,7 @@ class GoogleDriveConnector implements Connector {
       if (!handler) continue;
 
       // Create card for new file
-      const safeName = sanitizeName(file.name);
+      const safeName = safeFilename(file.name);
       const cardPath = path.join(
         this.boxRoot,
         folder.localPath,
@@ -294,14 +295,6 @@ class GoogleDriveConnector implements Connector {
 
     return { created, updated, pushed };
   }
-}
-
-function sanitizeName(name: string): string {
-  return name
-    .replace(/["*/:<>?\\|]/g, "_")
-    .replace(/\s+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_|_$/g, "");
 }
 
 export function createGoogleDriveConnector(

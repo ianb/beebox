@@ -1,12 +1,12 @@
 /** @jsxImportSource cardworks/jsx */
 /**
- * Drive sheet card schema — metadata for a Google Sheets spreadsheet synced to the box.
+ * Sheet card schema — metadata for a Google Sheets spreadsheet synced to the box.
  *
- * Each spreadsheet gets a `.drive-sheet.card` with metadata, linking to CSV files
+ * Each spreadsheet gets a `.sheet.card` with metadata, linking to CSV files
  * per sheet tab in a subdirectory with the same basename.
  *
  * Example layout:
- *   store/drive/Budget.drive-sheet.card
+ *   store/drive/Budget.sheet.card
  *   store/drive/Budget/Summary.csv
  *   store/drive/Budget/Expenses.csv
  */
@@ -14,26 +14,26 @@
 import { element, serialize } from "cardworks";
 import { z } from "zod";
 
-export const DriveSheetTitle = element("title", {
+export const SheetTitle = element("title", {
   text: z.string(),
 });
 
-export const DriveSheetModified = element("modified", {
+export const SheetModified = element("modified", {
   text: z.string(),
 });
 
-export const DriveSheetLink = element("link", {
+export const SheetLink = element("link", {
   text: z.string(),
 });
 
-export const DriveSheetOwner = element("owner", {
+export const SheetOwner = element("owner", {
   text: z.string(),
 });
 
 /**
  * Reference to a single sheet tab's CSV file.
  */
-export const DriveSheetTab = element("sheet", {
+export const SheetTab = element("sheet-tab", {
   attrs: {
     file: z.string(),
     title: z.string(),
@@ -44,46 +44,46 @@ export const DriveSheetTab = element("sheet", {
 /**
  * Container for sheet tab references.
  */
-export const DriveSheetTabs = element("sheets", {
-  children: z.array(DriveSheetTab),
+export const SheetTabs = element("sheets", {
+  children: z.array(SheetTab),
 });
 
 /**
- * Drive sheet card schema.
+ * Sheet card schema.
  *
  * Example:
  * ```xml
- * <drive-sheet drive-id="1abc..." status="synced">
+ * <sheet drive-id="1abc..." status="synced">
  * <title>Household Budget 2026</title>
  * <modified>2026-03-29T14:30:00Z</modified>
  * <link>https://docs.google.com/spreadsheets/d/1abc.../edit</link>
  * <owner>ian@example.com</owner>
  * <sheets>
- * <sheet file="Budget/Summary.csv" title="Summary" gid="0"/>
- * <sheet file="Budget/Expenses.csv" title="Expenses" gid="123456"/>
+ * <sheet-tab file="Budget/Summary.csv" title="Summary" gid="0"/>
+ * <sheet-tab file="Budget/Expenses.csv" title="Expenses" gid="123456"/>
  * </sheets>
- * </drive-sheet>
+ * </sheet>
  * ```
  */
-export const DriveSheetSchema = element("drive-sheet", {
+export const SheetSchema = element("sheet", {
   attrs: {
     "drive-id": z.string(),
     status: z.enum(["synced", "error", "new"]).optional(),
   },
   children: z.array(
     z.union([
-      DriveSheetTitle,
-      DriveSheetModified,
-      DriveSheetLink,
-      DriveSheetOwner,
-      DriveSheetTabs,
+      SheetTitle,
+      SheetModified,
+      SheetLink,
+      SheetOwner,
+      SheetTabs,
     ])
   ),
-  instructions: `# Drive Sheet Cards
+  instructions: `# Sheet Cards
 
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
-Each synced Google Spreadsheet has a \`.drive-sheet.card\` metadata file plus a subdirectory
+Each synced Google Spreadsheet has a \`.sheet.card\` metadata file plus a subdirectory
 (same basename) containing one CSV file per sheet tab.
 
 ## Reading spreadsheet data
@@ -100,12 +100,12 @@ Moving the card (and its CSV directory) to a new location is safe — the \`driv
 attribute in the card maintains the link to Google Drive.`,
 });
 
-export type DriveSheet = z.infer<typeof DriveSheetSchema>;
+export type Sheet = z.infer<typeof SheetSchema>;
 
 /**
- * Create a drive-sheet card from metadata.
+ * Create a sheet card from metadata.
  */
-export function createDriveSheetTemplate(options: {
+export function createSheetTemplate(options: {
   driveId: string;
   title: string;
   modified: string;
@@ -115,17 +115,17 @@ export function createDriveSheetTemplate(options: {
   status?: "synced" | "error" | "new";
 }): string {
   const card = (
-    <drive-sheet drive-id={options.driveId} status={options.status ?? "synced"}>
+    <sheet drive-id={options.driveId} status={options.status ?? "synced"}>
       <title>{options.title}</title>
       <modified>{options.modified}</modified>
       <link>{options.link}</link>
       <owner>{options.owner}</owner>
       <sheets>
         {options.sheets.map((s) => (
-          <sheet file={s.file} title={s.title} gid={s.gid} />
+          <sheet-tab file={s.file} title={s.title} gid={s.gid} />
         ))}
       </sheets>
-    </drive-sheet>
+    </sheet>
   );
 
   return serialize(card) + "\n";

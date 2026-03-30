@@ -9,6 +9,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { valuesToCsv, csvToValues } from "./drive-csv.js";
+import { safeFilename } from "./chat-utils.js";
 import type {
   DriveTypeHandler,
   InspectResult,
@@ -17,23 +18,16 @@ import type {
 } from "./drive-types.js";
 import { registerDriveHandler } from "./drive-types.js";
 import type { GoogleDriveService, DriveFile } from "../services/google-drive.js";
-import { createDriveSheetTemplate } from "../schemas/drive-sheet.js";
+import { createSheetTemplate } from "../schemas/sheet.js";
 
 function contentHash(content: string): string {
   return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
 
-/**
- * Sanitize a sheet tab title for use as a filename.
- * Replaces characters that are invalid in filenames.
- */
-function sanitizeTabName(title: string): string {
-  return title.replace(/["*/:<>?\\|]/g, "_");
-}
 
 const sheetsHandler: DriveTypeHandler = {
   mimeTypes: ["application/vnd.google-apps.spreadsheet"],
-  cardType: "drive-sheet",
+  cardType: "sheet",
 
   async inspect(file: DriveFile, service: GoogleDriveService): Promise<InspectResult> {
     const spreadsheet = await service.getSpreadsheet(file.id);
@@ -65,7 +59,7 @@ const sheetsHandler: DriveTypeHandler = {
     for (const sheet of spreadsheet.sheets) {
       const tabTitle = sheet.properties.title;
       const gid = String(sheet.properties.sheetId);
-      const safeName = sanitizeTabName(tabTitle);
+      const safeName = safeFilename(tabTitle, "sheet");
       const csvFileName = `${safeName}.csv`;
       const csvPath = path.join(localDir, csvFileName);
       const csvRelPath = path.relative(
@@ -142,7 +136,7 @@ const sheetsHandler: DriveTypeHandler = {
     // Write/update card
     const owner = file.owners?.[0]?.emailAddress ?? "unknown";
     const link = file.webViewLink ?? `https://docs.google.com/spreadsheets/d/${file.id}/edit`;
-    const cardContent = createDriveSheetTemplate({
+    const cardContent = createSheetTemplate({
       driveId: file.id,
       title: spreadsheet.properties.title,
       modified: file.modifiedTime,

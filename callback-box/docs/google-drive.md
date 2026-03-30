@@ -34,7 +34,7 @@ cb drive list
 Each synced spreadsheet creates a card file and a directory of CSV files:
 
 ```
-store/drive/Budget.drive-sheet.card     # metadata (title, Drive ID, link, tabs)
+store/drive/Budget.sheet.card     # metadata (title, Drive ID, link, tabs)
 store/drive/Budget/
   Summary.csv                           # one CSV per sheet tab
   Expenses.csv
@@ -43,13 +43,13 @@ store/drive/Budget/
 
 ### The Card is the Config
 
-The `.drive-sheet.card` file contains the `drive-id` attribute that links to Google Drive. Moving the card (and its CSV directory) to a new location is safe -- the link is maintained. No separate config file is needed for individual files.
+The `.sheet.card` file contains the `drive-id` attribute that links to Google Drive. Moving the card (and its CSV directory) to a new location is safe -- the link is maintained. No separate config file is needed for individual files.
 
 ### Sync Flow
 
 On `cb wakeup` or `cb drive sync`:
 
-1. The connector finds all `.drive-sheet.card` files anywhere in the box
+1. The connector finds all `.sheet.card` files anywhere in the box
 2. For each card, reads the `drive-id` attribute
 3. Compares local CSV content hashes with stored hashes:
    - **Local file unchanged** -- pull remote changes (overwrite CSV)

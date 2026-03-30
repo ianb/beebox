@@ -859,7 +859,7 @@ tests:
   - id: drive-find-spreadsheet
     prompt: "Where would I find spreadsheet data that's been synced from Google Drive?"
     expected_level: knows_about
-    watch_for: "Looks in store/drive/ for .drive-sheet.card files"
+    watch_for: "Looks in store/drive/ for .sheet.card files"
     correct_contains: ["store/drive"]
     tags: [drive, navigation]
 

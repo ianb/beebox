@@ -30,7 +30,7 @@ export {
   ChatThreadSchema,
   ChatJobSchema,
   TodoListSchema,
-  DriveSheetSchema,
+  SheetSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -56,7 +56,7 @@ export type { TelegramMessage } from "./telegram-message.js";
 export type { ChatThread } from "./chat-thread.js";
 export type { ChatJob } from "./chat-job.js";
 export type { TodoList, TodoItem, TodoItemStatusType } from "./todo-list.js";
-export type { DriveSheet } from "./drive-sheet.js";
+export type { Sheet } from "./sheet.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -80,7 +80,7 @@ export { createTelegramMessageTemplate } from "./telegram-message.js";
 export { createChatThreadTemplate, createMessageElement } from "./chat-thread.js";
 export { createChatJobTemplate } from "./chat-job.js";
 export { createTodoListTemplate } from "./todo-list.js";
-export { createDriveSheetTemplate } from "./drive-sheet.js";
+export { createSheetTemplate } from "./sheet.js";
 
 // Guide exports
 export { parseGuide, compileGuide, createInitialGuideTemplate } from "./guide.js";

@@ -26,7 +26,7 @@ Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, error?
 | RSS | `rss.ts` | `news-item` | Pull only | No (HTTP stubs) |
 | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Not yet wired |
 | Gmail | `gmail.ts` | `email-thread` | Pull only | Not yet wired |
-| Google Drive | `google-drive.ts` | `drive-sheet` | Two-way | Yes |
+| Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes |
 
 ## Lifecycle
 

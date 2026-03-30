@@ -19,6 +19,7 @@ import { createGoogleAuthService } from "../../services/google-auth.js";
 import { createGoogleDriveService } from "../../services/google-drive.js";
 import type { GoogleDriveService } from "../../services/google-drive.js";
 import { stageFiles, commit } from "../lib/git.js";
+import { safeFilename } from "../../connectors/chat-utils.js";
 
 // Ensure handlers are registered
 import "../../connectors/drive-handler-sheets.js";
@@ -121,7 +122,7 @@ driveCommand
     }
 
     // Do initial sync via the connector's sync logic
-    const { createDriveSheetTemplate } = await import("../../schemas/drive-sheet.js");
+    const { createSheetTemplate } = await import("../../schemas/sheet.js");
     const spreadsheet = await service.getSpreadsheet(fileId);
     const owner = file.owners?.[0]?.emailAddress ?? "unknown";
     const link = file.webViewLink ?? `https://docs.google.com/spreadsheets/d/${fileId}/edit`;
@@ -136,7 +137,7 @@ driveCommand
     for (const sheet of spreadsheet.sheets) {
       const tabTitle = sheet.properties.title;
       const gid = String(sheet.properties.sheetId);
-      const safeName = tabTitle.replace(/["*/:<>?\\|]/g, "_");
+      const safeName = safeFilename(tabTitle, "sheet");
       const csvRelPath = `${cardBasename}/${safeName}.csv`;
       const csvPath = path.join(path.dirname(cardPath), csvRelPath);
 
@@ -152,7 +153,7 @@ driveCommand
       sheetRefs.push({ file: csvRelPath, title: tabTitle, gid });
     }
 
-    const cardContent = createDriveSheetTemplate({
+    const cardContent = createSheetTemplate({
       driveId: fileId,
       title: spreadsheet.properties.title,
       modified: file.modifiedTime,
@@ -207,7 +208,7 @@ driveCommand
     const boxRoot = await requireBoxRoot();
     const { glob } = await import("glob");
 
-    const cardPaths = await glob("**/*.drive-sheet.card", { cwd: boxRoot });
+    const cardPaths = await glob("**/*.sheet.card", { cwd: boxRoot });
 
     if (cardPaths.length === 0) {
       console.log("No Drive files mounted.");

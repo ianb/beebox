@@ -43,8 +43,8 @@ const drive = createFakeGoogleDrive({
 });
 
 // Create the card manually first (simulating cb drive add)
-const { createDriveSheetTemplate } = await import("../src/schemas/drive-sheet.js");
-const cardContent = createDriveSheetTemplate({
+const { createSheetTemplate } = await import("../src/schemas/sheet.js");
+const cardContent = createSheetTemplate({
   driveId: "sheet-abc123",
   title: "Test Budget",
   modified: "2026-03-29T10:00:00Z",
@@ -52,7 +52,7 @@ const cardContent = createDriveSheetTemplate({
   owner: "test@example.com",
   sheets: [{ file: "Budget/Sheet1.csv", title: "Sheet1", gid: "0" }],
 });
-await box.seed("store/drive/Budget.drive-sheet.card", cardContent);
+await box.seed("store/drive/Budget.sheet.card", cardContent);
 await box.seed("store/drive/Budget/Sheet1.csv", "Name,Age\nAlice,30\n");
 box.commitAll("add drive sheet");
 
@@ -65,7 +65,7 @@ result.success
 The card file contains the spreadsheet metadata:
 
 ``` continue
-const card = await box.read("store/drive/Budget.drive-sheet.card");
+const card = await box.read("store/drive/Budget.sheet.card");
 card.includes('drive-id="sheet-abc123"')
 => true
 
@@ -105,8 +105,8 @@ const drive2 = createFakeGoogleDrive({
 });
 
 // Initial sync
-const { createDriveSheetTemplate: tpl2 } = await import("../src/schemas/drive-sheet.js");
-await box2.seed("store/drive/Contacts.drive-sheet.card", tpl2({
+const { createSheetTemplate: tpl2 } = await import("../src/schemas/sheet.js");
+await box2.seed("store/drive/Contacts.sheet.card", tpl2({
   driveId: "sheet-def456",
   title: "Contacts",
   modified: "2026-03-29T10:00:00Z",
@@ -166,8 +166,8 @@ const drive3 = createFakeGoogleDrive({
   spreadsheets: new Map([["sheet-push1", ss3]]),
 });
 
-const { createDriveSheetTemplate: tpl3 } = await import("../src/schemas/drive-sheet.js");
-await box3.seed("store/drive/Expenses.drive-sheet.card", tpl3({
+const { createSheetTemplate: tpl3 } = await import("../src/schemas/sheet.js");
+await box3.seed("store/drive/Expenses.sheet.card", tpl3({
   driveId: "sheet-push1",
   title: "Expenses",
   modified: "2026-03-29T10:00:00Z",
@@ -238,8 +238,8 @@ const drive4 = createFakeGoogleDrive({
   spreadsheets: new Map([["sheet-multi", ss4]]),
 });
 
-const { createDriveSheetTemplate: tpl4 } = await import("../src/schemas/drive-sheet.js");
-await box4.seed("store/drive/Multi.drive-sheet.card", tpl4({
+const { createSheetTemplate: tpl4 } = await import("../src/schemas/sheet.js");
+await box4.seed("store/drive/Multi.sheet.card", tpl4({
   driveId: "sheet-multi",
   title: "Multi",
   modified: "2026-03-29T10:00:00Z",
