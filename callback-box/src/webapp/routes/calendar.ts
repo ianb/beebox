@@ -8,6 +8,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { getGoogleAuth } from "../../connectors/google-auth.js";
+import { isGoogleServiceAllowed } from "../box-config.js";
+import { stageFiles, commit } from "../../cli/lib/git.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,
@@ -29,6 +31,16 @@ export async function registerCalendarRoutes(
 
   // GET /api/calendar/available — all calendars from Google, with sync status
   server.get("/api/calendar/available", async (_request, reply) => {
+    // Skip policy check when a fake service is injected (tests)
+    if (!calendar) {
+      const allowed = await isGoogleServiceAllowed(boxRoot, "calendar");
+      if (!allowed) {
+        return reply
+          .status(403)
+          .send({ error: "Calendar service not enabled for this box. Enable it in box settings." });
+      }
+    }
+
     let available;
     if (calendar) {
       available = await calendar.listCalendars();
@@ -69,6 +81,8 @@ export async function registerCalendarRoutes(
     async (request) => {
       const config = request.body;
       await saveCalendarConfig(boxRoot, config);
+      await stageFiles(boxRoot, ["config/connectors/google-calendar.json"]);
+      await commit(boxRoot, { message: "Update calendar sync config" });
       return { success: true };
     }
   );

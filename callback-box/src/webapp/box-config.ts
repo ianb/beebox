@@ -12,9 +12,26 @@ export interface BoxConfig {
   allowedEmails?: string[];
   /** IANA timezone for this box (e.g. "America/Chicago"). Used in all agent prompts. */
   timezone?: string;
+  /**
+   * Which Google services this box is allowed to use.
+   * If missing, no Google services are enabled (safe default).
+   * Example: { calendar: true, gmail: false, drive: false }
+   */
+  googleServices?: Partial<Record<"calendar" | "gmail" | "drive", boolean>>;
 }
 
+export type GoogleServiceName = "calendar" | "gmail" | "drive";
+
 const cache = new Map<string, { config: BoxConfig; mtime: number }>();
+
+/**
+ * Check if a Google service is allowed for this box.
+ * Returns false if googleServices is not configured or the service is not enabled.
+ */
+export async function isGoogleServiceAllowed(boxRoot: string, service: GoogleServiceName): Promise<boolean> {
+  const config = await loadBoxConfig(boxRoot);
+  return config.googleServices?.[service] === true;
+}
 
 /**
  * Load the box timezone (or null if not configured).

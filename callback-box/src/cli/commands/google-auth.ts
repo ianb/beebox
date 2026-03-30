@@ -14,8 +14,9 @@ import Fastify from "fastify";
 import open from "open";
 import { requireBoxRoot } from "../lib/paths.js";
 import {
-  loadGoogleSecret,
-  saveGoogleSecret,
+  loadGoogleTokens,
+  saveGoogleTokens,
+  getGoogleClientCreds,
   createOAuth2Client,
   GOOGLE_SCOPES,
 } from "../../connectors/google-auth.js";
@@ -33,14 +34,14 @@ export const googleAuthCommand = new Command("google-auth")
     }) => {
       const boxRoot = await requireBoxRoot();
 
-      // Load existing config or use provided values
-      const existing = await loadGoogleSecret(boxRoot);
-      const clientId = options.clientId || existing?.clientId;
-      const clientSecret = options.clientSecret || existing?.clientSecret;
+      // Client credentials from env vars or CLI flags
+      const envCreds = getGoogleClientCreds();
+      const clientId = options.clientId || envCreds?.clientId;
+      const clientSecret = options.clientSecret || envCreds?.clientSecret;
 
       if (!clientId || !clientSecret) {
         console.error(
-          "Error: --client-id and --client-secret are required for first-time setup."
+          "Error: Set GOOGLE_OAUTH_CLIENT_ID/SECRET env vars, or pass --client-id and --client-secret."
         );
         console.error(
           "Get these from Google Cloud Console → APIs & Services → Credentials."
@@ -49,13 +50,11 @@ export const googleAuthCommand = new Command("google-auth")
       }
 
       // Check if already authorized
+      const existing = await loadGoogleTokens(boxRoot);
       if (existing?.refreshToken && !options.reauth) {
         console.log("Already authorized. Use --reauth to re-authorize.");
         return;
       }
-
-      // Save client credentials immediately
-      await saveGoogleSecret(boxRoot, { clientId, clientSecret });
 
       const oauth2Client = createOAuth2Client({ clientId, clientSecret });
 
@@ -120,10 +119,7 @@ export const googleAuthCommand = new Command("google-auth")
               try {
                 const { tokens } = await oauth2Client.getToken(code);
 
-                const updates: Record<string, string> = {
-                  clientId,
-                  clientSecret,
-                };
+                const updates: Record<string, string> = {};
                 if (tokens.refresh_token) {
                   updates.refreshToken = tokens.refresh_token;
                 }
@@ -135,7 +131,7 @@ export const googleAuthCommand = new Command("google-auth")
                     tokens.expiry_date
                   ).toISOString();
                 }
-                await saveGoogleSecret(boxRoot, updates);
+                await saveGoogleTokens(updates, { boxRoot });
 
                 await reply.type("text/html").send(successPage);
                 resolve({ success: true });

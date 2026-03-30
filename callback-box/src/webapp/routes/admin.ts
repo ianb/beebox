@@ -21,9 +21,11 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { stageFiles, commit } from "../../cli/lib/git.js";
 import { isOwner, isAuthEnabled } from "../auth.js";
 import { loadTelegramConfig } from "../../connectors/telegram.js";
-import { loadGoogleSecret, saveGoogleSecret, createOAuth2Client, GOOGLE_SCOPES, type GoogleSecretConfig } from "../../connectors/google-auth.js";
+import { loadGoogleTokens, saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES, type GoogleTokens } from "../../connectors/google-auth.js";
+import { loadBoxConfig } from "../box-config.js";
 import type { Services } from "../../services/index.js";
 import { createTelegramService } from "../../services/telegram.js";
 import { createClaudeCliService } from "../../services/claude-cli.js";
@@ -44,7 +46,9 @@ async function loadPublicUrl(boxRoot: string): Promise<string | undefined> {
 function baseServerUrl(publicUrl: string): string {
   const url = new URL(publicUrl);
   url.pathname = url.pathname.replace(/\/[^/]+\/?$/, "");
-  return url.origin + url.pathname;
+  // Strip trailing slash to avoid double-slash when appending paths
+  const base = url.origin + url.pathname;
+  return base.endsWith("/") ? base.slice(0, -1) : base;
 }
 
 function addOwnerCheck(server: FastifyInstance) {
@@ -109,30 +113,29 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       return reply.redirect(`${returnUrl}?google=error&message=No+code+received`);
     }
 
-    // Get credentials from env vars or google.secret.json
-    const secret = await loadGoogleSecret(box.boxRoot);
-    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID || (secret && secret.clientId);
-    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET || (secret && secret.clientSecret);
-    if (!clientId || !clientSecret) {
-      console.log("[google-oauth] OAuth not configured for box:", boxSlug);
+    const creds = getGoogleClientCreds();
+    if (!creds) {
+      console.log("[google-oauth] OAuth not configured (no env vars)");
       return reply.redirect(`${returnUrl}?google=error&message=OAuth+not+configured`);
     }
 
-    // Use the same base URL that was used to generate the auth URL
+    // Use the server base URL (strip box slug from publicUrl)
     const publicUrl = await loadPublicUrl(box.boxRoot) || `${request.protocol}://${request.hostname}`;
-    const redirectUri = `${publicUrl}/auth/google-services/callback`;
+    const baseUrl = baseServerUrl(publicUrl);
+    const redirectUri = `${baseUrl}/auth/google-services/callback`;
     console.log("[google-oauth] Exchanging code, redirectUri:", redirectUri);
-    const oauth2Client = createOAuth2Client({ clientId, clientSecret, redirectUri });
+    const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
 
     try {
       const { tokens } = await oauth2Client.getToken(code);
       console.log("[google-oauth] Token exchange success, has refresh_token:", !!tokens.refresh_token, "has access_token:", !!tokens.access_token);
-      const updates: Partial<GoogleSecretConfig> = {};
+      const updates: Partial<GoogleTokens> = {};
       if (tokens.refresh_token) updates.refreshToken = tokens.refresh_token;
       if (tokens.access_token) updates.accessToken = tokens.access_token;
       if (tokens.expiry_date) updates.tokenExpiry = new Date(tokens.expiry_date).toISOString();
-      await saveGoogleSecret(box.boxRoot, updates);
-      console.log("[google-oauth] Saved tokens, redirecting to:", `${returnUrl}?google=connected`);
+      // Save to centralized token storage (not per-box)
+      await saveGoogleTokens(updates);
+      console.log("[google-oauth] Saved tokens (centralized), redirecting to:", `${returnUrl}?google=connected`);
       return reply.redirect(`${returnUrl}?google=connected`);
     } catch (err) {
       console.log("[google-oauth] Token exchange failed:", (err as Error).message);
@@ -254,47 +257,37 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   });
 
   // --- Google Services OAuth ---
-  // Uses GOOGLE_OAUTH_CLIENT_ID/SECRET env vars, falling back to
-  // config/connectors/google.secret.json (set up via `cb google-auth`).
-
-  async function getGoogleOAuthCreds(): Promise<{ clientId: string; clientSecret: string } | null> {
-    const envId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-    const envSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-    if (envId && envSecret) return { clientId: envId, clientSecret: envSecret };
-
-    const secret = await loadGoogleSecret(boxRoot);
-    if (secret && secret.clientId && secret.clientSecret) {
-      return { clientId: secret.clientId, clientSecret: secret.clientSecret };
-    }
-    return null;
-  }
+  // Client credentials from GOOGLE_OAUTH_CLIENT_ID/SECRET env vars.
+  // Tokens stored centrally via CB_GOOGLE_TOKENS_FILE (shared across all boxes).
+  // Per-box policy in box.json googleServices field.
 
   server.get("/api/admin/google-status", async () => {
-    const creds = await getGoogleOAuthCreds();
+    const creds = getGoogleClientCreds();
     if (!creds) {
-      return { available: false, hasTokens: false, scopes: GOOGLE_SCOPES };
+      return { available: false, hasTokens: false, scopes: GOOGLE_SCOPES, enabledServices: {} };
     }
-    const secret = await loadGoogleSecret(boxRoot);
+    const tokens = await loadGoogleTokens(boxRoot);
+    const config = await loadBoxConfig(boxRoot);
     return {
       available: true,
-      hasTokens: !!(secret && secret.refreshToken),
+      hasTokens: !!(tokens && tokens.refreshToken),
       scopes: GOOGLE_SCOPES,
+      enabledServices: config.googleServices || {},
     };
   });
 
   server.post("/api/admin/google-setup", async (request, reply) => {
     const body = (request.body || {}) as { returnPath?: string; origin?: string };
-    const creds = await getGoogleOAuthCreds();
+    const creds = getGoogleClientCreds();
     if (!creds) {
-      return reply.status(400).send({ error: "Google OAuth not configured. Set GOOGLE_OAUTH_CLIENT_ID/SECRET env vars or run: cb google-auth" });
+      return reply.status(400).send({ error: "Google OAuth not configured. Set GOOGLE_OAUTH_CLIENT_ID/SECRET env vars." });
     }
 
-    // Save client credentials to google.secret.json so connectors can use them
-    await saveGoogleSecret(boxRoot, { clientId: creds.clientId, clientSecret: creds.clientSecret });
-
-    // Use the caller's origin so the redirect goes back to where the user actually is
-    const baseUrl = body.origin || await loadPublicUrl(boxRoot) || "http://localhost:3210";
+    // Use the server base URL (strip box slug from publicUrl) for the redirect URI
+    const publicUrl = body.origin || await loadPublicUrl(boxRoot) || "http://localhost:3210";
+    const baseUrl = baseServerUrl(publicUrl);
     const redirectUri = `${baseUrl}/auth/google-services/callback`;
+    console.log("[google-oauth] Setup: publicUrl=%s baseUrl=%s redirectUri=%s", publicUrl, baseUrl, redirectUri);
     const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
 
     // State format: "boxSlug" or "boxSlug:returnPath"
@@ -311,9 +304,17 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   });
 
   server.post("/api/admin/google-disconnect", async () => {
-    const configPath = path.join(boxRoot, "config/connectors/google.secret.json");
+    // Disconnect removes the centralized token. This affects ALL boxes.
+    const central = process.env.CB_GOOGLE_TOKENS_FILE;
+    if (central) {
+      try {
+        await fs.unlink(central);
+      } catch (_e) { /* already gone */ }
+    }
+    // Also clean up legacy per-box file if present
+    const legacyPath = path.join(boxRoot, "config/connectors/google.secret.json");
     try {
-      await fs.unlink(configPath);
+      await fs.unlink(legacyPath);
     } catch (_e) { /* already gone */ }
     return { success: true };
   });
@@ -326,16 +327,22 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     try {
       const raw = await fs.readFile(configPath, "utf-8");
       const config = JSON.parse(raw);
-      return { boxSlug, allowedEmails: config.allowedEmails ?? [], publicUrl: config.publicUrl ?? null, ownerEmail };
+      return {
+        boxSlug,
+        allowedEmails: config.allowedEmails ?? [],
+        publicUrl: config.publicUrl ?? null,
+        ownerEmail,
+        googleServices: config.googleServices ?? {},
+      };
     } catch {
-      return { boxSlug, allowedEmails: [], publicUrl: null, ownerEmail };
+      return { boxSlug, allowedEmails: [], publicUrl: null, ownerEmail, googleServices: {} };
     }
   });
 
   server.post("/api/admin/box-config", async (request, reply) => {
-    const body = request.body as { allowedEmails?: string[] };
-    if (!body || !Array.isArray(body.allowedEmails)) {
-      return reply.status(400).send({ error: "allowedEmails array is required" });
+    const body = request.body as { allowedEmails?: string[]; googleServices?: Record<string, boolean> };
+    if (!body || (!body.allowedEmails && !body.googleServices)) {
+      return reply.status(400).send({ error: "At least one of allowedEmails or googleServices is required" });
     }
 
     const configPath = path.join(boxRoot, "config/box.json");
@@ -344,10 +351,21 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
       existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
     } catch { /* start fresh */ }
 
-    existing.allowedEmails = body.allowedEmails.filter((e) => typeof e === "string" && e.includes("@"));
+    if (body.allowedEmails) {
+      existing.allowedEmails = body.allowedEmails.filter((e) => typeof e === "string" && e.includes("@"));
+    }
+    if (body.googleServices) {
+      existing.googleServices = body.googleServices;
+    }
     await fs.mkdir(path.dirname(configPath), { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
 
-    return { success: true, allowedEmails: existing.allowedEmails };
+    const changed: string[] = [];
+    if (body.allowedEmails) changed.push("allowedEmails");
+    if (body.googleServices) changed.push("googleServices");
+    await stageFiles(boxRoot, ["config/box.json"]);
+    await commit(boxRoot, { message: `Update box config: ${changed.join(", ")}` });
+
+    return { success: true, allowedEmails: existing.allowedEmails, googleServices: existing.googleServices };
   });
 }

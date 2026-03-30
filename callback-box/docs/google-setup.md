@@ -48,24 +48,38 @@ Go to **APIs & Services → Credentials**:
 
 ## 5. Authorize Callback Box
 
+Google OAuth tokens are stored centrally (shared across all boxes on the server). Set `CB_GOOGLE_TOKENS_FILE` env var to point to the token file (e.g., `/home/callback/.google-tokens.json`). If not set, tokens fall back to per-box `config/connectors/google.secret.json`.
+
 ### Option A: Web Admin (recommended)
 
-1. Go to your box's **Admin** page
+1. Go to any box's **Admin** page
 2. In the **Google Services** section, click **Connect Google Account**
 3. You'll be redirected to Google for authorization
-4. After approving, you'll be redirected back to the Admin page
+4. After approving, you'll be redirected back — the token is now available to all boxes
 
 ### Option B: CLI
 
 ```bash
-cb google-auth --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
+cb google-auth
 ```
 
-This will:
-- Save credentials to `config/connectors/google.secret.json`
-- Open your browser for Google authorization
-- Exchange the auth code for tokens
-- Save tokens to the secret file
+(Client ID/Secret come from env vars `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`.)
+
+### Per-box service policy
+
+After connecting, enable specific services per box in each box's Admin page (Calendar, Gmail, Drive toggles). Or edit `config/box.json` directly:
+
+```json
+{
+  "googleServices": {
+    "calendar": true,
+    "gmail": false,
+    "drive": false
+  }
+}
+```
+
+If `googleServices` is missing, no Google services are enabled for that box (safe default).
 
 ## 6. Verify
 

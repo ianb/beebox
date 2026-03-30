@@ -2,6 +2,8 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
+import { isGoogleServiceAllowed } from "../../box-config.js";
+import { stageFiles, commit } from "../../../cli/lib/git.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,
@@ -11,6 +13,17 @@ import {
 
 export const calendarRouter = router({
   available: publicProcedure.query(async ({ ctx }) => {
+    // Skip policy check when a fake service is injected (tests)
+    if (!ctx.services.calendar) {
+      const allowed = await isGoogleServiceAllowed(ctx.boxRoot, "calendar");
+      if (!allowed) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Calendar service not enabled for this box. Enable it in box settings.",
+        });
+      }
+    }
+
     let available;
     if (ctx.services.calendar) {
       available = await ctx.services.calendar.listCalendars();
@@ -51,6 +64,8 @@ export const calendarRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       await saveCalendarConfig(ctx.boxRoot, input as CalendarConfig);
+      await stageFiles(ctx.boxRoot, ["config/connectors/google-calendar.json"]);
+      await commit(ctx.boxRoot, { message: "Update calendar sync config" });
       return { success: true };
     }),
 });

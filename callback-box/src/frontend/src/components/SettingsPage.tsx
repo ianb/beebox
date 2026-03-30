@@ -2,11 +2,9 @@
  * Settings page with calendar configuration and sharing tips.
  */
 
-import { useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { trpc, type RouterOutput } from "../lib/trpc";
-import { getApiBase } from "../api";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
 
@@ -55,7 +53,7 @@ function CalendarSection() {
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
           {error}
         </div>
-        <GoogleReconnectButton />
+        <GoogleConnectLink />
       </div>
     );
   }
@@ -118,45 +116,16 @@ function CalendarSection() {
   );
 }
 
-function GoogleReconnectButton() {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const handleReconnect = async () => {
-    setLoading(true);
-    setErr(null);
-    try {
-      const resp = await fetch(`${getApiBase()}/admin/google-setup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnPath: "settings", origin: window.location.origin }),
-      });
-      if (!resp.ok) {
-        const data = await resp.json();
-        setErr(data.error || "Failed to start auth");
-        return;
-      }
-      const data = await resp.json() as { authUrl: string };
-      window.location.href = data.authUrl;
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function GoogleConnectLink() {
+  const { boxSlug } = useParams({ strict: false });
   return (
     <div className="mt-3">
-      <button
-        onClick={handleReconnect}
-        disabled={loading}
-        className="px-3 py-1.5 bg-plum text-white text-sm rounded hover:bg-plum-dark disabled:opacity-50"
+      <Link
+        to={href(`/${boxSlug}/admin`)}
+        className="text-sm text-plum hover:text-plum-dark underline"
       >
-        {loading ? "Connecting..." : "Reconnect Google Account"}
-      </button>
-      {err ? (
-        <p className="mt-1 text-xs text-rose-600">{err}</p>
-      ) : null}
+        Set up Google connection in Admin
+      </Link>
     </div>
   );
 }
@@ -191,6 +160,77 @@ function ShortcutSteps({ boxSlug, shareUrl }: { boxSlug: string; shareUrl: strin
         7. Under <strong>Share Sheet Types</strong>, select only{" "}
         <strong>URLs</strong>
       </p>
+    </div>
+  );
+}
+
+function DriveSection() {
+  const configQuery = trpc.drive.config.useQuery();
+  const availableQuery = trpc.drive.available.useQuery(undefined, { retry: false });
+  const error = availableQuery.error?.message ?? configQuery.error?.message ?? null;
+  const config = configQuery.data;
+  const available = availableQuery.data;
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <h2 className="text-lg font-semibold text-warm-800 mb-4">
+          Google Drive
+        </h2>
+        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+          {error}
+        </div>
+        <GoogleConnectLink />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 mt-6">
+      <h2 className="text-lg font-semibold text-warm-800 mb-2">
+        Google Drive
+      </h2>
+      <p className="text-sm text-warm-700 mb-4">
+        Spreadsheets are synced as CSV files. Use{" "}
+        <code className="text-xs bg-warm-100 px-1 rounded">cb drive add &lt;url&gt; &lt;path&gt;</code>{" "}
+        to mount a spreadsheet.
+      </p>
+
+      {config?.folders && config.folders.length > 0 ? (
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-warm-800 mb-2">Folder mounts</h3>
+          <div className="space-y-1">
+            {config.folders.map((f) => (
+              <div key={f.driveFolderId} className="flex items-center gap-3 px-3 py-2 rounded bg-warm-50 text-sm">
+                <span className="text-warm-600">{f.localPath}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {available && available.length > 0 ? (
+        <div>
+          <h3 className="text-sm font-medium text-warm-800 mb-2">Available spreadsheets</h3>
+          <div className="space-y-1 max-h-48 overflow-auto">
+            {available.map((file) => (
+              <div key={file.id} className="flex items-center gap-3 px-3 py-2 rounded hover:bg-warm-50 text-sm">
+                <span className="flex-1 min-w-0 text-warm-900 truncate">{file.name}</span>
+                <span className="text-xs text-warm-500 flex-shrink-0">
+                  {new Date(file.modifiedTime).toLocaleDateString()}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-warm-500 mt-2">
+            Use the CLI to mount: <code className="bg-warm-100 px-1 rounded">cb drive add &lt;url&gt; store/drive/name</code>
+          </p>
+        </div>
+      ) : !availableQuery.isLoading ? (
+        <p className="text-sm text-warm-600">No spreadsheets found in your Drive.</p>
+      ) : (
+        <p className="text-sm text-warm-600">Loading spreadsheets...</p>
+      )}
     </div>
   );
 }
@@ -272,6 +312,8 @@ export function SettingsPage() {
         <h1 className="text-2xl font-bold text-warm-900 mb-6">Settings</h1>
 
         <CalendarSection />
+
+        <DriveSection />
 
         <ShareShortcutSection />
       </div>

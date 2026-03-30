@@ -391,23 +391,32 @@ function ChatInputArea({
           </svg>
         </button>
 
-        {/* Voice button — shows paused state when recording is suspended for TTS */}
+        {/* Voice button — toggle: start recording / stop recording (preserve text) */}
         <button
           onClick={() => {
             if (voicePaused) {
               onUnpause();
+            } else if (isTranscribing) {
+              // Stop recording, preserve transcript into input for editing
+              turnTakingRef.current = false;
+              const text = transcription.transcript;
+              transcription.cancel();
+              if (text) setInput((existing) => (existing ? existing + " " + text : text));
             } else {
               unlockAudioContext();
               onVoice();
             }
           }}
-          disabled={isTranscribing ? !voicePaused : false}
-          className={`${circleBtn} ${voicePaused ? "bg-plum/50 text-white animate-pulse" : "bg-plum text-white hover:bg-plum-dark active:opacity-80"} disabled:opacity-50 disabled:cursor-not-allowed`}
-          title={voicePaused ? "Resume recording (stops speech)" : "Voice input"}
+          className={`${circleBtn} ${voicePaused ? "bg-plum/50 text-white animate-pulse" : isTranscribing ? "bg-rose text-white hover:bg-rose-dark active:opacity-80" : "bg-plum text-white hover:bg-plum-dark active:opacity-80"}`}
+          title={voicePaused ? "Resume recording (stops speech)" : isTranscribing ? "Stop recording" : "Voice input"}
         >
           {voicePaused ? (
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : isTranscribing ? (
+            <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
             </svg>
           ) : (
             <MicrophoneIcon className="w-7 h-7" />

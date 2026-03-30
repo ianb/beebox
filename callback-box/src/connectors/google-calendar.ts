@@ -27,6 +27,7 @@ import {
   type SyncResult,
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
+import { isGoogleServiceAllowed } from "../webapp/box-config.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,
@@ -701,6 +702,11 @@ class GoogleCalendarConnector implements Connector {
   }
 
   async sync(): Promise<SyncResult> {
+    const allowed = await isGoogleServiceAllowed(this.boxRoot, "calendar");
+    if (!allowed) {
+      return { success: true, created: [], updated: [] };
+    }
+
     const auth = await getGoogleAuth(this.boxRoot);
     if (!auth) {
       return { success: true, created: [], updated: [] };

@@ -448,7 +448,14 @@ interface GoogleStatus {
   available: boolean;
   hasTokens: boolean;
   scopes: string[];
+  enabledServices: Record<string, boolean>;
 }
+
+const GOOGLE_SERVICE_LABELS: Record<string, string> = {
+  calendar: "Calendar",
+  gmail: "Gmail",
+  drive: "Drive",
+};
 
 function GoogleServicesSection({ apiBase }: { apiBase: string }) {
   const [status, setStatus] = useState<GoogleStatus | null>(null);
@@ -457,6 +464,7 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [savingServices, setSavingServices] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -532,6 +540,30 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
     }
   };
 
+  const handleServiceToggle = async (service: string, enabled: boolean) => {
+    if (!status) return;
+    setSavingServices(true);
+    setError(null);
+
+    const updated = { ...status.enabledServices, [service]: enabled };
+    try {
+      const resp = await fetch(`${apiBase}/admin/box-config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ googleServices: updated }),
+      });
+      const data = await resp.json();
+      if (!data.success) {
+        throw new Error(data.error || "Failed to save service settings");
+      }
+      setStatus({ ...status, enabledServices: updated });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSavingServices(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -548,9 +580,12 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Services</h2>
+      <div className="flex items-center gap-2 mb-2">
+        <h2 className="text-lg font-semibold text-warm-800">Google Services</h2>
+        <span className="text-xs bg-warm-200 text-warm-600 px-2 py-0.5 rounded">Server-wide</span>
+      </div>
       <p className="text-sm text-warm-700 mb-4">
-        Connect your Google account for Calendar, Gmail, and Drive access.
+        Google account connection is shared across all boxes. Enable specific services per box below.
       </p>
 
       {successMessage ? (
@@ -563,6 +598,24 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
         <>
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
             <span className="font-medium text-green-800">Connected</span>
+          </div>
+
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-warm-700 mb-2">Enabled for this box:</h3>
+            <div className="space-y-2">
+              {Object.entries(GOOGLE_SERVICE_LABELS).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm text-warm-800">
+                  <input
+                    type="checkbox"
+                    checked={status.enabledServices[key] === true}
+                    disabled={savingServices}
+                    onChange={(e) => handleServiceToggle(key, e.target.checked)}
+                    className="rounded border-warm-300"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="flex gap-3">
