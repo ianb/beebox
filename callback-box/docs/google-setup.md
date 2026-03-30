@@ -16,6 +16,7 @@ In your new project, go to **APIs & Services → Library** and enable:
 - **Google Calendar API**
 - **Gmail API**
 - **Google Drive API**
+- **Google Sheets API** (required for reading/writing spreadsheet cell values)
 
 Search for each one and click **Enable**.
 
