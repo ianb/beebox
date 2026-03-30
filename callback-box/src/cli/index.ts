@@ -47,6 +47,7 @@ import {
   renderCommand,
   formatCommand,
   usageCommand,
+  driveCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -81,6 +82,7 @@ program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);
 program.addCommand(googleAuthCommand);
 program.addCommand(calendarCommand);
+program.addCommand(driveCommand);
 program.addCommand(finishCommand);
 program.addCommand(reactorCommand);
 program.addCommand(scenarioCommand);

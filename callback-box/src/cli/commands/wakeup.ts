@@ -20,6 +20,7 @@ import { createRssConnector } from "../../connectors/rss.js";
 import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
+import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { getAllConnectors } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { createLoader } from "../lib/loader.js";
@@ -110,6 +111,7 @@ export const wakeupCommand = new Command("wakeup")
     createGmailConnector(boxRoot);
     createGoogleCalendarConnector(boxRoot);
     createTelegramConnector(boxRoot);
+    createGoogleDriveConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

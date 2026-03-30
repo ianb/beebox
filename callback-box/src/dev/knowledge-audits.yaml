@@ -853,3 +853,26 @@ tests:
       Tests whether the agent understands the sync is two-way. The agent should
       explain: new untracked .ics files get pushed, X-CB-DELETE marks events for
       deletion, and edited tracked files get pushed back.
+
+  # === Google Drive / Spreadsheets ===
+
+  - id: drive-find-spreadsheet
+    prompt: "Where would I find spreadsheet data that's been synced from Google Drive?"
+    expected_level: knows_about
+    watch_for: "Looks in store/drive/ for .drive-sheet.card files"
+    correct_contains: ["store/drive"]
+    tags: [drive, navigation]
+
+  - id: drive-edit-spreadsheet
+    prompt: "Can you update a value in one of my synced Google Sheets?"
+    expected_level: knows_about
+    watch_for: "Describes editing the CSV file — does NOT say spreadsheets are read-only"
+    correct_contains_any: ["csv", "CSV"]
+    tags: [drive, editing]
+
+  - id: drive-understand-formulas
+    prompt: "I want to understand how my budget spreadsheet calculates totals."
+    expected_level: discoverable
+    watch_for: "Reads the CSV and notices formula expressions like =SUM()"
+    correct_contains_any: ["formula", "=SUM", "CSV"]
+    tags: [drive]

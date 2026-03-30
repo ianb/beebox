@@ -615,6 +615,7 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "| `box/pool/` | Items being actively worked on |",
     "| `store/archive/` | Processed/completed items |",
     "| `store/calendar/` | Calendar events (.ics files) — two-way sync with Google Calendar |",
+    "| `store/drive/` | Google Drive files (spreadsheets as CSV) — two-way sync |",
     "| `store/integrated/` | Feedback absorbed into guides |",
     "| `store/recipes/` | Recipe collection (subdirectories for organization) |",
     "| `store/todos/` | Active todo lists — human action items |",
@@ -699,6 +700,22 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "END:VEVENT",
     "END:VCALENDAR",
     "```",
+    "",
+  );
+
+  // Google Drive section
+  lines.push(
+    "## Google Drive",
+    "",
+    "Google Sheets are synced as CSV files in `store/drive/` (or wherever the card is placed). Sync is **two-way**:",
+    "",
+    "- **Find spreadsheet data:** Look for `.drive-sheet.card` files. The card lists the title, Google link, and sheet tabs.",
+    "- **Read data:** Each sheet tab is a separate CSV file in a subdirectory matching the card basename.",
+    "- **Edit data:** Edit the CSV file directly and commit. Next sync pushes changes to Google Sheets.",
+    "- **CSVs contain formulas** (e.g., `=SUM(A1:A10)`), not computed values — you can understand the spreadsheet logic.",
+    "- **Move a spreadsheet:** Move the `.drive-sheet.card` and its CSV directory together. The `drive-id` in the card maintains the link.",
+    "",
+    "CLI: `cb drive inspect <url>`, `cb drive add <url> <path>`, `cb drive sync`, `cb drive status`.",
     "",
   );
 

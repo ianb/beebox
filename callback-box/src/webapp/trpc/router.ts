@@ -12,6 +12,7 @@ import { debugLogRouter } from "./routers/debugLog.js";
 import { adminRouter } from "./routers/admin.js";
 import { todosRouter } from "./routers/todos.js";
 import { healthRouter } from "./routers/health.js";
+import { driveRouter } from "./routers/drive.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -27,6 +28,7 @@ export const appRouter = router({
   admin: adminRouter,
   todos: todosRouter,
   health: healthRouter,
+  drive: driveRouter,
 });
 
 export type AppRouter = typeof appRouter;

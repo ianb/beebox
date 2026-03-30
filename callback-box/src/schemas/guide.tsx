@@ -644,6 +644,33 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
     },
     reactions: [],
   },
+  drive: {
+    jobTypes: "",
+    appliesTo: "Use when the user asks about spreadsheet data synced from Google Drive",
+    actions: [
+      {
+        name: "Read Spreadsheet",
+        when: "User asks about data in a synced spreadsheet",
+        instructions: "Find the .drive-sheet.card file to understand structure (tabs, title). Then read the relevant CSV file(s) in the matching subdirectory. CSVs contain formulas, not computed values.",
+      },
+      {
+        name: "Edit Spreadsheet",
+        when: "User asks to change values in a synced spreadsheet",
+        instructions: "Edit the CSV file directly and commit. Changes push to Google Sheets on next sync (cb drive sync or cb wakeup).",
+      },
+    ],
+    triageRules: [],
+    defaultAction: {
+      action: "Read",
+      text: "When in doubt, read the card and CSV files to understand the data",
+    },
+    experiment: {
+      id: "exp-drive-initial",
+      hypothesis: "Users primarily want to read spreadsheet data, edits are less common",
+      approach: "Default to reading and presenting data, offer to edit when asked",
+    },
+    reactions: [],
+  },
   chat: {
     jobTypes: "chat-job",
     appliesTo: "Use when processing chat messages from messaging connectors (Telegram, etc.)",

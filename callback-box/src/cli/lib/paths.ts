@@ -24,6 +24,9 @@ export const BOX_DIRS = {
   recipes: "store/recipes",
   todos: "store/todos",
 
+  // Drive sync
+  drive: "store/drive",
+
   // People
   people: "people",
 

@@ -60,6 +60,7 @@ store/archive
 store/archive/done
 store/archive/failed
 store/archive/processed
+store/drive
 store/integrated
 store/recipes
 store/todos

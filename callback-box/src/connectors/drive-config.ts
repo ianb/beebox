@@ -1,0 +1,37 @@
+/**
+ * Google Drive connector configuration.
+ *
+ * Config file: config/connectors/google-drive.json
+ *
+ * Contains folder mounts (auto-sync all sheets in a Drive folder).
+ * Individual file mounts don't need config — the card's existence IS the config.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+export interface DriveFolderMount {
+  driveFolderId: string;
+  localPath: string;
+}
+
+export interface DriveConfig {
+  folders?: DriveFolderMount[];
+}
+
+const CONFIG_REL = "config/connectors/google-drive.json";
+
+export async function loadDriveConfig(boxRoot: string): Promise<DriveConfig> {
+  try {
+    const content = await fs.readFile(path.join(boxRoot, CONFIG_REL), "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return {};
+  }
+}
+
+export async function saveDriveConfig(boxRoot: string, config: DriveConfig): Promise<void> {
+  const filePath = path.join(boxRoot, CONFIG_REL);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(config, null, 2) + "\n");
+}

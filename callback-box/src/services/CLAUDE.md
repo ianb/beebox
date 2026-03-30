@@ -117,5 +117,6 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |
 | `feed-fetcher.ts` | `FeedFetcherService` | `createFeedFetcherService()` | `createFakeFeedFetcher({ feeds? })` |
 | `article-fetcher.ts` | `ArticleFetcherService` | `createArticleFetcherService()` | `createFakeArticleFetcher(articles?)` |
+| `google-drive.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |
 | `index.ts` | `Services` container | — | Barrel exports all of the above |
