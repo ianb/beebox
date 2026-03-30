@@ -70,6 +70,7 @@ export function csvToValues(csv: string): string[][] {
 }
 
 function quoteField(value: string): string {
+  value = String(value ?? "");
   if (
     value.includes(",") ||
     value.includes('"') ||
