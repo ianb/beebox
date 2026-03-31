@@ -126,7 +126,7 @@ Phase: describe-images"
           [ -d "$dir" ] || continue
           for card in "$dir"*.audio.card; do
             [ -f "$card" ] || continue
-            if grep -q 'status="transcribed"' "$card" &amp;&amp; grep -q '&lt;summary/&gt;\|&lt;summary&gt;&lt;/summary&gt;' "$card"; then
+            if grep -q 'status="transcribed"' "$card" &amp;&amp; ! grep -qE '&lt;summary&gt;.+&lt;/summary&gt;' "$card"; then
               echo "  Needs summary: $card"
               found=$((found + 1))
             fi
@@ -596,10 +596,12 @@ Phase: archive"
           echo "Still $remaining capture session(s) in inbox — re-creating trigger"
           trigger="config/schedules/process-captures.scheduled-script.card"
           if [ ! -f "$trigger" ]; then
-            cb create "$trigger" --type scheduled-script -- \
-              runs="cb procedure run process-captures" \
-              description="Process remaining capture sessions (auto re-triggered)" \
-              on-wakeup=true once=true lock-group=captures
+            cat > "$trigger" &lt;&lt;'TRIGGER'
+&lt;scheduled-script on-wakeup="true" once="true" lock-group="captures"&gt;
+&lt;description&gt;Process remaining capture sessions (auto re-triggered)&lt;/description&gt;
+&lt;runs&gt;cb procedure run process-captures&lt;/runs&gt;
+&lt;/scheduled-script&gt;
+TRIGGER
             git add -A &amp;&amp; git commit -m "Re-trigger process-captures for remaining sessions
 
 Triggered-By: cb procedure

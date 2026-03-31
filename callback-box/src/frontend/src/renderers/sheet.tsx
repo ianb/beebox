@@ -60,50 +60,17 @@ function parseSheetElement(el: ElementNode): ParsedSheet {
   return result;
 }
 
-// ─── CSV parsing ────────────────────────────────────────────────────────────
+// ─── Cell types ─────────────────────────────────────────────────────────────
 
-function parseCsv(csv: string): string[][] {
-  const rows: string[][] = [];
-  let current = "";
-  let inQuotes = false;
-  let row: string[] = [];
+interface FormulaCell {
+  f: string;
+  v: string;
+}
 
-  for (let i = 0; i < csv.length; i++) {
-    const ch = csv[i]!;
-    if (inQuotes) {
-      if (ch === '"') {
-        if (i + 1 < csv.length && csv[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        current += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      row.push(current);
-      current = "";
-    } else if (ch === "\r") {
-      // skip
-    } else if (ch === "\n") {
-      row.push(current);
-      current = "";
-      rows.push(row);
-      row = [];
-    } else {
-      current += ch;
-    }
-  }
+type CellValue = string | number | boolean | null | FormulaCell;
 
-  if (current.length > 0 || row.length > 0) {
-    row.push(current);
-    rows.push(row);
-  }
-
-  return rows;
+function isFormulaCell(cell: CellValue): cell is FormulaCell {
+  return cell !== null && typeof cell === "object" && "f" in cell;
 }
 
 // ─── Column letter helpers ──────────────────────────────────────────────────
@@ -120,7 +87,7 @@ function columnLetter(index: number): string {
 
 // ─── Components ─────────────────────────────────────────────────────────────
 
-function SheetTable({ rows }: { rows: string[][] }) {
+function SheetTable({ rows }: { rows: CellValue[][] }) {
   if (rows.length === 0) {
     return <p className="text-sm text-warm-500 italic">Empty sheet</p>;
   }
@@ -152,15 +119,16 @@ function SheetTable({ rows }: { rows: string[][] }) {
                 {rowIdx + 1}
               </td>
               {Array.from({ length: maxCols }, (_, colIdx) => {
-                const value = row[colIdx] ?? "";
-                const isFormula = value.startsWith("=");
+                const cell = row[colIdx] ?? "";
+                const formula = isFormulaCell(cell);
+                const display = formula ? cell.v : String(cell ?? "");
                 return (
                   <td
                     key={colIdx}
-                    className={`border-r border-b border-warm-200 px-2 py-1 whitespace-pre-wrap ${isFormula ? "text-plum" : "text-warm-900"}`}
-                    title={isFormula ? value : undefined}
+                    className={`border-r border-b border-warm-200 px-2 py-1 whitespace-pre-wrap ${formula ? "text-plum" : "text-warm-900"}`}
+                    title={formula ? cell.f : undefined}
                   >
-                    {value}
+                    {display}
                   </td>
                 );
               })}
@@ -176,7 +144,7 @@ function SheetView({ data }: RendererProps) {
   const el = data.element;
   const sheet = el ? parseSheetElement(el) : null;
   const [activeTab, setActiveTab] = useState(0);
-  const [tabData, setTabData] = useState<Map<string, string[][]>>(new Map());
+  const [tabData, setTabData] = useState<Map<string, CellValue[][]>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const cardDir = data.path.replace(/[^/]+$/, "");
@@ -187,15 +155,15 @@ function SheetView({ data }: RendererProps) {
 
     async function loadTabs() {
       setLoading(true);
-      const results = new Map<string, string[][]>();
+      const results = new Map<string, CellValue[][]>();
 
       for (const tab of sheet!.tabs) {
         try {
-          const csvPath = cardDir + tab.file;
-          const resp = await fetch(`${getApiBase()}/files/${csvPath}`);
+          const filePath = cardDir + tab.file;
+          const resp = await fetch(`${getApiBase()}/files/${filePath}`);
           if (resp.ok) {
-            const text = await resp.text();
-            results.set(tab.title, parseCsv(text));
+            const json = await resp.json();
+            results.set(tab.title, json);
           }
         } catch {
           // Skip failed tabs

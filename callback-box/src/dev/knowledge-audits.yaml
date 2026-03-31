@@ -866,13 +866,13 @@ tests:
   - id: drive-edit-spreadsheet
     prompt: "Can you update a value in one of my synced Google Sheets?"
     expected_level: knows_about
-    watch_for: "Describes editing the CSV file — does NOT say spreadsheets are read-only"
-    correct_contains_any: ["csv", "CSV"]
+    watch_for: "Describes editing the JSON file — does NOT say spreadsheets are read-only"
+    correct_contains_any: ["json", "JSON"]
     tags: [drive, editing]
 
   - id: drive-understand-formulas
     prompt: "I want to understand how my budget spreadsheet calculates totals."
     expected_level: discoverable
-    watch_for: "Reads the CSV and notices formula expressions like =SUM()"
-    correct_contains_any: ["formula", "=SUM", "CSV"]
+    watch_for: "Reads the JSON and notices formula cells with f and v fields"
+    correct_contains_any: ["formula", "=SUM", "\"f\""]
     tags: [drive]

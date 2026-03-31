@@ -138,19 +138,24 @@ driveCommand
       const tabTitle = sheet.properties.title;
       const gid = String(sheet.properties.sheetId);
       const safeName = safeFilename(tabTitle, "sheet");
-      const csvRelPath = `${cardBasename}/${safeName}.csv`;
-      const csvPath = path.join(path.dirname(cardPath), csvRelPath);
+      const jsonRelPath = `${cardBasename}/${safeName}.json`;
+      const jsonPath = path.join(path.dirname(cardPath), jsonRelPath);
 
-      const values = await service.getSheetValues(fileId, {
+      const formulaValues = await service.getSheetValues(fileId, {
         sheetTitle: tabTitle,
         valueRenderOption: "FORMULA",
       });
+      const formattedValues = await service.getSheetValues(fileId, {
+        sheetTitle: tabTitle,
+        valueRenderOption: "FORMATTED_VALUE",
+      });
 
-      const { valuesToCsv } = await import("../../connectors/drive-csv.js");
-      const csvContent = valuesToCsv(values);
-      await fs.writeFile(csvPath, csvContent);
-      written.push(path.relative(boxRoot, csvPath));
-      sheetRefs.push({ file: csvRelPath, title: tabTitle, gid });
+      const { buildSheetData, serializeSheetData } = await import("../../connectors/drive-sheet-data.js");
+      const sheetData = buildSheetData(formulaValues, formattedValues);
+      await fs.writeFile(jsonPath, serializeSheetData(sheetData));
+      written.push(path.relative(boxRoot, jsonPath));
+
+      sheetRefs.push({ file: jsonRelPath, title: tabTitle, gid });
     }
 
     const cardContent = createSheetTemplate({

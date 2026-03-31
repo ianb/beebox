@@ -13,7 +13,7 @@ import { createGoogleDriveConnector } from "../src/connectors/google-drive.js";
 import type { FakeSpreadsheet } from "../src/services/google-drive.js";
 ```
 
-## Pull — creates card and CSV files from a spreadsheet
+## Pull — creates card and JSON files from a spreadsheet
 
 ```
 const box = await makeTmpBox({ git: true });
@@ -50,10 +50,10 @@ const cardContent = createSheetTemplate({
   modified: "2026-03-29T10:00:00Z",
   link: "https://docs.google.com/spreadsheets/d/sheet-abc123/edit",
   owner: "test@example.com",
-  sheets: [{ file: "Budget/Sheet1.csv", title: "Sheet1", gid: "0" }],
+  sheets: [{ file: "Budget/Sheet1.json", title: "Sheet1", gid: "0" }],
 });
 await box.seed("store/drive/Budget.sheet.card", cardContent);
-await box.seed("store/drive/Budget/Sheet1.csv", "Name,Age\nAlice,30\n");
+await box.seed("store/drive/Budget/Sheet1.json", '[\n["Name","Age"],\n["Alice","30"]\n]\n');
 box.commitAll("add drive sheet");
 
 const connector = createGoogleDriveConnector(box.root, drive);
@@ -73,71 +73,9 @@ card.includes("<title>Test Budget</title>")
 => true
 ```
 
-## Pull with remote change — updates CSV
+## Push — detects local JSON edit, pushes to Drive
 
-When the remote spreadsheet changes, the CSV is updated:
-
-```
-const box2 = await makeTmpBox({ git: true });
-await initBox(box2.root);
-box2.commitAll("init box");
-
-const sheets2 = new Map([["Sheet1", [["Name", "Age"], ["Alice", "30"]]]]);
-const ss2 = {
-  metadata: {
-    spreadsheetId: "sheet-def456",
-    properties: { title: "Contacts" },
-    sheets: [{ properties: { sheetId: 0, title: "Sheet1" } }],
-  },
-  sheets: sheets2,
-};
-
-const drive2 = createFakeGoogleDrive({
-  files: [{
-    id: "sheet-def456",
-    name: "Contacts",
-    mimeType: "application/vnd.google-apps.spreadsheet",
-    modifiedTime: "2026-03-29T10:00:00Z",
-    owners: [{ emailAddress: "test@example.com" }],
-    webViewLink: "https://docs.google.com/spreadsheets/d/sheet-def456/edit",
-  }],
-  spreadsheets: new Map([["sheet-def456", ss2]]),
-});
-
-// Initial sync
-const { createSheetTemplate: tpl2 } = await import("../src/schemas/sheet.js");
-await box2.seed("store/drive/Contacts.sheet.card", tpl2({
-  driveId: "sheet-def456",
-  title: "Contacts",
-  modified: "2026-03-29T10:00:00Z",
-  link: "https://docs.google.com/spreadsheets/d/sheet-def456/edit",
-  owner: "test@example.com",
-  sheets: [{ file: "Contacts/Sheet1.csv", title: "Sheet1", gid: "0" }],
-}));
-await box2.seed("store/drive/Contacts/Sheet1.csv", "Name,Age\nAlice,30\n");
-box2.commitAll("add contacts");
-
-const conn2 = createGoogleDriveConnector(box2.root, drive2);
-await conn2.sync();
-
-// Now change the remote data
-sheets2.set("Sheet1", [["Name", "Age"], ["Alice", "31"], ["Bob", "25"]]);
-
-const result2 = await conn2.sync();
-result2.success
-=> true
-
-const csv = await box2.read("store/drive/Contacts/Sheet1.csv");
-csv.includes("Alice,31")
-=> true
-
-csv.includes("Bob,25")
-=> true
-```
-
-## Push — detects local CSV edit, pushes to Drive
-
-When a user edits a CSV locally, the connector pushes changes back:
+When a user edits a JSON file locally, the connector pushes changes back:
 
 ```
 const box3 = await makeTmpBox({ git: true });
@@ -173,16 +111,16 @@ await box3.seed("store/drive/Expenses.sheet.card", tpl3({
   modified: "2026-03-29T10:00:00Z",
   link: "https://docs.google.com/spreadsheets/d/sheet-push1/edit",
   owner: "test@example.com",
-  sheets: [{ file: "Expenses/Sheet1.csv", title: "Sheet1", gid: "0" }],
+  sheets: [{ file: "Expenses/Sheet1.json", title: "Sheet1", gid: "0" }],
 }));
-await box3.seed("store/drive/Expenses/Sheet1.csv", "Item,Cost\nCoffee,5\n");
+await box3.seed("store/drive/Expenses/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
 box3.commitAll("add expenses");
 
 const conn3 = createGoogleDriveConnector(box3.root, drive3);
 await conn3.sync();
 
-// Edit the CSV locally
-await box3.seed("store/drive/Expenses/Sheet1.csv", "Item,Cost\nCoffee,6\nTea,3\n");
+// Edit the JSON locally — change Coffee price and add Tea
+await box3.seed("store/drive/Expenses/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","6"],\n["Tea","3"]\n]\n');
 box3.commitAll("edit expenses");
 
 const result3 = await conn3.sync();
@@ -203,7 +141,7 @@ drive3.updateLog[0]?.values[1]?.[1]
 
 ## Multiple tabs
 
-Spreadsheets with multiple sheet tabs get separate CSV files:
+Spreadsheets with multiple sheet tabs get separate JSON files:
 
 ```
 const box4 = await makeTmpBox({ git: true });
@@ -246,12 +184,12 @@ await box4.seed("store/drive/Multi.sheet.card", tpl4({
   link: "https://docs.google.com/spreadsheets/d/sheet-multi/edit",
   owner: "test@example.com",
   sheets: [
-    { file: "Multi/Summary.csv", title: "Summary", gid: "0" },
-    { file: "Multi/Expenses.csv", title: "Expenses", gid: "1" },
+    { file: "Multi/Summary.json", title: "Summary", gid: "0" },
+    { file: "Multi/Expenses.json", title: "Expenses", gid: "1" },
   ],
 }));
-await box4.seed("store/drive/Multi/Summary.csv", '"Total","=SUM(Expenses!B:B)"\n');
-await box4.seed("store/drive/Multi/Expenses.csv", "Item,Cost\nCoffee,5\n");
+await box4.seed("store/drive/Multi/Summary.json", '[\n["Total","=SUM(Expenses!B:B)"]\n]\n');
+await box4.seed("store/drive/Multi/Expenses.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
 box4.commitAll("add multi");
 
 const conn4 = createGoogleDriveConnector(box4.root, drive4);
@@ -263,7 +201,7 @@ const files = await readdir(join(box4.root, "store/drive/Multi"));
 files.sort();
 files
 => [
-  "Expenses.csv",
-  "Summary.csv"
+  "Expenses.json",
+  "Summary.json"
 ]
 ```

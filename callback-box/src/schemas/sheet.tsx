@@ -84,19 +84,34 @@ export const SheetSchema = element("sheet", {
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
 Each synced Google Spreadsheet has a \`.sheet.card\` metadata file plus a subdirectory
-(same basename) containing one CSV file per sheet tab.
+(same basename) containing one JSON file per sheet tab.
+
+## Data format
+Each tab is a JSON file with one row per line. Cell values are:
+- Plain values: strings, numbers, booleans, or null
+- Formula cells: \`{"f": "=SUM(A1:B1)", "v": "$42.00"}\` — \`f\` is the formula, \`v\` is the computed display value
+
+Example:
+\`\`\`json
+[
+["Name", "Amount", "Total"],
+["Alice", 100, {"f": "=SUM(B2:B3)", "v": "250"}],
+["Bob", 150, ""]
+]
+\`\`\`
 
 ## Reading spreadsheet data
 1. Read the card to understand structure: title, tabs, Google link
-2. Read the CSV files for actual data — they contain formulas (e.g., \`=SUM(A1:A10)\`), not computed values
+2. Read the JSON tab files — plain values are bare, formula cells have both the formula and computed result
 
 ## Editing spreadsheet data
-Edit the CSV file directly and commit. On next sync (\`cb wakeup\` or \`cb drive sync\`),
-local changes are pushed back to Google Sheets. Do NOT modify the card XML — it is
-managed by the connector.
+Edit the JSON file directly and commit. For plain cells, just change the value.
+For formula cells, edit the \`f\` field (the \`v\` field will be updated on next sync).
+On next sync (\`cb wakeup\` or \`cb drive sync\`), local changes are pushed to Google Sheets.
+Do NOT modify the card XML — it is managed by the connector.
 
 ## Moving spreadsheets
-Moving the card (and its CSV directory) to a new location is safe — the \`drive-id\`
+Moving the card (and its data directory) to a new location is safe — the \`drive-id\`
 attribute in the card maintains the link to Google Drive.`,
 });
 

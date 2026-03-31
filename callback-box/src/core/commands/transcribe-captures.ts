@@ -100,11 +100,39 @@ registerCommand({
             boxRoot: ctx.boxRoot,
           })) as DetailedTranscriptionResult;
 
-          // Write transcript text to <transcript> element
+          // Write transcript text to <transcript> element (create if missing)
           const transcriptEl = children.find((c) => c.tagName === "transcript");
           if (transcriptEl) {
             transcriptEl.text = result.text;
             transcriptEl.dirty = true;
+          } else {
+            const newTranscript: ElementNode = {
+              tagName: "transcript",
+              attrs: {},
+              children: [],
+              text: result.text,
+              dirty: true,
+              comments: {},
+              location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+            };
+            children.push(newTranscript);
+            element.dirty = true;
+          }
+
+          // Ensure <summary/> placeholder exists for the summarize step
+          const summaryEl = children.find((c) => c.tagName === "summary");
+          if (!summaryEl) {
+            const newSummary: ElementNode = {
+              tagName: "summary",
+              attrs: {},
+              children: [],
+              text: "",
+              dirty: true,
+              comments: {},
+              location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+            };
+            children.push(newSummary);
+            element.dirty = true;
           }
 
           // Set duration on <filename>

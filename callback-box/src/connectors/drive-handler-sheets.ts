@@ -1,15 +1,20 @@
 /**
  * Drive type handler for Google Sheets (spreadsheets).
  *
- * Exports sheets as CSV files (one per tab, with formulas).
+ * Exports sheets as JSON files (one per tab) with formula + computed values.
  * Detects local edits via content hash and pushes changes back.
  */
 
 import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { valuesToCsv, csvToValues } from "./drive-csv.js";
 import { safeFilename } from "./chat-utils.js";
+import {
+  buildSheetData,
+  serializeSheetData,
+  parseSheetData,
+  sheetDataToValues,
+} from "./drive-sheet-data.js";
 import type {
   DriveTypeHandler,
   InspectResult,
@@ -23,7 +28,6 @@ import { createSheetTemplate } from "../schemas/sheet.js";
 function contentHash(content: string): string {
   return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
-
 
 const sheetsHandler: DriveTypeHandler = {
   mimeTypes: ["application/vnd.google-apps.spreadsheet"],
@@ -51,7 +55,7 @@ const sheetsHandler: DriveTypeHandler = {
     const written: string[] = [];
     let changed = false;
 
-    // Ensure CSV directory exists
+    // Ensure data directory exists
     await fs.mkdir(localDir, { recursive: true });
 
     const sheetRefs: Array<{ file: string; title: string; gid: string }> = [];
@@ -60,30 +64,32 @@ const sheetsHandler: DriveTypeHandler = {
       const tabTitle = sheet.properties.title;
       const gid = String(sheet.properties.sheetId);
       const safeName = safeFilename(tabTitle, "sheet");
-      const csvFileName = `${safeName}.csv`;
-      const csvPath = path.join(localDir, csvFileName);
-      const csvRelPath = path.relative(
-        path.dirname(cardPath),
-        csvPath,
-      );
+      const jsonFileName = `${safeName}.json`;
+      const jsonPath = path.join(localDir, jsonFileName);
+      const jsonRelPath = path.relative(path.dirname(cardPath), jsonPath);
 
-      sheetRefs.push({ file: csvRelPath, title: tabTitle, gid });
+      sheetRefs.push({ file: jsonRelPath, title: tabTitle, gid });
 
-      // Fetch values with formulas
-      const values = await service.getSheetValues(file.id, {
+      // Fetch formula values and formatted values
+      const formulaValues = await service.getSheetValues(file.id, {
         sheetTitle: tabTitle,
         valueRenderOption: "FORMULA",
       });
+      const formattedValues = await service.getSheetValues(file.id, {
+        sheetTitle: tabTitle,
+        valueRenderOption: "FORMATTED_VALUE",
+      });
 
-      const csvContent = valuesToCsv(values);
-      const newHash = contentHash(csvContent);
-      const storedHash = state.contentHashes[csvRelPath];
+      const sheetData = buildSheetData(formulaValues, formattedValues);
+      const jsonContent = serializeSheetData(sheetData);
+      const newHash = contentHash(jsonContent);
+      const storedHash = state.contentHashes[jsonRelPath];
 
       if (storedHash) {
         // Check if local file was edited
         let localContent = "";
         try {
-          localContent = await fs.readFile(csvPath, "utf-8");
+          localContent = await fs.readFile(jsonPath, "utf-8");
         } catch {
           // File missing — will be written below
         }
@@ -95,11 +101,11 @@ const sheetsHandler: DriveTypeHandler = {
         }
       }
 
-      // Write CSV if content changed
+      // Write JSON if content changed
       if (newHash !== storedHash) {
-        await fs.writeFile(csvPath, csvContent);
-        state.contentHashes[csvRelPath] = newHash;
-        written.push(path.relative(boxRoot, csvPath));
+        await fs.writeFile(jsonPath, jsonContent);
+        state.contentHashes[jsonRelPath] = newHash;
+        written.push(path.relative(boxRoot, jsonPath));
         changed = true;
       }
     }
@@ -109,14 +115,12 @@ const sheetsHandler: DriveTypeHandler = {
       spreadsheet.sheets.map((s) => String(s.properties.sheetId)),
     );
     for (const [relPath, _hash] of Object.entries(state.contentHashes)) {
-      // Find the gid from state.extra
       const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
       const gid = tabGids[relPath];
       if (gid && !currentGids.has(gid)) {
-        // Tab was removed — delete local CSV
-        const csvPath = path.join(path.dirname(cardPath), relPath);
+        const filePath = path.join(path.dirname(cardPath), relPath);
         try {
-          await fs.unlink(csvPath);
+          await fs.unlink(filePath);
         } catch {
           // Already gone
         }
@@ -166,51 +170,47 @@ const sheetsHandler: DriveTypeHandler = {
     const { file, cardPath, boxRoot, service, state } = opts;
     const pushed: string[] = [];
 
-    // Check each CSV for local edits
     const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
 
     for (const [relPath, storedHash] of Object.entries(state.contentHashes)) {
-      if (!relPath.endsWith(".csv")) continue;
+      if (!relPath.endsWith(".json")) continue;
 
-      const csvPath = path.join(path.dirname(cardPath), relPath);
+      const filePath = path.join(path.dirname(cardPath), relPath);
       let localContent: string;
       try {
-        localContent = await fs.readFile(csvPath, "utf-8");
+        localContent = await fs.readFile(filePath, "utf-8");
       } catch {
-        continue; // File missing
+        continue;
       }
 
       const localHash = contentHash(localContent);
-      if (localHash === storedHash) continue; // No change
+      if (localHash === storedHash) continue;
 
-      // Find the tab title from the gid mapping
       const gid = tabGids[relPath];
       if (!gid) continue;
 
-      // Find tab title from spreadsheet metadata
       const spreadsheet = await service.getSpreadsheet(file.id);
       const sheet = spreadsheet.sheets.find(
         (s) => String(s.properties.sheetId) === gid,
       );
       if (!sheet) continue;
 
-      const values = csvToValues(localContent);
+      const sheetData = parseSheetData(localContent);
+      const values = sheetDataToValues(sheetData);
       await service.updateSheetValues(file.id, {
         sheetTitle: sheet.properties.title,
         values,
       });
 
-      // Update stored hash to reflect pushed content
       state.contentHashes[relPath] = localHash;
-      const csvAbsPath = path.join(path.dirname(cardPath), relPath);
-      pushed.push(path.relative(boxRoot, csvAbsPath));
+      const absPath = path.join(path.dirname(cardPath), relPath);
+      pushed.push(path.relative(boxRoot, absPath));
     }
 
     return { pushed };
   },
 };
 
-// Self-register on import
 registerDriveHandler(sheetsHandler);
 
 export { sheetsHandler };

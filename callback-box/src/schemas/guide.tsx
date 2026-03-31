@@ -651,12 +651,12 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Read Spreadsheet",
         when: "User asks about data in a synced spreadsheet",
-        instructions: "Find the .sheet.card file to understand structure (tabs, title). Then read the relevant CSV file(s) in the matching subdirectory. CSVs contain formulas, not computed values.",
+        instructions: "Find the .sheet.card file to understand structure (tabs, title). Then read the JSON tab file(s) in the matching subdirectory. Plain cells are bare values; formula cells are {\"f\": formula, \"v\": computed_result}.",
       },
       {
         name: "Edit Spreadsheet",
         when: "User asks to change values in a synced spreadsheet",
-        instructions: "Edit the CSV file directly and commit. Changes push to Google Sheets on next sync (cb drive sync or cb wakeup).",
+        instructions: "Edit the JSON file directly and commit. For plain cells change the value; for formula cells edit the 'f' field. Changes push to Google Sheets on next sync (cb drive sync or cb wakeup).",
       },
     ],
     triageRules: [],

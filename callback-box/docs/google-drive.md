@@ -31,19 +31,19 @@ cb drive list
 
 ### File Layout
 
-Each synced spreadsheet creates a card file and a directory of CSV files:
+Each synced spreadsheet creates a card file and a directory of JSON files:
 
 ```
 store/drive/Budget.sheet.card     # metadata (title, Drive ID, link, tabs)
 store/drive/Budget/
-  Summary.csv                           # one CSV per sheet tab
-  Expenses.csv
-  Income.csv
+  Summary.json                          # one JSON per sheet tab
+  Expenses.json
+  Income.json
 ```
 
 ### The Card is the Config
 
-The `.sheet.card` file contains the `drive-id` attribute that links to Google Drive. Moving the card (and its CSV directory) to a new location is safe -- the link is maintained. No separate config file is needed for individual files.
+The `.sheet.card` file contains the `drive-id` attribute that links to Google Drive. Moving the card (and its data directory) to a new location is safe -- the link is maintained. No separate config file is needed for individual files.
 
 ### Sync Flow
 
@@ -51,21 +51,31 @@ On `cb wakeup` or `cb drive sync`:
 
 1. The connector finds all `.sheet.card` files anywhere in the box
 2. For each card, reads the `drive-id` attribute
-3. Compares local CSV content hashes with stored hashes:
-   - **Local file unchanged** -- pull remote changes (overwrite CSV)
+3. Compares local JSON content hashes with stored hashes:
+   - **Local file unchanged** -- pull remote changes (overwrite JSON)
    - **Local file edited** -- push changes to Google Sheets via API
 4. Updates the card metadata (title, modified time)
 5. Stages and commits changes
 
-### CSV Format
+### Data Format
 
-- CSVs contain **formulas** (e.g., `=SUM(A1:B1)`), not computed values
-- This lets agents understand spreadsheet logic
-- When pushing edits, values are sent with `USER_ENTERED` so Google Sheets parses formulas
+Each tab is a JSON file with one row per line:
+
+```json
+[
+["Name", "Amount", "Total"],
+["Alice", 100, {"f": "=SUM(B2:B3)", "v": "250"}],
+["Bob", 150, ""]
+]
+```
+
+- Plain cells are bare values (strings, numbers, booleans, null)
+- Formula cells are objects: `{"f": "=SUM(...)", "v": "computed result"}` -- both the formula and the display value
+- When pushing edits, formula strings are sent with `USER_ENTERED` so Google Sheets parses them
 
 ### Editing Spreadsheets
 
-Edit the CSV file directly and commit. On next sync, the connector detects the change (via content hash) and pushes it to Google Sheets.
+Edit the JSON file directly and commit. For plain cells, change the value. For formula cells, edit the `f` field. On next sync, the connector detects the change (via content hash) and pushes it to Google Sheets.
 
 **Do NOT edit the card XML** -- it is managed by the connector.
 
@@ -112,7 +122,7 @@ Current handlers:
 - **Regular files** (PDFs, images) not yet supported (planned: direct download)
 - **No new file creation** -- the connector only syncs existing Drive files
 - **Export size** -- Google Sheets API has a 10MB response limit per request
-- **Comments/formatting** -- CSV export loses all formatting and comments. Edit in Google Sheets for formatting; edit CSV for data.
+- **Comments/formatting** -- JSON export preserves computed values but not formatting or comments. Edit in Google Sheets for formatting; edit JSON for data.
 
 ## Troubleshooting
 
@@ -126,4 +136,4 @@ Enable Drive separately: set `googleServices.drive: true` in `config/box.json`.
 
 ### Sync doesn't detect local changes
 
-The connector compares content hashes stored in transient state (`config/connectors/google-drive.state.json`). If this file is missing (e.g., new machine), the connector treats all files as fresh pulls. Edit and re-sync to establish hashes.
+The connector compares content hashes stored in transient state (`config/connectors/google-drive.state.json`). If this file is missing (e.g., new machine), the connector treats all files as fresh pulls. Re-sync to establish hashes.
