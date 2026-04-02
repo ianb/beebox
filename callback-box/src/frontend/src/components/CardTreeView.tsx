@@ -61,6 +61,10 @@ function getAttrColor(name: string): string {
  * Resolve a ref path relative to the card's directory.
  */
 function resolveRef(ref: string, cardPath: string): string {
+  // Absolute refs (leading /) are relative to box root
+  if (ref.startsWith("/")) {
+    return ref.slice(1);
+  }
   const cardDir = cardPath.split("/").slice(0, -1).join("/");
   if (!cardDir) return ref;
   // Simple path resolution: join and normalize
