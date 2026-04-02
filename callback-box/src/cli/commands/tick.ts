@@ -224,6 +224,14 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     }
 
     if (!options.quiet) console.log(`Running ${scriptName}...`);
+    // Snapshot mtime before execution so we can detect if the script recreated itself
+    let preRunMtimeMs = 0;
+    try {
+      const stat = await fs.stat(cardPath);
+      preRunMtimeMs = stat.mtimeMs;
+    } catch {
+      // file may have been deleted between readdir and here
+    }
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
     const wallStart = Date.now();
     const monoStart = performance.now();
@@ -253,10 +261,25 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
 
       await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
 
-      // Handle once: delete the card after success
+      // Handle once: delete the card after success — but only if the script
+      // didn't recreate the file during execution (e.g. archive re-triggering)
       if (parsed.once) {
-        await fs.unlink(cardPath);
-        if (!options.quiet) console.log(`  Deleted one-shot script: ${file}`);
+        let shouldDelete = true;
+        try {
+          const postStat = await fs.stat(cardPath);
+          if (postStat.mtimeMs > preRunMtimeMs) {
+            // File was recreated/modified during execution — leave it for next tick
+            shouldDelete = false;
+            if (!options.quiet) console.log(`  One-shot script recreated during execution, keeping: ${file}`);
+          }
+        } catch {
+          // File already gone — nothing to delete
+          shouldDelete = false;
+        }
+        if (shouldDelete) {
+          await fs.unlink(cardPath);
+          if (!options.quiet) console.log(`  Deleted one-shot script: ${file}`);
+        }
       }
 
       // Commit housekeeping changes (once deletion, createAfterSuccess files)

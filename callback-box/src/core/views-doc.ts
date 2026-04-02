@@ -146,6 +146,7 @@ To show a file to the user, use a \`view:\` link with the file path:
 The system automatically picks the right viewer based on file type:
 - \`.md\` files render as formatted Markdown
 - \`.card\` files use the card viewer (card-type-specific renderers if available, generic tree view otherwise)
+- Directories show a listing of subdirectories and cards
 - Other files show as raw text
 
 To open as a companion panel alongside chat, add \`?zoom\`:
@@ -158,7 +159,12 @@ To force a specific viewer, use \`?view=\`:
 [Raw XML](view:store/archive/Pasta.recipe.card?view=raw)
 \`\`\`
 
-**Note:** \`view:\` links are for file paths only. Do not use them for custom view slugs.
+Directory paths work too:
+\`\`\`
+[Catalog](view:store/catalogs/My_Catalog)
+\`\`\`
+
+**Note:** \`view:\` links are for file and directory paths only. Do not use them for custom view slugs.
 
 ### Inline vs Companion Views
 

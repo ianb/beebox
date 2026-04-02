@@ -112,6 +112,17 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     severity: "warning",
   });
 
+  // Gemini key (needed for image description in capture processing)
+  const geminiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
+  checks.push({
+    name: "gemini-api-key",
+    ok: geminiKey !== null,
+    message: geminiKey !== null
+      ? "Gemini API key configured"
+      : "Gemini API key not found — capture image description will not work. Set GEMINI_KEY in .env",
+    severity: "warning",
+  });
+
   // Claude Code credentials (needed for agent operations — chat, reactor, procedures)
   // Claude Code stores credentials in ~/.claude/.credentials.json (Linux) or Keychain (macOS)
   const credsPath = path.join(os.homedir(), ".claude", ".credentials.json");

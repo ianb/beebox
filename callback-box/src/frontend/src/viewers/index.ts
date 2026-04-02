@@ -4,4 +4,5 @@
 
 import "./markdown-viewer";
 import "./card-viewer";
+import "./directory-viewer";
 import "./raw-viewer";

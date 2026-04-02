@@ -29,7 +29,8 @@ export async function runShell(
   script: string
 ): Promise<ShellResult> {
   try {
-    const { stdout, stderr } = await execa("bash", ["-c", script], {
+    const wrappedScript = `set -e -o pipefail\n${script}`;
+    const { stdout, stderr } = await execa("bash", ["-c", wrappedScript], {
       cwd: boxRoot,
       env: {
         ...process.env,

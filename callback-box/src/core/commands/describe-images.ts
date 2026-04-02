@@ -93,8 +93,45 @@ async function executeDescribeImages(
   ctx.writeLine(`Analyzing ${items.length} image(s) with Gemini Flash...`);
 
   try {
-    const imagePaths = items.map((item) => item.imagePath);
-    const { analyses, usage } = await analyzeImagesWithGemini(apiKey, { imagePaths });
+    // Chunk into batches of 8 to avoid Gemini payload limits with large images
+    const BATCH_SIZE = 8;
+    const analyses: ImageAnalysis[] = [];
+    let totalUsage: { prompt: number; output: number; thinking: number } | null = null;
+
+    let batchErrors = 0;
+    for (let batchStart = 0; batchStart < items.length; batchStart += BATCH_SIZE) {
+      const batchItems = items.slice(batchStart, batchStart + BATCH_SIZE);
+      const batchPaths = batchItems.map((item) => item.imagePath);
+      try {
+        const result = await analyzeImagesWithGemini(apiKey, { imagePaths: batchPaths });
+
+        // Remap indices back to the global item indices
+        for (const a of result.analyses) {
+          a.index = a.index + batchStart;
+          analyses.push(a);
+        }
+
+        if (result.usage) {
+          if (!totalUsage) {
+            totalUsage = { ...result.usage };
+          } else {
+            totalUsage.prompt += result.usage.prompt;
+            totalUsage.output += result.usage.output;
+            totalUsage.thinking += result.usage.thinking;
+          }
+        }
+      } catch (batchErr) {
+        batchErrors++;
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, items.length);
+        ctx.writeLine(`\nError analyzing batch ${batchStart}-${batchEnd - 1} (${batchItems.length} images): ${(batchErr as Error).message}`);
+      }
+    }
+
+    if (batchErrors > 0) {
+      ctx.writeLine(`\n${batchErrors} batch(es) failed — ${analyses.length}/${items.length} images analyzed`);
+    }
+
+    const usage = totalUsage;
 
     for (const item of items) {
       const analysis = analyses.find((a) => a.index === item.index);
@@ -158,9 +195,17 @@ async function executeDescribeImages(
       ctx.writeLine(`\nTokens: input=${usage.prompt}, output=${usage.output}, thinking=${usage.thinking}`);
     }
 
+    const analyzedCount = analyses.length;
+    if (analyzedCount === 0 && items.length > 0) {
+      return {
+        success: false,
+        error: `All ${batchErrors} batch(es) failed — no images were analyzed`,
+      };
+    }
+
     return {
       success: true,
-      data: { analyzed: items.length, analyses },
+      data: { analyzed: analyzedCount, total: items.length, batchErrors, analyses },
     };
   } catch (error) {
     return {
