@@ -345,14 +345,22 @@ Phase: describe-images"
           &lt;name&gt;Example Item Name&lt;/name&gt;
           &lt;description&gt;What this item is and its condition&lt;/description&gt;
           &lt;sources&gt;
-            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Name/session.capture-session.card" time="1:30"&gt;
-              User describes this item while pointing at it
+            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Name/photo-003-descriptive-name.image.card"&gt;
+              Photo of the item showing its condition and markings
+            &lt;/source&gt;
+            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Name/photo-004-detail.image.card"&gt;
+              Close-up of label/serial number
             &lt;/source&gt;
           &lt;/sources&gt;
           &lt;location&gt;Living room, near the window&lt;/location&gt;
           &lt;measure value="500 USD"&gt;Estimated value&lt;/measure&gt;
         &lt;/record&gt;
         ```
+
+        IMPORTANT: Sources should reference the specific IMAGE CARDS (photo-NNN-name.image.card)
+        that depict this record, not the session card. Each record should link to exactly the
+        images that show it. If audio context is relevant, include a source ref to the session
+        card with a time= attribute.
 
         ## Records to Extract
         - **Record Name** → `Slugified_Filename.record.card`
@@ -473,8 +481,12 @@ Phase: describe-images"
         ```
         Then edit the created card to fill in the record following the spec's format guidance
         and example. Key rules:
-        - Always include &lt;sources&gt; referencing the session card and specific image cards
+        - Always include &lt;sources&gt; with refs to the specific IMAGE CARDS that depict this
+          record (e.g. photo-003-descriptive-name.image.card), NOT the session card.
+          Each record should link to exactly the photos that show it.
+          Only reference the session card if audio/transcript context is relevant (with time=).
         - Source body text must explain WHY that source is relevant
+        - Use absolute paths for refs: /box/inbox/capture-YYYYMMDDTHHMM-Name/photo-NNN-name.image.card
         - &lt;measure value="..."&gt; uses natural language: "2 pages", "7 feet", "1200 USD"
         - Only use fields the spec recommends
         - &lt;name&gt; is always required
