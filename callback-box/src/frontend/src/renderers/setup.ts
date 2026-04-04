@@ -4,5 +4,6 @@
  */
 
 import "./builtins";
+import "./image";
 import "./recipe";
 import "./sheet";
