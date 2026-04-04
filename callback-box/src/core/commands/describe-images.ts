@@ -150,8 +150,11 @@ async function executeDescribeImages(
       if (analysis.invalid) {
         ctx.writeLine("  Status: invalid");
       }
-      if (analysis.document_bbox) {
-        ctx.writeLine(`  Document bbox: [${analysis.document_bbox.join(", ")}]`);
+      if (analysis.subject_bbox) {
+        ctx.writeLine(`  Subject bbox: [${analysis.subject_bbox.join(", ")}]`);
+      }
+      if (analysis.rotation !== 0) {
+        ctx.writeLine(`  Rotation: ${analysis.rotation}°`);
       }
 
       // Create card if it doesn't exist
@@ -224,6 +227,9 @@ async function applyAnalysisToCard(
 
   el.attrs["status"] = analysis.invalid ? "invalid" : "analyzed";
   el.attrs["has-text"] = analysis.has_text ? "true" : "false";
+  if (analysis.rotation !== 0) {
+    el.attrs["rotation"] = String(analysis.rotation);
+  }
 
   const descChild = el.children.find((c) => c.tagName === "description");
   if (descChild) {
@@ -238,8 +244,8 @@ async function applyAnalysisToCard(
     }
   }
 
-  // Remove old text and exif children, add new ones
-  el.children = el.children.filter((c) => c.tagName !== "text" && c.tagName !== "exif");
+  // Remove old text, exif, and subject-bbox children, add new ones
+  el.children = el.children.filter((c) => c.tagName !== "text" && c.tagName !== "exif" && c.tagName !== "subject-bbox");
   for (const block of analysis.text_blocks) {
     el.children.push({
       tagName: "text",
@@ -262,6 +268,23 @@ async function applyAnalysisToCard(
     el.children.push({
       tagName: "exif",
       attrs: exifAttrs,
+      text: "",
+      children: [],
+      comments: {},
+      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+      dirty: true,
+    });
+  }
+
+  if (analysis.subject_bbox && analysis.subject_bbox.length === 4) {
+    el.children.push({
+      tagName: "subject-bbox",
+      attrs: {
+        y1: String(analysis.subject_bbox[0]),
+        x1: String(analysis.subject_bbox[1]),
+        y2: String(analysis.subject_bbox[2]),
+        x2: String(analysis.subject_bbox[3]),
+      },
       text: "",
       children: [],
       comments: {},

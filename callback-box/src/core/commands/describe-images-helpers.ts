@@ -121,7 +121,8 @@ export interface ImageAnalysis {
     text: string;
   }>;
   invalid: boolean;
-  document_bbox: number[] | null;
+  subject_bbox: number[] | null;
+  rotation: number;
 }
 
 /**
@@ -153,9 +154,8 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
 3. Whether the image contains readable text (has_text)
 4. If it has text: extract all readable text, organized by source (what the text is physically on). Use Markdown formatting. For tables, use Markdown tables.
 5. Whether this image seems invalid or useless (accidental capture, too blurry to read, etc.)
-6. If the image shows a document/paper/card photographed on a surface: the bounding box of just the document area as [y1, x1, y2, x2] on a 0-1000 scale. null if the image is not a document on a surface.
-
-Images may be rotated — read text in the correct orientation regardless.`;
+6. The bounding box of the main subject or item of interest as [y1, x1, y2, x2] on a 0-1000 scale. This could be a document on a surface, a coin on a table, a specific object being photographed, etc. — whatever the photo is "of". null only if the subject fills the entire frame or there's no clear focal subject.
+7. The rotation needed to view the image correctly, in degrees clockwise: 0 (upright), 90 (rotated 90° clockwise, needs counter-clockwise rotation to fix), 180 (upside down), or 270. Judge by text direction, face orientation, or natural object orientation. Use 0 if uncertain.`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -180,9 +180,10 @@ Images may be rotated — read text in the correct orientation regardless.`;
               },
             },
             invalid: { type: "BOOLEAN" },
-            document_bbox: { type: "ARRAY", items: { type: "INTEGER" }, nullable: true },
+            subject_bbox: { type: "ARRAY", items: { type: "INTEGER" }, nullable: true },
+            rotation: { type: "INTEGER" },
           },
-          required: ["index", "description", "title", "has_text", "text_blocks", "invalid"],
+          required: ["index", "description", "title", "has_text", "text_blocks", "invalid", "subject_bbox", "rotation"],
         },
       },
     },

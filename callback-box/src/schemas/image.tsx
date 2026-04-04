@@ -41,6 +41,15 @@ export const ImageExif = element("exif", {
   },
 });
 
+export const ImageSubjectBbox = element("subject-bbox", {
+  attrs: {
+    y1: z.string(),
+    x1: z.string(),
+    y2: z.string(),
+    x2: z.string(),
+  },
+});
+
 /**
  * Image card schema.
  *
@@ -57,6 +66,7 @@ export const ImageSchema = element("image", {
   attrs: {
     status: ImageStatus.default("new"),
     "has-text": z.enum(["true", "false"]).optional(),
+    rotation: z.enum(["0", "90", "180", "270"]).optional(),
   },
   children: z.array(
     z.union([
@@ -64,6 +74,7 @@ export const ImageSchema = element("image", {
       ImageDescription,
       ImageText,
       ImageExif,
+      ImageSubjectBbox,
     ])
   ),
   instructions: `# Image Cards
@@ -75,9 +86,11 @@ Elements:
 - \`<description>\` — one-sentence summary of what's in the image (filled during analysis)
 - \`<text source="...">\` — transcribed text content from the image, if any (source describes what the text is on: "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements allowed for different sources.
 - \`<exif>\` — EXIF metadata extracted from the image file (date, camera, GPS, dimensions)
+- \`<subject-bbox y1="..." x1="..." y2="..." x2="...">\` — bounding box of the main subject on a 0-1000 scale (coordinates are [y1, x1, y2, x2]). Present when the subject doesn't fill the entire frame.
 - \`has-text\` attribute — "true" if the image contains readable text, "false" otherwise
+- \`rotation\` attribute — degrees clockwise the image needs to be rotated to appear upright: "0", "90", "180", or "270"
 
-Analysis is done by \`cb describe-images\`, which sends images to Gemini Flash for OCR, description, and document bounding boxes, and extracts EXIF metadata. Pass multiple image cards or image files to process them as a batch (provides better context when images are related). Use \`--no-rename\` to skip automatic renaming.
+Analysis is done by \`cb describe-images\`, which sends images to Gemini Flash for OCR, description, subject detection, and rotation, and extracts EXIF metadata. Pass multiple image cards or image files to process them as a batch (provides better context when images are related). Use \`--no-rename\` to skip automatic renaming.
 
 Status: new (unanalyzed) → analyzed (description filled in) → invalid (accidental capture, too blurry, not useful).`,
 });
