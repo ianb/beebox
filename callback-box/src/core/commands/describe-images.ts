@@ -236,10 +236,12 @@ async function applyAnalysisToCard(
     descChild.text = analysis.description;
   }
 
-  // Update captured date from EXIF if available
+  // Update captured date from EXIF if the card doesn't already have one.
+  // Capture-pipeline cards have accurate UTC timestamps from the client;
+  // EXIF dates lack timezone info and are unreliable on UTC servers.
   if (exif && exif.date) {
     const filenameChild = el.children.find((c) => c.tagName === "filename");
-    if (filenameChild) {
+    if (filenameChild && !filenameChild.attrs["captured"]) {
       filenameChild.attrs["captured"] = exif.date;
     }
   }
