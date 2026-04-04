@@ -12,9 +12,7 @@
 
 import { useState } from "react";
 import { Markdown } from "./Markdown";
-import { ImageLightbox } from "./ImageLightbox";
 import { trpc } from "../lib/trpc";
-import { getApiBase } from "../api";
 import { getRenderers, type FileData } from "../renderers/index";
 
 /**
@@ -84,80 +82,12 @@ function resolveRef(ref: string, cardPath: string): string {
 /**
  * Inline expandable card ref viewer.
  */
-/**
- * Inner content for RefExpander — uses renderer registry if available,
- * otherwise falls back to raw image + ElementTree.
- */
-function RefExpanderContent({ refPath, data, imageSrc, imageFilename, lightboxOpen, onLightboxToggle }: {
-  refPath: string;
-  data: { element?: ElementNode; path: string; tagName?: string; xml?: string; version?: string; status?: string };
-  imageSrc: string | null;
-  imageFilename: string | null;
-  lightboxOpen: boolean;
-  onLightboxToggle: (open: boolean) => void;
-}) {
-  const fileData: FileData = {
-    path: data.path || refPath,
-    tagName: data.tagName,
-    element: data.element,
-    xml: data.xml,
-    version: data.version,
-    status: data.status,
-  };
-
-  const renderers = getRenderers(refPath, fileData);
-  if (renderers.length > 0) {
-    const Renderer = renderers[0].Component;
-    return <Renderer data={fileData} onNavigate={() => {}} />;
-  }
-
-  // Fallback: raw image + tree
-  return (
-    <div>
-      {imageSrc ? (
-        <>
-          <img
-            src={imageSrc}
-            alt={imageFilename || "Referenced image"}
-            className="max-w-sm max-h-64 rounded border border-warm-300 mb-2 cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => onLightboxToggle(true)}
-            title="Click to zoom"
-          />
-          {lightboxOpen ? (
-            <ImageLightbox
-              src={imageSrc}
-              alt={imageFilename || "Referenced image"}
-              onClose={() => onLightboxToggle(false)}
-            />
-          ) : null}
-        </>
-      ) : null}
-      <ElementTree
-        element={data.element as ElementNode}
-        depth={1}
-        cardPath={refPath}
-      />
-    </div>
-  );
-}
-
 function RefExpander({ refPath }: { refPath: string }) {
   const [expanded, setExpanded] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const query = trpc.card.get.useQuery(
     { path: refPath },
     { enabled: expanded }
   );
-
-  // Check if the referenced card has an associated image file
-  const hasImage = refPath.endsWith(".image.card");
-  const imageFilename = hasImage
-    ? query.data?.element?.children?.find((c: ElementNode) => c.tagName === "filename")?.attrs?.name ?? null
-    : null;
-  const imageDir = refPath.split("/").slice(0, -1).join("/");
-  const imageSrc = imageFilename
-    ? `${getApiBase()}/files/${imageDir}/${imageFilename}`
-    : null;
 
   return (
     <div className="mt-1">
@@ -177,19 +107,42 @@ function RefExpander({ refPath }: { refPath: string }) {
               Failed to load: {query.error.message}
             </div>
           ) : query.data ? (
-            <RefExpanderContent
-              refPath={refPath}
-              data={query.data}
-              imageSrc={imageSrc}
-              imageFilename={imageFilename}
-              lightboxOpen={lightboxOpen}
-              onLightboxToggle={setLightboxOpen}
-            />
+            <RefExpanderCard refPath={refPath} data={query.data} />
           ) : null}
         </div>
       ) : null}
     </div>
   );
+}
+
+/**
+ * Render a loaded card ref — uses the renderer registry (same as card viewer),
+ * falls back to ElementTree.
+ */
+function RefExpanderCard({ refPath, data }: {
+  refPath: string;
+  data: { element?: ElementNode; path: string; tagName?: string; xml?: string; version?: string; status?: string };
+}) {
+  const fileData: FileData = {
+    path: data.path || refPath,
+    tagName: data.tagName,
+    element: data.element,
+    xml: data.xml,
+    version: data.version,
+    status: data.status,
+  };
+
+  const renderers = getRenderers(refPath, fileData);
+  if (renderers.length > 0) {
+    const Renderer = renderers[0].Component;
+    return <Renderer data={fileData} onNavigate={() => {}} />;
+  }
+
+  if (data.element) {
+    return <ElementTree element={data.element} depth={1} cardPath={refPath} />;
+  }
+
+  return null;
 }
 
 /**
