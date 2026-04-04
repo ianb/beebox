@@ -182,7 +182,12 @@ export async function registerCaptureRoutes(
     const filesToStage: string[] = [];
     const audioRefs: string[] = [];
     const imageRefs: string[] = [];
-    let endedAt = session.startedAt;
+    // Compute actual start/end from file timestamps (client-provided),
+    // not session creation time (server-provided) which may differ significantly
+    // if uploads were delayed or retried.
+    const allFileTimestamps = session.files.map((f) => f.startedAt).toSorted();
+    const actualStartedAt = allFileTimestamps[0] || session.startedAt;
+    let endedAt = actualStartedAt;
 
     // Concatenate audio chunks into a single file.
     // MediaRecorder with timeslice produces chunks where only the first has
@@ -260,7 +265,7 @@ export async function registerCaptureRoutes(
     const sessionCardFilename = `${sessionDirName}.capture-session.card`;
     const sessionCardContent = createCaptureSessionTemplate({
       sessionId: session.id,
-      startedAt: session.startedAt,
+      startedAt: actualStartedAt,
       endedAt,
       imageRefs,
       audioRefs,

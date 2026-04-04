@@ -151,8 +151,8 @@ export async function analyzeImagesWithGemini(
 For each image (indexed 0 to ${imagePaths.length - 1}), provide:
 1. A one-sentence description of what's in the image
 2. A short title suitable for a filename (2-4 words, use underscores, retain capitals, e.g., "Utility_Bill" or "Piano_Business_Card")
-3. Whether the image contains readable text (has_text)
-4. If it has text: extract all readable text, organized by source (what the text is physically on). Use Markdown formatting. For tables, use Markdown tables.
+3. Whether the image contains readable text that is part of the subject (has_text). Ignore incidental or background text — text on objects in the background, brand names on equipment, etc. Only count text that the photographer intended to capture.
+4. If it has text: extract all readable text that is part of the subject, organized by source (what the text is physically on). Use Markdown formatting. For tables, use Markdown tables. Do not extract incidental text from the background.
 5. Whether this image seems invalid or useless (accidental capture, too blurry to read, etc.)
 6. The bounding box of the main subject or item of interest as [y1, x1, y2, x2] on a 0-1000 scale. This could be a document on a surface, a coin on a table, a specific object being photographed, etc. — whatever the photo is "of". null only if the subject fills the entire frame or there's no clear focal subject.
 7. The rotation needed to view the image correctly, in degrees clockwise: 0 (upright), 90 (rotated 90° clockwise, needs counter-clockwise rotation to fix), 180 (upside down), or 270. Judge by text direction, face orientation, or natural object orientation. Use 0 if uncertain.`;
