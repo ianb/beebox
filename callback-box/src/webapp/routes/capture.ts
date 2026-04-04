@@ -162,8 +162,19 @@ export async function registerCaptureRoutes(
 
     const tmpDir = sessionDir(session.id);
     const now = new Date();
-    // Format: capture-YYYYMMDDTHHMM-shortId
-    const startDate = new Date(session.startedAt);
+
+    const audioChunks = session.files.filter((f) => f.name.startsWith("audio-"));
+    const photoFiles = session.files.filter((f) => f.name.startsWith("photo-"));
+
+    // Compute actual start/end from file timestamps (client-provided),
+    // not session creation time (server-provided) which may differ significantly
+    // if the capture page was open a long time before the user took photos.
+    const allFileTimestamps = session.files.map((f) => f.startedAt).toSorted();
+    const actualStartedAt = allFileTimestamps[0] || session.startedAt;
+    let endedAt = actualStartedAt;
+
+    // Format: capture-YYYYMMDDTHHMM-shortId (using actual capture time)
+    const startDate = new Date(actualStartedAt);
     const datePart = startDate.toISOString().slice(0, 16).replace(/[:-]/g, "").replace("T", "T");
     // e.g. 20260310T1924
     const formattedDate = `${datePart.slice(0, 8)}T${datePart.slice(9, 13)}`;
@@ -174,20 +185,11 @@ export async function registerCaptureRoutes(
 
     await fs.mkdir(sessionAbsDir, { recursive: true });
 
-    const audioChunks = session.files.filter((f) => f.name.startsWith("audio-"));
-    const photoFiles = session.files.filter((f) => f.name.startsWith("photo-"));
-
     console.log(`[capture] Finalizing session ${session.id} → ${sessionDirName}: ${audioChunks.length} audio chunks, ${photoFiles.length} photos`);
 
     const filesToStage: string[] = [];
     const audioRefs: string[] = [];
     const imageRefs: string[] = [];
-    // Compute actual start/end from file timestamps (client-provided),
-    // not session creation time (server-provided) which may differ significantly
-    // if uploads were delayed or retried.
-    const allFileTimestamps = session.files.map((f) => f.startedAt).toSorted();
-    const actualStartedAt = allFileTimestamps[0] || session.startedAt;
-    let endedAt = actualStartedAt;
 
     // Concatenate audio chunks into a single file.
     // MediaRecorder with timeslice produces chunks where only the first has
