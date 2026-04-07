@@ -71,9 +71,9 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
           <span className="text-xs bg-iris-50 text-plum px-1.5 py-0.5 rounded mr-1">
             tick
           </span>
-          {scripts.map((s) => (
+          {scripts.map((s, si) => (
             <span
-              key={s.name}
+              key={`${s.name}-${si}`}
               className={`text-xs mr-1 ${s.status === "error" ? "text-red-600" : "text-green-600"}`}
             >
               {s.name}

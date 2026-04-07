@@ -64,6 +64,7 @@
     "@fastify/websocket": "^11.2.0",
     "@google/genai": "^1.44.0",
     "@parcel/markdown-ansi": "^2.16.3",
+    "@tanstack/react-virtual": "^3.13.23",
     "@trpc/server": "^11.11.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/mailparser": "^3.4.6",

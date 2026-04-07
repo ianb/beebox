@@ -71,6 +71,7 @@ export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise
     };
     if (origin) {
       headers["Access-Control-Allow-Origin"] = origin;
+      headers["Access-Control-Allow-Credentials"] = "true";
     }
 
     reply.raw.writeHead(200, headers);

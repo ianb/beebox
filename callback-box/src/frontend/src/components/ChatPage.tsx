@@ -9,16 +9,17 @@
  * SessionViewer instead of the interactive chat.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, type SessionEntry } from "../api";
+import { getApiBase, getEventSourceBase, type SessionEntry, type SessionContentBlock } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
 import { hasAssistantSpeech, parseAllSpeechTags, VALID_VOICES } from "../lib/speech-parsing";
 import { getTTSClient } from "../lib/tts-client";
 import { unlockAudioContext } from "../lib/audio-context";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { sendSound, tick, recordingStart, alarm } from "../lib/earcons";
@@ -226,7 +227,7 @@ function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
   isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr,
-  voicePaused, onUnpause,
+  voicePaused, onUnpause, hideMobile,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -247,6 +248,7 @@ function ChatInputArea({
   zoomedViewAttr: () => string;
   voicePaused: boolean;
   onUnpause: () => void;
+  hideMobile?: boolean;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const captureHref = href(`/${boxSlug}/capture`);
@@ -254,7 +256,7 @@ function ChatInputArea({
   const circleBtn = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
   return (
-    <div className="flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2">
+    <div className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="flex items-center gap-2">
         {/* Left buttons */}
         <a
@@ -538,6 +540,152 @@ function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZ
   );
 }
 
+/**
+ * Virtualized message list using TanStack Virtual.
+ * Only renders visible message groups in the DOM, with stick-to-bottom behavior.
+ */
+function VirtualizedMessageList({
+  messages, isStreaming, streamText, streamTools,
+  debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
+}: {
+  messages: SessionEntry[];
+  isStreaming: boolean;
+  streamText: string;
+  streamTools: SessionContentBlock[];
+  debugView: boolean;
+  currentUserEmail: string | undefined;
+  speechPlayback: { isPlaying: boolean };
+  handleStopSpeech: () => void;
+  onZoomView: OnZoomView;
+  snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing" | "resetting") => boolean };
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+
+  const groups = useMemo(() => groupMessages(messages), [messages]);
+  const itemCount = groups.length + (snapshot.matches("streaming") ? 1 : 0);
+
+  const virtualizer = useVirtualizer({
+    count: itemCount,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 120,
+    overscan: 5,
+    getItemKey: (index) => {
+      if (index >= groups.length) return "streaming";
+      return groups[index].entries[0].uuid;
+    },
+  });
+
+  // Track whether user is near the bottom
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Auto-scroll to bottom when new messages arrive or stream updates, if user was at bottom
+  const prevItemCount = useRef(itemCount);
+  useEffect(() => {
+    if (itemCount !== prevItemCount.current) {
+      // New group added — scroll to bottom if we were there
+      prevItemCount.current = itemCount;
+      if (isAtBottomRef.current) {
+        virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
+      }
+    }
+  }, [itemCount, virtualizer]);
+
+  // During streaming, keep scrolling to bottom as content grows
+  useEffect(() => {
+    if (snapshot.matches("streaming") && isAtBottomRef.current) {
+      virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
+    }
+  }, [streamText, streamTools.length, snapshot, virtualizer, itemCount]);
+
+  // Scroll to bottom on initial mount
+  useEffect(() => {
+    if (itemCount > 0) {
+      virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (messages.length === 0 && !isStreaming) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-warm-500 text-sm">
+        Start a conversation with your box assistant.
+      </div>
+    );
+  }
+
+  const lastAssistantGroupIndex = groups.findLastIndex((g) => g.type === "assistant");
+
+  return (
+    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+      <div
+        style={{
+          height: virtualizer.getTotalSize(),
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const index = virtualRow.index;
+          const isStreamingItem = index >= groups.length;
+
+          return (
+            <div
+              key={virtualRow.key}
+              ref={virtualizer.measureElement}
+              data-index={virtualRow.index}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+              className="py-0.5"
+            >
+              {isStreamingItem ? (
+                <div>
+                  <StreamingMessage text={streamText} onZoomView={onZoomView} />
+                  {streamTools.length > 0 ? (
+                    <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
+                      <ToolList blocks={streamTools} />
+                    </div>
+                  ) : null}
+                </div>
+              ) : (() => {
+                const group = groups[index];
+                if (group.type === "compaction") {
+                  return <CompactionMessage entries={group.entries} />;
+                } else if (group.type === "user") {
+                  return <UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} />;
+                } else {
+                  return (
+                    <AssistantMessage
+                      entries={group.entries}
+                      debugView={debugView}
+                      speechPlaying={Boolean(speechPlayback.isPlaying && index === lastAssistantGroupIndex)}
+                      onStopSpeech={handleStopSpeech}
+                      onZoomView={onZoomView}
+                    />
+                  );
+                }
+              })()}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ChatPage() {
   const viewSessionId = new URLSearchParams(window.location.search).get("session");
 
@@ -557,7 +705,6 @@ function InteractiveChat() {
   const currentUser = useCurrentUser();
 
   const [input, setInput] = useState("");
-  const [showAllMessages, setShowAllMessages] = useState(false);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [zoomedView, setZoomedView] = useState<{ target: ViewTarget; label: string } | null>(null);
@@ -571,7 +718,6 @@ function InteractiveChat() {
     setZoomedView(view);
   }, []);
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const turnTakingRef = useRef(false);
   const transcriptionRef = useRef<{ start: () => void; cancel: () => void; state: string; transcript: string } | null>(null);
@@ -762,11 +908,6 @@ function InteractiveChat() {
     }
   }, [snapshot.value, snapshot.context.streamText, speechPlayback]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamText]);
-
   const doSend = useCallback(
     (wrapped: string) => {
       send({ type: "SEND", message: wrapped });
@@ -931,73 +1072,19 @@ function InteractiveChat() {
           onToggleDebugLog={() => setShowDebugLog((v) => !v)}
         />
       </div>
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 pl-2 sm:pl-4 space-y-1 min-w-0">
-        {messages.length === 0 && !isStreaming ? (
-          <div className="flex items-center justify-center h-full text-warm-500 text-sm">
-            Start a conversation with your box assistant.
-          </div>
-        ) : null}
-        {(() => {
-          const MAX_USER_MESSAGES = 10;
-          let displayMessages = messages;
-          let truncated = false;
-          if (!showAllMessages) {
-            // Find the start index that keeps the last N user messages
-            let userCount = 0;
-            let cutIndex = -1;
-            for (let i = messages.length - 1; i >= 0; i--) {
-              if (messages[i]!.type === "user") userCount++;
-              if (userCount > MAX_USER_MESSAGES) {
-                cutIndex = i + 1;
-                break;
-              }
-            }
-            if (cutIndex > 0) {
-              truncated = true;
-              displayMessages = messages.slice(cutIndex);
-            }
-          }
-          return (
-            <>
-              {truncated ? (
-                <div className="text-center py-2">
-                  <button
-                    onClick={() => setShowAllMessages(true)}
-                    className="text-sm text-plum hover:text-plum/80"
-                  >
-                    Show {messages.length - displayMessages.length} earlier messages
-                  </button>
-                </div>
-              ) : null}
-              {(() => {
-                const groups = groupMessages(displayMessages);
-                const lastAssistantGroup = groups.findLast((g) => g.type === "assistant");
-                return groups.map((group) =>
-                  group.type === "compaction" ? (
-                    <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
-                  ) : group.type === "user" ? (
-                    <UserMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} currentUserEmail={currentUser?.email} />
-                  ) : (
-                    <AssistantMessage key={group.entries[0].uuid} entries={group.entries} debugView={debugView} speechPlaying={Boolean(speechPlayback.isPlaying && group === lastAssistantGroup)} onStopSpeech={handleStopSpeech} onZoomView={onZoomView} />
-                  )
-                );
-              })()}
-            </>
-          );
-        })()}
-        {snapshot.matches("streaming") ? (
-          <div>
-            <StreamingMessage text={streamText} onZoomView={onZoomView} />
-            {streamTools.length > 0 ? (
-              <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
-                <ToolList blocks={streamTools} />
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        <div ref={messagesEndRef} />
-      </div>
+      {/* Messages area — virtualized */}
+      <VirtualizedMessageList
+        messages={messages}
+        isStreaming={isStreaming}
+        streamText={streamText}
+        streamTools={streamTools}
+        debugView={debugView}
+        currentUserEmail={currentUser?.email}
+        speechPlayback={speechPlayback}
+        handleStopSpeech={handleStopSpeech}
+        onZoomView={onZoomView}
+        snapshot={snapshot}
+      />
 
       {/* Error display */}
       {error || transcription.error ? (
@@ -1034,46 +1121,47 @@ function InteractiveChat() {
         </div>
       ) : null}
 
-      {/* Input area: single row on desktop, button bar + optional typing row on mobile */}
+      {/* Input area: single row on desktop, button bar on mobile (hidden on mobile when typing) */}
       <ChatInputArea
-        textareaRef={textareaRef}
-        input={input}
-        setInput={setInput}
-        isTranscribing={isTranscribing}
-        transcription={transcription}
-        handleKeyDown={handleKeyDown}
-        handleSend={handleSend}
-        handleCancelTranscription={handleCancelTranscription}
-        onKeyboard={() => setTypingMode(true)}
-        onVoice={async () => {
-          turnTakingRef.current = true;
-          await recordingStart.play().started;
-          transcription.start();
-        }}
-        speechPlaying={speechPlayback.isPlaying}
-        onStopSpeech={handleStopSpeech}
-        isStreaming={isStreaming}
-        onInterrupt={handleInterrupt}
-        turnTakingRef={turnTakingRef}
-        doSend={doSend}
-        zoomedViewAttr={zoomedViewAttr}
-        voicePaused={voicePaused ? speechPlayback.isPlaying : false}
-        onUnpause={() => {
-          // Abort speech and resume recording
-          speechPlayback.stop();
-          voicePausedRef.current = false;
-          setVoicePaused(false);
-          transcription.start();
-        }}
-      />
-      {/* Mobile typing row: shown below button bar when typing/transcribing */}
+        hideMobile={typingMode}
+          textareaRef={textareaRef}
+          input={input}
+          setInput={setInput}
+          isTranscribing={isTranscribing}
+          transcription={transcription}
+          handleKeyDown={handleKeyDown}
+          handleSend={handleSend}
+          handleCancelTranscription={handleCancelTranscription}
+          onKeyboard={() => setTypingMode(true)}
+          onVoice={async () => {
+            turnTakingRef.current = true;
+            await recordingStart.play().started;
+            transcription.start();
+          }}
+          speechPlaying={speechPlayback.isPlaying}
+          onStopSpeech={handleStopSpeech}
+          isStreaming={isStreaming}
+          onInterrupt={handleInterrupt}
+          turnTakingRef={turnTakingRef}
+          doSend={doSend}
+          zoomedViewAttr={zoomedViewAttr}
+          voicePaused={voicePaused ? speechPlayback.isPlaying : false}
+          onUnpause={() => {
+            // Abort speech and resume recording
+            speechPlayback.stop();
+            voicePausedRef.current = false;
+            setVoicePaused(false);
+            transcription.start();
+          }}
+        />
+      {/* Mobile typing row: replaces button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (
-        <div className="sm:hidden bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 pb-2">
+        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2">
           {typingMode ? (
-            <div className="flex gap-1 justify-end pb-1">
+            <div className="absolute -top-10 right-3 flex gap-1 z-10">
               <button
                 onClick={() => setTypingLocked((v) => !v)}
-                className="p-1.5 rounded-full bg-warm-200 text-warm-600 hover:bg-warm-300"
+                className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
                 title={typingLocked ? "Unlock (close after send)" : "Lock open"}
               >
                 {typingLocked ? (
@@ -1088,7 +1176,7 @@ function InteractiveChat() {
               </button>
               <button
                 onClick={() => { setTypingMode(false); setTypingLocked(false); }}
-                className="p-1.5 rounded-full bg-warm-200 text-warm-600 hover:bg-warm-300"
+                className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
                 title="Close keyboard"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
