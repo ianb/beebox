@@ -289,6 +289,7 @@ function ChatInputArea({
           <TextareaAutosize
             ref={textareaRef}
             autoFocus
+            enterKeyHint="send"
             value={isTranscribing ? transcription.transcript : input}
             onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
             onKeyDown={handleKeyDown}
@@ -463,6 +464,7 @@ function MobileTextareaRow({
         onKeyDown={handleKeyDown}
         disabled={isTranscribing}
         readOnly={isTranscribing}
+        enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
@@ -1051,12 +1053,18 @@ function InteractiveChat() {
 
   // Keep textarea focused when it's visible and available for input.
   // On mobile (< sm), the textarea is only visible in typing mode or while transcribing.
+  // Safari needs a short delay after the element appears before focus will open the keyboard.
   useEffect(() => {
     if (!isTranscribing && textareaRef.current) {
       // Only focus if the textarea is actually visible (not hidden by mobile bar)
       if (textareaRef.current.offsetParent !== null) {
         textareaRef.current.focus();
       }
+    }
+    if (typingMode) {
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
     }
   }, [isTranscribing, typingMode]);
 
