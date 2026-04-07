@@ -236,9 +236,14 @@ export async function getChatStatus(): Promise<{ sessionId: string | null; runni
   return fetchJson(`${getApiBase()}/chat/status`);
 }
 
-export async function getChatHistory(sessionId?: string): Promise<{ sessionId: string | null; entries: SessionEntry[] }> {
-  const params = sessionId ? `?session=${encodeURIComponent(sessionId)}` : "";
-  return fetchJson(`${getApiBase()}/chat/history${params}`);
+export async function getChatHistory(params?: { sessionId?: string; tail?: number; offset?: number; limit?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
+  const searchParams = new URLSearchParams();
+  if (params?.sessionId) searchParams.set("session", params.sessionId);
+  if (params?.tail) searchParams.set("tail", String(params.tail));
+  if (params?.offset != null) searchParams.set("offset", String(params.offset));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  const qs = searchParams.toString();
+  return fetchJson(`${getApiBase()}/chat/history${qs ? `?${qs}` : ""}`);
 }
 
 export interface ChatSessionInfo {

@@ -450,7 +450,7 @@ function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZo
   if (!cleaned) return null;
 
   return (
-    <div className="prose prose-sm max-w-none">
+    <div className="prose prose-sm max-w-none overflow-hidden">
       <Markdown components={components}>{cleaned}</Markdown>
     </div>
   );

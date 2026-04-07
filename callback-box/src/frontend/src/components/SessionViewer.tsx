@@ -134,7 +134,7 @@ function SessionViewerInner({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    getChatHistory(sessionId)
+    getChatHistory({ sessionId })
       .then((result) => {
         if (!cancelled) setState({ messages: result.entries, loading: false, error: null });
       })

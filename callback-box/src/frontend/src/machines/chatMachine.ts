@@ -36,9 +36,13 @@ type ChatEvent =
   | { type: "STREAM_FAILED"; error: string }
   | { type: "REFRESH" }
   | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
-  | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string };
+  | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }
+  | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] };
 
 // -- Context --
+
+/** How many recent entries to load initially and on refresh. */
+const HISTORY_TAIL = 40;
 
 interface ChatContext {
   messages: SessionEntry[];
@@ -49,24 +53,27 @@ interface ChatContext {
   error: string | null;
   sessionId: string | null;
   processRunning: boolean;
+  /** Total number of entries in the full session log. */
+  totalEntries: number;
 }
 
 // -- Actors --
 
 const fetchInitialActor = fromPromise(async () => {
   const [history, status] = await Promise.all([
-    getChatHistory(),
+    getChatHistory({ tail: HISTORY_TAIL }),
     getChatStatus(),
   ]);
   return {
     entries: history.entries,
+    total: history.total,
     sessionId: history.sessionId ?? status.sessionId,
     running: status.running,
   };
 });
 
 const fetchHistoryActor = fromPromise(async () => {
-  return getChatHistory();
+  return getChatHistory({ tail: HISTORY_TAIL });
 });
 
 const resetSessionActor = fromPromise(async () => {
@@ -236,6 +243,7 @@ export const chatMachine = setup({
     error: null,
     sessionId: null,
     processRunning: false,
+    totalEntries: 0,
   },
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
@@ -275,6 +283,12 @@ export const chatMachine = setup({
         ],
       })),
     },
+    // Global handler: prepend older messages loaded on demand
+    PREPEND_MESSAGES: {
+      actions: assign(({ context, event }) => ({
+        messages: [...event.messages, ...context.messages],
+      })),
+    },
   },
   states: {
     loading: {
@@ -286,6 +300,7 @@ export const chatMachine = setup({
             messages: event.output.entries,
             sessionId: event.output.sessionId,
             processRunning: event.output.running,
+            totalEntries: event.output.total,
           })),
         },
         onError: {
@@ -431,6 +446,7 @@ export const chatMachine = setup({
               messages: reconciled.messages,
               pendingMessages: reconciled.pendingMessages,
               sessionId: event.output.sessionId,
+              totalEntries: event.output.total,
               streamText: "",
               streamTools: [],
             };

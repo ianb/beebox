@@ -278,18 +278,27 @@ export async function registerChatRoutes(
 
   // GET /api/chat/history - Load conversation history
   // Optional ?session=<id> to view any session's history (read-only)
-  server.get<{ Querystring: { session?: string } }>("/api/chat/history", async (request) => {
+  // Optional ?tail=N to load only the last N entries (returns total count)
+  // Optional ?offset=N&limit=N for explicit pagination
+  server.get<{ Querystring: { session?: string; tail?: string; offset?: string; limit?: string } }>("/api/chat/history", async (request) => {
     const sessionId = request.query.session;
+    const tail = request.query.tail ? parseInt(request.query.tail, 10) : undefined;
+    const offset = request.query.offset ? parseInt(request.query.offset, 10) : undefined;
+    const limit = request.query.limit ? parseInt(request.query.limit, 10) : undefined;
     if (!sessionId) {
-      return chatSession.getHistory();
+      return chatSession.getHistory(tail ? { tail } : undefined);
     }
     // Load from JSONL file directly
     const logPath = getSessionLogPath(boxRoot, sessionId);
     try {
-      const { entries } = await parseSessionLog({ logPath });
-      return { sessionId, entries };
+      const result = await parseSessionLog({ logPath, ...(offset != null ? { offset } : {}), ...(limit != null ? { limit } : {}) });
+      const { entries, total } = result;
+      if (tail && tail < entries.length) {
+        return { sessionId, entries: entries.slice(entries.length - tail), total };
+      }
+      return { sessionId, entries, total };
     } catch (_e) {
-      return { sessionId, entries: [] };
+      return { sessionId, entries: [], total: 0 };
     }
   });
 

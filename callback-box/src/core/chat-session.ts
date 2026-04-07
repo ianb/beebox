@@ -422,23 +422,34 @@ export class ChatSession extends EventEmitter {
   /**
    * Load conversation history from the session log.
    */
-  async getHistory(): Promise<{
+  async getHistory(params?: { tail?: number }): Promise<{
     sessionId: string | null;
     entries: SessionEntry[];
+    total: number;
   }> {
     if (!this.sessionId) {
-      return { sessionId: null, entries: [] };
+      return { sessionId: null, entries: [], total: 0 };
     }
 
     const logPath = getSessionLogPath(this.boxRoot, this.sessionId);
     if (!fs.existsSync(logPath)) {
-      return { sessionId: this.sessionId, entries: [] };
+      return { sessionId: this.sessionId, entries: [], total: 0 };
     }
 
     const result = await parseSessionLog({ logPath });
+    const { entries, total } = result;
+    const tail = params?.tail;
+    if (tail && tail < entries.length) {
+      return {
+        sessionId: this.sessionId,
+        entries: entries.slice(entries.length - tail),
+        total,
+      };
+    }
     return {
       sessionId: this.sessionId,
-      entries: result.entries,
+      entries,
+      total,
     };
   }
 

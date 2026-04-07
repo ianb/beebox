@@ -13,7 +13,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, type SessionEntry, type SessionContentBlock } from "../api";
+import { getApiBase, getEventSourceBase, getChatHistory, type SessionEntry, type SessionContentBlock } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
 import { hasAssistantSpeech, parseAllSpeechTags, VALID_VOICES } from "../lib/speech-parsing";
@@ -547,6 +547,7 @@ function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZ
 function VirtualizedMessageList({
   messages, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
+  totalEntries, onLoadOlder, loadingOlder,
 }: {
   messages: SessionEntry[];
   isStreaming: boolean;
@@ -558,21 +559,28 @@ function VirtualizedMessageList({
   handleStopSpeech: () => void;
   onZoomView: OnZoomView;
   snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing" | "resetting") => boolean };
+  totalEntries: number;
+  onLoadOlder: () => void;
+  loadingOlder: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
 
   const groups = useMemo(() => groupMessages(messages), [messages]);
-  const itemCount = groups.length + (snapshot.matches("streaming") ? 1 : 0);
+  const hasOlder = totalEntries > messages.length;
+  const headerCount = hasOlder ? 1 : 0;
+  const itemCount = headerCount + groups.length + (snapshot.matches("streaming") ? 1 : 0);
 
   const virtualizer = useVirtualizer({
     count: itemCount,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 120,
+    estimateSize: (index) => index === 0 && hasOlder ? 40 : 120,
     overscan: 5,
     getItemKey: (index) => {
-      if (index >= groups.length) return "streaming";
-      return groups[index].entries[0].uuid;
+      if (hasOlder && index === 0) return "load-older";
+      const groupIndex = index - headerCount;
+      if (groupIndex >= groups.length) return "streaming";
+      return groups[groupIndex].entries[0].uuid;
     },
   });
 
@@ -635,7 +643,9 @@ function VirtualizedMessageList({
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const index = virtualRow.index;
-          const isStreamingItem = index >= groups.length;
+          const isHeader = hasOlder && index === 0;
+          const groupIndex = index - headerCount;
+          const isStreamingItem = groupIndex >= groups.length;
 
           return (
             <div
@@ -649,9 +659,19 @@ function VirtualizedMessageList({
                 width: "100%",
                 transform: `translateY(${virtualRow.start}px)`,
               }}
-              className="py-0.5"
+              className="py-0.5 overflow-hidden"
             >
-              {isStreamingItem ? (
+              {isHeader ? (
+                <div className="text-center py-2">
+                  <button
+                    onClick={onLoadOlder}
+                    disabled={loadingOlder}
+                    className="text-sm text-plum hover:text-plum/80 disabled:text-warm-400"
+                  >
+                    {loadingOlder ? "Loading..." : `Show ${totalEntries - messages.length} earlier messages`}
+                  </button>
+                </div>
+              ) : isStreamingItem ? (
                 <div>
                   <StreamingMessage text={streamText} onZoomView={onZoomView} />
                   {streamTools.length > 0 ? (
@@ -661,7 +681,7 @@ function VirtualizedMessageList({
                   ) : null}
                 </div>
               ) : (() => {
-                const group = groups[index];
+                const group = groups[groupIndex];
                 if (group.type === "compaction") {
                   return <CompactionMessage entries={group.entries} />;
                 } else if (group.type === "user") {
@@ -671,7 +691,7 @@ function VirtualizedMessageList({
                     <AssistantMessage
                       entries={group.entries}
                       debugView={debugView}
-                      speechPlaying={Boolean(speechPlayback.isPlaying && index === lastAssistantGroupIndex)}
+                      speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
                       onStopSpeech={handleStopSpeech}
                       onZoomView={onZoomView}
                     />
@@ -699,12 +719,13 @@ export function ChatPage() {
 
 function InteractiveChat() {
   const [snapshot, send] = useSSRMachine(chatMachine);
-  const { messages, streamText, streamTools, error, sessionId, processRunning } = snapshot.context;
+  const { messages, streamText, streamTools, error, sessionId, processRunning, totalEntries } = snapshot.context;
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
 
   const [input, setInput] = useState("");
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [zoomedView, setZoomedView] = useState<{ target: ViewTarget; label: string } | null>(null);
@@ -908,6 +929,24 @@ function InteractiveChat() {
     }
   }, [snapshot.value, snapshot.context.streamText, speechPlayback]);
 
+  const handleLoadOlder = useCallback(() => {
+    if (loadingOlder) return;
+    setLoadingOlder(true);
+    // Load all history up to the current start point
+    const currentCount = messages.length;
+    const olderCount = totalEntries - currentCount;
+    const chunkSize = Math.min(olderCount, 40);
+    // Fetch a window ending just before current messages
+    const offset = Math.max(0, olderCount - chunkSize);
+    const limit = olderCount - offset;
+    getChatHistory({ offset, limit })
+      .then((result) => {
+        send({ type: "PREPEND_MESSAGES", messages: result.entries });
+      })
+      .catch(() => {})
+      .finally(() => setLoadingOlder(false));
+  }, [loadingOlder, messages.length, totalEntries, send]);
+
   const doSend = useCallback(
     (wrapped: string) => {
       send({ type: "SEND", message: wrapped });
@@ -1084,6 +1123,9 @@ function InteractiveChat() {
         handleStopSpeech={handleStopSpeech}
         onZoomView={onZoomView}
         snapshot={snapshot}
+        totalEntries={totalEntries}
+        onLoadOlder={handleLoadOlder}
+        loadingOlder={loadingOlder}
       />
 
       {/* Error display */}
