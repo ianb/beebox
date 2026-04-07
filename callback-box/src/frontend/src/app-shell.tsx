@@ -313,7 +313,7 @@ export function AppLayout() {
   const handleCloseSourceView = sourceView.toggle;
 
   return (
-    <div className="h-screen h-[100dvh] flex flex-col">
+    <div className="h-screen h-[100dvh] flex flex-col overflow-hidden">
       <AppNav
         onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
         onToggleSourceView={handleToggleSourceView}
