@@ -452,7 +452,7 @@ function MobileTextareaRow({
   const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex gap-2 items-center min-w-0 overflow-hidden">
       {isTranscribing ? (
         <div className="flex-shrink-0 self-center">
           <RecordingIndicator />
@@ -466,7 +466,7 @@ function MobileTextareaRow({
         readOnly={isTranscribing}
         enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        className="flex-1 min-w-0 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
         maxRows={8}
         autoFocus
@@ -1206,7 +1206,7 @@ function InteractiveChat() {
         />
       {/* Mobile typing row: replaces button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (
-        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2">
+        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2 overflow-hidden">
           {typingMode ? (
             <div className="absolute -top-10 right-3 flex gap-1 z-10">
               <button
