@@ -466,7 +466,7 @@ function MobileTextareaRow({
         readOnly={isTranscribing}
         enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className="flex-1 w-0 resize-none rounded-lg border border-warm-400 bg-yellow-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        className="flex-1 w-0 resize-none rounded-lg border border-warm-400 bg-rose-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
         maxRows={8}
         autoFocus
@@ -1102,7 +1102,7 @@ function InteractiveChat() {
       {zoomedView ? (
         <CompanionViewPanel view={zoomedView} onClose={() => setZoomedView(null)} />
       ) : null}
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto overflow-x-hidden">
       {/* Header with debug controls */}
       <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
         <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
