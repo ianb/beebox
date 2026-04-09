@@ -1216,7 +1216,7 @@ function InteractiveChat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
-              className="bg-purple-50 rounded-lg border border-warm-400 px-3 py-2 text-sm"
+              className="bg-cyan-50 rounded-lg border border-warm-400 px-3 py-2 text-base"
               style={{ flex: 1, minWidth: 0 }}
               rows={2}
             />
