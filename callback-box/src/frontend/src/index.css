@@ -3,25 +3,8 @@
 @tailwind utilities;
 
 /* Custom styles */
-html {
-  overflow: hidden;
-  height: 100%;
-  width: 100%;
-}
-
 body {
   @apply bg-warm-50 text-warm-900;
-  overflow: hidden;
-  height: 100%;
-  width: 100%;
-  /* Prevent iOS Safari from resizing text on orientation change */
-  -webkit-text-size-adjust: 100%;
-}
-
-#root {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
 }
 
 .card {

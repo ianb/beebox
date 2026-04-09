@@ -449,10 +449,10 @@ function MobileTextareaRow({
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
 }) {
-  const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
+  const circleBtn = "flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0";
 
   return (
-    <div className="flex gap-2 items-center min-w-0 overflow-hidden">
+    <div className="flex gap-1.5 items-center min-w-0">
       {isTranscribing ? (
         <div className="flex-shrink-0 self-center">
           <RecordingIndicator />
@@ -1206,7 +1206,7 @@ function InteractiveChat() {
         />
       {/* Mobile typing row: replaces button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (
-        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2 overflow-hidden">
+        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-2 py-2">
           {typingMode ? (
             <div className="absolute -top-10 right-3 flex gap-1 z-10">
               <button
