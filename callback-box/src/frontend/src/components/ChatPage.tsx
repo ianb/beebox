@@ -449,10 +449,10 @@ function MobileTextareaRow({
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
 }) {
-  const circleBtn = "flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0";
+  const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
   return (
-    <div className="flex gap-1.5 items-center w-full box-border">
+    <div className="flex gap-2 items-center">
       {isTranscribing ? (
         <div className="flex-shrink-0 self-center">
           <RecordingIndicator />
@@ -466,7 +466,7 @@ function MobileTextareaRow({
         readOnly={isTranscribing}
         enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className="flex-1 w-0 resize-none rounded-lg border border-warm-400 bg-rose-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        className="flex-1 resize-none rounded-lg border border-warm-400 bg-blue-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
         maxRows={8}
         autoFocus
@@ -1102,7 +1102,7 @@ function InteractiveChat() {
       {zoomedView ? (
         <CompanionViewPanel view={zoomedView} onClose={() => setZoomedView(null)} />
       ) : null}
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto overflow-x-hidden">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
       {/* Header with debug controls */}
       <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
         <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
@@ -1206,7 +1206,7 @@ function InteractiveChat() {
         />
       {/* Mobile typing row: replaces button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (
-        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-2 py-2">
+        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 pb-2">
           {typingMode ? (
             <div className="absolute -top-10 right-3 flex gap-1 z-10">
               <button
