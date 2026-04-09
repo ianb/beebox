@@ -466,7 +466,7 @@ function MobileTextareaRow({
         readOnly={isTranscribing}
         enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className="flex-1 w-0 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        className="flex-1 w-0 resize-none rounded-lg border border-warm-400 bg-yellow-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
         maxRows={8}
         autoFocus
