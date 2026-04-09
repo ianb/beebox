@@ -466,7 +466,7 @@ function MobileTextareaRow({
         readOnly={isTranscribing}
         enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className="flex-1 resize-none rounded-lg border border-warm-400 bg-blue-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
         maxRows={8}
         autoFocus
@@ -1173,7 +1173,7 @@ function InteractiveChat() {
 
       {/* Input area: single row on desktop, button bar on mobile (hidden on mobile when typing) */}
       <ChatInputArea
-        hideMobile={false}
+        hideMobile={typingMode}
           textareaRef={textareaRef}
           input={input}
           setInput={setInput}
@@ -1205,41 +1205,36 @@ function InteractiveChat() {
           }}
         />
       {/* Mobile typing row: replaces button bar when typing/transcribing */}
-      {typingMode ? (
-        <div className="sm:hidden p-2" style={{ maxWidth: "100%" }}>
-          <div style={{ display: "flex", gap: "8px", maxWidth: "100%" }}>
-            <textarea
-              ref={textareaRef}
-              autoFocus
-              enterKeyHint="send"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
-              className="bg-cyan-50 rounded-lg border border-warm-400 px-3 py-2 text-base"
-              style={{ flex: 1, minWidth: 0 }}
-              rows={2}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="bg-gold text-white rounded-full"
-              style={{ width: 44, height: 44, flexShrink: 0 }}
-            >
-              Send
-            </button>
-            <button
-              onClick={() => { setTypingMode(false); setTypingLocked(false); }}
-              className="text-warm-600"
-              style={{ flexShrink: 0 }}
-            >
-              X
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {isTranscribing ? (
-        <div className="sm:hidden bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 pb-2">
+      {(typingMode || isTranscribing) ? (
+        <div className="sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 pb-2">
+          {typingMode ? (
+            <div className="absolute -top-10 right-3 flex gap-1 z-10">
+              <button
+                onClick={() => setTypingLocked((v) => !v)}
+                className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
+                title={typingLocked ? "Unlock (close after send)" : "Lock open"}
+              >
+                {typingLocked ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={() => { setTypingMode(false); setTypingLocked(false); }}
+                className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
+                title="Close keyboard"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
           <MobileTextareaRow
             input={input}
             setInput={setInput}
