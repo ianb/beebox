@@ -1173,7 +1173,7 @@ function InteractiveChat() {
 
       {/* Input area: single row on desktop, button bar on mobile (hidden on mobile when typing) */}
       <ChatInputArea
-        hideMobile={typingMode}
+        hideMobile={false}
           textareaRef={textareaRef}
           input={input}
           setInput={setInput}
@@ -1216,7 +1216,7 @@ function InteractiveChat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
-              className="bg-green-50 rounded-lg border border-warm-400 px-3 py-2 text-sm"
+              className="bg-orange-50 rounded-lg border border-warm-400 px-3 py-2 text-sm"
               style={{ flex: 1, minWidth: 0 }}
               rows={2}
             />
