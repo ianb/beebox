@@ -22,7 +22,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { stageFiles, commit } from "../../cli/lib/git.js";
-import { isOwner, isAuthEnabled } from "../auth.js";
+import { isOwner, isAuthEnabled, isDiagnosticBypassRequest } from "../auth.js";
 import { loadTelegramConfig } from "../../connectors/telegram.js";
 import { loadGoogleTokens, saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES, type GoogleTokens } from "../../connectors/google-auth.js";
 import { loadBoxConfig } from "../box-config.js";
@@ -53,6 +53,12 @@ function baseServerUrl(publicUrl: string): string {
 
 function addOwnerCheck(server: FastifyInstance) {
   server.addHook("preHandler", async (request, reply) => {
+    // Diagnostic API key bypass (read-only debug/health endpoints) — same
+    // bypass as the per-box auth preHandler in server.ts. Without this, the
+    // bypass would 403 here even though the cookie auth let it through.
+    if (isDiagnosticBypassRequest(request)) {
+      return;
+    }
     if (isAuthEnabled() && !isOwner(request)) {
       return reply.status(403).send({ error: "Owner access required" });
     }
