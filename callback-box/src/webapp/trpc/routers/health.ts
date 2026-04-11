@@ -18,6 +18,57 @@ export interface HealthCheck {
   severity: "error" | "warning";
 }
 
+export interface CommitInfo {
+  hash: string;
+  subject: string;
+}
+
+export interface VersionInfo {
+  /** Wall-clock time the deploy script wrote deploy-info.json. null if file is absent (e.g. local dev). */
+  deployedAt: string | null;
+  /** Per-repo short hashes recorded by the deploy script. Empty object when deploy-info.json is absent. */
+  commits: Record<string, CommitInfo>;
+  /** ISO timestamp of when this server process started. */
+  processStartedAt: string;
+  /** Process uptime in seconds. */
+  uptimeSec: number;
+}
+
+// deploy-info.json sits at the callback-box repo root. From this file
+// (src/webapp/trpc/routers/health.ts) that's four levels up.
+const DEPLOY_INFO_PATH = path.resolve(
+  import.meta.dirname,
+  "../../../../deploy-info.json",
+);
+
+const PROCESS_STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
+
+export async function readVersionInfo(): Promise<VersionInfo> {
+  let deployedAt: string | null = null;
+  const commits: Record<string, CommitInfo> = {};
+  try {
+    const raw = await fs.readFile(DEPLOY_INFO_PATH, "utf-8");
+    const parsed = JSON.parse(raw) as { deployedAt?: string; commits?: Record<string, CommitInfo | null> };
+    if (typeof parsed.deployedAt === "string") deployedAt = parsed.deployedAt;
+    if (parsed.commits) {
+      // Strip the trailing "_": null entry the deploy script writes as a JSON-comma sentinel.
+      for (const [key, value] of Object.entries(parsed.commits)) {
+        if (value && typeof value === "object" && "hash" in value) {
+          commits[key] = value;
+        }
+      }
+    }
+  } catch (_e) {
+    // No deploy-info.json — likely local dev. Leave commits empty.
+  }
+  return {
+    deployedAt,
+    commits,
+    processStartedAt: PROCESS_STARTED_AT,
+    uptimeSec: Math.round(process.uptime()),
+  };
+}
+
 /**
  * Check that a directory is writable by the current process.
  */
@@ -148,10 +199,13 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
 
 export const healthRouter = router({
   check: publicProcedure.query(async ({ ctx }) => {
-    const checks = await runHealthChecks(ctx.boxRoot);
+    const [checks, version] = await Promise.all([
+      runHealthChecks(ctx.boxRoot),
+      readVersionInfo(),
+    ]);
     const hasErrors = checks.some((c) => !c.ok && c.severity === "error");
     const hasWarnings = checks.some((c) => !c.ok && c.severity === "warning");
     const status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy";
-    return { status, checks };
+    return { status, checks, version };
   }),
 });

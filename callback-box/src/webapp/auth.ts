@@ -46,6 +46,35 @@ export function getPublicUrl(): string {
   return process.env.CB_PUBLIC_URL || process.env.PUBLIC_URL || "http://localhost:3210";
 }
 
+/**
+ * Allow CLI/agent access to a narrow set of read-only diagnostic endpoints
+ * via a shared secret in CB_DIAG_API_KEY (in /home/callback/.env on prod).
+ *
+ * Bypasses cookie auth ONLY when ALL of the following hold:
+ *   - CB_DIAG_API_KEY is set in the environment
+ *   - the request method is GET
+ *   - the request path matches a whitelisted diagnostic endpoint
+ *   - the Authorization header is exactly `Bearer <key>`
+ *
+ * Whitelist: /api/debug-log, /api/trpc/health.check
+ *
+ * Use timing-safe comparison so the key cannot be brute-forced via response time.
+ */
+export function isDiagnosticBypassRequest(request: FastifyRequest): boolean {
+  const key = process.env.CB_DIAG_API_KEY;
+  if (!key) return false;
+  if (request.method !== "GET") return false;
+  const url = request.url;
+  const isDebugLog = url.includes("/api/debug-log");
+  const isHealth = url.includes("/api/trpc/health.check");
+  if (!isDebugLog && !isHealth) return false;
+  const auth = request.headers["authorization"];
+  if (typeof auth !== "string") return false;
+  const expected = `Bearer ${key}`;
+  if (auth.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(auth), Buffer.from(expected));
+}
+
 export interface SessionUser {
   email: string;
   name: string;

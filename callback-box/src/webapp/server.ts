@@ -31,7 +31,7 @@ import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
 import { ChatSession } from "../core/chat-session.js";
-import { isAuthEnabled, getSessionEmail, getOwnerEmail } from "./auth.js";
+import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 import type { Services } from "../services/index.js";
@@ -196,6 +196,10 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
         instance.addHook("preHandler", async (request, reply) => {
           // Let static assets through (handled by fastify-static)
           if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i.test(request.url)) {
+            return;
+          }
+          // Diagnostic API key bypass for read-only debug/health endpoints
+          if (isDiagnosticBypassRequest(request)) {
             return;
           }
           const email = getSessionEmail(request);
