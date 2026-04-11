@@ -220,8 +220,8 @@ Phase: describe-images"
     </run>
   </step>
 
-  <step id="rename">
-    <description>Rename session directories to descriptive names and set intake-complete</description>
+  <step id="plan-extraction">
+    <description>Rename the session directory, decide what records to extract and where they should be filed, write an extraction spec</description>
 
     <precheck>
       <shell pass-output="true">
@@ -230,7 +230,7 @@ Phase: describe-images"
           [ -d "$dir" ] || continue
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
-          # Check transcript has children (not empty)
+          # Check transcript has children (assemble ran)
           has_transcript=0
           if grep -q '&lt;text&gt;\|&lt;silence \|&lt;image ' "$session"; then
             has_transcript=1
@@ -245,88 +245,55 @@ Phase: describe-images"
         if [ "$found" -eq 0 ]; then
           exit $CHECK_SKIP
         fi
-        echo "Found $found session(s) to rename"
+        echo "Found $found session(s) ready for planning"
       </shell>
-      <why>No sessions are ready for renaming</why>
+      <why>No sessions with an assembled transcript are waiting to be planned</why>
     </precheck>
 
     <run>
-      <agent model="haiku" max-turns="20">
-        You are renaming capture session directories to descriptive names.
+      <agent model="opus" max-turns="20">
+        You are taking an assembled capture session from raw intake to a plan: picking a
+        descriptive name for the session directory, deciding what records are worth extracting,
+        and deciding where each one should be filed.
 
         YOUR TASK:
         For each session listed in the precheck output:
-        1. Read the session card to get the &lt;transcript&gt; and &lt;time start="..."&gt;
-        2. Read the image cards in the same directory to see their descriptions
-        3. Choose a short descriptive name based on what was captured (2-4 words, underscores for spaces)
-        4. Rename the directory: capture-YYYYMMDDTHHMM-Session_Name/
-           The date part comes from the session's start time.
 
-        Use cb mv to rename:
+        STEP 1 — READ THE SESSION:
+        1. Read the session card (the .capture-session.card file) — look at &lt;transcript&gt; and &lt;time start="..."&gt;
+        2. Read the image cards in the same directory to understand what was captured
+        3. Consider the transcript content together with the image descriptions
+
+        STEP 2 — READ FILING RULES (if the box has them):
+        If `config/intake.guide.card` exists in this box, read it. It contains the user's rules
+        for where different kinds of content should be filed, with confidence levels:
+        - `source="user-stated"` with `confidence="high"` are the user's own rules and should be
+          followed unless there's a clear reason not to.
+        - `source="default"` with `confidence="low"` are starting-point defaults; feel free to
+          override or ignore if the user-stated rules are more specific.
+        You'll use these rules in STEP 4 to pick a destination path for each record. If no intake
+        guide exists, skip this step and fall through to the default of store/catalogs/.
+
+        STEP 3 — RENAME THE DIRECTORY:
+        Pick a short descriptive name based on what was captured (2-4 words, underscores for
+        spaces, retaining capitals). The date part stays the same — it comes from the session's
+        start time. Example: `capture-20260211T1951-f26ffa35` → `capture-20260211T1951-Whiteboard_Planning`.
+
+        Use `cb mv` to rename:
         ```
         cb mv box/inbox/capture-20260211T1951-f26ffa35 box/inbox/capture-20260211T1951-Whiteboard_Planning
         ```
 
-        5. Set status="intake-complete" on the session card.
+        After the rename, the new path is where you'll reference image cards from in the spec
+        and write the extraction-spec.md file. The image cards themselves keep their own
+        basenames (photo-NNN-Descriptive_Title.image.card) — only the parent directory changes.
 
-        COMMIT (REQUIRED — do not skip):
-        ```bash
-        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
-        Rename capture sessions
-
-        Triggered-By: cb procedure
-        Phase: rename
-        EOF
-        )"
-        ```
-
-        GIT: Do NOT add Co-Authored-By to commits. The system adds appropriate trailers automatically.
-      </agent>
-    </run>
-  </step>
-
-  <step id="plan-extraction">
-    <description>Plan extraction of records from intake-complete sessions</description>
-
-    <precheck>
-      <shell pass-output="true">
-        found=0
-        for dir in box/inbox/capture-*/; do
-          [ -d "$dir" ] || continue
-          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
-          [ -f "$session" ] || continue
-          if grep -q 'status="intake-complete"' "$session"; then
-            echo "  Session: $session"
-            found=$((found + 1))
-          fi
-        done
-        if [ "$found" -eq 0 ]; then
-          exit $CHECK_SKIP
-        fi
-        echo "Found $found intake-complete session(s) for extraction planning"
-      </shell>
-      <why>No intake-complete sessions need extraction planning</why>
-    </precheck>
-
-    <run>
-      <agent model="opus" max-turns="10">
-        You are planning the extraction of records from capture sessions.
-
-        YOUR TASK:
-        For each intake-complete session listed in the precheck output, decide whether to extract
-        records and write an extraction spec.
-
-        STEP 1 - READ EACH SESSION:
-        For each session listed above:
-        1. Read the session card (the .capture-session.card file)
-        2. Read the image cards in the same directory to understand what was captured
-        3. Consider the transcript content and image descriptions
-
-        STEP 2 - DECIDE AND WRITE SPEC:
-        For each session, create a file called `extraction-spec.md` in the session directory.
+        STEP 4 — WRITE THE EXTRACTION SPEC:
+        Write `extraction-spec.md` inside the (now renamed) session directory. The spec tells
+        the next step (a haiku agent) exactly what records to create, how to shape them, and
+        where to file them.
 
         IF extraction is appropriate (the session contains identifiable, discrete things to catalog):
-        Write a spec with these sections:
 
         ```markdown
         # Extraction Spec
@@ -345,10 +312,10 @@ Phase: describe-images"
           &lt;name&gt;Example Item Name&lt;/name&gt;
           &lt;description&gt;What this item is and its condition&lt;/description&gt;
           &lt;sources&gt;
-            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Name/photo-003-descriptive-name.image.card"&gt;
+            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Descriptive_Name/photo-003-detail.image.card"&gt;
               Photo of the item showing its condition and markings
             &lt;/source&gt;
-            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Name/photo-004-detail.image.card"&gt;
+            &lt;source ref="/box/inbox/capture-YYYYMMDDTHHMM-Descriptive_Name/photo-004-label.image.card"&gt;
               Close-up of label/serial number
             &lt;/source&gt;
           &lt;/sources&gt;
@@ -357,14 +324,21 @@ Phase: describe-images"
         &lt;/record&gt;
         ```
 
-        IMPORTANT: Sources should reference the specific IMAGE CARDS (photo-NNN-name.image.card)
+        IMPORTANT: Sources must reference the specific IMAGE CARDS (photo-NNN-name.image.card)
         that depict this record, not the session card. Each record should link to exactly the
-        images that show it. If audio context is relevant, include a source ref to the session
-        card with a time= attribute.
+        photos that show it. If audio context is relevant, include a source ref to the session
+        card with a time= attribute. Use the RENAMED directory in all refs.
 
         ## Records to Extract
-        - **Record Name** → `Slugified_Filename.record.card`
+        Each bullet is one record. Include a destination path when a filing rule applies;
+        otherwise omit the path and the extract step will default to `store/catalogs/Descriptive_Name/`.
+
+        - **Record Name** → `Slugified_Filename.record.card` @ `store/documents/tax/2024/income/`
         - **Another Record** → `Another_Record.record.card`
+
+        The `@ path/` suffix tells the extract step where to write the card. Use it when the
+        intake guide has a high-confidence user-stated rule that matches the record. Trailing
+        slash on the destination means "write the record into this directory".
         ```
 
         IF extraction is NOT appropriate (session is too vague, incomplete, or doesn't contain
@@ -378,9 +352,15 @@ Phase: describe-images"
 
         IMPORTANT:
         - Filenames should be slugified with underscores, retaining capitals (e.g., `Brown_Leather_Couch.record.card`)
-        - The example XML should match the specific domain (home inventory, document archive, etc.)
+        - The example XML should match the specific domain (home inventory, document archive, tax records, etc.)
         - Be selective about which fields to recommend — don't suggest using every field
         - Each record in the list should have a clear, specific name
+        - When you emit a destination path, explain in the Description section which guide rule
+          matched so the user can audit the decision later.
+
+        STEP 5 — UPDATE SESSION STATUS:
+        Edit the session card to set `status="intake-complete"` once the rename, guide-reading,
+        and spec-writing are all done for that session.
 
         COMMIT (REQUIRED — do not skip):
         ```bash
@@ -462,23 +442,27 @@ Phase: describe-images"
         - What kind of records to create
         - Which fields to use
         - An example record in XML
-        - A list of records to extract with suggested filenames
+        - A list of records to extract with suggested filenames, optionally with a destination
+          path like `**Record Name** → `Filename.record.card` @ `store/documents/tax/2024/income/``
 
         STEP 2 - READ THE SESSION:
         Read the session card and its image cards to gather the actual content for each record.
 
-        STEP 3 - CREATE CATALOG DIRECTORY:
-        Create an output directory under store/catalogs/ with a descriptive name derived from
-        the session content. Use underscores and retain capitals:
-        ```bash
-        mkdir -p store/catalogs/Descriptive_Name
-        ```
+        STEP 3 - CREATE RECORDS:
+        For each record listed in the spec, pick its destination directory:
 
-        STEP 4 - CREATE RECORDS:
-        For each record listed in the spec:
+        - **If the bullet has an `@ path/` suffix**, that's the destination directory. Create
+          the directory if needed (`mkdir -p &lt;path&gt;`) and write the record there.
+        - **If no `@ path/` suffix is given**, default to `store/catalogs/Descriptive_Name/`
+          (one shared catalog directory per session, named after the session's descriptive name).
+
+        Create each record with `cb create` at the chosen path:
         ```bash
+        cb create store/documents/tax/2024/income/Fidelity_1099_DIV.record.card
+        # or for the default catalog path:
         cb create store/catalogs/Descriptive_Name/Slugified_Name.record.card
         ```
+
         Then edit the created card to fill in the record following the spec's format guidance
         and example. Key rules:
         - Always include &lt;sources&gt; with refs to the specific IMAGE CARDS that depict this
@@ -491,7 +475,7 @@ Phase: describe-images"
         - Only use fields the spec recommends
         - &lt;name&gt; is always required
 
-        STEP 5 - UPDATE SESSION STATUS:
+        STEP 4 - UPDATE SESSION STATUS:
         After creating all records, edit the session card to set status="extracted".
 
         COMMIT (REQUIRED — do not skip):
@@ -522,10 +506,12 @@ Phase: describe-images"
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
           if grep -q 'status="extracted"' "$session"; then
-            # Check that at least one record card exists in store/catalogs
-            catalog_count=$(find store/catalogs -name "*.record.card" 2>/dev/null | wc -l)
-            if [ "$catalog_count" -eq 0 ]; then
-              echo "FAIL: Session marked extracted but no record cards found in store/catalogs/"
+            # Check that at least one record card exists anywhere under store/
+            # (records may live in store/catalogs/ or in rule-matched destinations
+            # like store/documents/tax/.../ depending on the extraction spec).
+            record_count=$(find store -name "*.record.card" 2>/dev/null | wc -l)
+            if [ "$record_count" -eq 0 ]; then
+              echo "FAIL: Session marked extracted but no record cards found under store/"
               failed=$((failed + 1))
             fi
           elif grep -q 'status="intake-complete"' "$session"; then
