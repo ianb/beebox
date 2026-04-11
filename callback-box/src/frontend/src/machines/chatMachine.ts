@@ -472,6 +472,7 @@ export const chatMachine = setup({
             sessionId: null,
             processRunning: false,
             error: null,
+            totalEntries: 0,
           }),
         },
         onError: {
