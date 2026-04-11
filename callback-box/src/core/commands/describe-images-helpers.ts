@@ -109,6 +109,69 @@ export async function extractExif(imagePath: string): Promise<ExifData | null> {
 }
 
 /**
+ * Thrown when Gemini returns no text in the response. Captures finishReason,
+ * promptFeedback, and token usage so the caller can tell whether the cause was
+ * MAX_TOKENS (often: thinking budget exhausted by a too-large image batch),
+ * SAFETY blocking, or something else. The message embeds these fields so it
+ * surfaces in procedure run logs without extra plumbing.
+ */
+export class GeminiEmptyResponseError extends Error {
+  finishReason: string | undefined;
+  finishMessage: string | undefined;
+  blockReason: string | undefined;
+  blockReasonMessage: string | undefined;
+  promptTokens: number | undefined;
+  candidatesTokens: number | undefined;
+  thoughtsTokens: number | undefined;
+  totalTokens: number | undefined;
+  imageCount: number;
+
+  constructor({
+    finishReason,
+    finishMessage,
+    blockReason,
+    blockReasonMessage,
+    promptTokens,
+    candidatesTokens,
+    thoughtsTokens,
+    totalTokens,
+    imageCount,
+  }: {
+    finishReason: string | undefined;
+    finishMessage: string | undefined;
+    blockReason: string | undefined;
+    blockReasonMessage: string | undefined;
+    promptTokens: number | undefined;
+    candidatesTokens: number | undefined;
+    thoughtsTokens: number | undefined;
+    totalTokens: number | undefined;
+    imageCount: number;
+  }) {
+    const parts: string[] = ["Empty response from Gemini"];
+    parts.push(`images=${imageCount}`);
+    if (finishReason) parts.push(`finishReason=${finishReason}`);
+    if (finishMessage) parts.push(`finishMessage=${JSON.stringify(finishMessage)}`);
+    if (blockReason) parts.push(`blockReason=${blockReason}`);
+    if (blockReasonMessage) parts.push(`blockReasonMessage=${JSON.stringify(blockReasonMessage)}`);
+    if (promptTokens != null) parts.push(`promptTokens=${promptTokens}`);
+    if (candidatesTokens != null) parts.push(`candidatesTokens=${candidatesTokens}`);
+    if (thoughtsTokens != null) parts.push(`thoughtsTokens=${thoughtsTokens}`);
+    if (totalTokens != null) parts.push(`totalTokens=${totalTokens}`);
+    super(parts.join(" "));
+    this.name = "GeminiEmptyResponseError";
+    this.finishReason = finishReason;
+    this.finishMessage = finishMessage;
+    this.blockReason = blockReason;
+    this.blockReasonMessage = blockReasonMessage;
+    this.promptTokens = promptTokens;
+    this.candidatesTokens = candidatesTokens;
+    this.thoughtsTokens = thoughtsTokens;
+    this.totalTokens = totalTokens;
+    this.imageCount = imageCount;
+  }
+}
+
+/**
  * Structured output schema for Gemini's response.
  */
 export interface ImageAnalysis {
@@ -161,6 +224,12 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
     model: "gemini-2.5-flash",
     contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }],
     config: {
+      // Cap thinking tokens. Default (auto) burned ~11k thinking tokens on
+      // 8-image batches of financial documents and tripped Gemini's RECITATION
+      // filter, returning empty responses. Successful smaller batches use
+      // ~400. 2048 leaves plenty of headroom for "what is this" reasoning
+      // without giving the model room to internally reproduce document text.
+      thinkingConfig: { thinkingBudget: 2048 },
       responseMimeType: "application/json",
       responseSchema: {
         type: "ARRAY",
@@ -190,12 +259,22 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
   });
 
   const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+  const usageMeta = response.usageMetadata;
   if (!text) {
-    throw new Error("Empty response from Gemini");
+    throw new GeminiEmptyResponseError({
+      finishReason: response.candidates?.[0]?.finishReason,
+      finishMessage: response.candidates?.[0]?.finishMessage,
+      blockReason: response.promptFeedback?.blockReason,
+      blockReasonMessage: response.promptFeedback?.blockReasonMessage,
+      promptTokens: usageMeta?.promptTokenCount,
+      candidatesTokens: usageMeta?.candidatesTokenCount,
+      thoughtsTokens: usageMeta?.thoughtsTokenCount,
+      totalTokens: usageMeta?.totalTokenCount,
+      imageCount: imagePaths.length,
+    });
   }
 
   const analyses: ImageAnalysis[] = JSON.parse(text);
-  const usageMeta = response.usageMetadata;
   const usage = usageMeta ? {
     prompt: usageMeta.promptTokenCount || 0,
     output: usageMeta.candidatesTokenCount || 0,

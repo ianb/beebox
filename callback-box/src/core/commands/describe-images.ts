@@ -27,8 +27,101 @@ import {
   findAttachedImage,
   extractExif,
   analyzeImagesWithGemini,
+  GeminiEmptyResponseError,
   type ImageAnalysis,
 } from "./describe-images-helpers.js";
+
+interface BatchItem {
+  cardPath: string | null;
+  imagePath: string;
+  index: number;
+}
+
+interface BatchUsage {
+  prompt: number;
+  output: number;
+  thinking: number;
+}
+
+interface BatchOutcome {
+  analyses: ImageAnalysis[];
+  usage: BatchUsage | null;
+  failed: number;
+}
+
+/**
+ * Run one Gemini batch. If it fails with RECITATION or MAX_TOKENS — both
+ * symptoms of "too much content for one call" — split the batch in half and
+ * recurse on each side. Single-image batches that fail are counted as failed
+ * and skipped. Other errors (network, schema, etc.) abort the whole batch.
+ *
+ * Why split on these specific reasons: RECITATION fires when the model
+ * internally reproduces enough verbatim training-data text; it scales with
+ * batch size. MAX_TOKENS means the response was truncated and likely won't
+ * parse. Other reasons (SAFETY, BLOCKLIST, etc.) won't get better with smaller
+ * batches.
+ */
+async function analyzeBatchWithRetry({
+  apiKey,
+  batchItems,
+  batchStart,
+  ctx,
+}: {
+  apiKey: string;
+  batchItems: BatchItem[];
+  batchStart: number;
+  ctx: CommandContext;
+}): Promise<BatchOutcome> {
+  const batchPaths = batchItems.map((item) => item.imagePath);
+  const batchEnd = batchStart + batchItems.length - 1;
+  try {
+    const result = await analyzeImagesWithGemini(apiKey, { imagePaths: batchPaths });
+    const analyses: ImageAnalysis[] = [];
+    for (const a of result.analyses) {
+      a.index = a.index + batchStart;
+      analyses.push(a);
+    }
+    return { analyses, usage: result.usage, failed: 0 };
+  } catch (err) {
+    ctx.writeLine(`\nError analyzing batch ${batchStart}-${batchEnd} (${batchItems.length} images): ${(err as Error).message}`);
+    const retryable =
+      err instanceof GeminiEmptyResponseError &&
+      (err.finishReason === "RECITATION" || err.finishReason === "MAX_TOKENS");
+    if (!retryable || batchItems.length === 1) {
+      return { analyses: [], usage: null, failed: batchItems.length };
+    }
+    const mid = Math.ceil(batchItems.length / 2);
+    ctx.writeLine(`  Retrying as two smaller batches: ${mid} + ${batchItems.length - mid}`);
+    const left = await analyzeBatchWithRetry({
+      apiKey,
+      batchItems: batchItems.slice(0, mid),
+      batchStart,
+      ctx,
+    });
+    const right = await analyzeBatchWithRetry({
+      apiKey,
+      batchItems: batchItems.slice(mid),
+      batchStart: batchStart + mid,
+      ctx,
+    });
+    let usage: BatchUsage | null = null;
+    if (left.usage) usage = { ...left.usage };
+    if (right.usage) {
+      if (usage) {
+        usage.prompt += right.usage.prompt;
+        usage.output += right.usage.output;
+        usage.thinking += right.usage.thinking;
+      } else {
+        usage = { ...right.usage };
+      }
+    }
+    return {
+      analyses: [...left.analyses, ...right.analyses],
+      usage,
+      failed: left.failed + right.failed,
+    };
+  }
+}
 
 export interface DescribeImagesArgs {
   paths: string[];
@@ -51,11 +144,7 @@ async function executeDescribeImages(
   }
 
   // Resolve each path to { cardPath, imagePath }
-  const items: Array<{
-    cardPath: string | null;
-    imagePath: string;
-    index: number;
-  }> = [];
+  const items: BatchItem[] = [];
 
   const loader = await createLoader(ctx.boxRoot);
 
@@ -93,42 +182,37 @@ async function executeDescribeImages(
   ctx.writeLine(`Analyzing ${items.length} image(s) with Gemini Flash...`);
 
   try {
-    // Chunk into batches of 8 to avoid Gemini payload limits with large images
+    // Chunk into batches of 8 to avoid Gemini payload limits with large images.
+    // Batches that hit RECITATION/MAX_TOKENS get split in half and retried;
+    // see analyzeBatchWithRetry.
     const BATCH_SIZE = 8;
     const analyses: ImageAnalysis[] = [];
-    let totalUsage: { prompt: number; output: number; thinking: number } | null = null;
+    let totalUsage: BatchUsage | null = null;
+    let failedCount = 0;
 
-    let batchErrors = 0;
     for (let batchStart = 0; batchStart < items.length; batchStart += BATCH_SIZE) {
       const batchItems = items.slice(batchStart, batchStart + BATCH_SIZE);
-      const batchPaths = batchItems.map((item) => item.imagePath);
-      try {
-        const result = await analyzeImagesWithGemini(apiKey, { imagePaths: batchPaths });
-
-        // Remap indices back to the global item indices
-        for (const a of result.analyses) {
-          a.index = a.index + batchStart;
-          analyses.push(a);
+      const outcome = await analyzeBatchWithRetry({
+        apiKey,
+        batchItems,
+        batchStart,
+        ctx,
+      });
+      analyses.push(...outcome.analyses);
+      failedCount += outcome.failed;
+      if (outcome.usage) {
+        if (!totalUsage) {
+          totalUsage = { ...outcome.usage };
+        } else {
+          totalUsage.prompt += outcome.usage.prompt;
+          totalUsage.output += outcome.usage.output;
+          totalUsage.thinking += outcome.usage.thinking;
         }
-
-        if (result.usage) {
-          if (!totalUsage) {
-            totalUsage = { ...result.usage };
-          } else {
-            totalUsage.prompt += result.usage.prompt;
-            totalUsage.output += result.usage.output;
-            totalUsage.thinking += result.usage.thinking;
-          }
-        }
-      } catch (batchErr) {
-        batchErrors++;
-        const batchEnd = Math.min(batchStart + BATCH_SIZE, items.length);
-        ctx.writeLine(`\nError analyzing batch ${batchStart}-${batchEnd - 1} (${batchItems.length} images): ${(batchErr as Error).message}`);
       }
     }
 
-    if (batchErrors > 0) {
-      ctx.writeLine(`\n${batchErrors} batch(es) failed — ${analyses.length}/${items.length} images analyzed`);
+    if (failedCount > 0) {
+      ctx.writeLine(`\n${failedCount} image(s) failed — ${analyses.length}/${items.length} images analyzed`);
     }
 
     const usage = totalUsage;
@@ -202,13 +286,13 @@ async function executeDescribeImages(
     if (analyzedCount === 0 && items.length > 0) {
       return {
         success: false,
-        error: `All ${batchErrors} batch(es) failed — no images were analyzed`,
+        error: `All ${failedCount} image(s) failed — no images were analyzed`,
       };
     }
 
     return {
       success: true,
-      data: { analyzed: analyzedCount, total: items.length, batchErrors, analyses },
+      data: { analyzed: analyzedCount, total: items.length, failed: failedCount, analyses },
     };
   } catch (error) {
     return {
