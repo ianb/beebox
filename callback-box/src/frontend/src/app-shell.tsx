@@ -454,7 +454,6 @@ export function BoxRedirect() {
                 className="block px-6 py-3 hover:bg-warm-50 active:bg-warm-100"
               >
                 <span className="text-lg font-medium text-plum">{box.name}</span>
-                <span className="block text-sm text-warm-500 mt-0.5">/{box.slug}/</span>
               </Link>
               <div className="grid grid-cols-2 divide-x divide-warm-200 border-t border-warm-200">
                 <Link
