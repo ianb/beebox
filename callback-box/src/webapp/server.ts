@@ -251,7 +251,16 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerCalendarRoutes({ server: instance, boxRoot: box.boxRoot, calendar: options.services?.calendar });
       await registerSchedulerRoutes(instance, box.boxRoot);
       await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio });
-      await registerBoxAdminRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
+      // Wrap box admin routes in their own sub-scope so the owner-check
+      // preHandler (added by addOwnerCheck inside registerBoxAdminRoutes)
+      // is encapsulated to /api/admin/* only, not every per-box route.
+      // Without this sub-scope, the owner check bleeds out over the whole
+      // per-box instance and makes allowedEmails dead code (anyone who
+      // isn't the owner would be rejected by addOwnerCheck on any request).
+      // Mirrors the pattern used for registerSystemAdminRoutes at the root.
+      await instance.register(async (adminScope) => {
+        await registerBoxAdminRoutes(adminScope, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
+      });
       await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, eventBus });
       await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
       await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
