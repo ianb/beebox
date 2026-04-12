@@ -440,19 +440,37 @@ export function BoxRedirect() {
   }
 
   return (
-    <div className="min-h-screen bg-warm-50 flex items-center justify-center">
+    <div className="min-h-screen bg-warm-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <h1 className="text-2xl font-bold text-warm-800 mb-6 text-center">Callback Box</h1>
         <div className="space-y-3">
           {boxes.map((box) => (
-            <Link
+            <div
               key={box.slug}
-              to={href(`/${box.slug}/`)}
-              className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-gold hover:shadow transition-all"
+              className="bg-white rounded-lg shadow-sm border border-warm-300 overflow-hidden"
             >
-              <span className="text-lg font-medium text-plum">{box.name}</span>
-              <span className="block text-sm text-warm-600 mt-0.5">/{box.slug}/</span>
-            </Link>
+              <Link
+                to={href(`/${box.slug}/`)}
+                className="block px-6 py-3 hover:bg-warm-50 active:bg-warm-100"
+              >
+                <span className="text-lg font-medium text-plum">{box.name}</span>
+                <span className="block text-sm text-warm-500 mt-0.5">/{box.slug}/</span>
+              </Link>
+              <div className="grid grid-cols-2 divide-x divide-warm-200 border-t border-warm-200">
+                <Link
+                  to={href(`/${box.slug}/chat`)}
+                  className="py-4 text-center text-base font-medium text-plum hover:bg-warm-50 active:bg-warm-100"
+                >
+                  Chat
+                </Link>
+                <Link
+                  to={href(`/${box.slug}/capture`)}
+                  className="py-4 text-center text-base font-medium text-plum hover:bg-warm-50 active:bg-warm-100"
+                >
+                  Capture
+                </Link>
+              </div>
+            </div>
           ))}
         </div>
       </div>
