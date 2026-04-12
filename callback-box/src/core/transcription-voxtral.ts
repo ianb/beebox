@@ -96,8 +96,8 @@ export async function transcribeAudioVoxtral(
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": `multipart/form-data; boundary=${boundary}`,
         },
-        retry: 0,
-        timeout: 60_000,
+        retry: 2,
+        timeout: 120_000,
       })
       .json<{
         text: string;

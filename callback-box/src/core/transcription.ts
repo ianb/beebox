@@ -168,8 +168,8 @@ async function transcribeAudioWhisper(
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": `multipart/form-data; boundary=${boundary}`,
         },
-        retry: 0, // Caller handles retry based on permanent vs transient
-        timeout: 60_000,
+        retry: 2,
+        timeout: 120_000,
       })
       .json<{
         text: string;
