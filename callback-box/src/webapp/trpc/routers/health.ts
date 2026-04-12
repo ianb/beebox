@@ -51,7 +51,6 @@ export async function readVersionInfo(): Promise<VersionInfo> {
     const parsed = JSON.parse(raw) as { deployedAt?: string; commits?: Record<string, CommitInfo | null> };
     if (typeof parsed.deployedAt === "string") deployedAt = parsed.deployedAt;
     if (parsed.commits) {
-      // Strip the trailing "_": null entry the deploy script writes as a JSON-comma sentinel.
       for (const [key, value] of Object.entries(parsed.commits)) {
         if (value && typeof value === "object" && "hash" in value) {
           commits[key] = value;

@@ -61,25 +61,38 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   fi
 REMOTE
 
-# Write deploy info (git hashes + timestamp)
+# Write deploy info (git hashes + timestamp).
+# Build the JSON via node so JSON.stringify escapes subjects correctly —
+# commit subjects can contain quotes, backslashes, etc. that break naive
+# shell interpolation. Values come through env vars to avoid any shell
+# expansion in the node script body.
 echo "Writing deploy info..."
-DEPLOY_INFO=$(cat <<INFOEOF
-{
-  "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "commits": {
-$(for repo in cardworks callback-box; do
-  local_path="$MONO_DIR/$repo/"
-  if [[ -d "$local_path/.git" ]]; then
-    hash=$(cd "$local_path" && git rev-parse --short HEAD)
-    subject=$(cd "$local_path" && git log -1 --format=%s)
-    echo "    \"$repo\": { \"hash\": \"$hash\", \"subject\": \"$subject\" },"
-  fi
-done)
-    "_": null
-  }
+DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+CARDWORKS_HASH=""
+CARDWORKS_SUBJECT=""
+CALLBACK_BOX_HASH=""
+CALLBACK_BOX_SUBJECT=""
+if [[ -d "$MONO_DIR/cardworks/.git" ]]; then
+  CARDWORKS_HASH=$(cd "$MONO_DIR/cardworks" && git rev-parse --short HEAD)
+  CARDWORKS_SUBJECT=$(cd "$MONO_DIR/cardworks" && git log -1 --format=%s)
+fi
+if [[ -d "$MONO_DIR/callback-box/.git" ]]; then
+  CALLBACK_BOX_HASH=$(cd "$MONO_DIR/callback-box" && git rev-parse --short HEAD)
+  CALLBACK_BOX_SUBJECT=$(cd "$MONO_DIR/callback-box" && git log -1 --format=%s)
+fi
+DEPLOY_INFO=$(DEPLOYED_AT="$DEPLOYED_AT" \
+  CARDWORKS_HASH="$CARDWORKS_HASH" CARDWORKS_SUBJECT="$CARDWORKS_SUBJECT" \
+  CALLBACK_BOX_HASH="$CALLBACK_BOX_HASH" CALLBACK_BOX_SUBJECT="$CALLBACK_BOX_SUBJECT" \
+  node -e '
+const out = { deployedAt: process.env.DEPLOYED_AT, commits: {} };
+if (process.env.CARDWORKS_HASH) {
+  out.commits.cardworks = { hash: process.env.CARDWORKS_HASH, subject: process.env.CARDWORKS_SUBJECT };
 }
-INFOEOF
-)
+if (process.env.CALLBACK_BOX_HASH) {
+  out.commits["callback-box"] = { hash: process.env.CALLBACK_BOX_HASH, subject: process.env.CALLBACK_BOX_SUBJECT };
+}
+process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+')
 ssh "root@$SERVER_IP" "cat > $INSTALL_DIR/callback-box/deploy-info.json" <<< "$DEPLOY_INFO"
 
 # Append to deploy history (keep last 20 entries)
