@@ -89,7 +89,7 @@
             cb describe-images $cards
           fi
         done
-        git add -A &amp;&amp; git commit -m "Describe images via Gemini Flash
+        git add box/inbox/ &amp;&amp; git commit -m "Describe images via Gemini Flash
 
 Triggered-By: cb procedure
 Phase: describe-images"

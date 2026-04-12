@@ -6,6 +6,20 @@
 
 import { simpleGit, CleanOptions } from "simple-git";
 
+/**
+ * Check if a git error is an index.lock collision. These happen when LFS
+ * post-commit hooks or filter-process operations overlap with the next
+ * git command — common when boxes track large binary files via LFS.
+ */
+function isIndexLockError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.includes("index.lock");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Shape of our custom git log format. */
 interface GitLogFormat {
   hash: string;
@@ -93,14 +107,34 @@ export async function getStatus(boxRoot: string): Promise<GitStatus> {
  */
 export async function stageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await simpleGit(boxRoot).add(paths);
+  try {
+    await simpleGit(boxRoot).add(paths);
+  } catch (err) {
+    if (isIndexLockError(err)) {
+      await sleep(2000);
+      await simpleGit(boxRoot).add(paths);
+    } else {
+      throw err;
+    }
+  }
 }
 
 /**
- * Stage all changes.
+ * Stage all changes. Retries once on index.lock errors, which occur when
+ * git-lfs post-commit hooks or filter-process operations overlap with the
+ * next git operation — common in boxes that track images/audio via LFS.
  */
 export async function stageAll(boxRoot: string): Promise<void> {
-  await simpleGit(boxRoot).raw(["add", "-A"]);
+  try {
+    await simpleGit(boxRoot).raw(["add", "-A"]);
+  } catch (err) {
+    if (isIndexLockError(err)) {
+      await sleep(2000);
+      await simpleGit(boxRoot).raw(["add", "-A"]);
+    } else {
+      throw err;
+    }
+  }
 }
 
 /**
@@ -126,7 +160,16 @@ export async function commit(
 
   const git = simpleGit(boxRoot);
   const commitArgs = options.amend ? ["--amend"] : [];
-  await git.commit(message, commitArgs);
+  try {
+    await git.commit(message, commitArgs);
+  } catch (err) {
+    if (isIndexLockError(err)) {
+      await sleep(2000);
+      await git.commit(message, commitArgs);
+    } else {
+      throw err;
+    }
+  }
 
   // Get the commit hash
   const hash = await git.revparse(["HEAD"]);
