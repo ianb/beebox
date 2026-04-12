@@ -506,9 +506,12 @@ Phase: describe-images"
           fi
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
+          name=$(basename "$dir")
           if grep -q 'status="extracted"' "$session"; then
+            echo "  $name: extracted"
             extracted=$((extracted + 1))
           elif grep -q 'status="intake-complete"' "$session"; then
+            echo "  $name: intake-complete (will retry next run)"
             remaining=$((remaining + 1))
           fi
         done
