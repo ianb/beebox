@@ -549,7 +549,7 @@ function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZ
 function VirtualizedMessageList({
   messages, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder,
+  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger,
 }: {
   messages: SessionEntry[];
   isStreaming: boolean;
@@ -564,6 +564,7 @@ function VirtualizedMessageList({
   totalEntries: number;
   onLoadOlder: () => void;
   loadingOlder: boolean;
+  scrollToBottomTrigger: number;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
@@ -615,6 +616,14 @@ function VirtualizedMessageList({
       virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
     }
   }, [streamText, streamTools.length, snapshot, virtualizer, itemCount]);
+
+  // Scroll to bottom when user sends a message (even if scrolled up)
+  useEffect(() => {
+    if (scrollToBottomTrigger > 0 && itemCount > 0) {
+      isAtBottomRef.current = true;
+      virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
+    }
+  }, [scrollToBottomTrigger, virtualizer, itemCount]);
 
   // Scroll to bottom on initial mount
   useEffect(() => {
@@ -728,6 +737,7 @@ function InteractiveChat() {
 
   const [input, setInput] = useState("");
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [zoomedView, setZoomedView] = useState<{ target: ViewTarget; label: string } | null>(null);
@@ -969,6 +979,7 @@ function InteractiveChat() {
     unlockAudioContext();
     setInput("");
     doSend(`<typed local-time="${localTime()}"${zoomedViewAttr()}>${text}</typed>`);
+    setScrollToBottomTrigger((n) => n + 1);
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
@@ -1134,6 +1145,7 @@ function InteractiveChat() {
         totalEntries={totalEntries}
         onLoadOlder={handleLoadOlder}
         loadingOlder={loadingOlder}
+        scrollToBottomTrigger={scrollToBottomTrigger}
       />
 
       {/* Error display */}
