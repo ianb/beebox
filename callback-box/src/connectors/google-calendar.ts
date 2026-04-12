@@ -157,11 +157,15 @@ function generateVtimezone(tzid: string): ICAL.Component {
   }
 
   function formatOffset(minutes: number): string {
+    // ical.js's utc-offset property type expects input in the colon-separated
+    // form "+HH:MM" (it strips the colon on serialization via slice(0,3)+slice(4,6)).
+    // Passing "+HHMM" without the colon produces a truncated "+HH" + just-one-char
+    // = "+HH0" in the .ics output because slice(4,6) reads past end-of-string.
     const sign = minutes >= 0 ? "+" : "-";
     const abs = Math.abs(minutes);
     const h = String(Math.floor(abs / 60)).padStart(2, "0");
     const m = String(abs % 60).padStart(2, "0");
-    return `${sign}${h}${m}`;
+    return `${sign}${h}:${m}`;
   }
 
   function getTzName(date: Date): string {
