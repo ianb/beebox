@@ -185,6 +185,7 @@ export async function startProcedure(
     ? procedure.steps.filter((s) => s.id === options.step)
     : procedure.steps;
   let allSucceeded = true;
+  let failedStepId: string | null = null;
   for (const step of stepsToRun) {
     const result = await executeStep({
       ctx,
@@ -200,6 +201,7 @@ export async function startProcedure(
 
     if (result === "failed") {
       allSucceeded = false;
+      failedStepId = step.id;
       break;
     }
   }
@@ -223,7 +225,10 @@ export async function startProcedure(
     ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));
   }
 
-  return { success: allSucceeded };
+  return {
+    success: allSucceeded,
+    ...(!allSucceeded && { error: `Procedure ${procedureName} failed at step: ${failedStepId ?? "unknown"}` }),
+  };
 }
 
 /**
