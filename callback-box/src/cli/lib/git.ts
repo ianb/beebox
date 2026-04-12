@@ -206,6 +206,52 @@ export async function hasCommits(boxRoot: string): Promise<boolean> {
 }
 
 /**
+ * Result of a pushToRemote attempt. Designed to carry all information a
+ * caller needs to log without re-throwing — push is expected to fail
+ * intermittently (network, auth, upstream race) and callers should treat
+ * errors as non-fatal.
+ */
+export interface PushResult {
+  /** True when nothing was attempted (no remote, already up-to-date, no tracking). */
+  skipped: boolean;
+  /** Human-readable reason when skipped. */
+  reason?: string;
+  /** Number of commits that were pushed (0 when skipped). */
+  commitsPushed: number;
+  /** Error message when the push attempt itself failed. */
+  error?: string;
+}
+
+/**
+ * Push committed changes to the current branch's upstream, if configured
+ * and ahead. Returns a structured result rather than throwing, so wakeup
+ * and tick callers can log the outcome without blowing up the cycle.
+ */
+export async function pushToRemote(boxRoot: string): Promise<PushResult> {
+  const git = simpleGit(boxRoot);
+
+  const remotes = await git.getRemotes();
+  if (remotes.length === 0) {
+    return { skipped: true, reason: "no remote configured", commitsPushed: 0 };
+  }
+
+  const status = await git.status();
+  if (!status.tracking) {
+    return { skipped: true, reason: "no upstream tracking branch", commitsPushed: 0 };
+  }
+  if (status.ahead === 0) {
+    return { skipped: true, reason: "already up to date", commitsPushed: 0 };
+  }
+
+  try {
+    await git.push();
+    return { skipped: false, commitsPushed: status.ahead };
+  } catch (err) {
+    return { skipped: false, commitsPushed: 0, error: (err as Error).message };
+  }
+}
+
+/**
  * Create and switch to a new branch.
  */
 export async function createBranch(boxRoot: string, name: string): Promise<void> {

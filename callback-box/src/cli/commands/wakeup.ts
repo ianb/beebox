@@ -10,6 +10,7 @@
  * 6. Create intake jobs for unjobbed inbox items (UI memos, etc.)
  * 7. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
  * 8. Process pending jobs via reactor (one cycle, skip low-priority)
+ * 9. Push committed changes to the box's git remote (non-fatal if it fails)
  */
 
 import * as fs from "node:fs/promises";
@@ -25,7 +26,7 @@ import { getAllConnectors } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
-import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
+import { stageAll, stageFiles, commit, getStatus, pushToRemote } from "../lib/git.js";
 import { expireOldBriefs } from "../../core/housekeeping.js";
 import { getTranscribedFeedbackCards, buildFeedbackTriagePrompt } from "../../core/commands/triage-feedback.js";
 import { getUnprocessedBriefs } from "../../core/commands/process-feedback.js";
@@ -42,7 +43,8 @@ export const wakeupCommand = new Command("wakeup")
   .option("--skip-preprocess", "Skip preprocessing step")
   .option("--skip-triage", "Skip feedback triage step")
   .option("--skip-housekeeping", "Skip housekeeping step")
-  .action(async (options: { connector?: string; skipPreprocess?: boolean; skipTriage?: boolean; skipHousekeeping?: boolean }) => {
+  .option("--skip-push", "Skip pushing to git remote at the end of the cycle")
+  .action(async (options: { connector?: string; skipPreprocess?: boolean; skipTriage?: boolean; skipHousekeeping?: boolean; skipPush?: boolean }) => {
     const boxRoot = await requireBoxRoot();
 
     // Health check: warn about uncommitted changes
@@ -239,6 +241,24 @@ export const wakeupCommand = new Command("wakeup")
       }
       if (result.jobsRemaining > 0) {
         console.log(`  ${result.jobsRemaining} job(s) still remaining`);
+      }
+      console.log("");
+    }
+
+    // Step 8: Push committed changes to the box's git remote.
+    // Non-fatal: push errors (network, auth, upstream race) are logged but
+    // don't fail the wakeup. Skipped when running a single-connector cycle
+    // since that's usually a targeted manual invocation.
+    if (!options.connector && !options.skipPush) {
+      console.log("[Pushing to remote]");
+      const pushResult = await pushToRemote(boxRoot);
+      if (pushResult.error) {
+        console.log(`  ⚠ push failed: ${pushResult.error}`);
+      } else if (pushResult.skipped) {
+        console.log(`  ${pushResult.reason}`);
+      } else {
+        const plural = pushResult.commitsPushed === 1 ? "commit" : "commits";
+        console.log(`  ✓ pushed ${pushResult.commitsPushed} ${plural}`);
       }
     }
   });
