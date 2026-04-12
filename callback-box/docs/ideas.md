@@ -34,6 +34,17 @@ Several things go wrong when adding a new box to the server that are easy to for
 
 Longer term: `add-box.sh` or a `cb deploy-check` command could verify: all standard dirs exist and are writable, required secrets are present, `cb validate` passes, and the web endpoint responds.
 
+## Service-inject the google-calendar connector
+
+`src/connectors/google-calendar.ts` uses `getGoogleAuth()` + direct REST calls and `ical.js` inline, with no service abstraction. That means there's no doctest-friendly way to exercise its ics-generation path (`generateVtimezone`, `setDateTimeWithTz`, `eventToIcs`). The library-type gap was already noted in `src/connectors/CLAUDE.md` under "Not yet service-injected".
+
+Recent evidence this matters: a latent bug where `ICAL.Time.fromDateTimeString()` was being passed iCal basic-format strings (`YYYYMMDDTHHMMSS`) instead of ISO 8601 extended-format (`YYYY-MM-DDTHH:MM:SS`) broke calendar sync for every box with a Google Calendar connected. No test caught it; it was only noticed when a real wakeup run surfaced the error. A doctest that seeds a fake calendar with one timezone-bearing event and asserts the ics output contains a valid `VTIMEZONE` + `DTSTART` would have caught this immediately.
+
+Work needed:
+1. Define a `GoogleCalendarService` interface in `src/services/google-calendar.ts` (partially exists — there's already `createFakeGoogleCalendar`).
+2. Refactor `google-calendar.ts` to accept an optional service parameter in its factory, matching the telegram connector pattern.
+3. Add `test/connector-google-calendar.doctest.md` exercising the ics round-trip: seed fake calendar → run sync → assert output `.ics` files are parseable by `ICAL.parse()` and contain the expected components.
+
 ## Switch deploy from rsync to git push
 
 `deploy/deploy.sh` rsyncs the local working tree to `/opt/callback/`, excluding `.git`. Side effects:

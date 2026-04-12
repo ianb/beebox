@@ -175,10 +175,15 @@ function generateVtimezone(tzid: string): ICAL.Component {
   const janName = getTzName(jan);
   const julName = getTzName(jul);
 
+  // Note: ICAL.Time.fromDateTimeString requires ISO 8601 "extended" format
+  // (YYYY-MM-DDTHH:MM:SS, 19+ chars) — it rejects the iCal "basic" format
+  // (YYYYMMDDTHHMMSS) with `invalid date-time value`. The serialized output
+  // in the .ics file still uses the basic format per RFC 5545; only the
+  // parser input needs the separators.
   if (janOffset === julOffset) {
     // No DST — just STANDARD
     const standard = new ICAL.Component("standard");
-    standard.updatePropertyWithValue("dtstart", ICAL.Time.fromDateTimeString("19700101T000000"));
+    standard.updatePropertyWithValue("dtstart", ICAL.Time.fromDateTimeString("1970-01-01T00:00:00"));
     standard.updatePropertyWithValue("tzoffsetfrom", formatOffset(janOffset));
     standard.updatePropertyWithValue("tzoffsetto", formatOffset(janOffset));
     standard.updatePropertyWithValue("tzname", janName);
@@ -196,7 +201,7 @@ function generateVtimezone(tzid: string): ICAL.Component {
 
     const standard = new ICAL.Component("standard");
     standard.updatePropertyWithValue("dtstart",
-      ICAL.Time.fromDateTimeString(northernHemisphere ? "19701101T020000" : "19700401T030000"));
+      ICAL.Time.fromDateTimeString(northernHemisphere ? "1970-11-01T02:00:00" : "1970-04-01T03:00:00"));
     if (northernHemisphere) {
       standard.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=11;BYDAY=1SU"));
     } else {
@@ -209,7 +214,7 @@ function generateVtimezone(tzid: string): ICAL.Component {
 
     const daylight = new ICAL.Component("daylight");
     daylight.updatePropertyWithValue("dtstart",
-      ICAL.Time.fromDateTimeString(northernHemisphere ? "19700308T020000" : "19701004T020000"));
+      ICAL.Time.fromDateTimeString(northernHemisphere ? "1970-03-08T02:00:00" : "1970-10-04T02:00:00"));
     if (northernHemisphere) {
       daylight.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=3;BYDAY=2SU"));
     } else {
@@ -235,9 +240,10 @@ function setDateTimeWithTz(
   const { propName, dateTime, timeZone } = opts;
   const parts = parseLocalTimeParts(dateTime);
   if (parts && timeZone) {
-    // Format as iCal datetime string: "20260401T140000"
+    // Format as ISO 8601 extended ("2026-04-01T14:00:00"). fromDateTimeString
+    // rejects iCal basic format; see note in generateVtimezone above.
     const pad = (n: number, w: number) => String(n).padStart(w, "0");
-    const dtStr = `${pad(parts.year, 4)}${pad(parts.month, 2)}${pad(parts.day, 2)}T${pad(parts.hour, 2)}${pad(parts.minute, 2)}${pad(parts.second, 2)}`;
+    const dtStr = `${pad(parts.year, 4)}-${pad(parts.month, 2)}-${pad(parts.day, 2)}T${pad(parts.hour, 2)}:${pad(parts.minute, 2)}:${pad(parts.second, 2)}`;
     const dt = ICAL.Time.fromDateTimeString(dtStr);
     const prop = vevent.updatePropertyWithValue(propName, dt);
     prop.setParameter("tzid", timeZone);
