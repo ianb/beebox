@@ -513,10 +513,6 @@ Phase: describe-images"
           fi
         done
         echo "Extracted: $extracted, remaining: $remaining"
-        if [ "$extracted" -eq 0 ] &amp;&amp; [ "$remaining" -gt 0 ]; then
-          echo "No sessions were extracted"
-          exit 1
-        fi
       </shell>
       <instruction>Partial progress is OK — extracted sessions proceed to archive, remaining ones are picked up on the next run.</instruction>
       <why>The archive step only moves extracted sessions, and re-triggers process-captures if anything is left.</why>
