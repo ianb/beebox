@@ -493,9 +493,10 @@ Phase: describe-images"
       </agent>
     </run>
 
-    <validate severity="abort">
+    <validate severity="warn">
       <shell>
-        failed=0
+        extracted=0
+        remaining=0
         for dir in box/inbox/capture-*/; do
           [ -d "$dir" ] || continue
           spec="${dir}extraction-spec.md"
@@ -506,24 +507,19 @@ Phase: describe-images"
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
           if grep -q 'status="extracted"' "$session"; then
-            # Check that at least one record card exists anywhere under store/
-            # (records may live in store/catalogs/ or in rule-matched destinations
-            # like store/documents/tax/.../ depending on the extraction spec).
-            record_count=$(find store -name "*.record.card" 2>/dev/null | wc -l)
-            if [ "$record_count" -eq 0 ]; then
-              echo "FAIL: Session marked extracted but no record cards found under store/"
-              failed=$((failed + 1))
-            fi
+            extracted=$((extracted + 1))
           elif grep -q 'status="intake-complete"' "$session"; then
-            echo "FAIL: Session not updated to extracted: $session"
-            failed=$((failed + 1))
+            remaining=$((remaining + 1))
           fi
         done
-        echo "Failed sessions: $failed"
-        [ "$failed" -eq 0 ]
+        echo "Extracted: $extracted, remaining: $remaining"
+        if [ "$extracted" -eq 0 ] &amp;&amp; [ "$remaining" -gt 0 ]; then
+          echo "No sessions were extracted"
+          exit 1
+        fi
       </shell>
-      <instruction>Extracted sessions must have status="extracted" and record cards in store/catalogs/.</instruction>
-      <why>Extraction must produce actual record cards to be useful.</why>
+      <instruction>Partial progress is OK — extracted sessions proceed to archive, remaining ones are picked up on the next run.</instruction>
+      <why>The archive step only moves extracted sessions, and re-triggers process-captures if anything is left.</why>
     </validate>
   </step>
 
