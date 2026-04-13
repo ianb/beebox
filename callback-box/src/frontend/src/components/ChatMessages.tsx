@@ -193,7 +193,7 @@ function categorySingular(cat: string): string {
     case "read": return "read a file";
     case "edit": return "edited a file";
     case "command": return "ran a command";
-    case "search": return "searched code";
+    case "search": return "searched documents";
     case "task": return "delegated a task";
     case "todo": return "updated tasks";
     default: return "used a tool";
