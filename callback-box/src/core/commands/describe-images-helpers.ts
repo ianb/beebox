@@ -194,7 +194,7 @@ export interface ImageAnalysis {
  */
 export async function analyzeImagesWithGemini(
   apiKey: string,
-  { imagePaths }: { imagePaths: string[] }
+  { imagePaths, thinkingBudget }: { imagePaths: string[]; thinkingBudget?: number }
 ): Promise<{ analyses: ImageAnalysis[]; usage: { prompt: number; output: number; thinking: number } | null }> {
   const ai = new GoogleGenAI({ apiKey });
 
@@ -229,7 +229,7 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
       // filter, returning empty responses. Successful smaller batches use
       // ~400. 2048 leaves plenty of headroom for "what is this" reasoning
       // without giving the model room to internally reproduce document text.
-      thinkingConfig: { thinkingBudget: 2048 },
+      thinkingConfig: { thinkingBudget: thinkingBudget ?? 2048 },
       responseMimeType: "application/json",
       responseSchema: {
         type: "ARRAY",

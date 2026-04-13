@@ -87,8 +87,29 @@ async function analyzeBatchWithRetry({
     const retryable =
       err instanceof GeminiEmptyResponseError &&
       (err.finishReason === "RECITATION" || err.finishReason === "MAX_TOKENS");
-    if (!retryable || batchItems.length === 1) {
+    if (!retryable) {
       return { analyses: [], usage: null, failed: batchItems.length };
+    }
+    // Single-image batch still hitting RECITATION — try once more with
+    // thinking disabled. Without internal reasoning, the model is less
+    // likely to reproduce document text that triggers the recitation filter.
+    if (batchItems.length === 1) {
+      ctx.writeLine("  Retrying single image with thinking disabled...");
+      try {
+        const result = await analyzeImagesWithGemini(apiKey, {
+          imagePaths: batchPaths,
+          thinkingBudget: 0,
+        });
+        const analyses: ImageAnalysis[] = [];
+        for (const a of result.analyses) {
+          a.index = a.index + batchStart;
+          analyses.push(a);
+        }
+        return { analyses, usage: result.usage, failed: 0 };
+      } catch (retryErr) {
+        ctx.writeLine(`  Still failed: ${(retryErr as Error).message}`);
+        return { analyses: [], usage: null, failed: 1 };
+      }
     }
     const mid = Math.ceil(batchItems.length / 2);
     ctx.writeLine(`  Retrying as two smaller batches: ${mid} + ${batchItems.length - mid}`);
@@ -221,6 +242,23 @@ async function executeDescribeImages(
       const analysis = analyses.find((a) => a.index === item.index);
       if (!analysis) {
         ctx.writeLine(`Warning: No analysis returned for image ${item.index}`);
+        // Mark the image card as failed so it doesn't block the pipeline.
+        // The assemble precheck only blocks on status="new" — any other
+        // status (including "failed") lets the pipeline continue.
+        if (item.cardPath) {
+          try {
+            const cardContent = await fs.readFile(item.cardPath, "utf-8");
+            if (cardContent.includes('status="new"')) {
+              await fs.writeFile(
+                item.cardPath,
+                cardContent.replace('status="new"', 'status="failed"'),
+              );
+              ctx.writeLine(`  Marked ${path.relative(ctx.boxRoot, item.cardPath)} as failed`);
+            }
+          } catch (_e) {
+            // Best-effort — don't fail the whole command over a status update
+          }
+        }
         continue;
       }
 
