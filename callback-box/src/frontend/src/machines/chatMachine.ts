@@ -50,6 +50,8 @@ interface ChatContext {
   pendingMessages: SessionEntry[];
   streamText: string;
   streamTools: SessionContentBlock[];
+  /** True when tools ran since the last text — the next text block needs a paragraph separator. */
+  streamNeedsSeparator: boolean;
   error: string | null;
   sessionId: string | null;
   processRunning: boolean;
@@ -240,6 +242,7 @@ export const chatMachine = setup({
     pendingMessages: [],
     streamText: "",
     streamTools: [],
+    streamNeedsSeparator: false,
     error: null,
     sessionId: null,
     processRunning: false,
@@ -368,12 +371,16 @@ export const chatMachine = setup({
         },
         STREAM_TEXT: {
           actions: assign(({ context, event }) => ({
-            streamText: context.streamText + event.text,
+            streamText: context.streamNeedsSeparator && context.streamText
+              ? context.streamText + "\n\n" + event.text
+              : context.streamText + event.text,
+            streamNeedsSeparator: false,
           })),
         },
         STREAM_TOOL: {
           actions: assign(({ context, event }) => ({
             streamTools: [...context.streamTools, event.tool],
+            streamNeedsSeparator: context.streamText.length > 0,
           })),
         },
         STREAM_BUSY: {
