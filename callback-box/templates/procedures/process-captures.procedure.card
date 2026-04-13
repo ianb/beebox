@@ -579,7 +579,11 @@ Phase: describe-images"
 Triggered-By: cb procedure
 Phase: archive"
 
-        # Check if there are still unprocessed captures — re-trigger if so
+        # Check if there are still unprocessed captures — re-trigger if so.
+        # Always overwrite the trigger (even if it already exists from the
+        # original capture upload) so the mtime changes. Tick's one-shot
+        # cleanup checks mtimeMs — if the file was recreated during execution,
+        # tick keeps it for the next run instead of deleting it.
         remaining=0
         for dir in box/inbox/capture-*/; do
           [ -d "$dir" ] || continue
@@ -588,18 +592,16 @@ Phase: archive"
         if [ "$remaining" -gt 0 ]; then
           echo "Still $remaining capture session(s) in inbox — re-creating trigger"
           trigger="config/schedules/process-captures.scheduled-script.card"
-          if [ ! -f "$trigger" ]; then
-            cat > "$trigger" &lt;&lt;'TRIGGER'
+          cat > "$trigger" &lt;&lt;'TRIGGER'
 &lt;scheduled-script on-wakeup="true" once="true" lock-group="captures"&gt;
 &lt;description&gt;Process remaining capture sessions (auto re-triggered)&lt;/description&gt;
 &lt;runs&gt;cb procedure run process-captures&lt;/runs&gt;
 &lt;/scheduled-script&gt;
 TRIGGER
-            git add -A &amp;&amp; git commit -m "Re-trigger process-captures for remaining sessions
+          git add -A &amp;&amp; git commit -m "Re-trigger process-captures for remaining sessions
 
 Triggered-By: cb procedure
 Phase: archive"
-          fi
         fi
       </shell>
     </run>
