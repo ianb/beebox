@@ -186,6 +186,13 @@ export interface ImageAnalysis {
   invalid: boolean;
   subject_bbox: number[] | null;
   rotation: number;
+  is_document: boolean;
+  document_kind: string | null;
+  document_from: string | null;
+  document_dates: Array<{
+    label: string;
+    value: string;
+  }>;
 }
 
 /**
@@ -212,13 +219,29 @@ export async function analyzeImagesWithGemini(
   const prompt = `You are analyzing ${imagePaths.length} image(s) that were captured together in a session. They may be related to each other.
 
 For each image (indexed 0 to ${imagePaths.length - 1}), provide:
-1. A one-sentence description of what's in the image
-2. A short title suitable for a filename (2-4 words, use underscores, retain capitals, e.g., "Utility_Bill" or "Piano_Business_Card")
-3. Whether the image contains readable text that is part of the subject (has_text). Ignore incidental or background text — text on objects in the background, brand names on equipment, etc. Only count text that the photographer intended to capture.
-4. If it has text: extract all readable text that is part of the subject, organized by source (what the text is physically on). Use Markdown formatting. For tables, use Markdown tables. Do not extract incidental text from the background.
-5. Whether this image seems invalid or useless (accidental capture, too blurry to read, etc.)
-6. The bounding box of the main subject or item of interest as [y1, x1, y2, x2] on a 0-1000 scale. This could be a document on a surface, a coin on a table, a specific object being photographed, etc. — whatever the photo is "of". null only if the subject fills the entire frame or there's no clear focal subject.
-7. The rotation needed to view the image correctly, in degrees clockwise: 0 (upright), 90 (rotated 90° clockwise, needs counter-clockwise rotation to fix), 180 (upside down), or 270. Judge by text direction, face orientation, or natural object orientation. Use 0 if uncertain.`;
+
+1. description: one sentence describing what's in the image.
+
+2. title: a short filename-friendly title (2-4 words, underscores, retain capitals, e.g., "Utility_Bill" or "Piano_Business_Card").
+
+3. has_text: true if the image contains readable text that is part of the subject (document, whiteboard, business card, sign, label, engraving). Ignore incidental background text — brand names on equipment, text in the scenery, etc. Must be true whenever is_document is true.
+
+4. text_blocks: if has_text, extract the unique information the text is meant to convey, organized by source (what the text is physically on). Use Markdown. Use Markdown tables for tabular data. The original image is preserved, so you do NOT need to transcribe everything — focus on the data. KEEP: amounts, totals, line items, dates, names, addresses, account numbers, reference numbers, phone numbers, tables of figures, handwritten notes, specific values and labels that identify what the data means. DROP: legal/privacy/compliance footers, marketing copy, return addresses, page numbers, repeated column headers across pages, "see reverse for…" / "terms and conditions apply" / generic disclosures, slogans, decorative boilerplate. When in doubt about boilerplate, drop it. Empty array if no text.
+
+5. invalid: true if this image is useless — accidental capture, too blurry to read, covered lens, etc.
+
+6. subject_bbox: bounding box of the main subject as [y1, x1, y2, x2] on a 0-1000 scale (a document on a surface, a coin on a table, a specific object being photographed — whatever the photo is "of"). null if the subject fills the frame or there's no clear focal subject.
+
+7. rotation: degrees clockwise the image needs to view correctly — 0 (upright), 90 (rotated 90° clockwise, needs counter-clockwise rotation to fix), 180 (upside down), or 270. Judge by text direction, face orientation, or natural object orientation. Use 0 if uncertain.
+
+8. is_document: true if this is a photograph of a document — a piece of paper, a form, a letter, a bill or statement, a receipt, a contract, a certificate, a prescription, a report, a screen showing a document, etc. False for whiteboards, business cards, coins, signs, objects, scenes, people — even if they contain text.
+
+9. If is_document is true, also fill:
+   - document_kind: a short lowercase category, 2-5 words, describing what kind of document this is (e.g., "utility bill", "medical lab results", "pay stub", "insurance explanation of benefits", "handwritten note", "tax form w-2", "appointment reminder", "prescription label", "bank statement"). Be specific about the kind, but do not include the issuer's name.
+   - document_from: the issuer or sender — the organization or person the document is from (e.g., "Con Edison", "Dr. Jane Smith", "IRS"). null if unclear.
+   - document_dates: every date that appears on the document, each with a label describing what the date represents. Examples: {"label": "due", "value": "4/30/26"}, {"label": "billing period end", "value": "March 31, 2026"}, {"label": "statement", "value": "2026-04-01"}, {"label": "appointment", "value": "Fri May 8"}. Use the date string AS IT APPEARS on the document — do not reformat. Empty array if there are no dates.
+
+   If is_document is false: document_kind null, document_from null, document_dates [].`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -251,8 +274,19 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
             invalid: { type: "BOOLEAN" },
             subject_bbox: { type: "ARRAY", items: { type: "INTEGER" }, nullable: true },
             rotation: { type: "INTEGER" },
+            is_document: { type: "BOOLEAN" },
+            document_kind: { type: "STRING", nullable: true },
+            document_from: { type: "STRING", nullable: true },
+            document_dates: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: { label: { type: "STRING" }, value: { type: "STRING" } },
+                required: ["label", "value"],
+              },
+            },
           },
-          required: ["index", "description", "title", "has_text", "text_blocks", "invalid", "subject_bbox", "rotation"],
+          required: ["index", "description", "title", "has_text", "text_blocks", "invalid", "subject_bbox", "rotation", "is_document", "document_kind", "document_from", "document_dates"],
         },
       },
     },

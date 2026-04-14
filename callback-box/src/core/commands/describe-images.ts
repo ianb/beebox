@@ -269,6 +269,13 @@ async function executeDescribeImages(
       if (analysis.has_text) {
         ctx.writeLine(`  Text blocks: ${analysis.text_blocks.length}`);
       }
+      if (analysis.is_document) {
+        const parts: string[] = [];
+        if (analysis.document_kind) parts.push(`kind=${analysis.document_kind}`);
+        if (analysis.document_from) parts.push(`from=${analysis.document_from}`);
+        if (analysis.document_dates.length > 0) parts.push(`dates=${analysis.document_dates.length}`);
+        ctx.writeLine(`  Document: ${parts.join(", ") || "(unlabeled)"}`);
+      }
       if (analysis.invalid) {
         ctx.writeLine("  Status: invalid");
       }
@@ -348,7 +355,8 @@ async function applyAnalysisToCard(
   const el = card.element;
 
   el.attrs["status"] = analysis.invalid ? "invalid" : "analyzed";
-  el.attrs["has-text"] = analysis.has_text ? "true" : "false";
+  // Documents always count as has-text, even if the model forgot to set it.
+  el.attrs["has-text"] = (analysis.has_text || analysis.is_document) ? "true" : "false";
   if (analysis.rotation !== 0) {
     el.attrs["rotation"] = String(analysis.rotation);
   }
@@ -368,8 +376,8 @@ async function applyAnalysisToCard(
     }
   }
 
-  // Remove old text, exif, and subject-bbox children, add new ones
-  el.children = el.children.filter((c) => c.tagName !== "text" && c.tagName !== "exif" && c.tagName !== "subject-bbox");
+  // Remove old text, exif, subject-bbox, and document children, add new ones
+  el.children = el.children.filter((c) => c.tagName !== "text" && c.tagName !== "exif" && c.tagName !== "subject-bbox" && c.tagName !== "document");
   for (const block of analysis.text_blocks) {
     el.children.push({
       tagName: "text",
@@ -411,6 +419,30 @@ async function applyAnalysisToCard(
       },
       text: "",
       children: [],
+      comments: {},
+      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+      dirty: true,
+    });
+  }
+
+  if (analysis.is_document) {
+    const docAttrs: Record<string, string> = {};
+    if (analysis.document_kind) docAttrs["kind"] = analysis.document_kind;
+    if (analysis.document_from) docAttrs["from"] = analysis.document_from;
+    const dateChildren = analysis.document_dates.map((d) => ({
+      tagName: "date",
+      attrs: { label: d.label },
+      text: d.value,
+      children: [],
+      comments: {},
+      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
+      dirty: true,
+    }));
+    el.children.push({
+      tagName: "document",
+      attrs: docAttrs,
+      text: "",
+      children: dateChildren,
       comments: {},
       location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
       dirty: true,

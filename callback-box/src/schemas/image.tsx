@@ -50,6 +50,21 @@ export const ImageSubjectBbox = element("subject-bbox", {
   },
 });
 
+export const ImageDate = element("date", {
+  attrs: {
+    label: z.string(),
+  },
+  text: z.string(),
+});
+
+export const ImageDocument = element("document", {
+  attrs: {
+    kind: z.string().optional(),
+    from: z.string().optional(),
+  },
+  children: z.array(ImageDate).optional(),
+});
+
 /**
  * Image card schema.
  *
@@ -75,6 +90,7 @@ export const ImageSchema = element("image", {
       ImageText,
       ImageExif,
       ImageSubjectBbox,
+      ImageDocument,
     ])
   ),
   instructions: `# Image Cards
@@ -87,7 +103,8 @@ Elements:
 - \`<text source="...">\` — transcribed text content from the image, if any (source describes what the text is on: "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements allowed for different sources.
 - \`<exif>\` — EXIF metadata extracted from the image file (date, camera, GPS, dimensions)
 - \`<subject-bbox y1="..." x1="..." y2="..." x2="...">\` — bounding box of the main subject on a 0-1000 scale (coordinates are [y1, x1, y2, x2]). Present when the subject doesn't fill the entire frame.
-- \`has-text\` attribute — "true" if the image contains readable text, "false" otherwise
+- \`<document kind="..." from="...">\` — present when the image is a photograph of a document (bill, letter, form, receipt, statement, etc.). \`kind\` is a short free-text category ("utility bill", "lab results"), \`from\` is the issuer/sender. Contains \`<date label="...">value</date>\` children, one per date on the document. Date values are kept as they appear in the document; normalization happens downstream.
+- \`has-text\` attribute — "true" if the image contains readable text, "false" otherwise. Always "true" when a \`<document>\` child is present.
 - \`rotation\` attribute — degrees clockwise the image needs to be rotated to appear upright: "0", "90", "180", or "270"
 
 Analysis is done by \`cb describe-images\`, which sends images to Gemini Flash for OCR, description, subject detection, and rotation, and extracts EXIF metadata. Pass multiple image cards or image files to process them as a batch (provides better context when images are related). Use \`--no-rename\` to skip automatic renaming.
