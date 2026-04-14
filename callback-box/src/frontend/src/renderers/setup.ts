@@ -7,3 +7,6 @@ import "./builtins";
 import "./image";
 import "./recipe";
 import "./sheet";
+import "./markdown";
+import "./plaintext";
+import "./directory";

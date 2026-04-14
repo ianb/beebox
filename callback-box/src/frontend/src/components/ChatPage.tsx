@@ -27,7 +27,7 @@ import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 import { DebugLogPanel } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownContent, groupMessages, type OnZoomView } from "./ChatMessages";
-import { ViewDispatcher } from "./ViewDispatcher";
+import { FileView } from "./FileView";
 import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
@@ -227,7 +227,7 @@ function CompanionViewPanel({ view, onClose }: { view: { target: ViewTarget; lab
         </button>
       </div>
       <div className="flex-1 overflow-auto">
-        <ViewDispatcher target={view.target} mode="companion" />
+        <FileView path={view.target.path} mode="companion" rendererName={view.target.viewer} />
       </div>
     </div>
   );

@@ -7,7 +7,7 @@
 import { useMemo, useState } from "react";
 import { Markdown } from "./Markdown";
 import { ImageLightbox } from "./ImageLightbox";
-import { ViewDispatcher } from "./ViewDispatcher";
+import { FileView } from "./FileView";
 import type { Components } from "react-markdown";
 import { parseViewUrl, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
@@ -433,7 +433,7 @@ function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components
             </button>
           );
         }
-        return <ViewDispatcher target={target} mode="chat" />;
+        return <FileView path={target.path} mode="chat" rendererName={target.viewer} />;
       }
       return <a href={href} {...props}>{children}</a>;
     },

@@ -1,15 +1,15 @@
 /**
  * Full-page wrapper for a view, rendered at /$boxSlug/views/$viewPath.
  *
- * File paths (containing "/" or a known extension) use the ViewDispatcher
- * with built-in viewers. Plain slugs fall back to ViewRenderer for
- * legacy agent-generated .tsx views.
+ * File paths (containing "/" or a known extension) use FileView with the
+ * renderer registry. Plain slugs fall back to ViewRenderer for legacy
+ * agent-generated .tsx views.
  */
 
 import { useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { parseViewUrl } from "../lib/view-url";
-import { ViewDispatcher } from "./ViewDispatcher";
+import { FileView } from "./FileView";
 import { ViewRenderer } from "./ViewRenderer";
 
 const FILE_EXTENSIONS = new Set([".md", ".card", ".txt", ".json", ".xml", ".html", ".csv", ".tsv", ".yaml", ".yml"]);
@@ -47,7 +47,7 @@ export function ViewPage() {
   return (
     <div className="p-4">
       {parsed.type === "file" ? (
-        <ViewDispatcher target={parsed.target} mode="page" />
+        <FileView path={parsed.target.path} mode="page" rendererName={parsed.target.viewer} />
       ) : (
         <ViewRenderer slug={parsed.slug} mode="page" params={parsed.params} />
       )}

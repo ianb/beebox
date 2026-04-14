@@ -16,6 +16,8 @@ export interface FileData {
   xml?: string;
   version?: string;
   status?: string;
+  /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
+  content?: string;
 }
 
 /** Props passed to every renderer component */
