@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getApiBase, getEventSourceBase } from "../api";
 import { Markdown } from "../components/Markdown";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
+import { ChatViewerHeader } from "./chat-header";
 import { registerFileViewer, type FileViewerProps } from "./registry";
 
 function MarkdownViewer({ filePath, mode }: FileViewerProps) {
@@ -66,12 +67,21 @@ function MarkdownViewer({ filePath, mode }: FileViewerProps) {
     return <div className="p-4 text-warm-600">Loading...</div>;
   }
 
-  const containerClass = mode === "chat"
-    ? "max-h-96 overflow-auto border rounded-lg p-3"
-    : "p-4";
+  if (mode === "chat") {
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <ChatViewerHeader filePath={filePath} />
+        <div className="max-h-96 overflow-auto p-3">
+          <div className="prose prose-sm max-w-none">
+            <Markdown>{content}</Markdown>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={containerClass}>
+    <div className="p-4">
       <div className="prose prose-sm max-w-none">
         <Markdown>{content}</Markdown>
       </div>

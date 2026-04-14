@@ -20,26 +20,34 @@ interface BrowsePageProps {
   onNavigate: (path: string) => void;
 }
 
+/** Detect whether a path refers to a file (has an extension on the last segment). */
+function isFilePath(p: string): boolean {
+  if (!p) return false;
+  const base = p.split("/").pop() ?? "";
+  const dot = base.lastIndexOf(".");
+  return dot > 0 && dot < base.length - 1;
+}
+
 export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   const { boxSlug } = useParams({ strict: false });
 
-  // If currentPath points to a card file, split into directory + card filename
-  const isCardPath = currentPath.endsWith(".card");
-  const dirPath = isCardPath ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
-  const initialCardFile = isCardPath ? currentPath : null;
+  // If currentPath points to a file, split into directory + filename
+  const pathIsFile = isFilePath(currentPath);
+  const dirPath = pathIsFile ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
+  const initialFile = pathIsFile ? currentPath : null;
 
   const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: dirPath });
-  const [selectedCardPath, setSelectedCardPath] = useState<string | null>(initialCardFile);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(initialFile);
 
-  // Derive selectedCard from the path + loaded data
-  const selectedCard = selectedCardPath && data
-    ? data.cards.find((c) => c.relativePath === selectedCardPath) || null
+  // Derive selected card metadata (for non-card files we just render via FileView)
+  const selectedCard = selectedFilePath && data
+    ? data.cards.find((c) => c.relativePath === selectedFilePath) || null
     : null;
 
   // Build breadcrumb segments from the directory path
   const segments = dirPath ? dirPath.split("/").filter(Boolean) : [];
 
-  const hasDetail = Boolean(selectedCard);
+  const hasDetail = Boolean(selectedFilePath);
 
   return (
     <div className="h-full flex">
@@ -105,12 +113,12 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 <button
                   key={card.relativePath}
                   onClick={() => {
-                    setSelectedCardPath(card.relativePath);
+                    setSelectedFilePath(card.relativePath);
                     window.history.replaceState(null, "", href(`/${boxSlug}/browse/${card.relativePath}`));
                   }}
                   {...cbSource("card", card.relativePath)}
                   className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
-                    selectedCard?.relativePath === card.relativePath
+                    selectedFilePath === card.relativePath
                       ? "bg-iris-50"
                       : ""
                   }`}
@@ -133,8 +141,28 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 </button>
               ))}
 
+              {/* Non-card files */}
+              {(data.files ?? []).map((file) => (
+                <button
+                  key={file.relativePath}
+                  onClick={() => {
+                    setSelectedFilePath(file.relativePath);
+                    window.history.replaceState(null, "", href(`/${boxSlug}/browse/${file.relativePath}`));
+                  }}
+                  className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
+                    selectedFilePath === file.relativePath
+                      ? "bg-iris-50"
+                      : ""
+                  }`}
+                >
+                  <div className="font-medium text-warm-900 text-sm truncate">
+                    {file.name}
+                  </div>
+                </button>
+              ))}
+
               {/* Empty state */}
-              {data.dirs.length === 0 && data.cards.length === 0 && (
+              {data.dirs.length === 0 && data.cards.length === 0 && (data.files ?? []).length === 0 && (
                 <div className="p-4 text-warm-600 text-sm text-center">
                   Empty directory
                 </div>
@@ -146,11 +174,11 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
 
       {/* Detail panel */}
       <div className={`flex-1 overflow-auto bg-warm-50 ${hasDetail ? "" : "hidden sm:block"}`}>
-        {selectedCard ? (
+        {selectedFilePath ? (
           <div className="max-w-4xl mx-auto py-4 sm:py-8">
             <div className="mb-4 px-4 flex items-center justify-between">
               <button
-                onClick={() => setSelectedCardPath(null)}
+                onClick={() => setSelectedFilePath(null)}
                 className="sm:hidden flex items-center gap-1 text-sm text-plum hover:text-plum-dark"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,20 +186,22 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                 </svg>
                 Back
               </button>
-              <Link
-                to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
-                className="text-plum hover:text-plum-dark text-sm"
-              >
-                Open full view &rarr;
-              </Link>
+              {selectedCard ? (
+                <Link
+                  to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
+                  className="text-plum hover:text-plum-dark text-sm"
+                >
+                  Open full view &rarr;
+                </Link>
+              ) : null}
             </div>
             <div className="bg-white rounded-lg shadow">
-              <FileView path={selectedCard.relativePath} />
+              <FileView path={selectedFilePath} />
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-warm-500">
-            Select a card to view details
+            Select a file to view details
           </div>
         )}
       </div>

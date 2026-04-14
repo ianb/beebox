@@ -20,6 +20,11 @@ export interface BrowseCard {
   status?: string | undefined;
 }
 
+export interface BrowseFile {
+  relativePath: string;
+  name: string;
+}
+
 /**
  * Count news items in a directory.
  */
@@ -95,18 +100,19 @@ export const statusRouter = router({
       // Security: ensure we stay within boxRoot
       const resolved = path.resolve(targetDir);
       if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
-        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[] };
+        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
       try {
         entries = await fs.readdir(resolved, { withFileTypes: true });
       } catch {
-        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[] };
+        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
       }
 
       const dirs: BrowseDir[] = [];
       const cards: BrowseCard[] = [];
+      const files: BrowseFile[] = [];
       const loader = await createLoader(ctx.boxRoot);
 
       for (const entry of entries) {
@@ -123,29 +129,35 @@ export const statusRouter = router({
           dirs.push({ name: entry.name, fileCount });
           continue;
         }
-        if (!entry.name.endsWith(".card")) continue;
-        const parsed = parseCardName(entry.name);
-        if (!parsed) continue;
-
         const fullPath = path.join(resolved, entry.name);
         const relativePath = path.relative(ctx.boxRoot, fullPath);
 
-        try {
-          const card = await loader.load(fullPath);
-          cards.push({
-            relativePath,
-            name: parsed.name,
-            type: parsed.type,
-            tagName: card.element.tagName,
-            status: card.element.attrs["status"],
-          });
-        } catch {
-          cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown" });
+        if (entry.name.endsWith(".card")) {
+          const parsed = parseCardName(entry.name);
+          if (!parsed) continue;
+
+          try {
+            const card = await loader.load(fullPath);
+            cards.push({
+              relativePath,
+              name: parsed.name,
+              type: parsed.type,
+              tagName: card.element.tagName,
+              status: card.element.attrs["status"],
+            });
+          } catch {
+            cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown" });
+          }
+          continue;
         }
+
+        // Non-card file: list it as a generic file
+        files.push({ relativePath, name: entry.name });
       }
 
       dirs.sort((a, b) => a.name.localeCompare(b.name));
       cards.sort((a, b) => a.name.localeCompare(b.name));
-      return { path: input.path, dirs, cards };
+      files.sort((a, b) => a.name.localeCompare(b.name));
+      return { path: input.path, dirs, cards, files };
     }),
 });
