@@ -196,13 +196,29 @@ function ChatDebugMenu({
  * Companion view panel shown alongside chat when a view is zoomed.
  */
 function CompanionViewPanel({ view, onClose }: { view: { target: ViewTarget; label: string }; onClose: () => void }) {
+  const { boxSlug } = useParams({ strict: false });
+  const browseHref = href(`/${boxSlug}/browse/${view.target.path}`);
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
-      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-warm-300 bg-warm-50">
-        <span className="text-sm font-medium truncate">{view.label}</span>
+      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium truncate">{view.label}</div>
+          <div className="text-xs text-warm-500 truncate" title={view.target.path}>{view.target.path}</div>
+        </div>
+        <a
+          href={browseHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 p-1 text-warm-500 hover:text-warm-700 rounded hover:bg-warm-200"
+          title="Open in browse view (new tab)"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
         <button
           onClick={onClose}
-          className="ml-2 flex-shrink-0 p-1 text-warm-500 hover:text-warm-700 rounded hover:bg-warm-200"
+          className="flex-shrink-0 p-1 text-warm-500 hover:text-warm-700 rounded hover:bg-warm-200"
           title="Close companion view"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
