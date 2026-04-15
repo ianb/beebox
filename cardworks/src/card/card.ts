@@ -57,9 +57,19 @@ function extname(filename: string): string {
 }
 
 /**
- * Get the basename without extension.
+ * Get the shared stem of a card/attachment pair.
+ *
+ * Cards are named `Name.type.card` and their attachments are named `Name.ext`
+ * (e.g. `photo-001.image.card` + `photo-001.jpg`). The shared stem is `Name`:
+ * for .card files strip both the type and .card suffix, for everything else
+ * strip just the single extension.
  */
-function basenameWithoutExt(filename: string): string {
+function sharedStem(filename: string): string {
+  if (filename.endsWith(".card")) {
+    const withoutCard = filename.slice(0, -".card".length);
+    const lastDot = withoutCard.lastIndexOf(".");
+    return lastDot === -1 ? withoutCard : withoutCard.slice(0, lastDot);
+  }
   const ext = extname(filename);
   return ext ? filename.slice(0, -ext.length) : filename;
 }
@@ -105,21 +115,17 @@ class CardImpl implements Card {
   async getMedia(): Promise<Record<string, string>> {
     const result: Record<string, string> = {};
     const dir = dirname(this.path);
-    const cardBasename = basenameWithoutExt(basename(this.path));
-    const cardExt = extname(basename(this.path));
+    const cardStem = sharedStem(basename(this.path));
+    const cardName = basename(this.path);
 
     try {
       const entries = await this.fs.list(dir);
       for (const entry of entries) {
-        const entryBasename = basenameWithoutExt(entry);
+        if (entry === cardName) continue; // skip the card itself
+        if (sharedStem(entry) !== cardStem) continue;
         const entryExt = extname(entry);
-
-        // Match files with same basename but different extension
-        if (entryBasename === cardBasename && entryExt !== cardExt) {
-          // Use extension without the dot as key
-          const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
-          result[extKey] = `${dir}/${entry}`;
-        }
+        const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
+        result[extKey] = `${dir}/${entry}`;
       }
     } catch {
       // Directory may not exist or be unreadable
@@ -169,19 +175,17 @@ export class NewCardImpl implements Card {
 
     const result: Record<string, string> = {};
     const dir = dirname(this.path);
-    const cardBasename = basenameWithoutExt(basename(this.path));
-    const cardExt = extname(basename(this.path));
+    const cardStem = sharedStem(basename(this.path));
+    const cardName = basename(this.path);
 
     try {
       const entries = await this.fs.list(dir);
       for (const entry of entries) {
-        const entryBasename = basenameWithoutExt(entry);
+        if (entry === cardName) continue;
+        if (sharedStem(entry) !== cardStem) continue;
         const entryExt = extname(entry);
-
-        if (entryBasename === cardBasename && entryExt !== cardExt) {
-          const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
-          result[extKey] = `${dir}/${entry}`;
-        }
+        const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
+        result[extKey] = `${dir}/${entry}`;
       }
     } catch {
       // Directory may not exist or be unreadable

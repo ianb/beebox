@@ -291,6 +291,38 @@ test("MemoryCardLoader.move: moves related files with same basename", async (t) 
   t.equal(await loader.exists("/project/cards/Other.card"), true);
 });
 
+test("MemoryCardLoader.move: moves sibling of a .type.card (compound extension)", async (t) => {
+  // Cards named `Name.type.card` pair with siblings named `Name.ext`.
+  // The shared stem is `Name` — stripping .type.card from the card and the
+  // single extension from the attachment must both produce the same stem.
+  const loader = new MemoryCardLoader("/project", {
+    files: {
+      "/project/caps/photo-001.image.card": `<card version="1.0.0"><title>Photo</title></card>`,
+      "/project/caps/photo-001.jpg": "image data",
+      "/project/caps/file-001-Doc.file.card": `<card version="1.0.0"><title>Doc</title></card>`,
+      "/project/caps/file-001-Doc.pdf": "pdf data",
+    },
+  });
+
+  const imageCard = await loader.load("/project/caps/photo-001.image.card");
+  const imageResult = await loader.move(imageCard, "/project/out/photo-001.image.card");
+  t.equal(imageResult.result.movedFiles.length, 2);
+  const imagePaths = imageResult.result.movedFiles.map((f) => f.to).sort();
+  t.same(imagePaths, [
+    "/project/out/photo-001.image.card",
+    "/project/out/photo-001.jpg",
+  ]);
+
+  const fileCard = await loader.load("/project/caps/file-001-Doc.file.card");
+  const fileResult = await loader.move(fileCard, "/project/docs/file-001-Doc.file.card");
+  t.equal(fileResult.result.movedFiles.length, 2);
+  const filePaths = fileResult.result.movedFiles.map((f) => f.to).sort();
+  t.same(filePaths, [
+    "/project/docs/file-001-Doc.file.card",
+    "/project/docs/file-001-Doc.pdf",
+  ]);
+});
+
 test("MemoryCardLoader.move: updates references in other cards", async (t) => {
   const loader = new MemoryCardLoader("/project", {
     files: {

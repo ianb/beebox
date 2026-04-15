@@ -67,9 +67,20 @@ function extname(filename: string): string {
 }
 
 /**
- * Get the basename without extension.
+ * Get the shared basename of a card/attachment pair.
+ *
+ * Cards are named `Name.type.card` and their sibling attachments are named
+ * `Name.ext` (e.g. `photo-001.image.card` + `photo-001.jpg`). To detect the
+ * pair we need to treat "Name" as the shared stem — which means stripping
+ * BOTH `.type` and `.card` for card files, but only the single extension for
+ * non-card files.
  */
-function basenameWithoutExt(filename: string): string {
+function sharedStem(filename: string): string {
+  if (filename.endsWith(".card")) {
+    const withoutCard = filename.slice(0, -".card".length);
+    const lastDot = withoutCard.lastIndexOf(".");
+    return lastDot === -1 ? withoutCard : withoutCard.slice(0, lastDot);
+  }
   const ext = extname(filename);
   return ext ? filename.slice(0, -ext.length) : filename;
 }
@@ -482,23 +493,24 @@ abstract class BaseCardLoader implements ICardLoader {
       updatedCards: [],
     };
 
-    // Find related files with same basename (e.g., Recipe.card, Recipe.png)
+    // Find related files sharing the card's stem.
+    // Cards are named `Name.type.card` and pair with `Name.ext` attachments;
+    // the shared stem is `Name`. sharedStem() strips `.type.card` for .card
+    // files and a single extension for everything else.
     const fromDir = dirname(from);
     const toDir = dirname(to);
-    const fromBasename = basenameWithoutExt(basename(from));
-    const toBasename = basenameWithoutExt(basename(to));
+    const fromStem = sharedStem(basename(from));
+    const toStem = sharedStem(basename(to));
 
     const filesInDir = await this.fs.list(fromDir);
     const relatedFiles: Array<{ from: string; to: string }> = [];
 
     for (const filename of filesInDir) {
-      const fileBasename = basenameWithoutExt(filename);
-      if (fileBasename === fromBasename) {
-        const fileExt = extname(filename);
-        const fromPath = `${fromDir}/${filename}`;
-        const toPath = `${toDir}/${toBasename}${fileExt}`;
-        relatedFiles.push({ from: fromPath, to: toPath });
-      }
+      if (sharedStem(filename) !== fromStem) continue;
+      const suffix = filename.slice(fromStem.length); // e.g. ".image.card" or ".jpg"
+      const fromPath = `${fromDir}/${filename}`;
+      const toPath = `${toDir}/${toStem}${suffix}`;
+      relatedFiles.push({ from: fromPath, to: toPath });
     }
 
     // Find all card files and update references
