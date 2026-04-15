@@ -60,6 +60,25 @@ async function writeSession(session: CaptureSessionData): Promise<void> {
   await fs.writeFile(sessionJsonPath(session.id), JSON.stringify(session, null, 2));
 }
 
+/**
+ * Per-session mutex. Concurrent uploads for the same session read-modify-write
+ * session.json; without serialization they race and drop entries. The map
+ * stores the tail of a promise chain for each session id; each new task
+ * appends itself after the tail.
+ */
+const sessionLocks = new Map<string, Promise<void>>();
+
+async function withSessionLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+  const previous = sessionLocks.get(id) ?? Promise.resolve();
+  const done = previous.then(fn);
+  // Store a version that always resolves, so one failure doesn't break the chain.
+  sessionLocks.set(id, done.then(
+    () => {},
+    () => {},
+  ));
+  return done;
+}
+
 interface RegisterCaptureRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
@@ -141,8 +160,15 @@ export async function registerCaptureRoutes(
     };
     if (originalName) record.originalName = originalName;
     if (mimeType) record.mimeType = mimeType;
-    session.files.push(record);
-    await writeSession(session);
+
+    // Serialize session.json updates — concurrent uploads to the same session
+    // would otherwise read-modify-write and drop each other's file records.
+    await withSessionLock(session.id, async () => {
+      const current = await readSession(session.id);
+      if (!current) throw new Error("Session disappeared during upload");
+      current.files.push(record);
+      await writeSession(current);
+    });
 
     console.log(`[capture] Uploaded ${filename} (${fileBuffer.length} bytes) to session ${session.id}`);
     return { success: true, filename, size: fileBuffer.length };
@@ -157,6 +183,7 @@ export async function registerCaptureRoutes(
       return reply.status(404).send({ error: "Session not found" });
     }
     await cleanupDir(sessionDir(session.id));
+    sessionLocks.delete(session.id);
     return { success: true };
   });
 
@@ -341,6 +368,7 @@ export async function registerCaptureRoutes(
 
     // Clean up temp dir
     await cleanupDir(tmpDir);
+    sessionLocks.delete(session.id);
 
     const sessionCardRelPath = `${sessionRelDir}/${sessionCardFilename}`;
     console.log(`[capture] Created capture session: ${sessionCardRelPath}`);

@@ -367,11 +367,13 @@ export function CapturePage() {
   const handleGallerySelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!sessionId || !e.target.files) return;
-      for (const file of Array.from(e.target.files)) {
-        const index = photoStates.length;
+      const files = Array.from(e.target.files);
+      const baseIndex = photoStates.length;
+      const placeholders: UploadState[] = Array.from({ length: files.length }, (): UploadState => "uploading");
+      setPhotoStates((prev) => [...prev, ...placeholders]);
+      for (const [i, file] of files.entries()) {
         const startedAt = new Date().toISOString();
-        setPhotoStates((prev) => [...prev, "uploading"]);
-        uploadPhoto({ sessionId, index, blob: file, startedAt, source: "gallery" });
+        uploadPhoto({ sessionId, index: baseIndex + i, blob: file, startedAt, source: "gallery" });
       }
       e.target.value = "";
     },
@@ -412,10 +414,12 @@ export function CapturePage() {
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!sessionId || !e.target.files) return;
-      for (const file of Array.from(e.target.files)) {
-        const index = fileStates.length;
-        setFileStates((prev) => [...prev, "uploading"]);
-        uploadFile({ sessionId, index, file });
+      const files = Array.from(e.target.files);
+      const baseIndex = fileStates.length;
+      const placeholders: UploadState[] = Array.from({ length: files.length }, (): UploadState => "uploading");
+      setFileStates((prev) => [...prev, ...placeholders]);
+      for (const [i, file] of files.entries()) {
+        uploadFile({ sessionId, index: baseIndex + i, file });
       }
       e.target.value = "";
     },
