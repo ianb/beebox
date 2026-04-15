@@ -419,23 +419,45 @@ Phase: describe-images"
 
     <validate severity="warn">
       <shell>
-        missing=0
+        # Sessions that still match the precheck's "ready" condition were not
+        # processed by the agent (likely hit max-turns or errored). Count them.
+        still_pending=0
+        for dir in box/inbox/capture-*/; do
+          [ -d "$dir" ] || continue
+          session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
+          [ -f "$session" ] || continue
+          has_content=0
+          if grep -q '&lt;text&gt;\|&lt;silence \|&lt;image ' "$session"; then
+            has_content=1
+          elif grep -q '&lt;file-ref ' "$session"; then
+            has_content=1
+          fi
+          status=$(grep -oE 'status="[^"]*"' "$session" | head -1 | grep -oE '"[^"]*"' | tr -d '"')
+          if [ "$has_content" -eq 1 ] &amp;&amp; [ "$status" != "intake-complete" ] &amp;&amp; [ "$status" != "extracted" ]; then
+            echo "  Not processed: $dir (status=$status)"
+            still_pending=$((still_pending + 1))
+          fi
+        done
+
+        # Sessions marked intake-complete must have an extraction-spec.md.
+        missing_spec=0
         for dir in box/inbox/capture-*/; do
           [ -d "$dir" ] || continue
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
           if grep -q 'status="intake-complete"' "$session"; then
             if [ ! -f "${dir}extraction-spec.md" ]; then
-              echo "Missing extraction-spec.md: $dir"
-              missing=$((missing + 1))
+              echo "  Missing extraction-spec.md: $dir"
+              missing_spec=$((missing_spec + 1))
             fi
           fi
         done
-        echo "Sessions missing extraction spec: $missing"
-        [ "$missing" -eq 0 ]
+
+        echo "Sessions not processed: $still_pending; intake-complete sessions missing spec: $missing_spec"
+        [ "$still_pending" -eq 0 ] &amp;&amp; [ "$missing_spec" -eq 0 ]
       </shell>
-      <instruction>Each intake-complete session should have an extraction-spec.md file.</instruction>
-      <why>The extract step needs a spec to follow.</why>
+      <instruction>Every session that was ready at precheck time must end up at status="intake-complete" with an extraction-spec.md. If sessions are still pending after the agent ran, the agent likely hit max-turns — inspect the session log and consider bumping max-turns.</instruction>
+      <why>A silent "validate pass" with pending sessions let a real failure slip through on 2026-04-15 (agent hit max-turns=20 on 3 large PDFs, wrote nothing, procedure reported success).</why>
     </validate>
   </step>
 
