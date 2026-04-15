@@ -18,12 +18,13 @@ import {
   resetChatSession,
   type SessionEntry,
   type SessionContentBlock,
+  type ChatImageAttachment,
 } from "../api";
 
 // -- Events --
 
 type ChatEvent =
-  | { type: "SEND"; message: string }
+  | { type: "SEND"; message: string; images?: ChatImageAttachment[] }
   | { type: "NEW_SESSION" }
   | { type: "INTERRUPT" }
   | { type: "DISMISS_ERROR" }
@@ -88,10 +89,11 @@ const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { message: string };
+    input: { message: string; images?: ChatImageAttachment[] };
   }) => {
     sendChatMessage({
       message: input.message,
+      ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       onMessage: (msg) => {
         const type = msg.type as string;
 
@@ -166,11 +168,66 @@ const streamActor = fromCallback(
  * the chat-complete SSE event will trigger a history refresh when the
  * queued turn finishes.
  */
-function queueMessageToBackend(message: string): void {
+function queueMessageToBackend(message: string, images?: ChatImageAttachment[]): void {
   sendChatMessage({
     message,
+    ...(images && images.length > 0 ? { images } : {}),
     onMessage: () => {}, // ignore — will be "queued" then close
   }).catch(() => {}); // fire-and-forget
+}
+
+/**
+ * Build content blocks for the optimistic user message bubble displayed
+ * before the server responds. Mirrors the server-side `buildContentBlocks`
+ * in chat-session.ts so the local preview matches what gets stored in the
+ * session log — `[imageN]` tokens become inline image blocks.
+ */
+function buildOptimisticContent(
+  message: string,
+  images?: ChatImageAttachment[]
+): SessionContentBlock[] {
+  const attached = images ?? [];
+  if (attached.length === 0) {
+    return [{ type: "text", text: message }];
+  }
+
+  const byId = new Map<number, ChatImageAttachment>();
+  for (const img of attached) byId.set(img.id, img);
+  const used = new Set<number>();
+
+  const blocks: SessionContentBlock[] = [];
+  const tokenRe = /\[image(\d+)]/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+  while ((match = tokenRe.exec(message)) !== null) {
+    const idStr = match[1];
+    if (!idStr) continue;
+    const id = parseInt(idStr, 10);
+    const img = byId.get(id);
+    if (!img) continue;
+    if (match.index > cursor) {
+      blocks.push({ type: "text", text: message.slice(cursor, match.index) });
+    }
+    blocks.push({
+      type: "image",
+      mediaType: img.mimeType,
+      dataBase64: img.dataBase64,
+    });
+    used.add(id);
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < message.length) {
+    blocks.push({ type: "text", text: message.slice(cursor) });
+  }
+  for (const img of attached) {
+    if (used.has(img.id)) continue;
+    blocks.push({
+      type: "image",
+      mediaType: img.mimeType,
+      dataBase64: img.dataBase64,
+    });
+  }
+  return blocks;
 }
 
 /** Extract the text content from a session entry. */
@@ -331,7 +388,7 @@ export const chatMachine = setup({
                 uuid: `user-${Date.now()}`,
                 type: "user" as const,
                 timestamp: new Date().toISOString(),
-                content: [{ type: "text" as const, text: event.message }],
+                content: buildOptimisticContent(event.message, event.images),
               },
             ],
           })),
@@ -346,9 +403,15 @@ export const chatMachine = setup({
       invoke: {
         id: "chatStream",
         src: "stream",
-        input: ({ event }) => ({
-          message: (event as Extract<ChatEvent, { type: "SEND" }>).message,
-        }),
+        input: ({ event }) => {
+          const sendEvent = event as Extract<ChatEvent, { type: "SEND" }>;
+          return {
+            message: sendEvent.message,
+            ...(sendEvent.images && sendEvent.images.length > 0
+              ? { images: sendEvent.images }
+              : {}),
+          };
+        },
       },
       on: {
         SEND: {
@@ -359,14 +422,14 @@ export const chatMachine = setup({
                 uuid: `user-${Date.now()}`,
                 type: "user" as const,
                 timestamp: new Date().toISOString(),
-                content: [{ type: "text" as const, text: event.message }],
+                content: buildOptimisticContent(event.message, event.images),
               };
               return {
                 messages: [...context.messages, entry],
                 pendingMessages: [...context.pendingMessages, entry],
               };
             }),
-            ({ event }) => queueMessageToBackend(event.message),
+            ({ event }) => queueMessageToBackend(event.message, event.images),
           ],
         },
         STREAM_TEXT: {
@@ -429,14 +492,14 @@ export const chatMachine = setup({
                 uuid: `user-${Date.now()}`,
                 type: "user" as const,
                 timestamp: new Date().toISOString(),
-                content: [{ type: "text" as const, text: event.message }],
+                content: buildOptimisticContent(event.message, event.images),
               };
               return {
                 messages: [...context.messages, entry],
                 pendingMessages: [...context.pendingMessages, entry],
               };
             }),
-            ({ event }) => queueMessageToBackend(event.message),
+            ({ event }) => queueMessageToBackend(event.message, event.images),
           ],
         },
       },

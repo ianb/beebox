@@ -557,6 +557,78 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
 }
 
 /**
+ * Resolve an image block's source into a browser-usable URL.
+ * Returns null if neither base64 data nor a URL is present.
+ */
+function imageBlockSrc(block: SessionContentBlock): string | null {
+  if (block.dataBase64 && block.mediaType) {
+    return `data:${block.mediaType};base64,${block.dataBase64}`;
+  }
+  if (block.imageUrl) return block.imageUrl;
+  return null;
+}
+
+/**
+ * Thumbnail + lightbox for an inline image in a user message bubble.
+ */
+function MessageImage({ src, alt }: { src: string; alt: string }) {
+  const [zoomed, setZoomed] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setZoomed(true)}
+        className="block my-1 max-w-full rounded border border-white/20 overflow-hidden hover:ring-2 hover:ring-white/40 focus:outline-none focus:ring-2 focus:ring-white/60"
+        title="Click to zoom"
+      >
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-full max-h-64 object-contain bg-black/20"
+        />
+      </button>
+      {zoomed ? (
+        <ImageLightbox src={src} alt={alt} onClose={() => setZoomed(false)} />
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Render a user entry's content blocks: text blocks go through the normal
+ * tag-stripping display, image blocks render as clickable thumbnails.
+ */
+function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView: boolean }) {
+  return (
+    <>
+      {entry.content.map((block, i) => {
+        const key = `${entry.uuid}-${i}`;
+        if (block.type === "text") {
+          if (debugView) {
+            return (
+              <pre key={key} className="font-mono text-xs whitespace-pre-wrap">
+                {block.text ?? ""}
+              </pre>
+            );
+          }
+          return (
+            <div key={key} className="text-sm whitespace-pre-wrap">
+              <UserMessageText text={block.text ?? ""} />
+            </div>
+          );
+        }
+        if (block.type === "image") {
+          const src = imageBlockSrc(block);
+          if (!src) return null;
+          return <MessageImage key={key} src={src} alt={`Attached image ${i + 1}`} />;
+        }
+        return null;
+      })}
+    </>
+  );
+}
+
+/**
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
@@ -564,11 +636,12 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
   const allTexts = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
+  const hasImages = entries.some((e) => e.content.some((b) => b.type === "image"));
 
   // Hide schedule-fired messages entirely in normal view (they're system-injected)
   if (!debugView) {
     const allEmpty = allTexts.every((t) => stripUserDisplayTags(t).trim() === "");
-    if (allEmpty) return null;
+    if (allEmpty && !hasImages) return null;
   }
 
   // Show task-notification messages as collapsed system info
@@ -590,21 +663,9 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
       <div className="pr-12 sm:pr-24 py-1">
         <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
         <div className="ml-3 sm:ml-6 rounded-r-2xl bg-plum text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words">
-          {entries.map((entry) =>
-            entry.content
-              .filter((b) => b.type === "text")
-              .map((block, i) =>
-                debugView ? (
-                  <pre key={`${entry.uuid}-${i}`} className="font-mono text-xs whitespace-pre-wrap">
-                    {block.text ?? ""}
-                  </pre>
-                ) : (
-                  <div key={`${entry.uuid}-${i}`} className="text-sm whitespace-pre-wrap">
-                    <UserMessageText text={block.text ?? ""} />
-                  </div>
-                )
-              )
-          )}
+          {entries.map((entry) => (
+            <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
+          ))}
         </div>
       </div>
     );
@@ -613,21 +674,9 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
       <div className="rounded-l-2xl bg-iris text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words">
-        {entries.map((entry) =>
-          entry.content
-            .filter((b) => b.type === "text")
-            .map((block, i) =>
-              debugView ? (
-                <pre key={`${entry.uuid}-${i}`} className="font-mono text-xs whitespace-pre-wrap">
-                  {block.text ?? ""}
-                </pre>
-              ) : (
-                <div key={`${entry.uuid}-${i}`} className="text-sm whitespace-pre-wrap">
-                  <UserMessageText text={block.text ?? ""} />
-                </div>
-              )
-            )
-        )}
+        {entries.map((entry) => (
+          <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
+        ))}
       </div>
     </div>
   );

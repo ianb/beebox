@@ -4,7 +4,7 @@ Tests for the `ChatSession` class: session ID persistence, state accessors,
 reset, and history loading. These tests don't spawn a real Claude process.
 
 ```ts setup
-import { ChatSession } from "../src/core/chat-session.js";
+import { ChatSession, buildContentBlocks } from "../src/core/chat-session.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -156,4 +156,63 @@ entries: 0
 
 ``` cleanup
 await box.cleanup();
+```
+
+## buildContentBlocks — text only (no images)
+
+With no images, the helper returns a single text block unchanged:
+
+```
+JSON.stringify(buildContentBlocks({ text: "hello world" }))
+=> [{"type":"text","text":"hello world"}]
+```
+
+## buildContentBlocks — inline image replacement
+
+An `[imageN]` token in the text is replaced with the matching image block,
+and the surrounding text is split into separate blocks:
+
+```
+const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "AAAA" }];
+const blocks = buildContentBlocks({ text: "before [image1] after", images: imgs });
+JSON.stringify(blocks)
+=> [{"type":"text","text":"before "},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"AAAA"}},{"type":"text","text":" after"}]
+```
+
+## buildContentBlocks — unreferenced images append at end
+
+Images without a matching `[imageN]` token get appended after the text:
+
+```
+const imgs = [{ id: 1, mimeType: "image/jpeg", dataBase64: "QQ==" }];
+const blocks = buildContentBlocks({ text: "no token here", images: imgs });
+JSON.stringify(blocks.map((b) => b.type))
+=> ["text","image"]
+```
+
+## buildContentBlocks — orphan tokens left as literal text
+
+A `[image9]` token with no matching attachment stays as literal text
+(rather than being silently dropped):
+
+```
+const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "X" }];
+const blocks = buildContentBlocks({ text: "[image9] is orphan [image1] real", images: imgs });
+JSON.stringify(blocks)
+=> [{"type":"text","text":"[image9] is orphan "},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"X"}},{"type":"text","text":" real"}]
+```
+
+## buildContentBlocks — multiple images in order
+
+Two different images resolve to different blocks at their respective
+token positions:
+
+```
+const imgs = [
+  { id: 1, mimeType: "image/png", dataBase64: "ONE" },
+  { id: 2, mimeType: "image/png", dataBase64: "TWO" },
+];
+const blocks = buildContentBlocks({ text: "dog [image2] cat [image1]", images: imgs });
+JSON.stringify(blocks.map((b) => b.type === "image" ? b.source?.data : b.text))
+=> ["dog ","TWO"," cat ","ONE"]
 ```

@@ -11,7 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky from "ky";
 import type { FastifyInstance } from "fastify";
-import { ChatSession, type ChatMessage } from "../../core/chat-session.js";
+import { ChatSession, type ChatMessage, type ChatImage } from "../../core/chat-session.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { EventBus } from "../../core/event-bus.js";
@@ -31,7 +31,16 @@ import {
 interface SendBody {
   message: string;
   messageId?: string;
+  /**
+   * Optional image attachments referenced by `[imageN]` tokens in `message`.
+   * Tokens are replaced with the image block in the content array sent to
+   * Claude; unreferenced images are appended at the end.
+   */
+  images?: ChatImage[];
 }
+
+/** Soft cap on total base64 image payload per request (25 MB). */
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
 interface RegisterChatRoutesOptions {
   server: FastifyInstance;
@@ -135,10 +144,27 @@ export async function registerChatRoutes(
     "/api/chat/send",
     async (request, reply) => {
       const body = request.body ?? {};
-      const { message, messageId } = body;
+      const { message, messageId, images } = body;
 
       if (!message) {
         return reply.status(400).send({ error: "message is required" });
+      }
+
+      // Validate image attachments
+      if (images && images.length > 0) {
+        let totalBytes = 0;
+        for (const img of images) {
+          if (typeof img.id !== "number" || !img.mimeType || !img.dataBase64) {
+            return reply.status(400).send({ error: "invalid image attachment (id, mimeType, dataBase64 required)" });
+          }
+          if (!img.mimeType.startsWith("image/")) {
+            return reply.status(400).send({ error: `unsupported mime type: ${img.mimeType}` });
+          }
+          totalBytes += img.dataBase64.length;
+          if (totalBytes > MAX_IMAGE_BYTES) {
+            return reply.status(413).send({ error: "image attachments exceed 25 MB total" });
+          }
+        }
       }
 
       // Deduplicate retries: if we've already processed this messageId,
@@ -187,7 +213,7 @@ export async function registerChatRoutes(
 
       // If busy, queue the message for later delivery
       if (chatSession.isBusy()) {
-        chatSession.enqueue(attributed);
+        chatSession.enqueue({ text: attributed, ...(images ? { images } : {}) });
         reply.raw.write(
           `data: ${JSON.stringify({ type: "queued" })}\n\n`
         );
@@ -202,7 +228,10 @@ export async function registerChatRoutes(
         : attributed;
 
       // Send the message (may start the process if not running)
-      const sent = await chatSession.send(fullMessage);
+      const sent = await chatSession.send({
+        text: fullMessage,
+        ...(images ? { images } : {}),
+      });
       if (!sent) {
         reply.raw.write(
           `data: ${JSON.stringify({

@@ -13,7 +13,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, getChatHistory, type SessionEntry, type SessionContentBlock } from "../api";
+import { getApiBase, getEventSourceBase, getChatHistory, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../api";
+import { AttachmentPanel, type AttachmentItem } from "./ChatAttachments";
+import { extractImageFiles, processImageBlob } from "../lib/image-paste";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
 import { hasAssistantSpeech, parseAllSpeechTags, VALID_VOICES } from "../lib/speech-parsing";
@@ -244,6 +246,7 @@ function ChatInputArea({
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
   isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr,
   voicePaused, onUnpause, hideMobile,
+  onPaste, onDrop,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -265,6 +268,8 @@ function ChatInputArea({
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const captureHref = href(`/${boxSlug}/capture`);
@@ -309,9 +314,11 @@ function ChatInputArea({
             value={isTranscribing ? transcription.transcript : input}
             onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
             onKeyDown={handleKeyDown}
+            onPaste={onPaste}
+            onDrop={onDrop}
             disabled={isTranscribing}
             readOnly={isTranscribing}
-            placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+            placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
             className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600 min-w-0"
             minRows={1}
             maxRows={8}
@@ -453,6 +460,7 @@ function MobileTextareaRow({
   input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription,
   turnTakingRef, doSend, zoomedViewAttr,
+  onPaste, onDrop,
 }: {
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
@@ -464,6 +472,8 @@ function MobileTextareaRow({
   turnTakingRef: React.MutableRefObject<boolean>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
   const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
@@ -478,10 +488,12 @@ function MobileTextareaRow({
         value={isTranscribing ? transcription.transcript : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
         onKeyDown={handleKeyDown}
+        onPaste={onPaste}
+        onDrop={onDrop}
         disabled={isTranscribing}
         readOnly={isTranscribing}
         enterKeyHint="send"
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
         className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
         maxRows={8}
@@ -752,6 +764,8 @@ function InteractiveChat() {
   const currentUser = useCurrentUser();
 
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const nextAttachmentIdRef = useRef(1);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
@@ -988,18 +1002,146 @@ function InteractiveChat() {
     return ` zoomed-view="${uri}"`;
   }, [zoomedView]);
 
+  // doSend with attachments — used by handleSend below. Defined as ref rather
+  // than a separate useCallback to avoid circular deps with `send`.
+  const doSendWithImages = useCallback(
+    (wrapped: string, images: ChatImageAttachment[]) => {
+      if (images.length > 0) {
+        send({ type: "SEND", message: wrapped, images });
+      } else {
+        send({ type: "SEND", message: wrapped });
+      }
+    },
+    [send]
+  );
+
   const handleSend = useCallback(() => {
     const text = input.trim();
-    if (!text) return;
+    if (!text && attachments.length === 0) return;
     turnTakingRef.current = false;
     unlockAudioContext();
+
+    // Convert UI attachments to the wire-format images payload.
+    const images: ChatImageAttachment[] = attachments.map((a) => ({
+      id: a.id,
+      mimeType: a.mimeType,
+      dataBase64: a.dataBase64,
+    }));
+
+    const wrapped = `<typed local-time="${localTime()}"${zoomedViewAttr()}>${text}</typed>`;
+
+    // Release the object URLs after send — the base64 payload is independent
+    // of the object URL, so dropping them doesn't affect the message.
+    for (const a of attachments) {
+      try { URL.revokeObjectURL(a.objectUrl); } catch { /* already revoked */ }
+    }
+    setAttachments([]);
+    nextAttachmentIdRef.current = 1;
+
     setInput("");
-    doSend(`<typed local-time="${localTime()}"${zoomedViewAttr()}>${text}</typed>`);
+    doSendWithImages(wrapped, images);
     setScrollToBottomTrigger((n) => n + 1);
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [input, doSend, zoomedViewAttr, typingMode, typingLocked]);
+  }, [input, attachments, doSendWithImages, zoomedViewAttr, typingMode, typingLocked]);
+
+  /**
+   * Accept image files (from paste or drop) — downscale, encode, and add
+   * to the attachment panel. Inserts `[imageN]` at the current cursor
+   * position in the textarea (or appends if the textarea isn't focused).
+   */
+  const addImageFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+
+    // Process images in parallel; collect results in original order.
+    const processed = await Promise.all(
+      files.map(async (f) => {
+        try {
+          return await processImageBlob(f);
+        } catch (e) {
+          console.error("[chat] Failed to process pasted image:", e);
+          return null;
+        }
+      })
+    );
+
+    const startId = nextAttachmentIdRef.current;
+    const newItems: AttachmentItem[] = [];
+    for (const p of processed) {
+      if (!p) continue;
+      newItems.push({
+        id: nextAttachmentIdRef.current++,
+        mimeType: p.mimeType,
+        dataBase64: p.dataBase64,
+        objectUrl: p.objectUrl,
+        byteLength: p.byteLength,
+      });
+    }
+    if (newItems.length === 0) return;
+
+    setAttachments((prev) => [...prev, ...newItems]);
+
+    // Build the `[imageN] [imageN+1] ...` token string and insert at cursor.
+    const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
+    const ta = textareaRef.current;
+    if (ta && document.activeElement === ta) {
+      const selStart = ta.selectionStart ?? ta.value.length;
+      const selEnd = ta.selectionEnd ?? selStart;
+      const before = input.slice(0, selStart);
+      const after = input.slice(selEnd);
+      // Pad with a space before the tokens if needed so they don't glue to
+      // the preceding word.
+      const pad = before.length > 0 && !/\s$/.test(before) ? " " : "";
+      const next = before + pad + tokens + after;
+      setInput(next);
+      // Restore cursor after the inserted tokens.
+      const cursorAt = (before + pad + tokens).length;
+      requestAnimationFrame(() => {
+        if (ta.isConnected) {
+          ta.focus();
+          ta.setSelectionRange(cursorAt, cursorAt);
+        }
+      });
+    } else {
+      setInput((prev) => (prev ? prev + " " + tokens : tokens));
+    }
+    // startId is the first id just assigned — used in logging only
+    void startId;
+  }, [input]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = extractImageFiles(e.clipboardData);
+    if (images.length === 0) return;
+    e.preventDefault();
+    void addImageFiles(images);
+  }, [addImageFiles]);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLTextAreaElement>) => {
+    const images = extractImageFiles(e.dataTransfer);
+    if (images.length === 0) return;
+    e.preventDefault();
+    void addImageFiles(images);
+  }, [addImageFiles]);
+
+  const removeAttachment = useCallback((id: number) => {
+    setAttachments((prev) => {
+      const target = prev.find((a) => a.id === id);
+      if (target) {
+        try { URL.revokeObjectURL(target.objectUrl); } catch { /* already revoked */ }
+      }
+      return prev.filter((a) => a.id !== id);
+    });
+    // Strip any `[imageN]` tokens for this id from the input (plus up to one
+    // leading/trailing whitespace char so we don't leave stray gaps).
+    setInput((prev) =>
+      prev
+        .replace(/\s?\[image(\d+)]\s?/g, (match, n: string) =>
+          parseInt(n, 10) === id ? " " : match
+        )
+        .replace(/ {2,}/g, " ")
+    );
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -1199,6 +1341,9 @@ function InteractiveChat() {
         </div>
       ) : null}
 
+      {/* Image attachment panel: shows thumbnails above the composer */}
+      <AttachmentPanel attachments={attachments} onRemove={removeAttachment} />
+
       {/* Input area: single row on desktop, button bar on mobile (hidden on mobile when typing) */}
       <ChatInputArea
         hideMobile={typingMode}
@@ -1231,6 +1376,8 @@ function InteractiveChat() {
             setVoicePaused(false);
             transcription.start();
           }}
+          onPaste={handlePaste}
+          onDrop={handleDrop}
         />
       {/* Mobile typing row: replaces button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (
@@ -1274,6 +1421,8 @@ function InteractiveChat() {
             turnTakingRef={turnTakingRef}
             doSend={doSend}
             zoomedViewAttr={zoomedViewAttr}
+            onPaste={handlePaste}
+            onDrop={handleDrop}
           />
         </div>
       ) : null}

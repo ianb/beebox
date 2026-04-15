@@ -34,6 +34,13 @@ export interface ChatMessageContent {
   id?: string;
   name?: string;
   input?: Record<string, unknown>;
+  /** For image blocks */
+  source?: {
+    type: "base64" | "url";
+    media_type?: string;
+    data?: string;
+    url?: string;
+  };
 }
 
 /**
@@ -167,13 +174,101 @@ function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatSession:${context}]`, ...args);
 }
 
+/**
+ * An image attachment pasted/uploaded by the user, addressable by numeric id
+ * via `[imageN]` tokens in the message text.
+ */
+export interface ChatImage {
+  id: number;
+  mimeType: string;
+  /** Raw base64 data (no data: URL prefix) */
+  dataBase64: string;
+}
+
+export interface ChatSendInput {
+  text: string;
+  images?: ChatImage[];
+}
+
+/**
+ * Build the content array for a single compose (text + image attachments).
+ *
+ * `[imageN]` tokens in the text are replaced with the corresponding image
+ * block. Attachments whose token is absent from the text are appended at
+ * the end. Unknown tokens (id not in attachments) are left as literal text.
+ */
+export function buildContentBlocks(
+  input: ChatSendInput
+): ChatMessageContent[] {
+  const { text, images } = input;
+  const attached = images ?? [];
+  if (attached.length === 0) {
+    return [{ type: "text", text }];
+  }
+
+  const byId = new Map<number, ChatImage>();
+  for (const img of attached) byId.set(img.id, img);
+  const used = new Set<number>();
+
+  const blocks: ChatMessageContent[] = [];
+  const tokenRe = /\[image(\d+)]/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+  while ((match = tokenRe.exec(text)) !== null) {
+    const idStr = match[1];
+    if (!idStr) continue;
+    const id = parseInt(idStr, 10);
+    const img = byId.get(id);
+    if (!img) continue; // leave orphan token as literal text in the next chunk
+    if (match.index > cursor) {
+      blocks.push({ type: "text", text: text.slice(cursor, match.index) });
+    }
+    blocks.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: img.mimeType,
+        data: img.dataBase64,
+      },
+    } as ChatMessageContent);
+    used.add(id);
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < text.length) {
+    blocks.push({ type: "text", text: text.slice(cursor) });
+  }
+
+  // Append any unreferenced images at the end
+  for (const img of attached) {
+    if (used.has(img.id)) continue;
+    blocks.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: img.mimeType,
+        data: img.dataBase64,
+      },
+    } as ChatMessageContent);
+  }
+
+  // If only images were appended (no text at all), still include an empty
+  // text marker so downstream filters can tell this was a user turn (not
+  // PDF-plumbing). Shouldn't happen in practice since messages are wrapped
+  // in <typed>/<speech> tags by the caller, but defensive.
+  if (blocks.every((b) => b.type !== "text")) {
+    blocks.unshift({ type: "text", text: "" });
+  }
+
+  return blocks;
+}
+
 export class ChatSession extends EventEmitter {
   private proc: ChildProcess | null = null;
   private sessionId: string | null = null;
   private boxRoot: string;
   private busy = false;
   private turnText = "";
-  private messageQueue: string[] = [];
+  private messageQueue: ChatSendInput[] = [];
 
   constructor(boxRoot: string) {
     super();
@@ -347,29 +442,63 @@ export class ChatSession extends EventEmitter {
 
   /**
    * Queue a message for delivery after the current turn completes.
+   * Accepts either a plain string (back-compat) or a ChatSendInput with images.
    */
-  enqueue(message: string): void {
-    log("enqueue", `Queued message (${message.length} chars, queue size: ${this.messageQueue.length + 1})`);
-    this.messageQueue.push(message);
+  enqueue(message: string | ChatSendInput): void {
+    const input: ChatSendInput = typeof message === "string"
+      ? { text: message }
+      : message;
+    log("enqueue", `Queued message (${input.text.length} chars, ${(input.images ?? []).length} image(s), queue size: ${this.messageQueue.length + 1})`);
+    this.messageQueue.push(input);
   }
 
   /**
    * Send queued messages after a turn completes.
-   * Combines multiple queued messages into a single turn.
+   * Combines the queued inputs into a single turn — text joined with
+   * blank lines, image attachments concatenated (with per-message id
+   * offsets to prevent `[imageN]` token collisions).
    */
   private drainQueue(): void {
     if (this.messageQueue.length === 0) return;
     const queued = this.messageQueue.splice(0);
-    const combined = queued.join("\n\n");
     log("drain", `Sending ${queued.length} queued message(s)`);
-    this.send(combined);
+
+    const combinedImages: ChatImage[] = [];
+    const combinedTextParts: string[] = [];
+    let idOffset = 0;
+    for (const q of queued) {
+      const imgs = q.images ?? [];
+      let text = q.text;
+      if (imgs.length > 0 && idOffset > 0) {
+        // Renumber `[imageN]` tokens in this message's text and the image ids
+        // to avoid collisions with previously-queued messages.
+        text = text.replace(/\[image(\d+)]/g, (_m, n: string) => {
+          const id = parseInt(n, 10);
+          return `[image${id + idOffset}]`;
+        });
+        for (const img of imgs) {
+          combinedImages.push({ ...img, id: img.id + idOffset });
+        }
+      } else {
+        for (const img of imgs) combinedImages.push(img);
+      }
+      combinedTextParts.push(text);
+      // Advance offset past the highest id we've seen (ids are small, so
+      // offsetting by count of images in this message is safe).
+      idOffset += imgs.length;
+    }
+    this.send({ text: combinedTextParts.join("\n\n"), images: combinedImages });
   }
 
   /**
    * Send a message to claude. Starts the process if not running.
    * Returns false if a turn is already in progress.
+   *
+   * Accepts either a plain string (back-compat) or a ChatSendInput object
+   * carrying the text plus any image attachments referenced by `[imageN]`
+   * tokens in the text.
    */
-  async send(message: string): Promise<boolean> {
+  async send(message: string | ChatSendInput): Promise<boolean> {
     if (this.busy) {
       log("send", "Rejected — busy");
       return false;
@@ -387,15 +516,22 @@ export class ChatSession extends EventEmitter {
     this.busy = true;
     this.turnText = "";
 
+    const input: ChatSendInput = typeof message === "string"
+      ? { text: message }
+      : message;
+
+    const content = buildContentBlocks(input);
+
     const payload = JSON.stringify({
       type: "user",
       message: {
         role: "user",
-        content: [{ type: "text", text: message }],
+        content,
       },
     });
 
-    log("send", `Sending message (${message.length} chars)`);
+    const imgCount = (input.images ?? []).length;
+    log("send", `Sending message (${input.text.length} chars, ${imgCount} image(s), ${content.length} block(s))`);
     this.proc.stdin.write(payload + "\n");
     return true;
   }

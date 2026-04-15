@@ -14,7 +14,7 @@ import * as os from "node:os";
  * Content block from a session log entry.
  */
 export interface SessionContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "thinking";
+  type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
   text?: string;
   toolName?: string;
   toolId?: string;
@@ -23,6 +23,12 @@ export interface SessionContentBlock {
   input?: Record<string, unknown>;
   toolUseId?: string;
   resultSummary?: string;
+  /** For image blocks: MIME type like "image/png" */
+  mediaType?: string;
+  /** For image blocks with base64 source: raw base64 (no data: prefix) */
+  dataBase64?: string;
+  /** For image blocks with URL source */
+  imageUrl?: string;
 }
 
 /**
@@ -203,11 +209,25 @@ export function transformContent(content: unknown): SessionContentBlock[] {
       continue;
     }
 
-    // Drop image blocks entirely — Claude Code's PDF-reading tools emit a
-    // user-role turn with one image block per page to feed the model. These
-    // are API plumbing, not user input; rendering them as "[image]" text
-    // produces fake user messages in the chat UI.
-    if (block.type === "image") continue;
+    if (block.type === "image") {
+      // Preserve image blocks so user-pasted images render in history.
+      // PDF-reading plumbing (user-role turns containing only images) is
+      // filtered at the message level below — turns with no text content
+      // get dropped entirely, so synthetic image-only plumbing stays hidden.
+      const source = block.source as
+        | { type?: string; media_type?: string; data?: string; url?: string }
+        | undefined;
+      const imgBlock: SessionContentBlock = { type: "image" };
+      if (source?.media_type) imgBlock.mediaType = String(source.media_type);
+      if (source?.type === "base64" && source.data) {
+        imgBlock.dataBase64 = String(source.data);
+      }
+      if (source?.type === "url" && source.url) {
+        imgBlock.imageUrl = String(source.url);
+      }
+      blocks.push(imgBlock);
+      continue;
+    }
 
     // Unknown block types: fall through with a placeholder so we don't
     // silently swallow something new. This is visible in the UI, which is

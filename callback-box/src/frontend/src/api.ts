@@ -76,7 +76,7 @@ export interface HistoryCommit {
 }
 
 export interface SessionContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "thinking";
+  type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
   text?: string;
   toolName?: string;
   toolId?: string;
@@ -84,6 +84,23 @@ export interface SessionContentBlock {
   inputSummary?: string;
   toolUseId?: string;
   resultSummary?: string;
+  /** For image blocks: MIME type like "image/png" */
+  mediaType?: string;
+  /** For image blocks with base64 source: raw base64 (no data: prefix) */
+  dataBase64?: string;
+  /** For image blocks with URL source */
+  imageUrl?: string;
+}
+
+/**
+ * An image attachment sent with a chat message, addressable by numeric id
+ * via `[imageN]` tokens in the text.
+ */
+export interface ChatImageAttachment {
+  id: number;
+  mimeType: string;
+  /** Raw base64 data (no data: URL prefix) */
+  dataBase64: string;
 }
 
 export interface SessionEntry {
@@ -281,16 +298,21 @@ export async function resetChatSession(): Promise<{ ok: boolean }> {
  */
 export async function sendChatMessage(params: {
   message: string;
+  images?: ChatImageAttachment[];
   onMessage: (msg: Record<string, unknown>) => void;
 }): Promise<void> {
-  const { message, onMessage } = params;
+  const { message, images, onMessage } = params;
   const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const attempt = async (_retry: boolean): Promise<Response> => {
     const response = await fetch(`${getApiBase()}/chat/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, messageId }),
+      body: JSON.stringify({
+        message,
+        messageId,
+        ...(images && images.length > 0 ? { images } : {}),
+      }),
     });
 
     if (!response.ok) {

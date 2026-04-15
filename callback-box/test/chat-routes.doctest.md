@@ -277,6 +277,67 @@ result.length
 => 0
 ```
 
+### Image block (base64)
+
+User-pasted images arrive as image content blocks with a base64 source.
+They're preserved so the chat UI can render them inline.
+
+```
+const result = transformContent([
+  { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } }
+]);
+JSON.stringify(result[0])
+=> {"type":"image","mediaType":"image/png","dataBase64":"AAAA"}
+```
+
+### Image block (url)
+
+Image blocks using a URL source are preserved as `imageUrl`:
+
+```
+const result = transformContent([
+  { type: "image", source: { type: "url", url: "https://example.com/x.png" } }
+]);
+JSON.stringify(result[0])
+=> {"type":"image","imageUrl":"https://example.com/x.png"}
+```
+
+### User turn with only images is dropped as plumbing
+
+Claude Code emits user-role turns containing only image blocks when
+feeding PDF pages to the model. `parseSessionLog` treats these as
+plumbing and filters them out (the surrounding user prose, if any,
+is what carries the real message).
+
+```
+const { writeFile } = await import("node:fs/promises");
+const { mkdtempSync } = await import("node:fs");
+const { tmpdir } = await import("node:os");
+const { join } = await import("node:path");
+const dir = mkdtempSync(join(tmpdir(), "chat-img-"));
+const logPath = join(dir, "session.jsonl");
+const lines = [
+  // Synthetic PDF-page plumbing: user turn with only an image block
+  { type: "user", uuid: "u1", timestamp: "t1", message: { role: "user", content: [
+    { type: "image", source: { type: "base64", media_type: "image/png", data: "PDFPAGE" } }
+  ] } },
+  // Real user paste: text + image
+  { type: "user", uuid: "u2", timestamp: "t2", message: { role: "user", content: [
+    { type: "text", text: "<typed>look</typed>" },
+    { type: "image", source: { type: "base64", media_type: "image/png", data: "PASTED" } }
+  ] } },
+];
+await writeFile(logPath, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+const result = await parseSessionLog({ logPath });
+print(`entries: ${result.entries.length}`);
+print(`uuid: ${result.entries[0].uuid}`);
+print(`blocks: ${result.entries[0].content.map((b) => b.type).join(",")}`);
+=>
+entries: 1
+uuid: u2
+blocks: text,image
+```
+
 ## summarizeToolInput
 
 ```
