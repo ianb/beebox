@@ -112,17 +112,13 @@ export function useRealtimeTranscription(
     if (!keyword) return;
 
     if (keyword.action === "send") {
-      console.log("[realtime-transcription] Keyword SEND detected, processedTranscript:", JSON.stringify(keyword.processedTranscript));
       optionsRef.current?.onKeywordSend?.(keyword.processedTranscript);
     } else if (keyword.action === "micOff") {
-      console.log("[realtime-transcription] Keyword MIC_OFF detected");
       send({ type: "CANCEL" });
       optionsRef.current?.onKeywordMicOff?.();
     } else if (keyword.action === "cancel") {
-      console.log("[realtime-transcription] Keyword CANCEL detected");
       optionsRef.current?.onKeywordCancel?.();
     } else if (keyword.action === "erase") {
-      console.log("[realtime-transcription] Keyword ERASE detected — resetting transcript");
       send({ type: "CANCEL" });
       // Restart immediately after erase
       send({ type: "START" });

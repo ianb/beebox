@@ -99,7 +99,6 @@ const transcriptionActor = fromCallback<
 
       ws.onopen = () => {
         if (!disposed) {
-          console.log("[realtime-transcription] WebSocket connected");
           sendBack({ type: "WS_CONNECTED" });
         }
       };
@@ -108,7 +107,6 @@ const transcriptionActor = fromCallback<
         if (disposed) return;
         try {
           const msg = JSON.parse(event.data);
-          console.log("[realtime-transcription] Received:", msg.type || msg);
 
           if (msg.type === "transcription.text.delta") {
             const delta = msg.delta ?? msg.text ?? "";
@@ -136,9 +134,8 @@ const transcriptionActor = fromCallback<
         }
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = () => {
         if (!disposed) {
-          console.log("[realtime-transcription] WebSocket closed:", event.code, event.reason);
           sendBack({ type: "WS_CLOSED" });
         }
       };
