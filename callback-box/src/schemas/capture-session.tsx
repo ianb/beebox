@@ -43,6 +43,16 @@ export const SessionAudioClips = element("audio-clips", {
   children: z.array(SessionAudioRef).optional(),
 });
 
+export const SessionFileRef = element("file-ref", {
+  attrs: {
+    ref: z.string(),
+  },
+});
+
+export const SessionFiles = element("files", {
+  children: z.array(SessionFileRef).optional(),
+});
+
 export const SessionPurpose = element("purpose", {
   text: z.string().optional(),
 });
@@ -106,17 +116,19 @@ export const CaptureSessionSchema = element("capture-session", {
       SessionTime,
       SessionImages,
       SessionAudioClips,
+      SessionFiles,
       SessionPurpose,
       SessionTranscript,
     ])
   ),
   instructions: `# Capture Session Cards
 
-A capture session groups images and audio clips from a single recording session (e.g., a voice walkthrough with photos). All child cards live in the same directory.
+A capture session groups images, audio clips, and uploaded files from a single recording session (e.g., a voice walkthrough with photos, or a batch of documents). All child cards live in the same directory.
 
 Elements:
 - \`<images>\` — contains \`<image ref="...">\` references to child image cards
 - \`<audio-clips>\` — contains \`<audio ref="...">\` references to child audio cards
+- \`<files>\` — contains \`<file-ref ref="...">\` references to child file cards (uploaded documents, PDFs, etc.)
 - \`<purpose>\` — optional one-sentence statement of what the user was doing (legacy, no longer generated)
 - \`<transcript>\` — structured timeline combining speech and photos:
   - \`<text>\` — transcribed speech segments
@@ -156,10 +168,13 @@ export function createCaptureSessionTemplate(options: {
   endedAt?: string | null;
   imageRefs: string[];
   audioRefs: string[];
+  fileRefs?: string[];
 }): string {
   const duration = options.endedAt
     ? formatDuration(new Date(options.endedAt).getTime() - new Date(options.startedAt).getTime())
     : undefined;
+
+  const fileRefs = options.fileRefs ?? [];
 
   const captureSession = (
     <capture-session status="new" session-id={options.sessionId}>
@@ -174,6 +189,13 @@ export function createCaptureSessionTemplate(options: {
           <audio-ref ref={ref} />
         ))}
       </audio-clips>
+      {fileRefs.length > 0 ? (
+        <files>
+          {fileRefs.map((ref) => (
+            <file-ref ref={ref} />
+          ))}
+        </files>
+      ) : null}
       <transcript></transcript>
     </capture-session>
   );

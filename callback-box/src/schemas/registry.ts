@@ -22,6 +22,7 @@ import { ProcedureSchema } from "./procedure.js";
 import { ProcedureRunSchema } from "./procedure-run.js";
 import { ImageSchema } from "./image.js";
 import { AudioSchema } from "./audio.js";
+import { FileSchema } from "./file.js";
 import { CaptureSessionSchema } from "./capture-session.js";
 import { RecordSchema } from "./record.js";
 import { RecipeSchema } from "./recipe.js";
@@ -59,6 +60,7 @@ export const schemas: ElementSchema[] = [
   ProcedureRunSchema,
   ImageSchema,
   AudioSchema,
+  FileSchema,
   CaptureSessionSchema,
   RecordSchema,
   RecipeSchema,
@@ -248,6 +250,7 @@ export { ProcedureSchema } from "./procedure.js";
 export { ProcedureRunSchema } from "./procedure-run.js";
 export { ImageSchema } from "./image.js";
 export { AudioSchema } from "./audio.js";
+export { FileSchema } from "./file.js";
 export { CaptureSessionSchema } from "./capture-session.js";
 export { RecordSchema } from "./record.js";
 export { RecipeSchema } from "./recipe.js";

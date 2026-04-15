@@ -54,13 +54,15 @@ interface UploadFileOptions {
   blob: Blob;
   startedAt: string;
   source: string;
+  originalName?: string;
+  mimeType?: string;
 }
 
 const MAX_UPLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 
 async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
-  const { sessionId, filename, blob, startedAt, source } = options;
+  const { sessionId, filename, blob, startedAt, source, originalName, mimeType } = options;
 
   for (let attempt = 0; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
     if (attempt > 0) {
@@ -72,15 +74,19 @@ async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
     const formData = new FormData();
     formData.append("file", blob, filename);
 
+    const headers: Record<string, string> = {
+      "X-Capture-Filename": filename,
+      "X-Capture-Started-At": startedAt,
+      "X-Capture-Source": source,
+    };
+    if (originalName) headers["X-Capture-Original-Name"] = originalName;
+    if (mimeType) headers["X-Capture-Mime-Type"] = mimeType;
+
     let res: Response;
     try {
       res = await fetch(`${getApiBase()}/capture/sessions/${sessionId}/upload`, {
         method: "POST",
-        headers: {
-          "X-Capture-Filename": filename,
-          "X-Capture-Started-At": startedAt,
-          "X-Capture-Source": source,
-        },
+        headers,
         body: formData,
       });
     } catch (networkErr) {
@@ -130,6 +136,7 @@ export function CapturePage() {
   const [cameraOn, setCameraOn] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [photoStates, setPhotoStates] = useState<UploadState[]>([]);
+  const [fileStates, setFileStates] = useState<UploadState[]>([]);
   const [audioChunks, setAudioChunks] = useState<AudioChunkStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [finalizing, setFinalizing] = useState(false);
@@ -146,6 +153,7 @@ export function CapturePage() {
   const timerRef = useRef<number | null>(null);
   const recordStartRef = useRef<number>(0);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
   const pendingUploads = useRef<Promise<void>[]>([]);
 
   // Create session on mount + enumerate devices
@@ -370,6 +378,50 @@ export function CapturePage() {
     [sessionId, photoStates.length, uploadPhoto]
   );
 
+  const pickFileToUpload = useCallback(() => { if (uploadRef.current) uploadRef.current.click(); }, []);
+
+  const uploadFile = useCallback(
+    ({ sessionId: sid, index, file }: { sessionId: string; index: number; file: File }) => {
+      const sanitized = file.name.replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "");
+      const safeName = sanitized || "upload";
+      const filename = `file-${String(index + 1).padStart(3, "0")}-${safeName}`;
+      const startedAt = new Date().toISOString();
+      setFileStates((prev) => { const next = [...prev]; next[index] = "uploading"; return next; });
+      const p = uploadCaptureFile({
+        sessionId: sid,
+        filename,
+        blob: file,
+        startedAt,
+        source: "disk",
+        originalName: file.name,
+        mimeType: file.type || undefined,
+      })
+        .then(() => {
+          setFileStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
+        })
+        .catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error(`[capture] File upload failed (${filename}): ${msg}`);
+          setFileStates((prev) => { const next = [...prev]; next[index] = "failed"; return next; });
+        });
+      pendingUploads.current.push(p);
+    },
+    []
+  );
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!sessionId || !e.target.files) return;
+      for (const file of Array.from(e.target.files)) {
+        const index = fileStates.length;
+        setFileStates((prev) => [...prev, "uploading"]);
+        uploadFile({ sessionId, index, file });
+      }
+      e.target.value = "";
+    },
+    [sessionId, fileStates.length, uploadFile]
+  );
+
   const photosUploaded = photoStates.filter((s) => s === "uploaded").length;
   const photosUploading = photoStates.filter((s) => s === "uploading").length;
   const photosFailed = photoStates.filter((s) => s === "failed").length;
@@ -377,7 +429,11 @@ export function CapturePage() {
   const audioUploaded = audioChunks.filter((c) => c.state === "uploaded").length;
   const audioUploading = audioChunks.filter((c) => c.state === "uploading").length;
   const audioTotal = audioChunks.length;
-  const uploadsInProgress = photosUploading > 0 || audioUploading > 0;
+  const filesUploaded = fileStates.filter((s) => s === "uploaded").length;
+  const filesUploading = fileStates.filter((s) => s === "uploading").length;
+  const filesFailed = fileStates.filter((s) => s === "failed").length;
+  const fileTotal = fileStates.length;
+  const uploadsInProgress = photosUploading > 0 || audioUploading > 0 || filesUploading > 0;
 
   const handleDone = useCallback(async () => {
     if (!sessionId || finalizing) return;
@@ -393,7 +449,7 @@ export function CapturePage() {
       await Promise.all(pendingUploads.current);
       pendingUploads.current = [];
       await finalizeCaptureSession(sessionId);
-      setSessionId(null); setPhotoStates([]); setAudioChunks([]); setError(null); setFinalizing(false);
+      setSessionId(null); setPhotoStates([]); setFileStates([]); setAudioChunks([]); setError(null); setFinalizing(false);
       failedPhotoData.current.clear();
       try {
         const result = await createCaptureSession();
@@ -412,7 +468,7 @@ export function CapturePage() {
     } catch (err) {
       console.error("Cancel failed:", err);
     }
-    setSessionId(null); setPhotoStates([]); setAudioChunks([]); setError(null); setRecordingTime(0);
+    setSessionId(null); setPhotoStates([]); setFileStates([]); setAudioChunks([]); setError(null); setRecordingTime(0);
     try {
       const result = await createCaptureSession();
       setSessionId(result.sessionId);
@@ -427,9 +483,10 @@ export function CapturePage() {
         recording={recording} recordingTime={recordingTime} formatTime={formatTime}
         audioTotal={audioTotal} audioUploading={audioUploading} audioUploaded={audioUploaded}
         photoTotal={photoTotal} photosUploading={photosUploading} photosUploaded={photosUploaded} photosFailed={photosFailed}
+        fileTotal={fileTotal} filesUploading={filesUploading} filesUploaded={filesUploaded} filesFailed={filesFailed}
         showSettings={showSettings}
         onToggleSettings={() => setShowSettings((p) => !p)}
-        onPickGallery={pickFromGallery} onRetryFailed={retryFailedUploads}
+        onPickGallery={pickFromGallery} onPickFile={pickFileToUpload} onRetryFailed={retryFailedUploads}
       />
 
       {showSettings ? (
@@ -490,10 +547,11 @@ export function CapturePage() {
       ) : null}
 
       <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGallerySelect} />
+      <input ref={uploadRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
 
       <CaptureControls
         sessionId={sessionId} recording={recording} uploadsInProgress={uploadsInProgress} finalizing={finalizing}
-        hasContent={photoTotal > 0 || audioTotal > 0} photosFailed={photosFailed}
+        hasContent={photoTotal > 0 || audioTotal > 0 || fileTotal > 0} photosFailed={photosFailed}
         onDone={handleDone} onCancel={handleCancel} onToggleRecording={toggleRecording} onRetryFailed={retryFailedUploads}
       />
     </div>
@@ -506,8 +564,9 @@ function StatusBar(props: {
   recording: boolean; recordingTime: number; formatTime: (s: number) => string;
   audioTotal: number; audioUploading: number; audioUploaded: number;
   photoTotal: number; photosUploading: number; photosUploaded: number; photosFailed: number;
+  fileTotal: number; filesUploading: number; filesUploaded: number; filesFailed: number;
   showSettings: boolean;
-  onToggleSettings: () => void; onPickGallery: () => void; onRetryFailed: () => void;
+  onToggleSettings: () => void; onPickGallery: () => void; onPickFile: () => void; onRetryFailed: () => void;
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-gray-900/80 z-10">
@@ -545,6 +604,18 @@ function StatusBar(props: {
             )}
           </div>
         ) : null}
+        {props.fileTotal > 0 ? (
+          <div className="flex items-center gap-1.5">
+            {props.filesUploading > 0 ? (
+              <><span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" /><span className="text-yellow-400">{props.filesUploaded}/{props.fileTotal} files</span></>
+            ) : props.filesFailed > 0 ? (
+              <><span className="text-red-400">&#10007;</span><span className="text-red-400">{props.filesFailed} failed</span></>
+            ) : (
+              <><span className="text-green-400">&#10003;</span><span className="text-green-400">{props.fileTotal} files</span></>
+            )}
+          </div>
+        ) : null}
+        <button onClick={props.onPickFile} className="text-gray-400 hover:text-white p-1" title="Upload file">&#128206;</button>
         <button onClick={props.onPickGallery} className="text-gray-400 hover:text-white p-1" title="Add from gallery">&#128247;</button>
         <button
           onClick={props.onToggleSettings}

@@ -17,6 +17,7 @@ import type { EventBus } from "../../core/event-bus.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { createAudioTemplate } from "../../schemas/audio.js";
 import { createImageTemplate } from "../../schemas/image.js";
+import { createFileTemplate } from "../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script.js";
 
@@ -32,6 +33,8 @@ interface CaptureFile {
   source: string;
   startedAt: string;
   size: number;
+  originalName?: string;
+  mimeType?: string;
 }
 
 const SESSION_BASE = path.join(os.tmpdir(), "callback-box-capture");
@@ -98,9 +101,18 @@ export async function registerCaptureRoutes(
     const filename = request.headers["x-capture-filename"] as string;
     const source = (request.headers["x-capture-source"] as string) || "unknown";
     const startedAt = (request.headers["x-capture-started-at"] as string) || new Date().toISOString();
+    const originalName = (request.headers["x-capture-original-name"] as string) || undefined;
+    const mimeType = (request.headers["x-capture-mime-type"] as string) || undefined;
 
     if (!filename) {
       return reply.status(400).send({ error: "X-Capture-Filename header required" });
+    }
+
+    // Guard against path traversal via the filename header.
+    const dir = sessionDir(session.id);
+    const resolved = path.resolve(path.join(dir, filename));
+    if (!resolved.startsWith(path.resolve(dir) + path.sep)) {
+      return reply.status(400).send({ error: "Invalid filename" });
     }
 
     // Read raw body as buffer
@@ -119,15 +131,17 @@ export async function registerCaptureRoutes(
       }
     }
 
-    const filePath = path.join(sessionDir(session.id), filename);
-    await fs.writeFile(filePath, fileBuffer);
+    await fs.writeFile(resolved, fileBuffer);
 
-    session.files.push({
+    const record: CaptureFile = {
       name: filename,
       source,
       startedAt,
       size: fileBuffer.length,
-    });
+    };
+    if (originalName) record.originalName = originalName;
+    if (mimeType) record.mimeType = mimeType;
+    session.files.push(record);
     await writeSession(session);
 
     console.log(`[capture] Uploaded ${filename} (${fileBuffer.length} bytes) to session ${session.id}`);
@@ -165,6 +179,7 @@ export async function registerCaptureRoutes(
 
     const audioChunks = session.files.filter((f) => f.name.startsWith("audio-"));
     const photoFiles = session.files.filter((f) => f.name.startsWith("photo-"));
+    const uploadedFiles = session.files.filter((f) => f.name.startsWith("file-"));
 
     // Compute actual start/end from file timestamps (client-provided),
     // not session creation time (server-provided) which may differ significantly
@@ -185,11 +200,12 @@ export async function registerCaptureRoutes(
 
     await fs.mkdir(sessionAbsDir, { recursive: true });
 
-    console.log(`[capture] Finalizing session ${session.id} → ${sessionDirName}: ${audioChunks.length} audio chunks, ${photoFiles.length} photos`);
+    console.log(`[capture] Finalizing session ${session.id} → ${sessionDirName}: ${audioChunks.length} audio chunks, ${photoFiles.length} photos, ${uploadedFiles.length} files`);
 
     const filesToStage: string[] = [];
     const audioRefs: string[] = [];
     const imageRefs: string[] = [];
+    const fileRefs: string[] = [];
 
     // Concatenate audio chunks into a single file.
     // MediaRecorder with timeslice produces chunks where only the first has
@@ -263,6 +279,36 @@ export async function registerCaptureRoutes(
       }
     }
 
+    // Copy uploaded files + create file cards
+    for (const file of uploadedFiles) {
+      const mediaFilename = file.name; // stored as client-provided (file-NNN-<sanitized>.ext)
+      const baseWithoutExt = mediaFilename.replace(/\.[^./]+$/, "");
+      const cardFilename = `${baseWithoutExt}.file.card`;
+
+      const srcPath = path.join(tmpDir, file.name);
+      const destMediaPath = path.join(sessionAbsDir, mediaFilename);
+      await fs.copyFile(srcPath, destMediaPath);
+      filesToStage.push(`${sessionRelDir}/${mediaFilename}`);
+
+      const cardOptions: Parameters<typeof createFileTemplate>[0] = {
+        capturedAt: file.startedAt,
+        source: file.source,
+        filename: mediaFilename,
+        size: file.size,
+      };
+      if (file.originalName) cardOptions.originalName = file.originalName;
+      if (file.mimeType) cardOptions.mimeType = file.mimeType;
+      const cardContent = createFileTemplate(cardOptions);
+      const destCardPath = path.join(sessionAbsDir, cardFilename);
+      await fs.writeFile(destCardPath, cardContent);
+      filesToStage.push(`${sessionRelDir}/${cardFilename}`);
+      fileRefs.push(cardFilename);
+
+      if (file.startedAt > endedAt) {
+        endedAt = file.startedAt;
+      }
+    }
+
     // Create capture-session card
     const sessionCardFilename = `${sessionDirName}.capture-session.card`;
     const sessionCardContent = createCaptureSessionTemplate({
@@ -271,6 +317,7 @@ export async function registerCaptureRoutes(
       endedAt,
       imageRefs,
       audioRefs,
+      fileRefs,
     });
     const sessionCardPath = path.join(sessionAbsDir, sessionCardFilename);
     await fs.writeFile(sessionCardPath, sessionCardContent);
@@ -279,8 +326,12 @@ export async function registerCaptureRoutes(
     // Single commit for the whole session
     if (filesToStage.length > 0) {
       await stageFiles(boxRoot, filesToStage);
+      const parts: string[] = [];
+      if (audioRefs.length > 0) parts.push(`${audioRefs.length} audio`);
+      if (imageRefs.length > 0) parts.push(`${imageRefs.length} photos`);
+      if (fileRefs.length > 0) parts.push(`${fileRefs.length} files`);
       await commit(boxRoot, {
-        message: `Capture session: ${audioRefs.length} audio, ${imageRefs.length} photos`,
+        message: `Capture session: ${parts.join(", ")}`,
         trailers: { "Created-By": "capture" },
       });
     }

@@ -17,6 +17,7 @@ export {
   FeedbackSchema,
   ImageSchema,
   AudioSchema,
+  FileSchema,
   CaptureSessionSchema,
   RecordSchema,
   RecipeSchema,
@@ -43,6 +44,7 @@ export type { NewsGuide } from "./news-guide.js";
 export type { Feedback } from "./feedback.js";
 export type { Image, ImageStatus } from "./image.js";
 export type { Audio, AudioStatus } from "./audio.js";
+export type { File, FileStatus } from "./file.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
 export type { Record, RecordStatus } from "./record.js";
 export type { Recipe } from "./recipe.js";
@@ -69,6 +71,7 @@ export { createNewsItemTemplate } from "./news-item.js";
 export { createNewsSummaryTemplate } from "./news-summary.js";
 export { createImageTemplate } from "./image.js";
 export { createAudioTemplate } from "./audio.js";
+export { createFileTemplate } from "./file.js";
 export { createCaptureSessionTemplate } from "./capture-session.js";
 export { createRecordTemplate } from "./record.js";
 export { createRecipeTemplate } from "./recipe.js";
