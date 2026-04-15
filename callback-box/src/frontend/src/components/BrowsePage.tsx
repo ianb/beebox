@@ -4,7 +4,7 @@
  * Sidebar with directory listing + card detail panel.
  */
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { Sidebar } from "./Sidebar";
@@ -53,31 +53,28 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
     <div className="h-full flex">
       <Sidebar title="Browse" subtitle={dirPath || "/"} detailSelected={hasDetail}>
         <div className="flex flex-col">
-          {/* Breadcrumbs */}
-          <div className="px-3 py-2 border-b text-sm flex flex-wrap items-center gap-1">
+          {/* Breadcrumbs — no whitespace between elements so it copies as a clean path. */}
+          <div className="px-3 py-2 border-b text-sm break-words">
             <button
               onClick={() => onNavigate("")}
-              className="text-plum hover:text-plum-dark hover:underline"
-            >
-              /
-            </button>
+              className="text-plum hover:text-plum-dark hover:underline px-0.5"
+            >/</button>
             {segments.map((seg, i) => {
               const segPath = segments.slice(0, i + 1).join("/");
               const isLast = i === segments.length - 1;
               return (
-                <span key={segPath} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-warm-500">/</span>}
+                <Fragment key={segPath}>
+                  <wbr />
+                  {i > 0 ? <span className="text-warm-500 px-0.5">/</span> : null}
                   {isLast ? (
-                    <span className="text-warm-700 font-medium">{seg}</span>
+                    <span className="text-warm-700 font-medium px-0.5">{seg}</span>
                   ) : (
                     <button
                       onClick={() => onNavigate(segPath)}
-                      className="text-plum hover:text-plum-dark hover:underline"
-                    >
-                      {seg}
-                    </button>
+                      className="text-plum hover:text-plum-dark hover:underline px-0.5"
+                    >{seg}</button>
                   )}
-                </span>
+                </Fragment>
               );
             })}
           </div>
