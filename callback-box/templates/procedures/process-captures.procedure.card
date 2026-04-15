@@ -1,7 +1,8 @@
 <procedure name="process-captures">
   <description>
     Process capture sessions through intake: transcribe audio, describe images,
-    summarize audio, assemble timeline, rename, extract records, and archive.
+    summarize audio, assemble timeline, rename, extract records, file uploaded
+    files, and archive.
   </description>
 
   <step id="transcribe">
@@ -182,6 +183,16 @@ Phase: describe-images"
           [ -d "$dir" ] || continue
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
+          # Skip file-only sessions — there's no timeline to build.
+          has_av=0
+          for card in "$dir"*.audio.card "$dir"*.image.card; do
+            [ -f "$card" ] || continue
+            has_av=1
+            break
+          done
+          if [ "$has_av" -eq 0 ]; then
+            continue
+          fi
           # Check all audio transcribed
           audio_ready=1
           for card in "$dir"*.audio.card; do
@@ -212,7 +223,7 @@ Phase: describe-images"
         fi
         echo "Found $found session(s) ready for timeline assembly"
       </shell>
-      <why>No sessions are ready for assembly (need all audio transcribed and all images analyzed)</why>
+      <why>No audio/image sessions are ready for assembly (file-only sessions skip this step)</why>
     </precheck>
 
     <run>
@@ -230,13 +241,17 @@ Phase: describe-images"
           [ -d "$dir" ] || continue
           session=$(ls "$dir"*.capture-session.card 2>/dev/null | head -1)
           [ -f "$session" ] || continue
-          # Check transcript has children (assemble ran)
-          has_transcript=0
+          # Ready if the session has an assembled transcript OR uploaded files
+          # (file-only sessions skip transcribe/describe/assemble but still need
+          # filing).
+          has_content=0
           if grep -q '&lt;text&gt;\|&lt;silence \|&lt;image ' "$session"; then
-            has_transcript=1
+            has_content=1
+          elif grep -q '&lt;file-ref ' "$session"; then
+            has_content=1
           fi
           status=$(grep -oE 'status="[^"]*"' "$session" | head -1 | grep -oE '"[^"]*"' | tr -d '"')
-          if [ "$has_transcript" -eq 1 ] &amp;&amp; [ "$status" != "intake-complete" ] &amp;&amp; [ "$status" != "extracted" ]; then
+          if [ "$has_content" -eq 1 ] &amp;&amp; [ "$status" != "intake-complete" ] &amp;&amp; [ "$status" != "extracted" ]; then
             echo "  Ready: $dir"
             echo "  Session: $session"
             found=$((found + 1))
@@ -247,7 +262,7 @@ Phase: describe-images"
         fi
         echo "Found $found session(s) ready for planning"
       </shell>
-      <why>No sessions with an assembled transcript are waiting to be planned</why>
+      <why>No sessions have content (assembled transcript or uploaded files) waiting to be planned</why>
     </precheck>
 
     <run>
@@ -260,9 +275,10 @@ Phase: describe-images"
         For each session listed in the precheck output:
 
         STEP 1 — READ THE SESSION:
-        1. Read the session card (the .capture-session.card file) — look at &lt;transcript&gt; and &lt;time start="..."&gt;
-        2. Read the image cards in the same directory to understand what was captured
-        3. Consider the transcript content together with the image descriptions
+        1. Read the session card (the .capture-session.card file) — look at &lt;transcript&gt;, &lt;files&gt;, and &lt;time start="..."&gt;
+        2. Read the image cards in the same directory to understand what was photographed
+        3. Read the file cards (*.file.card) in the same directory to understand what documents were uploaded — their &lt;filename&gt; element has `original-name`, `mime-type`, and `size`
+        4. Consider all three together: transcript content, image descriptions, and uploaded files
 
         STEP 2 — READ FILING RULES (if the box has them):
         If `config/intake.guide.card` exists in this box, read it. It contains the user's rules
@@ -275,9 +291,12 @@ Phase: describe-images"
         guide exists, skip this step and fall through to the default of store/catalogs/.
 
         STEP 3 — RENAME THE DIRECTORY:
-        Pick a short descriptive name based on what was captured (2-4 words, underscores for
-        spaces, retaining capitals). The date part stays the same — it comes from the session's
-        start time. Example: `capture-20260211T1951-f26ffa35` → `capture-20260211T1951-Whiteboard_Planning`.
+        Pick a short descriptive name based on what was captured — for audio/photo sessions,
+        what was photographed or discussed; for file-only sessions, what the uploaded files are
+        (2-4 words, underscores for spaces, retaining capitals). The date part stays the same —
+        it comes from the session's start time. Example: `capture-20260211T1951-f26ffa35` →
+        `capture-20260211T1951-Whiteboard_Planning`, or for uploads
+        `capture-20260415T0050-Tax_Documents_2025`.
 
         Use `cb mv` to rename:
         ```
@@ -339,16 +358,33 @@ Phase: describe-images"
         The `@ path/` suffix tells the extract step where to write the card. Use it when the
         intake guide has a high-confidence user-stated rule that matches the record. Trailing
         slash on the destination means "write the record into this directory".
+
+        ## Files to File
+        Each bullet is an uploaded file (.file.card) to move to a destination directory. The
+        file card is the envelope and stays with its attachment — `cb mv` moves both together.
+        Omit this section if there are no file cards in the session.
+
+        - `file-001-Tax_Documents.file.card` → `store/documents/tax/2025/`
+        - `file-002-Receipts.file.card` → `store/documents/receipts/2025/`
+
+        Pick the destination from the intake guide when a rule matches. When no guide rule
+        matches, default to `store/inbox-files/` (the user can sort later). You may edit the
+        `&lt;description&gt;` element on a file card before filing, if you can infer a useful short
+        description from its `original-name` and the session context.
         ```
 
-        IF extraction is NOT appropriate (session is too vague, incomplete, or doesn't contain
-        discrete extractable things):
+        IF there is nothing to do (no records to extract AND no files to file — e.g. an
+        accidental capture, a session too vague to act on, a photo session with nothing
+        inventory-worthy):
 
         ```markdown
         skip: true
 
-        Reason: Brief explanation of why extraction doesn't apply.
+        Reason: Brief explanation of why nothing needs to be done.
         ```
+
+        A session with only uploaded files is NOT a skip case — fill in the `## Files to File`
+        section and the extract step will move them to their destinations.
 
         IMPORTANT:
         - Filenames should be slugified with underscores, retaining capitals (e.g., `Brown_Leather_Couch.record.card`)
@@ -431,11 +467,13 @@ Phase: describe-images"
 
     <run>
       <agent model="haiku" max-turns="30">
-        You are extracting records from capture sessions following extraction specs.
+        You are extracting records and filing uploaded files from capture sessions following
+        extraction specs.
 
         YOUR TASK:
-        For each session listed in the precheck output, read the extraction spec and create
-        record cards accordingly.
+        For each session listed in the precheck output, read the extraction spec and act on it.
+        The spec can contain a `## Records to Extract` section (create record cards), a
+        `## Files to File` section (move uploaded files to destination directories), or both.
 
         STEP 1 - READ THE SPEC:
         For each session, read the extraction-spec.md file. It contains:
@@ -444,11 +482,14 @@ Phase: describe-images"
         - An example record in XML
         - A list of records to extract with suggested filenames, optionally with a destination
           path like `**Record Name** → `Filename.record.card` @ `store/documents/tax/2024/income/``
+        - Optionally a `## Files to File` section listing uploaded file cards and their
+          destinations: `` `file-001-X.file.card` → `store/documents/X/` ``
 
         STEP 2 - READ THE SESSION:
-        Read the session card and its image cards to gather the actual content for each record.
+        Read the session card and its image/file cards to gather the actual content for each
+        record and to sanity-check file destinations.
 
-        STEP 3 - CREATE RECORDS:
+        STEP 3 - CREATE RECORDS (for `## Records to Extract`):
         For each record listed in the spec, pick its destination directory:
 
         - **If the bullet has an `@ path/` suffix**, that's the destination directory. Create
@@ -475,8 +516,23 @@ Phase: describe-images"
         - Only use fields the spec recommends
         - &lt;name&gt; is always required
 
+        STEP 3B - FILE UPLOADED FILES (for `## Files to File`):
+        For each file card bullet, move the file card to its destination using `cb mv`. The
+        command moves the card and its sibling attachment (the PDF/doc/etc.) together, and
+        stages both for git.
+
+        ```bash
+        mkdir -p store/documents/tax/2025/
+        cb mv box/inbox/capture-YYYYMMDDTHHMM-Name/file-001-Tax_Documents.file.card store/documents/tax/2025/
+        ```
+
+        Do not create a separate record card for a filed file — the file card itself is the
+        envelope. If you can infer a useful short description from the session context, edit
+        the file card's `&lt;description&gt;` element before moving (or after; either works).
+
         STEP 4 - UPDATE SESSION STATUS:
-        After creating all records, edit the session card to set status="extracted".
+        After creating all records and moving all files, edit the session card to set
+        status="extracted".
 
         COMMIT (REQUIRED — do not skip):
         ```bash
