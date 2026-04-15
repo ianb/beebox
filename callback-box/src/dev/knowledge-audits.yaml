@@ -810,6 +810,42 @@ tests:
       When a companion view is open, user messages include a zoomed-view attribute.
       Chat-only — this attribute is only added by the chat frontend.
 
+  # === Chat Voice ===
+  #
+  # Chat-only TTS features. The chat system prompt mentions <speech> tags and
+  # nested <instructions> directly, but per-message voice overrides and the
+  # hard-override mechanism live in docs/chat-voice.md. These tests verify
+  # the agent knows what's possible and can navigate to the details.
+
+  - id: chat-voice-per-message-override
+    prompt: "The user asks you to speak the next sentence in a different voice — something deeper and more dramatic — for emphasis. Is that possible, and how?"
+    expected_level: knows_about
+    watch_for: "Knows it's possible. Reads docs/chat-voice.md (or the card-personality rule for the voice list). Answers with a per-message voice attribute on <speech>, e.g. <speech voice=\"onyx\">."
+    correct_contains: ["voice="]
+    should_read: ["docs/generated/chat-voice.md"]
+    tags: [chat, voice]
+    notes: >
+      The chat system prompt points to docs/chat-voice.md for overrides.
+      The agent should navigate from "is this possible?" to the per-message
+      voice="..." attribute. Failure modes: "I can only use my default voice,"
+      fabricating a non-existent mechanism, or editing the personality card
+      (which changes the default for all messages, not this one).
+
+  - id: chat-voice-hard-override
+    prompt: "You're replying in chat, and one sentence in your response needs to be spoken with a completely different delivery than your usual warm, unhurried style — sharp, urgent, clipped, for an emergency. You know you can add delivery instructions to a <speech> tag, but those normally combine with the personality card's base speaking instructions, and the warm style would bleed through. How do you fully replace the base speaking instructions for just that one <speech> segment?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/chat-voice.md. Uses override-instructions=\"1\" along with nested <instructions>. Recognizes the distinction between appending (default) and replacing."
+    correct_contains: ["override-instructions"]
+    should_read: ["docs/generated/chat-voice.md"]
+    tags: [chat, voice]
+    notes: >
+      This tests the hard-override distinction vs. simple additive instructions.
+      The default behavior of nested <instructions> is to append to the base
+      speaking instructions — not replace them. The agent must know to use
+      override-instructions="1" when the base style actively conflicts.
+      Failure: using just <instructions> (which adds and would leave a
+      warm-and-urgent mashup), or inventing a different attribute.
+
   # === Calendar ===
   #
   # Status (2026-03-29): All 3 pass. Agent knows from agent guide that calendar

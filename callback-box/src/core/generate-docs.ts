@@ -21,6 +21,7 @@ import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 import { parsePersonality, compilePersonality, compileSpeakingVoice, type Personality } from "../schemas/personality.js";
 import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefing.js";
 import { generateViewsDoc } from "./views-doc.js";
+import { generateChatVoiceDoc } from "./chat-voice-doc.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -75,6 +76,10 @@ export interface GenerateDocsOptions {
   /** Add DOCID markers to each generated file for debugging prompt inclusion.
    *  If not specified, checks for a `.callback-box/docid-debug` marker file. */
   docIdDebug?: boolean | undefined;
+  /** Bypass the input-mtime / source-commit cache and regenerate everything.
+   *  Use during dev when source has uncommitted changes that affect output,
+   *  or in test infrastructure where stale docs would invalidate results. */
+  force?: boolean | undefined;
 }
 
 /**
@@ -237,21 +242,24 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
  * Generate all agent documentation for a box.
  */
 export async function generateDocs(boxRoot: string, options: GenerateDocsOptions = {}): Promise<void> {
-  // Fast path: skip if no input files changed and source code unchanged
+  // Fast path: skip if no input files changed and source code unchanged.
+  // Skipped entirely when force is set — see GenerateDocsOptions.force for why.
   const markerPath = join(boxRoot, GENERATE_MARKER);
   const inputMtime = await newestInputMtime(boxRoot);
   const currentCommit = await getCallbackBoxCommit();
-  try {
-    const markerStat = await stat(markerPath);
-    const markerContent = await readFile(markerPath, "utf-8");
-    const storedCommit = markerContent.split("\n")[1] || null;
-    const mtimeUnchanged = inputMtime > 0 && inputMtime <= markerStat.mtimeMs;
-    const commitUnchanged = currentCommit !== null && storedCommit === currentCommit;
-    if (mtimeUnchanged && commitUnchanged) {
-      return; // Nothing changed — skip regeneration
+  if (!options.force) {
+    try {
+      const markerStat = await stat(markerPath);
+      const markerContent = await readFile(markerPath, "utf-8");
+      const storedCommit = markerContent.split("\n")[1] || null;
+      const mtimeUnchanged = inputMtime > 0 && inputMtime <= markerStat.mtimeMs;
+      const commitUnchanged = currentCommit !== null && storedCommit === currentCommit;
+      if (mtimeUnchanged && commitUnchanged) {
+        return; // Nothing changed — skip regeneration
+      }
+    } catch (_e) {
+      // No marker file — first run, generate everything
     }
-  } catch {
-    // No marker file — first run, generate everything
   }
 
   const debug = options.docIdDebug ?? await hasDocIdMarker(boxRoot);
@@ -277,6 +285,8 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       withDocId({ relativePath: `${DOCS_DIR}/connectors.md`, content: generateConnectorsDocs(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "views.md"),
       withDocId({ relativePath: `${DOCS_DIR}/views.md`, content: generateViewsDoc(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "chat-voice.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/chat-voice.md`, content: generateChatVoiceDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     ...allSchemas
@@ -544,7 +554,7 @@ async function compilePersonalities(boxRoot: string, debug: boolean): Promise<st
   let files: string[];
   try {
     files = await readdir(configDir);
-  } catch {
+  } catch (_e) {
     return undefined;
   }
 
@@ -577,8 +587,8 @@ async function compilePersonalities(boxRoot: string, debug: boolean): Promise<st
     );
 
     return compiled;
-  } catch {
-    // Skip unparseable personality cards
+  } catch (e) {
+    console.error(`[generate-docs] Failed to compile personality ${filename}:`, e);
     return undefined;
   }
 }

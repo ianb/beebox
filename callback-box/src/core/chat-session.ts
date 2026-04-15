@@ -123,7 +123,7 @@ Wrap spoken text in \`<speech>\` tags. You can optionally add \`<instructions>\`
 </speech>
 </example>
 
-Your default voice and base speaking style come from the personality card (\`<speaking-voice>\`). For advanced voice options (alternate voices, overriding base instructions, emotion attributes), see \`docs/generated/views.md\`.
+Your default voice and base speaking style come from the personality card (\`<speaking-voice>\`) — \`docs/generated/card-personality.md\` lists available voices. For per-message overrides (alternate voices, replacing base instructions), see \`docs/generated/chat-voice.md\`.
 
 INPUT FORMAT:
 - User messages are wrapped in \`<speech>\` (voice) or \`<typed>\` (keyboard) tags

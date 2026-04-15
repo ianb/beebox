@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
 import { generateReport } from "./lib/report.js";
+import { generateDocs } from "../core/generate-docs.js";
 
 const DEFAULT_TESTS_DIR = path.dirname(new URL(import.meta.url).pathname);
 const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");
@@ -65,6 +66,14 @@ program
         process.exit(1);
       }
     }
+
+    // Always regenerate docs before running audits. The fast-path cache in
+    // generateDocs keys off git commits, so uncommitted source edits would
+    // otherwise leave stale generated docs in the box and silently invalidate
+    // results — exactly the scenario where the agent answers from a doc that
+    // doesn't match current source. Force is cheap; staleness is expensive.
+    console.log(`Regenerating docs in ${resolvedBox}...`);
+    await generateDocs(resolvedBox, { force: true });
 
     console.log(`Running ${tests.length} knowledge audits against ${resolvedBox}\n`);
 

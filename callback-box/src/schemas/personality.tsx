@@ -134,10 +134,38 @@ There is one personality card per box at \`config/main.personality.card\`.
 - \`<goes-by>\` — What the agent is called
 - \`<role>\` — The agent's general function (e.g., "Personal information aide"). This is about what the agent *does*, not what the box contains.
 - \`<boxholder>\` — Relational info about who the agent serves (\`<full-name>\`, \`<called>\`, \`<relationship>\` notes)
-- \`<speaking-voice>\` — TTS audio configuration (model, style instructions)
+- \`<speaking-voice>\` — TTS audio configuration for the chat frontend (see below)
 - \`<tone>\` — How the agent writes (phrasing, formality, interaction style)
 - \`<traits>\` — Personality traits with a compiled \`<description>\` paragraph and \`<unresolved>\` notes
 - \`<experiments>\` and \`<context-notes>\` — Same as guide cards
+
+**\`<speaking-voice>\`:** Configures the chat TTS voice. Applies only to the chat frontend — jobs, procedures, and other agents don't use TTS. The \`model\` attribute picks one of 13 OpenAI voices (impressions are subjective; experiment to find a fit):
+
+- \`alloy\` — Low female voice, somewhat older/mature, perhaps Black
+- \`ash\` — Deep male voice, somewhat gravelly
+- \`ballad\` — British male voice, high pitched, younger/peppy
+- \`cedar\` — Male, medium, glitchy but engaged
+- \`coral\` — Female, medium, enthusiastic but with an impersonal affect
+- \`echo\` — Neutral, could be male or female, naive
+- \`fable\` — British female voice, upper class, posh
+- \`marin\` — Female, medium, glitchy but very personal, younger feeling (default)
+- \`onyx\` — Male, low, deep and smooth, perhaps Black
+- \`nova\` — Female, high, engaged and personal
+- \`sage\` — Female, high, perky and light
+- \`shimmer\` — Female, medium, direct and personable
+- \`verse\` — Male, medium, smooth and professional, perhaps impersonal
+
+Child \`<instruction>\` elements give the TTS model style guidance — affect, tone, pacing, emotion, pronunciation. These apply to every spoken response. Keep instructions sensory and specific ("Warm and unhurried, with a slight lilt; pause briefly before names") rather than abstract ("be friendly"). Multiple \`<instruction>\` elements are concatenated.
+
+Example:
+\`\`\`xml
+<speaking-voice model="nova">
+<instruction>Warm and engaged, with a slight lilt.</instruction>
+<instruction>Speak at a measured pace — pause briefly before names.</instruction>
+</speaking-voice>
+\`\`\`
+
+To experiment: edit the card and reload the chat UI — the new voice and instructions load on the next message. For per-message voice or instruction overrides (special emphasis, urgency, a different speaker), see \`docs/generated/chat-voice.md\`.
 
 **Evidence model:** Same as guides — confidence (hypothesis → confirmed), source (user-stated > feedback > inferred > default). Applies to traits, tone instructions, and boxholder relationship notes.
 
@@ -415,6 +443,7 @@ export function compilePersonality(parsed: ParsedPersonality): string {
       lines.push(`- ${instruction}`);
     }
     lines.push("- Edit `<speaking-voice>` in `config/main.personality.card` to change defaults");
+    lines.push("- For per-message voice or instruction overrides (chat only), see `docs/generated/chat-voice.md`");
     lines.push("");
   }
 

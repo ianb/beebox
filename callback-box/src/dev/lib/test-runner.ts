@@ -128,6 +128,13 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
 
 /**
  * Extract agent behavior from a session transcript.
+ *
+ * Also walks into sub-agent logs (sibling `<sessionId>/subagents/*.jsonl`
+ * directory written by Claude Code when the main agent delegates via the
+ * Agent tool). Sub-agent tool calls count as the main agent's behavior for
+ * audit purposes — otherwise every delegated Read would be invisible.
+ * Sub-agent response text is NOT merged into responseText; only the main
+ * agent's text reply is evaluated.
  */
 async function extractBehavior(
   boxRoot: string,
@@ -149,6 +156,31 @@ async function extractBehavior(
           categorizeToolUse(block, acc);
         }
       }
+    }
+  }
+
+  // Merge tool uses from any sub-agent logs into the accumulator.
+  const subagentDir = path.join(path.dirname(logPath), sessionId, "subagents");
+  try {
+    const subagentFiles = await fs.readdir(subagentDir);
+    for (const file of subagentFiles) {
+      if (!file.endsWith(".jsonl")) continue;
+      const subagentLog = path.join(subagentDir, file);
+      const { entries: subEntries } = await parseSessionLog({ logPath: subagentLog });
+      for (const entry of subEntries) {
+        if (entry.type === "assistant") {
+          for (const block of entry.content) {
+            if (block.type === "tool_use") {
+              categorizeToolUse(block, acc);
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Sub-agent dir may not exist if the agent never delegated — that's fine.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`[test-runner] Failed to read subagent logs at ${subagentDir}:`, e);
     }
   }
 
