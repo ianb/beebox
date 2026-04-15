@@ -266,7 +266,7 @@ Phase: describe-images"
     </precheck>
 
     <run>
-      <agent model="opus" max-turns="20">
+      <agent model="opus" max-turns="40">
         You are taking an assembled capture session from raw intake to a plan: picking a
         descriptive name for the session directory, deciding what records are worth extracting,
         and deciding where each one should be filed.
@@ -279,6 +279,11 @@ Phase: describe-images"
         2. Read the image cards in the same directory to understand what was photographed
         3. Read the file cards (*.file.card) in the same directory to understand what documents were uploaded — their &lt;filename&gt; element has `original-name`, `mime-type`, and `size`
         4. Consider all three together: transcript content, image descriptions, and uploaded files
+
+        DO NOT open the attached files themselves (the actual PDFs/docs next to the file cards) unless
+        the filename is genuinely ambiguous and you can't decide a destination without a peek.
+        Deciding "tax-return-2025.pdf" goes under `store/documents/tax/2025/` does not require
+        reading the PDF. Budget turns accordingly — you have many sessions and only 40 turns total.
 
         STEP 2 — READ FILING RULES (if the box has them):
         If `config/intake.guide.card` exists in this box, read it. It contains the user's rules
