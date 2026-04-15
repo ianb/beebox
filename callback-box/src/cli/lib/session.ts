@@ -166,41 +166,55 @@ export function transformContent(content: unknown): SessionContentBlock[] {
 
   if (!Array.isArray(content)) return [];
 
-  return content.map((block: Record<string, unknown>) => {
+  const blocks: SessionContentBlock[] = [];
+  for (const block of content as Array<Record<string, unknown>>) {
     if (block.type === "text") {
-      return { type: "text" as const, text: String(block.text || "") };
+      blocks.push({ type: "text", text: String(block.text || "") });
+      continue;
     }
 
     if (block.type === "tool_use") {
       const input = (block.input || {}) as Record<string, unknown>;
-      return {
-        type: "tool_use" as const,
+      blocks.push({
+        type: "tool_use",
         toolName: String(block.name || ""),
         toolId: String(block.id || ""),
         input,
-        inputSummary: summarizeToolInput(
-          String(block.name || ""),
-          input
-        ),
-      };
+        inputSummary: summarizeToolInput(String(block.name || ""), input),
+      });
+      continue;
     }
 
     if (block.type === "tool_result") {
-      return {
-        type: "tool_result" as const,
+      blocks.push({
+        type: "tool_result",
         toolUseId: String(block.tool_use_id || ""),
         resultSummary: summarizeToolResult(block.content),
-      };
+      });
+      continue;
     }
 
     if (block.type === "thinking") {
-      return { type: "thinking" as const, text: String(block.thinking || "") };
+      blocks.push({ type: "thinking", text: String(block.thinking || "") });
+      continue;
     }
     if (block.type === "redacted_thinking") {
-      return { type: "thinking" as const, text: "[redacted]" };
+      blocks.push({ type: "thinking", text: "[redacted]" });
+      continue;
     }
-    return { type: "text" as const, text: `[${block.type}]` };
-  });
+
+    // Drop image blocks entirely — Claude Code's PDF-reading tools emit a
+    // user-role turn with one image block per page to feed the model. These
+    // are API plumbing, not user input; rendering them as "[image]" text
+    // produces fake user messages in the chat UI.
+    if (block.type === "image") continue;
+
+    // Unknown block types: fall through with a placeholder so we don't
+    // silently swallow something new. This is visible in the UI, which is
+    // the point — we want to notice new block types.
+    blocks.push({ type: "text", text: `[${String(block.type)}]` });
+  }
+  return blocks;
 }
 
 /**
