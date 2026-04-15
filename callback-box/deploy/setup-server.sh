@@ -16,7 +16,7 @@ echo "=== Callback Box Server Setup ==="
 echo "Installing system packages..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg
+apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils
 
 # ── Node.js via NodeSource ──────────────────────────────────────────
 echo "Installing Node.js $NODE_MAJOR..."

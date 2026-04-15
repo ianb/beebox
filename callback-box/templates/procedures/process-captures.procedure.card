@@ -278,12 +278,11 @@ Phase: describe-images"
         1. Read the session card (the .capture-session.card file) — look at &lt;transcript&gt;, &lt;files&gt;, and &lt;time start="..."&gt;
         2. Read the image cards in the same directory to understand what was photographed
         3. Read the file cards (*.file.card) in the same directory to understand what documents were uploaded — their &lt;filename&gt; element has `original-name`, `mime-type`, and `size`
-        4. Consider all three together: transcript content, image descriptions, and uploaded files
-
-        DO NOT open the attached files themselves (the actual PDFs/docs next to the file cards) unless
-        the filename is genuinely ambiguous and you can't decide a destination without a peek.
-        Deciding "tax-return-2025.pdf" goes under `store/documents/tax/2025/` does not require
-        reading the PDF. Budget turns accordingly — you have many sessions and only 40 turns total.
+        4. For uploaded files, look at the attached content when it will meaningfully improve your decisions: categorizing, picking a destination, writing a useful description, drafting an accurate spec. Reading the content fully is fine — **but dispatch a subagent (Task tool) to do it**, so the summary comes back compact instead of filling your own context with the raw document.
+           - For PDFs, `pdftotext` is installed on this box. A subagent prompt like: "Run `pdftotext box/inbox/capture-.../file-NNN-name.pdf -` and report: (a) what kind of document this is in 1–2 sentences, (b) key identifiers like date/year/issuer/subject, (c) anything relevant for deciding where to file it per the intake guide. Stay under 200 words." works well.
+           - For plain text/markdown/json, a direct Read is fine — no subagent needed.
+           - Only fall back to reading a PDF yourself if pdftotext can't handle it (scanned images, encrypted, etc.).
+        5. Consider all of it together: transcript content, image descriptions, and uploaded file summaries
 
         STEP 2 — READ FILING RULES (if the box has them):
         If `config/intake.guide.card` exists in this box, read it. It contains the user's rules
