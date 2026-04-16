@@ -141,11 +141,23 @@ const rule = {
            * Glob patterns matched against the `from "..."` source of imports
            * that bring in a UI component. A JSX element whose name was
            * imported from a matching source is subject to the rule.
+           * Ignored when `matchAll: true`.
            */
           components: {
             type: "array",
             items: { type: "string" },
           },
+          /**
+           * When true, check every JSX element in the file — native HTML
+           * elements (`<div>`, `<span>`, ...), locally-defined components,
+           * and imported components alike — regardless of import source.
+           * Use together with ESLint's `files`/`ignores` to scope the rule
+           * to "page-level" code where appearance classes shouldn't live.
+           *
+           * Default: false. Mutually exclusive with `components` in effect:
+           * when `matchAll` is true, `components` is ignored.
+           */
+          matchAll: { type: "boolean" },
           /**
            * Prop names to validate. Default: ["className"].
            */
@@ -162,12 +174,6 @@ const rule = {
             type: "array",
             items: { type: "string" },
           },
-          /**
-           * If true, also allow the classes produced by template literals
-           * containing expressions (interpolated strings) — the static parts
-           * of the template are still validated. Default: false.
-           */
-          validateTemplateQuasis: { type: "boolean" },
         },
       },
     ],
@@ -181,13 +187,15 @@ const rule = {
 
   create(context) {
     const options = context.options[0] || {};
+    const matchAll = options.matchAll === true;
     const componentPatterns = options.components || DEFAULT_COMPONENT_PATTERNS;
     const propNames = new Set(options.props || DEFAULT_PROPS);
     const allowedPatterns = (options.allowedPatterns || DEFAULT_ALLOWED_PATTERNS).map(
       (p) => new RegExp(p),
     );
 
-    // Imported component name → source (for elements we should check)
+    // Imported component name → source (for elements we should check).
+    // Unused when `matchAll` is true.
     const importedComponents = new Map();
 
     function isAllowedToken(token) {
@@ -206,22 +214,7 @@ const rule = {
       });
     }
 
-    return {
-      ImportDeclaration(node) {
-        const source = node.source.value;
-        if (typeof source !== "string") return;
-        if (!matchesAnyGlob(source, componentPatterns)) return;
-        for (const spec of node.specifiers) {
-          if (
-            spec.type === "ImportSpecifier" ||
-            spec.type === "ImportDefaultSpecifier" ||
-            spec.type === "ImportNamespaceSpecifier"
-          ) {
-            importedComponents.set(spec.local.name, source);
-          }
-        }
-      },
-
+    const visitors = {
       JSXAttribute(node) {
         const propName = node.name.type === "JSXIdentifier" ? node.name.name : null;
         if (propName === null || !propNames.has(propName)) return;
@@ -231,7 +224,8 @@ const rule = {
         const nameNode = opening.name;
         if (nameNode.type !== "JSXIdentifier") return;
         const componentName = nameNode.name;
-        if (!importedComponents.has(componentName)) return;
+
+        if (!matchAll && !importedComponents.has(componentName)) return;
 
         const value = extractStaticString(node.value);
         if (value === null) return; // dynamic — skip
@@ -244,6 +238,26 @@ const rule = {
         }
       },
     };
+
+    // Only track imports when we need to discriminate by import source
+    if (!matchAll) {
+      visitors.ImportDeclaration = function (node) {
+        const source = node.source.value;
+        if (typeof source !== "string") return;
+        if (!matchesAnyGlob(source, componentPatterns)) return;
+        for (const spec of node.specifiers) {
+          if (
+            spec.type === "ImportSpecifier" ||
+            spec.type === "ImportDefaultSpecifier" ||
+            spec.type === "ImportNamespaceSpecifier"
+          ) {
+            importedComponents.set(spec.local.name, source);
+          }
+        }
+      };
+    }
+
+    return visitors;
   },
 };
 

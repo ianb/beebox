@@ -105,9 +105,39 @@ export default vibeCheck({
 **Default allowlist** covers: margins, padding, sizing (`w-*`, `h-*`, `size-*`, `max-*`, `min-*`), flex item behavior (`flex-1`, `grow`, `shrink`, `basis-*`, `order-*`, `self-*`), grid item behavior (`col-*`, `row-*`), positioning (`absolute`, `relative`, `inset-*`, `top-*` etc.), z-index, and `aspect-*`. Responsive (`md:`, `lg:`, ...) and state (`hover:`, `focus:`, `dark:`, ...) prefixes are transparent — the rule validates the underlying utility.
 
 **Options:**
-- `components` (required): array of glob patterns for import sources. Use `*` for one segment, `**` for many.
+- `components`: array of glob patterns for import sources. Use `*` for one segment, `**` for many. Required unless `matchAll` is set.
+- `matchAll` (default `false`): when `true`, check every JSX element's `className` in the file — native HTML (`<div>`, `<span>`, ...), local components, and imported components alike. `components` is ignored when this is on. Use together with ESLint's `files`/`ignores` to scope to "page-level" code.
 - `props` (default `["className"]`): prop names to validate.
 - `allowedPatterns` (default: built-in layout list): array of regex source strings. Replaces the built-in list if provided.
+
+**Two-tier pattern** — restrict UI components everywhere, restrict everything (including `<div>`) outside `components/` subdirectories:
+
+```js
+import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+
+export default [
+  // Base: imported UI components restricted everywhere
+  ...vibeCheck({
+    react: true,
+    restrictComponentClasses: {
+      components: ["./components/ui/**", "./ui/**"],
+    },
+  }),
+  // Stricter: outside components/, check every element
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["**/components/**"],
+    rules: {
+      "personal-vibe-check/restrict-component-classes": [
+        "error",
+        { matchAll: true },
+      ],
+    },
+  },
+];
+```
+
+Files inside `components/` (where appearance classes legitimately live) fall back to the base rule — only imported UI components are restricted. Files outside `components/` (pages, renderers, app-shell) get the stricter rule — even `<div className="bg-white shadow">` is rejected.
 
 **Limitations:**
 - Only static strings and template literals without expressions are validated. Dynamic expressions like `className={cls}` are silently skipped.

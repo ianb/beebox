@@ -153,6 +153,30 @@ describe("restrict-component-classes", () => {
         `,
           [{ components: ["./ui/**"], allowedPatterns: ["^m(t|r|b|l|x|y)?-.+$"] }],
         ),
+
+        // matchAll off (default): native div with disallowed class is NOT checked
+        valid(
+          `<div className="text-red-500 bg-plum shadow-lg" />`,
+          [{ components: ["./ui/**"] }],
+        ),
+
+        // matchAll on: allowed tokens on a native element pass
+        valid(
+          `<div className="mb-4 flex-1 w-full" />`,
+          [{ matchAll: true }],
+        ),
+
+        // matchAll on: dynamic className on a native element is skipped
+        valid(
+          `export const X = ({ cls }) => <div className={cls} />;`,
+          [{ matchAll: true }],
+        ),
+
+        // matchAll on: element with no className prop is ignored
+        valid(
+          `<div />`,
+          [{ matchAll: true }],
+        ),
       ],
 
       invalid: [
@@ -232,6 +256,45 @@ describe("restrict-component-classes", () => {
             },
           ],
           [{ components: ["./ui/**"], props: ["layout"] }],
+        ),
+
+        // matchAll: native div with disallowed class is reported
+        invalid(
+          `<div className="text-red-500" />`,
+          [
+            {
+              messageId: "disallowedClass",
+              data: { class: "text-red-500", component: "div", prop: "className" },
+            },
+          ],
+          [{ matchAll: true }],
+        ),
+
+        // matchAll: non-imported local component is checked
+        invalid(
+          `
+          function Widget() { return null; }
+          export const X = () => <Widget className="shadow-lg" />;
+        `,
+          [
+            {
+              messageId: "disallowedClass",
+              data: { class: "shadow-lg", component: "Widget", prop: "className" },
+            },
+          ],
+          [{ matchAll: true }],
+        ),
+
+        // matchAll: 'components' option is ignored — every element is checked
+        invalid(
+          `<div className="bg-plum" />`,
+          [
+            {
+              messageId: "disallowedClass",
+              data: { class: "bg-plum", component: "div", prop: "className" },
+            },
+          ],
+          [{ matchAll: true, components: ["./nowhere/**"] }],
         ),
 
         // Custom allowedPatterns: only 'm-*' allowed → 'p-4' rejected
