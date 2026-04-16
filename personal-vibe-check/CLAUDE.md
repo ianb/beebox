@@ -11,36 +11,15 @@ Two distinct kinds of work happen here. Figure out which one you're doing, then 
 
 ## Using the library
 
-If you landed in this repo but the task is actually to configure eslint/prettier/tsconfig **for another project**, you are in the wrong directory — this repo has no project-level work to do for consumers.
+If you landed in this repo but the task is actually to **install or configure this preset in another project**, you are in the wrong directory. This repo has no project-level work to do for consumers.
 
-The full user-facing documentation lives in [`CONVENTIONS.md`](./CONVENTIONS.md). Consuming projects copy relevant sections of it into their own CLAUDE.md/AGENTS.md so downstream agents see the conventions directly.
+Relevant files to read, in priority order:
 
-Typical setup in a consuming project:
+- [`INSTALL.md`](./INSTALL.md) — step-by-step instructions for installing the preset into a downstream project (preferred `vibe-init` path, manual path, hook setup, verification, common failure modes).
+- [`CONVENTIONS.md`](./CONVENTIONS.md) — the prose coding rules that get copied into the downstream project's `CLAUDE.md`.
+- [`README.md`](./README.md) — human-oriented overview of what's bundled and why.
 
-```js
-// eslint.config.mjs
-import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
-
-export default vibeCheck({
-  react: true,
-  restrictComponentClasses: {
-    components: ["./components/ui/**"],
-  },
-});
-```
-
-`package.json` scripts:
-```json
-{
-  "scripts": {
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "format:check": "prettier --check src/"
-  }
-}
-```
-
-If a rule in this package isn't behaving the way you want for a downstream project, do not edit this repo to fix it — either disable the rule in the consuming project's eslint config, or open an issue/PR here with a reproduction. Breakage ripples across every project that depends on this preset.
+If a rule in this package isn't behaving the way you want for a downstream project, do not edit this repo to fix it — either disable the rule in the consuming project's eslint config, or (if the rule is wrong in general) return here under the **Changing the library** workflow.
 
 ---
 

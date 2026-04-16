@@ -21,6 +21,7 @@
     "tsconfig.base.json",
     "knip-base.json",
     "CONVENTIONS.md",
+    "INSTALL.md",
     "bin/",
     "hooks/",
     "rules/"
