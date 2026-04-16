@@ -18,7 +18,7 @@ import { AttachmentPanel, type AttachmentItem } from "./ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../lib/image-paste";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { useSpeechPlayback } from "../hooks/useSpeechPlayback";
-import { hasAssistantSpeech, parseAllSpeechTags, VALID_VOICES } from "../lib/speech-parsing";
+import { parseAllSpeechTags, VALID_VOICES, type SpeechSegment } from "../lib/speech-parsing";
 import { getTTSClient } from "../lib/tts-client";
 import { unlockAudioContext } from "../lib/audio-context";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -922,40 +922,95 @@ function InteractiveChat() {
       .catch(() => {});
   }, []);
 
-  // Handle state transitions: speech playback on result, mic restart after refresh
+  // Number of speech segments already dispatched to playback from the
+  // current stream. Reset when a new turn starts.
+  const playedSegmentCountRef = useRef(0);
+
+  /**
+   * Dispatch a batch of new speech segments for playback, applying the
+   * "suppress if user is composing voice" and "pause mic while speaking"
+   * rules. Returns true if segments were queued (or intentionally
+   * suppressed — i.e. handled), false otherwise.
+   */
+  const queueSpeechBatch = useCallback(
+    (newSegments: SpeechSegment[], messageId: string): boolean => {
+      if (newSegments.length === 0) return false;
+
+      speechPlayedRef.current = true;
+
+      // Suppress TTS if user has in-progress voice text
+      const hasActiveTranscript = transcriptionRef.current &&
+        transcriptionRef.current.transcript.trim().length > 0;
+      if (hasActiveTranscript) {
+        speechPlayback.markAsPlayed(messageId);
+        return true;
+      }
+
+      // Pause recording while TTS plays
+      if (transcriptionRef.current && transcriptionRef.current.state === "recording") {
+        voicePausedRef.current = true;
+        queueMicrotask(() => setVoicePaused(true));
+        transcriptionRef.current.cancel();
+      }
+
+      speechPlayback.playSegments({ messageId, segments: newSegments });
+      return true;
+    },
+    [speechPlayback]
+  );
+
+  // Mid-stream: play complete <speech>...</speech> segments as they arrive.
+  // Counts closing </speech> tags to avoid parsing a half-received segment.
+  useEffect(() => {
+    if (snapshot.value !== "streaming") return;
+    const text = snapshot.context.streamText;
+    const closedMatches = text.match(/<\/speech>/gi);
+    const closedCount = closedMatches ? closedMatches.length : 0;
+    if (closedCount <= playedSegmentCountRef.current) return;
+
+    const allSegments = parseAllSpeechTags(text);
+    // parseAllSpeechTags may include a still-open tag at the end; clip to
+    // the number of actual closing tags so we only dispatch fully-closed
+    // segments.
+    const complete = allSegments.slice(0, closedCount);
+    const newSegments = complete.slice(playedSegmentCountRef.current);
+    if (newSegments.length === 0) {
+      // Closing tag count advanced but parser didn't surface new segments
+      // (e.g. nested tags); sync the counter and move on.
+      playedSegmentCountRef.current = closedCount;
+      return;
+    }
+
+    const messageId = `stream-${Date.now()}-${playedSegmentCountRef.current}`;
+    queueSpeechBatch(newSegments, messageId);
+    playedSegmentCountRef.current = closedCount;
+  }, [snapshot.value, snapshot.context.streamText, queueSpeechBatch]);
+
+  // Handle state transitions: play any final speech, mic restart after refresh
   useEffect(() => {
     const current = snapshot.value as string;
     const prev = prevStateRef.current;
     prevStateRef.current = current;
 
-    // streaming → refreshing: play speech, stop tick
+    // Entering streaming: reset the mid-stream played counter for the new turn
+    if (current === "streaming" && prev !== "streaming") {
+      playedSegmentCountRef.current = 0;
+    }
+
+    // streaming → refreshing: stop tick, play any segments that didn't
+    // get dispatched mid-stream (rare — parser behavior or last-tick
+    // tail from the final message).
     if (current === "refreshing" && prev === "streaming") {
       if (stopTickRef.current) {
         stopTickRef.current();
         stopTickRef.current = null;
       }
-      const hasSpeech = hasAssistantSpeech(snapshot.context.streamText);
-      speechPlayedRef.current = hasSpeech;
-      if (hasSpeech) {
-        // Suppress TTS if user has in-progress voice text
-        const hasActiveTranscript = transcriptionRef.current &&
-          transcriptionRef.current.transcript.trim().length > 0;
-        if (hasActiveTranscript) {
-          // Don't play speech — user is composing
-          speechPlayback.markAsPlayed(`stream-${Date.now()}`);
-        } else {
-          // Pause recording while TTS plays
-          if (transcriptionRef.current && transcriptionRef.current.state === "recording") {
-            voicePausedRef.current = true;
-            queueMicrotask(() => setVoicePaused(true));
-            transcriptionRef.current.cancel();
-          }
-          const segments = parseAllSpeechTags(snapshot.context.streamText);
-          speechPlayback.playSegments({
-            messageId: `stream-${Date.now()}`,
-            segments,
-          });
-        }
+      const allSegments = parseAllSpeechTags(snapshot.context.streamText);
+      const remaining = allSegments.slice(playedSegmentCountRef.current);
+      if (allSegments.length > 0) speechPlayedRef.current = true;
+      if (remaining.length > 0) {
+        queueSpeechBatch(remaining, `stream-end-${Date.now()}`);
+        playedSegmentCountRef.current = allSegments.length;
       }
     }
 
@@ -969,7 +1024,7 @@ function InteractiveChat() {
         }
       }
     }
-  }, [snapshot.value, snapshot.context.streamText, speechPlayback]);
+  }, [snapshot.value, snapshot.context.streamText, queueSpeechBatch]);
 
   const handleLoadOlder = useCallback(() => {
     if (loadingOlder) return;
