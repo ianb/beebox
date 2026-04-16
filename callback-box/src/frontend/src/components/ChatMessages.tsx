@@ -351,7 +351,7 @@ function ChatImage({ src, alt }: { src: string; alt: string }) {
         <img
           src={src}
           alt={alt}
-          className="max-w-xs max-h-64 rounded shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+          className="max-w-xs max-h-64 rounded shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
           onClick={() => setLightbox(true)}
           title="Click to zoom"
         />
@@ -398,12 +398,75 @@ function extractImages(children: React.ReactNode): Array<{ src: string; alt: str
   return images.length > 0 ? images : null;
 }
 
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"]);
+
+function isImagePath(path: string): boolean {
+  const dot = path.lastIndexOf(".");
+  if (dot <= 0) return false;
+  return IMAGE_EXTS.has(path.slice(dot).toLowerCase());
+}
+
+/**
+ * Minimal hast node shape (from react-markdown's `node` prop) used for
+ * paragraph inspection. Hast elements have `tagName` + `properties`; text
+ * nodes have `value`.
+ */
+interface HastChild {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: { href?: unknown; src?: unknown; alt?: unknown };
+  children?: HastChild[];
+}
+
+function hastText(node: HastChild): string {
+  if (node.type === "text") return node.value || "";
+  if (!node.children) return "";
+  return node.children.map(hastText).join("");
+}
+
+/**
+ * Scan a paragraph's hast node for view: links that point at image files,
+ * and return their resolved src+alt. Returns null if any non-image,
+ * non-whitespace child is present — so we only take over when the paragraph
+ * is exclusively view-image links.
+ *
+ * This is needed because react-markdown's custom `a` component wraps link
+ * nodes in our handler function, so extractImages (which reads rendered
+ * React children) can't see the underlying <img> our handler emits. We
+ * inspect the source AST instead.
+ */
+function extractViewImagesFromNode(node: HastChild | undefined): Array<{ src: string; alt: string }> | null {
+  if (!node || !node.children) return null;
+  const images: Array<{ src: string; alt: string }> = [];
+  for (const child of node.children) {
+    if (child.type === "text" && (child.value || "").trim() === "") continue;
+    if (
+      child.type === "element" &&
+      child.tagName === "a" &&
+      typeof child.properties?.href === "string" &&
+      child.properties.href.startsWith("view:")
+    ) {
+      const target = parseViewUrl(child.properties.href);
+      if (isImagePath(target.path)) {
+        images.push({
+          src: `${getApiBase()}/files/${target.path}`,
+          alt: hastText(child),
+        });
+        continue;
+      }
+    }
+    return null;
+  }
+  return images.length > 0 ? images : null;
+}
+
 /**
  * Paragraph override that detects image-only paragraphs and renders them
  * as centered thumbnails (single) or a grid (multiple).
  */
-function ChatParagraph({ children, node: _node, ...props }: React.HTMLAttributes<HTMLParagraphElement> & { node?: unknown }) {
-  const images = extractImages(children);
+function ChatParagraph({ children, node, ...props }: React.HTMLAttributes<HTMLParagraphElement> & { node?: unknown }) {
+  const images = extractImages(children) ?? extractViewImagesFromNode(node as HastChild | undefined);
 
   if (images) {
     if (images.length === 1) {
@@ -433,6 +496,12 @@ function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components
     a({ href, children, node: _node, ...props }) {
       if (href && href.startsWith("view:")) {
         const target = parseViewUrl(href);
+        // Image view: links render inline as an image (equivalent to ![label](api/files/path)).
+        // ChatParagraph's extractImages picks this up and wraps it with the figure + caption + lightbox.
+        if (isImagePath(target.path)) {
+          const alt = typeof children === "string" ? children : target.path;
+          return <img src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
+        }
         if (target.zoom && onZoomView) {
           const label = typeof children === "string" ? children : target.path;
           return (
