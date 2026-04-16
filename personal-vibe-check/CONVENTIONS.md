@@ -78,3 +78,37 @@ Prettier handles formatting (indentation, line wrapping, spacing) automatically.
 - Use meaningful variable names
 - Files max 300 lines, functions max 150 lines (excluding blanks/comments)
 - **Only export what's needed**: don't export functions/constants only used within their own file. knip enforces this.
+
+## Restricting `className` on Components (opt-in)
+
+The rule `personal-vibe-check/restrict-component-classes` enforces the convention:
+
+> **Components own their appearance. Callers can only pass outer-layout classes** (margin, padding, flex/grid item behavior, sizing, position) via the `className` prop.
+
+Appearance changes (colors, fonts, borders, shadows) go through the component's typed intent/variant props — not className. This keeps the component's visual contract intact while letting callers control how it sits in the surrounding layout.
+
+**Enable in your project's `eslint.config.mjs`:**
+
+```js
+import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+
+export default vibeCheck({
+  react: true,
+  restrictComponentClasses: {
+    // Glob patterns matched against import source paths.
+    // Any component imported from a matching path is subject to the rule.
+    components: ["./ui/**", "./components/ui/**"],
+  },
+});
+```
+
+**Default allowlist** covers: margins, padding, sizing (`w-*`, `h-*`, `size-*`, `max-*`, `min-*`), flex item behavior (`flex-1`, `grow`, `shrink`, `basis-*`, `order-*`, `self-*`), grid item behavior (`col-*`, `row-*`), positioning (`absolute`, `relative`, `inset-*`, `top-*` etc.), z-index, and `aspect-*`. Responsive (`md:`, `lg:`, ...) and state (`hover:`, `focus:`, `dark:`, ...) prefixes are transparent — the rule validates the underlying utility.
+
+**Options:**
+- `components` (required): array of glob patterns for import sources. Use `*` for one segment, `**` for many.
+- `props` (default `["className"]`): prop names to validate.
+- `allowedPatterns` (default: built-in layout list): array of regex source strings. Replaces the built-in list if provided.
+
+**Limitations:**
+- Only static strings and template literals without expressions are validated. Dynamic expressions like `className={cls}` are silently skipped.
+- Barrel/re-export files: the rule checks the direct `import from` source in the file using the component. If components are re-exported through a barrel, add the barrel path to `components` too.

@@ -1,6 +1,7 @@
 import baseConfig from "eslint-config-agent";
 import unicornPlugin from "eslint-plugin-unicorn";
 import importXPlugin from "eslint-plugin-import-x";
+import vibePlugin from "./plugin.mjs";
 
 // ── Enabled rules ──────────────────────────────────────────────────
 // Rules reviewed and accepted. Each has a comment explaining why.
@@ -221,8 +222,8 @@ const enabledRules = {
   "unicorn/no-useless-undefined": "error",
   // Drop unnecessary .0 fractions — 1.0 → 1
   "unicorn/no-zero-fractions": "error",
-  // Lowercase hex in number literals — 0xFF not 0XFF
-  "unicorn/number-literal-case": "error",
+  // Disabled: conflicts with prettier's numeric separator formatting
+  // "unicorn/number-literal-case": "error",
   // Use .find() instead of .filter()[0]
   "unicorn/prefer-array-find": "error",
   // Use .some() instead of .filter().length or .find() !== undefined
@@ -337,10 +338,16 @@ function allRulesOffFrom(config) {
  * @param {object} [options]
  * @param {boolean} [options.react] — include React/JSX rules (default: false)
  * @param {string[]} [options.ignores] — additional ignore patterns
+ * @param {object} [options.restrictComponentClasses] — enable the
+ *   restrict-component-classes rule. Pass an options object, e.g.
+ *     `{ components: ["./ui/**", "./components/ui/**"] }`.
+ *   Omit to disable the rule.
  */
 export function vibeCheck(options) {
   const react = options && options.react;
   const extraIgnores = (options && options.ignores) || [];
+  const restrictClassesOptions =
+    options && options.restrictComponentClasses ? options.restrictComponentClasses : null;
 
   const allRulesOff = allRulesOffFrom(baseConfig);
 
@@ -457,6 +464,7 @@ export function vibeCheck(options) {
       plugins: {
         unicorn: unicornPlugin,
         "import-x": importXPlugin,
+        "personal-vibe-check": vibePlugin,
       },
       settings: {
         ...reactSettings,
@@ -466,6 +474,9 @@ export function vibeCheck(options) {
         ...enabledRules,
         ...reactRules,
         ...disabledRules,
+        ...(restrictClassesOptions !== null
+          ? { "personal-vibe-check/restrict-component-classes": ["error", restrictClassesOptions] }
+          : {}),
       },
     },
   ];

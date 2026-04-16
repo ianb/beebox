@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./eslint": "./eslint.config.mjs",
+    "./plugin": "./plugin.mjs",
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./knip-base.json": "./knip-base.json",
     "./prettier": "./prettier.config.mjs"
@@ -15,12 +16,14 @@
   },
   "files": [
     "eslint.config.mjs",
+    "plugin.mjs",
     "prettier.config.mjs",
     "tsconfig.base.json",
     "knip-base.json",
     "CONVENTIONS.md",
     "bin/",
-    "hooks/"
+    "hooks/",
+    "rules/"
   ],
   "peerDependencies": {
     "typescript": ">=5"
@@ -58,6 +61,7 @@
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "test": "node --test rules/test/*.test.mjs",
     "prepare": "husky"
   }
 }
