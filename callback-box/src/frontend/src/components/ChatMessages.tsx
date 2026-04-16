@@ -343,18 +343,29 @@ export function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
  */
 function ChatImage({ src, alt }: { src: string; alt: string }) {
   const [lightbox, setLightbox] = useState(false);
+  const hasCaption = alt.trim() !== "";
 
   return (
     <>
-      <img
-        src={src}
-        alt={alt}
-        className="max-w-xs max-h-64 rounded shadow-md cursor-pointer hover:opacity-90 transition-opacity"
-        onClick={() => setLightbox(true)}
-        title="Click to zoom"
-      />
+      <figure className="max-w-xs flex flex-col items-center">
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-xs max-h-64 rounded shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => setLightbox(true)}
+          title="Click to zoom"
+        />
+        {hasCaption ? (
+          <figcaption
+            className="mt-1 max-w-full text-xs text-warm-600 italic text-center truncate"
+            title={alt}
+          >
+            {alt}
+          </figcaption>
+        ) : null}
+      </figure>
       {lightbox ? (
-        <ImageLightbox src={src} alt={alt} onClose={() => setLightbox(false)} />
+        <ImageLightbox src={src} alt={alt} caption={alt} onClose={() => setLightbox(false)} />
       ) : null}
     </>
   );

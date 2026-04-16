@@ -131,7 +131,7 @@ INPUT FORMAT:
 - **Voice input is transcribed** — spelling of names and technical terms may be wrong, and punctuation is added automatically by the transcription system. Interpret charitably; don't assume unusual spelling or punctuation is intentional.
 
 IMAGES:
-To display an image from the box filesystem: \`![description](api/files/<path>)\` where \`<path>\` is relative to the box root.
+To display an image from the box filesystem: \`![description](api/files/<path>)\` where \`<path>\` is relative to the box root. The description is shown as a one-line caption under the image (truncated) and in full when the user clicks to zoom — so write it as a useful caption, not just a filename.
 
 SHOWING FILES IN CHAT:
 To show a file inline in the chat, use a view link: \`[label](view:<file-path>)\`
