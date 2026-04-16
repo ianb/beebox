@@ -73,6 +73,9 @@ class TTSClient {
   }
 
   async speak(text: string, options?: SpeechOptions): Promise<void> {
+    console.log(
+      `[tts] speak() enqueued chars=${text.length} queueLen=${this.queue.length} playing=${this.playing} voice=${options?.voice ?? "(default)"}`
+    );
     return new Promise((resolve, reject) => {
       this.queue.push({ text, options, resolve, reject });
       this.processQueue();
@@ -129,6 +132,11 @@ class TTSClient {
     );
     const voice = this.resolveVoice(item.options?.voice);
 
+    console.log(
+      `[tts] playItem start voice=${voice} instrChars=${instructions.length} textChars=${item.text.length}`
+    );
+
+    const httpStart = performance.now();
     this.abortController = new AbortController();
     const response = await fetch(`${getApiBase()}/chat/tts`, {
       method: "POST",
@@ -139,14 +147,21 @@ class TTSClient {
 
     if (!response.ok) {
       const err = await response.text();
+      console.warn(`[tts] HTTP ${response.status} body="${err.slice(0, 200)}"`);
       throw new Error(`TTS API error ${response.status}: ${err}`);
     }
 
     const buffer = await this.readStreamToBuffer(response);
+    const httpMs = Math.round(performance.now() - httpStart);
+    console.log(`[tts] HTTP ok audioBytes=${buffer.byteLength} httpMs=${httpMs}`);
+
+    const playStart = performance.now();
     const { stop, finished } = playAudioBlob(buffer);
     this.currentStop = stop;
     await finished;
     this.currentStop = null;
+    const playMs = Math.round(performance.now() - playStart);
+    console.log(`[tts] playItem done playMs=${playMs}`);
   }
 
   private async readStreamToBuffer(response: Response): Promise<ArrayBuffer> {
