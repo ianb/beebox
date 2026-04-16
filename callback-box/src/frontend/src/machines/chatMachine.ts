@@ -414,6 +414,19 @@ export const chatMachine = setup({
         },
       },
       on: {
+        // Ignore REFRESH while streaming — STREAM_RESULT / STREAM_FAILED
+        // handle termination. REFRESH arrives when the backend broadcasts
+        // chat-complete on its /events bus, which races with the
+        // per-turn SSE's STREAM_RESULT. If REFRESH won that race, we'd
+        // transition to refreshing with a cleared streamText and never
+        // play the <speech> that just arrived.
+        REFRESH: {
+          actions: () => {
+            console.warn(
+              "[chat] REFRESH ignored while streaming — racing with STREAM_RESULT"
+            );
+          },
+        },
         SEND: {
           // Queue the message — don't interrupt the current stream
           actions: [
