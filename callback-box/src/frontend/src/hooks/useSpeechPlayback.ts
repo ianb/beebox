@@ -49,12 +49,7 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
 
   const playSegments = useCallback(
     async ({ messageId, segments }: PlaySegmentsOptions) => {
-      if (playedMessagesRef.current.has(messageId)) {
-        console.warn(
-          `[speech] playSegments skipped — messageId already played: ${messageId}`
-        );
-        return;
-      }
+      if (playedMessagesRef.current.has(messageId)) return;
       playedMessagesRef.current.add(messageId);
       send({ type: "PLAY", messageId, segments, ttsClient });
     },

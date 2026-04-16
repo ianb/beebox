@@ -936,16 +936,12 @@ function InteractiveChat() {
       }
       const hasSpeech = hasAssistantSpeech(snapshot.context.streamText);
       speechPlayedRef.current = hasSpeech;
-      console.log(
-        `[speech] streaming→refreshing hasSpeech=${hasSpeech} streamTextLen=${snapshot.context.streamText.length}`
-      );
       if (hasSpeech) {
         // Suppress TTS if user has in-progress voice text
         const hasActiveTranscript = transcriptionRef.current &&
           transcriptionRef.current.transcript.trim().length > 0;
         if (hasActiveTranscript) {
           // Don't play speech — user is composing
-          console.log("[speech] suppressed: user has active transcript");
           speechPlayback.markAsPlayed(`stream-${Date.now()}`);
         } else {
           // Pause recording while TTS plays
@@ -955,11 +951,10 @@ function InteractiveChat() {
             transcriptionRef.current.cancel();
           }
           const segments = parseAllSpeechTags(snapshot.context.streamText);
-          const messageId = `stream-${Date.now()}`;
-          console.log(
-            `[speech] playSegments messageId=${messageId} segments=${segments.length} voices=[${segments.map((s) => s.voice ?? "default").join(",")}]`
-          );
-          speechPlayback.playSegments({ messageId, segments });
+          speechPlayback.playSegments({
+            messageId: `stream-${Date.now()}`,
+            segments,
+          });
         }
       }
     }

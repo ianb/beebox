@@ -81,38 +81,24 @@ export function playAudioBlob(buffer: ArrayBuffer, mimeType = "audio/mpeg"): { s
   const audio = getPlaybackAudioElement();
   let stopped = false;
 
-  console.log(
-    `[audio] playAudioBlob start bytes=${buffer.byteLength} mime=${mimeType} shared=${sharedAudio === audio ? 1 : 0} iOS=${isIOS() ? 1 : 0}`
-  );
-
   const finished = new Promise<void>((resolve) => {
     try { audio.pause(); } catch (_e) { /* ignore */ }
     audio.onended = () => {
       URL.revokeObjectURL(url);
-      console.log(`[audio] playAudioBlob ended duration=${audio.duration}s`);
       resolve();
     };
     audio.onerror = (e) => {
       URL.revokeObjectURL(url);
-      const mediaErr = audio.error;
-      console.warn(
-        `[audio] playAudioBlob error code=${mediaErr?.code} msg="${mediaErr?.message ?? ""}" event=${String(e).slice(0, 80)}`
-      );
+      console.error("[audio] playAudioBlob error:", e);
       resolve();
     };
     audio.src = url;
     audio.volume = 1;
-    audio.play()
-      .then(() => {
-        console.log("[audio] playAudioBlob play() resolved");
-      })
-      .catch((e) => {
-        URL.revokeObjectURL(url);
-        console.warn(
-          `[audio] playAudioBlob play() rejected name=${e?.name ?? "?"} message="${e?.message ?? String(e)}"`
-        );
-        resolve();
-      });
+    audio.play().catch((e) => {
+      URL.revokeObjectURL(url);
+      console.error("[audio] playAudioBlob play() rejected:", e);
+      resolve();
+    });
   });
 
   return {

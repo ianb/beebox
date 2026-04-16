@@ -420,13 +420,7 @@ export const chatMachine = setup({
         // per-turn SSE's STREAM_RESULT. If REFRESH won that race, we'd
         // transition to refreshing with a cleared streamText and never
         // play the <speech> that just arrived.
-        REFRESH: {
-          actions: () => {
-            console.warn(
-              "[chat] REFRESH ignored while streaming — racing with STREAM_RESULT"
-            );
-          },
-        },
+        REFRESH: {},
         SEND: {
           // Queue the message — don't interrupt the current stream
           actions: [
