@@ -31,6 +31,7 @@ import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import { Pre } from "./ui/Pre";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
+import { StatusBadge } from "./ui/StatusBadge";
 
 export type FileViewMode = "page" | "chat" | "companion";
 
@@ -219,7 +220,7 @@ function PageHeader({
           <h2 className="text-lg font-bold text-warm-900 truncate" title={data.path}>{data.path}</h2>
           <div className="flex items-center gap-2 mt-1">
             {data.tagName ? <span className="text-sm text-warm-600">Type: {data.tagName}</span> : null}
-            {data.status ? <span className={`status-badge status-${data.status}`}>{data.status}</span> : null}
+            {data.status ? <StatusBadge status={data.status} /> : null}
             {data.version ? <span className="text-sm text-warm-500">v{data.version}</span> : null}
           </div>
         </div>

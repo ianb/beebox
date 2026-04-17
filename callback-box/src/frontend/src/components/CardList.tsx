@@ -4,6 +4,7 @@
 
 import { useMemo } from "react";
 import type { CardInfo } from "../api";
+import { StatusBadge } from "./ui/StatusBadge";
 
 interface CardListProps {
   items: CardInfo[];
@@ -84,9 +85,7 @@ export function CardList({
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className="text-xs text-warm-500">{item.type}</span>
-                    {item.status ? <span className={`status-badge status-${item.status}`}>
-                        {item.status}
-                      </span> : null}
+                    {item.status ? <StatusBadge status={item.status} size="sm" /> : null}
                   </div>
                 </div>
               </button>

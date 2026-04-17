@@ -11,6 +11,7 @@ import { Sidebar } from "./Sidebar";
 import { FileView } from "./FileView";
 import { trpc } from "../lib/trpc";
 import { cbSource } from "../lib/source-tag";
+import { StatusBadge } from "./ui/StatusBadge";
 
 
 interface BrowsePageProps {
@@ -128,11 +129,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <span className="text-xs text-warm-500">{card.type}</span>
-                      {card.status ? (
-                        <span className={`status-badge status-${card.status}`}>
-                          {card.status}
-                        </span>
-                      ) : null}
+                      {card.status ? <StatusBadge status={card.status} size="sm" /> : null}
                     </div>
                   </div>
                 </button>

@@ -15,30 +15,6 @@ body {
   @apply border border-warm-400 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent;
 }
 
-.status-badge {
-  @apply inline-block px-2 py-1 text-xs rounded font-medium;
-}
-
-.status-pending {
-  @apply bg-accent-100 text-accent-dark;
-}
-
-.status-answered {
-  @apply bg-success-100 text-success-dark;
-}
-
-.status-new {
-  @apply bg-info-50 text-info-dark;
-}
-
-.status-processing {
-  @apply bg-primary-50 text-primary-dark;
-}
-
-.status-processed {
-  @apply bg-warm-200 text-warm-800;
-}
-
 /* Remove backtick decorations from inline code in prose */
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {

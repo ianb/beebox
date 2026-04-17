@@ -7,6 +7,7 @@
 
 import { type HistoryCommit } from "../api";
 import { cbSource } from "../lib/source-tag";
+import { Badge, type BadgeTone } from "./ui/Badge";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -25,23 +26,16 @@ function trailerString(value: string | string[] | undefined): string | undefined
   return Array.isArray(value) ? value[0] : value;
 }
 
-/**
- * Phase badge with color coding.
- */
-function PhaseBadge({ phase }: { phase: string }) {
-  const colors: Record<string, string> = {
-    triage: "bg-info-100 text-primary",
-    analyze: "bg-warning-100 text-warning-dark",
-    brief: "bg-success-100 text-success-dark",
-    fetch: "bg-cyan-100 text-cyan-700",
-    "process-feedback": "bg-info-100 text-info-dark",
-  };
+const PHASE_TONE: Record<string, BadgeTone> = {
+  triage: "info",
+  analyze: "warning",
+  brief: "success",
+  fetch: "info",
+  "process-feedback": "info",
+};
 
-  return (
-    <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${colors[phase] || "bg-warm-100 text-warm-700"}`}>
-      {phase}
-    </span>
-  );
+function PhaseBadge({ phase }: { phase: string }) {
+  return <Badge tone={PHASE_TONE[phase] ?? "neutral"} size="sm">{phase}</Badge>;
 }
 
 /**

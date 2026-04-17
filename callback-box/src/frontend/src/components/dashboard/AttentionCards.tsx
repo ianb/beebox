@@ -7,6 +7,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
 import { cbSource } from "../../lib/source-tag";
+import { StatusBadge } from "../ui/StatusBadge";
 
 type CardInfo = RouterOutput["status"]["questions"]["items"][number];
 
@@ -31,9 +32,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-warm-700">
               Questions
-              <span className="ml-2 status-badge status-pending">
-                {pendingQuestions.length}
-              </span>
+              <StatusBadge status="pending" className="ml-2">{pendingQuestions.length}</StatusBadge>
             </h3>
           </div>
           <ul className="space-y-1">
@@ -62,9 +61,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-warm-700">
               Inbox
-              <span className="ml-2 status-badge status-new">
-                {inboxCount}
-              </span>
+              <StatusBadge status="new" className="ml-2">{inboxCount}</StatusBadge>
             </h3>
             <Link
               to={href(`/${boxSlug}/browse/box/inbox`)}

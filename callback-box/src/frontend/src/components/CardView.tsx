@@ -11,6 +11,7 @@ import { trpc } from "../lib/trpc";
 import { CardTreeView } from "./CardTreeView";
 import { cbSource } from "../lib/source-tag";
 import { Pre } from "./ui/Pre";
+import { StatusBadge } from "./ui/StatusBadge";
 import hljs from "highlight.js/lib/core";
 import xml from "highlight.js/lib/languages/xml";
 import "highlight.js/styles/github.css";
@@ -83,9 +84,7 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
           <h2 className="text-lg font-bold text-warm-900">{card.path}</h2>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-sm text-warm-600">Type: {card.tagName}</span>
-            {card.status ? <span className={`status-badge status-${card.status}`}>
-                {card.status}
-              </span> : null}
+            {card.status ? <StatusBadge status={card.status} /> : null}
             {card.version ? <span className="text-sm text-warm-500">v{card.version}</span> : null}
           </div>
         </div>
