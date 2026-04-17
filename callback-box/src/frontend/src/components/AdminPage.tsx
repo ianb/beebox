@@ -283,16 +283,15 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
 
           {/* Token input */}
           <div className="flex gap-2 mb-2 items-start">
-            <div className="flex-1">
-              <TextField
-                label="Bot token"
-                hideLabel
-                value={botToken}
-                onChange={setBotToken}
-                onKeyDown={(e) => { if (e.key === "Enter") handleConnect(); }}
-                placeholder="Paste bot token here"
-              />
-            </div>
+            <TextField
+              label="Bot token"
+              hideLabel
+              value={botToken}
+              onChange={setBotToken}
+              onKeyDown={(e) => { if (e.key === "Enter") handleConnect(); }}
+              placeholder="Paste bot token here"
+              className="flex-1"
+            />
             <Button
               type="button"
               intent="primary"
@@ -423,17 +422,16 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
       )}
 
       <div className="flex gap-2 items-start">
-        <div className="flex-1">
-          <TextField
-            label="Allowed email"
-            hideLabel
-            type="email"
-            value={newEmail}
-            onChange={setNewEmail}
-            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-            placeholder="user@example.com"
-          />
-        </div>
+        <TextField
+          label="Allowed email"
+          hideLabel
+          type="email"
+          value={newEmail}
+          onChange={setNewEmail}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+          placeholder="user@example.com"
+          className="flex-1"
+        />
         <Button
           type="button"
           intent="primary"

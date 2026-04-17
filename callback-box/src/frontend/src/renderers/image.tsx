@@ -88,17 +88,16 @@ function ImageCardRenderer({ data }: RendererProps) {
 
   return (
     <div>
-      <div className="mb-3">
-        <Image
-          src={imageSrc}
-          alt={altText}
-          size="lg"
-          lightbox
-          bordered
-          rotation={card.rotation}
-          overlay={bbox}
-        />
-      </div>
+      <Image
+        src={imageSrc}
+        alt={altText}
+        size="lg"
+        lightbox
+        bordered
+        rotation={card.rotation}
+        overlay={bbox}
+        className="mb-3"
+      />
 
       {/* Controls */}
       <Row gap="md" className="mb-3">

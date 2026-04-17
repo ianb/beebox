@@ -1,3 +1,5 @@
+import { cn } from "../../lib/cn";
+
 export type CloseButtonSize = "sm" | "md";
 
 export interface CloseButtonProps {
@@ -12,6 +14,8 @@ export interface CloseButtonProps {
    */
   onDark?: boolean;
   disabled?: boolean;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 const SIZE_CLASSES: Record<CloseButtonSize, string> = {
@@ -28,8 +32,7 @@ function XIcon({ size }: { size: CloseButtonSize }) {
   );
 }
 
-export function CloseButton({ onClick, label = "Close", size = "md", onDark = false, disabled = false }: CloseButtonProps) {
-  const sizeClass = SIZE_CLASSES[size];
+export function CloseButton({ onClick, label = "Close", size = "md", onDark = false, disabled = false, className }: CloseButtonProps) {
   const colorClass = onDark
     ? "bg-white/90 hover:bg-white text-warm-700 shadow"
     : "bg-transparent hover:bg-warm-100 text-warm-500 hover:text-warm-700";
@@ -40,7 +43,12 @@ export function CloseButton({ onClick, label = "Close", size = "md", onDark = fa
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`${sizeClass} ${colorClass} rounded-full inline-flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={cn(
+        SIZE_CLASSES[size],
+        colorClass,
+        "rounded-full inline-flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-50 disabled:cursor-not-allowed",
+        className,
+      )}
     >
       <XIcon size={size} />
     </button>

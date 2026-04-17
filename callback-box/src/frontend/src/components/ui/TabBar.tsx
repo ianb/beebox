@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export interface TabDef<V extends string> {
   value: V;
@@ -14,11 +15,13 @@ export interface TabBarProps<V extends string> {
   tabs: TabDef<V>[];
   /** aria-label for the tablist — used when there's no visible heading. */
   label?: string;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
-export function TabBar<V extends string>({ value, onChange, tabs, label }: TabBarProps<V>) {
+export function TabBar<V extends string>({ value, onChange, tabs, label, className }: TabBarProps<V>) {
   return (
-    <div role="tablist" aria-label={label} className="flex gap-0 border-b border-warm-300">
+    <div role="tablist" aria-label={label} className={cn("flex gap-0 border-b border-warm-300", className)}>
       {tabs.map((tab) => {
         const active = tab.value === value;
         const disabled = tab.disabled === true;
@@ -39,11 +42,11 @@ export function TabBar<V extends string>({ value, onChange, tabs, label }: TabBa
             onClick={() => {
               if (!disabled) onChange(tab.value);
             }}
-            className={`px-4 py-1.5 text-sm border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold ${stateClass}`}
+            className={cn("px-4 py-1.5 text-sm border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold", stateClass)}
           >
             {tab.label}
             {tab.count !== undefined ? (
-              <span className={`ml-1 text-xs ${active ? "text-plum" : "text-warm-500"}`}>
+              <span className={cn("ml-1 text-xs", active ? "text-plum" : "text-warm-500")}>
                 ({tab.count})
               </span>
             ) : null}

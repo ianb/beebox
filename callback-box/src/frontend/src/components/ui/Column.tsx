@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type ColumnGap = "none" | "xs" | "sm" | "md" | "lg";
 export type ColumnAlign = "start" | "center" | "end" | "stretch";
@@ -29,8 +30,6 @@ const ALIGN_CLASSES: Record<ColumnAlign, string> = {
 };
 
 export function Column({ children, gap = "none", align = "stretch", className }: ColumnProps) {
-  const classes = ["flex flex-col", GAP_CLASSES[gap], ALIGN_CLASSES[align], className]
-    .filter(Boolean)
-    .join(" ");
+  const classes = cn("flex flex-col", GAP_CLASSES[gap], ALIGN_CLASSES[align], className);
   return <div className={classes}>{children}</div>;
 }

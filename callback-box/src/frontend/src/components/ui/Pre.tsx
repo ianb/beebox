@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type PreSize = "xs" | "sm" | "base";
 export type PreScroll = "sm" | "md" | "lg" | false;
@@ -16,6 +17,8 @@ export interface PreProps {
   /** Muted color (text-warm-500) — for secondary output. */
   muted?: boolean;
   title?: string;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 const SIZE_CLASSES: Record<PreSize, string> = {
@@ -38,8 +41,8 @@ export function Pre({
   error = false,
   muted = false,
   title,
+  className,
 }: PreProps) {
-  const sizeClass = SIZE_CLASSES[size];
   const colorClass = error ? "text-red-700" : muted ? "text-warm-500" : "text-warm-800";
   const boxClass = boxed
     ? error
@@ -47,17 +50,16 @@ export function Pre({
       : "bg-warm-50 rounded p-3"
     : "";
   const scrollClass = scroll !== false ? SCROLL_CLASSES[scroll] : "";
-  const className = [
+  const classes = cn(
     "font-mono whitespace-pre-wrap break-words",
-    sizeClass,
+    SIZE_CLASSES[size],
     colorClass,
     boxClass,
     scrollClass,
-  ]
-    .filter(Boolean)
-    .join(" ");
+    className,
+  );
   return (
-    <pre className={className} title={title}>
+    <pre className={classes} title={title}>
       {children}
     </pre>
   );

@@ -186,17 +186,16 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
       </div>
 
       {/* Text input */}
-      <div className="mb-4">
-        <TextareaField
-          label="Memo content"
-          value={content}
-          onChange={setContent}
-          placeholder="What's on your mind?"
-          rows={6}
-          inputClassName="resize-none"
-          disabled={uploading || recordingState === "recording"}
-        />
-      </div>
+      <TextareaField
+        label="Memo content"
+        value={content}
+        onChange={setContent}
+        placeholder="What's on your mind?"
+        rows={6}
+        inputClassName="resize-none"
+        disabled={uploading || recordingState === "recording"}
+        className="mb-4"
+      />
 
       {/* Voice recording section */}
       <div className="mb-4 p-3 bg-warm-50 rounded-lg">
@@ -238,20 +237,19 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
 
       {/* Submit button */}
       <div className="flex gap-2">
-        <div className="flex-1">
-          <Button
-            type="button"
-            intent="primary"
-            size="sm"
-            fullWidth
-            onClick={handleSubmit}
-            disabled={!hasContent || recordingState === "recording"}
-            loading={uploading}
-            loadingLabel="Uploading audio…"
-          >
-            <span className="font-mono">cb create</span>
-          </Button>
-        </div>
+        <Button
+          type="button"
+          intent="primary"
+          size="sm"
+          fullWidth
+          onClick={handleSubmit}
+          disabled={!hasContent || recordingState === "recording"}
+          loading={uploading}
+          loadingLabel="Uploading audio…"
+          className="flex-1"
+        >
+          <span className="font-mono">cb create</span>
+        </Button>
         <CancelButton onClick={onClose} />
       </div>
 

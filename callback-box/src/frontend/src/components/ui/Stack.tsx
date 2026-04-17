@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type StackGap = "none" | "xs" | "sm" | "md" | "lg";
 export type StackAs = "div" | "section" | "article" | "ul" | "ol";
@@ -21,7 +22,7 @@ const GAP_CLASSES: Record<StackGap, string> = {
 };
 
 export function Stack({ children, gap = "md", as = "div", className }: StackProps) {
-  const classes = [GAP_CLASSES[gap], className].filter(Boolean).join(" ");
+  const classes = cn(GAP_CLASSES[gap], className);
   if (as === "section") return <section className={classes}>{children}</section>;
   if (as === "article") return <article className={classes}>{children}</article>;
   if (as === "ul") return <ul className={classes}>{children}</ul>;

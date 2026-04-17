@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger" | "accent";
 export type BadgeSize = "sm" | "md";
@@ -27,14 +28,12 @@ const SIZE_CLASSES: Record<BadgeSize, string> = {
 };
 
 export function Badge({ children, tone = "neutral", size = "md", className, title }: BadgeProps) {
-  const classes = [
+  const classes = cn(
     "inline-block rounded font-medium",
     TONE_CLASSES[tone],
     SIZE_CLASSES[size],
     className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  );
   return (
     <span className={classes} title={title}>
       {children}

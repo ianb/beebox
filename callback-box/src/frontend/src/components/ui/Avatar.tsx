@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type AvatarSize = "sm" | "md" | "lg";
 
@@ -18,6 +19,8 @@ export interface AvatarProps {
   size?: AvatarSize;
   /** Fill styling for the initial/empty state — useful for dark nav contexts. */
   fallbackClassName?: string;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 function GenericUserIcon() {
@@ -35,8 +38,8 @@ export function Avatar({
   picture,
   size = "md",
   fallbackClassName = "bg-warm-200 text-warm-700",
+  className,
 }: AvatarProps) {
-  const sizeClass = SIZE_CLASSES[size];
   const altText = name !== null ? name : email !== null && email !== undefined ? email : "User";
   const initialSource = name !== null && name !== "" ? name : email !== null && email !== undefined ? email : null;
   const initial = initialSource !== null ? initialSource[0]!.toUpperCase() : null;
@@ -46,7 +49,7 @@ export function Avatar({
       <img
         src={picture}
         alt={altText}
-        className={`${sizeClass} rounded-full object-cover`}
+        className={cn(SIZE_CLASSES[size], "rounded-full object-cover", className)}
         referrerPolicy="no-referrer"
       />
     );
@@ -57,7 +60,7 @@ export function Avatar({
     <span
       aria-label={altText}
       role="img"
-      className={`${sizeClass} rounded-full ${fallbackClassName} font-bold flex items-center justify-center select-none`}
+      className={cn(SIZE_CLASSES[size], "rounded-full font-bold flex items-center justify-center select-none", fallbackClassName, className)}
     >
       {fallbackContent}
     </span>

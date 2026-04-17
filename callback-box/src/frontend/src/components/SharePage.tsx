@@ -213,17 +213,16 @@ export function SharePage() {
         </div>
 
         {/* Note input */}
-        <div className="mb-4">
-          <TextareaField
-            label="Note (optional)"
-            value={note}
-            onChange={setNote}
-            placeholder="Add a note about this link..."
-            rows={4}
-            inputClassName="resize-none text-sm"
-            disabled={shareState === "saving" || transcription.state === "recording"}
-          />
-        </div>
+        <TextareaField
+          label="Note (optional)"
+          value={note}
+          onChange={setNote}
+          placeholder="Add a note about this link..."
+          rows={4}
+          inputClassName="resize-none text-sm"
+          disabled={shareState === "saving" || transcription.state === "recording"}
+          className="mb-4"
+        />
 
         {/* Voice input */}
         <div className="mb-4 flex items-center gap-3">

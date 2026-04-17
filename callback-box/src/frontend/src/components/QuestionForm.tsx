@@ -53,28 +53,26 @@ export function QuestionForm({ question, onAnswered, sourcePath }: QuestionFormP
 
       <form onSubmit={handleSubmit}>
         {hasOptions && question.options !== undefined ? (
-          <div className="mb-4">
-            <RadioGroup
-              label="Answer"
-              name="answer"
-              variant="cards"
-              value={selectedOption}
-              onChange={setSelectedOption}
-              options={question.options.map((option) => ({ value: option, label: option }))}
-              error={error !== null ? error : undefined}
-            />
-          </div>
+          <RadioGroup
+            label="Answer"
+            name="answer"
+            variant="cards"
+            value={selectedOption}
+            onChange={setSelectedOption}
+            options={question.options.map((option) => ({ value: option, label: option }))}
+            error={error !== null ? error : undefined}
+            className="mb-4"
+          />
         ) : (
-          <div className="mb-4">
-            <TextareaField
-              label="Answer"
-              value={textAnswer}
-              onChange={setTextAnswer}
-              placeholder="Enter your answer..."
-              rows={3}
-              error={error !== null ? error : undefined}
-            />
-          </div>
+          <TextareaField
+            label="Answer"
+            value={textAnswer}
+            onChange={setTextAnswer}
+            placeholder="Enter your answer..."
+            rows={3}
+            error={error !== null ? error : undefined}
+            className="mb-4"
+          />
         )}
 
         <Button

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type RowGap = "none" | "xs" | "sm" | "md" | "lg";
 export type RowAlign = "start" | "center" | "end" | "baseline" | "stretch";
@@ -51,15 +52,13 @@ export function Row({
   wrap = false,
   className,
 }: RowProps) {
-  const classes = [
+  const classes = cn(
     "flex",
     GAP_CLASSES[gap],
     ALIGN_CLASSES[align],
     JUSTIFY_CLASSES[justify],
     wrap ? "flex-wrap" : "",
     className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  );
   return <div className={classes}>{children}</div>;
 }

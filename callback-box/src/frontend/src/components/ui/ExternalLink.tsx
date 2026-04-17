@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type ExternalLinkVariant = "inline" | "plain" | "button";
 
@@ -14,6 +15,8 @@ export interface ExternalLinkProps {
    * - `"button"`: styled as a secondary button (white background, border, padding). Use when the link stands alone as a call-to-action.
    */
   variant?: ExternalLinkVariant;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 function ExternalLinkIcon() {
@@ -38,14 +41,14 @@ const VARIANT_CLASSES: Record<ExternalLinkVariant, string> = {
     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-warm-300 rounded hover:bg-warm-50 text-warm-700",
 };
 
-export function ExternalLink({ href, children, hideIcon = false, title, variant = "inline" }: ExternalLinkProps) {
+export function ExternalLink({ href, children, hideIcon = false, title, variant = "inline", className }: ExternalLinkProps) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       title={title}
-      className={VARIANT_CLASSES[variant]}
+      className={cn(VARIANT_CLASSES[variant], className)}
     >
       <span>{children}</span>
       {hideIcon ? null : <ExternalLinkIcon />}

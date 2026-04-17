@@ -72,46 +72,42 @@ export function ProcessNewsForm({
       </div>
 
       {/* Batch size */}
-      <div className="mb-4">
-        <NumberField
-          label="Batch Size"
-          value={batchSize}
-          onChange={(n) => setBatchSize(n === null ? 10 : n)}
-          min={1}
-          max={50}
-          helper="items per phase"
-          inputClassName="max-w-[8rem]"
-        />
-      </div>
+      <NumberField
+        label="Batch Size"
+        value={batchSize}
+        onChange={(n) => setBatchSize(n === null ? 10 : n)}
+        min={1}
+        max={50}
+        helper="items per phase"
+        inputClassName="max-w-[8rem]"
+        className="mb-4"
+      />
 
       {/* Phase selection */}
-      <div className="mb-4">
-        <RadioGroup
-          label="Run Phase"
-          name="phase"
-          value={phase}
-          onChange={(v) => setPhase(v as Phase)}
-          options={[
-            { value: "all", label: "All phases (triage → analyze → brief)" },
-            { value: "triage", label: `Triage only (${inboxCount} inbox items)`, disabled: inboxCount === 0 },
-            { value: "analyze", label: `Analyze only (${inboxCount} inbox items)`, disabled: inboxCount === 0 },
-            { value: "brief", label: `Create brief (${poolCount} pool items)`, disabled: poolCount === 0 },
-          ]}
-        />
-      </div>
+      <RadioGroup
+        label="Run Phase"
+        name="phase"
+        value={phase}
+        onChange={(v) => setPhase(v as Phase)}
+        options={[
+          { value: "all", label: "All phases (triage → analyze → brief)" },
+          { value: "triage", label: `Triage only (${inboxCount} inbox items)`, disabled: inboxCount === 0 },
+          { value: "analyze", label: `Analyze only (${inboxCount} inbox items)`, disabled: inboxCount === 0 },
+          { value: "brief", label: `Create brief (${poolCount} pool items)`, disabled: poolCount === 0 },
+        ]}
+        className="mb-4"
+      />
 
       {/* Submit */}
       <div className="flex gap-2">
-        <div className="flex-1">
-          <Button type="button" intent="primary" fullWidth size="sm" onClick={handleSubmit}>
-            <span className="font-mono">
-              cb process-news
-              {phase === "triage" && " --triage-only"}
-              {phase === "analyze" && " --analyze-only"}
-              {phase === "brief" && " --brief-only"}
-            </span>
-          </Button>
-        </div>
+        <Button type="button" intent="primary" fullWidth size="sm" onClick={handleSubmit} className="flex-1">
+          <span className="font-mono">
+            cb process-news
+            {phase === "triage" && " --triage-only"}
+            {phase === "analyze" && " --analyze-only"}
+            {phase === "brief" && " --brief-only"}
+          </span>
+        </Button>
         <CancelButton onClick={onClose} />
       </div>
 

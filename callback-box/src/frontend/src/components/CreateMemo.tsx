@@ -47,18 +47,17 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
       <h3 className="text-lg font-bold text-warm-900 mb-4">New Memo</h3>
 
       <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <TextareaField
-            label="Memo content"
-            value={content}
-            onChange={setContent}
-            placeholder="What's on your mind?"
-            rows={6}
-            disabled={createMutation.isPending}
-            error={error !== null ? error : undefined}
-            inputClassName="resize-none"
-          />
-        </div>
+        <TextareaField
+          label="Memo content"
+          value={content}
+          onChange={setContent}
+          placeholder="What's on your mind?"
+          rows={6}
+          disabled={createMutation.isPending}
+          error={error !== null ? error : undefined}
+          inputClassName="resize-none"
+          className="mb-4"
+        />
 
         <Button
           type="submit"

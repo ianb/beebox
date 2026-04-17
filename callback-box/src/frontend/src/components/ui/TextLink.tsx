@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type TextLinkTone = "default" | "subtle";
 
@@ -30,13 +31,7 @@ export function TextLink({
   title,
   className,
 }: TextLinkProps) {
-  const classes = [
-    TONE_CLASSES[tone],
-    underline ? "hover:underline" : "",
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const classes = cn(TONE_CLASSES[tone], underline ? "hover:underline" : "", className);
   return (
     <Link to={to} onClick={onClick} title={title} className={classes}>
       {children}

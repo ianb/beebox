@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export interface AccordionProps {
   /** Content shown in the collapsed header row. */
@@ -13,6 +14,8 @@ export interface AccordionProps {
   /** Visual style. Default `"bordered"` — a boxed card. `"plain"` has no border/padding. */
   variant?: "bordered" | "plain";
   disabled?: boolean;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 function Chevron({ open }: { open: boolean }) {
@@ -34,6 +37,7 @@ export function Accordion({
   onOpenChange,
   variant = "bordered",
   disabled = false,
+  className,
 }: AccordionProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
@@ -46,8 +50,10 @@ export function Accordion({
     if (onOpenChange !== undefined) onOpenChange(next);
   };
 
-  const shellClass =
-    variant === "bordered" ? "border border-warm-200 rounded-lg overflow-hidden" : "";
+  const shellClass = cn(
+    variant === "bordered" ? "border border-warm-200 rounded-lg overflow-hidden" : "",
+    className,
+  );
   const buttonClass =
     variant === "bordered"
       ? "w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-warm-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-60 disabled:cursor-not-allowed"

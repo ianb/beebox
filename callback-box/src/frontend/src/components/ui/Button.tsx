@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type ButtonIntent =
   | "primary"
@@ -41,6 +42,8 @@ interface CommonButtonProps extends NativeButtonPassThrough {
   flash?: FlashSpec;
   /** `true` stretches the button to fill its parent's width. */
   fullWidth?: boolean;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 interface LabeledButtonProps extends CommonButtonProps {
@@ -97,9 +100,10 @@ interface ClassBuildOpts {
   size: ButtonSize;
   iconOnly: boolean;
   fullWidth: boolean;
+  extra: string | undefined;
 }
 
-function buildClasses({ intent, shape, size, iconOnly, fullWidth }: ClassBuildOpts): string {
+function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra }: ClassBuildOpts): string {
   const shapeClass = shape === "circle" ? "rounded-full" : "rounded";
   const sizeClass =
     shape === "circle"
@@ -108,9 +112,7 @@ function buildClasses({ intent, shape, size, iconOnly, fullWidth }: ClassBuildOp
         ? ICON_ONLY_RECT_SIZE[size]
         : RECT_SIZE[size];
   const widthClass = fullWidth && shape === "rect" ? "w-full" : "";
-  return [BASE_CLASSES, INTENT_CLASSES[intent], shapeClass, sizeClass, widthClass]
-    .filter(Boolean)
-    .join(" ");
+  return cn(BASE_CLASSES, INTENT_CLASSES[intent], shapeClass, sizeClass, widthClass, extra);
 }
 
 // ---------- spinner ----------
@@ -184,6 +186,7 @@ export function Button(props: ButtonProps) {
     fullWidth = false,
     icon,
     label,
+    className,
     ...rest
   } = props;
   const children = "children" in props ? props.children : undefined;
@@ -247,7 +250,7 @@ export function Button(props: ButtonProps) {
       aria-label={ariaLabel}
       aria-busy={loading || undefined}
       title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
-      className={buildClasses({ intent, shape, size, iconOnly, fullWidth })}
+      className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className })}
       onClick={handleClick}
     >
       {content}

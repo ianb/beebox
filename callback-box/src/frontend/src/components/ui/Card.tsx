@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type CardPadding = "none" | "sm" | "md" | "lg";
 export type CardBackground = "white" | "warm" | "transparent";
@@ -55,15 +56,13 @@ export function Card({
   shadow = false,
   className,
 }: CardProps) {
-  const classes = [
+  const classes = cn(
     PADDING_CLASSES[padding],
     BACKGROUND_CLASSES[background],
     BORDER_CLASSES[border],
     ROUNDING_CLASSES[rounding],
     shadow ? "shadow" : "",
     className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  );
   return <div className={classes}>{children}</div>;
 }

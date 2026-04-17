@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export interface ToggleProps {
   label: ReactNode;
@@ -10,6 +11,8 @@ export interface ToggleProps {
   id?: string;
   /** When true, the label sits to the right; otherwise the switch sits on the right. Default: switch-right. */
   labelPosition?: "left" | "right";
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 export function Toggle({
@@ -20,6 +23,7 @@ export function Toggle({
   disabled = false,
   id,
   labelPosition = "left",
+  className,
 }: ToggleProps) {
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
@@ -46,11 +50,18 @@ export function Toggle({
       onClick={() => {
         if (!disabled) onChange(!checked);
       }}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold ${trackClass} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+      className={cn(
+        "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+        trackClass,
+        disabled ? "cursor-not-allowed" : "cursor-pointer",
+      )}
     >
       <span
         aria-hidden="true"
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform translate-y-0.5 ${thumbClass}`}
+        className={cn(
+          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform translate-y-0.5",
+          thumbClass,
+        )}
       />
     </button>
   );
@@ -59,7 +70,7 @@ export function Toggle({
     <div className={disabled ? "opacity-60" : ""}>
       <label
         htmlFor={fieldId}
-        className={`text-sm font-medium text-warm-800 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+        className={cn("text-sm font-medium text-warm-800", disabled ? "cursor-not-allowed" : "cursor-pointer")}
       >
         {label}
       </label>
@@ -70,7 +81,7 @@ export function Toggle({
   );
 
   return (
-    <div className="flex items-start gap-3">
+    <div className={cn("flex items-start gap-3", className)}>
       {labelPosition === "left" ? (
         <>
           <div className="flex-1">{labelEl}</div>

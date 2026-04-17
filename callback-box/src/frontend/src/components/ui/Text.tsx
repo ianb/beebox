@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type TextSize = "xs" | "sm" | "base" | "lg" | "xl" | "2xl";
 export type TextTone = "default" | "muted" | "subtle" | "emphasis" | "strong" | "danger";
@@ -65,7 +66,7 @@ export function Text({
   className,
   title,
 }: TextProps) {
-  const classes = [
+  const classes = cn(
     TONE_CLASSES[tone],
     SIZE_CLASSES[size],
     WEIGHT_CLASSES[weight],
@@ -74,9 +75,7 @@ export function Text({
     truncate ? "truncate" : "",
     center ? "text-center" : "",
     className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  );
 
   if (as === "p") return <p className={classes} title={title}>{children}</p>;
   if (as === "div") return <div className={classes} title={title}>{children}</div>;

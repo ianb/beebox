@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
+import { cn } from "../../lib/cn";
 
 interface DropdownContextValue {
   close: () => void;
@@ -27,9 +28,11 @@ export interface DropdownProps {
   align?: DropdownAlign;
   /** Tailwind width class for the menu. Default `"w-48"`. */
   width?: string;
+  /** Outer-layout classes for the relative-positioned wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
-export function Dropdown({ trigger, children, align = "right", width = "w-48" }: DropdownProps) {
+export function Dropdown({ trigger, children, align = "right", width = "w-48", className }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -60,12 +63,12 @@ export function Dropdown({ trigger, children, align = "right", width = "w-48" }:
   };
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className={cn("relative", className)} ref={rootRef}>
       {trigger(triggerProps)}
       {open ? (
         <div
           role="menu"
-          className={`absolute top-full mt-1 ${alignClass} ${width} bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm`}
+          className={cn("absolute top-full mt-1 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm", alignClass, width)}
         >
           <DropdownContext.Provider value={ctxValue}>
             {children}

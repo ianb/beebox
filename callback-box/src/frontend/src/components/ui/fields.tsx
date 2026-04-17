@@ -1,21 +1,14 @@
 import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { cn } from "../../lib/cn";
 
 const INPUT_BASE = "w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold disabled:opacity-50 disabled:cursor-not-allowed";
 
 function inputClasses(error: boolean, extra?: string): string {
   const border = error ? "border-red-500" : "border-warm-400";
-  return `${INPUT_BASE} ${border}${extra ? ` ${extra}` : ""}`;
+  return cn(INPUT_BASE, border, extra);
 }
 
-function FieldShell({
-  id,
-  label,
-  hideLabel,
-  required,
-  error,
-  helper,
-  children,
-}: {
+interface FieldShellProps {
   id: string;
   label: ReactNode;
   hideLabel: boolean;
@@ -23,12 +16,15 @@ function FieldShell({
   error: ReactNode | undefined;
   helper: ReactNode | undefined;
   children: ReactNode;
-}) {
+  className?: string;
+}
+
+function FieldShell({ id, label, hideLabel, required, error, helper, children, className }: FieldShellProps) {
   const labelClass = hideLabel
     ? "sr-only"
     : "block text-sm font-medium text-warm-700 mb-1";
   return (
-    <div>
+    <div className={className}>
       <label htmlFor={id} className={labelClass}>
         {label}
         {required ? <span className="text-rose ml-0.5" aria-hidden="true">*</span> : null}
@@ -59,6 +55,8 @@ export interface TextFieldProps extends NativeInputPassThrough {
   helper?: ReactNode;
   id?: string;
   inputClassName?: string;
+  /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
   /** When true, the label is visually hidden but remains for screen readers. */
   hideLabel?: boolean;
 }
@@ -72,6 +70,7 @@ export function TextField({
   helper,
   id,
   inputClassName,
+  className,
   required = false,
   hideLabel = false,
   ...rest
@@ -80,7 +79,7 @@ export function TextField({
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
   return (
-    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper}>
+    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <input
         id={fieldId}
         type={type}
@@ -110,6 +109,8 @@ export interface TextareaFieldProps extends NativeTextareaPassThrough {
   helper?: ReactNode;
   id?: string;
   inputClassName?: string;
+  /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
   hideLabel?: boolean;
 }
 
@@ -121,6 +122,7 @@ export function TextareaField({
   helper,
   id,
   inputClassName,
+  className,
   required = false,
   rows = 4,
   hideLabel = false,
@@ -130,7 +132,7 @@ export function TextareaField({
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
   return (
-    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper}>
+    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <textarea
         id={fieldId}
         value={value}
@@ -156,6 +158,8 @@ export interface NumberFieldProps extends NativeInputPassThrough {
   helper?: ReactNode;
   id?: string;
   inputClassName?: string;
+  /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
   hideLabel?: boolean;
 }
 
@@ -167,6 +171,7 @@ export function NumberField({
   helper,
   id,
   inputClassName,
+  className,
   required = false,
   hideLabel = false,
   ...rest
@@ -175,7 +180,7 @@ export function NumberField({
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
   return (
-    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper}>
+    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <input
         id={fieldId}
         type="number"
@@ -207,6 +212,8 @@ export interface CheckboxFieldProps extends NativeCheckboxPassThrough {
   error?: ReactNode;
   helper?: ReactNode;
   id?: string;
+  /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 export function CheckboxField({
@@ -218,6 +225,7 @@ export function CheckboxField({
   id,
   required = false,
   disabled,
+  className,
   ...rest
 }: CheckboxFieldProps) {
   const autoId = useId();
@@ -227,7 +235,7 @@ export function CheckboxField({
     ? "flex items-center gap-2 text-sm text-warm-700 opacity-50"
     : "flex items-center gap-2 text-sm text-warm-700 cursor-pointer";
   return (
-    <div>
+    <div className={className}>
       <label htmlFor={fieldId} className={labelClass}>
         <input
           id={fieldId}
@@ -276,6 +284,8 @@ export interface SelectFieldProps extends NativeSelectPassThrough {
   helper?: ReactNode;
   id?: string;
   inputClassName?: string;
+  /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
   hideLabel?: boolean;
 }
 
@@ -288,6 +298,7 @@ export function SelectField({
   helper,
   id,
   inputClassName,
+  className,
   required = false,
   hideLabel = false,
   ...rest
@@ -296,7 +307,7 @@ export function SelectField({
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
   return (
-    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper}>
+    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <select
         id={fieldId}
         value={value}
@@ -339,6 +350,8 @@ export interface RadioGroupProps {
   required?: boolean;
   id?: string;
   disabled?: boolean;
+  /** Outer-layout classes on the group wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 export function RadioGroup({
@@ -353,6 +366,7 @@ export function RadioGroup({
   required = false,
   id,
   disabled = false,
+  className,
 }: RadioGroupProps) {
   const autoId = useId();
   const groupId = id !== undefined ? id : autoId;
@@ -365,6 +379,7 @@ export function RadioGroup({
       aria-labelledby={`${groupId}-label`}
       aria-invalid={hasError ? true : undefined}
       aria-required={required ? true : undefined}
+      className={className}
     >
       <div id={`${groupId}-label`} className="block text-sm font-medium text-warm-700 mb-1">
         {label}

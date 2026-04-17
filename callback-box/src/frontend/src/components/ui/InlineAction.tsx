@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 export type InlineActionIntent = "emphatic" | "subtle" | "danger";
 
@@ -14,6 +15,8 @@ export interface InlineActionProps {
   disabled?: boolean;
   title?: string;
   flash?: FlashSpec;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
 }
 
 const INTENT_CLASSES: Record<InlineActionIntent, string> = {
@@ -29,6 +32,7 @@ export function InlineAction({
   disabled = false,
   title,
   flash,
+  className,
 }: InlineActionProps) {
   const [pending, setPending] = useState(false);
   const [flashing, setFlashing] = useState(false);
@@ -66,7 +70,11 @@ export function InlineAction({
       onClick={handleClick}
       disabled={isBusy}
       title={title}
-      className={`${INTENT_CLASSES[intent]} cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded-sm`}
+      className={cn(
+        INTENT_CLASSES[intent],
+        "cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded-sm",
+        className,
+      )}
     >
       {content}
     </button>

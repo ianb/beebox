@@ -16,9 +16,7 @@ export function CardViewPanel({ cardPath, backHref, backLabel = "\u2190 Back to 
   return (
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-4xl mx-auto py-8 px-4">
-        <div className="mb-4">
-          <TextLink to={backHref} underline={false}>{backLabel}</TextLink>
-        </div>
+        <TextLink to={backHref} underline={false} className="block mb-4">{backLabel}</TextLink>
         <div className="bg-white rounded-lg shadow">
           <FileView path={cardPath} />
         </div>
