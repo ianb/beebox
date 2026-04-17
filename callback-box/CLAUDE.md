@@ -120,8 +120,11 @@ Keep additions concise. One line preventing a mistake is better than a paragraph
 | Connectors | `docs/connectors.md` |
 | Procedures | `docs/procedure-implementation.md` |
 | Deployment | `deploy/README.md` |
+| Server operations | `docs/server-operations.md` |
 | Adding a box | `docs/adding-a-box.md` |
 | Client debug log | `docs/client-debug-log.md` |
+| SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
+| Calendar integration plan | `docs/calendar-plan.md` |
 | Feature ideas | `docs/ideas.md` |
 
 @CONVENTIONS.md

@@ -19,14 +19,22 @@ The frontend captures browser console errors/warnings and forwards them to the s
 # SSH to server and read the log
 ssh root@$(cat deploy/server-ip) \
   cat /home/callback/boxes/<box-name>/.callback-box/client-debug.log
+```
 
-# Or use the API (from anywhere):
-curl https://box.example.com/<box-name>/api/debug-log | python3 -m json.tool
+**API endpoint** — `/api/debug-log` returns the in-memory ring buffer. In production it sits behind Google OAuth cookie auth, so `curl` without a browser cookie is rejected unless you use the diagnostic-key bypass:
+
+```bash
+# With CB_DIAG_API_KEY set in /home/callback/.env:
+curl -H "Authorization: Bearer $CB_DIAG_API_KEY" \
+  https://box.example.com/<box-name>/api/debug-log | python3 -m json.tool
 
 # Just the errors:
-curl -s https://box.example.com/<box-name>/api/debug-log | \
+curl -s -H "Authorization: Bearer $CB_DIAG_API_KEY" \
+  https://box.example.com/<box-name>/api/debug-log | \
   python3 -c "import sys,json; [print(e['ts'],e['message']) for e in json.load(sys.stdin)['entries'] if e['level']=='error']"
 ```
+
+The bypass applies only to GET `/api/debug-log` and `/api/trpc/health.check`. On localhost (no `GOOGLE_OAUTH_CLIENT_ID` set) all auth is disabled and curl works without the header.
 
 The log file is plain text, one line per entry: `2024-01-15T10:00:00.000Z [error] message`. It auto-truncates at ~100KB.
 

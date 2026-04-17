@@ -3,8 +3,16 @@
  *
  * iOS requires audio playback to originate from a user gesture.
  * The workaround: pre-allocate an HTMLAudioElement and play silence
- * during a gesture, then reuse that same element for all subsequent playback.
- * Based on the proven approach from memory-atlas.
+ * during a gesture, then reuse that same element for all subsequent
+ * playback (earcons + TTS) by swapping `.src`. Based on the proven
+ * approach from memory-atlas.
+ *
+ * Two constraints that bite if violated:
+ *   - `unlockAudioContext()` MUST be called in the synchronous call
+ *     stack of the click/tap handler — not after an `await`, not from
+ *     a microtask. Otherwise iOS treats the call as non-gesture.
+ *   - The Web Audio `AudioContext` API does NOT reliably work for
+ *     this on iOS; use the HTMLAudioElement approach here.
  */
 
 let sharedAudio: HTMLAudioElement | null = null;

@@ -168,3 +168,20 @@ Consider replacing card XML with Markdown files that have rich validated frontma
 Conventions for inline annotations could handle things like source attribution, status markers, or cross-references within the Markdown body. A `type` field in the frontmatter (or the file extension) would determine the schema, and could even indicate a non-Markdown content type for the body if needed.
 
 Benefits: agents already write Markdown fluently, diffs are cleaner, easier to read/edit by hand, no need for the cardworks XML library. Tradeoffs: XML's strict structure prevents malformed cards — Markdown frontmatter is more loosely coupled from the body content.
+
+
+### Agent "give up" mechanism
+
+When a Claude Code agent can't complete a task, let it write `.callback-box/agent-failure.json` with `{ reason, phase, sessionId }` before exiting. The caller (wakeup cycle, procedure engine, job dispatcher) detects the marker, reverts any uncommitted changes in the box, logs the failure, and moves on. Prevents half-finished work from getting committed and masks "silent success" failures where the agent bailed without indicating it.
+
+### Chat assistant as job dispatcher
+
+The chat frontend's system prompt should instruct the assistant to *dispatch jobs* to start tasks rather than executing them synchronously inside the chat turn. Plus give the assistant CLI query tools + docs to check: what's currently running, what's scheduled, when something last ran. This makes long-running work feel responsive in chat (assistant reports "I've queued X", user can ask "what's running?") and keeps the chat session from holding resources.
+
+### Voice keyword for photo capture
+
+Add a keyword trigger during voice input (especially the Dropbox long-recording mode) that snaps a photo from the camera mid-recording. Useful for annotating voice notes with visual context — "take a picture" while dictating about something visual produces a linked photo + transcript pair.
+
+### Image card EXIF date extraction
+
+When processing image cards, prefer the date from EXIF `DateTimeOriginal` over file timestamps. File mtime/ctime are unreliable after syncing/copying (common with photo workflows) — EXIF is the source of truth for when the photo was taken.
