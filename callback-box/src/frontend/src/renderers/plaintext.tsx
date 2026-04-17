@@ -12,11 +12,7 @@ import { Text } from "../components/ui/Text";
 
 function PlaintextRenderer({ data }: RendererProps) {
   if (data.content === undefined) {
-    return (
-      <div className="p-4">
-        <Text tone="subtle">No text content available</Text>
-      </div>
-    );
+    return <Text as="div" tone="subtle" className="p-4">No text content available</Text>;
   }
   return (
     <div className="p-4">

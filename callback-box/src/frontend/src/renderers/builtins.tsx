@@ -22,11 +22,7 @@ function XmlRenderer({ data }: RendererProps) {
   }, [data.xml]);
 
   if (!data.xml) {
-    return (
-      <div className="p-4">
-        <Text tone="subtle">No XML content</Text>
-      </div>
-    );
+    return <Text as="div" tone="subtle" className="p-4">No XML content</Text>;
   }
 
   return (
@@ -41,11 +37,7 @@ function XmlRenderer({ data }: RendererProps) {
 /** Structured card tree view */
 function TreeRenderer({ data }: RendererProps) {
   if (!data.element) {
-    return (
-      <div className="p-4">
-        <Text tone="subtle">No element data</Text>
-      </div>
-    );
+    return <Text as="div" tone="subtle" className="p-4">No element data</Text>;
   }
   return <CardTreeView element={data.element} path={data.path} />;
 }

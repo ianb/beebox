@@ -5,6 +5,7 @@
 
 import { FileView } from "./FileView";
 import { TextLink } from "./ui/TextLink";
+import { Card } from "./ui/Card";
 
 export interface CardViewPanelProps {
   cardPath: string;
@@ -17,9 +18,9 @@ export function CardViewPanel({ cardPath, backHref, backLabel = "\u2190 Back to 
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-4xl mx-auto py-8 px-4">
         <TextLink to={backHref} underline={false} className="block mb-4">{backLabel}</TextLink>
-        <div className="bg-white rounded-lg shadow">
+        <Card padding="none" shadow>
           <FileView path={cardPath} />
-        </div>
+        </Card>
       </div>
     </div>
   );

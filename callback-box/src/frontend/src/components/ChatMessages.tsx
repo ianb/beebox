@@ -634,11 +634,7 @@ function imageBlockSrc(block: SessionContentBlock): string | null {
  * Thumbnail + lightbox for an inline image in a user message bubble.
  */
 function MessageImage({ src, alt }: { src: string; alt: string }) {
-  return (
-    <div className="my-1">
-      <Image src={src} alt={alt} size="sm" lightbox bordered />
-    </div>
-  );
+  return <Image src={src} alt={alt} size="sm" lightbox bordered className="my-1" />;
 }
 
 /**

@@ -8,11 +8,7 @@ import { registerFileRenderer, type RendererProps } from "./index";
 
 function MarkdownRenderer({ data }: RendererProps) {
   if (data.content === undefined) {
-    return (
-      <div className="p-4">
-        <Text tone="subtle">No content</Text>
-      </div>
-    );
+    return <Text as="div" tone="subtle" className="p-4">No content</Text>;
   }
   return (
     <div className="p-4">
