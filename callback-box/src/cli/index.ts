@@ -48,6 +48,7 @@ import {
   formatCommand,
   usageCommand,
   driveCommand,
+  chatCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -98,6 +99,7 @@ program.addCommand(lsCommand);
 program.addCommand(renderCommand);
 program.addCommand(formatCommand);
 program.addCommand(usageCommand);
+program.addCommand(chatCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

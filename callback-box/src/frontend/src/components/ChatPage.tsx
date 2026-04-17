@@ -28,13 +28,14 @@ import { sendSound, tick, recordingStart, alarm } from "../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "./VoiceRecorder";
 import { DebugLogPanel } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownContent, groupMessages, type OnZoomView } from "./ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, type OnZoomView } from "./ChatMessages";
 import { FileView } from "./FileView";
 import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
 import { CloseButton } from "./ui/CloseButton";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
+import { RecentFilesButton } from "./RecentFilesButton";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
@@ -698,6 +699,8 @@ function VirtualizedMessageList({
                 const group = groups[groupIndex];
                 if (group.type === "compaction") {
                   return <CompactionMessage entries={group.entries} />;
+                } else if (group.type === "self-note") {
+                  return <SelfNoteMessage note={group.note} />;
                 } else if (group.type === "user") {
                   return <UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} />;
                 } else {
@@ -1313,6 +1316,13 @@ function InteractiveChat() {
       {/* Header with debug controls */}
       <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
+        <RecentFilesButton
+          entries={messages}
+          onPanel={(summary) => onZoomView({
+            target: { path: summary.path, viewer: null, params: {}, zoom: false },
+            label: summary.title,
+          })}
+        />
         <SessionListButton />
         <NewSessionButton onClick={handleNewSession} />
         <ChatDebugMenu

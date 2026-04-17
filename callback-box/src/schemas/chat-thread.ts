@@ -79,10 +79,10 @@ export const ChatSeen = element("seen", {
  * <chat-thread chat-id="-1001234567890" connector="telegram">
  * <description>Family Group</description>
  * <participants>
- * <person ref="people/Ian_Bicking" />
+ * <person ref="people/Jane_Doe" />
  * <person ref="people/Alice" />
  * </participants>
- * <message id="1" sender="Ian Bicking" sender-id="8239678071" time="2026-02-26T19:35:19Z">Hi</message>
+ * <message id="1" sender="Jane Doe" sender-id="8239678071" time="2026-02-26T19:35:19Z">Hi</message>
  * <message sender="agent" sent="2026-02-26T19:36:00Z">Hey! I'm set up and listening.</message>
  * <message id="2" sender="Alice" sender-id="12345" time="2026-02-26T20:00:00Z">Can someone pick me up at 3?</message>
  * <seen callback-in="30m">Check if anyone responded about picking Alice up.</seen>

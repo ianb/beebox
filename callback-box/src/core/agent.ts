@@ -17,6 +17,7 @@ import { mkdirSync } from "node:fs";
 import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
+import { buildScriptEnv } from "./script-env.js";
 
 // ─── Agent interface ─────────────────────────────────────────────────
 
@@ -430,7 +431,7 @@ async function runAgent(options: AgentOptions): Promise<AgentResult> {
       ? startPromptLogger(boxRoot, sessionId)
       : Promise.resolve(null);
 
-    loggerSetup.then((logger) => {
+    loggerSetup.then(async (logger) => {
       if (shouldLog && logger) {
         onOutput?.(`Prompt logging enabled → .callback-box/logs/${sessionId}.log\n`);
       } else if (shouldLog) {
@@ -438,13 +439,12 @@ async function runAgent(options: AgentOptions): Promise<AgentResult> {
       }
 
       // Add callback-box bin directory to PATH so cb commands are available
-      const env: Record<string, string | undefined> = {
-        ...process.env,
+      const env = await buildScriptEnv(boxRoot, {
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
         // Allow nested Claude Code sessions (e.g., when cb is invoked from
         // within an existing Claude Code session)
         CLAUDECODE: undefined,
-      };
+      });
 
       // Route through the logging proxy if active
       if (logger) {

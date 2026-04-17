@@ -15,6 +15,7 @@ import { createRequire } from "node:module";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { stageAll, commit, getStatus } from "../lib/git.js";
+import { buildScriptEnv } from "../../core/script-env.js";
 
 const require = createRequire(import.meta.url);
 
@@ -102,15 +103,15 @@ interface RunTrickOptions {
  * Run a trick as a subprocess via tsx.
  * Returns the exit code.
  */
-function runTrick(opts: RunTrickOptions): Promise<number> {
+async function runTrick(opts: RunTrickOptions): Promise<number> {
+  const env = await buildScriptEnv(opts.boxRoot, {
+    CB_BOX_ROOT: opts.boxRoot,
+    CB_TRICK_NAME: opts.name,
+  });
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [resolveTsx(), opts.entryPoint, ...opts.args], {
       cwd: path.join(opts.boxRoot, "tricks"),
-      env: {
-        ...process.env,
-        CB_BOX_ROOT: opts.boxRoot,
-        CB_TRICK_NAME: opts.name,
-      },
+      env,
       stdio: "inherit",
     });
 

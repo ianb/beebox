@@ -27,6 +27,7 @@ import {
 } from "../../core/schedule-state.js";
 import { handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../lib/git.js";
+import { buildScriptEnv } from "../../core/script-env.js";
 
 const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h default pruning window
@@ -236,11 +237,14 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     const wallStart = Date.now();
     const monoStart = performance.now();
     try {
+      const scriptEnv = await buildScriptEnv(boxRoot, {
+        CB_TRIGGERED_BY: "schedule",
+      });
       await execWithTimeout(parsed.runs, {
         cwd: boxRoot,
         stdio: options.quiet ? "ignore" : "inherit",
         timeout: SCRIPT_TIMEOUT,
-        env: { ...process.env, CB_TRIGGERED_BY: "schedule" },
+        env: scriptEnv,
       });
 
       const wallElapsed = Date.now() - wallStart;
@@ -251,6 +255,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       state.lastRun = now.toISOString();
       state.lastResult = "success";
       state.lastError = null;
+      state.lastDurationMs = durationMs;
       state.runCount++;
       const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
       recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
@@ -303,6 +308,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       state.lastRun = now.toISOString();
       state.lastResult = "failure";
       state.lastError = (err as Error).message;
+      state.lastDurationMs = durationMs;
       state.runCount++;
       const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
       recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });

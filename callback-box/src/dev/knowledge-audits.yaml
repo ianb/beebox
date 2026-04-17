@@ -173,6 +173,31 @@ tests:
       to discover --since and --dialogue-only rather than guessing flags.
       A good answer lands on something like "cb session --since 1d --dialogue-only".
 
+  - id: cb-chat-self-note-exists
+    prompt: "You are running as a scheduled sub-agent (daily rumination, weekly research, etc.). After you've done your work and committed, how do you leave a short note in the live chat session so the boxholder sees what you did when they next revisit chat?"
+    expected_level: knows_directly
+    watch_for: "Names cb chat self-note as the mechanism — not a journal file, not a new card, not a commit message alone"
+    correct_contains: ["cb chat self-note"]
+    tags: [cli, chat]
+    notes: >
+      The agent should know cb chat self-note exists for precisely this
+      scheduled-agent handoff case. Failure modes: describing a journal file
+      in store/, creating a memo card in box/inbox/, relying on the commit
+      message alone (which doesn't surface in chat), or posting via the
+      regular chat endpoint (which would trigger a full conversational turn).
+
+  - id: cb-chat-self-note-env
+    prompt: "What environment variables does cb chat self-note require, and where do they come from?"
+    expected_level: knows_about
+    watch_for: "Names CB_BOX_NAME and CB_SERVER_URL; knows they're set by the scheduler/script-runner from config/box.json publicUrl, not hardcoded or defaulted"
+    correct_contains_any: ["CB_BOX_NAME", "CB_SERVER_URL"]
+    tags: [cli, chat]
+    notes: >
+      Self-note intentionally has no default server/box — the caller must
+      inherit them from the spawning harness. Scheduled scripts get them
+      automatically via buildScriptEnv in src/core/script-env.ts, which
+      reads publicUrl from config/box.json.
+
   # === Image Analysis ===
 
   - id: describe-images-command

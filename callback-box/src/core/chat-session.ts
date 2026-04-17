@@ -19,6 +19,7 @@ import {
 } from "../cli/lib/session.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { generateDocs } from "./generate-docs.js";
+import { buildScriptEnv } from "./script-env.js";
 
 // Path to the cb-claude wrapper that auto-adds plugins
 const __dirname = import.meta.dirname;
@@ -146,9 +147,22 @@ To show a file inline in the chat, use a view link: \`[label](view:<file-path>)\
 
 For custom interactive dashboards, you can create \`.tsx\` view components — see \`docs/generated/views.md\` for the full API. Do NOT use \`view:\` links for custom views; those links are for file paths only.
 
+SELF-NOTES:
+
+User-position messages wrapped in \`<self-note>\` tags are records of background agent activity — usually a scheduled sub-agent run (daily rumination, weekly research, etc.). No one typed or spoke them; they are not user input. They exist so you're aware of what background work has happened and so the session transcript carries a trail of it.
+
+The user is not present when a self-note arrives, and will not see an immediate reply. Any text you produce lands in the transcript as an asynchronous message for them to read when they next revisit chat — not a conversational response.
+
+Given that:
+- Default behavior is to produce nothing. A self-note is a record, not a request.
+- Tool use can be appropriate (read a file, update state, create a follow-up job, set a schedule) when the note genuinely calls for it.
+- Write text only if there's something worth surfacing when the user next looks at the chat — and write it as a message addressed to them later, not a reply in the moment.
+
+Attributes: \`ref\` points to the script/procedure that produced the note; \`commit\` is the git commit with the full work. Use \`git show <commit>\` if you need details.
+
 SCHEDULING:
 To set a timer or reminder, include a \`<schedule>\` tag in your response text:
-  \`<schedule in="20m" label="rice timer" alarm="1" announce="check rice timer">Tell Ian to check the rice</schedule>\`
+  \`<schedule in="20m" label="rice timer" alarm="1" announce="check rice timer">Tell the user to check the rice</schedule>\`
 
 The tag attributes:
 - \`in\` — duration until firing (e.g. "5m", "1h", "30s"). Precision is to the nearest minute.
@@ -349,11 +363,10 @@ export class ChatSession extends EventEmitter {
 
     log("start", "Spawning cb-claude with stream-json mode");
 
-    const env: Record<string, string | undefined> = {
-      ...process.env,
+    const env = await buildScriptEnv(this.boxRoot, {
       PATH: `${binDir}:${process.env.PATH ?? ""}`,
       CLAUDECODE: undefined,
-    };
+    });
 
     this.proc = spawn(cbClaudePath, args, {
       cwd: this.boxRoot,

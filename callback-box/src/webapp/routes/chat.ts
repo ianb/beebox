@@ -39,6 +39,21 @@ interface SendBody {
   images?: ChatImage[];
 }
 
+interface SelfNoteBody {
+  body: string;
+  ref?: string;
+  commit?: string;
+  session?: string;
+}
+
+function escapeXmlAttr(v: string): string {
+  return v
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 /** Soft cap on total base64 image payload per request (25 MB). */
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
@@ -302,6 +317,49 @@ export async function registerChatRoutes(
           resolve();
         });
       });
+    }
+  );
+
+  // POST /api/chat/self-note - Post a self-note (agent-authored record) to
+  // the live chat session. Enqueues a user-position message wrapped in
+  // <self-note> so it lands in the session transcript; Claude sees the tag
+  // and knows not to treat it as conversational input.
+  server.post<{ Body: SelfNoteBody }>(
+    "/api/chat/self-note",
+    async (request, reply) => {
+      const { body, ref, commit, session } = request.body ?? {};
+
+      if (!body || !body.trim()) {
+        return reply.status(400).send({ error: "body is required" });
+      }
+
+      if (session) {
+        const liveId = chatSession.getSessionId();
+        if (liveId !== session) {
+          return reply.status(404).send({
+            error: liveId
+              ? `session "${session}" is not the live chat session (live: "${liveId}")`
+              : `session "${session}" not live (no chat session active yet)`,
+          });
+        }
+      }
+
+      const attrs: string[] = [];
+      if (ref) attrs.push(`ref="${escapeXmlAttr(ref)}"`);
+      if (commit) attrs.push(`commit="${escapeXmlAttr(commit)}"`);
+      const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+      const wrapped = `<self-note${attrStr}>\n${body.trim()}\n</self-note>`;
+
+      if (chatSession.isBusy()) {
+        chatSession.enqueue({ text: wrapped });
+      } else {
+        chatSession.send({ text: wrapped }).catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error("[self-note] send failed:", msg);
+        });
+      }
+
+      return reply.send({ ok: true, sessionId: chatSession.getSessionId() });
     }
   );
 

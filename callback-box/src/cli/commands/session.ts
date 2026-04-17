@@ -15,6 +15,7 @@ import {
   getSessionLogPath,
   getSessionMetadata,
   listSessions,
+  parseSelfNote,
   parseSessionLog,
   stripSpeechWrappers,
   type SessionEntry,
@@ -66,6 +67,38 @@ interface RenderOptions {
 }
 
 /**
+ * If this entry is an agent-authored self-note (user-position text wrapped
+ * in `<self-note>...</self-note>`), return the parsed note info. Otherwise
+ * null.
+ */
+function getSelfNote(entry: SessionEntry): ReturnType<typeof parseSelfNote> {
+  if (entry.type !== "user") return null;
+  for (const block of entry.content) {
+    if (block.type !== "text") continue;
+    const note = parseSelfNote(block.text || "");
+    if (note) return note;
+  }
+  return null;
+}
+
+function renderSelfNote(
+  note: NonNullable<ReturnType<typeof parseSelfNote>>,
+  options: RenderOptions
+): void {
+  const separator = "\u2500".repeat(40);
+  console.log(`\u2500\u2500 Self-note ${separator}`);
+  if (!options.dialogueOnly) {
+    if (note.ref) console.log(`  ref:    ${note.ref}`);
+    if (note.commit) console.log(`  commit: ${note.commit}`);
+    if (note.ref || note.commit) console.log();
+  }
+  for (const line of note.body.split("\n")) {
+    console.log(`  ${line}`);
+  }
+  console.log();
+}
+
+/**
  * Compute the printable lines for one session entry. Returns empty array when
  * the entry would produce no output — caller suppresses the speaker header in
  * that case, which prevents empty `── Assistant ──` blocks.
@@ -107,6 +140,12 @@ function renderEntries(entries: SessionEntry[], options: RenderOptions): void {
   const separator = "\u2500".repeat(40);
 
   for (const entry of entries) {
+    const note = getSelfNote(entry);
+    if (note) {
+      renderSelfNote(note, options);
+      continue;
+    }
+
     const lines = computeEntryLines(entry, options);
     if (lines.length === 0) continue;
 

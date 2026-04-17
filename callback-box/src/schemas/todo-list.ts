@@ -57,7 +57,7 @@ export type TodoItem = z.infer<typeof TodoItemElement>;
  * ```xml
  * <todo-list name="Kitchen Remodel">
  * <details>Renovating the kitchen, started getting quotes in February</details>
- * <agent-notes>Ian prefers local contractors</agent-notes>
+ * <agent-notes>Boxholder prefers local contractors</agent-notes>
  * <item name="Get cabinet quotes" status="done" completed="2026-03-01T00:00:00Z">
  * <details>Called three places, went with HomeDepot</details>
  * </item>
@@ -107,7 +107,7 @@ Active todo lists live in \`store/todos/\`. Filename: \`List_Name.todo-list.card
 
 - Keep item names short and actionable
 - Use details for supporting info, not the item name
-- Use agent-notes for context the agent should remember (e.g., "Ian mentioned this during the Feb 22 voice memo")
+- Use agent-notes for context the agent should remember (e.g., "Boxholder mentioned this during the Feb 22 voice memo")
 - Don't create separate todo lists for single items — add to an existing relevant list if one exists
 - When extracting todos from voice memos or other inputs, group related items into lists by topic`,
 });

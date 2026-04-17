@@ -16,6 +16,49 @@ import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
 
 /**
+ * Parse a self-note block out of user-position text. Self-notes are
+ * agent-authored messages wrapped in `<self-note ref="..." commit="...">...</self-note>`
+ * (see `cb chat self-note`). Returns null if the text is not a self-note.
+ */
+interface SelfNoteInfo {
+  ref: string | null;
+  commit: string | null;
+  body: string;
+}
+
+function decodeXmlAttr(v: string): string {
+  return v
+    .replace(/&quot;/g, "\"")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+function parseSelfNote(text: string): SelfNoteInfo | null {
+  const match = text.trim().match(/^<self-note\b([^>]*)>([\S\s]*?)<\/self-note>\s*$/);
+  if (!match) return null;
+  const attrs = match[1] || "";
+  const body = (match[2] || "").trim();
+  const refMatch = attrs.match(/\bref="([^"]*)"/);
+  const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
+  return {
+    ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
+    commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
+    body,
+  };
+}
+
+function entrySelfNote(entry: SessionEntry): SelfNoteInfo | null {
+  if (entry.type !== "user") return null;
+  for (const block of entry.content) {
+    if (block.type !== "text") continue;
+    const note = parseSelfNote(block.text || "");
+    if (note) return note;
+  }
+  return null;
+}
+
+/**
  * Render user message text with keyword pills (e.g. send-message).
  */
 /**
@@ -499,9 +542,35 @@ function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components
         }
         return <FileView path={target.path} mode="chat" rendererName={target.viewer} />;
       }
+      const isExternal = typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
+      if (isExternal) {
+        return (
+          <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+            {children}
+            <ExternalLinkIndicator />
+          </a>
+        );
+      }
       return <a href={href} {...props}>{children}</a>;
     },
   };
+}
+
+function ExternalLinkIndicator() {
+  return (
+    <svg
+      className="inline-block w-[0.85em] h-[0.85em] ml-0.5 align-[-0.1em] opacity-70"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3" />
+    </svg>
+  );
 }
 
 /**
@@ -523,16 +592,27 @@ function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZo
 /**
  * Group consecutive messages by role for merged display.
  * Compaction entries always get their own group (never merged).
+ * Self-notes (agent-authored user-position entries) also get their own
+ * group — they should not merge with human-typed messages.
  */
-export function groupMessages(entries: SessionEntry[]): Array<{ type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }> {
-  const groups: Array<{ type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }> = [];
+export type MessageGroup =
+  | { type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }
+  | { type: "self-note"; entries: SessionEntry[]; note: SelfNoteInfo };
+
+export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
+  const groups: MessageGroup[] = [];
   for (const entry of entries) {
     if (entry.type === "compaction") {
       groups.push({ type: "compaction", entries: [entry] });
       continue;
     }
+    const note = entrySelfNote(entry);
+    if (note) {
+      groups.push({ type: "self-note", entries: [entry], note });
+      continue;
+    }
     const last = groups[groups.length - 1];
-    if (last && last.type === entry.type) {
+    if (last && (last.type === "user" || last.type === "assistant") && last.type === entry.type) {
       last.entries.push(entry);
     } else {
       groups.push({ type: entry.type, entries: [entry] });
@@ -850,6 +930,33 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
           </div>
         ) : null}
       </details>
+    </div>
+  );
+}
+
+/**
+ * Render an agent-authored self-note. Distinct from user bubbles — it's
+ * not conversational content; it's a background activity record.
+ */
+export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
+  const commitShort = note.commit ? note.commit.substring(0, 7) : null;
+  return (
+    <div className="py-2 px-3 sm:px-6">
+      <div className="mx-auto max-w-2xl border-l-2 border-warm-300 bg-warm-50/60 rounded-r px-3 py-2 text-sm text-warm-700">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-warm-500 mb-1">
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M9 12h6M9 16h6M9 8h6M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3-7 3z" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>self-note</span>
+          {note.ref ? (
+            <span className="normal-case tracking-normal text-warm-500 truncate">· {note.ref}</span>
+          ) : null}
+          {commitShort ? (
+            <span className="normal-case tracking-normal text-warm-500 font-mono">· {commitShort}</span>
+          ) : null}
+        </div>
+        <div className="whitespace-pre-wrap break-words">{note.body}</div>
+      </div>
     </div>
   );
 }

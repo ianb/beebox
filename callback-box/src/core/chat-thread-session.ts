@@ -14,6 +14,7 @@ import * as readline from "node:readline";
 import * as path from "node:path";
 import type { ChatMessage } from "./chat-session.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
+import { buildScriptEnv } from "./script-env.js";
 
 // Path to the cb-claude wrapper that auto-adds plugins
 const __dirname = import.meta.dirname;
@@ -136,11 +137,10 @@ export class ChatThreadSession extends EventEmitter {
 
     log("start", `Spawning for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
-    const env: Record<string, string | undefined> = {
-      ...process.env,
+    const env = await buildScriptEnv(this.boxRoot, {
       PATH: `${binDir}:${process.env.PATH ?? ""}`,
       CLAUDECODE: undefined,
-    };
+    });
 
     this.proc = spawn(cbClaudePath, args, {
       cwd: this.boxRoot,

@@ -13,6 +13,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
+import { buildScriptEnv } from "../script-env.js";
 
 /** Resolve the `cb` binary path, matching the pattern in scheduler.ts */
 function resolveCbPath(): string {
@@ -28,11 +29,12 @@ async function executeWakeup(
   _args: Record<string, unknown>
 ): Promise<CommandResult> {
   const cbPath = resolveCbPath();
+  const env = await buildScriptEnv(ctx.boxRoot, { CB_TRIGGERED_BY: "webapp" });
 
   return new Promise((resolve) => {
     const child = spawn(cbPath, ["wakeup"], {
       cwd: ctx.boxRoot,
-      env: { ...process.env, CB_TRIGGERED_BY: "webapp" },
+      env,
       stdio: ["ignore", "pipe", "pipe"],
     });
 

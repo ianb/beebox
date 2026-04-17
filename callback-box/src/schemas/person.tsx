@@ -60,7 +60,7 @@ They live at \`people/First_Last.person.card\`. The filename uses the person's n
 **Structure:**
 - \`<name>\` — Full name. Required.
 - \`<called>\` — Alias or nickname. Multiple allowed. Include if the boxholder uses this name (e.g., "Dad", "Mom").
-- \`<role>\` — Relationship or function (e.g., "Ledger subject — Ian's father", "Financial advisor").
+- \`<role>\` — Relationship or function (e.g., "Ledger subject — boxholder's father", "Financial advisor").
 - \`<contact>\` — Freeform contact info (phone, email, address).
 - \`<notes>\` — Freeform context.
 - \`status\` attr — \`active\` (default), \`inactive\`, or \`archived\`.

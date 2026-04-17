@@ -8,14 +8,17 @@
  */
 
 import { spawn } from "node:child_process";
+import { buildScriptEnv } from "../script-env.js";
 
 /**
  * Run `cb wakeup` as a subprocess to sync external sources.
  */
 export async function runSync(boxRoot: string, onLog?: (text: string) => void): Promise<boolean> {
+  const env = await buildScriptEnv(boxRoot);
   return new Promise((resolve) => {
     const child = spawn("cb", ["wakeup"], {
       cwd: boxRoot,
+      env,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -42,9 +45,11 @@ export async function runSync(boxRoot: string, onLog?: (text: string) => void): 
  * Run `cb finalize` as a subprocess to flush outbound cards.
  */
 export async function runFinalize(boxRoot: string, onLog?: (text: string) => void): Promise<boolean> {
+  const env = await buildScriptEnv(boxRoot);
   return new Promise((resolve) => {
     const child = spawn("cb", ["finalize"], {
       cwd: boxRoot,
+      env,
       stdio: ["ignore", "pipe", "pipe"],
     });
 

@@ -262,7 +262,7 @@ export function createBriefingTemplate(): string {
      Create a person card for each: people/First_Last.person.card
      Example:
      <person name="Jane Smith" called="Mom" ref="people/Jane_Smith.person.card">
-       Ian's mother. Primary contact for household matters.
+       Boxholder's mother. Primary contact for household matters.
      </person>
 -->
 <key-people/>

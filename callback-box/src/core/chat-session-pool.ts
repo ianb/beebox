@@ -55,7 +55,7 @@ export interface SendOptions {
   threadRef: string;
   /** Message text to send to the agent */
   message: string;
-  /** Human-readable chat description (e.g., "Ian Bicking") */
+  /** Human-readable chat description (e.g., "Jane Doe") */
   chatDescription: string;
   /** Called immediately when each <chat-response> is intercepted from the stream */
   onResponse?: DeliverResponse | undefined;

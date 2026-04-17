@@ -238,6 +238,45 @@ export function transformContent(content: unknown): SessionContentBlock[] {
 }
 
 /**
+ * Parsed self-note metadata. Self-notes are agent-authored user-position
+ * messages wrapped in `<self-note ref="..." commit="...">body</self-note>`.
+ * See `cb chat self-note` and the webapp `/api/chat/self-note` endpoint.
+ */
+export interface SelfNoteInfo {
+  ref: string | null;
+  commit: string | null;
+  body: string;
+}
+
+function decodeXmlAttr(v: string): string {
+  return v
+    .replace(/&quot;/g, "\"")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+/**
+ * If `text` is a self-note (a `<self-note>...</self-note>` block, possibly
+ * with surrounding whitespace), return the parsed metadata and body;
+ * otherwise null. Used by both the CLI session renderer and the chat UI
+ * to render self-notes distinctly from typed/spoken user messages.
+ */
+export function parseSelfNote(text: string): SelfNoteInfo | null {
+  const match = text.trim().match(/^<self-note\b([^>]*)>([\S\s]*?)<\/self-note>\s*$/);
+  if (!match) return null;
+  const attrs = match[1] || "";
+  const body = (match[2] || "").trim();
+  const refMatch = attrs.match(/\bref="([^"]*)"/);
+  const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
+  return {
+    ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
+    commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
+    body,
+  };
+}
+
+/**
  * Strip voice-direction metadata and speech/typed tag shells from user text.
  * Used both for snippets in --list and for --dialogue-only rendering.
  */
@@ -322,6 +361,7 @@ export async function getSessionMetadata(args: {
       if (textBlocks.length === 0) continue;
       const text = textBlocks.map((b) => String(b.text || "")).join("\n").trim();
       if (isPlumbingMessage(text) || isCompactionSummary(text)) continue;
+      if (parseSelfNote(text)) continue;
       userTurns += 1;
       if (firstUserSnippet === null) firstUserSnippet = extractSnippet(text);
     } else {

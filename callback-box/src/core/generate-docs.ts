@@ -662,6 +662,7 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "- `cb finish <job-file>` — Complete a job (deletes the job card and commits)",
     "- `cb procedure run <name-or-path>` — Run a procedure (see `docs/generated/procedures.md`)",
     "- `cb calendar [timespan]` — View upcoming calendar events (default 7d; supports `today`, `3d`, `2w`, `1m`)",
+    "- `cb chat self-note \"<body>\" [--ref <path>] [--commit <hash>]` — Post an agent-authored record into the live chat session. For use by scheduled sub-agents (daily rumination, weekly research) to leave a short summary of what they did, so the boxholder sees it on next chat revisit. Not a conversational message — Claude in chat knows not to reply. Requires `CB_BOX_NAME` and `CB_SERVER_URL` in env (set automatically by the scheduler).",
     "",
   ];
 
