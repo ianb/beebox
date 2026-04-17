@@ -10,6 +10,7 @@ import { useState, useMemo } from "react";
 import { trpc } from "../lib/trpc";
 import { CardTreeView } from "./CardTreeView";
 import { cbSource } from "../lib/source-tag";
+import { Pre } from "./ui/Pre";
 import hljs from "highlight.js/lib/core";
 import xml from "highlight.js/lib/languages/xml";
 import "highlight.js/styles/github.css";
@@ -25,14 +26,12 @@ function HighlightedXml({ xml: xmlContent }: { xml: string }) {
   }, [xmlContent]);
 
   return (
-    <div className="bg-warm-100 rounded p-4 overflow-auto">
-      <pre className="text-sm whitespace-pre-wrap font-mono">
-        <code
-          className="hljs"
-          dangerouslySetInnerHTML={{ __html: highlighted }}
-        />
-      </pre>
-    </div>
+    <Pre boxed>
+      <code
+        className="hljs"
+        dangerouslySetInnerHTML={{ __html: highlighted }}
+      />
+    </Pre>
   );
 }
 
@@ -65,12 +64,12 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
         <h2 className="text-lg font-bold text-warm-900 mb-2">{card.path}</h2>
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
           <div className="text-sm font-medium text-red-800 mb-1">Validation Error</div>
-          <pre className="text-xs text-red-700 whitespace-pre-wrap break-words">{card.validationError}</pre>
+          <Pre size="xs" error>{card.validationError}</Pre>
         </div>
         {card.element ? (
           <CardTreeView element={card.element} />
         ) : (
-          <pre className="text-sm font-mono whitespace-pre-wrap bg-warm-100 rounded p-4 overflow-auto">{card.xml}</pre>
+          <Pre boxed>{card.xml}</Pre>
         )}
       </div>
     );

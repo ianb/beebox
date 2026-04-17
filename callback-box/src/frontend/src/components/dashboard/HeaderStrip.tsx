@@ -4,6 +4,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { RouterOutput } from "../../lib/trpc";
+import { Button } from "../ui/Button";
 
 type StatusResponse = RouterOutput["status"]["status"];
 
@@ -89,24 +90,15 @@ export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2">
-        <button
-          onClick={() => onAction("create-memo")}
-          className="btn btn-success text-sm"
-        >
+        <Button type="button" intent="success" size="sm" onClick={() => onAction("create-memo")}>
           + Memo
-        </button>
-        <button
-          onClick={() => onAction("wakeup")}
-          className="btn btn-secondary text-sm font-mono"
-        >
-          wakeup
-        </button>
-        <button
-          onClick={() => onAction("sync")}
-          className="btn btn-secondary text-sm font-mono"
-        >
-          sync
-        </button>
+        </Button>
+        <Button type="button" intent="secondary" size="sm" onClick={() => onAction("wakeup")}>
+          <span className="font-mono">wakeup</span>
+        </Button>
+        <Button type="button" intent="secondary" size="sm" onClick={() => onAction("sync")}>
+          <span className="font-mono">sync</span>
+        </Button>
       </div>
     </div>
   );

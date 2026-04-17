@@ -3,6 +3,7 @@
  */
 
 import { trpc } from "../lib/trpc";
+import { Button } from "./ui/Button";
 
 interface StatusBarProps {
   connected: boolean;
@@ -45,16 +46,19 @@ export function StatusBar({ connected, onRefresh }: StatusBarProps) {
           </div> : null}
 
         {/* Refresh button */}
-        <button
+        <Button
+          type="button"
+          intent="secondary"
+          size="sm"
           onClick={() => {
             refetch();
             onRefresh();
           }}
-          className="btn btn-secondary text-sm"
-          disabled={isLoading}
+          loading={isLoading}
+          loadingLabel="Loading…"
         >
-          {isLoading ? "Loading..." : "Refresh"}
-        </button>
+          Refresh
+        </Button>
       </div>
 
       {error ? <div className="absolute top-full left-0 right-0 bg-red-100 text-red-800 px-4 py-2 text-sm">

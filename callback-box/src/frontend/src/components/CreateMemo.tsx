@@ -4,6 +4,8 @@
 
 import { useCallback, useState } from "react";
 import { trpc } from "../lib/trpc";
+import { TextareaField } from "./ui/fields";
+import { Button } from "./ui/Button";
 
 interface CreateMemoProps {
   onCreated: () => void;
@@ -40,36 +42,34 @@ export function CreateMemo({ onCreated }: CreateMemoProps) {
     createMutation.mutate({ path: cardPath, template: "memo", args: { content: trimmed } });
   }, [content, createMutation]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-  }, []);
-
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       <h3 className="text-lg font-bold text-warm-900 mb-4">New Memo</h3>
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <textarea
+          <TextareaField
+            label="Memo content"
             value={content}
-            onChange={handleChange}
+            onChange={setContent}
             placeholder="What's on your mind?"
-            className="input w-full h-32 resize-none"
+            rows={6}
             disabled={createMutation.isPending}
+            error={error !== null ? error : undefined}
+            inputClassName="resize-none"
           />
         </div>
 
-        {error ? (
-          <div className="text-red-600 text-sm mb-4">Error: {error}</div>
-        ) : null}
-
-        <button
+        <Button
           type="submit"
-          disabled={createMutation.isPending || !content.trim()}
-          className="btn btn-primary w-full"
+          intent="primary"
+          fullWidth
+          disabled={!content.trim()}
+          loading={createMutation.isPending}
+          loadingLabel="Creating…"
         >
-          {createMutation.isPending ? "Creating..." : "Create Memo"}
-        </button>
+          Create Memo
+        </Button>
       </form>
     </div>
   );

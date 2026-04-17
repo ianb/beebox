@@ -11,7 +11,8 @@ import { getApiBase } from "../api";
 import { cbSource } from "../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { CardTreeView, type ElementNode } from "./CardTreeView";
-import { ImageLightbox } from "./ImageLightbox";
+import { Image } from "./ui/Image";
+import { Pre } from "./ui/Pre";
 
 interface CommitDetailProps {
   commit: HistoryCommit;
@@ -213,22 +214,13 @@ function getFileExt(filePath: string): string {
 }
 
 function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const ext = getFileExt(file.path);
   const blobUrl = `${getApiBase()}/history/blob/${hash}/${file.path}`;
 
   if (IMAGE_EXTS.includes(ext)) {
     return (
       <div className="px-3 py-2">
-        <img
-          src={blobUrl}
-          alt={file.path}
-          className="max-w-full max-h-96 rounded cursor-pointer hover:opacity-90 transition-opacity"
-          onClick={() => setLightboxSrc(blobUrl)}
-        />
-        {lightboxSrc ? (
-          <ImageLightbox src={lightboxSrc} alt={file.path} onClose={() => setLightboxSrc(null)} />
-        ) : null}
+        <Image src={blobUrl} alt={file.path} size="md" lightbox />
       </div>
     );
   }
@@ -304,23 +296,25 @@ function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
           {file.binary ? (
             <BinaryFilePreview file={file} hash={hash} />
           ) : (
-            <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words">
-              {file.hunks.map((line, i) => {
-                let className = "text-warm-700";
-                if (line.startsWith("+")) {
-                  className = "text-green-700 bg-green-50";
-                } else if (line.startsWith("-")) {
-                  className = "text-red-700 bg-red-50";
-                } else if (line.startsWith("@@")) {
-                  className = "text-purple-500 text-[10px]";
-                }
-                return (
-                  <div key={i} className={className}>
-                    {line}
-                  </div>
-                );
-              })}
-            </pre>
+            <div className="px-3 py-1">
+              <Pre size="xs">
+                {file.hunks.map((line, i) => {
+                  let className = "text-warm-700";
+                  if (line.startsWith("+")) {
+                    className = "text-green-700 bg-green-50";
+                  } else if (line.startsWith("-")) {
+                    className = "text-red-700 bg-red-50";
+                  } else if (line.startsWith("@@")) {
+                    className = "text-purple-500 text-[10px]";
+                  }
+                  return (
+                    <div key={i} className={className}>
+                      {line}
+                    </div>
+                  );
+                })}
+              </Pre>
+            </div>
           )}
         </div>
       ))}
@@ -350,11 +344,13 @@ function NewFilesTab({ files, hash }: { files: DiffFile[]; hash: string }) {
             ) : cardElement ? (
               <CardTreeView element={cardElement} />
             ) : content ? (
-              <pre className="text-xs font-mono px-3 py-1 leading-relaxed whitespace-pre-wrap break-words text-warm-700">
-                {content.split("\n").map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
-              </pre>
+              <div className="px-3 py-1">
+                <Pre size="xs">
+                  {content.split("\n").map((line, i) => (
+                    <div key={i}>{line}</div>
+                  ))}
+                </Pre>
+              </div>
             ) : null}
           </div>
         );

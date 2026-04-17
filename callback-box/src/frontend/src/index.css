@@ -11,26 +11,6 @@ body {
   @apply bg-white rounded-lg shadow p-4 mb-4;
 }
 
-.btn {
-  @apply px-4 py-2 rounded font-medium transition-colors;
-}
-
-.btn:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
-
-.btn-primary {
-  @apply bg-plum text-white hover:bg-plum-dark;
-}
-
-.btn-secondary {
-  @apply bg-warm-200 text-warm-800 hover:bg-warm-300;
-}
-
-.btn-success {
-  @apply bg-green-600 text-white hover:bg-green-700;
-}
-
 .input {
   @apply border border-warm-400 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold;
 }

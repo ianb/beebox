@@ -5,18 +5,26 @@
 
 import { useState } from "react";
 import { Markdown } from "../components/Markdown";
-import { ImageLightbox } from "../components/ImageLightbox";
+import { Image } from "../components/ui/Image";
+import { CheckboxField } from "../components/ui/fields";
+import { Text } from "../components/ui/Text";
+import { Row } from "../components/ui/Row";
+import { Stack } from "../components/ui/Stack";
+import { Card } from "../components/ui/Card";
+import { BboxOverlay } from "../components/ui/BboxOverlay";
 import { getApiBase } from "../api";
 import type { RendererProps } from "./index";
 import { registerCardRenderer } from "./index";
 import type { ElementNode } from "../api";
+
+type Rotation = 0 | 90 | 180 | 270;
 
 interface ParsedImageCard {
   filename: string | null;
   description: string | null;
   status: string;
   hasText: boolean;
-  rotation: number;
+  rotation: Rotation;
   subjectBbox: { y1: number; x1: number; y2: number; x2: number } | null;
   textBlocks: Array<{ source: string; text: string }>;
   exif: Record<string, string>;
@@ -34,14 +42,16 @@ function parseImageCard(element: ElementNode): ParsedImageCard {
     .filter((c) => c.tagName === "text")
     .map((c) => ({ source: c.attrs.source || "unknown", text: c.text || "" }));
 
-  const rotation = parseInt(element.attrs.rotation || "0", 10);
+  const rawRotation = parseInt(element.attrs.rotation || "0", 10);
+  const rotation: Rotation =
+    rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
 
   return {
     filename: filenameEl ? (filenameEl.attrs.name as string) : null,
     description: descEl ? (descEl.text as string) || null : null,
     status: (element.attrs.status as string) || "new",
     hasText: element.attrs["has-text"] === "true",
-    rotation: [0, 90, 180, 270].includes(rotation) ? rotation : 0,
+    rotation,
     subjectBbox: bboxEl ? {
       y1: parseInt(bboxEl.attrs.y1 as string, 10),
       x1: parseInt(bboxEl.attrs.x1 as string, 10),
@@ -54,7 +64,6 @@ function parseImageCard(element: ElementNode): ParsedImageCard {
 }
 
 function ImageCardRenderer({ data }: RendererProps) {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showBbox, setShowBbox] = useState(true);
 
   if (!data.element) return null;
@@ -64,100 +73,68 @@ function ImageCardRenderer({ data }: RendererProps) {
 
   const cardDir = data.path.split("/").slice(0, -1).join("/");
   const imageSrc = `${getApiBase()}/files/${cardDir}/${card.filename}`;
+  const altText = card.description || card.filename;
 
-  const rotationStyle = card.rotation !== 0
-    ? { transform: `rotate(${card.rotation}deg)` }
-    : undefined;
-
-  // For 90/270 rotation, the image dimensions swap, so we need to adjust the container
-  const isOrthogonal = card.rotation === 90 || card.rotation === 270;
+  const rotationTransform = card.rotation !== 0 ? `rotate(${card.rotation}deg)` : undefined;
+  const bbox = showBbox && card.subjectBbox ? (
+    <BboxOverlay
+      top={card.subjectBbox.y1 / 10}
+      left={card.subjectBbox.x1 / 10}
+      width={(card.subjectBbox.x2 - card.subjectBbox.x1) / 10}
+      height={(card.subjectBbox.y2 - card.subjectBbox.y1) / 10}
+      transform={rotationTransform}
+    />
+  ) : null;
 
   return (
     <div>
-      {/* Image with bbox overlay */}
-      <div className="relative inline-block mb-3">
-        <div
-          className={isOrthogonal ? "flex items-center justify-center" : ""}
-          style={isOrthogonal ? { padding: "15% 0" } : undefined}
-        >
-          <img
-            src={imageSrc}
-            alt={card.description || card.filename}
-            className="max-w-full max-h-[32rem] rounded border border-warm-300 cursor-pointer hover:opacity-90 transition-opacity"
-            style={rotationStyle}
-            onClick={() => setLightboxOpen(true)}
-            title="Click to zoom"
-          />
-        </div>
-        {showBbox && card.subjectBbox ? (
-          <div
-            className="absolute border-2 border-plum rounded pointer-events-none"
-            style={rotationStyle ? {
-              // When rotated, bbox coordinates are in the rotated frame
-              top: `${card.subjectBbox.y1 / 10}%`,
-              left: `${card.subjectBbox.x1 / 10}%`,
-              width: `${(card.subjectBbox.x2 - card.subjectBbox.x1) / 10}%`,
-              height: `${(card.subjectBbox.y2 - card.subjectBbox.y1) / 10}%`,
-              transform: rotationStyle.transform,
-            } : {
-              top: `${card.subjectBbox.y1 / 10}%`,
-              left: `${card.subjectBbox.x1 / 10}%`,
-              width: `${(card.subjectBbox.x2 - card.subjectBbox.x1) / 10}%`,
-              height: `${(card.subjectBbox.y2 - card.subjectBbox.y1) / 10}%`,
-            }}
-          />
-        ) : null}
+      <div className="mb-3">
+        <Image
+          src={imageSrc}
+          alt={altText}
+          size="lg"
+          lightbox
+          bordered
+          rotation={card.rotation}
+          overlay={bbox}
+        />
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-3 mb-3 text-xs text-warm-500">
+      <Row gap="md" className="mb-3">
         {card.subjectBbox ? (
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showBbox}
-              onChange={(e) => setShowBbox(e.target.checked)}
-              className="rounded"
-            />
-            Show subject
-          </label>
+          <CheckboxField
+            label="Show subject"
+            checked={showBbox}
+            onChange={setShowBbox}
+          />
         ) : null}
         {card.rotation !== 0 ? (
-          <span>Rotation: {card.rotation}deg</span>
+          <Text size="xs" tone="muted">Rotation: {card.rotation}deg</Text>
         ) : null}
         {card.exif.camera ? (
-          <span>{card.exif.camera}</span>
+          <Text size="xs" tone="muted">{card.exif.camera}</Text>
         ) : null}
         {card.exif.date ? (
-          <span>{new Date(card.exif.date).toLocaleString()}</span>
+          <Text size="xs" tone="muted">{new Date(card.exif.date).toLocaleString()}</Text>
         ) : null}
-      </div>
+      </Row>
 
       {/* Description */}
       {card.description ? (
-        <p className="text-warm-700 text-sm mb-3">{card.description}</p>
+        <Text as="p" size="sm" tone="emphasis" className="mb-3">{card.description}</Text>
       ) : null}
 
       {/* Extracted text */}
       {card.textBlocks.length > 0 ? (
-        <div className="space-y-2">
+        <Stack gap="sm">
           {card.textBlocks.map((block, i) => (
-            <div key={i} className="border border-warm-200 rounded-lg p-3">
-              <div className="text-xs text-warm-500 mb-1">{block.source}</div>
-              <div className="prose prose-sm max-w-none text-warm-700">
-                <Markdown>{block.text}</Markdown>
-              </div>
-            </div>
+            <Card key={i} padding="sm" border="subtle">
+              <Text size="xs" tone="muted" as="div" className="mb-1">{block.source}</Text>
+              <Markdown prose="block">{block.text}</Markdown>
+            </Card>
           ))}
-        </div>
-      ) : null}
-
-      {lightboxOpen ? (
-        <ImageLightbox
-          src={imageSrc}
-          alt={card.description || card.filename}
-          onClose={() => setLightboxOpen(false)}
-        />
+        </Stack>
       ) : null}
     </div>
   );

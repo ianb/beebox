@@ -4,6 +4,7 @@
  */
 
 import type { Excerpt } from "./types";
+import { ExternalLink } from "../ui/ExternalLink";
 
 export function ExcerptBlock({ excerpt }: { excerpt: Excerpt }) {
   return (
@@ -11,9 +12,7 @@ export function ExcerptBlock({ excerpt }: { excerpt: Excerpt }) {
       <p>{excerpt.text}</p>
       <p className="mt-1 text-xs text-warm-600">
         — {excerpt.link ? (
-          <a href={excerpt.link} target="_blank" rel="noopener noreferrer" className="text-plum hover:underline">
-            {excerpt.source}
-          </a>
+          <ExternalLink href={excerpt.link}>{excerpt.source}</ExternalLink>
         ) : excerpt.source}
       </p>
     </div>

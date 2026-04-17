@@ -8,6 +8,7 @@ import { MicrophoneIcon } from "../VoiceRecorder";
 import type { Expando } from "./types";
 import { ThumbsFeedback } from "./ThumbsFeedback";
 import { InlineVoiceRecorder } from "./InlineVoiceRecorder";
+import { InlineAction } from "../ui/InlineAction";
 
 export function ExpandoSection({
   expando,
@@ -105,20 +106,18 @@ export function ExpandoSection({
                 </div>
               </div>
             ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowComment(true)}
-                  className="text-sm text-plum hover:text-plum-dark"
-                >
+              <div className="flex gap-2 text-sm">
+                <InlineAction onClick={() => setShowComment(true)}>
                   + Add comment
-                </button>
-                {onVoiceComment ? <button
-                    onClick={() => setShowVoice(true)}
-                    className="text-sm text-plum hover:text-plum-dark flex items-center gap-1"
-                  >
-                    <MicrophoneIcon className="w-4 h-4" />
-                    Voice
-                  </button> : null}
+                </InlineAction>
+                {onVoiceComment ? (
+                  <InlineAction onClick={() => setShowVoice(true)}>
+                    <span className="inline-flex items-center gap-1">
+                      <MicrophoneIcon className="w-4 h-4" />
+                      Voice
+                    </span>
+                  </InlineAction>
+                ) : null}
               </div>
             )}
           </div>

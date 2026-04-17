@@ -30,6 +30,8 @@ import { DebugLogPanel } from "./DebugLog";
 import { chatMachine } from "../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownContent, groupMessages, type OnZoomView } from "./ChatMessages";
 import { FileView } from "./FileView";
+import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
+import { CloseButton } from "./ui/CloseButton";
 import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
@@ -136,61 +138,35 @@ function ChatDebugMenu({
   showDebugLog: boolean;
   onToggleDebugLog: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
   return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-        title="Debug controls"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-        </svg>
-      </button>
-      {open ? (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-warm-300 rounded-lg shadow-lg z-50 py-1">
-          <button
-            onClick={() => { onStopProcess(); setOpen(false); }}
-            disabled={!running}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700 disabled:text-warm-500 disabled:hover:bg-warm-50"
-          >
-            Stop Process
-          </button>
-          <div className="border-t border-warm-200 my-1" />
-          <button
-            onClick={() => { onToggleDebugView(); setOpen(false); }}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700"
-          >
-            {debugView ? "\u2713 " : ""}Debug View
-          </button>
-          <button
-            onClick={() => { onToggleDebugLog(); setOpen(false); }}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-warm-100 text-warm-700"
-          >
-            {showDebugLog ? "\u2713 " : ""}Debug Log
-          </button>
-          <div className="border-t border-warm-200 my-1" />
-          <div className="px-3 py-1.5 text-xs text-warm-500">
-            <div>Session: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
-            <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <Dropdown
+      align="right"
+      width="w-56"
+      trigger={({ toggle, ariaProps }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          title="Debug controls"
+          aria-label="Debug controls"
+          {...ariaProps}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          </svg>
+        </button>
+      )}
+    >
+      <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
+      <MenuDivider />
+      <MenuItem onClick={onToggleDebugView}>{debugView ? "\u2713 " : ""}Debug View</MenuItem>
+      <MenuItem onClick={onToggleDebugLog}>{showDebugLog ? "\u2713 " : ""}Debug Log</MenuItem>
+      <MenuDivider />
+      <div className="px-3 py-1.5 text-xs text-warm-500">
+        <div>Session: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
+        <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
+      </div>
+    </Dropdown>
   );
 }
 
@@ -218,15 +194,7 @@ function CompanionViewPanel({ view, onClose }: { view: { target: ViewTarget; lab
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>
-        <button
-          onClick={onClose}
-          className="flex-shrink-0 p-1 text-warm-500 hover:text-warm-700 rounded hover:bg-warm-200"
-          title="Close companion view"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <CloseButton onClick={onClose} label="Close companion view" size="sm" />
       </div>
       <div className="flex-1 overflow-auto">
         <FileView path={view.target.path} mode="companion" rendererName={view.target.viewer} />

@@ -7,14 +7,20 @@
  */
 
 import { registerFileRenderer, type RendererProps } from "./index";
+import { Pre } from "../components/ui/Pre";
+import { Text } from "../components/ui/Text";
 
 function PlaintextRenderer({ data }: RendererProps) {
   if (data.content === undefined) {
-    return <div className="p-4 text-warm-600">No text content available</div>;
+    return (
+      <div className="p-4">
+        <Text tone="subtle">No text content available</Text>
+      </div>
+    );
   }
   return (
     <div className="p-4">
-      <pre className="text-sm whitespace-pre-wrap font-mono bg-warm-50 rounded p-4">{data.content}</pre>
+      <Pre boxed>{data.content}</Pre>
     </div>
   );
 }

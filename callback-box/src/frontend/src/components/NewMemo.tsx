@@ -7,6 +7,17 @@
 
 import { useState, useRef, useCallback } from "react";
 import { uploadFile } from "../api";
+import { TextareaField } from "./ui/fields";
+import { Button } from "./ui/Button";
+import { InlineAction } from "./ui/InlineAction";
+import { CloseButton } from "./ui/CloseButton";
+import { CancelButton } from "./ui/CancelButton";
+
+const MicIcon = () => (
+  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+    <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+  </svg>
+);
 
 export interface MemoCommandArgs {
   path: string;
@@ -171,23 +182,18 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
     <div className="bg-white rounded-lg shadow p-4 max-w-xl">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-warm-900">New Memo</h3>
-        <button
-          onClick={onClose}
-          className="text-warm-500 hover:text-warm-700"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
 
       {/* Text input */}
       <div className="mb-4">
-        <textarea
+        <TextareaField
+          label="Memo content"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={setContent}
           placeholder="What's on your mind?"
-          className="input w-full h-32 resize-none"
+          rows={6}
+          inputClassName="resize-none"
           disabled={uploading || recordingState === "recording"}
         />
       </div>
@@ -198,20 +204,9 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
           <span className="text-sm text-warm-700">Voice Recording</span>
 
           {recordingState === "idle" && !audioBlob && (
-            <button
-              onClick={startRecording}
-              disabled={uploading}
-              className="btn btn-sm bg-warm-200 hover:bg-warm-300 text-warm-700 flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <Button type="button" intent="secondary" size="sm" icon={<MicIcon />} onClick={startRecording} disabled={uploading}>
               Record
-            </button>
+            </Button>
           )}
 
           {recordingState === "recording" && (
@@ -221,27 +216,20 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
               </span>
               <span className="text-sm font-mono">{formatDuration(duration)}</span>
-              <button
-                onClick={stopRecording}
-                className="btn btn-sm bg-red-600 hover:bg-red-700 text-white"
-              >
-                Stop
-              </button>
+              <Button type="button" intent="destructive" size="sm" onClick={stopRecording}>Stop</Button>
             </div>
           )}
 
-          {recordingState === "idle" && audioBlob ? <div className="flex items-center gap-2">
-              <span className="text-sm text-green-600">
+          {recordingState === "idle" && audioBlob ? (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-green-600">
                 ✓ {formatDuration(duration)} recorded
               </span>
-              <button
-                onClick={clearRecording}
-                disabled={uploading}
-                className="text-sm text-warm-600 hover:text-red-600"
-              >
+              <InlineAction intent="danger" onClick={clearRecording} disabled={uploading}>
                 Remove
-              </button>
-            </div> : null}
+              </InlineAction>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -250,23 +238,21 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
 
       {/* Submit button */}
       <div className="flex gap-2">
-        <button
-          onClick={handleSubmit}
-          disabled={!hasContent || uploading || recordingState === "recording"}
-          className="btn btn-primary flex-1 font-mono text-sm"
-        >
-          {uploading ? (
-            "Uploading audio..."
-          ) : (
-            <>cb create</>
-          )}
-        </button>
-        <button
-          onClick={onClose}
-          className="btn btn-secondary"
-        >
-          Cancel
-        </button>
+        <div className="flex-1">
+          <Button
+            type="button"
+            intent="primary"
+            size="sm"
+            fullWidth
+            onClick={handleSubmit}
+            disabled={!hasContent || recordingState === "recording"}
+            loading={uploading}
+            loadingLabel="Uploading audio…"
+          >
+            <span className="font-mono">cb create</span>
+          </Button>
+        </div>
+        <CancelButton onClick={onClose} />
       </div>
 
       <p className="text-xs text-warm-600 text-center mt-3">

@@ -11,6 +11,7 @@ import { ExpandoSection } from "./ExpandoSection";
 import { QueryPrompt } from "./QueryPrompt";
 import { ExcerptBlock } from "./ExcerptBlock";
 import { InlineVoiceRecorder } from "./InlineVoiceRecorder";
+import { ExternalLink } from "../ui/ExternalLink";
 
 export function ContentSection({
   section,
@@ -57,9 +58,7 @@ export function ContentSection({
           <div className="flex items-center">
             <h2 className="text-xl font-semibold text-warm-800">
               {section.link ? (
-                <a href={section.link} target="_blank" rel="noopener noreferrer" className="hover:text-plum-dark">
-                  {section.heading}
-                </a>
+                <ExternalLink href={section.link} variant="plain">{section.heading}</ExternalLink>
               ) : section.heading}
             </h2>
             {section.id && onItemFeedback ? <ThumbsFeedback

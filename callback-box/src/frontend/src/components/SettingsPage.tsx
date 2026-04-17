@@ -5,6 +5,7 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { trpc, type RouterOutput } from "../lib/trpc";
+import { CheckboxField } from "./ui/fields";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
 
@@ -81,35 +82,33 @@ function CalendarSection() {
 
       <div className="space-y-1">
         {calendars.map((cal) => (
-          <label
-            key={cal.id}
-            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-warm-50 cursor-pointer"
-          >
-            <input
-              type="checkbox"
-              checked={cal.syncing}
-              onChange={() => toggleCalendar(cal)}
-              disabled={updateMutation.isPending}
-              className="rounded border-warm-400 text-plum focus:ring-gold"
-            />
-            <span className="flex-1 min-w-0">
-              <span className="text-sm text-warm-900">{cal.summary}</span>
-              {cal.primary ? (
-                <span className="ml-1 text-xs text-warm-500">(primary)</span>
-              ) : null}
-              {cal.accessRole !== "owner" && (
-                <span className="ml-1 text-xs text-warm-500">
-                  ({cal.accessRole})
-                </span>
-              )}
-            </span>
+          <div key={cal.id} className="flex items-center gap-3 px-3 py-2 rounded hover:bg-warm-50">
+            <div className="flex-1 min-w-0">
+              <CheckboxField
+                label={
+                  <>
+                    {cal.summary}
+                    {cal.primary ? (
+                      <span className="ml-1 text-xs text-warm-500">(primary)</span>
+                    ) : null}
+                    {cal.accessRole !== "owner" ? (
+                      <span className="ml-1 text-xs text-warm-500">({cal.accessRole})</span>
+                    ) : null}
+                  </>
+                }
+                checked={cal.syncing}
+                onChange={() => toggleCalendar(cal)}
+                disabled={updateMutation.isPending}
+              />
+            </div>
             {cal.backgroundColor ? (
               <span
                 className="w-3 h-3 rounded-full flex-shrink-0"
                 style={{ backgroundColor: cal.backgroundColor }}
+                aria-hidden="true"
               />
             ) : null}
-          </label>
+          </div>
         ))}
       </div>
     </div>

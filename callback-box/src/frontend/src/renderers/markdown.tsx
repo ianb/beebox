@@ -3,17 +3,20 @@
  */
 
 import { Markdown } from "../components/Markdown";
+import { Text } from "../components/ui/Text";
 import { registerFileRenderer, type RendererProps } from "./index";
 
 function MarkdownRenderer({ data }: RendererProps) {
   if (data.content === undefined) {
-    return <div className="p-4 text-warm-600">No content</div>;
+    return (
+      <div className="p-4">
+        <Text tone="subtle">No content</Text>
+      </div>
+    );
   }
   return (
     <div className="p-4">
-      <div className="prose prose-sm max-w-none">
-        <Markdown>{data.content}</Markdown>
-      </div>
+      <Markdown prose="block">{data.content}</Markdown>
     </div>
   );
 }

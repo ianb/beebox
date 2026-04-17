@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getApiBase } from "../api";
+import { CloseButton } from "./ui/CloseButton";
 
 interface LogEntry {
   level: "log" | "warn" | "error" | "info";
@@ -184,7 +185,7 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
           className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
         <button onClick={clearLog} className="text-warm-500 hover:text-warm-700">Clear</button>
-        <button onClick={onClose} className="text-warm-500 hover:text-warm-700 font-bold">{"\u2715"}</button>
+        <CloseButton onClick={onClose} size="sm" />
       </div>
       <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-1 font-mono text-[11px] leading-tight">
         {filtered.length === 0 ? (

@@ -12,6 +12,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
+import { ExternalLink } from "./ui/ExternalLink";
+import { TextareaField } from "./ui/fields";
+import { Button } from "./ui/Button";
 
 type ShareState = "ready" | "saving" | "saved" | "error";
 
@@ -206,24 +209,18 @@ export function SharePage() {
           {sharedTitle ? (
             <div className="font-medium text-warm-800 text-sm mb-1">{sharedTitle}</div>
           ) : null}
-          <a
-            href={sharedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-plum text-sm break-all hover:underline"
-          >
-            {sharedUrl}
-          </a>
+          <ExternalLink href={sharedUrl}>{sharedUrl}</ExternalLink>
         </div>
 
         {/* Note input */}
         <div className="mb-4">
-          <label className="block text-sm text-warm-700 mb-1">Note (optional)</label>
-          <textarea
+          <TextareaField
+            label="Note (optional)"
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={setNote}
             placeholder="Add a note about this link..."
-            className="input w-full h-24 resize-none text-sm"
+            rows={4}
+            inputClassName="resize-none text-sm"
             disabled={shareState === "saving" || transcription.state === "recording"}
           />
         </div>
@@ -287,13 +284,16 @@ export function SharePage() {
         ) : null}
 
         {/* Save button */}
-        <button
+        <Button
+          type="button"
+          intent="primary"
+          fullWidth
           onClick={handleSave}
-          disabled={shareState === "saving"}
-          className="btn btn-primary w-full"
+          loading={shareState === "saving"}
+          loadingLabel="Saving…"
         >
-          {shareState === "saving" ? "Saving..." : "Save Bookmark"}
-        </button>
+          Save Bookmark
+        </Button>
 
         <p className="text-xs text-warm-500 text-center mt-3">
           Saves to inbox for processing at next wakeup.

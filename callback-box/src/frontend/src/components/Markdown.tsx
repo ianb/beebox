@@ -58,21 +58,30 @@ const commentComponents: Partial<Components> = {
   },
 };
 
+type ProseVariant = false | "block" | "inline";
+
 interface MarkdownProps {
   children: string;
   components?: Partial<Components>;
   /** Show HTML comments as visible styled text. Defaults to false. */
   showComments?: boolean;
+  /**
+   * Wrap the rendered output in a Tailwind Typography container.
+   * - `"block"` — `<div>` wrapper (default for rendered pages).
+   * - `"inline"` — `<span>` wrapper (for markdown within flowing text).
+   * - `false` (default) — no wrapper; caller decides.
+   */
+  prose?: ProseVariant;
 }
 
-export function Markdown({ children, components, showComments }: MarkdownProps) {
+export function Markdown({ children, components, showComments, prose = false }: MarkdownProps) {
   const plugins = showComments ? pluginsWithComments : defaultPlugins;
   const defaultBase = showComments ? commentComponents : baseComponents;
   const merged = components
     ? { ...defaultBase, ...components }
     : defaultBase;
 
-  return (
+  const rendered = (
     <ReactMarkdown
       remarkPlugins={plugins}
       components={merged}
@@ -81,4 +90,12 @@ export function Markdown({ children, components, showComments }: MarkdownProps) 
       {children}
     </ReactMarkdown>
   );
+
+  if (prose === "block") {
+    return <div className="prose prose-sm max-w-none text-warm-700">{rendered}</div>;
+  }
+  if (prose === "inline") {
+    return <span className="prose prose-sm inline max-w-none">{rendered}</span>;
+  }
+  return rendered;
 }

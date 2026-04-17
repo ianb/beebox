@@ -6,7 +6,8 @@
 
 import { useMemo, useState } from "react";
 import { Markdown } from "./Markdown";
-import { ImageLightbox } from "./ImageLightbox";
+import { Image } from "./ui/Image";
+import { Pre } from "./ui/Pre";
 import { FileView } from "./FileView";
 import type { Components } from "react-markdown";
 import { parseViewUrl, type ViewTarget } from "../lib/view-url";
@@ -240,9 +241,11 @@ function ToolDetail({ block }: { block: SessionContentBlock }) {
         <span>{description}</span>
       </summary>
       {input ? (
-        <pre className="mt-1 mb-1 ml-3 text-[11px] text-warm-500 bg-warm-50 rounded p-2 overflow-x-auto max-h-40 whitespace-pre-wrap">
-          {JSON.stringify(input, null, 2)}
-        </pre>
+        <div className="mt-1 mb-1 ml-3">
+          <Pre size="xs" boxed scroll="sm" muted>
+            {JSON.stringify(input, null, 2)}
+          </Pre>
+        </div>
       ) : null}
     </details>
   );
@@ -342,32 +345,15 @@ export function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
  * Clickable image thumbnail that opens a lightbox on click.
  */
 function ChatImage({ src, alt }: { src: string; alt: string }) {
-  const [lightbox, setLightbox] = useState(false);
   const hasCaption = alt.trim() !== "";
-
   return (
-    <>
-      <figure className="max-w-xs flex flex-col items-center">
-        <img
-          src={src}
-          alt={alt}
-          className="max-w-xs max-h-64 rounded shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
-          onClick={() => setLightbox(true)}
-          title="Click to zoom"
-        />
-        {hasCaption ? (
-          <figcaption
-            className="mt-1 max-w-full text-xs text-warm-600 italic text-center truncate"
-            title={alt}
-          >
-            {alt}
-          </figcaption>
-        ) : null}
-      </figure>
-      {lightbox ? (
-        <ImageLightbox src={src} alt={alt} caption={alt} onClose={() => setLightbox(false)} />
-      ) : null}
-    </>
+    <Image
+      src={src}
+      alt={alt}
+      size="sm"
+      lightbox
+      caption={hasCaption ? alt : undefined}
+    />
   );
 }
 
@@ -624,9 +610,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
           {loadingOutput ? (
             <div className="text-warm-500 italic">Loading output...</div>
           ) : output ? (
-            <pre className="whitespace-pre-wrap break-words text-warm-700 max-h-64 overflow-auto font-mono">
-              {output}
-            </pre>
+            <Pre size="xs" scroll="md">{output}</Pre>
           ) : (
             <div className="text-warm-500 italic">No output file</div>
           )}
@@ -652,25 +636,10 @@ function imageBlockSrc(block: SessionContentBlock): string | null {
  * Thumbnail + lightbox for an inline image in a user message bubble.
  */
 function MessageImage({ src, alt }: { src: string; alt: string }) {
-  const [zoomed, setZoomed] = useState(false);
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setZoomed(true)}
-        className="block my-1 max-w-full rounded border border-white/20 overflow-hidden hover:ring-2 hover:ring-white/40 focus:outline-none focus:ring-2 focus:ring-white/60"
-        title="Click to zoom"
-      >
-        <img
-          src={src}
-          alt={alt}
-          className="max-w-full max-h-64 object-contain bg-black/20"
-        />
-      </button>
-      {zoomed ? (
-        <ImageLightbox src={src} alt={alt} onClose={() => setZoomed(false)} />
-      ) : null}
-    </>
+    <div className="my-1">
+      <Image src={src} alt={alt} size="sm" lightbox bordered />
+    </div>
   );
 }
 
@@ -686,9 +655,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
         if (block.type === "text") {
           if (debugView) {
             return (
-              <pre key={key} className="font-mono text-xs whitespace-pre-wrap">
-                {block.text ?? ""}
-              </pre>
+              <Pre key={key} size="xs">{block.text ?? ""}</Pre>
             );
           }
           return (
@@ -856,9 +823,7 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
       {grouped.map((group, i) =>
         group.kind === "text" ? (
           debugView ? (
-            <pre key={i} className="font-mono text-xs whitespace-pre-wrap bg-warm-50 text-warm-800 p-2 rounded">
-              {group.text}
-            </pre>
+            <Pre key={i} size="xs" boxed>{group.text}</Pre>
           ) : (
             <MarkdownContent key={i} text={group.text} onZoomView={onZoomView} />
           )

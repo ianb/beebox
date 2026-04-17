@@ -29,6 +29,7 @@ import { getApiBase, getEventSourceBase } from "../api";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
+import { Pre } from "./ui/Pre";
 
 export type FileViewMode = "page" | "chat" | "companion";
 
@@ -266,7 +267,7 @@ export function FileView({ path, mode = "page", rendererName }: FileViewProps) {
     return (
       <div className="p-4 text-red-600">
         <p className="font-medium">Error loading {path}</p>
-        <pre className="text-sm mt-1">{error}</pre>
+        <div className="mt-1"><Pre size="sm" error>{error}</Pre></div>
       </div>
     );
   }

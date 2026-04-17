@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CommandRunner } from "../CommandRunner";
 import { NewMemo, buildCreateCommandLabel, type MemoCommandArgs } from "../NewMemo";
 import { ProcessNewsForm, buildProcessNewsLabel, type ProcessNewsArgs } from "../ProcessNewsForm";
+import { CloseButton } from "../ui/CloseButton";
 
 export type ActionType = "wakeup" | "sync" | "create-memo" | "process-news" | null;
 
@@ -102,12 +103,7 @@ export function ActionModal({ action, onClose, onComplete, newsInboxCount = 0, n
             {action === "create-memo" && "New Memo"}
             {action === "process-news" && "cb process-news"}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-warm-500 hover:text-warm-700 text-lg leading-none"
-          >
-            &times;
-          </button>
+          <CloseButton onClick={onClose} size="sm" />
         </div>
 
         <div className="flex-1 overflow-auto p-4">

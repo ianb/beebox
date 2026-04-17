@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import { Pre } from "./ui/Pre";
 
 interface Props {
   children: React.ReactNode;
@@ -47,10 +48,10 @@ export class ViewErrorBoundary extends React.Component<Props, State> {
               Retry
             </button>
           </div>
-          <pre className="text-sm text-red-700 whitespace-pre-wrap overflow-auto max-h-48">
+          <Pre size="sm" error scroll="md">
             {this.state.error.message}
             {this.state.error.stack ? "\n\n" + this.state.error.stack : ""}
-          </pre>
+          </Pre>
         </div>
       );
     }

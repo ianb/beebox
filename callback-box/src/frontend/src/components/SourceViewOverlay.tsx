@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { CloseButton } from "./ui/CloseButton";
 
 interface SelectedSource {
   source: string;
@@ -198,11 +199,7 @@ function ModeBar({ onClose }: { onClose: () => void }) {
       <span className="font-medium">Source View — click elements to inspect</span>
       <div className="flex items-center gap-3">
         <span className="text-white/60">Esc to close</span>
-        <button onClick={onClose} className="hover:text-white/80">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M2 2l10 10M12 2L2 12" />
-          </svg>
-        </button>
+        <CloseButton onClick={onClose} onDark size="sm" />
       </div>
     </div>
   );

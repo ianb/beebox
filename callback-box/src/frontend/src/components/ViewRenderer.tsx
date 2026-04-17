@@ -10,6 +10,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase, getEventSourceBase } from "../api";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
+import { Pre } from "./ui/Pre";
 /** View card data from the API */
 interface ViewCard {
   path: string;
@@ -154,7 +155,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
     return (
       <div className="border border-red-300 bg-red-50 rounded-lg p-4">
         <h3 className="text-red-800 font-medium mb-2">View Error</h3>
-        <pre className="text-sm text-red-700 whitespace-pre-wrap">{error}</pre>
+        <Pre size="sm" error>{error}</Pre>
       </div>
     );
   }

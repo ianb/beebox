@@ -5,6 +5,8 @@
 import { useState } from "react";
 import { trpc } from "../lib/trpc";
 import { cbSource } from "../lib/source-tag";
+import { RadioGroup, TextareaField } from "./ui/fields";
+import { Button } from "./ui/Button";
 import type { CardInfo } from "../api";
 
 interface QuestionFormProps {
@@ -50,49 +52,41 @@ export function QuestionForm({ question, onAnswered, sourcePath }: QuestionFormP
       <p className="text-warm-700 mb-4">{question.prompt}</p>
 
       <form onSubmit={handleSubmit}>
-        {hasOptions ? (
-          <div className="space-y-2 mb-4">
-            {question.options?.map((option, index) => (
-              <label
-                key={index}
-                className={`block p-3 border rounded cursor-pointer transition-colors ${
-                  selectedOption === option
-                    ? "border-plum bg-iris-50"
-                    : "border-warm-300 hover:border-warm-400"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="answer"
-                  value={option}
-                  checked={selectedOption === option}
-                  onChange={(e) => setSelectedOption(e.target.value)}
-                  className="sr-only"
-                />
-                <span className="text-warm-900">{option}</span>
-              </label>
-            ))}
+        {hasOptions && question.options !== undefined ? (
+          <div className="mb-4">
+            <RadioGroup
+              label="Answer"
+              name="answer"
+              variant="cards"
+              value={selectedOption}
+              onChange={setSelectedOption}
+              options={question.options.map((option) => ({ value: option, label: option }))}
+              error={error !== null ? error : undefined}
+            />
           </div>
         ) : (
           <div className="mb-4">
-            <textarea
+            <TextareaField
+              label="Answer"
               value={textAnswer}
-              onChange={(e) => setTextAnswer(e.target.value)}
+              onChange={setTextAnswer}
               placeholder="Enter your answer..."
-              className="input w-full h-24"
+              rows={3}
+              error={error !== null ? error : undefined}
             />
           </div>
         )}
 
-        {error ? <div className="text-red-600 text-sm mb-4">Error: {error}</div> : null}
-
-        <button
+        <Button
           type="submit"
-          disabled={answerMutation.isPending || (!selectedOption && !textAnswer)}
-          className="btn btn-primary w-full"
+          intent="primary"
+          fullWidth
+          disabled={!selectedOption && !textAnswer}
+          loading={answerMutation.isPending}
+          loadingLabel="Submitting…"
         >
-          {answerMutation.isPending ? "Submitting..." : "Submit Answer"}
-        </button>
+          Submit Answer
+        </Button>
       </form>
     </div>
   );

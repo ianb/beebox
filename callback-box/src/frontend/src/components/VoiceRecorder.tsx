@@ -5,6 +5,7 @@
 import { useCallback } from "react";
 import { createVoiceMemo } from "../api";
 import { useVoiceRecorder, type VoiceRecordingResult } from "../hooks/useVoiceRecorder";
+import { Button } from "./ui/Button";
 
 interface VoiceRecorderProps {
   onCreated: () => void;
@@ -28,13 +29,9 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
 
       <div className="flex flex-col items-center gap-4">
         {state === "idle" && (
-          <button
-            onClick={startRecording}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <MicrophoneIcon />
+          <Button type="button" intent="primary" icon={<MicrophoneIcon />} onClick={startRecording}>
             Start Recording
-          </button>
+          </Button>
         )}
 
         {state === "recording" && (
@@ -43,13 +40,9 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
               <RecordingIndicator />
               <span className="text-lg font-mono">{formatDuration(duration)}</span>
             </div>
-            <button
-              onClick={stopRecording}
-              className="btn bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
-            >
-              <StopIcon />
+            <Button type="button" intent="destructive" icon={<StopIcon />} onClick={stopRecording}>
               Stop Recording
-            </button>
+            </Button>
           </>
         )}
 

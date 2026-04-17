@@ -16,4 +16,16 @@ export default [
       "error/no-literal-error-message": "off",
     },
   },
+  // Outside any components/ subdirectory: every JSX element's className must
+  // be outer-layout classes only (margin, padding, flex/grid item, sizing,
+  // position). Keeps page-level code (renderers, app-shell, routes) from
+  // smuggling appearance in via <div className="bg-plum shadow">. Files
+  // inside components/ are exempt — that is where appearance lives.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["**/components/**"],
+    rules: {
+      "personal-vibe-check/restrict-component-classes": ["error", { matchAll: true }],
+    },
+  },
 ];

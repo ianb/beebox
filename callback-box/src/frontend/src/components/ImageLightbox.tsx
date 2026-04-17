@@ -7,6 +7,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { CloseButton } from "./ui/CloseButton";
 
 function ExternalLinkIcon() {
   return (
@@ -56,13 +57,7 @@ export function ImageLightbox({ src, alt, caption, onClose }: { src: string; alt
           >
             <ExternalLinkIcon />
           </a>
-          <button
-            onClick={onClose}
-            className="bg-white/90 hover:bg-white text-warm-700 rounded-full w-8 h-8 flex items-center justify-center shadow text-sm"
-            title="Close"
-          >
-            &times;
-          </button>
+          <CloseButton onClick={onClose} onDark size="sm" />
         </div>
       </figure>
     </div>,

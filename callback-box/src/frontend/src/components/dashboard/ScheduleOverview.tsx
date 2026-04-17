@@ -6,6 +6,7 @@ import { useState } from "react";
 import { trpc } from "../../lib/trpc";
 import type { RouterOutput } from "../../lib/trpc";
 import { cbSource } from "../../lib/source-tag";
+import { Pre } from "../ui/Pre";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -150,7 +151,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
       {showError && s.lastError ? (
         <tr>
           <td colSpan={5} className="pb-2 px-3">
-            <pre className="text-xs text-red-700 bg-red-50 rounded p-2 whitespace-pre-wrap break-words max-h-40 overflow-auto">{s.lastError}</pre>
+            <Pre size="xs" error boxed scroll="sm">{s.lastError}</Pre>
           </td>
         </tr>
       ) : null}

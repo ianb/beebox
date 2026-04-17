@@ -9,6 +9,9 @@ import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { getApiBase } from "../api.js";
 import { claudeAuthMachine } from "../machines/claudeAuthMachine.js";
+import { ExternalLink } from "./ui/ExternalLink";
+import { CheckboxField, TextField } from "./ui/fields";
+import { Button } from "./ui/Button";
 
 function ClaudeCodeSection() {
   const [snapshot, send] = useSSRMachine(claudeAuthMachine);
@@ -65,14 +68,7 @@ function ClaudeCodeSection() {
           <p className="text-sm text-plum mb-2">
             Complete authentication in a new tab:
           </p>
-          <a
-            href={authUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-sm text-iris-dark underline hover:text-plum break-all"
-          >
-            Open Anthropic Login
-          </a>
+          <ExternalLink href={authUrl}>Open Anthropic Login</ExternalLink>
           <p className="text-xs text-plum mt-2">
             Waiting for authentication to complete...
           </p>
@@ -89,34 +85,36 @@ function ClaudeCodeSection() {
       {/* Actions */}
       <div className="flex gap-3">
         {!status?.loggedIn ? (
-          <button
+          <Button
+            type="button"
+            intent="primary"
             onClick={() => send({ type: "LOGIN" })}
             disabled={!isIdle}
-            className="btn btn-primary"
+            loading={isStarting || isPolling}
+            loadingLabel={isPolling ? "Waiting…" : "Starting…"}
           >
-            {isStarting
-              ? "Starting..."
-              : isPolling
-                ? "Waiting..."
-                : "Authenticate Claude Code"}
-          </button>
+            Authenticate Claude Code
+          </Button>
         ) : null}
         {status?.loggedIn ? (
-          <button
+          <Button
+            type="button"
+            intent="secondary"
             onClick={() => send({ type: "LOGOUT" })}
-            disabled={isLoggingOut}
-            className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
+            loading={isLoggingOut}
+            loadingLabel="Logging out…"
           >
-            {isLoggingOut ? "Logging out..." : "Log Out"}
-          </button>
+            Log Out
+          </Button>
         ) : null}
-        <button
+        <Button
+          type="button"
+          intent="ghost"
           onClick={() => send({ type: "REFRESH" })}
           disabled={isLoading}
-          className="btn bg-warm-100 text-warm-700 hover:bg-warm-200"
         >
           Refresh
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -255,13 +253,15 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
             <p>Add <strong>@{status.botUsername}</strong> to your Telegram group and send a message.</p>
           </div>
 
-          <button
+          <Button
+            type="button"
+            intent="secondary"
             onClick={handleDisconnect}
-            disabled={disconnecting}
-            className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
+            loading={disconnecting}
+            loadingLabel="Disconnecting…"
           >
-            {disconnecting ? "Disconnecting..." : "Disconnect"}
-          </button>
+            Disconnect
+          </Button>
         </>
       ) : (
         <>
@@ -282,22 +282,27 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
           </div>
 
           {/* Token input */}
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={botToken}
-              onChange={(e) => setBotToken(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleConnect(); }}
-              placeholder="Paste bot token here"
-              className="flex-1 rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-            />
-            <button
+          <div className="flex gap-2 mb-2 items-start">
+            <div className="flex-1">
+              <TextField
+                label="Bot token"
+                hideLabel
+                value={botToken}
+                onChange={setBotToken}
+                onKeyDown={(e) => { if (e.key === "Enter") handleConnect(); }}
+                placeholder="Paste bot token here"
+              />
+            </div>
+            <Button
+              type="button"
+              intent="primary"
               onClick={handleConnect}
-              disabled={connecting || !botToken.trim()}
-              className="btn btn-primary"
+              disabled={!botToken.trim()}
+              loading={connecting}
+              loadingLabel="Connecting…"
             >
-              {connecting ? "Connecting..." : "Connect"}
-            </button>
+              Connect
+            </Button>
           </div>
         </>
       )}
@@ -417,22 +422,28 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
         </div>
       )}
 
-      <div className="flex gap-2">
-        <input
-          type="email"
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-          placeholder="user@example.com"
-          className="flex-1 rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-        />
-        <button
+      <div className="flex gap-2 items-start">
+        <div className="flex-1">
+          <TextField
+            label="Allowed email"
+            hideLabel
+            type="email"
+            value={newEmail}
+            onChange={setNewEmail}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+            placeholder="user@example.com"
+          />
+        </div>
+        <Button
+          type="button"
+          intent="primary"
           onClick={handleAdd}
-          disabled={saving || !newEmail.trim().includes("@")}
-          className="btn btn-primary"
+          disabled={!newEmail.trim().includes("@")}
+          loading={saving}
+          loadingLabel="Saving…"
         >
-          {saving ? "Saving..." : "Add"}
-        </button>
+          Add
+        </Button>
       </div>
 
       {error ? (
@@ -604,45 +615,48 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
             <h3 className="text-sm font-medium text-warm-700 mb-2">Enabled for this box:</h3>
             <div className="space-y-2">
               {Object.entries(GOOGLE_SERVICE_LABELS).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-2 text-sm text-warm-800">
-                  <input
-                    type="checkbox"
-                    checked={status.enabledServices[key] === true}
-                    disabled={savingServices}
-                    onChange={(e) => handleServiceToggle(key, e.target.checked)}
-                    className="rounded border-warm-300"
-                  />
-                  {label}
-                </label>
+                <CheckboxField
+                  key={key}
+                  label={label}
+                  checked={status.enabledServices[key] === true}
+                  disabled={savingServices}
+                  onChange={(checked) => handleServiceToggle(key, checked)}
+                />
               ))}
             </div>
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
+              type="button"
+              intent="secondary"
               onClick={handleAuthorize}
-              disabled={connecting}
-              className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
+              loading={connecting}
+              loadingLabel="Redirecting…"
             >
-              {connecting ? "Redirecting..." : "Re-authorize"}
-            </button>
-            <button
+              Re-authorize
+            </Button>
+            <Button
+              type="button"
+              intent="secondary"
               onClick={handleDisconnect}
-              disabled={disconnecting}
-              className="btn bg-warm-200 text-warm-800 hover:bg-warm-300"
+              loading={disconnecting}
+              loadingLabel="Disconnecting…"
             >
-              {disconnecting ? "Disconnecting..." : "Disconnect"}
-            </button>
+              Disconnect
+            </Button>
           </div>
         </>
       ) : (
-        <button
+        <Button
+          type="button"
+          intent="primary"
           onClick={handleAuthorize}
-          disabled={connecting}
-          className="btn btn-primary"
+          loading={connecting}
+          loadingLabel="Redirecting…"
         >
-          {connecting ? "Redirecting..." : "Connect Google Account"}
-        </button>
+          Connect Google Account
+        </Button>
       )}
 
       {error ? (

@@ -8,6 +8,12 @@
  */
 
 import { useState } from "react";
+import { NumberField, RadioGroup } from "./ui/fields";
+import { Button } from "./ui/Button";
+import { CloseButton } from "./ui/CloseButton";
+import { CancelButton } from "./ui/CancelButton";
+
+type Phase = "all" | "triage" | "analyze" | "brief";
 
 export interface ProcessNewsArgs {
   batchSize: number;
@@ -32,7 +38,7 @@ export function ProcessNewsForm({
   poolCount,
 }: ProcessNewsFormProps) {
   const [batchSize, setBatchSize] = useState(10);
-  const [phase, setPhase] = useState<"all" | "triage" | "analyze" | "brief">("all");
+  const [phase, setPhase] = useState<Phase>("all");
 
   const handleSubmit = () => {
     onSubmit({
@@ -47,14 +53,7 @@ export function ProcessNewsForm({
     <div className="bg-white rounded-lg shadow p-4 max-w-xl">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-warm-900">Process News</h3>
-        <button
-          onClick={onClose}
-          className="text-warm-500 hover:text-warm-700"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
 
       {/* Status summary */}
@@ -74,96 +73,46 @@ export function ProcessNewsForm({
 
       {/* Batch size */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-warm-700 mb-1">
-          Batch Size
-        </label>
-        <input
-          type="number"
+        <NumberField
+          label="Batch Size"
+          value={batchSize}
+          onChange={(n) => setBatchSize(n === null ? 10 : n)}
           min={1}
           max={50}
-          value={batchSize}
-          onChange={(e) => setBatchSize(parseInt(e.target.value) || 10)}
-          className="input w-24"
+          helper="items per phase"
+          inputClassName="max-w-[8rem]"
         />
-        <span className="text-sm text-warm-600 ml-2">items per phase</span>
       </div>
 
       {/* Phase selection */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-warm-700 mb-2">
-          Run Phase
-        </label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="phase"
-              value="all"
-              checked={phase === "all"}
-              onChange={() => setPhase("all")}
-              className="text-plum"
-            />
-            <span className="text-sm">All phases (triage → analyze → brief)</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="phase"
-              value="triage"
-              checked={phase === "triage"}
-              onChange={() => setPhase("triage")}
-              className="text-plum"
-              disabled={inboxCount === 0}
-            />
-            <span className={`text-sm ${inboxCount === 0 ? "text-warm-500" : ""}`}>
-              Triage only ({inboxCount} inbox items)
-            </span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="phase"
-              value="analyze"
-              checked={phase === "analyze"}
-              onChange={() => setPhase("analyze")}
-              className="text-plum"
-              disabled={inboxCount === 0}
-            />
-            <span className={`text-sm ${inboxCount === 0 ? "text-warm-500" : ""}`}>
-              Analyze only ({inboxCount} inbox items)
-            </span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="phase"
-              value="brief"
-              checked={phase === "brief"}
-              onChange={() => setPhase("brief")}
-              className="text-plum"
-              disabled={poolCount === 0}
-            />
-            <span className={`text-sm ${poolCount === 0 ? "text-warm-500" : ""}`}>
-              Create brief ({poolCount} pool items)
-            </span>
-          </label>
-        </div>
+        <RadioGroup
+          label="Run Phase"
+          name="phase"
+          value={phase}
+          onChange={(v) => setPhase(v as Phase)}
+          options={[
+            { value: "all", label: "All phases (triage → analyze → brief)" },
+            { value: "triage", label: `Triage only (${inboxCount} inbox items)`, disabled: inboxCount === 0 },
+            { value: "analyze", label: `Analyze only (${inboxCount} inbox items)`, disabled: inboxCount === 0 },
+            { value: "brief", label: `Create brief (${poolCount} pool items)`, disabled: poolCount === 0 },
+          ]}
+        />
       </div>
 
       {/* Submit */}
       <div className="flex gap-2">
-        <button
-          onClick={handleSubmit}
-          className="btn btn-primary flex-1 font-mono text-sm"
-        >
-          cb process-news
-          {phase === "triage" && " --triage-only"}
-          {phase === "analyze" && " --analyze-only"}
-          {phase === "brief" && " --brief-only"}
-        </button>
-        <button onClick={onClose} className="btn btn-secondary">
-          Cancel
-        </button>
+        <div className="flex-1">
+          <Button type="button" intent="primary" fullWidth size="sm" onClick={handleSubmit}>
+            <span className="font-mono">
+              cb process-news
+              {phase === "triage" && " --triage-only"}
+              {phase === "analyze" && " --analyze-only"}
+              {phase === "brief" && " --brief-only"}
+            </span>
+          </Button>
+        </div>
+        <CancelButton onClick={onClose} />
       </div>
 
       <p className="text-xs text-warm-600 text-center mt-3">

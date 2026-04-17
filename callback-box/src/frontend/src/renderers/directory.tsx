@@ -5,40 +5,39 @@
  * Cards expand inline as accordions via the card renderer registry.
  */
 
-import { useState } from "react";
 import { useParams } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc";
 import { href } from "../lib/routing";
 import { CardTreeView } from "../components/CardTreeView";
+import { Accordion } from "../components/ui/Accordion";
+import { Pre } from "../components/ui/Pre";
+import { Text } from "../components/ui/Text";
+import { Row } from "../components/ui/Row";
+import { Stack } from "../components/ui/Stack";
+import { Badge } from "../components/ui/Badge";
+import { TextLink } from "../components/ui/TextLink";
 import { getRenderers, registerFileRenderer, type FileData, type RendererProps } from "./index";
 
 function CardAccordion({ cardPath, name, type, status }: { cardPath: string; name: string; type: string; status?: string }) {
-  const [open, setOpen] = useState(false);
+  const title = (
+    <Row gap="sm">
+      <Text size="sm" weight="medium" tone="emphasis">{name}</Text>
+      <Text size="xs" tone="muted">.{type}.card</Text>
+      {status ? <Badge size="sm">{status}</Badge> : null}
+    </Row>
+  );
   return (
-    <div className="border border-warm-200 rounded-lg overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-warm-50 transition-colors"
-      >
-        <span className={`text-warm-400 text-xs transition-transform ${open ? "rotate-90" : ""}`}>&#9654;</span>
-        <span className="text-sm font-medium text-warm-800">{name}</span>
-        <span className="text-warm-400 text-xs">.{type}.card</span>
-        {status ? (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-warm-100 text-warm-500">{status}</span>
-        ) : null}
-      </button>
-      {open ? <CardAccordionBody cardPath={cardPath} /> : null}
-    </div>
+    <Accordion title={title}>
+      <CardAccordionBody cardPath={cardPath} />
+    </Accordion>
   );
 }
 
 function CardAccordionBody({ cardPath }: { cardPath: string }) {
   const { data: card, isLoading, error } = trpc.card.get.useQuery({ path: cardPath });
 
-  if (isLoading) return <div className="px-3 py-2 text-warm-500 text-sm">Loading...</div>;
-  if (error || !card) return <div className="px-3 py-2 text-red-500 text-sm">Failed to load card</div>;
+  if (isLoading) return <Text size="sm" tone="muted">Loading...</Text>;
+  if (error || !card) return <Text size="sm" tone="danger">Failed to load card</Text>;
 
   const fileData: FileData = {
     path: card.path,
@@ -52,24 +51,12 @@ function CardAccordionBody({ cardPath }: { cardPath: string }) {
   const renderers = getRenderers(cardPath, fileData);
   if (renderers.length > 0) {
     const Renderer = renderers[0].Component;
-    return (
-      <div className="border-t border-warm-200 px-3 py-2">
-        <Renderer data={fileData} onNavigate={() => {}} />
-      </div>
-    );
+    return <Renderer data={fileData} onNavigate={() => {}} />;
   }
   if (card.element) {
-    return (
-      <div className="border-t border-warm-200 px-3 py-2">
-        <CardTreeView element={card.element} path={card.path} version={card.version} />
-      </div>
-    );
+    return <CardTreeView element={card.element} path={card.path} version={card.version} />;
   }
-  return (
-    <div className="border-t border-warm-200 px-3 py-2">
-      <pre className="text-xs whitespace-pre-wrap">{card.xml}</pre>
-    </div>
-  );
+  return <Pre size="xs">{card.xml}</Pre>;
 }
 
 function DirectoryRenderer({ data }: RendererProps) {
@@ -77,32 +64,33 @@ function DirectoryRenderer({ data }: RendererProps) {
   const { boxSlug } = useParams({ strict: false });
   const { data: browse, isLoading, error } = trpc.status.browse.useQuery({ path: dirPath });
 
-  if (isLoading) return <div className="p-4 text-warm-600">Loading...</div>;
-  if (error) return <div className="p-4 text-red-600">Error: {error.message}</div>;
-  if (!browse) return <div className="p-4 text-warm-600">Not found: {dirPath || "/"}</div>;
+  if (isLoading) return <div className="p-4"><Text tone="subtle">Loading...</Text></div>;
+  if (error) return <div className="p-4"><Text tone="danger">Error: {error.message}</Text></div>;
+  if (!browse) return <div className="p-4"><Text tone="subtle">Not found: {dirPath || "/"}</Text></div>;
 
   const isEmpty = browse.dirs.length === 0 && browse.cards.length === 0 && (browse.files ?? []).length === 0;
 
   return (
     <div className="p-4">
-      <div className="text-sm font-mono text-warm-500 mb-2">{dirPath || ""}/</div>
-      {isEmpty ? <div className="text-warm-500 text-sm">Empty directory</div> : null}
+      <Text as="div" size="sm" mono tone="muted" className="mb-2">{dirPath || ""}/</Text>
+      {isEmpty ? <Text size="sm" tone="muted">Empty directory</Text> : null}
       {browse.dirs.length > 0 ? (
-        <ul className="text-sm space-y-0.5 mb-2">
+        <Stack as="ul" gap="xs" className="mb-2">
           {browse.dirs.map((dir) => (
-            <li key={dir.name} className="font-mono">
-              <Link
+            <li key={dir.name}>
+              <TextLink
                 to={href(`/${boxSlug}/browse/${dirPath ? `${dirPath}/${dir.name}` : dir.name}`)}
-                className="text-plum hover:text-plum-dark hover:underline"
               >
-                <span className="text-warm-400 mr-1">/</span>{dir.name}
-              </Link>
+                <Text size="sm" mono>
+                  <Text size="sm" tone="muted" className="mr-1">/</Text>{dir.name}
+                </Text>
+              </TextLink>
             </li>
           ))}
-        </ul>
+        </Stack>
       ) : null}
       {browse.cards.length > 0 ? (
-        <div className="space-y-1 mb-2">
+        <Stack gap="xs" className="mb-2">
           {browse.cards.map((card) => (
             <CardAccordion
               key={card.relativePath}
@@ -112,21 +100,18 @@ function DirectoryRenderer({ data }: RendererProps) {
               status={card.status}
             />
           ))}
-        </div>
+        </Stack>
       ) : null}
       {(browse.files ?? []).length > 0 ? (
-        <ul className="text-sm space-y-0.5">
+        <Stack as="ul" gap="xs">
           {(browse.files ?? []).map((file) => (
-            <li key={file.relativePath} className="font-mono">
-              <Link
-                to={href(`/${boxSlug}/browse/${file.relativePath}`)}
-                className="text-plum hover:text-plum-dark hover:underline"
-              >
-                {file.name}
-              </Link>
+            <li key={file.relativePath}>
+              <TextLink to={href(`/${boxSlug}/browse/${file.relativePath}`)}>
+                <Text size="sm" mono>{file.name}</Text>
+              </TextLink>
             </li>
           ))}
-        </ul>
+        </Stack>
       ) : null}
     </div>
   );

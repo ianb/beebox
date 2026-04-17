@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { Image } from "./ui/Image";
 import { ImageLightbox } from "./ImageLightbox";
 
 /** UI-side attachment record (pairs ChatImageAttachment payload with preview metadata). */
@@ -75,13 +76,14 @@ function ThumbTile({
       <button
         type="button"
         onClick={onClick}
-        className="block w-16 h-16 rounded border border-warm-400 bg-warm-200 overflow-hidden hover:ring-2 hover:ring-gold focus:outline-none focus:ring-2 focus:ring-gold"
+        className="block rounded bg-warm-200 overflow-hidden hover:ring-2 hover:ring-gold focus:outline-none focus:ring-2 focus:ring-gold"
         title={`image${attachment.id} · ${kb} KB · click to zoom`}
       >
-        <img
+        <Image
           src={attachment.objectUrl}
           alt={`image${attachment.id}`}
-          className="w-full h-full object-cover"
+          size="thumb"
+          bordered
         />
       </button>
       <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
