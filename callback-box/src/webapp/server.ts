@@ -243,7 +243,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       });
 
       // REST routes that can't move to tRPC (SSE streaming, file uploads, WebSocket)
-      await registerApiRoutes(instance, box.boxRoot);
+      await registerApiRoutes(instance, { boxRoot: box.boxRoot, eventBus });
       await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
       await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
       await registerBriefRoutes(instance, box.boxRoot);

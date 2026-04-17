@@ -41,6 +41,10 @@ export interface GitCommitOptions {
   amend?: boolean;
 }
 
+export interface GitPathCommitOptions extends GitCommitOptions {
+  paths: string[];
+}
+
 export interface GitLogEntry {
   hash: string;
   date: string;
@@ -120,6 +124,18 @@ export async function stageFiles(boxRoot: string, paths: string[]): Promise<void
 }
 
 /**
+ * Check whether any of the given paths have tracked or untracked changes.
+ *
+ * @param boxRoot - Repository root
+ * @param paths - Paths to inspect (relative to boxRoot)
+ */
+export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promise<boolean> {
+  if (paths.length === 0) return false;
+  const output = await simpleGit(boxRoot).raw(["status", "--short", "--", ...paths]);
+  return output.trim().length > 0;
+}
+
+/**
  * Stage all changes. Retries once on index.lock errors, which occur when
  * git-lfs post-commit hooks or filter-process operations overlap with the
  * next git operation — common in boxes that track images/audio via LFS.
@@ -148,15 +164,7 @@ export async function commit(
   boxRoot: string,
   options: GitCommitOptions
 ): Promise<string> {
-  let message = options.message;
-
-  // Add trailers if provided
-  if (options.trailers && Object.keys(options.trailers).length > 0) {
-    message += "\n";
-    for (const [key, value] of Object.entries(options.trailers)) {
-      message += `\n${key}: ${value}`;
-    }
-  }
+  const message = buildCommitMessage(options);
 
   const git = simpleGit(boxRoot);
   const commitArgs = options.amend ? ["--amend"] : [];
@@ -174,6 +182,59 @@ export async function commit(
   // Get the commit hash
   const hash = await git.revparse(["HEAD"]);
   return hash.trim();
+}
+
+/**
+ * Commit only the given paths, ignoring unrelated staged changes.
+ *
+ * @param boxRoot - Repository root
+ * @param paths - Paths to commit (relative to boxRoot)
+ * @param options - Commit options
+ * @returns The commit hash
+ */
+export async function commitPaths(
+  boxRoot: string,
+  options: GitPathCommitOptions,
+): Promise<string> {
+  const { paths } = options;
+  if (paths.length === 0) {
+    throw new Error("commitPaths requires at least one path");
+  }
+
+  const message = buildCommitMessage(options);
+  const git = simpleGit(boxRoot);
+  const commitArgs = ["commit", "-m", message];
+  if (options.amend) {
+    commitArgs.push("--amend");
+  }
+  commitArgs.push("--", ...paths);
+
+  try {
+    await git.raw(commitArgs);
+  } catch (err) {
+    if (isIndexLockError(err)) {
+      await sleep(2000);
+      await git.raw(commitArgs);
+    } else {
+      throw err;
+    }
+  }
+
+  const hash = await git.revparse(["HEAD"]);
+  return hash.trim();
+}
+
+function buildCommitMessage(options: GitCommitOptions): string {
+  let message = options.message;
+
+  if (options.trailers && Object.keys(options.trailers).length > 0) {
+    message += "\n";
+    for (const [key, value] of Object.entries(options.trailers)) {
+      message += `\n${key}: ${value}`;
+    }
+  }
+
+  return message;
 }
 
 /**

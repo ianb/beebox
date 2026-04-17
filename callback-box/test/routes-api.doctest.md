@@ -4,6 +4,7 @@ The core data API provides endpoints for reading box state, browsing cards, and 
 
 ```ts setup
 import { makeTestServer } from "./helpers/doctest-server.js";
+import { execSync } from "node:child_process";
 ```
 
 ## Box status
@@ -154,6 +155,56 @@ await ctx.inject({ method: "GET", url: "/api/browse/box/inbox" })
     }
   ]
 }
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
+## Deleting raw files
+
+`DELETE /api/files/*` removes a non-card file and commits the deletion:
+
+```
+const ctx = await makeTestServer();
+await ctx.seed("store/images/delete-me.webp", "not really an image");
+ctx.commitAll("seed image");
+const res = await ctx.request({ method: "DELETE", url: "/api/files/store/images/delete-me.webp" });
+res.statusCode
+=> 200
+```
+
+``` continue
+execSync("git log -1 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
+=> "Deleted by user: store/images/delete-me.webp"
+```
+
+``` continue
+await ctx.inject({ method: "GET", url: "/api/files/store/images/delete-me.webp" })
+=>
+404
+«*»"error": "Not found"«*»
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
+Dirty files get preserved in their own commit before the delete commit:
+
+```
+const ctx = await makeTestServer();
+await ctx.seed("store/images/dirty-delete.webp", "version 1");
+ctx.commitAll("seed dirty image");
+await ctx.seed("store/images/dirty-delete.webp", "version 2");
+const res = await ctx.request({ method: "DELETE", url: "/api/files/store/images/dirty-delete.webp" });
+res.statusCode
+=> 200
+```
+
+``` continue
+execSync("git log -2 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
+=> "Deleted by user: store/images/dirty-delete.webp\nSaved before user delete: store/images/dirty-delete.webp"
 ```
 
 ``` cleanup

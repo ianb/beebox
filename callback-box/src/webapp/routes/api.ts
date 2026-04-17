@@ -9,7 +9,8 @@ import { getSystemState, generateContext } from "../../core/state.js";
 import { runHealthChecks } from "../trpc/routers/health.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { parseCardName } from "../../cli/lib/paths.js";
-import { getLog } from "../../cli/lib/git.js";
+import { commitPaths, getLog, pathsHaveChanges, stageFiles } from "../../cli/lib/git.js";
+import type { EventBus } from "../../core/event-bus.js";
 import type { ElementNode } from "cardworks";
 
 type PatchOp =
@@ -122,10 +123,16 @@ async function countNewsInDir(boxRoot: string, relativeDir: string): Promise<num
 /**
  * Register API routes on the Fastify server.
  */
+interface RegisterApiRoutesOptions {
+  boxRoot: string;
+  eventBus: EventBus;
+}
+
 export async function registerApiRoutes(
   server: FastifyInstance,
-  boxRoot: string
+  options: RegisterApiRoutesOptions,
 ): Promise<void> {
+  const { boxRoot, eventBus } = options;
   // GET /api/health - Health check (permissions, API keys)
   server.get("/api/health", async () => {
     const checks = await runHealthChecks(boxRoot);
@@ -435,6 +442,63 @@ export async function registerApiRoutes(
       } catch {
         return reply.status(404).send({ error: "Not found" });
       }
+    }
+  );
+
+  // DELETE /api/files/* - Remove a raw box file and commit the deletion
+  server.delete<{ Params: { "*": string } }>(
+    "/api/files/*",
+    async (request, reply) => {
+      const reqPath = request.params["*"] || "";
+      const resolved = path.resolve(path.join(boxRoot, reqPath));
+
+      if (!resolved.startsWith(path.resolve(boxRoot))) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+
+      if (reqPath === "" || path.basename(resolved).startsWith(".")) {
+        return reply.status(400).send({ error: "File path required" });
+      }
+
+      if (resolved.endsWith(".card")) {
+        return reply.status(403).send({ error: "Card deletion is not supported through this endpoint" });
+      }
+
+      try {
+        const stat = await fs.stat(resolved);
+        if (!stat.isFile()) {
+          return reply.status(404).send({ error: "Not found" });
+        }
+      } catch {
+        return reply.status(404).send({ error: "Not found" });
+      }
+
+      if (await pathsHaveChanges(boxRoot, [reqPath])) {
+        await stageFiles(boxRoot, [reqPath]);
+        await commitPaths(boxRoot, {
+          paths: [reqPath],
+          message: `Saved before user delete: ${reqPath}`,
+        });
+      }
+
+      await fs.unlink(resolved);
+      await stageFiles(boxRoot, [reqPath]);
+      const commitHash = await commitPaths(boxRoot, {
+        paths: [reqPath],
+        message: `Deleted by user: ${reqPath}`,
+      });
+
+      eventBus.emitTransient("file-change", {
+        event: "unlink",
+        path: reqPath,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        ok: true,
+        path: reqPath,
+        commit: commitHash,
+      };
     }
   );
 
