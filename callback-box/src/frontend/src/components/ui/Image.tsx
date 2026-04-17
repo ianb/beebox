@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { ImageLightbox } from "../ImageLightbox";
+import { cn } from "../../lib/cn";
 
 const SIZE_CLASSES = {
   thumb: "w-16 h-16 object-cover",
@@ -20,6 +21,13 @@ interface BaseImageProps {
   rotation?: ImageRotation;
   bordered?: boolean;
   title?: string;
+  /**
+   * Outer-layout classes (margin, padding, flex item, sizing, position),
+   * applied to whichever element ends up being outermost (figure when
+   * `caption` is set, the overlay wrapper when `overlay` is set, otherwise
+   * the img itself).
+   */
+  className?: string;
 }
 
 export type ImageProps = BaseImageProps & (
@@ -44,11 +52,11 @@ function BrokenImageIcon() {
   );
 }
 
-function ErrorPlaceholder({ alt, size, bordered }: { alt: string; size: ImageSize; bordered: boolean }) {
+function ErrorPlaceholder({ alt, size, bordered, extraClass }: { alt: string; size: ImageSize; bordered: boolean; extraClass?: string }) {
   const borderClass = bordered ? "border border-warm-300" : "border border-warm-200";
   return (
     <div
-      className={`${SIZE_CLASSES[size]} ${borderClass} rounded bg-warm-100 flex flex-col items-center justify-center text-warm-500 text-xs p-2 gap-1`}
+      className={cn(SIZE_CLASSES[size], borderClass, "rounded bg-warm-100 flex flex-col items-center justify-center text-warm-500 text-xs p-2 gap-1", extraClass)}
       role="img"
       aria-label={`Failed to load image: ${alt}`}
     >
@@ -73,9 +81,10 @@ interface ImgElementProps {
   onActivate: (() => void) | null;
   onError: () => void;
   lightbox: boolean;
+  extraClass?: string;
 }
 
-function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, lightbox }: ImgElementProps) {
+function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, lightbox, extraClass }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleKeyDown = (e: KeyboardEvent<HTMLImageElement>) => {
     if (onActivate !== null && (e.key === "Enter" || e.key === " ")) {
@@ -83,12 +92,13 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       onActivate();
     }
   };
-  const classes = [
+  const classes = cn(
     SIZE_CLASSES[size],
     "rounded",
     bordered ? "border border-warm-300" : "",
     interactive ? "cursor-pointer hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-gold" : "",
-  ].filter(Boolean).join(" ");
+    extraClass,
+  );
 
   return (
     <img
@@ -107,32 +117,72 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
   );
 }
 
-function wrapOrthogonal(node: ReactNode): ReactNode {
+function wrapOrthogonal({ node, extraClass }: { node: ReactNode; extraClass?: string }): ReactNode {
   return (
-    <div className="flex items-center justify-center" style={{ padding: "15% 0" }}>
+    <div className={cn("flex items-center justify-center", extraClass)} style={{ padding: "15% 0" }}>
       {node}
     </div>
   );
 }
 
-function wrapWithOverlay(node: ReactNode, overlay: ReactNode): ReactNode {
+function wrapWithOverlay({ node, overlay, extraClass }: { node: ReactNode; overlay: ReactNode; extraClass?: string }): ReactNode {
   return (
-    <div className="relative inline-block">
+    <div className={cn("relative inline-block", extraClass)}>
       {node}
       {overlay}
     </div>
   );
 }
 
-function wrapInFigure(node: ReactNode, caption: ReactNode): ReactNode {
+function wrapInFigure({ node, caption, extraClass }: { node: ReactNode; caption: ReactNode; extraClass?: string }): ReactNode {
   return (
-    <figure className="inline-flex flex-col items-center">
+    <figure className={cn("inline-flex flex-col items-center", extraClass)}>
       {node}
       <figcaption className="mt-1 max-w-full text-xs text-warm-600 italic text-center">
         {caption}
       </figcaption>
     </figure>
   );
+}
+
+type OuterLayer = "figure" | "overlay" | "orthogonal" | "img";
+
+interface AssembleOpts {
+  base: ReactNode;
+  caption: ReactNode;
+  overlay: ReactNode;
+  errored: boolean;
+  isOrthogonal: boolean;
+  outerLayer: OuterLayer;
+  className: string | undefined;
+}
+
+function assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className }: AssembleOpts): ReactNode {
+  let node: ReactNode = base;
+  if (isOrthogonal && !errored) {
+    node = wrapOrthogonal({ node, extraClass: outerLayer === "orthogonal" ? className : undefined });
+  }
+  if (overlay !== undefined && !errored) {
+    node = wrapWithOverlay({ node, overlay, extraClass: outerLayer === "overlay" ? className : undefined });
+  }
+  if (caption !== undefined) {
+    node = wrapInFigure({ node, caption, extraClass: className });
+  }
+  return node;
+}
+
+interface OuterLayerOpts {
+  caption: ReactNode;
+  overlay: ReactNode;
+  errored: boolean;
+  isOrthogonal: boolean;
+}
+
+function pickOuterLayer({ caption, overlay, errored, isOrthogonal }: OuterLayerOpts): OuterLayer {
+  if (caption !== undefined) return "figure";
+  if (overlay !== undefined && !errored) return "overlay";
+  if (isOrthogonal && !errored) return "orthogonal";
+  return "img";
 }
 
 export function Image(props: ImageProps) {
@@ -145,6 +195,7 @@ export function Image(props: ImageProps) {
     rotation = 0,
     bordered = false,
     title,
+    className,
   } = props;
   const lightbox = props.lightbox === true;
   const externalOnClick = lightbox ? undefined : props.onClick;
@@ -167,8 +218,14 @@ export function Image(props: ImageProps) {
 
   const effectiveTitle = title !== undefined ? title : lightbox && !errored ? "Click to zoom" : undefined;
 
-  let imgBlock: ReactNode = errored ? (
-    <ErrorPlaceholder alt={alt} size={size} bordered={bordered} />
+  // Determine which layer is the outermost wrapper so the caller's
+  // className lands there. Layer order, inside-out: img → orthogonal
+  // padding → overlay wrapper → figure (caption).
+  const outerLayer = pickOuterLayer({ caption, overlay, errored, isOrthogonal });
+  const imgExtra = outerLayer === "img" ? className : undefined;
+
+  const base: ReactNode = errored ? (
+    <ErrorPlaceholder alt={alt} size={size} bordered={bordered} extraClass={imgExtra} />
   ) : (
     <ImgElement
       src={src}
@@ -180,17 +237,11 @@ export function Image(props: ImageProps) {
       onActivate={activate}
       onError={() => setErrorSrc(src)}
       lightbox={lightbox}
+      extraClass={imgExtra}
     />
   );
 
-  if (isOrthogonal && !errored) {
-    imgBlock = wrapOrthogonal(imgBlock);
-  }
-  if (overlay !== undefined && !errored) {
-    imgBlock = wrapWithOverlay(imgBlock, overlay);
-  }
-
-  const rendered = caption !== undefined ? wrapInFigure(imgBlock, caption) : imgBlock;
+  const rendered = assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className });
   const lightboxCaption = typeof caption === "string" ? caption : undefined;
 
   return (

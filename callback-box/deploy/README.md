@@ -42,7 +42,7 @@ Installs everything on Ubuntu 24.04:
 - System packages (git, Node.js 22, nginx)
 - Clones and builds: cardworks → callback-box
 - Symlinks `cb` CLI to `/usr/local/bin/`
-- Installs Claude Code CLI
+- Installs Claude Code CLI (native installer — auto-updates in background)
 - Creates systemd services for web server and scheduler
 - Configures nginx reverse proxy (port 80 → 3210)
 
@@ -93,6 +93,7 @@ Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations o
   test1/
   hearth/
 /home/callback/.env         # Environment variables (API keys)
+/home/callback/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/cb           # CLI symlink
 /usr/local/bin/cb-rebuild   # Rebuild shortcut
 ```
@@ -121,6 +122,10 @@ systemctl restart callback-serve callback-scheduler
 # Required
 ANTHROPIC_API_KEY=sk-ant-...
 PUBLIC_URL=https://box.example.com
+
+# Systemd doesn't source .bashrc, so PATH must include the native
+# Claude Code install location for the callback user.
+PATH=/home/callback/.local/bin:/usr/local/bin:/usr/bin:/bin
 
 # Auth (optional — enables Google OAuth when set)
 GOOGLE_OAUTH_CLIENT_ID=...

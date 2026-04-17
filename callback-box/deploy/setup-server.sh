@@ -80,8 +80,14 @@ ln -sf "$INSTALL_DIR/callback-box/bin/cb" /usr/local/bin/cb
 cb --help >/dev/null 2>&1 && echo "cb CLI is working" || echo "WARNING: cb CLI test failed"
 
 # ── Install Claude Code CLI ─────────────────────────────────────────
-echo "Installing Claude Code CLI..."
-npm install -g @anthropic-ai/claude-code
+# Native installer auto-updates in the background, unlike npm global
+# install. Install for BOTH root (manual admin use) and the callback
+# user (service use). Each user manages its own version.
+echo "Installing Claude Code CLI (native installer)..."
+curl -fsSL https://claude.ai/install.sh | bash
+su - "$CB_USER" -c 'curl -fsSL https://claude.ai/install.sh | bash'
+# Add native install location to callback user's PATH
+su - "$CB_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
 # ── Code directory permissions ───────────────────────────────────────
 echo "Setting read permissions on $INSTALL_DIR for $CB_USER..."
@@ -102,6 +108,10 @@ if [[ ! -f "$ENV_FILE" ]]; then
   cat > "$ENV_FILE" <<'ENVEOF'
 # Required
 PUBLIC_URL=https://box.example.com
+
+# PATH must include the native Claude Code install location so systemd
+# services (which don't source .bashrc) can find the `claude` binary.
+PATH=/home/callback/.local/bin:/usr/local/bin:/usr/bin:/bin
 
 # Optional
 # THINKING_OPENAI_API_KEY=sk-REPLACE_ME
