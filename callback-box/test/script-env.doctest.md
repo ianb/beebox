@@ -5,7 +5,7 @@ box-scoped subprocess spawn site runs to get `CB_BOX_NAME` and
 `CB_SERVER_URL` (plus any caller-specific additions).
 
 ```ts setup
-import { buildScriptEnv, parsePublicUrl } from "../src/core/script-env.js";
+import { buildScriptEnv, parsePublicUrl, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../src/core/script-env.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -86,6 +86,55 @@ print(`CB_SERVER_URL: ${env.CB_SERVER_URL}`);
 =>
 CB_BOX_NAME: my-box
 CB_SERVER_URL: https://cb.example.org
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## buildScriptEnv — ambient registration wins over box.json
+
+When the webapp server registers a live public URL for a box (called
+from `startServer` after listen), it takes priority over box.json. This
+lets a local dev server supply `CB_BOX_NAME` / `CB_SERVER_URL` even
+when `publicUrl` is absent from config:
+
+```
+const box = await makeTmpBox();
+await fs.mkdir(path.join(box.root, "config"), { recursive: true });
+await fs.writeFile(
+  path.join(box.root, "config", "box.json"),
+  JSON.stringify({ publicUrl: "https://stale.example.org/wrong-name" })
+);
+registerBoxPublicUrl(box.root, "http://localhost:3210/live-name");
+const env = await buildScriptEnv(box.root);
+unregisterBoxPublicUrl(box.root);
+print(`CB_BOX_NAME: ${env.CB_BOX_NAME}`);
+print(`CB_SERVER_URL: ${env.CB_SERVER_URL}`);
+=>
+CB_BOX_NAME: live-name
+CB_SERVER_URL: http://localhost:3210
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## buildScriptEnv — ambient works without box.json at all
+
+A box with no `config/box.json` picks up env vars from the ambient
+registration:
+
+```
+const box = await makeTmpBox();
+registerBoxPublicUrl(box.root, "http://localhost:3210/ephemeral-box");
+const env = await buildScriptEnv(box.root);
+unregisterBoxPublicUrl(box.root);
+print(`CB_BOX_NAME: ${env.CB_BOX_NAME}`);
+print(`CB_SERVER_URL: ${env.CB_SERVER_URL}`);
+=>
+CB_BOX_NAME: ephemeral-box
+CB_SERVER_URL: http://localhost:3210
 ```
 
 ``` cleanup

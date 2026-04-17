@@ -15,9 +15,10 @@ import {
   getSessionLogPath,
   getSessionMetadata,
   listSessions,
-  parseSelfNote,
+  parseSelfNotes,
   parseSessionLog,
   stripSpeechWrappers,
+  type SelfNoteInfo,
   type SessionEntry,
   type SessionContentBlock,
   type SessionMetadata,
@@ -67,24 +68,21 @@ interface RenderOptions {
 }
 
 /**
- * If this entry is an agent-authored self-note (user-position text wrapped
- * in `<self-note>...</self-note>`), return the parsed note info. Otherwise
- * null.
+ * If this entry is a pure self-note entry (user-position text composed
+ * entirely of one or more `<self-note>` blocks), return all the notes.
+ * Otherwise null.
  */
-function getSelfNote(entry: SessionEntry): ReturnType<typeof parseSelfNote> {
+function getSelfNotes(entry: SessionEntry): SelfNoteInfo[] | null {
   if (entry.type !== "user") return null;
   for (const block of entry.content) {
     if (block.type !== "text") continue;
-    const note = parseSelfNote(block.text || "");
-    if (note) return note;
+    const notes = parseSelfNotes(block.text || "");
+    if (notes) return notes;
   }
   return null;
 }
 
-function renderSelfNote(
-  note: NonNullable<ReturnType<typeof parseSelfNote>>,
-  options: RenderOptions
-): void {
+function renderSelfNote(note: SelfNoteInfo, options: RenderOptions): void {
   const separator = "\u2500".repeat(40);
   console.log(`\u2500\u2500 Self-note ${separator}`);
   if (!options.dialogueOnly) {
@@ -140,9 +138,11 @@ function renderEntries(entries: SessionEntry[], options: RenderOptions): void {
   const separator = "\u2500".repeat(40);
 
   for (const entry of entries) {
-    const note = getSelfNote(entry);
-    if (note) {
-      renderSelfNote(note, options);
+    const notes = getSelfNotes(entry);
+    if (notes) {
+      for (const note of notes) {
+        renderSelfNote(note, options);
+      }
       continue;
     }
 

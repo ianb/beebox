@@ -34,26 +34,36 @@ function decodeXmlAttr(v: string): string {
     .replace(/&amp;/g, "&");
 }
 
-function parseSelfNote(text: string): SelfNoteInfo | null {
-  const match = text.trim().match(/^<self-note\b([^>]*)>([\S\s]*?)<\/self-note>\s*$/);
-  if (!match) return null;
-  const attrs = match[1] || "";
-  const body = (match[2] || "").trim();
-  const refMatch = attrs.match(/\bref="([^"]*)"/);
-  const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
-  return {
-    ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
-    commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
-    body,
-  };
+function parseSelfNotes(text: string): SelfNoteInfo[] | null {
+  const re = /<self-note\b([^>]*)>([\S\s]*?)<\/self-note>/g;
+  const notes: SelfNoteInfo[] = [];
+  let lastEnd = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const between = text.slice(lastEnd, m.index);
+    if (between.trim().length > 0) return null;
+    const attrs = m[1] || "";
+    const body = (m[2] || "").trim();
+    const refMatch = attrs.match(/\bref="([^"]*)"/);
+    const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
+    notes.push({
+      ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
+      commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
+      body,
+    });
+    lastEnd = m.index + m[0].length;
+  }
+  if (notes.length === 0) return null;
+  if (text.slice(lastEnd).trim().length > 0) return null;
+  return notes;
 }
 
-function entrySelfNote(entry: SessionEntry): SelfNoteInfo | null {
+function entrySelfNotes(entry: SessionEntry): SelfNoteInfo[] | null {
   if (entry.type !== "user") return null;
   for (const block of entry.content) {
     if (block.type !== "text") continue;
-    const note = parseSelfNote(block.text || "");
-    if (note) return note;
+    const notes = parseSelfNotes(block.text || "");
+    if (notes) return notes;
   }
   return null;
 }
@@ -597,7 +607,7 @@ function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZo
  */
 export type MessageGroup =
   | { type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }
-  | { type: "self-note"; entries: SessionEntry[]; note: SelfNoteInfo };
+  | { type: "self-note"; entries: SessionEntry[]; notes: SelfNoteInfo[] };
 
 export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
   const groups: MessageGroup[] = [];
@@ -606,9 +616,9 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
       groups.push({ type: "compaction", entries: [entry] });
       continue;
     }
-    const note = entrySelfNote(entry);
-    if (note) {
-      groups.push({ type: "self-note", entries: [entry], note });
+    const notes = entrySelfNotes(entry);
+    if (notes) {
+      groups.push({ type: "self-note", entries: [entry], notes });
       continue;
     }
     const last = groups[groups.length - 1];

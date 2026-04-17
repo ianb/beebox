@@ -257,23 +257,49 @@ function decodeXmlAttr(v: string): string {
 }
 
 /**
- * If `text` is a self-note (a `<self-note>...</self-note>` block, possibly
- * with surrounding whitespace), return the parsed metadata and body;
- * otherwise null. Used by both the CLI session renderer and the chat UI
- * to render self-notes distinctly from typed/spoken user messages.
+ * If `text` is composed entirely of one or more `<self-note>` blocks
+ * (separated by whitespace, with no non-whitespace between them), return
+ * the parsed notes. Otherwise null — a mixed message (self-notes plus
+ * other text) falls through to normal user rendering so the other text
+ * isn't silently hidden.
+ *
+ * Multiple notes per entry happen naturally: `ChatSession.drainQueue()`
+ * concatenates queued messages with `\n\n`, so a burst of
+ * `cb chat self-note` calls during one turn arrives as a single user
+ * entry containing several `<self-note>` blocks back-to-back.
+ */
+export function parseSelfNotes(text: string): SelfNoteInfo[] | null {
+  const re = /<self-note\b([^>]*)>([\S\s]*?)<\/self-note>/g;
+  const notes: SelfNoteInfo[] = [];
+  let lastEnd = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const between = text.slice(lastEnd, m.index);
+    if (between.trim().length > 0) return null;
+    const attrs = m[1] || "";
+    const body = (m[2] || "").trim();
+    const refMatch = attrs.match(/\bref="([^"]*)"/);
+    const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
+    notes.push({
+      ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
+      commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
+      body,
+    });
+    lastEnd = m.index + m[0].length;
+  }
+  if (notes.length === 0) return null;
+  if (text.slice(lastEnd).trim().length > 0) return null;
+  return notes;
+}
+
+/**
+ * Legacy single-note accessor kept for call sites that expect one note.
+ * Returns the first self-note in a pure-self-note text block, or null.
+ * New code should prefer `parseSelfNotes`.
  */
 export function parseSelfNote(text: string): SelfNoteInfo | null {
-  const match = text.trim().match(/^<self-note\b([^>]*)>([\S\s]*?)<\/self-note>\s*$/);
-  if (!match) return null;
-  const attrs = match[1] || "";
-  const body = (match[2] || "").trim();
-  const refMatch = attrs.match(/\bref="([^"]*)"/);
-  const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
-  return {
-    ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
-    commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
-    body,
-  };
+  const notes = parseSelfNotes(text);
+  return notes && notes.length > 0 ? notes[0]! : null;
 }
 
 /**

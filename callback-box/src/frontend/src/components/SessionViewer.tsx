@@ -185,7 +185,11 @@ function SessionViewerInner({ sessionId }: { sessionId: string }) {
           group.type === "compaction" ? (
             <CompactionMessage key={group.entries[0].uuid} entries={group.entries} />
           ) : group.type === "self-note" ? (
-            <SelfNoteMessage key={group.entries[0].uuid} note={group.note} />
+            <div key={group.entries[0].uuid}>
+              {group.notes.map((note, i) => (
+                <SelfNoteMessage key={i} note={note} />
+              ))}
+            </div>
           ) : group.type === "user" ? (
             <UserMessage key={group.entries[0].uuid} entries={group.entries} />
           ) : (

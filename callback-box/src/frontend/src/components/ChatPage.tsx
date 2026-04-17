@@ -700,7 +700,13 @@ function VirtualizedMessageList({
                 if (group.type === "compaction") {
                   return <CompactionMessage entries={group.entries} />;
                 } else if (group.type === "self-note") {
-                  return <SelfNoteMessage note={group.note} />;
+                  return (
+                    <>
+                      {group.notes.map((note, i) => (
+                        <SelfNoteMessage key={i} note={note} />
+                      ))}
+                    </>
+                  );
                 } else if (group.type === "user") {
                   return <UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} />;
                 } else {

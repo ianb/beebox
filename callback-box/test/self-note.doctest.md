@@ -5,7 +5,7 @@ Tests for agent-authored self-notes: the `<self-note>` tag parser, the
 input validation.
 
 ```ts setup
-import { parseSelfNote, parseSessionLog, getSessionMetadata } from "../src/cli/lib/session.js";
+import { parseSelfNote, parseSelfNotes, parseSessionLog, getSessionMetadata } from "../src/cli/lib/session.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { makeTestServer } from "./helpers/doctest-server.js";
 ```
@@ -87,6 +87,58 @@ parseSelfNote("<typed>regular user message</typed>") === null
 
 ```
 parseSelfNote("<self-note>no closing tag") === null
+=> true
+```
+
+## parseSelfNotes — multiple notes in one text block
+
+`ChatSession.drainQueue()` concatenates a burst of enqueued self-notes
+with `\n\n`, so a single user entry can contain several `<self-note>`
+blocks back-to-back. `parseSelfNotes` returns them all.
+
+```
+const text = "<self-note>one</self-note>\n\n<self-note ref=\"x\">two</self-note>\n\n<self-note commit=\"abc\">three</self-note>";
+const notes = parseSelfNotes(text);
+print(`count: ${notes.length}`);
+print(`0: ${notes[0].body}`);
+print(`1 ref: ${notes[1].ref}, body: ${notes[1].body}`);
+print(`2 commit: ${notes[2].commit}, body: ${notes[2].body}`);
+=>
+count: 3
+0: one
+1 ref: x, body: two
+2 commit: abc, body: three
+```
+
+A single note returns a one-element array:
+
+```
+parseSelfNotes("<self-note>hi</self-note>").length
+=> 1
+```
+
+Mixed content (self-note plus other text) is rejected — falls through
+to normal user rendering so the other text isn't silently hidden:
+
+```
+parseSelfNotes("<self-note>note</self-note>\nrandom extra text") === null
+=> true
+```
+
+```
+parseSelfNotes("hello\n<self-note>note</self-note>") === null
+=> true
+```
+
+```
+parseSelfNotes("<self-note>a</self-note> BETWEEN <self-note>b</self-note>") === null
+=> true
+```
+
+No self-notes in the text:
+
+```
+parseSelfNotes("just a typed message") === null
 => true
 ```
 

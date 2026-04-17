@@ -27,6 +27,31 @@ interface BoxEnvPieces {
 }
 
 /**
+ * Per-box live server URLs, populated at server startup. Preferred over
+ * `config/box.json#publicUrl` so that a running local dev server (which
+ * knows its actual port and slug) can supply the env vars even when
+ * `publicUrl` is absent from box config.
+ *
+ * Keyed by absolute box root path.
+ */
+const ambientPublicUrls = new Map<string, string>();
+
+/**
+ * Register the live public URL for a box. Called by `startServer` after
+ * the server binds, once per served box. Format matches
+ * `config/box.json#publicUrl`: full URL including slug (e.g.
+ * `http://localhost:3210/test1`).
+ */
+export function registerBoxPublicUrl(boxRoot: string, publicUrl: string): void {
+  ambientPublicUrls.set(boxRoot, publicUrl);
+}
+
+/** Clear a registration (server shutdown or test cleanup). */
+export function unregisterBoxPublicUrl(boxRoot: string): void {
+  ambientPublicUrls.delete(boxRoot);
+}
+
+/**
  * Derive `{ serverUrl, boxName }` from a `publicUrl` string, or return
  * both null when the input is falsy / unparseable. Exported for tests.
  */
@@ -61,8 +86,12 @@ export async function buildScriptEnv(
 ): Promise<NodeJS.ProcessEnv> {
   const env: NodeJS.ProcessEnv = { ...process.env };
 
+  // Priority: live ambient (running server) > box.json publicUrl > PUBLIC_URL env.
+  // The live ambient lets a local dev server supply the env vars without
+  // requiring publicUrl to be configured in box.json.
+  const ambient = ambientPublicUrls.get(boxRoot);
   const config = await loadBoxConfig(boxRoot);
-  const publicUrl = config.publicUrl ?? process.env.PUBLIC_URL;
+  const publicUrl = ambient ?? config.publicUrl ?? process.env.PUBLIC_URL;
   const { serverUrl, boxName } = parsePublicUrl(publicUrl);
   if (serverUrl) env.CB_SERVER_URL = serverUrl;
   if (boxName) env.CB_BOX_NAME = boxName;

@@ -33,6 +33,7 @@ import type { TrpcContext } from "./trpc/context.js";
 import { ChatSession } from "../core/chat-session.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
+import { registerBoxPublicUrl } from "../core/script-env.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 import type { Services } from "../services/index.js";
 
@@ -435,6 +436,12 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
 
   try {
     await server.listen({ port, host });
+    // Register live public URLs for each served box so subprocess spawns
+    // pick up CB_BOX_NAME / CB_SERVER_URL via buildScriptEnv without
+    // requiring publicUrl to be set in config/box.json.
+    for (const box of boxes) {
+      registerBoxPublicUrl(box.boxRoot, `http://${host}:${port}/${box.slug}`);
+    }
     console.log(`Server running at http://${host}:${port}`);
     for (const box of boxes) {
       console.log(`  ${box.slug}: http://${host}:${port}/${box.slug}/`);
