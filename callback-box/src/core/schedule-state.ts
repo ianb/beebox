@@ -19,6 +19,7 @@ export interface ScriptState {
   lastRun: string | null;
   lastResult: "success" | "failure" | null;
   lastError: string | null;
+  lastDurationMs: number | null;
   runCount: number;
   recentRuns?: RunRecord[];
 }
@@ -27,6 +28,7 @@ const EMPTY_STATE: ScriptState = {
   lastRun: null,
   lastResult: null,
   lastError: null,
+  lastDurationMs: null,
   runCount: 0,
 };
 

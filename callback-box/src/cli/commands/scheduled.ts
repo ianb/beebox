@@ -67,13 +67,24 @@ export const scheduledCommand = new Command("scheduled")
         scheduleDesc = "on-wakeup only";
       }
 
-      // Build last-run description
+      // Build last-run description. Fall back to recentRuns for durationMs when
+      // the state file predates lastDurationMs being recorded directly.
       let lastDesc: string;
       if (state.lastRun) {
         const elapsed = now.getTime() - new Date(state.lastRun).getTime();
         lastDesc = `last: ${formatDuration(elapsed)} ago`;
+        let durationMs = state.lastDurationMs;
+        if (durationMs == null && state.recentRuns && state.recentRuns.length > 0) {
+          const match = state.recentRuns.find((r) => r.ts === state.lastRun);
+          if (match) durationMs = match.durationMs;
+        }
+        const dur = durationMs != null
+          ? `, ${(durationMs / 1000).toFixed(1)}s`
+          : "";
         if (state.lastResult === "failure") {
-          lastDesc += " (failed)";
+          lastDesc += ` (\u2717 error${dur})`;
+        } else if (state.lastResult === "success") {
+          lastDesc += ` (ran${dur})`;
         }
       } else {
         lastDesc = "never run";

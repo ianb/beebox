@@ -190,8 +190,9 @@ schedulerCommand
   .option("--box <path>", "Show logs for a specific box (default: all configured boxes)")
   .option("--limit <n>", "Max entries to show", "20")
   .option("--errors", "Only show entries with errors")
+  .option("--script <name>", "Only show entries where this script ran or errored")
   .option("--json", "Output raw JSONL")
-  .action(async (options: { box?: string; limit: string; errors?: boolean; json?: boolean }) => {
+  .action(async (options: { box?: string; limit: string; errors?: boolean; script?: string; json?: boolean }) => {
     const limit = parseInt(options.limit, 10);
 
     // Determine which boxes to read logs from
@@ -232,6 +233,13 @@ schedulerCommand
             else if (entry.result && entry.result.errors > 0) { /* keep */ }
             else continue;
           }
+          if (options.script) {
+            // Keep only tick entries where this script ran or errored.
+            const match = entry.result && entry.result.scripts.some(
+              (s) => s.name === options.script && (s.status === "ran" || s.status === "error"),
+            );
+            if (!match) continue;
+          }
           allEntries.push(entry);
         } catch {
           // skip malformed
@@ -260,8 +268,23 @@ schedulerCommand
       if (e.event === "tick" && e.result) {
         const boxName = path.basename(e.box ?? "?");
         const r = e.result;
-        const ranScripts = r.scripts.filter((s) => s.status === "ran");
-        const errorScripts = r.scripts.filter((s) => s.status === "error");
+        let ranScripts = r.scripts.filter((s) => s.status === "ran");
+        let errorScripts = r.scripts.filter((s) => s.status === "error");
+
+        // When filtering to a single script, render just that script's line
+        // with timestamp + box context — suppress the tick summary header.
+        if (options.script) {
+          ranScripts = ranScripts.filter((s) => s.name === options.script);
+          errorScripts = errorScripts.filter((s) => s.name === options.script);
+          for (const s of ranScripts) {
+            const dur = s.durationMs ? ` (${(s.durationMs / 1000).toFixed(1)}s)` : "";
+            console.log(`${ts}  ${boxName}: → ${s.name}${dur}`);
+          }
+          for (const s of errorScripts) {
+            console.log(`${ts}  ${boxName}: ✗ ${s.name}: ${s.error ?? "unknown error"}`);
+          }
+          continue;
+        }
 
         if (r.ran === 0 && r.errors === 0) {
           console.log(`${ts}  ${boxName}: all ${r.skipped} skipped`);
