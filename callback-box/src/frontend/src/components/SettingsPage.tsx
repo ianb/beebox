@@ -83,24 +83,23 @@ function CalendarSection() {
       <div className="space-y-1">
         {calendars.map((cal) => (
           <div key={cal.id} className="flex items-center gap-3 px-3 py-2 rounded hover:bg-warm-50">
-            <div className="flex-1 min-w-0">
-              <CheckboxField
-                label={
-                  <>
-                    {cal.summary}
-                    {cal.primary ? (
-                      <span className="ml-1 text-xs text-warm-500">(primary)</span>
-                    ) : null}
-                    {cal.accessRole !== "owner" ? (
-                      <span className="ml-1 text-xs text-warm-500">({cal.accessRole})</span>
-                    ) : null}
-                  </>
-                }
-                checked={cal.syncing}
-                onChange={() => toggleCalendar(cal)}
-                disabled={updateMutation.isPending}
-              />
-            </div>
+            <CheckboxField
+              label={
+                <>
+                  {cal.summary}
+                  {cal.primary ? (
+                    <span className="ml-1 text-xs text-warm-500">(primary)</span>
+                  ) : null}
+                  {cal.accessRole !== "owner" ? (
+                    <span className="ml-1 text-xs text-warm-500">({cal.accessRole})</span>
+                  ) : null}
+                </>
+              }
+              checked={cal.syncing}
+              onChange={() => toggleCalendar(cal)}
+              disabled={updateMutation.isPending}
+              className="flex-1 min-w-0"
+            />
             {cal.backgroundColor ? (
               <span
                 className="w-3 h-3 rounded-full flex-shrink-0"

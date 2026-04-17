@@ -241,11 +241,9 @@ function ToolDetail({ block }: { block: SessionContentBlock }) {
         <span>{description}</span>
       </summary>
       {input ? (
-        <div className="mt-1 mb-1 ml-3">
-          <Pre size="xs" boxed scroll="sm" muted>
-            {JSON.stringify(input, null, 2)}
-          </Pre>
-        </div>
+        <Pre size="xs" boxed scroll="sm" muted className="mt-1 mb-1 ml-3">
+          {JSON.stringify(input, null, 2)}
+        </Pre>
       ) : null}
     </details>
   );

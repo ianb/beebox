@@ -30,6 +30,7 @@ import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import { Pre } from "./ui/Pre";
+import { ExternalIconLink } from "./ui/ExternalIconLink";
 
 export type FileViewMode = "page" | "chat" | "companion";
 
@@ -153,14 +154,6 @@ function displayName(path: string): string {
   return base.endsWith(".card") ? base.slice(0, -5) : base;
 }
 
-function ExternalLinkIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-    </svg>
-  );
-}
-
 function RendererToggle({
   renderers, active, onSelect, compact,
 }: {
@@ -205,15 +198,7 @@ function ChatHeader({
         <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
-      <a
-        href={browseHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex-shrink-0 p-1 text-warm-500 hover:text-warm-700 rounded hover:bg-warm-200"
-        title="Open in browse view (new tab)"
-      >
-        <ExternalLinkIcon />
-      </a>
+      <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
     </div>
   );
 }

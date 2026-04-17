@@ -32,6 +32,7 @@ import { UserMessage, AssistantMessage, CompactionMessage, ToolList, MarkdownCon
 import { FileView } from "./FileView";
 import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
 import { CloseButton } from "./ui/CloseButton";
+import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
 import { SessionViewer, SessionListButton } from "./SessionViewer";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
@@ -183,17 +184,7 @@ function CompanionViewPanel({ view, onClose }: { view: { target: ViewTarget; lab
           <div className="text-sm font-medium truncate">{view.label}</div>
           <div className="text-xs text-warm-500 truncate" title={view.target.path}>{view.target.path}</div>
         </div>
-        <a
-          href={browseHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-shrink-0 p-1 text-warm-500 hover:text-warm-700 rounded hover:bg-warm-200"
-          title="Open in browse view (new tab)"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
+        <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
         <CloseButton onClick={onClose} label="Close companion view" size="sm" />
       </div>
       <div className="flex-1 overflow-auto">
