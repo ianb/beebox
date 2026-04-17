@@ -176,7 +176,7 @@ res.statusCode
 
 ``` continue
 execSync("git log -1 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
-=> "Deleted by user: store/images/delete-me.webp"
+=> Deleted by user: store/images/delete-me.webp
 ```
 
 ``` continue
@@ -204,7 +204,9 @@ res.statusCode
 
 ``` continue
 execSync("git log -2 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
-=> "Deleted by user: store/images/dirty-delete.webp\nSaved before user delete: store/images/dirty-delete.webp"
+=>
+Deleted by user: store/images/dirty-delete.webp
+Saved before user delete: store/images/dirty-delete.webp
 ```
 
 ``` cleanup
