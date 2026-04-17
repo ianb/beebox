@@ -188,17 +188,19 @@ function FileView({ path }: { path: string }) {
     <div>
       {/* View toggle — only show if multiple renderers */}
       {renderers.length > 1 && (
-        <div className="flex gap-1 mb-4">
+        <Row gap="xs" className="mb-4">
           {renderers.map(r => (
-            <button
+            <Button
               key={r.name}
-              className={`btn btn-sm ${r === current ? "btn-primary" : "btn-secondary"}`}
+              type="button"
+              intent={r === current ? "primary" : "secondary"}
+              size="sm"
               onClick={() => setActiveRenderer(r.name)}
             >
               {r.name}
-            </button>
+            </Button>
           ))}
-        </div>
+        </Row>
       )}
 
       <current.Component
@@ -329,13 +331,19 @@ function DirectoryBrowser({ dir }: { dir: string }) {
     <div>
       {/* Subdirectory links */}
       {subdirs.length > 0 && (
-        <div className="flex gap-2 mb-4">
+        <Row gap="sm" className="mb-4">
           {subdirs.map(d => (
-            <Link key={d} to={`/browse/${d}`} className="btn btn-secondary btn-sm">
+            <Button
+              key={d}
+              type="button"
+              intent="secondary"
+              size="sm"
+              onClick={() => navigate(`/browse/${d}`)}
+            >
               {path.basename(d)}/
-            </Link>
+            </Button>
           ))}
-        </div>
+        </Row>
       )}
 
       <Accordion>
@@ -612,21 +620,23 @@ function RecipeDetailView({ data }: RendererProps) {
       )}
 
       {/* Scaling controls */}
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-sm text-gray-500">Scale:</span>
+      <Row gap="sm" className="mb-6">
+        <Text size="sm" tone="muted">Scale:</Text>
         {[0.5, 1, 2, 3].map(s => (
-          <button
+          <Button
             key={s}
-            className={`btn btn-sm ${scale === s ? "btn-primary" : "btn-secondary"}`}
+            type="button"
+            intent={scale === s ? "primary" : "secondary"}
+            size="sm"
             onClick={() => setScale(s)}
           >
             {s}x
-          </button>
+          </Button>
         ))}
-        <span className="text-sm text-gray-500 ml-2">
+        <Text size="sm" tone="muted" className="ml-2">
           ({recipe.yieldText} → {scaleYield(recipe.yieldAmount, scale)})
-        </span>
-      </div>
+        </Text>
+      </Row>
 
       {/* Sections */}
       {recipe.sections.map((section, i) => (
@@ -866,22 +876,24 @@ export const bookmarkListPlugin: CardListPlugin = {
 function BookmarkListItem({ card, onNavigate }: CardListItemProps) {
   const { title, link } = card.summary ?? {};
   return (
-    <div className="card flex justify-between items-center">
-      <div>
-        <h3 className="font-medium">{title ?? card.path}</h3>
-        {link && (
-          <a href={link} target="_blank" className="text-sm text-blue-500 hover:underline">
-            {new URL(link).hostname}
-          </a>
-        )}
-      </div>
-      <button
-        className="btn btn-secondary btn-sm"
-        onClick={() => onNavigate(`/view/${card.path}`)}
-      >
-        View
-      </button>
-    </div>
+    <Card>
+      <Row justify="between">
+        <div>
+          <Text as="h3" weight="medium">{title ?? card.path}</Text>
+          {link && (
+            <ExternalLink href={link}>{new URL(link).hostname}</ExternalLink>
+          )}
+        </div>
+        <Button
+          type="button"
+          intent="secondary"
+          size="sm"
+          onClick={() => onNavigate(`/view/${card.path}`)}
+        >
+          View
+        </Button>
+      </Row>
+    </Card>
   );
 }
 
