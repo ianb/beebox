@@ -14,8 +14,10 @@ import { Card } from "../components/ui/Card";
 import { BboxOverlay } from "../components/ui/BboxOverlay";
 import { getApiBase } from "../api";
 import type { RendererProps } from "./index";
-import { registerCardRenderer } from "./index";
+import { registerCardRenderer, registerFileRenderer } from "./index";
 import type { ElementNode } from "../api";
+
+const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg|ico)$/i;
 
 type Rotation = 0 | 90 | 180 | 270;
 
@@ -144,3 +146,23 @@ registerCardRenderer("image", {
   Component: ImageCardRenderer,
   priority: 50,
 });
+
+function RawImageRenderer({ data }: RendererProps) {
+  const basename = data.path.split("/").pop() || data.path;
+  return (
+    <div className="p-4">
+      <Image
+        src={`${getApiBase()}/files/${data.path}`}
+        alt={basename}
+        size="lg"
+        lightbox
+        bordered
+      />
+    </div>
+  );
+}
+
+registerFileRenderer(
+  (path) => RAW_IMAGE_EXT.test(path),
+  { name: "Image", Component: RawImageRenderer, priority: 30 },
+);

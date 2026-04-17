@@ -16,7 +16,7 @@ function PlaintextRenderer({ data }: RendererProps) {
   }
   return (
     <div className="p-4">
-      <Pre boxed>{data.content}</Pre>
+      <Pre>{data.content}</Pre>
     </div>
   );
 }
