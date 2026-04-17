@@ -22,6 +22,9 @@ detectKeyword("finished")?.action
 
 detectKeyword("send now")?.action
 => send
+
+detectKeyword("it's a message")?.action
+=> send
 ```
 
 The matched phrase is replaced with a tag in the processed transcript:
