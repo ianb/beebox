@@ -103,6 +103,20 @@ function localTime(): string {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
+/**
+ * Format a millisecond gap as "Xh" or "XdYh" (hours omitted when zero).
+ * Returns null when the gap is under 12 hours — callers should omit the attribute then.
+ */
+function formatTimePassed(ms: number): string | null {
+  const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+  if (ms < TWELVE_HOURS) return null;
+  const totalHours = Math.floor(ms / (60 * 60 * 1000));
+  if (totalHours < 24) return `${totalHours}h`;
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  return hours > 0 ? `${days}d${hours}h` : `${days}d`;
+}
+
 function NewSessionButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -203,7 +217,7 @@ function ChatInputArea({
   textareaRef, input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
-  isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr,
+  isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop,
 }: {
@@ -224,6 +238,7 @@ function ChatInputArea({
   turnTakingRef: React.MutableRefObject<boolean>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
+  timePassedAttr: () => string;
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;
@@ -311,7 +326,7 @@ function ChatInputArea({
                 onClick={() => {
                   const text = transcription.transcript.trim();
                   transcription.cancel();
-                  if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
+                  if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
                 }}
                 className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
                 title="Send"
@@ -418,7 +433,7 @@ function ChatInputArea({
 function MobileTextareaRow({
   input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription,
-  turnTakingRef, doSend, zoomedViewAttr,
+  turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
   onPaste, onDrop,
 }: {
   input: string;
@@ -431,6 +446,7 @@ function MobileTextareaRow({
   turnTakingRef: React.MutableRefObject<boolean>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
+  timePassedAttr: () => string;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
@@ -487,7 +503,7 @@ function MobileTextareaRow({
             onClick={async () => {
               const finalText = await transcription.stop();
               const text = finalText.trim();
-              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
+              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
             }}
             className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
             title="Send"
@@ -1016,6 +1032,14 @@ function InteractiveChat() {
     return ` zoomed-view="${uri}"`;
   }, [zoomedView]);
 
+  const timePassedAttr = useCallback(() => {
+    if (messages.length === 0) return "";
+    const last = messages[messages.length - 1];
+    const elapsed = Date.now() - new Date(last.timestamp).getTime();
+    const formatted = formatTimePassed(elapsed);
+    return formatted ? ` time-passed="${formatted}"` : "";
+  }, [messages]);
+
   // doSend with attachments — used by handleSend below. Defined as ref rather
   // than a separate useCallback to avoid circular deps with `send`.
   const doSendWithImages = useCallback(
@@ -1042,7 +1066,7 @@ function InteractiveChat() {
       dataBase64: a.dataBase64,
     }));
 
-    const wrapped = `<typed local-time="${localTime()}"${zoomedViewAttr()}>${text}</typed>`;
+    const wrapped = `<typed local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</typed>`;
 
     // Release the object URLs after send — the base64 payload is independent
     // of the object URL, so dropping them doesn't affect the message.
@@ -1058,7 +1082,7 @@ function InteractiveChat() {
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [input, attachments, doSendWithImages, zoomedViewAttr, typingMode, typingLocked]);
+  }, [input, attachments, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked]);
 
   /**
    * Accept image files (from paste or drop) — downscale, encode, and add
@@ -1187,7 +1211,7 @@ function InteractiveChat() {
       if (text.trim()) {
         sendSound.play();
         stopTickRef.current = tick.repeatPlay(1000, 30000);
-        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
+        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
       }
       // Restart recording so the user can keep talking
       transcription.start();
@@ -1382,6 +1406,7 @@ function InteractiveChat() {
           turnTakingRef={turnTakingRef}
           doSend={doSend}
           zoomedViewAttr={zoomedViewAttr}
+          timePassedAttr={timePassedAttr}
           voicePaused={voicePaused ? speechPlayback.isPlaying : false}
           onUnpause={() => {
             // Abort speech and resume recording
@@ -1435,6 +1460,7 @@ function InteractiveChat() {
             turnTakingRef={turnTakingRef}
             doSend={doSend}
             zoomedViewAttr={zoomedViewAttr}
+            timePassedAttr={timePassedAttr}
             onPaste={handlePaste}
             onDrop={handleDrop}
           />
