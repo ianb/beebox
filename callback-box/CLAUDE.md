@@ -93,6 +93,7 @@ plugins/          Claude Code plugins (card-validator hook)
 - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server. Read them with `curl https://box.example.com/<box>/api/debug-log` or check the log file at `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
 - **Fix errors as you find them.** If you encounter lint, type, or test errors — even pre-existing ones from previous work — fix them. Don't leave broken windows.
 - **Leave the repo clean when committing.** If there's uncommitted work, make enough commits to leave everything in a clean state. Don't leave half-done changes lying around.
+- **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by any user. Don't write the boxholder's first name (e.g. "Ian") or any configured personality name into source code, prompts, schemas, docs, or rules. Refer to "the user" or "the boxholder" in shared text. Names are only fine in per-box config, throwaway replies, and personal memory.
 
 ## Improving These Instructions
 
