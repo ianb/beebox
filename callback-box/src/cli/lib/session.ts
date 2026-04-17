@@ -238,6 +238,127 @@ export function transformContent(content: unknown): SessionContentBlock[] {
 }
 
 /**
+ * Strip voice-direction metadata and speech/typed tag shells from user text.
+ * Used both for snippets in --list and for --dialogue-only rendering.
+ */
+export function stripSpeechWrappers(text: string): string {
+  let out = text;
+  // Drop <instructions>...</instructions> voice-direction blocks
+  out = out.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/g, "");
+  // Drop self-closing voice-keyword marker tags
+  out = out.replace(/<(?:send-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
+  // Unwrap outer <speech>/<typed> shells, keeping their text content
+  out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
+  return out;
+}
+
+function extractSnippet(text: string, maxLen = 60): string | null {
+  const cleaned = stripSpeechWrappers(text).replace(/\s+/g, " ").trim();
+  if (!cleaned) return null;
+  if (cleaned.length <= maxLen) return cleaned;
+  return cleaned.substring(0, maxLen - 1).trimEnd() + "\u2026";
+}
+
+/**
+ * Summary info for a session — used by --list enrichment and --since filtering.
+ */
+export interface SessionMetadata {
+  sessionId: string;
+  path: string;
+  startTime: Date | null;
+  endTime: Date | null;
+  userTurns: number;
+  assistantTurns: number;
+  toolCount: number;
+  firstUserSnippet: string | null;
+}
+
+/**
+ * Scan a session log once and compute summary metadata. Turn counts match the
+ * semantics used by --tool-report (`generateSessionReport`): user turns count
+ * entries with real text (not tool_result plumbing); assistant turns count
+ * entries with text or tool_use.
+ */
+export async function getSessionMetadata(args: {
+  sessionId: string;
+  logPath: string;
+}): Promise<SessionMetadata> {
+  const fileStream = fs.createReadStream(args.logPath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+  let startTime: Date | null = null;
+  let endTime: Date | null = null;
+  let userTurns = 0;
+  let assistantTurns = 0;
+  let toolCount = 0;
+  let firstUserSnippet: string | null = null;
+
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+
+    let raw: Record<string, unknown>;
+    try {
+      raw = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (raw.type !== "user" && raw.type !== "assistant") continue;
+
+    const message = raw.message as Record<string, unknown> | undefined;
+    if (!message) continue;
+
+    const content = message.content;
+    const blocks: Array<Record<string, unknown>> =
+      typeof content === "string"
+        ? [{ type: "text", text: content }]
+        : Array.isArray(content)
+          ? (content as Array<Record<string, unknown>>)
+          : [];
+
+    if (raw.type === "user") {
+      const textBlocks = blocks.filter(
+        (b) => b.type === "text" && b.text && String(b.text).trim()
+      );
+      if (textBlocks.length === 0) continue;
+      const text = textBlocks.map((b) => String(b.text || "")).join("\n").trim();
+      if (isPlumbingMessage(text) || isCompactionSummary(text)) continue;
+      userTurns += 1;
+      if (firstUserSnippet === null) firstUserSnippet = extractSnippet(text);
+    } else {
+      let hasVisible = false;
+      for (const block of blocks) {
+        if (block.type === "text" && block.text && String(block.text).trim()) {
+          hasVisible = true;
+        }
+        if (block.type === "tool_use") {
+          toolCount += 1;
+          hasVisible = true;
+        }
+      }
+      if (!hasVisible) continue;
+      assistantTurns += 1;
+    }
+
+    const ts = raw.timestamp ? new Date(String(raw.timestamp)) : null;
+    if (ts && !isNaN(ts.getTime())) {
+      if (!startTime) startTime = ts;
+      endTime = ts;
+    }
+  }
+
+  return {
+    sessionId: args.sessionId,
+    path: args.logPath,
+    startTime,
+    endTime,
+    userTurns,
+    assistantTurns,
+    toolCount,
+    firstUserSnippet,
+  };
+}
+
+/**
  * Parameters for parseSessionLog
  */
 export interface ParseSessionLogParams {

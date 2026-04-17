@@ -215,14 +215,14 @@ export function parseScheduledScript(script: ScheduledScript): ParsedScheduledSc
 // ============================================
 
 /**
- * Parse a duration string like "5m", "1h", "1d" into milliseconds.
+ * Parse a duration string like "5m", "1h", "1d", "2w" into milliseconds.
  *
- * Supported suffixes: s (seconds), m (minutes), h (hours), d (days)
+ * Supported suffixes: s (seconds), m (minutes), h (hours), d (days), w (weeks)
  */
 export function parseDuration(str: string): number {
-  const match = str.match(/^(\d+\.?\d*)\s*(s|m|h|d)$/);
+  const match = str.match(/^(\d+\.?\d*)\s*(s|m|h|d|w)$/);
   if (!match) {
-    throw new Error(`Invalid duration: "${str}". Use format like "5m", "1h", "1d".`);
+    throw new Error(`Invalid duration: "${str}". Use format like "5m", "1h", "1d", "2w".`);
   }
 
   const value = parseFloat(match[1]!);
@@ -237,6 +237,8 @@ export function parseDuration(str: string): number {
       return value * 60 * 60 * 1000;
     case "d":
       return value * 24 * 60 * 60 * 1000;
+    case "w":
+      return value * 7 * 24 * 60 * 60 * 1000;
     default:
       throw new Error(`Unknown duration unit: "${unit}"`);
   }

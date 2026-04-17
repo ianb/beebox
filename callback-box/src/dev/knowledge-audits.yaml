@@ -151,6 +151,28 @@ tests:
     correct_contains: ["cb validate"]
     tags: [cli]
 
+  - id: cb-session-exists
+    prompt: "I want to review the transcript of a past chat — what command gives me that?"
+    expected_level: knows_directly
+    watch_for: "Names cb session as the command for viewing Claude Code session transcripts"
+    correct_contains: ["cb session"]
+    tags: [cli]
+    notes: >
+      The agent should know cb session exists and is how to see past session
+      content. Failure modes: pointing to raw JSONL files in ~/.claude, web UI
+      navigation, or claiming no such command exists.
+
+  - id: cb-session-how-to-use
+    prompt: "How do I use cb session to catch up on just the conversation from the last day, without tool-call noise?"
+    expected_level: knows_about
+    watch_for: "Runs cb session --help (or reads the command source) to discover flags, then combines --since and --dialogue-only"
+    correct_contains_any: ["--since", "cb session --help"]
+    tags: [cli]
+    notes: >
+      The agent should reach for cb session --help (or read src/cli/commands/session.ts)
+      to discover --since and --dialogue-only rather than guessing flags.
+      A good answer lands on something like "cb session --since 1d --dialogue-only".
+
   # === Image Analysis ===
 
   - id: describe-images-command
