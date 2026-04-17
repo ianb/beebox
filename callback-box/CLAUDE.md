@@ -52,8 +52,13 @@ src/webapp/       Fastify server, API routes, SSE
   routes/         HTTP route handlers
   trpc/           tRPC router and sub-routers
 src/frontend/     React UI (Vite, separate tsconfig)
-  src/components/ Page components (ChatPage, CapturePage, etc.)
-  src/machines/   XState state machines
+  src/components/     Page + feature components (ChatPage, CapturePage, AdminPage, ...)
+  src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see CONVENTIONS.md
+  src/renderers/      File-type renderers (markdown, image, sheet, recipe, directory, ...)
+  src/machines/       XState state machines
+  src/hooks/          Shared React hooks
+  src/lib/            Helpers (cn, source-tag, view-url, trpc, audio-context, ...)
+  src/ssr/            Server-side rendering setup for `cb render`
 src/schemas/      Card type definitions (Zod + cardworks)
 src/services/     Service interfaces, real + fake implementations
 src/test-lib/     Test utilities, doctest infrastructure
@@ -81,6 +86,7 @@ plugins/          Claude Code plugins (card-validator hook)
 - **Read before writing.** Don't guess file formats, XML structures, or API shapes. Read the schema, read the existing code, read the test patterns. This project has specific conventions that differ from defaults.
 - **Doctests are the primary test format.** They're markdown files with executable code blocks. Read `.claude/rules/doctest.md` before writing tests. Common mistakes: using JS object notation instead of JSON in expected output, forgetting `continue` blocks share scope.
 - **The frontend has two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `npm run typecheck` to succeed.
+- **For frontend work, reach for UI primitives.** Use components from `src/frontend/src/components/ui/` (Button, Text, Stack, Image, etc.) before writing raw HTML + appearance classes. Page-level code (outside any `components/` subdirectory) can only use outer-layout classes via `className` — this is enforced by the `personal-vibe-check/restrict-component-classes` ESLint rule. See CONVENTIONS.md for the full palette, primitive reference, and className convention.
 - **Don't invent card XML formats.** Every card type has a schema. Read it in `src/schemas/` before creating or modifying cards. The schema's `element()` call defines exactly what attributes and children are valid.
 - **Service fakes are domain-specific**, not generic mocks. They have real in-memory state. Read existing fakes before writing new ones.
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Use `cb commit` which handles validation.
