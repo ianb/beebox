@@ -4,6 +4,9 @@ import { TrpcProvider } from "./lib/trpc-provider";
 import { createAppRouter } from "./router";
 import "./index.css";
 import "./renderers/setup";
+import { registerBuiltinFileTypes } from "./file-types";
+
+registerBuiltinFileTypes();
 
 const router = createAppRouter();
 

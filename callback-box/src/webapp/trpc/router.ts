@@ -13,6 +13,7 @@ import { adminRouter } from "./routers/admin.js";
 import { todosRouter } from "./routers/todos.js";
 import { healthRouter } from "./routers/health.js";
 import { driveRouter } from "./routers/drive.js";
+import { filesRouter } from "./routers/files.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   todos: todosRouter,
   health: healthRouter,
   drive: driveRouter,
+  files: filesRouter,
 });
 
 export type AppRouter = typeof appRouter;

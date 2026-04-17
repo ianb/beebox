@@ -8,6 +8,7 @@
 
 import { element, escapeText, escapeAttr } from "cardworks";
 import { z } from "zod";
+import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
 /**
  * Valid memo statuses.
@@ -122,6 +123,45 @@ Status: new → processing → processed.`,
 });
 
 export type Memo = z.infer<typeof MemoSchema>;
+
+export type MemoAttrs = Memo["attrs"];
+
+/**
+ * Memo loader — title is derived from the <content> text (truncated) or the
+ * transcription for voice memos, falling back to the filename.
+ */
+export const memoLoader: FileLoader<MemoAttrs> = (raw) => {
+  const el = raw.element;
+  const fallback = titleFromFilename(raw.path);
+  if (!el) {
+    return { path: raw.path, tagName: "memo", title: fallback, attrs: { status: "new" } };
+  }
+
+  let title = "";
+  for (const child of el.children) {
+    if (child.tagName === "content" && typeof child.text === "string" && child.text.trim()) {
+      title = child.text.trim();
+      break;
+    }
+  }
+  if (!title) {
+    for (const child of el.children) {
+      if (child.tagName === "transcription" && typeof child.text === "string" && child.text.trim()) {
+        title = child.text.trim();
+        break;
+      }
+    }
+  }
+  if (!title) title = fallback;
+  title = truncateTitle(title, 80);
+
+  const status = el.attrs["status"];
+  const attrs: MemoAttrs = {
+    status: (status === "new" || status === "processing" || status === "processed") ? status : "new",
+  };
+
+  return { path: raw.path, tagName: "memo", title, attrs };
+};
 
 /**
  * Template for creating a new text memo card.

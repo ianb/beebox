@@ -8,6 +8,7 @@
 
 import { element, serialize } from "cardworks";
 import { z } from "zod";
+import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
 export const ImageStatus = z.enum(["new", "analyzed", "invalid"]);
 export type ImageStatus = z.infer<typeof ImageStatus>;
@@ -113,6 +114,55 @@ Status: new (unanalyzed) → analyzed (description filled in) → invalid (accid
 });
 
 export type Image = z.infer<typeof ImageSchema>;
+
+/**
+ * Attrs shape returned by the image loader. Includes the schema's own attrs
+ * plus the attached image filename pulled from the `<filename>` child — useful
+ * for rendering a thumbnail without re-parsing the card.
+ */
+export type ImageAttrs = Image["attrs"] & {
+  filename?: string;
+};
+
+/**
+ * Image loader — title derived from <description>, <filename name>, or the path.
+ */
+export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
+  const el = raw.element;
+  const fallback = titleFromFilename(raw.path);
+  if (!el) {
+    return { path: raw.path, tagName: "image", title: fallback, attrs: { status: "new" } };
+  }
+
+  let title = "";
+  let filename: string | undefined;
+  for (const child of el.children) {
+    if (child.tagName === "filename") {
+      const name = child.attrs["name"];
+      if (typeof name === "string" && name.length > 0) filename = name;
+    }
+    if (child.tagName === "description" && typeof child.text === "string" && child.text.trim()) {
+      title = child.text.trim();
+    }
+  }
+  if (!title && filename) title = titleFromFilename(filename);
+  if (!title) title = fallback;
+  title = truncateTitle(title, 80);
+
+  const status = el.attrs["status"];
+  const hasText = el.attrs["has-text"];
+  const rotation = el.attrs["rotation"];
+  const attrs: ImageAttrs = {
+    status: (status === "new" || status === "analyzed" || status === "invalid") ? status : "new",
+    ...(hasText === "true" || hasText === "false" ? { "has-text": hasText } : {}),
+    ...(rotation === "0" || rotation === "90" || rotation === "180" || rotation === "270"
+      ? { rotation }
+      : {}),
+    ...(filename ? { filename } : {}),
+  };
+
+  return { path: raw.path, tagName: "image", title, attrs };
+};
 
 /**
  * Template for creating an image card.
