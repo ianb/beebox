@@ -37,7 +37,7 @@ function formatDurationMs(ms: number): string {
 
 function BudgetIndicator({ budget }: { budget: { limitMs: number; windowMs: number; usedMs: number } }) {
   const exceeded = budget.usedMs >= budget.limitMs;
-  const cls = exceeded ? "text-red-600 font-medium" : "text-warm-500";
+  const cls = exceeded ? "text-danger-dark font-medium" : "text-warm-500";
   return (
     <span className={`ml-1 ${cls}`} title={`${formatDurationMs(budget.usedMs)} used of ${formatDurationMs(budget.limitMs)} budget in ${formatDurationMs(budget.windowMs)} window`}>
       [{formatDurationMs(budget.usedMs)}/{formatDurationMs(budget.limitMs)}]
@@ -58,7 +58,7 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
       onClick={() => mutation.mutate({ name, enabled: !enabled })}
       disabled={mutation.isPending}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        enabled ? "bg-green-600" : "bg-warm-300"
+        enabled ? "bg-success" : "bg-warm-300"
       } ${mutation.isPending ? "opacity-50" : ""}`}
       title={enabled ? "Disable schedule" : "Enable schedule"}
     >
@@ -135,7 +135,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
         </td>
         <td className="py-2 pr-3">
           {s.missingRequirements && s.missingRequirements.length > 0 ? (
-            <span className="text-amber-600 text-xs" title={`Missing: ${s.missingRequirements.join(", ")}`}>
+            <span className="text-warning text-xs" title={`Missing: ${s.missingRequirements.join(", ")}`}>
               &#9888; {s.missingRequirements.join(", ")}
             </span>
           ) : s.running ? (
@@ -185,8 +185,8 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
 function RunningIndicator({ running }: { running: { startedAt: string; triggeredBy: string } }) {
   const elapsed = timeAgo(running.startedAt).replace(" ago", "");
   return (
-    <span className="text-yellow-600 text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
-      <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 animate-pulse mr-1 align-middle" />
+    <span className="text-warning text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
+      <span className="inline-block w-2 h-2 rounded-full bg-warning animate-pulse mr-1 align-middle" />
       running ({elapsed})
     </span>
   );
@@ -194,13 +194,13 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
 
 function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult: "success" | "failure" | null; lastError: string | null; onToggleError?: () => void }) {
   if (lastResult === "success") {
-    return <span className="text-green-600 text-xs">&#10003;</span>;
+    return <span className="text-success text-xs">&#10003;</span>;
   }
   if (lastResult === "failure") {
     return (
       <button
         onClick={onToggleError}
-        className="text-red-600 text-xs text-left hover:underline"
+        className="text-danger-dark text-xs text-left hover:underline"
         title={lastError ? "Click to expand error" : ""}
       >
         &#10007; {lastError ? <span className="text-warm-600">{lastError.substring(0, 60)}&#8230;</span> : null}
@@ -218,17 +218,17 @@ function TickEntry({ tick }: { tick: SchedulerLogEntry }) {
       {tick.result ? (
         <TickResult result={tick.result} />
       ) : null}
-      {tick.error ? <span className="text-red-600">{tick.error}</span> : null}
+      {tick.error ? <span className="text-danger-dark">{tick.error}</span> : null}
     </div>
   );
 }
 
 function TickResult({ result }: { result: NonNullable<SchedulerLogEntry["result"]> }) {
   if (result.ran > 0) {
-    return <span className="text-green-600">{result.ran} ran</span>;
+    return <span className="text-success">{result.ran} ran</span>;
   }
   if (result.errors > 0) {
-    return <span className="text-red-600">{result.errors} errors</span>;
+    return <span className="text-danger-dark">{result.errors} errors</span>;
   }
   return <span>all skipped</span>;
 }
@@ -249,7 +249,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
     return (
       <div className="card">
         <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
-        <p className="text-sm text-red-600">Failed to load: {error.message}</p>
+        <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       </div>
     );
   }

@@ -110,7 +110,7 @@ function rowClass({ active, danger, disabled }: RowClassOpts): string {
   if (active) {
     return "block w-full text-left px-3 py-2 bg-warm-100 text-warm-900 font-medium";
   }
-  const color = danger ? "text-rose hover:bg-rose/10" : "text-warm-700 hover:bg-warm-50";
+  const color = danger ? "text-danger hover:bg-danger/10" : "text-warm-700 hover:bg-warm-50";
   return `block w-full text-left px-3 py-2 transition-colors ${color}`;
 }
 

@@ -64,7 +64,7 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
 
   if (briefsQuery.error) {
     return (
-      <div className="p-8 text-center text-red-600">
+      <div className="p-8 text-center text-danger-dark">
         Error: {briefsQuery.error.message}
       </div>
     );
@@ -87,7 +87,7 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
           onClick={() => onSelect(brief)}
           {...cbSource("card", brief.relativePath)}
           className={`w-full text-left p-4 hover:bg-warm-50 transition-colors ${
-            selectedPath === brief.path ? "bg-iris-50 border-l-4 border-plum" : ""
+            selectedPath === brief.path ? "bg-info-50 border-l-4 border-primary" : ""
           } ${brief.read ? "opacity-60" : ""}`}
         >
           <div className="flex items-start justify-between gap-4">
@@ -106,7 +106,7 @@ export function NewsIndex({ onSelect, selectedPath, refreshKey }: NewsIndexProps
                 {formatDate(brief.date)}
               </time>
               {!brief.read && (
-                <span className="block mt-1 text-xs text-plum font-medium">
+                <span className="block mt-1 text-xs text-primary font-medium">
                   New
                 </span>
               )}

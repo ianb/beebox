@@ -47,10 +47,10 @@ function ClaudeCodeSection() {
 
       {/* Current status */}
       {status?.loggedIn ? (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
-          <span className="font-medium text-green-800">Authenticated</span>
+        <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
+          <span className="font-medium text-success-dark">Authenticated</span>
           {status.email ? (
-            <span className="text-green-700 ml-2">as {status.email}</span>
+            <span className="text-success-dark ml-2">as {status.email}</span>
           ) : null}
         </div>
       ) : (
@@ -64,12 +64,12 @@ function ClaudeCodeSection() {
 
       {/* Auth URL display */}
       {authUrl && isPolling ? (
-        <div className="mb-4 p-4 bg-iris-50 border border-iris-100 rounded">
-          <p className="text-sm text-plum mb-2">
+        <div className="mb-4 p-4 bg-info-50 border border-info-100 rounded">
+          <p className="text-sm text-primary mb-2">
             Complete authentication in a new tab:
           </p>
           <ExternalLink href={authUrl}>Open Anthropic Login</ExternalLink>
-          <p className="text-xs text-plum mt-2">
+          <p className="text-xs text-primary mt-2">
             Waiting for authentication to complete...
           </p>
         </div>
@@ -77,7 +77,7 @@ function ClaudeCodeSection() {
 
       {/* Error */}
       {error ? (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+        <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
           {error}
         </div>
       ) : null}
@@ -218,10 +218,10 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
       {status?.configured ? (
         <>
           {/* Connected status */}
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
-            <span className="font-medium text-green-800">Connected</span>
+          <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
+            <span className="font-medium text-success-dark">Connected</span>
             {status.botUsername ? (
-              <span className="text-green-700 ml-2">as @{status.botUsername}</span>
+              <span className="text-success-dark ml-2">as @{status.botUsername}</span>
             ) : null}
           </div>
 
@@ -242,13 +242,13 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
           ) : null}
 
           {status.error ? (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+            <div className="mb-4 p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
               {status.error}
             </div>
           ) : null}
 
           {/* Usage instructions */}
-          <div className="mb-4 p-3 bg-iris-50 border border-iris-100 rounded text-sm text-plum">
+          <div className="mb-4 p-3 bg-info-50 border border-info-100 rounded text-sm text-primary">
             <p className="font-medium mb-1">To use in a group:</p>
             <p>Add <strong>@{status.botUsername}</strong> to your Telegram group and send a message.</p>
           </div>
@@ -308,7 +308,7 @@ function TelegramSection({ apiBase }: { apiBase: string }) {
 
       {/* Error */}
       {error ? (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+        <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
           {error}
         </div>
       ) : null}
@@ -408,7 +408,7 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
               <button
                 onClick={() => handleRemove(email)}
                 disabled={saving}
-                className="text-warm-500 hover:text-red-600 text-xs px-2"
+                className="text-warm-500 hover:text-danger-dark text-xs px-2"
               >
                 remove
               </button>
@@ -445,7 +445,7 @@ function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
       </div>
 
       {error ? (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+        <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
           {error}
         </div>
       ) : null}
@@ -598,15 +598,15 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
       </p>
 
       {successMessage ? (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+        <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm text-success-dark">
           {successMessage}
         </div>
       ) : null}
 
       {status && status.hasTokens ? (
         <>
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
-            <span className="font-medium text-green-800">Connected</span>
+          <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
+            <span className="font-medium text-success-dark">Connected</span>
           </div>
 
           <div className="mb-4">
@@ -658,7 +658,7 @@ function GoogleServicesSection({ apiBase }: { apiBase: string }) {
       )}
 
       {error ? (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+        <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
           {error}
         </div>
       ) : null}
@@ -674,7 +674,7 @@ export function AdminPage() {
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <Link to={href(`/${boxSlug}/`)} className="text-plum hover:text-plum-dark text-sm">
+          <Link to={href(`/${boxSlug}/`)} className="text-primary hover:text-primary-dark text-sm">
             &larr; Back
           </Link>
         </div>

@@ -35,8 +35,8 @@ function ExternalLinkIcon() {
 }
 
 const VARIANT_CLASSES: Record<ExternalLinkVariant, string> = {
-  inline: "text-plum underline hover:text-plum-dark inline-flex items-baseline gap-0.5",
-  plain: "hover:text-plum-dark inline-flex items-baseline gap-0.5",
+  inline: "text-primary underline hover:text-primary-dark inline-flex items-baseline gap-0.5",
+  plain: "hover:text-primary-dark inline-flex items-baseline gap-0.5",
   button:
     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-warm-300 rounded hover:bg-warm-50 text-warm-700",
 };

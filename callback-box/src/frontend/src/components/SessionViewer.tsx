@@ -90,7 +90,7 @@ export function SessionListButton() {
                   className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50 font-medium" : ""}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.isActive ? "bg-green-500" : sourceColor(s.source)}`} />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.isActive ? "bg-success" : sourceColor(s.source)}`} />
                     <span className="flex-1 truncate text-warm-800">{s.label}</span>
                     <span className="text-xs text-warm-500 flex-shrink-0">{relativeTime(s.lastUsedAt)}</span>
                   </div>
@@ -106,9 +106,9 @@ export function SessionListButton() {
 
 function sourceColor(source: string): string {
   switch (source) {
-    case "chat": return "bg-iris";
+    case "chat": return "bg-info";
     case "telegram": return "bg-coral";
-    case "reactor": return "bg-plum";
+    case "reactor": return "bg-primary";
     default: return "bg-warm-400";
   }
 }
@@ -165,13 +165,13 @@ function SessionViewerInner({ sessionId }: { sessionId: string }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
         <span>Viewing session (read-only)</span>
-        <Link to={href(`/${boxSlug}/chat`)} className="ml-auto text-iris hover:text-iris-dark font-medium">
+        <Link to={href(`/${boxSlug}/chat`)} className="ml-auto text-info hover:text-info-dark font-medium">
           Go to active chat &rarr;
         </Link>
       </div>
 
       {state.error ? (
-        <div className="px-4 py-2 bg-rose-50 text-rose-dark text-sm">{state.error}</div>
+        <div className="px-4 py-2 bg-danger-50 text-danger-dark text-sm">{state.error}</div>
       ) : null}
 
       {/* Messages */}

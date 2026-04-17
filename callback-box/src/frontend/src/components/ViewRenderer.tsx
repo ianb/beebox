@@ -153,8 +153,8 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
 
   if (error) {
     return (
-      <div className="border border-red-300 bg-red-50 rounded-lg p-4">
-        <h3 className="text-red-800 font-medium mb-2">View Error</h3>
+      <div className="border border-danger-light bg-danger-50 rounded-lg p-4">
+        <h3 className="text-danger-dark font-medium mb-2">View Error</h3>
         <Pre size="sm" error>{error}</Pre>
       </div>
     );

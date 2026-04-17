@@ -46,8 +46,8 @@ export function ThumbsFeedback({
         }}
         className={`p-1 rounded transition-colors ${
           feedback === "thumbs-up"
-            ? "text-green-600 bg-green-100"
-            : "text-warm-500 hover:text-green-600 hover:bg-green-50"
+            ? "text-success bg-success-100"
+            : "text-warm-500 hover:text-success hover:bg-success-50"
         }`}
         title="Thumbs up"
       >
@@ -60,8 +60,8 @@ export function ThumbsFeedback({
         }}
         className={`p-1 rounded transition-colors ${
           feedback === "thumbs-down"
-            ? "text-red-600 bg-red-100"
-            : "text-warm-500 hover:text-red-600 hover:bg-red-50"
+            ? "text-danger-dark bg-danger-100"
+            : "text-warm-500 hover:text-danger-dark hover:bg-danger-50"
         }`}
         title="Thumbs down"
       >

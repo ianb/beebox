@@ -51,7 +51,7 @@ export function BoxRedirect() {
           <p className="text-warm-600 mb-6">Sign in to access your boxes.</p>
           <a
             href={`/auth/login?returnTo=${encodeURIComponent(window.location.pathname)}`}
-            className="inline-block bg-plum text-white px-6 py-3 rounded-lg font-medium hover:bg-plum-dark transition-colors"
+            className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"
           >
             Sign in with Google
           </a>
@@ -78,18 +78,18 @@ export function BoxRedirect() {
                 to={href(`/${box.slug}/`)}
                 className="block px-6 py-3 hover:bg-warm-50 active:bg-warm-100"
               >
-                <span className="text-lg font-medium text-plum">{box.name}</span>
+                <span className="text-lg font-medium text-primary">{box.name}</span>
               </Link>
               <div className="grid grid-cols-2 divide-x divide-warm-200 border-t border-warm-200">
                 <Link
                   to={href(`/${box.slug}/chat`)}
-                  className="py-4 text-center text-base font-medium text-plum hover:bg-warm-50 active:bg-warm-100"
+                  className="py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
                 >
                   Chat
                 </Link>
                 <Link
                   to={href(`/${box.slug}/capture`)}
-                  className="py-4 text-center text-base font-medium text-plum hover:bg-warm-50 active:bg-warm-100"
+                  className="py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
                 >
                   Capture
                 </Link>
@@ -145,9 +145,9 @@ export function ShareRedirect() {
               <a
                 key={box.slug}
                 href={`/${box.slug}/share${search}`}
-                className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-gold hover:shadow transition-all"
+                className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-accent hover:shadow transition-all"
               >
-                <span className="text-lg font-medium text-plum">{box.name}</span>
+                <span className="text-lg font-medium text-primary">{box.name}</span>
               </a>
             ))}
           </div>

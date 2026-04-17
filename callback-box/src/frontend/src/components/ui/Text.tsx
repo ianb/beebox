@@ -34,7 +34,7 @@ const TONE_CLASSES: Record<TextTone, string> = {
   subtle: "text-warm-600",
   emphasis: "text-warm-700",
   strong: "text-warm-900",
-  danger: "text-red-600",
+  danger: "text-danger-dark",
 };
 
 const SIZE_CLASSES: Record<TextSize, string> = {

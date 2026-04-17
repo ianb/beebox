@@ -30,11 +30,11 @@ function trailerString(value: string | string[] | undefined): string | undefined
  */
 function PhaseBadge({ phase }: { phase: string }) {
   const colors: Record<string, string> = {
-    triage: "bg-iris-100 text-plum",
-    analyze: "bg-amber-100 text-amber-700",
-    brief: "bg-green-100 text-green-700",
+    triage: "bg-info-100 text-primary",
+    analyze: "bg-warning-100 text-warning-dark",
+    brief: "bg-success-100 text-success-dark",
     fetch: "bg-cyan-100 text-cyan-700",
-    "process-feedback": "bg-purple-100 text-purple-700",
+    "process-feedback": "bg-info-100 text-info-dark",
   };
 
   return (
@@ -111,12 +111,12 @@ function FileStatBadges({ stat }: { stat: { added: number; modified: number; del
   return (
     <>
       {stat.added > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success-100 text-success-dark font-medium">
           add {stat.added}
         </span>
       ) : null}
       {stat.modified > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning-100 text-warning-dark font-medium">
           {stat.insertions > 0 || stat.deletions > 0
             ? `+${stat.insertions}-${stat.deletions} in ${stat.modified}`
             : `mod ${stat.modified}`}
@@ -128,7 +128,7 @@ function FileStatBadges({ stat }: { stat: { added: number; modified: number; del
         </span>
       ) : null}
       {stat.deleted > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-danger-100 text-danger-dark font-medium">
           del {stat.deleted}
         </span>
       ) : null}
@@ -160,7 +160,7 @@ function CommitRow({
       onClick={onSelect}
       {...cbSource("commit", commit.hash)}
       className={`w-full text-left px-3 py-2 hover:bg-warm-50 transition-colors ${
-        isSelected ? "bg-iris-50 border-r-2 border-plum" : ""
+        isSelected ? "bg-info-50 border-r-2 border-primary" : ""
       }`}
     >
       <div className="flex items-center gap-1.5 mb-0.5">
@@ -245,7 +245,7 @@ export function CommitTimeline({
 
       {hasMore && !loading ? <button
           onClick={onLoadMore}
-          className="w-full p-2 text-sm text-plum hover:bg-iris-50"
+          className="w-full p-2 text-sm text-primary hover:bg-info-50"
         >
           Load more commits
         </button> : null}

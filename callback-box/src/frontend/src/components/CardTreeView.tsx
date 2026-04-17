@@ -45,10 +45,10 @@ function formatTagName(tagName: string): string {
  */
 function getAttrColor(name: string): string {
   const colors: Record<string, string> = {
-    confidence: "bg-iris-100 text-plum-dark",
-    status: "bg-green-100 text-green-800",
-    source: "bg-purple-100 text-purple-800",
-    aspect: "bg-amber-100 text-amber-800",
+    confidence: "bg-info-100 text-primary-dark",
+    status: "bg-success-100 text-success-dark",
+    source: "bg-info-100 text-info-dark",
+    aspect: "bg-warning-100 text-warning-dark",
     duration: "bg-cyan-100 text-cyan-800",
     id: "bg-warm-100 text-warm-700",
     version: "bg-warm-100 text-warm-700",
@@ -93,17 +93,17 @@ function RefExpander({ refPath }: { refPath: string }) {
     <div className="mt-1">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="text-xs text-plum hover:text-plum-dark hover:underline flex items-center gap-1"
+        className="text-xs text-primary hover:text-primary-dark hover:underline flex items-center gap-1"
       >
         <span className="text-[10px]">{expanded ? "\u25BC" : "\u25B6"}</span>
         {refPath.split("/").pop()}
       </button>
       {expanded ? (
-        <div className="mt-1 ml-2 border-l-2 border-plum-light pl-3">
+        <div className="mt-1 ml-2 border-l-2 border-primary-light pl-3">
           {query.isLoading ? (
             <div className="text-xs text-warm-500">Loading...</div>
           ) : query.error ? (
-            <div className="text-xs text-red-600">
+            <div className="text-xs text-danger-dark">
               Failed to load: {query.error.message}
             </div>
           ) : query.data ? (

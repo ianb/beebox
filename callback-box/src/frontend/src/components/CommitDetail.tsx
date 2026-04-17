@@ -31,9 +31,9 @@ function trailerString(value: string | string[] | undefined): string | undefined
  */
 function PhaseBadge({ phase }: { phase: string }) {
   const colors: Record<string, string> = {
-    triage: "bg-iris-100 text-plum",
-    analyze: "bg-amber-100 text-amber-700",
-    brief: "bg-green-100 text-green-700",
+    triage: "bg-info-100 text-primary",
+    analyze: "bg-warning-100 text-warning-dark",
+    brief: "bg-success-100 text-success-dark",
   };
 
   return (
@@ -290,7 +290,7 @@ function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
           <div className="px-3 py-1.5 bg-warm-50 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono font-medium text-warm-700">{file.path}</span>
             {file.meta.filter((m) => m !== "new file" && m !== "deleted" && m !== "moved").map((m, mi) => (
-              <span key={mi} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">{m}</span>
+              <span key={mi} className="text-[10px] px-1.5 py-0.5 rounded bg-warning-100 text-warning-dark">{m}</span>
             ))}
           </div>
           {file.binary ? (
@@ -301,11 +301,11 @@ function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
                 {file.hunks.map((line, i) => {
                   let className = "text-warm-700";
                   if (line.startsWith("+")) {
-                    className = "text-green-700 bg-green-50";
+                    className = "text-success-dark bg-success-50";
                   } else if (line.startsWith("-")) {
-                    className = "text-red-700 bg-red-50";
+                    className = "text-danger-dark bg-danger-50";
                   } else if (line.startsWith("@@")) {
-                    className = "text-purple-500 text-[10px]";
+                    className = "text-info text-[10px]";
                   }
                   return (
                     <div key={i} className={className}>
@@ -336,8 +336,8 @@ function NewFilesTab({ files, hash }: { files: DiffFile[]; hash: string }) {
 
         return (
           <div key={fi}>
-            <div className="px-3 py-1.5 bg-green-50 flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-green-800">{file.path}</span>
+            <div className="px-3 py-1.5 bg-success-50 flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-success-dark">{file.path}</span>
             </div>
             {file.binary ? (
               <BinaryFilePreview file={file} hash={hash} />

@@ -250,7 +250,7 @@ export function FileView({ path, mode = "page", rendererName }: FileViewProps) {
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error) {
     return (
-      <div className="p-4 text-red-600">
+      <div className="p-4 text-danger-dark">
         <p className="font-medium">Error loading {path}</p>
         <div className="mt-1"><Pre size="sm" error>{error}</Pre></div>
       </div>

@@ -18,7 +18,7 @@ export function ActivityLog({ refreshKey: _refreshKey }: ActivityLogProps) {
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">Error: {error.message}</div>;
+    return <div className="p-4 text-danger-dark">Error: {error.message}</div>;
   }
 
   if (entries.length === 0) {

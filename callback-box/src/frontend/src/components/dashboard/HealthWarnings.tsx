@@ -19,14 +19,14 @@ export function HealthWarnings({ health }: HealthWarningsProps) {
   if (failures.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 space-y-1">
-      <div className="text-sm font-medium text-yellow-800">
+    <div className="rounded-lg border border-warning-light bg-warning-50 p-3 space-y-1">
+      <div className="text-sm font-medium text-warning-dark">
         {health.status === "unhealthy" ? "Box health issues" : "Box warnings"}
       </div>
       {failures.map((check) => (
         <div
           key={check.name}
-          className={`text-xs ${check.severity === "error" ? "text-red-700" : "text-yellow-700"}`}
+          className={`text-xs ${check.severity === "error" ? "text-danger-dark" : "text-warning-dark"}`}
         >
           {check.severity === "error" ? "\u2718" : "\u26A0"} {check.message}
         </div>

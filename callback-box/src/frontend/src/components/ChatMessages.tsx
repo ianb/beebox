@@ -267,7 +267,7 @@ function ActivityGroupInner({ parts }: { parts: Array<{ type: "thinking" | "tool
       {parts.map((part, i) =>
         part.type === "thinking" ? (
           <details key={i} className="group/think">
-            <summary className="cursor-pointer list-none flex items-center gap-1 text-plum hover:text-plum-dark py-0.5">
+            <summary className="cursor-pointer list-none flex items-center gap-1 text-primary hover:text-primary-dark py-0.5">
               <span className="group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
               thinking
             </summary>
@@ -491,7 +491,7 @@ function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components
           return (
             <button
               onClick={() => onZoomView({ target: { ...target, zoom: false }, label })}
-              className="text-plum hover:text-plum/80 underline cursor-pointer"
+              className="text-primary hover:text-primary/80 underline cursor-pointer"
             >
               {children}
             </button>
@@ -567,8 +567,8 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
   const [output, setOutput] = useState<string | null>(null);
   const [loadingOutput, setLoadingOutput] = useState(false);
   const statusColor = notification.status === "completed"
-    ? "text-green-600"
-    : notification.status === "error" ? "text-red-600" : "text-warm-600";
+    ? "text-success"
+    : notification.status === "error" ? "text-danger-dark" : "text-warm-600";
 
   const handleExpand = () => {
     const next = !expanded;
@@ -707,7 +707,7 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
     return (
       <div className="pr-12 sm:pr-24 py-1">
         <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
-        <div className="ml-3 sm:ml-6 rounded-r-2xl bg-plum text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words">
+        <div className="ml-3 sm:ml-6 rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words">
           {entries.map((entry) => (
             <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
           ))}
@@ -718,7 +718,7 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
 
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
-      <div className="rounded-l-2xl bg-iris text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words">
+      <div className="rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words">
         {entries.map((entry) => (
           <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
         ))}
@@ -793,7 +793,7 @@ function SpeechIcon({ playing, onStop }: { playing: boolean; onStop?: () => void
       strokeLinecap="round"
       strokeLinejoin="round"
       className={`inline-block w-4 h-4 align-text-bottom ${
-        playing ? "text-plum animate-pulse cursor-pointer" : "text-plum opacity-40"
+        playing ? "text-primary animate-pulse cursor-pointer" : "text-primary opacity-40"
       }`}
     >
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />

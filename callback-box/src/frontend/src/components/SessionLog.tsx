@@ -32,7 +32,7 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
           <span className={`transition-transform ${expanded ? "rotate-90" : ""}`}>
             &#9654;
           </span>
-          <span className="font-semibold text-plum">{block.toolName}</span>
+          <span className="font-semibold text-primary">{block.toolName}</span>
           <span className="text-warm-600 truncate max-w-[500px]">
             {block.inputSummary}
           </span>
@@ -75,9 +75,9 @@ function EntryView({ entry }: { entry: { uuid: string; type: string; timestamp: 
   }
 
   return (
-    <div className={`px-3 py-2 ${isUser ? "bg-iris-50 border-l-2 border-plum-light" : ""}`}>
+    <div className={`px-3 py-2 ${isUser ? "bg-info-50 border-l-2 border-primary-light" : ""}`}>
       <div className="flex items-center gap-2 mb-1">
-        <span className={`text-xs font-medium ${isUser ? "text-plum" : "text-warm-600"}`}>
+        <span className={`text-xs font-medium ${isUser ? "text-primary" : "text-warm-600"}`}>
           {isUser ? "User" : "Assistant"}
         </span>
         <span className="text-xs text-warm-500">
@@ -134,7 +134,7 @@ export function SessionLog({ sessionId }: SessionLogProps) {
       {loading ? <div className="p-3 text-sm text-warm-500">Loading...</div> : null}
       {hasNextPage && !loading ? <button
           onClick={() => fetchNextPage()}
-          className="w-full p-2 text-sm text-plum hover:bg-iris-50 border-t"
+          className="w-full p-2 text-sm text-primary hover:bg-info-50 border-t"
         >
           Load more ({total - entries.length} remaining)
         </button> : null}

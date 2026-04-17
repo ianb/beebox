@@ -65,11 +65,11 @@ export type ButtonProps = LabeledButtonProps | IconOnlyButtonProps;
 // ---------- styling ----------
 
 const INTENT_CLASSES: Record<ButtonIntent, string> = {
-  primary: "bg-plum text-white hover:bg-plum-dark",
+  primary: "bg-primary text-white hover:bg-primary-dark",
   secondary: "bg-warm-200 text-warm-800 hover:bg-warm-300",
-  destructive: "bg-rose text-white hover:bg-rose-dark",
-  accent: "bg-gold text-white hover:bg-gold-dark",
-  success: "bg-green-600 text-white hover:bg-green-700",
+  destructive: "bg-danger text-white hover:bg-danger-dark",
+  accent: "bg-accent text-white hover:bg-accent-dark",
+  success: "bg-success text-white hover:bg-success-dark",
   ghost: "bg-transparent text-warm-700 hover:bg-warm-100",
 };
 
@@ -92,7 +92,7 @@ const ICON_ONLY_RECT_SIZE: Record<ButtonSize, string> = {
 };
 
 const BASE_CLASSES =
-  "inline-flex items-center justify-center font-medium transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center font-medium transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed";
 
 interface ClassBuildOpts {
   intent: ButtonIntent;

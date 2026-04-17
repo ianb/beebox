@@ -48,7 +48,7 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
 
         {state === "uploading" && <UploadingIndicator />}
 
-        {error ? <div className="text-red-600 text-sm text-center">Error: {error}</div> : null}
+        {error ? <div className="text-danger-dark text-sm text-center">Error: {error}</div> : null}
       </div>
 
       <p className="text-xs text-warm-600 text-center mt-4">
@@ -87,8 +87,8 @@ export function StopIcon({ className = "w-5 h-5" }: { className?: string }) {
 export function RecordingIndicator() {
   return (
     <span className="relative flex h-3 w-3">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger-light opacity-75" />
+      <span className="relative inline-flex rounded-full h-3 w-3 bg-danger" />
     </span>
   );
 }

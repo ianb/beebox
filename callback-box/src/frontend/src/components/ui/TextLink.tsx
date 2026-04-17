@@ -7,7 +7,7 @@ export type TextLinkTone = "default" | "subtle";
 export interface TextLinkProps {
   to: string;
   children: ReactNode;
-  /** Color. Default `"default"` (plum). `"subtle"` for dim contexts. */
+  /** Color. Default `"default"` (primary). `"subtle"` for dim contexts. */
   tone?: TextLinkTone;
   /** Underline the link text on hover. Default true. */
   underline?: boolean;
@@ -18,7 +18,7 @@ export interface TextLinkProps {
 }
 
 const TONE_CLASSES: Record<TextLinkTone, string> = {
-  default: "text-plum hover:text-plum-dark",
+  default: "text-primary hover:text-primary-dark",
   subtle: "text-warm-600 hover:text-warm-900",
 };
 

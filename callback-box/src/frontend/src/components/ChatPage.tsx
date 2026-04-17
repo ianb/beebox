@@ -78,7 +78,7 @@ function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSchedule;
   }, [schedule.firesAt, onFired]);
 
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/15 text-gold-dark text-xs font-medium border border-gold/30">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/15 text-accent-dark text-xs font-medium border border-accent/30">
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
@@ -86,7 +86,7 @@ function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSchedule;
       {schedule.alarm ? " 🔔" : null}
       <button
         onClick={onCancel}
-        className="ml-0.5 text-gold-dark/60 hover:text-gold-dark"
+        className="ml-0.5 text-accent-dark/60 hover:text-accent-dark"
         title="Cancel schedule"
       >
         {"\u00D7"}
@@ -278,7 +278,7 @@ function ChatInputArea({
             disabled={isTranscribing}
             readOnly={isTranscribing}
             placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
-            className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600 min-w-0"
+            className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600 min-w-0"
             minRows={1}
             maxRows={8}
           />
@@ -286,7 +286,7 @@ function ChatInputArea({
             <>
               <button
                 onClick={handleCancelTranscription}
-                className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50 flex-shrink-0"
+                className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
                 title="Cancel (Esc)"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,7 +313,7 @@ function ChatInputArea({
                   transcription.cancel();
                   if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
                 }}
-                className={`${circleBtn} bg-gold text-white hover:bg-gold-dark`}
+                className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
                 title="Send"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,7 +325,7 @@ function ChatInputArea({
             <button
               onClick={handleSend}
               disabled={!input.trim()}
-              className={`${circleBtn} bg-gold text-white hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+              className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
               title="Send"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,7 +342,7 @@ function ChatInputArea({
         {speechPlaying ? (
           <button
             onClick={onStopSpeech}
-            className={`${circleBtn} bg-rose-100 text-rose hover:bg-rose-200 active:bg-rose-300`}
+            className={`${circleBtn} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
             title="Stop speaking"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,7 +354,7 @@ function ChatInputArea({
         {isStreaming ? (
           <button
             onClick={onInterrupt}
-            className={`${circleBtn} bg-rose-100 text-rose hover:bg-rose-200 active:bg-rose-300`}
+            className={`${circleBtn} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
             title="Stop agent"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -392,7 +392,7 @@ function ChatInputArea({
               onVoice();
             }
           }}
-          className={`${circleBtn} ${voicePaused ? "bg-plum/50 text-white animate-pulse" : isTranscribing ? "bg-rose text-white hover:bg-rose-dark active:opacity-80" : "bg-plum text-white hover:bg-plum-dark active:opacity-80"}`}
+          className={`${circleBtn} ${voicePaused ? "bg-primary/50 text-white animate-pulse" : isTranscribing ? "bg-danger text-white hover:bg-danger-dark active:opacity-80" : "bg-primary text-white hover:bg-primary-dark active:opacity-80"}`}
           title={voicePaused ? "Resume recording (stops speech)" : isTranscribing ? "Stop recording" : "Voice input"}
         >
           {voicePaused ? (
@@ -453,7 +453,7 @@ function MobileTextareaRow({
         readOnly={isTranscribing}
         enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
-        className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
         minRows={2}
         maxRows={8}
         autoFocus
@@ -462,7 +462,7 @@ function MobileTextareaRow({
         <>
           <button
             onClick={handleCancelTranscription}
-            className="p-2 text-rose hover:text-rose-dark rounded-lg hover:bg-rose-50 flex-shrink-0"
+            className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
             title="Cancel (Esc)"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -489,7 +489,7 @@ function MobileTextareaRow({
               const text = finalText.trim();
               if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}>${text}</speech>`);
             }}
-            className={`${circleBtn} bg-gold text-white hover:bg-gold-dark`}
+            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
             title="Send"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -501,7 +501,7 @@ function MobileTextareaRow({
         <button
           onClick={handleSend}
           disabled={!input.trim()}
-          className={`${circleBtn} bg-gold text-white hover:bg-gold-dark disabled:bg-iris-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+          className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
           title="Send"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -664,7 +664,7 @@ function VirtualizedMessageList({
                   <button
                     onClick={onLoadOlder}
                     disabled={loadingOlder}
-                    className="text-sm text-plum hover:text-plum/80 disabled:text-warm-400"
+                    className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
                   >
                     {loadingOlder ? "Loading..." : `Show ${totalEntries - messages.length} earlier messages`}
                   </button>
@@ -1287,7 +1287,7 @@ function InteractiveChat() {
       ) : null}
     <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
       {/* Header with debug controls */}
-      <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-gold via-coral to-plum">
+      <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
         <SessionListButton />
         <NewSessionButton onClick={handleNewSession} />
@@ -1322,14 +1322,14 @@ function InteractiveChat() {
 
       {/* Error display */}
       {error || transcription.error ? (
-        <div className="px-4 py-2 bg-rose-50 border-t border-rose-light text-rose-dark text-sm">
+        <div className="px-4 py-2 bg-danger-50 border-t border-danger-light text-danger-dark text-sm">
           {error || transcription.error}
           <button
             onClick={() => {
               send({ type: "DISMISS_ERROR" });
               transcription.dismissError();
             }}
-            className="ml-2 text-rose hover:text-rose-dark"
+            className="ml-2 text-danger hover:text-danger-dark"
           >
             dismiss
           </button>

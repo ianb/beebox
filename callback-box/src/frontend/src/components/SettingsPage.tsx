@@ -51,7 +51,7 @@ function CalendarSection() {
         <h2 className="text-lg font-semibold text-warm-800 mb-4">
           Google Calendar
         </h2>
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+        <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
           {error}
         </div>
         <GoogleConnectLink />
@@ -120,7 +120,7 @@ function GoogleConnectLink() {
     <div className="mt-3">
       <Link
         to={href(`/${boxSlug}/admin`)}
-        className="text-sm text-plum hover:text-plum-dark underline"
+        className="text-sm text-primary hover:text-primary-dark underline"
       >
         Set up Google connection in Admin
       </Link>
@@ -131,7 +131,7 @@ function GoogleConnectLink() {
 function ShortcutUrlDisplay({ url }: { url: string }) {
   return (
     <code className="block mt-1 mb-1 p-2 bg-white border border-warm-300 rounded text-xs break-all select-all">
-      {url}?url=<span className="text-plum">{"[Shortcut Input]"}</span>
+      {url}?url=<span className="text-primary">{"[Shortcut Input]"}</span>
     </code>
   );
 }
@@ -146,7 +146,7 @@ function ShortcutSteps({ boxSlug, shareUrl }: { boxSlug: string; shareUrl: strin
       <p>5. Set the URL to:</p>
       <ShortcutUrlDisplay url={shareUrl} />
       <p>
-        Tap the <span className="text-plum">Shortcut Input</span> part —
+        Tap the <span className="text-primary">Shortcut Input</span> part —
         select <strong>Shortcut Input</strong> from the variables list (it
         provides the shared URL).
       </p>
@@ -175,7 +175,7 @@ function DriveSection() {
         <h2 className="text-lg font-semibold text-warm-800 mb-4">
           Google Drive
         </h2>
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+        <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
           {error}
         </div>
         <GoogleConnectLink />
@@ -302,7 +302,7 @@ export function SettingsPage() {
     <div className="h-full bg-warm-50 overflow-auto">
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <Link to={href(`/${boxSlug}/`)} className="text-plum hover:text-plum-dark text-sm">
+          <Link to={href(`/${boxSlug}/`)} className="text-primary hover:text-primary-dark text-sm">
             &larr; Back to Dashboard
           </Link>
         </div>

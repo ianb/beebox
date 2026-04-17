@@ -74,7 +74,7 @@ export function CardList({
                 key={item.path}
                 onClick={() => onSelect(item)}
                 className={`w-full text-left px-4 py-3 hover:bg-warm-50 transition-colors ${
-                  selectedPath === item.path ? "bg-iris-50" : ""
+                  selectedPath === item.path ? "bg-info-50" : ""
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">

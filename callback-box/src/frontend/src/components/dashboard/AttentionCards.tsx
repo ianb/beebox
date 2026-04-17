@@ -41,7 +41,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
               <li key={q.path} className="text-sm" {...cbSource("card", q.relativePath)}>
                 <Link
                   to={href(`/${boxSlug}/card/${q.relativePath}`)}
-                  className="text-plum hover:text-plum-dark hover:underline"
+                  className="text-primary hover:text-primary-dark hover:underline"
                 >
                   {q.prompt || q.name}
                 </Link>
@@ -68,7 +68,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
             </h3>
             <Link
               to={href(`/${boxSlug}/browse/box/inbox`)}
-              className="text-xs text-plum hover:text-plum-dark"
+              className="text-xs text-primary hover:text-primary-dark"
             >
               Browse &rarr;
             </Link>

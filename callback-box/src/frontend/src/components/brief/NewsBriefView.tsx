@@ -180,7 +180,7 @@ export function NewsBriefView({
       {!completed && (
         <div className="mt-8 pt-6 border-t border-warm-300">
           {globalSubmitted ? (
-            <p className="text-green-700 text-sm">Got it, I'll keep that in mind.</p>
+            <p className="text-success-dark text-sm">Got it, I'll keep that in mind.</p>
           ) : showGlobalComment ? (
             <div className="space-y-3">
               <textarea
@@ -193,7 +193,7 @@ export function NewsBriefView({
               <div className="flex gap-2">
                 <button
                   onClick={handleGlobalComment}
-                  className="px-4 py-2 bg-plum text-white rounded hover:bg-plum-dark"
+                  className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
                 >
                   Submit Comment
                 </button>
@@ -221,14 +221,14 @@ export function NewsBriefView({
             <div className="flex gap-3">
               <button
                 onClick={() => setShowGlobalComment(true)}
-                className="text-sm text-warm-500 hover:text-plum"
+                className="text-sm text-warm-500 hover:text-primary"
               >
                 + Add a comment about this brief
               </button>
               {onVoiceComment ? (
                 <button
                   onClick={() => setShowGlobalVoice(true)}
-                  className="text-sm text-warm-500 hover:text-plum flex items-center gap-1"
+                  className="text-sm text-warm-500 hover:text-primary flex items-center gap-1"
                 >
                   <MicrophoneIcon className="w-4 h-4" />
                   Voice
@@ -245,7 +245,7 @@ export function NewsBriefView({
           Finish Reading
         </h3>
         {completed ? (
-          <p className="text-green-700">Thanks for your feedback!</p>
+          <p className="text-success-dark">Thanks for your feedback!</p>
         ) : onCompleteReading ? (
           <ReadingFeedback
             guideReactions={guideReactions}

@@ -144,8 +144,8 @@ function useLogEntries(): LogEntry[] {
 }
 
 const levelColors: Record<string, string> = {
-  error: "text-rose-600",
-  warn: "text-amber-600",
+  error: "text-danger-dark",
+  warn: "text-warning",
   info: "text-blue-500",
   log: "text-warm-700",
 };

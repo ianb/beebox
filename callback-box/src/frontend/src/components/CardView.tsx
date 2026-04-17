@@ -50,7 +50,7 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">Error: {error.message}</div>;
+    return <div className="p-4 text-danger-dark">Error: {error.message}</div>;
   }
 
   if (!card) {
@@ -62,8 +62,8 @@ export function CardView({ path, defaultView = "tree" }: CardViewProps) {
     return (
       <div className="p-4" {...cbSource("card", path)}>
         <h2 className="text-lg font-bold text-warm-900 mb-2">{card.path}</h2>
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-          <div className="text-sm font-medium text-red-800 mb-1">Validation Error</div>
+        <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded">
+          <div className="text-sm font-medium text-danger-dark mb-1">Validation Error</div>
           <Pre size="xs" error>{card.validationError}</Pre>
         </div>
         {card.element ? (

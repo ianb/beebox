@@ -76,7 +76,7 @@ function ThumbTile({
       <button
         type="button"
         onClick={onClick}
-        className="block rounded bg-warm-200 overflow-hidden hover:ring-2 hover:ring-gold focus:outline-none focus:ring-2 focus:ring-gold"
+        className="block rounded bg-warm-200 overflow-hidden hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
         title={`image${attachment.id} · ${kb} KB · click to zoom`}
       >
         <Image
@@ -92,7 +92,7 @@ function ThumbTile({
       <button
         type="button"
         onClick={onRemove}
-        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose text-white flex items-center justify-center shadow hover:bg-rose-dark focus:outline-none focus:ring-2 focus:ring-rose"
+        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center shadow hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger"
         title="Remove attachment"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">

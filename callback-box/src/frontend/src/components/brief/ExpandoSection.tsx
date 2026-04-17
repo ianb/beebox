@@ -47,25 +47,25 @@ export function ExpandoSection({
   };
 
   return (
-    <div className="my-4 border-l-4 border-iris-100 bg-iris-50 rounded-r-lg overflow-hidden">
+    <div className="my-4 border-l-4 border-info-100 bg-info-50 rounded-r-lg overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-iris-100 transition-colors"
+        className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-info-100 transition-colors"
       >
         <div className="flex items-center">
-          <span className="font-medium text-plum-dark">{expando.title}</span>
+          <span className="font-medium text-primary-dark">{expando.title}</span>
           {expanded && expando.id && onFeedback ? <ThumbsFeedback id={expando.id} feedback={feedback} onFeedback={onFeedback} /> : null}
         </div>
-        <span className="text-plum">{expanded ? "\u2212" : "+"}</span>
+        <span className="text-primary">{expanded ? "\u2212" : "+"}</span>
       </button>
       {expanded ? <div className="px-4 pb-4">
           <div className="prose prose-sm max-w-none">
             <Markdown>{expando.text}</Markdown>
           </div>
           {/* Comment affordance */}
-          <div className="mt-4 pt-4 border-t border-iris-100">
+          <div className="mt-4 pt-4 border-t border-info-100">
             {submitted ? (
-              <p className="text-green-700 text-sm">Got it, I'll keep that in mind.</p>
+              <p className="text-success-dark text-sm">Got it, I'll keep that in mind.</p>
             ) : showVoice ? (
               <InlineVoiceRecorder
                 onComplete={handleVoiceComplete}
@@ -83,7 +83,7 @@ export function ExpandoSection({
                 <div className="flex gap-2">
                   <button
                     onClick={handleSubmitComment}
-                    className="px-3 py-1 bg-plum text-white text-sm rounded hover:bg-plum-dark"
+                    className="px-3 py-1 bg-primary text-white text-sm rounded hover:bg-primary-dark"
                   >
                     Comment
                   </button>

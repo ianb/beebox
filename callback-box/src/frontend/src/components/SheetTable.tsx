@@ -73,7 +73,7 @@ export function SheetTable({ rows }: SheetTableProps) {
                 return (
                   <td
                     key={colIdx}
-                    className={`border-r border-b border-warm-200 px-2 py-1 whitespace-pre-wrap ${formula ? "text-plum" : "text-warm-900"}`}
+                    className={`border-r border-b border-warm-200 px-2 py-1 whitespace-pre-wrap ${formula ? "text-primary" : "text-warm-900"}`}
                     title={formula ? cell.f : undefined}
                   >
                     {display}

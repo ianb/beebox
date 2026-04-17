@@ -40,7 +40,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
     <div className="py-2 flex items-start justify-between gap-2" {...cbSource("commit", commit.hash)}>
       <div className="min-w-0">
         <div className="text-sm text-warm-900 truncate">
-          <Link to={href(`/${boxSlug}/history/${commit.hash}`)} className="hover:text-plum">
+          <Link to={href(`/${boxSlug}/history/${commit.hash}`)} className="hover:text-primary">
             {commit.subject}
           </Link>
         </div>
@@ -68,13 +68,13 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
     <div className="py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-sm text-warm-700">
-          <span className="text-xs bg-iris-50 text-plum px-1.5 py-0.5 rounded mr-1">
+          <span className="text-xs bg-info-50 text-primary px-1.5 py-0.5 rounded mr-1">
             tick
           </span>
           {scripts.map((s, si) => (
             <span
               key={`${s.name}-${si}`}
-              className={`text-xs mr-1 ${s.status === "error" ? "text-red-600" : "text-green-600"}`}
+              className={`text-xs mr-1 ${s.status === "error" ? "text-danger-dark" : "text-success"}`}
             >
               {s.name}
               {s.durationMs != null ? (
@@ -122,7 +122,7 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
     <div className="card">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-warm-700">Recent Activity</h3>
-        <Link to={href(`/${boxSlug}/history`)} className="text-xs text-plum hover:text-plum-dark">
+        <Link to={href(`/${boxSlug}/history`)} className="text-xs text-primary hover:text-primary-dark">
           All history &rarr;
         </Link>
       </div>
@@ -130,7 +130,7 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
       {loading ? (
         <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
       ) : error ? (
-        <p className="text-sm text-red-600">Failed to load: {error.message}</p>
+        <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       ) : display.length === 0 ? (
         <p className="text-sm text-warm-500">No recent activity</p>
       ) : (

@@ -45,7 +45,7 @@ export function ExternalIconLink({ href, label, size = "md", onDark = false, cla
       className={cn(
         SIZE_CLASSES[size],
         colorClass,
-        "rounded-full inline-flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+        "rounded-full inline-flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         className,
       )}
     >

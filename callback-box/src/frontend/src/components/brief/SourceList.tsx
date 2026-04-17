@@ -33,7 +33,7 @@ export function SourceList({
                 <li key={i}>
                   <button
                     onClick={() => onSourceClick?.(source.path)}
-                    className="text-plum hover:text-plum-dark hover:underline text-sm text-left"
+                    className="text-primary hover:text-primary-dark hover:underline text-sm text-left"
                   >
                     {source.title}
                   </button>
@@ -50,7 +50,7 @@ export function SourceList({
                 <li key={i}>
                   <button
                     onClick={() => onSourceClick?.(source.path)}
-                    className="text-plum hover:text-plum-dark hover:underline text-sm text-left"
+                    className="text-primary hover:text-primary-dark hover:underline text-sm text-left"
                   >
                     {source.title}
                   </button>

@@ -20,9 +20,9 @@ export interface InlineActionProps {
 }
 
 const INTENT_CLASSES: Record<InlineActionIntent, string> = {
-  emphatic: "text-plum hover:text-plum-dark underline",
+  emphatic: "text-primary hover:text-primary-dark underline",
   subtle: "text-warm-600 hover:text-warm-900 underline",
-  danger: "text-rose hover:text-rose-dark underline",
+  danger: "text-danger hover:text-danger-dark underline",
 };
 
 export function InlineAction({
@@ -72,7 +72,7 @@ export function InlineAction({
       title={title}
       className={cn(
         INTENT_CLASSES[intent],
-        "cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded-sm",
+        "cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm",
         className,
       )}
     >

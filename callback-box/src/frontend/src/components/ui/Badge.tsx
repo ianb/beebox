@@ -15,11 +15,11 @@ export interface BadgeProps {
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
   neutral: "bg-warm-100 text-warm-500",
-  info: "bg-iris-50 text-iris-dark",
-  success: "bg-green-100 text-green-800",
-  warning: "bg-gold-100 text-gold-dark",
-  danger: "bg-rose-100 text-rose",
-  accent: "bg-plum-50 text-plum-dark",
+  info: "bg-info-50 text-info-dark",
+  success: "bg-success-100 text-success-dark",
+  warning: "bg-accent-100 text-accent-dark",
+  danger: "bg-danger-100 text-danger",
+  accent: "bg-primary-50 text-primary-dark",
 };
 
 const SIZE_CLASSES: Record<BadgeSize, string> = {

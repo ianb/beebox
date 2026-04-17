@@ -19,7 +19,7 @@ export interface BboxOverlayProps {
 export function BboxOverlay({ top, left, width, height, transform }: BboxOverlayProps) {
   return (
     <div
-      className="absolute border-2 border-plum rounded pointer-events-none"
+      className="absolute border-2 border-primary rounded pointer-events-none"
       style={{
         top: `${top}%`,
         left: `${left}%`,

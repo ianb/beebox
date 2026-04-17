@@ -43,10 +43,10 @@ export function Pre({
   title,
   className,
 }: PreProps) {
-  const colorClass = error ? "text-red-700" : muted ? "text-warm-500" : "text-warm-800";
+  const colorClass = error ? "text-danger-dark" : muted ? "text-warm-500" : "text-warm-800";
   const boxClass = boxed
     ? error
-      ? "bg-red-50 border border-red-200 rounded p-3"
+      ? "bg-danger-50 border border-danger-100 rounded p-3"
       : "bg-warm-50 rounded p-3"
     : "";
   const scrollClass = scroll !== false ? SCROLL_CLASSES[scroll] : "";

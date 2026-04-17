@@ -31,8 +31,8 @@ export function Toggle({
 
   const trackClass = checked
     ? disabled
-      ? "bg-plum/50"
-      : "bg-plum"
+      ? "bg-primary/50"
+      : "bg-primary"
     : disabled
       ? "bg-warm-200"
       : "bg-warm-300 hover:bg-warm-400";
@@ -51,7 +51,7 @@ export function Toggle({
         if (!disabled) onChange(!checked);
       }}
       className={cn(
-        "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+        "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         trackClass,
         disabled ? "cursor-not-allowed" : "cursor-pointer",
       )}

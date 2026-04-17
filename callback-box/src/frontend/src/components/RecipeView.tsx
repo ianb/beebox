@@ -240,14 +240,14 @@ export function RecipeView({ data }: RendererProps) {
 
       {/* Scaling controls */}
       {recipe.yieldAmount > 0 ? (
-        <div className="flex items-center gap-2 mb-6 p-3 bg-iris-50 rounded-lg">
+        <div className="flex items-center gap-2 mb-6 p-3 bg-info-50 rounded-lg">
           <span className="text-sm text-warm-700">Scale:</span>
           {[0.5, 1, 1.5, 2, 3].map(s => (
             <button
               key={s}
               className={`px-3 py-1 text-sm rounded ${
                 scale === s
-                  ? "bg-plum text-white shadow-sm"
+                  ? "bg-primary text-white shadow-sm"
                   : "bg-white text-warm-700 hover:bg-warm-100"
               }`}
               onClick={() => setScale(s)}
@@ -271,9 +271,9 @@ export function RecipeView({ data }: RendererProps) {
       ))}
 
       {recipe.notes ? (
-        <div className="mt-6 p-4 bg-amber-50 rounded-lg">
-          <h3 className="font-medium text-amber-800 mb-1">Notes</h3>
-          <div className="prose prose-sm max-w-none text-amber-900">
+        <div className="mt-6 p-4 bg-warning-50 rounded-lg">
+          <h3 className="font-medium text-warning-dark mb-1">Notes</h3>
+          <div className="prose prose-sm max-w-none text-warning-dark">
             <Markdown>{recipe.notes}</Markdown>
           </div>
         </div>

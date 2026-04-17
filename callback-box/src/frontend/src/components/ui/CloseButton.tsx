@@ -46,7 +46,7 @@ export function CloseButton({ onClick, label = "Close", size = "md", onDark = fa
       className={cn(
         SIZE_CLASSES[size],
         colorClass,
-        "rounded-full inline-flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-50 disabled:cursor-not-allowed",
+        "rounded-full inline-flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed",
         className,
       )}
     >

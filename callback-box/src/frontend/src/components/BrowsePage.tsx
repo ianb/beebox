@@ -57,7 +57,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
           <div className="px-3 py-2 border-b text-sm break-words">
             <button
               onClick={() => onNavigate("")}
-              className="text-plum hover:text-plum-dark hover:underline px-0.5"
+              className="text-primary hover:text-primary-dark hover:underline px-0.5"
             >/</button>
             {segments.map((seg, i) => {
               const segPath = segments.slice(0, i + 1).join("/");
@@ -71,7 +71,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                   ) : (
                     <button
                       onClick={() => onNavigate(segPath)}
-                      className="text-plum hover:text-plum-dark hover:underline px-0.5"
+                      className="text-primary hover:text-primary-dark hover:underline px-0.5"
                     >{seg}</button>
                   )}
                 </Fragment>
@@ -93,7 +93,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                   }
                   className="w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200"
                 >
-                  <span className="text-plum flex-shrink-0">
+                  <span className="text-primary flex-shrink-0">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                     </svg>
@@ -116,7 +116,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                   {...cbSource("card", card.relativePath)}
                   className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
                     selectedFilePath === card.relativePath
-                      ? "bg-iris-50"
+                      ? "bg-info-50"
                       : ""
                   }`}
                 >
@@ -148,7 +148,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
                   }}
                   className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
                     selectedFilePath === file.relativePath
-                      ? "bg-iris-50"
+                      ? "bg-info-50"
                       : ""
                   }`}
                 >
@@ -176,7 +176,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
             <div className="mb-4 px-4 flex items-center justify-between">
               <button
                 onClick={() => setSelectedFilePath(null)}
-                className="sm:hidden flex items-center gap-1 text-sm text-plum hover:text-plum-dark"
+                className="sm:hidden flex items-center gap-1 text-sm text-primary hover:text-primary-dark"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -186,7 +186,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
               {selectedCard ? (
                 <Link
                   to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
-                  className="text-plum hover:text-plum-dark text-sm"
+                  className="text-primary hover:text-primary-dark text-sm"
                 >
                   Open full view &rarr;
                 </Link>

@@ -56,7 +56,7 @@ export function ReadingFeedback({
             onClick={() => setSelectedRating("great")}
             className={`px-4 py-2 rounded-lg border transition-colors ${
               selectedRating === "great"
-                ? "bg-green-100 border-green-500 text-green-800"
+                ? "bg-success-100 border-success text-success-dark"
                 : "border-warm-400 hover:bg-warm-50"
             }`}
           >
@@ -66,7 +66,7 @@ export function ReadingFeedback({
             onClick={() => setSelectedRating("ok")}
             className={`px-4 py-2 rounded-lg border transition-colors ${
               selectedRating === "ok"
-                ? "bg-iris-100 border-plum text-plum-dark"
+                ? "bg-info-100 border-primary text-primary-dark"
                 : "border-warm-400 hover:bg-warm-50"
             }`}
           >
@@ -76,7 +76,7 @@ export function ReadingFeedback({
             onClick={() => setSelectedRating("meh")}
             className={`px-4 py-2 rounded-lg border transition-colors ${
               selectedRating === "meh"
-                ? "bg-amber-100 border-amber-500 text-amber-800"
+                ? "bg-warning-100 border-warning text-warning-dark"
                 : "border-warm-400 hover:bg-warm-50"
             }`}
           >
@@ -97,10 +97,10 @@ export function ReadingFeedback({
                 className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                   selectedReactions.has(reaction.id)
                     ? reaction.sentiment === "negative"
-                      ? "bg-red-100 border-red-400 text-red-800"
+                      ? "bg-danger-100 border-danger-light text-danger-dark"
                       : reaction.sentiment === "positive"
-                        ? "bg-green-100 border-green-400 text-green-800"
-                        : "bg-iris-100 border-plum-light text-plum-dark"
+                        ? "bg-success-100 border-success-light text-success-dark"
+                        : "bg-info-100 border-primary-light text-primary-dark"
                     : "border-warm-400 hover:bg-warm-50"
                 }`}
               >
@@ -113,7 +113,7 @@ export function ReadingFeedback({
                 onClick={() => toggleReaction(reaction.id)}
                 className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                   selectedReactions.has(reaction.id)
-                    ? "bg-purple-100 border-purple-400 text-purple-800"
+                    ? "bg-info-100 border-info-light text-info-dark"
                     : "border-warm-400 hover:bg-warm-50"
                 }`}
               >
@@ -129,7 +129,7 @@ export function ReadingFeedback({
         <button
           onClick={handleSubmit}
           disabled={!selectedRating || submitting}
-          className="px-5 py-2 bg-plum text-white rounded-lg hover:bg-plum-dark disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? "Saving..." : "Done Reading"}
         </button>

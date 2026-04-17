@@ -28,7 +28,7 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, classNa
         const stateClass = disabled
           ? "border-transparent text-warm-400 cursor-not-allowed"
           : active
-            ? "border-plum text-plum font-medium"
+            ? "border-primary text-primary font-medium"
             : "border-transparent text-warm-600 hover:text-warm-800 hover:border-warm-300 cursor-pointer";
         return (
           <button
@@ -42,11 +42,11 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, classNa
             onClick={() => {
               if (!disabled) onChange(tab.value);
             }}
-            className={cn("px-4 py-1.5 text-sm border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold", stateClass)}
+            className={cn("px-4 py-1.5 text-sm border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent", stateClass)}
           >
             {tab.label}
             {tab.count !== undefined ? (
-              <span className={cn("ml-1 text-xs", active ? "text-plum" : "text-warm-500")}>
+              <span className={cn("ml-1 text-xs", active ? "text-primary" : "text-warm-500")}>
                 ({tab.count})
               </span>
             ) : null}

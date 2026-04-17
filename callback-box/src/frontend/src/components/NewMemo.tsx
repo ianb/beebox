@@ -211,8 +211,8 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
           {recordingState === "recording" && (
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger-light opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-danger" />
               </span>
               <span className="text-sm font-mono">{formatDuration(duration)}</span>
               <Button type="button" intent="destructive" size="sm" onClick={stopRecording}>Stop</Button>
@@ -221,7 +221,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
 
           {recordingState === "idle" && audioBlob ? (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-green-600">
+              <span className="text-success">
                 ✓ {formatDuration(duration)} recorded
               </span>
               <InlineAction intent="danger" onClick={clearRecording} disabled={uploading}>
@@ -233,7 +233,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
       </div>
 
       {/* Error display */}
-      {error ? <div className="text-red-600 text-sm mb-4">Error: {error}</div> : null}
+      {error ? <div className="text-danger-dark text-sm mb-4">Error: {error}</div> : null}
 
       {/* Submit button */}
       <div className="flex gap-2">

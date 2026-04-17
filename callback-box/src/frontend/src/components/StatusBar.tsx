@@ -22,7 +22,7 @@ export function StatusBar({ connected, onRefresh }: StatusBarProps) {
         <div className="flex items-center gap-2">
           <span
             className={`w-2 h-2 rounded-full ${
-              connected ? "bg-green-500" : "bg-red-500"
+              connected ? "bg-success" : "bg-danger"
             }`}
           />
           <span className="text-sm text-warm-600">
@@ -41,7 +41,7 @@ export function StatusBar({ connected, onRefresh }: StatusBarProps) {
               <span className="font-medium">{status.counts.pendingQuestions}</span> questions
             </span>
             {!status.git.clean && (
-              <span className="text-yellow-600 font-medium">Uncommitted changes</span>
+              <span className="text-warning font-medium">Uncommitted changes</span>
             )}
           </div> : null}
 
@@ -61,7 +61,7 @@ export function StatusBar({ connected, onRefresh }: StatusBarProps) {
         </Button>
       </div>
 
-      {error ? <div className="absolute top-full left-0 right-0 bg-red-100 text-red-800 px-4 py-2 text-sm">
+      {error ? <div className="absolute top-full left-0 right-0 bg-danger-100 text-danger-dark px-4 py-2 text-sm">
           Error: {error.message}
         </div> : null}
     </div>

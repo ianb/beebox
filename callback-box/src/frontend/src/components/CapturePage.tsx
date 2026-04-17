@@ -544,9 +544,9 @@ export function CapturePage() {
       </div>
 
       {error ? (
-        <div className="absolute top-14 left-4 right-4 bg-red-900/80 text-red-200 text-sm px-3 py-2 rounded-lg z-20">
+        <div className="absolute top-14 left-4 right-4 bg-danger-dark/80 text-danger-100 text-sm px-3 py-2 rounded-lg z-20">
           {error}
-          <button onClick={() => setError(null)} className="float-right text-red-300 hover:text-white">&times;</button>
+          <button onClick={() => setError(null)} className="float-right text-danger-light hover:text-white">&times;</button>
         </div>
       ) : null}
 
@@ -577,16 +577,16 @@ function StatusBar(props: {
       <div className="flex items-center gap-3">
         {props.recording ? (
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+            <span className="w-2.5 h-2.5 bg-danger rounded-full animate-pulse" />
             <span className="text-sm font-mono">{props.formatTime(props.recordingTime)}</span>
           </div>
         ) : null}
         {!props.recording && props.audioTotal > 0 ? (
           <div className="flex items-center gap-1.5 text-sm">
             {props.audioUploading > 0 ? (
-              <><span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" /><span className="text-yellow-400">audio uploading</span></>
+              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">audio uploading</span></>
             ) : (
-              <><span className="text-green-400">&#10003;</span><span className="text-green-400">audio ({props.audioUploaded})</span></>
+              <><span className="text-success-light">&#10003;</span><span className="text-success-light">audio ({props.audioUploaded})</span></>
             )}
           </div>
         ) : null}
@@ -595,27 +595,27 @@ function StatusBar(props: {
         {props.photoTotal > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.photosUploading > 0 ? (
-              <><span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" /><span className="text-yellow-400">{props.photosUploaded}/{props.photoTotal}</span></>
+              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.photosUploaded}/{props.photoTotal}</span></>
             ) : props.photosFailed > 0 ? (
               <>
-                <span className="text-red-400">&#10007;</span>
-                <span className="text-red-400">{props.photosFailed} failed</span>
-                <button onClick={props.onRetryFailed} className="text-yellow-300 underline ml-1">retry</button>
-                {props.photosUploaded > 0 ? <span className="text-green-400">, {props.photosUploaded} ok</span> : null}
+                <span className="text-danger-light">&#10007;</span>
+                <span className="text-danger-light">{props.photosFailed} failed</span>
+                <button onClick={props.onRetryFailed} className="text-warning-light underline ml-1">retry</button>
+                {props.photosUploaded > 0 ? <span className="text-success-light">, {props.photosUploaded} ok</span> : null}
               </>
             ) : (
-              <><span className="text-green-400">&#10003;</span><span className="text-green-400">{props.photoTotal} photos</span></>
+              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.photoTotal} photos</span></>
             )}
           </div>
         ) : null}
         {props.fileTotal > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.filesUploading > 0 ? (
-              <><span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" /><span className="text-yellow-400">{props.filesUploaded}/{props.fileTotal} files</span></>
+              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files</span></>
             ) : props.filesFailed > 0 ? (
-              <><span className="text-red-400">&#10007;</span><span className="text-red-400">{props.filesFailed} failed</span></>
+              <><span className="text-danger-light">&#10007;</span><span className="text-danger-light">{props.filesFailed} failed</span></>
             ) : (
-              <><span className="text-green-400">&#10003;</span><span className="text-green-400">{props.fileTotal} files</span></>
+              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.fileTotal} files</span></>
             )}
           </div>
         ) : null}
@@ -676,30 +676,30 @@ function CaptureControls(props: {
   return (
     <div className="flex flex-col items-center bg-gray-900/80">
       {props.photosFailed > 0 ? (
-        <div className="text-red-300 text-sm py-2 px-4 text-center">
+        <div className="text-danger-light text-sm py-2 px-4 text-center">
           {props.photosFailed} photo{props.photosFailed > 1 ? "s" : ""} failed to upload.{" "}
-          <button onClick={props.onRetryFailed} className="text-yellow-300 underline">Retry</button>
+          <button onClick={props.onRetryFailed} className="text-warning-light underline">Retry</button>
           {" "}or discard the session.
         </div>
       ) : null}
       <div className="flex items-center justify-around w-full px-6 py-4">
         <button onClick={props.onCancel} disabled={!props.sessionId || props.finalizing || !props.hasContent}
           className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center disabled:opacity-30 active:bg-gray-600">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-danger-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
         <button onClick={props.onToggleRecording} disabled={!props.sessionId}
-          className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-red-600" : ""}`}>
+          className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-danger-dark" : ""}`}>
           {props.recording ? <span className="w-7 h-7 bg-white rounded-sm" /> : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-danger" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z" /><path d="M17 11a5 5 0 01-10 0H5a7 7 0 0014 0h-2z" />
               <rect x="11" y="19" width="2" height="3" rx="1" /><rect x="8" y="21" width="8" height="2" rx="1" />
             </svg>
           )}
         </button>
         <button onClick={props.onDone} disabled={doneDisabled}
-          className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-30 active:bg-green-500">
+          className="w-12 h-12 rounded-full bg-success flex items-center justify-center disabled:opacity-30 active:bg-success">
           {props.finalizing ? (
             <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (

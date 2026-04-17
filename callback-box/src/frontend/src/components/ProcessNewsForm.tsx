@@ -61,11 +61,11 @@ export function ProcessNewsForm({
         <div className="text-sm text-warm-700 mb-2">Pipeline Status:</div>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-plum" />
+            <span className="w-3 h-3 rounded-full bg-primary" />
             <span>{inboxCount} in inbox</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-green-500" />
+            <span className="w-3 h-3 rounded-full bg-success" />
             <span>{poolCount} in pool</span>
           </div>
         </div>

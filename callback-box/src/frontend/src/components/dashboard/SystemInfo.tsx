@@ -19,9 +19,9 @@ export function SystemInfo({ status }: SystemInfoProps) {
       <span>Created: {new Date(status.created).toLocaleDateString()}</span>
       <span>
         Git: {status.git.clean ? (
-          <span className="text-green-600">clean</span>
+          <span className="text-success">clean</span>
         ) : (
-          <span className="text-yellow-600">
+          <span className="text-warning">
             {status.git.modified.length} modified, {status.git.untracked.length} untracked
           </span>
         )}

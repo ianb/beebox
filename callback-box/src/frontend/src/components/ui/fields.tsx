@@ -1,10 +1,10 @@
 import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
 
-const INPUT_BASE = "w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold disabled:opacity-50 disabled:cursor-not-allowed";
+const INPUT_BASE = "w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed";
 
 function inputClasses(error: boolean, extra?: string): string {
-  const border = error ? "border-red-500" : "border-warm-400";
+  const border = error ? "border-danger" : "border-warm-400";
   return cn(INPUT_BASE, border, extra);
 }
 
@@ -27,11 +27,11 @@ function FieldShell({ id, label, hideLabel, required, error, helper, children, c
     <div className={className}>
       <label htmlFor={id} className={labelClass}>
         {label}
-        {required ? <span className="text-rose ml-0.5" aria-hidden="true">*</span> : null}
+        {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
       </label>
       {children}
       {error !== undefined ? (
-        <div className="text-red-600 text-sm mt-1" role="alert">{error}</div>
+        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
       ) : helper !== undefined ? (
         <div className="text-xs text-warm-500 mt-1">{helper}</div>
       ) : null}
@@ -245,16 +245,16 @@ export function CheckboxField({
           required={required}
           disabled={disabled}
           aria-invalid={hasError ? true : undefined}
-          className="rounded border-warm-400 text-plum focus:ring-gold disabled:cursor-not-allowed"
+          className="rounded border-warm-400 text-primary focus:ring-accent disabled:cursor-not-allowed"
           {...rest}
         />
         <span>
           {label}
-          {required ? <span className="text-rose ml-0.5" aria-hidden="true">*</span> : null}
+          {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
         </span>
       </label>
       {error !== undefined ? (
-        <div className="text-red-600 text-sm mt-1" role="alert">{error}</div>
+        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
       ) : helper !== undefined ? (
         <div className="text-xs text-warm-500 mt-1">{helper}</div>
       ) : null}
@@ -383,7 +383,7 @@ export function RadioGroup({
     >
       <div id={`${groupId}-label`} className="block text-sm font-medium text-warm-700 mb-1">
         {label}
-        {required ? <span className="text-rose ml-0.5" aria-hidden="true">*</span> : null}
+        {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
       </div>
       {variant === "list" ? (
         <RadioList name={groupName} value={value} options={options} disabled={disabled} onChange={onChange} />
@@ -391,7 +391,7 @@ export function RadioGroup({
         <RadioCards name={groupName} value={value} options={options} disabled={disabled} onChange={onChange} />
       )}
       {error !== undefined ? (
-        <div className="text-red-600 text-sm mt-1" role="alert">{error}</div>
+        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
       ) : helper !== undefined ? (
         <div className="text-xs text-warm-500 mt-1">{helper}</div>
       ) : null}
@@ -424,7 +424,7 @@ function RadioList({ name, value, options, disabled, onChange }: RadioInternalPr
               checked={value === opt.value}
               onChange={() => onChange(opt.value)}
               disabled={isDisabled}
-              className="text-plum focus:ring-gold"
+              className="text-primary focus:ring-accent"
             />
             <span>{opt.label}</span>
           </label>
@@ -444,7 +444,7 @@ function RadioCards({ name, value, options, disabled, onChange }: RadioInternalP
         const stateClass = isDisabled
           ? "border-warm-200 bg-warm-50 opacity-60 cursor-not-allowed"
           : isSelected
-            ? "border-plum bg-iris-50 cursor-pointer"
+            ? "border-primary bg-info-50 cursor-pointer"
             : "border-warm-300 hover:border-warm-400 cursor-pointer";
         return (
           <label key={opt.value} className={`${baseClass} ${stateClass}`}>

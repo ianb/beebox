@@ -50,7 +50,7 @@ export function InlineVoiceRecorder({
         <span className="font-mono text-sm">{formatDuration(duration)}</span>
         <button
           onClick={stopRecording}
-          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex items-center gap-1"
+          className="px-3 py-1 bg-danger-dark text-white text-sm rounded hover:bg-danger-dark flex items-center gap-1"
         >
           <StopIcon className="w-4 h-4" />
           Stop
@@ -69,7 +69,7 @@ export function InlineVoiceRecorder({
     <div className="flex items-center gap-2 py-2">
       {error ? (
         <>
-          <span className="text-red-600 text-sm">{error}</span>
+          <span className="text-danger-dark text-sm">{error}</span>
           <button onClick={onCancel} className="px-3 py-1 text-warm-700 text-sm hover:text-warm-800">
             Cancel
           </button>

@@ -231,15 +231,15 @@ export function SharePage() {
             disabled={shareState === "saving" || transcription.state === "connecting" || transcription.state === "finalizing"}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
               transcription.state === "recording"
-                ? "bg-red-100 text-red-700 hover:bg-red-200"
+                ? "bg-danger-100 text-danger-dark hover:bg-danger-100"
                 : "bg-warm-100 text-warm-700 hover:bg-warm-200"
             }`}
           >
             {transcription.state === "recording" ? (
               <>
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger-light opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-danger" />
                 </span>
                 Stop
               </>
@@ -267,19 +267,19 @@ export function SharePage() {
 
         {/* Live transcript */}
         {transcription.state === "recording" && transcription.transcript ? (
-          <div className="mb-4 p-2 bg-iris-50 rounded text-sm text-warm-700 italic">
+          <div className="mb-4 p-2 bg-info-50 rounded text-sm text-warm-700 italic">
             {transcription.transcript}
           </div>
         ) : null}
 
         {/* Transcription error */}
         {transcription.error ? (
-          <div className="mb-4 text-red-600 text-sm">Mic error: {transcription.error}</div>
+          <div className="mb-4 text-danger-dark text-sm">Mic error: {transcription.error}</div>
         ) : null}
 
         {/* Error display */}
         {shareState === "error" ? (
-          <div className="mb-4 text-red-600 text-sm">Error: {errorMessage}</div>
+          <div className="mb-4 text-danger-dark text-sm">Error: {errorMessage}</div>
         ) : null}
 
         {/* Save button */}

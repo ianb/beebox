@@ -17,14 +17,14 @@ interface HeaderStripProps {
 function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
   const { staged, modified, untracked } = git;
   const sections: Array<{ label: string; files: string[]; color: string }> = [];
-  if (staged.length > 0) sections.push({ label: "Staged", files: staged, color: "text-green-700" });
-  if (modified.length > 0) sections.push({ label: "Modified", files: modified, color: "text-yellow-700" });
+  if (staged.length > 0) sections.push({ label: "Staged", files: staged, color: "text-success-dark" });
+  if (modified.length > 0) sections.push({ label: "Modified", files: modified, color: "text-warning-dark" });
   if (untracked.length > 0) sections.push({ label: "Untracked", files: untracked, color: "text-warm-600" });
 
   return (
     <div className="fixed left-[10vw] top-24 w-[80vw] bg-white border rounded-lg shadow-lg z-10 p-3 text-xs">
       {git.clean ? (
-        <p className="text-green-600">Working tree clean</p>
+        <p className="text-success">Working tree clean</p>
       ) : (
         <div className="space-y-2">
           {sections.map((s) => (
@@ -71,7 +71,7 @@ export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
           ) : null}
         </div>
         <span
-          className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-green-500" : "bg-red-400"}`}
+          className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-success" : "bg-danger-light"}`}
           title={connected ? "Connected" : "Disconnected"}
         />
         {status ? (
@@ -79,7 +79,7 @@ export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
             <button
               onClick={() => setShowGit(!showGit)}
               className={`text-sm px-2 py-0.5 rounded hover:bg-warm-100 whitespace-nowrap ${
-                status.git.clean ? "text-green-600" : "text-yellow-600"
+                status.git.clean ? "text-success" : "text-warning"
               }`}
             >
               {status.git.clean ? "clean" : `dirty (${status.git.modified.length + status.git.untracked.length} files)`}

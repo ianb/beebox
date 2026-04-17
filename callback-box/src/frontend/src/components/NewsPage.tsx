@@ -211,13 +211,13 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-red-600">Error: {error}</div>
+            <div className="text-danger-dark">Error: {error}</div>
           </div>
         ) : briefData ? (
           <div {...(briefPath ? cbSource("card", briefPath) : {})}>
             <button
               onClick={handleBack}
-              className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-plum hover:text-plum-dark"
+              className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-primary hover:text-primary-dark"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

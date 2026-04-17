@@ -98,7 +98,7 @@ export function ContentSection({
       {/* Section comment affordance */}
       {section.id && (onComment || onVoiceComment) ? <div className="mt-3 pt-3 border-t border-warm-200">
           {submitted ? (
-            <p className="text-green-700 text-sm">Got it, I'll keep that in mind.</p>
+            <p className="text-success-dark text-sm">Got it, I'll keep that in mind.</p>
           ) : showVoice ? (
             <InlineVoiceRecorder
               onComplete={handleVoiceComplete}
@@ -116,7 +116,7 @@ export function ContentSection({
               <div className="flex gap-2">
                 <button
                   onClick={handleSubmitComment}
-                  className="px-3 py-1 bg-plum text-white text-sm rounded hover:bg-plum-dark"
+                  className="px-3 py-1 bg-primary text-white text-sm rounded hover:bg-primary-dark"
                 >
                   Comment
                 </button>
@@ -142,13 +142,13 @@ export function ContentSection({
             <div className="flex gap-2">
               <button
                 onClick={() => setShowComment(true)}
-                className="text-sm text-warm-500 hover:text-plum"
+                className="text-sm text-warm-500 hover:text-primary"
               >
                 + Add comment
               </button>
               {onVoiceComment ? <button
                   onClick={() => setShowVoice(true)}
-                  className="text-sm text-warm-500 hover:text-plum flex items-center gap-1"
+                  className="text-sm text-warm-500 hover:text-primary flex items-center gap-1"
                 >
                   <MicrophoneIcon className="w-4 h-4" />
                   Voice

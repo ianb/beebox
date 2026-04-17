@@ -12,7 +12,7 @@ body {
 }
 
 .input {
-  @apply border border-warm-400 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold;
+  @apply border border-warm-400 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent;
 }
 
 .status-badge {
@@ -20,19 +20,19 @@ body {
 }
 
 .status-pending {
-  @apply bg-gold-100 text-gold-dark;
+  @apply bg-accent-100 text-accent-dark;
 }
 
 .status-answered {
-  @apply bg-green-100 text-green-800;
+  @apply bg-success-100 text-success-dark;
 }
 
 .status-new {
-  @apply bg-iris-50 text-iris-dark;
+  @apply bg-info-50 text-info-dark;
 }
 
 .status-processing {
-  @apply bg-plum-50 text-plum-dark;
+  @apply bg-primary-50 text-primary-dark;
 }
 
 .status-processed {

@@ -131,9 +131,9 @@ export function CommandRunner({
 
   const stateColors = {
     idle: "bg-warm-100 border-warm-400",
-    running: "bg-iris-50 border-plum-light",
-    success: "bg-green-50 border-green-300",
-    error: "bg-red-50 border-red-300",
+    running: "bg-info-50 border-primary-light",
+    success: "bg-success-50 border-success-light",
+    error: "bg-danger-50 border-danger-light",
   };
 
   const stateIcons = {
@@ -151,11 +151,11 @@ export function CommandRunner({
           <span
             className={`text-sm ${
               state === "running"
-                ? "text-plum animate-pulse"
+                ? "text-primary animate-pulse"
                 : state === "success"
-                  ? "text-green-600"
+                  ? "text-success"
                   : state === "error"
-                    ? "text-red-600"
+                    ? "text-danger-dark"
                     : "text-warm-500"
             }`}
           >
@@ -170,14 +170,14 @@ export function CommandRunner({
           {state === "idle" && (
             <button
               onClick={runCommand}
-              className="px-3 py-1 text-sm bg-plum text-white rounded hover:bg-plum-dark transition-colors"
+              className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary-dark transition-colors"
             >
               Run
             </button>
           )}
 
           {state === "running" && (
-            <span className="text-xs text-plum">Running...</span>
+            <span className="text-xs text-primary">Running...</span>
           )}
 
           {(state === "success" || state === "error") && (
@@ -210,7 +210,7 @@ export function CommandRunner({
               dangerouslySetInnerHTML={{ __html: ansiConverter.toHtml(line) }}
             />
           ))}
-          {error ? <div className="text-red-400">Error: {error}</div> : null}
+          {error ? <div className="text-danger-light">Error: {error}</div> : null}
         </pre> : null}
 
       {/* Empty state */}

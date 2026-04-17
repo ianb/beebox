@@ -56,8 +56,8 @@ export function Accordion({
   );
   const buttonClass =
     variant === "bordered"
-      ? "w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-warm-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-60 disabled:cursor-not-allowed"
-      : "w-full flex items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-60 disabled:cursor-not-allowed";
+      ? "w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-warm-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed"
+      : "w-full flex items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 disabled:cursor-not-allowed";
   const bodyClass = variant === "bordered" ? "border-t border-warm-200 px-3 py-2" : "mt-2";
 
   return (

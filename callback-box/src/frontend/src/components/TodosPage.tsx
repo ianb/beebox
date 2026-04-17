@@ -25,10 +25,10 @@ function TodoItem(props: {
           onClick={() => onToggle(item.name, isDone ? "pending" : "done")}
           className={`mt-0.5 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
             isDone
-              ? "bg-plum border-plum text-white"
+              ? "bg-primary border-primary text-white"
               : item.status === "deferred"
                 ? "border-warm-300 bg-warm-100"
-                : "border-warm-400 hover:border-plum"
+                : "border-warm-400 hover:border-primary"
           }`}
           title={isDone ? "Mark pending" : "Mark done"}
         >
