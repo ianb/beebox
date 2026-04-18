@@ -92,7 +92,8 @@ describe("restrict-component-classes", () => {
           export const X = ({ cls }) => <Button className={cls}>Hi</Button>;
         `),
 
-        // Template literal with expression — skipped
+        // Template literal with plain identifier expression — static parts
+        // allowed, identifier contributes no known tokens
         valid(`
           import { Button } from "./ui/Button";
           export const X = ({ x }) => <Button className={\`mb-4 \${x}\`}>Hi</Button>;
@@ -102,6 +103,30 @@ describe("restrict-component-classes", () => {
         valid(`
           import { Button } from "./ui/Button";
           export const X = () => <Button className={\`mb-4 flex-1\`}>Hi</Button>;
+        `),
+
+        // Conditional expression — both branches are allowed tokens
+        valid(`
+          import { Button } from "./ui/Button";
+          export const X = ({ big }) => <Button className={big ? "p-6" : "p-2"}>Hi</Button>;
+        `),
+
+        // Template literal with a conditional expression — all fragments allowed
+        valid(`
+          import { Button } from "./ui/Button";
+          export const X = ({ wide }) => <Button className={\`flex-1 \${wide ? "w-full" : "w-auto"}\`}>Hi</Button>;
+        `),
+
+        // Logical && — right side is allowed
+        valid(`
+          import { Button } from "./ui/Button";
+          export const X = ({ narrow }) => <Button className={narrow && "mx-auto"}>Hi</Button>;
+        `),
+
+        // Nested conditionals — all branches allowed
+        valid(`
+          import { Button } from "./ui/Button";
+          export const X = ({ size }) => <Button className={size === "lg" ? "p-6" : size === "sm" ? "p-1" : "p-3"}>Hi</Button>;
         `),
 
         // No options.components configured → nothing is checked
@@ -314,6 +339,42 @@ describe("restrict-component-classes", () => {
           export const X = () => <Button className={\`text-red-500\`}>Hi</Button>;
         `,
           ["text-red-500"],
+        ),
+
+        // Conditional — disallowed class in one branch is reported
+        invalid(
+          `
+          import { Button } from "./ui/Button";
+          export const X = ({ err }) => <Button className={err ? "bg-danger" : "mt-2"}>Hi</Button>;
+        `,
+          ["bg-danger"],
+        ),
+
+        // Conditional — disallowed class in both branches, each reported once
+        invalid(
+          `
+          import { Button } from "./ui/Button";
+          export const X = ({ on }) => <Button className={on ? "bg-primary" : "bg-warm-200"}>Hi</Button>;
+        `,
+          ["bg-primary", "bg-warm-200"],
+        ),
+
+        // Template literal embeds a conditional with disallowed classes
+        invalid(
+          `
+          import { Button } from "./ui/Button";
+          export const X = ({ open }) => <Button className={\`flex-1 \${open ? "" : "hidden sm:flex"}\`}>Hi</Button>;
+        `,
+          ["hidden", "sm:flex"],
+        ),
+
+        // Logical && — disallowed class on right side reported
+        invalid(
+          `
+          import { Button } from "./ui/Button";
+          export const X = ({ bad }) => <Button className={bad && "bg-danger"}>Hi</Button>;
+        `,
+          ["bg-danger"],
         ),
       ],
     });

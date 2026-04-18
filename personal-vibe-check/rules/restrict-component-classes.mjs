@@ -110,19 +110,56 @@ function stripPrefixes(token) {
   return lastColon === -1 ? token : token.slice(lastColon + 1);
 }
 
-function extractStaticString(valueNode) {
-  if (valueNode === null || valueNode === undefined) return null;
+/**
+ * Collect every string fragment that *could* appear in the resulting className
+ * at runtime, walking into template literals, conditional expressions, and the
+ * right side of logical expressions. Expressions we can't reason about (plain
+ * identifiers, call expressions, member expressions, etc.) contribute nothing,
+ * so they're implicitly skipped — the rule only flags tokens it can prove will
+ * show up.
+ *
+ * Returns an array of strings. Each string is later split into whitespace-
+ * separated class tokens by the caller.
+ */
+function collectStringFragments(expr) {
+  if (!expr) return [];
+  if (expr.type === "Literal" && typeof expr.value === "string") {
+    return [expr.value];
+  }
+  if (expr.type === "TemplateLiteral") {
+    const out = [];
+    for (const q of expr.quasis) {
+      if (q.value.cooked) out.push(q.value.cooked);
+    }
+    for (const e of expr.expressions) {
+      out.push(...collectStringFragments(e));
+    }
+    return out;
+  }
+  if (expr.type === "ConditionalExpression") {
+    return [
+      ...collectStringFragments(expr.consequent),
+      ...collectStringFragments(expr.alternate),
+    ];
+  }
+  if (expr.type === "LogicalExpression") {
+    // For `&&` / `||` / `??`, the right side is what ends up assigned when the
+    // test keeps the value. The left is a boolean/nullish gate — its string
+    // value (if any) doesn't survive.
+    return collectStringFragments(expr.right);
+  }
+  return [];
+}
+
+function extractStringFragments(valueNode) {
+  if (valueNode === null || valueNode === undefined) return [];
   if (valueNode.type === "Literal" && typeof valueNode.value === "string") {
-    return valueNode.value;
+    return [valueNode.value];
   }
   if (valueNode.type === "JSXExpressionContainer") {
-    const expr = valueNode.expression;
-    if (expr.type === "Literal" && typeof expr.value === "string") return expr.value;
-    if (expr.type === "TemplateLiteral" && expr.expressions.length === 0) {
-      return expr.quasis[0].value.cooked;
-    }
+    return collectStringFragments(valueNode.expression);
   }
-  return null;
+  return [];
 }
 
 const rule = {
@@ -227,13 +264,15 @@ const rule = {
 
         if (!matchAll && !importedComponents.has(componentName)) return;
 
-        const value = extractStaticString(node.value);
-        if (value === null) return; // dynamic — skip
-
-        const tokens = value.split(/\s+/).filter(Boolean);
-        for (const token of tokens) {
-          if (!isAllowedToken(token)) {
-            reportDisallowed(node, componentName, propName, token);
+        const fragments = extractStringFragments(node.value);
+        const seen = new Set();
+        for (const fragment of fragments) {
+          for (const token of fragment.split(/\s+/).filter(Boolean)) {
+            if (seen.has(token)) continue;
+            seen.add(token);
+            if (!isAllowedToken(token)) {
+              reportDisallowed(node, componentName, propName, token);
+            }
           }
         }
       },
