@@ -20,7 +20,8 @@ import { AdminPage } from "./pages/AdminPage";
 import { SharePage } from "./pages/SharePage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
 import { TodosPage } from "./pages/TodosPage";
-import { AppLayout, BoxRedirect, ShareRedirect, CardViewPage, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
+import { AppLayout, BoxRedirect, ShareRedirect, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
+import { CardViewPage } from "./pages/card/CardViewPage";
 import { ViewPage } from "./pages/ViewPage";
 
 // --- Root route ---

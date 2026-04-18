@@ -13,8 +13,6 @@ import { BrowsePage } from "./pages/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { AppNav } from "./components/AppNav";
-import { CardViewPanel } from "./components/CardViewPanel";
-import { Text } from "./components/ui/Text";
 import { Column } from "./components/ui/Column";
 
 import { href } from "./lib/routing";
@@ -91,12 +89,3 @@ export function BrowsePageWrapper() {
 /**
  * Card viewer page wrapper.
  */
-export function CardViewPage() {
-  const { boxSlug, _splat: cardPath } = useParams({ strict: false });
-
-  if (!cardPath) {
-    return <div className="p-8"><Text tone="subtle">No card path specified</Text></div>;
-  }
-
-  return <CardViewPanel cardPath={cardPath} backHref={href(`/${boxSlug}`)} />;
-}
