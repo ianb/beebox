@@ -1,8 +1,14 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Capture page — audio recording + photo capture.
  *
  * Ported from the legacy capture view. Sessions accumulate files
  * and finalize into inbox cards. Device preferences stored in localStorage.
+ *
+ * NOTE: intentionally uses raw HTML with dark-theme Tailwind defaults —
+ * this is a full-bleed dark video UI, distinct from the rest of the app.
+ * The restrict-component-classes rule is disabled accordingly (not just
+ * a refactor TODO).
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";

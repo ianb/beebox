@@ -14,7 +14,7 @@ import { DashboardPage } from "./components/DashboardPage";
 import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./components/QuestionsPage";
 import { HistoryPage } from "./components/HistoryPage";
-import { CapturePage } from "./components/CapturePage";
+import { CapturePage } from "./pages/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { SharePage } from "./pages/SharePage";
