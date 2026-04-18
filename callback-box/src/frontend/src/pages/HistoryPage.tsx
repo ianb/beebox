@@ -80,7 +80,7 @@ export function HistoryPage() {
         />
       </Sidebar>
 
-      <Column overflow="hidden" className={`flex-1 ${hasDetail ? "" : "hidden sm:flex"}`}>
+      <Column overflow="hidden" hideOnMobile={!hasDetail} className="flex-1">
         {selectedCommit ? (
           <CommitDetail commit={selectedCommit} onBack={() => setSelectedCommit(null)} />
         ) : (

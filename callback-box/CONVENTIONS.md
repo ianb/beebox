@@ -118,7 +118,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 **Layout containers**
 - `<Stack>` — vertical `space-y-*` between children. `gap: none/xs/sm/md/lg`.
 - `<Row>` — horizontal flex with gap/align/justify/wrap.
-- `<Column>` — vertical flex-col (different from Stack: uses flex not space-y, has align). Takes `overflow` (visible/hidden/auto/scroll) so it can serve as a page-level scroll container.
+- `<Column>` — vertical flex-col (different from Stack: uses flex not space-y, has align). Takes `overflow` (visible/hidden/auto/scroll) so it can serve as a page-level scroll container. `hideOnMobile` makes it `hidden sm:flex` — typical for the detail pane in a two-pane layout.
 - `<Card>` — bordered box with padding/background/shadow/rounding props. `muted` dims the card to indicate inactive/archived content.
 - `<Accordion>` — collapsible disclosure. `variant: bordered/plain`.
 

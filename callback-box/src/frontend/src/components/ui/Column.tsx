@@ -13,6 +13,11 @@ export interface ColumnProps {
   align?: ColumnAlign;
   /** How overflow is handled. Default `"visible"`. */
   overflow?: ColumnOverflow;
+  /**
+   * When true, hide on mobile and show as flex at the `sm` breakpoint and
+   * above. Common pattern for the detail pane in two-pane page layouts.
+   */
+  hideOnMobile?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -39,7 +44,14 @@ const OVERFLOW_CLASSES: Record<ColumnOverflow, string> = {
   scroll: "overflow-scroll",
 };
 
-export function Column({ children, gap = "none", align = "stretch", overflow = "visible", className }: ColumnProps) {
-  const classes = cn("flex flex-col", GAP_CLASSES[gap], ALIGN_CLASSES[align], OVERFLOW_CLASSES[overflow], className);
+export function Column({ children, gap = "none", align = "stretch", overflow = "visible", hideOnMobile = false, className }: ColumnProps) {
+  const classes = cn(
+    "flex flex-col",
+    GAP_CLASSES[gap],
+    ALIGN_CLASSES[align],
+    OVERFLOW_CLASSES[overflow],
+    hideOnMobile ? "hidden sm:flex" : "",
+    className,
+  );
   return <div className={classes}>{children}</div>;
 }

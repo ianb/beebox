@@ -203,7 +203,7 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
         <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path ?? initialPath} refreshKey={sidebarRefreshKey} />
       </Sidebar>
 
-      <Column overflow="auto" className={`flex-1 ${hasDetail ? "" : "hidden sm:flex"}`}>
+      <Column overflow="auto" hideOnMobile={!hasDetail} className="flex-1">
         {loading ? (
           <Row justify="center" align="center" className="h-full">
             <Text tone="subtle">Loading...</Text>
