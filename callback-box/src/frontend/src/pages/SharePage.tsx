@@ -1,3 +1,4 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * SharePage — PWA share target landing page (box-scoped).
  *
@@ -7,14 +8,16 @@
  *
  * The root /share route (ShareRedirect in App.tsx) handles box selection
  * and redirects here with query params preserved.
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
-import { ExternalLink } from "./ui/ExternalLink";
-import { TextareaField } from "./ui/fields";
-import { Button } from "./ui/Button";
+import { ExternalLink } from "../components/ui/ExternalLink";
+import { TextareaField } from "../components/ui/fields";
+import { Button } from "../components/ui/Button";
 
 type ShareState = "ready" | "saving" | "saved" | "error";
 

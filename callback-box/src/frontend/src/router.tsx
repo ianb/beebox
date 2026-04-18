@@ -17,7 +17,7 @@ import { HistoryPage } from "./components/HistoryPage";
 import { CapturePage } from "./components/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./components/AdminPage";
-import { SharePage } from "./components/SharePage";
+import { SharePage } from "./pages/SharePage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
 import { TodosPage } from "./pages/TodosPage";
 import { AppLayout, BoxRedirect, ShareRedirect, CardViewPage, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
