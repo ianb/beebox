@@ -1,7 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    "src/cli/index.ts",
     "src/webapp/server.ts",
     "src/schemas/index.ts",
     "src/connectors/index.ts"
@@ -22,6 +21,7 @@
     "ansi-to-html",
     "@tanstack/react-virtual",
     "cheerio",
-    "agent-doctest"
+    "agent-doctest",
+    "react"
   ]
 }
