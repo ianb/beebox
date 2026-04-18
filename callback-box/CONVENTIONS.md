@@ -113,7 +113,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<HighlightedCode>` — wraps highlight.js output in a `<code class="hljs">`. Use inside a `<Pre boxed>`.
 - `<Badge>` — pill label. Tones: neutral/info/success/warning/danger/accent. Sizes: sm/md.
 - `<StatusBadge>` — card-status badge that maps `status` (new/pending/answered/processing/processed) to the right Badge tone. Pass `children` to override the displayed text (e.g., show a count instead).
-- `<Text>` — typography primitive. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings).
+- `<Text>` — typography primitive. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
 
 **Layout containers**
 - `<Stack>` — vertical `space-y-*` between children. `gap: none/xs/sm/md/lg`.

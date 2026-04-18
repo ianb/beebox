@@ -25,6 +25,8 @@ export interface TextProps {
   center?: boolean;
   /** Uppercase with wide letter-spacing — typical for small section headings. */
   uppercase?: boolean;
+  /** Break long unbreakable strings (URLs) across word boundaries. */
+  breakAll?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   title?: string;
@@ -66,6 +68,7 @@ export function Text({
   truncate = false,
   center = false,
   uppercase = false,
+  breakAll = false,
   className,
   title,
 }: TextProps) {
@@ -78,6 +81,7 @@ export function Text({
     truncate ? "truncate" : "",
     center ? "text-center" : "",
     uppercase ? "uppercase tracking-wide" : "",
+    breakAll ? "break-all" : "",
     className,
   );
 

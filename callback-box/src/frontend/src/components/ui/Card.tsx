@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
 export type CardPadding = "none" | "sm" | "md" | "lg";
-export type CardBackground = "white" | "warm" | "transparent";
+export type CardBackground = "white" | "warm" | "info" | "transparent";
 export type CardBorder = "none" | "subtle" | "default";
 export type CardRounding = "none" | "default" | "lg";
 
@@ -34,6 +34,7 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
 const BACKGROUND_CLASSES: Record<CardBackground, string> = {
   white: "bg-white",
   warm: "bg-warm-50",
+  info: "bg-info-50",
   transparent: "",
 };
 
