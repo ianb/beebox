@@ -3,6 +3,7 @@ import { cn } from "../../lib/cn";
 
 export type ColumnGap = "none" | "xs" | "sm" | "md" | "lg";
 export type ColumnAlign = "start" | "center" | "end" | "stretch";
+export type ColumnOverflow = "visible" | "hidden" | "auto" | "scroll";
 
 export interface ColumnProps {
   children: ReactNode;
@@ -10,6 +11,8 @@ export interface ColumnProps {
   gap?: ColumnGap;
   /** Cross-axis alignment (horizontal in a column). Default `"stretch"`. */
   align?: ColumnAlign;
+  /** How overflow is handled. Default `"visible"`. */
+  overflow?: ColumnOverflow;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -29,7 +32,14 @@ const ALIGN_CLASSES: Record<ColumnAlign, string> = {
   stretch: "items-stretch",
 };
 
-export function Column({ children, gap = "none", align = "stretch", className }: ColumnProps) {
-  const classes = cn("flex flex-col", GAP_CLASSES[gap], ALIGN_CLASSES[align], className);
+const OVERFLOW_CLASSES: Record<ColumnOverflow, string> = {
+  visible: "",
+  hidden: "overflow-hidden",
+  auto: "overflow-auto",
+  scroll: "overflow-scroll",
+};
+
+export function Column({ children, gap = "none", align = "stretch", overflow = "visible", className }: ColumnProps) {
+  const classes = cn("flex flex-col", GAP_CLASSES[gap], ALIGN_CLASSES[align], OVERFLOW_CLASSES[overflow], className);
   return <div className={classes}>{children}</div>;
 }

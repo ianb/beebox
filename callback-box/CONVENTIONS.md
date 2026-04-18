@@ -118,7 +118,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 **Layout containers**
 - `<Stack>` — vertical `space-y-*` between children. `gap: none/xs/sm/md/lg`.
 - `<Row>` — horizontal flex with gap/align/justify/wrap.
-- `<Column>` — vertical flex-col (different from Stack: uses flex not space-y, has align).
+- `<Column>` — vertical flex-col (different from Stack: uses flex not space-y, has align). Takes `overflow` (visible/hidden/auto/scroll) so it can serve as a page-level scroll container.
 - `<Card>` — bordered box with padding/background/shadow/rounding props.
 - `<Accordion>` — collapsible disclosure. `variant: bordered/plain`.
 

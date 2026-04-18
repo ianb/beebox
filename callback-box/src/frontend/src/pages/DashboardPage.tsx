@@ -1,8 +1,5 @@
-/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Dashboard page — single scrollable overview of the box.
- *
- * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState } from "react";
@@ -17,6 +14,8 @@ import { NewsPipelineStatus } from "../components/dashboard/NewsPipelineStatus";
 import { SystemInfo } from "../components/dashboard/SystemInfo";
 import { HealthWarnings } from "../components/dashboard/HealthWarnings";
 import { ActionModal, type ActionType } from "../components/dashboard/ActionModal";
+import { Column } from "../components/ui/Column";
+import { Stack } from "../components/ui/Stack";
 
 export function DashboardPage() {
   const [activeAction, setActiveAction] = useState<ActionType>(null);
@@ -61,15 +60,15 @@ export function DashboardPage() {
   const activityError = commitsQuery.error || ticksQuery.error;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <Column overflow="hidden" className="h-full">
       <HeaderStrip
         status={status}
         connected={connected}
         onAction={setActiveAction}
       />
 
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto py-4 px-4 space-y-4">
+      <Column overflow="auto" className="flex-1">
+        <Stack gap="lg" className="max-w-4xl mx-auto py-4 px-4">
           <HealthWarnings health={healthQuery.data ?? null} />
 
           <AttentionCards
@@ -92,8 +91,8 @@ export function DashboardPage() {
           />
 
           <NewsPipelineStatus newsStatus={newsStatus} />
-        </div>
-      </div>
+        </Stack>
+      </Column>
 
       <SystemInfo status={status} />
 
@@ -104,6 +103,6 @@ export function DashboardPage() {
         newsInboxCount={newsStatus.inbox}
         newsPoolCount={newsStatus.pool}
       />
-    </div>
+    </Column>
   );
 }
