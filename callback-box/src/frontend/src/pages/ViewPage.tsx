@@ -9,8 +9,9 @@
 import { useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { parseViewUrl } from "../lib/view-url";
-import { FileView } from "./FileView";
-import { ViewRenderer } from "./ViewRenderer";
+import { FileView } from "../components/FileView";
+import { ViewRenderer } from "../components/ViewRenderer";
+import { Text } from "../components/ui/Text";
 
 const FILE_EXTENSIONS = new Set([".md", ".card", ".txt", ".json", ".xml", ".html", ".csv", ".tsv", ".yaml", ".yml"]);
 
@@ -41,7 +42,7 @@ export function ViewPage() {
   }, [splat]);
 
   if (!parsed) {
-    return <div className="p-8 text-gray-500">No view specified.</div>;
+    return <Text as="div" tone="muted" className="p-8">No view specified.</Text>;
   }
 
   return (

@@ -21,7 +21,7 @@ import { SharePage } from "./pages/SharePage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
 import { TodosPage } from "./pages/TodosPage";
 import { AppLayout, BoxRedirect, ShareRedirect, CardViewPage, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
-import { ViewPage } from "./components/ViewPage";
+import { ViewPage } from "./pages/ViewPage";
 
 // --- Root route ---
 
