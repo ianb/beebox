@@ -18,7 +18,7 @@ import { CapturePage } from "./pages/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { SharePage } from "./pages/SharePage";
-import { PrintBriefView } from "./components/brief/PrintBriefView";
+import { PrintBriefView } from "./pages/news/PrintBriefView";
 import { TodosPage } from "./pages/TodosPage";
 import { AppLayout, BoxRedirect, ShareRedirect, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
 import { CardViewPage } from "./pages/card/CardViewPage";

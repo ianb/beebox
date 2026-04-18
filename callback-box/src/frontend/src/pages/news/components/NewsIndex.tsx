@@ -6,8 +6,8 @@
  */
 
 import { useEffect } from "react";
-import { trpc, type RouterOutput } from "../lib/trpc";
-import { cbSource } from "../lib/source-tag";
+import { trpc, type RouterOutput } from "../../../lib/trpc";
+import { cbSource } from "../../../lib/source-tag";
 
 export type BriefSummary = RouterOutput["briefs"]["list"]["briefs"][number];
 

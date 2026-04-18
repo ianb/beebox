@@ -3,15 +3,15 @@
  */
 
 import { useState } from "react";
-import { Markdown } from "../Markdown";
-import { MicrophoneIcon } from "../VoiceRecorder";
+import { Markdown } from "../../../../components/Markdown";
+import { MicrophoneIcon } from "../../../../components/VoiceRecorder";
 import type { Section } from "./types";
 import { ThumbsFeedback } from "./ThumbsFeedback";
 import { ExpandoSection } from "./ExpandoSection";
 import { QueryPrompt } from "./QueryPrompt";
 import { ExcerptBlock } from "./ExcerptBlock";
 import { InlineVoiceRecorder } from "./InlineVoiceRecorder";
-import { ExternalLink } from "../ui/ExternalLink";
+import { ExternalLink } from "../../../../components/ui/ExternalLink";
 
 export function ContentSection({
   section,

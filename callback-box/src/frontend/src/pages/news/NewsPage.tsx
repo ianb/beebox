@@ -6,19 +6,16 @@
  */
 
 import { useState, useCallback } from "react";
-import { NewsIndex, type BriefSummary } from "../components/NewsIndex";
-import {
-  NewsBriefView,
-  type NewsBriefData,
-  type BriefReaction,
-} from "../components/NewsBriefView";
-import { Sidebar } from "../components/Sidebar";
-import { cbSource } from "../lib/source-tag";
-import { trpc } from "../lib/trpc";
-import { Row } from "../components/ui/Row";
-import { Column } from "../components/ui/Column";
-import { Text } from "../components/ui/Text";
-import { MobileBackButton } from "../components/ui/MobileBackButton";
+import { NewsIndex, type BriefSummary } from "./components/NewsIndex";
+import { NewsBriefView } from "./components/brief/NewsBriefView";
+import type { NewsBriefData, BriefReaction } from "./components/brief/types";
+import { Sidebar } from "../../components/Sidebar";
+import { cbSource } from "../../lib/source-tag";
+import { trpc } from "../../lib/trpc";
+import { Row } from "../../components/ui/Row";
+import { Column } from "../../components/ui/Column";
+import { Text } from "../../components/ui/Text";
+import { MobileBackButton } from "../../components/ui/MobileBackButton";
 
 /**
  * Convert a Blob to base64 string.

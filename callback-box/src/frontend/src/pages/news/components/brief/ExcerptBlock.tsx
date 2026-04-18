@@ -4,7 +4,7 @@
  */
 
 import type { Excerpt } from "./types";
-import { ExternalLink } from "../ui/ExternalLink";
+import { ExternalLink } from "../../../../components/ui/ExternalLink";
 
 export function ExcerptBlock({ excerpt }: { excerpt: Excerpt }) {
   return (

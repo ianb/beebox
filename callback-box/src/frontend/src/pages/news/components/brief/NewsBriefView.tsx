@@ -7,9 +7,9 @@
 
 import { useState, useCallback } from "react";
 import { Link, useParams } from "@tanstack/react-router";
-import { href } from "../../lib/routing";
-import { Markdown } from "../Markdown";
-import { MicrophoneIcon } from "../VoiceRecorder";
+import { href } from "../../../../lib/routing";
+import { Markdown } from "../../../../components/Markdown";
+import { MicrophoneIcon } from "../../../../components/VoiceRecorder";
 import type { NewsBriefData, GuideReaction, BriefReaction } from "./types";
 import { ContentSection } from "./ContentSection";
 import { ExpandoSection } from "./ExpandoSection";

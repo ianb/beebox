@@ -4,12 +4,12 @@
  */
 
 import { useCallback, useEffect } from "react";
-import { useVoiceRecorder, type VoiceRecordingResult } from "../../hooks/useVoiceRecorder";
+import { useVoiceRecorder, type VoiceRecordingResult } from "../../../../hooks/useVoiceRecorder";
 import {
   StopIcon,
   RecordingIndicator,
   UploadingIndicator,
-} from "../VoiceRecorder";
+} from "../../../../components/VoiceRecorder";
 
 export function InlineVoiceRecorder({
   onComplete,

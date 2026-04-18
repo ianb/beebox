@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { MicrophoneIcon } from "../VoiceRecorder";
+import { MicrophoneIcon } from "../../../../components/VoiceRecorder";
 import type { Query } from "./types";
 import { InlineVoiceRecorder } from "./InlineVoiceRecorder";
 

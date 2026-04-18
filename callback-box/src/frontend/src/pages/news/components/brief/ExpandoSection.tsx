@@ -3,12 +3,12 @@
  */
 
 import { useState } from "react";
-import { Markdown } from "../Markdown";
-import { MicrophoneIcon } from "../VoiceRecorder";
+import { Markdown } from "../../../../components/Markdown";
+import { MicrophoneIcon } from "../../../../components/VoiceRecorder";
 import type { Expando } from "./types";
 import { ThumbsFeedback } from "./ThumbsFeedback";
 import { InlineVoiceRecorder } from "./InlineVoiceRecorder";
-import { InlineAction } from "../ui/InlineAction";
+import { InlineAction } from "../../../../components/ui/InlineAction";
 
 export function ExpandoSection({
   expando,
