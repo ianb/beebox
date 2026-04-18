@@ -13,6 +13,9 @@ import {
   type TranscriptionState,
 } from "../machines/realtimeTranscriptionMachine";
 import { detectKeyword } from "../lib/speech-keywords";
+import { stillListening } from "../lib/earcons";
+
+const STILL_LISTENING_DELAY_MS = 10000;
 
 export type { TranscriptionState };
 
@@ -124,6 +127,16 @@ export function useRealtimeTranscription(
       send({ type: "START" });
     }
   }, [transcript, state, send]);
+
+  // Idle cue: play a subtle earcon every 10s while recording if there's
+  // a transcript but no new deltas have arrived — "I'm still listening"
+  useEffect(() => {
+    if (state !== "recording" || !transcript) return;
+    const interval = setInterval(() => {
+      stillListening.play();
+    }, STILL_LISTENING_DELAY_MS);
+    return () => clearInterval(interval);
+  }, [state, transcript]);
 
   // Resolve stop() promise when machine returns to idle
   useEffect(() => {
