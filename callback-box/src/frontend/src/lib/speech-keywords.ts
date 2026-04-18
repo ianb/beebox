@@ -6,7 +6,6 @@ const sendPattern = KeywordPattern.compile(`
   message (done | finished)
   send now
   finished
-  finish
 `);
 
 const cancelPattern = KeywordPattern.compile(`
