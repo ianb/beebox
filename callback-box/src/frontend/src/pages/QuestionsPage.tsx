@@ -1,11 +1,14 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Questions page — view and answer pending questions.
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { getEventSourceBase } from "../api";
 import { trpc } from "../lib/trpc";
 import { useSSE } from "../hooks/useSSE";
-import { QuestionForm } from "./QuestionForm";
+import { QuestionForm } from "../components/QuestionForm";
 import { cbSource } from "../lib/source-tag";
 
 export function QuestionsPage() {
