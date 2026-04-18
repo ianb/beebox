@@ -6,6 +6,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { router, publicProcedure } from "../trpc.js";
@@ -70,12 +71,15 @@ export async function readVersionInfo(): Promise<VersionInfo> {
 
 /**
  * Check that a directory is writable by the current process.
+ *
+ * Uses `fs.access(..., W_OK)` — a POSIX permission probe that never
+ * creates a file. An earlier version wrote and unlinked a `.health-check-*`
+ * file, which leaked into watched directories when the unlink failed or
+ * a file watcher grabbed the file first.
  */
 async function isWritable(dirPath: string): Promise<boolean> {
   try {
-    const testFile = path.join(dirPath, `.health-check-${Date.now()}`);
-    await fs.writeFile(testFile, "");
-    await fs.unlink(testFile);
+    await fs.access(dirPath, fsConstants.W_OK);
     return true;
   } catch {
     return false;
@@ -83,9 +87,35 @@ async function isWritable(dirPath: string): Promise<boolean> {
 }
 
 /**
+ * Sweep any leftover `.health-check-*` files from an earlier isWritable
+ * implementation that wrote-then-unlinked. Silently ignores failures —
+ * this is cleanup, not a hard requirement.
+ */
+async function sweepLegacyHealthCheckFiles(boxRoot: string): Promise<void> {
+  const dirs = [
+    path.join(boxRoot, "box/inbox"),
+    path.join(boxRoot, "config/connectors"),
+    path.join(boxRoot, "store/archive"),
+  ];
+  for (const dir of dirs) {
+    try {
+      const entries = await fs.readdir(dir);
+      for (const name of entries) {
+        if (name.startsWith(".health-check-")) {
+          await fs.unlink(path.join(dir, name)).catch(() => {});
+        }
+      }
+    } catch {
+      // Directory missing or unreadable — nothing to sweep.
+    }
+  }
+}
+
+/**
  * Run all health checks for a box.
  */
 export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
+  await sweepLegacyHealthCheckFiles(boxRoot);
   const checks: HealthCheck[] = [];
 
   // --- Permission checks ---
