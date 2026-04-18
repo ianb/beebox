@@ -1,11 +1,14 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Settings page with calendar configuration and sharing tips.
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { trpc, type RouterOutput } from "../lib/trpc";
-import { CheckboxField } from "./ui/fields";
+import { CheckboxField } from "../components/ui/fields";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
 

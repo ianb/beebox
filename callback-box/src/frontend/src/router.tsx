@@ -15,7 +15,7 @@ import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./components/QuestionsPage";
 import { HistoryPage } from "./components/HistoryPage";
 import { CapturePage } from "./components/CapturePage";
-import { SettingsPage } from "./components/SettingsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./components/AdminPage";
 import { SharePage } from "./components/SharePage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
