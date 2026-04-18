@@ -203,25 +203,30 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     severity: "warning",
   });
 
-  // Claude Code credentials (needed for agent operations — chat, reactor, procedures)
-  // Claude Code stores credentials in ~/.claude/.credentials.json (Linux) or Keychain (macOS)
-  const credsPath = path.join(os.homedir(), ".claude", ".credentials.json");
-  let hasClaudeCredentials = false;
-  try {
-    const creds = await fs.readFile(credsPath, "utf-8");
-    const parsed = JSON.parse(creds);
-    hasClaudeCredentials = !!(parsed.claudeAiOauth && parsed.claudeAiOauth.accessToken);
-  } catch {
-    // Not found or invalid
+  // Claude Code credentials (needed for agent operations — chat, reactor, procedures).
+  // On Linux (the deployed server) Claude Code stores them at
+  // ~/.claude/.credentials.json. On macOS they live in the Keychain instead,
+  // which we can't probe without spawning `security` — and local dev machines
+  // rely on the developer managing their own auth — so skip the check there.
+  if (os.platform() !== "darwin") {
+    const credsPath = path.join(os.homedir(), ".claude", ".credentials.json");
+    let hasClaudeCredentials = false;
+    try {
+      const creds = await fs.readFile(credsPath, "utf-8");
+      const parsed = JSON.parse(creds);
+      hasClaudeCredentials = !!(parsed.claudeAiOauth && parsed.claudeAiOauth.accessToken);
+    } catch {
+      // Not found or invalid
+    }
+    checks.push({
+      name: "claude-credentials",
+      ok: hasClaudeCredentials,
+      message: hasClaudeCredentials
+        ? "Claude Code credentials configured"
+        : "Claude Code credentials not found — agent operations (chat, reactor, procedures) will not work. Run 'claude auth login' or copy credentials to ~/.claude/.credentials.json",
+      severity: "error",
+    });
   }
-  checks.push({
-    name: "claude-credentials",
-    ok: hasClaudeCredentials,
-    message: hasClaudeCredentials
-      ? "Claude Code credentials configured"
-      : "Claude Code credentials not found — agent operations (chat, reactor, procedures) will not work. Run 'claude auth login' or copy credentials to ~/.claude/.credentials.json",
-    severity: "error",
-  });
 
   return checks;
 }
