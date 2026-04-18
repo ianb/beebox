@@ -1,8 +1,5 @@
-/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Questions page — view and answer pending questions.
- *
- * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { getEventSourceBase } from "../api";
@@ -10,6 +7,10 @@ import { trpc } from "../lib/trpc";
 import { useSSE } from "../hooks/useSSE";
 import { QuestionForm } from "../components/QuestionForm";
 import { cbSource } from "../lib/source-tag";
+import { Column } from "../components/ui/Column";
+import { Stack } from "../components/ui/Stack";
+import { Card } from "../components/ui/Card";
+import { Text } from "../components/ui/Text";
 
 export function QuestionsPage() {
   const utils = trpc.useUtils();
@@ -33,20 +34,20 @@ export function QuestionsPage() {
   const answered = questions.filter((q) => q.status !== "pending");
 
   if (isLoading) {
-    return <div className="p-8 text-warm-600">Loading...</div>;
+    return <Text as="div" tone="subtle" className="p-8">Loading...</Text>;
   }
 
   return (
-    <div className="h-full bg-warm-50 overflow-auto">
-      <div className="max-w-2xl mx-auto py-8 px-4">
-        <h1 className="text-2xl font-bold text-warm-900 mb-6">Questions</h1>
+    <Column overflow="auto" className="h-full">
+      <Stack gap="lg" className="max-w-2xl mx-auto py-8 px-4">
+        <Text as="h1" size="2xl" weight="bold">Questions</Text>
 
         {pending.length === 0 && answered.length === 0 ? (
-          <p className="text-warm-600">No questions yet.</p>
+          <Text as="p" tone="subtle">No questions yet.</Text>
         ) : null}
 
         {pending.length > 0 ? (
-          <div className="space-y-4 mb-8">
+          <Stack gap="lg">
             {pending.map((q) => (
               <QuestionForm
                 key={q.path}
@@ -55,33 +56,35 @@ export function QuestionsPage() {
                 onAnswered={() => utils.status.questions.invalidate()}
               />
             ))}
-          </div>
+          </Stack>
         ) : null}
 
         {answered.length > 0 ? (
-          <div>
-            <h2 className="text-sm font-semibold text-warm-600 uppercase tracking-wide mb-3">
+          <Stack gap="sm">
+            <Text as="h2" size="sm" weight="semibold" tone="subtle" uppercase>
               Answered
-            </h2>
-            <div className="space-y-2">
+            </Text>
+            <Stack gap="sm">
               {answered.map((q) => (
-                <div
+                <Card
                   key={q.path}
-                  className="p-3 bg-white rounded-lg border border-warm-200 opacity-60"
+                  padding="sm"
+                  border="subtle"
+                  muted
                   {...cbSource("card", q.relativePath)}
                 >
-                  <div className="text-sm font-medium text-warm-800">
+                  <Text as="div" size="sm" weight="medium" tone="emphasis">
                     {q.prompt || q.name}
-                  </div>
-                  <div className="text-xs text-warm-500 mt-1">
+                  </Text>
+                  <Text as="div" size="xs" tone="muted" className="mt-1">
                     {q.status}
-                  </div>
-                </div>
+                  </Text>
+                </Card>
               ))}
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         ) : null}
-      </div>
-    </div>
+      </Stack>
+    </Column>
   );
 }

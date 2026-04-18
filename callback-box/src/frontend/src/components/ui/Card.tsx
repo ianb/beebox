@@ -18,6 +18,8 @@ export interface CardProps {
   rounding?: CardRounding;
   /** Drop shadow. Default false. */
   shadow?: boolean;
+  /** Dim to indicate inactive/archived content. Default false. */
+  muted?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -54,6 +56,7 @@ export function Card({
   border = "default",
   rounding = "lg",
   shadow = false,
+  muted = false,
   className,
 }: CardProps) {
   const classes = cn(
@@ -62,6 +65,7 @@ export function Card({
     BORDER_CLASSES[border],
     ROUNDING_CLASSES[rounding],
     shadow ? "shadow" : "",
+    muted ? "opacity-60" : "",
     className,
   );
   return <div className={classes}>{children}</div>;

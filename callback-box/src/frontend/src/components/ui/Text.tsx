@@ -23,6 +23,8 @@ export interface TextProps {
   truncate?: boolean;
   /** Center the text. */
   center?: boolean;
+  /** Uppercase with wide letter-spacing — typical for small section headings. */
+  uppercase?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   title?: string;
@@ -63,6 +65,7 @@ export function Text({
   mono = false,
   truncate = false,
   center = false,
+  uppercase = false,
   className,
   title,
 }: TextProps) {
@@ -74,6 +77,7 @@ export function Text({
     mono ? "font-mono" : "",
     truncate ? "truncate" : "",
     center ? "text-center" : "",
+    uppercase ? "uppercase tracking-wide" : "",
     className,
   );
 
