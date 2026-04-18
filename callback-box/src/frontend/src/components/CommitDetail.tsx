@@ -16,6 +16,8 @@ import { Pre } from "./ui/Pre";
 
 interface CommitDetailProps {
   commit: HistoryCommit;
+  /** If provided, renders a mobile-only back button at the top. Called when user dismisses. */
+  onBack?: () => void;
 }
 
 /**
@@ -420,7 +422,7 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 
 // --- Main component ---
 
-export function CommitDetail({ commit }: CommitDetailProps) {
+export function CommitDetail({ commit, onBack }: CommitDetailProps) {
   const sessionId = trailerString(commit.trailers?.Session);
   const bodyText = commit.body ? stripTrailers(commit.body) : "";
 
@@ -445,7 +447,19 @@ export function CommitDetail({ commit }: CommitDetailProps) {
   }, [diff]);
 
   return (
-    <div className="h-full overflow-auto" {...cbSource("commit", commit.hash)}>
+    <div className="h-full flex flex-col bg-white" {...cbSource("commit", commit.hash)}>
+      {onBack ? (
+        <button
+          onClick={onBack}
+          className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-primary hover:text-primary-dark border-b border-warm-200"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to commits
+        </button>
+      ) : null}
+      <div className="flex-1 overflow-auto">
       {/* Commit info */}
       <CommitTab commit={commit} bodyText={bodyText} />
 
@@ -479,6 +493,7 @@ export function CommitDetail({ commit }: CommitDetailProps) {
       ) : null}
 
       {sessionId ? <SessionSection sessionId={sessionId} /> : null}
+      </div>
     </div>
   );
 }

@@ -1,11 +1,8 @@
-/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * HistoryPage - Main page for viewing agent run history.
  *
  * Two-panel layout: Sidebar with CommitTimeline (left, collapsible) + CommitDetail (right).
  * URL reflects selected commit: /history/:hash
- *
- * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState, useMemo } from "react";
@@ -16,6 +13,9 @@ import { trpc } from "../lib/trpc";
 import { Sidebar } from "../components/Sidebar";
 import { CommitTimeline } from "../components/CommitTimeline";
 import { CommitDetail } from "../components/CommitDetail";
+import { Row } from "../components/ui/Row";
+import { Column } from "../components/ui/Column";
+import { Text } from "../components/ui/Text";
 
 const PAGE_SIZE = 50;
 
@@ -68,7 +68,7 @@ export function HistoryPage() {
   const hasDetail = Boolean(selectedCommit);
 
   return (
-    <div className="h-full flex">
+    <Row gap="none" align="stretch" className="h-full">
       <Sidebar title="Commits" subtitle={`${commits.length} loaded`} detailSelected={hasDetail}>
         <CommitTimeline
           commits={commits}
@@ -80,29 +80,15 @@ export function HistoryPage() {
         />
       </Sidebar>
 
-      {/* Right panel: commit detail */}
-      <div className={`flex-1 bg-white overflow-hidden ${hasDetail ? "" : "hidden sm:block"}`}>
+      <Column overflow="hidden" className={`flex-1 ${hasDetail ? "" : "hidden sm:flex"}`}>
         {selectedCommit ? (
-          <div className="h-full flex flex-col">
-            <button
-              onClick={() => setSelectedCommit(null)}
-              className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-primary hover:text-primary-dark border-b"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to commits
-            </button>
-            <div className="flex-1 overflow-hidden">
-              <CommitDetail commit={selectedCommit} />
-            </div>
-          </div>
+          <CommitDetail commit={selectedCommit} onBack={() => setSelectedCommit(null)} />
         ) : (
-          <div className="flex items-center justify-center h-full text-warm-500">
-            {loading ? "Loading..." : "Select a commit to view details"}
-          </div>
+          <Row justify="center" align="center" className="h-full">
+            <Text tone="muted">{loading ? "Loading..." : "Select a commit to view details"}</Text>
+          </Row>
         )}
-      </div>
-    </div>
+      </Column>
+    </Row>
   );
 }
