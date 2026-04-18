@@ -6,8 +6,11 @@ import { useState } from "react";
 import { trpc } from "../../lib/trpc";
 import type { RouterOutput } from "../../lib/trpc";
 import { cbSource } from "../../lib/source-tag";
+import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { InlineAction } from "../ui/InlineAction";
 import { Pre } from "../ui/Pre";
+import { Toggle } from "../ui/Toggle";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -55,19 +58,13 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
   });
 
   return (
-    <button
-      onClick={() => mutation.mutate({ name, enabled: !enabled })}
+    <Toggle
+      checked={enabled}
+      onChange={(next) => mutation.mutate({ name, enabled: next })}
       disabled={mutation.isPending}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-        enabled ? "bg-success" : "bg-warm-300"
-      } ${mutation.isPending ? "opacity-50" : ""}`}
-      title={enabled ? "Disable schedule" : "Enable schedule"}
-    >
-      <span
-        className="inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform"
-        style={{ transform: enabled ? "translateX(18px)" : "translateX(2px)" }}
-      />
-    </button>
+      label={enabled ? "Disable schedule" : "Enable schedule"}
+      className="shrink-0"
+    />
   );
 }
 
@@ -83,18 +80,18 @@ function TriggerButton({ name, enabled }: { name: string; enabled: boolean }) {
   });
 
   return (
-    <button
+    <Button
+      type="button"
+      intent="secondary"
+      size="sm"
       onClick={() => mutation.mutate({ name })}
-      disabled={mutation.isPending || !enabled}
-      className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-        mutation.isPending
-          ? "bg-warm-200 text-warm-500"
-          : "bg-warm-100 text-warm-700 hover:bg-warm-200"
-      } ${!enabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      disabled={!enabled}
+      loading={mutation.isPending}
+      loadingLabel="..."
       title={!enabled ? "Schedule is disabled" : `Run ${name} now`}
     >
-      {mutation.isPending ? "..." : "Run"}
-    </button>
+      Run
+    </Button>
   );
 }
 
@@ -199,13 +196,14 @@ function StatusIndicator({ lastResult, lastError, onToggleError }: { lastResult:
   }
   if (lastResult === "failure") {
     return (
-      <button
-        onClick={onToggleError}
-        className="text-danger-dark text-xs text-left hover:underline"
-        title={lastError ? "Click to expand error" : ""}
+      <InlineAction
+        intent="danger"
+        onClick={() => { if (onToggleError) onToggleError(); }}
+        title={lastError ? "Click to expand error" : undefined}
+        className="text-xs text-left"
       >
         &#10007; {lastError ? <span className="text-warm-600">{lastError.substring(0, 60)}&#8230;</span> : null}
-      </button>
+      </InlineAction>
     );
   }
   return <span className="text-warm-500 text-xs">&mdash;</span>;
@@ -276,9 +274,10 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
       {recentTicks.length > 0 ? (
         <div className="mt-3 pt-3 border-t">
-          <button
+          <InlineAction
+            intent="subtle"
             onClick={() => setShowTicks(!showTicks)}
-            className="text-xs text-warm-600 hover:text-warm-700"
+            className="text-xs"
           >
             {showTicks ? "Hide" : "Show"} recent ticks ({recentTicks.length})
             {skippedCount > 0 && !showTicks ? (
@@ -286,7 +285,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
                 &middot; {skippedCount} all-skipped
               </span>
             ) : null}
-          </button>
+          </InlineAction>
 
           {showTicks ? (
             <div className="mt-2 space-y-1 text-xs">
