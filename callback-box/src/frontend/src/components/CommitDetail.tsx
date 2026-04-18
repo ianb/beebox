@@ -13,6 +13,7 @@ import { SessionLog } from "./SessionLog";
 import { CardTreeView, type ElementNode } from "./CardTreeView";
 import { Image } from "./ui/Image";
 import { Pre } from "./ui/Pre";
+import { MobileBackButton } from "./ui/MobileBackButton";
 
 interface CommitDetailProps {
   commit: HistoryCommit;
@@ -448,17 +449,7 @@ export function CommitDetail({ commit, onBack }: CommitDetailProps) {
 
   return (
     <div className="h-full flex flex-col bg-white" {...cbSource("commit", commit.hash)}>
-      {onBack ? (
-        <button
-          onClick={onBack}
-          className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-primary hover:text-primary-dark border-b border-warm-200"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to commits
-        </button>
-      ) : null}
+      {onBack ? <MobileBackButton label="Back to commits" onClick={onBack} /> : null}
       <div className="flex-1 overflow-auto">
       {/* Commit info */}
       <CommitTab commit={commit} bodyText={bodyText} />
