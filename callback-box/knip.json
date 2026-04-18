@@ -19,6 +19,9 @@
   "ignoreDependencies": [
     "@ianbicking/personal-vibe-check",
     "@parcel/markdown-ansi",
-    "ansi-to-html"
+    "ansi-to-html",
+    "@tanstack/react-virtual",
+    "cheerio",
+    "agent-doctest"
   ]
 }

@@ -98,7 +98,6 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<CheckboxField>` — inline checkbox with label to the right.
 - `<SelectField>` — dropdown select with options array.
 - `<RadioGroup>` — stacked (`variant="list"`) or card-style (`variant="cards"`) radios.
-- `<Toggle>` — iOS-style pill switch for immediate-apply settings (distinct from CheckboxField, which is form-bound).
 
 **Navigation**
 - `<Link>` — use TanStack Router's Link for any internal nav.
