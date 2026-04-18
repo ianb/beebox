@@ -104,6 +104,14 @@ function localTime(): string {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
+function composerTextareaClasses({ mobile, isTranscribing }: { mobile: boolean; isTranscribing: boolean }): string {
+  const sizeClass = mobile ? "text-base" : "text-sm min-w-0";
+  const stateClass = isTranscribing
+    ? "bg-white text-warm-800 border-primary/40 shadow-[0_0_0_1px_rgba(56,149,211,0.08)]"
+    : "bg-white border-warm-400";
+  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-500`;
+}
+
 /**
  * Format a millisecond gap as "Xh" or "XdYh" (hours omitted when zero).
  * Returns null when the gap is under 12 hours — callers should omit the attribute then.
@@ -291,10 +299,9 @@ function ChatInputArea({
             onKeyDown={handleKeyDown}
             onPaste={onPaste}
             onDrop={onDrop}
-            disabled={isTranscribing}
             readOnly={isTranscribing}
             placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
-            className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600 min-w-0"
+            className={composerTextareaClasses({ mobile: false, isTranscribing })}
             minRows={1}
             maxRows={8}
           />
@@ -466,11 +473,10 @@ function MobileTextareaRow({
         onKeyDown={handleKeyDown}
         onPaste={onPaste}
         onDrop={onDrop}
-        disabled={isTranscribing}
         readOnly={isTranscribing}
         enterKeyHint="send"
         placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
-        className="flex-1 resize-none rounded-lg border border-warm-400 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-warm-200 disabled:text-warm-600"
+        className={composerTextareaClasses({ mobile: true, isTranscribing })}
         minRows={2}
         maxRows={8}
         autoFocus
@@ -1179,16 +1185,6 @@ export function InteractiveChat() {
     );
   }, []);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend]
-  );
-
   const handleInterrupt = useCallback(() => {
     send({ type: "INTERRUPT" });
   }, [send]);
@@ -1231,6 +1227,19 @@ export function InteractiveChat() {
     transcription.state === "connecting" ||
     transcription.state === "recording" ||
     transcription.state === "finalizing";
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (isTranscribing) {
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend, isTranscribing]
+  );
 
   // When transcription ends with an error, preserve partial text into the input field.
   // Uses queueMicrotask to avoid synchronous setState within the effect body.
