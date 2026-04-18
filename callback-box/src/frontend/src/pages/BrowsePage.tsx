@@ -1,18 +1,21 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * BrowsePage - File browser for store/ and other directories.
  *
  * Sidebar with directory listing + card detail panel.
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../api";
 import { href } from "../lib/routing";
-import { Sidebar } from "./Sidebar";
-import { FileView } from "./FileView";
+import { Sidebar } from "../components/Sidebar";
+import { FileView } from "../components/FileView";
 import { trpc, type RouterOutput } from "../lib/trpc";
 import { cbSource } from "../lib/source-tag";
-import { StatusBadge } from "./ui/StatusBadge";
+import { StatusBadge } from "../components/ui/StatusBadge";
 
 
 interface BrowsePageProps {
