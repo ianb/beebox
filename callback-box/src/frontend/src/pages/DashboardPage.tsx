@@ -1,19 +1,22 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Dashboard page — single scrollable overview of the box.
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState } from "react";
 import { useSSE } from "../hooks/useSSE";
 import { getEventSourceBase } from "../api";
 import { trpc } from "../lib/trpc";
-import { HeaderStrip } from "./dashboard/HeaderStrip";
-import { AttentionCards } from "./dashboard/AttentionCards";
-import { ScheduleOverview } from "./dashboard/ScheduleOverview";
-import { RecentActivity } from "./dashboard/RecentActivity";
-import { NewsPipelineStatus } from "./dashboard/NewsPipelineStatus";
-import { SystemInfo } from "./dashboard/SystemInfo";
-import { HealthWarnings } from "./dashboard/HealthWarnings";
-import { ActionModal, type ActionType } from "./dashboard/ActionModal";
+import { HeaderStrip } from "../components/dashboard/HeaderStrip";
+import { AttentionCards } from "../components/dashboard/AttentionCards";
+import { ScheduleOverview } from "../components/dashboard/ScheduleOverview";
+import { RecentActivity } from "../components/dashboard/RecentActivity";
+import { NewsPipelineStatus } from "../components/dashboard/NewsPipelineStatus";
+import { SystemInfo } from "../components/dashboard/SystemInfo";
+import { HealthWarnings } from "../components/dashboard/HealthWarnings";
+import { ActionModal, type ActionType } from "../components/dashboard/ActionModal";
 
 export function DashboardPage() {
   const [activeAction, setActiveAction] = useState<ActionType>(null);

@@ -10,7 +10,7 @@ import { createRouter, createRoute, createRootRoute, Outlet, redirect } from "@t
 import { z } from "zod";
 
 // --- Page imports ---
-import { DashboardPage } from "./components/DashboardPage";
+import { DashboardPage } from "./pages/DashboardPage";
 import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./pages/QuestionsPage";
 import { HistoryPage } from "./pages/HistoryPage";
