@@ -20,7 +20,7 @@ import { Column } from "./components/ui/Column";
 import { href } from "./lib/routing";
 
 // Re-exported for the route tree
-export { BoxRedirect, ShareRedirect } from "./components/BoxSelection";
+export { BoxRedirect, ShareRedirect } from "./pages/BoxSelection";
 
 // Start capturing console errors immediately so we never miss early failures
 enableDebugLogCapture();

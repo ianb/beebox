@@ -1,3 +1,4 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Full-page box selection UIs used by top-level routes:
  *
@@ -7,8 +8,7 @@
  *     box link preserves the share query params so the target page receives
  *     them.
  *
- * Lives in components/ so the page styling (gradients, buttons, list cards)
- * can stay next to the logic.
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState, useEffect } from "react";
