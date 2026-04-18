@@ -13,7 +13,7 @@ import { z } from "zod";
 import { DashboardPage } from "./components/DashboardPage";
 import { ChatPage } from "./components/ChatPage";
 import { QuestionsPage } from "./pages/QuestionsPage";
-import { HistoryPage } from "./components/HistoryPage";
+import { HistoryPage } from "./pages/HistoryPage";
 import { CapturePage } from "./pages/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";

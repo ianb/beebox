@@ -1,8 +1,11 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * HistoryPage - Main page for viewing agent run history.
  *
  * Two-panel layout: Sidebar with CommitTimeline (left, collapsible) + CommitDetail (right).
  * URL reflects selected commit: /history/:hash
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState, useMemo } from "react";
@@ -10,9 +13,9 @@ import { useParams, useNavigate } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import type { HistoryCommit } from "../api";
 import { trpc } from "../lib/trpc";
-import { Sidebar } from "./Sidebar";
-import { CommitTimeline } from "./CommitTimeline";
-import { CommitDetail } from "./CommitDetail";
+import { Sidebar } from "../components/Sidebar";
+import { CommitTimeline } from "../components/CommitTimeline";
+import { CommitDetail } from "../components/CommitDetail";
 
 const PAGE_SIZE = 50;
 
