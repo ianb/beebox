@@ -1,4 +1,3 @@
-/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Full-page box selection UIs used by top-level routes:
  *
@@ -7,14 +6,29 @@
  *   - `<ShareRedirect>` — root `/share?...` route. Same behavior, but each
  *     box link preserves the share query params so the target page receives
  *     them.
- *
- * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { fetchBoxes } from "../lib/boxes";
+import { Column } from "../components/ui/Column";
+import { Row } from "../components/ui/Row";
+import { Stack } from "../components/ui/Stack";
+import { Text } from "../components/ui/Text";
+import {
+  BoxActionsTile,
+  BoxShareTile,
+  SignInLink,
+} from "../components/BoxSelectionTiles";
+
+function CenteredScreen({ children }: { children: React.ReactNode }) {
+  return (
+    <Row justify="center" align="center" className="min-h-screen p-4">
+      {children}
+    </Row>
+  );
+}
 
 /**
  * Root page: if one box, redirect; if multiple, show links.
@@ -40,65 +54,42 @@ export function BoxRedirect() {
   }, [loading, boxes, navigate]);
 
   if (loading) {
-    return <div className="p-8 text-warm-600">Loading...</div>;
+    return <Text as="div" tone="subtle" className="p-8">Loading...</Text>;
   }
 
   if (boxes.length === 0 && authRequired) {
     return (
-      <div className="min-h-screen bg-warm-50 flex items-center justify-center">
-        <div className="max-w-sm w-full text-center">
-          <h1 className="text-2xl font-bold text-warm-800 mb-4">Callback Box</h1>
-          <p className="text-warm-600 mb-6">Sign in to access your boxes.</p>
-          <a
-            href={`/auth/login?returnTo=${encodeURIComponent(window.location.pathname)}`}
-            className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"
-          >
-            Sign in with Google
-          </a>
-        </div>
-      </div>
+      <CenteredScreen>
+        <Column align="center" className="max-w-sm w-full">
+          <Text as="h1" size="2xl" weight="bold" tone="emphasis" center className="mb-4">
+            Callback Box
+          </Text>
+          <Text as="p" tone="subtle" center className="mb-6">
+            Sign in to access your boxes.
+          </Text>
+          <SignInLink returnTo={window.location.pathname} />
+        </Column>
+      </CenteredScreen>
     );
   }
 
   if (boxes.length === 1) {
-    return <div className="p-8 text-warm-600">Redirecting...</div>;
+    return <Text as="div" tone="subtle" className="p-8">Redirecting...</Text>;
   }
 
   return (
-    <div className="min-h-screen bg-warm-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <h1 className="text-2xl font-bold text-warm-800 mb-6 text-center">Callback Box</h1>
-        <div className="space-y-3">
+    <CenteredScreen>
+      <Column className="max-w-md w-full">
+        <Text as="h1" size="2xl" weight="bold" tone="emphasis" center className="mb-6">
+          Callback Box
+        </Text>
+        <Stack gap="md">
           {boxes.map((box) => (
-            <div
-              key={box.slug}
-              className="bg-white rounded-lg shadow-sm border border-warm-300 overflow-hidden"
-            >
-              <Link
-                to={href(`/${box.slug}/`)}
-                className="block px-6 py-3 hover:bg-warm-50 active:bg-warm-100"
-              >
-                <span className="text-lg font-medium text-primary">{box.name}</span>
-              </Link>
-              <div className="grid grid-cols-2 divide-x divide-warm-200 border-t border-warm-200">
-                <Link
-                  to={href(`/${box.slug}/chat`)}
-                  className="py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
-                >
-                  Chat
-                </Link>
-                <Link
-                  to={href(`/${box.slug}/capture`)}
-                  className="py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
-                >
-                  Capture
-                </Link>
-              </div>
-            </div>
+            <BoxActionsTile key={box.slug} box={box} />
           ))}
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Column>
+    </CenteredScreen>
   );
 }
 
@@ -118,7 +109,6 @@ export function ShareRedirect() {
     });
   }, []);
 
-  // Preserve query params when redirecting
   const search = window.location.search;
 
   useEffect(() => {
@@ -128,33 +118,37 @@ export function ShareRedirect() {
   }, [loading, boxes, navigate, search]);
 
   if (loading) {
-    return <div className="min-h-screen bg-warm-50 flex items-center justify-center"><span className="text-warm-600">Loading...</span></div>;
+    return (
+      <CenteredScreen>
+        <Text tone="subtle">Loading...</Text>
+      </CenteredScreen>
+    );
   }
 
   if (boxes.length === 1) {
-    return <div className="min-h-screen bg-warm-50 flex items-center justify-center"><span className="text-warm-600">Redirecting...</span></div>;
+    return (
+      <CenteredScreen>
+        <Text tone="subtle">Redirecting...</Text>
+      </CenteredScreen>
+    );
   }
 
   if (boxes.length > 1) {
     return (
-      <div className="min-h-screen bg-warm-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <h1 className="text-xl font-bold text-warm-800 mb-4 text-center">Save to which box?</h1>
-          <div className="space-y-3">
+      <CenteredScreen>
+        <Column className="max-w-md w-full">
+          <Text as="h1" size="xl" weight="bold" tone="emphasis" center className="mb-4">
+            Save to which box?
+          </Text>
+          <Stack gap="md">
             {boxes.map((box) => (
-              <a
-                key={box.slug}
-                href={`/${box.slug}/share${search}`}
-                className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-accent hover:shadow transition-all"
-              >
-                <span className="text-lg font-medium text-primary">{box.name}</span>
-              </a>
+              <BoxShareTile key={box.slug} box={box} search={search} />
             ))}
-          </div>
-        </div>
-      </div>
+          </Stack>
+        </Column>
+      </CenteredScreen>
     );
   }
 
-  return <div className="p-8 text-warm-600">No boxes available.</div>;
+  return <Text as="div" tone="subtle" className="p-8">No boxes available.</Text>;
 }
