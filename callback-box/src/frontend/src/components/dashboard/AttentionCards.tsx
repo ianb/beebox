@@ -7,6 +7,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
 import { cbSource } from "../../lib/source-tag";
+import { Card } from "../ui/Card";
 import { StatusBadge } from "../ui/StatusBadge";
 
 type CardInfo = RouterOutput["status"]["questions"]["items"][number];
@@ -28,7 +29,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Questions */}
       {pendingQuestions.length > 0 && (
-        <div className="card">
+        <Card shadow border="none">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-warm-700">
               Questions
@@ -52,12 +53,12 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
               </li>
             )}
           </ul>
-        </div>
+        </Card>
       )}
 
       {/* Inbox */}
       {inboxCount > 0 && (
-        <div className="card">
+        <Card shadow border="none">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-warm-700">
               Inbox
@@ -73,7 +74,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
           <p className="text-sm text-warm-700">
             {inboxCount} item{inboxCount !== 1 ? "s" : ""} waiting
           </p>
-        </div>
+        </Card>
       )}
     </div>
   );

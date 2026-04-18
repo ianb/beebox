@@ -6,6 +6,7 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { RouterOutput } from "../../lib/trpc";
+import { Card } from "../ui/Card";
 
 type NewsStatusResponse = RouterOutput["status"]["newsStatus"];
 
@@ -22,7 +23,7 @@ export function NewsPipelineStatus({ newsStatus }: NewsPipelineStatusProps) {
   }
 
   return (
-    <div className="card">
+    <Card shadow border="none">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-warm-700">News Pipeline</h3>
         <Link to={href(`/${boxSlug}/news`)} className="text-xs text-primary hover:text-primary-dark">
@@ -47,6 +48,6 @@ export function NewsPipelineStatus({ newsStatus }: NewsPipelineStatusProps) {
           Trash ({trash})
         </span>
       </div>
-    </div>
+    </Card>
   );
 }

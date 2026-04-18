@@ -6,6 +6,7 @@ import { useState } from "react";
 import { trpc } from "../../lib/trpc";
 import type { RouterOutput } from "../../lib/trpc";
 import { cbSource } from "../../lib/source-tag";
+import { Card } from "../ui/Card";
 import { Pre } from "../ui/Pre";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
@@ -238,28 +239,28 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
   if (loading) {
     return (
-      <div className="card">
+      <Card shadow border="none">
         <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
         <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
-      </div>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="card">
+      <Card shadow border="none">
         <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
         <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
-      </div>
+      </Card>
     );
   }
 
   if (schedules.length === 0) {
     return (
-      <div className="card">
+      <Card shadow border="none">
         <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
         <p className="text-sm text-warm-500">No scheduled scripts in config/schedules/</p>
-      </div>
+      </Card>
     );
   }
 
@@ -268,7 +269,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
   ).length;
 
   return (
-    <div className="card">
+    <Card shadow border="none">
       <h3 className="text-sm font-semibold text-warm-700 mb-3">Schedules</h3>
 
       <ScheduleTable schedules={schedules} />
@@ -296,6 +297,6 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
           ) : null}
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 }
