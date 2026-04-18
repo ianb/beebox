@@ -11,7 +11,7 @@ import { z } from "zod";
 
 // --- Page imports ---
 import { DashboardPage } from "./pages/DashboardPage";
-import { ChatPage } from "./components/ChatPage";
+import { ChatPage } from "./pages/ChatPage";
 import { QuestionsPage } from "./pages/QuestionsPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { CapturePage } from "./pages/CapturePage";
