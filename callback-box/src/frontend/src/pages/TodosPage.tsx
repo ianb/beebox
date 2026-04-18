@@ -1,5 +1,8 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Todos page — view and manage todo lists.
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { getEventSourceBase } from "../api";

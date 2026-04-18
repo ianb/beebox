@@ -19,7 +19,7 @@ import { SettingsPage } from "./components/SettingsPage";
 import { AdminPage } from "./components/AdminPage";
 import { SharePage } from "./components/SharePage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
-import { TodosPage } from "./components/TodosPage";
+import { TodosPage } from "./pages/TodosPage";
 import { AppLayout, BoxRedirect, ShareRedirect, CardViewPage, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
 import { ViewPage } from "./components/ViewPage";
 

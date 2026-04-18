@@ -52,7 +52,8 @@ src/webapp/       Fastify server, API routes, SSE
   routes/         HTTP route handlers
   trpc/           tRPC router and sub-routers
 src/frontend/     React UI (Vite, separate tsconfig)
-  src/components/     Page + feature components (ChatPage, CapturePage, AdminPage, ...)
+  src/pages/          Routed top-level pages (ChatPage, DashboardPage, AdminPage, ...) — subject to restrict-component-classes; can only use outer-layout classes
+  src/components/     Reusable feature components (Sidebar, CommitTimeline, FileView, brief/, dashboard/, ...)
   src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see CONVENTIONS.md
   src/renderers/      File-type renderers (markdown, image, sheet, recipe, directory, ...)
   src/machines/       XState state machines
