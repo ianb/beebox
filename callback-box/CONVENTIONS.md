@@ -126,6 +126,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Dropdown>` + `<MenuItem>` + `<MenuDivider>` — menu with click-outside, escape-to-close, auto-close on select. `<Dropdown>` takes a render-prop `trigger`.
 - `<TabBar>` — generic tab group with active state.
 - `<ImageLightbox>` — fullscreen image overlay (usually accessed via `<Image lightbox>` rather than directly).
+- `<MobileBackButton>` — chevron + label back-navigation button for two-pane mobile layouts. Hidden at `sm+` breakpoints. Used at the top of the detail pane.
 
 **Renderer-specific**
 - `<BboxOverlay>` — bounding box for image renderer (rectangle with color + position).

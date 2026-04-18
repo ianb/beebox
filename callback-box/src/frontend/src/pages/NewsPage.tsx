@@ -1,11 +1,8 @@
-/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * NewsPage - Full news reading experience.
  *
  * Shows a sidebar with brief index and main area with the selected brief.
  * Supports comments, query responses (text and voice).
- *
- * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState, useCallback } from "react";
@@ -18,6 +15,10 @@ import {
 import { Sidebar } from "../components/Sidebar";
 import { cbSource } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";
+import { Row } from "../components/ui/Row";
+import { Column } from "../components/ui/Column";
+import { Text } from "../components/ui/Text";
+import { MobileBackButton } from "../components/ui/MobileBackButton";
 
 /**
  * Convert a Blob to base64 string.
@@ -200,33 +201,23 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
   const hasDetail = Boolean(briefData || loading || error);
 
   return (
-    <div className="h-full flex">
-      {/* Sidebar with index */}
+    <Row gap="none" align="stretch" className="h-full">
       <Sidebar title="News Briefs" detailSelected={hasDetail}>
         <NewsIndex onSelect={handleSelect} selectedPath={selectedSummary?.path ?? initialPath} refreshKey={sidebarRefreshKey} />
       </Sidebar>
 
-      {/* Main content — hidden on mobile when no detail selected */}
-      <div className={`flex-1 overflow-auto bg-warm-50 ${hasDetail ? "" : "hidden sm:block"}`}>
+      <Column overflow="auto" className={`flex-1 ${hasDetail ? "" : "hidden sm:flex"}`}>
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-warm-600">Loading...</div>
-          </div>
+          <Row justify="center" align="center" className="h-full">
+            <Text tone="subtle">Loading...</Text>
+          </Row>
         ) : error ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-danger-dark">Error: {error}</div>
-          </div>
+          <Row justify="center" align="center" className="h-full">
+            <Text tone="danger">Error: {error}</Text>
+          </Row>
         ) : briefData ? (
           <div {...(briefPath ? cbSource("card", briefPath) : {})}>
-            <button
-              onClick={handleBack}
-              className="sm:hidden flex items-center gap-1 px-3 py-2 text-sm text-primary hover:text-primary-dark"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to briefs
-            </button>
+            <MobileBackButton label="Back to briefs" onClick={handleBack} />
             <NewsBriefView
               brief={briefData}
               briefPath={briefPath ?? undefined}
@@ -241,12 +232,12 @@ export function NewsPage({ initialPath, onSourceClick, onNavigate }: NewsPagePro
             />
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full text-warm-500">
-            Select a brief to read
-          </div>
+          <Row justify="center" align="center" className="h-full">
+            <Text tone="muted">Select a brief to read</Text>
+          </Row>
         )}
-      </div>
-    </div>
+      </Column>
+    </Row>
   );
 }
 
