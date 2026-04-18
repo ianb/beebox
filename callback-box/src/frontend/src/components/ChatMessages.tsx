@@ -393,17 +393,31 @@ export function ToolList({ blocks }: { blocks: SessionContentBlock[] }) {
 
 
 /**
- * Clickable image thumbnail that opens a lightbox on click.
+ * Markdown image with chat-friendly sizing and lightbox behavior.
+ * Used directly for inline images and re-used by image-only paragraphs.
  */
+function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      size="chat"
+      lightbox
+      className="block mx-auto my-2"
+    />
+  );
+}
+
 function ChatImage({ src, alt }: { src: string; alt: string }) {
   const hasCaption = alt.trim() !== "";
   return (
     <Image
       src={src}
       alt={alt}
-      size="sm"
+      size="chat"
       lightbox
       caption={hasCaption ? alt : undefined}
+      className="mx-auto"
     />
   );
 }
@@ -423,7 +437,7 @@ function extractImages(children: React.ReactNode): Array<{ src: string; alt: str
       child !== null &&
       typeof child === "object" &&
       "type" in child &&
-      child.type === "img" &&
+      (child.type === "img" || child.type === ChatInlineImage) &&
       child.props
     ) {
       images.push({ src: child.props.src || "", alt: child.props.alt || "" });
@@ -530,14 +544,17 @@ export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components> {
   return {
     p: ChatParagraph,
+    img({ src, alt }) {
+      return <ChatInlineImage src={src || ""} alt={alt || ""} />;
+    },
     a({ href, children, node: _node, ...props }) {
       if (href && href.startsWith("view:")) {
         const target = parseViewUrl(href);
-        // Image view: links render inline as an image (equivalent to ![label](api/files/path)).
-        // ChatParagraph's extractImages picks this up and wraps it with the figure + caption + lightbox.
+        // Image view: links render inline as an image with the same sizing
+        // and lightbox behavior as markdown images.
         if (isImagePath(target.path)) {
           const alt = typeof children === "string" ? children : target.path;
-          return <img src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
+          return <ChatInlineImage src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
         }
         if (target.zoom && onZoomView) {
           const label = typeof children === "string" ? children : target.path;

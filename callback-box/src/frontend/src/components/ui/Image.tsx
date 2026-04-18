@@ -6,6 +6,7 @@ const SIZE_CLASSES = {
   thumb: "w-16 h-16 object-cover",
   sm: "max-w-xs max-h-64",
   md: "max-w-full max-h-96",
+  chat: "max-w-full max-h-[70vh]",
   lg: "max-w-full max-h-[32rem]",
 } as const;
 
