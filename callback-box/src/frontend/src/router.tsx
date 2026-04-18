@@ -16,7 +16,7 @@ import { QuestionsPage } from "./components/QuestionsPage";
 import { HistoryPage } from "./components/HistoryPage";
 import { CapturePage } from "./components/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { AdminPage } from "./components/AdminPage";
+import { AdminPage } from "./pages/AdminPage";
 import { SharePage } from "./pages/SharePage";
 import { PrintBriefView } from "./components/brief/PrintBriefView";
 import { TodosPage } from "./pages/TodosPage";
