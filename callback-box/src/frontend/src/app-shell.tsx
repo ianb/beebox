@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
-import { NewsPage } from "./components/NewsPage";
+import { NewsPage } from "./pages/NewsPage";
 import { BrowsePage } from "./components/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";

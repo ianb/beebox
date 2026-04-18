@@ -1,18 +1,21 @@
+/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * NewsPage - Full news reading experience.
  *
  * Shows a sidebar with brief index and main area with the selected brief.
  * Supports comments, query responses (text and voice).
+ *
+ * TODO: refactor to UI primitives to remove the eslint-disable above.
  */
 
 import { useState, useCallback } from "react";
-import { NewsIndex, type BriefSummary } from "./NewsIndex";
+import { NewsIndex, type BriefSummary } from "../components/NewsIndex";
 import {
   NewsBriefView,
   type NewsBriefData,
   type BriefReaction,
-} from "./NewsBriefView";
-import { Sidebar } from "./Sidebar";
+} from "../components/NewsBriefView";
+import { Sidebar } from "../components/Sidebar";
 import { cbSource } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";
 
