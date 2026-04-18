@@ -4,7 +4,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
@@ -25,83 +24,13 @@ import {
   releaseScriptLock,
   loadRunningScripts,
 } from "../../core/schedule-state.js";
-import { handleCreateAfterSuccess } from "./tick-utils.js";
+import { execWithTimeout, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
 
 const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h default pruning window
 const SLEEP_THRESHOLD_MS = 5_000; // wall vs monotonic drift > 5s = sleep
-
-/**
- * Run a command with a reliable timeout. Uses spawn with a process group
- * so we can kill the entire tree on timeout (execSync timeout doesn't
- * reliably kill grandchild processes).
- *
- * Captures stderr (last 500 chars) to include in error messages.
- * When verbose, stdout/stderr also go to the parent process.
- */
-function execWithTimeout(
-  command: string,
-  options: { cwd: string; stdio: "inherit" | "ignore"; timeout: number; env: NodeJS.ProcessEnv }
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Always use pipe so we can capture stderr for error messages
-    const child = spawn("sh", ["-c", command], {
-      cwd: options.cwd,
-      stdio: ["ignore", "pipe", "pipe"],
-      env: options.env,
-      detached: true, // create process group so we can kill the tree
-    });
-
-    let stderrBuf = "";
-    const MAX_STDERR = 500;
-
-    if (child.stdout) {
-      if (options.stdio === "inherit") {
-        child.stdout.pipe(process.stdout);
-      } else {
-        child.stdout.resume(); // drain
-      }
-    }
-    if (child.stderr) {
-      child.stderr.on("data", (chunk: Buffer) => {
-        const text = chunk.toString();
-        stderrBuf += text;
-        if (stderrBuf.length > MAX_STDERR * 2) {
-          stderrBuf = stderrBuf.slice(-MAX_STDERR);
-        }
-        if (options.stdio === "inherit") {
-          process.stderr.write(chunk);
-        }
-      });
-    }
-
-    const timer = setTimeout(() => {
-      // Kill entire process group (negative pid)
-      try { process.kill(-child.pid!, "SIGKILL"); } catch { /* already dead */ }
-      reject(new Error(`Command timed out after ${options.timeout}ms`));
-    }, options.timeout);
-
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        resolve();
-      } else {
-        const detail = stderrBuf.trim().slice(-MAX_STDERR);
-        const msg = detail
-          ? `Command failed with exit code ${code}: ${detail}`
-          : `Command failed with exit code ${code}`;
-        reject(new Error(msg));
-      }
-    });
-
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-  });
-}
 
 export interface TickOptions {
   dryRun?: boolean;

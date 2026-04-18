@@ -3,7 +3,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
-import { execSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
@@ -23,7 +22,8 @@ import {
   releaseScriptLock,
   loadRunningScripts,
 } from "../../../core/schedule-state.js";
-import { handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
+import { execWithTimeout, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
+import { buildScriptEnv } from "../../../core/script-env.js";
 import { createLoader } from "../../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 
@@ -317,11 +317,14 @@ export const schedulerRouter = router({
       const wallStart = Date.now();
       const monoStart = performance.now();
       try {
-        execSync(parsed.runs, {
+        const scriptEnv = await buildScriptEnv(ctx.boxRoot, {
+          CB_TRIGGERED_BY: "webapp-trigger",
+        });
+        await execWithTimeout(parsed.runs, {
           cwd: ctx.boxRoot,
           stdio: "ignore",
           timeout: SCRIPT_TIMEOUT,
-          env: { ...process.env, CB_TRIGGERED_BY: "webapp-trigger" },
+          env: scriptEnv,
         });
 
         const wallElapsed = Date.now() - wallStart;

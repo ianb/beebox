@@ -19,7 +19,14 @@
  * "CB_SERVER_URL is not set" error.
  */
 
+import * as path from "node:path";
 import { loadBoxConfig } from "../webapp/box-config.js";
+
+// Path to callback-box's own bin/ so subprocesses can find `cb`.
+// Prepended to PATH inside buildScriptEnv so every box-spawned subprocess
+// works regardless of how the parent process was launched.
+const __dirname = import.meta.dirname;
+const CB_BIN_DIR = path.resolve(__dirname, "../../bin");
 
 interface BoxEnvPieces {
   serverUrl: string | null;
@@ -85,6 +92,10 @@ export async function buildScriptEnv(
   additions?: Record<string, string | undefined>
 ): Promise<NodeJS.ProcessEnv> {
   const env: NodeJS.ProcessEnv = { ...process.env };
+
+  // Prepend callback-box's bin/ so scripts can find `cb` regardless of
+  // how the parent process's PATH was set up.
+  env.PATH = `${CB_BIN_DIR}:${env.PATH ?? ""}`;
 
   // Priority: live ambient (running server) > box.json publicUrl > PUBLIC_URL env.
   // The live ambient lets a local dev server supply the env vars without

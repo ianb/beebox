@@ -438,11 +438,10 @@ async function runAgent(options: AgentOptions): Promise<AgentResult> {
         onOutput?.("Warning: prompt logging requested but logger failed to start\n");
       }
 
-      // Add callback-box bin directory to PATH so cb commands are available
+      // buildScriptEnv prepends callback-box's bin/ to PATH.
+      // CLAUDECODE is cleared so Claude Code can run even when nested
+      // inside an existing Claude Code session.
       const env = await buildScriptEnv(boxRoot, {
-        PATH: `${binDir}:${process.env.PATH ?? ""}`,
-        // Allow nested Claude Code sessions (e.g., when cb is invoked from
-        // within an existing Claude Code session)
         CLAUDECODE: undefined,
       });
 
