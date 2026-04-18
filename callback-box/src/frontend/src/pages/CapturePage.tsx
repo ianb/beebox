@@ -1,20 +1,25 @@
-/* eslint-disable personal-vibe-check/restrict-component-classes */
 /**
  * Capture page — audio recording + photo capture.
  *
  * Ported from the legacy capture view. Sessions accumulate files
  * and finalize into inbox cards. Device preferences stored in localStorage.
  *
- * NOTE: intentionally uses raw HTML with dark-theme Tailwind defaults —
- * this is a full-bleed dark video UI, distinct from the rest of the app.
- * The restrict-component-classes rule is disabled accordingly (not just
- * a refactor TODO).
+ * The dark-themed UI (status bar / camera viewport / device settings /
+ * error banner / controls) lives under components/capture/ where the
+ * off-palette colors can stay without tripping the restrict-component-classes
+ * ESLint rule. This page coordinates state, sessions, and uploads.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChunkedRecorder } from "../lib/recorder";
 import { CameraCapture } from "../lib/camera";
 import { getApiBase } from "../api";
+import { CaptureShell } from "../components/capture/CaptureShell";
+import { StatusBar } from "../components/capture/StatusBar";
+import { DeviceSettings } from "../components/capture/DeviceSettings";
+import { CameraViewport } from "../components/capture/CameraViewport";
+import { CaptureErrorBanner } from "../components/capture/CaptureErrorBanner";
+import { CaptureControls } from "../components/capture/CaptureControls";
 
 type UploadState = "uploading" | "uploaded" | "failed";
 
@@ -488,7 +493,7 @@ export function CapturePage() {
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
   return (
-    <div className="flex flex-col h-full bg-black relative text-white">
+    <CaptureShell>
       <StatusBar
         recording={recording} recordingTime={recordingTime} formatTime={formatTime}
         audioTotal={audioTotal} audioUploading={audioUploading} audioUploaded={audioUploaded}
@@ -506,213 +511,26 @@ export function CapturePage() {
         />
       ) : null}
 
-      <div
-        className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden cursor-pointer"
-        onClick={cameraOn ? takePhoto : startCamera}
-      >
-        <video
-          ref={videoRef}
-          className={`w-full h-full object-contain ${cameraOn ? "" : "hidden"}`}
-          style={flashing ? { filter: "brightness(3) saturate(0)" } : undefined}
-          playsInline muted
-        />
-        {cameraOn ? (
-          <>
-            <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-10">
-              <div className="w-16 h-16 rounded-full border-4 border-white/40" />
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
-              className="absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-white/80 z-10"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                <line x1="3" y1="3" x2="21" y2="21" strokeLinecap="round" />
-              </svg>
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); flipCamera(); }}
-              className="absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-white/80 z-10"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          </>
-        ) : (
-          <div className="text-gray-600 text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 mx-auto mb-2 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            <p className="text-sm">Tap to start camera</p>
-          </div>
-        )}
-      </div>
+      <CameraViewport
+        ref={videoRef}
+        cameraOn={cameraOn}
+        flashing={flashing}
+        onTap={cameraOn ? takePhoto : startCamera}
+        onToggleCamera={toggleCamera}
+        onFlipCamera={flipCamera}
+      />
 
-      {error ? (
-        <div className="absolute top-14 left-4 right-4 bg-danger-dark/80 text-danger-100 text-sm px-3 py-2 rounded-lg z-20">
-          {error}
-          <button onClick={() => setError(null)} className="float-right text-danger-light hover:text-white">&times;</button>
-        </div>
-      ) : null}
+      {error ? <CaptureErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
 
-      <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGallerySelect} />
-      <input ref={uploadRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+      <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={handleGallerySelect} />
+      <input ref={uploadRef} type="file" multiple hidden onChange={handleFileSelect} />
 
       <CaptureControls
         sessionId={sessionId} recording={recording} uploadsInProgress={uploadsInProgress} finalizing={finalizing}
         hasContent={photoTotal > 0 || audioTotal > 0 || fileTotal > 0} photosFailed={photosFailed}
         onDone={handleDone} onCancel={handleCancel} onToggleRecording={toggleRecording} onRetryFailed={retryFailedUploads}
       />
-    </div>
+    </CaptureShell>
   );
 }
 
-// --- Extracted sub-components to keep CapturePage under limit ---
-
-function StatusBar(props: {
-  recording: boolean; recordingTime: number; formatTime: (s: number) => string;
-  audioTotal: number; audioUploading: number; audioUploaded: number;
-  photoTotal: number; photosUploading: number; photosUploaded: number; photosFailed: number;
-  fileTotal: number; filesUploading: number; filesUploaded: number; filesFailed: number;
-  showSettings: boolean;
-  onToggleSettings: () => void; onPickGallery: () => void; onPickFile: () => void; onRetryFailed: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between px-4 py-2 bg-gray-900/80 z-10">
-      <div className="flex items-center gap-3">
-        {props.recording ? (
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-danger rounded-full animate-pulse" />
-            <span className="text-sm font-mono">{props.formatTime(props.recordingTime)}</span>
-          </div>
-        ) : null}
-        {!props.recording && props.audioTotal > 0 ? (
-          <div className="flex items-center gap-1.5 text-sm">
-            {props.audioUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">audio uploading</span></>
-            ) : (
-              <><span className="text-success-light">&#10003;</span><span className="text-success-light">audio ({props.audioUploaded})</span></>
-            )}
-          </div>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-3 text-sm">
-        {props.photoTotal > 0 ? (
-          <div className="flex items-center gap-1.5">
-            {props.photosUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.photosUploaded}/{props.photoTotal}</span></>
-            ) : props.photosFailed > 0 ? (
-              <>
-                <span className="text-danger-light">&#10007;</span>
-                <span className="text-danger-light">{props.photosFailed} failed</span>
-                <button onClick={props.onRetryFailed} className="text-warning-light underline ml-1">retry</button>
-                {props.photosUploaded > 0 ? <span className="text-success-light">, {props.photosUploaded} ok</span> : null}
-              </>
-            ) : (
-              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.photoTotal} photos</span></>
-            )}
-          </div>
-        ) : null}
-        {props.fileTotal > 0 ? (
-          <div className="flex items-center gap-1.5">
-            {props.filesUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files</span></>
-            ) : props.filesFailed > 0 ? (
-              <><span className="text-danger-light">&#10007;</span><span className="text-danger-light">{props.filesFailed} failed</span></>
-            ) : (
-              <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.fileTotal} files</span></>
-            )}
-          </div>
-        ) : null}
-        <button onClick={props.onPickFile} className="text-gray-400 hover:text-white p-1" title="Upload file">&#128206;</button>
-        <button onClick={props.onPickGallery} className="text-gray-400 hover:text-white p-1" title="Add from gallery">&#128247;</button>
-        <button
-          onClick={props.onToggleSettings}
-          className={`p-1 text-lg ${props.showSettings ? "text-white" : "text-gray-400 hover:text-white"}`}
-          title="Device settings"
-        >&#9881;</button>
-      </div>
-    </div>
-  );
-}
-
-function DeviceSettings(props: {
-  videoDevices: MediaDeviceInfo[]; audioDevices: MediaDeviceInfo[];
-  devicePrefs: DevicePrefs; onUpdate: (key: keyof DevicePrefs, value: string | null) => void;
-}) {
-  return (
-    <div className="px-4 py-3 bg-gray-900/90 border-t border-gray-700 z-10 flex gap-4 text-sm">
-      <label className="flex flex-col gap-1 flex-1">
-        <span className="text-gray-400">Camera</span>
-        <select
-          value={props.devicePrefs.videoDeviceId ?? ""}
-          onChange={(e) => props.onUpdate("videoDeviceId", e.target.value || null)}
-          className="bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm"
-        >
-          <option value="">Default</option>
-          {props.videoDevices.map((d) => (
-            <option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${d.deviceId.slice(0, 8)}`}</option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 flex-1">
-        <span className="text-gray-400">Microphone</span>
-        <select
-          value={props.devicePrefs.audioDeviceId ?? ""}
-          onChange={(e) => props.onUpdate("audioDeviceId", e.target.value || null)}
-          className="bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm"
-        >
-          <option value="">Default</option>
-          {props.audioDevices.map((d) => (
-            <option key={d.deviceId} value={d.deviceId}>{d.label || `Mic ${d.deviceId.slice(0, 8)}`}</option>
-          ))}
-        </select>
-      </label>
-    </div>
-  );
-}
-
-function CaptureControls(props: {
-  sessionId: string | null; recording: boolean;
-  uploadsInProgress: boolean; finalizing: boolean; hasContent: boolean; photosFailed: number;
-  onDone: () => void; onCancel: () => void; onToggleRecording: () => void; onRetryFailed: () => void;
-}) {
-  const doneDisabled = !props.sessionId || props.uploadsInProgress || props.finalizing || !props.hasContent || props.photosFailed > 0;
-  return (
-    <div className="flex flex-col items-center bg-gray-900/80">
-      {props.photosFailed > 0 ? (
-        <div className="text-danger-light text-sm py-2 px-4 text-center">
-          {props.photosFailed} photo{props.photosFailed > 1 ? "s" : ""} failed to upload.{" "}
-          <button onClick={props.onRetryFailed} className="text-warning-light underline">Retry</button>
-          {" "}or discard the session.
-        </div>
-      ) : null}
-      <div className="flex items-center justify-around w-full px-6 py-4">
-        <button onClick={props.onCancel} disabled={!props.sessionId || props.finalizing || !props.hasContent}
-          className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center disabled:opacity-30 active:bg-gray-600">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-danger-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
-        <button onClick={props.onToggleRecording} disabled={!props.sessionId}
-          className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-danger-dark" : ""}`}>
-          {props.recording ? <span className="w-7 h-7 bg-white rounded-sm" /> : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-danger" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z" /><path d="M17 11a5 5 0 01-10 0H5a7 7 0 0014 0h-2z" />
-              <rect x="11" y="19" width="2" height="3" rx="1" /><rect x="8" y="21" width="8" height="2" rx="1" />
-            </svg>
-          )}
-        </button>
-        <button onClick={props.onDone} disabled={doneDisabled}
-          className="w-12 h-12 rounded-full bg-success flex items-center justify-center disabled:opacity-30 active:bg-success">
-          {props.finalizing ? (
-            <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
