@@ -18,6 +18,7 @@ interface InjectOpts {
   method: string;
   url: string;
   payload?: unknown;
+  headers?: Record<string, string>;
 }
 
 export interface InjectResult {
@@ -63,23 +64,39 @@ export async function makeTestServer(opts?: TestServerOptions): Promise<TestServ
       return `${res.statusCode}\n${JSON.stringify(res.body, null, 2)}`;
     },
     async request(opts: InjectOpts) {
-      const reqOpts: { method: string; url: string; payload?: unknown } = {
+      const reqOpts: {
+        method: string;
+        url: string;
+        payload?: unknown;
+        headers?: Record<string, string>;
+      } = {
         method: opts.method,
         url: `${BASE}${opts.url}`,
       };
       if (opts.payload !== undefined) {
         reqOpts.payload = opts.payload;
       }
+      if (opts.headers !== undefined) {
+        reqOpts.headers = opts.headers;
+      }
       const res = await ctx.server.inject(reqOpts);
       return { statusCode: res.statusCode, body: res.json() };
     },
     async rawRequest(opts: InjectOpts) {
-      const reqOpts: { method: string; url: string; payload?: unknown } = {
+      const reqOpts: {
+        method: string;
+        url: string;
+        payload?: unknown;
+        headers?: Record<string, string>;
+      } = {
         method: opts.method,
         url: `${BASE}${opts.url}`,
       };
       if (opts.payload !== undefined) {
         reqOpts.payload = opts.payload;
+      }
+      if (opts.headers !== undefined) {
+        reqOpts.headers = opts.headers;
       }
       const res = await ctx.server.inject(reqOpts);
       return {
@@ -89,12 +106,20 @@ export async function makeTestServer(opts?: TestServerOptions): Promise<TestServ
       };
     },
     async rootRequest(opts: InjectOpts) {
-      const reqOpts: { method: string; url: string; payload?: unknown } = {
+      const reqOpts: {
+        method: string;
+        url: string;
+        payload?: unknown;
+        headers?: Record<string, string>;
+      } = {
         method: opts.method,
         url: opts.url,
       };
       if (opts.payload !== undefined) {
         reqOpts.payload = opts.payload;
+      }
+      if (opts.headers !== undefined) {
+        reqOpts.headers = opts.headers;
       }
       const res = await ctx.server.inject(reqOpts);
       return { statusCode: res.statusCode, body: res.json() };

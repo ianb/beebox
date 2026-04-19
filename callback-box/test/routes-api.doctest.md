@@ -161,6 +161,72 @@ await ctx.inject({ method: "GET", url: "/api/browse/box/inbox" })
 await ctx.cleanup();
 ```
 
+## Serving raw files
+
+`GET /api/files/*` serves the file body, includes `ETag` and `Last-Modified`
+for conditional GETs, and advertises `no-cache` so the browser revalidates
+every time (otherwise agent edits would stay hidden behind stale HTTP cache):
+
+```
+const ctx = await makeTestServer();
+await ctx.seed("store/notes/hello.md", "# Hello");
+const res = await ctx.rawRequest({ method: "GET", url: "/api/files/store/notes/hello.md" });
+res.statusCode
+=> 200
+
+res.headers["cache-control"]
+=> no-cache
+
+res.payload
+=> # Hello
+```
+
+``` continue
+typeof res.headers["etag"]
+=> string
+
+typeof res.headers["last-modified"]
+=> string
+```
+
+A second request that echoes the ETag back in `If-None-Match` gets a 304 with
+no body:
+
+``` continue
+const etag = res.headers["etag"] as string;
+const revalidate = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/files/store/notes/hello.md",
+  headers: { "if-none-match": etag },
+});
+revalidate.statusCode
+=> 304
+
+revalidate.payload
+=>
+```
+
+After the file changes on disk, the ETag changes and the client gets a fresh
+200 even when it sends the old ETag:
+
+``` continue
+await ctx.seed("store/notes/hello.md", "# Hello, world");
+const fresh = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/files/store/notes/hello.md",
+  headers: { "if-none-match": etag },
+});
+fresh.statusCode
+=> 200
+
+fresh.payload
+=> # Hello, world
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
 ## Deleting raw files
 
 `DELETE /api/files/*` removes a non-card file and commits the deletion:

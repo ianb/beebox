@@ -434,10 +434,34 @@ export async function registerApiRoutes(
         };
         const contentType = mimeTypes[ext] || "application/octet-stream";
 
+        // Conditional GET: build weak ETag from mtime + size, serve 304 when
+        // the client already has the current version. `no-cache` means the
+        // browser keeps the body but must revalidate every time, so an agent
+        // editing the file on disk becomes visible on the next reload.
+        const lastModified = stat.mtime.toUTCString();
+        const etag = `W/"${stat.mtimeMs.toString(36)}-${stat.size.toString(36)}"`;
+        const ifNoneMatch = request.headers["if-none-match"];
+        const ifModifiedSince = request.headers["if-modified-since"];
+        const etagMatches = ifNoneMatch === etag;
+        const mtimeMatches =
+          typeof ifModifiedSince === "string" &&
+          Number.isFinite(Date.parse(ifModifiedSince)) &&
+          Math.floor(Date.parse(ifModifiedSince) / 1000) >= Math.floor(stat.mtimeMs / 1000);
+        if (etagMatches || mtimeMatches) {
+          return reply
+            .header("ETag", etag)
+            .header("Last-Modified", lastModified)
+            .header("Cache-Control", "no-cache")
+            .status(304)
+            .send();
+        }
+
         const content = await fs.readFile(resolved);
         return reply
           .header("Content-Type", contentType)
-          .header("Cache-Control", "public, max-age=3600")
+          .header("Cache-Control", "no-cache")
+          .header("ETag", etag)
+          .header("Last-Modified", lastModified)
           .send(content);
       } catch {
         return reply.status(404).send({ error: "Not found" });
