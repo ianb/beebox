@@ -13,7 +13,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, getChatHistory, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
+import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
 import { AttachmentPanel, type AttachmentItem } from "../ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
@@ -28,7 +28,7 @@ import { sendSound, tick, recordingStart, alarm } from "../../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
 import { chatMachine } from "../../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, type OnZoomView } from "../ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, type MessageGroup, type OnZoomView } from "../ChatMessages";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
 import { CloseButton } from "../ui/CloseButton";
@@ -141,10 +141,36 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
+ * Model options surfaced in the chat debug menu. `null` = CLI default.
+ * Ordered as presented to the user.
+ */
+const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
+  { label: "Default", model: null },
+  { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
+  { label: "Opus 4.7", model: "claude-opus-4-7" },
+  { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
+  { label: "Opus 4.7 (1M context)", model: "claude-opus-4-7[1m]" },
+];
+
+/**
+ * Ephemeral marker shown in the message stream when the user switches models.
+ * `afterGroupCount` snapshots the number of message groups at insertion time
+ * — the marker renders between that group and whatever comes after, which
+ * gives chronological ordering relative to later-arriving messages.
+ * Not persisted: these disappear on page reload.
+ */
+interface ModelMarker {
+  id: string;
+  label: string;
+  afterGroupCount: number;
+}
+
+/**
  * Debug dropdown menu for chat controls.
  */
 function ChatDebugMenu({
   onStopProcess,
+  onCompactSession,
   sessionId,
   running,
   busy,
@@ -152,8 +178,11 @@ function ChatDebugMenu({
   onToggleDebugView,
   showDebugLog,
   onToggleDebugLog,
+  selectedModel,
+  onSelectModel,
 }: {
   onStopProcess: () => void;
+  onCompactSession: () => void;
   sessionId: string | null;
   running: boolean;
   busy: boolean;
@@ -161,6 +190,8 @@ function ChatDebugMenu({
   onToggleDebugView: () => void;
   showDebugLog: boolean;
   onToggleDebugLog: () => void;
+  selectedModel: string | null;
+  onSelectModel: (model: string | null) => void;
 }) {
   return (
     <Dropdown
@@ -182,6 +213,17 @@ function ChatDebugMenu({
       )}
     >
       <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
+      <MenuItem onClick={onCompactSession} disabled={busy}>Compact Session</MenuItem>
+      <MenuDivider />
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Model</div>
+      {MODEL_OPTIONS.map((opt) => (
+        <MenuItem
+          key={opt.label}
+          onClick={() => onSelectModel(opt.model)}
+        >
+          {selectedModel === opt.model ? "\u2713 " : "\u2007\u2007"}{opt.label}
+        </MenuItem>
+      ))}
       <MenuDivider />
       <MenuItem onClick={onToggleDebugView}>{debugView ? "\u2713 " : ""}Debug View</MenuItem>
       <MenuItem onClick={onToggleDebugLog}>{showDebugLog ? "\u2713 " : ""}Debug Log</MenuItem>
@@ -556,12 +598,20 @@ function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZ
  * Virtualized message list using TanStack Virtual.
  * Only renders visible message groups in the DOM, with stick-to-bottom behavior.
  */
+type FlatItem =
+  | { kind: "header" }
+  | { kind: "group"; group: MessageGroup; groupIndex: number }
+  | { kind: "marker"; marker: ModelMarker }
+  | { kind: "streaming" };
+
 function VirtualizedMessageList({
-  messages, isStreaming, streamText, streamTools,
+  messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger,
 }: {
   messages: SessionEntry[];
+  groups: MessageGroup[];
+  modelMarkers: ModelMarker[];
   isStreaming: boolean;
   streamText: string;
   streamTools: SessionContentBlock[];
@@ -579,21 +629,48 @@ function VirtualizedMessageList({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
 
-  const groups = useMemo(() => groupMessages(messages), [messages]);
   const hasOlder = totalEntries > messages.length;
-  const headerCount = hasOlder ? 1 : 0;
-  const itemCount = headerCount + groups.length + (snapshot.matches("streaming") ? 1 : 0);
+  const streamingShown = snapshot.matches("streaming");
+
+  // Build the flat render list: header → interleaved groups + markers → streaming.
+  // Each marker sits after the group index it was snapshotted at, keeping its
+  // chronological position even as later messages arrive below it.
+  const flatItems = useMemo<FlatItem[]>(() => {
+    const items: FlatItem[] = [];
+    if (hasOlder) items.push({ kind: "header" });
+    for (const m of modelMarkers) {
+      if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
+    }
+    for (const [i, group] of groups.entries()) {
+      items.push({ kind: "group", group, groupIndex: i });
+      for (const m of modelMarkers) {
+        if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
+      }
+    }
+    if (streamingShown) items.push({ kind: "streaming" });
+    return items;
+  }, [hasOlder, groups, modelMarkers, streamingShown]);
+
+  const itemCount = flatItems.length;
 
   const virtualizer = useVirtualizer({
     count: itemCount,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => index === 0 && hasOlder ? 40 : 120,
+    estimateSize: (index) => {
+      const item = flatItems[index];
+      if (!item) return 120;
+      if (item.kind === "header") return 40;
+      if (item.kind === "marker") return 32;
+      return 120;
+    },
     overscan: 5,
     getItemKey: (index) => {
-      if (hasOlder && index === 0) return "load-older";
-      const groupIndex = index - headerCount;
-      if (groupIndex >= groups.length) return "streaming";
-      return groups[groupIndex].entries[0].uuid;
+      const item = flatItems[index];
+      if (!item) return `idx-${index}`;
+      if (item.kind === "header") return "load-older";
+      if (item.kind === "streaming") return "streaming";
+      if (item.kind === "marker") return `marker-${item.marker.id}`;
+      return item.group.entries[0].uuid;
     },
   });
 
@@ -663,10 +740,7 @@ function VirtualizedMessageList({
         }}
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const index = virtualRow.index;
-          const isHeader = hasOlder && index === 0;
-          const groupIndex = index - headerCount;
-          const isStreamingItem = groupIndex >= groups.length;
+          const item = flatItems[virtualRow.index];
 
           return (
             <div
@@ -682,7 +756,7 @@ function VirtualizedMessageList({
               }}
               className="py-0.5 overflow-hidden"
             >
-              {isHeader ? (
+              {item.kind === "header" ? (
                 <div className="text-center py-2">
                   <button
                     onClick={onLoadOlder}
@@ -692,7 +766,7 @@ function VirtualizedMessageList({
                     {loadingOlder ? "Loading..." : `Show ${totalEntries - messages.length} earlier messages`}
                   </button>
                 </div>
-              ) : isStreamingItem ? (
+              ) : item.kind === "streaming" ? (
                 <div>
                   <StreamingMessage text={streamText} onZoomView={onZoomView} />
                   {streamTools.length > 0 ? (
@@ -701,8 +775,15 @@ function VirtualizedMessageList({
                     </div>
                   ) : null}
                 </div>
+              ) : item.kind === "marker" ? (
+                <div className="flex justify-center py-1">
+                  <div className="text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
+                    {item.marker.label}
+                  </div>
+                </div>
               ) : (() => {
-                const group = groups[groupIndex];
+                const group = item.group;
+                const groupIndex = item.groupIndex;
                 if (group.type === "compaction") {
                   return <CompactionMessage entries={group.entries} />;
                 } else if (group.type === "self-note") {
@@ -749,6 +830,32 @@ export function InteractiveChat() {
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
+  const groups = useMemo(() => groupMessages(messages), [messages]);
+
+  // Server persists the selection in .callback-box/chat-model.json;
+  // read it on mount so the menu's checkmark reflects server state.
+  useEffect(() => {
+    getChatStatus()
+      .then((status) => { setSelectedModel(status.model); })
+      .catch(() => {});
+  }, []);
+
+  const handleSelectModel = useCallback((model: string | null) => {
+    if (model === selectedModel) return;
+    const label = MODEL_OPTIONS.find((o) => o.model === model)?.label ?? "default";
+    setModelMarkers((markers) => [
+      ...markers,
+      {
+        id: `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        label: `Switched to ${label}`,
+        afterGroupCount: groups.length,
+      },
+    ]);
+    setSelectedModel(model);
+    setChatModel(model).catch(() => {});
+  }, [selectedModel, groups.length]);
   const [zoomedView, setZoomedView] = useState<{ target: ViewTarget; label: string } | null>(null);
   const [typingMode, setTypingMode] = useState(false);
   const [typingLocked, setTypingLocked] = useState(false);
@@ -1197,6 +1304,13 @@ export function InteractiveChat() {
     send({ type: "INTERRUPT" });
   }, [send]);
 
+  const handleCompactSession = useCallback(() => {
+    // /compact must be the first characters of the text, with no wrapping —
+    // the backend /send route detects leading-slash messages and skips
+    // user-attr + pending-schedules injection.
+    send({ type: "SEND", message: "/compact" });
+  }, [send]);
+
   // Realtime transcription with voice keyword spotting
   const transcription = useRealtimeTranscription({
     onKeywordSend: (text) => {
@@ -1331,6 +1445,7 @@ export function InteractiveChat() {
         <NewSessionButton onClick={handleNewSession} />
         <ChatDebugMenu
           onStopProcess={handleStopProcess}
+          onCompactSession={handleCompactSession}
           sessionId={sessionId}
           running={processRunning}
           busy={isStreaming}
@@ -1338,11 +1453,15 @@ export function InteractiveChat() {
           onToggleDebugView={() => setDebugView((v) => !v)}
           showDebugLog={showDebugLog}
           onToggleDebugLog={() => setShowDebugLog((v) => !v)}
+          selectedModel={selectedModel}
+          onSelectModel={handleSelectModel}
         />
       </div>
       {/* Messages area — virtualized */}
       <VirtualizedMessageList
         messages={messages}
+        groups={groups}
+        modelMarkers={modelMarkers}
         isStreaming={isStreaming}
         streamText={streamText}
         streamTools={streamTools}

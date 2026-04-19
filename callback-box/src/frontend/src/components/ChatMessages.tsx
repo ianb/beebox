@@ -626,9 +626,29 @@ export type MessageGroup =
   | { type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }
   | { type: "self-note"; entries: SessionEntry[]; notes: SelfNoteInfo[] };
 
+/**
+ * Local-command entries are injected by the Claude CLI when slash commands
+ * like /model or /compact run via stream-json. They appear as user-type
+ * entries whose text is a bare `<local-command-caveat>`, `<command-name>`,
+ * or `<local-command-stdout>` tag. We skip them in the rendered chat because
+ * they clutter the transcript and say nothing the user cares about — the
+ * relevant UI affordance (pill, compaction marker) is surfaced separately.
+ */
+function isLocalCommandEntry(entry: SessionEntry): boolean {
+  if (entry.type !== "user") return false;
+  const texts = entry.content.filter((b) => b.type === "text").map((b) => (b.text ?? "").trim());
+  if (texts.length === 0) return false;
+  return texts.every((t) =>
+    t.startsWith("<local-command-caveat>") ||
+    t.startsWith("<local-command-stdout>") ||
+    t.startsWith("<command-name>"),
+  );
+}
+
 export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
   const groups: MessageGroup[] = [];
   for (const entry of entries) {
+    if (isLocalCommandEntry(entry)) continue;
     if (entry.type === "compaction") {
       groups.push({ type: "compaction", entries: [entry] });
       continue;
