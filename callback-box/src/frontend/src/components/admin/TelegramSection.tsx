@@ -137,7 +137,6 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
           </div>
 
           <Button
-            type="button"
             intent="secondary"
             onClick={handleDisconnect}
             loading={disconnecting}
@@ -174,7 +173,6 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
               className="flex-1"
             />
             <Button
-              type="button"
               intent="primary"
               onClick={handleConnect}
               disabled={!botToken.trim()}

@@ -81,7 +81,6 @@ function TriggerButton({ name, enabled }: { name: string; enabled: boolean }) {
 
   return (
     <Button
-      type="button"
       intent="secondary"
       size="sm"
       onClick={() => mutation.mutate({ name })}

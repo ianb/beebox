@@ -90,13 +90,13 @@ export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2">
-        <Button type="button" intent="success" size="sm" onClick={() => onAction("create-memo")}>
+        <Button intent="success" size="sm" onClick={() => onAction("create-memo")}>
           + Memo
         </Button>
-        <Button type="button" intent="secondary" size="sm" onClick={() => onAction("wakeup")}>
+        <Button intent="secondary" size="sm" onClick={() => onAction("wakeup")}>
           <span className="font-mono">wakeup</span>
         </Button>
-        <Button type="button" intent="secondary" size="sm" onClick={() => onAction("sync")}>
+        <Button intent="secondary" size="sm" onClick={() => onAction("sync")}>
           <span className="font-mono">sync</span>
         </Button>
       </div>

@@ -180,7 +180,6 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
 
           <div className="flex gap-3">
             <Button
-              type="button"
               intent="secondary"
               onClick={handleAuthorize}
               loading={connecting}
@@ -189,7 +188,6 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
               Re-authorize
             </Button>
             <Button
-              type="button"
               intent="secondary"
               onClick={handleDisconnect}
               loading={disconnecting}
@@ -201,7 +199,6 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
         </>
       ) : (
         <Button
-          type="button"
           intent="primary"
           onClick={handleAuthorize}
           loading={connecting}

@@ -29,7 +29,7 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
 
       <div className="flex flex-col items-center gap-4">
         {state === "idle" && (
-          <Button type="button" intent="primary" icon={<MicrophoneIcon />} onClick={startRecording}>
+          <Button intent="primary" icon={<MicrophoneIcon />} onClick={startRecording}>
             Start Recording
           </Button>
         )}
@@ -40,7 +40,7 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
               <RecordingIndicator />
               <span className="text-lg font-mono">{formatDuration(duration)}</span>
             </div>
-            <Button type="button" intent="destructive" icon={<StopIcon />} onClick={stopRecording}>
+            <Button intent="destructive" icon={<StopIcon />} onClick={stopRecording}>
               Stop Recording
             </Button>
           </>

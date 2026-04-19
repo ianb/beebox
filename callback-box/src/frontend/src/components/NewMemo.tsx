@@ -203,7 +203,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
           <span className="text-sm text-warm-700">Voice Recording</span>
 
           {recordingState === "idle" && !audioBlob && (
-            <Button type="button" intent="secondary" size="sm" icon={<MicIcon />} onClick={startRecording} disabled={uploading}>
+            <Button intent="secondary" size="sm" icon={<MicIcon />} onClick={startRecording} disabled={uploading}>
               Record
             </Button>
           )}
@@ -215,7 +215,7 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-danger" />
               </span>
               <span className="text-sm font-mono">{formatDuration(duration)}</span>
-              <Button type="button" intent="destructive" size="sm" onClick={stopRecording}>Stop</Button>
+              <Button intent="destructive" size="sm" onClick={stopRecording}>Stop</Button>
             </div>
           )}
 
@@ -238,7 +238,6 @@ export function NewMemo({ onSubmit, onClose }: NewMemoProps) {
       {/* Submit button */}
       <div className="flex gap-2">
         <Button
-          type="button"
           intent="primary"
           size="sm"
           fullWidth

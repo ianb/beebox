@@ -259,7 +259,6 @@ export function SharePage() {
           ) : null}
 
           <Button
-            type="button"
             intent="primary"
             fullWidth
             onClick={handleSave}

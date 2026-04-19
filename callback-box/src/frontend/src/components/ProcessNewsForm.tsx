@@ -100,7 +100,7 @@ export function ProcessNewsForm({
 
       {/* Submit */}
       <div className="flex gap-2">
-        <Button type="button" intent="primary" fullWidth size="sm" onClick={handleSubmit} className="flex-1">
+        <Button intent="primary" fullWidth size="sm" onClick={handleSubmit} className="flex-1">
           <span className="font-mono">
             cb process-news
             {phase === "triage" && " --triage-only"}

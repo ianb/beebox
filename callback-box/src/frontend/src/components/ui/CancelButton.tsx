@@ -12,7 +12,7 @@ export interface CancelButtonProps {
 
 export function CancelButton({ onClick, children = "Cancel", disabled = false, size = "md", className }: CancelButtonProps) {
   return (
-    <Button type="button" intent="secondary" size={size} disabled={disabled} onClick={onClick} className={className}>
+    <Button intent="secondary" size={size} disabled={disabled} onClick={onClick} className={className}>
       {children}
     </Button>
   );

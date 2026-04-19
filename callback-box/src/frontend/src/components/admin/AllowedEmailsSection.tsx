@@ -124,7 +124,6 @@ export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
           className="flex-1"
         />
         <Button
-          type="button"
           intent="primary"
           onClick={handleAdd}
           disabled={!newEmail.trim().includes("@")}

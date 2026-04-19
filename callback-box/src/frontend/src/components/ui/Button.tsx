@@ -24,8 +24,8 @@ type NativeButtonPassThrough = Omit<
 >;
 
 interface CommonButtonProps extends NativeButtonPassThrough {
-  /** `"button"` is explicit to avoid accidental form submission. */
-  type: "button" | "submit" | "reset";
+  /** Defaults to `"button"`. Set to `"submit"` for a form's primary submit button. */
+  type?: "button" | "submit" | "reset";
   onClick?: (e: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
   intent?: ButtonIntent;
   shape?: ButtonShape;
@@ -136,6 +136,39 @@ function Spinner() {
   );
 }
 
+// ---------- content rendering ----------
+
+function renderContent({
+  flashing,
+  flash,
+  loading,
+  loadingLabel,
+  elapsed,
+  iconOnly,
+  icon,
+  children,
+}: {
+  flashing: boolean;
+  flash: FlashSpec | undefined;
+  loading: boolean;
+  loadingLabel: ReactNode | ((s: number) => ReactNode) | undefined;
+  elapsed: number;
+  iconOnly: boolean;
+  icon: ReactNode | undefined;
+  children: ReactNode | undefined;
+}): ReactNode {
+  if (flashing && flash !== undefined) {
+    return <span>{flash.label}</span>;
+  }
+  if (loading) {
+    const resolved = typeof loadingLabel === "function" ? loadingLabel(elapsed) : loadingLabel;
+    const trailing = resolved !== undefined ? <span>{resolved}</span> : children !== undefined ? <span>{children}</span> : null;
+    return <><Spinner />{trailing}</>;
+  }
+  if (iconOnly) return icon;
+  return <>{icon !== undefined ? icon : null}<span>{children}</span></>;
+}
+
 // ---------- hooks ----------
 
 function useElapsedSeconds(active: boolean): number {
@@ -174,7 +207,7 @@ function useFlashState(): { flashing: boolean; triggerFlash: (duration: number) 
 
 export function Button(props: ButtonProps) {
   const {
-    type,
+    type = "button",
     onClick,
     intent = "secondary",
     shape = "rect",
@@ -216,28 +249,16 @@ export function Button(props: ButtonProps) {
     }
   };
 
-  // Content rendering
-  let content: ReactNode;
-  if (flashing && flash !== undefined) {
-    content = <span>{flash.label}</span>;
-  } else if (loading) {
-    const resolvedLoading = typeof loadingLabel === "function" ? loadingLabel(elapsed) : loadingLabel;
-    content = (
-      <>
-        <Spinner />
-        {resolvedLoading !== undefined ? <span>{resolvedLoading}</span> : children !== undefined ? <span>{children}</span> : null}
-      </>
-    );
-  } else if (iconOnly) {
-    content = icon;
-  } else {
-    content = (
-      <>
-        {icon !== undefined ? icon : null}
-        <span>{children}</span>
-      </>
-    );
-  }
+  const content = renderContent({
+    flashing,
+    flash,
+    loading,
+    loadingLabel,
+    elapsed,
+    iconOnly,
+    icon,
+    children,
+  });
 
   const ariaLabel = label !== undefined ? label : undefined;
   const titleFallback = iconOnly && label !== undefined ? label : undefined;

@@ -77,7 +77,6 @@ export function ClaudeCodeSection() {
       <div className="flex gap-3">
         {!status?.loggedIn ? (
           <Button
-            type="button"
             intent="primary"
             onClick={() => send({ type: "LOGIN" })}
             disabled={!isIdle}
@@ -89,7 +88,6 @@ export function ClaudeCodeSection() {
         ) : null}
         {status?.loggedIn ? (
           <Button
-            type="button"
             intent="secondary"
             onClick={() => send({ type: "LOGOUT" })}
             loading={isLoggingOut}
@@ -99,7 +97,6 @@ export function ClaudeCodeSection() {
           </Button>
         ) : null}
         <Button
-          type="button"
           intent="ghost"
           onClick={() => send({ type: "REFRESH" })}
           disabled={isLoading}
