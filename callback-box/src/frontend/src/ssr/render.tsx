@@ -35,6 +35,7 @@ import {
 import { ChatSession } from "../../../core/chat-session.js";
 import type { TrpcContext } from "../../../webapp/trpc/context.js";
 import type { Services } from "../../../services/index.js";
+import { ActivityChatSessionPool, createBuiltinRegistry } from "../../../activities/index.js";
 
 // --- Argument parsing ---
 
@@ -184,6 +185,8 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {} as Services,
     chatSession: new ChatSession(boxRoot),
+    activityRegistry: createBuiltinRegistry(),
+    activityChatPool: new ActivityChatSessionPool(createBuiltinRegistry()),
   };
 
   const caller = appRouter.createCaller(ctx);

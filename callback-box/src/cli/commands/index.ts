@@ -42,3 +42,4 @@ export { formatCommand } from "./format.js";
 export { usageCommand } from "./usage.js";
 export { driveCommand } from "./drive.js";
 export { chatCommand } from "./chat.js";
+export { activityCommand } from "./activity.js";

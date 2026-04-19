@@ -49,6 +49,7 @@ import {
   usageCommand,
   driveCommand,
   chatCommand,
+  activityCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -100,6 +101,7 @@ program.addCommand(renderCommand);
 program.addCommand(formatCommand);
 program.addCommand(usageCommand);
 program.addCommand(chatCommand);
+program.addCommand(activityCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)

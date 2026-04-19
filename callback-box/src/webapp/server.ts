@@ -14,6 +14,8 @@ import * as fs from "node:fs";
 import { registerApiRoutes } from "./routes/api.js";
 import { registerSseRoutes } from "./routes/sse.js";
 import { createEventBus } from "../core/event-bus.js";
+import type { ActivityRegistry } from "../activities/index.js";
+import { ActivityChatSessionPool, createBuiltinRegistry } from "../activities/index.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerBriefRoutes } from "./routes/briefs.js";
@@ -52,6 +54,10 @@ export interface ServerOptions {
   boxRoot?: string | undefined;
   /** External service implementations — pass fakes in tests */
   services?: Services | undefined;
+  /** Activity registry — defaults to createBuiltinRegistry(). Tests pass a custom one. */
+  activityRegistry?: ActivityRegistry | undefined;
+  /** Pool of activity chat sessions — defaults to a fresh pool backed by the activity registry. */
+  activityChatPool?: ActivityChatSessionPool | undefined;
 }
 
 export interface ServerContext {
@@ -224,6 +230,9 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       }
 
       const chatSession = new ChatSession(box.boxRoot);
+      const activityRegistry = options.activityRegistry ?? createBuiltinRegistry();
+      const activityChatPool =
+        options.activityChatPool ?? new ActivityChatSessionPool(activityRegistry, { eventBus });
 
       // Register SSE route (subscribes clients to EventBus)
       await registerSseRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
@@ -239,6 +248,8 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
             eventBus,
             services: options.services ?? {},
             chatSession,
+            activityRegistry,
+            activityChatPool,
           }),
         },
       });

@@ -6,11 +6,11 @@
  * process alive between messages, and resumes sessions across restarts.
  */
 
-import type { ChildProcess } from "node:child_process";
-import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import * as readline from "node:readline";
 import * as fs from "node:fs";
+import { writeFile } from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import {
   getSessionLogPath,
@@ -20,11 +20,16 @@ import {
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { generateDocs } from "./generate-docs.js";
 import { buildScriptEnv } from "./script-env.js";
+import type { MCPServerConfig } from "../activities/index.js";
+import {
+  createClaudeChatSpawner,
+  type ClaudeChatProcess,
+  type ClaudeChatSpawner,
+} from "../services/claude-chat.js";
 
-// Path to the cb-claude wrapper that auto-adds plugins
+// Path to the cb-claude wrapper binary — used to extend PATH for subprocess tools.
 const __dirname = import.meta.dirname;
 const binDir = path.resolve(__dirname, "../../bin");
-const cbClaudePath = path.join(binDir, "cb-claude");
 
 /**
  * Content block in a Claude stream-json message.
@@ -70,7 +75,37 @@ export interface ChatMessage {
   num_turns?: number;
 }
 
-const SESSION_FILE = ".callback-box/chat-session-id.json";
+const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
+
+/**
+ * Configurable knobs for a ChatSession. All fields are optional — the
+ * defaults match the pre-existing "main chat" behavior.
+ *
+ * Activity sessions pass overrides for `systemPrompt` (base + mode prompt),
+ * `mcpConfig` (tools), `sessionFile` (per-instance pointer), `extraEnv`
+ * (CB_ACTIVITY_*), and `onSessionIdAssigned` (per-session bookkeeping).
+ */
+export interface ChatSessionOptions {
+  /** Resolves the system prompt at process-start. Default: CHAT_SYSTEM_PROMPT + tzContext. */
+  systemPrompt?: (boxRoot: string) => Promise<string>;
+  /** MCP server config. When set, written to a temp JSON file and passed via --mcp-config. */
+  mcpConfig?: MCPServerConfig | null;
+  /** Path to the current-session-id pointer, relative to boxRoot. Default: .callback-box/chat-session-id.json. */
+  sessionFile?: string;
+  /** Extra env vars merged into the Claude subprocess env. */
+  extraEnv?: Record<string, string>;
+  /** Called once when Claude assigns a new session ID. Used for per-session bookkeeping. */
+  onSessionIdAssigned?: (sessionId: string) => Promise<void> | void;
+  /** Injectable spawner — real by default; tests inject the fake. */
+  spawner?: ClaudeChatSpawner;
+  /**
+   * Skip the `generateDocs` bootstrap step inside `startProcess`. Useful in
+   * tests where the box isn't a fully-initialized callback-box, and in
+   * activity sessions where the host box's docs aren't relevant to the
+   * mode. Defaults to false (main chat behavior).
+   */
+  skipBootstrap?: boolean;
+}
 
 export const CHAT_SYSTEM_PROMPT = `You are in CALLBACK_BOX_CHAT_MODE.
 
@@ -277,16 +312,23 @@ export function buildContentBlocks(
 }
 
 export class ChatSession extends EventEmitter {
-  private proc: ChildProcess | null = null;
+  private proc: ClaudeChatProcess | null = null;
   private sessionId: string | null = null;
   private boxRoot: string;
   private busy = false;
   private turnText = "";
   private messageQueue: ChatSendInput[] = [];
+  private readonly options: ChatSessionOptions;
+  private readonly sessionFile: string;
+  private readonly spawner: ClaudeChatSpawner;
+  private mcpConfigPath: string | null = null;
 
-  constructor(boxRoot: string) {
+  constructor(boxRoot: string, options: ChatSessionOptions = {}) {
     super();
     this.boxRoot = boxRoot;
+    this.options = options;
+    this.sessionFile = options.sessionFile ?? DEFAULT_SESSION_FILE;
+    this.spawner = options.spawner ?? createClaudeChatSpawner();
     this.sessionId = this.loadSessionId();
     if (this.sessionId) {
       log("init", `Loaded session: ${this.sessionId}`);
@@ -296,7 +338,7 @@ export class ChatSession extends EventEmitter {
   }
 
   private loadSessionId(): string | null {
-    const filePath = path.join(this.boxRoot, SESSION_FILE);
+    const filePath = path.join(this.boxRoot, this.sessionFile);
     try {
       if (fs.existsSync(filePath)) {
         const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as {
@@ -311,7 +353,7 @@ export class ChatSession extends EventEmitter {
   }
 
   private saveSessionId(sessionId: string): void {
-    const filePath = path.join(this.boxRoot, SESSION_FILE);
+    const filePath = path.join(this.boxRoot, this.sessionFile);
     const dir = path.dirname(filePath);
     try {
       if (!fs.existsSync(dir)) {
@@ -331,6 +373,47 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
+   * Resolve the system prompt for a new subprocess. Uses the options override
+   * if provided; otherwise falls back to the main-chat default
+   * (CHAT_SYSTEM_PROMPT + tzContext).
+   */
+  private async resolveSystemPrompt(): Promise<string> {
+    if (this.options.systemPrompt !== undefined) {
+      return this.options.systemPrompt(this.boxRoot);
+    }
+    const tzContext = await buildTimezoneContext(this.boxRoot);
+    return CHAT_SYSTEM_PROMPT + tzContext;
+  }
+
+  /**
+   * Write the mcpConfig option to a temp JSON file so it can be passed to
+   * claude via --mcp-config. Returns the path, or null if no config set.
+   * Caller is responsible for cleanup via cleanupMcpConfigFile().
+   */
+  private async writeMcpConfigFile(): Promise<string | null> {
+    const cfg = this.options.mcpConfig;
+    if (!cfg) return null;
+    const file = path.join(os.tmpdir(), `cb-mcp-${process.pid}-${Date.now()}.json`);
+    const contents = {
+      mcpServers: {
+        "cb-activity": { command: cfg.command, args: cfg.args, env: cfg.env },
+      },
+    };
+    await writeFile(file, JSON.stringify(contents, null, 2));
+    return file;
+  }
+
+  private cleanupMcpConfigFile(): void {
+    if (this.mcpConfigPath === null) return;
+    try {
+      fs.unlinkSync(this.mcpConfigPath);
+    } catch (_e) {
+      // Best-effort cleanup; temp file will get swept by the OS eventually.
+    }
+    this.mcpConfigPath = null;
+  }
+
+  /**
    * Spawn the claude process with stream-json mode.
    */
   private async startProcess(): Promise<void> {
@@ -340,38 +423,30 @@ export class ChatSession extends EventEmitter {
     }
 
     // Ensure agent docs are up to date (fast mtime-cached no-op if nothing changed)
-    await generateDocs(this.boxRoot);
-
-    const tzContext = await buildTimezoneContext(this.boxRoot);
-    const systemPrompt = CHAT_SYSTEM_PROMPT + tzContext;
-
-    const args = [
-      "-p",
-      "--output-format",
-      "stream-json",
-      "--input-format",
-      "stream-json",
-      "--verbose",
-      "--dangerously-skip-permissions",
-      "--append-system-prompt",
-      systemPrompt,
-    ];
-
-    if (this.sessionId) {
-      args.push("--resume", this.sessionId);
+    if (this.options.skipBootstrap !== true) {
+      await generateDocs(this.boxRoot);
     }
+
+    const systemPrompt = await this.resolveSystemPrompt();
+    this.mcpConfigPath = await this.writeMcpConfigFile();
 
     log("start", "Spawning cb-claude with stream-json mode");
 
-    const env = await buildScriptEnv(this.boxRoot, {
+    const baseEnv = await buildScriptEnv(this.boxRoot, {
       PATH: `${binDir}:${process.env.PATH ?? ""}`,
       CLAUDECODE: undefined,
     });
+    const env: Record<string, string | undefined> = {
+      ...baseEnv,
+      ...(this.options.extraEnv ?? {}),
+    };
 
-    this.proc = spawn(cbClaudePath, args, {
+    this.proc = this.spawner.spawn({
       cwd: this.boxRoot,
+      systemPrompt,
+      sessionIdToResume: this.sessionId ?? undefined,
+      mcpConfigPath: this.mcpConfigPath ?? undefined,
       env,
-      stdio: ["pipe", "pipe", "pipe"],
     });
 
     log("start", `Process spawned with PID: ${this.proc.pid}`);
@@ -410,6 +485,7 @@ export class ChatSession extends EventEmitter {
       log("close", `Process exited with code: ${code}`);
       this.proc = null;
       this.busy = false;
+      this.cleanupMcpConfigFile();
       this.emit("close", code);
     });
 
@@ -417,6 +493,7 @@ export class ChatSession extends EventEmitter {
       log("error", `Process error: ${err.message}`);
       this.proc = null;
       this.busy = false;
+      this.cleanupMcpConfigFile();
       this.emit("error", err);
     });
   }
@@ -427,6 +504,11 @@ export class ChatSession extends EventEmitter {
       this.sessionId = msg.session_id;
       log("session", `Got session ID: ${this.sessionId}`);
       this.saveSessionId(this.sessionId);
+      if (this.options.onSessionIdAssigned !== undefined) {
+        void Promise.resolve(this.options.onSessionIdAssigned(this.sessionId)).catch((e: unknown) => {
+          log("session", `onSessionIdAssigned error: ${e instanceof Error ? e.message : String(e)}`);
+        });
+      }
     }
 
     // Accumulate assistant text for schedule parsing
@@ -635,7 +717,7 @@ export class ChatSession extends EventEmitter {
     log("reset", "Resetting session");
     this.stop();
     this.sessionId = null;
-    const filePath = path.join(this.boxRoot, SESSION_FILE);
+    const filePath = path.join(this.boxRoot, this.sessionFile);
     try {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
