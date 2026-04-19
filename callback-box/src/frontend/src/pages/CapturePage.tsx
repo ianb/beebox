@@ -14,6 +14,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChunkedRecorder } from "../lib/recorder";
 import { CameraCapture } from "../lib/camera";
 import { getApiBase } from "../api";
+import { sanitizeFilename } from "../../../lib/filename";
 import { CaptureShell } from "../components/capture/CaptureShell";
 import { StatusBar } from "../components/capture/StatusBar";
 import { DeviceSettings } from "../components/capture/DeviceSettings";
@@ -395,8 +396,7 @@ export function CapturePage() {
 
   const uploadFile = useCallback(
     ({ sessionId: sid, index, file }: { sessionId: string; index: number; file: File }) => {
-      const sanitized = file.name.replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "");
-      const safeName = sanitized || "upload";
+      const safeName = sanitizeFilename(file.name, { fallback: "upload" });
       const filename = `file-${String(index + 1).padStart(3, "0")}-${safeName}`;
       const startedAt = new Date().toISOString();
       setFileStates((prev) => { const next = [...prev]; next[index] = "uploading"; return next; });

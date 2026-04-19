@@ -16,6 +16,16 @@ safeFilename("Meeting Notes (2026)")
 => Meeting_Notes_2026
 ```
 
+Leading and trailing underscores are stripped (e.g. `Tax Documents (2)` would otherwise end in `_` after the `)` becomes blank):
+
+```
+safeFilename("Tax Documents (2)")
+=> Tax_Documents_2
+
+safeFilename("  leading spaces")
+=> leading_spaces
+```
+
 Hyphens are preserved:
 
 ```

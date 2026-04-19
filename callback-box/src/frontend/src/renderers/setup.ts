@@ -5,6 +5,7 @@
 
 import "./builtins";
 import "./image";
+import "./pdf";
 import "./recipe";
 import "./sheet";
 import "./markdown";

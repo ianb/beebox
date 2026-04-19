@@ -18,18 +18,17 @@ import {
 } from "../schemas/chat-thread.js";
 import { createChatJobTemplate } from "../schemas/chat-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
+import { sanitizeFilenameStem } from "../lib/filename.js";
 
 /**
- * Safe filename: sanitize for platform safety, strip non-alphanumeric
- * (except spaces and hyphens), replace spaces with underscores, max 50 chars.
+ * Safe filename stem for a display name/title. Runs through the
+ * OS-forbidden-char pass from `sanitize-filename` before applying our
+ * shared {@link sanitizeFilenameStem}. Does NOT preserve file extensions —
+ * callers that need to keep `.pdf` etc should use
+ * {@link sanitizeFilename} from `src/lib/filename.ts` instead.
  */
 export function safeFilename(text: string, fallback = "untitled"): string {
-  return (
-    sanitize(text)
-      .replace(/[^\d\sA-Za-z-]/g, "")
-      .replace(/\s+/g, "_")
-      .slice(0, 50) || fallback
-  );
+  return sanitizeFilenameStem(sanitize(text), { fallback });
 }
 
 /**
