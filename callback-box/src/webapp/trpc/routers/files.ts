@@ -19,10 +19,23 @@ import type { FileSummary, LoaderInput } from "../../../core/file-summary.js";
 registerBuiltinLoaders();
 
 /**
+ * Normalize a client-supplied path to box-relative, or return null if the
+ * path is absolute and lives outside the box.
+ */
+function normalizePath(boxRoot: string, raw: string): string | null {
+  if (!path.isAbsolute(raw)) return raw;
+  const relative = path.relative(boxRoot, raw);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) return null;
+  return relative;
+}
+
+/**
  * Produce a summary for one path. Errors (missing file, parse failure) are
  * swallowed into a best-effort fallback so one bad file doesn't break the batch.
  */
-async function summarizePath(boxRoot: string, relPath: string): Promise<FileSummary<unknown>> {
+async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSummary<unknown> | null> {
+  const relPath = normalizePath(boxRoot, inputPath);
+  if (relPath === null) return null;
   const fullPath = path.join(boxRoot, relPath);
   const input: LoaderInput = { path: relPath };
 
@@ -54,9 +67,9 @@ export const filesRouter = router({
     .query(async ({ input, ctx }) => {
       const unique = Array.from(new Set(input.paths));
       const results = await Promise.all(
-        unique.map(p => summarizePath(ctx.boxRoot, p)),
+        unique.map(async p => [p, await summarizePath(ctx.boxRoot, p)] as const),
       );
-      const byPath = new Map(results.map(r => [r.path, r]));
-      return input.paths.map(p => byPath.get(p)!);
+      const byInput = new Map(results);
+      return input.paths.map(p => byInput.get(p) ?? null);
     }),
 });

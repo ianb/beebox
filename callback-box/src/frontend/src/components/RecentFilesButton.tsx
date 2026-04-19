@@ -52,7 +52,7 @@ export function RecentFilesButton({ entries, onPanel }: RecentFilesButtonProps) 
           />
           <div
             role="menu"
-            className="absolute top-full right-0 mt-1 w-[min(24rem,calc(100vw-2rem))] max-h-[70vh] overflow-auto bg-white rounded-lg shadow-lg border border-warm-200 z-50 text-sm"
+            className="absolute top-full right-0 mt-1 w-[min(40rem,calc(100vw-2rem))] max-h-[70vh] overflow-auto bg-white rounded-lg shadow-lg border border-warm-200 z-50 text-sm"
           >
             <div className="px-3 py-2 border-b border-warm-200 text-xs text-warm-500 font-medium uppercase tracking-wide">
               Recent files

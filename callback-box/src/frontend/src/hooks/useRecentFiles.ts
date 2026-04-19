@@ -34,7 +34,7 @@ function extractFromText(text: string, out: string[]): void {
 function extractFromToolInput(input: Record<string, unknown>, out: string[]): void {
   for (const key of TOOL_PATH_KEYS) {
     const v = input[key];
-    if (typeof v === "string" && v.length > 0 && !v.startsWith("/")) {
+    if (typeof v === "string" && v.length > 0) {
       out.push(v);
     }
   }
@@ -101,7 +101,13 @@ export function useRecentFiles(entries: SessionEntry[]): {
   const files = useMemo<RecentFile[]>(() => {
     const results = query.data;
     if (!results) return paths.map(p => ({ path: p, summary: null }));
-    return paths.map((p, i) => ({ path: p, summary: results[i] ?? null }));
+    const out: RecentFile[] = [];
+    for (const [i, p] of paths.entries()) {
+      const summary = results[i];
+      if (summary === null || summary === undefined) continue;
+      out.push({ path: p, summary });
+    }
+    return out;
   }, [paths, query.data]);
 
   return { paths, files, isLoading: query.isLoading };

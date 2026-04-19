@@ -83,12 +83,12 @@ function PageIcon() {
 
 function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact: boolean }) {
   return (
-    <div className="flex min-w-0 items-baseline gap-2">
-      <span className="truncate text-warm-800 font-medium">{data.title}</span>
+    <div className="min-w-0">
+      <div className="truncate text-warm-800 font-medium">{data.title}</div>
       {compact ? null : (
-        <span className="truncate text-xs text-warm-500" title={data.path}>
+        <div className="truncate text-xs text-warm-500" title={data.path}>
           {data.path}
-        </span>
+        </div>
       )}
     </div>
   );
