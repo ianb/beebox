@@ -76,6 +76,7 @@ export interface ChatMessage {
 }
 
 const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
+const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 
 /**
  * Configurable knobs for a ChatSession. All fields are optional — the
@@ -92,6 +93,8 @@ export interface ChatSessionOptions {
   mcpConfig?: MCPServerConfig | null;
   /** Path to the current-session-id pointer, relative to boxRoot. Default: .callback-box/chat-session-id.json. */
   sessionFile?: string;
+  /** Path to the current-model pointer, relative to boxRoot. Default: .callback-box/chat-model.json. */
+  modelFile?: string;
   /** Extra env vars merged into the Claude subprocess env. */
   extraEnv?: Record<string, string>;
   /** Called once when Claude assigns a new session ID. Used for per-session bookkeeping. */
@@ -320,20 +323,63 @@ export class ChatSession extends EventEmitter {
   private messageQueue: ChatSendInput[] = [];
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string;
+  private readonly modelFile: string;
   private readonly spawner: ClaudeChatSpawner;
   private mcpConfigPath: string | null = null;
+  private currentModel: string | null = null;
+  private controlRequestCounter = 0;
 
   constructor(boxRoot: string, options: ChatSessionOptions = {}) {
     super();
     this.boxRoot = boxRoot;
     this.options = options;
     this.sessionFile = options.sessionFile ?? DEFAULT_SESSION_FILE;
+    this.modelFile = options.modelFile ?? DEFAULT_MODEL_FILE;
     this.spawner = options.spawner ?? createClaudeChatSpawner();
     this.sessionId = this.loadSessionId();
+    this.currentModel = this.loadCurrentModel();
     if (this.sessionId) {
       log("init", `Loaded session: ${this.sessionId}`);
     } else {
       log("init", "No saved session, will create on first message");
+    }
+    if (this.currentModel) {
+      log("init", `Loaded model override: ${this.currentModel}`);
+    }
+  }
+
+  private loadCurrentModel(): string | null {
+    const filePath = path.join(this.boxRoot, this.modelFile);
+    try {
+      if (fs.existsSync(filePath)) {
+        const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as {
+          model: string | null;
+        };
+        return data.model ?? null;
+      }
+    } catch (e) {
+      log("model", `Failed to load model file: ${e}`);
+    }
+    return null;
+  }
+
+  private saveCurrentModel(model: string | null): void {
+    const filePath = path.join(this.boxRoot, this.modelFile);
+    const dir = path.dirname(filePath);
+    try {
+      if (model === null) {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        return;
+      }
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify({ model, savedAt: new Date().toISOString() })
+      );
+    } catch (e) {
+      log("model", `Failed to save model file: ${e}`);
     }
   }
 
@@ -446,6 +492,7 @@ export class ChatSession extends EventEmitter {
       systemPrompt,
       sessionIdToResume: this.sessionId ?? undefined,
       mcpConfigPath: this.mcpConfigPath ?? undefined,
+      model: this.currentModel ?? undefined,
       env,
     });
 
@@ -647,6 +694,34 @@ export class ChatSession extends EventEmitter {
     });
 
     log("interrupt", "Sending interrupt");
+    this.proc.stdin.write(controlRequest + "\n");
+  }
+
+  /**
+   * Set the model for this chat session. Pass `null` to reset to the CLI default.
+   * Stores the selection so it's re-applied after process restarts/session init.
+   */
+  setModel(model: string | null): void {
+    this.currentModel = model;
+    this.saveCurrentModel(model);
+    if (this.proc && this.proc.stdin) {
+      this.writeSetModelControl(model);
+    }
+  }
+
+  getCurrentModel(): string | null {
+    return this.currentModel;
+  }
+
+  private writeSetModelControl(model: string | null): void {
+    if (!this.proc || !this.proc.stdin) return;
+    this.controlRequestCounter += 1;
+    const controlRequest = JSON.stringify({
+      type: "control_request",
+      request_id: `set_model_${this.controlRequestCounter}_${Date.now()}`,
+      request: { subtype: "set_model", model },
+    });
+    log("set_model", `Sending set_model: ${model ?? "<default>"}`);
     this.proc.stdin.write(controlRequest + "\n");
   }
 

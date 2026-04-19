@@ -249,8 +249,15 @@ export async function executeCommand(
 
 // --- Chat API (SSE streaming — can't use tRPC) ---
 
-export async function getChatStatus(): Promise<{ sessionId: string | null; running: boolean; busy: boolean }> {
+export async function getChatStatus(): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
   return fetchJson(`${getApiBase()}/chat/status`);
+}
+
+export async function setChatModel(model: string | null): Promise<{ ok: boolean; model: string | null }> {
+  return fetchJson(`${getApiBase()}/chat/set-model`, {
+    method: "POST",
+    body: JSON.stringify({ model }),
+  });
 }
 
 export async function getChatHistory(params?: { sessionId?: string; tail?: number; offset?: number; limit?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {

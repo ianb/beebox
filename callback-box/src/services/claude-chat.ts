@@ -29,6 +29,8 @@ export interface ClaudeChatSpawnOptions {
   sessionIdToResume?: string | undefined;
   /** If set, passed via --mcp-config as the path to a JSON config file. */
   mcpConfigPath?: string | undefined;
+  /** If set, passed via --model to pin the subprocess to that model. */
+  model?: string | undefined;
   /** Full env var map for the subprocess (caller builds it). Keys with undefined values are dropped. */
   env: Record<string, string | undefined>;
 }
@@ -72,6 +74,9 @@ export function createClaudeChatSpawner(): ClaudeChatSpawner {
       }
       if (opts.mcpConfigPath !== undefined) {
         args.push("--mcp-config", opts.mcpConfigPath);
+      }
+      if (opts.model !== undefined) {
+        args.push("--model", opts.model);
       }
       return nodeSpawn(cbClaudePath, args, {
         cwd: opts.cwd,

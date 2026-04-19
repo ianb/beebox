@@ -204,8 +204,13 @@ export async function registerChatRoutes(
       // Identify the sender from the session (may be null if auth is disabled)
       const user = getSessionUser(request);
 
+      // Slash commands (e.g. /compact) are parsed by the claude CLI when they
+      // appear at the very start of the user text — any prefix/suffix would
+      // break detection, so skip user-attr and pending-schedules injection.
+      const isSlashCommand = message.startsWith("/");
+
       // Inject user attribution into the message
-      const attributed = user ? injectUserAttr(message, user) : message;
+      const attributed = user && !isSlashCommand ? injectUserAttr(message, user) : message;
 
       // Broadcast the user message to other clients via SSE
       eventBus.emit("chat-user-message", {
@@ -236,8 +241,9 @@ export async function registerChatRoutes(
         return;
       }
 
-      // Append active schedule info so the agent knows what's pending
-      const pendingInfo = scheduleManager.formatPendingForPrompt();
+      // Append active schedule info so the agent knows what's pending.
+      // Skip for slash commands so they remain at the start of the text.
+      const pendingInfo = isSlashCommand ? "" : scheduleManager.formatPendingForPrompt();
       const fullMessage = pendingInfo
         ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
         : attributed;
@@ -479,8 +485,19 @@ export async function registerChatRoutes(
       sessionId: chatSession.getSessionId(),
       running: chatSession.isRunning(),
       busy: chatSession.isBusy(),
+      model: chatSession.getCurrentModel(),
     };
   });
+
+  // POST /api/chat/set-model - Switch the model used for this chat session
+  server.post<{ Body: { model: string | null } }>(
+    "/api/chat/set-model",
+    async (request) => {
+      const { model } = request.body;
+      chatSession.setModel(model);
+      return { ok: true, model: chatSession.getCurrentModel() };
+    }
+  );
 
   // GET /api/chat/schedules - List active schedules
   server.get("/api/chat/schedules", async () => {
