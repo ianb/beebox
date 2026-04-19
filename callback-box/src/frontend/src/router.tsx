@@ -101,16 +101,26 @@ const browseRoute = createRoute({
   component: BrowsePageWrapper,
 });
 
+const historySearchSchema = z.object({
+  connector: z.array(z.string()).optional(),
+  workflow: z.array(z.string()).optional(),
+  touchpoint: z.boolean().optional(),
+  feedback: z.boolean().optional(),
+  session: z.string().optional(),
+});
+
 const historyRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/history",
   component: HistoryPage,
+  validateSearch: historySearchSchema,
 });
 
 const historyDetailRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/history/$hash",
   component: HistoryPage,
+  validateSearch: historySearchSchema,
 });
 
 const captureRoute = createRoute({

@@ -1,5 +1,5 @@
-import { useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { ImageLightbox } from "../ImageLightbox";
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 
 const SIZE_CLASSES = {
@@ -79,18 +79,23 @@ interface ImgElementProps {
   bordered: boolean;
   rotationStyle: CSSProperties | undefined;
   title: string | undefined;
-  onActivate: (() => void) | null;
+  onActivate: ((element: HTMLImageElement) => void) | null;
   onError: () => void;
   lightbox: boolean;
+  lightboxCaption: string | undefined;
+  imgRef: React.RefObject<HTMLImageElement>;
   extraClass?: string;
 }
 
-function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, lightbox, extraClass }: ImgElementProps) {
+function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, lightbox, lightboxCaption, imgRef, extraClass }: ImgElementProps) {
   const interactive = onActivate !== null;
+  const handleClick = () => {
+    if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
+  };
   const handleKeyDown = (e: KeyboardEvent<HTMLImageElement>) => {
-    if (onActivate !== null && (e.key === "Enter" || e.key === " ")) {
+    if (onActivate !== null && (e.key === "Enter" || e.key === " ") && imgRef.current) {
       e.preventDefault();
-      onActivate();
+      onActivate(imgRef.current);
     }
   };
   const classes = cn(
@@ -103,17 +108,21 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
 
   return (
     <img
+      ref={imgRef}
       src={src}
       alt={alt}
       className={classes}
       style={rotationStyle}
-      onClick={onActivate !== null ? onActivate : undefined}
+      onClick={interactive ? handleClick : undefined}
       onKeyDown={interactive ? handleKeyDown : undefined}
       onError={onError}
       title={title}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
       aria-label={interactive && lightbox ? `${alt} (click to zoom)` : undefined}
+      data-image-src={lightbox ? src : undefined}
+      data-image-alt={lightbox ? alt : undefined}
+      data-image-caption={lightbox && lightboxCaption !== undefined ? lightboxCaption : undefined}
     />
   );
 }
@@ -201,7 +210,8 @@ export function Image(props: ImageProps) {
   const lightbox = props.lightbox === true;
   const externalOnClick = lightbox ? undefined : props.onClick;
 
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const lightboxCtx = useLightbox();
+  const imgRef = useRef<HTMLImageElement>(null);
   const [errorSrc, setErrorSrc] = useState<string | null>(null);
   const errored = errorSrc === src;
 
@@ -209,12 +219,14 @@ export function Image(props: ImageProps) {
     rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
   const isOrthogonal = rotation === 90 || rotation === 270;
 
-  const activate = errored
+  const lightboxCaption = typeof caption === "string" ? caption : undefined;
+
+  const activate: ((element: HTMLImageElement) => void) | null = errored
     ? null
     : lightbox
-      ? () => setLightboxOpen(true)
+      ? (element) => lightboxCtx.openFromElement(element)
       : externalOnClick !== undefined
-        ? externalOnClick
+        ? () => externalOnClick()
         : null;
 
   const effectiveTitle = title !== undefined ? title : lightbox && !errored ? "Click to zoom" : undefined;
@@ -238,24 +250,11 @@ export function Image(props: ImageProps) {
       onActivate={activate}
       onError={() => setErrorSrc(src)}
       lightbox={lightbox}
+      lightboxCaption={lightboxCaption}
+      imgRef={imgRef}
       extraClass={imgExtra}
     />
   );
 
-  const rendered = assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className });
-  const lightboxCaption = typeof caption === "string" ? caption : undefined;
-
-  return (
-    <>
-      {rendered}
-      {lightbox && lightboxOpen && !errored ? (
-        <ImageLightbox
-          src={src}
-          alt={alt}
-          caption={lightboxCaption}
-          onClose={() => setLightboxOpen(false)}
-        />
-      ) : null}
-    </>
-  );
+  return assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className });
 }

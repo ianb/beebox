@@ -19,6 +19,27 @@ interface CommitDetailProps {
   commit: HistoryCommit;
   /** If provided, renders a mobile-only back button at the top. Called when user dismisses. */
   onBack?: () => void;
+  /** Scope the surrounding history list to this commit's session. */
+  onFilterSession?: (sessionId: string) => void;
+  /** Add this connector value to the active connector filter. */
+  onFilterConnector?: (connector: string) => void;
+  /** Add this workflow value to the active workflow filter. */
+  onFilterWorkflow?: (workflow: string) => void;
+}
+
+const CONNECTOR_KEYS = [
+  "Pulled-By",
+  "Created-By",
+  "Fetched-By",
+  "Pushed-By",
+  "Sent-By",
+] as const;
+
+function trailerValues(
+  value: string | string[] | undefined
+): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 /**
@@ -255,9 +276,67 @@ function stripTrailers(body: string): string {
 
 // --- Tab content components ---
 
-function CommitTab({ commit, bodyText }: { commit: HistoryCommit; bodyText: string }) {
-  const phase = trailerString(commit.trailers?.Phase);
-  const triggeredBy = trailerString(commit.trailers?.["Triggered-By"]);
+interface TrailerChipProps {
+  label: string;
+  value: string;
+  onClick?: () => void;
+  title?: string;
+}
+
+function TrailerChip({ label, value, onClick, title }: TrailerChipProps) {
+  const base = "text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-1";
+  const display = label ? (
+    <>
+      <span className="text-warm-500">{label}:</span>
+      <span className="font-medium">{value}</span>
+    </>
+  ) : (
+    <span>{value}</span>
+  );
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        title={title}
+        className={`${base} bg-warm-100 text-warm-700 hover:bg-primary-50 hover:text-primary-dark transition-colors`}
+      >
+        {display}
+      </button>
+    );
+  }
+  return <span className={`${base} bg-warm-100 text-warm-700`}>{display}</span>;
+}
+
+interface CommitTabProps {
+  commit: HistoryCommit;
+  bodyText: string;
+  onFilterSession?: (sessionId: string) => void;
+  onFilterConnector?: (connector: string) => void;
+  onFilterWorkflow?: (workflow: string) => void;
+}
+
+function CommitTab({
+  commit,
+  bodyText,
+  onFilterSession,
+  onFilterConnector,
+  onFilterWorkflow,
+}: CommitTabProps) {
+  const trailers = commit.trailers;
+  const phase = trailerString(trailers?.Phase);
+  const triggeredBy = trailerString(trailers?.["Triggered-By"]);
+  const sessionId = trailerString(trailers?.Session);
+  const workflow = trailerString(trailers?.Workflow);
+
+  const connectorChips: { key: string; value: string }[] = [];
+  if (trailers) {
+    for (const key of CONNECTOR_KEYS) {
+      for (const value of trailerValues(trailers[key])) {
+        connectorChips.push({ key, value });
+      }
+    }
+  }
 
   return (
     <div className="p-4">
@@ -269,10 +348,37 @@ function CommitTab({ commit, bodyText }: { commit: HistoryCommit; bodyText: stri
           {new Date(commit.date).toLocaleString()}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}
-        {triggeredBy ? <span className="text-xs bg-warm-100 text-warm-700 px-1.5 py-0.5 rounded">
-            {triggeredBy}
-          </span> : null}
+        {triggeredBy ? <TrailerChip label="" value={triggeredBy} /> : null}
       </div>
+      {sessionId || workflow || connectorChips.length > 0 ? (
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+          {sessionId ? (
+            <TrailerChip
+              label="session"
+              value={`${sessionId.slice(0, 8)}…`}
+              title={onFilterSession ? `Show only this session (${sessionId})` : sessionId}
+              onClick={onFilterSession ? () => onFilterSession(sessionId) : undefined}
+            />
+          ) : null}
+          {workflow ? (
+            <TrailerChip
+              label="workflow"
+              value={workflow}
+              title={onFilterWorkflow ? `Filter to workflow "${workflow}"` : undefined}
+              onClick={onFilterWorkflow ? () => onFilterWorkflow(workflow) : undefined}
+            />
+          ) : null}
+          {connectorChips.map((c) => (
+            <TrailerChip
+              key={`${c.key}:${c.value}`}
+              label={c.key.replace("-By", "").toLowerCase()}
+              value={c.value}
+              title={onFilterConnector ? `Filter to connector "${c.value}"` : undefined}
+              onClick={onFilterConnector ? () => onFilterConnector(c.value) : undefined}
+            />
+          ))}
+        </div>
+      ) : null}
       <h2 className="font-medium text-warm-900">{commit.subject}</h2>
       {bodyText ? <div className="mt-2 prose prose-sm max-w-none text-warm-700">
           <Markdown>{bodyText}</Markdown>
@@ -423,7 +529,13 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 
 // --- Main component ---
 
-export function CommitDetail({ commit, onBack }: CommitDetailProps) {
+export function CommitDetail({
+  commit,
+  onBack,
+  onFilterSession,
+  onFilterConnector,
+  onFilterWorkflow,
+}: CommitDetailProps) {
   const sessionId = trailerString(commit.trailers?.Session);
   const bodyText = commit.body ? stripTrailers(commit.body) : "";
 
@@ -452,7 +564,13 @@ export function CommitDetail({ commit, onBack }: CommitDetailProps) {
       {onBack ? <MobileBackButton label="Back to commits" onClick={onBack} /> : null}
       <div className="flex-1 overflow-auto">
       {/* Commit info */}
-      <CommitTab commit={commit} bodyText={bodyText} />
+      <CommitTab
+        commit={commit}
+        bodyText={bodyText}
+        onFilterSession={onFilterSession}
+        onFilterConnector={onFilterConnector}
+        onFilterWorkflow={onFilterWorkflow}
+      />
 
       {/* Divider */}
       <div className="border-t-2 border-warm-200" />

@@ -7,9 +7,8 @@
  * removes the attachment and strips its `[imageN]` token from the text.
  */
 
-import { useState } from "react";
 import { Image } from "./ui/Image";
-import { ImageLightbox } from "./ImageLightbox";
+import { useLightbox } from "./LightboxProvider";
 
 /** UI-side attachment record (pairs ChatImageAttachment payload with preview metadata). */
 export interface AttachmentItem {
@@ -30,34 +29,30 @@ export function AttachmentPanel({
   attachments: AttachmentItem[];
   onRemove: (id: number) => void;
 }) {
-  const [lightboxId, setLightboxId] = useState<number | null>(null);
+  const lightbox = useLightbox();
 
   if (attachments.length === 0) return null;
 
-  const lightboxItem = lightboxId == null
-    ? null
-    : attachments.find((a) => a.id === lightboxId);
+  const openAt = (clickedId: number) => {
+    const images = attachments.map((a) => ({
+      src: a.objectUrl,
+      alt: `image${a.id}`,
+    }));
+    const index = attachments.findIndex((a) => a.id === clickedId);
+    if (index !== -1) lightbox.openList(images, index);
+  };
 
   return (
-    <>
-      <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
-        {attachments.map((att) => (
-          <ThumbTile
-            key={att.id}
-            attachment={att}
-            onClick={() => setLightboxId(att.id)}
-            onRemove={() => onRemove(att.id)}
-          />
-        ))}
-      </div>
-      {lightboxItem ? (
-        <ImageLightbox
-          src={lightboxItem.objectUrl}
-          alt={`Attachment ${lightboxItem.id}`}
-          onClose={() => setLightboxId(null)}
+    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+      {attachments.map((att) => (
+        <ThumbTile
+          key={att.id}
+          attachment={att}
+          onClick={() => openAt(att.id)}
+          onRemove={() => onRemove(att.id)}
         />
-      ) : null}
-    </>
+      ))}
+    </div>
   );
 }
 

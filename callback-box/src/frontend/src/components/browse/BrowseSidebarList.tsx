@@ -8,8 +8,21 @@ import { href } from "../../lib/routing";
 import { cbSource } from "../../lib/source-tag";
 import { StatusBadge } from "../ui/StatusBadge";
 import type { RouterOutput } from "../../lib/trpc";
+import { getApiBase } from "../../api";
 
 type BrowseData = RouterOutput["status"]["browse"];
+
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"]);
+
+function imageDataAttrs(relativePath: string, name: string): Record<string, string> | null {
+  const dot = relativePath.lastIndexOf(".");
+  if (dot <= 0) return null;
+  if (!IMAGE_EXTS.has(relativePath.slice(dot).toLowerCase())) return null;
+  return {
+    "data-image-src": `${getApiBase()}/files/${relativePath}`,
+    "data-image-alt": name,
+  };
+}
 
 interface BrowseSidebarListProps {
   boxSlug?: string;
@@ -93,6 +106,7 @@ export function BrowseSidebarList({
             window.history.replaceState(null, "", href(`/${boxSlug}/browse/${file.relativePath}`));
           }}
           onContextMenu={(event) => onFileContextMenu(event, file.relativePath)}
+          {...(imageDataAttrs(file.relativePath, file.name) ?? {})}
           className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
             selectedFilePath === file.relativePath ? "bg-info-50" : ""
           }`}

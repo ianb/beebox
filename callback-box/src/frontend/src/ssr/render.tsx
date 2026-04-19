@@ -24,6 +24,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { load as cheerioLoad } from "cheerio";
 import { trpc } from "../lib/trpc";
 import { createAppRouter } from "../router";
+import { LightboxProvider } from "../components/LightboxProvider";
 import { SSRStateContext, type SSRStateMap } from "../hooks/useSSRMachine";
 import { appRouter } from "../../../webapp/trpc/router.js";
 import {
@@ -348,7 +349,9 @@ async function main() {
     <trpc.Provider client={trpcClient as never} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <SSRStateContext.Provider value={ssrState}>
-          <RouterProvider router={router} />
+          <LightboxProvider>
+            <RouterProvider router={router} />
+          </LightboxProvider>
         </SSRStateContext.Provider>
       </QueryClientProvider>
     </trpc.Provider>,

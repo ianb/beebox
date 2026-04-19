@@ -16,6 +16,10 @@ interface CommitTimelineProps {
   onLoadMore: () => void;
   hasMore: boolean;
   loading: boolean;
+  /** Filter the list to a single session. If unset, session headers are static labels. */
+  onFilterSession?: (sessionId: string) => void;
+  /** Currently active session filter; used to suppress the filter affordance when already scoped. */
+  activeSession?: string | null;
 }
 
 /**
@@ -187,6 +191,8 @@ export function CommitTimeline({
   onLoadMore,
   hasMore,
   loading,
+  onFilterSession,
+  activeSession,
 }: CommitTimelineProps) {
   const groups = groupBySession(commits);
 
@@ -201,15 +207,33 @@ export function CommitTimeline({
     <div className="divide-y divide-warm-200">
       {groups.map((group, gi) => {
         if (group.sessionId && group.commits.length > 1) {
-          // Session group with visual indicator
+          const sessionId = group.sessionId;
+          const isActive = activeSession === sessionId;
+          const canFilter = onFilterSession !== undefined && !isActive;
+          const headerClasses =
+            "w-full text-left px-3 py-1 bg-indigo-50/50 text-[10px] text-indigo-500 font-medium flex items-baseline gap-1";
+          const headerContent = (
+            <>
+              <span>Session {sessionId.substring(0, 8)}...</span>
+              <span className="text-indigo-400">({group.commits.length} commits)</span>
+              {canFilter ? (
+                <span className="ml-auto text-indigo-400">show only →</span>
+              ) : null}
+            </>
+          );
           return (
             <div key={gi} className="border-l-2 border-indigo-200 ml-1">
-              <div className="px-3 py-1 bg-indigo-50/50 text-[10px] text-indigo-500 font-medium">
-                Session {group.sessionId.substring(0, 8)}...
-                <span className="text-indigo-400 ml-1">
-                  ({group.commits.length} commits)
-                </span>
-              </div>
+              {canFilter ? (
+                <button
+                  type="button"
+                  onClick={() => onFilterSession(sessionId)}
+                  className={`${headerClasses} hover:bg-indigo-100/50 transition-colors`}
+                >
+                  {headerContent}
+                </button>
+              ) : (
+                <div className={headerClasses}>{headerContent}</div>
+              )}
               {group.commits.map((commit) => (
                 <CommitRow
                   key={commit.hash}

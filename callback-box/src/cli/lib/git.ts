@@ -409,9 +409,47 @@ export interface GitLogEntryExtended {
  */
 export interface GetLogPaginatedParams {
   boxRoot: string;
-  count?: number;
-  offset?: number;
+  count?: number | undefined;
+  offset?: number | undefined;
+  filter?: LogFilter | undefined;
 }
+
+/**
+ * Filter criteria applied server-side via `git log --grep --all-match`.
+ * Each grep regex must match (AND across axes); alternation within a single
+ * grep expresses OR within an axis.
+ */
+export interface LogFilter {
+  greps?: string[];
+}
+
+/**
+ * Trailer keys that name a connector performing some action on a card.
+ * For the browse UI these are treated as a single axis — selecting a
+ * connector matches any of these trailers with that value.
+ */
+export const CONNECTOR_TRAILER_KEYS = [
+  "Pulled-By",
+  "Created-By",
+  "Fetched-By",
+  "Pushed-By",
+  "Sent-By",
+] as const;
+
+/**
+ * Trailer keys indicating a user-facing touchpoint (webapp, API call, voice/text input).
+ */
+export const TOUCHPOINT_TRAILER_KEYS = ["Source", "Endpoint", "Type"] as const;
+
+/**
+ * Trailer keys indicating feedback signal on a brief or card.
+ */
+export const FEEDBACK_TRAILER_KEYS = [
+  "Thumbs",
+  "Reactions",
+  "Rating",
+  "Feedback-Source",
+] as const;
 
 /**
  * Get paginated commits from the log with multi-value trailer support.
@@ -443,7 +481,11 @@ function parseHashGrouped(raw: string): Map<string, string[]> {
 export async function getLogPaginated(
   params: GetLogPaginatedParams
 ): Promise<GitLogEntryExtended[]> {
-  const { boxRoot, count = 50, offset = 0 } = params;
+  const { boxRoot, count = 50, offset = 0, filter } = params;
+
+  if (filter && filter.greps && filter.greps.length > 0) {
+    return getLogFiltered({ boxRoot, count, offset, greps: filter.greps });
+  }
 
   try {
     const logOptions: Record<string, unknown> = {
@@ -558,6 +600,168 @@ export async function clean(
   if (opts.gitignored) modes.push(CleanOptions.IGNORED_ONLY);
   if (opts.directories) modes.push(CleanOptions.RECURSIVE);
   await simpleGit(boxRoot).clean(modes);
+}
+
+/**
+ * Aggregated distinct trailer values used by the history browse UI.
+ */
+export interface TrailerFacets {
+  connectors: string[];
+  workflows: string[];
+}
+
+/**
+ * Scan every commit's trailer block and collect distinct values for the
+ * axes that populate the History filter bar. The output is sorted for
+ * stable UI ordering.
+ */
+export async function getTrailerFacets(boxRoot: string): Promise<TrailerFacets> {
+  const connectorKeys = new Set<string>(CONNECTOR_TRAILER_KEYS);
+  const connectors = new Set<string>();
+  const workflows = new Set<string>();
+
+  try {
+    const raw = await simpleGit(boxRoot).raw([
+      "log",
+      "--format=%(trailers:only,unfold)%x00",
+    ]);
+
+    for (const commitBlock of raw.split("\u0000")) {
+      for (const line of commitBlock.split("\n")) {
+        const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
+        if (!match) continue;
+        const key = match[1]!;
+        const value = match[2]!.trim();
+        if (!value) continue;
+        if (connectorKeys.has(key)) {
+          connectors.add(value);
+        } else if (key === "Workflow") {
+          workflows.add(value);
+        }
+      }
+    }
+  } catch {
+    // No commits or git error — empty facets
+  }
+
+  return {
+    connectors: [...connectors].toSorted(),
+    workflows: [...workflows].toSorted(),
+  };
+}
+
+/**
+ * Filtered git log using `--grep --all-match --extended-regexp`. Parses a
+ * custom record-separated format to recover hash/date/subject/body plus
+ * file stats in two passes.
+ */
+interface GetLogFilteredParams {
+  boxRoot: string;
+  count: number;
+  offset: number;
+  greps: string[];
+}
+
+async function getLogFiltered(
+  params: GetLogFilteredParams
+): Promise<GitLogEntryExtended[]> {
+  const { boxRoot, count, offset, greps } = params;
+  const git = simpleGit(boxRoot);
+
+  const grepArgs = [
+    "--extended-regexp",
+    "--all-match",
+    ...greps.map((g) => `--grep=${g}`),
+  ];
+  const pageArgs = [
+    `--max-count=${count}`,
+    ...(offset > 0 ? [`--skip=${offset}`] : []),
+  ];
+
+  // ASCII record/field separators keep the format unambiguous against
+  // commit messages that contain newlines, colons, or arbitrary text.
+  const RS = "\u001E";
+  const FS = "\u001F";
+
+  let raw: string;
+  try {
+    raw = await git.raw([
+      "log",
+      ...grepArgs,
+      ...pageArgs,
+      `--format=${FS}%H${FS}%aI${FS}%s${FS}%b${RS}`,
+    ]);
+  } catch {
+    return [];
+  }
+
+  const entries: GitLogEntryExtended[] = [];
+  for (const record of raw.split(RS)) {
+    if (!record.trim()) continue;
+    const parts = record.split(FS);
+    if (parts.length < 5) continue;
+    const hash = parts[1]!.trim();
+    if (!/^[\da-f]{40}$/.test(hash)) continue;
+    const body = parts[4]!.trim() || undefined;
+    const trailers = parseTrailersMulti(body);
+    entries.push({
+      hash,
+      date: parts[2]!.trim(),
+      subject: parts[3]!.trim(),
+      body,
+      trailers: Object.keys(trailers).length > 0 ? trailers : undefined,
+    });
+  }
+
+  // Stats fetch applies the same grep filter + pagination so the hashes
+  // line up with `entries`.
+  try {
+    const statusRaw = await git.raw([
+      "log",
+      ...grepArgs,
+      ...pageArgs,
+      "--format=%H",
+      "--name-status",
+    ]);
+    const numstatRaw = await git.raw([
+      "log",
+      ...grepArgs,
+      ...pageArgs,
+      "--format=%H",
+      "--numstat",
+    ]);
+    const statusByHash = parseHashGrouped(statusRaw);
+    const numstatByHash = parseHashGrouped(numstatRaw);
+    for (const entry of entries) {
+      const stat: FileStat = {
+        added: 0,
+        modified: 0,
+        deleted: 0,
+        renamed: 0,
+        insertions: 0,
+        deletions: 0,
+      };
+      for (const line of statusByHash.get(entry.hash) || []) {
+        const status = line[0];
+        if (status === "A") stat.added++;
+        else if (status === "M") stat.modified++;
+        else if (status === "D") stat.deleted++;
+        else if (status === "R") stat.renamed++;
+      }
+      for (const line of numstatByHash.get(entry.hash) || []) {
+        const cols = line.split("\t");
+        if (cols.length >= 2 && cols[0] !== "-") {
+          stat.insertions += parseInt(cols[0]!, 10) || 0;
+          stat.deletions += parseInt(cols[1]!, 10) || 0;
+        }
+      }
+      entry.fileStat = stat;
+    }
+  } catch {
+    // stats are optional
+  }
+
+  return entries;
 }
 
 // --- Internal helpers ---

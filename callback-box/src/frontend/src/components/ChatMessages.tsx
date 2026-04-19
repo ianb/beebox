@@ -9,6 +9,7 @@ import { Markdown } from "./Markdown";
 import { Image } from "./ui/Image";
 import { Pre } from "./ui/Pre";
 import { FileView } from "./FileView";
+import type { LightboxImage } from "./ImageLightbox";
 import type { Components } from "react-markdown";
 import { parseViewUrl, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
@@ -755,6 +756,62 @@ function imageBlockSrc(block: SessionContentBlock): string | null {
   }
   if (block.imageUrl) return block.imageUrl;
   return null;
+}
+
+/**
+ * Extract every image referenced in a chat — image content blocks plus
+ * markdown `![](url)` and `view:` image links inside text blocks. The
+ * result is the canonical, in-order list used by the lightbox so that
+ * navigation works for messages that aren't currently mounted by the
+ * virtualizer. Optional `streamText` appends still-streaming images so
+ * the list stays accurate while a turn is in flight.
+ */
+export function extractChatImages(entries: SessionEntry[], streamText?: string): LightboxImage[] {
+  const images: LightboxImage[] = [];
+  let attachmentIndex = 0;
+  for (const entry of entries) {
+    for (const block of entry.content) {
+      if (block.type === "image") {
+        const src = imageBlockSrc(block);
+        if (src) {
+          attachmentIndex += 1;
+          images.push({ src, alt: `Attached image ${attachmentIndex}` });
+        }
+      } else if (block.type === "text" && block.text) {
+        extractImagesFromMarkdown(block.text, images);
+      }
+    }
+  }
+  if (streamText) extractImagesFromMarkdown(streamText, images);
+  return images;
+}
+
+const MARKDOWN_IMAGE_RE = /!\[([^\]]*)]\(([^\s)]+)(?:\s+"[^"]*")?\)/g;
+const VIEW_LINK_RE = /\[([^\]]*)]\(view:([^\s)]+)\)/g;
+
+function extractImagesFromMarkdown(text: string, out: LightboxImage[]): void {
+  for (const match of text.matchAll(MARKDOWN_IMAGE_RE)) {
+    const alt = match[1];
+    const src = match[2];
+    if (src) {
+      const trimmedAlt = alt.trim();
+      out.push({
+        src,
+        alt,
+        caption: trimmedAlt === "" ? undefined : alt,
+      });
+    }
+  }
+  for (const match of text.matchAll(VIEW_LINK_RE)) {
+    const label = match[1];
+    const target = parseViewUrl(`view:${match[2]}`);
+    if (isImagePath(target.path)) {
+      out.push({
+        src: `${getApiBase()}/files/${target.path}`,
+        alt: label,
+      });
+    }
+  }
 }
 
 /**

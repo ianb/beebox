@@ -28,7 +28,7 @@ import { sendSound, tick, recordingStart, alarm } from "../../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
 import { chatMachine } from "../../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, type MessageGroup, type OnZoomView } from "../ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
 import { CloseButton } from "../ui/CloseButton";
@@ -653,6 +653,14 @@ function VirtualizedMessageList({
 
   const itemCount = flatItems.length;
 
+  // Lightbox needs the full image list (across all messages, not just the
+  // virtualizer's mounted slice). Embed it as JSON so the provider can
+  // dedup against any currently-rendered images.
+  const chatImagesJson = useMemo(
+    () => JSON.stringify(extractChatImages(messages, streamText)),
+    [messages, streamText],
+  );
+
   const virtualizer = useVirtualizer({
     count: itemCount,
     getScrollElement: () => scrollRef.current,
@@ -732,6 +740,7 @@ function VirtualizedMessageList({
 
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+      <div data-image-list hidden>{chatImagesJson}</div>
       <div
         style={{
           height: virtualizer.getTotalSize(),
