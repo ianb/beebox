@@ -6,6 +6,7 @@
  */
 
 import type { ElementNode } from "../api";
+import type { ViewTarget } from "../lib/view-url";
 
 /** Data for rendering a file */
 export interface FileData {
@@ -24,7 +25,13 @@ export interface FileData {
 export interface RendererProps {
   data: FileData;
   onPatch?: (ops: PatchOp[]) => Promise<void>;
-  onNavigate: (path: string) => void;
+  /**
+   * Called when the user clicks a link that should switch this surface to
+   * view a different file. `target` carries the resolved path plus any
+   * `?view=`/`?zoom` modifiers from `view:` URLs, so the handler can decide
+   * whether to push a new URL, swap a sidebar pane, open a zoomed view, etc.
+   */
+  onNavigate: (target: ViewTarget) => void;
 }
 
 /** A patch operation for modifying a card */

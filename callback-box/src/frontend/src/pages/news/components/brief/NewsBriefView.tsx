@@ -9,6 +9,7 @@ import { useState, useCallback } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../../../lib/routing";
 import { Markdown } from "../../../../components/Markdown";
+import { useViewNavigate } from "../../../../hooks/useViewNavigate";
 import { MicrophoneIcon } from "../../../../components/VoiceRecorder";
 import type { NewsBriefData, GuideReaction, BriefReaction } from "./types";
 import { ContentSection } from "./ContentSection";
@@ -49,6 +50,7 @@ export function NewsBriefView({
   onCompleteReading,
 }: NewsBriefViewProps) {
   const { boxSlug } = useParams({ strict: false });
+  const handleNavigate = useViewNavigate();
   const [showGlobalComment, setShowGlobalComment] = useState(false);
   const [showGlobalVoice, setShowGlobalVoice] = useState(false);
   const [globalComment, setGlobalComment] = useState("");
@@ -132,7 +134,7 @@ export function NewsBriefView({
       {/* Main content */}
       <div className="prose prose-lg max-w-none mb-8">
         {brief.content.text ? (
-          <Markdown>{brief.content.text}</Markdown>
+          <Markdown onNavigate={handleNavigate} basePath={briefPath}>{brief.content.text}</Markdown>
         ) : null}
 
         {brief.content.sections.map((section, i) => (

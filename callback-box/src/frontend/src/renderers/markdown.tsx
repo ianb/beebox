@@ -6,13 +6,15 @@ import { Markdown } from "../components/Markdown";
 import { Text } from "../components/ui/Text";
 import { registerFileRenderer, type RendererProps } from "./index";
 
-function MarkdownRenderer({ data }: RendererProps) {
+function MarkdownRenderer({ data, onNavigate }: RendererProps) {
   if (data.content === undefined) {
     return <Text as="div" tone="subtle" className="p-4">No content</Text>;
   }
   return (
     <div className="p-4">
-      <Markdown prose="block">{data.content}</Markdown>
+      <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
+        {data.content}
+      </Markdown>
     </div>
   );
 }

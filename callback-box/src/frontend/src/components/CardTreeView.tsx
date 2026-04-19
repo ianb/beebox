@@ -14,6 +14,7 @@ import { useState } from "react";
 import { Markdown } from "./Markdown";
 import { trpc } from "../lib/trpc";
 import { getRenderers, type FileData } from "../renderers/index";
+import { useViewNavigate } from "../hooks/useViewNavigate";
 
 /**
  * Element node from the API.
@@ -150,6 +151,7 @@ function RefExpanderCard({ refPath, data }: {
  */
 function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const handleNavigate = useViewNavigate();
   const hasChildren = element.children && element.children.length > 0;
   const hasContent = element.text || hasChildren;
 
@@ -219,7 +221,7 @@ function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
       {!collapsed && hasContent ? <div className="mt-1">
           {/* Text content rendered as Markdown */}
           {element.text ? <div className="prose prose-sm max-w-none text-warm-700">
-              <Markdown>
+              <Markdown onNavigate={handleNavigate} basePath={cardPath}>
                 {element.text}
               </Markdown>
             </div> : null}

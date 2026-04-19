@@ -3,12 +3,27 @@
  *
  * Wraps react-markdown with remark-gfm and the comment-visibility plugin,
  * so HTML comments render as visible styled text instead of being stripped.
+ *
+ * Links:
+ *  - `view:…` URLs and relative paths are intercepted and handed to the
+ *    required `onNavigate` callback so each context (browse page, companion
+ *    pane, zoomable view, …) can decide what "open this file" means.
+ *  - http(s) links render as normal external links in a new tab.
+ *  - Callers that need fully custom link handling (e.g. chat's inline image
+ *    rendering) can still override via `components.a`.
  */
 
+import { useMemo } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { remarkComments, isCommentCode } from "../lib/remark-comments";
+import {
+  classifyMarkdownHref,
+  parseViewUrl,
+  resolveRelativePath,
+  type ViewTarget,
+} from "../lib/view-url";
 
 /**
  * URL transform that preserves view: URLs (used for embedding views in chat)
@@ -24,39 +39,87 @@ function viewUrlTransform(url: string): string {
 const defaultPlugins = [remarkGfm];
 const pluginsWithComments = [remarkGfm, remarkComments];
 
-/** Open external links in new tabs */
-const baseComponents: Partial<Components> = {
-  a({ children, href: linkHref, node: _node, ...props }) {
-    const isExternal = linkHref && (linkHref.startsWith("http://") || linkHref.startsWith("https://"));
-    return (
-      <a
-        href={linkHref}
-        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        {...props}
-      >
-        {children}
-      </a>
-    );
-  },
-};
-
-const commentComponents: Partial<Components> = {
-  ...baseComponents,
-  code({ children, node: _node, ...props }) {
-    const text = typeof children === "string" ? children : "";
-    if (isCommentCode(text)) {
+function makeDefaultComponents(
+  onNavigate: (target: ViewTarget) => void,
+  basePath: string | undefined,
+): Partial<Components> {
+  return {
+    a({ children, href: linkHref, node: _node, ...props }) {
+      if (typeof linkHref !== "string") {
+        return <a {...props}>{children}</a>;
+      }
+      const classified = classifyMarkdownHref(linkHref);
+      if (classified.kind === "view") {
+        const target = parseViewUrl(classified.raw);
+        return (
+          <a
+            href={linkHref}
+            onClick={(e) => {
+              if (e.defaultPrevented) return;
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              onNavigate(target);
+            }}
+            {...props}
+          >
+            {children}
+          </a>
+        );
+      }
+      if (classified.kind === "relative") {
+        const resolved = resolveRelativePath(basePath, classified.path);
+        return (
+          <a
+            href={linkHref}
+            onClick={(e) => {
+              if (e.defaultPrevented) return;
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              onNavigate({ path: resolved, viewer: null, params: {}, zoom: false });
+            }}
+            {...props}
+          >
+            {children}
+          </a>
+        );
+      }
+      const isExternal =
+        linkHref.startsWith("http://") || linkHref.startsWith("https://");
       return (
-        <code
+        <a
+          href={linkHref}
+          {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
           {...props}
-          className="text-warm-400 italic font-normal bg-transparent"
         >
-          {text}
-        </code>
+          {children}
+        </a>
       );
-    }
-    return <code {...props}>{children}</code>;
-  },
-};
+    },
+  };
+}
+
+function makeCommentComponents(
+  onNavigate: (target: ViewTarget) => void,
+  basePath: string | undefined,
+): Partial<Components> {
+  return {
+    ...makeDefaultComponents(onNavigate, basePath),
+    code({ children, node: _node, ...props }) {
+      const text = typeof children === "string" ? children : "";
+      if (isCommentCode(text)) {
+        return (
+          <code
+            {...props}
+            className="text-warm-400 italic font-normal bg-transparent"
+          >
+            {text}
+          </code>
+        );
+      }
+      return <code {...props}>{children}</code>;
+    },
+  };
+}
 
 type ProseVariant = false | "block" | "inline";
 
@@ -72,11 +135,36 @@ interface MarkdownProps {
    * - `false` (default) — no wrapper; caller decides.
    */
   prose?: ProseVariant;
+  /**
+   * Required. Called when the user clicks a `view:` or relative link — the
+   * caller decides whether to push a URL, swap a sidebar pane, etc. See
+   * {@link RendererProps.onNavigate} for the broader contract.
+   */
+  onNavigate: (target: ViewTarget) => void;
+  /**
+   * Path of the document being rendered (relative to the box root). Used to
+   * resolve relative links like `[1040](1040.pdf)` against the document's
+   * own directory. If omitted, relative links are treated as already
+   * box-root-relative.
+   */
+  basePath?: string;
 }
 
-export function Markdown({ children, components, showComments, prose = false }: MarkdownProps) {
+export function Markdown({
+  children,
+  components,
+  showComments,
+  prose = false,
+  onNavigate,
+  basePath,
+}: MarkdownProps) {
   const plugins = showComments ? pluginsWithComments : defaultPlugins;
-  const defaultBase = showComments ? commentComponents : baseComponents;
+  const defaultBase = useMemo(
+    () => (showComments
+      ? makeCommentComponents(onNavigate, basePath)
+      : makeDefaultComponents(onNavigate, basePath)),
+    [showComments, onNavigate, basePath],
+  );
   const merged = components
     ? { ...defaultBase, ...components }
     : defaultBase;

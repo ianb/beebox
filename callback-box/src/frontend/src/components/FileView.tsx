@@ -29,6 +29,7 @@ import { getApiBase, getEventSourceBase } from "../api";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
+import type { ViewTarget } from "../lib/view-url";
 import { Pre } from "./ui/Pre";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { StatusBadge } from "./ui/StatusBadge";
@@ -40,6 +41,12 @@ interface FileViewProps {
   mode?: FileViewMode;
   /** Force a specific renderer by name (e.g. from a `?view=X` param). */
   rendererName?: string | null;
+  /**
+   * Required. Called when a link inside this view wants to open a different
+   * file. The surrounding context decides what that means — pushing a URL,
+   * replacing a sidebar pane, etc.
+   */
+  onNavigate: (target: ViewTarget) => void;
 }
 
 /* ---------- path classification ---------- */
@@ -232,7 +239,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode = "page", rendererName }: FileViewProps) {
+export function FileView({ path, mode = "page", rendererName, onNavigate }: FileViewProps) {
   const { data, loading, error } = useFileData(path);
 
   // Track user's toggle selection scoped to the current path. When the path
@@ -267,7 +274,7 @@ export function FileView({ path, mode = "page", rendererName }: FileViewProps) {
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
   }
 
-  const body = <active.Component data={data} onNavigate={() => {}} />;
+  const body = <active.Component data={data} onNavigate={onNavigate} />;
 
   if (mode === "chat") {
     return (

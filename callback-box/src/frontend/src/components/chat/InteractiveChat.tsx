@@ -239,7 +239,15 @@ function ChatDebugMenu({
 /**
  * Companion view panel shown alongside chat when a view is zoomed.
  */
-function CompanionViewPanel({ view, onClose }: { view: { target: ViewTarget; label: string }; onClose: () => void }) {
+function CompanionViewPanel({
+  view,
+  onClose,
+  onNavigate,
+}: {
+  view: { target: ViewTarget; label: string };
+  onClose: () => void;
+  onNavigate: (target: ViewTarget) => void;
+}) {
   const { boxSlug } = useParams({ strict: false });
   const browseHref = href(`/${boxSlug}/browse/${view.target.path}`);
   return (
@@ -253,7 +261,12 @@ function CompanionViewPanel({ view, onClose }: { view: { target: ViewTarget; lab
         <CloseButton onClick={onClose} label="Close companion view" size="sm" />
       </div>
       <div className="flex-1 overflow-auto">
-        <FileView path={view.target.path} mode="companion" rendererName={view.target.viewer} />
+        <FileView
+          path={view.target.path}
+          mode="companion"
+          rendererName={view.target.viewer}
+          onNavigate={onNavigate}
+        />
       </div>
     </div>
   );
@@ -1437,7 +1450,11 @@ export function InteractiveChat() {
     <>
     <div className={`h-full flex ${zoomedView ? "flex-col md:flex-row" : "flex-col"} bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden`}>
       {zoomedView ? (
-        <CompanionViewPanel view={zoomedView} onClose={() => setZoomedView(null)} />
+        <CompanionViewPanel
+          view={zoomedView}
+          onClose={() => setZoomedView(null)}
+          onNavigate={(target) => onZoomView({ target: { ...target, zoom: false }, label: target.path })}
+        />
       ) : null}
     <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
       {/* Header with debug controls */}

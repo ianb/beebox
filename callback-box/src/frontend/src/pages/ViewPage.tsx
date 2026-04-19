@@ -9,6 +9,7 @@
 import { useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { parseViewUrl } from "../lib/view-url";
+import { useViewNavigate } from "../hooks/useViewNavigate";
 import { FileView } from "../components/FileView";
 import { ViewRenderer } from "../components/ViewRenderer";
 import { Text } from "../components/ui/Text";
@@ -24,6 +25,7 @@ function looksLikeFilePath(value: string): boolean {
 
 export function ViewPage() {
   const { _splat: splat } = useParams({ strict: false });
+  const handleNavigate = useViewNavigate();
 
   const parsed = useMemo(() => {
     if (!splat) return null;
@@ -48,7 +50,12 @@ export function ViewPage() {
   return (
     <div className="p-4">
       {parsed.type === "file" ? (
-        <FileView path={parsed.target.path} mode="page" rendererName={parsed.target.viewer} />
+        <FileView
+          path={parsed.target.path}
+          mode="page"
+          rendererName={parsed.target.viewer}
+          onNavigate={handleNavigate}
+        />
       ) : (
         <ViewRenderer slug={parsed.slug} mode="page" params={parsed.params} />
       )}

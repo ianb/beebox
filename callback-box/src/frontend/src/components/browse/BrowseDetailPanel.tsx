@@ -6,6 +6,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
+import type { ViewTarget } from "../../lib/view-url";
 import { FileView } from "../FileView";
 import { MobileBackButton } from "../ui/MobileBackButton";
 
@@ -15,6 +16,7 @@ interface BrowseDetailPanelProps {
   deletingPath: string | null;
   onBack: () => void;
   onDelete: (path: string) => void | Promise<void>;
+  onNavigate: (target: ViewTarget) => void;
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
@@ -30,6 +32,7 @@ export function BrowseDetailPanel({
   deletingPath,
   onBack,
   onDelete,
+  onNavigate,
   selectedCard,
   selectedFilePath,
   selectedRawFile,
@@ -77,7 +80,7 @@ export function BrowseDetailPanel({
             ) : null}
           </div>
         </div>
-        <FileView path={selectedFilePath} mode="companion" />
+        <FileView path={selectedFilePath} mode="companion" onNavigate={onNavigate} />
       </div>
     </div>
   );

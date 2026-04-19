@@ -65,7 +65,7 @@ function parseImageCard(element: ElementNode): ParsedImageCard {
   };
 }
 
-function ImageCardRenderer({ data }: RendererProps) {
+function ImageCardRenderer({ data, onNavigate }: RendererProps) {
   const [showBbox, setShowBbox] = useState(true);
 
   if (!data.element) return null;
@@ -132,7 +132,7 @@ function ImageCardRenderer({ data }: RendererProps) {
           {card.textBlocks.map((block, i) => (
             <Card key={i} padding="sm" border="subtle">
               <Text size="xs" tone="muted" as="div" className="mb-1">{block.source}</Text>
-              <Markdown prose="block">{block.text}</Markdown>
+              <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{block.text}</Markdown>
             </Card>
           ))}
         </Stack>

@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { Markdown } from "../../../../components/Markdown";
+import { useViewNavigate } from "../../../../hooks/useViewNavigate";
 import { MicrophoneIcon } from "../../../../components/VoiceRecorder";
 import type { Section } from "./types";
 import { ThumbsFeedback } from "./ThumbsFeedback";
@@ -34,6 +35,7 @@ export function ContentSection({
   const [showVoice, setShowVoice] = useState(false);
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const handleNavigate = useViewNavigate();
 
   const handleSubmitComment = () => {
     if (comment.trim() && onComment && section.id) {
@@ -72,7 +74,7 @@ export function ContentSection({
             </span> : null}
         </div> : null}
       {section.text ? <div className="prose prose-sm max-w-none mb-4">
-          <Markdown>{section.text}</Markdown>
+          <Markdown onNavigate={handleNavigate}>{section.text}</Markdown>
         </div> : null}
       {section.excerpts.map((excerpt, i) => (
         <ExcerptBlock key={i} excerpt={excerpt} />

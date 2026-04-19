@@ -18,6 +18,7 @@ import { resolveFileTypeUI } from "../../file-types/registry";
 import { cn } from "../../lib/cn";
 import { FileView } from "../FileView";
 import { href } from "../../lib/routing";
+import { useViewNavigate } from "../../hooks/useViewNavigate";
 
 interface FileEntryProps {
   summary: FileSummary<unknown>;
@@ -147,6 +148,7 @@ export function FileEntry({ summary, compact = false, onPanel, className }: File
   const Icon = ui.icon;
   const ListComponent = ui.ListComponent;
   const { boxSlug } = useParams({ strict: false });
+  const handleNavigate = useViewNavigate();
 
   const header = (
     <div className="flex items-center gap-2 min-w-0 py-1.5 px-2">
@@ -192,7 +194,7 @@ export function FileEntry({ summary, compact = false, onPanel, className }: File
       >
         {header}
         <div className="border-t border-warm-200">
-          <FileView path={summary.path} mode="companion" />
+          <FileView path={summary.path} mode="companion" onNavigate={handleNavigate} />
         </div>
       </div>
     );

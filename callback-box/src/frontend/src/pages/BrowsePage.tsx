@@ -5,8 +5,10 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useParams, useNavigate } from "@tanstack/react-router";
 import { getApiBase } from "../api";
+import { href } from "../lib/routing";
+import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
 import { Sidebar } from "../components/Sidebar";
 import { trpc } from "../lib/trpc";
 import { BrowseSidebarList } from "../components/browse/BrowseSidebarList";
@@ -45,6 +47,22 @@ interface ContextMenuState {
 export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
+  const navigate = useNavigate();
+
+  const handleLinkNavigate = useCallback(
+    (target: ViewTarget) => {
+      // Zoom links escape out to the full view page so the target gets the
+      // whole viewport. Everything else stays in the browse layout —
+      // navigating to a new file path swaps the detail panel and updates
+      // the URL via onNavigate.
+      if (target.zoom) {
+        navigate({ to: href(`/${boxSlug}/views/${serializeViewUrl({ ...target, zoom: false })}`) });
+        return;
+      }
+      onNavigate(target.path);
+    },
+    [boxSlug, navigate, onNavigate],
+  );
 
   const pathIsFile = isFilePath(currentPath);
   const dirPath = pathIsFile ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
@@ -153,6 +171,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
             deletingPath={deletingPath}
             onBack={() => setSelectedFilePath(null)}
             onDelete={handleDelete}
+            onNavigate={handleLinkNavigate}
             selectedCard={selectedCard}
             selectedFilePath={selectedFilePath}
             selectedRawFile={selectedRawFile}

@@ -18,7 +18,19 @@ import { Badge } from "../components/ui/Badge";
 import { TextLink } from "../components/ui/TextLink";
 import { getRenderers, registerFileRenderer, type FileData, type RendererProps } from "./index";
 
-function CardAccordion({ cardPath, name, type, status }: { cardPath: string; name: string; type: string; status?: string }) {
+function CardAccordion({
+  cardPath,
+  name,
+  type,
+  status,
+  onNavigate,
+}: {
+  cardPath: string;
+  name: string;
+  type: string;
+  status?: string;
+  onNavigate: RendererProps["onNavigate"];
+}) {
   const title = (
     <Row gap="sm">
       <Text size="sm" weight="medium" tone="emphasis">{name}</Text>
@@ -28,12 +40,18 @@ function CardAccordion({ cardPath, name, type, status }: { cardPath: string; nam
   );
   return (
     <Accordion title={title}>
-      <CardAccordionBody cardPath={cardPath} />
+      <CardAccordionBody cardPath={cardPath} onNavigate={onNavigate} />
     </Accordion>
   );
 }
 
-function CardAccordionBody({ cardPath }: { cardPath: string }) {
+function CardAccordionBody({
+  cardPath,
+  onNavigate,
+}: {
+  cardPath: string;
+  onNavigate: RendererProps["onNavigate"];
+}) {
   const { data: card, isLoading, error } = trpc.card.get.useQuery({ path: cardPath });
 
   if (isLoading) return <Text size="sm" tone="muted">Loading...</Text>;
@@ -51,7 +69,7 @@ function CardAccordionBody({ cardPath }: { cardPath: string }) {
   const renderers = getRenderers(cardPath, fileData);
   if (renderers.length > 0) {
     const Renderer = renderers[0].Component;
-    return <Renderer data={fileData} onNavigate={() => {}} />;
+    return <Renderer data={fileData} onNavigate={onNavigate} />;
   }
   if (card.element) {
     return <CardTreeView element={card.element} path={card.path} version={card.version} />;
@@ -59,7 +77,7 @@ function CardAccordionBody({ cardPath }: { cardPath: string }) {
   return <Pre size="xs">{card.xml}</Pre>;
 }
 
-function DirectoryRenderer({ data }: RendererProps) {
+function DirectoryRenderer({ data, onNavigate }: RendererProps) {
   const dirPath = data.path.replace(/\/$/, "");
   const { boxSlug } = useParams({ strict: false });
   const { data: browse, isLoading, error } = trpc.status.browse.useQuery({ path: dirPath });
@@ -98,6 +116,7 @@ function DirectoryRenderer({ data }: RendererProps) {
               name={card.name}
               type={card.type}
               status={card.status}
+              onNavigate={onNavigate}
             />
           ))}
         </Stack>

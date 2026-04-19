@@ -4,7 +4,7 @@
  * Used by both the interactive ChatPage and the read-only SessionViewer.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Markdown } from "./Markdown";
 import { Image } from "./ui/Image";
 import { Pre } from "./ui/Pre";
@@ -542,7 +542,10 @@ function ChatParagraph({ children, node, ...props }: React.HTMLAttributes<HTMLPa
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
-function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components> {
+function makeChatMarkdownComponents(
+  onNavigate: (target: ViewTarget) => void,
+  onZoomView?: OnZoomView,
+): Partial<Components> {
   return {
     p: ChatParagraph,
     img({ src, alt }) {
@@ -568,7 +571,14 @@ function makeChatMarkdownComponents(onZoomView?: OnZoomView): Partial<Components
             </button>
           );
         }
-        return <FileView path={target.path} mode="chat" rendererName={target.viewer} />;
+        return (
+          <FileView
+            path={target.path}
+            mode="chat"
+            rendererName={target.viewer}
+            onNavigate={onNavigate}
+          />
+        );
       }
       const isExternal = typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
       if (isExternal) {
@@ -606,13 +616,24 @@ function ExternalLinkIndicator() {
  */
 function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   const cleaned = useMemo(() => stripSpeechTags(text), [text]);
-  const components = useMemo(() => makeChatMarkdownComponents(onZoomView), [onZoomView]);
+  const handleNavigate = useCallback(
+    (target: ViewTarget) => {
+      if (onZoomView) {
+        onZoomView({ target: { ...target, zoom: false }, label: target.path });
+      }
+    },
+    [onZoomView],
+  );
+  const components = useMemo(
+    () => makeChatMarkdownComponents(handleNavigate, onZoomView),
+    [handleNavigate, onZoomView],
+  );
 
   if (!cleaned) return null;
 
   return (
     <div className="prose prose-sm max-w-none overflow-hidden">
-      <Markdown components={components}>{cleaned}</Markdown>
+      <Markdown components={components} onNavigate={handleNavigate}>{cleaned}</Markdown>
     </div>
   );
 }

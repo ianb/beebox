@@ -152,14 +152,24 @@ function scaleAmount(raw: string, scale: number): ReactNode {
 
 // --- Sub-components ---
 
-function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: number }) {
+function RecipeSectionView({
+  section,
+  scale,
+  onNavigate,
+  basePath,
+}: {
+  section: RecipeSection;
+  scale: number;
+  onNavigate: RendererProps["onNavigate"];
+  basePath: string;
+}) {
   return (
     <div className="mb-6">
       {section.name ? <h2 className="text-lg font-semibold mb-3">{section.name}</h2> : null}
 
       {section.notes ? (
         <div className="mb-3 text-sm text-warm-700 italic">
-          <Markdown>{section.notes}</Markdown>
+          <Markdown onNavigate={onNavigate} basePath={basePath}>{section.notes}</Markdown>
         </div>
       ) : null}
 
@@ -194,7 +204,11 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
             {section.steps.map((step, i) => (
               <li key={i} className="leading-relaxed">
                 <span className="prose prose-sm inline max-w-none">
-                  <Markdown components={{ p: ({ children }) => children as React.ReactElement }}>
+                  <Markdown
+                    components={{ p: ({ children }) => children as React.ReactElement }}
+                    onNavigate={onNavigate}
+                    basePath={basePath}
+                  >
                     {renderIngredientRefs(step)}
                   </Markdown>
                 </span>
@@ -209,12 +223,13 @@ function RecipeSectionView({ section, scale }: { section: RecipeSection; scale: 
 
 // --- Main component ---
 
-export function RecipeView({ data }: RendererProps) {
+export function RecipeView({ data, onNavigate }: RendererProps) {
   const [scale, setScale] = useState(1);
 
   if (!data.element) return <div className="p-4 text-warm-600">No recipe data</div>;
 
   const recipe = parseRecipeElement(data.element);
+  const basePath = data.path;
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -267,14 +282,20 @@ export function RecipeView({ data }: RendererProps) {
 
       {/* Sections */}
       {recipe.sections.map((section, i) => (
-        <RecipeSectionView key={i} section={section} scale={scale} />
+        <RecipeSectionView
+          key={i}
+          section={section}
+          scale={scale}
+          onNavigate={onNavigate}
+          basePath={basePath}
+        />
       ))}
 
       {recipe.notes ? (
         <div className="mt-6 p-4 bg-warning-50 rounded-lg">
           <h3 className="font-medium text-warning-dark mb-1">Notes</h3>
           <div className="prose prose-sm max-w-none text-warning-dark">
-            <Markdown>{recipe.notes}</Markdown>
+            <Markdown onNavigate={onNavigate} basePath={basePath}>{recipe.notes}</Markdown>
           </div>
         </div>
       ) : null}

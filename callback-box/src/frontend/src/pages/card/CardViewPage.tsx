@@ -6,6 +6,7 @@
 
 import { useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
+import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { FileView } from "../../components/FileView";
 import { Card } from "../../components/ui/Card";
 import { Column } from "../../components/ui/Column";
@@ -15,6 +16,7 @@ import { TextLink } from "../../components/ui/TextLink";
 
 export function CardViewPage() {
   const { boxSlug, _splat: cardPath } = useParams({ strict: false });
+  const handleNavigate = useViewNavigate();
 
   if (!cardPath) {
     return <Text as="div" tone="subtle" className="p-8">No card path specified</Text>;
@@ -27,7 +29,7 @@ export function CardViewPage() {
           {"\u2190 Back to Dashboard"}
         </TextLink>
         <Card padding="none" shadow>
-          <FileView path={cardPath} />
+          <FileView path={cardPath} onNavigate={handleNavigate} />
         </Card>
       </Stack>
     </Column>

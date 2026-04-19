@@ -10,7 +10,11 @@ import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../../../lib/routing";
 import { Markdown } from "../../../../components/Markdown";
+import { useViewNavigate } from "../../../../hooks/useViewNavigate";
+import type { ViewTarget } from "../../../../lib/view-url";
 import type { NewsBriefData, Section, Excerpt, Expando } from "./types";
+
+type NavigateFn = (target: ViewTarget) => void;
 
 function collectFootnotes(brief: NewsBriefData): Array<{ label: string; url: string }> {
   const footnotes: Array<{ label: string; url: string }> = [];
@@ -59,12 +63,12 @@ function PrintExcerpt({
   );
 }
 
-function PrintExpando({ expando }: { expando: Expando }) {
+function PrintExpando({ expando, onNavigate }: { expando: Expando; onNavigate: NavigateFn }) {
   return (
     <div className="print-expando">
       <h3 className="print-expando-title">{expando.title}</h3>
       <div className="print-prose">
-        <Markdown>{expando.text}</Markdown>
+        <Markdown onNavigate={onNavigate}>{expando.text}</Markdown>
       </div>
     </div>
   );
@@ -73,9 +77,11 @@ function PrintExpando({ expando }: { expando: Expando }) {
 function PrintSection({
   section,
   footnotes,
+  onNavigate,
 }: {
   section: Section;
   footnotes: Array<{ label: string; url: string }>;
+  onNavigate: NavigateFn;
 }) {
   const num = section.link ? getFootnoteNumber(footnotes, section.link) : null;
   return (
@@ -88,14 +94,14 @@ function PrintSection({
       ) : null}
       {section.text ? (
         <div className="print-prose">
-          <Markdown>{section.text}</Markdown>
+          <Markdown onNavigate={onNavigate}>{section.text}</Markdown>
         </div>
       ) : null}
       {section.excerpts.map((excerpt, i) => (
         <PrintExcerpt key={i} excerpt={excerpt} footnotes={footnotes} />
       ))}
       {section.expandos.map((expando, i) => (
-        <PrintExpando key={expando.id ?? i} expando={expando} />
+        <PrintExpando key={expando.id ?? i} expando={expando} onNavigate={onNavigate} />
       ))}
     </div>
   );
@@ -109,6 +115,7 @@ interface PrintBriefRendererProps {
 }
 
 export function PrintBriefRenderer({ brief, largePrint, onToggleLargePrint, interactiveUrl }: PrintBriefRendererProps) {
+  const handleNavigate = useViewNavigate();
   useEffect(() => {
     const dateStr = new Date(brief.date + "T00:00").toLocaleDateString("en-US", {
       year: "numeric",
@@ -160,12 +167,12 @@ export function PrintBriefRenderer({ brief, largePrint, onToggleLargePrint, inte
 
         {brief.content.text ? (
           <div className="print-intro print-prose">
-            <Markdown>{brief.content.text}</Markdown>
+            <Markdown onNavigate={handleNavigate}>{brief.content.text}</Markdown>
           </div>
         ) : null}
 
         {brief.content.sections.map((section, i) => (
-          <PrintSection key={section.id ?? i} section={section} footnotes={footnotes} />
+          <PrintSection key={section.id ?? i} section={section} footnotes={footnotes} onNavigate={handleNavigate} />
         ))}
 
         {brief.content.excerpts.map((excerpt, i) => (
@@ -173,7 +180,7 @@ export function PrintBriefRenderer({ brief, largePrint, onToggleLargePrint, inte
         ))}
 
         {brief.content.expandos.map((expando, i) => (
-          <PrintExpando key={expando.id ?? i} expando={expando} />
+          <PrintExpando key={expando.id ?? i} expando={expando} onNavigate={handleNavigate} />
         ))}
 
         {footnotes.length > 0 ? (

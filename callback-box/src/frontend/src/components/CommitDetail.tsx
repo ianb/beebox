@@ -9,6 +9,7 @@ import type { HistoryCommit } from "../api";
 import { trpc } from "../lib/trpc";
 import { getApiBase } from "../api";
 import { cbSource } from "../lib/source-tag";
+import { useViewNavigate } from "../hooks/useViewNavigate";
 import { SessionLog } from "./SessionLog";
 import { CardTreeView, type ElementNode } from "./CardTreeView";
 import { Image } from "./ui/Image";
@@ -323,6 +324,7 @@ function CommitTab({
   onFilterConnector,
   onFilterWorkflow,
 }: CommitTabProps) {
+  const handleNavigate = useViewNavigate();
   const trailers = commit.trailers;
   const phase = trailerString(trailers?.Phase);
   const triggeredBy = trailerString(trailers?.["Triggered-By"]);
@@ -381,7 +383,7 @@ function CommitTab({
       ) : null}
       <h2 className="font-medium text-warm-900">{commit.subject}</h2>
       {bodyText ? <div className="mt-2 prose prose-sm max-w-none text-warm-700">
-          <Markdown>{bodyText}</Markdown>
+          <Markdown onNavigate={handleNavigate}>{bodyText}</Markdown>
         </div> : null}
     </div>
   );

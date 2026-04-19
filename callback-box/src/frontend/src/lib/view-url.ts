@@ -60,3 +60,43 @@ export function serializeViewUrl(target: ViewTarget): string {
   const qs = parts.join("&");
   return qs ? `${target.path}?${qs}` : target.path;
 }
+
+/**
+ * Resolve a relative path against a base document's path (like a filesystem
+ * would). `basePath` is the path of the containing document — the filename on
+ * the end is stripped and `relative` is resolved against the remaining dir.
+ * Empty/undefined `basePath` treats `relative` as already box-root-relative.
+ */
+export function resolveRelativePath(basePath: string | undefined, relative: string): string {
+  if (relative.startsWith("/")) return relative.replace(/^\/+/, "");
+  const baseDir =
+    basePath && basePath.includes("/") ? basePath.slice(0, basePath.lastIndexOf("/")) : "";
+  const parts = [...baseDir.split("/"), ...relative.split("/")];
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") {
+      out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  return out.join("/");
+}
+
+/**
+ * Classify an href as one of: a view: link, a relative path that can be
+ * resolved against a document, or an external/non-navigable link (http,
+ * mailto, anchor, etc.). For `view:` and `relative`, callers should
+ * `preventDefault` and hand the result to an onNavigate handler.
+ */
+export function classifyMarkdownHref(
+  href: string,
+): { kind: "view"; raw: string } | { kind: "relative"; path: string } | { kind: "external" } {
+  if (href.startsWith("view:")) return { kind: "view", raw: href };
+  // Anything with a URL scheme (http:, mailto:, tel:, data:, etc.) is external.
+  if (/^[a-z][\w+.-]*:/i.test(href)) return { kind: "external" };
+  // Anchors and empty hrefs are not navigations.
+  if (href.startsWith("#") || href === "") return { kind: "external" };
+  return { kind: "relative", path: href };
+}

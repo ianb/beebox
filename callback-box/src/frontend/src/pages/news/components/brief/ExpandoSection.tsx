@@ -9,6 +9,7 @@ import type { Expando } from "./types";
 import { ThumbsFeedback } from "./ThumbsFeedback";
 import { InlineVoiceRecorder } from "./InlineVoiceRecorder";
 import { InlineAction } from "../../../../components/ui/InlineAction";
+import { useViewNavigate } from "../../../../hooks/useViewNavigate";
 
 export function ExpandoSection({
   expando,
@@ -28,6 +29,7 @@ export function ExpandoSection({
   const [showVoice, setShowVoice] = useState(false);
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const handleNavigate = useViewNavigate();
 
   const handleSubmitComment = () => {
     if (comment.trim() && onComment && expando.id) {
@@ -60,7 +62,7 @@ export function ExpandoSection({
       </button>
       {expanded ? <div className="px-4 pb-4">
           <div className="prose prose-sm max-w-none">
-            <Markdown>{expando.text}</Markdown>
+            <Markdown onNavigate={handleNavigate}>{expando.text}</Markdown>
           </div>
           {/* Comment affordance */}
           <div className="mt-4 pt-4 border-t border-info-100">
