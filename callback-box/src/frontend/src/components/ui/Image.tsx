@@ -102,7 +102,7 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
     SIZE_CLASSES[size],
     "rounded",
     bordered ? "border border-warm-300" : "",
-    interactive ? "cursor-pointer hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" : "",
+    interactive ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" : "",
     extraClass,
   );
 
