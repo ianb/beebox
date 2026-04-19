@@ -63,6 +63,7 @@
     "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.2.0",
     "@google/genai": "^1.44.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@parcel/markdown-ansi": "^2.16.3",
     "@tanstack/react-virtual": "^3.13.23",
     "@trpc/server": "^11.11.0",

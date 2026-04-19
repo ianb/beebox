@@ -1,4 +1,5 @@
 import type { Activity } from "./Activity.js";
+import { Polyglot } from "./polyglot/index.js";
 
 export class ActivityTypeAlreadyRegisteredError extends Error {
   constructor(public readonly type: string) {
@@ -49,6 +50,6 @@ export class ActivityRegistry {
  */
 export function createBuiltinRegistry(): ActivityRegistry {
   const registry = new ActivityRegistry();
-  // register(new Polyglot()); — added when polyglot is ported
+  registry.register(new Polyglot());
   return registry;
 }

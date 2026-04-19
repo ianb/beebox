@@ -116,8 +116,8 @@ thrown && thrown.message
 ## Built-in registry
 
 `createBuiltinRegistry()` returns the framework's hand-maintained set
-of built-in activities. V1 ships empty — activities are added here as
-they're ported. Box-local discovery is a separate (deferred) feature.
+of built-in activities. Activities are added here as they're ported.
+Box-local discovery is a separate (deferred) feature.
 
 ```ts setup
 import { createBuiltinRegistry } from "../src/activities/registry.js";
@@ -125,6 +125,6 @@ import { createBuiltinRegistry } from "../src/activities/registry.js";
 
 ```
 const builtin = createBuiltinRegistry();
-builtin.list().length
-=> 0
+builtin.list().map((a) => a.type).sort().join(",")
+=> polyglot
 ```
