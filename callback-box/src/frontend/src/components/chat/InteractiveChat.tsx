@@ -114,11 +114,11 @@ function composerTextareaClasses({ mobile, isTranscribing }: { mobile: boolean; 
 
 /**
  * Format a millisecond gap as "Xh" or "XdYh" (hours omitted when zero).
- * Returns null when the gap is under 12 hours — callers should omit the attribute then.
+ * Returns null when the gap is under 6 hours — callers should omit the attribute then.
  */
 function formatTimePassed(ms: number): string | null {
-  const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-  if (ms < TWELVE_HOURS) return null;
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
+  if (ms < SIX_HOURS) return null;
   const totalHours = Math.floor(ms / (60 * 60 * 1000));
   if (totalHours < 24) return `${totalHours}h`;
   const days = Math.floor(totalHours / 24);
