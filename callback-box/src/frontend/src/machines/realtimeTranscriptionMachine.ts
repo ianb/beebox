@@ -213,9 +213,17 @@ export const realtimeTranscriptionMachine = setup({
       error: "Transcription timed out — partial text preserved",
     }),
     eraseTranscript: assign({ transcript: "" }),
+    sendStopToTranscriber: ({ system }) => {
+      const transcriber = system.get("transcriber");
+      if (transcriber) {
+        transcriber.send({ type: "STOP" });
+      }
+    },
   },
   delays: {
     FINALIZE_TIMEOUT: 10000,
+    SILENCE_TIMEOUT: 5 * 60 * 1000,
+    MAX_DURATION: 15 * 60 * 1000,
   },
 }).createMachine({
   id: "realtimeTranscription",
@@ -244,6 +252,18 @@ export const realtimeTranscriptionMachine = setup({
         input: {},
       },
       initial: "connecting",
+      // Hard cap on total recording time. Does not reset on text arrival.
+      after: {
+        MAX_DURATION: {
+          target: ".finalizing",
+          actions: [
+            () => {
+              console.info("[realtime-transcription] Max duration reached — auto-stopping");
+            },
+            "sendStopToTranscriber",
+          ],
+        },
+      },
       on: {
         // Events that return to idle from any active substate.
         // Use setError so partial text is preserved.
@@ -272,18 +292,28 @@ export const realtimeTranscriptionMachine = setup({
           },
         },
         recording: {
+          // Auto-stop after silence (no new text deltas). Resets on each TEXT_DELTA
+          // via `reenter: true`.
+          after: {
+            SILENCE_TIMEOUT: {
+              target: "finalizing",
+              actions: [
+                () => {
+                  console.info("[realtime-transcription] Silence timeout — auto-stopping");
+                },
+                "sendStopToTranscriber",
+              ],
+            },
+          },
           on: {
             TEXT_DELTA: {
+              target: "recording",
+              reenter: true,
               actions: "appendDelta",
             },
             STOP: {
               target: "finalizing",
-              actions: ({ system }) => {
-                const transcriber = system.get("transcriber");
-                if (transcriber) {
-                  transcriber.send({ type: "STOP" });
-                }
-              },
+              actions: "sendStopToTranscriber",
             },
             CANCEL: {
               target: "#realtimeTranscription.idle",
