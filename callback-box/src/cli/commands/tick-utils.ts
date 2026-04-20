@@ -37,7 +37,7 @@ const SLEEP_THRESHOLD_MS = 5_000; // wall vs monotonic drift > 5s = sleep
  * so we can kill the entire tree on timeout (execSync timeout doesn't
  * reliably kill grandchild processes).
  *
- * Captures stderr (last 500 chars) to include in error messages.
+ * Captures tails of stdout and stderr to include in error messages.
  * When verbose, stdout/stderr also go to the parent process.
  */
 export function execWithTimeout(
@@ -52,15 +52,26 @@ export function execWithTimeout(
       detached: true,
     });
 
+    // Capture tails of both streams. Stdout is where most scheduled commands
+    // (including `cb prompt`) surface their actual diagnostic output — the
+    // previous policy of discarding stdout meant script failures arrived in
+    // logs with no useful context.
+    const MAX_STDERR = 2000;
+    const MAX_STDOUT = 4000;
     let stderrBuf = "";
-    const MAX_STDERR = 500;
+    let stdoutBuf = "";
 
     if (child.stdout) {
-      if (options.stdio === "inherit") {
-        child.stdout.pipe(process.stdout);
-      } else {
-        child.stdout.resume();
-      }
+      child.stdout.on("data", (chunk: Buffer) => {
+        const text = chunk.toString();
+        stdoutBuf += text;
+        if (stdoutBuf.length > MAX_STDOUT * 2) {
+          stdoutBuf = stdoutBuf.slice(-MAX_STDOUT);
+        }
+        if (options.stdio === "inherit") {
+          process.stdout.write(chunk);
+        }
+      });
     }
     if (child.stderr) {
       child.stderr.on("data", (chunk: Buffer) => {
@@ -77,7 +88,8 @@ export function execWithTimeout(
 
     const timer = setTimeout(() => {
       try { process.kill(-child.pid!, "SIGKILL"); } catch { /* already dead */ }
-      reject(new Error(`Command timed out after ${options.timeout}ms`));
+      const base = `Command timed out after ${options.timeout}ms`;
+      reject(new Error(appendOutputTail(base, { stdout: stdoutBuf, stderr: stderrBuf })));
     }, options.timeout);
 
     child.on("close", (code) => {
@@ -85,11 +97,8 @@ export function execWithTimeout(
       if (code === 0) {
         resolve();
       } else {
-        const detail = stderrBuf.trim().slice(-MAX_STDERR);
-        const msg = detail
-          ? `Command failed with exit code ${code}: ${detail}`
-          : `Command failed with exit code ${code}`;
-        reject(new Error(msg));
+        const base = `Command failed with exit code ${code}`;
+        reject(new Error(appendOutputTail(base, { stdout: stdoutBuf, stderr: stderrBuf })));
       }
     });
 
@@ -98,6 +107,37 @@ export function execWithTimeout(
       reject(err);
     });
   });
+}
+
+/**
+ * Append a tail of stdout/stderr to an error headline, after stripping
+ * universally-noisy lines (Node deprecation warnings). Keeps enough context
+ * to diagnose the failure without flooding the scheduler log.
+ */
+function appendOutputTail(
+  headline: string,
+  bufs: { stdout: string; stderr: string }
+): string {
+  const stderrTail = tailChars(stripNodeNoise(bufs.stderr), 500);
+  const stdoutTail = tailChars(stripNodeNoise(bufs.stdout), 2000);
+  const parts = [headline];
+  if (stderrTail) parts.push(`stderr:\n${stderrTail}`);
+  if (stdoutTail) parts.push(`stdout:\n${stdoutTail}`);
+  return parts.join("\n");
+}
+
+function stripNodeNoise(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !/^\(node:\d+\) \[DEP\d+] DeprecationWarning:/.test(line))
+    .filter((line) => !/^\(Use `node --trace-deprecation/.test(line))
+    .join("\n");
+}
+
+function tailChars(text: string, max: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return trimmed;
+  return "…" + trimmed.slice(-max);
 }
 
 /**

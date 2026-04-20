@@ -492,8 +492,11 @@ async function runAgent(options: AgentOptions): Promise<AgentResult> {
           exitCode,
           sessionId,
         };
-        if (exitCode !== 0) {
-          result.error = stderr || `Exit code: ${exitCode}`;
+        // Only set `error` when we actually have stderr content. The exit code
+        // is already on `result.exitCode`, so don't synthesize an "Exit code: N"
+        // string — it just causes duplicate noise in scheduler logs.
+        if (exitCode !== 0 && stderr.trim()) {
+          result.error = stderr;
         }
         resolve(result);
       });

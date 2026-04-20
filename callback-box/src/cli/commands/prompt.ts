@@ -55,9 +55,25 @@ export const promptCommand = new Command("prompt")
       // Print session ID for follow-up inspection
       console.log(`\n\nSession: ${agent.sessionId}`);
       if (!result.success) {
-        console.error(`Exit code: ${result.exitCode}`);
-        if (result.error) console.error(result.error);
+        // Claude Code's own output (tool calls, messages, any final error) was
+        // streamed to stdout via onOutput. Echo the tail to stderr on failure
+        // so schedulers — which capture stderr preferentially — see the real
+        // reason, not just an uninformative exit code.
+        const tail = tailLines(result.output, 30);
+        if (tail) {
+          console.error("--- claude output (tail) ---");
+          console.error(tail);
+          console.error("--- end ---");
+        }
+        if (result.error) console.error(result.error.trimEnd());
+        console.error(`cb prompt: FAILED (session ${agent.sessionId}, exit ${result.exitCode})`);
         process.exit(result.exitCode || 1);
       }
     }
   );
+
+function tailLines(text: string, n: number): string {
+  const lines = text.split("\n");
+  const start = Math.max(0, lines.length - n);
+  return lines.slice(start).join("\n").trim();
+}
