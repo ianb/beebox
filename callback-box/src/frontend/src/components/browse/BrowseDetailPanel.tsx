@@ -38,7 +38,7 @@ export function BrowseDetailPanel({
   selectedRawFile,
 }: BrowseDetailPanelProps) {
   return (
-    <div className="max-w-4xl mx-auto py-4 sm:py-8">
+    <div className={`${selectedRawFile ? "max-w-7xl" : "max-w-4xl"} mx-auto py-4 sm:py-8`}>
       <MobileBackButton label="Back" onClick={onBack} className="mb-4 mx-4" />
       {deleteError ? (
         <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark">

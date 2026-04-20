@@ -14,14 +14,17 @@
  */
 
 import { useMemo } from "react";
+import { useParams } from "@tanstack/react-router";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { remarkComments, isCommentCode } from "../lib/remark-comments";
+import { href as routeHref } from "../lib/routing";
 import {
   classifyMarkdownHref,
   parseViewUrl,
   resolveRelativePath,
+  serializeViewUrl,
   type ViewTarget,
 } from "../lib/view-url";
 
@@ -39,10 +42,18 @@ function viewUrlTransform(url: string): string {
 const defaultPlugins = [remarkGfm];
 const pluginsWithComments = [remarkGfm, remarkComments];
 
-function makeDefaultComponents(
-  onNavigate: (target: ViewTarget) => void,
-  basePath: string | undefined,
-): Partial<Components> {
+function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
+  return routeHref(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
+}
+
+interface LinkContext {
+  onNavigate: (target: ViewTarget) => void;
+  basePath: string | undefined;
+  boxSlug: string | undefined;
+}
+
+function makeDefaultComponents(ctx: LinkContext): Partial<Components> {
+  const { onNavigate, basePath, boxSlug } = ctx;
   return {
     a({ children, href: linkHref, node: _node, ...props }) {
       if (typeof linkHref !== "string") {
@@ -51,9 +62,10 @@ function makeDefaultComponents(
       const classified = classifyMarkdownHref(linkHref);
       if (classified.kind === "view") {
         const target = parseViewUrl(classified.raw);
+        const resolvedHref = viewHref(boxSlug, target);
         return (
           <a
-            href={linkHref}
+            href={resolvedHref}
             onClick={(e) => {
               if (e.defaultPrevented) return;
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
@@ -68,14 +80,16 @@ function makeDefaultComponents(
       }
       if (classified.kind === "relative") {
         const resolved = resolveRelativePath(basePath, classified.path);
+        const target: ViewTarget = { path: resolved, viewer: null, params: {}, zoom: false };
+        const resolvedHref = viewHref(boxSlug, target);
         return (
           <a
-            href={linkHref}
+            href={resolvedHref}
             onClick={(e) => {
               if (e.defaultPrevented) return;
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
               e.preventDefault();
-              onNavigate({ path: resolved, viewer: null, params: {}, zoom: false });
+              onNavigate(target);
             }}
             {...props}
           >
@@ -98,12 +112,9 @@ function makeDefaultComponents(
   };
 }
 
-function makeCommentComponents(
-  onNavigate: (target: ViewTarget) => void,
-  basePath: string | undefined,
-): Partial<Components> {
+function makeCommentComponents(ctx: LinkContext): Partial<Components> {
   return {
-    ...makeDefaultComponents(onNavigate, basePath),
+    ...makeDefaultComponents(ctx),
     code({ children, node: _node, ...props }) {
       const text = typeof children === "string" ? children : "";
       if (isCommentCode(text)) {
@@ -158,12 +169,14 @@ export function Markdown({
   onNavigate,
   basePath,
 }: MarkdownProps) {
+  const { boxSlug } = useParams({ strict: false });
   const plugins = showComments ? pluginsWithComments : defaultPlugins;
   const defaultBase = useMemo(
-    () => (showComments
-      ? makeCommentComponents(onNavigate, basePath)
-      : makeDefaultComponents(onNavigate, basePath)),
-    [showComments, onNavigate, basePath],
+    () => {
+      const ctx: LinkContext = { onNavigate, basePath, boxSlug };
+      return showComments ? makeCommentComponents(ctx) : makeDefaultComponents(ctx);
+    },
+    [showComments, onNavigate, basePath, boxSlug],
   );
   const merged = components
     ? { ...defaultBase, ...components }
