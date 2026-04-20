@@ -101,10 +101,13 @@ export function useRecentFiles(entries: SessionEntry[]): {
   const files = useMemo<RecentFile[]>(() => {
     const results = query.data;
     if (!results) return paths.map(p => ({ path: p, summary: null }));
+    const seen = new Set<string>();
     const out: RecentFile[] = [];
     for (const [i, p] of paths.entries()) {
       const summary = results[i];
       if (summary === null || summary === undefined) continue;
+      if (seen.has(summary.path)) continue;
+      seen.add(summary.path);
       out.push({ path: p, summary });
     }
     return out;
