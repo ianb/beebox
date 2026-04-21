@@ -95,6 +95,8 @@ function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact:
   );
 }
 
+const rightIconClass = "flex-shrink-0 p-1.5 rounded text-warm-500 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
 function ExpandedControls({
   summary, boxSlug, onCollapse, onPanel,
 }: {
@@ -105,14 +107,23 @@ function ExpandedControls({
 }) {
   const pageHref = boxSlug ? href(`/${boxSlug}/browse/${summary.path}`) : undefined;
   return (
-    <div className="flex items-center gap-1">
+    <>
+      <button
+        type="button"
+        onClick={onCollapse}
+        aria-label="Collapse"
+        title="Collapse"
+        className={rightIconClass}
+      >
+        <CollapseIcon />
+      </button>
       {onPanel ? (
         <button
           type="button"
           onClick={() => onPanel(summary)}
           aria-label="Open as side panel"
           title="Open as side panel"
-          className="p-1 rounded text-warm-500 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className={rightIconClass}
         >
           <PanelIcon />
         </button>
@@ -124,21 +135,12 @@ function ExpandedControls({
           rel="noopener noreferrer"
           aria-label="Open as full page (new tab)"
           title="Open as full page (new tab)"
-          className="p-1 rounded text-warm-500 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className={rightIconClass}
         >
           <PageIcon />
         </a>
       ) : null}
-      <button
-        type="button"
-        onClick={onCollapse}
-        aria-label="Collapse"
-        title="Collapse"
-        className="p-1 rounded text-warm-500 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      >
-        <CollapseIcon />
-      </button>
-    </div>
+    </>
   );
 }
 
@@ -150,6 +152,21 @@ export function FileEntry({ summary, compact = false, onPanel, className }: File
   const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useViewNavigate();
 
+  const titleSlot = (
+    <div className="flex-1 min-w-0 flex items-center gap-2">
+      <span className="flex-shrink-0 text-warm-500">
+        <Icon size={18} />
+      </span>
+      <div className="flex-1 min-w-0">
+        {ListComponent ? (
+          <ListComponent data={summary} compact={compact} />
+        ) : (
+          <DefaultMiddle data={summary} compact={compact} />
+        )}
+      </div>
+    </div>
+  );
+
   if (expanded) {
     return (
       <div
@@ -159,17 +176,8 @@ export function FileEntry({ summary, compact = false, onPanel, className }: File
         )}
         data-file-path={summary.path}
       >
-        <div className="flex items-center gap-2 min-w-0 py-1.5 px-2">
-          <span className="flex-shrink-0 text-warm-500">
-            <Icon size={18} />
-          </span>
-          <div className="flex-1 min-w-0">
-            {ListComponent ? (
-              <ListComponent data={summary} compact={compact} />
-            ) : (
-              <DefaultMiddle data={summary} compact={compact} />
-            )}
-          </div>
+        <div className="flex items-center gap-1 min-w-0 py-1.5 px-2">
+          {titleSlot}
           <ExpandedControls
             summary={summary}
             boxSlug={boxSlug}
@@ -186,28 +194,25 @@ export function FileEntry({ summary, compact = false, onPanel, className }: File
 
   return (
     <div
-      className={cn("flex items-center min-w-0", className)}
+      className={cn("flex items-center gap-1 min-w-0 rounded hover:bg-warm-100 transition-colors", className)}
       data-file-path={summary.path}
     >
       <button
         type="button"
         onClick={() => setExpanded(true)}
         aria-label={`Preview ${summary.title}`}
-        className="flex-1 flex items-center gap-2 min-w-0 py-1.5 px-2 rounded hover:bg-warm-100 transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex-1 flex items-center min-w-0 py-1.5 px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >
-        <span className="flex-shrink-0 text-warm-500">
-          <Icon size={18} />
-        </span>
-        <div className="flex-1 min-w-0">
-          {ListComponent ? (
-            <ListComponent data={summary} compact={compact} />
-          ) : (
-            <DefaultMiddle data={summary} compact={compact} />
-          )}
-        </div>
-        <span className="flex-shrink-0 p-1 text-warm-400">
-          <PeekIcon />
-        </span>
+        {titleSlot}
+      </button>
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        aria-label="Preview"
+        title="Preview"
+        className={rightIconClass}
+      >
+        <PeekIcon />
       </button>
       {onPanel ? (
         <button
@@ -215,7 +220,7 @@ export function FileEntry({ summary, compact = false, onPanel, className }: File
           onClick={() => onPanel(summary)}
           aria-label="Open as side panel"
           title="Open as side panel"
-          className="flex-shrink-0 p-1.5 mx-1 rounded text-warm-400 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className={rightIconClass}
         >
           <PanelIcon />
         </button>
