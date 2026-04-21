@@ -21,6 +21,22 @@ import {
   type ChatImageAttachment,
 } from "../api";
 
+/**
+ * Forwarded to the server via the console-warn debug-log pipe so wedge
+ * diagnostics survive across reloads. Kept terse and structured: a grep
+ * for `[chatfsm]` in `.callback-box/client-debug.log` should reconstruct
+ * the state timeline without needing the browser.
+ */
+function logFsm(event: string, detail?: Record<string, unknown>): void {
+  const parts = [`[chatfsm] ${event}`];
+  if (detail) {
+    for (const [k, v] of Object.entries(detail)) {
+      parts.push(`${k}=${typeof v === "string" ? v : JSON.stringify(v)}`);
+    }
+  }
+  console.warn(parts.join(" "));
+}
+
 // -- Events --
 
 type ChatEvent =
@@ -98,15 +114,23 @@ const streamActor = fromCallback(
     // after the subprocess emitted `result` but before we parsed it, etc.),
     // the machine would otherwise sit in `streaming` forever.
     let terminalFired = false;
+    let msgCount = 0;
     const terminal = (event: ChatEvent) => {
       terminalFired = true;
+      logFsm("stream-terminal", { event: event.type, msgCount });
       sendBack(event);
     };
+
+    logFsm("stream-start", {
+      msgLen: input.message.length,
+      images: input.images ? input.images.length : 0,
+    });
 
     sendChatMessage({
       message: input.message,
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       onMessage: (msg) => {
+        msgCount++;
         const type = msg.type as string;
 
         if (type === "busy") {
@@ -166,6 +190,7 @@ const streamActor = fromCallback(
     })
       .then(() => {
         if (!terminalFired) {
+          logFsm("stream-eof-no-terminal", { msgCount });
           // Stream ended without any terminal event — fall back to a history
           // refresh so the UI can recover whatever the server completed.
           sendBack({
@@ -175,9 +200,11 @@ const streamActor = fromCallback(
         }
       })
       .catch((err) => {
+        const msg = err instanceof Error ? err.message : "Send failed";
+        logFsm("stream-throw", { msg, msgCount });
         sendBack({
           type: "STREAM_FAILED",
-          error: err instanceof Error ? err.message : "Send failed",
+          error: msg,
         });
       });
 
@@ -295,6 +322,13 @@ function reconcilePending(params: {
     return !serverUserTexts.some((st) => st === pmText || st.includes(pmText));
   });
 
+  logFsm("reconcile", {
+    serverMsgs: serverMessages.length,
+    pendingIn: pendingMessages.length,
+    pendingOut: stillPending.length,
+    cleared: pendingMessages.length - stillPending.length,
+  });
+
   return {
     messages: [...serverMessages, ...stillPending],
     pendingMessages: stillPending,
@@ -346,10 +380,16 @@ export const chatMachine = setup({
     // Global handler: refresh history from any state (e.g., after SSE chat-complete)
     REFRESH: {
       target: ".refreshing",
-      actions: assign({
-        streamText: "",
-        streamTools: [],
-      }),
+      actions: [
+        ({ context }) => logFsm("refresh", {
+          pending: context.pendingMessages.length,
+          msgs: context.messages.length,
+        }),
+        assign({
+          streamText: "",
+          streamTools: [],
+        }),
+      ],
     },
     // Global handler: another user sent a message (via SSE broadcast)
     OTHER_USER_MESSAGE: {
@@ -398,23 +438,30 @@ export const chatMachine = setup({
       },
     },
     idle: {
+      entry: ({ context }) => logFsm("enter-idle", {
+        msgs: context.messages.length,
+        pending: context.pendingMessages.length,
+      }),
       on: {
         SEND: {
           target: "streaming",
-          actions: assign(({ context, event }) => ({
-            error: null,
-            streamText: "",
-            streamTools: [],
-            messages: [
-              ...context.messages,
-              {
-                uuid: `user-${Date.now()}`,
-                type: "user" as const,
-                timestamp: new Date().toISOString(),
-                content: buildOptimisticContent(event.message, event.images),
-              },
-            ],
-          })),
+          actions: [
+            ({ event }) => logFsm("send-from-idle", { len: event.message.length }),
+            assign(({ context, event }) => ({
+              error: null,
+              streamText: "",
+              streamTools: [],
+              messages: [
+                ...context.messages,
+                {
+                  uuid: `user-${Date.now()}`,
+                  type: "user" as const,
+                  timestamp: new Date().toISOString(),
+                  content: buildOptimisticContent(event.message, event.images),
+                },
+              ],
+            })),
+          ],
         },
         NEW_SESSION: "resetting",
         DISMISS_ERROR: {
@@ -423,6 +470,10 @@ export const chatMachine = setup({
       },
     },
     streaming: {
+      entry: ({ context }) => logFsm("enter-streaming", {
+        msgs: context.messages.length,
+        pending: context.pendingMessages.length,
+      }),
       invoke: {
         id: "chatStream",
         src: "stream",
@@ -443,10 +494,16 @@ export const chatMachine = setup({
         // per-turn SSE's STREAM_RESULT. If REFRESH won that race, we'd
         // transition to refreshing with a cleared streamText and never
         // play the <speech> that just arrived.
-        REFRESH: {},
+        REFRESH: {
+          actions: () => logFsm("refresh-ignored-streaming"),
+        },
         SEND: {
           // Queue the message — don't interrupt the current stream
           actions: [
+            ({ event, context }) => logFsm("send-from-streaming", {
+              len: event.message.length,
+              pending: context.pendingMessages.length,
+            }),
             assign(({ context, event }) => {
               const entry: SessionEntry = {
                 uuid: `user-${Date.now()}`,
@@ -515,9 +572,16 @@ export const chatMachine = setup({
       },
     },
     refreshing: {
+      entry: ({ context }) => logFsm("enter-refreshing", {
+        pending: context.pendingMessages.length,
+      }),
       on: {
         SEND: {
           actions: [
+            ({ event, context }) => logFsm("send-from-refreshing", {
+              len: event.message.length,
+              pending: context.pendingMessages.length,
+            }),
             assign(({ context, event }) => {
               const entry: SessionEntry = {
                 uuid: `user-${Date.now()}`,
@@ -556,10 +620,15 @@ export const chatMachine = setup({
         },
         onError: {
           target: "idle",
-          actions: assign({
-            streamText: "",
-            streamTools: [],
-          }),
+          actions: [
+            ({ event }) => logFsm("refresh-error", {
+              msg: event.error instanceof Error ? event.error.message : String(event.error),
+            }),
+            assign({
+              streamText: "",
+              streamTools: [],
+            }),
+          ],
         },
       },
     },

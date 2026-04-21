@@ -972,6 +972,12 @@ export function InteractiveChat() {
 
   // Handle SSE events: schedule-fired, chat-history, chat-user-message
   useSSE(`${getEventSourceBase()}/events`, {
+    onConnect: useCallback(() => {
+      console.warn("[chatfsm] sse-connect");
+    }, []),
+    onDisconnect: useCallback(() => {
+      console.warn("[chatfsm] sse-disconnect");
+    }, []),
     onEvent: useCallback((event: SSEEvent) => {
       if (event.event === "schedule-fired") {
         const data = event.data as { label: string; alarm: boolean; announce: string | null };
@@ -985,9 +991,11 @@ export function InteractiveChat() {
         fetchSchedules();
       } else if (event.event === "chat-history") {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
+        console.warn(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
       } else if (event.event === "chat-complete") {
+        console.warn("[chatfsm] sse-chat-complete");
         // Agent turn completed — refresh history to pick up the response.
         // This catches cases where the send SSE stream was interrupted
         // but the agent finished on the server.
