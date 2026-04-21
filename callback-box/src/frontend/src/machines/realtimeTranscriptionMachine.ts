@@ -11,6 +11,7 @@
 import { setup, assign, fromCallback } from "xstate";
 import { getApiBase } from "../api";
 import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
+import { recordingStop } from "../lib/earcons";
 
 export type TranscriptionState = "idle" | "connecting" | "recording" | "finalizing";
 
@@ -219,6 +220,9 @@ export const realtimeTranscriptionMachine = setup({
         transcriber.send({ type: "STOP" });
       }
     },
+    playMicOffSound: () => {
+      recordingStop.play();
+    },
   },
   delays: {
     FINALIZE_TIMEOUT: 10000,
@@ -261,6 +265,7 @@ export const realtimeTranscriptionMachine = setup({
               console.info("[realtime-transcription] Max duration reached — auto-stopping");
             },
             "sendStopToTranscriber",
+            "playMicOffSound",
           ],
         },
       },
@@ -302,6 +307,7 @@ export const realtimeTranscriptionMachine = setup({
                   console.info("[realtime-transcription] Silence timeout — auto-stopping");
                 },
                 "sendStopToTranscriber",
+                "playMicOffSound",
               ],
             },
           },

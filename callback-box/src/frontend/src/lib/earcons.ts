@@ -45,5 +45,6 @@ export const sendSound = new EarCon({ name: "send", filename: "beeprising.wav", 
 export const tick = new EarCon({ name: "tick", filename: "tick2.wav", volume: 0.6 });
 export const stillListening = new EarCon({ name: "stillListening", filename: "book-close.wav", volume: 0.3 });
 export const recordingStart = new EarCon({ name: "recordingStart", filename: "recording-start.mp3", volume: 0.7 });
+export const recordingStop = new EarCon({ name: "recordingStop", filename: "recording-stop.mp3", volume: 0.7 });
 // Source: https://freesound.org/people/SoapBoxRocket/sounds/846141/
 export const alarm = new EarCon({ name: "alarm", filename: "krell-alarm-7.wav", volume: 0.8 });

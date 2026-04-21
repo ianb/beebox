@@ -24,7 +24,7 @@ import { unlockAudioContext } from "../../lib/audio-context";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
-import { sendSound, tick, recordingStart, alarm } from "../../lib/earcons";
+import { sendSound, tick, recordingStart, recordingStop, alarm } from "../../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
 import { chatMachine } from "../../machines/chatMachine.js";
@@ -1351,6 +1351,7 @@ export function InteractiveChat() {
     },
     onKeywordMicOff: () => {
       turnTakingRef.current = false;
+      recordingStop.play();
     },
     onKeywordErase: () => {
       // Transcript is already cleared by the hook; nothing else needed
@@ -1394,6 +1395,7 @@ export function InteractiveChat() {
 
   const handleCancelTranscription = useCallback(() => {
     turnTakingRef.current = false;
+    recordingStop.play();
     transcription.cancel();
   }, [transcription]);
 
