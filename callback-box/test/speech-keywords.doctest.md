@@ -17,7 +17,7 @@ detectKeyword("send message")?.action
 detectKeyword("deliver the message")?.action
 => send
 
-detectKeyword("finished")?.action
+detectKeyword("message finished")?.action
 => send
 
 detectKeyword("send now")?.action
@@ -27,14 +27,21 @@ detectKeyword("it's a message")?.action
 => send
 ```
 
+Bare "finished" does NOT trigger send — too easy to hit in normal speech. It needs "message" adjacent:
+
+```
+detectKeyword("finished")
+=> null
+
+detectKeyword("I'm finished")
+=> null
+```
+
 The matched phrase is replaced with a tag in the processed transcript:
 
 ```
 detectKeyword("OK send message")?.processedTranscript
 => OK <send-message phrase="send message" />
-
-detectKeyword("I'm finished")?.processedTranscript
-=> I'm <send-message phrase="finished" />
 ```
 
 ## Cancel commands

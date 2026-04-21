@@ -5,7 +5,6 @@ const sendPattern = KeywordPattern.compile(`
   it's (a | the | an)? message
   message (done | finished)
   send now
-  finished
 `);
 
 const cancelPattern = KeywordPattern.compile(`
