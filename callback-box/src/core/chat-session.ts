@@ -555,6 +555,14 @@ export class ChatSession extends EventEmitter {
       this.busy = false;
       this.cleanupMcpConfigFile();
       this.emit("close", code);
+      // If messages were queued while the (now-dead) subprocess was busy,
+      // drain them into a fresh subprocess so they aren't stranded.
+      // stop()/resetSession() clear the queue first, so this is a no-op on
+      // intentional shutdown and only fires on unexpected death or restart().
+      if (this.messageQueue.length > 0) {
+        log("close", `Draining ${this.messageQueue.length} queued message(s) into fresh subprocess`);
+        this.drainQueue();
+      }
     });
 
     this.proc.on("error", (err) => {
@@ -793,16 +801,34 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
-   * Stop the claude process gracefully.
+   * Stop the claude process gracefully. Clears the pending queue so the
+   * close handler won't auto-drain into a fresh subprocess.
    */
   stop(): void {
     if (this.proc) {
       log("stop", "Stopping Claude process");
+      this.messageQueue = [];
       if (this.proc.stdin) this.proc.stdin.end();
       this.proc.kill();
       this.proc = null;
       this.busy = false;
     }
+  }
+
+  /**
+   * Restart the claude subprocess. Kills the current process (if any) but
+   * preserves the session id and any queued messages — the close handler
+   * drains the queue into the fresh subprocess so wedged sessions recover
+   * without losing in-flight user messages.
+   */
+  restart(): void {
+    if (!this.proc) {
+      log("restart", "No process to restart");
+      return;
+    }
+    log("restart", "Killing subprocess — close handler will drain any queued messages");
+    if (this.proc.stdin) this.proc.stdin.end();
+    this.proc.kill();
   }
 
   /**

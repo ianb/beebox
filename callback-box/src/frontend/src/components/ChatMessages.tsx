@@ -903,15 +903,23 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
     ? senderEmail ? senderEmail !== currentUserEmail : senderName ? senderName !== currentUserEmail : false
     : false;
 
+  const isPending = entries.every((e) => e.pending === true);
+  const pendingClass = isPending ? " opacity-60" : "";
+  const pendingTitle = isPending ? "Queued — waiting for agent" : undefined;
+
   if (isOtherUser) {
     // Other user's message: left-aligned with name label
     return (
       <div className="pr-12 sm:pr-24 py-1">
         <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
-        <div className="ml-3 sm:ml-6 rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words">
+        <div
+          className={"ml-3 sm:ml-6 rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words" + pendingClass}
+          title={pendingTitle}
+        >
           {entries.map((entry) => (
             <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
           ))}
+          {isPending ? <PendingIndicator /> : null}
         </div>
       </div>
     );
@@ -919,12 +927,22 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
 
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
-      <div className="rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words">
+      <div
+        className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
+        title={pendingTitle}
+      >
         {entries.map((entry) => (
           <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
         ))}
+        {isPending ? <PendingIndicator /> : null}
       </div>
     </div>
+  );
+}
+
+function PendingIndicator() {
+  return (
+    <div className="text-xs text-white/70 mt-1 italic">queued — waiting</div>
   );
 }
 

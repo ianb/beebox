@@ -13,7 +13,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
+import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
 import { AttachmentPanel, type AttachmentItem } from "../ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
@@ -170,6 +170,7 @@ interface ModelMarker {
  */
 function ChatDebugMenu({
   onStopProcess,
+  onRestartProcess,
   onCompactSession,
   sessionId,
   running,
@@ -182,6 +183,7 @@ function ChatDebugMenu({
   onSelectModel,
 }: {
   onStopProcess: () => void;
+  onRestartProcess: () => void;
   onCompactSession: () => void;
   sessionId: string | null;
   running: boolean;
@@ -213,6 +215,7 @@ function ChatDebugMenu({
       )}
     >
       <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
+      <MenuItem onClick={onRestartProcess} disabled={!running}>Restart Subprocess</MenuItem>
       <MenuItem onClick={onCompactSession} disabled={busy}>Compact Session</MenuItem>
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Model</div>
@@ -1326,6 +1329,10 @@ export function InteractiveChat() {
     send({ type: "INTERRUPT" });
   }, [send]);
 
+  const handleRestartProcess = useCallback(() => {
+    restartChatSubprocess().catch(() => {});
+  }, []);
+
   const handleCompactSession = useCallback(() => {
     // /compact must be the first characters of the text, with no wrapping —
     // the backend /send route detects leading-slash messages and skips
@@ -1473,6 +1480,7 @@ export function InteractiveChat() {
         <NewSessionButton onClick={handleNewSession} />
         <ChatDebugMenu
           onStopProcess={handleStopProcess}
+          onRestartProcess={handleRestartProcess}
           onCompactSession={handleCompactSession}
           sessionId={sessionId}
           running={processRunning}

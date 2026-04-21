@@ -232,6 +232,115 @@ session.stop();
 await box.cleanup();
 ```
 
+## Close handler drains queued messages into a fresh subprocess
+
+If the subprocess dies while a turn is in progress and messages are
+queued behind it, the close handler auto-drains the queue into a newly
+spawned subprocess. This recovers from wedged/killed subprocesses
+without losing the user's in-flight messages.
+
+```
+const box = await makeTmpBox();
+const spawner = createFakeClaudeChatSpawner();
+const opts = { spawner, systemPrompt: plainTestPrompt, skipBootstrap: true };
+const session = new ChatSession(box.root, opts);
+
+// First message starts a turn; session goes busy
+await session.send("first");
+await tick();
+
+// Two more messages queue up because busy=true
+session.enqueue("second");
+session.enqueue("third");
+
+// Simulate the subprocess dying mid-turn (no result emitted)
+const proc1 = spawner.lastProcess();
+proc1.close(1);
+await tick();
+await tick();
+
+// A second process got spawned and received the combined queued text
+spawner.processes.length
+=> 2
+```
+
+``` continue
+const proc2 = spawner.processes[1];
+const userTurn = proc2.sent.find((m) => m && m.type === "user");
+const text = userTurn.message.content[0].text;
+text.includes("second") && text.includes("third")
+=> true
+```
+
+```cleanup
+session.stop();
+await box.cleanup();
+```
+
+## restart() kills subprocess and drains queue into fresh one
+
+Calling `restart()` kills the current subprocess; the close handler
+then drains any queued messages into a new subprocess, preserving the
+session id. Unlike `stop()`, queued messages survive.
+
+```
+const box = await makeTmpBox();
+const spawner = createFakeClaudeChatSpawner();
+const opts = { spawner, systemPrompt: plainTestPrompt, skipBootstrap: true };
+const session = new ChatSession(box.root, opts);
+
+await session.send("hello");
+await tick();
+session.enqueue("queued after restart");
+
+session.restart();
+await tick();
+await tick();
+
+spawner.processes.length
+=> 2
+```
+
+``` continue
+const proc2 = spawner.processes[1];
+const userTurn = proc2.sent.find((m) => m && m.type === "user");
+userTurn.message.content[0].text.includes("queued after restart")
+=> true
+```
+
+```cleanup
+session.stop();
+await box.cleanup();
+```
+
+## stop() clears queued messages — no auto-drain
+
+`stop()` is used for intentional shutdown (including `resetSession`).
+It clears the queue before killing the process so the close handler
+doesn't surprise the caller by respawning.
+
+```
+const box = await makeTmpBox();
+const spawner = createFakeClaudeChatSpawner();
+const opts = { spawner, systemPrompt: plainTestPrompt, skipBootstrap: true };
+const session = new ChatSession(box.root, opts);
+
+await session.send("hi");
+await tick();
+session.enqueue("will be discarded");
+
+session.stop();
+await tick();
+await tick();
+
+spawner.processes.length
+=> 1
+```
+
+```cleanup
+await box.cleanup();
+```
+
 ## Notes
 
 - All the options are optional. `new ChatSession(boxRoot)` with no
