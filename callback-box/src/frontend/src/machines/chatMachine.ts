@@ -93,6 +93,16 @@ const streamActor = fromCallback(
     sendBack: (event: ChatEvent) => void;
     input: { message: string; images?: ChatImageAttachment[] };
   }) => {
+    // Track whether the stream ever produced a terminal event. If the SSE
+    // ends cleanly without one (proxy timeout, server closed the socket
+    // after the subprocess emitted `result` but before we parsed it, etc.),
+    // the machine would otherwise sit in `streaming` forever.
+    let terminalFired = false;
+    const terminal = (event: ChatEvent) => {
+      terminalFired = true;
+      sendBack(event);
+    };
+
     sendChatMessage({
       message: input.message,
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
@@ -100,17 +110,17 @@ const streamActor = fromCallback(
         const type = msg.type as string;
 
         if (type === "busy") {
-          sendBack({ type: "STREAM_BUSY" });
+          terminal({ type: "STREAM_BUSY" });
           return;
         }
 
         if (type === "queued") {
-          sendBack({ type: "STREAM_QUEUED" });
+          terminal({ type: "STREAM_QUEUED" });
           return;
         }
 
         if (type === "error") {
-          sendBack({
+          terminal({
             type: "STREAM_ERROR",
             error: (msg.error as string) || "Unknown error",
           });
@@ -150,15 +160,26 @@ const streamActor = fromCallback(
         }
 
         if (type === "result") {
-          sendBack({ type: "STREAM_RESULT" });
+          terminal({ type: "STREAM_RESULT" });
         }
       },
-    }).catch((err) => {
-      sendBack({
-        type: "STREAM_FAILED",
-        error: err instanceof Error ? err.message : "Send failed",
+    })
+      .then(() => {
+        if (!terminalFired) {
+          // Stream ended without any terminal event — fall back to a history
+          // refresh so the UI can recover whatever the server completed.
+          sendBack({
+            type: "STREAM_FAILED",
+            error: "Stream ended without result",
+          });
+        }
+      })
+      .catch((err) => {
+        sendBack({
+          type: "STREAM_FAILED",
+          error: err instanceof Error ? err.message : "Send failed",
+        });
       });
-    });
 
     return () => {};
   }
