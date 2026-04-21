@@ -19,7 +19,6 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { SharePage } from "./pages/SharePage";
 import { PrintBriefView } from "./pages/news/PrintBriefView";
-import { TodosPage } from "./pages/TodosPage";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { AppLayout, BoxRedirect, ShareRedirect, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
 import { CardViewPage } from "./pages/card/CardViewPage";
@@ -147,12 +146,6 @@ const adminRoute = createRoute({
   }),
 });
 
-const todosRoute = createRoute({
-  getParentRoute: () => boxLayoutRoute,
-  path: "/todos",
-  component: TodosPage,
-});
-
 const activitiesRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/activities",
@@ -197,7 +190,6 @@ const routeTree = rootRoute.addChildren([
     captureRoute,
     settingsRoute,
     adminRoute,
-    todosRoute,
     activitiesRoute,
     cardRoute,
     viewRoute,

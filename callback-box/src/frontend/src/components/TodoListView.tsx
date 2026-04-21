@@ -1,22 +1,80 @@
 /**
- * TodoListCard — renders a single todo list with items and a status-toggle
- * checkbox per item. Appearance-heavy (bespoke round checkbox for the tri-state
- * pending/done/deferred item), so it lives in components/ rather than a page.
+ * TodoListView — card renderer for todo-list cards.
+ *
+ * Parses the XML element into items + nested sub-items, renders them with a
+ * tri-state round checkbox (pending/done/deferred), and toggles status via
+ * the todos.updateItem mutation.
+ *
+ * Lives in components/ because the bespoke round-checkbox look is
+ * appearance-heavy.
  */
 
 import { cbSource, cbSourceItem } from "../lib/source-tag";
-import { trpc, type RouterOutput } from "../lib/trpc";
+import { trpc } from "../lib/trpc";
+import type { ElementNode } from "../api";
+import type { RendererProps } from "../renderers";
 
-type TodoItemInfo = RouterOutput["todos"]["list"]["lists"][number]["items"][number];
-type TodoListInfo = RouterOutput["todos"]["list"]["lists"][number];
+interface TodoItemInfo {
+  name: string;
+  status: string;
+  details?: string | undefined;
+  children: TodoItemInfo[];
+}
+
+interface TodoListInfo {
+  name: string;
+  details?: string | undefined;
+  items: TodoItemInfo[];
+  counts: { pending: number; done: number; cancelled: number; deferred: number };
+}
+
+function parseItem(el: ElementNode): TodoItemInfo {
+  const children = el.children ?? [];
+  const detailsEl = children.find((c) => c.tagName === "details");
+  const subItems = children.filter((c) => c.tagName === "item");
+
+  return {
+    name: el.attrs.name ?? "",
+    status: el.attrs.status ?? "pending",
+    details: detailsEl ? (detailsEl.text ?? "") : undefined,
+    children: subItems.map(parseItem),
+  };
+}
+
+function countStatuses(items: TodoItemInfo[]): TodoListInfo["counts"] {
+  const counts = { pending: 0, done: 0, cancelled: 0, deferred: 0 };
+  for (const item of items) {
+    const status = item.status as keyof typeof counts;
+    if (status in counts) counts[status]++;
+    const sub = countStatuses(item.children);
+    counts.pending += sub.pending;
+    counts.done += sub.done;
+    counts.cancelled += sub.cancelled;
+    counts.deferred += sub.deferred;
+  }
+  return counts;
+}
+
+function parseTodoList(element: ElementNode): TodoListInfo {
+  const children = element.children ?? [];
+  const detailsEl = children.find((c) => c.tagName === "details");
+  const itemEls = children.filter((c) => c.tagName === "item");
+  const items = itemEls.map(parseItem);
+
+  return {
+    name: element.attrs.name ?? "",
+    details: detailsEl ? (detailsEl.text ?? "") : undefined,
+    items,
+    counts: countStatuses(items),
+  };
+}
 
 interface TodoItemProps {
   item: TodoItemInfo;
-  listPath: string;
   onToggle: (itemName: string, newStatus: string) => void;
 }
 
-function TodoItem({ item, listPath, onToggle }: TodoItemProps) {
+function TodoItem({ item, onToggle }: TodoItemProps) {
   const isDone = item.status === "done" || item.status === "cancelled";
 
   return (
@@ -61,7 +119,6 @@ function TodoItem({ item, listPath, onToggle }: TodoItemProps) {
                 <TodoItem
                   key={child.name}
                   item={child}
-                  listPath={listPath}
                   onToggle={onToggle}
                 />
               ))}
@@ -73,27 +130,32 @@ function TodoItem({ item, listPath, onToggle }: TodoItemProps) {
   );
 }
 
-export function TodoListCard({ list }: { list: TodoListInfo }) {
+export function TodoListView({ data }: RendererProps) {
   const utils = trpc.useUtils();
   const updateMutation = trpc.todos.updateItem.useMutation({
     onSuccess: () => {
-      utils.todos.list.invalidate();
+      utils.card.get.invalidate({ path: data.path });
     },
   });
 
+  if (!data.element) {
+    return <div className="p-4 text-warm-600">No todo list data</div>;
+  }
+
+  const list = parseTodoList(data.element);
+  const total = list.counts.pending + list.counts.done + list.counts.cancelled + list.counts.deferred;
+  const completed = list.counts.done + list.counts.cancelled;
+
   const handleToggle = (itemName: string, newStatus: string) => {
     updateMutation.mutate({
-      listPath: list.relativePath,
+      listPath: data.path,
       itemName,
       status: newStatus as "pending" | "done" | "cancelled" | "deferred",
     });
   };
 
-  const total = list.counts.pending + list.counts.done + list.counts.cancelled + list.counts.deferred;
-  const completed = list.counts.done + list.counts.cancelled;
-
   return (
-    <div className="bg-white rounded-lg border border-warm-200 shadow-sm" {...cbSource("card", list.relativePath)}>
+    <div className="bg-white rounded-lg border border-warm-200 shadow-sm" {...cbSource("card", data.path)}>
       <div className="px-4 py-3 border-b border-warm-100">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-warm-900">{list.name}</h2>
@@ -110,7 +172,6 @@ export function TodoListCard({ list }: { list: TodoListInfo }) {
           <TodoItem
             key={item.name}
             item={item}
-            listPath={list.relativePath}
             onToggle={handleToggle}
           />
         ))}
