@@ -15,6 +15,7 @@ import * as path from "node:path";
 import {
   getSessionLogPath,
   parseSessionLog,
+  tailForMinUserMessages,
   type SessionEntry,
 } from "../cli/lib/session.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
@@ -30,6 +31,26 @@ import {
 // Path to the cb-claude wrapper binary — used to extend PATH for subprocess tools.
 const __dirname = import.meta.dirname;
 const binDir = path.resolve(__dirname, "../../bin");
+
+/**
+ * Compute the tail size honoring both an explicit tail and a minimum number
+ * of real user messages to include. Returns null to mean "no trimming".
+ */
+function effectiveTailSize(
+  entries: SessionEntry[],
+  params?: { tail?: number; minRealUserMessages?: number },
+): number | null {
+  const tail = params ? params.tail : undefined;
+  const minUsers = params ? params.minRealUserMessages : undefined;
+  const userTail = minUsers && minUsers > 0
+    ? tailForMinUserMessages(entries, minUsers)
+    : 0;
+  if (tail !== undefined && tail > 0) {
+    return Math.max(tail, userTail);
+  }
+  if (userTail > 0) return userTail;
+  return null;
+}
 
 /**
  * Content block in a Claude stream-json message.
@@ -728,7 +749,7 @@ export class ChatSession extends EventEmitter {
   /**
    * Load conversation history from the session log.
    */
-  async getHistory(params?: { tail?: number }): Promise<{
+  async getHistory(params?: { tail?: number; minRealUserMessages?: number }): Promise<{
     sessionId: string | null;
     entries: SessionEntry[];
     total: number;
@@ -744,11 +765,11 @@ export class ChatSession extends EventEmitter {
 
     const result = await parseSessionLog({ logPath });
     const { entries, total } = result;
-    const tail = params?.tail;
-    if (tail && tail < entries.length) {
+    const effectiveTail = effectiveTailSize(entries, params);
+    if (effectiveTail !== null && effectiveTail < entries.length) {
       return {
         sessionId: this.sessionId,
-        entries: entries.slice(entries.length - tail),
+        entries: entries.slice(entries.length - effectiveTail),
         total,
       };
     }

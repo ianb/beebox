@@ -12,8 +12,10 @@ import type { SessionEntry, SessionContentBlock } from "../api";
 import { trpc } from "../lib/trpc";
 import type { FileSummary } from "../../../core/file-summary";
 
+// Tool-input keys we treat as "agent touched this file". Deliberately
+// excludes generic `path` (used by Grep/Glob/LS for the search *scope*,
+// which is typically a directory or ".").
 const TOOL_PATH_KEYS = [
-  "path",
   "file_path",
   "notebook_path",
   "target_file",

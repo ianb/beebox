@@ -425,6 +425,43 @@ export async function getSessionMetadata(args: {
 }
 
 /**
+ * A "real" user message is one the human actually typed or spoke, as opposed
+ * to system-injected user entries (tool results, schedule-fired notifications,
+ * pending-schedules status, etc.). Real user messages start with a <typed> or
+ * <speech> tag since the UI wraps human input in those.
+ */
+export function isRealUserMessage(entry: SessionEntry): boolean {
+  if (entry.type !== "user") return false;
+  for (const block of entry.content) {
+    if (block.type !== "text") continue;
+    const text = (block.text || "").trimStart();
+    if (text.startsWith("<typed") || text.startsWith("<speech")) return true;
+  }
+  return false;
+}
+
+/**
+ * Compute the minimum tail size that includes at least `minRealUserMessages`
+ * real user messages. Returns the number of entries from the end of the list
+ * needed to cover that many — or `entries.length` if fewer real user messages
+ * exist than requested.
+ */
+export function tailForMinUserMessages(
+  entries: SessionEntry[],
+  minRealUserMessages: number,
+): number {
+  if (minRealUserMessages <= 0) return 0;
+  let count = 0;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (isRealUserMessage(entries[i]!)) {
+      count += 1;
+      if (count >= minRealUserMessages) return entries.length - i;
+    }
+  }
+  return entries.length;
+}
+
+/**
  * Parameters for parseSessionLog
  */
 export interface ParseSessionLogParams {

@@ -43,7 +43,9 @@ type ChatEvent =
 // -- Context --
 
 /** How many recent entries to load initially and on refresh. */
-const HISTORY_TAIL = 40;
+const HISTORY_TAIL = 200;
+/** Floor on how many real (typed/spoken) user messages the initial load must cover. */
+const MIN_REAL_USER_MESSAGES = 2;
 
 interface ChatContext {
   messages: SessionEntry[];
@@ -64,7 +66,7 @@ interface ChatContext {
 
 const fetchInitialActor = fromPromise(async () => {
   const [history, status] = await Promise.all([
-    getChatHistory({ tail: HISTORY_TAIL }),
+    getChatHistory({ tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
     getChatStatus(),
   ]);
   return {
@@ -76,7 +78,7 @@ const fetchInitialActor = fromPromise(async () => {
 });
 
 const fetchHistoryActor = fromPromise(async () => {
-  return getChatHistory({ tail: HISTORY_TAIL });
+  return getChatHistory({ tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES });
 });
 
 const resetSessionActor = fromPromise(async () => {
@@ -430,6 +432,7 @@ export const chatMachine = setup({
                 type: "user" as const,
                 timestamp: new Date().toISOString(),
                 content: buildOptimisticContent(event.message, event.images),
+                pending: true,
               };
               return {
                 messages: [...context.messages, entry],
@@ -500,6 +503,7 @@ export const chatMachine = setup({
                 type: "user" as const,
                 timestamp: new Date().toISOString(),
                 content: buildOptimisticContent(event.message, event.images),
+                pending: true,
               };
               return {
                 messages: [...context.messages, entry],

@@ -21,6 +21,7 @@ import {
   listSessions,
   getSessionLogPath,
   parseSessionLog,
+  tailForMinUserMessages,
 } from "../../cli/lib/session.js";
 import {
   ChatScheduleManager,
@@ -373,21 +374,31 @@ export async function registerChatRoutes(
   // Optional ?session=<id> to view any session's history (read-only)
   // Optional ?tail=N to load only the last N entries (returns total count)
   // Optional ?offset=N&limit=N for explicit pagination
-  server.get<{ Querystring: { session?: string; tail?: string; offset?: string; limit?: string } }>("/api/chat/history", async (request) => {
+  server.get<{ Querystring: { session?: string; tail?: string; offset?: string; limit?: string; minRealUserMessages?: string } }>("/api/chat/history", async (request) => {
     const sessionId = request.query.session;
     const tail = request.query.tail ? parseInt(request.query.tail, 10) : undefined;
     const offset = request.query.offset ? parseInt(request.query.offset, 10) : undefined;
     const limit = request.query.limit ? parseInt(request.query.limit, 10) : undefined;
+    const minRealUserMessages = request.query.minRealUserMessages
+      ? parseInt(request.query.minRealUserMessages, 10)
+      : undefined;
     if (!sessionId) {
-      return chatSession.getHistory(tail ? { tail } : undefined);
+      const historyParams: { tail?: number; minRealUserMessages?: number } = {};
+      if (tail) historyParams.tail = tail;
+      if (minRealUserMessages) historyParams.minRealUserMessages = minRealUserMessages;
+      return chatSession.getHistory(Object.keys(historyParams).length > 0 ? historyParams : undefined);
     }
     // Load from JSONL file directly
     const logPath = getSessionLogPath(boxRoot, sessionId);
     try {
       const result = await parseSessionLog({ logPath, ...(offset != null ? { offset } : {}), ...(limit != null ? { limit } : {}) });
       const { entries, total } = result;
-      if (tail && tail < entries.length) {
-        return { sessionId, entries: entries.slice(entries.length - tail), total };
+      const userTail = minRealUserMessages && minRealUserMessages > 0
+        ? tailForMinUserMessages(entries, minRealUserMessages)
+        : 0;
+      const effective = tail && tail > 0 ? Math.max(tail, userTail) : (userTail > 0 ? userTail : undefined);
+      if (effective !== undefined && effective < entries.length) {
+        return { sessionId, entries: entries.slice(entries.length - effective), total };
       }
       return { sessionId, entries, total };
     } catch (_e) {
@@ -476,6 +487,14 @@ export async function registerChatRoutes(
   // POST /api/chat/interrupt - Interrupt current turn
   server.post("/api/chat/interrupt", async () => {
     chatSession.interrupt();
+    return { ok: true };
+  });
+
+  // POST /api/chat/restart - Kill the subprocess (preserves session id).
+  // Queued messages are drained into the fresh subprocess automatically
+  // via the close handler — this is how users unstick a wedged chat.
+  server.post("/api/chat/restart", async () => {
+    chatSession.restart();
     return { ok: true };
   });
 

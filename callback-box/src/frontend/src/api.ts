@@ -112,6 +112,13 @@ export interface SessionEntry {
   user?: string;
   /** Email of the sender (for identity matching across devices) */
   userEmail?: string;
+  /**
+   * Client-only flag: this entry was queued because the agent was busy
+   * and hasn't yet been confirmed by the server as delivered. Rendered
+   * with a "sending" indicator. Cleared when the server history catches
+   * up (see reconcilePending in chatMachine).
+   */
+  pending?: boolean;
 }
 
 // --- Shared fetch helper ---
@@ -260,12 +267,13 @@ export async function setChatModel(model: string | null): Promise<{ ok: boolean;
   });
 }
 
-export async function getChatHistory(params?: { sessionId?: string; tail?: number; offset?: number; limit?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
+export async function getChatHistory(params?: { sessionId?: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
   const searchParams = new URLSearchParams();
   if (params?.sessionId) searchParams.set("session", params.sessionId);
   if (params?.tail) searchParams.set("tail", String(params.tail));
   if (params?.offset != null) searchParams.set("offset", String(params.offset));
   if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.minRealUserMessages) searchParams.set("minRealUserMessages", String(params.minRealUserMessages));
   const qs = searchParams.toString();
   return fetchJson(`${getApiBase()}/chat/history${qs ? `?${qs}` : ""}`);
 }
@@ -291,6 +299,18 @@ export async function interruptChat(): Promise<{ ok: boolean }> {
 
 export async function resetChatSession(): Promise<{ ok: boolean }> {
   return fetchJson(`${getApiBase()}/chat/reset`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Kill the chat subprocess without resetting the session id. Queued
+ * messages drain into the fresh subprocess automatically. Use this to
+ * unstick a wedged chat.
+ */
+export async function restartChatSubprocess(): Promise<{ ok: boolean }> {
+  return fetchJson(`${getApiBase()}/chat/restart`, {
     method: "POST",
     body: JSON.stringify({}),
   });
