@@ -168,6 +168,11 @@ export function CapturePage() {
   const uploadRef = useRef<HTMLInputElement>(null);
   const pendingUploads = useRef<Promise<void>[]>([]);
 
+  // Track failed upload payloads so the user can retry them
+  const failedPhotoData = useRef<Map<number, { blob: Blob; startedAt: string; source: string }>>(new Map());
+  const failedAudioData = useRef<Map<number, { blob: Blob; startedAt: string }>>(new Map());
+  const failedFileData = useRef<Map<number, { file: File }>>(new Map());
+
   // Create session on mount + enumerate devices
   useEffect(() => {
     let cancelled = false;
@@ -250,9 +255,6 @@ export function CapturePage() {
     source: string;
   }
 
-  // Track failed photo blobs so we can retry them
-  const failedPhotoData = useRef<Map<number, { blob: Blob; startedAt: string; source: string }>>(new Map());
-
   const uploadPhoto = useCallback(
     ({ sessionId: sid, index, blob, startedAt, source }: UploadPhotoParams) => {
       const ext = blob.type.includes("png") ? "png" : "jpg";
@@ -274,26 +276,23 @@ export function CapturePage() {
     []
   );
 
-  const retryFailedUploads = useCallback(() => {
-    if (!sessionId) return;
-    const entries = Array.from(failedPhotoData.current.entries());
-    for (const [index, data] of entries) {
-      failedPhotoData.current.delete(index);
-      uploadPhoto({ sessionId, index, blob: data.blob, startedAt: data.startedAt, source: data.source });
-    }
-  }, [sessionId, uploadPhoto]);
-
   const handleChunk = useCallback(
     ({ blob, index, startedAt }: { blob: Blob; index: number; startedAt: string }) => {
       if (!sessionId) return;
       const filename = `audio-${String(index + 1).padStart(3, "0")}.webm`;
-      setAudioChunks((prev) => [...prev, { index, state: "uploading" }]);
+      setAudioChunks((prev) => {
+        const existing = prev.find((c) => c.index === index);
+        if (existing) return prev.map((c) => (c.index === index ? { ...c, state: "uploading" } : c));
+        return [...prev, { index, state: "uploading" }];
+      });
       const p = uploadCaptureFile({ sessionId, filename, blob, startedAt, source: "microphone" })
         .then(() => {
+          failedAudioData.current.delete(index);
           setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "uploaded" } : c)));
         })
         .catch((e: Error) => {
           console.error(`[capture] Audio upload failed (${filename}):`, e);
+          failedAudioData.current.set(index, { blob, startedAt });
           setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "failed" } : c)));
         });
       pendingUploads.current.push(p);
@@ -410,17 +409,38 @@ export function CapturePage() {
         mimeType: file.type || undefined,
       })
         .then(() => {
+          failedFileData.current.delete(index);
           setFileStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
         })
         .catch((e: unknown) => {
           const msg = e instanceof Error ? e.message : String(e);
           console.error(`[capture] File upload failed (${filename}): ${msg}`);
+          failedFileData.current.set(index, { file });
           setFileStates((prev) => { const next = [...prev]; next[index] = "failed"; return next; });
         });
       pendingUploads.current.push(p);
     },
     []
   );
+
+  const retryFailedUploads = useCallback(() => {
+    if (!sessionId) return;
+    const photoEntries = Array.from(failedPhotoData.current.entries());
+    for (const [index, data] of photoEntries) {
+      failedPhotoData.current.delete(index);
+      uploadPhoto({ sessionId, index, blob: data.blob, startedAt: data.startedAt, source: data.source });
+    }
+    const audioEntries = Array.from(failedAudioData.current.entries());
+    for (const [index, data] of audioEntries) {
+      failedAudioData.current.delete(index);
+      handleChunk({ blob: data.blob, index, startedAt: data.startedAt });
+    }
+    const fileEntries = Array.from(failedFileData.current.entries());
+    for (const [index, data] of fileEntries) {
+      failedFileData.current.delete(index);
+      uploadFile({ sessionId, index, file: data.file });
+    }
+  }, [sessionId, uploadPhoto, handleChunk, uploadFile]);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -443,6 +463,7 @@ export function CapturePage() {
   const photoTotal = photoStates.length;
   const audioUploaded = audioChunks.filter((c) => c.state === "uploaded").length;
   const audioUploading = audioChunks.filter((c) => c.state === "uploading").length;
+  const audioFailed = audioChunks.filter((c) => c.state === "failed").length;
   const audioTotal = audioChunks.length;
   const filesUploaded = fileStates.filter((s) => s === "uploaded").length;
   const filesUploading = fileStates.filter((s) => s === "uploading").length;
@@ -466,6 +487,8 @@ export function CapturePage() {
       await finalizeCaptureSession(sessionId);
       setSessionId(null); setPhotoStates([]); setFileStates([]); setAudioChunks([]); setError(null); setFinalizing(false);
       failedPhotoData.current.clear();
+      failedAudioData.current.clear();
+      failedFileData.current.clear();
       try {
         const result = await createCaptureSession();
         setSessionId(result.sessionId);
@@ -477,6 +500,9 @@ export function CapturePage() {
     if (!sessionId) return;
     if (recording && recorderRef.current) { recorderRef.current.stop(); recorderRef.current = null; setRecording(false); }
     pendingUploads.current = [];
+    failedPhotoData.current.clear();
+    failedAudioData.current.clear();
+    failedFileData.current.clear();
     if (cameraOn) { cameraRef.current.stop(); setCameraOn(false); }
     try {
       await cancelCaptureSession(sessionId);
@@ -496,7 +522,7 @@ export function CapturePage() {
     <CaptureShell>
       <StatusBar
         recording={recording} recordingTime={recordingTime} formatTime={formatTime}
-        audioTotal={audioTotal} audioUploading={audioUploading} audioUploaded={audioUploaded}
+        audioTotal={audioTotal} audioUploading={audioUploading} audioUploaded={audioUploaded} audioFailed={audioFailed}
         photoTotal={photoTotal} photosUploading={photosUploading} photosUploaded={photosUploaded} photosFailed={photosFailed}
         fileTotal={fileTotal} filesUploading={filesUploading} filesUploaded={filesUploaded} filesFailed={filesFailed}
         showSettings={showSettings}
@@ -527,7 +553,8 @@ export function CapturePage() {
 
       <CaptureControls
         sessionId={sessionId} recording={recording} uploadsInProgress={uploadsInProgress} finalizing={finalizing}
-        hasContent={photoTotal > 0 || audioTotal > 0 || fileTotal > 0} photosFailed={photosFailed}
+        hasContent={photoTotal > 0 || audioTotal > 0 || fileTotal > 0}
+        photosFailed={photosFailed} audioFailed={audioFailed} filesFailed={filesFailed}
         onDone={handleDone} onCancel={handleCancel} onToggleRecording={toggleRecording} onRetryFailed={retryFailedUploads}
       />
     </CaptureShell>

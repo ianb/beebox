@@ -10,21 +10,32 @@ interface CaptureControlsProps {
   finalizing: boolean;
   hasContent: boolean;
   photosFailed: number;
+  audioFailed: number;
+  filesFailed: number;
   onDone: () => void;
   onCancel: () => void;
   onToggleRecording: () => void;
   onRetryFailed: () => void;
 }
 
+function summarizeFailures({ photosFailed, audioFailed, filesFailed }: { photosFailed: number; audioFailed: number; filesFailed: number }): string {
+  const parts: string[] = [];
+  if (photosFailed > 0) parts.push(`${photosFailed} photo${photosFailed > 1 ? "s" : ""}`);
+  if (audioFailed > 0) parts.push(`${audioFailed} audio chunk${audioFailed > 1 ? "s" : ""}`);
+  if (filesFailed > 0) parts.push(`${filesFailed} file${filesFailed > 1 ? "s" : ""}`);
+  return parts.join(", ");
+}
+
 export function CaptureControls(props: CaptureControlsProps) {
-  const doneDisabled = !props.sessionId || props.uploadsInProgress || props.finalizing || !props.hasContent || props.photosFailed > 0;
+  const totalFailed = props.photosFailed + props.audioFailed + props.filesFailed;
+  const doneDisabled = !props.sessionId || props.uploadsInProgress || props.finalizing || !props.hasContent;
   return (
     <div className="flex flex-col items-center bg-gray-900/80">
-      {props.photosFailed > 0 ? (
+      {totalFailed > 0 ? (
         <div className="text-danger-light text-sm py-2 px-4 text-center">
-          {props.photosFailed} photo{props.photosFailed > 1 ? "s" : ""} failed to upload.{" "}
+          {summarizeFailures(props)} failed to upload.{" "}
           <button onClick={props.onRetryFailed} className="text-warning-light underline">Retry</button>
-          {" "}or discard the session.
+          {" "}or press Done to finalize without them.
         </div>
       ) : null}
       <div className="flex items-center justify-around w-full px-6 py-4">

@@ -11,6 +11,7 @@ interface StatusBarProps {
   audioTotal: number;
   audioUploading: number;
   audioUploaded: number;
+  audioFailed: number;
   photoTotal: number;
   photosUploading: number;
   photosUploaded: number;
@@ -40,6 +41,12 @@ export function StatusBar(props: StatusBarProps) {
           <div className="flex items-center gap-1.5 text-sm">
             {props.audioUploading > 0 ? (
               <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">audio uploading</span></>
+            ) : props.audioFailed > 0 ? (
+              <>
+                <span className="text-danger-light">&#10007;</span>
+                <span className="text-danger-light">{props.audioFailed} audio failed</span>
+                <button onClick={props.onRetryFailed} className="text-warning-light underline ml-1">retry</button>
+              </>
             ) : (
               <><span className="text-success-light">&#10003;</span><span className="text-success-light">audio ({props.audioUploaded})</span></>
             )}
@@ -68,7 +75,12 @@ export function StatusBar(props: StatusBarProps) {
             {props.filesUploading > 0 ? (
               <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files</span></>
             ) : props.filesFailed > 0 ? (
-              <><span className="text-danger-light">&#10007;</span><span className="text-danger-light">{props.filesFailed} failed</span></>
+              <>
+                <span className="text-danger-light">&#10007;</span>
+                <span className="text-danger-light">{props.filesFailed} failed</span>
+                <button onClick={props.onRetryFailed} className="text-warning-light underline ml-1">retry</button>
+                {props.filesUploaded > 0 ? <span className="text-success-light">, {props.filesUploaded} ok</span> : null}
+              </>
             ) : (
               <><span className="text-success-light">&#10003;</span><span className="text-success-light">{props.fileTotal} files</span></>
             )}
