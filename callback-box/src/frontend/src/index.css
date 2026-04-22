@@ -37,6 +37,80 @@ body {
   color: #032f62;
 }
 
+/* ===== Elegant print styles for Markdown / prose in the browse view ===== */
+
+@media print {
+  html, body {
+    background: white !important;
+    color: #1a1a1a !important;
+  }
+
+  /* Release the app-shell / two-pane height & overflow constraints so that
+     content flows naturally across pages instead of being clipped to the
+     viewport. Target the Tailwind utilities directly — all our layout
+     containers build from these. */
+  .h-screen,
+  .h-\[100dvh\],
+  .h-full {
+    height: auto !important;
+  }
+
+  .min-h-0 {
+    min-height: 0 !important;
+  }
+
+  .overflow-auto,
+  .overflow-hidden,
+  .overflow-scroll {
+    overflow: visible !important;
+  }
+
+  .max-h-96 {
+    max-height: none !important;
+  }
+
+  /* Upgrade Tailwind's .prose to a print-friendly serif layout. */
+  .prose {
+    color: #1a1a1a !important;
+    font-family: Georgia, "Times New Roman", Times, serif !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+    max-width: none !important;
+  }
+
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    color: #111 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .prose p, .prose li, .prose blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .prose pre, .prose blockquote, .prose table, .prose figure, .prose img {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .prose a {
+    color: #111 !important;
+    text-decoration: underline;
+  }
+
+  .prose img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Avoid ink-heavy backgrounds on code/blockquote borders */
+  .prose pre, .prose code {
+    background: #f5f5f5 !important;
+    color: #1a1a1a !important;
+  }
+}
+
 /* ===== Print Brief Styles ===== */
 
 .print-brief {

@@ -291,7 +291,7 @@ export function FileView({ path, mode = "page", rendererName, onNavigate }: File
     return (
       <div>
         {renderers.length > 1 ? (
-          <div className="flex justify-end px-3 py-2 border-b border-warm-200">
+          <div className="flex justify-end px-3 py-2 border-b border-warm-200 print:hidden">
             <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact />
           </div>
         ) : null}

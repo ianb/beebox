@@ -38,7 +38,7 @@ export function Sidebar({
 
   return (
     <div
-      className={`sm:border-r bg-white overflow-hidden flex-col transition-[width] duration-150 ease-in-out ${
+      className={`sm:border-r bg-white overflow-hidden flex-col transition-[width] duration-150 ease-in-out print:hidden ${
         detailSelected
           ? "hidden sm:flex sm:flex-shrink-0"
           : "flex flex-1 sm:flex-initial sm:flex-shrink-0"

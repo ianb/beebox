@@ -120,7 +120,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   );
 
   return (
-    <nav className="bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm">
+    <nav className="bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
       {/* Mobile: compact bar with hamburger + dropdown */}
       <div className="sm:hidden" ref={menuRef}>
         <div className="flex items-center justify-between px-3 py-2">

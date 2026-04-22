@@ -38,15 +38,15 @@ export function BrowseDetailPanel({
   selectedRawFile,
 }: BrowseDetailPanelProps) {
   return (
-    <div className={`${selectedRawFile ? "max-w-7xl" : "max-w-4xl"} mx-auto py-4 sm:py-8`}>
-      <MobileBackButton label="Back" onClick={onBack} className="mb-4 mx-4" />
+    <div className={`${selectedRawFile ? "max-w-7xl" : "max-w-4xl"} mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
+      <MobileBackButton label="Back" onClick={onBack} className="mb-4 mx-4 print:hidden" />
       {deleteError ? (
-        <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark">
+        <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark print:hidden">
           {deleteError}
         </div>
       ) : null}
-      <div className="bg-white rounded-lg shadow">
-        <div className="flex items-start justify-between gap-4 border-b border-warm-200 px-4 py-3">
+      <div className="bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none">
+        <div className="flex items-start justify-between gap-4 border-b border-warm-200 px-4 py-3 print:hidden">
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-bold text-warm-900" title={selectedFilePath}>
               {displayName(selectedFilePath)}
