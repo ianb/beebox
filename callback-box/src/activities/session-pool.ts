@@ -112,11 +112,11 @@ export class ActivityChatSessionPool {
     let detached = false;
     const onMessage = (msg: unknown) => {
       if (detached) return;
-      eventBus.emit("activity-chat-message", { ...scope, msg });
+      eventBus.emitTransient("activity-chat-message", { ...scope, msg });
     };
     const onTurnText = (text: string) => {
       if (detached) return;
-      eventBus.emit("activity-chat-turn-text", { ...scope, text });
+      eventBus.emitTransient("activity-chat-turn-text", { ...scope, text });
     };
     const onDone = (result: unknown) => {
       if (detached) return;

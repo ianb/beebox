@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { Link, useParams } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -119,20 +120,27 @@ function InstanceList({
   type: string;
   instances: Array<{ name: string; displayName: string; createdAt: string }>;
 }) {
+  const { boxSlug } = useParams({ strict: false });
   return (
     <Stack gap="xs">
       {instances.map((i) => (
-        <Row key={i.name} justify="between" align="center" className="py-1">
-          <Stack gap="none">
-            <Text as="div" weight="medium">{i.displayName}</Text>
-            <Text as="div" tone="subtle" size="xs" mono>
-              {type}/{i.name}
+        <Link
+          key={i.name}
+          to="/$boxSlug/activities/$type/$instance"
+          params={{ boxSlug: boxSlug !== undefined ? boxSlug : "", type, instance: i.name }}
+        >
+          <Row justify="between" align="center" className="py-1">
+            <Stack gap="none">
+              <Text as="div" weight="medium">{i.displayName}</Text>
+              <Text as="div" tone="subtle" size="xs" mono>
+                {type}/{i.name}
+              </Text>
+            </Stack>
+            <Text tone="subtle" size="xs">
+              created {formatRelative(i.createdAt)}
             </Text>
-          </Stack>
-          <Text tone="subtle" size="xs">
-            created {formatRelative(i.createdAt)}
-          </Text>
-        </Row>
+          </Row>
+        </Link>
       ))}
     </Stack>
   );

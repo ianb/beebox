@@ -20,6 +20,7 @@ import { AdminPage } from "./pages/AdminPage";
 import { SharePage } from "./pages/SharePage";
 import { PrintBriefView } from "./pages/news/PrintBriefView";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
+import { ActivityChatPage } from "./pages/activity-chat/ActivityChatPage";
 import { AppLayout, BoxRedirect, ShareRedirect, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
 import { CardViewPage } from "./pages/card/CardViewPage";
 import { ViewPage } from "./pages/ViewPage";
@@ -151,6 +152,12 @@ const activitiesRoute = createRoute({
   path: "/activities",
   component: ActivitiesPage,
 });
+
+const activityChatRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/activities/$type/$instance",
+  component: ActivityChatPage,
+});
 const cardRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/card/$",
@@ -191,6 +198,7 @@ const routeTree = rootRoute.addChildren([
     settingsRoute,
     adminRoute,
     activitiesRoute,
+    activityChatRoute,
     cardRoute,
     viewRoute,
     boxCatchAllRoute,

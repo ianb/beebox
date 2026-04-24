@@ -103,6 +103,61 @@ export const activitiesRouter = router({
     ),
 
   /**
+   * Fetch the chat transcript for `(type, instance, mode)`. Returns an
+   * empty history if the session has never produced a session id yet.
+   */
+  getHistory: publicProcedure
+    .input(z.object({ type: z.string(), instance: z.string(), mode: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const session = await ctx.activityChatPool
+        .getOrCreate({
+          boxRoot: ctx.boxRoot,
+          activityType: input.type,
+          instanceName: input.instance,
+          modeName: input.mode,
+        })
+        .catch((e: unknown) => {
+          if (e instanceof UnknownActivityTypeError) {
+            throw new TRPCError({ code: "NOT_FOUND", message: e.message });
+          }
+          if (e instanceof UnknownModeError) {
+            throw new TRPCError({ code: "NOT_FOUND", message: e.message });
+          }
+          throw e;
+        });
+      return session.getHistory();
+    }),
+
+  /**
+   * Status of the subprocess/session for `(type, instance, mode)`.
+   */
+  getStatus: publicProcedure
+    .input(z.object({ type: z.string(), instance: z.string(), mode: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const session = await ctx.activityChatPool
+        .getOrCreate({
+          boxRoot: ctx.boxRoot,
+          activityType: input.type,
+          instanceName: input.instance,
+          modeName: input.mode,
+        })
+        .catch((e: unknown) => {
+          if (e instanceof UnknownActivityTypeError) {
+            throw new TRPCError({ code: "NOT_FOUND", message: e.message });
+          }
+          if (e instanceof UnknownModeError) {
+            throw new TRPCError({ code: "NOT_FOUND", message: e.message });
+          }
+          throw e;
+        });
+      return {
+        sessionId: session.getSessionId(),
+        running: session.isRunning(),
+        busy: session.isBusy(),
+      };
+    }),
+
+  /**
    * Send a user message into the activity chat session for
    * `(type, instance, mode)`. Accepts immediately and returns the
    * session id (if one has been assigned); assistant output streams

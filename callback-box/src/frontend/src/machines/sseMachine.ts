@@ -43,6 +43,10 @@ const EVENT_TYPES = [
   "schedule-fired",
   "chat-complete",
   "chat-history",
+  "activity-chat-message",
+  "activity-chat-turn-text",
+  "activity-chat-done",
+  "activity-chat-close",
 ];
 
 interface SSEActorInput {
