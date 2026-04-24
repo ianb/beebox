@@ -80,6 +80,8 @@ ssh root@<server> 'journalctl -t claude-update --since "-7 days" --no-pager'
 
 **Force an immediate run:** `ssh root@<server> systemctl start claude-update.service`.
 
+**Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — a weekly remote routine reminds the user to run that runbook.
+
 ## Diagnostic endpoints behind auth
 
 In production, `/api/debug-log` and `/api/trpc/health.check` sit behind the Google OAuth cookie gate — `curl` without a browser cookie gets rejected.
