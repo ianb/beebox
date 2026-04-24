@@ -16,6 +16,7 @@ import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { TextField } from "../components/ui/fields";
 import { Badge } from "../components/ui/Badge";
+import { slugify } from "../../../lib/filename";
 
 export function ActivitiesPage() {
   const { data: types, isLoading } = trpc.activities.listTypes.useQuery();
@@ -99,10 +100,10 @@ function TypeHeader({
   return (
     <Row justify="between" align="center" wrap>
       <Stack gap="xs">
-        <Text size="lg" weight="bold">
+        <Text as="div" size="lg" weight="bold">
           {type.title}{type.singleton ? <> <Badge tone="neutral" size="sm">singleton</Badge></> : null}
         </Text>
-        <Text tone="subtle" size="sm">{type.description}</Text>
+        <Text as="div" tone="subtle" size="sm">{type.description}</Text>
       </Stack>
       {canCreate ? (
         <Button intent="primary" onClick={onCreate}>New instance</Button>
@@ -147,27 +148,33 @@ function NewInstanceForm({
   onCreated: () => void;
 }) {
   const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const createMutation = trpc.activities.create.useMutation();
+
+  const trimmed = name.trim();
+  const slug = slugify(trimmed);
+  const helper = slug === ""
+    ? "Enter a name — it will become a directory like spanish-practice."
+    : `Directory: ${slug}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const trimmedName = name.trim();
-    const trimmedDisplay = displayName.trim();
-    if (trimmedName === "") {
+    if (trimmed === "") {
       setError("Name is required");
+      return;
+    }
+    if (slug === "") {
+      setError("Name must contain letters or numbers");
       return;
     }
     try {
       await createMutation.mutateAsync({
         type: type.type,
-        name: trimmedName,
-        displayName: trimmedDisplay === "" ? trimmedName : trimmedDisplay,
+        name: slug,
+        displayName: trimmed,
       });
       setName("");
-      setDisplayName("");
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -178,22 +185,15 @@ function NewInstanceForm({
     <form onSubmit={handleSubmit}>
       <Card muted>
         <Stack gap="sm">
-          <Text size="sm" weight="medium">New {type.title} instance</Text>
+          <Text as="div" size="sm" weight="medium">New {type.title} instance</Text>
           <TextField
             label="Name"
             value={name}
             onChange={setName}
-            placeholder="spanish-practice"
-            helper="Used as a directory name: a-z, 0-9, - and _"
-            pattern="^[a-z0-9][a-z0-9_-]*$"
+            placeholder="Spanish practice"
+            helper={helper}
             required
             autoFocus
-          />
-          <TextField
-            label="Display name"
-            value={displayName}
-            onChange={setDisplayName}
-            placeholder="(defaults to name)"
           />
           {error !== null ? (
             <Text tone="danger" size="sm">{error}</Text>

@@ -49,3 +49,25 @@ export function sanitizeFilename(
   const safeExt = ext.replace(/[^\w.-]+/g, "");
   return sanitizeFilenameStem(stem, options) + safeExt;
 }
+
+export interface SlugifyOptions {
+  maxLength?: number;
+}
+
+/**
+ * Turn an arbitrary string into a lowercase hyphenated slug suitable for
+ * URLs or directory names. Strips punctuation, collapses whitespace and
+ * hyphen runs, and trims leading/trailing hyphens. Returns an empty
+ * string when nothing survives.
+ */
+export function slugify(text: string, options?: SlugifyOptions): string {
+  const maxLength = options && options.maxLength !== undefined ? options.maxLength : 50;
+  return text
+    .toLowerCase()
+    .replace(/[^\d\sa-z-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, maxLength)
+    .replace(/-+$/, "");
+}
