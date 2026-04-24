@@ -11,9 +11,9 @@
 import { useCallback } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
-import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
+import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../lib/view-url";
 
-export function useViewNavigate(): (target: ViewTarget) => void {
+export function useViewNavigate(): (target: ViewTarget, hint?: NavigateHint) => void {
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
   return useCallback(

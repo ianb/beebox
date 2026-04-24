@@ -33,9 +33,10 @@ import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
 import { CloseButton } from "../ui/CloseButton";
 import { ExternalIconLink } from "../ui/ExternalIconLink";
-import { serializeViewUrl, type ViewTarget } from "../../lib/view-url";
+import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { SessionListButton } from "../SessionViewer";
 import { RecentFilesButton } from "../RecentFilesButton";
+import { cn } from "../../lib/cn";
 import { useSSE, type SSEEvent } from "../../hooks/useSSE";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
@@ -239,35 +240,93 @@ function ChatDebugMenu({
   );
 }
 
+interface PanelTab {
+  target: ViewTarget;
+  label: string;
+}
+
 /**
- * Companion view panel shown alongside chat when a view is zoomed.
+ * Companion view panel shown alongside chat when one or more views are open.
+ * Tabs are keyed by path: opening a file that's already open reactivates it
+ * rather than duplicating a tab, and in-file link clicks open new tabs.
  */
 function CompanionViewPanel({
-  view,
-  onClose,
+  tabs,
+  activePath,
+  onSelectTab,
+  onCloseTab,
+  onClosePanel,
   onNavigate,
 }: {
-  view: { target: ViewTarget; label: string };
-  onClose: () => void;
-  onNavigate: (target: ViewTarget) => void;
+  tabs: PanelTab[];
+  activePath: string;
+  onSelectTab: (path: string) => void;
+  onCloseTab: (path: string) => void;
+  onClosePanel: () => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
-  const browseHref = href(`/${boxSlug}/browse/${view.target.path}`);
+  const active = tabs.find((t) => t.target.path === activePath);
+  if (!active) return null;
+  const browseHref = href(`/${boxSlug}/browse/${active.target.path}`);
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{view.label}</div>
-          <div className="text-xs text-warm-500 truncate" title={view.target.path}>{view.target.path}</div>
+      <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
+        <div role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex overflow-x-auto">
+          {tabs.map((tab) => {
+            const isActive = tab.target.path === activePath;
+            return (
+              <div
+                key={tab.target.path}
+                className={cn(
+                  "flex-shrink-0 max-w-[14rem] flex items-center border-r border-warm-300 border-b-2",
+                  isActive
+                    ? "bg-white border-b-primary"
+                    : "border-b-transparent hover:bg-warm-100",
+                )}
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => onSelectTab(tab.target.path)}
+                  title={tab.target.path}
+                  className={cn(
+                    "flex-1 min-w-0 truncate text-left text-sm pl-3 pr-1 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                    isActive ? "text-warm-900 font-medium" : "text-warm-600",
+                  )}
+                >
+                  {tab.label}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCloseTab(tab.target.path);
+                  }}
+                  aria-label={`Close ${tab.label}`}
+                  title="Close tab"
+                  className="flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6l-12 12" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
         </div>
-        <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
-        <CloseButton onClick={onClose} label="Close companion view" size="sm" />
+        <div className="flex-shrink-0 flex items-center gap-1 px-2 border-l border-warm-300">
+          <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
+          <CloseButton onClick={onClosePanel} label="Close companion view" size="sm" />
+        </div>
       </div>
       <div className="flex-1 overflow-auto">
         <FileView
-          path={view.target.path}
+          key={active.target.path}
+          path={active.target.path}
           mode="companion"
-          rendererName={view.target.viewer}
+          rendererName={active.target.viewer}
           onNavigate={onNavigate}
         />
       </div>
@@ -881,7 +940,10 @@ export function InteractiveChat() {
     setSelectedModel(model);
     setChatModel(model).catch(() => {});
   }, [selectedModel, groups.length]);
-  const [zoomedView, setZoomedView] = useState<{ target: ViewTarget; label: string } | null>(null);
+  const [panel, setPanel] = useState<{ tabs: PanelTab[]; activePath: string | null }>({ tabs: [], activePath: null });
+  const activeView = panel.activePath
+    ? panel.tabs.find((t) => t.target.path === panel.activePath) ?? null
+    : null;
   const [typingMode, setTypingMode] = useState(false);
   const [typingLocked, setTypingLocked] = useState(false);
   // Tracks when voice recording is paused due to TTS playback
@@ -889,7 +951,28 @@ export function InteractiveChat() {
   const voicePausedRef = useRef(false);
 
   const onZoomView = useCallback<OnZoomView>((view) => {
-    setZoomedView(view);
+    setPanel((p) => {
+      const exists = p.tabs.some((t) => t.target.path === view.target.path);
+      const tabs = exists ? p.tabs : [...p.tabs, view];
+      return { tabs, activePath: view.target.path };
+    });
+  }, []);
+  const onSelectTab = useCallback((path: string) => {
+    setPanel((p) => ({ ...p, activePath: path }));
+  }, []);
+  const onCloseTab = useCallback((path: string) => {
+    setPanel((p) => {
+      const idx = p.tabs.findIndex((t) => t.target.path === path);
+      if (idx === -1) return p;
+      const tabs = p.tabs.filter((_, i) => i !== idx);
+      const activePath = p.activePath === path
+        ? (tabs.length === 0 ? null : tabs[Math.min(idx, tabs.length - 1)].target.path)
+        : p.activePath;
+      return { tabs, activePath };
+    });
+  }, []);
+  const onClosePanel = useCallback(() => {
+    setPanel({ tabs: [], activePath: null });
   }, []);
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1171,10 +1254,10 @@ export function InteractiveChat() {
   );
 
   const zoomedViewAttr = useCallback(() => {
-    if (!zoomedView) return "";
-    const uri = `view:${serializeViewUrl(zoomedView.target)}`;
+    if (!activeView) return "";
+    const uri = `view:${serializeViewUrl(activeView.target)}`;
     return ` zoomed-view="${uri}"`;
-  }, [zoomedView]);
+  }, [activeView]);
 
   const timePassedAttr = useCallback(() => {
     if (messages.length === 0) return "";
@@ -1465,12 +1548,18 @@ export function InteractiveChat() {
 
   return (
     <>
-    <div className={`h-full flex ${zoomedView ? "flex-col md:flex-row" : "flex-col"} bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden`}>
-      {zoomedView ? (
+    <div className={`h-full flex ${activeView ? "flex-col md:flex-row" : "flex-col"} bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden`}>
+      {activeView ? (
         <CompanionViewPanel
-          view={zoomedView}
-          onClose={() => setZoomedView(null)}
-          onNavigate={(target) => onZoomView({ target: { ...target, zoom: false }, label: target.path })}
+          tabs={panel.tabs}
+          activePath={activeView.target.path}
+          onSelectTab={onSelectTab}
+          onCloseTab={onCloseTab}
+          onClosePanel={onClosePanel}
+          onNavigate={(target, hint) => onZoomView({
+            target: { ...target, zoom: false },
+            label: hint && hint.label ? hint.label : target.path,
+          })}
         />
       ) : null}
     <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">

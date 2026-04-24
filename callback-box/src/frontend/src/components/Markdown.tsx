@@ -25,8 +25,10 @@ import {
   parseViewUrl,
   resolveRelativePath,
   serializeViewUrl,
+  type NavigateHint,
   type ViewTarget,
 } from "../lib/view-url";
+import type { ReactNode } from "react";
 
 /**
  * URL transform that preserves view: URLs (used for embedding views in chat)
@@ -47,9 +49,21 @@ function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
 }
 
 interface LinkContext {
-  onNavigate: (target: ViewTarget) => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath: string | undefined;
   boxSlug: string | undefined;
+}
+
+/** Flatten React link children to a plain string for use as a tab label. */
+function flattenText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (node == null || typeof node === "boolean") return "";
+  if (Array.isArray(node)) return node.map(flattenText).join("");
+  if (typeof node === "object") {
+    const maybe = node as { props?: { children?: ReactNode } };
+    if (maybe.props && "children" in maybe.props) return flattenText(maybe.props.children);
+  }
+  return "";
 }
 
 function makeDefaultComponents(ctx: LinkContext): Partial<Components> {
@@ -70,7 +84,8 @@ function makeDefaultComponents(ctx: LinkContext): Partial<Components> {
               if (e.defaultPrevented) return;
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
               e.preventDefault();
-              onNavigate(target);
+              const label = flattenText(children).trim();
+              onNavigate(target, label ? { label } : undefined);
             }}
             {...props}
           >
@@ -89,7 +104,8 @@ function makeDefaultComponents(ctx: LinkContext): Partial<Components> {
               if (e.defaultPrevented) return;
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
               e.preventDefault();
-              onNavigate(target);
+              const label = flattenText(children).trim();
+              onNavigate(target, label ? { label } : undefined);
             }}
             {...props}
           >
@@ -151,7 +167,7 @@ interface MarkdownProps {
    * caller decides whether to push a URL, swap a sidebar pane, etc. See
    * {@link RendererProps.onNavigate} for the broader contract.
    */
-  onNavigate: (target: ViewTarget) => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   /**
    * Path of the document being rendered (relative to the box root). Used to
    * resolve relative links like `[1040](1040.pdf)` against the document's

@@ -11,7 +11,7 @@ import { Pre } from "./ui/Pre";
 import { FileView } from "./FileView";
 import type { LightboxImage } from "./ImageLightbox";
 import type { Components } from "react-markdown";
-import { parseViewUrl, type ViewTarget } from "../lib/view-url";
+import { parseViewUrl, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
@@ -543,7 +543,7 @@ function ChatParagraph({ children, node, ...props }: React.HTMLAttributes<HTMLPa
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
 function makeChatMarkdownComponents(
-  onNavigate: (target: ViewTarget) => void,
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
   onZoomView?: OnZoomView,
 ): Partial<Components> {
   return {

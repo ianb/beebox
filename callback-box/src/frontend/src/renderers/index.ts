@@ -6,7 +6,7 @@
  */
 
 import type { ElementNode } from "../api";
-import type { ViewTarget } from "../lib/view-url";
+import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
 /** Data for rendering a file */
 export interface FileData {
@@ -31,7 +31,7 @@ export interface RendererProps {
    * `?view=`/`?zoom` modifiers from `view:` URLs, so the handler can decide
    * whether to push a new URL, swap a sidebar pane, open a zoomed view, etc.
    */
-  onNavigate: (target: ViewTarget) => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
 }
 
 /** A patch operation for modifying a card */

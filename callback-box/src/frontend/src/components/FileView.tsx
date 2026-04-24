@@ -29,7 +29,7 @@ import { getApiBase, getEventSourceBase } from "../api";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
-import type { ViewTarget } from "../lib/view-url";
+import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import { Pre } from "./ui/Pre";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { StatusBadge } from "./ui/StatusBadge";
@@ -46,7 +46,7 @@ interface FileViewProps {
    * file. The surrounding context decides what that means — pushing a URL,
    * replacing a sidebar pane, etc.
    */
-  onNavigate: (target: ViewTarget) => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
 }
 
 /* ---------- path classification ---------- */

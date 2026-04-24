@@ -18,6 +18,17 @@ export interface ViewTarget {
 }
 
 /**
+ * Optional context a navigation source can pass alongside a ViewTarget. The
+ * target itself is serializable (URL-bound); the hint carries out-of-band
+ * context like a human-friendly label for the originating link text, which
+ * consumers can use for tab titles, breadcrumbs, etc.
+ */
+export interface NavigateHint {
+  /** Human-friendly label (e.g. the clicked link's text). */
+  label?: string;
+}
+
+/**
  * Parse a view URL value (the part after "view:") into a structured ViewTarget.
  */
 export function parseViewUrl(raw: string): ViewTarget {
