@@ -49,6 +49,37 @@ rm /tmp/cc-creds.json
 
 Tokens refresh automatically when the server uses them (Claude Code writes the file back with the new `expiresAt`). You only need to re-transfer if you explicitly log out of Claude Code on macOS.
 
+### Nightly version updates
+
+Claude Code's built-in auto-updater only fires reliably during long-running interactive sessions — server-side short-lived invocations drift behind. A systemd timer runs `claude update` as the `callback` user nightly around 04:00 UTC (with up to 30m jitter).
+
+**Units** (installed by `setup-server.sh`):
+- `claude-update.timer` — schedule (`OnCalendar=*-*-* 04:00:00`, `Persistent=true` so missed runs catch up at boot).
+- `claude-update.service` — oneshot that invokes the wrapper below.
+- `claude-update-failure.service` — triggered via `OnFailure=` if the wrapper can't record its own failure (e.g. script missing / disk full); logs to syslog `daemon.err`.
+
+**Wrapper**: `deploy/claude-update.sh` (served from the checked-out tree at `/opt/callback/callback-box/deploy/claude-update.sh`, so `deploy.sh` rsync picks up edits). It:
+- Appends `starting:` / `ok:` or `FAIL:` lines with UTC timestamps to `/home/callback/claude-update.log`.
+- Also writes failures to syslog via `logger -t claude-update -p daemon.err`.
+- Exits with claude's exit code so systemd marks the unit failed (triggering the belt-and-suspenders `OnFailure` unit).
+
+**Where to look for evidence:**
+
+```bash
+# The wrapper's own log (every run appends a line)
+ssh root@<server> tail -50 /home/callback/claude-update.log
+
+# Systemd view (last run, next run, last 20 journal lines)
+ssh root@<server> 'systemctl list-timers claude-update.timer --no-pager; \
+  systemctl status claude-update.service --no-pager; \
+  journalctl -u claude-update.service -n 20 --no-pager'
+
+# Any failure messages tagged by the wrapper or belt-and-suspenders unit
+ssh root@<server> 'journalctl -t claude-update --since "-7 days" --no-pager'
+```
+
+**Force an immediate run:** `ssh root@<server> systemctl start claude-update.service`.
+
 ## Diagnostic endpoints behind auth
 
 In production, `/api/debug-log` and `/api/trpc/health.check` sit behind the Google OAuth cookie gate — `curl` without a browser cookie gets rejected.

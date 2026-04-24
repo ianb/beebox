@@ -172,9 +172,70 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+# ── Systemd: nightly Claude Code self-update ───────────────────────
+# Claude Code's built-in auto-updater only fires during interactive-ish
+# sessions, so server-side short-lived invocations drift behind.
+# This timer runs `claude update` nightly as the callback user.
+#
+# Observability:
+#   - Wrapper script logs to $CB_HOME/claude-update.log (every run writes
+#     start/ok or start/FAIL lines, timestamped).
+#   - Failure also logs to syslog via `logger -p daemon.err`.
+#   - Belt-and-suspenders: OnFailure= fires claude-update-failure.service
+#     so even if the wrapper itself can't run, the journal still gets a
+#     failure record.
+#
+# ExecStart runs the script from its checked-out location so normal
+# deploys (deploy.sh rsync) pick up any edits with no extra step.
+CLAUDE_UPDATE_SCRIPT="$INSTALL_DIR/callback-box/deploy/claude-update.sh"
+chmod +x "$CLAUDE_UPDATE_SCRIPT"
+
+# Pre-create the log file with correct ownership.
+touch "$CB_HOME/claude-update.log"
+chown "$CB_USER:$CB_USER" "$CB_HOME/claude-update.log"
+
+cat > /etc/systemd/system/claude-update.service <<EOF
+[Unit]
+Description=Update Claude Code CLI
+After=network-online.target
+Wants=network-online.target
+OnFailure=claude-update-failure.service
+
+[Service]
+Type=oneshot
+User=$CB_USER
+Group=$CB_USER
+Environment=PATH=$CB_HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=$CLAUDE_UPDATE_SCRIPT
+EOF
+
+cat > /etc/systemd/system/claude-update-failure.service <<EOF
+[Unit]
+Description=Record Claude Code update failure (belt-and-suspenders)
+
+[Service]
+Type=oneshot
+User=$CB_USER
+Group=$CB_USER
+ExecStart=/usr/bin/logger -t claude-update -p daemon.err "claude-update.service failed -- wrapper did not record a line; see journalctl -u claude-update.service"
+EOF
+
+cat > /etc/systemd/system/claude-update.timer <<EOF
+[Unit]
+Description=Nightly Claude Code CLI update
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
 systemctl daemon-reload
-systemctl enable callback-serve callback-scheduler
-systemctl start callback-serve callback-scheduler
+systemctl enable callback-serve callback-scheduler claude-update.timer
+systemctl start callback-serve callback-scheduler claude-update.timer
 
 # ── Nginx reverse proxy ────────────────────────────────────────────
 echo "Configuring nginx..."
