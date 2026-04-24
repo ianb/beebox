@@ -24,8 +24,11 @@ export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise
   const { server, boxRoot, eventBus } = opts;
   let watcher: FSWatcher | null = null;
 
-  // Start file watcher lazily on first SSE client connection
-  const watchPaths = [path.join(boxRoot, "box"), path.join(boxRoot, "views")];
+  // Start file watcher lazily on first SSE client connection. Watch the
+  // whole box root so agent edits to store/, config/, docs/, etc. surface
+  // as file-change events the UI can react to. Dotfiles (.git,
+  // .callback-box, …) are excluded by the `ignored` pattern below.
+  const watchPaths = [boxRoot];
 
   function ensureWatcher(): void {
     if (watcher) return;
