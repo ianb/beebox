@@ -124,8 +124,8 @@ function InstanceList({
       {instances.map((i) => (
         <Row key={i.name} justify="between" align="center" className="py-1">
           <Stack gap="none">
-            <Text weight="medium">{i.displayName}</Text>
-            <Text tone="subtle" size="xs" mono>
+            <Text as="div" weight="medium">{i.displayName}</Text>
+            <Text as="div" tone="subtle" size="xs" mono>
               {type}/{i.name}
             </Text>
           </Stack>
