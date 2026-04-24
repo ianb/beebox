@@ -30,6 +30,12 @@ export function RecentFilesButton({ entries, onPanel }: RecentFilesButtonProps) 
   const [open, setOpen] = useState(false);
   const { files, isLoading } = useRecentFiles(entries);
   const count = files.length;
+  const handlePanel = onPanel
+    ? (summary: FileSummary<unknown>) => {
+        setOpen(false);
+        onPanel(summary);
+      }
+    : undefined;
 
   return (
     <div className="relative">
@@ -68,7 +74,7 @@ export function RecentFilesButton({ entries, onPanel }: RecentFilesButtonProps) 
                   <FileEntry
                     key={path}
                     summary={summary ?? { path, title: path }}
-                    onPanel={onPanel}
+                    onPanel={handlePanel}
                   />
                 ))}
               </div>
