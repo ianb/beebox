@@ -17,8 +17,17 @@
 
 let sharedAudio: HTMLAudioElement | null = null;
 
-function isIOS(): boolean {
+export function isIOS(): boolean {
   return /iP(ad|hone|od)/.test(navigator.userAgent);
+}
+
+/**
+ * Whether to prefetch upcoming TTS audio while the current segment plays.
+ * Disabled on iOS because the shared-Audio-element gymnastics around
+ * gesture-locked playback complicate any benefit prefetching would offer.
+ */
+export function shouldPrefetchSpeech(): boolean {
+  return !isIOS();
 }
 
 /**

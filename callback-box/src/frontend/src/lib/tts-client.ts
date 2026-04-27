@@ -20,6 +20,12 @@ interface SpeechOptions {
   instructions?: string;
   voice?: TTSVoice;
   overrideInstructions?: boolean;
+  prefetch?: PrefetchHandle;
+}
+
+export interface PrefetchHandle {
+  buffer: Promise<ArrayBuffer>;
+  abort: () => void;
 }
 
 interface SpeechQueueItem {
@@ -33,7 +39,7 @@ class TTSClient {
   private queue: SpeechQueueItem[] = [];
   private playing = false;
   private currentStop: (() => void) | null = null;
-  private abortController: AbortController | null = null;
+  private currentAbort: (() => void) | null = null;
   private onPlayingChange?: (playing: boolean) => void;
   private voiceConfig: VoiceConfig = {
     voice: DEFAULT_VOICE,
@@ -79,10 +85,27 @@ class TTSClient {
     });
   }
 
+  /**
+   * Start fetching audio for an upcoming speak() call. Returns a handle whose
+   * `.buffer` resolves to the raw audio data. Pass the handle to speak() to
+   * play the prefetched buffer instead of re-fetching.
+   */
+  prefetch(text: string, options?: SpeechOptions): PrefetchHandle {
+    const ac = new AbortController();
+    const buffer = this.fetchAudio(text, { options, signal: ac.signal });
+    // Avoid an unhandled rejection if the prefetch is aborted before any
+    // speak() consumer attaches to the promise.
+    buffer.catch(() => { /* swallow; consumer will see the rejection if it awaits */ });
+    return {
+      buffer,
+      abort: () => ac.abort(),
+    };
+  }
+
   stop(): void {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
+    if (this.currentAbort) {
+      this.currentAbort();
+      this.currentAbort = null;
     }
     if (this.currentStop) {
       this.currentStop();
@@ -90,6 +113,7 @@ class TTSClient {
     }
     const pending = this.queue.splice(0);
     for (const item of pending) {
+      item.options?.prefetch?.abort();
       item.reject(new Error("Playback stopped"));
     }
     this.setPlaying(false);
@@ -123,18 +147,39 @@ class TTSClient {
   }
 
   private async playItem(item: SpeechQueueItem): Promise<void> {
-    const instructions = this.buildInstructions(
-      item.options?.instructions,
-      item.options?.overrideInstructions,
-    );
-    const voice = this.resolveVoice(item.options?.voice);
+    const prefetch = item.options?.prefetch;
+    let buffer: ArrayBuffer;
+    if (prefetch) {
+      this.currentAbort = prefetch.abort;
+      buffer = await prefetch.buffer;
+    } else {
+      const ac = new AbortController();
+      this.currentAbort = () => ac.abort();
+      buffer = await this.fetchAudio(item.text, { options: item.options, signal: ac.signal });
+    }
+    this.currentAbort = null;
 
-    this.abortController = new AbortController();
+    const { stop, finished } = playAudioBlob(buffer);
+    this.currentStop = stop;
+    await finished;
+    this.currentStop = null;
+  }
+
+  private async fetchAudio(
+    text: string,
+    { options, signal }: { options?: SpeechOptions; signal: AbortSignal },
+  ): Promise<ArrayBuffer> {
+    const instructions = this.buildInstructions(
+      options?.instructions,
+      options?.overrideInstructions,
+    );
+    const voice = this.resolveVoice(options?.voice);
+
     const response = await fetch(`${getApiBase()}/chat/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: item.text, instructions, voice }),
-      signal: this.abortController.signal,
+      body: JSON.stringify({ text, instructions, voice }),
+      signal,
     });
 
     if (!response.ok) {
@@ -142,11 +187,7 @@ class TTSClient {
       throw new Error(`TTS API error ${response.status}: ${err}`);
     }
 
-    const buffer = await this.readStreamToBuffer(response);
-    const { stop, finished } = playAudioBlob(buffer);
-    this.currentStop = stop;
-    await finished;
-    this.currentStop = null;
+    return this.readStreamToBuffer(response);
   }
 
   private async readStreamToBuffer(response: Response): Promise<ArrayBuffer> {
