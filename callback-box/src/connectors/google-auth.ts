@@ -37,9 +37,15 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.compose",
-  "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/drive.file",
+  // Full Drive scope: needed for two-way sync of user-owned files we
+  // didn't create (existing Sheets and Docs added by URL). Supersedes
+  // drive.readonly and drive.file.
+  "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/spreadsheets",
+  // Docs API metadata: for lossy-content detection on synced Google Docs
+  // (footnotes, inline objects, equations, suggestions). Push uses Drive
+  // multipart upload — no Docs write scope needed.
+  "https://www.googleapis.com/auth/documents.readonly",
 ];
 
 /** The known Google service categories that can be toggled per box. */

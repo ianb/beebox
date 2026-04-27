@@ -310,3 +310,68 @@ drive4.contentUpdateLog.length
 drive4.contentUpdateLog[0]?.content
 => Merged.
 ```
+
+## Graceful degradation when Docs API is unavailable
+
+If `getDocument` fails (e.g. the auth token lacks the `documents.readonly` scope), pull still succeeds — markdown is exported via the Drive API and the lossy block falls back to comment count only.
+
+```
+const box5 = await makeTmpBox({ git: true });
+await initBox(box5.root);
+box5.commitAll("init box");
+
+const drive5 = createFakeGoogleDrive({
+  files: [{
+    id: "doc-5",
+    name: "Degraded",
+    mimeType: "application/vnd.google-apps.document",
+    modifiedTime: "2026-04-26T10:00:00Z",
+    owners: [{ emailAddress: "test@example.com" }],
+    webViewLink: "https://docs.google.com/document/d/doc-5/edit",
+  }],
+  documents: new Map([["doc-5", makeDoc({
+    id: "doc-5",
+    title: "Degraded",
+    markdown: "Body.\n",
+    inlineObjects: 5,
+    comments: 2,
+  })]]),
+});
+
+// Simulate a 403 by replacing getDocument with a stub that throws.
+drive5.getDocument = async () => {
+  throw new Error("HTTPError: 403 Insufficient Permission");
+};
+
+await box5.seed("store/drive/Degraded.doc.card", createDocTemplate({
+  driveId: "doc-5",
+  title: "Degraded",
+  modified: "2026-04-26T10:00:00Z",
+  revision: "rev-1",
+  link: "https://docs.google.com/document/d/doc-5/edit",
+  owner: "test@example.com",
+  contentFile: "Degraded.md",
+  status: "new",
+}));
+box5.commitAll("add degraded");
+
+const result5 = await createGoogleDriveConnector(box5.root, drive5).sync();
+result5.success
+=> true
+
+// Markdown still pulled.
+await box5.read("store/drive/Degraded.md")
+=> Body.
+
+// Card still written, falls back to Drive metadata title.
+const card5 = await box5.read("store/drive/Degraded.doc.card");
+card5.includes("<title>Degraded</title>")
+=> true
+
+// Lossy block contains comments (Drive API) but NOT images (Docs API).
+card5.includes('<item type="comments" count="2"/>')
+=> true
+
+card5.includes('type="images"')
+=> false
+```

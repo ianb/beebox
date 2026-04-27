@@ -112,6 +112,29 @@ function lossyToTemplateItems(
   return items;
 }
 
+/**
+ * Call `getDocument`, but degrade gracefully if the auth token lacks the
+ * `documents.readonly` scope (HTTP 403). Returns null on failure so the
+ * caller can keep pulling with reduced fidelity (no revisionId for
+ * conflict detection, lossy detection limited to comment count).
+ */
+async function tryGetDocument(
+  service: GoogleDriveService,
+  opts: { fileId: string; fileName: string },
+): Promise<DocumentStructure | null> {
+  try {
+    return await service.getDocument(opts.fileId);
+  } catch (e) {
+    const msg = (e as Error).message;
+    console.warn(
+      "[google-drive] Could not fetch Docs API metadata for " +
+        opts.fileName + ": " + msg +
+        ". If this is a 403, run 'cb google-auth' to grant the documents.readonly scope.",
+    );
+    return null;
+  }
+}
+
 const docsHandler: DriveTypeHandler = {
   mimeTypes: [DOC_MIME],
   cardType: "doc",
@@ -143,14 +166,17 @@ const docsHandler: DriveTypeHandler = {
     const mdRelPath = `${cardBasename}.md`;
     const mdPath = path.join(cardDir, mdRelPath);
 
-    // Fetch upstream state in parallel.
+    // Fetch upstream state in parallel. `getDocument` requires the
+    // `documents.readonly` scope; if it's missing we still want pull to
+    // succeed with reduced fidelity (no revisionId, no lossy details
+    // beyond the comment count).
     const [doc, comments, markdown] = await Promise.all([
-      service.getDocument(file.id),
+      tryGetDocument(service, { fileId: file.id, fileName: file.name }),
       service.listComments(file.id),
       service.exportFile(file.id, MARKDOWN_MIME),
     ]);
 
-    const lossy = tallyLossyFromDocument(doc);
+    const lossy = doc ? tallyLossyFromDocument(doc) : emptyLossy();
     lossy.comments = comments.length;
 
     const newHash = contentHash(markdown);
@@ -181,10 +207,14 @@ const docsHandler: DriveTypeHandler = {
       // Else: local edit (push handles it) or nothing changed.
     }
 
-    // Update remote-tracking state. Always update revisionId and
-    // modifiedTime so push can detect divergence accurately.
+    // Update remote-tracking state. modifiedTime is always available;
+    // revisionId only when `getDocument` succeeded.
     state.lastModified = file.modifiedTime;
-    state.extra["headRevisionId"] = doc.revisionId;
+    if (doc) {
+      state.extra["headRevisionId"] = doc.revisionId;
+    } else {
+      delete state.extra["headRevisionId"];
+    }
 
     // Determine card status: keep `conflict` if push set it on a previous
     // sync and there's still a `.remote.md` file. Otherwise `synced`.
@@ -197,14 +227,15 @@ const docsHandler: DriveTypeHandler = {
       // No conflict file
     }
 
-    // Build (or rebuild) the card.
+    // Build (or rebuild) the card. Fall back to Drive metadata if the
+    // Docs API call failed (no title/revisionId in that case).
     const owner = file.owners?.[0]?.emailAddress ?? "unknown";
     const link = file.webViewLink ?? `https://docs.google.com/document/d/${file.id}/edit`;
     const cardContent = createDocTemplate({
       driveId: file.id,
-      title: doc.title,
+      title: doc ? doc.title : file.name,
       modified: file.modifiedTime,
-      revision: doc.revisionId,
+      revision: doc ? doc.revisionId : "",
       link,
       owner,
       contentFile: mdRelPath,
@@ -274,11 +305,15 @@ const docsHandler: DriveTypeHandler = {
     // the upstream content alongside as `.remote.md`. The pull that runs
     // immediately after this push will see the file and set the card's
     // status to `conflict`.
+    //
+    // Both signals are best-effort: revisionId only kicks in when both the
+    // stored and current values are available (Docs API scope present at
+    // both pull-time and push-time). modifiedTime always works.
     const storedRevision = state.extra["headRevisionId"] as string | undefined;
-    const doc = await service.getDocument(file.id);
+    const doc = await tryGetDocument(service, { fileId: file.id, fileName: file.name });
     const remoteDiverged =
       file.modifiedTime !== state.lastModified ||
-      (storedRevision !== undefined && doc.revisionId !== storedRevision);
+      (storedRevision !== undefined && doc !== null && doc.revisionId !== storedRevision);
 
     if (remoteDiverged) {
       const remoteMarkdown = await service.exportFile(file.id, MARKDOWN_MIME);
