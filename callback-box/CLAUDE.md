@@ -128,6 +128,7 @@ Keep additions concise. One line preventing a mistake is better than a paragraph
 | Client debug log | `docs/client-debug-log.md` |
 | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 | Calendar integration plan | `docs/calendar-plan.md` |
+| Source editor plan | `docs/source-editor.md` |
 | Feature ideas | `docs/ideas.md` |
 
 @CONVENTIONS.md
