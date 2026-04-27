@@ -94,8 +94,14 @@ export function ActionModal({ action, onClose, onComplete, newsInboxCount = 0, n
   if (!action) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h2 className="text-sm font-semibold text-warm-700">
             {action === "wakeup" && "cb wakeup"}
