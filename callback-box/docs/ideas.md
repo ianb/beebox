@@ -129,7 +129,7 @@ Several things for the chat page:
 - **Image paste/capture**: support pasting or capturing images directly in the chat input.
 - **Max width**: the chat page needs a max-width constraint and general layout cleanup.
 - **Rich text input**: consider using TenTap (or similar) for message composition.
-- **Capture-from-chat flow**: a button in chat that navigates to the capture page. When you finish the capture (hit checkmark), it returns to chat and inserts a reference to what was captured — not the content itself, just a link/reference to the capture.
+- **Capture-from-chat flow**: add a "Capture" item to the chat composer's `+` menu (alongside Camera and Attach file). Selecting it runs a capture session, then returns to chat with a message announcing the capture has been added — referencing what was captured, not the content itself.
 
 ### Transcript processing as labeled sub-agents
 

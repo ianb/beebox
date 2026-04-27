@@ -376,47 +376,36 @@ function ChatInputArea({
   hideMobile?: boolean;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
-  onAttachFiles?: () => void;
+  onAttachFiles: () => void;
 }) {
-  const { boxSlug } = useParams({ strict: false });
-  const captureHref = href(`/${boxSlug}/capture`);
-
   const circleBtn = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
   return (
     <div className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="flex items-center gap-2">
-        {/* Left buttons */}
-        <a
-          href={captureHref}
-          className={`${circleBtn} bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
-          title="Capture"
+        {/* Add menu: camera (coming soon), attach file. Capture lives here in the future. */}
+        <Dropdown
+          align="left"
+          vertical="above"
+          width="w-44"
+          trigger={({ toggle, ariaProps }) => (
+            <button
+              type="button"
+              onClick={toggle}
+              className={`${circleBtn} bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+              title="Add"
+              aria-label="Add"
+              {...ariaProps}
+            >
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          )}
         >
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </a>
-        <button
-          className={`${circleBtn} bg-warm-300 text-warm-500 cursor-not-allowed opacity-50`}
-          title="Camera (coming soon)"
-          disabled
-        >
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-        <button
-          className={`${circleBtn} bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
-          title="Attach file"
-          onClick={onAttachFiles}
-          disabled={!onAttachFiles}
-          type="button"
-        >
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
+          <MenuItem onClick={() => {}} disabled>Camera (coming soon)</MenuItem>
+          <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
+        </Dropdown>
 
         {/* Desktop: inline textarea + send button */}
         <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">

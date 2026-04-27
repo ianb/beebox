@@ -9,6 +9,7 @@ interface DropdownContextValue {
 const DropdownContext = createContext<DropdownContextValue | null>(null);
 
 export type DropdownAlign = "left" | "right";
+export type DropdownVertical = "below" | "above";
 
 export interface DropdownTriggerProps {
   open: boolean;
@@ -26,13 +27,15 @@ export interface DropdownProps {
   children: ReactNode;
   /** Menu edge aligned to the trigger. Default `"right"`. */
   align?: DropdownAlign;
+  /** Whether the menu opens below or above the trigger. Default `"below"`. */
+  vertical?: DropdownVertical;
   /** Tailwind width class for the menu. Default `"w-48"`. */
   width?: string;
   /** Outer-layout classes for the relative-positioned wrapper (margin, padding, flex item, sizing, position). */
   className?: string;
 }
 
-export function Dropdown({ trigger, children, align = "right", width = "w-48", className }: DropdownProps) {
+export function Dropdown({ trigger, children, align = "right", vertical = "below", width = "w-48", className }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +58,7 @@ export function Dropdown({ trigger, children, align = "right", width = "w-48", c
   }, [open]);
 
   const alignClass = align === "right" ? "right-0" : "left-0";
+  const verticalClass = vertical === "above" ? "bottom-full mb-1" : "top-full mt-1";
   const ctxValue = useMemo<DropdownContextValue>(() => ({ close: () => setOpen(false) }), []);
   const triggerProps: DropdownTriggerProps = {
     open,
@@ -68,7 +72,7 @@ export function Dropdown({ trigger, children, align = "right", width = "w-48", c
       {open ? (
         <div
           role="menu"
-          className={cn("absolute top-full mt-1 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm", alignClass, width)}
+          className={cn("absolute bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm", verticalClass, alignClass, width)}
         >
           <DropdownContext.Provider value={ctxValue}>
             {children}
