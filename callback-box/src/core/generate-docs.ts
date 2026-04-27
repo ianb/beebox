@@ -808,6 +808,13 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "",
   );
 
+  lines.push(
+    "## External Tools",
+    "",
+    "`pandoc` is installed for converting document formats (.doc, .docx, .rtf, .odt, etc.) to plain text or markdown.",
+    "",
+  );
+
   // Views section
   lines.push(
     "## Views",
