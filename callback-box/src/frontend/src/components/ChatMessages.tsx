@@ -82,7 +82,42 @@ function stripUserDisplayTags(text: string): string {
     .replace(/<speech[^>]*>/gi, "")
     .replace(/<\/speech>/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
-    .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "");
+    .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
+    .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "");
+}
+
+/**
+ * Extract file attachments from a user message's text. Looks for the
+ * `<attachments>` block written by the chat composer and parses
+ * `[fileN]: tmp/<timestamp>_<original-name>` reference lines.
+ */
+interface FileAttachmentRef {
+  id: number;
+  path: string;
+  /** Best-effort original filename, recovered by stripping the timestamp prefix. */
+  displayName: string;
+}
+
+const ATTACHMENTS_BLOCK_RE = /<attachments>([\S\s]*?)<\/attachments>/i;
+const FILE_REF_LINE_RE = /\[file(\d+)]:\s*(\S+)/g;
+const TMP_FILENAME_PREFIX_RE = /^tmp\/[^/_]+_(.+)$/;
+
+function extractFileAttachments(text: string): FileAttachmentRef[] {
+  const block = text.match(ATTACHMENTS_BLOCK_RE);
+  if (!block) return [];
+  const inner = block[1];
+  const refs: FileAttachmentRef[] = [];
+  for (const m of inner.matchAll(FILE_REF_LINE_RE)) {
+    const id = parseInt(m[1], 10);
+    const p = m[2];
+    const stripped = p.match(TMP_FILENAME_PREFIX_RE);
+    refs.push({
+      id,
+      path: p,
+      displayName: stripped ? stripped[1] : p,
+    });
+  }
+  return refs;
 }
 
 /**
@@ -843,10 +878,30 @@ function MessageImage({ src, alt }: { src: string; alt: string }) {
 }
 
 /**
+ * Inline chip showing an attached file with its original name. The path
+ * sits in <boxRoot>/tmp/, gitignored and swept by housekeeping; we don't
+ * link it because the chip is just a "you sent this" affordance.
+ */
+function MessageFileChip({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-warm-100 border border-warm-300 text-xs text-warm-800">
+      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <span className="truncate max-w-[16rem]">{name}</span>
+    </span>
+  );
+}
+
+/**
  * Render a user entry's content blocks: text blocks go through the normal
- * tag-stripping display, image blocks render as clickable thumbnails.
+ * tag-stripping display, image blocks render as clickable thumbnails. File
+ * attachments parsed from a sibling <attachments> block render as chips.
  */
 function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView: boolean }) {
+  const fileRefs = entry.content
+    .filter((b) => b.type === "text")
+    .flatMap((b) => extractFileAttachments(b.text ?? ""));
   return (
     <>
       {entry.content.map((block, i) => {
@@ -870,6 +925,13 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
         }
         return null;
       })}
+      {!debugView && fileRefs.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {fileRefs.map((f) => (
+            <MessageFileChip key={f.id} name={f.displayName} />
+          ))}
+        </div>
+      ) : null}
     </>
   );
 }
@@ -883,11 +945,12 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
   const hasImages = entries.some((e) => e.content.some((b) => b.type === "image"));
+  const hasFiles = allTexts.some((t) => extractFileAttachments(t).length > 0);
 
   // Hide schedule-fired messages entirely in normal view (they're system-injected)
   if (!debugView) {
     const allEmpty = allTexts.every((t) => stripUserDisplayTags(t).trim() === "");
-    if (allEmpty && !hasImages) return null;
+    if (allEmpty && !hasImages && !hasFiles) return null;
   }
 
   // Show task-notification messages as collapsed system info

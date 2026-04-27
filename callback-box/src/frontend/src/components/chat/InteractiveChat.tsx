@@ -14,8 +14,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
 import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
-import { AttachmentPanel, type AttachmentItem } from "../ChatAttachments";
+import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
+import { uploadChatFile } from "../../lib/file-upload";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
 import { parseAllSpeechTags, VALID_VOICES, type SpeechSegment } from "../../lib/speech-parsing";
@@ -350,7 +351,7 @@ function ChatInputArea({
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
   isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop,
+  onPaste, onDrop, onAttachFiles,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -375,6 +376,7 @@ function ChatInputArea({
   hideMobile?: boolean;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  onAttachFiles?: () => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const captureHref = href(`/${boxSlug}/capture`);
@@ -402,6 +404,17 @@ function ChatInputArea({
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+        <button
+          className={`${circleBtn} bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+          title="Attach file"
+          onClick={onAttachFiles}
+          disabled={!onAttachFiles}
+          type="button"
+        >
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </button>
 
@@ -915,6 +928,9 @@ export function InteractiveChat() {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const nextAttachmentIdRef = useRef(1);
+  const [fileAttachments, setFileAttachments] = useState<FileAttachmentItem[]>([]);
+  const nextFileAttachmentIdRef = useRef(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
@@ -1308,7 +1324,7 @@ export function InteractiveChat() {
 
   const handleSend = useCallback(() => {
     const text = input.trim();
-    if (!text && attachments.length === 0) return;
+    if (!text && attachments.length === 0 && fileAttachments.length === 0) return;
     turnTakingRef.current = false;
     unlockAudioContext();
 
@@ -1319,7 +1335,16 @@ export function InteractiveChat() {
       dataBase64: a.dataBase64,
     }));
 
-    const wrapped = `<typed local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</typed>`;
+    const typed = `<typed local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</typed>`;
+    // File attachments emit a sibling <attachments> block of markdown-style
+    // reference links so the agent sees the path each [fileN] token resolves
+    // to without us having to inline the file's bytes anywhere.
+    const attachmentsBlock = fileAttachments.length > 0
+      ? "\n<attachments>\n" +
+        fileAttachments.map((f) => `[file${f.id}]: ${f.path}`).join("\n") +
+        "\n</attachments>"
+      : "";
+    const wrapped = typed + attachmentsBlock;
 
     // Release the object URLs after send — the base64 payload is independent
     // of the object URL, so dropping them doesn't affect the message.
@@ -1328,6 +1353,8 @@ export function InteractiveChat() {
     }
     setAttachments([]);
     nextAttachmentIdRef.current = 1;
+    setFileAttachments([]);
+    nextFileAttachmentIdRef.current = 1;
 
     setInput("");
     doSendWithImages(wrapped, images);
@@ -1335,7 +1362,7 @@ export function InteractiveChat() {
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [input, attachments, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked]);
+  }, [input, attachments, fileAttachments, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked]);
 
   /**
    * Accept image files (from paste or drop) — downscale, encode, and add
@@ -1428,6 +1455,85 @@ export function InteractiveChat() {
     setInput((prev) =>
       prev
         .replace(/\s?\[image(\d+)]\s?/g, (match, n: string) =>
+          parseInt(n, 10) === id ? " " : match
+        )
+        .replace(/ {2,}/g, " ")
+    );
+  }, []);
+
+  /**
+   * Upload picked files to the box's tmp/ dir, then add them to the
+   * attachment row and insert `[fileN]` tokens at the textarea cursor.
+   * Mirrors addImageFiles but the upload happens server-side; we just track
+   * the returned path.
+   */
+  const addFileUploads = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+
+    const uploaded = await Promise.all(
+      files.map(async (f) => {
+        try {
+          return await uploadChatFile(f);
+        } catch (e) {
+          console.error("[chat] Failed to upload file:", e);
+          return null;
+        }
+      })
+    );
+
+    const newItems: FileAttachmentItem[] = [];
+    for (const u of uploaded) {
+      if (!u) continue;
+      newItems.push({
+        id: nextFileAttachmentIdRef.current++,
+        path: u.path,
+        originalName: u.originalName,
+        size: u.size,
+        mimetype: u.mimetype,
+      });
+    }
+    if (newItems.length === 0) return;
+
+    setFileAttachments((prev) => [...prev, ...newItems]);
+
+    const tokens = newItems.map((f) => `[file${f.id}]`).join(" ");
+    const ta = textareaRef.current;
+    if (ta && document.activeElement === ta) {
+      const selStart = ta.selectionStart ?? ta.value.length;
+      const selEnd = ta.selectionEnd ?? selStart;
+      const before = input.slice(0, selStart);
+      const after = input.slice(selEnd);
+      const pad = before.length > 0 && !/\s$/.test(before) ? " " : "";
+      const next = before + pad + tokens + after;
+      setInput(next);
+      const cursorAt = (before + pad + tokens).length;
+      requestAnimationFrame(() => {
+        if (ta.isConnected) {
+          ta.focus();
+          ta.setSelectionRange(cursorAt, cursorAt);
+        }
+      });
+    } else {
+      setInput((prev) => (prev ? prev + " " + tokens : tokens));
+    }
+  }, [input]);
+
+  const handleAttachFiles = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    void addFileUploads(files);
+  }, [addFileUploads]);
+
+  const removeFileAttachment = useCallback((id: number) => {
+    setFileAttachments((prev) => prev.filter((f) => f.id !== id));
+    setInput((prev) =>
+      prev
+        .replace(/\s?\[file(\d+)]\s?/g, (match, n: string) =>
           parseInt(n, 10) === id ? " " : match
         )
         .replace(/ {2,}/g, " ")
@@ -1685,6 +1791,18 @@ export function InteractiveChat() {
       {/* Image attachment panel: shows thumbnails above the composer */}
       <AttachmentPanel attachments={attachments} onRemove={removeAttachment} />
 
+      {/* File attachment panel: chips for non-image uploads */}
+      <FileAttachmentPanel attachments={fileAttachments} onRemove={removeFileAttachment} />
+
+      {/* Hidden file input — opened by the "+" attach button. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
+
       {/* Input area: single row on desktop, button bar on mobile (hidden on mobile when typing) */}
       <ChatInputArea
         hideMobile={typingMode}
@@ -1720,6 +1838,7 @@ export function InteractiveChat() {
           }}
           onPaste={handlePaste}
           onDrop={handleDrop}
+          onAttachFiles={handleAttachFiles}
         />
       {/* Mobile typing row: replaces button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (

@@ -28,6 +28,7 @@ import {
   parseScheduleTags,
   parseCancelScheduleTags,
 } from "../../core/chat-schedules.js";
+import { registerChatUploadRoutes } from "./chat-uploads.js";
 
 interface SendBody {
   message: string;
@@ -72,6 +73,10 @@ export async function registerChatRoutes(
   options: RegisterChatRoutesOptions
 ): Promise<void> {
   const { server, boxRoot, eventBus, openaiAudio } = options;
+
+  // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
+  await registerChatUploadRoutes({ server, boxRoot });
+
   // Create singleton ChatSession for this box
   const chatSession = new ChatSession(boxRoot);
 

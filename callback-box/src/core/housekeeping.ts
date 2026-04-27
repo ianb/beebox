@@ -109,3 +109,54 @@ export async function expireOldBriefs(
   onLog?.(`  Expired ${expiredNotes.length} brief(s)`);
   return expiredNotes.length;
 }
+
+/**
+ * Sweep transient chat-upload files from <boxRoot>/tmp/.
+ *
+ * The chat composer uploads files here before referencing them in messages.
+ * Once the agent has read them, they linger — this removes anything older
+ * than 7 days. The directory itself is gitignored, so no commit is needed.
+ */
+export async function cleanupOldTmpUploads(
+  boxRoot: string,
+  onLog?: (msg: string) => void,
+): Promise<number> {
+  const EXPIRY_DAYS = 7;
+  const now = getBoxTime(boxRoot).getTime();
+  const expiryMs = EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+  const tmpDir = path.join(boxRoot, "tmp");
+  let entries: string[];
+  try {
+    entries = await fs.readdir(tmpDir);
+  } catch {
+    return 0;
+  }
+
+  let removed = 0;
+  for (const entry of entries) {
+    const fullPath = path.join(tmpDir, entry);
+    let stat: Awaited<ReturnType<typeof fs.stat>>;
+    try {
+      stat = await fs.stat(fullPath);
+    } catch {
+      continue;
+    }
+    if (!stat.isFile()) continue;
+    if (now - stat.mtimeMs <= expiryMs) continue;
+
+    try {
+      await fs.unlink(fullPath);
+      removed++;
+      const ageDays = Math.floor((now - stat.mtimeMs) / (24 * 60 * 60 * 1000));
+      onLog?.(`  Removed: tmp/${entry} (${ageDays} days old)`);
+    } catch (err) {
+      onLog?.(`  Warning: could not remove tmp/${entry}: ${(err as Error).message}`);
+    }
+  }
+
+  if (removed > 0) {
+    onLog?.(`  Removed ${removed} stale upload(s) from tmp/`);
+  }
+  return removed;
+}

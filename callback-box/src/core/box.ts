@@ -116,6 +116,9 @@ config/schedules/.state/
 # Trick dependencies (installed by agent)
 tricks/node_modules/
 
+# Chat file uploads (transient, swept by cb wakeup housekeeping)
+tmp/
+
 # Temporary files
 *.tmp
 *.swp

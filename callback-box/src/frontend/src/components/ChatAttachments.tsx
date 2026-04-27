@@ -5,6 +5,9 @@
  * thumbnail references a numeric id that appears as `[imageN]` in the
  * textarea; clicking a thumbnail opens it in a lightbox, the trash button
  * removes the attachment and strips its `[imageN]` token from the text.
+ *
+ * The parallel `FileAttachmentPanel` shows uploaded non-image files which
+ * the composer references via `[fileN]` tokens.
  */
 
 import { Image } from "./ui/Image";
@@ -83,6 +86,88 @@ function ThumbTile({
       </button>
       <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
         {attachment.id}
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center shadow hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger"
+        title="Remove attachment"
+      >
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+/**
+ * UI-side record for a chat file attachment. Pairs the token id, the saved
+ * path returned by the upload endpoint, and the metadata needed to render
+ * the chip.
+ */
+export interface FileAttachmentItem {
+  id: number;
+  /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
+  path: string;
+  originalName: string;
+  size: number;
+  mimetype: string;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function FileAttachmentPanel({
+  attachments,
+  onRemove,
+}: {
+  attachments: FileAttachmentItem[];
+  onRemove: (id: number) => void;
+}) {
+  if (attachments.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+      {attachments.map((att) => (
+        <FileChip
+          key={att.id}
+          attachment={att}
+          onRemove={() => onRemove(att.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function FileChip({
+  attachment,
+  onRemove,
+}: {
+  attachment: FileAttachmentItem;
+  onRemove: () => void;
+}) {
+  const sizeLabel = formatBytes(attachment.size);
+  return (
+    <div
+      className="relative group flex items-center gap-2 pl-2 pr-7 py-1.5 rounded bg-warm-200 border border-warm-300 max-w-xs"
+      data-cb-source={`file-attachment-${attachment.id}`}
+      title={`file${attachment.id} · ${attachment.originalName} · ${sizeLabel}`}
+    >
+      <span className="text-[10px] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
+        {attachment.id}
+      </span>
+      <svg className="w-4 h-4 text-warm-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <div className="flex flex-col min-w-0 leading-tight">
+        <span className="truncate text-xs font-medium text-warm-800">
+          {attachment.originalName}
+        </span>
+        <span className="text-[10px] text-warm-600">{sizeLabel}</span>
       </div>
       <button
         type="button"
