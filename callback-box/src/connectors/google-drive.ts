@@ -28,8 +28,9 @@ import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
 import type { FileState } from "./drive-types.js";
 import { safeFilename } from "./chat-utils.js";
 
-// Ensure the sheets handler is registered
+// Ensure handlers are registered
 import "./drive-handler-sheets.js";
+import "./drive-handler-docs.js";
 
 // ─── State types ────────────────────────────────────────────────────────────
 

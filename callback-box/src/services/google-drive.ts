@@ -31,6 +31,51 @@ export interface SpreadsheetMetadata {
   sheets: Array<{ properties: SheetProperties }>;
 }
 
+export interface DriveComment {
+  id: string;
+  content: string;
+  author?: { displayName?: string; emailAddress?: string };
+  resolved?: boolean;
+}
+
+/**
+ * Narrow shape of the Google Docs API document resource.
+ *
+ * Only the fields we actually inspect for lossy-content detection.
+ * `body.content` is recursive — `table` and `tableOfContents` can themselves
+ * contain structural elements — but we only walk the top-level paragraphs
+ * for the features we care about (text run equations, suggestion ranges).
+ * Other lossy features (footnotes, inline objects) are exposed as keyed
+ * dictionaries at the document root.
+ */
+export interface DocumentTextRun {
+  content?: string;
+  textStyle?: Record<string, unknown>;
+  suggestedInsertionIds?: string[];
+  suggestedDeletionIds?: string[];
+}
+
+export interface DocumentParagraphElement {
+  equation?: unknown;
+  inlineObjectElement?: { inlineObjectId: string };
+  footnoteReference?: { footnoteId: string };
+  textRun?: DocumentTextRun;
+}
+
+export interface DocumentStructuralElement {
+  paragraph?: { elements?: DocumentParagraphElement[] };
+  table?: unknown;
+}
+
+export interface DocumentStructure {
+  documentId: string;
+  title: string;
+  revisionId: string;
+  body?: { content?: DocumentStructuralElement[] };
+  inlineObjects?: Record<string, unknown>;
+  footnotes?: Record<string, unknown>;
+}
+
 // ─── Service interface ──────────────────────────────────────────────────────
 
 export interface GoogleDriveService {
@@ -57,6 +102,21 @@ export interface GoogleDriveService {
     sheetTitle: string;
     values: string[][];
   }): Promise<void>;
+
+  /** Export a Drive file as a given mimeType (e.g. text/markdown for a Doc) */
+  exportFile(fileId: string, mimeType: string): Promise<string>;
+
+  /** Replace the content of a Drive file via media upload (auto-converts mimeType) */
+  updateFileContent(fileId: string, opts: {
+    mimeType: string;
+    content: string;
+  }): Promise<void>;
+
+  /** Fetch the structured Docs API representation of a Google Doc */
+  getDocument(fileId: string): Promise<DocumentStructure>;
+
+  /** List comments on a Drive file */
+  listComments(fileId: string): Promise<DriveComment[]>;
 }
 
 // ─── Real implementation ────────────────────────────────────────────────────
@@ -77,6 +137,32 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
 
   const sheetsApi = ky.create({
     prefixUrl: "https://sheets.googleapis.com/v4",
+    retry: 2,
+    hooks: {
+      beforeRequest: [
+        async (request) => {
+          const token = await auth.getAccessToken();
+          request.headers.set("Authorization", `Bearer ${token}`);
+        },
+      ],
+    },
+  });
+
+  const docsApi = ky.create({
+    prefixUrl: "https://docs.googleapis.com/v1",
+    retry: 2,
+    hooks: {
+      beforeRequest: [
+        async (request) => {
+          const token = await auth.getAccessToken();
+          request.headers.set("Authorization", `Bearer ${token}`);
+        },
+      ],
+    },
+  });
+
+  const uploadApi = ky.create({
+    prefixUrl: "https://www.googleapis.com/upload/drive/v3",
     retry: 2,
     hooks: {
       beforeRequest: [
@@ -169,6 +255,46 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
         },
       );
     },
+
+    async exportFile(fileId, mimeType) {
+      const response = await driveApi.get(
+        `files/${encodeURIComponent(fileId)}/export`,
+        { searchParams: { mimeType } },
+      );
+      return response.text();
+    },
+
+    async updateFileContent(fileId, opts) {
+      await uploadApi.patch(`files/${encodeURIComponent(fileId)}`, {
+        searchParams: { uploadType: "media" },
+        body: opts.content,
+        headers: { "Content-Type": opts.mimeType },
+      });
+    },
+
+    async getDocument(fileId) {
+      return docsApi
+        .get(`documents/${encodeURIComponent(fileId)}`)
+        .json<DocumentStructure>();
+    },
+
+    async listComments(fileId) {
+      const items: DriveComment[] = [];
+      let pageToken: string | undefined;
+      do {
+        const searchParams: Record<string, string> = {
+          fields: "nextPageToken,comments(id,content,author(displayName,emailAddress),resolved)",
+          pageSize: "100",
+        };
+        if (pageToken) searchParams["pageToken"] = pageToken;
+        const data = await driveApi
+          .get(`files/${encodeURIComponent(fileId)}/comments`, { searchParams })
+          .json<{ comments?: DriveComment[]; nextPageToken?: string }>();
+        if (data.comments) items.push(...data.comments);
+        pageToken = data.nextPageToken;
+      } while (pageToken);
+      return items;
+    },
   };
 }
 
@@ -179,15 +305,33 @@ export interface FakeSpreadsheet {
   sheets: Map<string, string[][]>;
 }
 
+/**
+ * In-memory representation of a Google Doc for fakes.
+ *
+ * `exports` maps mimeType → content so tests can prepare the markdown body
+ * the connector will pull. `structure` is what `getDocument()` returns —
+ * tests populate `inlineObjects`, `footnotes`, etc. to exercise lossy
+ * detection. `revisionId` and `modifiedTime` change on every
+ * `updateFileContent` so conflict detection works.
+ */
+export interface FakeDocument {
+  structure: DocumentStructure;
+  exports: Map<string, string>;
+  comments: DriveComment[];
+}
+
 export interface FakeGoogleDriveOptions {
   files?: DriveFile[];
   spreadsheets?: Map<string, FakeSpreadsheet>;
+  documents?: Map<string, FakeDocument>;
 }
 
 export interface FakeGoogleDriveService extends GoogleDriveService {
   files: DriveFile[];
   spreadsheets: Map<string, FakeSpreadsheet>;
+  documents: Map<string, FakeDocument>;
   updateLog: Array<{ fileId: string; sheetTitle: string; values: string[][] }>;
+  contentUpdateLog: Array<{ fileId: string; mimeType: string; content: string }>;
 }
 
 export function createFakeGoogleDrive(
@@ -196,7 +340,9 @@ export function createFakeGoogleDrive(
   const fake: FakeGoogleDriveService = {
     files: opts?.files ? [...opts.files] : [],
     spreadsheets: opts?.spreadsheets ? new Map(opts.spreadsheets) : new Map(),
+    documents: opts?.documents ? new Map(opts.documents) : new Map(),
     updateLog: [],
+    contentUpdateLog: [],
 
     async getFile(fileId) {
       const file = fake.files.find((f) => f.id === fileId);
@@ -239,6 +385,41 @@ export function createFakeGoogleDrive(
         sheetTitle: updateOpts.sheetTitle,
         values: updateOpts.values,
       });
+    },
+
+    async exportFile(fileId, mimeType) {
+      const doc = fake.documents.get(fileId);
+      if (!doc) throw new Error(`Document not found: ${fileId}`);
+      const content = doc.exports.get(mimeType);
+      if (content === undefined) {
+        throw new Error(`No export for mimeType ${mimeType} on ${fileId}`);
+      }
+      return content;
+    },
+
+    async updateFileContent(fileId, updateOpts) {
+      const doc = fake.documents.get(fileId);
+      if (!doc) throw new Error(`Document not found: ${fileId}`);
+      doc.exports.set(updateOpts.mimeType, updateOpts.content);
+      doc.structure.revisionId = `rev-${Date.now()}-${fake.contentUpdateLog.length + 1}`;
+      const file = fake.files.find((f) => f.id === fileId);
+      if (file) file.modifiedTime = new Date().toISOString();
+      fake.contentUpdateLog.push({
+        fileId,
+        mimeType: updateOpts.mimeType,
+        content: updateOpts.content,
+      });
+    },
+
+    async getDocument(fileId) {
+      const doc = fake.documents.get(fileId);
+      if (!doc) throw new Error(`Document not found: ${fileId}`);
+      return doc.structure;
+    },
+
+    async listComments(fileId) {
+      const doc = fake.documents.get(fileId);
+      return doc ? [...doc.comments] : [];
     },
   };
 

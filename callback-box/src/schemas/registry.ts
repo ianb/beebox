@@ -43,6 +43,7 @@ import { TodoListSchema } from "./todo-list.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
 import { SheetSchema } from "./sheet.js";
+import { DocSchema } from "./doc.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -81,6 +82,7 @@ export const schemas: ElementSchema[] = [
   BriefingSchema,
   PersonSchema,
   SheetSchema,
+  DocSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
@@ -271,3 +273,4 @@ export { TodoListSchema } from "./todo-list.js";
 export { BriefingSchema } from "./briefing.js";
 export { PersonSchema } from "./person.js";
 export { SheetSchema } from "./sheet.js";
+export { DocSchema } from "./doc.js";
