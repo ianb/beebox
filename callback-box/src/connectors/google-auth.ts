@@ -32,9 +32,11 @@ const DEFAULT_REDIRECT_URI = "http://localhost:8976/oauth/callback";
 
 /** All scopes we request during auth */
 export const GOOGLE_SCOPES = [
-  "https://www.googleapis.com/auth/calendar",
+  // Narrow calendar scopes: events read/write + read-only calendar list.
+  // We don't manage calendars themselves (create/delete/share), so we
+  // avoid the full `calendar` scope which would request that.
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.compose",
   // Full Drive scope: needed for two-way sync of user-owned files we
