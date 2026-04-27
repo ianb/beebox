@@ -959,3 +959,44 @@ tests:
     watch_for: "Reads the JSON and notices formula cells with f and v fields"
     correct_contains_any: ["formula", "=SUM", "\"f\""]
     tags: [drive]
+
+  # === Google Drive / Documents ===
+  #
+  # The drive connector handles both spreadsheets and docs. These tests
+  # verify the agent doesn't claim docs are unsupported and knows the
+  # local-edit + conflict-resolution flow.
+
+  - id: drive-docs-supported
+    prompt: "Can I sync a Google Doc into this box, or only spreadsheets?"
+    expected_level: knows_directly
+    watch_for: "Says yes, Google Docs are supported. Should NOT say only spreadsheets work."
+    correct_contains_any: [".doc.card", "Google Docs", "doc card"]
+    tags: [drive, docs]
+
+  - id: drive-docs-edit
+    prompt: "How do I edit the body of a Google Doc that's been synced into the box?"
+    expected_level: knows_about
+    watch_for: "Says edit the sibling .md file (NOT the card XML, NOT a JSON file)"
+    correct_contains: [".md"]
+    tags: [drive, docs, editing]
+
+  - id: drive-docs-not-json
+    prompt: "Is a synced Google Doc stored as JSON like a spreadsheet?"
+    expected_level: knows_directly
+    watch_for: "Says no — docs are stored as markdown, not JSON. JSON is the spreadsheet format."
+    correct_contains_any: ["markdown", ".md"]
+    tags: [drive, docs]
+
+  - id: drive-docs-conflict
+    prompt: "I edited a synced Google Doc locally but it didn't push. There's a file called Notes.remote.md next to it. What happened and what do I do?"
+    expected_level: knows_about
+    watch_for: "Identifies this as a sync conflict. Explains the upstream changed since last pull and that resolution is: merge the two files, delete .remote.md, commit."
+    correct_contains_any: ["conflict", "merge"]
+    tags: [drive, docs, conflict]
+
+  - id: drive-docs-lossy
+    prompt: "If a Google Doc has comments and footnotes, what happens to them when I sync?"
+    expected_level: knows_about
+    watch_for: "Mentions the <lossy> block and that comments/footnotes don't survive markdown export. Should warn the user that pushing local edits will destroy them."
+    correct_contains_any: ["lossy", "don't survive", "destroy", "lost"]
+    tags: [drive, docs, lossy]
