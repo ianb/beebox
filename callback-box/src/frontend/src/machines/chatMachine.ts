@@ -60,9 +60,9 @@ type ChatEvent =
 // -- Context --
 
 /** How many recent entries to load initially and on refresh. */
-const HISTORY_TAIL = 200;
+export const HISTORY_TAIL = 200;
 /** Floor on how many real (typed/spoken) user messages the initial load must cover. */
-const MIN_REAL_USER_MESSAGES = 2;
+export const MIN_REAL_USER_MESSAGES = 2;
 
 interface ChatContext {
   messages: SessionEntry[];
@@ -434,7 +434,21 @@ export const chatMachine = setup({
         },
         STREAM_QUEUED: {
           target: "idle",
-          // Message was queued — no error, it'll be sent when the current turn finishes
+          // Backend was busy → this message is queued. Promote the just-added
+          // optimistic user message to pending so reconcile keeps it visible
+          // (dimmed) until the server has actually processed the queued turn.
+          // Without this, the optimistic message is unprotected by reconcile
+          // and there's no visible signal that work is still pending.
+          actions: assign(({ context }) => {
+            const last = context.messages[context.messages.length - 1];
+            if (!last || last.type !== "user") return {};
+            if (context.pendingMessages.some((p) => p.uuid === last.uuid)) return {};
+            const promoted: SessionEntry = { ...last, pending: true };
+            return {
+              messages: [...context.messages.slice(0, -1), promoted],
+              pendingMessages: [...context.pendingMessages, promoted],
+            };
+          }),
         },
         STREAM_ERROR: {
           target: "idle",

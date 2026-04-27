@@ -133,6 +133,17 @@ export async function registerChatRoutes(
     }
   });
 
+  // Broadcast chat-complete on every turn end, not just turns watched by an
+  // active /send request. When /send hits the busy branch and queues the
+  // message, its per-request "done" listener is never registered — so without
+  // this permanent listener, the eventual reply lands in the JSONL but no SSE
+  // refresh fires and the frontend stays stuck on idle with no response.
+  chatSession.on("done", () => {
+    eventBus.emit("chat-complete", {
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   /**
    * Inject user="Name" into the opening <typed> or <speech> tag of a message.
    */
@@ -282,9 +293,6 @@ export async function registerChatRoutes(
         };
 
         const onDone = () => {
-          eventBus.emit("chat-complete", {
-            timestamp: new Date().toISOString(),
-          });
           finish();
         };
 

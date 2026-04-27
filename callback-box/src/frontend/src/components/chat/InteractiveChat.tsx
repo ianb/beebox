@@ -27,7 +27,7 @@ import "ldrs/react/Grid.css";
 import { sendSound, tick, recordingStart, recordingStop, alarm } from "../../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
-import { chatMachine } from "../../machines/chatMachine.js";
+import { chatMachine, HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, CompactionMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
@@ -902,7 +902,7 @@ function VirtualizedMessageList({
 
 export function InteractiveChat() {
   const [snapshot, send] = useSSRMachine(chatMachine);
-  const { messages, streamText, streamTools, error, sessionId, processRunning, totalEntries } = snapshot.context;
+  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, totalEntries } = snapshot.context;
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
@@ -1052,6 +1052,24 @@ export function InteractiveChat() {
     checkAndPoll();
     return () => clearInterval(id);
   }, [activeSchedules, send, fetchSchedules, isStreaming]);
+
+  // Fallback for missed chat-complete SSE: while pending messages exist,
+  // poll history every 5s and dispatch SET_MESSAGES so reconcile drops them
+  // as the server catches up. SET_MESSAGES is a global handler — works in
+  // any state without forcing a refresh transition that would disturb a
+  // running stream.
+  useEffect(() => {
+    if (pendingMessages.length === 0) return;
+    const poll = () => {
+      getChatHistory({ tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES })
+        .then((data) => {
+          send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
+        })
+        .catch(() => {});
+    };
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [pendingMessages.length, send]);
 
   // Handle SSE events: schedule-fired, chat-history, chat-user-message
   useSSE(`${getEventSourceBase()}/events`, {
@@ -1623,6 +1641,16 @@ export function InteractiveChat() {
           >
             dismiss
           </button>
+        </div>
+      ) : null}
+
+      {/* Queued-message indicator: visible whenever the agent is busy with
+          a previous turn and one or more user messages are sitting in the
+          backend queue waiting to be processed. Without this the UI looks
+          idle even though work is pending. */}
+      {pendingMessages.length > 0 ? (
+        <div className="px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs">
+          Agent is busy — {pendingMessages.length === 1 ? "your message is queued" : `${pendingMessages.length} messages are queued`}
         </div>
       ) : null}
 
