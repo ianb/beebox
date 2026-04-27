@@ -1,5 +1,5 @@
 /**
- * cb drive — Manage Google Drive sheet sync.
+ * cb drive — Manage Google Drive sync (Sheets, Docs).
  *
  * Usage:
  *   cb drive inspect <url-or-id>        — preview file metadata
@@ -19,12 +19,17 @@ import { createGoogleAuthService } from "../../services/google-auth.js";
 import { createGoogleDriveService } from "../../services/google-drive.js";
 import type { GoogleDriveService } from "../../services/google-drive.js";
 import { stageFiles, commit } from "../lib/git.js";
-import { safeFilename } from "../../connectors/chat-utils.js";
+import { loadTransientState, saveTransientState } from "../../connectors/transient-state.js";
 
 // Ensure handlers are registered
 import "../../connectors/drive-handler-sheets.js";
-import { getHandlerForMimeType } from "../../connectors/drive-types.js";
-import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
+import "../../connectors/drive-handler-docs.js";
+import { getHandlerForMimeType, getAllDriveHandlers } from "../../connectors/drive-types.js";
+import {
+  createGoogleDriveConnector,
+  emptyFileState,
+  type DriveTransientState,
+} from "../../connectors/google-drive.js";
 
 async function requireDriveService(boxRoot: string): Promise<GoogleDriveService> {
   const auth = await getGoogleAuth(boxRoot);
@@ -47,7 +52,7 @@ function requireFileId(input: string): string {
 }
 
 export const driveCommand = new Command("drive")
-  .description("Manage Google Drive sheet sync")
+  .description("Manage Google Drive sync (Sheets, Docs)")
   .action(async () => {
     // Default action: show status
     await driveCommand.commands.find((c) => c.name() === "status")?.parseAsync([], { from: "user" });
@@ -75,6 +80,7 @@ driveCommand
 
     if (handler) {
       const info = await handler.inspect(file, service);
+
       if (info.details["tabs"]) {
         const tabs = info.details["tabs"] as Array<{ title: string; gid: number }>;
         console.log(`\nSheet tabs (${tabs.length}):`);
@@ -82,6 +88,22 @@ driveCommand
           console.log(`  - ${tab.title} (gid: ${tab.gid})`);
         }
       }
+
+      if (info.details["lossy"]) {
+        const lossy = info.details["lossy"] as Record<string, number>;
+        const present = Object.entries(lossy).filter(([, n]) => n > 0);
+        if (present.length > 0) {
+          console.log("\nLossy content (will not survive markdown push):");
+          for (const [type, count] of present) {
+            console.log(`  - ${type}: ${count}`);
+          }
+        }
+      }
+
+      if (info.details["revisionId"]) {
+        console.log(`\nRevision: ${info.details["revisionId"] as string}`);
+      }
+
       console.log(`\nCard type: ${handler.cardType}`);
     } else {
       console.log("\nNo handler registered for this file type.");
@@ -121,65 +143,43 @@ driveCommand
       // Good
     }
 
-    // Do initial sync via the connector's sync logic
-    const { createSheetTemplate } = await import("../../schemas/sheet.js");
-    const spreadsheet = await service.getSpreadsheet(fileId);
-    const owner = file.owners?.[0]?.emailAddress ?? "unknown";
-    const link = file.webViewLink ?? `https://docs.google.com/spreadsheets/d/${fileId}/edit`;
-
+    // Delegate first-time creation to the handler's pull(): it knows
+    // how to write the card and the type-specific local files (JSON tabs
+    // for sheets, sibling .md for docs). Empty state means "fresh sync".
     const cardBasename = path.basename(cardPath, `.${handler.cardType}.card`);
     const localDir = path.join(path.dirname(cardPath), cardBasename);
-    await fs.mkdir(localDir, { recursive: true });
+    await fs.mkdir(path.dirname(cardPath), { recursive: true });
 
-    const sheetRefs: Array<{ file: string; title: string; gid: string }> = [];
-    const written: string[] = [];
-
-    for (const sheet of spreadsheet.sheets) {
-      const tabTitle = sheet.properties.title;
-      const gid = String(sheet.properties.sheetId);
-      const safeName = safeFilename(tabTitle, "sheet");
-      const jsonRelPath = `${cardBasename}/${safeName}.json`;
-      const jsonPath = path.join(path.dirname(cardPath), jsonRelPath);
-
-      const formulaValues = await service.getSheetValues(fileId, {
-        sheetTitle: tabTitle,
-        valueRenderOption: "FORMULA",
-      });
-      const formattedValues = await service.getSheetValues(fileId, {
-        sheetTitle: tabTitle,
-        valueRenderOption: "FORMATTED_VALUE",
-      });
-
-      const { buildSheetData, serializeSheetData } = await import("../../connectors/drive-sheet-data.js");
-      const sheetData = buildSheetData(formulaValues, formattedValues);
-      await fs.writeFile(jsonPath, serializeSheetData(sheetData));
-      written.push(path.relative(boxRoot, jsonPath));
-
-      sheetRefs.push({ file: jsonRelPath, title: tabTitle, gid });
-    }
-
-    const cardContent = createSheetTemplate({
-      driveId: fileId,
-      title: spreadsheet.properties.title,
-      modified: file.modifiedTime,
-      link,
-      owner,
-      sheets: sheetRefs,
+    const fileState = emptyFileState();
+    const result = await handler.pull({
+      file, localDir, cardPath, boxRoot, service, state: fileState,
     });
 
-    await fs.mkdir(path.dirname(cardPath), { recursive: true });
-    await fs.writeFile(cardPath, cardContent);
-    written.push(path.relative(boxRoot, cardPath));
+    // Persist the per-file state into the connector's transient state file
+    // so future `cb drive sync` runs see this file as already-synced.
+    const transient = await loadTransientState<DriveTransientState>({
+      boxRoot,
+      connectorName: "google-drive",
+      defaultValue: { files: {} },
+    });
+    transient.files[fileId] = fileState;
+    await saveTransientState({
+      boxRoot,
+      connectorName: "google-drive",
+      data: transient,
+    });
 
-    await stageFiles(boxRoot, written);
+    await stageFiles(boxRoot, result.written);
     await commit(boxRoot, {
-      message: `Add Drive sheet: ${spreadsheet.properties.title}`,
+      message: `Add Drive ${handler.cardType}: ${file.name}`,
     });
 
     console.log(`Created ${path.relative(boxRoot, cardPath)}`);
-    console.log(`  "${spreadsheet.properties.title}" (${sheetRefs.length} tab(s))`);
-    for (const ref of sheetRefs) {
-      console.log(`  → ${ref.file}`);
+    console.log(`  "${file.name}" (${handler.cardType})`);
+    for (const written of result.written) {
+      if (written !== path.relative(boxRoot, cardPath)) {
+        console.log(`  → ${written}`);
+      }
     }
   });
 
@@ -213,11 +213,16 @@ driveCommand
     const boxRoot = await requireBoxRoot();
     const { glob } = await import("glob");
 
-    const cardPaths = await glob("**/*.sheet.card", { cwd: boxRoot });
+    const cardPaths: string[] = [];
+    for (const h of getAllDriveHandlers()) {
+      const matches = await glob(`**/*.${h.cardType}.card`, { cwd: boxRoot });
+      cardPaths.push(...matches);
+    }
+    cardPaths.sort();
 
     if (cardPaths.length === 0) {
       console.log("No Drive files mounted.");
-      console.log('Use "cb drive add <url> <path>" to mount a spreadsheet.');
+      console.log('Use "cb drive add <url> <path>" to mount a Drive file.');
       return;
     }
 
@@ -229,15 +234,24 @@ driveCommand
       const driveIdMatch = content.match(/drive-id="([^"]+)"/);
       const titleMatch = content.match(/<title>([^<]+)<\/title>/);
       const modifiedMatch = content.match(/<modified>([^<]+)<\/modified>/);
-      const sheetMatches = [...content.matchAll(/title="([^"]+)"/g)];
+      const statusMatch = content.match(/\bstatus="([^"]+)"/);
+      const sheetMatches = [...content.matchAll(/<sheet-tab[^>]*\btitle="([^"]+)"/g)];
+      const lossyMatches = [...content.matchAll(/<item type="([^"]+)" count="([^"]+)"/g)];
 
       console.log(`  ${relPath}`);
       if (titleMatch) console.log(`    Title: ${titleMatch[1]}`);
       if (driveIdMatch) console.log(`    Drive ID: ${driveIdMatch[1]}`);
       if (modifiedMatch) console.log(`    Last synced: ${modifiedMatch[1]}`);
+      if (statusMatch && statusMatch[1] !== "synced") {
+        console.log(`    Status: ${statusMatch[1]}`);
+      }
       if (sheetMatches.length > 0) {
         const tabs = sheetMatches.map((m) => m[1]).filter(Boolean);
         console.log(`    Tabs: ${tabs.join(", ")}`);
+      }
+      if (lossyMatches.length > 0) {
+        const summary = lossyMatches.map((m) => `${m[1]}=${m[2]}`).join(", ");
+        console.log(`    Lossy: ${summary}`);
       }
       console.log("");
     }

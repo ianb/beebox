@@ -34,11 +34,15 @@ import "./drive-handler-docs.js";
 
 // ─── State types ────────────────────────────────────────────────────────────
 
-interface DriveTransientState {
+export interface DriveTransientState {
   files: Record<string, FileState>;
 }
 
 const DEFAULT_STATE: DriveTransientState = { files: {} };
+
+export function emptyFileState(): FileState {
+  return { contentHashes: {}, lastModified: "", extra: {} };
+}
 
 // ─── Card parsing ───────────────────────────────────────────────────────────
 
