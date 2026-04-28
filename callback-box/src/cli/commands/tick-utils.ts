@@ -12,10 +12,10 @@ import {
   parseScheduledScript,
   isDueForWakeup,
   isWithinBudget,
-  checkMissingConnectors,
   type ScheduledScript,
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
+import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   loadScriptState,
   saveScriptState,
@@ -180,7 +180,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
 
     // Requirements check
     if (parsed.requires) {
-      const missing = checkMissingConnectors(boxRoot, parsed.requires);
+      const missing = await checkMissingConnectors(boxRoot, parsed.requires);
       if (missing.length > 0) {
         console.log(`  Skipping ${scriptName}: missing connectors: ${missing.join(", ")}`);
         continue;

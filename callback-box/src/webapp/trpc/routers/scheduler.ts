@@ -11,9 +11,9 @@ import { parseXml } from "cardworks";
 import {
   parseScheduledScript,
   isWithinBudget,
-  checkMissingConnectors,
   type ScheduledScript,
 } from "../../../schemas/scheduled-script.js";
+import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import {
   loadScriptState,
   saveScriptState,
@@ -187,7 +187,7 @@ export const schedulerRouter = router({
       const lock = running.get(scriptName);
 
       const missingReqs = parsed.requires
-        ? checkMissingConnectors(ctx.boxRoot, parsed.requires)
+        ? await checkMissingConnectors(ctx.boxRoot, parsed.requires)
         : undefined;
 
       schedules.push({
@@ -274,7 +274,7 @@ export const schedulerRouter = router({
 
       // Check requirements
       if (parsed.requires) {
-        const missing = checkMissingConnectors(ctx.boxRoot, parsed.requires);
+        const missing = await checkMissingConnectors(ctx.boxRoot, parsed.requires);
         if (missing.length > 0) {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",

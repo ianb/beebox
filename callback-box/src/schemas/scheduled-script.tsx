@@ -8,8 +8,6 @@
  * The filename stem is the identity (e.g., check-email.scheduled-script.card).
  */
 
-import { accessSync } from "node:fs";
-import { join } from "node:path";
 import { element } from "cardworks";
 import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
@@ -104,7 +102,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **<description>**: Optional. Human-readable summary of what this schedule does.
 - **<source>**: Optional. Why this schedule exists, with optional \`ref\` to a related card.
 - **<create-after-success path="...">**: Optional. Create a card at the given path after successful execution. Text content is key=value lines (one per line) passed as template args. Skipped if the target file already exists.
-- **<requires>**: Optional. Declares prerequisites. Contains \`<connector name="..." />\` children. The schedule won't run if any required connector's secret file (\`config/connectors/<name>.secret.json\`) is missing. Example: \`<requires><connector name="gmail" /></requires>\`.
+- **<requires>**: Optional. Declares prerequisites. Contains \`<connector name="..." />\` children. The schedule won't run if any required connector isn't configured for this box. Each connector defines its own configured-check (e.g. legacy connectors look for \`config/connectors/<name>.secret.json\`; Google connectors check the shared OAuth tokens plus the per-box \`googleServices\` policy). Example: \`<requires><connector name="gmail" /></requires>\`.
 
 ## Guidelines
 - Set reasonable not-before values to prevent hammering external services.
@@ -257,27 +255,6 @@ export function parseBudget(str: string): { limitMs: number; windowMs: number } 
     limitMs: parseDuration(str.slice(0, slash)),
     windowMs: parseDuration(str.slice(slash + 1)),
   };
-}
-
-// ============================================
-// Requirements checking
-// ============================================
-
-/**
- * Check which required connectors are missing their secret files.
- * Returns the list of connector names whose secret file is absent.
- */
-export function checkMissingConnectors(boxRoot: string, requires: ScheduleRequirements): string[] {
-  const missing: string[] = [];
-  for (const name of requires.connectors) {
-    const secretPath = join(boxRoot, "config/connectors", `${name}.secret.json`);
-    try {
-      accessSync(secretPath);
-    } catch {
-      missing.push(name);
-    }
-  }
-  return missing;
 }
 
 // ============================================
