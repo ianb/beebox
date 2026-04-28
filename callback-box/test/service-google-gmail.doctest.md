@@ -103,3 +103,39 @@ await svc.listMessages({ q: "label:inbox" });
 printCalls(svc.callLog, "listMessages")
 => listMessages({"q":"label:inbox"})
 ```
+
+## Creating drafts
+
+The fake assigns sequential `r-fake-N` / `m-fake-N` IDs and stores each
+draft (with the raw MIME) on `.drafts` for inspection.
+
+```
+const svc = createFakeGoogleGmail();
+const draft = await svc.createDraft({ raw: "VG86IGFsaWNl" });
+draft.id
+=> r-fake-1
+```
+
+``` continue
+draft.message.id
+=> m-fake-1
+
+JSON.stringify(draft.message.labelIds)
+=> ["DRAFT"]
+
+svc.drafts.length
+=> 1
+
+svc.drafts[0]?.raw
+=> VG86IGFsaWNl
+```
+
+When `threadId` is passed it is preserved on the returned draft (so reply
+drafts thread onto an existing conversation).
+
+```
+const svc = createFakeGoogleGmail();
+const draft = await svc.createDraft({ raw: "Zm9v", threadId: "t-existing" });
+draft.message.threadId
+=> t-existing
+```

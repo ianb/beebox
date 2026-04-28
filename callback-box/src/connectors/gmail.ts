@@ -32,6 +32,7 @@ import {
 } from "./index.js";
 import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
+import { uploadPendingDrafts } from "./gmail-drafts.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
 import { getGoogleAuth } from "./google-auth.js";
@@ -454,15 +455,6 @@ class GmailConnector implements Connector {
         pageToken = result.nextPageToken;
       } while (pageToken);
 
-      if (refs.length === 0) {
-        await saveTransientState({
-          boxRoot: this.boxRoot,
-          connectorName: "gmail",
-          data: { lastPullDate: new Date().toISOString() },
-        });
-        return { success: true, created: [], updated: [] };
-      }
-
       // Fetch each message that we haven't seen yet
       const messages: FetchedMessage[] = [];
       for (const ref of refs) {
@@ -476,16 +468,7 @@ class GmailConnector implements Connector {
         if (fetched) messages.push(fetched);
       }
 
-      if (messages.length === 0) {
-        await saveTransientState({
-          boxRoot: this.boxRoot,
-          connectorName: "gmail",
-          data: { lastPullDate: new Date().toISOString() },
-        });
-        return { success: true, created: [], updated: [] };
-      }
-
-      // Group messages by thread
+      // Group messages by thread (empty if no new messages — loop becomes no-op)
       const threads = new Map<string, FetchedMessage[]>();
       for (const msg of messages) {
         const existing = threads.get(msg.threadId) || [];
@@ -692,6 +675,25 @@ class GmailConnector implements Connector {
           ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}),
         },
       });
+    }
+
+    // Upload any agent-authored draft cards that haven't been uploaded yet.
+    // Stamps each card with gmail-draft-id and gmail-draft-url and commits
+    // the stamps as a separate commit so the inbound-pull diff stays clean.
+    const draftResult = await uploadPendingDrafts({
+      boxRoot: this.boxRoot,
+      service,
+    });
+    if (draftResult.updated.length > 0) {
+      await stageFiles(this.boxRoot, draftResult.updated);
+      await commit(this.boxRoot, {
+        message: `Upload ${draftResult.updated.length} draft${draftResult.updated.length === 1 ? "" : "s"} to Gmail`,
+        trailers: {
+          "Pushed-By": "gmail-connector",
+          ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}),
+        },
+      });
+      updated.push(...draftResult.updated);
     }
 
     return { success: true, created, updated };

@@ -63,6 +63,16 @@ export interface ListMessagesResult {
   nextPageToken?: string;
 }
 
+export interface GmailDraft {
+  /** API draft id (e.g. "r-1234567890"); used to update or delete. */
+  id: string;
+  message: {
+    id: string;
+    threadId: string;
+    labelIds?: string[];
+  };
+}
+
 // ─── Service interface ───────────────────────────────────────────────────────
 
 export interface GoogleGmailService {
@@ -81,6 +91,12 @@ export interface GoogleGmailService {
 
   /** List all labels (system + user). */
   listLabels(): Promise<GmailLabel[]>;
+
+  /**
+   * Create a Gmail draft from a base64url-encoded RFC 2822 message.
+   * Pass `threadId` to attach the draft to an existing thread (for replies).
+   */
+  createDraft(opts: { raw: string; threadId?: string }): Promise<GmailDraft>;
 }
 
 // ─── Real implementation ─────────────────────────────────────────────────────
@@ -137,6 +153,14 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
         .json<{ labels?: GmailLabel[] }>();
       return data.labels ?? [];
     },
+
+    async createDraft(opts) {
+      const message: { raw: string; threadId?: string } = { raw: opts.raw };
+      if (opts.threadId) message.threadId = opts.threadId;
+      return api
+        .post("users/me/drafts", { json: { message } })
+        .json<GmailDraft>();
+    },
   };
 }
 
@@ -148,20 +172,30 @@ export interface FakeGoogleGmailOptions {
   attachments?: Map<string, GmailAttachmentData>;
 }
 
+export interface FakeDraftRecord {
+  draft: GmailDraft;
+  /** base64url-encoded MIME — what was uploaded */
+  raw: string;
+}
+
 export interface FakeGoogleGmailService extends GoogleGmailService {
   messages: GmailMessage[];
   labels: GmailLabel[];
   /** keyed by `${messageId}:${attachmentId}` */
   attachments: Map<string, GmailAttachmentData>;
+  /** Drafts created via createDraft() — tests inspect this directly. */
+  drafts: FakeDraftRecord[];
 }
 
 export function createFakeGoogleGmail(
   opts?: FakeGoogleGmailOptions,
 ): FakeGoogleGmailService {
+  let draftSeq = 0;
   const fake: FakeGoogleGmailService = {
     messages: [...(opts?.messages ?? [])],
     labels: [...(opts?.labels ?? [])],
     attachments: opts?.attachments ? new Map(opts.attachments) : new Map(),
+    drafts: [],
 
     async listMessages(_opts) {
       return {
@@ -184,6 +218,23 @@ export function createFakeGoogleGmail(
 
     async listLabels() {
       return fake.labels;
+    },
+
+    async createDraft(createOpts) {
+      draftSeq += 1;
+      const draftId = `r-fake-${draftSeq}`;
+      const messageId = `m-fake-${draftSeq}`;
+      const threadId = createOpts.threadId ?? `t-fake-${draftSeq}`;
+      const draft: GmailDraft = {
+        id: draftId,
+        message: {
+          id: messageId,
+          threadId,
+          labelIds: ["DRAFT"],
+        },
+      };
+      fake.drafts.push({ draft, raw: createOpts.raw });
+      return draft;
     },
   };
 

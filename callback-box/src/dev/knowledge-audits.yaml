@@ -1000,3 +1000,82 @@ tests:
     watch_for: "Mentions the <lossy> block and that comments/footnotes don't survive markdown export. Should warn the user that pushing local edits will destroy them."
     correct_contains_any: ["lossy", "don't survive", "destroy", "lost"]
     tags: [drive, docs, lossy]
+
+  # === Email Drafts ===
+  #
+  # The email-message schema doubles as a draft authoring format —
+  # `status="draft"` cards under box/inbox/email/ get uploaded to Gmail
+  # by the connector on next sync, then stamped with gmail-draft-id and
+  # gmail-draft-url. The schema's `instructions` block teaches this; tests
+  # verify the agent can find that knowledge when asked.
+  #
+  # Status (2026-04-28): All 5 pass after the assertions were tightened on
+  # `draft-email-can-write` (initially false-positive — agent said "Gmail
+  # is read-only" while still using the word "draft" in a different sense).
+  # Stochastic on cold prompts: when asked "can you draft for me" without
+  # context anchoring, the agent sometimes guesses and sometimes checks
+  # the email-message doc. The 4 anchored prompts are reliable.
+  # Open gap: the agent guide lists email-message as a card type but
+  # doesn't surface drafting as a capability; cold-prompt reliability
+  # would improve by hinting at the role in cards.ts or adding an
+  # outbound section to box-shape.ts.
+
+  - id: draft-email-can-write
+    prompt: "Can you write a draft email reply for me, or do I have to compose it in Gmail myself?"
+    expected_level: knows_about
+    watch_for: >
+      Says yes — names the email-message card type and either status="draft"
+      or that the gmail connector uploads on sync. Should NOT say "Gmail
+      integration is read-only" or suggest saving the draft as a memo.
+    correct_contains: ["email-message"]
+    correct_contains_any: ["status=\"draft\"", "status='draft'", "gmail-draft", "uploads", "sync"]
+    tags: [email, drafts]
+    notes: >
+      Cold prompts — without context anchoring to a specific email — are
+      where this fails: the agent guide lists the email-message card type
+      but doesn't surface that drafts can be authored. The agent guesses
+      "Gmail is read-only." Fix is to surface the capability in the agent
+      guide (cards.ts) so the agent at least knows to read the doc.
+
+  - id: draft-email-format
+    prompt: "Show me what a draft reply email card looks like — what XML do I write?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/card-email-message.md (or schema source) and shows
+      <email-message status="draft"> with <to>, <subject>, <body>, and
+      <in-reply-to ref="..." /> for replies.
+    correct_contains: ["status=\"draft\""]
+    correct_contains_any: ["in-reply-to", "<body>"]
+    should_read: ["card-email-message.md"]
+    tags: [email, drafts]
+
+  - id: draft-email-placement
+    prompt: "If you're drafting a reply to an email I received, where on disk should the draft card go?"
+    expected_level: knows_about
+    watch_for: >
+      Reply drafts go inside the existing thread directory under
+      box/inbox/email/ (next to the msg-NNN cards), NOT in a separate
+      outbox tree.
+    correct_contains_any: ["thread", "box/inbox/email"]
+    tags: [email, drafts]
+
+  - id: draft-email-after-upload
+    prompt: "After gmail sync runs and you've drafted an email, how do I find and review the draft in Gmail itself?"
+    expected_level: knows_about
+    watch_for: >
+      Mentions that the connector stamps the card with gmail-draft-url
+      after upload, and the user clicks that URL to open the draft in
+      Gmail. Should NOT say to search Gmail by subject or check the
+      drafts folder manually as the only option.
+    correct_contains_any: ["gmail-draft-url", "url", "link"]
+    tags: [email, drafts]
+
+  - id: draft-email-body-format
+    prompt: "What formatting can I use in a draft email body? Can I use markdown?"
+    expected_level: knows_about
+    watch_for: >
+      Names the limited markdown subset (bold **text**, italic *text*,
+      links [text](url)) and says nothing else is supported. Should NOT
+      claim full markdown or full HTML support.
+    correct_contains_any: ["bold", "italic", "**", "limited", "subset"]
+    tags: [email, drafts]
