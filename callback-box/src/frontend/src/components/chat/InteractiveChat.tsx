@@ -1485,26 +1485,25 @@ export function InteractiveChat() {
 
     setFileAttachments((prev) => [...prev, ...newItems]);
 
-    const tokens = newItems.map((f) => `[file${f.id}]`).join(" ");
+    // Always trail a space so the user can keep typing after the token, and
+    // always focus the textarea — the upload is triggered from a menu, so
+    // focus is on the menu button, not the composer.
+    const tokens = newItems.map((f) => `[file${f.id}]`).join(" ") + " ";
     const ta = textareaRef.current;
-    if (ta && document.activeElement === ta) {
-      const selStart = ta.selectionStart ?? ta.value.length;
-      const selEnd = ta.selectionEnd ?? selStart;
-      const before = input.slice(0, selStart);
-      const after = input.slice(selEnd);
-      const pad = before.length > 0 && !/\s$/.test(before) ? " " : "";
-      const next = before + pad + tokens + after;
-      setInput(next);
-      const cursorAt = (before + pad + tokens).length;
-      requestAnimationFrame(() => {
-        if (ta.isConnected) {
-          ta.focus();
-          ta.setSelectionRange(cursorAt, cursorAt);
-        }
-      });
-    } else {
-      setInput((prev) => (prev ? prev + " " + tokens : tokens));
-    }
+    const taFocused = ta !== null && document.activeElement === ta;
+    const selStart = taFocused && ta.selectionStart !== null ? ta.selectionStart : input.length;
+    const selEnd = taFocused && ta.selectionEnd !== null ? ta.selectionEnd : selStart;
+    const before = input.slice(0, selStart);
+    const after = input.slice(selEnd);
+    const pad = before.length > 0 && !/\s$/.test(before) ? " " : "";
+    setInput(before + pad + tokens + after);
+    const cursorAt = (before + pad + tokens).length;
+    requestAnimationFrame(() => {
+      if (ta !== null && ta.isConnected) {
+        ta.focus();
+        ta.setSelectionRange(cursorAt, cursorAt);
+      }
+    });
   }, [input]);
 
   const handleAttachFiles = useCallback(() => {
