@@ -43,14 +43,14 @@ function BinaryRenderer({ data }: RendererProps) {
 
   return (
     <Stack gap="sm" className="p-6">
-      <Text size="lg" weight="bold">{basename}</Text>
-      <Text tone="subtle" size="sm" mono>{data.path}</Text>
+      <Text as="div" size="lg" weight="bold">{basename}</Text>
+      <Text as="div" tone="subtle" size="sm" mono breakAll>{data.path}</Text>
       {isLoading ? (
-        <Text tone="subtle" size="sm">Loading file info…</Text>
+        <Text as="div" tone="subtle" size="sm">Loading file info…</Text>
       ) : meta ? (
         <Stack gap="xs">
-          <Text size="sm"><Text tone="subtle">Size:</Text> {formatBytes(meta.size)}</Text>
-          <Text size="sm"><Text tone="subtle">Type:</Text> {meta.contentType}</Text>
+          <Text as="div" size="sm"><Text tone="subtle">Size:</Text> {formatBytes(meta.size)}</Text>
+          <Text as="div" size="sm"><Text tone="subtle">Type:</Text> {meta.contentType}</Text>
         </Stack>
       ) : null}
       <ExternalLink href={url} variant="button" download={basename} className="self-start mt-2">
