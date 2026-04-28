@@ -1,12 +1,16 @@
 /**
- * Gmail draft uploader — finds agent-authored draft email-message cards
- * under box/inbox/email/, builds RFC 2822 MIME messages, uploads them as
- * Gmail drafts, and stamps each card with `gmail-draft-id` and
- * `gmail-draft-url` so the user can open the draft in Gmail.
+ * Gmail draft uploader — finds agent-authored email-outbound cards under
+ * box/inbox/email/, builds RFC 2822 MIME messages, uploads them as Gmail
+ * drafts, and stamps each card with `gmail-draft-id` and `gmail-draft-url`
+ * so the user can open the draft in Gmail.
  *
  * Drafts already stamped with `gmail-draft-id` are skipped on subsequent
  * runs — this is a one-shot upload. Editing the card after upload does
  * NOT update the Gmail draft (yet).
+ *
+ * Outbound cards live in `*.email-outbound.card` files, intentionally
+ * separate from `*.email-message.card` (received) so the wakeup intake
+ * step doesn't try to triage them as incoming mail.
  */
 
 import * as fs from "node:fs/promises";
@@ -61,8 +65,8 @@ export async function uploadPendingDrafts(opts: {
 }
 
 /**
- * Walk box/inbox/email/ for email-message cards with status="draft" and
- * no gmail-draft-id attribute. Returns absolute paths.
+ * Walk box/inbox/email/ for email-outbound cards in draft status without
+ * a gmail-draft-id stamp. Returns absolute paths.
  */
 async function findDraftCards(boxRoot: string): Promise<string[]> {
   const emailDir = path.join(boxRoot, "box/inbox/email");
@@ -89,15 +93,14 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
       continue;
     }
     for (const file of files) {
-      if (!file.endsWith(".email-message.card")) continue;
+      if (!file.endsWith(".email-outbound.card")) continue;
       const cardPath = path.join(threadDir, file);
       try {
         const content = await fs.readFile(cardPath, "utf-8");
         const root = await parseXml(content, file);
-        if (
-          root.attrs.status === "draft" &&
-          !root.attrs["gmail-draft-id"]
-        ) {
+        // status defaults to "draft" — only skip explicit non-draft cards
+        const status = root.attrs.status ?? "draft";
+        if (status === "draft" && !root.attrs["gmail-draft-id"]) {
           drafts.push(cardPath);
         }
       } catch {
@@ -118,8 +121,8 @@ async function uploadOneDraft(opts: {
   const root = await parseXml(content, path.basename(opts.cardPath));
   const fields = readDraftFields(root);
 
-  // Resolve threading from in-reply-to ref (if present). The ref may be
-  // written in any of three forms; whichever is most natural for the agent:
+  // Resolve threading from in-reply-to ref (if present). The ref points at
+  // a received `email-message` card, in any of three forms:
   //   - relative to the draft's directory ("msg-001.email-message.card")
   //   - box-relative ("box/inbox/email/thread-X/msg-001.email-message.card")
   //   - box-anchored absolute ("/box/inbox/email/thread-X/msg-001...")
@@ -293,12 +296,12 @@ async function stampDraftCard(opts: {
   draftUrl: string;
 }): Promise<void> {
   const content = await fs.readFile(opts.cardPath, "utf-8");
-  // Append the two new attrs to the opening <email-message ... > tag.
-  // We assume the existing card has status="draft" and no gmail-draft-id.
+  // Append the two new attrs to the opening <email-outbound ... > tag.
+  // We assume the existing card is status="draft" with no gmail-draft-id.
   const stamped = content.replace(
-    /<email-message\b([^>]*)>/,
+    /<email-outbound\b([^>]*)>/,
     (_match, attrs: string) =>
-      `<email-message${attrs} gmail-draft-id="${escapeAttr(opts.draftId)}" gmail-draft-url="${escapeAttr(opts.draftUrl)}">`,
+      `<email-outbound${attrs} gmail-draft-id="${escapeAttr(opts.draftId)}" gmail-draft-url="${escapeAttr(opts.draftUrl)}">`,
   );
   await fs.writeFile(opts.cardPath, stamped);
 }

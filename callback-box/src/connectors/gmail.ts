@@ -308,7 +308,7 @@ function isoDateFromInternal(internalDate: string | undefined): string {
 
 class GmailConnector implements Connector {
   name = "gmail";
-  produces = ["email-thread", "email-message"];
+  produces = ["email-thread", "email-message", "email-outbound"];
   inboxPaths = ["box/inbox/email"];
   triggeredBy?: string;
 

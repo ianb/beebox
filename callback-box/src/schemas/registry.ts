@@ -28,6 +28,7 @@ import { RecordSchema } from "./record.js";
 import { RecipeSchema } from "./recipe.js";
 import { EmailThreadSchema } from "./email-thread.js";
 import { EmailMessageSchema } from "./email-message.js";
+import { EmailOutboundSchema } from "./email-outbound.js";
 import { NewsJobSchema } from "./news-job.js";
 import { GuideRevisionJobSchema } from "./guide-revision-job.js";
 import { IntakeJobSchema } from "./intake-job.js";
@@ -67,6 +68,7 @@ export const schemas: ElementSchema[] = [
   RecipeSchema,
   EmailThreadSchema,
   EmailMessageSchema,
+  EmailOutboundSchema,
   NewsJobSchema,
   GuideRevisionJobSchema,
   IntakeJobSchema,
@@ -258,6 +260,7 @@ export { RecordSchema } from "./record.js";
 export { RecipeSchema } from "./recipe.js";
 export { EmailThreadSchema } from "./email-thread.js";
 export { EmailMessageSchema } from "./email-message.js";
+export { EmailOutboundSchema } from "./email-outbound.js";
 export { NewsJobSchema } from "./news-job.js";
 export { GuideRevisionJobSchema } from "./guide-revision-job.js";
 export { IntakeJobSchema } from "./intake-job.js";

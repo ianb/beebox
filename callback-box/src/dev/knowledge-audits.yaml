@@ -1001,52 +1001,49 @@ tests:
     correct_contains_any: ["lossy", "don't survive", "destroy", "lost"]
     tags: [drive, docs, lossy]
 
-  # === Email Drafts ===
+  # === Email Outbound (drafts) ===
   #
-  # The email-message schema doubles as a draft authoring format —
-  # `status="draft"` cards under box/inbox/email/ get uploaded to Gmail
-  # by the connector on next sync, then stamped with gmail-draft-id and
-  # gmail-draft-url. The schema's `instructions` block teaches this; tests
-  # verify the agent can find that knowledge when asked.
+  # email-outbound is the agent-authored card type for emails leaving via
+  # Gmail. Today it's always status="draft" (uploaded to Gmail's drafts
+  # folder for human review); future status="sent" will direct-send.
+  # The schema's `instructions` block teaches authoring; these audits
+  # verify the agent can find that knowledge.
   #
-  # Status (2026-04-28): All 5 pass after the assertions were tightened on
-  # `draft-email-can-write` (initially false-positive — agent said "Gmail
-  # is read-only" while still using the word "draft" in a different sense).
-  # Stochastic on cold prompts: when asked "can you draft for me" without
-  # context anchoring, the agent sometimes guesses and sometimes checks
-  # the email-message doc. The 4 anchored prompts are reliable.
-  # Open gap: the agent guide lists email-message as a card type but
-  # doesn't surface drafting as a capability; cold-prompt reliability
-  # would improve by hinting at the role in cards.ts or adding an
-  # outbound section to box-shape.ts.
+  # Status (2026-04-28): split from email-message after the unified design
+  # caused the wakeup intake to triage drafts as incoming mail. Cold
+  # prompt (`draft-email-can-write`) remains stochastic — agent guide
+  # surfaces the type but not the capability — see open gap note below.
+  # Open gap: cold-prompt reliability would improve by adding an outbound
+  # hint to cards.ts or a new section in box-shape.ts.
 
   - id: draft-email-can-write
     prompt: "Can you write a draft email reply for me, or do I have to compose it in Gmail myself?"
     expected_level: knows_about
     watch_for: >
-      Says yes — names the email-message card type and either status="draft"
-      or that the gmail connector uploads on sync. Should NOT say "Gmail
-      integration is read-only" or suggest saving the draft as a memo.
-    correct_contains: ["email-message"]
-    correct_contains_any: ["status=\"draft\"", "status='draft'", "gmail-draft", "uploads", "sync"]
+      Says yes — names the email-outbound card type and indicates the
+      gmail connector uploads it as a draft on next sync. Should NOT say
+      "Gmail integration is read-only" or suggest saving the reply as a
+      memo.
+    correct_contains: ["email-outbound"]
+    correct_contains_any: ["draft", "gmail-draft", "uploads", "sync"]
     tags: [email, drafts]
     notes: >
       Cold prompts — without context anchoring to a specific email — are
-      where this fails: the agent guide lists the email-message card type
-      but doesn't surface that drafts can be authored. The agent guesses
-      "Gmail is read-only." Fix is to surface the capability in the agent
-      guide (cards.ts) so the agent at least knows to read the doc.
+      where this fails: the agent guide lists email-outbound but doesn't
+      flag it as the way to compose mail. The agent often guesses
+      "Gmail is read-only." Fix is to surface the capability in cards.ts
+      so the agent at least knows to read the doc.
 
   - id: draft-email-format
     prompt: "Show me what a draft reply email card looks like — what XML do I write?"
     expected_level: knows_about
     watch_for: >
-      Reads docs/generated/card-email-message.md (or schema source) and shows
-      <email-message status="draft"> with <to>, <subject>, <body>, and
+      Reads docs/generated/card-email-outbound.md (or schema source) and
+      shows <email-outbound> with <to>, <subject>, <body>, and
       <in-reply-to ref="..." /> for replies.
-    correct_contains: ["status=\"draft\""]
+    correct_contains: ["email-outbound"]
     correct_contains_any: ["in-reply-to", "<body>"]
-    should_read: ["card-email-message.md"]
+    should_read: ["card-email-outbound.md"]
     tags: [email, drafts]
 
   - id: draft-email-placement
@@ -1054,8 +1051,8 @@ tests:
     expected_level: knows_about
     watch_for: >
       Reply drafts go inside the existing thread directory under
-      box/inbox/email/ (next to the msg-NNN cards), NOT in a separate
-      outbox tree.
+      box/inbox/email/ (next to the msg-NNN cards), as a
+      *.email-outbound.card file. NOT a separate outbox tree.
     correct_contains_any: ["thread", "box/inbox/email"]
     tags: [email, drafts]
 
@@ -1078,4 +1075,15 @@ tests:
       links [text](url)) and says nothing else is supported. Should NOT
       claim full markdown or full HTML support.
     correct_contains_any: ["bold", "italic", "**", "limited", "subset"]
+    tags: [email, drafts]
+
+  - id: outbound-not-treated-as-incoming
+    prompt: "If you write a draft reply, will the inbox triage code treat it like a new incoming email and try to process it?"
+    expected_level: knows_about
+    watch_for: >
+      Says no — drafts are *.email-outbound.card files, intake/triage
+      globs *.email-message.card so they're invisible. Should NOT say
+      drafts use status="draft" on email-message (that was the old
+      design).
+    correct_contains: ["email-outbound"]
     tags: [email, drafts]
