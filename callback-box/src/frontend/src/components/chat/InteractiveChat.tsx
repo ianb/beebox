@@ -5,8 +5,9 @@
  * User input is wrapped in <typed> tags before sending.
  * User messages are right-aligned dark bubbles; assistant uses markdown.
  *
- * Rendered by ChatPage when no `?session=<id>` query param is present
- * (a present session id switches to a read-only SessionViewer instead).
+ * Receives `sessionInput` from ChatPage — either an existing session id or
+ * the `"new"` sentinel for a fresh conversation. Keyed on that prop so
+ * a session switch (or new-chat reset) cleanly remounts the machine.
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -35,12 +36,12 @@ import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
 import { CloseButton } from "../ui/CloseButton";
 import { ExternalIconLink } from "../ui/ExternalIconLink";
 import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../lib/view-url";
-import { SessionListButton } from "../SessionViewer";
+import { SessionListButton } from "../SessionListButton";
 import { RecentFilesButton } from "../RecentFilesButton";
 import { cn } from "../../lib/cn";
 import { useSSE, type SSEEvent } from "../../hooks/useSSE";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import { useSyncRun } from "../../hooks/useSyncRun";
@@ -702,7 +703,7 @@ function VirtualizedMessageList({
   speechPlayback: { isPlaying: boolean };
   handleStopSpeech: () => void;
   onZoomView: OnZoomView;
-  snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing" | "resetting") => boolean };
+  snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
   totalEntries: number;
   onLoadOlder: () => void;
   loadingOlder: boolean;
@@ -907,12 +908,19 @@ function VirtualizedMessageList({
   );
 }
 
-export function InteractiveChat() {
-  const [snapshot, send] = useSSRMachine(chatMachine);
+interface InteractiveChatProps {
+  /** Either an existing session id or `"new"` for a fresh conversation. */
+  sessionInput: string;
+}
+
+export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
+  const [snapshot, send] = useSSRMachine(chatMachine, { input: { sessionInput } });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, totalEntries } = snapshot.context;
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
+  const navigate = useNavigate();
+  const { boxSlug } = useParams({ strict: false });
 
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
@@ -934,10 +942,11 @@ export function InteractiveChat() {
   // Server persists the selection in .callback-box/chat-model.json;
   // read it on mount so the menu's checkmark reflects server state.
   useEffect(() => {
-    getChatStatus()
+    if (!sessionId) return;
+    getChatStatus({ sessionId })
       .then((status) => { setSelectedModel(status.model); })
       .catch(() => {});
-  }, []);
+  }, [sessionId]);
 
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
@@ -951,8 +960,10 @@ export function InteractiveChat() {
       },
     ]);
     setSelectedModel(model);
-    setChatModel(model).catch(() => {});
-  }, [selectedModel, groups.length]);
+    if (sessionId) {
+      setChatModel({ sessionId, model }).catch(() => {});
+    }
+  }, [selectedModel, groups.length, sessionId]);
   const [panel, setPanel] = useState<{ tabs: PanelTab[]; activePath: string | null }>({ tabs: [], activePath: null });
   const activeView = panel.activePath
     ? panel.tabs.find((t) => t.target.path === panel.activePath) ?? null
@@ -1073,8 +1084,9 @@ export function InteractiveChat() {
   // running stream.
   useEffect(() => {
     if (pendingMessages.length === 0) return;
+    if (!sessionId) return;
     const poll = () => {
-      getChatHistory({ tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES })
+      getChatHistory({ sessionId, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES })
         .then((data) => {
           send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         })
@@ -1082,9 +1094,11 @@ export function InteractiveChat() {
     };
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
-  }, [pendingMessages.length, send]);
+  }, [pendingMessages.length, send, sessionId]);
 
-  // Handle SSE events: schedule-fired, chat-history, chat-user-message
+  // Handle SSE events: schedule-fired, chat-history, chat-user-message,
+  // chat-session-assigned. Events tagged with a sessionId are filtered to
+  // this view's session only.
   useSSE(`${getEventSourceBase()}/events`, {
     onConnect: useCallback(() => {
       console.warn("[chatfsm] sse-connect");
@@ -1105,18 +1119,19 @@ export function InteractiveChat() {
         fetchSchedules();
       } else if (event.event === "chat-history") {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
+        if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
         console.warn(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
       } else if (event.event === "chat-complete") {
+        const data = event.data as { sessionId: string | null };
+        if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
         console.warn("[chatfsm] sse-chat-complete");
         // Agent turn completed — refresh history to pick up the response.
-        // This catches cases where the send SSE stream was interrupted
-        // but the agent finished on the server.
         send({ type: "REFRESH" });
       } else if (event.event === "chat-user-message") {
-        // Another user sent a message — add it to our view if it's not from us
-        const data = event.data as { message: string; user: { email: string; name: string } | null; timestamp: string };
+        const data = event.data as { sessionId: string | null; message: string; user: { email: string; name: string } | null; timestamp: string };
+        if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
         if (data.user && currentUser && data.user.email !== currentUser.email) {
           send({
             type: "OTHER_USER_MESSAGE",
@@ -1125,8 +1140,21 @@ export function InteractiveChat() {
             timestamp: data.timestamp,
           });
         }
+      } else if (event.event === "chat-session-assigned") {
+        const data = event.data as { sessionId: string };
+        // We only navigate when this view started in "new" mode and the
+        // assigned id is the one for our pending session. Once the URL
+        // changes, this component will remount with the real id; the
+        // freshly-written JSONL is reloaded by fetchInitial.
+        if (sessionInput === "new" && !sessionId) {
+          navigate({
+            to: href(`/${boxSlug}/chat`),
+            search: { session: data.sessionId } as never,
+            replace: true,
+          });
+        }
       }
-    }, [fetchSchedules, send, currentUser]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, navigate, boxSlug]),
   });
 
   const handleCancelSchedule = useCallback((label: string) => {
@@ -1261,6 +1289,7 @@ export function InteractiveChat() {
 
   const handleLoadOlder = useCallback(() => {
     if (loadingOlder) return;
+    if (!sessionId) return;
     setLoadingOlder(true);
     // Load all history up to the current start point
     const currentCount = messages.length;
@@ -1269,13 +1298,13 @@ export function InteractiveChat() {
     // Fetch a window ending just before current messages
     const offset = Math.max(0, olderCount - chunkSize);
     const limit = olderCount - offset;
-    getChatHistory({ offset, limit })
+    getChatHistory({ sessionId, offset, limit })
       .then((result) => {
         send({ type: "PREPEND_MESSAGES", messages: result.entries });
       })
       .catch(() => {})
       .finally(() => setLoadingOlder(false));
-  }, [loadingOlder, messages.length, totalEntries, send]);
+  }, [loadingOlder, messages.length, totalEntries, send, sessionId]);
 
   const doSend = useCallback(
     (wrapped: string) => {
@@ -1533,16 +1562,20 @@ export function InteractiveChat() {
   }, [send]);
 
   const handleNewSession = useCallback(() => {
-    send({ type: "NEW_SESSION" });
-  }, [send]);
+    navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: { session: "new" } as never,
+    });
+  }, [navigate, boxSlug]);
 
   const handleStopProcess = useCallback(() => {
     send({ type: "INTERRUPT" });
   }, [send]);
 
   const handleRestartProcess = useCallback(() => {
-    restartChatSubprocess().catch(() => {});
-  }, []);
+    if (!sessionId) return;
+    restartChatSubprocess({ sessionId }).catch(() => {});
+  }, [sessionId]);
 
   const handleCompactSession = useCallback(() => {
     // /compact must be the first characters of the text, with no wrapping —

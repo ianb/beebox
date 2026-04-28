@@ -6,7 +6,6 @@ import { schedulerRouter } from "./routers/scheduler.js";
 import { calendarRouter } from "./routers/calendar.js";
 import { actionsRouter } from "./routers/actions.js";
 import { briefsRouter } from "./routers/briefs.js";
-import { chatRouter } from "./routers/chat.js";
 import { commandsRouter } from "./routers/commands.js";
 import { debugLogRouter } from "./routers/debugLog.js";
 import { adminRouter } from "./routers/admin.js";
@@ -24,7 +23,6 @@ export const appRouter = router({
   calendar: calendarRouter,
   actions: actionsRouter,
   briefs: briefsRouter,
-  chat: chatRouter,
   commands: commandsRouter,
   debugLog: debugLogRouter,
   admin: adminRouter,

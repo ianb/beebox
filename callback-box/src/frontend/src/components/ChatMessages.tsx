@@ -1,7 +1,5 @@
 /**
  * Shared message rendering components for chat UI.
- *
- * Used by both the interactive ChatPage and the read-only SessionViewer.
  */
 
 import { useCallback, useMemo, useState } from "react";

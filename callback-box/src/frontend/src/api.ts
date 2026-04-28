@@ -256,26 +256,30 @@ export async function executeCommand(
 
 // --- Chat API (SSE streaming — can't use tRPC) ---
 
-export async function getChatStatus(): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
-  return fetchJson(`${getApiBase()}/chat/status`);
+export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
+  const qs = params.sessionId ? `?session=${encodeURIComponent(params.sessionId)}` : "";
+  return fetchJson(`${getApiBase()}/chat/status${qs}`);
 }
 
-export async function setChatModel(model: string | null): Promise<{ ok: boolean; model: string | null }> {
+export async function getDefaultChatSession(): Promise<{ sessionId: string | null }> {
+  return fetchJson(`${getApiBase()}/chat/default`);
+}
+
+export async function setChatModel(params: { sessionId: string; model: string | null }): Promise<{ ok: boolean; model: string | null }> {
   return fetchJson(`${getApiBase()}/chat/set-model`, {
     method: "POST",
-    body: JSON.stringify({ model }),
+    body: JSON.stringify({ session: params.sessionId, model: params.model }),
   });
 }
 
-export async function getChatHistory(params?: { sessionId?: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
+export async function getChatHistory(params: { sessionId: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
   const searchParams = new URLSearchParams();
-  if (params?.sessionId) searchParams.set("session", params.sessionId);
-  if (params?.tail) searchParams.set("tail", String(params.tail));
-  if (params?.offset != null) searchParams.set("offset", String(params.offset));
-  if (params?.limit) searchParams.set("limit", String(params.limit));
-  if (params?.minRealUserMessages) searchParams.set("minRealUserMessages", String(params.minRealUserMessages));
-  const qs = searchParams.toString();
-  return fetchJson(`${getApiBase()}/chat/history${qs ? `?${qs}` : ""}`);
+  searchParams.set("session", params.sessionId);
+  if (params.tail) searchParams.set("tail", String(params.tail));
+  if (params.offset != null) searchParams.set("offset", String(params.offset));
+  if (params.limit) searchParams.set("limit", String(params.limit));
+  if (params.minRealUserMessages) searchParams.set("minRealUserMessages", String(params.minRealUserMessages));
+  return fetchJson(`${getApiBase()}/chat/history?${searchParams.toString()}`);
 }
 
 export interface ChatSessionInfo {
@@ -290,17 +294,10 @@ export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[] }
   return fetchJson(`${getApiBase()}/chat/sessions`);
 }
 
-export async function interruptChat(): Promise<{ ok: boolean }> {
+export async function interruptChat(params: { sessionId: string }): Promise<{ ok: boolean }> {
   return fetchJson(`${getApiBase()}/chat/interrupt`, {
     method: "POST",
-    body: JSON.stringify({}),
-  });
-}
-
-export async function resetChatSession(): Promise<{ ok: boolean }> {
-  return fetchJson(`${getApiBase()}/chat/reset`, {
-    method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify({ session: params.sessionId }),
   });
 }
 
@@ -309,10 +306,10 @@ export async function resetChatSession(): Promise<{ ok: boolean }> {
  * messages drain into the fresh subprocess automatically. Use this to
  * unstick a wedged chat.
  */
-export async function restartChatSubprocess(): Promise<{ ok: boolean }> {
+export async function restartChatSubprocess(params: { sessionId: string }): Promise<{ ok: boolean }> {
   return fetchJson(`${getApiBase()}/chat/restart`, {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify({ session: params.sessionId }),
   });
 }
 
@@ -324,11 +321,13 @@ export async function restartChatSubprocess(): Promise<{ ok: boolean }> {
  * Retries once on network failure with a messageId to prevent duplicates.
  */
 export async function sendChatMessage(params: {
+  /** Session to send into. Pass `"new"` to start a fresh conversation. */
+  session: string;
   message: string;
   images?: ChatImageAttachment[];
   onMessage: (msg: Record<string, unknown>) => void;
 }): Promise<void> {
-  const { message, images, onMessage } = params;
+  const { session, message, images, onMessage } = params;
   const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const attempt = async (_retry: boolean): Promise<Response> => {
@@ -336,6 +335,7 @@ export async function sendChatMessage(params: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        session,
         message,
         messageId,
         ...(images && images.length > 0 ? { images } : {}),

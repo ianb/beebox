@@ -31,9 +31,7 @@ import {
   buildSSRStateMap,
   getQueryOverrides,
   formatStateList,
-  machineRegistry,
 } from "./state-registry";
-import { ChatSession } from "../../../core/chat-session.js";
 import type { TrpcContext } from "../../../webapp/trpc/context.js";
 import type { Services } from "../../../services/index.js";
 import { ActivityChatSessionPool, createBuiltinRegistry } from "../../../activities/index.js";
@@ -185,7 +183,6 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
     boxSlug: slug,
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {} as Services,
-    chatSession: new ChatSession(boxRoot),
     activityRegistry: createBuiltinRegistry(),
     activityChatPool: new ActivityChatSessionPool(createBuiltinRegistry()),
   };
@@ -286,7 +283,7 @@ async function main() {
   const fullRoute = `/${slug}${routePath.startsWith("/") ? routePath : "/" + routePath}`;
   setRoute(fullRoute);
 
-  const { queryClient, caller } = await prefetchData({ boxRoot: boxDir, slug, routePath });
+  const { queryClient } = await prefetchData({ boxRoot: boxDir, slug, routePath });
 
   // Build XState machine snapshots — from scenario, explicit overrides, or defaults
   const hasOverrides = scenario || Object.keys(machineOverrides).length > 0;
@@ -295,28 +292,7 @@ async function main() {
   if (hasOverrides) {
     ssrState = buildSSRStateMap(routePath, { scenario, machineOverrides });
   } else {
-    // Default behavior: use registry defaults + enrich chat from live data
     ssrState = buildSSRStateMap(routePath);
-    if (routePath.replace(/^\//, "") === "chat" && !machineOverrides.chat) {
-      try {
-        const [history, status] = await Promise.all([
-          caller.chat.history(),
-          caller.chat.status(),
-        ]);
-        const chatInfo = machineRegistry.chat;
-        ssrState.chat = chatInfo.machine.resolveState({
-          value: "idle",
-          context: {
-            ...chatInfo.states.idle.context,
-            messages: history.entries,
-            sessionId: history.sessionId ?? status.sessionId,
-            processRunning: status.running,
-          },
-        } as never);
-      } catch {
-        // Skip — chat will render with sample data
-      }
-    }
   }
 
   // Apply query overrides from --scenario

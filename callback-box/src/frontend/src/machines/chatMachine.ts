@@ -2,7 +2,6 @@
  * XState machine for chat session lifecycle.
  *
  * States: loading → idle ⇄ streaming → refreshing → idle
- *                   idle → resetting → idle
  *
  * The SSE stream lives in a callback actor's closure.
  * Serializable context holds messages, stream text, error, session info.
@@ -15,7 +14,6 @@ import {
   getChatStatus,
   sendChatMessage,
   interruptChat,
-  resetChatSession,
   type SessionEntry,
   type SessionContentBlock,
   type ChatImageAttachment,
@@ -42,7 +40,6 @@ function logFsm(event: string, detail?: Record<string, unknown>): void {
 
 type ChatEvent =
   | { type: "SEND"; message: string; images?: ChatImageAttachment[] }
-  | { type: "NEW_SESSION" }
   | { type: "INTERRUPT" }
   | { type: "DISMISS_ERROR" }
   | { type: "STREAM_TEXT"; text: string }
@@ -73,18 +70,41 @@ interface ChatContext {
   /** True when tools ran since the last text — the next text block needs a paragraph separator. */
   streamNeedsSeparator: boolean;
   error: string | null;
+  /**
+   * What to address backend chat calls by — either an existing session id
+   * or `"new"` to start a fresh conversation. Held alongside `sessionId`
+   * because for a freshly-created chat the server-assigned id arrives
+   * after the first send completes.
+   */
+  sessionInput: string;
   sessionId: string | null;
   processRunning: boolean;
   /** Total number of entries in the full session log. */
   totalEntries: number;
 }
 
+interface ChatMachineInput {
+  /** `"new"` for a fresh conversation, or an existing session id. */
+  sessionInput: string;
+}
+
 // -- Actors --
 
-const fetchInitialActor = fromPromise(async () => {
+interface SessionInput {
+  /** Either a known session id or the "new" sentinel. Null/undefined means brand-new shell with no history. */
+  sessionInput: string;
+}
+
+const fetchInitialActor = fromPromise<
+  { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean },
+  SessionInput
+>(async ({ input }) => {
+  if (input.sessionInput === "new") {
+    return { entries: [], total: 0, sessionId: null, running: false };
+  }
   const [history, status] = await Promise.all([
-    getChatHistory({ tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
-    getChatStatus(),
+    getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
+    getChatStatus({ sessionId: input.sessionInput }),
   ]);
   return {
     entries: history.entries,
@@ -94,12 +114,14 @@ const fetchInitialActor = fromPromise(async () => {
   };
 });
 
-const fetchHistoryActor = fromPromise(async () => {
-  return getChatHistory({ tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES });
-});
-
-const resetSessionActor = fromPromise(async () => {
-  return resetChatSession();
+const fetchHistoryActor = fromPromise<
+  { sessionId: string | null; entries: SessionEntry[]; total: number },
+  SessionInput
+>(async ({ input }) => {
+  if (input.sessionInput === "new") {
+    return { sessionId: null, entries: [], total: 0 };
+  }
+  return getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES });
 });
 
 const streamActor = fromCallback(
@@ -108,7 +130,7 @@ const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { message: string; images?: ChatImageAttachment[] };
+    input: { sessionInput: string; message: string; images?: ChatImageAttachment[] };
   }) => {
     // Track whether the stream ever produced a terminal event. If the SSE
     // ends cleanly without one (proxy timeout, server closed the socket
@@ -128,6 +150,7 @@ const streamActor = fromCallback(
     });
 
     sendChatMessage({
+      session: input.sessionInput,
       message: input.message,
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       onMessage: (msg) => {
@@ -219,8 +242,10 @@ const streamActor = fromCallback(
  * the chat-complete SSE event will trigger a history refresh when the
  * queued turn finishes.
  */
-function queueMessageToBackend(message: string, images?: ChatImageAttachment[]): void {
+function queueMessageToBackend(opts: { session: string; message: string; images?: ChatImageAttachment[] }): void {
+  const { session, message, images } = opts;
   sendChatMessage({
+    session,
     message,
     ...(images && images.length > 0 ? { images } : {}),
     onMessage: () => {}, // ignore — will be "queued" then close
@@ -233,27 +258,28 @@ export const chatMachine = setup({
   types: {
     context: {} as ChatContext,
     events: {} as ChatEvent,
+    input: {} as ChatMachineInput,
   },
   actors: {
     fetchInitial: fetchInitialActor,
     fetchHistory: fetchHistoryActor,
-    resetSession: resetSessionActor,
     stream: streamActor,
   },
 }).createMachine({
   id: "chat",
   initial: "loading",
-  context: {
+  context: ({ input }) => ({
     messages: [],
     pendingMessages: [],
     streamText: "",
     streamTools: [],
     streamNeedsSeparator: false,
     error: null,
-    sessionId: null,
+    sessionInput: input.sessionInput,
+    sessionId: input.sessionInput === "new" ? null : input.sessionInput,
     processRunning: false,
     totalEntries: 0,
-  },
+  }),
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
     SET_MESSAGES: {
@@ -309,6 +335,7 @@ export const chatMachine = setup({
     loading: {
       invoke: {
         src: "fetchInitial",
+        input: ({ context }) => ({ sessionInput: context.sessionInput }),
         onDone: {
           target: "idle",
           actions: assign(({ event }) => ({
@@ -355,7 +382,6 @@ export const chatMachine = setup({
             })),
           ],
         },
-        NEW_SESSION: "resetting",
         DISMISS_ERROR: {
           actions: assign({ error: null }),
         },
@@ -369,9 +395,10 @@ export const chatMachine = setup({
       invoke: {
         id: "chatStream",
         src: "stream",
-        input: ({ event }) => {
+        input: ({ event, context }) => {
           const sendEvent = event as Extract<ChatEvent, { type: "SEND" }>;
           return {
+            sessionInput: context.sessionInput,
             message: sendEvent.message,
             ...(sendEvent.images && sendEvent.images.length > 0
               ? { images: sendEvent.images }
@@ -409,7 +436,11 @@ export const chatMachine = setup({
                 pendingMessages: [...context.pendingMessages, entry],
               };
             }),
-            ({ event }) => queueMessageToBackend(event.message, event.images),
+            ({ event, context }) => queueMessageToBackend({
+              session: context.sessionInput,
+              message: event.message,
+              ...(event.images ? { images: event.images } : {}),
+            }),
           ],
         },
         STREAM_TEXT: {
@@ -471,8 +502,10 @@ export const chatMachine = setup({
           })),
         },
         INTERRUPT: {
-          actions: () => {
-            interruptChat().catch(() => {});
+          actions: ({ context }) => {
+            if (context.sessionId) {
+              interruptChat({ sessionId: context.sessionId }).catch(() => {});
+            }
           },
         },
       },
@@ -501,12 +534,17 @@ export const chatMachine = setup({
                 pendingMessages: [...context.pendingMessages, entry],
               };
             }),
-            ({ event }) => queueMessageToBackend(event.message, event.images),
+            ({ event, context }) => queueMessageToBackend({
+              session: context.sessionInput,
+              message: event.message,
+              ...(event.images ? { images: event.images } : {}),
+            }),
           ],
         },
       },
       invoke: {
         src: "fetchHistory",
+        input: ({ context }) => ({ sessionInput: context.sessionInput }),
         onDone: {
           target: "idle",
           actions: assign(({ context, event }) => {
@@ -535,31 +573,6 @@ export const chatMachine = setup({
               streamTools: [],
             }),
           ],
-        },
-      },
-    },
-    resetting: {
-      invoke: {
-        src: "resetSession",
-        onDone: {
-          target: "idle",
-          actions: assign({
-            messages: [],
-            pendingMessages: [],
-            sessionId: null,
-            processRunning: false,
-            error: null,
-            totalEntries: 0,
-          }),
-        },
-        onError: {
-          target: "idle",
-          actions: assign(({ event }) => ({
-            error:
-              event.error instanceof Error
-                ? event.error.message
-                : "Failed to reset session",
-          })),
         },
       },
     },

@@ -67,7 +67,6 @@ function makeCtx(boxRoot: string) {
     // Tests in this file don't touch them.
     eventBus: null,
     services: {},
-    chatSession: null,
   };
 }
 

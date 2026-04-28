@@ -1,25 +1,41 @@
 /**
- * Chat routes - Persistent conversational interface to a box's Claude agent.
+ * Chat routes - Per-session conversational interface to a box's Claude agent.
  *
- * POST /api/chat/send     - Send message, stream response via SSE
- * GET  /api/chat/history   - Load conversation history
- * POST /api/chat/interrupt - Interrupt current turn
- * GET  /api/chat/status    - Check session status
+ * Sessions are addressed by id. The route layer routes each request to a
+ * `ChatSession` instance via `ChatSessionRegistry`. Bare-`/chat` clients
+ * resolve the "most-active" pointer to find a default session id.
+ *
+ * POST /api/chat/send     - Send a message; streams response via SSE
+ * POST /api/chat/self-note - Inject a self-note into a session transcript
+ * GET  /api/chat/history   - Load conversation history (any session)
+ * GET  /api/chat/sessions  - List web chat sessions (history file + metadata)
+ * POST /api/chat/interrupt - Interrupt an in-flight turn
+ * POST /api/chat/restart   - Kill the subprocess (preserves session id)
+ * POST /api/chat/reset     - Drop a session from the registry
+ * GET  /api/chat/status    - Session status (running/busy/model)
+ * GET  /api/chat/default   - Resolve the "most-active" session id
+ * POST /api/chat/set-model - Change a session's active model
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky from "ky";
 import type { FastifyInstance } from "fastify";
-import { ChatSession, type ChatMessage, type ChatImage } from "../../core/chat-session.js";
+import { type ChatMessage, type ChatImage, type ChatSession } from "../../core/chat-session.js";
+import { ChatSessionRegistry } from "../../core/chat-session-registry.js";
+import {
+  getMostActive,
+  loadHistory,
+  runBackfillIfNeeded,
+} from "../../core/chat-session-history.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import { getSessionUser, type SessionUser } from "../auth.js";
 import {
-  listSessions,
   getSessionLogPath,
+  getSessionMetadata,
   parseSessionLog,
   tailForMinUserMessages,
 } from "../../cli/lib/session.js";
@@ -33,6 +49,8 @@ import { registerChatUploadRoutes } from "./chat-uploads.js";
 interface SendBody {
   message: string;
   messageId?: string;
+  /** Session id to send into. Use "new" to start a fresh conversation. */
+  session: string;
   /**
    * Optional image attachments referenced by `[imageN]` tokens in `message`.
    * Tokens are replaced with the image block in the content array sent to
@@ -77,13 +95,47 @@ export async function registerChatRoutes(
   // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
   await registerChatUploadRoutes({ server, boxRoot });
 
-  // Create singleton ChatSession for this box
-  const chatSession = new ChatSession(boxRoot);
+  // One-shot backfill of pre-existing chat sessions into the history file.
+  // Idempotent — returns early on subsequent boots.
+  void runBackfillIfNeeded(boxRoot).catch((e: unknown) => {
+    console.error("[chat] backfill failed:", e instanceof Error ? e.message : e);
+  });
 
-  // Schedule manager — fires schedules back into the chat session
+  // Per-box registry of ChatSession instances, keyed by sessionId.
+  const registry = new ChatSessionRegistry(boxRoot);
+  registry.startCleanup();
+
+  // Wire any session in the registry to the global event bus on creation.
+  // Each entry's events get tagged with sessionId so the frontend can filter.
+  const wired = new WeakSet<ChatSession>();
+  function wireSession(session: ChatSession): void {
+    if (wired.has(session)) return;
+    wired.add(session);
+
+    // Parse schedule tags out of completed turns.
+    session.on("turn-text", (text: string) => {
+      const newSchedules = parseScheduleTags(text);
+      for (const s of newSchedules) {
+        scheduleManager.addSchedule(s);
+      }
+      const cancels = parseCancelScheduleTags(text);
+      for (const label of cancels) {
+        scheduleManager.cancelByLabel(label);
+      }
+    });
+
+    // Broadcast turn-end so other tabs / the schedule fallback know.
+    session.on("done", () => {
+      eventBus.emit("chat-complete", {
+        sessionId: session.getSessionId(),
+        timestamp: new Date().toISOString(),
+      });
+    });
+  }
+
+  // Schedule manager — fires schedules into the most-active session.
   const scheduleManager = new ChatScheduleManager(boxRoot, {
     async onFire({ schedule }) {
-      // Broadcast a schedule-fired event so the frontend can play alarms/TTS
       eventBus.emit("schedule-fired", {
         id: schedule.id,
         label: schedule.label,
@@ -91,7 +143,14 @@ export async function registerChatRoutes(
         announce: schedule.announce,
       });
 
-      // Inject a message into the chat session to wake the agent
+      const targetId = await getMostActive(boxRoot);
+      if (!targetId) {
+        console.warn("[schedule] No most-active session, dropping fire");
+        return;
+      }
+      const session = registry.getOrCreate(targetId);
+      wireSession(session);
+
       const firedAt = new Date().toISOString();
       const firedMessage = [
         "<schedule-fired label=\"" + schedule.label + "\" scheduled-at=\"" + schedule.createdAt + "\" fired-at=\"" + firedAt + "\">",
@@ -101,52 +160,25 @@ export async function registerChatRoutes(
         "</schedule-fired>",
       ].join("\n");
 
-      // Listen for the agent's response to complete, then push the
-      // full history to the frontend via SSE so it can display the reply.
       const onScheduleDone = () => {
-        chatSession.getHistory()
+        session.getHistory()
           .then((history) => {
             eventBus.emit("chat-history", {
-              entries: history.entries,
               sessionId: history.sessionId,
+              entries: history.entries,
             });
           })
           .catch((_e) => {});
       };
-      chatSession.once("done", onScheduleDone);
+      session.once("done", onScheduleDone);
 
-      const sent = await chatSession.send(firedMessage);
+      registry.enforceLiveCap(targetId);
+      registry.touch(targetId, { subprocessUse: true });
+      const sent = await session.send(firedMessage);
       if (!sent) {
-        chatSession.removeListener("done", onScheduleDone);
+        session.removeListener("done", onScheduleDone);
       }
     },
-  });
-
-
-  // Listen for completed turns to parse schedule/cancel tags
-  chatSession.on("turn-text", (text: string) => {
-    // Process <schedule> tags
-    const newSchedules = parseScheduleTags(text);
-    for (const s of newSchedules) {
-      scheduleManager.addSchedule(s);
-    }
-
-    // Process <cancel-schedule> tags
-    const cancels = parseCancelScheduleTags(text);
-    for (const label of cancels) {
-      scheduleManager.cancelByLabel(label);
-    }
-  });
-
-  // Broadcast chat-complete on every turn end, not just turns watched by an
-  // active /send request. When /send hits the busy branch and queues the
-  // message, its per-request "done" listener is never registered — so without
-  // this permanent listener, the eventual reply lands in the JSONL but no SSE
-  // refresh fires and the frontend stays stuck on idle with no response.
-  chatSession.on("done", () => {
-    eventBus.emit("chat-complete", {
-      timestamp: new Date().toISOString(),
-    });
   });
 
   /**
@@ -171,15 +203,37 @@ export async function registerChatRoutes(
     }
   }
 
+  /**
+   * Resolve the request's `session` param to a `ChatSession`. Handles the
+   * "new" sentinel by constructing a pending session and arranging for
+   * promotion when its real id arrives.
+   *
+   * Returns the session and its current id (`null` for a still-pending new
+   * session).
+   */
+  function resolveSendTarget(sessionParam: string): { session: ChatSession; id: string | null } {
+    if (sessionParam === "new") {
+      const session = registry.createNew();
+      wireSession(session);
+      return { session, id: null };
+    }
+    const session = registry.getOrCreate(sessionParam);
+    wireSession(session);
+    return { session, id: sessionParam };
+  }
+
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody }>(
     "/api/chat/send",
     async (request, reply) => {
-      const body = request.body ?? {};
-      const { message, messageId, images } = body;
+      const body = request.body ?? ({} as Partial<SendBody>);
+      const { message, messageId, images, session: sessionParam } = body;
 
       if (!message) {
         return reply.status(400).send({ error: "message is required" });
+      }
+      if (!sessionParam) {
+        return reply.status(400).send({ error: "session is required (id or 'new')" });
       }
 
       // Validate image attachments
@@ -198,6 +252,17 @@ export async function registerChatRoutes(
           }
         }
       }
+
+      const { session: chatSession, id: knownId } = resolveSendTarget(sessionParam);
+
+      // Identify the sender from the session (may be null if auth is disabled)
+      const user = getSessionUser(request);
+
+      // Slash commands (e.g. /compact) are parsed by the claude CLI when they
+      // appear at the very start of the user text — any prefix/suffix would
+      // break detection, so skip user-attr and pending-schedules injection.
+      const isSlashCommand = message.startsWith("/");
+      const attributed = user && !isSlashCommand ? injectUserAttr(message, user) : message;
 
       // Deduplicate retries: if we've already processed this messageId,
       // return success without re-sending to the agent
@@ -218,42 +283,29 @@ export async function registerChatRoutes(
         processedMessageIds.set(messageId, Date.now());
       }
 
-      // Identify the sender from the session (may be null if auth is disabled)
-      const user = getSessionUser(request);
-
-      // Slash commands (e.g. /compact) are parsed by the claude CLI when they
-      // appear at the very start of the user text — any prefix/suffix would
-      // break detection, so skip user-attr and pending-schedules injection.
-      const isSlashCommand = message.startsWith("/");
-
-      // Inject user attribution into the message
-      const attributed = user && !isSlashCommand ? injectUserAttr(message, user) : message;
-
-      // Broadcast the user message to other clients via SSE
+      // Broadcast the user message to other clients via SSE.
+      // For pending-new sessions, sessionId is still unknown; subscribers will
+      // see it once `session-assigned` fires.
       eventBus.emit("chat-user-message", {
+        sessionId: knownId,
         message: attributed,
         user: user ? { email: user.email, name: user.name } : null,
         timestamp: new Date().toISOString(),
       });
 
-      // Hijack the response from Fastify so we control the socket directly.
-      // Without this, Fastify fires request.raw "close" immediately and
-      // our event listeners get cleaned up before Claude responds.
+      // Hijack the response so we control the socket directly and can hold
+      // it open across the SSE stream lifetime.
       reply.hijack();
-
-      // Set up SSE streaming
       reply.raw.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
       });
 
-      // If busy, queue the message for later delivery
+      // If busy, queue and return — the queue drains on the next "done".
       if (chatSession.isBusy()) {
         chatSession.enqueue({ text: attributed, ...(images ? { images } : {}) });
-        reply.raw.write(
-          `data: ${JSON.stringify({ type: "queued" })}\n\n`
-        );
+        reply.raw.write(`data: ${JSON.stringify({ type: "queued" })}\n\n`);
         reply.raw.end();
         return;
       }
@@ -265,23 +317,32 @@ export async function registerChatRoutes(
         ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
         : attributed;
 
-      // Send the message (may start the process if not running)
+      // Touch and pin the entry while the SSE stream is open so it survives
+      // the idle sweep. (Pending-new sessions aren't yet in `entries`; they
+      // pin on promotion via session-assigned.) Also mark this session as
+      // the most-active so bare /chat resolves here next time.
+      let releasePin: () => void = () => {};
+      if (knownId !== null) {
+        registry.touch(knownId, { subprocessUse: true });
+        registry.enforceLiveCap(knownId);
+        releasePin = registry.pin(knownId);
+        void registry.markMostActive(knownId).catch((_e) => {});
+      }
+
       const sent = await chatSession.send({
         text: fullMessage,
         ...(images ? { images } : {}),
       });
       if (!sent) {
         reply.raw.write(
-          `data: ${JSON.stringify({
-            type: "error",
-            error: "Failed to send message",
-          })}\n\n`
+          `data: ${JSON.stringify({ type: "error", error: "Failed to send message" })}\n\n`
         );
         reply.raw.end();
+        releasePin();
         return;
       }
 
-      // Wait for the turn to complete.
+      // Stream subprocess messages until the turn completes.
       await new Promise<void>((resolve) => {
         const onMessage = (msg: ChatMessage) => {
           try {
@@ -294,20 +355,16 @@ export async function registerChatRoutes(
         const finish = () => {
           cleanup();
           reply.raw.end();
+          releasePin();
           resolve();
         };
 
-        const onDone = () => {
-          finish();
-        };
+        const onDone = () => finish();
 
         const onError = (err: Error) => {
           try {
             reply.raw.write(
-              `data: ${JSON.stringify({
-                type: "error",
-                error: err.message,
-              })}\n\n`
+              `data: ${JSON.stringify({ type: "error", error: err.message })}\n\n`
             );
           } catch {
             // Client disconnected
@@ -315,9 +372,7 @@ export async function registerChatRoutes(
           finish();
         };
 
-        const onClose = () => {
-          finish();
-        };
+        const onClose = () => finish();
 
         const cleanup = () => {
           chatSession.removeListener("message", onMessage);
@@ -334,34 +389,35 @@ export async function registerChatRoutes(
         // Handle client disconnect
         reply.raw.on("close", () => {
           cleanup();
+          releasePin();
           resolve();
         });
       });
     }
   );
 
-  // POST /api/chat/self-note - Post a self-note (agent-authored record) to
-  // the live chat session. Enqueues a user-position message wrapped in
-  // <self-note> so it lands in the session transcript; Claude sees the tag
-  // and knows not to treat it as conversational input.
+  // POST /api/chat/self-note — inject a self-note into a session transcript.
   server.post<{ Body: SelfNoteBody }>(
     "/api/chat/self-note",
     async (request, reply) => {
-      const { body, ref, commit, session } = request.body ?? {};
+      const { body, ref, commit, session: requestedSession } = request.body ?? ({} as Partial<SelfNoteBody>);
 
       if (!body || !body.trim()) {
         return reply.status(400).send({ error: "body is required" });
       }
 
-      if (session) {
-        const liveId = chatSession.getSessionId();
-        if (liveId !== session) {
-          return reply.status(404).send({
-            error: liveId
-              ? `session "${session}" is not the live chat session (live: "${liveId}")`
-              : `session "${session}" not live (no chat session active yet)`,
-          });
-        }
+      // Resolve target session: explicit > most-active.
+      const targetId = requestedSession ?? (await getMostActive(boxRoot));
+      if (!targetId) {
+        return reply.status(404).send({ error: "no live chat session" });
+      }
+      const target = registry.get(targetId);
+      if (!target) {
+        return reply.status(404).send({
+          error: requestedSession
+            ? `session "${requestedSession}" is not live`
+            : "no live chat session",
+        });
       }
 
       const attrs: string[] = [];
@@ -370,38 +426,34 @@ export async function registerChatRoutes(
       const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
       const wrapped = `<self-note${attrStr}>\n${body.trim()}\n</self-note>`;
 
-      if (chatSession.isBusy()) {
-        chatSession.enqueue({ text: wrapped });
+      if (target.isBusy()) {
+        target.enqueue({ text: wrapped });
       } else {
-        chatSession.send({ text: wrapped }).catch((e: unknown) => {
+        registry.enforceLiveCap(targetId);
+        registry.touch(targetId, { subprocessUse: true });
+        target.send({ text: wrapped }).catch((e: unknown) => {
           const msg = e instanceof Error ? e.message : String(e);
           console.error("[self-note] send failed:", msg);
         });
       }
 
-      return reply.send({ ok: true, sessionId: chatSession.getSessionId() });
+      return reply.send({ ok: true, sessionId: target.getSessionId() });
     }
   );
 
-  // GET /api/chat/history - Load conversation history
-  // Optional ?session=<id> to view any session's history (read-only)
-  // Optional ?tail=N to load only the last N entries (returns total count)
-  // Optional ?offset=N&limit=N for explicit pagination
-  server.get<{ Querystring: { session?: string; tail?: string; offset?: string; limit?: string; minRealUserMessages?: string } }>("/api/chat/history", async (request) => {
+  // GET /api/chat/history?session=<id> — load conversation history.
+  // `session` is required.
+  server.get<{ Querystring: { session?: string; tail?: string; offset?: string; limit?: string; minRealUserMessages?: string } }>("/api/chat/history", async (request, reply) => {
     const sessionId = request.query.session;
+    if (!sessionId) {
+      return reply.status(400).send({ error: "session is required" });
+    }
     const tail = request.query.tail ? parseInt(request.query.tail, 10) : undefined;
     const offset = request.query.offset ? parseInt(request.query.offset, 10) : undefined;
     const limit = request.query.limit ? parseInt(request.query.limit, 10) : undefined;
     const minRealUserMessages = request.query.minRealUserMessages
       ? parseInt(request.query.minRealUserMessages, 10)
       : undefined;
-    if (!sessionId) {
-      const historyParams: { tail?: number; minRealUserMessages?: number } = {};
-      if (tail) historyParams.tail = tail;
-      if (minRealUserMessages) historyParams.minRealUserMessages = minRealUserMessages;
-      return chatSession.getHistory(Object.keys(historyParams).length > 0 ? historyParams : undefined);
-    }
-    // Load from JSONL file directly
     const logPath = getSessionLogPath(boxRoot, sessionId);
     try {
       const result = await parseSessionLog({ logPath, ...(offset != null ? { offset } : {}), ...(limit != null ? { limit } : {}) });
@@ -419,124 +471,103 @@ export async function registerChatRoutes(
     }
   });
 
-  // GET /api/chat/sessions - List all known sessions with metadata
+  // GET /api/chat/sessions — list web chat sessions only, with first-user-snippet labels.
   server.get("/api/chat/sessions", async () => {
-    const activeSessionId = chatSession.getSessionId();
+    const ids = await loadHistory(boxRoot);
+    const mostActive = await getMostActive(boxRoot);
 
-    // Source 1: Interactive chat session
-    const knownSessions = new Map<string, { source: string; label: string; lastUsedAt: string; isActive: boolean }>();
-    if (activeSessionId) {
-      knownSessions.set(activeSessionId, {
-        source: "chat",
-        label: "Chat",
-        lastUsedAt: new Date().toISOString(),
-        isActive: true,
-      });
-    }
-
-    // Source 2: Telegram thread sessions
-    const threadSessionsPath = path.join(boxRoot, ".callback-box/chat-thread-sessions.json");
-    try {
-      const data = await fs.readFile(threadSessionsPath, "utf-8");
-      const threadSessions = JSON.parse(data) as Record<string, { sessionId: string; lastUsedAt: string; messageCount: number }>;
-      for (const [threadRef, record] of Object.entries(threadSessions)) {
-        if (!knownSessions.has(record.sessionId)) {
-          // Extract a label from the thread ref (e.g., "box/inbox/telegram/family-group/thread.chat.card" → "telegram/family-group")
-          const parts = threadRef.split("/");
-          const telegramIdx = parts.indexOf("telegram");
-          const label = telegramIdx !== -1 ? parts.slice(telegramIdx + 1, -1).join("/") || "Telegram" : threadRef;
-          knownSessions.set(record.sessionId, {
-            source: "telegram",
-            label: `Telegram: ${label}`,
-            lastUsedAt: record.lastUsedAt,
-            isActive: false,
-          });
+    const sessions = await Promise.all(
+      ids.map(async (sessionId) => {
+        const logPath = getSessionLogPath(boxRoot, sessionId);
+        let label = sessionId.slice(0, 8);
+        let lastUsedAt = new Date(0).toISOString();
+        try {
+          const stat = await fs.stat(logPath);
+          lastUsedAt = stat.mtime.toISOString();
+          const meta = await getSessionMetadata({ sessionId, logPath });
+          if (meta.firstUserSnippet) label = meta.firstUserSnippet;
+          if (meta.endTime) lastUsedAt = meta.endTime.toISOString();
+        } catch {
+          // JSONL missing or unreadable — keep id-prefix label.
         }
-      }
-    } catch (_e) {
-      // No telegram sessions
-    }
+        return {
+          sessionId,
+          source: "chat",
+          label,
+          lastUsedAt,
+          isActive: sessionId === mostActive,
+        };
+      })
+    );
 
-    // Source 3: Reactor chat sessions
-    const reactorSessionsPath = path.join(boxRoot, ".callback-box/chat-sessions.json");
-    try {
-      const data = await fs.readFile(reactorSessionsPath, "utf-8");
-      const reactorSessions = JSON.parse(data) as Record<string, { sessionId: string; lastUsedAt: string; messageCount: number }>;
-      for (const [threadRef, record] of Object.entries(reactorSessions)) {
-        if (!knownSessions.has(record.sessionId)) {
-          knownSessions.set(record.sessionId, {
-            source: "reactor",
-            label: `Reactor: ${threadRef}`,
-            lastUsedAt: record.lastUsedAt,
-            isActive: false,
-          });
-        }
-      }
-    } catch (_e) {
-      // No reactor sessions
-    }
-
-    // Source 4: All JSONL files (catches sessions not tracked above)
-    const allSessions = await listSessions(boxRoot);
-    for (const s of allSessions) {
-      if (!knownSessions.has(s.sessionId)) {
-        knownSessions.set(s.sessionId, {
-          source: "unknown",
-          label: s.sessionId.slice(0, 12),
-          lastUsedAt: s.mtime.toISOString(),
-          isActive: false,
-        });
-      }
-    }
-
-    // Sort by lastUsedAt descending
-    const sessions = [...knownSessions.entries()]
-      .map(([sessionId, meta]) => ({ sessionId, ...meta }))
-      .toSorted((a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime());
-
+    sessions.sort((a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime());
     return { sessions };
   });
 
-  // POST /api/chat/interrupt - Interrupt current turn
-  server.post("/api/chat/interrupt", async () => {
-    chatSession.interrupt();
+  // POST /api/chat/interrupt — interrupt the in-flight turn for a session.
+  server.post<{ Body: { session?: string } }>("/api/chat/interrupt", async (request, reply) => {
+    const sessionId = request.body?.session;
+    if (!sessionId) return reply.status(400).send({ error: "session is required" });
+    const target = registry.get(sessionId);
+    if (!target) return reply.status(404).send({ error: "session not live" });
+    target.interrupt();
     return { ok: true };
   });
 
-  // POST /api/chat/restart - Kill the subprocess (preserves session id).
-  // Queued messages are drained into the fresh subprocess automatically
-  // via the close handler — this is how users unstick a wedged chat.
-  server.post("/api/chat/restart", async () => {
-    chatSession.restart();
+  // POST /api/chat/restart — kill subprocess, preserving session id and queue.
+  server.post<{ Body: { session?: string } }>("/api/chat/restart", async (request, reply) => {
+    const sessionId = request.body?.session;
+    if (!sessionId) return reply.status(400).send({ error: "session is required" });
+    const target = registry.get(sessionId);
+    if (!target) return reply.status(404).send({ error: "session not live" });
+    target.restart();
     return { ok: true };
   });
 
-  // GET /api/chat/status - Check session status
-  server.get("/api/chat/status", async () => {
+  // GET /api/chat/status?session=<id> — session status (running, busy, model).
+  // Without `session`, returns empty/default — bare /chat resolves via /default.
+  server.get<{ Querystring: { session?: string } }>("/api/chat/status", async (request) => {
+    const sessionId = request.query.session;
+    if (!sessionId) {
+      return { sessionId: null, running: false, busy: false, model: null };
+    }
+    const target = registry.get(sessionId);
+    if (!target) {
+      return { sessionId, running: false, busy: false, model: null };
+    }
     return {
-      sessionId: chatSession.getSessionId(),
-      running: chatSession.isRunning(),
-      busy: chatSession.isBusy(),
-      model: chatSession.getCurrentModel(),
+      sessionId: target.getSessionId(),
+      running: target.isRunning(),
+      busy: target.isBusy(),
+      model: target.getCurrentModel(),
     };
   });
 
-  // POST /api/chat/set-model - Switch the model used for this chat session
-  server.post<{ Body: { model: string | null } }>(
+  // GET /api/chat/default — return the most-active session id (for bare /chat).
+  server.get("/api/chat/default", async () => {
+    const sessionId = await getMostActive(boxRoot);
+    return { sessionId };
+  });
+
+  // POST /api/chat/set-model — change a session's active model.
+  server.post<{ Body: { model: string | null; session?: string } }>(
     "/api/chat/set-model",
-    async (request) => {
-      const { model } = request.body;
-      chatSession.setModel(model);
-      return { ok: true, model: chatSession.getCurrentModel() };
+    async (request, reply) => {
+      const { model, session: sessionId } = request.body;
+      if (!sessionId) return reply.status(400).send({ error: "session is required" });
+      const target = registry.get(sessionId);
+      if (!target) return reply.status(404).send({ error: "session not live" });
+      target.setModel(model);
+      return { ok: true, model: target.getCurrentModel() };
     }
   );
 
-  // GET /api/chat/schedules - List active schedules
+  // GET /api/chat/schedules — list active schedules (single per-box manager).
   server.get("/api/chat/schedules", async () => {
     return { schedules: scheduleManager.getActive() };
   });
 
-  // POST /api/chat/schedules/cancel - Cancel a schedule by label
+  // POST /api/chat/schedules/cancel — cancel a schedule by label.
   server.post<{ Body: { label: string } }>(
     "/api/chat/schedules/cancel",
     async (request) => {
@@ -546,23 +577,21 @@ export async function registerChatRoutes(
     }
   );
 
-  // POST /api/chat/reset - Reset session (start fresh)
-  server.post("/api/chat/reset", async () => {
-    chatSession.resetSession();
-    return { ok: true };
-  });
-
   // GET /api/chat/voice-config - Return speaking voice config from personality
   server.get("/api/chat/voice-config", async (_request, _reply) => {
     try {
-      const { readFile } = await import("node:fs/promises");
-      const { join } = await import("node:path");
-      const voicePath = join(boxRoot, "docs/generated/speaking-voice.json");
-      const content = await readFile(voicePath, "utf-8");
+      const voicePath = path.join(boxRoot, "docs/generated/speaking-voice.json");
+      const content = await fs.readFile(voicePath, "utf-8");
       return JSON.parse(content);
     } catch {
       return { model: undefined, instructions: [] };
     }
+  });
+
+  // Surface session-id assignments as SSE events so a tab waiting on a
+  // pending "new" send can pick up the real id and update its URL.
+  registry.on("session-assigned", ({ sessionId }: { sessionId: string }) => {
+    eventBus.emit("chat-session-assigned", { sessionId });
   });
 
   // POST /api/chat/tts - Proxy TTS requests to OpenAI
@@ -578,7 +607,6 @@ export async function registerChatRoutes(
       const resolvedVoice = voice && VALID_TTS_VOICES.includes(voice) ? voice : "marin";
 
       if (openaiAudio) {
-        // Use injected service (tests or explicit config)
         const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };
         if (instructions) ttsOpts.instructions = instructions;
         const result = await openaiAudio.textToSpeech(text, ttsOpts);
@@ -586,7 +614,6 @@ export async function registerChatRoutes(
         return reply.send(result.audio);
       }
 
-      // Fallback: direct API call
       const apiKey = process.env.THINKING_OPENAI_API_KEY;
       if (!apiKey) {
         return reply.status(500).send({ error: "TTS API key not configured" });
@@ -635,8 +662,6 @@ export async function registerChatRoutes(
       });
 
       mistral.on("open", () => {
-        // Mistral sends session.created automatically; no session.update needed.
-        // Mark ready immediately — queued audio will be flushed.
         mistralReady = true;
         for (const msg of queued) {
           mistral.send(msg);
@@ -662,13 +687,11 @@ export async function registerChatRoutes(
         const reasonStr = reason.toString() || "(no reason)";
         console.log(`[transcribe-ws] Mistral closed: code=${code} reason=${reasonStr}`);
         if (socket.readyState === socket.OPEN) {
-          // Send error to client so it knows transcription failed
           socket.send(JSON.stringify({ type: "error", error: `Transcription connection closed (code ${code})` }));
           socket.close(1000, "Mistral closed");
         }
       });
 
-      // Browser → Mistral
       socket.on("message", (data) => {
         const text = data.toString();
         if (mistralReady && mistral.readyState === WsWebSocket.OPEN) {
@@ -693,4 +716,9 @@ export async function registerChatRoutes(
       });
     }
   );
+
+  // Tear down the registry on server close so subprocesses don't linger.
+  server.addHook("onClose", async () => {
+    registry.shutdown();
+  });
 }

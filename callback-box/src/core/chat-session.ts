@@ -112,14 +112,24 @@ export interface ChatSessionOptions {
   systemPrompt?: (boxRoot: string) => Promise<string>;
   /** MCP server config. When set, written to a temp JSON file and passed via --mcp-config. */
   mcpConfig?: MCPServerConfig | null;
-  /** Path to the current-session-id pointer, relative to boxRoot. Default: .callback-box/chat-session-id.json. */
-  sessionFile?: string;
+  /**
+   * Path to the current-session-id pointer, relative to boxRoot.
+   * Default: .callback-box/chat-session-id.json. Set to `null` to opt out of
+   * filesystem persistence — used by the registry, which manages session
+   * bookkeeping out-of-band.
+   */
+  sessionFile?: string | null;
   /** Path to the current-model pointer, relative to boxRoot. Default: .callback-box/chat-model.json. */
   modelFile?: string;
   /** Extra env vars merged into the Claude subprocess env. */
   extraEnv?: Record<string, string>;
   /** Called once when Claude assigns a new session ID. Used for per-session bookkeeping. */
   onSessionIdAssigned?: (sessionId: string) => Promise<void> | void;
+  /**
+   * Pre-set the session id (skips loading from `sessionFile`). Used by the
+   * registry to construct an instance bound to a specific existing session.
+   */
+  initialSessionId?: string;
   /** Injectable spawner — real by default; tests inject the fake. */
   spawner?: ClaudeChatSpawner;
   /**
@@ -343,7 +353,7 @@ export class ChatSession extends EventEmitter {
   private turnText = "";
   private messageQueue: ChatSendInput[] = [];
   private readonly options: ChatSessionOptions;
-  private readonly sessionFile: string;
+  private readonly sessionFile: string | null;
   private readonly modelFile: string;
   private readonly spawner: ClaudeChatSpawner;
   private mcpConfigPath: string | null = null;
@@ -354,10 +364,14 @@ export class ChatSession extends EventEmitter {
     super();
     this.boxRoot = boxRoot;
     this.options = options;
-    this.sessionFile = options.sessionFile ?? DEFAULT_SESSION_FILE;
+    this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
     this.modelFile = options.modelFile ?? DEFAULT_MODEL_FILE;
     this.spawner = options.spawner ?? createClaudeChatSpawner();
-    this.sessionId = this.loadSessionId();
+    if (options.initialSessionId !== undefined) {
+      this.sessionId = options.initialSessionId;
+    } else {
+      this.sessionId = this.loadSessionId();
+    }
     this.currentModel = this.loadCurrentModel();
     if (this.sessionId) {
       log("init", `Loaded session: ${this.sessionId}`);
@@ -405,6 +419,7 @@ export class ChatSession extends EventEmitter {
   }
 
   private loadSessionId(): string | null {
+    if (this.sessionFile === null) return null;
     const filePath = path.join(this.boxRoot, this.sessionFile);
     try {
       if (fs.existsSync(filePath)) {
@@ -420,6 +435,7 @@ export class ChatSession extends EventEmitter {
   }
 
   private saveSessionId(sessionId: string): void {
+    if (this.sessionFile === null) return;
     const filePath = path.join(this.boxRoot, this.sessionFile);
     const dir = path.dirname(filePath);
     try {
@@ -839,6 +855,7 @@ export class ChatSession extends EventEmitter {
     log("reset", "Resetting session");
     this.stop();
     this.sessionId = null;
+    if (this.sessionFile === null) return;
     const filePath = path.join(this.boxRoot, this.sessionFile);
     try {
       if (fs.existsSync(filePath)) {

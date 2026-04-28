@@ -32,7 +32,6 @@ import { registerCaptureRoutes } from "./routes/capture.js";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
-import { ChatSession } from "../core/chat-session.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
@@ -229,7 +228,6 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
         });
       }
 
-      const chatSession = new ChatSession(box.boxRoot);
       const activityRegistry = options.activityRegistry ?? createBuiltinRegistry();
       const activityChatPool =
         options.activityChatPool ?? new ActivityChatSessionPool(activityRegistry, { eventBus });
@@ -247,7 +245,6 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
             boxSlug: box.slug,
             eventBus,
             services: options.services ?? {},
-            chatSession,
             activityRegistry,
             activityChatPool,
           }),
