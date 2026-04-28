@@ -815,6 +815,27 @@ function generateAgentGuide(options: AgentGuideOptions): string {
     "",
   );
 
+  lines.push(
+    "## Chat Attachments",
+    "",
+    "When the user attaches files in chat, their message contains `[fileN]` tokens plus a sibling `<attachments>` block mapping each token to a path:",
+    "",
+    "```",
+    "<attachments>",
+    "[file1]: tmp/2026-04-27T15-30-12-987Z_report.pdf",
+    "</attachments>",
+    "```",
+    "",
+    "Files live in `<box-root>/tmp/` — gitignored, transient. Read them with the right tool: Read for text/images/PDFs; `pandoc <path> -t plain` for .doc/.docx/.rtf/.odt.",
+    "",
+    "**`tmp/` is not storage.** After you've used a file, decide:",
+    "",
+    "- **Worth keeping** — move or copy it into the box where it belongs (e.g., create a card that references it as an attachment, or place it under `box/inbox/` or `store/`). Don't leave keepers in `tmp/`.",
+    "- **Done with it** — delete it (`rm tmp/<filename>`).",
+    "- Otherwise leave it for `cb wakeup` housekeeping, which sweeps `tmp/` files older than 7 days.",
+    "",
+  );
+
   // Views section
   lines.push(
     "## Views",
