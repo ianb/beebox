@@ -48,6 +48,13 @@ export interface ReactorOptions {
   skipLowPriority?: boolean | undefined;
   /** Only process jobs of this type (e.g. "chat" matches *.chat.job.card) */
   type?: string | undefined;
+  /**
+   * Only process jobs whose root element has source="<value>". Used by
+   * `cb wakeup --connector X` to drain just the jobs that the same
+   * partial run produced. Cross-cutting jobs (different source) are
+   * left for the next run that does match them.
+   */
+  sourceFilter?: string | undefined;
   /** Reset all persisted chat sessions before processing */
   resetSessions?: boolean | undefined;
   onLog?: ((text: string) => void) | undefined;
@@ -77,6 +84,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     pollInterval = 0,
     skipLowPriority = false,
     type: typeFilter,
+    sourceFilter,
     resetSessions: shouldResetSessions = false,
     onLog,
     createAgent: agentFactory = realCreateAgent,
@@ -121,7 +129,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     const jobsDir = path.join(boxRoot, "box/jobs");
     await fs.mkdir(jobsDir, { recursive: true });
 
-    const jobCards = await findJobCards(jobsDir, typeFilter);
+    const jobCards = await findJobCards(jobsDir, { typeFilter, sourceFilter });
 
     if (jobCards.length === 0) {
       onLog?.("No pending jobs.\n");
@@ -184,7 +192,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     }
 
     // Count remaining jobs
-    const remaining = await findJobCards(jobsDir, typeFilter);
+    const remaining = await findJobCards(jobsDir, { typeFilter, sourceFilter });
     const processed = jobCards.length - remaining.length;
 
     onLog?.(fmt.dim(`\nCycle complete: ${processed} processed, ${remaining.length} remaining\n`));

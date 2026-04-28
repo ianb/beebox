@@ -65,6 +65,7 @@ async function readDriveIdFromCard(cardPath: string): Promise<string | null> {
 class GoogleDriveConnector implements Connector {
   name = "google-drive";
   produces: string[];
+  inboxPaths: string[] = [];
   triggeredBy?: string;
 
   private boxRoot: string;

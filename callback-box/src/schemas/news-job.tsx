@@ -30,7 +30,7 @@ export const JobItem = element("item", {
  *
  * Example:
  * ```xml
- * <news-job created="2026-02-21T08:15:00Z" source="rss-connector">
+ * <news-job created="2026-02-21T08:15:00Z" source="rss">
  *   <description>5 new items from RSS feeds</description>
  *   <item ref="box/inbox/news/item1.news-item.card" />
  *   <item ref="box/inbox/news/item2.news-item.card" />

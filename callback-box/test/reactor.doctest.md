@@ -105,10 +105,10 @@ await box.cleanup();
 ```
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/msg1.chat.job.card", `<chat-job><description>Chat</description></chat-job>`);
-await box.write("box/jobs/digest.news.job.card", `<news-job><description>News</description></news-job>`);
+await box.write("box/jobs/msg1.chat.job.card", `<chat-job source="telegram"><description>Chat</description></chat-job>`);
+await box.write("box/jobs/digest.news.job.card", `<news-job source="rss"><description>News</description></news-job>`);
 
-const chatOnly = await findJobCards(jobsDir, "chat");
+const chatOnly = await findJobCards(jobsDir, { typeFilter: "chat" });
 chatOnly.length
 => 1
 
@@ -118,6 +118,31 @@ chatOnly[0].file
 const all = await findJobCards(jobsDir);
 all.length
 => 2
+
+await box.cleanup();
+```
+
+### Source filter drops jobs whose root source attr does not match
+
+```
+const box = await makeTmpBox({ git: true });
+const jobsDir = path.join(box.root, "box/jobs");
+await box.write("box/jobs/email.intake.job.card", `<intake-job source="gmail"><description>Email triage</description></intake-job>`);
+await box.write("box/jobs/news.news.job.card", `<news-job source="rss"><description>News</description></news-job>`);
+await box.write("box/jobs/feedback.guide-revision.job.card", `<guide-revision-job source="feedback-sync"><description>Revise</description></guide-revision-job>`);
+
+const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
+JSON.stringify(gmailOnly.map((c) => c.file))
+=> ["email.intake.job.card"]
+
+const rssOnly = await findJobCards(jobsDir, { sourceFilter: "rss" });
+JSON.stringify(rssOnly.map((c) => c.file))
+=> ["news.news.job.card"]
+
+// Cross-cutting jobs (different source) stay put for a future run that does match them
+const noFilter = await findJobCards(jobsDir);
+noFilter.length
+=> 3
 
 await box.cleanup();
 ```

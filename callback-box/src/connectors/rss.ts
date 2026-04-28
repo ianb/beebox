@@ -186,6 +186,7 @@ function buildRssCommitMessage(feedNotes: Map<string, string[]>): string {
 class RssConnector implements Connector {
   name = "rss";
   produces = ["news-item"];
+  inboxPaths = ["box/inbox/news"];
   triggeredBy?: string;
 
   private boxRoot: string;
@@ -331,7 +332,7 @@ class RssConnector implements Connector {
 
       const jobContent = createNewsJobTemplate({
         created: getBoxTimeISO(this.boxRoot),
-        source: "rss-connector",
+        source: "rss",
         description: `${created.length} new item${created.length === 1 ? "" : "s"} from RSS feeds`,
         items: created,
       });

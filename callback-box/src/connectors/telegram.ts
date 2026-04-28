@@ -148,6 +148,7 @@ export function extractMessage(update: TelegramUpdate): {
 class TelegramConnector implements Connector {
   name = "telegram";
   produces = ["chat-thread"];
+  inboxPaths: string[] = [];
   triggeredBy?: string;
 
   private boxRoot: string;
@@ -298,6 +299,7 @@ class TelegramConnector implements Connector {
           boxRoot: this.boxRoot,
           threadRef,
           description: `New messages in ${slug}`,
+          source: "telegram",
         });
         jobs.push(jobPath);
       }
@@ -450,6 +452,7 @@ class TelegramConnector implements Connector {
           boxRoot: this.boxRoot,
           threadRef,
           description: `Callback timer for ${slug}`,
+          source: "telegram",
         });
         jobs.push(jobPath);
 
@@ -661,6 +664,7 @@ export async function processWebhookUpdate(opts: {
       boxRoot,
       threadRef: result.threadRelPath,
       description: `New messages in ${slug}`,
+      source: "telegram",
     });
     await stageFiles(boxRoot, [jobPath]);
     await commit(boxRoot, {

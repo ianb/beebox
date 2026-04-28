@@ -4,6 +4,11 @@
  * Connectors call createOrAppendIntakeJob() after creating inbox items.
  * If a pending intake job from the same source already exists, items
  * are appended to it rather than creating a new job.
+ *
+ * The `source` value here doubles as the reactor's source filter key —
+ * use the connector's canonical name (e.g. "gmail", "rss"), not a
+ * decorated form like "rss-connector", or `cb wakeup --connector X`
+ * won't pick up the job it just created.
  */
 
 import * as fs from "node:fs/promises";

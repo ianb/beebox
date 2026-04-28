@@ -16,7 +16,7 @@ import { JobDescription, JobItem } from "./news-job.js";
  * Example:
  * ```xml
  * <intake-job status="pending" created="2026-02-21T12:00:00Z"
- *     source="capture-connector" priority="low">
+ *     source="gmail" priority="normal">
  *   <description>Triage 2 new capture sessions</description>
  *   <item ref="box/inbox/capture-20260221T1430-abc12345/session.capture-session.card" />
  *   <item ref="box/inbox/capture-20260221T1500-def67890/session.capture-session.card" />

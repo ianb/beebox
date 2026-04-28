@@ -658,6 +658,7 @@ function buildNarrativeCommitMessage(
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
   produces = ["calendar-event"];
+  inboxPaths: string[] = [];
   triggeredBy?: string;
 
   private boxRoot: string;

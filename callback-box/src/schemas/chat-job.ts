@@ -30,16 +30,21 @@ export const ChatJobThread = element("thread", {
  *
  * Example:
  * ```xml
- * <chat-job status="pending" created="2026-02-26T20:00:00Z">
+ * <chat-job status="pending" created="2026-02-26T20:00:00Z" source="telegram">
  *   <description>New messages in Family Group</description>
  *   <thread ref="store/chat/telegram/Family_Group/thread.chat-thread.card" />
  * </chat-job>
  * ```
+ *
+ * The `source` attribute names the connector that owns the thread, so
+ * `cb wakeup --connector telegram` can drain telegram-originated chat
+ * jobs without picking up unrelated work.
  */
 export const ChatJobSchema = element("chat-job", {
   attrs: {
     status: z.string().default("pending"),
     created: z.string().datetime({ offset: true }),
+    source: z.string(),
   },
   children: z.array(z.union([ChatJobDescription, ChatJobThread])),
   instructions: `# Processing Chat Jobs
@@ -74,9 +79,10 @@ export function createChatJobTemplate(options: {
   created?: string;
   description: string;
   threadRef: string;
+  source: string;
 }): string {
   const created = options.created ?? new Date().toISOString();
-  return `<chat-job status="pending" created="${escapeAttr(created)}">
+  return `<chat-job status="pending" created="${escapeAttr(created)}" source="${escapeAttr(options.source)}">
 <description>${escapeText(options.description)}</description>
 <thread ref="${escapeAttr(options.threadRef)}" />
 </chat-job>

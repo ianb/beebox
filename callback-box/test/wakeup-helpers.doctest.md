@@ -142,6 +142,40 @@ count
 => 0
 ```
 
+### Connector-scoped scan only sees that connector's inbox subdir and tags jobs with its name
+
+Under `cb wakeup --connector X`, only items in the connector's
+declared `inboxPaths` are picked up, and the resulting intake job
+is tagged `source="X"` so the same wakeup's reactor (with the
+matching `sourceFilter`) processes it.
+
+```
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+// One item in the gmail-owned subdir, one in an unrelated subdir
+await box.seed("box/inbox/email/thread-1/msg-001.email-message.card", "<email-message>Hi</email-message>");
+await box.seed("box/inbox/pages-saved/page1.memo.card", "<memo>Saved</memo>");
+box.commitAll("add items");
+
+const fakeGmail = { name: "gmail", inboxPaths: ["box/inbox/email"] };
+const count = await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail });
+
+// Only the email item — the pages-saved item is left for full wakeup
+count
+=> 1
+
+const allFiles = await readdir(join(box.root, "box/jobs"));
+const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
+const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
+content.includes('source="gmail"')
+=> true
+
+content.includes("pages-saved")
+=> false
+```
+
 ## createGuideRevisionJobIfNeeded
 
 ### Creates a guide-revision job when briefs have feedback

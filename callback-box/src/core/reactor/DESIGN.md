@@ -50,11 +50,17 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
 
 ## Job Lifecycle
 
-1. **Creation:** Jobs appear in `box/jobs/` via connectors (sync phase), intake, or manual placement. They're XML files with the `.job.card` suffix.
-2. **Discovery:** `findJobCards()` scans the directory, extracts priority from the XML, and sorts normal-priority first.
+1. **Creation:** Jobs appear in `box/jobs/` via connectors (sync phase), intake, or manual placement. They're XML files with the `.job.card` suffix. Each root element carries a `source="..."` attribute naming the connector that owns it (e.g. `gmail`, `rss`, `telegram`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`).
+2. **Discovery:** `findJobCards()` scans the directory, extracts priority and source from the XML, and sorts normal-priority first.
 3. **Partitioning:** Jobs containing `<procedure ref="...">` are separated for the procedure trampoline. The rest go to agent processing.
 4. **Processing:** The agent (or procedure engine) does the work, commits changes, and calls `cb finish <path>` to delete the job file.
 5. **Finalize:** After all cycles, `cb finalize` flushes any outbound cards created during processing.
+
+## Source Filter
+
+`runReactor` accepts a `sourceFilter` option. When set, jobs whose root `source` attribute does not match are skipped — left in `box/jobs/` for a later run that does match them. This is how `cb wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source="gmail"` jobs, even if RSS or feedback jobs are also pending.
+
+Cross-cutting jobs (e.g. `feedback-sync` for guide revisions, `question-answer` for question follow-ups) carry sources that no connector matches, so they only run when the reactor is invoked with no filter (a full `cb wakeup`, or `cb reactor` directly).
 
 ## Procedure Trampoline
 

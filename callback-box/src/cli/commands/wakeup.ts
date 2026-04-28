@@ -11,6 +11,13 @@
  * 7. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
  * 8. Process pending jobs via reactor (one cycle, skip low-priority)
  * 9. Push committed changes to the box's git remote (non-fatal if it fails)
+ *
+ * Under `--connector X`, the wakeup is scoped: step 5 runs only that
+ * connector, step 6 scans only its `inboxPaths` and tags new intake
+ * jobs `source="X"`, and step 8 passes `sourceFilter: "X"` to the
+ * reactor so it processes just the jobs that this run produced.
+ * Cross-cutting jobs (guide-revision, etc.) are left for a later
+ * unscoped wakeup that matches them.
  */
 
 import * as fs from "node:fs/promises";
@@ -22,7 +29,7 @@ import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
-import { getAllConnectors } from "../../connectors/index.js";
+import { getAllConnectors, type Connector } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
@@ -118,6 +125,11 @@ export const wakeupCommand = new Command("wakeup")
 
     const connectors = getAllConnectors();
 
+    // Resolve the active connector (set when --connector is passed). We
+    // hold onto it so step 5b can scope its inbox scan and step 7 can
+    // pass `sourceFilter` to the reactor.
+    let activeConnector: Connector | undefined;
+
     if (connectors.length === 0) {
       console.log("  No connectors configured.");
     } else {
@@ -129,6 +141,10 @@ export const wakeupCommand = new Command("wakeup")
       if (toRun.length === 0) {
         console.error(`Connector not found: ${options.connector}`);
         process.exit(1);
+      }
+
+      if (options.connector) {
+        activeConnector = toRun[0];
       }
 
       let totalCreated = 0;
@@ -208,7 +224,10 @@ export const wakeupCommand = new Command("wakeup")
 
     // Step 5b: Create intake jobs for unjobbed inbox items
     console.log("[Checking for unjobbed inbox items]");
-    const intakeJobs = await createIntakeJobsForUnjobbed(boxRoot);
+    const intakeJobs = await createIntakeJobsForUnjobbed(
+      boxRoot,
+      activeConnector ? { connector: activeConnector } : {},
+    );
     if (intakeJobs > 0) {
       console.log(`  Created intake jobs for ${intakeJobs} item(s)`);
     } else {
@@ -226,31 +245,32 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 7: Process pending jobs
-    if (!options.connector) {
-      console.log("[Processing pending jobs]");
-      const result = await runReactor({
-        boxRoot,
-        maxCycles: 1,
-        skipLowPriority: true,
-        onLog: (text) => process.stdout.write(text),
-      });
-      if (result.jobsProcessed > 0) {
-        console.log(`  Processed ${result.jobsProcessed} job(s)`);
-      } else {
-        console.log("  No jobs to process");
-      }
-      if (result.jobsRemaining > 0) {
-        console.log(`  ${result.jobsRemaining} job(s) still remaining`);
-      }
-      console.log("");
+    // Step 7: Process pending jobs. Under --connector X, the source
+    // filter restricts processing to jobs tagged source="X" so a
+    // gmail-scoped tick doesn't drain RSS or feedback work.
+    console.log("[Processing pending jobs]");
+    const reactorOptions: Parameters<typeof runReactor>[0] = {
+      boxRoot,
+      maxCycles: 1,
+      skipLowPriority: true,
+      onLog: (text) => process.stdout.write(text),
+    };
+    if (activeConnector) reactorOptions.sourceFilter = activeConnector.name;
+    const result = await runReactor(reactorOptions);
+    if (result.jobsProcessed > 0) {
+      console.log(`  Processed ${result.jobsProcessed} job(s)`);
+    } else {
+      console.log("  No jobs to process");
     }
+    if (result.jobsRemaining > 0) {
+      console.log(`  ${result.jobsRemaining} job(s) still remaining`);
+    }
+    console.log("");
 
     // Step 8: Push committed changes to the box's git remote.
-    // Non-fatal: push errors (network, auth, upstream race) are logged but
-    // don't fail the wakeup. Skipped when running a single-connector cycle
-    // since that's usually a targeted manual invocation.
-    if (!options.connector && !options.skipPush) {
+    // Non-fatal: push errors (network, auth, upstream race) are logged
+    // but don't fail the wakeup.
+    if (!options.skipPush) {
       console.log("[Pushing to remote]");
       const pushResult = await pushToRemote(boxRoot);
       if (pushResult.error) {
@@ -528,9 +548,21 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
 /**
  * Scan inbox for items not referenced by any pending job and create
  * intake jobs for them. Returns the number of items covered.
+ *
+ * Under a full wakeup, scans all of `box/inbox/` (skipping subdirs that
+ * have their own pipelines) and tags intake jobs with `source="wakeup"`
+ * / `source="wakeup-captures"`. Under a connector-scoped wakeup, scans
+ * only `connector.inboxPaths` and tags jobs with the connector's name
+ * as `source`, so the reactor's source filter routes them back to the
+ * same partial run.
  */
-export async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<number> {
-  // Subdirectories with their own pipelines — skip these
+export async function createIntakeJobsForUnjobbed(
+  boxRoot: string,
+  options: { connector?: Connector } = {}
+): Promise<number> {
+  const { connector } = options;
+
+  // Subdirectories with their own pipelines — skip these on a full scan.
   const EXCLUDED_SUBDIRS = ["news", "feedback", "editions"];
 
   // Collect all refs from existing pending job cards
@@ -554,7 +586,7 @@ export async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<numb
   const inboxDir = path.join(boxRoot, "box/inbox");
   const unjobbedItems: string[] = [];
 
-  async function scanDir(dir: string): Promise<void> {
+  async function scanDir(dir: string, atInboxRoot: boolean): Promise<void> {
     let entries: string[];
     try {
       entries = await fs.readdir(dir);
@@ -568,19 +600,23 @@ export async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<numb
       const stat = await fs.stat(fullPath);
 
       if (stat.isDirectory()) {
-        // Skip excluded subdirectories at the inbox root level
-        const relToInbox = path.relative(inboxDir, fullPath);
-        if (!relToInbox.includes(path.sep) && EXCLUDED_SUBDIRS.includes(relToInbox)) {
-          continue;
-        }
-        await scanDir(fullPath);
+        // Skip excluded subdirectories at the inbox root level (full scan only)
+        if (atInboxRoot && EXCLUDED_SUBDIRS.includes(entry)) continue;
+        await scanDir(fullPath, false);
       } else if (entry.endsWith(".card") && !existingRefs.has(relPath)) {
         unjobbedItems.push(relPath);
       }
     }
   }
 
-  await scanDir(inboxDir);
+  if (connector) {
+    // Scoped scan: only the connector's declared inbox paths.
+    for (const rel of connector.inboxPaths) {
+      await scanDir(path.join(boxRoot, rel), false);
+    }
+  } else {
+    await scanDir(inboxDir, true);
+  }
   if (unjobbedItems.length === 0) return 0;
 
   // Group by type for priority assignment
@@ -590,6 +626,12 @@ export async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<numb
   const normalPriority = unjobbedItems.filter(
     (p) => !lowPriority.includes(p)
   );
+
+  // Source naming: scoped wakeups use the connector name (so the reactor's
+  // source filter picks them up in the same run); full wakeups keep the
+  // historical "wakeup" / "wakeup-captures" pair.
+  const normalSource = connector ? connector.name : "wakeup";
+  const lowSource = connector ? connector.name : "wakeup-captures";
 
   const INTAKE_BATCH_SIZE = 10;
   const jobPaths: string[] = [];
@@ -616,7 +658,7 @@ export async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<numb
 
   if (normalPriority.length > 0) {
     await createBatchedJobs(normalPriority, {
-      source: "wakeup",
+      source: normalSource,
       priority: "normal",
       label: "inbox item",
     });
@@ -624,7 +666,7 @@ export async function createIntakeJobsForUnjobbed(boxRoot: string): Promise<numb
 
   if (lowPriority.length > 0) {
     await createBatchedJobs(lowPriority, {
-      source: "wakeup-captures",
+      source: lowSource,
       priority: "low",
       label: "capture item",
     });

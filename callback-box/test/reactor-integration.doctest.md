@@ -170,7 +170,7 @@ await box.cleanup();
 ```
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/conv1.card", `<thread><message role="user">Hi there</message></thread>`);
-await box.write("box/jobs/msg.chat.job.card", `<chat-job><thread ref="store/threads/conv1.card" /><description>Reply to user</description></chat-job>`);
+await box.write("box/jobs/msg.chat.job.card", `<chat-job source="telegram"><thread ref="store/threads/conv1.card" /><description>Reply to user</description></chat-job>`);
 box.commitAll("Add chat job");
 
 let agents = [];
@@ -214,8 +214,8 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/a.card", `<thread><message>Thread A</message></thread>`);
 await box.write("store/threads/b.card", `<thread><message>Thread B</message></thread>`);
-await box.write("box/jobs/a.chat.job.card", `<chat-job><thread ref="store/threads/a.card" /><description>Reply A</description></chat-job>`);
-await box.write("box/jobs/b.chat.job.card", `<chat-job><thread ref="store/threads/b.card" /><description>Reply B</description></chat-job>`);
+await box.write("box/jobs/a.chat.job.card", `<chat-job source="telegram"><thread ref="store/threads/a.card" /><description>Reply A</description></chat-job>`);
+await box.write("box/jobs/b.chat.job.card", `<chat-job source="telegram"><thread ref="store/threads/b.card" /><description>Reply B</description></chat-job>`);
 box.commitAll("Add chat jobs");
 
 let agents = [];
