@@ -59,7 +59,7 @@ export const EmailLabels = element("labels", {
  */
 export const EmailMessageRef = element("message-ref", {
   attrs: {
-    file: z.string(), // relative path to .email-message.card
+    ref: z.string(), // relative path to .email-message.card
   },
 });
 
@@ -87,8 +87,8 @@ export const EmailMessages = element("messages", {
  *   <date-range start="2026-02-15T10:00:00Z" end="2026-02-15T14:30:00Z" />
  *   <labels><label>inbox</label></labels>
  *   <messages>
- *     <message-ref file="msg-001.email-message.card" />
- *     <message-ref file="msg-002.email-message.card" />
+ *     <message-ref ref="msg-001.email-message.card" />
+ *     <message-ref ref="msg-002.email-message.card" />
  *   </messages>
  * </email-thread>
  * ```
@@ -156,8 +156,8 @@ export function createEmailThreadTemplate(options: {
         </labels>
       )}
       <messages>
-        {options.messageRefs.map((ref) => (
-          <message-ref file={ref} />
+        {options.messageRefs.map((r) => (
+          <message-ref ref={r} />
         ))}
       </messages>
     </email-thread>

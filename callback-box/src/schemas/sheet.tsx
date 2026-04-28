@@ -35,7 +35,7 @@ export const SheetOwner = element("owner", {
  */
 export const SheetTab = element("sheet-tab", {
   attrs: {
-    file: z.string(),
+    ref: z.string(),
     title: z.string(),
     gid: z.string(),
   },
@@ -59,8 +59,8 @@ export const SheetTabs = element("sheets", {
  * <link>https://docs.google.com/spreadsheets/d/1abc.../edit</link>
  * <owner>ian@example.com</owner>
  * <sheets>
- * <sheet-tab file="Budget/Summary.csv" title="Summary" gid="0"/>
- * <sheet-tab file="Budget/Expenses.csv" title="Expenses" gid="123456"/>
+ * <sheet-tab ref="Budget/Summary.csv" title="Summary" gid="0"/>
+ * <sheet-tab ref="Budget/Expenses.csv" title="Expenses" gid="123456"/>
  * </sheets>
  * </sheet>
  * ```
@@ -126,7 +126,7 @@ export function createSheetTemplate(options: {
   modified: string;
   link: string;
   owner: string;
-  sheets: Array<{ file: string; title: string; gid: string }>;
+  sheets: Array<{ ref: string; title: string; gid: string }>;
   status?: "synced" | "error" | "new";
 }): string {
   const card = (
@@ -137,7 +137,7 @@ export function createSheetTemplate(options: {
       <owner>{options.owner}</owner>
       <sheets>
         {options.sheets.map((s) => (
-          <sheet-tab file={s.file} title={s.title} gid={s.gid} />
+          <sheet-tab ref={s.ref} title={s.title} gid={s.gid} />
         ))}
       </sheets>
     </sheet>

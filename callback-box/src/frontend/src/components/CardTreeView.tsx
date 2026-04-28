@@ -178,9 +178,9 @@ function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
     );
   }
 
-  // Get non-empty attributes (exclude ref since we handle it specially)
+  // Get non-empty attributes (exclude ref since we handle it specially below)
   const attrs = Object.entries(element.attrs).filter(
-    ([key, value]) => value !== undefined && value !== "" && (key !== "ref" || !isCardRef)
+    ([key, value]) => value !== undefined && value !== "" && key !== "ref"
   );
 
   return (
@@ -210,9 +210,23 @@ function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
           </button> : null}
       </div>
 
-      {/* Expandable ref */}
+      {/* Refs: card refs expand inline; non-card refs are file links. */}
       {isCardRef && resolvedRef ? (
         <RefExpander refPath={resolvedRef} />
+      ) : resolvedRef ? (
+        <button
+          onClick={() =>
+            handleNavigate({
+              path: resolvedRef,
+              viewer: null,
+              params: {},
+              zoom: false,
+            })
+          }
+          className="text-xs text-primary hover:text-primary-dark hover:underline mt-0.5 block text-left"
+        >
+          {ref}
+        </button>
       ) : ref ? (
         <div className="text-xs text-warm-500 mt-0.5">{ref}</div>
       ) : null}

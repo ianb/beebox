@@ -63,7 +63,7 @@ export const EmailBodyFile = element("body-file", {
  */
 export const EmailAttachment = element("attachment", {
   attrs: {
-    file: z.string(), // relative path
+    ref: z.string(), // relative path
     "content-type": z.string(),
     size: z.coerce.number().optional(),
   },
@@ -139,7 +139,7 @@ export function createEmailMessageTemplate(options: {
   snippet: string;
   bodyFile: string;
   attachments?: Array<{
-    file: string;
+    ref: string;
     contentType: string;
     size?: number;
   }>;
@@ -157,7 +157,7 @@ export function createEmailMessageTemplate(options: {
         <attachments>
           {options.attachments.map((a) => (
             <attachment
-              file={a.file}
+              ref={a.ref}
               content-type={a.contentType}
               size={a.size}
             />

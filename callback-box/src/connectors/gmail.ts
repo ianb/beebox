@@ -558,7 +558,7 @@ class GmailConnector implements Connector {
           }
           if (tmsg.attachments.length > 0) {
             templateOpts.attachments = tmsg.attachments.map((a) => ({
-              file: `attachments/${a.filename}`,
+              ref: `attachments/${a.filename}`,
               contentType: a.contentType,
               size: a.size,
             }));

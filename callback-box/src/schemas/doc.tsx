@@ -36,7 +36,7 @@ export const DocOwner = element("owner", {
 
 export const DocContent = element("content", {
   attrs: {
-    file: z.string(),
+    ref: z.string(),
   },
 });
 
@@ -154,7 +154,7 @@ export function createDocTemplate(options: {
       <revision>{options.revision}</revision>
       <link>{options.link}</link>
       <owner>{options.owner}</owner>
-      <content file={options.contentFile} />
+      <content ref={options.contentFile} />
       {lossy.length > 0 ? (
         <lossy>
           {lossy.map((item) => (

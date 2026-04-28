@@ -58,7 +58,7 @@ const sheetsHandler: DriveTypeHandler = {
     // Ensure data directory exists
     await fs.mkdir(localDir, { recursive: true });
 
-    const sheetRefs: Array<{ file: string; title: string; gid: string }> = [];
+    const sheetRefs: Array<{ ref: string; title: string; gid: string }> = [];
 
     for (const sheet of spreadsheet.sheets) {
       const tabTitle = sheet.properties.title;
@@ -68,7 +68,7 @@ const sheetsHandler: DriveTypeHandler = {
       const jsonPath = path.join(localDir, jsonFileName);
       const jsonRelPath = path.relative(path.dirname(cardPath), jsonPath);
 
-      sheetRefs.push({ file: jsonRelPath, title: tabTitle, gid });
+      sheetRefs.push({ ref: jsonRelPath, title: tabTitle, gid });
 
       // Fetch formula values and formatted values
       const formulaValues = await service.getSheetValues(file.id, {
@@ -131,8 +131,8 @@ const sheetsHandler: DriveTypeHandler = {
 
     // Update gid mapping in state
     const tabGids: Record<string, string> = {};
-    for (const ref of sheetRefs) {
-      tabGids[ref.file] = ref.gid;
+    for (const r of sheetRefs) {
+      tabGids[r.ref] = r.gid;
     }
     state.extra["tabGids"] = tabGids;
     state.lastModified = file.modifiedTime;

@@ -22,7 +22,7 @@ interface ParsedSheet {
   link: string;
   owner: string;
   driveId: string;
-  tabs: Array<{ file: string; title: string; gid: string }>;
+  tabs: Array<{ ref: string; title: string; gid: string }>;
 }
 
 function parseSheetElement(el: ElementNode): ParsedSheet {
@@ -53,7 +53,7 @@ function parseSheetElement(el: ElementNode): ParsedSheet {
         for (const tab of child.children ?? []) {
           if (tab.tagName === "sheet-tab") {
             result.tabs.push({
-              file: tab.attrs["file"] ?? "",
+              ref: tab.attrs["ref"] ?? "",
               title: tab.attrs["title"] ?? "",
               gid: tab.attrs["gid"] ?? "",
             });
@@ -87,7 +87,7 @@ function SheetView({ data }: RendererProps) {
 
       for (const tab of sheet!.tabs) {
         try {
-          const filePath = cardDir + tab.file;
+          const filePath = cardDir + tab.ref;
           const resp = await fetch(`${getApiBase()}/files/${filePath}`);
           if (resp.ok) {
             const json = await resp.json();
