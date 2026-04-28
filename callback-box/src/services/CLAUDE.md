@@ -113,7 +113,7 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `claude-cli.ts` | `ClaudeCliService` | `createClaudeCliService()` | `createFakeClaudeCli({ loggedIn? })` |
 | `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client)` | `createFakeGoogleAuth({ accessToken? })` |
 | `google-calendar.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
-| `imap.ts` | `ImapService` | `createImapService({ host, port, user, pass })` | `createFakeImap({ messages? })` |
+| `google-gmail.ts` | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments? })` |
 | `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |
 | `feed-fetcher.ts` | `FeedFetcherService` | `createFeedFetcherService()` | `createFakeFeedFetcher({ feeds? })` |
 | `article-fetcher.ts` | `ArticleFetcherService` | `createArticleFetcherService()` | `createFakeArticleFetcher(articles?)` |

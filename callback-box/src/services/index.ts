@@ -11,7 +11,7 @@ import type { TelegramService } from "./telegram.js";
 import type { ClaudeCliService } from "./claude-cli.js";
 import type { GoogleAuthService } from "./google-auth.js";
 import type { GoogleCalendarService } from "./google-calendar.js";
-import type { ImapService } from "./imap.js";
+import type { GoogleGmailService } from "./google-gmail.js";
 import type { OpenAIAudioService } from "./openai-audio.js";
 import type { FeedFetcherService } from "./feed-fetcher.js";
 import type { ArticleFetcherService } from "./article-fetcher.js";
@@ -43,11 +43,22 @@ export {
   createFakeGoogleCalendar,
 } from "./google-calendar.js";
 
-export type { ImapService, ImapMessage, ImapEnvelope } from "./imap.js";
+export type {
+  GoogleGmailService,
+  GmailMessage,
+  GmailMessageRef,
+  GmailHeader,
+  GmailBody,
+  GmailPayload,
+  GmailAttachmentData,
+  GmailLabel,
+  ListMessagesResult,
+  FakeGoogleGmailService,
+} from "./google-gmail.js";
 export {
-  createImapService,
-  createFakeImap,
-} from "./imap.js";
+  createGoogleGmailService,
+  createFakeGoogleGmail,
+} from "./google-gmail.js";
 
 export type { OpenAIAudioService, TranscriptionResult, TTSResult } from "./openai-audio.js";
 export {
@@ -83,7 +94,7 @@ export interface Services {
   claudeCli?: ClaudeCliService | undefined;
   googleAuth?: GoogleAuthService | undefined;
   calendar?: GoogleCalendarService | undefined;
-  imap?: ImapService | undefined;
+  gmail?: GoogleGmailService | undefined;
   openaiAudio?: OpenAIAudioService | undefined;
   feedFetcher?: FeedFetcherService | undefined;
   articleFetcher?: ArticleFetcherService | undefined;

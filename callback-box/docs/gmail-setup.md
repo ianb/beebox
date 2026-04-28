@@ -1,43 +1,26 @@
 # Gmail Connector Setup
 
-The Gmail connector pulls email threads into your box via IMAP using a Google App Password.
+The Gmail connector pulls email threads into your box via the Gmail REST API. It shares the same Google OAuth connection as the Calendar and Drive connectors — there is no separate password or app password to configure.
 
-## 1. Enable 2-Step Verification
+## 1. Connect your Google account
 
-If you haven't already, enable 2-Step Verification on your Google Account:
+Open the box's admin page (`/<box>/admin`). In the **Google Services** section:
 
-1. Go to https://myaccount.google.com/security
-2. Under "How you sign in to Google", click **2-Step Verification**
-3. Follow the prompts to set it up
+1. Click **Connect Google Account** and complete the OAuth flow.
+2. After redirect, enable the **Gmail** checkbox for this box.
 
-## 2. Create an App Password
+Boxes that don't have Gmail enabled are skipped silently when the connector runs — the same OAuth connection can serve some boxes Calendar and others Gmail.
 
-1. Go to https://myaccount.google.com/apppasswords
-2. Enter a name (e.g., "callback-box")
-3. Click **Create**
-4. Copy the 16-character password — it's only shown once
+If the server doesn't show the Google Services section at all, OAuth client credentials haven't been configured server-wide. See `docs/google-setup.md`.
 
-## 3. Configure the connector
+## 2. Configure what to pull
 
-In your box directory, create two files:
-
-### `config/connectors/gmail.secret.json`
-
-```json
-{
-  "user": "you@gmail.com",
-  "appPassword": "abcd efgh ijkl mnop"
-}
-```
-
-This file is gitignored by the `*.secret.*` pattern.
+In your box directory, create:
 
 ### `config/connectors/gmail.json`
 
 ```json
-{
-  "query": "label:inbox"
-}
+{ "query": "label:inbox" }
 ```
 
 The `query` field uses [Gmail search syntax](https://support.google.com/mail/answer/7190?hl=en). Examples:
@@ -51,15 +34,15 @@ The `query` field uses [Gmail search syntax](https://support.google.com/mail/ans
 | `from:boss@example.com` | Messages from a specific sender |
 | `label:inbox after:2026/02/01` | Inbox messages after a date |
 
-You can also use the `labels` field instead of `query` for simple label filtering:
+You can also use the `labels` field instead of `query` for simple OR-filtering across labels:
 
 ```json
-{
-  "labels": ["inbox", "important"]
-}
+{ "labels": ["inbox", "important"] }
 ```
 
-## 4. Pull emails
+If both are set, `query` wins.
+
+## 3. Pull emails
 
 ```bash
 cb pull --connector gmail
@@ -90,11 +73,12 @@ The `.email-message.card` files contain metadata only — the actual message bod
 
 ## Subsequent pulls
 
-The connector tracks which messages it has already seen. On each pull it only fetches new messages. If a thread gets new replies, they're appended to the existing thread directory.
+The connector tracks which messages it has already seen (by RFC `Message-ID` header) in `config/connectors/gmail-state.json`. On each pull it only writes new messages. If a thread gets new replies, they're appended to the existing thread directory.
 
-## Notes
+A timestamp of the last pull is also stored (gitignored) and is used to narrow the Gmail search with `after:`.
 
-- The connector connects to `imap.gmail.com:993` (SSL)
-- App passwords don't expire unless you change your Google account password or revoke them
-- If you change your Google password, all app passwords are revoked — you'll need to create a new one
-- The state file (`config/connectors/gmail-state.json`) tracks seen message IDs and is auto-managed
+## Migrating from the IMAP / app-password setup
+
+Earlier versions of this connector used IMAP with a Google App Password stored in `config/connectors/gmail.secret.json`. That file is no longer read; the connector deletes it on first sync after this change. If you still have 2-Step Verification app passwords from the old setup, you can revoke them at <https://myaccount.google.com/apppasswords>.
+
+Existing seen-message state in `gmail-state.json` is preserved across the migration — the same RFC `Message-ID` values are used by both implementations.

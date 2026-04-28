@@ -9,6 +9,7 @@ import { getApiBase } from "../api.js";
 import { ClaudeCodeSection } from "../components/admin/ClaudeCodeSection";
 import { AllowedEmailsSection } from "../components/admin/AllowedEmailsSection";
 import { GoogleServicesSection } from "../components/admin/GoogleServicesSection";
+import { GmailFiltersSection } from "../components/admin/GmailFiltersSection";
 import { TelegramSection } from "../components/admin/TelegramSection";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
@@ -32,6 +33,7 @@ export function AdminPage() {
           <ClaudeCodeSection />
           <AllowedEmailsSection apiBase={apiBase} />
           <GoogleServicesSection apiBase={apiBase} />
+          <GmailFiltersSection />
           <TelegramSection apiBase={apiBase} />
         </Stack>
       </Stack>

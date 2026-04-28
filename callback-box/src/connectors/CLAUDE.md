@@ -16,13 +16,10 @@ See `src/services/CLAUDE.md` for the full service layer documentation: interface
 
 ## Currently service-injected
 
-- **telegram.ts** — uses `TelegramService` (getUpdates, sendMessage, setWebhook, deleteWebhook)
+- **telegram.ts** — uses `TelegramService`
+- **gmail.ts** — uses `GoogleGmailService` (Gmail REST API via shared Google OAuth)
+- **google-drive.ts** — uses `GoogleDriveService`
 
 ## Not yet service-injected
 
-These connectors use library-specific types that don't cleanly map to our service abstractions:
-
-- **gmail.ts** — uses `imapflow` with library-specific message types and `mailparser` for MIME parsing
-- **google-calendar.ts** — uses `getGoogleAuth()` + direct REST calls with ICS parsing via `ical.js`
-
-Service definitions exist for both of these in `src/services/` (imap.ts, google-calendar.ts), but the connector wiring hasn't been done yet because the type gaps are larger.
+- **google-calendar.ts** — uses `getGoogleAuth()` + direct REST calls with ICS parsing via `ical.js`. A `GoogleCalendarService` interface exists but the connector hasn't been wired through it yet.
