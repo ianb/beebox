@@ -177,6 +177,14 @@ The body uses a small markdown subset: \`**bold**\`, \`*italic*\`, and
   (e.g. \`box/inbox/email/thread-X/draft-001.email-message.card\`).
 - New drafts (no thread) go in a fresh directory under \`box/inbox/email/\`.
 
+**For replies, get the threading right:**
+- \`<in-reply-to ref="msg-NNN.email-message.card" />\` — use a path relative
+  to the draft's own directory (just the filename when the source message
+  is in the same thread directory, which is the expected layout).
+- The connector reads the source card's \`message-id\` and \`thread-id\`
+  attributes to set Gmail threading. **If the ref doesn't resolve, the
+  upload fails** rather than silently losing threading.
+
 On the next gmail sync, the connector uploads the draft to Gmail and stamps
 the card with \`gmail-draft-id\` and \`gmail-draft-url\` — share the URL with
 the user so they can review and send. The draft will not be re-uploaded once

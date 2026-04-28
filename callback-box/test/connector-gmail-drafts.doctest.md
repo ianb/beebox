@@ -111,6 +111,74 @@ decoded.includes("References: orig-msg-id-123")
 => true
 ```
 
+## Threading also works with box-relative or box-anchored absolute refs
+
+Agents sometimes write `<in-reply-to>` with a longer path. All three forms
+resolve to the same source card:
+
+```
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+await mkdir(join(box.root, "box/inbox/email/thread-Test-zzz99999"), { recursive: true });
+await box.seed(
+  "box/inbox/email/thread-Test-zzz99999/msg-001.email-message.card",
+  '<email-message message-id="abs-msg-id" thread-id="thread-zzz99999">\n<from>a@b.com</from>\n<to>me@x.com</to>\n<subject>X</subject>\n<body-file>msg-001.body.txt</body-file>\n</email-message>\n',
+);
+// Box-anchored absolute path (leading slash, relative to box root)
+await box.seed(
+  "box/inbox/email/thread-Test-zzz99999/draft-001.email-message.card",
+  '<email-message status="draft">\n<to>a@b.com</to>\n<subject>Re: X</subject>\n<in-reply-to ref="/box/inbox/email/thread-Test-zzz99999/msg-001.email-message.card" />\n<body>Reply 1.</body>\n</email-message>\n',
+);
+box.commitAll("setup");
+
+const gmail = createFakeGoogleGmail();
+const connector = createGmailConnector(box.root, gmail);
+await connector.sync();
+
+gmail.drafts.length
+=> 1
+
+gmail.drafts[0].draft.message.threadId
+=> thread-zzz99999
+```
+
+## A reply draft with an unresolvable in-reply-to ref reports the error
+
+If the agent writes a draft whose `in-reply-to` doesn't point to a real
+source card, we'd rather fail loud than upload it as a brand-new thread
+the user only notices is wrong after opening Gmail:
+
+```
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+await mkdir(join(box.root, "box/inbox/email/thread-Bad-aaa00000"), { recursive: true });
+await box.seed(
+  "box/inbox/email/thread-Bad-aaa00000/draft-001.email-message.card",
+  '<email-message status="draft">\n<to>x@y.com</to>\n<subject>Re: missing</subject>\n<in-reply-to ref="does-not-exist.email-message.card" />\n<body>...</body>\n</email-message>\n',
+);
+box.commitAll("setup");
+
+const gmail = createFakeGoogleGmail();
+const connector = createGmailConnector(box.root, gmail);
+const result = await connector.sync();
+
+// No draft uploaded, sync reports the error per-card
+gmail.drafts.length
+=> 0
+
+result.success
+=> true
+
+// Card stays unstamped so the user can fix the ref and retry on next sync
+const stamped = await readFile(join(box.root, "box/inbox/email/thread-Bad-aaa00000/draft-001.email-message.card"), "utf-8");
+stamped.includes("gmail-draft-id")
+=> false
+```
+
 ## Already-stamped drafts are skipped
 
 A draft card with `gmail-draft-id` set has already been uploaded — the

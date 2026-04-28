@@ -118,21 +118,31 @@ async function uploadOneDraft(opts: {
   const root = await parseXml(content, path.basename(opts.cardPath));
   const fields = readDraftFields(root);
 
-  // Resolve threading from in-reply-to ref (if present)
+  // Resolve threading from in-reply-to ref (if present). The ref may be
+  // written in any of three forms; whichever is most natural for the agent:
+  //   - relative to the draft's directory ("msg-001.email-message.card")
+  //   - box-relative ("box/inbox/email/thread-X/msg-001.email-message.card")
+  //   - box-anchored absolute ("/box/inbox/email/thread-X/msg-001...")
+  // If we can't resolve it, throw — silent fallback means the draft uploads
+  // as a brand-new thread, which the user only notices when they open Gmail.
   let inReplyToMessageId: string | undefined;
   let references: string | undefined;
   let threadId: string | undefined;
   if (fields.inReplyToRef) {
-    const sourcePath = path.resolve(
-      path.dirname(opts.cardPath),
-      fields.inReplyToRef,
-    );
+    const sourcePath = resolveCardRef({
+      boxRoot: opts.boxRoot,
+      cardPath: opts.cardPath,
+      ref: fields.inReplyToRef,
+    });
     const source = await readSourceMessage(sourcePath);
-    if (source) {
-      inReplyToMessageId = source.messageId;
-      references = source.messageId;
-      threadId = source.threadId;
+    if (!source) {
+      throw new Error(
+        `in-reply-to ref "${fields.inReplyToRef}" did not resolve to a readable email-message card with message-id and thread-id (looked at ${sourcePath})`,
+      );
     }
+    inReplyToMessageId = source.messageId;
+    references = source.messageId;
+    threadId = source.threadId;
   }
 
   const mimeOpts: BuildMimeOptions = {
@@ -198,6 +208,37 @@ async function readSourceMessage(
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve a ref attribute (e.g. on <in-reply-to ref="...">) to an absolute
+ * filesystem path. Accepts three forms:
+ *   - card-relative: "msg-001.email-message.card" → next to the draft card
+ *   - box-relative:  "box/inbox/email/.../msg-001..." → from the box root
+ *   - box-absolute:  "/box/inbox/email/..." (leading slash) → from the box root
+ *
+ * `path.resolve` alone is wrong because a leading-slash arg is treated as
+ * filesystem-absolute, which loses the box root and points at /box/... on
+ * the host.
+ */
+function resolveCardRef(opts: {
+  boxRoot: string;
+  cardPath: string;
+  ref: string;
+}): string {
+  const ref = opts.ref;
+  if (ref.startsWith("/")) {
+    return path.join(opts.boxRoot, ref.slice(1));
+  }
+  if (
+    ref.startsWith("box/") ||
+    ref.startsWith("store/") ||
+    ref.startsWith("config/") ||
+    ref.startsWith("people/")
+  ) {
+    return path.join(opts.boxRoot, ref);
+  }
+  return path.resolve(path.dirname(opts.cardPath), ref);
 }
 
 interface BuildMimeOptions {
