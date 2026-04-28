@@ -375,15 +375,25 @@ class GmailConnector implements Connector {
 
   private buildQuery(config: GmailConfig, lastPullDate: string | undefined): string {
     let base: string;
+    // A label-based or user-authored query is naturally bounded — applying
+    // an `after:` floor would hide messages that were *labeled* recently
+    // but received earlier, which breaks labeling-as-routing. Pagination +
+    // seenMessageIds dedup handle re-listing cheaply when the set is
+    // bounded. The bare `label:inbox` fallback is unbounded, so we keep
+    // the date filter there to protect the seenMessageIds cap.
+    let bounded: boolean;
     if (config.query) {
       base = config.query;
+      bounded = true;
     } else if (config.labels && config.labels.length > 0) {
       base = config.labels.map((l) => `label:${l}`).join(" OR ");
+      bounded = true;
     } else {
       base = "label:inbox";
+      bounded = false;
     }
 
-    if (lastPullDate) {
+    if (!bounded && lastPullDate) {
       const datePart = lastPullDate.split("T")[0];
       return `${base} after:${datePart}`;
     }

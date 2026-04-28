@@ -185,3 +185,19 @@ Add a keyword trigger during voice input (especially the Dropbox long-recording 
 ### Image card EXIF date extraction
 
 When processing image cards, prefer the date from EXIF `DateTimeOriginal` over file timestamps. File mtime/ctime are unreliable after syncing/copying (common with photo workflows) — EXIF is the source of truth for when the photo was taken.
+
+## Gmail sync improvements
+
+The current Gmail connector dedups via a `seenMessageIds` list (capped at 5000) plus a `lastPullDate` `after:` filter. The cap and the date filter interact in ways worth revisiting:
+
+### Drop the `seenMessageIds` cap
+
+Each ID is ~16 chars, so 100k IDs is only ~1.6MB on disk. The 5000-cap exists to keep state small, but it means a labeled set larger than 5000 would roll IDs out and re-fetch them. Removing the cap (or raising it dramatically) lets the bare `label:inbox` query also drop the date filter safely, simplifying the code and fixing the labeling-as-routing case for the unbounded fallback too.
+
+### Detect newly-labeled messages even on the unbounded query
+
+For the bare `label:inbox` default, the date filter is currently kept (see `buildQuery`) to bound the list call. That means labeling an old message and expecting it to flow into the box doesn't work unless the user has configured `labels` or `query`. Options: widen the `after:` window (e.g. `lastPullDate - 30d`) to catch recently-labeled older messages, or use Gmail's history API (`users.history.list`) to incrementally pick up label changes. The history API is the right answer long-term but is a bigger change.
+
+### Garbage-collect unlabeled messages
+
+If a message in the box loses its triggering label in Gmail (user archives it, removes the label, etc.), the box still has the inbox card and the seen ID. There's no signal back. A periodic reconciliation pass — list current matches, remove cards whose IDs no longer match — would close the loop, but needs careful design to avoid deleting cards the user has already acted on.
