@@ -72,7 +72,7 @@ function CardAccordionBody({
     return <Renderer data={fileData} onNavigate={onNavigate} />;
   }
   if (card.element) {
-    return <CardTreeView element={card.element} path={card.path} version={card.version} />;
+    return <CardTreeView element={card.element} path={card.path} version={card.version} onNavigate={onNavigate} />;
   }
   return <Pre size="xs">{card.xml}</Pre>;
 }

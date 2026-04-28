@@ -15,6 +15,9 @@ import { Markdown } from "./Markdown";
 import { trpc } from "../lib/trpc";
 import { getRenderers, type FileData } from "../renderers/index";
 import { useViewNavigate } from "../hooks/useViewNavigate";
+import type { NavigateHint, ViewTarget } from "../lib/view-url";
+
+type NavigateFn = (target: ViewTarget, hint?: NavigateHint) => void;
 
 /**
  * Element node from the API.
@@ -31,6 +34,13 @@ interface ElementTreeProps {
   depth?: number;
   /** Path of the card containing this element (for resolving relative refs) */
   cardPath?: string;
+  /**
+   * Optional navigation handler for ref clicks. When omitted, falls back to
+   * the default URL-pushing behavior (`useViewNavigate`). Surfaces that want
+   * to keep ref clicks within their layout (browse, companion pane) should
+   * pass their own.
+   */
+  onNavigate?: NavigateFn;
 }
 
 /**
@@ -83,7 +93,7 @@ function resolveRef(ref: string, cardPath: string): string {
 /**
  * Inline expandable card ref viewer.
  */
-function RefExpander({ refPath }: { refPath: string }) {
+function RefExpander({ refPath, onNavigate }: { refPath: string; onNavigate: NavigateFn }) {
   const [expanded, setExpanded] = useState(false);
   const query = trpc.card.get.useQuery(
     { path: refPath },
@@ -108,7 +118,7 @@ function RefExpander({ refPath }: { refPath: string }) {
               Failed to load: {query.error.message}
             </div>
           ) : query.data ? (
-            <RefExpanderCard refPath={refPath} data={query.data} />
+            <RefExpanderCard refPath={refPath} data={query.data} onNavigate={onNavigate} />
           ) : null}
         </div>
       ) : null}
@@ -120,9 +130,10 @@ function RefExpander({ refPath }: { refPath: string }) {
  * Render a loaded card ref — uses the renderer registry (same as card viewer),
  * falls back to ElementTree.
  */
-function RefExpanderCard({ refPath, data }: {
+function RefExpanderCard({ refPath, data, onNavigate }: {
   refPath: string;
   data: { element?: ElementNode; path: string; tagName?: string; xml?: string; version?: string; status?: string };
+  onNavigate: NavigateFn;
 }) {
   const fileData: FileData = {
     path: data.path || refPath,
@@ -136,28 +147,57 @@ function RefExpanderCard({ refPath, data }: {
   const renderers = getRenderers(refPath, fileData);
   if (renderers.length > 0) {
     const Renderer = renderers[0].Component;
-    return <Renderer data={fileData} onNavigate={() => {}} />;
+    return <Renderer data={fileData} onNavigate={onNavigate} />;
   }
 
   if (data.element) {
-    return <ElementTree element={data.element} depth={1} cardPath={refPath} />;
+    return <ElementTree element={data.element} depth={1} cardPath={refPath} onNavigate={onNavigate} />;
   }
 
   return null;
 }
 
 /**
+ * Render the `ref` line under an element header: card refs expand inline,
+ * non-card refs become a file-view link, and unresolved refs render as text.
+ */
+function RefLine({
+  refAttr, resolvedRef, isCardRef, onNavigate,
+}: {
+  refAttr: string;
+  resolvedRef: string | null;
+  isCardRef: boolean;
+  onNavigate: NavigateFn;
+}) {
+  if (isCardRef && resolvedRef) {
+    return <RefExpander refPath={resolvedRef} onNavigate={onNavigate} />;
+  }
+  if (resolvedRef) {
+    return (
+      <button
+        onClick={() => onNavigate({ path: resolvedRef, viewer: null, params: {}, zoom: false })}
+        className="text-xs text-primary hover:text-primary-dark hover:underline mt-0.5 block text-left"
+      >
+        {refAttr}
+      </button>
+    );
+  }
+  return <div className="text-xs text-warm-500 mt-0.5">{refAttr}</div>;
+}
+
+/**
  * Render a single element node.
  */
-function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
+function ElementTree({ element, depth = 0, cardPath, onNavigate }: ElementTreeProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const handleNavigate = useViewNavigate();
+  const fallbackNavigate = useViewNavigate();
+  const handleNavigate = onNavigate ?? fallbackNavigate;
   const hasChildren = element.children && element.children.length > 0;
   const hasContent = element.text || hasChildren;
 
   // Check for ref attribute pointing to a card
-  const ref = element.attrs.ref;
-  const resolvedRef = ref && cardPath ? resolveRef(ref, cardPath) : null;
+  const refAttr = element.attrs.ref;
+  const resolvedRef = refAttr && cardPath ? resolveRef(refAttr, cardPath) : null;
   const isCardRef = resolvedRef && resolvedRef.endsWith(".card");
 
   // Skip rendering empty containers that just wrap children
@@ -172,7 +212,7 @@ function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
     return (
       <>
         {element.children.map((child, i) => (
-          <ElementTree key={i} element={child} depth={depth} cardPath={cardPath} />
+          <ElementTree key={i} element={child} depth={depth} cardPath={cardPath} onNavigate={onNavigate} />
         ))}
       </>
     );
@@ -210,25 +250,13 @@ function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
           </button> : null}
       </div>
 
-      {/* Refs: card refs expand inline; non-card refs are file links. */}
-      {isCardRef && resolvedRef ? (
-        <RefExpander refPath={resolvedRef} />
-      ) : resolvedRef ? (
-        <button
-          onClick={() =>
-            handleNavigate({
-              path: resolvedRef,
-              viewer: null,
-              params: {},
-              zoom: false,
-            })
-          }
-          className="text-xs text-primary hover:text-primary-dark hover:underline mt-0.5 block text-left"
-        >
-          {ref}
-        </button>
-      ) : ref ? (
-        <div className="text-xs text-warm-500 mt-0.5">{ref}</div>
+      {refAttr ? (
+        <RefLine
+          refAttr={refAttr}
+          resolvedRef={resolvedRef}
+          isCardRef={Boolean(isCardRef)}
+          onNavigate={handleNavigate}
+        />
       ) : null}
 
       {/* Content */}
@@ -243,7 +271,7 @@ function ElementTree({ element, depth = 0, cardPath }: ElementTreeProps) {
           {/* Children */}
           {element.children && element.children.length > 0 ? <div className="mt-2">
               {element.children.map((child, i) => (
-                <ElementTree key={i} element={child} depth={depth + 1} cardPath={cardPath} />
+                <ElementTree key={i} element={child} depth={depth + 1} cardPath={cardPath} onNavigate={onNavigate} />
               ))}
             </div> : null}
         </div> : null}
@@ -255,12 +283,14 @@ interface CardTreeViewProps {
   element: ElementNode;
   path?: string;
   version?: string;
+  /** Optional navigation handler — see ElementTreeProps. */
+  onNavigate?: NavigateFn;
 }
 
 /**
  * Full card tree view with header.
  */
-export function CardTreeView({ element, path, version }: CardTreeViewProps) {
+export function CardTreeView({ element, path, version, onNavigate }: CardTreeViewProps) {
   return (
     <div className="p-4">
       {/* Card header */}
@@ -277,7 +307,7 @@ export function CardTreeView({ element, path, version }: CardTreeViewProps) {
         </div> : null}
 
       {/* Element tree */}
-      <ElementTree element={element} cardPath={path} />
+      <ElementTree element={element} cardPath={path} onNavigate={onNavigate} />
     </div>
   );
 }

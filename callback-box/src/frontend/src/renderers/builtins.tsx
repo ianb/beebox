@@ -35,11 +35,11 @@ function XmlRenderer({ data }: RendererProps) {
 }
 
 /** Structured card tree view */
-function TreeRenderer({ data }: RendererProps) {
+function TreeRenderer({ data, onNavigate }: RendererProps) {
   if (!data.element) {
     return <Text as="div" tone="subtle" className="p-4">No element data</Text>;
   }
-  return <CardTreeView element={data.element} path={data.path} />;
+  return <CardTreeView element={data.element} path={data.path} onNavigate={onNavigate} />;
 }
 
 // Register built-in renderers
