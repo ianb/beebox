@@ -15,6 +15,12 @@ export interface ExternalLinkProps {
    * - `"button"`: styled as a secondary button (white background, border, padding). Use when the link stands alone as a call-to-action.
    */
   variant?: ExternalLinkVariant;
+  /**
+   * If set, the link is treated as a download (`download` HTML attribute);
+   * the browser saves the target instead of navigating to it. Pass a string
+   * to set the suggested filename. Pairs naturally with `variant="button"`.
+   */
+  download?: string | boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -41,17 +47,19 @@ const VARIANT_CLASSES: Record<ExternalLinkVariant, string> = {
     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-warm-300 rounded hover:bg-warm-50 text-warm-700",
 };
 
-export function ExternalLink({ href, children, hideIcon = false, title, variant = "inline", className }: ExternalLinkProps) {
+export function ExternalLink({ href, children, hideIcon = false, title, variant = "inline", download, className }: ExternalLinkProps) {
+  const isDownload = download !== undefined && download !== false;
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       title={title}
+      download={isDownload ? (download === true ? "" : download) : undefined}
       className={cn(VARIANT_CLASSES[variant], className)}
     >
       <span>{children}</span>
-      {hideIcon ? null : <ExternalLinkIcon />}
+      {hideIcon || isDownload ? null : <ExternalLinkIcon />}
     </a>
   );
 }

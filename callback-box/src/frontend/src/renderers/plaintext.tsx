@@ -7,6 +7,7 @@
  */
 
 import { registerFileRenderer, type RendererProps } from "./index";
+import { isBinaryPath } from "../lib/binary-files";
 import { Pre } from "../components/ui/Pre";
 import { Text } from "../components/ui/Text";
 
@@ -21,15 +22,13 @@ function PlaintextRenderer({ data }: RendererProps) {
   );
 }
 
-// Binary/data extensions whose preferred renderer is not plaintext.
-const BINARY_EXTS = /\.(png|jpe?g|gif|webp|bmp|svg|ico|mp3|m4a|mp4|wav|webm|ogg|aac|flac|pdf|zip|card)$/i;
-
 registerFileRenderer(
   (path) => {
-    // Only match files with an extension (skip directories) and not binary.
+    // Skip directories (no extension), card files, and known binary types.
     const base = path.split("/").pop();
     if (!base || !base.includes(".")) return false;
-    return !BINARY_EXTS.test(base);
+    if (path.endsWith(".card")) return false;
+    return !isBinaryPath(path);
   },
   { name: "Plaintext", Component: PlaintextRenderer, priority: 1 },
 );

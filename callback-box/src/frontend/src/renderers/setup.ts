@@ -10,5 +10,6 @@ import "./recipe";
 import "./sheet";
 import "./markdown";
 import "./plaintext";
+import "./binary";
 import "./directory";
 import "./todo-list";

@@ -30,6 +30,7 @@ import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
+import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { Pre } from "./ui/Pre";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { StatusBadge } from "./ui/StatusBadge";
@@ -51,30 +52,12 @@ interface FileViewProps {
 
 /* ---------- path classification ---------- */
 
-const BINARY_EXTS = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico",
-  ".mp3", ".m4a", ".mp4", ".wav", ".webm", ".ogg", ".aac", ".flac",
-  ".pdf", ".zip",
-]);
-
-function lastExt(path: string): string {
-  const base = path.split("/").pop();
-  if (!base) return "";
-  const dot = base.lastIndexOf(".");
-  if (dot <= 0) return "";
-  return base.slice(dot).toLowerCase();
-}
-
 function isCardPath(path: string): boolean {
   return path.endsWith(".card");
 }
 
 function isDirectoryPath(path: string): boolean {
-  return lastExt(path) === "";
-}
-
-function isBinaryPath(path: string): boolean {
-  return BINARY_EXTS.has(lastExt(path));
+  return pathExt(path) === "";
 }
 
 /* ---------- data loading ---------- */
