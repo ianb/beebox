@@ -19,6 +19,8 @@ import "./procedure.js";
 import "./transcribe-captures.js";
 import "./assemble-timeline.js";
 import "./describe-images.js";
+import "./scan-import.js";
+import "./upload.js";
 import "./ls.js";
 import "./wakeup.js";
 

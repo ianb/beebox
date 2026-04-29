@@ -43,6 +43,8 @@ import {
   sessionCommand,
   schedulerCommand,
   describeImagesCommand,
+  scanImportCommand,
+  uploadCommand,
   lsCommand,
   renderCommand,
   formatCommand,
@@ -96,6 +98,8 @@ program.addCommand(promptCommand);
 program.addCommand(sessionCommand);
 program.addCommand(schedulerCommand);
 program.addCommand(describeImagesCommand);
+program.addCommand(scanImportCommand);
+program.addCommand(uploadCommand);
 program.addCommand(lsCommand);
 program.addCommand(renderCommand);
 program.addCommand(formatCommand);

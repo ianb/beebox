@@ -36,6 +36,8 @@ export { promptCommand } from "./prompt.js";
 export { sessionCommand } from "./session.js";
 export { schedulerCommand } from "./scheduler.js";
 export { describeImagesCommand } from "./describe-images.js";
+export { scanImportCommand } from "./scan-import.js";
+export { uploadCommand } from "./upload.js";
 export { lsCommand } from "./ls.js";
 export { renderCommand } from "./render.js";
 export { formatCommand } from "./format.js";
