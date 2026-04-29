@@ -89,7 +89,7 @@ function ImageCardRenderer({ data, onNavigate }: RendererProps) {
   ) : null;
 
   return (
-    <div>
+    <div className="p-4">
       <Image
         src={imageSrc}
         alt={altText}
