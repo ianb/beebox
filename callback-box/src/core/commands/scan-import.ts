@@ -1,15 +1,24 @@
 /**
- * Scan-Import command — turn a scanned PDF of photographs into image cards.
+ * Scan-Import command — turn a scanned PDF, OCR'd document PDF, or batch of
+ * scanned JPEGs into a session in `box/inbox/scan-…/`.
  *
- * Each PDF page is rendered to a JPEG; pages are sent to Gemini Flash in
- * sliding-overlap batches to classify each page as photo / back-of-photo /
- * blank / unsure and to pair photos with their backs. Results become a
- * capture-session card with one image card per photo, sibling back-of-photo
- * JPEGs preserved when uncertain, and question cards for orphans.
+ * Internal dispatch:
+ *   - All inputs are images (.jpg/.png/etc) → photo flow with image batch
+ *   - Single PDF, no embedded text → photo flow with rendered pages
+ *   - Single PDF with embedded text → document mode (no Flash, file the PDF)
+ *   - Multiple PDFs or mixed types → error (callers must split)
  *
- * Mirrors the capture-session layout from src/webapp/routes/capture.ts so
- * later transcripts (handwriting walkthroughs, voice notes about the stack)
- * can attach to the same session.
+ * Photo flow output:
+ *   <session>/photo-NNN.jpg + .image.card (Flash-analyzed)
+ *   <session>/photo-NNN-back.jpg when paired
+ *   <session>/orphan-back-NNN.jpg + question
+ *   <session>/unsure-NNN.jpg + question
+ *   <session>/<name>.capture-session.card
+ *   <session>/source.pdf + source.file.card  (PDF source only)
+ *
+ * Document flow output:
+ *   <session>/source.pdf + source.file.card
+ *   <session>/<name>.capture-session.card  (no image refs)
  */
 
 import * as fs from "node:fs/promises";
@@ -29,6 +38,11 @@ import { createFileTemplate } from "../../schemas/file.js";
 import { createTextQuestionTemplate } from "../../schemas/question.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import {
+  PDF_EXTENSION,
+  SUPPORTED_IMAGE_EXTENSIONS,
+} from "./upload-helpers.js";
+import {
+  detectPdfNeedsFlash,
   renderPdfPages,
   runScanBatches,
   resolveScanPages,
@@ -37,126 +51,271 @@ import {
 } from "./scan-import-helpers.js";
 
 export interface ScanImportArgs {
-  pdfPath: string;
+  inputs: string[];
   archiveDpi?: number;
   apiScaleTo?: number;
-  /** Extra free-form context appended to CLAUDE_SCANS.md content for this run. */
   context?: string;
+  treatAs?: "scan" | "document";
 }
 
-/**
- * Read the persistent scan context (recurring people, eras, places) from
- * CLAUDE_SCANS.md at the box root, if it exists. Returns null when absent
- * so the prompt skips the context section entirely.
- */
+interface SessionLayout {
+  sessionId: string;
+  sessionDirName: string;
+  sessionRelDir: string;
+  sessionAbsDir: string;
+  sessionCardFilename: string;
+  startedAt: string;
+}
+
+type PhotoSource =
+  | { kind: "pdf"; pdfPath: string; archiveDpi: number; apiScaleTo: number }
+  | { kind: "images"; imagePaths: string[] };
+
+const isImageFile = (p: string): boolean =>
+  SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(p).toLowerCase());
+const isPdfFile = (p: string): boolean =>
+  path.extname(p).toLowerCase() === PDF_EXTENSION;
+
 async function readScanContextFile(boxRoot: string): Promise<string | null> {
-  const candidates = ["CLAUDE_SCANS.md", "claude_scans.md"];
-  for (const name of candidates) {
+  for (const name of ["CLAUDE_SCANS.md", "claude_scans.md"]) {
     try {
       const content = await fs.readFile(path.join(boxRoot, name), "utf-8");
       if (content.trim().length > 0) return content;
     } catch {
-      // File doesn't exist — try next candidate.
+      // try next candidate
     }
   }
   return null;
 }
 
-async function executeScanImport(
-  ctx: CommandContext,
-  args: Record<string, unknown>
-): Promise<CommandResult> {
-  const { pdfPath: rawPdfPath, archiveDpi = 600, apiScaleTo = 2000, context: extraContext } =
-    args as unknown as ScanImportArgs;
-
-  if (!rawPdfPath) {
-    return { success: false, error: "pdfPath argument is required" };
-  }
-
-  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
-  if (!apiKey) {
-    return { success: false, error: "GEMINI_KEY environment variable is required" };
-  }
-
-  const pdfAbsPath = path.isAbsolute(rawPdfPath) ? rawPdfPath : path.join(ctx.boxRoot, rawPdfPath);
-  try {
-    await fs.access(pdfAbsPath);
-  } catch {
-    return { success: false, error: `PDF not found: ${pdfAbsPath}` };
-  }
-
+async function createSessionLayout(ctx: CommandContext): Promise<SessionLayout> {
   const sessionId = randomUUID();
   const shortId = sessionId.slice(0, 8);
   const startedAt = getBoxTimeISO(ctx.boxRoot);
-  // Format: scan-YYYYMMDDTHHMM-shortId
   const stamp = startedAt.replace(/[:-]/g, "").slice(0, 13);
   const formattedDate = `${stamp.slice(0, 8)}T${stamp.slice(9, 13)}`;
   const sessionDirName = `scan-${formattedDate}-${shortId}`;
   const sessionRelDir = `box/inbox/${sessionDirName}`;
   const sessionAbsDir = path.join(ctx.boxRoot, sessionRelDir);
   await fs.mkdir(sessionAbsDir, { recursive: true });
+  return {
+    sessionId,
+    sessionDirName,
+    sessionRelDir,
+    sessionAbsDir,
+    sessionCardFilename: `${sessionDirName}.capture-session.card`,
+    startedAt,
+  };
+}
 
-  ctx.writeLine(`Scan import → ${sessionRelDir}`);
-  ctx.writeLine(`Source: ${pdfAbsPath}`);
+async function executeScanImport(
+  ctx: CommandContext,
+  args: Record<string, unknown>
+): Promise<CommandResult> {
+  const {
+    inputs,
+    archiveDpi = 600,
+    apiScaleTo = 2000,
+    context: extraContext,
+    treatAs,
+  } = args as unknown as ScanImportArgs;
 
-  // Copy the PDF into the session dir as the source-of-truth archive,
-  // along with a file card pointing at it.
-  const sourcePdfName = "source.pdf";
-  const sourceFileCardName = "source.file.card";
-  await fs.copyFile(pdfAbsPath, path.join(sessionAbsDir, sourcePdfName));
-  const pdfStat = await fs.stat(path.join(sessionAbsDir, sourcePdfName));
-  const sourceFileCardContent = createFileTemplate({
-    capturedAt: startedAt,
-    source: "scan-import",
-    filename: sourcePdfName,
-    originalName: path.basename(pdfAbsPath),
-    mimeType: "application/pdf",
-    size: pdfStat.size,
-  });
-  await fs.writeFile(path.join(sessionAbsDir, sourceFileCardName), sourceFileCardContent);
+  if (!inputs || inputs.length === 0) {
+    return { success: false, error: "inputs argument is required (at least one file)" };
+  }
 
-  // Render archive (high-res) and API (downsampled) copies to scratch dirs
-  // inside the session. Archive copies become photo-NNN.jpg via rename;
-  // API copies are deleted after analysis.
-  const archiveDir = path.join(sessionAbsDir, ".scan-archive");
-  const apiDir = path.join(sessionAbsDir, ".scan-api");
+  const resolved: string[] = [];
+  for (const f of inputs) {
+    const abs = path.isAbsolute(f) ? f : path.join(ctx.boxRoot, f);
+    try {
+      await fs.access(abs);
+    } catch {
+      return { success: false, error: `Input file not found: ${abs}` };
+    }
+    resolved.push(abs);
+  }
 
-  ctx.writeLine(`Rendering archive copies at ${archiveDpi}dpi...`);
-  const archivePages = await renderPdfPages({
-    pdfPath: pdfAbsPath,
-    outDir: archiveDir,
-    prefix: "page",
-    mode: { dpi: archiveDpi },
-  });
-  ctx.writeLine(`  ${archivePages.length} pages rendered`);
-
-  ctx.writeLine(`Rendering API copies at scale-to=${apiScaleTo}...`);
-  const apiPages = await renderPdfPages({
-    pdfPath: pdfAbsPath,
-    outDir: apiDir,
-    prefix: "page",
-    mode: { scaleTo: apiScaleTo },
-    jpegQuality: 85,
-  });
-  ctx.writeLine(`  ${apiPages.length} pages rendered`);
-
-  if (archivePages.length !== apiPages.length) {
+  const allPdf = resolved.every((f) => isPdfFile(f));
+  const allImage = resolved.every((f) => isImageFile(f));
+  if (!allPdf && !allImage) {
     return {
       success: false,
-      error: `Page count mismatch between archive (${archivePages.length}) and API (${apiPages.length}) renders`,
+      error: "Mixed file types in one scan-import invocation. PDFs run one-per-session; images can be batched together.",
     };
   }
 
-  // Build the boxholder-context block: persistent file content first, then
-  // any per-run --context addition.
+  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
+
+  if (allPdf) {
+    if (resolved.length > 1) {
+      return {
+        success: false,
+        error: "scan-import takes a single PDF at a time (use cb upload for batches)",
+      };
+    }
+    const pdfPath = resolved[0]!;
+
+    let mode: "photo" | "document";
+    if (treatAs === "scan") mode = "photo";
+    else if (treatAs === "document") mode = "document";
+    else {
+      ctx.writeLine(`Detecting PDF mode for ${path.basename(pdfPath)}...`);
+      try {
+        const det = await detectPdfNeedsFlash(pdfPath);
+        ctx.writeLine(
+          `  pages=${det.pageCount}, chars/page=${det.charsPerPage.toFixed(1)} → ${det.needsFlash ? "photo (scanned)" : "document (text-bearing)"}`
+        );
+        mode = det.needsFlash ? "photo" : "document";
+      } catch (e) {
+        return { success: false, error: `PDF mode detection failed: ${(e as Error).message}` };
+      }
+    }
+
+    if (mode === "document") {
+      return runDocumentMode(ctx, { pdfPath });
+    }
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_KEY environment variable is required for photo flow" };
+    }
+    return runPhotoMode(ctx, {
+      apiKey,
+      source: { kind: "pdf", pdfPath, archiveDpi, apiScaleTo },
+      extraContext,
+    });
+  }
+
+  // All-image path
+  if (!apiKey) {
+    return { success: false, error: "GEMINI_KEY environment variable is required" };
+  }
+  return runPhotoMode(ctx, {
+    apiKey,
+    source: { kind: "images", imagePaths: resolved },
+    extraContext,
+  });
+}
+
+interface MaterializeArgs {
+  source: PhotoSource;
+  scratchArchiveDir: string;
+  scratchApiDir: string;
+}
+
+async function materializePhotoSource(
+  ctx: CommandContext,
+  { source, scratchArchiveDir, scratchApiDir }: MaterializeArgs
+): Promise<
+  | { ok: true; archivePages: string[]; apiPages: string[]; sourceLabel: string; sourceFileRef: string | null; sourceStaged: string[] }
+  | { ok: false; error: string }
+> {
+  if (source.kind === "pdf") {
+    ctx.writeLine(`Source PDF: ${source.pdfPath}`);
+    ctx.writeLine(`Rendering archive copies at ${source.archiveDpi}dpi...`);
+    const archivePages = await renderPdfPages({
+      pdfPath: source.pdfPath,
+      outDir: scratchArchiveDir,
+      prefix: "page",
+      mode: { dpi: source.archiveDpi },
+    });
+    ctx.writeLine(`  ${archivePages.length} pages rendered`);
+    ctx.writeLine(`Rendering API copies at scale-to=${source.apiScaleTo}...`);
+    const apiPages = await renderPdfPages({
+      pdfPath: source.pdfPath,
+      outDir: scratchApiDir,
+      prefix: "page",
+      mode: { scaleTo: source.apiScaleTo },
+      jpegQuality: 85,
+    });
+    ctx.writeLine(`  ${apiPages.length} pages rendered`);
+    if (archivePages.length !== apiPages.length) {
+      return {
+        ok: false,
+        error: `Page count mismatch between archive (${archivePages.length}) and API (${apiPages.length}) renders`,
+      };
+    }
+    return {
+      ok: true,
+      archivePages,
+      apiPages,
+      sourceLabel: path.basename(source.pdfPath),
+      sourceFileRef: "source.file.card",
+      sourceStaged: ["source.pdf", "source.file.card"],
+    };
+  }
+
+  ctx.writeLine(`Source: ${source.imagePaths.length} image file(s)`);
+  await fs.mkdir(scratchArchiveDir, { recursive: true });
+  const archivePages: string[] = [];
+  for (const [i, src] of source.imagePaths.entries()) {
+    const idx = String(i + 1).padStart(3, "0");
+    const dst = path.join(scratchArchiveDir, `page-${idx}${path.extname(src).toLowerCase()}`);
+    await fs.copyFile(src, dst);
+    archivePages.push(dst);
+  }
+  // No API copy — Gemini handles ~3000-pixel JPEGs fine; saves a render step.
+  return {
+    ok: true,
+    archivePages,
+    apiPages: archivePages,
+    sourceLabel: `${source.imagePaths.length} images`,
+    sourceFileRef: null,
+    sourceStaged: [],
+  };
+}
+
+interface RunPhotoModeArgs {
+  apiKey: string;
+  source: PhotoSource;
+  extraContext: string | undefined;
+}
+
+async function runPhotoMode(
+  ctx: CommandContext,
+  args: RunPhotoModeArgs
+): Promise<CommandResult> {
+  const { apiKey, source, extraContext } = args;
+  const layout = await createSessionLayout(ctx);
+  const { sessionAbsDir, sessionRelDir, sessionCardFilename, sessionId, startedAt } = layout;
+  ctx.writeLine(`Photo intake → ${sessionRelDir}`);
+
+  const filesToStage: string[] = [];
+
+  // Write source.pdf + source.file.card up front so they're recoverable even if
+  // we crash mid-flow.
+  if (source.kind === "pdf") {
+    await fs.copyFile(source.pdfPath, path.join(sessionAbsDir, "source.pdf"));
+    const stat = await fs.stat(path.join(sessionAbsDir, "source.pdf"));
+    const fileCard = createFileTemplate({
+      capturedAt: startedAt,
+      source: "scan-import",
+      filename: "source.pdf",
+      originalName: path.basename(source.pdfPath),
+      mimeType: "application/pdf",
+      size: stat.size,
+    });
+    await fs.writeFile(path.join(sessionAbsDir, "source.file.card"), fileCard);
+  }
+
+  const archiveDir = path.join(sessionAbsDir, ".scan-archive");
+  const apiDir = path.join(sessionAbsDir, ".scan-api");
+  const mat = await materializePhotoSource(ctx, {
+    source,
+    scratchArchiveDir: archiveDir,
+    scratchApiDir: apiDir,
+  });
+  if (!mat.ok) return { success: false, error: mat.error };
+  const { archivePages, apiPages, sourceLabel, sourceFileRef } = mat;
+  for (const f of mat.sourceStaged) filesToStage.push(`${sessionRelDir}/${f}`);
+
   const fileContext = await readScanContextFile(ctx.boxRoot);
   const contextParts: string[] = [];
   if (fileContext) contextParts.push(fileContext.trim());
   if (extraContext && extraContext.trim().length > 0) contextParts.push(extraContext.trim());
   const boxholderContext = contextParts.length > 0 ? contextParts.join("\n\n---\n\n") : null;
-
   if (boxholderContext) {
-    ctx.writeLine(`Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`);
+    ctx.writeLine(
+      `Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`
+    );
   }
 
   ctx.writeLine(`Analyzing ${apiPages.length} pages with Gemini Flash...`);
@@ -166,26 +325,20 @@ async function executeScanImport(
     boxholderContext,
     log: (line) => ctx.writeLine(line),
   });
-
-  if (batchResult.failed > 0) {
-    ctx.writeLine(`${batchResult.failed} page(s) failed analysis`);
-  }
+  if (batchResult.failed > 0) ctx.writeLine(`${batchResult.failed} page(s) failed analysis`);
   if (batchResult.usage) {
     ctx.writeLine(
       `Tokens: input=${batchResult.usage.prompt}, output=${batchResult.usage.output}, thinking=${batchResult.usage.thinking}`
     );
   }
 
-  const resolved = resolveScanPages(batchResult.pageAnalyses, apiPages.length);
-  const { bundles, orphanBacks, unsurePages, blankPages } = bundleResolvedPages(resolved);
-
+  const resolvedPages = resolveScanPages(batchResult.pageAnalyses, apiPages.length);
+  const { bundles, orphanBacks, unsurePages, blankPages } = bundleResolvedPages(resolvedPages);
   ctx.writeLine(
     `\nResults: ${bundles.length} photos (${bundles.filter((b) => b.backIndex !== null).length} with backs), ${orphanBacks.length} orphan backs, ${unsurePages.length} unsure, ${blankPages.length} blank`
   );
 
-  // Assemble cards
   const loader = await createLoader(ctx.boxRoot);
-  const filesToStage: string[] = [];
   const imageRefs: string[] = [];
   const questionPaths: string[] = [];
 
@@ -195,12 +348,9 @@ async function executeScanImport(
     const photoFilename = `${photoBasename}.jpg`;
     const cardFilename = `${photoBasename}.image.card`;
 
-    // Move the archive page into place under the photo basename.
     await fs.rename(archivePages[bundle.photoIndex]!, path.join(sessionAbsDir, photoFilename));
     filesToStage.push(`${sessionRelDir}/${photoFilename}`);
 
-    // Always keep the paired back as a sibling — OCR of handwriting is
-    // fallible and the user needs the original to verify or correct.
     let backFilename: string | null = null;
     if (bundle.backIndex !== null) {
       backFilename = `${photoBasename}-back.jpg`;
@@ -208,7 +358,6 @@ async function executeScanImport(
       filesToStage.push(`${sessionRelDir}/${backFilename}`);
     }
 
-    // Create the image card from the standard template, then apply analysis.
     const cardContent = createImageTemplate({
       capturedAt: startedAt,
       source: "gallery",
@@ -222,7 +371,7 @@ async function executeScanImport(
 
     if (bundle.flagForReview) {
       const memo = [
-        `Photo ${photoIdx} (PDF page ${bundle.photoIndex + 1}${bundle.backIndex !== null ? `, back on page ${bundle.backIndex + 1}` : ""}) needs review:`,
+        `Photo ${photoIdx} (page ${bundle.photoIndex + 1}${bundle.backIndex !== null ? `, back on page ${bundle.backIndex + 1}` : ""}) needs review:`,
         ...bundle.flagReasons.map((r) => `- ${r}`),
       ].join("\n");
       const directiveParts = [`Open ${sessionRelDir}/${cardFilename} and adjust description or text blocks.`];
@@ -242,32 +391,29 @@ async function executeScanImport(
     }
   }
 
-  // Orphan backs become standalone question cards with the back image attached.
   for (const [i, orphan] of orphanBacks.entries()) {
-    const backIdx = String(i + 1).padStart(3, "0");
-    const backBasename = `orphan-back-${backIdx}`;
-    const backFilename = `${backBasename}.jpg`;
-    await fs.rename(archivePages[orphan.index]!, path.join(sessionAbsDir, backFilename));
-    filesToStage.push(`${sessionRelDir}/${backFilename}`);
-
+    const idx = String(i + 1).padStart(3, "0");
+    const basename = `orphan-back-${idx}`;
+    const filename = `${basename}.jpg`;
+    await fs.rename(archivePages[orphan.index]!, path.join(sessionAbsDir, filename));
+    filesToStage.push(`${sessionRelDir}/${filename}`);
     const ocrText = orphan.analysis.text_blocks.map((b) => b.text).join("\n").trim();
     const memo = [
-      `Found a back-of-photo with no matching photo (PDF page ${orphan.index + 1}).`,
+      `Found a back-of-photo with no matching photo (page ${orphan.index + 1}).`,
       ocrText ? `Transcribed text:\n${ocrText}` : "(no transcribed text)",
     ].join("\n\n");
     const questionContent = createTextQuestionTemplate({
       memo,
-      prompt: `Which photo does ${backFilename} belong with, or should it be discarded?`,
-      directive: `If it belongs with a photo in this session, attach by appending text blocks to that image card. Otherwise delete ${sessionRelDir}/${backFilename}.`,
+      prompt: `Which photo does ${filename} belong with, or should it be discarded?`,
+      directive: `If it belongs with a photo in this session, attach by appending text blocks to that image card. Otherwise delete ${sessionRelDir}/${filename}.`,
     });
-    const questionFilename = `${backBasename}.question.card`;
+    const questionFilename = `${basename}.question.card`;
     const questionPath = path.join(sessionAbsDir, questionFilename);
     await fs.writeFile(questionPath, questionContent);
     filesToStage.push(`${sessionRelDir}/${questionFilename}`);
     questionPaths.push(`${sessionRelDir}/${questionFilename}`);
   }
 
-  // Unsure pages: save the page and ask.
   for (const [i, page] of unsurePages.entries()) {
     const idx = String(i + 1).padStart(3, "0");
     const basename = `unsure-${idx}`;
@@ -275,7 +421,7 @@ async function executeScanImport(
     await fs.rename(archivePages[page.index]!, path.join(sessionAbsDir, filename));
     filesToStage.push(`${sessionRelDir}/${filename}`);
     const memo = [
-      `Could not classify PDF page ${page.index + 1}.`,
+      `Could not classify page ${page.index + 1}.`,
       page.analysis.flag_reason ?? "(no specific reason given)",
     ].join("\n\n");
     const questionContent = createTextQuestionTemplate({
@@ -290,45 +436,32 @@ async function executeScanImport(
     questionPaths.push(`${sessionRelDir}/${questionFilename}`);
   }
 
-  // Discard archive pages we didn't keep.
   await fs.rm(archiveDir, { recursive: true, force: true });
-  await fs.rm(apiDir, { recursive: true, force: true });
+  if (apiDir !== archiveDir) await fs.rm(apiDir, { recursive: true, force: true });
 
-  // Capture-session card. Status starts at "intake-complete" since image
-  // analysis is already done — the reactor's intake guide takes over from
-  // here. (The "transcribing"/"transcribed" states are audio-pipeline
-  // specific; for a scan they're skipped.)
-  const sessionCardFilename = `${sessionDirName}.capture-session.card`;
   const sessionCardContent = createCaptureSessionTemplate({
     sessionId,
     startedAt,
     endedAt: startedAt,
     imageRefs,
     audioRefs: [],
-    fileRefs: [sourceFileCardName],
+    fileRefs: sourceFileRef ? [sourceFileRef] : [],
   });
   const sessionCardPath = path.join(sessionAbsDir, sessionCardFilename);
   await fs.writeFile(sessionCardPath, sessionCardContent);
   filesToStage.push(`${sessionRelDir}/${sessionCardFilename}`);
-  filesToStage.push(`${sessionRelDir}/${sourcePdfName}`);
-  filesToStage.push(`${sessionRelDir}/${sourceFileCardName}`);
 
-  // Stage and commit everything in one go (matches capture finalize).
-  if (filesToStage.length > 0) {
-    await stageFiles(ctx.boxRoot, filesToStage);
-    const summaryParts: string[] = [];
-    summaryParts.push(`${bundles.length} photos`);
-    if (orphanBacks.length > 0) summaryParts.push(`${orphanBacks.length} orphan backs`);
-    if (unsurePages.length > 0) summaryParts.push(`${unsurePages.length} unsure`);
-    await commit(ctx.boxRoot, {
-      message: `Scan import: ${summaryParts.join(", ")}`,
-      trailers: { "Created-By": "scan-import" },
-    });
-  }
+  await stageFiles(ctx.boxRoot, filesToStage);
+  const summaryParts: string[] = [`${bundles.length} photos`];
+  if (orphanBacks.length > 0) summaryParts.push(`${orphanBacks.length} orphan backs`);
+  if (unsurePages.length > 0) summaryParts.push(`${unsurePages.length} unsure`);
+  await commit(ctx.boxRoot, {
+    message: `Scan import: ${summaryParts.join(", ")}`,
+    trailers: { "Created-By": "scan-import" },
+  });
 
-  // File an intake job referencing the session card and any open questions.
   const intakeItems = [`${sessionRelDir}/${sessionCardFilename}`, ...questionPaths];
-  const intakeDescription = `Scan from ${path.basename(pdfAbsPath)}: ${bundles.length} photo${bundles.length === 1 ? "" : "s"}${questionPaths.length > 0 ? `, ${questionPaths.length} review question${questionPaths.length === 1 ? "" : "s"}` : ""}`;
+  const intakeDescription = `Scan from ${sourceLabel}: ${bundles.length} photo${bundles.length === 1 ? "" : "s"}${questionPaths.length > 0 ? `, ${questionPaths.length} review question${questionPaths.length === 1 ? "" : "s"}` : ""}`;
   const intakeJobPath = await createOrAppendIntakeJob({
     boxRoot: ctx.boxRoot,
     source: "scan",
@@ -341,6 +474,7 @@ async function executeScanImport(
   return {
     success: true,
     data: {
+      mode: "photo",
       sessionRelDir,
       sessionCardPath: `${sessionRelDir}/${sessionCardFilename}`,
       photoCount: bundles.length,
@@ -354,12 +488,68 @@ async function executeScanImport(
   };
 }
 
-/**
- * Apply a scan-mode photo bundle to a freshly-created image card. We adapt
- * the bundle into the ImageAnalysis shape so we can reuse the loader-based
- * mutation pattern from describe-images.ts (rather than serializing XML by
- * hand).
- */
+async function runDocumentMode(
+  ctx: CommandContext,
+  args: { pdfPath: string }
+): Promise<CommandResult> {
+  const layout = await createSessionLayout(ctx);
+  const { sessionAbsDir, sessionRelDir, sessionCardFilename, sessionId, startedAt } = layout;
+  ctx.writeLine(`Document intake → ${sessionRelDir}`);
+  ctx.writeLine(`Source: ${args.pdfPath}`);
+
+  await fs.copyFile(args.pdfPath, path.join(sessionAbsDir, "source.pdf"));
+  const stat = await fs.stat(path.join(sessionAbsDir, "source.pdf"));
+  const fileCard = createFileTemplate({
+    capturedAt: startedAt,
+    source: "scan-import",
+    filename: "source.pdf",
+    originalName: path.basename(args.pdfPath),
+    mimeType: "application/pdf",
+    size: stat.size,
+  });
+  await fs.writeFile(path.join(sessionAbsDir, "source.file.card"), fileCard);
+
+  const sessionCardContent = createCaptureSessionTemplate({
+    sessionId,
+    startedAt,
+    endedAt: startedAt,
+    imageRefs: [],
+    audioRefs: [],
+    fileRefs: ["source.file.card"],
+  });
+  await fs.writeFile(path.join(sessionAbsDir, sessionCardFilename), sessionCardContent);
+
+  const filesToStage = [
+    `${sessionRelDir}/source.pdf`,
+    `${sessionRelDir}/source.file.card`,
+    `${sessionRelDir}/${sessionCardFilename}`,
+  ];
+  await stageFiles(ctx.boxRoot, filesToStage);
+  await commit(ctx.boxRoot, {
+    message: `Document import: ${path.basename(args.pdfPath)}`,
+    trailers: { "Created-By": "scan-import" },
+  });
+
+  const intakeJobPath = await createOrAppendIntakeJob({
+    boxRoot: ctx.boxRoot,
+    source: "scan",
+    items: [`${sessionRelDir}/${sessionCardFilename}`],
+    description: `Document PDF: ${path.basename(args.pdfPath)}`,
+  });
+  ctx.writeLine(`\nIntake job: ${intakeJobPath}`);
+  ctx.writeLine(`Session: ${sessionRelDir}/${sessionCardFilename}`);
+
+  return {
+    success: true,
+    data: {
+      mode: "document",
+      sessionRelDir,
+      sessionCardPath: `${sessionRelDir}/${sessionCardFilename}`,
+      intakeJobPath,
+    },
+  };
+}
+
 async function applyBundleAnalysisToCard(
   loader: Awaited<ReturnType<typeof createLoader>>,
   { cardPath, bundle }: { cardPath: string; bundle: PhotoBundle }
@@ -387,12 +577,8 @@ async function applyBundleAnalysisToCard(
   }
 
   const descChild = el.children.find((c) => c.tagName === "description");
-  if (descChild) {
-    descChild.text = photo.description;
-  }
+  if (descChild) descChild.text = photo.description;
 
-  // Replace text/exif/subject-bbox/document children — fresh card has none,
-  // but the filter is cheap and keeps this consistent with describe-images.
   el.children = el.children.filter(
     (c) =>
       c.tagName !== "text" &&
@@ -435,31 +621,37 @@ async function applyBundleAnalysisToCard(
 
 registerCommand({
   name: "scan-import",
-  description: "Import a scanned PDF of photographs as image cards (Gemini Flash pairs photos with their backs)",
+  description: "Import a scanned PDF, image batch, or document PDF as a session in box/inbox/scan-…/",
   args: [
     {
-      name: "pdfPath",
-      description: "Path to the PDF file (absolute or relative to box root)",
+      name: "inputs",
+      description: "PDF (one) or image files (many) — absolute or relative to box root",
       required: true,
-      type: "string",
+      type: "string[]",
     },
     {
       name: "archiveDpi",
-      description: "DPI for archival JPEG render of each page",
+      description: "DPI for archival JPEG render of each PDF page (PDF inputs only)",
       required: false,
       default: 600,
       type: "number",
     },
     {
       name: "apiScaleTo",
-      description: "Longest-side pixel size for the API copy sent to Gemini",
+      description: "Longest-side pixel size for the API copy sent to Gemini (PDF inputs only)",
       required: false,
       default: 2000,
       type: "number",
     },
     {
       name: "context",
-      description: "Extra context appended to CLAUDE_SCANS.md content for this run (e.g. \"1985 family reunion in Maine\")",
+      description: "Extra context appended to CLAUDE_SCANS.md content for this run",
+      required: false,
+      type: "string",
+    },
+    {
+      name: "treatAs",
+      description: "Force PDF mode: 'scan' (run Flash) or 'document' (file as PDF, no Flash)",
       required: false,
       type: "string",
     },

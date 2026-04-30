@@ -34,6 +34,69 @@ async function runProcess(cmd: string, args: string[]): Promise<void> {
   });
 }
 
+/**
+ * Spawn a child process and capture stdout. Used for short-output tools
+ * like pdftotext and pdfinfo where we need the result, not just the exit code.
+ */
+async function runProcessCaptureStdout(cmd: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve(stdout);
+        return;
+      }
+      reject(new Error(`${cmd} exited with code ${code}: ${stderr.trim()}`));
+    });
+  });
+}
+
+/**
+ * Average extracted text characters per page below which we treat a PDF as
+ * a scanned image (i.e. no embedded text → needs Flash for OCR + description).
+ *
+ * The gap between scanned PDFs (effectively zero chars) and document PDFs
+ * (typically hundreds to thousands per page) is wide, so the threshold
+ * doesn't need to be precisely tuned.
+ */
+export const PDF_FLASH_CHARS_PER_PAGE_THRESHOLD = 50;
+
+export interface PdfFlashDetection {
+  needsFlash: boolean;
+  charsPerPage: number;
+  pageCount: number;
+}
+
+/**
+ * Decide whether a PDF needs Flash treatment (per-page image analysis) or
+ * is already a text-bearing document. Uses pdftotext to extract embedded
+ * text; if the average is below the threshold the PDF is treated as a scan.
+ */
+export async function detectPdfNeedsFlash(pdfPath: string): Promise<PdfFlashDetection> {
+  const info = await runProcessCaptureStdout("pdfinfo", [pdfPath]);
+  const pagesMatch = info.match(/^Pages:\s*(\d+)/m);
+  const pageCount = pagesMatch ? Number(pagesMatch[1]) : 0;
+
+  const text = await runProcessCaptureStdout("pdftotext", [pdfPath, "-"]);
+  const textChars = text.trim().length;
+  const charsPerPage = pageCount > 0 ? textChars / pageCount : 0;
+
+  return {
+    needsFlash: charsPerPage < PDF_FLASH_CHARS_PER_PAGE_THRESHOLD,
+    charsPerPage,
+    pageCount,
+  };
+}
+
 export interface RenderPdfOptions {
   pdfPath: string;
   outDir: string;

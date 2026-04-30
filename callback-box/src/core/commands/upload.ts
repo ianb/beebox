@@ -22,7 +22,9 @@ import {
   sha256File,
   findEntry,
   addEntry,
+  groupScanFiles,
   type UploadLedgerEntry,
+  type ScanGroup,
 } from "./upload-helpers.js";
 
 export interface UploadArgs {
@@ -30,6 +32,7 @@ export interface UploadArgs {
   kind: string;
   force?: boolean;
   context?: string;
+  treatAs?: "scan" | "document";
 }
 
 const SUPPORTED_KINDS = ["scan"] as const;
@@ -43,7 +46,7 @@ async function executeUpload(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { files, kind, force, context: extraContext } = args as unknown as UploadArgs;
+  const { files, kind, force, context: extraContext, treatAs } = args as unknown as UploadArgs;
 
   if (!files || files.length === 0) {
     return { success: false, error: "At least one file is required" };
@@ -73,37 +76,46 @@ async function executeUpload(
     absoluteFiles.push(abs);
   }
 
-  const ledger = await loadLedger(ctx.boxRoot);
+  let groups: ScanGroup[];
+  try {
+    groups = groupScanFiles(absoluteFiles);
+  } catch (e) {
+    return { success: false, error: (e as Error).message };
+  }
 
+  ctx.writeLine(`Found ${groups.length} group${groups.length === 1 ? "" : "s"}:`);
+  for (const g of groups) {
+    ctx.writeLine(`  [${g.kind}] ${g.label} (${g.files.length} file${g.files.length === 1 ? "" : "s"})`);
+  }
+
+  const ledger = await loadLedger(ctx.boxRoot);
   let imported = 0;
   let skipped = 0;
   let failed = 0;
 
-  for (const filePath of absoluteFiles) {
-    const baseName = path.basename(filePath);
-    ctx.writeLine(`\n→ ${baseName}`);
+  for (const group of groups) {
+    ctx.writeLine(`\n→ [${group.kind}] ${group.label}`);
 
-    const hash = await sha256File(filePath);
-    const existing = findEntry(ledger, hash);
-    if (existing && !force) {
-      const where = existing.sessionRelDir ? ` → ${existing.sessionRelDir}` : "";
+    const hashes: { file: string; hash: string }[] = [];
+    for (const file of group.files) {
+      hashes.push({ file, hash: await sha256File(file) });
+    }
+    const existingForHashes = hashes.map((h) => findEntry(ledger, h.hash));
+    const allSeen = existingForHashes.every((e) => e !== undefined);
+    if (allSeen && !force) {
+      const withSession = existingForHashes.find((e) => e !== undefined && typeof e.sessionRelDir === "string");
+      const where = withSession && withSession.sessionRelDir ? ` → ${withSession.sessionRelDir}` : "";
       ctx.writeLine(
-        `  skipped (uploaded ${existing.uploadedAt} as ${existing.kind}${where}); use --force to re-import`
+        `  skipped (all ${group.files.length} file${group.files.length === 1 ? "" : "s"} already uploaded${where}); use --force to re-import`
       );
       skipped++;
       continue;
     }
 
-    let result: CommandResult;
-    if (kind === "scan") {
-      const scanArgs: Record<string, unknown> = { pdfPath: filePath };
-      if (extraContext && extraContext.trim().length > 0) {
-        scanArgs["context"] = extraContext;
-      }
-      result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
-    } else {
-      result = { success: false, error: `Unsupported kind '${kind}'` };
-    }
+    const scanArgs: Record<string, unknown> = { inputs: group.files };
+    if (extraContext && extraContext.trim().length > 0) scanArgs["context"] = extraContext;
+    if (treatAs) scanArgs["treatAs"] = treatAs;
+    const result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
 
     if (!result.success) {
       ctx.writeLine(`  failed: ${result.error}`);
@@ -112,23 +124,25 @@ async function executeUpload(
     }
 
     const data = result.data as { sessionRelDir?: string } | undefined;
-    const entry: UploadLedgerEntry = {
-      hash,
-      originalName: baseName,
-      originalPath: filePath,
-      uploadedAt: getBoxTimeISO(ctx.boxRoot),
-      kind,
-    };
-    if (data && typeof data.sessionRelDir === "string") {
-      entry.sessionRelDir = data.sessionRelDir;
+    const sessionRelDir = data && typeof data.sessionRelDir === "string" ? data.sessionRelDir : undefined;
+    for (const { file, hash } of hashes) {
+      if (findEntry(ledger, hash) !== undefined) continue;
+      const entry: UploadLedgerEntry = {
+        hash,
+        originalName: path.basename(file),
+        originalPath: file,
+        uploadedAt: getBoxTimeISO(ctx.boxRoot),
+        kind,
+      };
+      if (sessionRelDir) entry.sessionRelDir = sessionRelDir;
+      addEntry(ledger, entry);
     }
-    addEntry(ledger, entry);
-    // Save after each file so a crash mid-batch still preserves the dedup record.
+    // Save after each group so a crash mid-batch still preserves the dedup record.
     await saveLedger(ctx.boxRoot, ledger);
     imported++;
   }
 
-  ctx.writeLine(`\nUpload summary: ${imported} imported, ${skipped} skipped, ${failed} failed`);
+  ctx.writeLine(`\nUpload summary: ${imported} group${imported === 1 ? "" : "s"} imported, ${skipped} skipped, ${failed} failed`);
   return {
     success: failed === 0,
     data: { imported, skipped, failed },
@@ -143,6 +157,7 @@ registerCommand({
     { name: "kind", description: "Destination kind (currently: scan)", required: true, type: "string" },
     { name: "force", description: "Re-import files already in the ledger", required: false, default: false, type: "boolean" },
     { name: "context", description: "Per-batch context passed to the destination handler", required: false, type: "string" },
+    { name: "treatAs", description: "Force PDF mode: 'scan' (run Flash) or 'document' (file as PDF, no Flash)", required: false, type: "string" },
   ],
   execute: executeUpload,
 });

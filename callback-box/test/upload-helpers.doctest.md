@@ -11,6 +11,7 @@ import {
   loadLedger,
   saveLedger,
   sha256File,
+  groupScanFiles,
   LEDGER_REL_PATH,
   type UploadLedgerEntry,
 } from "../src/core/commands/upload-helpers.js";
@@ -131,4 +132,68 @@ await sha256File(box4.path("sample.txt"))
 
 ```cleanup
 await box4.cleanup();
+```
+
+## groupScanFiles: scanner-prefix grouping
+
+JPEGs from a flatbed scanner come out as `<prefix>_NNN.jpg`. We group by
+prefix so a single upload invocation produces one session per scanner run.
+
+```
+const groups = groupScanFiles([
+  "/in/Scan2026-04-29_153807_000.jpg",
+  "/in/Scan2026-04-29_153807_001.jpg",
+  "/in/Scan2026-04-29_154704_000.jpg",
+  "/in/Scan2026-04-29_154704_001.jpg",
+  "/in/Scan2026-04-29_154704_002.jpg",
+]);
+groups.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
+=> image-batch:Scan2026-04-29_153807=2 | image-batch:Scan2026-04-29_154704=3
+```
+
+## groupScanFiles: each PDF is its own group
+
+```
+const groups2 = groupScanFiles([
+  "/in/letter.pdf",
+  "/in/will.pdf",
+  "/in/photos_000.jpg",
+  "/in/photos_001.jpg",
+]);
+groups2.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
+=> pdf:letter=1 | pdf:will=1 | image-batch:photos=2
+```
+
+## groupScanFiles: unmatched images bundle together
+
+Image filenames without a `_NNN.ext` tail (no underscore-digits suffix) bundle
+into one fallback group — the caller's invocation defines the batch.
+
+```
+const groups3 = groupScanFiles([
+  "/in/holiday.jpg",
+  "/in/random.png",
+  "/in/Scan2026-04-29_154947_000.jpg",
+  "/in/Scan2026-04-29_154947_001.jpg",
+]);
+groups3.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
+=> image-batch:Scan2026-04-29_154947=2 | image-batch:(loose images)=2
+```
+
+A single image with a scanner-like name (`IMG_0042.jpg`, etc.) gets its own
+matched group, even if it's just one file. The pattern is broad on purpose:
+single-file groups still work fine downstream.
+
+```
+const groups4 = groupScanFiles(["/in/IMG_0042.jpg", "/in/IMG_0043.jpg"]);
+groups4.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
+=> image-batch:IMG=2
+```
+
+## groupScanFiles: rejects unsupported types
+
+```
+const err = await caught(async () => groupScanFiles(["/in/notes.txt"]));
+err !== null && err.message.startsWith("Unsupported file type(s):")
+=> true
 ```
