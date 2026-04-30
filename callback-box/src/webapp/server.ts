@@ -200,8 +200,18 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       // Per-box auth check: verify session and box-level access
       if (isAuthEnabled()) {
         instance.addHook("preHandler", async (request, reply) => {
-          // Let static assets through (handled by fastify-static)
-          if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i.test(request.url)) {
+          // Let static assets (served by fastify-static) through. Scope this
+          // narrowly: API/SSE paths (like /api/files/foo.jpg) need the auth
+          // check even when they end in an asset extension.
+          const urlPath = request.url.split("?")[0]!;
+          const isApiPath =
+            urlPath.includes("/api/") ||
+            urlPath.includes("/trpc/") ||
+            urlPath.includes("/events");
+          if (
+            !isApiPath &&
+            /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i.test(urlPath)
+          ) {
             return;
           }
           // Diagnostic API key bypass for read-only debug/health endpoints
