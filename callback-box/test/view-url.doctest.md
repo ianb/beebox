@@ -8,6 +8,7 @@ import {
   serializeViewUrl,
   resolveRelativePath,
   classifyMarkdownHref,
+  resolveImageSrc,
 } from "../src/frontend/src/lib/view-url.js";
 ```
 
@@ -81,4 +82,42 @@ JSON.stringify(classifyMarkdownHref("mailto:a@b.com"))
 
 JSON.stringify(classifyMarkdownHref("#anchor"))
 => {"kind":"external"}
+```
+
+## resolveImageSrc
+
+Rewrites a markdown image `src` into a URL that doesn't depend on the page URL — so an image written into `dossiers/annika.md` renders the same whether it's opened in chat or browsed at a deep URL.
+
+A leading `/` means box-root-relative:
+
+```
+resolveImageSrc("/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
+=> /test1/api/files/store/images/front.png
+```
+
+A bare path is document-relative — resolved against `basePath`:
+
+```
+resolveImageSrc("images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
+=> /test1/api/files/store/dossiers/images/front.png
+
+resolveImageSrc("../shared/logo.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
+=> /test1/api/files/store/shared/logo.png
+```
+
+The legacy `api/files/<path>` form is accepted as a hint that the path is already box-root-relative:
+
+```
+resolveImageSrc("api/files/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
+=> /test1/api/files/store/images/front.png
+```
+
+External URLs pass through untouched:
+
+```
+resolveImageSrc("https://example.com/x.png", { boxSlug: "test1", basePath: "store/a.md" })
+=> https://example.com/x.png
+
+resolveImageSrc("data:image/png;base64,AAAA", { boxSlug: "test1", basePath: "store/a.md" })
+=> data:image/png;base64,AAAA
 ```

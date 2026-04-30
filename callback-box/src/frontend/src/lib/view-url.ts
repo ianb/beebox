@@ -111,3 +111,38 @@ export function classifyMarkdownHref(
   if (href.startsWith("#") || href === "") return { kind: "external" };
   return { kind: "relative", path: href };
 }
+
+/**
+ * Rewrite a markdown image `src` into a stable URL that doesn't depend on the
+ * page URL. Inputs we accept:
+ *
+ *  - `http(s)://...`, `data:`, protocol-relative `//...` — pass through
+ *  - `api/files/<path>` or `/api/files/<path>` — back-compat form, treat the
+ *    rest as box-root-relative
+ *  - `/store/foo.png` — leading `/` means box-root-relative
+ *  - `images/foo.png`, `../sibling/foo.png` — document-relative, resolved
+ *    against `basePath`
+ *
+ * Output is always `/<boxSlug>/api/files/<resolved>` for in-box paths, so the
+ * rendered `<img>` works whether the markdown is shown in chat, browse, or any
+ * deeper URL.
+ */
+export function resolveImageSrc(
+  src: string,
+  { boxSlug, basePath }: { boxSlug: string | undefined; basePath: string | undefined },
+): string {
+  if (src === "") return src;
+  if (/^[a-z][\w+.-]*:/i.test(src)) return src;
+  if (src.startsWith("//")) return src;
+
+  const apiFilesPrefix = src.startsWith("/api/files/")
+    ? "/api/files/"
+    : src.startsWith("api/files/")
+    ? "api/files/"
+    : null;
+  const path = apiFilesPrefix
+    ? src.slice(apiFilesPrefix.length).replace(/^\/+/, "")
+    : resolveRelativePath(basePath, src);
+  const slug = boxSlug ?? "";
+  return `/${slug}/api/files/${path}`;
+}

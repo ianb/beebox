@@ -3,13 +3,14 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
+import { useParams } from "@tanstack/react-router";
 import { Markdown } from "./Markdown";
 import { Image } from "./ui/Image";
 import { Pre } from "./ui/Pre";
 import { FileView } from "./FileView";
 import type { LightboxImage } from "./ImageLightbox";
 import type { Components } from "react-markdown";
-import { parseViewUrl, type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
@@ -577,12 +578,13 @@ export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
 function makeChatMarkdownComponents(
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
-  onZoomView?: OnZoomView,
+  { boxSlug, onZoomView }: { boxSlug: string | undefined; onZoomView?: OnZoomView },
 ): Partial<Components> {
   return {
     p: ChatParagraph,
     img({ src, alt }) {
-      return <ChatInlineImage src={src || ""} alt={alt || ""} />;
+      const resolved = src ? resolveImageSrc(src, { boxSlug, basePath: undefined }) : "";
+      return <ChatInlineImage src={resolved} alt={alt || ""} />;
     },
     a({ href, children, node: _node, ...props }) {
       if (href && href.startsWith("view:")) {
@@ -649,6 +651,7 @@ function ExternalLinkIndicator() {
  */
 function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   const cleaned = useMemo(() => stripSpeechTags(text), [text]);
+  const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useCallback(
     (target: ViewTarget) => {
       if (onZoomView) {
@@ -658,8 +661,8 @@ function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZo
     [onZoomView],
   );
   const components = useMemo(
-    () => makeChatMarkdownComponents(handleNavigate, onZoomView),
-    [handleNavigate, onZoomView],
+    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, onZoomView }),
+    [handleNavigate, boxSlug, onZoomView],
   );
 
   if (!cleaned) return null;
@@ -820,7 +823,10 @@ function imageBlockSrc(block: SessionContentBlock): string | null {
  * virtualizer. Optional `streamText` appends still-streaming images so
  * the list stays accurate while a turn is in flight.
  */
-export function extractChatImages(entries: SessionEntry[], streamText?: string): LightboxImage[] {
+export function extractChatImages(
+  entries: SessionEntry[],
+  { streamText, boxSlug }: { streamText: string | undefined; boxSlug: string | undefined },
+): LightboxImage[] {
   const images: LightboxImage[] = [];
   let attachmentIndex = 0;
   for (const entry of entries) {
@@ -832,22 +838,26 @@ export function extractChatImages(entries: SessionEntry[], streamText?: string):
           images.push({ src, alt: `Attached image ${attachmentIndex}` });
         }
       } else if (block.type === "text" && block.text) {
-        extractImagesFromMarkdown(block.text, images);
+        extractImagesFromMarkdown(block.text, { out: images, boxSlug });
       }
     }
   }
-  if (streamText) extractImagesFromMarkdown(streamText, images);
+  if (streamText) extractImagesFromMarkdown(streamText, { out: images, boxSlug });
   return images;
 }
 
 const MARKDOWN_IMAGE_RE = /!\[([^\]]*)]\(([^\s)]+)(?:\s+"[^"]*")?\)/g;
 const VIEW_LINK_RE = /\[([^\]]*)]\(view:([^\s)]+)\)/g;
 
-function extractImagesFromMarkdown(text: string, out: LightboxImage[]): void {
+function extractImagesFromMarkdown(
+  text: string,
+  { out, boxSlug }: { out: LightboxImage[]; boxSlug: string | undefined },
+): void {
   for (const match of text.matchAll(MARKDOWN_IMAGE_RE)) {
     const alt = match[1];
-    const src = match[2];
-    if (src) {
+    const rawSrc = match[2];
+    if (rawSrc) {
+      const src = resolveImageSrc(rawSrc, { boxSlug, basePath: undefined });
       const trimmedAlt = alt.trim();
       out.push({
         src,

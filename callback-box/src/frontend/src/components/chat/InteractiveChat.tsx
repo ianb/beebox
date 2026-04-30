@@ -711,6 +711,7 @@ function VirtualizedMessageList({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
+  const { boxSlug } = useParams({ strict: false });
 
   const hasOlder = totalEntries > messages.length;
   const streamingShown = snapshot.matches("streaming");
@@ -740,8 +741,8 @@ function VirtualizedMessageList({
   // virtualizer's mounted slice). Embed it as JSON so the provider can
   // dedup against any currently-rendered images.
   const chatImagesJson = useMemo(
-    () => JSON.stringify(extractChatImages(messages, streamText)),
-    [messages, streamText],
+    () => JSON.stringify(extractChatImages(messages, { streamText, boxSlug })),
+    [messages, streamText, boxSlug],
   );
 
   const virtualizer = useVirtualizer({

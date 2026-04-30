@@ -20,9 +20,11 @@ import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { remarkComments, isCommentCode } from "../lib/remark-comments";
 import { href as routeHref } from "../lib/routing";
+import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
   parseViewUrl,
+  resolveImageSrc,
   resolveRelativePath,
   serializeViewUrl,
   type NavigateHint,
@@ -66,9 +68,52 @@ function flattenText(node: ReactNode): string {
   return "";
 }
 
+/**
+ * True when a paragraph's hast children are exactly one image (ignoring
+ * whitespace-only text nodes). Markdown wraps standalone images in a `<p>`,
+ * but our img handler renders block-level content (figure / div / placeholder)
+ * which is invalid inside a paragraph and breaks layout. Detect that case so
+ * the `p` handler can render the children without the `<p>` wrapper.
+ */
+function isLoneImageParagraph(node: unknown): boolean {
+  if (node === null || typeof node !== "object") return false;
+  const children = (node as { children?: unknown[] }).children;
+  if (!Array.isArray(children)) return false;
+  let imgCount = 0;
+  for (const child of children) {
+    if (child === null || typeof child !== "object") return false;
+    const c = child as { type?: string; tagName?: string; value?: string };
+    if (c.type === "text" && typeof c.value === "string" && c.value.trim() === "") continue;
+    if (c.type === "element" && c.tagName === "img") {
+      imgCount++;
+      continue;
+    }
+    return false;
+  }
+  return imgCount === 1;
+}
+
 function makeDefaultComponents(ctx: LinkContext): Partial<Components> {
   const { onNavigate, basePath, boxSlug } = ctx;
   return {
+    p({ children, node }) {
+      if (isLoneImageParagraph(node)) {
+        return children;
+      }
+      return <p>{children}</p>;
+    },
+    img({ src, alt, node: _node }) {
+      const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug, basePath }) : "";
+      return (
+        <Image
+          src={resolved}
+          alt={alt ?? ""}
+          size="chat"
+          lightbox
+          className="block mx-auto my-2"
+        />
+      );
+    },
     a({ children, href: linkHref, node: _node, ...props }) {
       if (typeof linkHref !== "string") {
         return <a {...props}>{children}</a>;
