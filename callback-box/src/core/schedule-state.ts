@@ -7,7 +7,12 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import lockfile from "proper-lockfile";
+import {
+  acquireLock as acquireFileLock,
+  releaseLock as releaseFileLock,
+  scanLocks,
+  LockHeldError,
+} from "../lib/file-lock.js";
 
 export interface RunRecord {
   ts: string;
@@ -103,8 +108,6 @@ export function recordRun(
 
 // --- Lock files for running script tracking ---
 
-const SCRIPT_LOCK_STALE_MS = 10 * 60 * 1000; // 10 minutes
-
 export interface ScriptLock {
   pid: number;
   startedAt: string;
@@ -112,8 +115,10 @@ export interface ScriptLock {
   lockGroup?: string;
 }
 
+const LOCK_SUFFIX = ".lock";
+
 function lockFilePath(boxRoot: string, scriptName: string): string {
-  return path.join(stateDir(boxRoot), `${scriptName}.lock`);
+  return path.join(stateDir(boxRoot), `${scriptName}${LOCK_SUFFIX}`);
 }
 
 export async function acquireScriptLock(
@@ -121,71 +126,41 @@ export async function acquireScriptLock(
 ): Promise<void> {
   const dir = stateDir(opts.boxRoot);
   await fs.mkdir(dir, { recursive: true });
-  const lockPath = lockFilePath(opts.boxRoot, opts.scriptName);
-
-  // Ensure the lock file exists (proper-lockfile requires it)
-  await fs.writeFile(lockPath, "", { flag: "a" });
-  await lockfile.lock(lockPath, { stale: SCRIPT_LOCK_STALE_MS, retries: 0 });
-
-  // Write metadata to the lock file
-  const lock: ScriptLock = {
-    pid: process.pid,
-    startedAt: new Date().toISOString(),
-    triggeredBy: opts.triggeredBy,
-    ...(opts.lockGroup ? { lockGroup: opts.lockGroup } : {}),
-  };
-  await fs.writeFile(lockPath, JSON.stringify(lock) + "\n");
+  const metadata: Record<string, unknown> = { triggeredBy: opts.triggeredBy };
+  if (opts.lockGroup) metadata["lockGroup"] = opts.lockGroup;
+  try {
+    await acquireFileLock(lockFilePath(opts.boxRoot, opts.scriptName), metadata);
+  } catch (err) {
+    if (err instanceof LockHeldError) {
+      throw new Error(`Script "${opts.scriptName}" is already running (pid ${err.holder.pid})`);
+    }
+    throw err;
+  }
 }
 
 export async function releaseScriptLock(
   opts: { boxRoot: string; scriptName: string },
 ): Promise<void> {
-  const lockPath = lockFilePath(opts.boxRoot, opts.scriptName);
-  try {
-    await lockfile.unlock(lockPath);
-  } catch {
-    // Already unlocked or lock file missing
-  }
-  await fs.unlink(lockPath).catch(() => {});
+  await releaseFileLock(lockFilePath(opts.boxRoot, opts.scriptName));
 }
 
 /**
- * Read all lock files, check if locks are held, remove stale locks.
  * Returns a map of scriptName → ScriptLock for currently running scripts.
+ * Stale locks (dead PID, post-reboot) are cleaned up as a side effect.
  */
 export async function loadRunningScripts(boxRoot: string): Promise<Map<string, ScriptLock>> {
-  const dir = stateDir(boxRoot);
+  const holders = await scanLocks(stateDir(boxRoot), LOCK_SUFFIX);
   const running = new Map<string, ScriptLock>();
-
-  let entries: string[];
-  try {
-    entries = await fs.readdir(dir);
-  } catch {
-    return running;
+  for (const [scriptName, holder] of holders) {
+    const triggeredBy = holder.metadata["triggeredBy"];
+    const lockGroup = holder.metadata["lockGroup"];
+    const lock: ScriptLock = {
+      pid: holder.pid,
+      startedAt: holder.acquiredAt,
+      triggeredBy: typeof triggeredBy === "string" ? triggeredBy : "unknown",
+      ...(typeof lockGroup === "string" ? { lockGroup } : {}),
+    };
+    running.set(scriptName, lock);
   }
-
-  const lockFiles = entries.filter((f) => f.endsWith(".lock") && !f.endsWith(".lock.lock"));
-
-  for (const file of lockFiles) {
-    const scriptName = file.replace(".lock", "");
-    const fullPath = path.join(dir, file);
-
-    try {
-      const isLocked = await lockfile.check(fullPath, { stale: SCRIPT_LOCK_STALE_MS });
-      if (!isLocked) {
-        // Stale or released — clean up
-        await fs.unlink(fullPath).catch(() => {});
-        continue;
-      }
-
-      const content = await fs.readFile(fullPath, "utf-8");
-      const lock = JSON.parse(content) as ScriptLock;
-      running.set(scriptName, lock);
-    } catch {
-      // Malformed lock file or check failed — clean up
-      await fs.unlink(fullPath).catch(() => {});
-    }
-  }
-
   return running;
 }

@@ -12,6 +12,7 @@ import { createFakeAgent } from "./helpers/fake-agent.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import * as os from "node:os";
 ```
 
 ## Batch processing with fake agent
@@ -300,8 +301,15 @@ await box.cleanup();
 ```
 const box = await makeTmpBox({ git: true });
 const lockFile = path.join(box.root, ".cb-reactor.lock");
-// Write lock with our own PID (will be seen as "alive")
-await fs.writeFile(lockFile, String(process.pid));
+// Write a well-formed lock pointing at our own PID (treated as alive).
+const liveHolder = {
+  pid: process.pid,
+  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
+  hostname: os.hostname(),
+  acquiredAt: new Date().toISOString(),
+  metadata: { kind: "reactor" },
+};
+await fs.writeFile(lockFile, JSON.stringify(liveHolder));
 
 const result = await runReactor({
   boxRoot: box.root,
@@ -311,9 +319,10 @@ const result = await runReactor({
 // Reactor bailed due to lock
 result.jobsProcessed
 => 0
+```
 
-// Clean up lock
-await fs.unlink(lockFile);
+``` cleanup
+await fs.unlink(lockFile).catch(() => {});
 await box.cleanup();
 ```
 
@@ -322,8 +331,15 @@ await box.cleanup();
 ```
 const box = await makeTmpBox({ git: true });
 const lockFile = path.join(box.root, ".cb-reactor.lock");
-// Write lock with a dead PID
-await fs.writeFile(lockFile, "99999999");
+// Write a holder pointing at a dead PID — reactor should reclaim and run.
+const deadHolder = {
+  pid: 99999999,
+  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
+  hostname: os.hostname(),
+  acquiredAt: new Date().toISOString(),
+  metadata: { kind: "reactor" },
+};
+await fs.writeFile(lockFile, JSON.stringify(deadHolder));
 
 await box.write("box/jobs/task.job.card", `<job><description>After stale lock</description></job>`);
 box.commitAll("Add job");

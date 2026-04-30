@@ -19,7 +19,11 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import lockfile from "proper-lockfile";
+import {
+  acquireLock as acquireFileLock,
+  releaseLock as releaseFileLock,
+  LockHeldError,
+} from "../../lib/file-lock.js";
 import { createAgent as realCreateAgent } from "../agent.js";
 import { generateDocs } from "../generate-docs.js";
 import { fmt } from "../../cli/lib/format.js";
@@ -257,30 +261,22 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
 
 // ─── Reactor lock ─────────────────────────────────────────────────────
 
-const REACTOR_LOCK_STALE_MS = 10 * 60 * 1000; // 10 minutes
-
 /**
- * Acquire a lock using proper-lockfile (atomic mkdir-based).
- * Stale locks are automatically cleaned up after REACTOR_LOCK_STALE_MS.
+ * Acquire the reactor lock. Returns true on success, false if a live
+ * holder owns it. Dead holders are reclaimed automatically.
  */
 async function acquireReactorLock(lockPath: string): Promise<boolean> {
-  // Ensure the lock file exists (proper-lockfile requires it)
-  await fs.writeFile(lockPath, "", { flag: "a" });
-
   try {
-    await lockfile.lock(lockPath, { stale: REACTOR_LOCK_STALE_MS, retries: 0 });
+    await acquireFileLock(lockPath, { kind: "reactor" });
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    if (err instanceof LockHeldError) return false;
+    throw err;
   }
 }
 
 async function releaseReactorLock(lockPath: string): Promise<void> {
-  try {
-    await lockfile.unlock(lockPath);
-  } catch {
-    // Already unlocked or lock file missing
-  }
+  await releaseFileLock(lockPath);
 }
 
 function sleep(ms: number): Promise<void> {

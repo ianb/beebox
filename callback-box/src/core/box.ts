@@ -91,11 +91,9 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
 
   // Always write .gitignore (keep in sync with cb version)
   const gitignore = `# Callback Box .gitignore
-# Lock files (and proper-lockfile directories)
+# Lock files
 .cb-lock
-.cb-lock.lock
 .cb-reactor.lock
-.cb-reactor.lock.lock
 
 # Local config (credentials, etc.)
 config/connectors/*.secret.*

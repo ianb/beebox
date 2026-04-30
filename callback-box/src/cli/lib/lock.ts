@@ -1,17 +1,20 @@
 /**
- * Lock file management for wakeup mutex.
+ * Box-level wakeup mutex. Prevents concurrent wakeup-style processes
+ * (process-feedback, process-news, triage-feedback) from running on
+ * the same box at the same time.
  *
- * Prevents concurrent wakeup processes from running.
- * Uses proper-lockfile for atomic lock acquisition (mkdir-based)
- * with mtime-based stale detection.
+ * Backed by the file-lock primitive in src/lib/file-lock.ts.
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import lockfile from "proper-lockfile";
+import {
+  acquireLock as acquireFileLock,
+  releaseLock as releaseFileLock,
+  inspectLock,
+  LockHeldError,
+} from "../../lib/file-lock.js";
 
 const LOCK_FILE = ".cb-lock";
-const LOCK_STALE_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface LockInfo {
   pid: number;
@@ -19,67 +22,45 @@ export interface LockInfo {
   hostname: string;
 }
 
+function lockPath(boxRoot: string): string {
+  return path.join(boxRoot, LOCK_FILE);
+}
+
 /**
  * Attempt to acquire the wakeup lock.
- *
- * @param boxRoot - The box root directory
- * @returns Lock info if acquired, null if already locked
+ * Returns LockInfo on success, null if a live holder owns it.
  */
 export async function acquireLock(boxRoot: string): Promise<LockInfo | null> {
-  const lockPath = path.join(boxRoot, LOCK_FILE);
-
-  // Ensure the lock file exists (proper-lockfile requires it)
-  await fs.writeFile(lockPath, "", { flag: "a" });
-
   try {
-    await lockfile.lock(lockPath, { stale: LOCK_STALE_MS, retries: 0 });
-  } catch {
-    return null; // Already locked or couldn't acquire
+    const holder = await acquireFileLock(lockPath(boxRoot), {});
+    return {
+      pid: holder.pid,
+      startedAt: holder.acquiredAt,
+      hostname: holder.hostname,
+    };
+  } catch (err) {
+    if (err instanceof LockHeldError) return null;
+    throw err;
   }
-
-  // Write metadata to the lock file
-  const lockInfo: LockInfo = {
-    pid: process.pid,
-    startedAt: new Date().toISOString(),
-    hostname: process.env["HOSTNAME"] ?? "localhost",
-  };
-
-  await fs.writeFile(lockPath, JSON.stringify(lockInfo, null, 2));
-  return lockInfo;
 }
 
 /**
- * Release the wakeup lock.
- *
- * @param boxRoot - The box root directory
+ * Release the wakeup lock. Idempotent; only deletes the lock file if we
+ * are still the recorded owner.
  */
 export async function releaseLock(boxRoot: string): Promise<void> {
-  const lockPath = path.join(boxRoot, LOCK_FILE);
-
-  try {
-    await lockfile.unlock(lockPath);
-  } catch {
-    // Already unlocked or lock file missing
-  }
+  await releaseFileLock(lockPath(boxRoot));
 }
 
 /**
- * Get current lock info if locked.
- * Returns null if not locked (or lock is stale).
- *
- * @param boxRoot - The box root directory
- * @returns Lock info or null if not locked
+ * Get the current lock holder, or null if not held (or held by a dead process).
  */
 export async function getLockInfo(boxRoot: string): Promise<LockInfo | null> {
-  const lockPath = path.join(boxRoot, LOCK_FILE);
-
-  try {
-    const isLocked = await lockfile.check(lockPath, { stale: LOCK_STALE_MS });
-    if (!isLocked) return null;
-
-    const content = await fs.readFile(lockPath, "utf-8");
-    return JSON.parse(content) as LockInfo;
-  } catch {
-    return null;
-  }
+  const holder = await inspectLock(lockPath(boxRoot));
+  if (holder === null) return null;
+  return {
+    pid: holder.pid,
+    startedAt: holder.acquiredAt,
+    hostname: holder.hostname,
+  };
 }

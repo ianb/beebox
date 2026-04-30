@@ -34,6 +34,28 @@ Several things go wrong when adding a new box to the server that are easy to for
 
 Longer term: `add-box.sh` or a `cb deploy-check` command could verify: all standard dirs exist and are writable, required secrets are present, `cb validate` passes, and the web endpoint responds.
 
+## Scheduler: `cb tick --force` and timeout durability
+
+Surfaced while debugging a Wren daily-rumination "failure" where the agent had actually completed and committed but the wrapper hung past the 10-minute mono timeout.
+
+### Add `--force` to `cb tick --script <name>`
+
+Currently `--script` only filters which schedules to evaluate; `not-before`, `budget`, and lock-group checks still apply, so there's no clean way to manually re-run a script that just ran. Add a `--force` flag that:
+
+- Bypasses `not-before` and `budget` checks.
+- On lock-group conflict, only skips if the holder is *live* (the file-lock primitive already auto-cleans dead holders, so this is mostly free — just remove the lock-group skip's reliance on a stale "running" map for force runs).
+- Does not preempt a live holder.
+
+### `cb prompt` doesn't exit promptly after the agent's final turn
+
+Symptom: a scheduled `cb prompt …` invocation continued running for ~65 minutes of wall time after the agent's final message landed (commit and journal entry succeeded), until the 10-min mono setTimeout finally fired and SIGKILLed the tree. This made a successful run look like a failure in the scheduler log.
+
+Hypothesis: the spawned `claude --print` process isn't closing stdout/exiting after returning its final response. Worth instrumenting `runAgent` in `src/core/agent.ts` — log when `child.on("close")` fires vs. when the last stdout chunk arrived. If they're far apart, the issue is in claude-code itself; if close fires promptly but our wrapper hangs after, look at the prompt-logger proxy lifecycle (`stopPromptLogger`) and any pending I/O in `cb prompt`.
+
+### Re-evaluate the per-script timeout
+
+`SCRIPT_TIMEOUT = 10m` is monotonic time, which means it pauses during macOS sleep. That's good — a script that was about to finish doesn't get killed just because the laptop closed. But `wren-weekly-research` has `--max-turns 30` (web research) and bumps right against 10 min of real CPU time. Either bump the per-script timeout (configurable in the card?) or add a `<timeout>` attribute on `<scheduled-script>`.
+
 ## Service-inject the google-calendar connector
 
 `src/connectors/google-calendar.ts` uses `getGoogleAuth()` + direct REST calls and `ical.js` inline, with no service abstraction. That means there's no doctest-friendly way to exercise its ics-generation path (`generateVtimezone`, `setDateTimeWithTz`, `eventToIcs`). The library-type gap was already noted in `src/connectors/CLAUDE.md` under "Not yet service-injected".
