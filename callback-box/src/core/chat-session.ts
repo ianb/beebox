@@ -201,7 +201,7 @@ INPUT FORMAT:
 - **Voice input is transcribed** — spelling of names and technical terms may be wrong, and punctuation is added automatically by the transcription system. Interpret charitably; don't assume unusual spelling or punctuation is intentional.
 
 IMAGES:
-To display an image from the box filesystem: \`![description](api/files/<path>)\` where \`<path>\` is relative to the box root. The description is shown as a one-line caption under the image (truncated) and in full when the user clicks to zoom — so write it as a useful caption, not just a filename.
+To display an image from the box filesystem: \`![description](/<box-root-path>)\` (e.g. \`![front view](/store/notes/photos/front.png)\`). When you're authoring inside a markdown file, you can also use a path relative to that file (e.g. \`![front view](photos/front.png)\` from a note in the same directory). The renderer rewrites both forms — don't include \`api/files/\` (it still works for back-compat, but the leading-slash form is preferred). The description is shown as a one-line caption under the image (truncated) and in full when the user clicks to zoom — so write it as a useful caption, not just a filename.
 
 SHOWING FILES IN CHAT:
 To show a file inline in the chat, use a view link: \`[label](view:<file-path>)\`
@@ -358,7 +358,6 @@ export class ChatSession extends EventEmitter {
   private readonly spawner: ClaudeChatSpawner;
   private mcpConfigPath: string | null = null;
   private currentModel: string | null = null;
-  private controlRequestCounter = 0;
 
   constructor(boxRoot: string, options: ChatSessionOptions = {}) {
     super();
@@ -744,30 +743,18 @@ export class ChatSession extends EventEmitter {
 
   /**
    * Set the model for this chat session. Pass `null` to reset to the CLI default.
-   * Stores the selection so it's re-applied after process restarts/session init.
+   * Persisted to the model file so subsequent process spawns pick it up via
+   * the `--model` flag. Does NOT change the model of a running subprocess —
+   * Claude Code's stream-json input doesn't support live model switching, so
+   * the caller must restart the subprocess for the change to take effect.
    */
   setModel(model: string | null): void {
     this.currentModel = model;
     this.saveCurrentModel(model);
-    if (this.proc && this.proc.stdin) {
-      this.writeSetModelControl(model);
-    }
   }
 
   getCurrentModel(): string | null {
     return this.currentModel;
-  }
-
-  private writeSetModelControl(model: string | null): void {
-    if (!this.proc || !this.proc.stdin) return;
-    this.controlRequestCounter += 1;
-    const controlRequest = JSON.stringify({
-      type: "control_request",
-      request_id: `set_model_${this.controlRequestCounter}_${Date.now()}`,
-      request: { subtype: "set_model", model },
-    });
-    log("set_model", `Sending set_model: ${model ?? "<default>"}`);
-    this.proc.stdin.write(controlRequest + "\n");
   }
 
   /**

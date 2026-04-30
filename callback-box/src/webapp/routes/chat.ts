@@ -550,15 +550,35 @@ export async function registerChatRoutes(
   });
 
   // POST /api/chat/set-model — change a session's active model.
+  // Uses getOrCreate so an evicted session is re-registered rather than 404'd
+  // (the model is persisted to chat-model.json regardless). After saving,
+  // restart the live subprocess so the next turn actually picks up the new
+  // model — the `set_model` control_request to a live subprocess isn't
+  // honored by Claude Code, so without a restart the live proc stays pinned
+  // to the `--model` it was spawned with.
   server.post<{ Body: { model: string | null; session?: string } }>(
     "/api/chat/set-model",
     async (request, reply) => {
       const { model, session: sessionId } = request.body;
       if (!sessionId) return reply.status(400).send({ error: "session is required" });
-      const target = registry.get(sessionId);
-      if (!target) return reply.status(404).send({ error: "session not live" });
+      const target = registry.getOrCreate(sessionId);
+      wireSession(target);
       target.setModel(model);
-      return { ok: true, model: target.getCurrentModel() };
+      let restarted = false;
+      if (target.isRunning()) {
+        if (target.isBusy()) {
+          // Mid-turn — defer restart until the current turn ends, otherwise
+          // the in-progress response is lost. The close handler drains any
+          // queued sends into the fresh subprocess.
+          target.once("done", () => {
+            if (target.isRunning()) target.restart();
+          });
+        } else {
+          target.restart();
+          restarted = true;
+        }
+      }
+      return { ok: true, model: target.getCurrentModel(), restarted };
     }
   );
 

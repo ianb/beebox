@@ -109,6 +109,14 @@ function localTime(): string {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
+// Minted at SEND-dispatch time and threaded through to /chat/send so the
+// backend's processedMessageIds dedupe (chat.ts:269-284) catches the case
+// where the streamActor body runs twice for one logical send (StrictMode
+// double-mount, accidental double-dispatch, etc.).
+function newMessageId(): string {
+  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function composerTextareaClasses({ mobile, isTranscribing }: { mobile: boolean; isTranscribing: boolean }): string {
   const sizeClass = mobile ? "text-base" : "text-sm min-w-0";
   const stateClass = isTranscribing
@@ -685,10 +693,11 @@ type FlatItem =
   | { kind: "header" }
   | { kind: "group"; group: MessageGroup; groupIndex: number }
   | { kind: "marker"; marker: ModelMarker }
-  | { kind: "streaming" };
+  | { kind: "streaming" }
+  | { kind: "processing" };
 
 function VirtualizedMessageList({
-  messages, groups, modelMarkers, isStreaming, streamText, streamTools,
+  messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger,
 }: {
@@ -698,6 +707,7 @@ function VirtualizedMessageList({
   isStreaming: boolean;
   streamText: string;
   streamTools: SessionContentBlock[];
+  processingShown: boolean;
   debugView: boolean;
   currentUserEmail: string | undefined;
   speechPlayback: { isPlaying: boolean };
@@ -716,7 +726,8 @@ function VirtualizedMessageList({
   const hasOlder = totalEntries > messages.length;
   const streamingShown = snapshot.matches("streaming");
 
-  // Build the flat render list: header → interleaved groups + markers → streaming.
+  // Build the flat render list: header → interleaved groups + markers →
+  // streaming bubble OR processing indicator (mutually exclusive).
   // Each marker sits after the group index it was snapshotted at, keeping its
   // chronological position even as later messages arrive below it.
   const flatItems = useMemo<FlatItem[]>(() => {
@@ -732,8 +743,9 @@ function VirtualizedMessageList({
       }
     }
     if (streamingShown) items.push({ kind: "streaming" });
+    else if (processingShown) items.push({ kind: "processing" });
     return items;
-  }, [hasOlder, groups, modelMarkers, streamingShown]);
+  }, [hasOlder, groups, modelMarkers, streamingShown, processingShown]);
 
   const itemCount = flatItems.length;
 
@@ -753,6 +765,7 @@ function VirtualizedMessageList({
       if (!item) return 120;
       if (item.kind === "header") return 40;
       if (item.kind === "marker") return 32;
+      if (item.kind === "processing") return 48;
       return 120;
     },
     overscan: 5,
@@ -761,6 +774,7 @@ function VirtualizedMessageList({
       if (!item) return `idx-${index}`;
       if (item.kind === "header") return "load-older";
       if (item.kind === "streaming") return "streaming";
+      if (item.kind === "processing") return "processing";
       if (item.kind === "marker") return `marker-${item.marker.id}`;
       return item.group.entries[0].uuid;
     },
@@ -868,6 +882,10 @@ function VirtualizedMessageList({
                     </div>
                   ) : null}
                 </div>
+              ) : item.kind === "processing" ? (
+                <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 py-2 text-sm text-warm-500 italic">
+                  Agent is processing…
+                </div>
               ) : item.kind === "marker" ? (
                 <div className="flex justify-center py-1">
                   <div className="text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
@@ -916,7 +934,7 @@ interface InteractiveChatProps {
 
 export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
   const [snapshot, send] = useSSRMachine(chatMachine, { input: { sessionInput } });
-  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, totalEntries } = snapshot.context;
+  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries } = snapshot.context;
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
@@ -962,7 +980,20 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
     ]);
     setSelectedModel(model);
     if (sessionId) {
-      setChatModel({ sessionId, model }).catch(() => {});
+      console.warn(`[chatfsm] set-model request sessionId=${sessionId} model=${model ?? "<default>"}`);
+      setChatModel({ sessionId, model })
+        .then((res) => {
+          console.warn(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
+          // Re-sync UI to whatever the server actually persisted, in case a
+          // race / bug means the request landed differently than expected.
+          setSelectedModel(res.model);
+        })
+        .catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.warn(`[chatfsm] set-model error: ${msg}`);
+        });
+    } else {
+      console.warn("[chatfsm] set-model skipped — sessionId is null");
     }
   }, [selectedModel, groups.length, sessionId]);
   const [panel, setPanel] = useState<{ tabs: PanelTab[]; activePath: string | null }>({ tabs: [], activePath: null });
@@ -1103,7 +1134,12 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
   useSSE(`${getEventSourceBase()}/events`, {
     onConnect: useCallback(() => {
       console.warn("[chatfsm] sse-connect");
-    }, []),
+      // Re-sync after a (re)connect: any chat-complete / chat-history events
+      // we missed while disconnected won't replay if the gap exceeded the
+      // event-bus retention. REFRESH is a global handler that's ignored in
+      // streaming, so it's safe to dispatch unconditionally.
+      send({ type: "REFRESH" });
+    }, [send]),
     onDisconnect: useCallback(() => {
       console.warn("[chatfsm] sse-disconnect");
     }, []),
@@ -1309,7 +1345,7 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
 
   const doSend = useCallback(
     (wrapped: string) => {
-      send({ type: "SEND", message: wrapped });
+      send({ type: "SEND", message: wrapped, messageId: newMessageId() });
     },
     [send]
   );
@@ -1332,10 +1368,11 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
   // than a separate useCallback to avoid circular deps with `send`.
   const doSendWithImages = useCallback(
     (wrapped: string, images: ChatImageAttachment[]) => {
+      const messageId = newMessageId();
       if (images.length > 0) {
-        send({ type: "SEND", message: wrapped, images });
+        send({ type: "SEND", message: wrapped, messageId, images });
       } else {
-        send({ type: "SEND", message: wrapped });
+        send({ type: "SEND", message: wrapped, messageId });
       }
     },
     [send]
@@ -1582,7 +1619,7 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
     // /compact must be the first characters of the text, with no wrapping —
     // the backend /send route detects leading-slash messages and skips
     // user-attr + pending-schedules injection.
-    send({ type: "SEND", message: "/compact" });
+    send({ type: "SEND", message: "/compact", messageId: newMessageId() });
   }, [send]);
 
   // Realtime transcription with voice keyword spotting
@@ -1753,6 +1790,7 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
         isStreaming={isStreaming}
         streamText={streamText}
         streamTools={streamTools}
+        processingShown={Boolean(processBusy) && !isStreaming}
         debugView={debugView}
         currentUserEmail={currentUser?.email}
         speechPlayback={speechPlayback}

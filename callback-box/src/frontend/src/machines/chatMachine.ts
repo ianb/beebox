@@ -39,7 +39,7 @@ function logFsm(event: string, detail?: Record<string, unknown>): void {
 // -- Events --
 
 type ChatEvent =
-  | { type: "SEND"; message: string; images?: ChatImageAttachment[] }
+  | { type: "SEND"; message: string; messageId: string; images?: ChatImageAttachment[] }
   | { type: "INTERRUPT" }
   | { type: "DISMISS_ERROR" }
   | { type: "STREAM_TEXT"; text: string }
@@ -78,7 +78,10 @@ interface ChatContext {
    */
   sessionInput: string;
   sessionId: string | null;
+  /** Subprocess is alive (true once first send has started; stays true between turns). */
   processRunning: boolean;
+  /** Subprocess is currently mid-turn — drives the "agent is processing" indicator. */
+  processBusy: boolean;
   /** Total number of entries in the full session log. */
   totalEntries: number;
 }
@@ -96,11 +99,11 @@ interface SessionInput {
 }
 
 const fetchInitialActor = fromPromise<
-  { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean },
+  { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
   SessionInput
 >(async ({ input }) => {
   if (input.sessionInput === "new") {
-    return { entries: [], total: 0, sessionId: null, running: false };
+    return { entries: [], total: 0, sessionId: null, running: false, busy: false };
   }
   const [history, status] = await Promise.all([
     getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
@@ -111,17 +114,28 @@ const fetchInitialActor = fromPromise<
     total: history.total,
     sessionId: history.sessionId ?? status.sessionId,
     running: status.running,
+    busy: status.busy,
   };
 });
 
 const fetchHistoryActor = fromPromise<
-  { sessionId: string | null; entries: SessionEntry[]; total: number },
+  { sessionId: string | null; entries: SessionEntry[]; total: number; running: boolean; busy: boolean },
   SessionInput
 >(async ({ input }) => {
   if (input.sessionInput === "new") {
-    return { sessionId: null, entries: [], total: 0 };
+    return { sessionId: null, entries: [], total: 0, running: false, busy: false };
   }
-  return getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES });
+  const [history, status] = await Promise.all([
+    getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
+    getChatStatus({ sessionId: input.sessionInput }),
+  ]);
+  return {
+    sessionId: history.sessionId ?? status.sessionId,
+    entries: history.entries,
+    total: history.total,
+    running: status.running,
+    busy: status.busy,
+  };
 });
 
 const streamActor = fromCallback(
@@ -130,7 +144,7 @@ const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { sessionInput: string; message: string; images?: ChatImageAttachment[] };
+    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[] };
   }) => {
     // Track whether the stream ever produced a terminal event. If the SSE
     // ends cleanly without one (proxy timeout, server closed the socket
@@ -152,6 +166,7 @@ const streamActor = fromCallback(
     sendChatMessage({
       session: input.sessionInput,
       message: input.message,
+      messageId: input.messageId,
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       onMessage: (msg) => {
         msgCount++;
@@ -237,16 +252,38 @@ const streamActor = fromCallback(
 );
 
 /**
+ * Build a synthetic assistant entry from the in-memory stream buffers so a
+ * completed turn stays visible when we can't refetch from the server (the
+ * "new" session case — the backend hasn't surfaced a session id yet, so
+ * `getChatHistory` has nothing to return).
+ */
+function rollupStreamToEntry(
+  streamText: string,
+  streamTools: SessionContentBlock[],
+): SessionEntry | null {
+  if (!streamText && streamTools.length === 0) return null;
+  const content: SessionContentBlock[] = [...streamTools];
+  if (streamText) content.push({ type: "text", text: streamText });
+  return {
+    uuid: `assistant-stream-${Date.now()}`,
+    type: "assistant",
+    timestamp: new Date().toISOString(),
+    content,
+  };
+}
+
+/**
  * Fire-and-forget: send a message to the backend knowing it will be queued.
  * We don't need to track the SSE response — the backend enqueues it and
  * the chat-complete SSE event will trigger a history refresh when the
  * queued turn finishes.
  */
-function queueMessageToBackend(opts: { session: string; message: string; images?: ChatImageAttachment[] }): void {
-  const { session, message, images } = opts;
+function queueMessageToBackend(opts: { session: string; message: string; messageId: string; images?: ChatImageAttachment[] }): void {
+  const { session, message, messageId, images } = opts;
   sendChatMessage({
     session,
     message,
+    messageId,
     ...(images && images.length > 0 ? { images } : {}),
     onMessage: () => {}, // ignore — will be "queued" then close
   }).catch(() => {}); // fire-and-forget
@@ -278,6 +315,7 @@ export const chatMachine = setup({
     sessionInput: input.sessionInput,
     sessionId: input.sessionInput === "new" ? null : input.sessionInput,
     processRunning: false,
+    processBusy: false,
     totalEntries: 0,
   }),
   on: {
@@ -342,6 +380,7 @@ export const chatMachine = setup({
             messages: event.output.entries,
             sessionId: event.output.sessionId,
             processRunning: event.output.running,
+            processBusy: event.output.busy,
             totalEntries: event.output.total,
           })),
         },
@@ -400,6 +439,7 @@ export const chatMachine = setup({
           return {
             sessionInput: context.sessionInput,
             message: sendEvent.message,
+            messageId: sendEvent.messageId,
             ...(sendEvent.images && sendEvent.images.length > 0
               ? { images: sendEvent.images }
               : {}),
@@ -439,6 +479,7 @@ export const chatMachine = setup({
             ({ event, context }) => queueMessageToBackend({
               session: context.sessionInput,
               message: event.message,
+              messageId: event.messageId,
               ...(event.images ? { images: event.images } : {}),
             }),
           ],
@@ -537,6 +578,7 @@ export const chatMachine = setup({
             ({ event, context }) => queueMessageToBackend({
               session: context.sessionInput,
               message: event.message,
+              messageId: event.messageId,
               ...(event.images ? { images: event.images } : {}),
             }),
           ],
@@ -548,6 +590,19 @@ export const chatMachine = setup({
         onDone: {
           target: "idle",
           actions: assign(({ context, event }) => {
+            // "new" session: server has no id yet, so fetchHistory returned
+            // empty. Roll up whatever streamed for this turn into a synthetic
+            // assistant entry so the completed response stays visible — the
+            // chat-session-assigned SSE / URL navigation eventually loads
+            // the authoritative copy and replaces this on remount.
+            if (context.sessionInput === "new") {
+              const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
+              return {
+                messages: synthetic ? [...context.messages, synthetic] : context.messages,
+                streamText: "",
+                streamTools: [],
+              };
+            }
             const reconciled = reconcilePending({
               serverMessages: event.output.entries,
               pendingMessages: context.pendingMessages,
@@ -557,6 +612,8 @@ export const chatMachine = setup({
               pendingMessages: reconciled.pendingMessages,
               sessionId: event.output.sessionId,
               totalEntries: event.output.total,
+              processRunning: event.output.running,
+              processBusy: event.output.busy,
               streamText: "",
               streamTools: [],
             };

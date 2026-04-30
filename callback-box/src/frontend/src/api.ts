@@ -324,11 +324,15 @@ export async function sendChatMessage(params: {
   /** Session to send into. Pass `"new"` to start a fresh conversation. */
   session: string;
   message: string;
+  /** Stable id used by the backend to dedupe retries. If omitted, one is
+   *  generated per call — pass an explicit id to dedupe across separate
+   *  callers (e.g. an actor body that runs twice under StrictMode). */
+  messageId?: string;
   images?: ChatImageAttachment[];
   onMessage: (msg: Record<string, unknown>) => void;
 }): Promise<void> {
   const { session, message, images, onMessage } = params;
-  const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const attempt = async (_retry: boolean): Promise<Response> => {
     const response = await fetch(`${getApiBase()}/chat/send`, {
