@@ -98,11 +98,12 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       onActivate(imgRef.current);
     }
   };
+  const cursorClass = interactive ? (lightbox ? "cursor-zoom-in" : "cursor-pointer") : "";
   const classes = cn(
     SIZE_CLASSES[size],
     "rounded",
     bordered ? "border border-warm-300" : "",
-    interactive ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" : "",
+    interactive ? `${cursorClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent` : "",
     extraClass,
   );
 
@@ -229,7 +230,7 @@ export function Image(props: ImageProps) {
         ? () => externalOnClick()
         : null;
 
-  const effectiveTitle = title !== undefined ? title : lightbox && !errored ? "Click to zoom" : undefined;
+  const effectiveTitle = title;
 
   // Determine which layer is the outermost wrapper so the caller's
   // className lands there. Layer order, inside-out: img → orthogonal

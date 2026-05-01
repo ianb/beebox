@@ -36,6 +36,8 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.stopImmediatePropagation();
+        e.preventDefault();
         onClose();
         return;
       }
@@ -48,8 +50,8 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
         onIndexChange((safeIndex + 1) % total);
       }
     };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    document.addEventListener("keydown", handleKey, { capture: true });
+    return () => document.removeEventListener("keydown", handleKey, { capture: true });
   }, [onClose, onIndexChange, safeIndex, total, hasMany]);
 
   if (!current) return null;
