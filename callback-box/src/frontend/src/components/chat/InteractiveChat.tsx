@@ -732,6 +732,15 @@ type FlatItem =
   | { kind: "streaming" }
   | { kind: "processing" };
 
+function itemKey(item: FlatItem | undefined, index: number): string {
+  if (!item) return `idx-${index}`;
+  if (item.kind === "header") return "load-older";
+  if (item.kind === "streaming") return "streaming";
+  if (item.kind === "processing") return "processing";
+  if (item.kind === "marker") return `marker-${item.marker.id}`;
+  return item.group.entries[0].uuid;
+}
+
 function VirtualizedMessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
@@ -757,6 +766,7 @@ function VirtualizedMessageList({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
+  const sizeCache = useRef<Map<string, number>>(new Map());
   const { boxSlug } = useParams({ strict: false });
 
   const hasOlder = totalEntries > messages.length;
@@ -798,22 +808,29 @@ function VirtualizedMessageList({
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
       const item = flatItems[index];
+      if (item && item.kind === "group") {
+        const cached = sizeCache.current.get(itemKey(item, index));
+        if (cached !== undefined) return cached;
+      }
       if (!item) return 120;
       if (item.kind === "header") return 40;
       if (item.kind === "marker") return 32;
       if (item.kind === "processing") return 48;
       return 120;
     },
-    overscan: 5,
-    getItemKey: (index) => {
-      const item = flatItems[index];
-      if (!item) return `idx-${index}`;
-      if (item.kind === "header") return "load-older";
-      if (item.kind === "streaming") return "streaming";
-      if (item.kind === "processing") return "processing";
-      if (item.kind === "marker") return `marker-${item.marker.id}`;
-      return item.group.entries[0].uuid;
-    },
+    overscan: 20,
+    getItemKey: (index) => itemKey(flatItems[index], index),
+  });
+
+  // Persist measured group heights so remounted rows start at their real size
+  // and (combined with minHeight on the row) don't briefly collapse while
+  // images decode.
+  useEffect(() => {
+    for (const v of virtualizer.getVirtualItems()) {
+      const item = flatItems[v.index];
+      if (!item || item.kind !== "group") continue;
+      if (v.size > 0) sizeCache.current.set(itemKey(item, v.index), v.size);
+    }
   });
 
   // Track whether user is near the bottom
@@ -884,6 +901,9 @@ function VirtualizedMessageList({
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const item = flatItems[virtualRow.index];
+          const cachedHeight = item && item.kind === "group"
+            ? sizeCache.current.get(itemKey(item, virtualRow.index))
+            : undefined;
 
           return (
             <div
@@ -896,6 +916,7 @@ function VirtualizedMessageList({
                 left: 0,
                 width: "100%",
                 transform: `translateY(${virtualRow.start}px)`,
+                minHeight: cachedHeight,
               }}
               className="py-0.5 overflow-hidden"
             >
