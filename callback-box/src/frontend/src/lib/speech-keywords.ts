@@ -1,4 +1,4 @@
-import { KeywordPattern } from "./patmatch";
+import { KeywordPattern, type InputMatch } from "./patmatch";
 
 const sendPattern = KeywordPattern.compile(`
   (send | deliver | finished | finish | said) (a | the | an)? message
@@ -34,6 +34,16 @@ export interface KeywordResult {
   matchedPhrase: string;
 }
 
+export interface DetectKeywordOptions {
+  /**
+   * Only return matches that begin at the start of the transcript (no
+   * preceding words). Useful for matching against the live (interim)
+   * transcript, where command words mid-utterance are usually false
+   * positives.
+   */
+  atStart?: boolean;
+}
+
 const ACTION_TAG_NAMES: Record<KeywordAction, string> = {
   send: "send-message",
   cancel: "cancel-message",
@@ -46,42 +56,37 @@ function keywordTag(action: KeywordAction, phrase: string): string {
   return `<${ACTION_TAG_NAMES[action]} phrase="${escaped}" />`;
 }
 
-export function detectKeyword(transcript: string): KeywordResult | null {
-  const micOffMatch = micOffPattern.match(transcript);
-  if (micOffMatch) {
-    return {
-      action: "micOff",
-      processedTranscript: micOffMatch.replaceTrimmed(keywordTag("micOff", micOffMatch.capturedTextTrimmed)).trim(),
-      matchedPhrase: micOffMatch.capturedTextTrimmed,
-    };
-  }
+function asResult(action: KeywordAction, match: InputMatch): KeywordResult {
+  return {
+    action,
+    processedTranscript: match.replaceTrimmed(keywordTag(action, match.capturedTextTrimmed)).trim(),
+    matchedPhrase: match.capturedTextTrimmed,
+  };
+}
 
-  const cancelMatch = cancelPattern.match(transcript);
-  if (cancelMatch) {
-    return {
-      action: "cancel",
-      processedTranscript: cancelMatch.replaceTrimmed(keywordTag("cancel", cancelMatch.capturedTextTrimmed)).trim(),
-      matchedPhrase: cancelMatch.capturedTextTrimmed,
-    };
-  }
+export function detectKeyword(
+  transcript: string,
+  options?: DetectKeywordOptions
+): KeywordResult | null {
+  const atStart = !!options?.atStart;
+  const tryMatch = (pattern: KeywordPattern): InputMatch | null => {
+    const match = pattern.match(transcript);
+    if (!match) return null;
+    if (atStart && match.leading.length > 0) return null;
+    return match;
+  };
 
-  const eraseMatch = erasePattern.match(transcript);
-  if (eraseMatch) {
-    return {
-      action: "erase",
-      processedTranscript: eraseMatch.replaceTrimmed(keywordTag("erase", eraseMatch.capturedTextTrimmed)).trim(),
-      matchedPhrase: eraseMatch.capturedTextTrimmed,
-    };
-  }
+  const micOffMatch = tryMatch(micOffPattern);
+  if (micOffMatch) return asResult("micOff", micOffMatch);
 
-  const sendMatch = sendPattern.match(transcript);
-  if (sendMatch) {
-    return {
-      action: "send",
-      processedTranscript: sendMatch.replaceTrimmed(keywordTag("send", sendMatch.capturedTextTrimmed)).trim(),
-      matchedPhrase: sendMatch.capturedTextTrimmed,
-    };
-  }
+  const cancelMatch = tryMatch(cancelPattern);
+  if (cancelMatch) return asResult("cancel", cancelMatch);
+
+  const eraseMatch = tryMatch(erasePattern);
+  if (eraseMatch) return asResult("erase", eraseMatch);
+
+  const sendMatch = tryMatch(sendPattern);
+  if (sendMatch) return asResult("send", sendMatch);
 
   return null;
 }

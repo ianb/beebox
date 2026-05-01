@@ -1,17 +1,35 @@
 /**
- * XState machine for realtime speech-to-text via WebSocket.
+ * XState machine for realtime speech-to-text.
  *
  * States: idle → connecting → recording → finalizing → idle
  *
- * A callback actor owns all non-serializable resources (WebSocket,
- * AudioContext, MediaStream, AudioWorkletNode). The machine context
- * holds only serializable data: transcript, error.
+ * The callback actor branches by transcription service (configured per box):
+ *
+ *   - "voxtral":  WebSocket proxy through the backend, which forwards to
+ *                 Mistral Voxtral Realtime. Audio frames go up as JSON
+ *                 (base64 PCM); deltas come back as transcription.text.delta.
+ *                 No interim/final distinction — every delta accumulates.
+ *
+ *   - "deepgram": Direct browser → Deepgram WebSocket using a short-lived
+ *                 temp key minted by the backend. Audio frames go up as
+ *                 raw 16kHz s16le PCM bytes. Results arrive with is_final
+ *                 toggled — interim updates set interimTranscript, final
+ *                 updates append to finalTranscript.
+ *
+ * Both branches feed the same internal events:
+ *   TEXT_UPDATE { finalText, interimText }
+ *   TRANSCRIPTION_DONE { text }
+ *
+ * Machine context keeps finalTranscript and interimTranscript separate so
+ * keyword spotting can run on finals only.
  */
 
 import { setup, assign, fromCallback } from "xstate";
 import { getApiBase } from "../api";
 import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { recordingStop } from "../lib/earcons";
+import { trpcClient } from "../lib/trpc";
+import { deepgramKeyManager } from "../lib/deepgram-key";
 
 export type TranscriptionState = "idle" | "connecting" | "recording" | "finalizing";
 
@@ -34,15 +52,144 @@ type TranscriptionEvent =
   | { type: "WS_CONNECTED" }
   | { type: "WS_ERROR"; message: string }
   | { type: "WS_CLOSED" }
-  | { type: "TEXT_DELTA"; delta: string }
+  | { type: "TEXT_UPDATE"; finalText: string; interimText: string }
   | { type: "TRANSCRIPTION_DONE"; text?: string }
   | { type: "SERVER_ERROR"; message: string }
   | { type: "SETUP_ERROR"; message: string };
 
+// -- Per-service connection helpers --
+
+interface ConnectionHandle {
+  ws: WebSocket;
+  /** Send a chunk of 16-bit PCM (16kHz mono) to the service. */
+  sendPcm: (samples: ArrayBuffer) => void;
+  /** Tell the service we're done sending audio. */
+  endStream: () => void;
+}
+
+interface ServiceCallbacks {
+  onTextUpdate: (finalText: string, interimText: string) => void;
+  onDone: (text?: string) => void;
+  onServerError: (message: string) => void;
+}
+
+function startVoxtralConnection(callbacks: ServiceCallbacks): ConnectionHandle {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${protocol}//${window.location.host}${getApiBase()}/chat/transcribe-ws`;
+  const ws = new WebSocket(wsUrl);
+  let accumulated = "";
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "transcription.text.delta") {
+        const delta = msg.delta ?? msg.text ?? "";
+        if (delta) {
+          accumulated += delta;
+          callbacks.onTextUpdate(accumulated, "");
+        }
+      } else if (msg.type === "transcription.done") {
+        const text = typeof msg.text === "string" && msg.text ? msg.text : accumulated;
+        callbacks.onDone(text);
+      } else if (msg.type === "error") {
+        const errMsg = typeof msg.error === "object"
+          ? (msg.error as { message?: string })?.message || JSON.stringify(msg.error)
+          : msg.error || "Transcription error";
+        callbacks.onServerError(String(errMsg));
+      }
+      // session.created, session.updated, transcription.segment,
+      // transcription.language — log only / ignore
+    } catch (_e) {
+      // Non-JSON message, ignore
+    }
+  };
+
+  return {
+    ws,
+    sendPcm: (samples) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({
+        type: "input_audio.append",
+        audio: arrayBufferToBase64(samples),
+      }));
+    },
+    endStream: () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: "input_audio.end" }));
+    },
+  };
+}
+
+async function startDeepgramConnection(callbacks: ServiceCallbacks): Promise<ConnectionHandle> {
+  const tempKey = await deepgramKeyManager.getKey();
+  const params = new URLSearchParams({
+    model: "nova-3",
+    encoding: "linear16",
+    sample_rate: "16000",
+    channels: "1",
+    interim_results: "true",
+    smart_format: "true",
+    punctuate: "true",
+    no_delay: "true",
+    endpointing: "1500",
+    utterance_end_ms: "1500",
+    mip_opt_out: "true",
+    language: "en-US",
+  });
+  const wsUrl = `wss://api.deepgram.com/v1/listen?${params.toString()}`;
+  const ws = new WebSocket(wsUrl, ["token", tempKey]);
+  let accumulatedFinal = "";
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "Results") {
+        const transcript: string = msg.channel?.alternatives?.[0]?.transcript ?? "";
+        const isFinal: boolean = !!msg.is_final;
+        if (isFinal) {
+          if (transcript.trim()) {
+            accumulatedFinal = (accumulatedFinal + " " + transcript).trim();
+          }
+          callbacks.onTextUpdate(accumulatedFinal, "");
+        } else {
+          callbacks.onTextUpdate(accumulatedFinal, transcript);
+        }
+      } else if (msg.type === "UtteranceEnd") {
+        // Drop any stray interim
+        callbacks.onTextUpdate(accumulatedFinal, "");
+      } else if (msg.type === "Metadata") {
+        // Sent at session end — ignore here, onclose drives done
+      } else if (msg.type === "Error" || msg.type === "error") {
+        const errMsg = msg.description || msg.message || JSON.stringify(msg);
+        callbacks.onServerError(String(errMsg));
+      }
+    } catch (_e) {
+      // Non-JSON message, ignore
+    }
+  };
+
+  // The done signal is delivered when Deepgram closes the socket after
+  // CloseStream — wire it via the actor's onclose handler below by stashing
+  // the accumulated text on the handle.
+  (ws as WebSocket & { __dgFinal?: () => string }).__dgFinal = () => accumulatedFinal;
+
+  return {
+    ws,
+    sendPcm: (samples) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(samples);
+    },
+    endStream: () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: "CloseStream" }));
+    },
+  };
+}
+
 // -- Callback actor: owns WebSocket + AudioContext + MediaStream + Worklet --
 
 interface TranscriptionActorInput {
-  dummy?: never; // no input needed; resources created internally
+  dummy?: never;
 }
 
 const transcriptionActor = fromCallback<
@@ -50,11 +197,12 @@ const transcriptionActor = fromCallback<
   TranscriptionActorInput,
   TranscriptionEvent
 >(({ sendBack, receive }) => {
-  let ws: WebSocket | null = null;
+  let connection: ConnectionHandle | null = null;
   let audioContext: AudioContext | null = null;
   let stream: MediaStream | null = null;
   let workletNode: AudioWorkletNode | null = null;
   let disposed = false;
+  let connectedFired = false;
 
   function cleanup() {
     disposed = true;
@@ -72,17 +220,21 @@ const transcriptionActor = fromCallback<
       audioContext.close().catch(() => {});
       audioContext = null;
     }
-    if (ws) {
+    if (connection) {
+      const ws = connection.ws;
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close();
       }
-      ws = null;
+      connection = null;
     }
   }
 
-  // Start setup asynchronously
   (async () => {
     try {
+      const config = await trpcClient.transcription.config.query();
+      if (disposed) { cleanup(); return; }
+      const service = config.service;
+
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (disposed) { cleanup(); return; }
 
@@ -94,60 +246,55 @@ const transcriptionActor = fromCallback<
       workletNode = new AudioWorkletNode(audioContext, "pcm-processor");
       source.connect(workletNode);
 
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}${getApiBase()}/chat/transcribe-ws`;
-      ws = new WebSocket(wsUrl);
+      const callbacks: ServiceCallbacks = {
+        onTextUpdate: (finalText, interimText) => {
+          if (disposed) return;
+          sendBack({ type: "TEXT_UPDATE", finalText, interimText });
+        },
+        onDone: (text) => {
+          if (disposed) return;
+          sendBack({ type: "TRANSCRIPTION_DONE", text });
+        },
+        onServerError: (message) => {
+          if (disposed) return;
+          sendBack({ type: "SERVER_ERROR", message });
+        },
+      };
 
+      if (service === "deepgram") {
+        connection = await startDeepgramConnection(callbacks);
+      } else {
+        // Default: voxtral (whisper has no realtime path; treat like voxtral)
+        connection = startVoxtralConnection(callbacks);
+      }
+      if (disposed) { cleanup(); return; }
+
+      const ws = connection.ws;
       ws.onopen = () => {
-        if (!disposed) {
-          sendBack({ type: "WS_CONNECTED" });
-        }
+        if (disposed || connectedFired) return;
+        connectedFired = true;
+        sendBack({ type: "WS_CONNECTED" });
       };
-
-      ws.onmessage = (event) => {
-        if (disposed) return;
-        try {
-          const msg = JSON.parse(event.data);
-
-          if (msg.type === "transcription.text.delta") {
-            const delta = msg.delta ?? msg.text ?? "";
-            if (delta) {
-              sendBack({ type: "TEXT_DELTA", delta });
-            }
-          } else if (msg.type === "transcription.done") {
-            sendBack({ type: "TRANSCRIPTION_DONE", text: msg.text });
-          } else if (msg.type === "error") {
-            const errMsg = typeof msg.error === "object"
-              ? (msg.error as { message?: string })?.message || JSON.stringify(msg.error)
-              : msg.error || "Transcription error";
-            sendBack({ type: "SERVER_ERROR", message: String(errMsg) });
-          }
-          // session.created, session.updated, transcription.segment, transcription.language — log only
-        } catch {
-          // Non-JSON message, ignore
-        }
-      };
-
       ws.onerror = () => {
-        if (!disposed) {
-          console.error("[realtime-transcription] WebSocket error");
-          sendBack({ type: "WS_ERROR", message: "WebSocket connection error" });
-        }
+        if (disposed) return;
+        console.error("[realtime-transcription] WebSocket error");
+        sendBack({ type: "WS_ERROR", message: "WebSocket connection error" });
       };
-
       ws.onclose = () => {
-        if (!disposed) {
+        if (disposed) return;
+        // For Deepgram, the final transcript lives on the handle —
+        // emit a TRANSCRIPTION_DONE so the machine can leave finalizing.
+        const dgFinal = (ws as WebSocket & { __dgFinal?: () => string }).__dgFinal;
+        if (dgFinal) {
+          sendBack({ type: "TRANSCRIPTION_DONE", text: dgFinal() });
+        } else {
           sendBack({ type: "WS_CLOSED" });
         }
       };
 
       workletNode.port.onmessage = (event) => {
-        if (event.data.type === "pcm" && ws && ws.readyState === WebSocket.OPEN) {
-          const base64Audio = arrayBufferToBase64(event.data.samples);
-          ws.send(JSON.stringify({
-            type: "input_audio.append",
-            audio: base64Audio,
-          }));
+        if (event.data.type === "pcm" && connection) {
+          connection.sendPcm(event.data.samples);
         }
       };
     } catch (err) {
@@ -162,7 +309,8 @@ const transcriptionActor = fromCallback<
 
   receive((event) => {
     if (event.type === "STOP") {
-      // Stop capturing audio, send end signal, keep WS open for final transcript
+      // Stop capturing audio; tell the service we're done; keep WS open
+      // so the final transcript can arrive.
       if (stream) {
         for (const track of stream.getTracks()) {
           track.stop();
@@ -172,8 +320,8 @@ const transcriptionActor = fromCallback<
         workletNode.disconnect();
         workletNode = null;
       }
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "input_audio.end" }));
+      if (connection) {
+        connection.endStream();
       }
     } else if (event.type === "CANCEL") {
       cleanup();
@@ -188,7 +336,8 @@ const transcriptionActor = fromCallback<
 export const realtimeTranscriptionMachine = setup({
   types: {
     context: {} as {
-      transcript: string;
+      finalTranscript: string;
+      interimTranscript: string;
       error: string | null;
     },
     events: {} as TranscriptionEvent,
@@ -197,23 +346,23 @@ export const realtimeTranscriptionMachine = setup({
     transcriptionActor,
   },
   actions: {
-    appendDelta: assign(({ context, event }) => {
-      const delta = (event as { type: "TEXT_DELTA"; delta: string }).delta;
-      return { transcript: context.transcript + delta };
+    applyTextUpdate: assign(({ event }) => {
+      const e = event as { type: "TEXT_UPDATE"; finalText: string; interimText: string };
+      return { finalTranscript: e.finalText, interimTranscript: e.interimText };
     }),
-    clearTranscript: assign({ transcript: "", error: null }),
+    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", error: null }),
     setError: assign(({ event }) => {
       const msg = (event as { message: string }).message;
       return { error: msg };
     }),
     setFinalTranscript: assign(({ context, event }) => {
       const text = (event as { type: "TRANSCRIPTION_DONE"; text?: string }).text;
-      return { transcript: text || context.transcript };
+      const final = text && text.length > 0 ? text : context.finalTranscript;
+      return { finalTranscript: final, interimTranscript: "" };
     }),
     setTimeoutWarning: assign({
       error: "Transcription timed out — partial text preserved",
     }),
-    eraseTranscript: assign({ transcript: "" }),
     sendStopToTranscriber: ({ system }) => {
       const transcriber = system.get("transcriber");
       if (transcriber) {
@@ -233,7 +382,8 @@ export const realtimeTranscriptionMachine = setup({
   id: "realtimeTranscription",
   initial: "idle",
   context: {
-    transcript: "",
+    finalTranscript: "",
+    interimTranscript: "",
     error: null,
   },
   states: {
@@ -249,14 +399,11 @@ export const realtimeTranscriptionMachine = setup({
       },
     },
     active: {
-      // Actor lives across connecting → recording → finalizing
       invoke: {
         id: "transcriber",
         src: "transcriptionActor",
         input: {},
       },
-      initial: "connecting",
-      // Hard cap on total recording time. Does not reset on text arrival.
       after: {
         MAX_DURATION: {
           target: ".finalizing",
@@ -270,8 +417,6 @@ export const realtimeTranscriptionMachine = setup({
         },
       },
       on: {
-        // Events that return to idle from any active substate.
-        // Use setError so partial text is preserved.
         SERVER_ERROR: {
           target: "idle",
           actions: "setError",
@@ -282,6 +427,7 @@ export const realtimeTranscriptionMachine = setup({
         },
         WS_CLOSED: "idle",
       },
+      initial: "connecting",
       states: {
         connecting: {
           on: {
@@ -297,8 +443,6 @@ export const realtimeTranscriptionMachine = setup({
           },
         },
         recording: {
-          // Auto-stop after silence (no new text deltas). Resets on each TEXT_DELTA
-          // via `reenter: true`.
           after: {
             SILENCE_TIMEOUT: {
               target: "finalizing",
@@ -312,10 +456,10 @@ export const realtimeTranscriptionMachine = setup({
             },
           },
           on: {
-            TEXT_DELTA: {
+            TEXT_UPDATE: {
               target: "recording",
               reenter: true,
-              actions: "appendDelta",
+              actions: "applyTextUpdate",
             },
             STOP: {
               target: "finalizing",
@@ -352,8 +496,8 @@ export const realtimeTranscriptionMachine = setup({
             },
           },
           on: {
-            TEXT_DELTA: {
-              actions: "appendDelta",
+            TEXT_UPDATE: {
+              actions: "applyTextUpdate",
             },
             TRANSCRIPTION_DONE: {
               target: "#realtimeTranscription.idle",

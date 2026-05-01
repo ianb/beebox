@@ -46,6 +46,7 @@ import { href } from "../../lib/routing";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import { useSyncRun } from "../../hooks/useSyncRun";
 import { SyncRunModal } from "./SyncRunModal";
+import { trpc } from "../../lib/trpc";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
@@ -165,6 +166,16 @@ const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Opus 4.7 (1M context)", model: "claude-opus-4-7[1m]" },
 ];
 
+type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper";
+
+const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
+  label: string;
+  service: TranscriptionServiceOption;
+}> = [
+  { label: "Voxtral (Mistral)", service: "voxtral" },
+  { label: "Deepgram", service: "deepgram" },
+];
+
 /**
  * Ephemeral marker shown in the message stream when the user switches models.
  * `afterGroupCount` snapshots the number of message groups at insertion time
@@ -210,6 +221,21 @@ function ChatDebugMenu({
   selectedModel: string | null;
   onSelectModel: (model: string | null) => void;
 }) {
+  const transcriptionConfigQuery = trpc.transcription.config.useQuery();
+  const setTranscriptionService = trpc.transcription.setService.useMutation();
+  const utils = trpc.useUtils();
+  const currentService = transcriptionConfigQuery.data?.service ?? null;
+
+  const onSelectTranscriptionService = async (service: TranscriptionServiceOption) => {
+    if (currentService === service) return;
+    try {
+      await setTranscriptionService.mutateAsync({ service });
+      utils.transcription.config.invalidate();
+    } catch (e) {
+      console.error("[chat] Failed to set transcription service", e);
+    }
+  };
+
   return (
     <Dropdown
       align="right"
@@ -241,6 +267,16 @@ function ChatDebugMenu({
           onClick={() => onSelectModel(opt.model)}
         >
           {selectedModel === opt.model ? "\u2713 " : "\u2007\u2007"}{opt.label}
+        </MenuItem>
+      ))}
+      <MenuDivider />
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Transcription</div>
+      {TRANSCRIPTION_OPTIONS.map((opt) => (
+        <MenuItem
+          key={opt.service}
+          onClick={() => onSelectTranscriptionService(opt.service)}
+        >
+          {currentService === opt.service ? "\u2713 " : "\u2007\u2007"}{opt.label}
         </MenuItem>
       ))}
       <MenuDivider />

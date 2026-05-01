@@ -1,9 +1,14 @@
 /**
  * Hook for realtime speech-to-text via XState machine.
  *
- * Captures mic audio via AudioWorklet (PCM 16kHz mono), streams it
- * over a WebSocket proxy to the backend, which forwards to Mistral.
- * Returns live transcript text as the user speaks.
+ * Captures mic audio via AudioWorklet (PCM 16kHz mono) and routes it to
+ * either the Voxtral WS proxy or directly to Deepgram (with a temp key),
+ * depending on box config. See realtimeTranscriptionMachine.ts.
+ *
+ * The machine tracks finalTranscript and interimTranscript separately:
+ *   - `transcript` (combined) is what the UI shows.
+ *   - `finalTranscript` alone is what we run keyword detection against
+ *     (interim revisions would otherwise misfire commands repeatedly).
  */
 
 import { useCallback, useEffect, useRef } from "react";
@@ -12,7 +17,7 @@ import {
   realtimeTranscriptionMachine,
   type TranscriptionState,
 } from "../machines/realtimeTranscriptionMachine";
-import { detectKeyword } from "../lib/speech-keywords";
+import { detectKeyword, type KeywordResult } from "../lib/speech-keywords";
 import { stillListening } from "../lib/earcons";
 
 const STILL_LISTENING_DELAY_MS = 10000;
@@ -28,13 +33,24 @@ export interface UseRealtimeTranscriptionOptions {
 
 export interface UseRealtimeTranscriptionResult {
   state: TranscriptionState;
+  /** Final + interim text combined, for display. */
   transcript: string;
+  /** Confirmed text only — keyword detection runs against this. */
+  finalTranscript: string;
+  /** Live, unconfirmed text. May change as the recognizer revises. */
+  interimTranscript: string;
   error: string | null;
   start: () => void;
   /** Stop recording and wait for final transcript. Returns the final text. */
   stop: () => Promise<string>;
   cancel: () => void;
   dismissError: () => void;
+}
+
+function combine(finalText: string, interimText: string): string {
+  if (!finalText) return interimText;
+  if (!interimText) return finalText;
+  return `${finalText} ${interimText}`;
 }
 
 export function useRealtimeTranscription(
@@ -46,7 +62,15 @@ export function useRealtimeTranscription(
     optionsRef.current = options;
   });
   const doneResolveRef = useRef<((text: string) => void) | null>(null);
-  const prevTranscriptRef = useRef("");
+  const prevFinalRef = useRef("");
+  /**
+   * Identifier of the most recent keyword fired against an *interim*
+   * transcript ("<action>:<matchedPhrase>"). Suppresses re-firing when an
+   * interim revision still contains the same match. Cleared whenever the
+   * final transcript changes (so a finalized keyword can re-fire later) or
+   * when the interim has no match.
+   */
+  const lastInterimFireKeyRef = useRef<string | null>(null);
 
   // Map machine state to TranscriptionState (nested under "active" parent)
   const state: TranscriptionState = snapshot.matches({ active: "recording" })
@@ -57,7 +81,8 @@ export function useRealtimeTranscription(
         ? "connecting"
         : "idle";
 
-  const { transcript, error } = snapshot.context;
+  const { finalTranscript, interimTranscript, error } = snapshot.context;
+  const transcript = combine(finalTranscript, interimTranscript);
 
   // Screen Wake Lock: keep device awake while recording
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -104,16 +129,7 @@ export function useRealtimeTranscription(
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [isActive]);
 
-  // Keyword detection: run when transcript changes
-  useEffect(() => {
-    if (transcript === prevTranscriptRef.current) return;
-    prevTranscriptRef.current = transcript;
-
-    if (!transcript || state !== "recording") return;
-
-    const keyword = detectKeyword(transcript);
-    if (!keyword) return;
-
+  const fireKeyword = useCallback((keyword: KeywordResult) => {
     if (keyword.action === "send") {
       optionsRef.current?.onKeywordSend?.(keyword.processedTranscript);
     } else if (keyword.action === "micOff") {
@@ -123,13 +139,47 @@ export function useRealtimeTranscription(
       optionsRef.current?.onKeywordCancel?.();
     } else if (keyword.action === "erase") {
       send({ type: "CANCEL" });
-      // Restart immediately after erase
       send({ type: "START" });
     }
-  }, [transcript, state, send]);
+  }, [send]);
 
-  // Idle cue: play a subtle earcon every 10s while recording if there's
-  // a transcript but no new deltas have arrived — "I'm still listening"
+  // Keyword detection on confirmed (final) text — matches anywhere, so it
+  // catches phrases that span multiple final segments.
+  useEffect(() => {
+    if (finalTranscript === prevFinalRef.current) return;
+    prevFinalRef.current = finalTranscript;
+    // Final has advanced; allow the same keyword to fire again from interim.
+    lastInterimFireKeyRef.current = null;
+
+    if (!finalTranscript || state !== "recording") return;
+
+    const keyword = detectKeyword(finalTranscript);
+    if (!keyword) return;
+    fireKeyword(keyword);
+  }, [finalTranscript, state, fireKeyword]);
+
+  // Keyword detection on the live (interim) text — only matches at the
+  // *start* of the interim, since command words mid-utterance are usually
+  // false positives. Dedup by action+phrase so successive interim revisions
+  // containing the same match don't fire repeatedly.
+  useEffect(() => {
+    if (state !== "recording" || !interimTranscript) {
+      lastInterimFireKeyRef.current = null;
+      return;
+    }
+    const keyword = detectKeyword(interimTranscript, { atStart: true });
+    if (!keyword) {
+      lastInterimFireKeyRef.current = null;
+      return;
+    }
+    const fireKey = `${keyword.action}:${keyword.matchedPhrase}`;
+    if (lastInterimFireKeyRef.current === fireKey) return;
+    lastInterimFireKeyRef.current = fireKey;
+    fireKeyword(keyword);
+  }, [interimTranscript, state, fireKeyword]);
+
+  // Idle cue: subtle earcon every 10s while recording if there's text but
+  // no new updates have arrived
   useEffect(() => {
     if (state !== "recording" || !transcript) return;
     const interval = setInterval(() => {
@@ -147,7 +197,8 @@ export function useRealtimeTranscription(
   }, [state, transcript]);
 
   const start = useCallback(() => {
-    prevTranscriptRef.current = "";
+    prevFinalRef.current = "";
+    lastInterimFireKeyRef.current = null;
     send({ type: "START" });
   }, [send]);
 
@@ -162,7 +213,8 @@ export function useRealtimeTranscription(
   }, [state, transcript, send]);
 
   const cancel = useCallback(() => {
-    prevTranscriptRef.current = "";
+    prevFinalRef.current = "";
+    lastInterimFireKeyRef.current = null;
     send({ type: "CANCEL" });
   }, [send]);
 
@@ -170,5 +222,15 @@ export function useRealtimeTranscription(
     send({ type: "DISMISS_ERROR" });
   }, [send]);
 
-  return { state, transcript, error, start, stop, cancel, dismissError };
+  return {
+    state,
+    transcript,
+    finalTranscript,
+    interimTranscript,
+    error,
+    start,
+    stop,
+    cancel,
+    dismissError,
+  };
 }

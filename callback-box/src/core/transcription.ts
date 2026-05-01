@@ -1,11 +1,13 @@
 /**
- * Audio transcription — dispatches to Whisper or Voxtral based on box config.
+ * Audio transcription — dispatches to Whisper, Voxtral, or Deepgram based on
+ * box config.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky, { type HTTPError } from "ky";
 import { transcribeAudioVoxtral } from "./transcription-voxtral.js";
+import { transcribeAudioDeepgram } from "./transcription-deepgram.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 const OPENAI_MODEL = "whisper-1";
@@ -47,17 +49,19 @@ export interface TranscribeAudioParams {
   boxRoot?: string;
 }
 
+export type TranscriptionService = "whisper" | "voxtral" | "deepgram";
+
 interface TranscriptionConfig {
-  service: "whisper" | "voxtral";
+  service: TranscriptionService;
 }
 
-async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
+export async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
   if (!boxRoot) return { service: "voxtral" };
   try {
     const configPath = path.join(boxRoot, "config/transcription.json");
     const content = await fs.readFile(configPath, "utf-8");
     return JSON.parse(content) as TranscriptionConfig;
-  } catch {
+  } catch (_e) {
     return { service: "voxtral" };
   }
 }
@@ -75,6 +79,9 @@ export async function transcribeAudio(
   const config = await loadTranscriptionConfig(params.boxRoot);
   if (config.service === "voxtral") {
     return transcribeAudioVoxtral(params);
+  }
+  if (config.service === "deepgram") {
+    return transcribeAudioDeepgram(params);
   }
   return transcribeAudioWhisper(params);
 }

@@ -11,6 +11,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
+import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
+import { loadTranscriptionConfig } from "../../../core/transcription.js";
 
 export interface HealthCheck {
   name: string;
@@ -170,25 +172,42 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
 
   // --- API key checks ---
 
-  // Mistral key (needed for Voxtral realtime transcription)
-  const mistralKey = await getMistralApiKey(boxRoot);
-  checks.push({
-    name: "mistral-api-key",
-    ok: mistralKey !== null,
-    message: mistralKey !== null
-      ? "Mistral API key configured"
-      : "Mistral API key not found — voice transcription (realtime) will not work. Add config/connectors/mistral.secret.json or set CALLBACK_MISTRAL_API_KEY",
-    severity: "warning",
-  });
+  // Transcription service (Voxtral / Deepgram / Whisper). Only require the
+  // key for the configured service; the others are optional.
+  const transcriptionConfig = await loadTranscriptionConfig(boxRoot);
+  if (transcriptionConfig.service === "voxtral") {
+    const mistralKey = await getMistralApiKey(boxRoot);
+    checks.push({
+      name: "mistral-api-key",
+      ok: mistralKey !== null,
+      message: mistralKey !== null
+        ? "Mistral API key configured (Voxtral)"
+        : "Mistral API key not found — voice transcription will not work. Add config/connectors/mistral.secret.json or set CALLBACK_MISTRAL_API_KEY",
+      severity: "warning",
+    });
+  } else if (transcriptionConfig.service === "deepgram") {
+    const deepgramCreds = await getDeepgramCredentials(boxRoot);
+    checks.push({
+      name: "deepgram-credentials",
+      ok: deepgramCreds !== null,
+      message: deepgramCreds !== null
+        ? "Deepgram credentials configured"
+        : "Deepgram credentials not found — voice transcription will not work. Add config/connectors/deepgram.secret.json (apiKey + projectId) or set CALLBACK_DEEPGRAM_API_KEY + CALLBACK_DEEPGRAM_PROJECT",
+      severity: "warning",
+    });
+  }
 
-  // OpenAI / Whisper key (needed for audio transcription of captures)
+  // OpenAI / Whisper key (needed for TTS, and Whisper transcription if selected)
   const openaiKey = process.env["THINKING_OPENAI_API_KEY"] ?? null;
+  const openaiRequired = transcriptionConfig.service === "whisper";
   checks.push({
     name: "openai-api-key",
     ok: openaiKey !== null,
     message: openaiKey !== null
       ? "OpenAI API key configured (THINKING_OPENAI_API_KEY)"
-      : "OpenAI API key not found — capture audio transcription and TTS will not work. Set THINKING_OPENAI_API_KEY in .env",
+      : openaiRequired
+        ? "OpenAI API key not found — Whisper transcription and TTS will not work. Set THINKING_OPENAI_API_KEY in .env"
+        : "OpenAI API key not found — TTS will not work. Set THINKING_OPENAI_API_KEY in .env",
     severity: "warning",
   });
 
