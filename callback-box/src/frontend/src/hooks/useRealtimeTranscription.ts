@@ -175,8 +175,15 @@ export function useRealtimeTranscription(
     const fireKey = `${keyword.action}:${keyword.matchedPhrase}`;
     if (lastInterimFireKeyRef.current === fireKey) return;
     lastInterimFireKeyRef.current = fireKey;
-    fireKeyword(keyword);
-  }, [interimTranscript, state, fireKeyword]);
+    // The match was found against just the interim text, so its
+    // processedTranscript only covers that segment. Prepend the existing
+    // final text so commands like "send message" don't drop everything
+    // the user said before the keyword.
+    const combinedProcessed = finalTranscript
+      ? `${finalTranscript} ${keyword.processedTranscript}`.trim()
+      : keyword.processedTranscript;
+    fireKeyword({ ...keyword, processedTranscript: combinedProcessed });
+  }, [interimTranscript, finalTranscript, state, fireKeyword]);
 
   // Idle cue: subtle earcon every 10s while recording if there's text but
   // no new updates have arrived
