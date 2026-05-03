@@ -70,19 +70,25 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
       ) : null}
       <figure
         className="relative max-w-[95vw] max-h-[95vh] flex flex-col items-center"
-        onClick={(e) => e.stopPropagation()}
       >
         <img
           src={current.src}
           alt={current.alt}
+          onClick={(e) => e.stopPropagation()}
           className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"}`}
         />
         {captionText ? (
-          <figcaption className="mt-3 max-w-[80ch] text-sm text-white/90 text-center px-4 leading-relaxed">
+          <figcaption
+            onClick={(e) => e.stopPropagation()}
+            className="mt-3 max-w-[80ch] text-sm text-white/90 text-center px-4 leading-relaxed"
+          >
             {captionText}
           </figcaption>
         ) : null}
-        <div className="absolute top-2 right-2 flex items-center gap-2">
+        <div
+          className="absolute top-2 right-2 flex items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           {hasMany ? (
             <span className="text-xs text-white/80 bg-black/40 rounded px-2 py-0.5 font-mono">
               {safeIndex + 1} / {total}
