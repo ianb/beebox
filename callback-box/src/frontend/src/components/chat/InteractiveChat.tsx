@@ -609,7 +609,7 @@ function ChatInputArea({
  */
 function MobileTextareaRow({
   input, setInput, isTranscribing, transcription,
-  handleKeyDown, handleSend, handleCancelTranscription,
+  handleSend, handleCancelTranscription,
   turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
   onPaste, onDrop,
 }: {
@@ -617,7 +617,6 @@ function MobileTextareaRow({
   setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
   transcription: { transcript: string; start: () => void; stop: () => Promise<string>; cancel: () => void };
-  handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
   turnTakingRef: React.MutableRefObject<boolean>;
@@ -639,11 +638,10 @@ function MobileTextareaRow({
       <TextareaAutosize
         value={isTranscribing ? transcription.transcript : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
-        onKeyDown={handleKeyDown}
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}
-        enterKeyHint="send"
+        enterKeyHint="enter"
         placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
         minRows={2}
@@ -1993,7 +1991,6 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
             setInput={setInput}
             isTranscribing={isTranscribing}
             transcription={transcription}
-            handleKeyDown={handleKeyDown}
             handleSend={handleSend}
             handleCancelTranscription={handleCancelTranscription}
             turnTakingRef={turnTakingRef}
