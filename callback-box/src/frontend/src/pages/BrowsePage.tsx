@@ -4,7 +4,7 @@
  * Sidebar with directory listing + card detail panel.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { getApiBase } from "../api";
 import { href } from "../lib/routing";
@@ -18,6 +18,25 @@ import { BrowseContextMenu } from "../components/browse/BrowseContextMenu";
 import { Row } from "../components/ui/Row";
 import { Column } from "../components/ui/Column";
 import { Text } from "../components/ui/Text";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+
+/**
+ * Strip a trailing extension and convert underscores to spaces.
+ * `UGMA_Transfer_Letter.md` → `UGMA Transfer Letter`.
+ * Card files have two extensions (`Foo.memo.card`); strip both.
+ */
+function basenameTitle(filename: string): string {
+  let stem = filename;
+  if (stem.endsWith(".card")) {
+    stem = stem.slice(0, -".card".length);
+    const dot = stem.lastIndexOf(".");
+    if (dot > 0) stem = stem.slice(0, dot);
+  } else {
+    const dot = stem.lastIndexOf(".");
+    if (dot > 0) stem = stem.slice(0, dot);
+  }
+  return stem.replace(/_/g, " ");
+}
 
 interface BrowsePageProps {
   /** Current directory path from URL splat (e.g., "store/recipes" or "store/recipes/Foo.recipe.card") */
@@ -109,6 +128,22 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   const selectedRawFile = selectedFilePath && isRawFilePath(selectedFilePath) ? selectedFilePath : null;
 
   const hasDetail = Boolean(selectedFilePath);
+
+  const pageTitle = useMemo(() => {
+    if (selectedFilePath) {
+      const cardTitle = selectedCard?.title?.trim();
+      if (cardTitle) return cardTitle;
+      const filename = selectedFilePath.split("/").pop() ?? selectedFilePath;
+      return basenameTitle(filename);
+    }
+    if (dirPath) {
+      const last = dirPath.split("/").pop() ?? dirPath;
+      return last.replace(/_/g, " ");
+    }
+    return "Browse";
+  }, [selectedFilePath, selectedCard, dirPath]);
+
+  useDocumentTitle(pageTitle);
 
   const handleDelete = useCallback(async (path: string) => {
     if (deletingPath !== null) return;

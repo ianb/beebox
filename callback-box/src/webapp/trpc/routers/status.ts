@@ -18,6 +18,7 @@ export interface BrowseCard {
   type: string;
   tagName: string;
   status?: string | undefined;
+  title?: string | undefined;
 }
 
 export interface BrowseFile {
@@ -144,6 +145,7 @@ export const statusRouter = router({
               type: parsed.type,
               tagName: card.element.tagName,
               status: card.element.attrs["status"],
+              title: card.element.attrs["title"],
             });
           } catch {
             cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown" });
