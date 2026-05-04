@@ -435,6 +435,16 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     source: "Sync calendar changes hourly",
     requires: ["google"],
   },
+  {
+    name: "refresh-maps",
+    description: "Refresh MAP.md files when files or directories were added/deleted",
+    cron: "0 5 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    enabled: true,
+    runs: "cb procedure run refresh-maps",
+    source: "Daily check; precheck no-ops when nothing changed",
+  },
 ];
 
 /**

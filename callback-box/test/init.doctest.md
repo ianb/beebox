@@ -52,6 +52,7 @@ await listFiles(tmp, "config/schedules")
 check-calendar.scheduled-script.card
 check-email.scheduled-script.card
 check-rss.scheduled-script.card
+refresh-maps.scheduled-script.card
 ```
 
 The working tree is clean — everything is committed, nothing left untracked:
@@ -89,6 +90,7 @@ process-captures.procedure.card
 process-guidance.procedure.card
 process-news.procedure.card
 process-pages.procedure.card
+refresh-maps.procedure.card
 ```
 
 ``` continue
