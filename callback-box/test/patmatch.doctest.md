@@ -35,6 +35,34 @@ p.match("goodbye world")
 => undefined
 ```
 
+## Plural tolerance
+
+Patterns match common English plural forms automatically — no need to write
+`message(s)?`:
+
+```
+const p = KeywordPattern.compile("send message");
+p.match("send message")?.capturedTextTrimmed
+=> send message
+
+p.match("send messages")?.capturedTextTrimmed
+=> send messages
+```
+
+`+es` and `y → ies` plurals are also handled, in either direction:
+
+```
+const p = KeywordPattern.compile("close (the)? box");
+p.match("close the boxes")?.capturedTextTrimmed
+=> close the boxes
+```
+
+``` continue
+const q = KeywordPattern.compile("parties");
+q.match("the party started")?.capturedTextTrimmed
+=> party
+```
+
 ## Alternatives
 
 `(a | b)` matches either word:

@@ -71,6 +71,21 @@ function normalizeWord(word: string): string {
     .replace(/[^\da-z]/g, ""); // Remove any remaining non-alphanumeric characters
 }
 
+// Symmetric plural-tolerant equality so "message" matches "messages",
+// "box" matches "boxes", and "party" matches "parties". Words are assumed
+// already normalized.
+function wordsEqual(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length > b.length) {
+    [a, b] = [b, a];
+  }
+  if (a.length < 2) return false;
+  if (b === a + "s") return true;
+  if (b === a + "es") return true;
+  if (a.endsWith("y") && b === a.slice(0, -1) + "ies") return true;
+  return false;
+}
+
 interface InputWord {
   normalized: string;
   original: string;
@@ -151,7 +166,7 @@ class WordMatcher extends Matcher {
     this.word = normalizeWord(word);
   }
   match(input: InputWord[]) {
-    if (input.length > 0 && input[0].normalized === this.word) {
+    if (input.length > 0 && wordsEqual(input[0].normalized, this.word)) {
       return [
         {
           captured: input.slice(0, 1),
