@@ -17,6 +17,7 @@ import { useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import type { Components } from "react-markdown";
 import { remarkComments, isCommentCode } from "../lib/remark-comments";
 import { href as routeHref } from "../lib/routing";
@@ -45,6 +46,7 @@ function viewUrlTransform(url: string): string {
 
 const defaultPlugins = [remarkGfm];
 const pluginsWithComments = [remarkGfm, remarkComments];
+const rehypePlugins = [rehypeRaw];
 
 function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
   return routeHref(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
@@ -246,6 +248,7 @@ export function Markdown({
   const rendered = (
     <ReactMarkdown
       remarkPlugins={plugins}
+      rehypePlugins={rehypePlugins}
       components={merged}
       urlTransform={viewUrlTransform}
     >
