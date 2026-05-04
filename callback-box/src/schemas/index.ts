@@ -32,6 +32,7 @@ export {
   ChatJobSchema,
   TodoListSchema,
   SheetSchema,
+  LandmarkSchema,
 } from "./registry.js";
 
 // Re-export individual schema types
@@ -59,6 +60,7 @@ export type { ChatThread } from "./chat-thread.js";
 export type { ChatJob } from "./chat-job.js";
 export type { TodoList, TodoItem, TodoItemStatusType } from "./todo-list.js";
 export type { Sheet } from "./sheet.js";
+export type { Landmark } from "./landmark.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
@@ -84,6 +86,7 @@ export { createChatThreadTemplate, createMessageElement } from "./chat-thread.js
 export { createChatJobTemplate } from "./chat-job.js";
 export { createTodoListTemplate } from "./todo-list.js";
 export { createSheetTemplate } from "./sheet.js";
+export { createLandmarkTemplate } from "./landmark.js";
 
 // Guide exports
 export { parseGuide, compileGuide, createInitialGuideTemplate } from "./guide.js";

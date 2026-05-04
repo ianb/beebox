@@ -15,6 +15,7 @@ import { driveRouter } from "./routers/drive.js";
 import { filesRouter } from "./routers/files.js";
 import { activitiesRouter } from "./routers/activities.js";
 import { transcriptionRouter } from "./routers/transcription.js";
+import { landmarksRouter } from "./routers/landmarks.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -33,6 +34,7 @@ export const appRouter = router({
   files: filesRouter,
   activities: activitiesRouter,
   transcription: transcriptionRouter,
+  landmarks: landmarksRouter,
 });
 
 export type AppRouter = typeof appRouter;

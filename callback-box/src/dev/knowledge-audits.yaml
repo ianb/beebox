@@ -1087,3 +1087,103 @@ tests:
       design).
     correct_contains: ["email-outbound"]
     tags: [email, drafts]
+
+  # === Landmarks ===
+  #
+  # Landmarks are the user-navigation overlay on the box's filesystem.
+  # The agent should know they exist and what they're for, but should
+  # NOT freelance creation. Curation criteria live in
+  # docs/landmark-curation.md; the schema reference is at
+  # docs/generated/card-landmark.md.
+  #
+  # Status (2026-05-04): All 7 pass. landmarks-vs-directories initially
+  # failed on a too-narrow keyword check (agent answered with "boxholder"
+  # / "you" instead of "user") — broadened correct_contains_any to
+  # include "boxholder" and "you", which matches project terminology.
+
+  - id: landmarks-purpose
+    prompt: "What is the Landmarks page in this box for?"
+    expected_level: knows_directly
+    watch_for: >
+      Describes landmarks as a quick-jump surface for the spots the user
+      actually returns to — a user-navigation overlay on the directory
+      tree. NOT a directory listing, NOT a creation tool, NOT a TOC.
+    correct_contains_any: ["return", "navigate", "user", "quick"]
+    tags: [landmarks, navigation]
+
+  - id: landmarks-vs-directories
+    prompt: "Why have landmarks if the box already has a directory tree?"
+    expected_level: knows_directly
+    watch_for: >
+      Explains that file layout organizes the box for the system, while
+      landmarks orient that organization to the boxholder's mental model
+      — the places they actually inhabit. The directory tree is for
+      storage; landmarks are for the boxholder.
+    correct_contains_any: ["mental model", "user", "boxholder", "perspective", "navigate", "you"]
+    tags: [landmarks, navigation]
+
+  - id: landmarks-recurrence-signal
+    prompt: "I have asked you about my recipes three times this week already. Should you do something?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/landmark-curation.md, recognizes recurrence as the
+      signal that argues for a landmark, and proposes one to the user
+      as a question — does NOT silently create one. Does NOT treat the
+      question as purely about the recipes themselves.
+    should_read: ["docs/landmark-curation.md"]
+    correct_contains_any: ["landmark"]
+    tags: [landmarks, curation]
+    notes: >
+      The agent should read the curation doc and propose a landmark
+      rather than creating one quietly. Failure modes: creates the
+      landmark silently, or ignores the recurrence signal entirely.
+
+  - id: landmarks-criteria
+    prompt: "What makes a directory worth turning into a landmark?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/landmark-curation.md and answers in user-perspective
+      terms — recurrence in conversation, places the user returns to,
+      navigational asks rather than search. Does NOT cite size, volume,
+      or technical importance as criteria.
+    should_read: ["docs/landmark-curation.md"]
+    correct_contains_any: ["recurrence", "return", "user", "navigate"]
+    tags: [landmarks, curation]
+
+  - id: landmarks-not-everywhere
+    prompt: "Should every directory under store/ get its own landmark?"
+    expected_level: knows_about
+    watch_for: >
+      Says no. Explains that the Landmarks page is meant to be short —
+      a half-dozen high-traffic spots, not a complete map of the box.
+      Does NOT just answer "yes, for organization."
+    should_read: ["docs/landmark-curation.md"]
+    correct_contains_any: ["no", "few", "short"]
+    tags: [landmarks, curation]
+
+  - id: landmarks-dont-create-quietly
+    prompt: "I keep asking about the household budget folder. Set up a landmark for it."
+    expected_level: knows_about
+    watch_for: >
+      Confirms the user's intent and the spot before creating. May
+      create the landmark since the user explicitly asked, but should
+      NOT proceed without confirming the symbol/label or hand-waving
+      the curated links. Reads docs/landmark-curation.md or
+      docs/generated/card-landmark.md before writing.
+    should_read: ["docs/landmark-curation.md"]
+    tags: [landmarks, curation]
+    notes: >
+      Even with explicit user direction, creation is editorial work —
+      the agent shouldn't fire-and-forget. The interesting failure
+      mode is creating with a generic label/symbol the user wouldn't
+      recognize.
+
+  - id: landmark-link-attribute
+    prompt: "When I add a link inside a landmark card, what attribute names the target?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/card-landmark.md and answers `ref` —
+      not href, not path, not url, not target.
+    should_read: ["docs/generated/card-landmark.md"]
+    correct_contains: ["ref"]
+    tags: [landmarks, schemas]

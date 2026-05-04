@@ -24,6 +24,7 @@ import { ActivityChatPage } from "./pages/activity-chat/ActivityChatPage";
 import { AppLayout, BoxRedirect, ShareRedirect, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
 import { CardViewPage } from "./pages/card/CardViewPage";
 import { ViewPage } from "./pages/ViewPage";
+import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
 
 // --- Root route ---
 
@@ -170,6 +171,12 @@ const viewRoute = createRoute({
   component: ViewPage,
 });
 
+const landmarksRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/landmarks",
+  component: LandmarksPage,
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
@@ -201,6 +208,7 @@ const routeTree = rootRoute.addChildren([
     activityChatRoute,
     cardRoute,
     viewRoute,
+    landmarksRoute,
     boxCatchAllRoute,
   ]),
 ]);

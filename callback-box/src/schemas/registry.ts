@@ -45,6 +45,7 @@ import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
 import { SheetSchema } from "./sheet.js";
 import { DocSchema } from "./doc.js";
+import { LandmarkSchema } from "./landmark.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -85,6 +86,7 @@ export const schemas: ElementSchema[] = [
   PersonSchema,
   SheetSchema,
   DocSchema,
+  LandmarkSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
@@ -277,3 +279,4 @@ export { BriefingSchema } from "./briefing.js";
 export { PersonSchema } from "./person.js";
 export { SheetSchema } from "./sheet.js";
 export { DocSchema } from "./doc.js";
+export { LandmarkSchema } from "./landmark.js";

@@ -37,6 +37,7 @@ import {
   gitHistorySection,
   whereToRecordSection,
 } from "./behavior.js";
+import { landmarksSection } from "./landmarks.js";
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
@@ -57,6 +58,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     "# Callback Box Agent Guide",
     "",
     ...directoryLayoutSection(),
+    ...landmarksSection(),
     ...howItemsEnterSection(),
     ...keyCommandsSection(),
     ...calendarSection(),
