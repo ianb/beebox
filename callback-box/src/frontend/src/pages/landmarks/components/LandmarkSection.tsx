@@ -46,15 +46,13 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
           </Stack>
         </div>
 
-        {landmark.links.length === 0 ? (
-          <Text as="p" size="sm" tone="muted">No linked items.</Text>
-        ) : (
+        {landmark.links.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {landmark.links.map((link) => (
               <LinkTile key={link.ref} link={link} boxSlug={boxSlug} />
             ))}
           </div>
-        )}
+        ) : null}
       </Stack>
     </Card>
   );
