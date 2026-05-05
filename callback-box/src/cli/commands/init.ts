@@ -1,5 +1,10 @@
 /**
  * cb init - Initialize a new callback box
+ *
+ * When you change what `cb init` creates, installs, or generates, also
+ * review docs/box-layout.md — that doc is the canonical developer
+ * reference for the on-disk shape of a box, and it doesn't auto-generate
+ * itself.
  */
 
 import { Command } from "commander";
@@ -7,7 +12,7 @@ import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, symlinkClaudeMemory } from "../../core/box.js";
 import { stageAll, commit } from "../lib/git.js";
-import { generateRules } from "./init-rules.js";
+import { generateRules } from "../../core/init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { parseXml } from "cardworks";
 import { parseNewsGuide, type NewsGuide } from "../../schemas/news-guide.js";

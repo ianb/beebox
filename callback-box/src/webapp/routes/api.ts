@@ -5,7 +5,8 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getSystemState, generateContext } from "../../core/state.js";
+import { getSystemState } from "../../core/state.js";
+import { generateContext } from "../context.js";
 import { runHealthChecks } from "../trpc/routers/health.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { parseCardName } from "../../cli/lib/paths.js";

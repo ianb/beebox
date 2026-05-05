@@ -13,7 +13,6 @@ export function keyCommandsSection(): string[] {
     "- `cb rm <path>` — Soft-delete a card to `store/trash/`",
     "- `cb validate <path>` — Validate a card against its schema",
     "- `cb answer <path>` — Answer a pending question",
-    "- `cb context` — Show current box state for agent prompts",
     "- `cb reactor` — Process all pending jobs in `box/jobs/`",
     "- `cb finalize` — Flush outbound cards in `box/output/` (push notifications, etc.)",
     "- `cb scenario list|run` — Run scenario tests against boxes",

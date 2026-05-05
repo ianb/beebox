@@ -15,7 +15,6 @@ import {
   statusCommand,
   validateCommand,
   createCommand,
-  contextCommand,
   serveCommand,
   answerCommand,
   wakeupCommand,
@@ -27,7 +26,6 @@ import {
   processFeedbackCommand,
   triageFeedbackCommand,
   procedureCommand,
-  initRulesCommand,
   transcribeCapturesCommand,
   assembleTimelineCommand,
   googleAuthCommand,
@@ -47,7 +45,6 @@ import {
   uploadCommand,
   lsCommand,
   renderCommand,
-  formatCommand,
   usageCommand,
   driveCommand,
   chatCommand,
@@ -70,7 +67,6 @@ program.addCommand(initCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
 program.addCommand(createCommand);
-program.addCommand(contextCommand);
 program.addCommand(serveCommand);
 program.addCommand(answerCommand);
 program.addCommand(wakeupCommand);
@@ -82,7 +78,6 @@ program.addCommand(processNewsCommand);
 program.addCommand(processFeedbackCommand);
 program.addCommand(triageFeedbackCommand);
 program.addCommand(procedureCommand);
-program.addCommand(initRulesCommand);
 program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);
 program.addCommand(googleAuthCommand);
@@ -103,7 +98,6 @@ program.addCommand(scanImportCommand);
 program.addCommand(uploadCommand);
 program.addCommand(lsCommand);
 program.addCommand(renderCommand);
-program.addCommand(formatCommand);
 program.addCommand(usageCommand);
 program.addCommand(chatCommand);
 program.addCommand(activityCommand);

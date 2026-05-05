@@ -1,17 +1,16 @@
 /**
- * cb init-rules - Generate .claude/rules/ files from card schemas
- * and connector-specific file rules.
+ * Generate `.claude/rules/` files from card schemas and connector-specific
+ * file rules. Each card type with `instructions` gets a rule file that
+ * auto-loads when an agent reads or edits a matching card file. Connector
+ * rules cover non-card files (e.g. `.ics`).
  *
- * Each card type with instructions gets a rule file that auto-loads
- * when an agent reads or edits a matching card file.
- *
- * Connector rules provide instructions for non-card files (e.g. .ics).
+ * Called from `cb init`. Not a standalone CLI command — invoke `cb init`
+ * to regenerate rules in a box.
  */
 
-import { Command } from "commander";
-import { resolve, join } from "node:path";
+import { join } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
-import { schemas, loadBoxSchemas } from "../../schemas/registry.js";
+import { schemas, loadBoxSchemas } from "../schemas/registry.js";
 
 export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
@@ -61,7 +60,7 @@ Use \`cb calendar today\`, \`cb calendar upcoming\`, or \`cb calendar <timespan>
 /**
  * Generate rules files from schema instructions and connector rules.
  *
- * Exported so `cb init` can call it directly.
+ * Called by `cb init`.
  */
 export async function generateRules(boxRoot: string): Promise<string[]> {
   const rulesDir = join(boxRoot, ".claude", "rules");
@@ -124,25 +123,3 @@ ${rule.instructions.trim()}
 
   return generated;
 }
-
-export const initRulesCommand = new Command("init-rules")
-  .description("Generate .claude/rules/ files from card schemas")
-  .argument("[path]", "Box root path", ".")
-  .action(async (targetPath: string) => {
-    try {
-      const boxRoot = resolve(targetPath);
-      const generated = await generateRules(boxRoot);
-
-      if (generated.length === 0) {
-        console.log("No schemas with instructions found.");
-      } else {
-        console.log(`Generated ${generated.length} rule files in .claude/rules/:`);
-        for (const file of generated) {
-          console.log(`  ${file}`);
-        }
-      }
-    } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
