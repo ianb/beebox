@@ -30,13 +30,22 @@ export const LandmarkSymbol = element("symbol", {
 /**
  * A pinned reference to another card.
  *
- * `ref` is the path to the target, relative to the landmark's directory.
- * Inner text is an optional per-landmark contextual label; if omitted,
- * the renderer falls back to the target's own title.
+ * Hand-listed links use `ref` — a literal path relative to the
+ * landmark's directory, validated like any other ref.
+ *
+ * Templates inside `<expand>` use `template-ref` — a string with
+ * `${path}` / `${xpath}` placeholders that get substituted per match.
+ * The two attributes are separate so the validator never tries to
+ * resolve a placeholder as a real path.
+ *
+ * Inner text is an optional contextual label. In hand-listed links
+ * it's a literal label; in template links it's a placeholder string
+ * (e.g. `${title}`) that's substituted per match.
  */
 export const LandmarkLink = element("link", {
   attrs: {
-    ref: z.string(),
+    ref: z.string().optional(),
+    "template-ref": z.string().optional(),
   },
   text: z.string().optional(),
 });
@@ -46,10 +55,14 @@ export const LandmarkLink = element("link", {
  * directory and emits a `<link>` per match.
  *
  * The element's children are the template; if omitted, the default
- * template is `<link ref="${path}"/>`. Template placeholders use
- * `${...}` — `${path}` is special-cased to the matched card's
- * box-relative path; other expressions are evaluated as XPath against
- * the matched card's root.
+ * template is `<link template-ref="${path}"/>`. Template placeholders
+ * use `${...}` — `${path}` is special-cased to the matched card's path
+ * (relative to the landmark's directory); other expressions are
+ * evaluated as XPath against the matched card's root.
+ *
+ * Template links must use `template-ref`, not `ref` — `ref` is for
+ * literal paths and gets validated by cardworks; `template-ref`
+ * carries placeholders that are substituted at render time.
  *
  * Dedup: if a card appears in both a hand-listed `<link>` and an
  * `<expand>` result, the first occurrence wins (source order).
@@ -73,7 +86,7 @@ export const LandmarkExpand = element("expand", {
  * <symbol>🍳</symbol>
  * <link ref="Bread.recipe.card">the bread</link>
  * <expand query="*.recipe.card" order="modified-desc">
- *   <link ref="${path}">${title}</link>
+ *   <link template-ref="${path}">${title}</link>
  * </expand>
  * </landmark>
  * ```
@@ -91,8 +104,8 @@ A landmark marks a directory as a notable spot in the box. It's a hand-curated b
 **Structure:**
 - \`<label>\` — short bookmark name. Treat like a tab name, not a sentence.
 - \`<symbol>\` — the iconic mark. Emoji for now.
-- \`<link ref="...">\` — optional curated references to other cards. Inner text is a per-landmark label; falls back to the target's title if omitted. The \`ref\` is a path relative to the landmark's directory; cross-directory refs are allowed.
-- \`<expand query="..." order="...">\` — optional templated fan-out. \`query\` is a glob (like \`cb ls\`). The element's children form the template; placeholders \`\${path}\` and \`\${xpath}\` are interpolated per match. \`order\` is one of \`alphabetical\` (default), \`modified-desc\`, \`modified-asc\`.
+- \`<link ref="...">\` — optional curated references to other cards. Inner text is a per-landmark label; falls back to the target's title if omitted. The \`ref\` is a literal path relative to the landmark's directory; cross-directory refs are allowed. \`ref\` is validated like any other ref — it must point at a real file.
+- \`<expand query="..." order="...">\` — optional templated fan-out. \`query\` is a glob (like \`cb ls\`). The element's children form the template; inside that template, links use \`template-ref="..."\` (NOT \`ref=""\`) so the validator doesn't try to resolve placeholders. Placeholders are \`\${path}\` (matched card's path) and \`\${xpath-expr}\` (XPath against the matched card's root). \`order\` is one of \`alphabetical\` (default), \`modified-desc\`, \`modified-asc\`.
 
 **Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and \`<link>\` to it.
 

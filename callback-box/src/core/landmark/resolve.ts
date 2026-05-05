@@ -79,6 +79,8 @@ async function resolveHandLink(
   el: ElementNode,
   options: ResolveOptions,
 ): Promise<ResolvedLink | null> {
+  // Hand-listed links use `ref` (literal path). `template-ref` is only
+  // meaningful inside <expand>; ignore it here.
   const rawRef = el.attrs["ref"];
   if (typeof rawRef !== "string" || rawRef === "") return null;
   const labelText = typeof el.text === "string" ? el.text.trim() : "";
@@ -115,7 +117,9 @@ async function resolveExpand(
     let matchedRoot: ElementNode | null = null;
 
     for (const tpl of templates) {
-      const refTpl = tpl.attrs["ref"];
+      // Templates carry placeholders, so they live in `template-ref` —
+      // `ref` is for literal links the validator can resolve.
+      const refTpl = tpl.attrs["template-ref"];
       if (typeof refTpl !== "string") continue;
       const labelTpl = typeof tpl.text === "string" ? tpl.text : "";
 

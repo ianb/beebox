@@ -1100,6 +1100,10 @@ tests:
   # failed on a too-narrow keyword check (agent answered with "boxholder"
   # / "you" instead of "user") — broadened correct_contains_any to
   # include "boxholder" and "you", which matches project terminology.
+  #
+  # Status (2026-05-05): Added landmark-template-ref. Refined
+  # landmark-link-attribute to specify "hand-listed" since templates
+  # use template-ref. Both new/refined audits pass.
 
   - id: landmarks-purpose
     prompt: "What is the Landmarks page in this box for?"
@@ -1179,11 +1183,29 @@ tests:
       recognize.
 
   - id: landmark-link-attribute
-    prompt: "When I add a link inside a landmark card, what attribute names the target?"
+    prompt: "When I add a hand-listed link inside a landmark card, what attribute names the target?"
     expected_level: knows_about
     watch_for: >
       Reads docs/generated/card-landmark.md and answers `ref` —
-      not href, not path, not url, not target.
+      not href, not path, not url, not target. May also note that
+      templates inside <expand> use template-ref instead.
     should_read: ["docs/generated/card-landmark.md"]
     correct_contains: ["ref"]
     tags: [landmarks, schemas]
+
+  - id: landmark-template-ref
+    prompt: "I want a landmark that automatically lists every recipe in my recipes directory. How do I write the <link> inside the <expand> template?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/card-landmark.md and uses
+      `template-ref="${path}"` (NOT `ref="${path}"`) inside the
+      template. Should explain or imply why: ref is for literal
+      paths the validator can resolve, template-ref carries
+      placeholders that get substituted at render time.
+    should_read: ["docs/generated/card-landmark.md"]
+    correct_contains: ["template-ref"]
+    tags: [landmarks, schemas]
+    notes: >
+      The failure mode this guards against: writing
+      <link ref="${path}"/> inside <expand>, which the validator
+      rejects because ${path} doesn't resolve to a real file.

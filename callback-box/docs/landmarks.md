@@ -37,7 +37,7 @@ Both can coexist in the same directory.
 <link ref="Bread.recipe.card">the bread</link>
 <link ref="techniques/Knife_Skills.doc.card"/>
 <expand query="*.recipe.card" order="modified-desc">
-  <link ref="${path}">${title}</link>
+  <link template-ref="${path}">${title}</link>
 </expand>
 </landmark>
 ```
@@ -48,7 +48,7 @@ Both can coexist in the same directory.
 
 **`<symbol>`** (required, one) — the iconic mark. Emoji is the v1 form. Image (`<symbol src="..."/>`) and styling cues (color/mood) can be added later without breaking existing cards. The symbol carries most of the "iconic and unique expression" weight — pick well.
 
-**`<link ref="..." [text]>`** (zero or more) — a pinned reference to another card. `ref` is the path to the target (relative to the landmark's directory; may cross directories). Optional inner text is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When inner text is omitted, the renderer falls back to the target's own title.
+**`<link ref="..." [text]>`** (zero or more) — a pinned reference to another card. `ref` is a literal path to the target (relative to the landmark's directory; may cross directories). It's validated like any other ref — it must point at a real file. Optional inner text is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When inner text is omitted, the renderer falls back to the target's own title.
 
 **`<expand query="..." [order=...]>[template]</expand>`** (zero or more) — templated fan-out. Runs the query, applies the template per match, generates `<link>` elements. See below.
 
@@ -66,16 +66,20 @@ The `query` attribute is a glob pattern, matching `cb ls` conventions (`*.recipe
 
 ### Template
 
-The element's children are a template, applied to each matched card. The default template (when children are omitted) is:
+The element's children are a template, applied to each matched card. The default template (when children are omitted) is the equivalent of:
 
 ```xml
-<link ref="${path}"/>
+<link template-ref="${path}"/>
 ```
+
+**Templates use `template-ref="..."`, not `ref="..."`.** The two attributes are distinct types: `ref` is a literal path that the cardworks ref-checker resolves at load time; `template-ref` carries `${...}` placeholders that get substituted per match at render time. Putting `${path}` in `ref` would (rightly) be flagged as a broken reference.
 
 `${...}` placeholders interpolate at expand time:
 
 - **`${path}`** — special-cased; resolves to the file path of the matched card, relative to the landmark's directory.
 - **`${expr}`** for any other `expr` — evaluated as XPath against the matched card's root, via cardworks' `evaluateXPathString`. So `${title}` grabs the `<title>` element's text; `${/some/nested/value}` works for deeper paths.
+
+Inner text on a template `<link>` is also placeholder-substituted (`<link template-ref="${path}">${title}</link>`), so you can derive the per-match label from the matched card's content.
 
 (Note: cardworks calls this XPath, not XQuery, but the user-facing shape is the same as `cb ls`.)
 

@@ -37,7 +37,12 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
           <Stack gap="xs">
             <Text as="h2" size="lg" weight="bold">{labelText}</Text>
             {landmark.dir ? (
-              <Text as="div" size="xs" tone="muted">{landmark.dir}/</Text>
+              <Link
+                to={href(`/${boxSlug}/browse/${landmark.dir}`)}
+                className="hover:underline"
+              >
+                <Text as="span" size="xs" tone="muted">{landmark.dir}/</Text>
+              </Link>
             ) : null}
           </Stack>
         </div>

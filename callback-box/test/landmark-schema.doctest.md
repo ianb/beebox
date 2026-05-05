@@ -145,8 +145,8 @@ await box.cleanup();
 
 ## Expand: glob with default template
 
-Without a template body, `<expand>` emits one bare `<link ref="${path}"/>`
-per match, sorted alphabetically by default.
+Without a template body, `<expand>` emits one bare link per match,
+sorted alphabetically by default.
 
 ```
 const box = await makeTmpBox();
@@ -179,9 +179,11 @@ await box.cleanup();
 
 ## Expand: template with ${path} and ${title}
 
-Template placeholders interpolate per match. `${path}` is the matched
-card's path relative to the landmark's directory; any other expression
-is XPath-evaluated against the matched card's root.
+Template placeholders interpolate per match. Templates use
+`template-ref="..."` (not `ref="..."`) so the cardworks ref-checker
+doesn't try to resolve the placeholder as a real path. `${path}` is
+the matched card's path relative to the landmark's directory; any
+other expression is XPath-evaluated against the matched card's root.
 
 ```
 const box = await makeTmpBox();
@@ -192,7 +194,7 @@ const xml = `<landmark>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <expand query="*.recipe.card">
-<link ref="\${path}">\${title}</link>
+<link template-ref="\${path}">\${title}</link>
 </expand>
 </landmark>`;
 
