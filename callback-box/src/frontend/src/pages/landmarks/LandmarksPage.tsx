@@ -10,6 +10,7 @@ import { Column } from "../../components/ui/Column";
 import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
 import { LandmarkSection } from "./components/LandmarkSection";
+import { LandmarksGrid } from "./components/LandmarksGrid";
 
 export function LandmarksPage() {
   const { boxSlug } = useParams({ strict: false });
@@ -30,7 +31,7 @@ export function LandmarksPage() {
 
   return (
     <Column overflow="auto" className="h-full">
-      <Stack gap="lg" className="max-w-4xl mx-auto py-8 px-4 w-full">
+      <Stack gap="lg" className="max-w-6xl mx-auto py-8 px-4 w-full">
         <Text as="h1" size="2xl" weight="bold">Landmarks</Text>
 
         {landmarks.length === 0 ? (
@@ -39,11 +40,11 @@ export function LandmarksPage() {
             want to surface here.
           </Text>
         ) : (
-          <Stack gap="lg">
+          <LandmarksGrid>
             {landmarks.map((lm) => (
               <LandmarkSection key={lm.path} landmark={lm} boxSlug={boxSlug ?? ""} />
             ))}
-          </Stack>
+          </LandmarksGrid>
         )}
       </Stack>
     </Column>
