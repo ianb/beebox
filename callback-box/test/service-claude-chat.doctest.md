@@ -1,70 +1,72 @@
-# ClaudeChatSpawner service
+# ChatBackend service
 
-`ClaudeChatSpawner.spawn(opts)` returns a ChildProcess-like handle with
-`stdin` / `stdout` / `stderr` streams. The real implementation shells
-out to `cb-claude`; the fake returns PassThrough streams plus a
-test-facing API for scripting the stream-json protocol.
+`ChatBackend.start(opts)` returns a `ChatBackendRun` — a handle on a
+long-lived `query()` call against `@anthropic-ai/claude-agent-sdk`.
+The run lets you push user content, iterate SDK messages, interrupt a
+turn, or close the conversation. The real implementation calls the
+SDK; the fake gives tests a scriptable handle for deterministic
+unit-testing without spawning a Claude subprocess.
 
 Use the fake to test anything that drives a chat session — no
 subprocess, no network, fully deterministic.
 
 ```ts setup
-import { createFakeClaudeChatSpawner } from "../src/services/claude-chat.js";
-import * as readline from "node:readline";
+import { createFakeChatBackend } from "../src/services/claude-chat.js";
 ```
 
-## Spawning and inspecting options
+## Starting a run and inspecting options
 
-Every `spawn` call records its options on the returned process handle,
-so tests can assert what would have been passed to claude:
+Every `start()` call records its options on the returned run, so
+tests can assert what would have been passed to the SDK:
 
 ```
-const spawner = createFakeClaudeChatSpawner();
-const proc = spawner.spawn({
+const backend = createFakeChatBackend();
+const run = backend.start({
   cwd: "/tmp/box",
   systemPrompt: "You are a greeter",
-  sessionIdToResume: "sess-abc",
+  resumeSessionId: "sess-abc",
   env: { FOO: "bar" },
 });
-proc.spawnOptions.systemPrompt
+run.startOptions.systemPrompt
 => You are a greeter
 
-proc.spawnOptions.sessionIdToResume
+run.startOptions.resumeSessionId
 => sess-abc
 
-proc.spawnOptions.env.FOO
+run.startOptions.env.FOO
 => bar
 
-proc.spawnOptions.cwd
+run.startOptions.cwd
 => /tmp/box
 
-spawner.processes.length
+backend.runs.length
 => 1
 
-spawner.lastProcess() === proc
+backend.lastRun() === run
 => true
 ```
 
-## Emitting stream-json messages
+## Emitting SDK messages
 
-Tests push lines onto the fake's `stdout` as if claude emitted them.
-Callers (like `ChatSession`) read that stdout with `readline` and
-dispatch messages.
+Tests push SDK messages onto the run's `messages` iterable via the
+`emit*` helpers. Callers (like `ChatSession`) consume the iterable.
 
 ```
-const spawner = createFakeClaudeChatSpawner();
-const proc = spawner.spawn({ cwd: "/tmp", systemPrompt: "x", env: {} });
+const backend = createFakeChatBackend();
+const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
 
 const received = [];
-const rl = readline.createInterface({ input: proc.stdout, crlfDelay: Infinity });
-rl.on("line", (line) => received.push(JSON.parse(line)));
+const consume = (async () => {
+  for await (const msg of run.messages) {
+    received.push(msg);
+  }
+})();
 
-proc.emitSessionInit("sess-xyz");
-proc.emitAssistantText("Hello there");
-proc.emitResult();
-
-// Give the event loop a tick to flush
-await new Promise((r) => setImmediate(r));
+run.emitSessionInit("sess-xyz");
+run.emitAssistantText("Hello there");
+run.emitResult();
+await run.close();
+await consume;
 
 received.length
 => 3
@@ -85,72 +87,74 @@ received[2].type
 => result
 ```
 
-## Capturing stdin
+## Capturing send() calls
 
-Anything written to `proc.stdin` is JSON-parsed and pushed onto
-`proc.sent`. Tests use this to assert that the caller sent the right
-user turns.
+Each `send(content)` call appends to `run.sent` — the test asserts
+on what content blocks the caller pushed.
 
 ```
-const spawner = createFakeClaudeChatSpawner();
-const proc = spawner.spawn({ cwd: "/tmp", systemPrompt: "x", env: {} });
+const backend = createFakeChatBackend();
+const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
 
-proc.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: "hi" } }) + "\n");
-proc.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: "bye" } }) + "\n");
-await new Promise((r) => setImmediate(r));
+run.send([{ type: "text", text: "hi" }]);
+run.send([{ type: "text", text: "bye" }]);
 
-proc.sent.length
+run.sent.length
 => 2
 
-proc.sent[0].message.content
+run.sent[0][0].text
 => hi
 
-proc.sent[1].message.content
+run.sent[1][0].text
 => bye
 ```
 
-## Lifecycle: close and kill
+## Lifecycle: close and interrupt
 
-Both `close()` and `kill()` fire the `"close"` event, which
-`ChatSession` listens on to detect the subprocess exiting. The close
-callback receives the exit code.
-
-```
-const spawner = createFakeClaudeChatSpawner();
-const proc = spawner.spawn({ cwd: "/tmp", systemPrompt: "x", env: {} });
-
-let closedWith = undefined;
-proc.on("close", (code) => { closedWith = code; });
-proc.close(0);
-await new Promise((r) => setImmediate(r));
-
-closedWith
-=> 0
-```
+`close()` ends the messages iterable so the consumer's for-await loop
+returns. `interrupt()` is a no-op on the fake other than flipping
+`interrupted`; production tests typically just observe whether
+`ChatSession.interrupt()` reached the backend.
 
 ```
-const spawner = createFakeClaudeChatSpawner();
-const proc = spawner.spawn({ cwd: "/tmp", systemPrompt: "x", env: {} });
+const backend = createFakeChatBackend();
+const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
 
-let closedWith = "unset";
-proc.on("close", (code) => { closedWith = code; });
-proc.kill();
-await new Promise((r) => setImmediate(r));
+let ended = false;
+const consume = (async () => {
+  for await (const _ of run.messages) { /* drain */ }
+  ended = true;
+})();
 
-closedWith
-=> null
+await run.close();
+await consume;
+
+ended
+=> true
+
+run.closed
+=> true
+```
+
+```
+const backend = createFakeChatBackend();
+const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
+
+await run.interrupt();
+run.interrupted
+=> true
 ```
 
 ## Notes for agents writing chat-adjacent code
 
-- Any code that spawns claude for a chat session should accept a
-  `ClaudeChatSpawner` via constructor/options so tests can swap in the
+- Any code that drives a chat session should accept a
+  `ChatBackend` via constructor/options so tests can swap in the
   fake. See `ChatSession` for the pattern.
-- The fake's `spawnOptions` is the source of truth for assertions
-  about arguments — there's no need to reconstruct the argv string.
-- Use `readline.createInterface({ input: proc.stdout })` to consume
-  messages, matching the real implementation. Tests can assert on
-  parsed objects instead of raw lines.
-- Schedule your `emitMessage` calls before asserting — since streams
-  deliver data asynchronously, insert a `await new Promise((r) =>
-  setImmediate(r))` to let the event loop flush.
+- `run.startOptions` is the source of truth for assertions about
+  arguments — there's no need to reconstruct an argv string.
+- Iterate `run.messages` with `for await ... of` to consume the
+  stream. The iterable returns when the run is closed.
+- The fake's `emit*` helpers deliver synchronously; assertions don't
+  usually need to wait for ticks. When working through `ChatSession`
+  (which has an internal async loop) you may still need a
+  `setImmediate` tick to flush queued event handlers.

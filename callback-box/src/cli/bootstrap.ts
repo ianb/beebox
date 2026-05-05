@@ -17,6 +17,12 @@ import * as path from "node:path";
 const __dirname = import.meta.dirname;
 process.env.TSX_TSCONFIG_PATH = path.resolve(__dirname, "../../tsconfig.json");
 
+// Force Claude (CLI and SDK) to use subscription auth, never an API key.
+// Stripping it here means downstream code, the SDK, and any spawned
+// subprocesses inheriting from this process all see no key. Subscription
+// credentials in ~/.claude/ are unaffected.
+delete process.env.ANTHROPIC_API_KEY;
+
 // Install strict fetch mode for scenario runs — must happen before any
 // connector or library code calls fetch(). When CB_STRICT_FETCH is set,
 // all fetch() calls must match a stub or throw.

@@ -1,25 +1,23 @@
 /**
- * ChatThreadSession — Persistent Claude process for a single chat thread.
+ * ChatThreadSession — Persistent SDK chat run for a single chat thread.
  *
  * Adapted from ChatSession (src/core/chat-session.ts) but:
  * - Targeted at a specific thread (not the whole box)
  * - Intercepts <chat-response> tags from agent output for immediate delivery
- * - Can be parked (killed but session ID preserved) and resumed
+ * - Can be parked (run closed but session ID preserved) and resumed
  */
 
-import type { ChildProcess } from "node:child_process";
-import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
-import * as readline from "node:readline";
-import * as path from "node:path";
-import type { ChatMessage } from "./chat-session.js";
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { ChatMessage, ChatMessageContent } from "./chat-session.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
-
-// Path to the cb-claude wrapper that auto-adds plugins
-const __dirname = import.meta.dirname;
-const binDir = path.resolve(__dirname, "../../bin");
-const cbClaudePath = path.join(binDir, "cb-claude");
+import {
+  CARD_VALIDATOR_PLUGIN_PATH,
+  createChatBackend,
+  type ChatBackend,
+  type ChatBackendRun,
+} from "../services/claude-chat.js";
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatThreadSession:${context}]`, ...args);
@@ -32,6 +30,8 @@ export interface ChatThreadSessionOptions {
   sessionId?: string | undefined;
   /** Base URL for session viewer links, e.g. "https://example.com/mybox/chat" */
   sessionViewBaseUrl?: string | undefined;
+  /** Injectable backend — real by default; tests inject the fake. */
+  backend?: ChatBackend;
 }
 
 /**
@@ -81,8 +81,52 @@ COMMIT DISCIPLINE:
 - Do NOT add Co-Authored-By trailers — the system adds appropriate trailers automatically.`;
 }
 
+/**
+ * Adapt an SDK message into the stable ChatMessage wire shape we emit
+ * to consumers. (Same logic as ChatSession's adapter, narrowed to the
+ * subset this thread session cares about.)
+ */
+function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
+  switch (msg.type) {
+    case "system": {
+      if (msg.subtype !== "init") return null;
+      return { type: "system", subtype: "init", session_id: msg.session_id };
+    }
+    case "assistant": {
+      const result: ChatMessage = {
+        type: "assistant",
+        session_id: msg.session_id,
+        message: {
+          role: msg.message.role,
+          content: msg.message.content as ChatMessageContent[],
+          ...(msg.message.stop_reason !== null && msg.message.stop_reason !== undefined
+            ? { stop_reason: msg.message.stop_reason }
+            : {}),
+        },
+      };
+      if (msg.uuid) result.uuid = msg.uuid;
+      return result;
+    }
+    case "result": {
+      const r: ChatMessage = {
+        type: "result",
+        subtype: msg.subtype,
+        session_id: msg.session_id,
+        is_error: msg.is_error,
+        duration_ms: msg.duration_ms,
+        num_turns: msg.num_turns,
+        total_cost_usd: msg.total_cost_usd,
+      };
+      if (msg.subtype === "success") r.result = msg.result;
+      return r;
+    }
+    default:
+      return null;
+  }
+}
+
 export class ChatThreadSession extends EventEmitter {
-  private proc: ChildProcess | null = null;
+  private run: ChatBackendRun | null = null;
   private sessionId: string | null;
   private boxRoot: string;
   private threadRef: string;
@@ -94,6 +138,7 @@ export class ChatThreadSession extends EventEmitter {
   private turnText = "";
   /** Full turn text (not sliced by chat-response extraction) for schedule parsing */
   private fullTurnText = "";
+  private readonly backend: ChatBackend;
 
   constructor(opts: ChatThreadSessionOptions) {
     super();
@@ -102,102 +147,63 @@ export class ChatThreadSession extends EventEmitter {
     this.chatDescription = opts.chatDescription;
     this.sessionId = opts.sessionId ?? null;
     this.sessionViewBaseUrl = opts.sessionViewBaseUrl;
+    this.backend = opts.backend ?? createChatBackend();
   }
 
-  private async startProcess(): Promise<void> {
-    if (this.proc) {
-      log("start", "Process already running");
+  private async startRun(): Promise<void> {
+    if (this.run !== null && !this.run.closed) {
+      log("start", "Run already active");
       return;
     }
 
-    const args = [
-      "-p",
-      "--output-format",
-      "stream-json",
-      "--input-format",
-      "stream-json",
-      "--verbose",
-      "--dangerously-skip-permissions",
-    ];
-
-    if (this.sessionId) {
-      args.push("--resume", this.sessionId);
-    }
-
-    // System prompt only on new sessions (resume already has it)
+    let systemPrompt = "";
     if (!this.sessionId) {
       const tzContext = await buildTimezoneContext(this.boxRoot);
-      const prompt = buildThreadSystemPrompt({
-        threadRef: this.threadRef,
-        chatDescription: this.chatDescription,
-        sessionViewBaseUrl: this.sessionViewBaseUrl,
-      }) + tzContext;
-      args.push("--append-system-prompt", prompt);
+      systemPrompt =
+        buildThreadSystemPrompt({
+          threadRef: this.threadRef,
+          chatDescription: this.chatDescription,
+          sessionViewBaseUrl: this.sessionViewBaseUrl,
+        }) + tzContext;
     }
 
-    log("start", `Spawning for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
-
     const env = await buildScriptEnv(this.boxRoot, {
-      PATH: `${binDir}:${process.env.PATH ?? ""}`,
       CLAUDECODE: undefined,
     });
 
-    this.proc = spawn(cbClaudePath, args, {
+    log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
+
+    this.run = this.backend.start({
       cwd: this.boxRoot,
+      systemPrompt,
+      resumeSessionId: this.sessionId ?? undefined,
+      pluginPaths: [CARD_VALIDATOR_PLUGIN_PATH],
       env,
-      stdio: ["pipe", "pipe", "pipe"],
     });
 
-    log("start", `Process spawned with PID: ${this.proc.pid}`);
+    void this.consumeMessages(this.run);
+  }
 
-    if (!this.proc.stdout) {
-      log("error", "No stdout available");
-      this.emit("error", new Error("Claude process has no stdout"));
-      return;
-    }
-
-    const rl = readline.createInterface({
-      input: this.proc.stdout,
-      crlfDelay: Infinity,
-    });
-
-    rl.on("line", (line) => {
-      try {
-        const msg = JSON.parse(line) as ChatMessage;
-        this.handleMessage(msg);
-      } catch (e) {
-        log("parse", `Failed to parse: ${e instanceof Error ? e.message : e}`);
+  private async consumeMessages(run: ChatBackendRun): Promise<void> {
+    try {
+      for await (const sdkMsg of run.messages) {
+        const msg = adaptSdkMessage(sdkMsg);
+        if (msg !== null) this.handleMessage(msg);
       }
-    });
-
-    if (this.proc.stderr) {
-      this.proc.stderr.on("data", (data: Buffer) => {
-        log("stderr", data.toString().trim());
-      });
-    }
-
-    this.proc.on("close", (code) => {
-      log("close", `Process exited with code: ${code}`);
-      this.proc = null;
-      this.busy = false;
-      this.emit("close", code);
-      // Resolve any pending turn
-      if (this.turnResolve) {
-        this.turnResolve();
-        this.turnResolve = null;
-      }
-    });
-
-    this.proc.on("error", (err) => {
-      log("error", `Process error: ${err.message}`);
-      this.proc = null;
-      this.busy = false;
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      log("error", `Run errored: ${err.message}`);
       this.emit("error", err);
+    } finally {
+      log("close", "Run ended");
+      this.run = null;
+      this.busy = false;
+      this.emit("close", null);
       if (this.turnResolve) {
         this.turnResolve();
         this.turnResolve = null;
       }
-    });
+    }
   }
 
   private handleMessage(msg: ChatMessage): void {
@@ -254,7 +260,6 @@ export class ChatThreadSession extends EventEmitter {
       lastIndex = regex.lastIndex;
     }
 
-    // Keep only the text after the last complete match (may contain a partial tag)
     if (lastIndex > 0) {
       this.turnText = this.turnText.slice(lastIndex);
     }
@@ -269,12 +274,12 @@ export class ChatThreadSession extends EventEmitter {
       throw new Error("Session is busy");
     }
 
-    if (!this.proc) {
-      await this.startProcess();
+    if (this.run === null || this.run.closed) {
+      await this.startRun();
     }
 
-    if (!this.proc || !this.proc.stdin) {
-      return Promise.reject(new Error("Process not ready"));
+    if (this.run === null) {
+      return Promise.reject(new Error("Run not ready after start"));
     }
 
     this.busy = true;
@@ -292,16 +297,8 @@ export class ChatThreadSession extends EventEmitter {
       fullMessage = `${message}\n\n${reminder}`;
     }
 
-    const payload = JSON.stringify({
-      type: "user",
-      message: {
-        role: "user",
-        content: [{ type: "text", text: fullMessage }],
-      },
-    });
-
     log("send", `Sending message (${message.length} chars) to ${this.threadRef}`);
-    this.proc.stdin.write(payload + "\n");
+    this.run.send([{ type: "text", text: fullMessage }]);
 
     return new Promise<void>((resolve) => {
       this.turnResolve = resolve;
@@ -309,16 +306,13 @@ export class ChatThreadSession extends EventEmitter {
   }
 
   /**
-   * Park the session: kill the process but preserve the session ID for later resume.
+   * Park the session: close the run but preserve the session ID for later resume.
    */
   park(): string | null {
     const sessionId = this.sessionId;
-    if (this.proc) {
+    if (this.run !== null && !this.run.closed) {
       log("park", `Parking session ${sessionId}`);
-      if (this.proc.stdin) this.proc.stdin.end();
-      this.proc.kill();
-      this.proc = null;
-      this.busy = false;
+      void this.run.close();
     }
     return sessionId;
   }
@@ -327,12 +321,9 @@ export class ChatThreadSession extends EventEmitter {
    * Stop and clear the session entirely.
    */
   stop(): void {
-    if (this.proc) {
-      log("stop", "Stopping process");
-      if (this.proc.stdin) this.proc.stdin.end();
-      this.proc.kill();
-      this.proc = null;
-      this.busy = false;
+    if (this.run !== null && !this.run.closed) {
+      log("stop", "Stopping run");
+      void this.run.close();
     }
     this.sessionId = null;
   }
@@ -346,7 +337,7 @@ export class ChatThreadSession extends EventEmitter {
   }
 
   isRunning(): boolean {
-    return this.proc !== null;
+    return this.run !== null && !this.run.closed;
   }
 
   isBusy(): boolean {

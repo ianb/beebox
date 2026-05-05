@@ -320,7 +320,7 @@ async function executeProcessFeedback(
         agent,
         baseline,
         fallbackMessage: `Guide revision from ${unprocessedBriefs.length} brief(s)`,
-        fallbackTrailers: { "Triggered-By": "cb process-feedback", Session: agent.sessionId },
+        fallbackTrailers: { "Triggered-By": "cb process-feedback", Session: agent.sessionId ?? "unknown" },
         onOutput: (text) => ctx.write(text),
       });
 

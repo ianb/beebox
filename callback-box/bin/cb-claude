@@ -1,8 +1,0 @@
-#!/bin/bash
-# Wrapper for Claude Code that automatically adds callback-box plugins
-# Use this instead of calling 'claude' directly
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_DIR="$SCRIPT_DIR/../plugins/card-validator"
-
-exec claude --plugin-dir "$PLUGIN_DIR" "$@"

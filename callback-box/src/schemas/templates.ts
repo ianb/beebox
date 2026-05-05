@@ -58,7 +58,7 @@ const templateRegistry = new Map<string, TemplateDefinition>();
 export function registerTemplate<T extends ZodRawShape>(
   definition: TemplateDefinition<T>
 ): void {
-  templateRegistry.set(definition.name, definition as TemplateDefinition);
+  templateRegistry.set(definition.name, definition as unknown as TemplateDefinition);
 }
 
 /**
@@ -157,7 +157,8 @@ function isArraySchema(schema: z.ZodTypeAny): boolean {
  */
 function getDefaultValue(schema: z.ZodTypeAny): unknown {
   if (schema instanceof z.ZodDefault) {
-    return schema._def.defaultValue();
+    const dv = schema._def.defaultValue;
+    return typeof dv === "function" ? (dv as () => unknown)() : dv;
   }
   return undefined;
 }

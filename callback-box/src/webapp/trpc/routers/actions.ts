@@ -101,7 +101,7 @@ export const actionsRouter = router({
       z.object({
         path: z.string().min(1),
         template: z.string().min(1),
-        args: z.record(z.unknown()).optional(),
+        args: z.record(z.string(), z.unknown()).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {

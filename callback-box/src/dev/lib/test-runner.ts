@@ -115,7 +115,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   // Snapshot card files after the agent runs
   const cardsAfter = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
 
-  const behavior = await extractBehavior(boxRoot, agent.sessionId);
+  const behavior = await extractBehavior(boxRoot, result.sessionId);
   const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
   const checks = runChecks(test, { behavior, newOrModifiedCards });
 

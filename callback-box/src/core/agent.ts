@@ -1,19 +1,23 @@
 /**
- * Agent invocation - Spawns Claude Code to process items.
+ * Agent invocation - runs Claude via @anthropic-ai/claude-agent-sdk.
  *
- * This module handles spawning Claude Code with appropriate context
- * and processing its outputs.
+ * The SDK still spawns a Claude Code subprocess (it bundles its own binary),
+ * but we communicate via typed SDKMessage events instead of parsing raw stdout.
  *
  * Set CB_LOG_PROMPTS=1 to capture full API traffic (including system prompts
  * and CLAUDE.md content) via claude-code-logger. Logs go to .callback-box/logs/.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { createWriteStream, appendFileSync, type WriteStream } from "node:fs";
 import { mkdirSync } from "node:fs";
+import {
+  query,
+  type SDKMessage,
+  type SDKAssistantMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
@@ -43,20 +47,25 @@ export interface AgentInvokeOptions {
 /**
  * A named agent with session lifecycle.
  *
- * First invoke() starts a new session with the system prompt.
- * Subsequent invoke() calls resume the same session (no system prompt).
+ * First invoke() starts a new session; the SDK assigns a session id which
+ * becomes available via `sessionId` once the first system message arrives.
+ * Subsequent invoke() calls resume the same session.
+ *
+ * `sessionId` is `null` before the first invoke completes — the SDK assigns
+ * it server-side, we don't generate it ourselves. All known consumers read
+ * it only after `await agent.invoke(...)`, at which point it's set.
  */
 export interface Agent {
   readonly name: string;
-  readonly sessionId: string;
+  readonly sessionId: string | null;
   invoke(options: AgentInvokeOptions): Promise<AgentResult>;
 }
 
 /**
- * Create a real agent that spawns Claude Code.
+ * Create a real agent that runs Claude via the SDK.
  *
- * If `resume` is true, the first invoke() resumes an existing session
- * (requires `sessionId` from a previous run).
+ * If `sessionId` is given (typically with `resume: true`), the first invoke
+ * resumes that existing session.
  */
 export function createAgent(options: {
   name: string;
@@ -65,26 +74,20 @@ export function createAgent(options: {
   resume?: boolean;
   onOutput?: (text: string) => void;
 }): Agent {
-  const sessionId = options.sessionId ?? randomUUID();
+  let sessionId: string | null = options.sessionId ?? null;
   let invocationCount = options.resume ? 1 : 0;
+  let manifestWritten = false;
 
   return {
     name: options.name,
-    sessionId,
+    get sessionId() {
+      return sessionId;
+    },
     async invoke(opts: AgentInvokeOptions): Promise<AgentResult> {
       const isResume = invocationCount > 0;
       invocationCount++;
 
-      // Log to session manifest on first invocation
-      if (invocationCount === 1) {
-        appendSessionManifest(opts.boxRoot, {
-          sessionId,
-          task: options.name,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      return runAgent({
+      const result = await runAgent({
         boxRoot: opts.boxRoot,
         systemPrompt: opts.systemPrompt ?? "",
         prompt: opts.prompt,
@@ -92,9 +95,21 @@ export function createAgent(options: {
         model: opts.model,
         maxTurns: opts.maxTurns,
         dryRun: opts.dryRun,
-        sessionId,
-        resume: isResume,
+        resumeSessionId: isResume && sessionId !== null ? sessionId : undefined,
+        onSessionId: (id) => {
+          if (sessionId === null) sessionId = id;
+          if (!manifestWritten) {
+            appendSessionManifest(opts.boxRoot, {
+              sessionId: id,
+              task: options.name,
+              timestamp: new Date().toISOString(),
+            });
+            manifestWritten = true;
+          }
+        },
       });
+
+      return result;
     },
   };
 }
@@ -192,81 +207,124 @@ function appendSessionManifest(boxRoot: string, entry: ManifestEntry): void {
   appendFileSync(manifestPath, JSON.stringify(entry) + "\n");
 }
 
-// Get the path to the cb wrapper scripts so we can add them to PATH
+// ─── SDK plumbing ─────────────────────────────────────────────────────
+
 const __dirname = import.meta.dirname;
-const binDir = path.resolve(__dirname, "../../bin");
-// Path to the cb-claude wrapper that auto-adds plugins
-const cbClaudePath = path.join(binDir, "cb-claude");
+// callback-box repo root — used to locate the bundled card-validator plugin.
+const CALLBACK_BOX_ROOT = path.resolve(__dirname, "../..");
+const CARD_VALIDATOR_PLUGIN = path.join(CALLBACK_BOX_ROOT, "plugins", "card-validator");
 
 /**
- * Format command line for display, with special handling for prompts.
- * Returns multiple lines: the command itself, then system prompt, then user prompt.
+ * Render a single SDKMessage event to a human-readable line for `onOutput`.
+ * Loose imitation of the CLI's verbose stream — assistant text passes
+ * through verbatim, tool calls and results get one-line summaries.
  */
-function formatCommandLine(cmd: string, args: string[]): string {
+function renderSdkMessage(msg: SDKMessage): string {
+  if (msg.type === "system" && msg.subtype === "init") {
+    const sid = msg.session_id;
+    return fmt.dim(`[session ${sid.slice(0, 8)} model=${msg.model ?? "default"}]\n`);
+  }
+  if (msg.type === "assistant") {
+    return renderAssistantMessage(msg);
+  }
+  if (msg.type === "user") {
+    // Tool results — one-line summary per block.
+    const lines: string[] = [];
+    const content = msg.message.content;
+    if (Array.isArray(content)) {
+      for (const block of content) {
+        if (block.type === "tool_result") {
+          const text = extractToolResultText(block.content);
+          const summary = text ? truncate(text.replace(/\s+/g, " "), 200) : "(no content)";
+          const errMark = block.is_error ? fmt.fail(" [error]") : "";
+          lines.push(fmt.dim(`  ↳ ${summary}${errMark}\n`));
+        }
+      }
+    }
+    return lines.join("");
+  }
+  if (msg.type === "result") {
+    if (msg.subtype === "success") {
+      return fmt.ok(
+        `\n[done in ${msg.num_turns} turn(s), ${(msg.duration_ms / 1000).toFixed(1)}s]\n`,
+      );
+    }
+    return fmt.fail(`\n[result error: ${msg.subtype}]\n`);
+  }
+  return "";
+}
+
+function renderAssistantMessage(msg: SDKAssistantMessage): string {
   const lines: string[] = [];
-  const cmdParts: string[] = [cmd];
-
-  let systemPrompt: string | null = null;
-  let userPrompt: string | null = null;
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i]!;
-
-    if (arg === "--append-system-prompt" && i + 1 < args.length) {
-      systemPrompt = args[i + 1]!;
-      cmdParts.push(arg, "<system-prompt>");
-      i++; // skip the next arg
-    } else if (i === args.length - 1 && !arg.startsWith("-")) {
-      // Last non-flag arg is likely the user prompt
-      userPrompt = arg;
-      cmdParts.push("<prompt>");
-    } else {
-      cmdParts.push(arg);
+  for (const block of msg.message.content) {
+    if (block.type === "text") {
+      if (block.text) lines.push(block.text);
+    } else if (block.type === "tool_use") {
+      const inputSummary = summarizeToolInput(block.input);
+      lines.push(fmt.dim(`\n→ ${block.name}(${inputSummary})\n`));
+    } else if (block.type === "thinking") {
+      // Thinking blocks: keep noise low — single line marker.
+      lines.push(fmt.dim("  …thinking…\n"));
     }
   }
-
-  lines.push(fmt.dim("$ ") + fmt.cmd(cmdParts.join(" ")));
-
-  if (systemPrompt) {
-    lines.push("");
-    lines.push(fmt.dim("System prompt:"));
-    lines.push(fmt.dim("─".repeat(40)));
-    lines.push(systemPrompt);
-    lines.push(fmt.dim("─".repeat(40)));
+  if (msg.error) {
+    lines.push(fmt.fail(`\n[assistant error: ${msg.error}]\n`));
   }
+  return lines.join("");
+}
 
-  if (userPrompt) {
-    lines.push("");
-    lines.push(fmt.dim("User prompt:"));
-    lines.push(fmt.dim("─".repeat(40)));
-    lines.push(userPrompt);
-    lines.push(fmt.dim("─".repeat(40)));
+function summarizeToolInput(input: unknown): string {
+  if (input === null || typeof input !== "object") return "";
+  const obj = input as Record<string, unknown>;
+  // Surface common fields concisely.
+  for (const key of ["command", "file_path", "path", "pattern", "url"]) {
+    const v = obj[key];
+    if (typeof v === "string") return truncate(v, 120);
   }
+  return truncate(JSON.stringify(obj), 120);
+}
 
-  lines.push("");
+function extractToolResultText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    const parts: string[] = [];
+    for (const item of content) {
+      if (item && typeof item === "object" && "type" in item && item.type === "text") {
+        const text = (item as { text?: unknown }).text;
+        if (typeof text === "string") parts.push(text);
+      }
+    }
+    return parts.join("\n");
+  }
+  return "";
+}
 
-  return lines.join("\n");
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
 }
 
 /**
  * Start a claude-code-logger proxy for capturing full API traffic.
  * Returns the proxy process, port, and log file stream.
+ *
+ * Session id is captured from the first SDK system message, so this is
+ * given a placeholder filename until then — but in practice we start the
+ * logger before invoking the SDK, so we use a timestamp-based filename.
  */
 async function startPromptLogger(
   boxRoot: string,
-  sessionId: string,
+  filenameHint: string,
 ): Promise<{ proxy: ChildProcess; port: number; logStream: WriteStream } | null> {
   const logsDir = path.join(boxRoot, ".callback-box", "logs");
   await fs.mkdir(logsDir, { recursive: true });
 
-  const logPath = path.join(logsDir, `${sessionId}.log`);
+  const logPath = path.join(logsDir, `${filenameHint}.log`);
   const logStream = createWriteStream(logPath, { flags: "a" });
 
-  // Write header
-  const header = `\n${"=".repeat(60)}\nSession: ${sessionId}\nStarted: ${new Date().toISOString()}\n${"=".repeat(60)}\n\n`;
+  const header = `\n${"=".repeat(60)}\nLog: ${filenameHint}\nStarted: ${new Date().toISOString()}\n${"=".repeat(60)}\n\n`;
   logStream.write(header);
 
-  // Pick a random port in the ephemeral range
   const port = 30000 + Math.floor(Math.random() * 20000);
 
   const proxy = spawn("npx", [
@@ -279,15 +337,12 @@ async function startPromptLogger(
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  // Pipe proxy output to log file
   proxy.stdout?.on("data", (data) => logStream.write(data));
   proxy.stderr?.on("data", (data) => logStream.write(data));
 
-  // Wait for the proxy to signal readiness
   const ready = await new Promise<boolean>((resolve) => {
     const timeout = setTimeout(() => resolve(false), 10000);
     let buffer = "";
-
     const onData = (data: Buffer) => {
       buffer += data.toString();
       if (buffer.includes("Proxy server started")) {
@@ -295,15 +350,12 @@ async function startPromptLogger(
         resolve(true);
       }
     };
-
     proxy.stdout?.on("data", onData);
     proxy.stderr?.on("data", onData);
-
     proxy.on("error", () => {
       clearTimeout(timeout);
       resolve(false);
     });
-
     proxy.on("close", () => {
       clearTimeout(timeout);
       resolve(false);
@@ -320,9 +372,6 @@ async function startPromptLogger(
   return { proxy, port, logStream };
 }
 
-/**
- * Stop the prompt logger proxy and close the log file.
- */
 function stopPromptLogger(logger: { proxy: ChildProcess; logStream: WriteStream }): void {
   logger.proxy.kill();
   const footer = `\n${"=".repeat(60)}\nEnded: ${new Date().toISOString()}\n${"=".repeat(60)}\n`;
@@ -330,27 +379,18 @@ function stopPromptLogger(logger: { proxy: ChildProcess; logStream: WriteStream 
   logger.logStream.end();
 }
 
-interface AgentOptions {
-  /** Box root directory */
+interface RunAgentOptions {
   boxRoot: string;
-  /** System prompt to prepend */
   systemPrompt: string;
-  /** User prompt to send */
   prompt: string;
-  /** Callback for streaming output */
   onOutput?: ((text: string) => void) | undefined;
-  /** Maximum cost budget in dollars (default: 1.00) */
-  maxCost?: number | undefined;
-  /** Whether to run in dry-run mode (no side effects) */
   dryRun?: boolean | undefined;
-  /** Explicit session ID (auto-generated if not provided) */
-  sessionId?: string | undefined;
-  /** Maximum agent turns (default: 20) */
   maxTurns?: number | undefined;
-  /** Model to use (e.g., "claude-haiku-4-5-20251001"). Omit to use CLI default. */
   model?: string | undefined;
-  /** Resume an existing session instead of starting a new one. Requires sessionId. */
-  resume?: boolean | undefined;
+  /** Resume an existing session by id. */
+  resumeSessionId?: string | undefined;
+  /** Called once with the SDK-assigned session id (from the first system message). */
+  onSessionId?: ((id: string) => void) | undefined;
 }
 
 export interface AgentResult {
@@ -362,11 +402,20 @@ export interface AgentResult {
 }
 
 /**
- * Run Claude Code with the given prompts.
- *
- * Returns when the agent completes or errors.
+ * Drop env entries with undefined values to satisfy Record<string, string>.
  */
-async function runAgent(options: AgentOptions): Promise<AgentResult> {
+function dropUndefined(env: Record<string, string | undefined>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Run a single agent turn (or session-resume turn) via the SDK.
+ */
+async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   const {
     boxRoot,
     systemPrompt,
@@ -376,132 +425,140 @@ async function runAgent(options: AgentOptions): Promise<AgentResult> {
     maxTurns = 20,
   } = options;
 
-  const sessionId = options.sessionId ?? randomUUID();
-  const tzContext = options.resume ? "" : await buildTimezoneContext(boxRoot);
+  const isResume = options.resumeSessionId !== undefined;
+  const tzContext = isResume ? "" : await buildTimezoneContext(boxRoot);
 
-  return new Promise((resolve) => {
-    const args = [
-      "--print",
-      "--verbose",
-      "--dangerously-skip-permissions",
-      "--max-turns", String(maxTurns),
-    ];
+  if (dryRun) {
+    return {
+      success: true,
+      output: `[DRY RUN] Would run Claude via SDK with prompt:\n${prompt}`,
+      exitCode: 0,
+      sessionId: options.resumeSessionId ?? "",
+    };
+  }
 
-    // Resume existing session or start new one
-    if (options.resume && options.sessionId) {
-      args.push("--resume", sessionId);
-    } else {
-      args.push("--session-id", sessionId);
-    }
+  // Prompt-logger proxy (optional).
+  const shouldLog = process.env.CB_LOG_PROMPTS === "1";
+  const filenameHint = `${new Date().toISOString().replace(/[.:]/g, "-")}-${Math.random().toString(36).slice(2, 8)}`;
+  const logger = shouldLog ? await startPromptLogger(boxRoot, filenameHint) : null;
 
-    // Add model selection if specified
-    if (options.model) {
-      args.push("--model", options.model);
-    }
+  if (shouldLog && logger) {
+    onOutput?.(`Prompt logging enabled → .callback-box/logs/${filenameHint}.log\n`);
+  } else if (shouldLog) {
+    onOutput?.("Warning: prompt logging requested but logger failed to start\n");
+  }
 
-    // Add system prompt with session tracking instruction (skip on resume — session already has it)
-    if (!options.resume) {
-      const sessionInstruction = `\n\nSESSION TRACKING: When making git commits, include this trailer:\n  Session: ${sessionId}\nAdd it after any other trailers in your commit messages.`;
-      const fullSystemPrompt = systemPrompt + tzContext + sessionInstruction;
-      if (fullSystemPrompt) {
-        args.push("--append-system-prompt", fullSystemPrompt);
-      }
-    }
-
-    // Add the user prompt
-    args.push(prompt);
-
-    if (dryRun) {
-      resolve({
-        success: true,
-        output: `[DRY RUN] Would run Claude Code with prompt:\n${prompt}`,
-        exitCode: 0,
-        sessionId,
-      });
-      return;
-    }
-
-    // Show the command being run (show as "claude" for readability even though we use cb-claude)
-    const cmdLine = formatCommandLine("claude", args);
-    onOutput?.(cmdLine);
-
-    // Start prompt logger if CB_LOG_PROMPTS is set
-    const shouldLog = process.env.CB_LOG_PROMPTS === "1";
-    const loggerSetup = shouldLog
-      ? startPromptLogger(boxRoot, sessionId)
-      : Promise.resolve(null);
-
-    loggerSetup.then(async (logger) => {
-      if (shouldLog && logger) {
-        onOutput?.(`Prompt logging enabled → .callback-box/logs/${sessionId}.log\n`);
-      } else if (shouldLog) {
-        onOutput?.("Warning: prompt logging requested but logger failed to start\n");
-      }
-
-      // buildScriptEnv prepends callback-box's bin/ to PATH.
-      // CLAUDECODE is cleared so Claude Code can run even when nested
-      // inside an existing Claude Code session.
-      const env = await buildScriptEnv(boxRoot, {
-        CLAUDECODE: undefined,
-      });
-
-      // Route through the logging proxy if active
-      if (logger) {
-        env.ANTHROPIC_BASE_URL = `http://localhost:${logger.port}/`;
-      }
-
-      // Use cb-claude wrapper which auto-adds --plugin-dir for card validation
-      const child = spawn(cbClaudePath, args, {
-        cwd: boxRoot,
-        env,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      child.stdout.on("data", (data) => {
-        const text = data.toString();
-        stdout += text;
-        onOutput?.(text);
-      });
-
-      child.stderr.on("data", (data) => {
-        const text = data.toString();
-        stderr += text;
-        onOutput?.(text);
-      });
-
-      child.on("error", (err) => {
-        if (logger) stopPromptLogger(logger);
-        resolve({
-          success: false,
-          output: stdout,
-          error: `Failed to spawn Claude Code: ${err.message}`,
-          exitCode: -1,
-          sessionId,
-        });
-      });
-
-      child.on("close", (code) => {
-        if (logger) stopPromptLogger(logger);
-        const exitCode = code ?? 0;
-        const result: AgentResult = {
-          success: exitCode === 0,
-          output: stdout,
-          exitCode,
-          sessionId,
-        };
-        // Only set `error` when we actually have stderr content. The exit code
-        // is already on `result.exitCode`, so don't synthesize an "Exit code: N"
-        // string — it just causes duplicate noise in scheduler logs.
-        if (exitCode !== 0 && stderr.trim()) {
-          result.error = stderr;
-        }
-        resolve(result);
-      });
-    });
+  // Build env. CLAUDECODE is unset so the SDK can run nested inside Claude Code.
+  // ANTHROPIC_API_KEY is already stripped by buildScriptEnv to force subscription auth.
+  const env = await buildScriptEnv(boxRoot, {
+    CLAUDECODE: undefined,
+    ...(logger ? { ANTHROPIC_BASE_URL: `http://localhost:${logger.port}/` } : {}),
   });
+
+  // Banner showing what's running.
+  onOutput?.(
+    fmt.dim("$ ") +
+      fmt.cmd("claude-agent-sdk query") +
+      fmt.dim(
+        ` (model=${options.model ?? "default"} maxTurns=${maxTurns}${isResume ? ` resume=${options.resumeSessionId}` : ""})`,
+      ) +
+      "\n",
+  );
+  if (!isResume && (systemPrompt || tzContext)) {
+    onOutput?.(`\n${fmt.dim("System prompt:")}\n${fmt.dim("─".repeat(40))}\n${systemPrompt}${tzContext}\n${fmt.dim("─".repeat(40))}\n\n`);
+  }
+  onOutput?.(`${fmt.dim("User prompt:")}\n${fmt.dim("─".repeat(40))}\n${prompt}\n${fmt.dim("─".repeat(40))}\n\n`);
+
+  const appendedSystem = isResume ? "" : systemPrompt + tzContext;
+
+  let outputBuf = "";
+  let resultMessage: SDKMessage | null = null;
+  let assignedSessionId: string | null = null;
+  let errorText: string | null = null;
+
+  try {
+    const q = query({
+      prompt,
+      options: {
+        cwd: boxRoot,
+        env: dropUndefined(env),
+        permissionMode: "bypassPermissions",
+        maxTurns,
+        ...(options.model !== undefined && { model: options.model }),
+        ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),
+        plugins: [{ type: "local", path: CARD_VALIDATOR_PLUGIN }],
+        // settingSources defaults to ["user", "project"] which auto-loads
+        // CLAUDE.md, .claude/settings.json, .claude/rules/, etc.
+        ...(appendedSystem !== "" && {
+          systemPrompt: {
+            type: "preset" as const,
+            preset: "claude_code" as const,
+            append: appendedSystem,
+          },
+        }),
+      },
+    });
+
+    for await (const msg of q) {
+      if (msg.type === "system" && msg.subtype === "init") {
+        if (assignedSessionId === null) {
+          assignedSessionId = msg.session_id;
+          options.onSessionId?.(msg.session_id);
+        }
+      }
+      if (msg.type === "result") {
+        resultMessage = msg;
+      }
+      const rendered = renderSdkMessage(msg);
+      if (rendered) {
+        outputBuf += rendered;
+        onOutput?.(rendered);
+      }
+    }
+  } catch (e) {
+    errorText = e instanceof Error ? e.message : String(e);
+  } finally {
+    if (logger) stopPromptLogger(logger);
+  }
+
+  const sessionId = assignedSessionId ?? options.resumeSessionId ?? "";
+
+  if (errorText !== null) {
+    return {
+      success: false,
+      output: outputBuf,
+      error: errorText,
+      exitCode: -1,
+      sessionId,
+    };
+  }
+
+  if (resultMessage === null) {
+    return {
+      success: false,
+      output: outputBuf,
+      error: "Agent ended without a result message",
+      exitCode: -1,
+      sessionId,
+    };
+  }
+
+  const isError = resultMessage.is_error || resultMessage.subtype !== "success";
+  const result: AgentResult = {
+    success: !isError,
+    output: outputBuf,
+    exitCode: isError ? 1 : 0,
+    sessionId,
+  };
+  if (isError) {
+    if (resultMessage.subtype !== "success") {
+      const errs = "errors" in resultMessage ? resultMessage.errors : [];
+      result.error = errs.length > 0 ? errs.join("\n") : resultMessage.subtype;
+    } else {
+      result.error = "result.is_error was true";
+    }
+  }
+  return result;
 }
 
 /**

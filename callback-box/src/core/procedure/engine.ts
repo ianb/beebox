@@ -619,7 +619,7 @@ async function executeStep(params: ExecuteStepParams): Promise<"completed" | "sk
 
     const agentResult = await agent.invoke(invokeOpts);
 
-    sessionId = agent.sessionId;
+    sessionId = agent.sessionId ?? undefined;
 
     if (!agentResult.success) {
       ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error ?? "unknown error"}`));

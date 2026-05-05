@@ -6,13 +6,13 @@ tRPC routes) ask the pool for a session when a chat request comes
 in; the pool reuses an existing session or creates a new one via
 `buildActivityChatSessionOptions`.
 
-Tests inject a fake spawner + `skipBootstrap` via the pool's
+Tests inject a fake `ChatBackend` + `skipBootstrap` via the pool's
 `chatOptions` so no real subprocess is spawned.
 
 ```ts setup
 import { Activity, ActivityMode, ActivityRegistry, ActivityChatSessionPool } from "../src/activities/index.js";
 import type { ActivityInstance } from "../src/activities/index.js";
-import { createFakeClaudeChatSpawner } from "../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../src/services/claude-chat.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 class PolyglotSetup extends ActivityMode {
@@ -59,8 +59,8 @@ const box = await makeTmpBox();
 const registry = makeRegistry();
 await registry.getOrThrow("polyglot").createInstance({ boxRoot: box.root, name: "es", displayName: "Spanish" });
 
-const spawner = createFakeClaudeChatSpawner();
-const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true } });
+const backend = createFakeChatBackend();
+const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true } });
 
 const first = await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "setup" });
 const second = await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "setup" });
@@ -87,8 +87,8 @@ const box = await makeTmpBox();
 const registry = makeRegistry();
 await registry.getOrThrow("polyglot").createInstance({ boxRoot: box.root, name: "es", displayName: "Spanish" });
 
-const spawner = createFakeClaudeChatSpawner();
-const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true } });
+const backend = createFakeChatBackend();
+const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true } });
 
 const setup = await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "setup" });
 const main = await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "main" });
@@ -113,8 +113,8 @@ const polyglot = registry.getOrThrow("polyglot");
 await polyglot.createInstance({ boxRoot: box.root, name: "es", displayName: "Spanish" });
 await polyglot.createInstance({ boxRoot: box.root, name: "fr", displayName: "French" });
 
-const spawner = createFakeClaudeChatSpawner();
-const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true } });
+const backend = createFakeChatBackend();
+const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true } });
 
 const es = await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "setup" });
 const fr = await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "fr", modeName: "setup" });
@@ -137,8 +137,8 @@ const box = await makeTmpBox();
 const registry = makeRegistry();
 await registry.getOrThrow("polyglot").createInstance({ boxRoot: box.root, name: "es", displayName: "Spanish" });
 
-const spawner = createFakeClaudeChatSpawner();
-const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true } });
+const backend = createFakeChatBackend();
+const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true } });
 
 const key = { boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "setup" };
 await pool.getOrCreate(key);
@@ -174,8 +174,8 @@ const box = await makeTmpBox();
 const registry = makeRegistry();
 await registry.getOrThrow("polyglot").createInstance({ boxRoot: box.root, name: "es", displayName: "Spanish" });
 
-const spawner = createFakeClaudeChatSpawner();
-const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true } });
+const backend = createFakeChatBackend();
+const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true } });
 
 await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "setup" });
 await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "main" });
@@ -220,15 +220,15 @@ const box = await makeTmpBox();
 const registry = makeRegistry();
 await registry.getOrThrow("polyglot").createInstance({ boxRoot: box.root, name: "es", displayName: "Spanish" });
 
-const spawner = createFakeClaudeChatSpawner();
+const backend = createFakeChatBackend();
 const eventBus = createEventBus(box.root);
-const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true }, eventBus });
+const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true }, eventBus });
 
 const received = [];
 const sub = eventBus.subscribe({ listener: (e) => received.push(e) });
 
 const session = await pool.getOrCreate({ boxRoot: box.root, activityType: "polyglot", instanceName: "es", modeName: "setup" });
-await runTurn(session, { spawner, sessionIdToEmit: "sess-abc" });
+await runTurn(session, { backend, sessionIdToEmit: "sess-abc" });
 await tick();
 ```
 
@@ -274,8 +274,8 @@ async function caught(fn) { try { await fn(); return null; } catch (e) { return 
 ```
 const box = await makeTmpBox();
 const registry = makeRegistry();
-const spawner = createFakeClaudeChatSpawner();
-const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true } });
+const backend = createFakeChatBackend();
+const pool = new ActivityChatSessionPool(registry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true } });
 
 const err = await caught(() => pool.getOrCreate({ boxRoot: box.root, activityType: "nope", instanceName: "x", modeName: "main" }));
 err instanceof UnknownActivityTypeError

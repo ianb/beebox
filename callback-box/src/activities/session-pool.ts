@@ -6,7 +6,7 @@
  * teardown via `close()`, bulk shutdown via `closeAll()`.
  *
  * Threads through the `registry`, a `basePrompt` factory, and any
- * `chatOptions` overrides (used by tests to inject the fake spawner or
+ * `chatOptions` overrides (used by tests to inject the fake backend or
  * skipBootstrap).
  */
 

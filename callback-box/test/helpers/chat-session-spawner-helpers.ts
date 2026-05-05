@@ -6,7 +6,7 @@
 
 import { once } from "node:events";
 import type { ChatSession, ChatSessionOptions } from "../../src/core/chat-session.js";
-import type { FakeClaudeChatSpawner } from "../../src/services/claude-chat.js";
+import type { FakeChatBackend } from "../../src/services/claude-chat.js";
 
 export async function setupSystemPrompt(): Promise<string> { return "setup"; }
 export async function mainSystemPrompt(): Promise<string> { return "main"; }
@@ -18,20 +18,20 @@ export async function plainTestPrompt(): Promise<string> { return "test"; }
 export const SETUP_FILE = "store/activities/poly/x/.callback-box/current-session-setup.json";
 export const MAIN_FILE = "store/activities/poly/x/.callback-box/current-session-main.json";
 
-export function buildSetupOpts(spawner: FakeClaudeChatSpawner): ChatSessionOptions {
-  return { spawner, systemPrompt: setupSystemPrompt, sessionFile: SETUP_FILE, skipBootstrap: true };
+export function buildSetupOpts(backend: FakeChatBackend): ChatSessionOptions {
+  return { backend, systemPrompt: setupSystemPrompt, sessionFile: SETUP_FILE, skipBootstrap: true };
 }
 
-export function buildMainOpts(spawner: FakeClaudeChatSpawner): ChatSessionOptions {
-  return { spawner, systemPrompt: mainSystemPrompt, sessionFile: MAIN_FILE, skipBootstrap: true };
+export function buildMainOpts(backend: FakeChatBackend): ChatSessionOptions {
+  return { backend, systemPrompt: mainSystemPrompt, sessionFile: MAIN_FILE, skipBootstrap: true };
 }
 
-export function buildReopenSetupOpts(spawner: FakeClaudeChatSpawner): ChatSessionOptions {
-  return { spawner, sessionFile: SETUP_FILE, skipBootstrap: true };
+export function buildReopenSetupOpts(backend: FakeChatBackend): ChatSessionOptions {
+  return { backend, sessionFile: SETUP_FILE, skipBootstrap: true };
 }
 
-export function buildReopenMainOpts(spawner: FakeClaudeChatSpawner): ChatSessionOptions {
-  return { spawner, sessionFile: MAIN_FILE, skipBootstrap: true };
+export function buildReopenMainOpts(backend: FakeChatBackend): ChatSessionOptions {
+  return { backend, sessionFile: MAIN_FILE, skipBootstrap: true };
 }
 
 export async function tick(): Promise<void> {
@@ -41,16 +41,16 @@ export async function tick(): Promise<void> {
 
 export async function runTurn(
   session: ChatSession,
-  { spawner, sessionIdToEmit }: { spawner: FakeClaudeChatSpawner; sessionIdToEmit: string },
+  { backend, sessionIdToEmit }: { backend: FakeChatBackend; sessionIdToEmit: string },
 ): Promise<void> {
   await session.send("hi");
   await tick();
-  // Register the "done" waiter BEFORE emitting — PassThrough may deliver
-  // synchronously, in which case `once` would miss the event if registered after.
+  // Register the "done" waiter BEFORE emitting — the fake delivers
+  // synchronously, so `once` would miss the event if registered after.
   const done = once(session, "done");
-  const proc = spawner.lastProcess();
-  if (proc === null) throw new Error("runTurn: no process spawned");
-  proc.emitSessionInit(sessionIdToEmit);
-  proc.emitResult();
+  const run = backend.lastRun();
+  if (run === null) throw new Error("runTurn: no run started");
+  run.emitSessionInit(sessionIdToEmit);
+  run.emitResult();
   await done;
 }

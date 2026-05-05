@@ -12,13 +12,13 @@ import { z } from "zod";
  * Valid question statuses.
  */
 export const QuestionStatus = z.enum(["pending", "answered", "expired"]);
-export type QuestionStatusType = typeof QuestionStatus._type;
+export type QuestionStatusType = z.infer<typeof QuestionStatus>;
 
 /**
  * Input types for questions.
  */
 export const QuestionInputType = z.enum(["select", "text", "confirm"]);
-export type QuestionInputTypeValue = typeof QuestionInputType._type;
+export type QuestionInputTypeValue = z.infer<typeof QuestionInputType>;
 
 /**
  * Child element for context/memo about the question.

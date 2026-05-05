@@ -1,12 +1,12 @@
-# ChatSession with injected spawner
+# ChatSession with injected backend
 
 `ChatSession` accepts a `ChatSessionOptions` bag that lets tests
-inject a fake `ClaudeChatSpawner` and override the system prompt,
-session file, MCP config, env vars, and session-id callback. This
-doctest exercises the full round-trip without spawning a real Claude
+inject a fake `ChatBackend` and override the system prompt, session
+file, MCP config, env vars, and session-id callback. This doctest
+exercises the full round-trip without spawning a real Claude
 subprocess.
 
-See `service-claude-chat.doctest.md` for the fake spawner API.
+See `service-claude-chat.doctest.md` for the fake backend API.
 Most of the helpers used below live in
 `test/helpers/chat-session-spawner-helpers.ts` — the doctest loader
 has trouble with top-level function declarations whose bodies return
@@ -14,7 +14,7 @@ inline object literals, so the helpers are in a regular `.ts` file.
 
 ```ts setup
 import { ChatSession } from "../src/core/chat-session.js";
-import { createFakeClaudeChatSpawner } from "../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../src/services/claude-chat.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import {
   runTurn,
@@ -34,32 +34,32 @@ import { readFile } from "node:fs/promises";
 import { once } from "node:events";
 ```
 
-## Spawner sees the right options
+## Backend sees the right options
 
-`ChatSession` builds system prompt + env + resume flag + MCP config
-and hands them to the spawner. With an override prompt and extra env
-the fake captures both:
+`ChatSession` builds system prompt + env + resume id + MCP config and
+hands them to the backend. With an override prompt and extra env the
+fake captures both:
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
-const opts = { spawner, systemPrompt: testPrompt, extraEnv: { CB_ACTIVITY_NAME: "polyglot", CB_ACTIVITY_MODE: "setup" }, skipBootstrap: true };
+const backend = createFakeChatBackend();
+const opts = { backend, systemPrompt: testPrompt, extraEnv: { CB_ACTIVITY_NAME: "polyglot", CB_ACTIVITY_MODE: "setup" }, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 await session.send("hello");
 await tick();
 
-const proc = spawner.lastProcess();
-proc !== null && proc.spawnOptions.systemPrompt
+const run = backend.lastRun();
+run !== null && run.startOptions.systemPrompt
 => TEST PROMPT
 
-proc !== null && proc.spawnOptions.env.CB_ACTIVITY_NAME
+run !== null && run.startOptions.env.CB_ACTIVITY_NAME
 => polyglot
 
-proc !== null && proc.spawnOptions.env.CB_ACTIVITY_MODE
+run !== null && run.startOptions.env.CB_ACTIVITY_MODE
 => setup
 
-proc !== null && proc.spawnOptions.sessionIdToResume
+run !== null && run.startOptions.resumeSessionId
 => undefined
 ```
 
@@ -72,27 +72,27 @@ await box.cleanup();
 
 When the fake emits the init system message with a `session_id`,
 `ChatSession` persists it to `sessionFile` and calls the
-`onSessionIdAssigned` callback. Subsequent turns reuse the id as
-`--resume`.
+`onSessionIdAssigned` callback. Subsequent runs reuse the id as
+`resume`.
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
+const backend = createFakeChatBackend();
 const observed = [];
 async function recordId(id) { observed.push(id); }
-const opts = { spawner, systemPrompt: testPromptShort, onSessionIdAssigned: recordId, skipBootstrap: true };
+const opts = { backend, systemPrompt: testPromptShort, onSessionIdAssigned: recordId, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 await session.send("first message");
 await tick();
 
-// Register the "done" waiter BEFORE emitting — PassThrough may deliver
-// synchronously, in which case emit/handle/"done" all fire before `once()` binds.
+// Register the "done" waiter BEFORE emitting — the fake delivers
+// synchronously, so emit/handle/"done" all fire before `once()` binds.
 const done = once(session, "done");
-const proc = spawner.lastProcess();
-proc.emitSessionInit("sess-xyz");
-proc.emitAssistantText("hi back");
-proc.emitResult();
+const run = backend.lastRun();
+run.emitSessionInit("sess-xyz");
+run.emitAssistantText("hi back");
+run.emitResult();
 await done;
 
 session.getSessionId()
@@ -105,7 +105,7 @@ observed.join(",")
 A new ChatSession in the same box picks up the persisted id:
 
 ``` continue
-const reloaded = new ChatSession(box.root, { spawner, skipBootstrap: true });
+const reloaded = new ChatSession(box.root, { backend, skipBootstrap: true });
 reloaded.getSessionId()
 => sess-xyz
 ```
@@ -124,9 +124,9 @@ writes its id to that file; a session pointed at a different
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
-const session = new ChatSession(box.root, buildSetupOpts(spawner));
-await runTurn(session, { spawner, sessionIdToEmit: "sess-setup-1" });
+const backend = createFakeChatBackend();
+const session = new ChatSession(box.root, buildSetupOpts(backend));
+await runTurn(session, { backend, sessionIdToEmit: "sess-setup-1" });
 
 const raw = await readFile(box.path(SETUP_FILE), "utf-8");
 JSON.parse(raw).sessionId
@@ -137,11 +137,11 @@ Reopening with the same `sessionFile` recovers the saved id; a
 different `sessionFile` has none:
 
 ``` continue
-const reopen = new ChatSession(box.root, buildReopenSetupOpts(spawner));
+const reopen = new ChatSession(box.root, buildReopenSetupOpts(backend));
 reopen.getSessionId()
 => sess-setup-1
 
-const mainSession = new ChatSession(box.root, buildReopenMainOpts(spawner));
+const mainSession = new ChatSession(box.root, buildReopenMainOpts(backend));
 mainSession.getSessionId()
 => null
 ```
@@ -151,36 +151,30 @@ session.stop();
 await box.cleanup();
 ```
 
-## MCP config gets written and passed
+## MCP config flows through to the backend
 
-When `mcpConfig` is provided, ChatSession writes a temp JSON file with
-the `mcpServers` wrapper claude expects, and passes the path via
-`--mcp-config`. The spawner sees `mcpConfigPath` pointing at that file.
+When `mcpConfig` is provided, ChatSession passes it through to the
+backend as the `cb-activity` MCP server. The SDK takes it directly
+(no temp file needed).
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
+const backend = createFakeChatBackend();
 const mcp = { command: "tsx", args: ["mcp.ts"], env: { FOO: "bar" } };
-const opts = { spawner, systemPrompt: xPrompt, mcpConfig: mcp, skipBootstrap: true };
+const opts = { backend, systemPrompt: xPrompt, mcpConfig: mcp, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 await session.send("hi");
 await tick();
 
-const proc = spawner.lastProcess();
-typeof proc.spawnOptions.mcpConfigPath
-=> string
-```
-
-Read the temp config file back and check its shape:
-
-``` continue
-const raw = await readFile(proc.spawnOptions.mcpConfigPath, "utf-8");
-const cfg = JSON.parse(raw);
-cfg.mcpServers["cb-activity"].command
+const run = backend.lastRun();
+run.startOptions.mcpConfig.command
 => tsx
 
-cfg.mcpServers["cb-activity"].env.FOO
+run.startOptions.mcpConfig.args[0]
+=> mcp.ts
+
+run.startOptions.mcpConfig.env.FOO
 => bar
 ```
 
@@ -196,8 +190,8 @@ A full turn with an assistant text block + result event emits
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
-const opts = { spawner, systemPrompt: plainTestPrompt, skipBootstrap: true };
+const backend = createFakeChatBackend();
+const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 let turnText = null;
@@ -206,25 +200,25 @@ session.on("turn-text", (t) => { turnText = t; });
 await session.send("what is 2+2?");
 await tick();
 const done = once(session, "done");
-const proc = spawner.lastProcess();
-proc.emitSessionInit("sess-123");
-proc.emitAssistantText("2+2 ");
-proc.emitAssistantText("equals 4.");
-proc.emitResult();
+const run = backend.lastRun();
+run.emitSessionInit("sess-123");
+run.emitAssistantText("2+2 ");
+run.emitAssistantText("equals 4.");
+run.emitResult();
 await done;
 
 turnText
 => 2+2 equals 4.
 ```
 
-And stdin received a user-turn message:
+And the backend received a user turn (one content array per send call):
 
 ``` continue
-proc.sent.length >= 1
-=> true
+run.sent.length
+=> 1
 
-proc.sent[0].type
-=> user
+run.sent[0][0].type
+=> text
 ```
 
 ```cleanup
@@ -232,17 +226,17 @@ session.stop();
 await box.cleanup();
 ```
 
-## Close handler drains queued messages into a fresh subprocess
+## Close handler drains queued messages into a fresh run
 
-If the subprocess dies while a turn is in progress and messages are
-queued behind it, the close handler auto-drains the queue into a newly
-spawned subprocess. This recovers from wedged/killed subprocesses
-without losing the user's in-flight messages.
+If the run ends while a turn is in progress and messages are queued
+behind it, the close handler auto-drains the queue into a newly
+started run. This recovers from wedged/killed sessions without losing
+the user's in-flight messages.
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
-const opts = { spawner, systemPrompt: plainTestPrompt, skipBootstrap: true };
+const backend = createFakeChatBackend();
+const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 // First message starts a turn; session goes busy
@@ -253,21 +247,21 @@ await tick();
 session.enqueue("second");
 session.enqueue("third");
 
-// Simulate the subprocess dying mid-turn (no result emitted)
-const proc1 = spawner.lastProcess();
-proc1.close(1);
+// Simulate the run ending mid-turn (no result emitted)
+const run1 = backend.lastRun();
+await run1.close();
 await tick();
 await tick();
 
-// A second process got spawned and received the combined queued text
-spawner.processes.length
+// A second run got started and received the combined queued text
+backend.runs.length
 => 2
 ```
 
 ``` continue
-const proc2 = spawner.processes[1];
-const userTurn = proc2.sent.find((m) => m && m.type === "user");
-const text = userTurn.message.content[0].text;
+const run2 = backend.runs[1];
+const userTurn = run2.sent[0];
+const text = userTurn[0].text;
 text.includes("second") && text.includes("third")
 => true
 ```
@@ -277,16 +271,16 @@ session.stop();
 await box.cleanup();
 ```
 
-## restart() kills subprocess and drains queue into fresh one
+## restart() closes the current run and drains queue into a fresh one
 
-Calling `restart()` kills the current subprocess; the close handler
-then drains any queued messages into a new subprocess, preserving the
-session id. Unlike `stop()`, queued messages survive.
+Calling `restart()` ends the current run; the close handler then
+drains any queued messages into a new run, preserving the session
+id. Unlike `stop()`, queued messages survive.
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
-const opts = { spawner, systemPrompt: plainTestPrompt, skipBootstrap: true };
+const backend = createFakeChatBackend();
+const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 await session.send("hello");
@@ -297,14 +291,14 @@ session.restart();
 await tick();
 await tick();
 
-spawner.processes.length
+backend.runs.length
 => 2
 ```
 
 ``` continue
-const proc2 = spawner.processes[1];
-const userTurn = proc2.sent.find((m) => m && m.type === "user");
-userTurn.message.content[0].text.includes("queued after restart")
+const run2 = backend.runs[1];
+const userTurn = run2.sent[0];
+userTurn[0].text.includes("queued after restart")
 => true
 ```
 
@@ -316,13 +310,13 @@ await box.cleanup();
 ## stop() clears queued messages — no auto-drain
 
 `stop()` is used for intentional shutdown (including `resetSession`).
-It clears the queue before killing the process so the close handler
-doesn't surprise the caller by respawning.
+It clears the queue before closing the run so the close handler
+doesn't surprise the caller by starting a new run.
 
 ```
 const box = await makeTmpBox();
-const spawner = createFakeClaudeChatSpawner();
-const opts = { spawner, systemPrompt: plainTestPrompt, skipBootstrap: true };
+const backend = createFakeChatBackend();
+const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 await session.send("hi");
@@ -333,7 +327,7 @@ session.stop();
 await tick();
 await tick();
 
-spawner.processes.length
+backend.runs.length
 => 1
 ```
 
@@ -345,13 +339,12 @@ await box.cleanup();
 
 - All the options are optional. `new ChatSession(boxRoot)` with no
   options still produces the pre-existing main-chat behavior.
-- Inject the fake spawner for any test that exercises
-  spawn-to-response behavior. For tests that only care about session
-  state (getSessionId, resetSession, getHistory), no spawner is needed
-  — those paths don't start a subprocess.
-- `tick()` lets the event loop drain after pushing lines onto the
-  fake's stdout. Use `once(session, "done")` to wait for a turn to
-  complete.
+- Inject the fake backend for any test that exercises
+  send-to-response behavior. For tests that only care about session
+  state (getSessionId, resetSession, getHistory), no backend is
+  needed — those paths don't start a run.
+- `tick()` lets the event loop drain after pushing messages into the
+  fake. Use `once(session, "done")` to wait for a turn to complete.
 - Avoid arrow-function expressions with `=>` on the same line as other
   code in example blocks — the doctest loader confuses the arrow with
   its expectation marker. Put lambdas in the setup block or a helper

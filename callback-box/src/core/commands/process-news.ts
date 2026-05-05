@@ -530,7 +530,7 @@ async function executeProcessNews(
               agent: triageAgent,
               baseline: triageBaseline,
               fallbackMessage: `Triage ${inboxItems.length} news items`,
-              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageAgent.sessionId },
+              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "triage", Session: triageAgent.sessionId ?? "unknown" },
               onOutput: (text) => ctx.write(text),
             });
           } else {
@@ -625,7 +625,7 @@ async function executeProcessNews(
               agent: analyzeAgent,
               baseline: analyzeBaseline,
               fallbackMessage: `Analyze ${itemsToAnalyze.length} news items`,
-              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeAgent.sessionId },
+              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "analyze", Session: analyzeAgent.sessionId ?? "unknown" },
               onOutput: (text) => ctx.write(text),
             });
           } else {
@@ -677,7 +677,7 @@ async function executeProcessNews(
               agent: briefAgent,
               baseline: briefBaseline,
               fallbackMessage: "Create news brief",
-              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefAgent.sessionId },
+              fallbackTrailers: { "Triggered-By": "cb process-news", Phase: "brief", Session: briefAgent.sessionId ?? "unknown" },
               onOutput: (text) => ctx.write(text),
             });
           } else {

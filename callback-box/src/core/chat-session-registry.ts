@@ -51,7 +51,7 @@ export interface ChatSessionRegistryOptions {
   cleanupIntervalMs?: number;
   /**
    * Factory for the underlying ChatSession. Override for tests so that
-   * spawner / systemPrompt / etc. can be injected. The registry adds
+   * backend / systemPrompt / etc. can be injected. The registry adds
    * `initialSessionId`, `sessionFile: null`, and `onSessionIdAssigned`
    * on top of whatever this returns.
    */

@@ -12,6 +12,12 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.TSX_TSCONFIG_PATH = path.resolve(__dirname, "tsconfig.json");
 
+// Force Claude to use subscription auth, never an API key. Removing this
+// here means it can't leak into any code path that runs after preload —
+// the SDK, spawned subprocesses, or stray reads of process.env all see
+// no key.
+delete process.env.ANTHROPIC_API_KEY;
+
 // Filter the punycode DEP0040 deprecation. The offending require lives
 // in grammy → node-fetch@2 → whatwg-url@5 → tr46@0; we can't patch any
 // of those without ejecting grammy.

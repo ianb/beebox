@@ -97,6 +97,12 @@ export async function buildScriptEnv(
   // how the parent process's PATH was set up.
   env.PATH = `${CB_BIN_DIR}:${env.PATH ?? ""}`;
 
+  // Force Claude to use subscription auth, never an API key. The Claude
+  // Agent SDK and CLI both pick up ANTHROPIC_API_KEY if present and silently
+  // bill it instead of the user's subscription. Strip it from every
+  // box-spawned subprocess so it can't leak in by accident.
+  delete env.ANTHROPIC_API_KEY;
+
   // Priority: live ambient (running server) > box.json publicUrl > PUBLIC_URL env.
   // The live ambient lets a local dev server supply the env vars without
   // requiring publicUrl to be configured in box.json.

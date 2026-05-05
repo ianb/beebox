@@ -18,7 +18,7 @@ Errors from the base class are translated into tRPC error codes:
 import { Activity, ActivityChatSessionPool, ActivityMode, ActivityRegistry } from "../src/activities/index.js";
 import type { ActivityInstance, InstanceSummary } from "../src/activities/index.js";
 import { appRouter } from "../src/webapp/trpc/router.js";
-import { createFakeClaudeChatSpawner } from "../src/services/claude-chat.js";
+import { createFakeChatBackend } from "../src/services/claude-chat.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 class HelloSetup extends ActivityMode {
@@ -55,14 +55,14 @@ async function constantBase() { return "BASE"; }
 function makeCtx(boxRoot: string) {
   const activityRegistry = new ActivityRegistry();
   activityRegistry.register(new Hello());
-  const spawner = createFakeClaudeChatSpawner();
-  const activityChatPool = new ActivityChatSessionPool(activityRegistry, { basePrompt: constantBase, chatOptions: { spawner, skipBootstrap: true } });
+  const backend = createFakeChatBackend();
+  const activityChatPool = new ActivityChatSessionPool(activityRegistry, { basePrompt: constantBase, chatOptions: { backend, skipBootstrap: true } });
   return {
     boxRoot,
     boxSlug: "test",
     activityRegistry,
     activityChatPool,
-    _testSpawner: spawner,
+    _testBackend: backend,
     // Fields below are required by TrpcContext but not used by the activities router.
     // Tests in this file don't touch them.
     eventBus: null,
@@ -265,21 +265,21 @@ first.sessionId
 => null
 ```
 
-The pool now holds one session, and the fake spawner received the right
+The pool now holds one session, and the fake backend received the right
 env vars + system prompt (composed from basePrompt + mode prompt):
 
 ``` continue
 ctx.activityChatPool.size()
 => 1
 
-const proc = ctx._testSpawner.lastProcess();
-proc.spawnOptions.env.CB_ACTIVITY_NAME
+const run = ctx._testBackend.lastRun();
+run.startOptions.env.CB_ACTIVITY_NAME
 => hello
 
-proc.spawnOptions.env.CB_ACTIVITY_MODE
+run.startOptions.env.CB_ACTIVITY_MODE
 => setup
 
-proc.spawnOptions.systemPrompt.includes("Set me up")
+run.startOptions.systemPrompt.includes("Set me up")
 => true
 ```
 

@@ -1,16 +1,15 @@
 /**
- * ChatSession - Manages a long-lived Claude process for interactive chat.
+ * ChatSession — Manages a long-lived SDK chat run for interactive chat.
  *
- * Follows the Thinking Machine pattern: spawns claude CLI with
- * --output-format stream-json --input-format stream-json, keeps the
- * process alive between messages, and resumes sessions across restarts.
+ * Wraps `@anthropic-ai/claude-agent-sdk` via `ChatBackend` (in
+ * `services/claude-chat.ts`). One backend run per spawned chat — the
+ * session pushes user messages and receives SDK message events one turn
+ * after another, and resumes sessions across restarts via the SDK's
+ * `resume` option.
  */
 
 import { EventEmitter } from "node:events";
-import * as readline from "node:readline";
 import * as fs from "node:fs";
-import { writeFile } from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
 import {
   getSessionLogPath,
@@ -23,14 +22,13 @@ import { generateDocs } from "./generate-docs.js";
 import { buildScriptEnv } from "./script-env.js";
 import type { MCPServerConfig } from "../activities/index.js";
 import {
-  createClaudeChatSpawner,
-  type ClaudeChatProcess,
-  type ClaudeChatSpawner,
+  CARD_VALIDATOR_PLUGIN_PATH,
+  createChatBackend,
+  type ChatBackend,
+  type ChatBackendRun,
+  type ChatContentBlock,
 } from "../services/claude-chat.js";
-
-// Path to the cb-claude wrapper binary — used to extend PATH for subprocess tools.
-const __dirname = import.meta.dirname;
-const binDir = path.resolve(__dirname, "../../bin");
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
 /**
  * Compute the tail size honoring both an explicit tail and a minimum number
@@ -53,7 +51,8 @@ function effectiveTailSize(
 }
 
 /**
- * Content block in a Claude stream-json message.
+ * Content block in a chat message, for the wire shape consumed by the
+ * frontend over SSE.
  */
 export interface ChatMessageContent {
   type: string;
@@ -71,7 +70,8 @@ export interface ChatMessageContent {
 }
 
 /**
- * A message from the Claude stream-json protocol.
+ * A message emitted by ChatSession to consumers (chat routes, activity
+ * pool). Stable wire shape for the frontend.
  */
 export interface ChatMessage {
   type:
@@ -96,6 +96,69 @@ export interface ChatMessage {
   num_turns?: number;
 }
 
+/**
+ * Map an SDKMessage to a ChatMessage (the stable wire shape).
+ * Returns null for SDK message types we don't surface (partials, hooks,
+ * status, etc.) — those stay internal to the SDK pipeline.
+ */
+function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
+  switch (msg.type) {
+    case "system": {
+      // We only forward the init system message, the only one with session_id.
+      if (msg.subtype !== "init") return null;
+      return {
+        type: "system",
+        subtype: "init",
+        session_id: msg.session_id,
+      };
+    }
+    case "assistant": {
+      const result: ChatMessage = {
+        type: "assistant",
+        session_id: msg.session_id,
+        message: {
+          role: msg.message.role,
+          content: msg.message.content as ChatMessageContent[],
+          ...(msg.message.stop_reason !== null && msg.message.stop_reason !== undefined
+            ? { stop_reason: msg.message.stop_reason }
+            : {}),
+        },
+      };
+      if (msg.uuid) result.uuid = msg.uuid;
+      return result;
+    }
+    case "user": {
+      // SDK's SDKUserMessage carries content the assistant turn just consumed
+      // (i.e., the user message we pushed in). Forward so the UI can echo it.
+      const content = (msg.message as { content?: ChatMessageContent[] }).content;
+      const out: ChatMessage = {
+        type: "user",
+        message: {
+          role: "user",
+          content: Array.isArray(content) ? content : [],
+        },
+      };
+      if (msg.session_id !== undefined) out.session_id = msg.session_id;
+      return out;
+    }
+    case "result": {
+      const r: ChatMessage = {
+        type: "result",
+        subtype: msg.subtype,
+        session_id: msg.session_id,
+        is_error: msg.is_error,
+        duration_ms: msg.duration_ms,
+        num_turns: msg.num_turns,
+        total_cost_usd: msg.total_cost_usd,
+      };
+      if (msg.subtype === "success") r.result = msg.result;
+      return r;
+    }
+    default:
+      return null;
+  }
+}
+
 const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
 const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 
@@ -110,7 +173,7 @@ const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 export interface ChatSessionOptions {
   /** Resolves the system prompt at process-start. Default: CHAT_SYSTEM_PROMPT + tzContext. */
   systemPrompt?: (boxRoot: string) => Promise<string>;
-  /** MCP server config. When set, written to a temp JSON file and passed via --mcp-config. */
+  /** MCP server config. Passed directly to the SDK as the `cb-activity` server. */
   mcpConfig?: MCPServerConfig | null;
   /**
    * Path to the current-session-id pointer, relative to boxRoot.
@@ -121,19 +184,19 @@ export interface ChatSessionOptions {
   sessionFile?: string | null;
   /** Path to the current-model pointer, relative to boxRoot. Default: .callback-box/chat-model.json. */
   modelFile?: string;
-  /** Extra env vars merged into the Claude subprocess env. */
+  /** Extra env vars merged into the SDK subprocess env. */
   extraEnv?: Record<string, string>;
-  /** Called once when Claude assigns a new session ID. Used for per-session bookkeeping. */
+  /** Called once when the SDK assigns a new session ID. Used for per-session bookkeeping. */
   onSessionIdAssigned?: (sessionId: string) => Promise<void> | void;
   /**
    * Pre-set the session id (skips loading from `sessionFile`). Used by the
    * registry to construct an instance bound to a specific existing session.
    */
   initialSessionId?: string;
-  /** Injectable spawner — real by default; tests inject the fake. */
-  spawner?: ClaudeChatSpawner;
+  /** Injectable backend — real by default; tests inject the fake. */
+  backend?: ChatBackend;
   /**
-   * Skip the `generateDocs` bootstrap step inside `startProcess`. Useful in
+   * Skip the `generateDocs` bootstrap step inside `startRun`. Useful in
    * tests where the box isn't a fully-initialized callback-box, and in
    * activity sessions where the host box's docs aren't relevant to the
    * mode. Defaults to false (main chat behavior).
@@ -345,8 +408,25 @@ export function buildContentBlocks(
   return blocks;
 }
 
+/**
+ * Convert a ChatMessageContent array into the SDK's ChatContentBlock array.
+ * The shapes are compatible — we just narrow the type so downstream type
+ * checks pass.
+ */
+function toBackendContent(blocks: ChatMessageContent[]): ChatContentBlock[] {
+  const out: ChatContentBlock[] = [];
+  for (const b of blocks) {
+    if (b.type === "text") {
+      out.push({ type: "text", text: b.text ?? "" });
+    } else if (b.type === "image" && b.source) {
+      out.push({ type: "image", source: b.source });
+    }
+  }
+  return out;
+}
+
 export class ChatSession extends EventEmitter {
-  private proc: ClaudeChatProcess | null = null;
+  private run: ChatBackendRun | null = null;
   private sessionId: string | null = null;
   private boxRoot: string;
   private busy = false;
@@ -355,9 +435,11 @@ export class ChatSession extends EventEmitter {
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
   private readonly modelFile: string;
-  private readonly spawner: ClaudeChatSpawner;
-  private mcpConfigPath: string | null = null;
+  private readonly backend: ChatBackend;
   private currentModel: string | null = null;
+  /** Marker so the close listener can distinguish intentional shutdown
+   *  (which clears the queue) from unexpected death (which drains it). */
+  private intentionalStop = false;
 
   constructor(boxRoot: string, options: ChatSessionOptions = {}) {
     super();
@@ -365,7 +447,7 @@ export class ChatSession extends EventEmitter {
     this.options = options;
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
     this.modelFile = options.modelFile ?? DEFAULT_MODEL_FILE;
-    this.spawner = options.spawner ?? createClaudeChatSpawner();
+    this.backend = options.backend ?? createChatBackend();
     if (options.initialSessionId !== undefined) {
       this.sessionId = options.initialSessionId;
     } else {
@@ -455,7 +537,7 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
-   * Resolve the system prompt for a new subprocess. Uses the options override
+   * Resolve the system prompt for a new run. Uses the options override
    * if provided; otherwise falls back to the main-chat default
    * (CHAT_SYSTEM_PROMPT + tzContext).
    */
@@ -468,39 +550,11 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
-   * Write the mcpConfig option to a temp JSON file so it can be passed to
-   * claude via --mcp-config. Returns the path, or null if no config set.
-   * Caller is responsible for cleanup via cleanupMcpConfigFile().
+   * Start a new SDK chat run.
    */
-  private async writeMcpConfigFile(): Promise<string | null> {
-    const cfg = this.options.mcpConfig;
-    if (!cfg) return null;
-    const file = path.join(os.tmpdir(), `cb-mcp-${process.pid}-${Date.now()}.json`);
-    const contents = {
-      mcpServers: {
-        "cb-activity": { command: cfg.command, args: cfg.args, env: cfg.env },
-      },
-    };
-    await writeFile(file, JSON.stringify(contents, null, 2));
-    return file;
-  }
-
-  private cleanupMcpConfigFile(): void {
-    if (this.mcpConfigPath === null) return;
-    try {
-      fs.unlinkSync(this.mcpConfigPath);
-    } catch (_e) {
-      // Best-effort cleanup; temp file will get swept by the OS eventually.
-    }
-    this.mcpConfigPath = null;
-  }
-
-  /**
-   * Spawn the claude process with stream-json mode.
-   */
-  private async startProcess(): Promise<void> {
-    if (this.proc) {
-      log("start", "Process already running");
+  private async startRun(): Promise<void> {
+    if (this.run !== null && !this.run.closed) {
+      log("start", "Run already active");
       return;
     }
 
@@ -510,12 +564,10 @@ export class ChatSession extends EventEmitter {
     }
 
     const systemPrompt = await this.resolveSystemPrompt();
-    this.mcpConfigPath = await this.writeMcpConfigFile();
 
-    log("start", "Spawning cb-claude with stream-json mode");
+    log("start", "Starting SDK chat run");
 
     const baseEnv = await buildScriptEnv(this.boxRoot, {
-      PATH: `${binDir}:${process.env.PATH ?? ""}`,
       CLAUDECODE: undefined,
     });
     const env: Record<string, string | undefined> = {
@@ -523,70 +575,46 @@ export class ChatSession extends EventEmitter {
       ...(this.options.extraEnv ?? {}),
     };
 
-    this.proc = this.spawner.spawn({
+    const run = this.backend.start({
       cwd: this.boxRoot,
       systemPrompt,
-      sessionIdToResume: this.sessionId ?? undefined,
-      mcpConfigPath: this.mcpConfigPath ?? undefined,
+      resumeSessionId: this.sessionId ?? undefined,
+      mcpConfig: this.options.mcpConfig ?? null,
       model: this.currentModel ?? undefined,
+      pluginPaths: [CARD_VALIDATOR_PLUGIN_PATH],
       env,
     });
+    this.run = run;
+    this.intentionalStop = false;
 
-    log("start", `Process spawned with PID: ${this.proc.pid}`);
+    // Background loop: pump SDK messages into handleMessage. Capture errors
+    // and emit as "error" events.
+    void this.consumeMessages(run);
+  }
 
-    if (!this.proc.stdout) {
-      log("error", "No stdout available");
-      this.emit("error", new Error("Claude process has no stdout"));
-      return;
-    }
-
-    const rl = readline.createInterface({
-      input: this.proc.stdout,
-      crlfDelay: Infinity,
-    });
-
-    rl.on("line", (line) => {
-      try {
-        const msg = JSON.parse(line) as ChatMessage;
-        this.handleMessage(msg);
-      } catch (e) {
-        log(
-          "error",
-          `Failed to parse JSON: ${e instanceof Error ? e.message : e}`
-        );
+  private async consumeMessages(run: ChatBackendRun): Promise<void> {
+    try {
+      for await (const sdkMsg of run.messages) {
+        const msg = adaptSdkMessage(sdkMsg);
+        if (msg !== null) this.handleMessage(msg);
       }
-    });
-
-    if (this.proc.stderr) {
-      this.proc.stderr.on("data", (data: Buffer) => {
-        const text = data.toString();
-        log("stderr", text.trim());
-      });
-    }
-
-    this.proc.on("close", (code) => {
-      log("close", `Process exited with code: ${code}`);
-      this.proc = null;
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      log("error", `Run errored: ${err.message}`);
+      this.emit("error", err);
+    } finally {
+      log("close", "Run ended");
+      const wasIntentional = this.intentionalStop;
+      this.run = null;
       this.busy = false;
-      this.cleanupMcpConfigFile();
-      this.emit("close", code);
-      // If messages were queued while the (now-dead) subprocess was busy,
-      // drain them into a fresh subprocess so they aren't stranded.
-      // stop()/resetSession() clear the queue first, so this is a no-op on
-      // intentional shutdown and only fires on unexpected death or restart().
-      if (this.messageQueue.length > 0) {
-        log("close", `Draining ${this.messageQueue.length} queued message(s) into fresh subprocess`);
+      this.emit("close", wasIntentional ? 0 : null);
+      // Drain any messages queued while the run was busy into a fresh run,
+      // unless this was an intentional stop (queue is already cleared).
+      if (!wasIntentional && this.messageQueue.length > 0) {
+        log("close", `Draining ${this.messageQueue.length} queued message(s) into fresh run`);
         this.drainQueue();
       }
-    });
-
-    this.proc.on("error", (err) => {
-      log("error", `Process error: ${err.message}`);
-      this.proc = null;
-      this.busy = false;
-      this.cleanupMcpConfigFile();
-      this.emit("error", err);
-    });
+    }
   }
 
   private handleMessage(msg: ChatMessage): void {
@@ -669,15 +697,13 @@ export class ChatSession extends EventEmitter {
         for (const img of imgs) combinedImages.push(img);
       }
       combinedTextParts.push(text);
-      // Advance offset past the highest id we've seen (ids are small, so
-      // offsetting by count of images in this message is safe).
       idOffset += imgs.length;
     }
-    this.send({ text: combinedTextParts.join("\n\n"), images: combinedImages });
+    void this.send({ text: combinedTextParts.join("\n\n"), images: combinedImages });
   }
 
   /**
-   * Send a message to claude. Starts the process if not running.
+   * Send a message to claude. Starts a run if not running.
    * Returns false if a turn is already in progress.
    *
    * Accepts either a plain string (back-compat) or a ChatSendInput object
@@ -690,12 +716,12 @@ export class ChatSession extends EventEmitter {
       return false;
     }
 
-    if (!this.proc) {
-      await this.startProcess();
+    if (this.run === null || this.run.closed) {
+      await this.startRun();
     }
 
-    if (!this.proc || !this.proc.stdin) {
-      log("error", "Process not ready after start");
+    if (this.run === null) {
+      log("error", "Run not ready after start");
       return false;
     }
 
@@ -707,18 +733,9 @@ export class ChatSession extends EventEmitter {
       : message;
 
     const content = buildContentBlocks(input);
-
-    const payload = JSON.stringify({
-      type: "user",
-      message: {
-        role: "user",
-        content,
-      },
-    });
-
     const imgCount = (input.images ?? []).length;
     log("send", `Sending message (${input.text.length} chars, ${imgCount} image(s), ${content.length} block(s))`);
-    this.proc.stdin.write(payload + "\n");
+    this.run.send(toBackendContent(content));
     return true;
   }
 
@@ -726,27 +743,20 @@ export class ChatSession extends EventEmitter {
    * Interrupt the current turn.
    */
   interrupt(): void {
-    if (!this.proc || !this.proc.stdin) {
-      log("interrupt", "No process to interrupt");
+    if (this.run === null || this.run.closed) {
+      log("interrupt", "No run to interrupt");
       return;
     }
-
-    const controlRequest = JSON.stringify({
-      type: "control_request",
-      request_id: `interrupt_${Date.now()}`,
-      request: { subtype: "interrupt" },
-    });
-
     log("interrupt", "Sending interrupt");
-    this.proc.stdin.write(controlRequest + "\n");
+    void this.run.interrupt().catch((e: unknown) => {
+      log("interrupt", `Interrupt failed: ${e instanceof Error ? e.message : String(e)}`);
+    });
   }
 
   /**
-   * Set the model for this chat session. Pass `null` to reset to the CLI default.
-   * Persisted to the model file so subsequent process spawns pick it up via
-   * the `--model` flag. Does NOT change the model of a running subprocess —
-   * Claude Code's stream-json input doesn't support live model switching, so
-   * the caller must restart the subprocess for the change to take effect.
+   * Set the model for this chat session. Pass `null` to reset to the SDK default.
+   * Persisted to the model file so subsequent runs pick it up. Does NOT
+   * change the model of an in-flight run — caller must restart.
    */
   setModel(model: string | null): void {
     this.currentModel = model;
@@ -796,7 +806,7 @@ export class ChatSession extends EventEmitter {
   }
 
   isRunning(): boolean {
-    return this.proc !== null;
+    return this.run !== null && !this.run.closed;
   }
 
   isBusy(): boolean {
@@ -804,38 +814,35 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
-   * Stop the claude process gracefully. Clears the pending queue so the
-   * close handler won't auto-drain into a fresh subprocess.
+   * Stop the current run gracefully. Clears the pending queue so the
+   * close handler won't auto-drain into a fresh run.
    */
   stop(): void {
-    if (this.proc) {
-      log("stop", "Stopping Claude process");
+    if (this.run !== null && !this.run.closed) {
+      log("stop", "Stopping run");
+      this.intentionalStop = true;
       this.messageQueue = [];
-      if (this.proc.stdin) this.proc.stdin.end();
-      this.proc.kill();
-      this.proc = null;
-      this.busy = false;
+      void this.run.close();
     }
   }
 
   /**
-   * Restart the claude subprocess. Kills the current process (if any) but
+   * Restart the current run. Closes the existing one (if any) but
    * preserves the session id and any queued messages — the close handler
-   * drains the queue into the fresh subprocess so wedged sessions recover
+   * drains the queue into the fresh run so wedged sessions recover
    * without losing in-flight user messages.
    */
   restart(): void {
-    if (!this.proc) {
-      log("restart", "No process to restart");
+    if (this.run === null || this.run.closed) {
+      log("restart", "No run to restart");
       return;
     }
-    log("restart", "Killing subprocess — close handler will drain any queued messages");
-    if (this.proc.stdin) this.proc.stdin.end();
-    this.proc.kill();
+    log("restart", "Closing run — close handler will drain any queued messages");
+    void this.run.close();
   }
 
   /**
-   * Reset the session — stop the process and clear the saved session ID.
+   * Reset the session — stop the run and clear the saved session ID.
    * The next send() will start a fresh conversation.
    */
   resetSession(): void {

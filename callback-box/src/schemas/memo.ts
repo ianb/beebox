@@ -14,7 +14,7 @@ import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-
  * Valid memo statuses.
  */
 export const MemoStatus = z.enum(["new", "processing", "processed"]);
-export type MemoStatusType = typeof MemoStatus._type;
+export type MemoStatusType = z.infer<typeof MemoStatus>;
 
 /**
  * Child element for created timestamp.

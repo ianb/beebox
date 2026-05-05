@@ -34,7 +34,7 @@ export const commandsRouter = router({
     .input(
       z.object({
         command: z.string().min(1),
-        args: z.record(z.unknown()).default({}),
+        args: z.record(z.string(), z.unknown()).default({}),
       })
     )
     .mutation(async ({ input, ctx }) => {

@@ -1,204 +1,344 @@
 /**
- * Claude chat spawner — typed interface for launching a Claude Code subprocess
- * in stream-json chat mode.
+ * Claude chat backend — wraps `@anthropic-ai/claude-agent-sdk`'s `query()`
+ * for long-lived bidirectional chat sessions. The chat session pushes user
+ * messages and consumes SDK message events, one turn after another, against
+ * a single SDK query handle.
  *
- * Real implementation shells out to `cb-claude` with the usual flags.
- * Fake implementation returns PassThrough streams and exposes a test-facing
- * API so tests can script the stream-json protocol without spawning a
- * subprocess.
+ * Real implementation calls `query()` and adapts SDKMessage events into a
+ * stream the chat session iterates.
  *
- * The interface intentionally stays narrow: spawn options in, a ChildProcess-
- * like handle out. The chat session owns stdin writes, stdout line parsing,
- * and message handling.
+ * Fake implementation lets tests script messages onto the stream and
+ * inspect what was sent.
+ *
+ * The interface stays narrow: start a run, push user content, iterate
+ * messages, interrupt or close. Renaming/replacing of session id and
+ * resume semantics live one level up in `ChatSession`.
  */
 
-import { spawn as nodeSpawn } from "node:child_process";
-import { EventEmitter } from "node:events";
 import * as path from "node:path";
-import { PassThrough } from "node:stream";
-import type { Readable, Writable } from "node:stream";
+import {
+  query,
+  type Options,
+  type Query,
+  type SDKMessage,
+  type SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
+import type { MCPServerConfig } from "../activities/index.js";
 
-// ─── Interface ───────────────────────────────────────────────────────────────
+// ─── Backend interface ───────────────────────────────────────────────────────
 
-export interface ClaudeChatSpawnOptions {
-  /** Working directory for the subprocess. */
+/** Content blocks accepted by `ChatBackendRun.send()`. */
+export type ChatContentBlock =
+  | { type: "text"; text: string }
+  | {
+      type: "image";
+      source: {
+        type: "base64" | "url";
+        media_type?: string;
+        data?: string;
+        url?: string;
+      };
+    };
+
+export interface ChatBackendStartOptions {
+  /** Working directory for the underlying SDK subprocess. */
   cwd: string;
-  /** Fully-resolved system prompt — passed via --append-system-prompt. */
+  /** Appended to the `claude_code` system-prompt preset. */
   systemPrompt: string;
-  /** If set, passed via --resume to continue an existing conversation. */
-  sessionIdToResume?: string | undefined;
-  /** If set, passed via --mcp-config as the path to a JSON config file. */
-  mcpConfigPath?: string | undefined;
-  /** If set, passed via --model to pin the subprocess to that model. */
+  /** If set, resumes the given SDK session; otherwise a fresh session. */
+  resumeSessionId?: string | undefined;
+  /** Optional MCP server (registered as `cb-activity`). */
+  mcpConfig?: MCPServerConfig | null;
+  /** Pin to a specific model; omit for SDK default. */
   model?: string | undefined;
-  /** Full env var map for the subprocess (caller builds it). Keys with undefined values are dropped. */
+  /** Plugin paths to load. */
+  pluginPaths?: string[] | undefined;
+  /** Subprocess env. Keys with undefined values are dropped. */
   env: Record<string, string | undefined>;
 }
 
-export interface ClaudeChatProcess {
-  pid?: number | undefined;
-  stdin: Writable | null;
-  stdout: Readable | null;
-  stderr: Readable | null;
-  kill(signal?: NodeJS.Signals | number): boolean;
-  on(event: "close", listener: (code: number | null) => void): this;
-  on(event: "error", listener: (err: Error) => void): this;
+export interface ChatBackendRun {
+  /** Push a user message into the running query. */
+  send(content: ChatContentBlock[]): void;
+  /** Async iterable of SDK message events. Iterate exactly once per run. */
+  messages: AsyncIterable<SDKMessage>;
+  /** Interrupt the in-progress turn, if any. */
+  interrupt(): Promise<void>;
+  /**
+   * End the conversation gracefully — the messages iterator will return.
+   * Idempotent.
+   */
+  close(): Promise<void>;
+  /** True after the messages iterator has returned (close or end-of-query). */
+  closed: boolean;
 }
 
-export interface ClaudeChatSpawner {
-  spawn(opts: ClaudeChatSpawnOptions): ClaudeChatProcess;
+export interface ChatBackend {
+  start(opts: ChatBackendStartOptions): ChatBackendRun;
 }
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
-const __dirname = import.meta.dirname;
-const binDir = path.resolve(__dirname, "../../bin");
-const cbClaudePath = path.join(binDir, "cb-claude");
-
-export function createClaudeChatSpawner(): ClaudeChatSpawner {
-  return {
-    spawn(opts: ClaudeChatSpawnOptions): ClaudeChatProcess {
-      const args = [
-        "-p",
-        "--output-format",
-        "stream-json",
-        "--input-format",
-        "stream-json",
-        "--verbose",
-        "--dangerously-skip-permissions",
-        "--append-system-prompt",
-        opts.systemPrompt,
-      ];
-      if (opts.sessionIdToResume !== undefined) {
-        args.push("--resume", opts.sessionIdToResume);
-      }
-      if (opts.mcpConfigPath !== undefined) {
-        args.push("--mcp-config", opts.mcpConfigPath);
-      }
-      if (opts.model !== undefined) {
-        args.push("--model", opts.model);
-      }
-      return nodeSpawn(cbClaudePath, args, {
-        cwd: opts.cwd,
-        env: opts.env,
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-    },
-  };
+function dropUndefined(env: Record<string, string | undefined>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
 }
-
-// ─── Fake implementation ─────────────────────────────────────────────────────
 
 /**
- * A fake ClaudeChatProcess driven from test code. Exposes a `script()` API
- * for pushing stream-json lines onto the stdout stream as if claude emitted
- * them, plus inspectable fields (`spawnOptions`, `sent`) for assertions.
+ * A queue-based async iterable: producers push items via `push()`, the
+ * iterable yields them in order, and `end()` terminates iteration.
  */
-export interface FakeClaudeChatProcess extends ClaudeChatProcess {
-  pid: number;
-  /** What `spawn` was called with. Useful for asserting --resume etc. */
-  spawnOptions: ClaudeChatSpawnOptions;
-  /** Lines received on stdin (as JSON-decoded objects). Caller-ordered. */
-  sent: unknown[];
-  /** Emit a stream-json line to stdout. The object is JSON-stringified + newline-terminated. */
-  emitMessage(msg: Record<string, unknown>): void;
-  /** Emit the init system message with a session_id, then resolve. */
-  emitSessionInit(sessionId: string): void;
-  /** Emit a plain assistant text message. */
-  emitAssistantText(text: string): void;
-  /** Emit the end-of-turn `result` message. */
-  emitResult(opts?: { isError?: boolean; result?: string }): void;
-  /** Close the subprocess with the given exit code (default 0). */
-  close(code?: number): void;
-}
+function createAsyncIterableQueue<T>(): {
+  push(item: T): void;
+  end(): void;
+  iterable: AsyncIterable<T>;
+} {
+  const queue: T[] = [];
+  const waiters: Array<(v: IteratorResult<T>) => void> = [];
+  let ended = false;
 
-export interface FakeClaudeChatSpawner extends ClaudeChatSpawner {
-  /** Every process this spawner has produced, in order. */
-  processes: FakeClaudeChatProcess[];
-  /** The most recently spawned process, or null if none. */
-  lastProcess(): FakeClaudeChatProcess | null;
-}
+  function push(item: T): void {
+    if (ended) return;
+    const w = waiters.shift();
+    if (w !== undefined) {
+      w({ value: item, done: false });
+    } else {
+      queue.push(item);
+    }
+  }
 
-export function createFakeClaudeChatSpawner(): FakeClaudeChatSpawner {
-  const processes: FakeClaudeChatProcess[] = [];
-  const spawner: FakeClaudeChatSpawner = {
-    processes,
-    lastProcess() {
-      return processes[processes.length - 1] ?? null;
-    },
-    spawn(opts: ClaudeChatSpawnOptions): FakeClaudeChatProcess {
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      const stdin = new PassThrough();
-      const emitter = new EventEmitter();
-      const sent: unknown[] = [];
+  function end(): void {
+    if (ended) return;
+    ended = true;
+    while (waiters.length > 0) {
+      const w = waiters.shift();
+      if (w !== undefined) w({ value: undefined as unknown as T, done: true });
+    }
+  }
 
-      stdin.on("data", (chunk: Buffer) => {
-        const text = chunk.toString("utf-8");
-        for (const line of text.split("\n")) {
-          if (line.length === 0) continue;
-          try {
-            sent.push(JSON.parse(line));
-          } catch {
-            sent.push(line);
+  const iterable: AsyncIterable<T> = {
+    [Symbol.asyncIterator](): AsyncIterator<T> {
+      return {
+        next(): Promise<IteratorResult<T>> {
+          if (queue.length > 0) {
+            const value = queue.shift() as T;
+            return Promise.resolve({ value, done: false });
           }
-        }
+          if (ended) {
+            return Promise.resolve({ value: undefined as unknown as T, done: true });
+          }
+          return new Promise((resolve) => {
+            waiters.push(resolve);
+          });
+        },
+      };
+    },
+  };
+
+  return { push, end, iterable };
+}
+
+export function createChatBackend(): ChatBackend {
+  return {
+    start(opts: ChatBackendStartOptions): ChatBackendRun {
+      const inputQueue = createAsyncIterableQueue<SDKUserMessage>();
+      const messageQueue = createAsyncIterableQueue<SDKMessage>();
+
+      // Build SDK options.
+      const queryOptions: Options = {
+        cwd: opts.cwd,
+        env: dropUndefined(opts.env),
+        permissionMode: "bypassPermissions",
+        systemPrompt: {
+          type: "preset" as const,
+          preset: "claude_code" as const,
+          append: opts.systemPrompt,
+        },
+      };
+      if (opts.resumeSessionId !== undefined) {
+        queryOptions.resume = opts.resumeSessionId;
+      }
+      if (opts.model !== undefined) {
+        queryOptions.model = opts.model;
+      }
+      if (opts.pluginPaths !== undefined && opts.pluginPaths.length > 0) {
+        queryOptions.plugins = opts.pluginPaths.map((p) => ({ type: "local" as const, path: p }));
+      }
+      if (opts.mcpConfig) {
+        queryOptions.mcpServers = {
+          "cb-activity": {
+            type: "stdio",
+            command: opts.mcpConfig.command,
+            args: opts.mcpConfig.args,
+            env: opts.mcpConfig.env,
+          },
+        };
+      }
+
+      const q: Query = query({
+        prompt: inputQueue.iterable,
+        options: queryOptions,
       });
 
-      let killed = false;
-
-      const proc: FakeClaudeChatProcess = {
-        pid: 99999 + processes.length,
-        stdin,
-        stdout,
-        stderr,
-        spawnOptions: opts,
-        sent,
-        kill(_signal?: NodeJS.Signals | number): boolean {
-          if (killed) return false;
-          killed = true;
-          stdout.end();
-          stderr.end();
-          process.nextTick(() => {
-            emitter.emit("close", null);
-          });
-          return true;
+      const run: ChatBackendRun = {
+        closed: false,
+        messages: messageQueue.iterable,
+        send(content: ChatContentBlock[]): void {
+          if (run.closed) return;
+          inputQueue.push({
+            type: "user",
+            message: { role: "user", content },
+            // session_id is populated by the SDK from the active query.
+            session_id: opts.resumeSessionId ?? "",
+            parent_tool_use_id: null,
+          } as SDKUserMessage);
         },
-        on(event, listener) {
-          emitter.on(event, listener as (...args: unknown[]) => void);
-          return proc;
+        async interrupt(): Promise<void> {
+          if (run.closed) return;
+          await q.interrupt();
         },
-        emitMessage(msg: Record<string, unknown>) {
-          stdout.write(JSON.stringify(msg) + "\n");
-        },
-        emitSessionInit(sessionId: string) {
-          proc.emitMessage({ type: "system", subtype: "init", session_id: sessionId });
-        },
-        emitAssistantText(text: string) {
-          proc.emitMessage({
-            type: "assistant",
-            message: { role: "assistant", content: [{ type: "text", text }] },
-          });
-        },
-        emitResult(resultOpts?: { isError?: boolean; result?: string }) {
-          proc.emitMessage({
-            type: "result",
-            is_error: resultOpts?.isError ?? false,
-            result: resultOpts?.result ?? "",
-          });
-        },
-        close(code: number = 0) {
-          stdout.end();
-          stderr.end();
-          process.nextTick(() => {
-            emitter.emit("close", code);
+        async close(): Promise<void> {
+          if (run.closed) return;
+          inputQueue.end();
+          await pump.catch(() => {
+            // Errors already surface via the messages iterator.
           });
         },
       };
 
-      processes.push(proc);
-      return proc;
+      // Background loop: pump SDK events into the message queue.
+      const pump = (async (): Promise<void> => {
+        try {
+          for await (const msg of q) {
+            messageQueue.push(msg);
+          }
+        } finally {
+          messageQueue.end();
+          run.closed = true;
+        }
+      })();
+      pump.catch(() => {
+        // The messageQueue has already been ended by the finally block.
+      });
+
+      return run;
     },
   };
-  return spawner;
+}
+
+// Re-export the bundled card-validator plugin path so callers don't have
+// to know callback-box's repo layout.
+const __dirname = import.meta.dirname;
+const CALLBACK_BOX_ROOT = path.resolve(__dirname, "../..");
+export const CARD_VALIDATOR_PLUGIN_PATH = path.join(
+  CALLBACK_BOX_ROOT,
+  "plugins",
+  "card-validator",
+);
+
+// ─── Fake implementation ─────────────────────────────────────────────────────
+
+/**
+ * A fake `ChatBackendRun` driven from test code. Tests push SDK messages
+ * onto the stream via `emit*` helpers and inspect `sent` for whatever the
+ * caller pushed in via `send()`.
+ */
+export interface FakeChatBackendRun extends ChatBackendRun {
+  /** What `start()` was called with. */
+  startOptions: ChatBackendStartOptions;
+  /** Each `send()` call appended in order, captured as content arrays. */
+  sent: ChatContentBlock[][];
+  /** Push a raw SDK message onto the messages stream. */
+  emitMessage(msg: SDKMessage): void;
+  /** Push a `system/init` message with a session_id. */
+  emitSessionInit(sessionId: string): void;
+  /** Push a plain assistant text turn. */
+  emitAssistantText(text: string): void;
+  /** Push an end-of-turn `result` message. */
+  emitResult(opts?: { isError?: boolean; result?: string }): void;
+  /** Whether `interrupt()` was called. */
+  interrupted: boolean;
+}
+
+export interface FakeChatBackend extends ChatBackend {
+  /** All runs the fake has produced, in order. */
+  runs: FakeChatBackendRun[];
+  /** The most recent run, or null. */
+  lastRun(): FakeChatBackendRun | null;
+}
+
+export function createFakeChatBackend(): FakeChatBackend {
+  const runs: FakeChatBackendRun[] = [];
+  return {
+    runs,
+    lastRun() {
+      return runs[runs.length - 1] ?? null;
+    },
+    start(opts: ChatBackendStartOptions): FakeChatBackendRun {
+      const messageQueue = createAsyncIterableQueue<SDKMessage>();
+      const sent: ChatContentBlock[][] = [];
+
+      const run: FakeChatBackendRun = {
+        startOptions: opts,
+        sent,
+        interrupted: false,
+        closed: false,
+        messages: messageQueue.iterable,
+        send(content: ChatContentBlock[]): void {
+          if (run.closed) return;
+          sent.push(content);
+        },
+        async interrupt(): Promise<void> {
+          run.interrupted = true;
+        },
+        async close(): Promise<void> {
+          if (run.closed) return;
+          run.closed = true;
+          messageQueue.end();
+        },
+        emitMessage(msg: SDKMessage): void {
+          messageQueue.push(msg);
+        },
+        emitSessionInit(sessionId: string): void {
+          run.emitMessage({
+            type: "system",
+            subtype: "init",
+            session_id: sessionId,
+            // The remaining fields aren't used by ChatSession's handler.
+          } as unknown as SDKMessage);
+        },
+        emitAssistantText(text: string): void {
+          run.emitMessage({
+            type: "assistant",
+            message: { role: "assistant", content: [{ type: "text", text }] },
+            session_id: opts.resumeSessionId ?? "",
+            parent_tool_use_id: null,
+          } as unknown as SDKMessage);
+        },
+        emitResult(resultOpts?: { isError?: boolean; result?: string }): void {
+          run.emitMessage({
+            type: "result",
+            subtype: resultOpts?.isError ? "error_during_execution" : "success",
+            is_error: resultOpts?.isError ?? false,
+            result: resultOpts?.result ?? "",
+            duration_ms: 0,
+            duration_api_ms: 0,
+            num_turns: 1,
+            stop_reason: "end_turn",
+            total_cost_usd: 0,
+            usage: {} as unknown,
+            modelUsage: {},
+            permission_denials: [],
+            session_id: opts.resumeSessionId ?? "",
+          } as unknown as SDKMessage);
+        },
+      };
+
+      runs.push(run);
+      return run;
+    },
+  };
 }

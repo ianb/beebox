@@ -301,7 +301,7 @@ async function executeTriageFeedback(
         agent,
         baseline,
         fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
-        fallbackTrailers: { "Triggered-By": "cb triage-feedback", Session: agent.sessionId },
+        fallbackTrailers: { "Triggered-By": "cb triage-feedback", Session: agent.sessionId ?? "unknown" },
         onOutput: (text) => ctx.write(text),
       });
 
