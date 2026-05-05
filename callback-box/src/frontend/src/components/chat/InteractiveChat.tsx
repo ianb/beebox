@@ -23,7 +23,7 @@ import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
 import { parseAllSpeechTags, VALID_VOICES, type SpeechSegment } from "../../lib/speech-parsing";
 import { getTTSClient } from "../../lib/tts-client";
 import { unlockAudioContext } from "../../lib/audio-context";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { sendSound, tick, recordingStart, recordingStop, alarm } from "../../lib/earcons";
@@ -720,23 +720,53 @@ function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZ
 }
 
 /**
- * Virtualized message list using TanStack Virtual.
- * Only renders visible message groups in the DOM, with stick-to-bottom behavior.
+ * Virtualized message list using react-virtuoso. Only renders visible
+ * message groups in the DOM, with stick-to-bottom behavior. The streaming
+ * tail and "load older" header use virtuoso's data array and Header slot
+ * respectively; firstItemIndex tracks prepends so loading older messages
+ * doesn't visually jump the user.
  */
-type FlatItem =
-  | { kind: "header" }
+type DataItem =
   | { kind: "group"; group: MessageGroup; groupIndex: number }
   | { kind: "marker"; marker: ModelMarker }
-  | { kind: "streaming" }
+  | { kind: "stream" }
   | { kind: "processing" };
 
-function itemKey(item: FlatItem | undefined, index: number): string {
-  if (!item) return `idx-${index}`;
-  if (item.kind === "header") return "load-older";
-  if (item.kind === "streaming") return "streaming";
-  if (item.kind === "processing") return "processing";
-  if (item.kind === "marker") return `marker-${item.marker.id}`;
-  return item.group.entries[0].uuid;
+function dataItemKey(d: DataItem): string {
+  switch (d.kind) {
+    case "marker": return `marker-${d.marker.id}`;
+    case "stream": return "stream";
+    case "processing": return "processing";
+    case "group": return d.group.entries[0].uuid;
+  }
+}
+
+const VIRTUOSO_INITIAL_FIRST_INDEX = 1_000_000_000;
+
+// Virtuoso requires Header/Footer components to be stable references; if a
+// new component identity is passed each render they remount. We keep them
+// module-level and pass dynamic data via the `context` prop instead.
+interface ChatListContext {
+  hasOlder: boolean;
+  loadingOlder: boolean;
+  onLoadOlder: () => void;
+  earlierCount: number;
+}
+
+function LoadOlderHeader({ context }: { context?: ChatListContext }) {
+  if (!context || !context.hasOlder) return null;
+  const handleClick = context.onLoadOlder;
+  return (
+    <div className="text-center py-2">
+      <button
+        onClick={handleClick}
+        disabled={context.loadingOlder}
+        className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
+      >
+        {context.loadingOlder ? "Loading..." : `Show ${context.earlierCount} earlier messages`}
+      </button>
+    </div>
+  );
 }
 
 function VirtualizedMessageList({
@@ -762,21 +792,19 @@ function VirtualizedMessageList({
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isAtBottomRef = useRef(true);
-  const sizeCache = useRef<Map<string, number>>(new Map());
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const atBottomRef = useRef(true);
   const { boxSlug } = useParams({ strict: false });
 
   const hasOlder = totalEntries > messages.length;
   const streamingShown = snapshot.matches("streaming");
 
-  // Build the flat render list: header → interleaved groups + markers →
-  // streaming bubble OR processing indicator (mutually exclusive).
-  // Each marker sits after the group index it was snapshotted at, keeping its
-  // chronological position even as later messages arrive below it.
-  const flatItems = useMemo<FlatItem[]>(() => {
-    const items: FlatItem[] = [];
-    if (hasOlder) items.push({ kind: "header" });
+  // Build the data array: groups interleaved with markers (chronological),
+  // plus the streaming/processing tail as its own item so virtuoso's
+  // followOutput fires when it appears, and so scrollToIndex("LAST")
+  // targets it directly during stream growth.
+  const data = useMemo<DataItem[]>(() => {
+    const items: DataItem[] = [];
     for (const m of modelMarkers) {
       if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
     }
@@ -786,12 +814,28 @@ function VirtualizedMessageList({
         if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
       }
     }
-    if (streamingShown) items.push({ kind: "streaming" });
+    if (streamingShown) items.push({ kind: "stream" });
     else if (processingShown) items.push({ kind: "processing" });
     return items;
-  }, [hasOlder, groups, modelMarkers, streamingShown, processingShown]);
+  }, [groups, modelMarkers, streamingShown, processingShown]);
 
-  const itemCount = flatItems.length;
+  // Track first-data-key across renders. When older messages prepend, the
+  // key shifts from data[0] to data[N], and we decrement firstItemIndex by
+  // N so virtuoso preserves the user's visual scroll anchor (no jump on
+  // "load older"). See virtuoso "Prepending Items" pattern.
+  // Updated synchronously during render (set-state-during-render pattern)
+  // so the new firstItemIndex is committed in the same paint as the new
+  // data — avoids a one-frame flash with a stale anchor.
+  const [firstItemIndex, setFirstItemIndex] = useState(VIRTUOSO_INITIAL_FIRST_INDEX);
+  const [trackedFirstKey, setTrackedFirstKey] = useState<string | undefined>();
+  const newFirstKey = data.length > 0 ? dataItemKey(data[0]) : undefined;
+  if (newFirstKey !== trackedFirstKey) {
+    if (trackedFirstKey !== undefined && newFirstKey !== undefined) {
+      const idx = data.findIndex((d) => dataItemKey(d) === trackedFirstKey);
+      if (idx > 0) setFirstItemIndex((prev) => prev - idx);
+    }
+    setTrackedFirstKey(newFirstKey);
+  }
 
   // Lightbox needs the full image list (across all messages, not just the
   // virtualizer's mounted slice). Embed it as JSON so the provider can
@@ -801,107 +845,40 @@ function VirtualizedMessageList({
     [messages, streamText, boxSlug],
   );
 
-  const virtualizer = useVirtualizer({
-    count: itemCount,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => {
-      const item = flatItems[index];
-      if (item && item.kind === "group") {
-        const cached = sizeCache.current.get(itemKey(item, index));
-        if (cached !== undefined) return cached;
-      }
-      if (!item) return 120;
-      if (item.kind === "header") return 40;
-      if (item.kind === "marker") return 32;
-      if (item.kind === "processing") return 48;
-      return 120;
-    },
-    overscan: 20,
-    getItemKey: (index) => itemKey(flatItems[index], index),
-  });
-
-  // Persist measured group heights so remounted rows start at their real size
-  // and (combined with minHeight on the row) don't briefly collapse while
-  // images decode.
-  useEffect(() => {
-    for (const v of virtualizer.getVirtualItems()) {
-      const item = flatItems[v.index];
-      if (!item || item.kind !== "group") continue;
-      if (v.size > 0) sizeCache.current.set(itemKey(item, v.index), v.size);
-    }
-  });
-
-  // Track whether user is near the bottom
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    };
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => el.removeEventListener("scroll", handleScroll);
+  const handleAtBottomStateChange = useCallback((b: boolean) => {
+    atBottomRef.current = b;
   }, []);
 
-  // Pin scroll to the bottom using the actual rendered scrollHeight, and
-  // re-issue across the next two frames to ride out measurement settling
-  // (ResizeObserver flushes after visibility changes, image decode, etc.).
-  // Direct DOM scroll is more robust than virtualizer.scrollToIndex(last,
-  // "end") in dynamic-measurement mode, where a stale totalSize can leave
-  // the call landing mid-list. See TanStack/virtual#615, #468, #1001.
-  const pinToBottom = useCallback(() => {
-    let frame = 0;
-    const pin = () => {
-      const el = scrollRef.current;
-      if (!el) return;
-      el.scrollTop = el.scrollHeight;
-      frame++;
-      if (frame < 3) requestAnimationFrame(pin);
-    };
-    pin();
-  }, []);
-
-  // Re-pin to bottom when the tab regains visibility, in case background
-  // throttling left the scroll position drifting while measurements
-  // updated out from under us.
+  // During streaming, the tail item's height grows without changing data
+  // length — followOutput won't fire — so re-pin to bottom imperatively
+  // while the user is at the bottom.
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible" && isAtBottomRef.current) {
-        pinToBottom();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [pinToBottom]);
-
-  // Auto-scroll to bottom when new messages arrive or stream updates, if user was at bottom
-  const prevItemCount = useRef(itemCount);
-  useEffect(() => {
-    if (itemCount !== prevItemCount.current) {
-      prevItemCount.current = itemCount;
-      if (isAtBottomRef.current) pinToBottom();
+    if (streamingShown && atBottomRef.current) {
+      virtuosoRef.current?.scrollToIndex({
+        index: "LAST",
+        align: "end",
+        behavior: "auto",
+      });
     }
-  }, [itemCount, pinToBottom]);
+  }, [streamText, streamTools.length, streamingShown]);
 
-  // During streaming, keep scrolling to bottom as content grows
+  // Scroll to bottom when user sends a message (even if scrolled up).
   useEffect(() => {
-    if (snapshot.matches("streaming") && isAtBottomRef.current) {
-      pinToBottom();
+    if (scrollToBottomTrigger > 0 && data.length > 0) {
+      virtuosoRef.current?.scrollToIndex({
+        index: "LAST",
+        align: "end",
+        behavior: "auto",
+      });
     }
-  }, [streamText, streamTools.length, snapshot, pinToBottom]);
+  }, [scrollToBottomTrigger, data.length]);
 
-  // Scroll to bottom when user sends a message (even if scrolled up)
-  useEffect(() => {
-    if (scrollToBottomTrigger > 0 && itemCount > 0) {
-      isAtBottomRef.current = true;
-      pinToBottom();
-    }
-  }, [scrollToBottomTrigger, itemCount, pinToBottom]);
-
-  // Scroll to bottom on initial mount
-  useEffect(() => {
-    if (itemCount > 0) pinToBottom();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const headerContext = useMemo<ChatListContext>(() => ({
+    hasOlder,
+    loadingOlder,
+    onLoadOlder,
+    earlierCount: totalEntries - messages.length,
+  }), [hasOlder, loadingOlder, onLoadOlder, totalEntries, messages.length]);
 
   if (messages.length === 0 && !isStreaming) {
     return (
@@ -914,96 +891,79 @@ function VirtualizedMessageList({
   const lastAssistantGroupIndex = groups.findLastIndex((g) => g.type === "assistant");
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+    <div className="flex-1 min-w-0 flex flex-col overflow-x-hidden">
       <div data-image-list hidden>{chatImagesJson}</div>
-      <div
-        style={{
-          height: virtualizer.getTotalSize(),
-          width: "100%",
-          position: "relative",
-        }}
-      >
-        {virtualizer.getVirtualItems().map((virtualRow) => {
-          const item = flatItems[virtualRow.index];
-          const cachedHeight = item && item.kind === "group"
-            ? sizeCache.current.get(itemKey(item, virtualRow.index))
-            : undefined;
-
-          return (
-            <div
-              key={virtualRow.key}
-              ref={virtualizer.measureElement}
-              data-index={virtualRow.index}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start}px)`,
-                minHeight: cachedHeight,
-              }}
-              className="py-0.5 overflow-hidden"
-            >
-              {item.kind === "header" ? (
-                <div className="text-center py-2">
-                  <button
-                    onClick={onLoadOlder}
-                    disabled={loadingOlder}
-                    className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
-                  >
-                    {loadingOlder ? "Loading..." : `Show ${totalEntries - messages.length} earlier messages`}
-                  </button>
+      <Virtuoso<DataItem, ChatListContext>
+        ref={virtuosoRef}
+        className="flex-1"
+        data={data}
+        firstItemIndex={firstItemIndex}
+        initialTopMostItemIndex={Math.max(0, data.length - 1)}
+        followOutput={(atBottom) => (atBottom ? "auto" : false)}
+        atBottomStateChange={handleAtBottomStateChange}
+        atBottomThreshold={80}
+        computeItemKey={(_, item) => dataItemKey(item)}
+        context={headerContext}
+        components={{ Header: LoadOlderHeader }}
+        itemContent={(_, item) => {
+          if (item.kind === "marker") {
+            return (
+              <div className="flex justify-center py-1">
+                <div className="text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
+                  {item.marker.label}
                 </div>
-              ) : item.kind === "streaming" ? (
-                <div>
-                  <StreamingMessage text={streamText} onZoomView={onZoomView} />
-                  {streamTools.length > 0 ? (
-                    <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
-                      <ToolList blocks={streamTools} />
-                    </div>
-                  ) : null}
-                </div>
-              ) : item.kind === "processing" ? (
-                <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 py-2 text-sm text-warm-500 italic">
-                  Agent is processing…
-                </div>
-              ) : item.kind === "marker" ? (
-                <div className="flex justify-center py-1">
-                  <div className="text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
-                    {item.marker.label}
+              </div>
+            );
+          }
+          if (item.kind === "stream") {
+            return (
+              <div className="py-0.5">
+                <StreamingMessage text={streamText} onZoomView={onZoomView} />
+                {streamTools.length > 0 ? (
+                  <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
+                    <ToolList blocks={streamTools} />
                   </div>
-                </div>
-              ) : (() => {
-                const group = item.group;
-                const groupIndex = item.groupIndex;
-                if (group.type === "compaction") {
-                  return <CompactionMessage entries={group.entries} />;
-                } else if (group.type === "self-note") {
-                  return (
-                    <>
-                      {group.notes.map((note, i) => (
-                        <SelfNoteMessage key={i} note={note} />
-                      ))}
-                    </>
-                  );
-                } else if (group.type === "user") {
-                  return <UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} />;
-                } else {
-                  return (
-                    <AssistantMessage
-                      entries={group.entries}
-                      debugView={debugView}
-                      speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
-                      onStopSpeech={handleStopSpeech}
-                      onZoomView={onZoomView}
-                    />
-                  );
-                }
-              })()}
+                ) : null}
+              </div>
+            );
+          }
+          if (item.kind === "processing") {
+            return (
+              <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 py-2 text-sm text-warm-500 italic">
+                Agent is processing…
+              </div>
+            );
+          }
+          const group = item.group;
+          const groupIndex = item.groupIndex;
+          if (group.type === "compaction") {
+            return <div className="py-0.5"><CompactionMessage entries={group.entries} /></div>;
+          }
+          if (group.type === "self-note") {
+            return (
+              <div className="py-0.5">
+                {group.notes.map((note, i) => (
+                  <SelfNoteMessage key={i} note={note} />
+                ))}
+              </div>
+            );
+          }
+          if (group.type === "user") {
+            return <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} /></div>;
+          }
+          return (
+            <div className="py-0.5">
+              <AssistantMessage
+                entries={group.entries}
+                debugView={debugView}
+                speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
+                onStopSpeech={handleStopSpeech}
+                onZoomView={onZoomView}
+              />
             </div>
           );
-        })}
-      </div>
+        }}
+      />
     </div>
   );
 }
