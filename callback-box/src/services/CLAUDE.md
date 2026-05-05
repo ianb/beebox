@@ -1,10 +1,12 @@
 # Services
 
-Every external dependency (API, library, CLI tool) is wrapped in a **typed service interface** with three parts:
+**Rule of thumb:** if a library or function touches external things — network, filesystem outside the box, child processes, real time — wrap it in a service. The wrapping lets tests substitute a fake.
 
-1. **Interface** — the subset of the external API we actually use
-2. **Real implementation** — thin wrapper around the library/API, created from config (token, credentials)
-3. **Fake implementation** — domain-specific in-memory implementation for tests
+A service has three parts in one file:
+
+1. **Interface** — the subset of the external API we actually call (not the full surface).
+2. **Real implementation** — `createFooService(...)` returning the interface, calling the actual external thing.
+3. **Fake implementation** — `createFakeFoo(...)` returning the interface (or an extended one), backed by in-memory state.
 
 ## Pattern
 
@@ -17,20 +19,27 @@ export interface FooService {
 // Real — wraps the library
 export function createFooService(token: string): FooService { ... }
 
-// Fake — domain-specific constructor with observable state
-export function createFakeFoo(opts?: { items?: Item[] }): FakeFooService { ... }
+// Fake — takes a named-params object
+export interface FakeFooOptions {
+  items?: Item[];
+}
+export function createFakeFoo(opts?: FakeFooOptions): FakeFooService { ... }
 
-// Fake extends the interface with inspectable state
+// Fake extends the interface with whatever state tests want to observe.
+// Always include describe() so doctests can print a stable snapshot.
 export interface FakeFooService extends FooService {
-  items: Item[];        // mutable arrays for inspection
-  sent: Message[];      // outbox-style tracking
+  items: Item[];
+  sent: Message[];
+  describe(): string;
 }
 ```
 
 ## Design rules
 
-- **Fakes are domain-specific**, not generic `Partial<T>` overrides. Constructor params reflect what the service needs to function (e.g., `createFakeTelegram({ username: "bot" })` requires a username because `getMe()` returns it).
-- **Fakes have observable state** — outbox arrays (`.sent`), mutable collections (`.bookmarks`), status flags (`.connected`). Tests inspect these directly.
+- **Always named-params, never positional.** Even for one-input fakes — call `createFakeFoo({ items: [...] })`, not `createFakeFoo([...])`. Keeps call sites uniform and lets you add fields later without breaking callers.
+- **Extend the interface as tests need it.** If tests want to inspect what happened (sent messages, fetched URLs, written files), declare a `FakeFooService extends FooService` with the relevant fields. If tests don't need it, returning the bare `FooService` is fine — `withCallLog(svc)` covers generic "did this method get called" observation without baking state into the fake.
+- **Provide a `describe(): string` method on the fake.** Returns a multi-line, stable, human-readable snapshot of the fake's current state. Doctests then `print(fake.describe())` and match. Avoids per-test `JSON.stringify` boilerplate and makes failures legible.
+- **Fakes are domain-specific**, not generic `Partial<T>` overrides. Constructor params reflect what the service needs to function (e.g. `createFakeTelegram({ username: "bot" })` requires a username because `getMe()` returns it).
 - **Optional `| undefined`** — all service fields in the `Services` container and in route option interfaces must use `?: T | undefined` (not just `?: T`) because of `exactOptionalPropertyTypes` in tsconfig.
 - **No `!.` in doctests** — the doctest runner doesn't support TypeScript's non-null assertion. Use `?.` instead: `svc.items[0]?.name`.
 
@@ -62,31 +71,22 @@ printCalls(tg.callLog);
 
 `printCalls(log, methodName?)` formats the log for doctest assertions. Pass a method name to filter.
 
-## Threading through routes
+## Threading through callers
 
-Routes accept optional services in their options object. When provided, the service is used directly. When `undefined`, the route falls back to creating a real implementation (or returns an error if credentials are missing):
+Routes and connectors both accept optional services from their caller. When the service is provided, it's used directly; when `undefined`, the caller creates a real implementation from config (or errors if credentials are missing). `server.ts` passes `options.services?.foo` down to each.
 
 ```typescript
+// Route options object
 interface ChatRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
   openaiAudio?: OpenAIAudioService | undefined;
 }
-```
 
-`server.ts` passes `options.services?.foo` to each route.
-
-## Threading through connectors
-
-Connectors accept an optional service in their factory function:
-
-```typescript
+// Connector factory parameter
 export function createTelegramConnector(boxRoot: string, telegram?: TelegramService): Connector
-```
 
-Inside the connector, a helper creates the real service from config when no injected service is provided:
-
-```typescript
+// Fallback inside the connector
 private getTelegram(botToken: string): TelegramService {
   return this.telegramService ?? createTelegramService(botToken);
 }
@@ -118,5 +118,8 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `feed-fetcher.ts` | `FeedFetcherService` | `createFeedFetcherService()` | `createFakeFeedFetcher({ feeds? })` |
 | `article-fetcher.ts` | `ArticleFetcherService` | `createArticleFetcherService()` | `createFakeArticleFetcher(articles?)` |
 | `google-drive.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
+| `claude-chat.ts` | `ClaudeChatSpawner` | `createClaudeChatSpawner()` | `createFakeClaudeChatSpawner()` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |
 | `index.ts` | `Services` container | — | Barrel exports all of the above |
+
+`claude-chat.ts` is not part of the `Services` container — chat job code imports the spawner directly. It still follows the interface/real/fake pattern.

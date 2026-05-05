@@ -5,7 +5,15 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 
-/** Standard directory names in a callback box */
+/**
+ * Standard directory names in a callback box.
+ *
+ * If you add, remove, or rename an entry here, also update:
+ *   - docs/box-layout.md (developer reference)
+ *   - src/core/agent-guide/box-shape.ts (in-box agent reference)
+ * The three are not auto-generated from each other; drift between them
+ * has caused confusion before.
+ */
 export const BOX_DIRS = {
   // Working state
   inbox: "box/inbox",

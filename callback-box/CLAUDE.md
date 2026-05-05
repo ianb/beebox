@@ -20,33 +20,22 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 ## Cards
 
-Cards are the core data format. They are XML files validated by Zod schemas via cardworks.
+Cards are the core data format — XML files validated by Zod schemas via cardworks. Each card type has a root XML element matching its type name; schemas live in `src/schemas/` and use cardworks' `element()` helper with Zod validators. `src/schemas/registry.ts` lists the built-in set; boxes can add local schemas under `config/schemas/`.
 
-**Naming**: `Name.type.card` — the type determines which schema validates it. Example: `Meeting_Notes.memo.card`, `Weekly_Digest.news-brief.card`. Attachments share the basename: `Voice_Memo.memo.card` + `Voice_Memo.m4a`.
+**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `Weekly_Digest.news-brief.card`). Attachments share the basename: `Voice_Memo.memo.card` + `Voice_Memo.m4a`.
 
-**Structure**: Each card type has a root XML element matching its type name. Schemas are defined in `src/schemas/` using cardworks' `element()` helper with Zod validators. Example:
+**Formatting**: Card XML is flat — no indentation at any nesting level. One long line per paragraph in text content, not soft-wrapped at 80 columns. Keeps diffs clean.
 
-```xml
-<memo status="new">
-<created>2024-01-15T10:00:00Z</created>
-<content>Some text</content>
-<source>text</source>
-</memo>
-```
+**Schemas can include `instructions`** — prose embedded in the schema that's injected into agent context when processing cards of that type.
 
-**Formatting**: Card XML is flat — no indentation at any nesting level. Text content within elements should use one long line per paragraph, not soft-wrapped at 80 columns. This keeps diffs clean and avoids re-wrapping on edits.
-
-**Schemas can include `instructions`** — prose embedded in the schema definition that tells agents how to handle that card type. These instructions are injected into agent context when processing cards.
-
-**Validation**: Cards are validated on load and before commit (via pre-commit hook/plugin). `cb validate` checks all cards. Never write XML by hand-guessing the format — read the schema first.
-
-**Registry**: `src/schemas/registry.ts` registers all built-in schemas. Boxes can also define local schemas in `config/schemas/`.
+**Validation**: Cards validate on load and before commit (pre-commit plugin). `cb validate` checks all cards.
 
 ## Source Layout
 
 ```
 src/cli/          CLI commands (wakeup, validate, execute-commands, etc.)
 src/core/         Wakeup cycle, agent invocation, state, procedure engine
+src/activities/   Activity runtime (Activity classes, registry, modes, session pool)
 src/connectors/   External integrations (rss, gmail, telegram, etc.)
 src/webapp/       Fastify server, API routes, SSE
   routes/         HTTP route handlers
@@ -55,7 +44,7 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/pages/          Routed top-level pages (ChatPage, DashboardPage, AdminPage, ...) — subject to restrict-component-classes; can only use outer-layout classes
                       Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/news/NewsPage.tsx` + `pages/news/PrintBriefView.tsx` + `pages/news/components/brief/...`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
   src/components/     Reusable feature components (Sidebar, CommitTimeline, FileView, dashboard/, ...) — shared across pages
-  src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see CONVENTIONS.md
+  src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see FRONTEND.md
   src/renderers/      File-type renderers (markdown, image, sheet, recipe, directory, ...)
   src/machines/       XState state machines
   src/hooks/          Shared React hooks
@@ -63,6 +52,10 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/ssr/            Server-side rendering setup for `cb render`
 src/schemas/      Card type definitions (Zod + cardworks)
 src/services/     Service interfaces, real + fake implementations
+src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
+src/dev/          Dev tools (knowledge audits, doc image generation)
+src/lib/          Cross-cutting helpers
+src/types/        Ambient type declarations
 src/test-lib/     Test utilities, doctest infrastructure
 test/             Doctest files
 deploy/           Server provisioning and deployment scripts
@@ -87,28 +80,17 @@ plugins/          Claude Code plugins (card-validator hook)
 
 - **Read before writing.** Don't guess file formats, XML structures, or API shapes. Read the schema, read the existing code, read the test patterns. This project has specific conventions that differ from defaults.
 - **Doctests are the primary test format.** They're markdown files with executable code blocks. Read `.claude/rules/doctest.md` before writing tests. Common mistakes: using JS object notation instead of JSON in expected output, forgetting `continue` blocks share scope.
-- **The frontend has two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `npm run typecheck` to succeed.
-- **HTTP endpoints go in tRPC.** Add a procedure to a router under `src/webapp/trpc/routers/`, validate input with Zod, and call it from the frontend via `trpc.<router>.<procedure>`. The whole point of tRPC is end-to-end types — use it everywhere. Raw Fastify routes in `src/webapp/routes/` are only for things that structurally don't fit the tRPC request/response model: SSE / streaming responses, proxying, file uploads/downloads, OAuth redirects, webhook receivers. Older endpoints still living as raw routes are tech debt — migrate them to tRPC when you touch the area.
-- **For frontend work, reach for UI primitives.** Use components from `src/frontend/src/components/ui/` (Button, Text, Stack, Image, etc.) before writing raw HTML + appearance classes. Page-level code (outside any `components/` subdirectory) can only use outer-layout classes via `className` — this is enforced by the `personal-vibe-check/restrict-component-classes` ESLint rule. See CONVENTIONS.md for the full palette, primitive reference, and className convention.
-- **Don't invent card XML formats.** Every card type has a schema. Read it in `src/schemas/` before creating or modifying cards. The schema's `element()` call defines exactly what attributes and children are valid.
-- **Service fakes are domain-specific**, not generic mocks. They have real in-memory state. Read existing fakes before writing new ones.
+- **Two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `npm run typecheck`.
+- **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: SSE/streaming, file upload/download, OAuth redirects, webhooks. Older raw routes are tech debt — migrate when you touch the area.
+- **Frontend uses UI primitives and a semantic palette.** Read FRONTEND.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Use `cb commit` which handles validation.
-- **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server. Read them with `curl https://box.example.com/<box>/api/debug-log` or check the log file at `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
-- **Fix errors as you find them.** If you encounter lint, type, or test errors — even pre-existing ones from previous work — fix them. Don't leave broken windows.
-- **Leave the repo clean when committing.** If there's uncommitted work, make enough commits to leave everything in a clean state. Don't leave half-done changes lying around.
-- **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by any user. Don't write the boxholder's first name (e.g. "Ian") or any configured personality name into source code, prompts, schemas, docs, or rules. Refer to "the user" or "the boxholder" in shared text. Names are only fine in per-box config, throwaway replies, and personal memory.
+- **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server. Read them with `curl https://box.example.com/<box>/api/debug-log` or check `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
+- **Leave the repo clean when committing.** Fix any lint/type/test errors you encounter (even pre-existing ones) and make enough commits that nothing half-done is left lying around.
+- **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by any user. Refer to "the user" or "the boxholder" in shared text (source, prompts, schemas, docs, rules). Names are only fine in per-box config, throwaway replies, and personal memory.
 
 ## Improving These Instructions
 
-When you get corrected on something — a convention you missed, a pattern you got wrong, a tool you misused — consider whether the correction reveals a gap in these instructions. If the mistake was caused by missing or unclear guidance here, update this file (or the relevant doc) so the next agent doesn't repeat it. This applies to CLAUDE.md, CONVENTIONS.md, `.claude/rules/` files, and docs/.
-
-Examples of things worth capturing:
-- A convention you violated because it wasn't documented
-- A pattern you had to discover by reading code that should have been stated upfront
-- A common mistake you made that a one-line note here would prevent
-- A workflow step (test, lint, build) that has a non-obvious gotcha
-
-Keep additions concise. One line preventing a mistake is better than a paragraph explaining it.
+When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, CODE-STYLE.md, FRONTEND.md, `.claude/rules/`, or `docs/` so the next agent doesn't repeat the mistake. One-line additions preferred.
 
 ## Guides
 
@@ -126,10 +108,14 @@ Keep additions concise. One line preventing a mistake is better than a paragraph
 | Deployment | `deploy/README.md` |
 | Server operations | `docs/server-operations.md` |
 | Adding a box | `docs/adding-a-box.md` |
+| Box layout reference | `docs/box-layout.md` |
+| Landmarks (navigation surface) | `docs/landmarks.md` |
 | Client debug log | `docs/client-debug-log.md` |
+| Periodic maintenance | `docs/maintenance.md` |
+| Knowledge audits | `docs/knowledge-audits.md` |
 | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 | Calendar integration plan | `docs/calendar-plan.md` |
 | Source editor plan | `docs/source-editor.md` |
 | Feature ideas | `docs/ideas.md` |
 
-@CONVENTIONS.md
+@CODE-STYLE.md

@@ -1,6 +1,11 @@
 /**
  * Directory layout and intake mechanisms — the shape of the box and how
  * items get into it.
+ *
+ * This is the in-box agent-facing summary. The canonical directory list
+ * lives in BOX_DIRS (src/cli/lib/paths.ts) and the developer-facing
+ * reference is docs/box-layout.md. When you change directories here, keep
+ * those two in sync — drift between them has caused confusion before.
  */
 
 export function directoryLayoutSection(): string[] {
