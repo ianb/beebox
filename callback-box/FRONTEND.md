@@ -1,60 +1,6 @@
-# Coding Conventions
+# Frontend Conventions
 
-## Type Checking and Linting
-
-Run checks after writing code. The build tool (esbuild) does NOT do type checking or linting — it just strips types. A pre-commit hook runs both automatically.
-
-```bash
-npm run typecheck    # TypeScript errors
-npm run lint         # ESLint errors
-npm run lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
-npm run lint:knip    # Dead code detector (unused files, exports, dependencies)
-npm run lint:circular  # Circular dependency detector (madge)
-```
-
-- The tsconfig is strict — no implicit `any` allowed
-- ESLint config is in `eslint.config.mjs` with rules reviewed individually
-- oxlint provides supplemental checks (ambiguous constructors, useless spreads, identical ternary branches, etc.) — run periodically, not in pre-commit
-- knip detects unused files, exports, and dependencies — run periodically to catch dead code
-- madge detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not
-
-## Error Handling
-
-- NEVER use `any` type (enforced via tsconfig and eslint)
-- NEVER use bare `catch {}` — always bind the error: `catch(e)` to log it, or `catch(_e)` if truly unused
-- ONLY catch the minimal, specific error you can handle
-- If there's an error boundary with recovery, ALWAYS log the error somewhere
-- Never silently ignore errors — at minimum log them
-- Use custom error classes, not `new Error()` — enables programmatic error inspection
-
-## Code Style
-
-- **Semicolons**: always (enforced by eslint)
-- **Quotes**: double quotes (enforced by eslint)
-- **No optional chaining** (`?.`): use explicit null checks for clarity
-- **No default parameters**: handle defaults explicitly in function body
-- **Max 2 positional parameters**: functions with more must use a named params object:
-  ```typescript
-  // Bad: too many positional params
-  function save(path: string, content: string, hash: string) { ... }
-
-  // Good: named params object
-  function save(path: string, { content, hash }: SaveOptions) { ... }
-  ```
-- **Consistent naming between variables and parameters**: name object properties to match common variable names at call sites, so callers can use shorthand:
-  ```typescript
-  // Good: property names match local variables, enabling shorthand
-  const content = readFile(path);
-  const hash = computeHash(content);
-  save(path, { content, hash });
-
-  // Bad: property names don't match, forcing verbose call sites
-  save(path, { fileContent: content, contentHash: hash });
-  ```
-- Prefer explicit types over inference where it aids readability
-- Use meaningful variable names
-- Files max 300 lines, functions max 150 lines (excluding blanks/comments)
-- **Only export what's needed**: don't export functions/constants only used within their own file. knip enforces this.
+UI palette, primitives, and the `className` rule. Backend code never needs to load this; CODE-STYLE.md covers conventions that apply to both halves.
 
 ## Data Source Tagging
 
@@ -158,4 +104,4 @@ What fails lint:
 2. Is the pattern used 3+ times with uniform look? If so, extract a primitive.
 3. Is it genuinely a one-off in a specific context (inside `components/`)? Then keep it local — don't force abstraction.
 
-New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic role in CONVENTIONS.md.
+New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic role in FRONTEND.md.

@@ -2,7 +2,7 @@
  * Page-local chat appearance pieces for ActivityChatPage — headers,
  * error bars, streaming turn, composer. These own Tailwind appearance
  * classes so the page file stays within the page-level layout-only
- * convention (see CONVENTIONS.md).
+ * convention (see FRONTEND.md).
  */
 
 import { useState } from "react";
