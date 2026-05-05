@@ -46,7 +46,14 @@ Both can coexist in the same directory.
 
 **`<label>`** (required, one) — short bookmark name. Displayed prominently on the tile. Not a sentence; treat it like a tab name.
 
-**`<symbol>`** (required, one) — the iconic mark. Emoji is the v1 form. Image (`<symbol src="..."/>`) and styling cues (color/mood) can be added later without breaking existing cards. The symbol carries most of the "iconic and unique expression" weight — pick well.
+**`<symbol>`** (required, one) — the iconic mark. Two forms:
+
+```xml
+<symbol>🍳</symbol>                            <!-- emoji or short text -->
+<symbol src="images/Marisol.webp"/>            <!-- image -->
+```
+
+For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a path relative to the landmark's directory; cross-directory paths are allowed. The symbol carries most of the "iconic and unique expression" weight — pick well.
 
 **`<link ref="..." [text]>`** (zero or more) — a pinned reference to another card. `ref` is a literal path to the target (relative to the landmark's directory; may cross directories). It's validated like any other ref — it must point at a real file. Optional inner text is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When inner text is omitted, the renderer falls back to the target's own title.
 

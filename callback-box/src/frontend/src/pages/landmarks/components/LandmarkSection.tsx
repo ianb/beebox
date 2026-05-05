@@ -21,6 +21,7 @@ interface Landmark {
   dir: string;
   label: string;
   symbol: string;
+  symbolSrc: string | null;
   links: ResolvedLink[];
 }
 
@@ -30,10 +31,8 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
   return (
     <Card padding="md" border="subtle" shadow>
       <Stack gap="md">
-        <div className="flex items-baseline gap-3">
-          <span className="text-4xl leading-none" aria-hidden>
-            {landmark.symbol || "📍"}
-          </span>
+        <div className="flex items-center gap-3">
+          <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
           <Stack gap="xs">
             <Text as="h2" size="lg" weight="bold">{labelText}</Text>
             {landmark.dir ? (
@@ -58,6 +57,23 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
         )}
       </Stack>
     </Card>
+  );
+}
+
+function LandmarkSymbol({ landmark, boxSlug }: { landmark: Landmark; boxSlug: string }) {
+  if (landmark.symbolSrc) {
+    return (
+      <img
+        src={`/${boxSlug}/api/files/${landmark.symbolSrc}`}
+        alt=""
+        className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+      />
+    );
+  }
+  return (
+    <span className="text-4xl leading-none flex-shrink-0" aria-hidden>
+      {landmark.symbol || "📍"}
+    </span>
   );
 }
 

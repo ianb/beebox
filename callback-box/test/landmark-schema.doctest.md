@@ -60,6 +60,27 @@ createLandmarkTemplate({ label: "A & B", symbol: "📍" })
 </landmark>
 ```
 
+## Image symbols
+
+`<symbol>` accepts either text (emoji) or an `src` attribute pointing
+at an image. Both forms validate cleanly.
+
+```
+const xml = `<landmark>
+<label>Marisol</label>
+<symbol src="images/Marisol.webp"/>
+</landmark>`;
+
+const root = await parseXml(xml, "test.xml");
+const symbolEl = root.children.find((c) => c.tagName === "symbol");
+JSON.stringify({ src: symbolEl.attrs.src, text: symbolEl.text || "" }, null, 2)
+=>
+{
+  "src": "images/Marisol.webp",
+  "text": ""
+}
+```
+
 ## Hand-listed links
 
 A landmark with two `<link>` references resolves to a flat list. Inner

@@ -23,8 +23,10 @@ export interface LandmarkPayload {
   dir: string;
   /** Label text (falls back to filename-derived title). */
   label: string;
-  /** Symbol text (emoji etc.); empty if missing. */
+  /** Symbol text (emoji or short text); empty when an image is used. */
   symbol: string;
+  /** Box-relative path to the symbol image, or null for text symbols. */
+  symbolSrc: string | null;
   /** Resolved hand-listed + expanded links, in source order with dedup. */
   links: ResolvedLink[];
 }
@@ -36,6 +38,29 @@ function readChildText(element: ElementNode, tagName: string): string {
     }
   }
   return "";
+}
+
+/**
+ * Pull `<symbol>`'s text and `src` attribute (if any). The `src` is
+ * resolved from "relative to landmark directory" to "box-relative" so
+ * the frontend can pipe it directly to /api/files.
+ */
+function readSymbol(
+  element: ElementNode,
+  { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
+): { text: string; src: string | null } {
+  for (const child of element.children) {
+    if (child.tagName !== "symbol") continue;
+    const rawSrc = child.attrs["src"];
+    let src: string | null = null;
+    if (typeof rawSrc === "string" && rawSrc !== "") {
+      const absolute = path.resolve(landmarkDir, rawSrc);
+      src = path.relative(boxRoot, absolute);
+    }
+    const text = typeof child.text === "string" ? child.text.trim() : "";
+    return { text, src };
+  }
+  return { text: "", src: null };
 }
 
 export const landmarksRouter = router({
@@ -67,12 +92,14 @@ export const landmarksRouter = router({
         landmarkDir,
         boxRoot: ctx.boxRoot,
       });
+      const symbol = readSymbol(element, { landmarkDir, boxRoot: ctx.boxRoot });
 
       payloads.push({
         path: relPath,
         dir: dir === "." ? "" : dir,
         label: readChildText(element, "label"),
-        symbol: readChildText(element, "symbol"),
+        symbol: symbol.text,
+        symbolSrc: symbol.src,
         links,
       });
     }

@@ -19,12 +19,21 @@ export const LandmarkLabel = element("label", {
 });
 
 /**
- * The iconic mark for the landmark. Emoji is the v1 form; image and
- * styling extensions can be added later as new attributes/children
- * without breaking existing cards.
+ * The iconic mark for the landmark. Two forms:
+ *
+ *   <symbol>🍳</symbol>                            — emoji or short text
+ *   <symbol src="images/Marisol.webp"/>            — image (path relative
+ *                                                    to the landmark's
+ *                                                    directory)
+ *
+ * One or the other; if `src` is set the renderer shows the image,
+ * otherwise it shows the text.
  */
 export const LandmarkSymbol = element("symbol", {
-  text: z.string(),
+  attrs: {
+    src: z.string().optional(),
+  },
+  text: z.string().optional(),
 });
 
 /**
@@ -103,7 +112,7 @@ A landmark marks a directory as a notable spot in the box. It's a hand-curated b
 
 **Structure:**
 - \`<label>\` — short bookmark name. Treat like a tab name, not a sentence.
-- \`<symbol>\` — the iconic mark. Emoji for now.
+- \`<symbol>\` — the iconic mark. Either an emoji / short text (\`<symbol>🍳</symbol>\`) or an image (\`<symbol src="images/Marisol.webp"/>\`). Image \`src\` is a path relative to the landmark's directory; cross-directory paths are allowed. For character-driven landmarks the portrait makes a stronger bookmark than an emoji.
 - \`<link ref="...">\` — optional curated references to other cards. Inner text is a per-landmark label; falls back to the target's title if omitted. The \`ref\` is a literal path relative to the landmark's directory; cross-directory refs are allowed. \`ref\` is validated like any other ref — it must point at a real file.
 - \`<expand query="..." order="...">\` — optional templated fan-out. \`query\` is a glob (like \`cb ls\`). The element's children form the template; inside that template, links use \`template-ref="..."\` (NOT \`ref=""\`) so the validator doesn't try to resolve placeholders. Placeholders are \`\${path}\` (matched card's path) and \`\${xpath-expr}\` (XPath against the matched card's root). \`order\` is one of \`alphabetical\` (default), \`modified-desc\`, \`modified-asc\`.
 
@@ -138,11 +147,21 @@ export const landmarkLoader: FileLoader<Record<string, never>> = (raw) => {
 
 /**
  * Template for `cb create` — produces a starter landmark with placeholders.
+ *
+ * Pass `symbol` for an emoji/text symbol, or `symbolSrc` for an image
+ * path (relative to the landmark's directory).
  */
-export function createLandmarkTemplate(options: { label: string; symbol: string }): string {
+export function createLandmarkTemplate(options: {
+  label: string;
+  symbol?: string;
+  symbolSrc?: string;
+}): string {
+  const symbol = options.symbolSrc
+    ? `<symbol src="${escapeAttr(options.symbolSrc)}"/>`
+    : `<symbol>${escapeText(options.symbol ?? "")}</symbol>`;
   return `<landmark>
 <label>${escapeText(options.label)}</label>
-<symbol>${escapeText(options.symbol)}</symbol>
+${symbol}
 </landmark>
 `;
 }
