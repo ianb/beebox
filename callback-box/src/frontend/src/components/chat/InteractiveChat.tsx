@@ -982,12 +982,43 @@ function VirtualizedMessageList({
   );
 }
 
+/**
+ * Small "Context: <dir>" link in the chat header for chats that were
+ * started from a landmark. Pulled out as its own component so the trpc
+ * query and the conditional render don't bump InteractiveChat over the
+ * cyclomatic-complexity ceiling.
+ */
+function ChatContextLink({ sessionId, boxSlug }: { sessionId: string | null; boxSlug: string }) {
+  const query = trpc.chat.directoryFor.useQuery(
+    { sessionId: sessionId ?? "" },
+    { enabled: Boolean(sessionId) },
+  );
+  const dir = query.data?.contextDir;
+  if (!dir) return null;
+  return (
+    <a
+      href={`/${boxSlug}/browse/${dir}`}
+      className="ml-3 text-xs text-white/80 hover:text-white truncate"
+      title={`Context: ${dir}/`}
+    >
+      {dir}/
+    </a>
+  );
+}
+
 interface InteractiveChatProps {
   /** Either an existing session id or `"new"` for a fresh conversation. */
   sessionInput: string;
+  /**
+   * If set on a `"new"` chat, the chat is associated with this directory:
+   * the first user turn is auto-seeded with a `<context-directory>`
+   * directive, and once the session id is assigned the dir is recorded
+   * in chat-session-history.
+   */
+  contextDir?: string;
 }
 
-export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatProps) {
   const [snapshot, send] = useSSRMachine(chatMachine, { input: { sessionInput } });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries } = snapshot.context;
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
@@ -995,6 +1026,8 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
   const currentUser = useCurrentUser();
   const navigate = useNavigate();
   const { boxSlug } = useParams({ strict: false });
+  const recordContextDir = trpc.chat.recordContextDir.useMutation();
+  const seedSentRef = useRef(false);
 
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
@@ -1239,6 +1272,16 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
         // changes, this component will remount with the real id; the
         // freshly-written JSONL is reloaded by fetchInitial.
         if (sessionInput === "new" && !sessionId) {
+          // If this chat was started from a landmark, persist the
+          // directory association before navigating away. We don't await
+          // this — `appendHistory` is idempotent and the new URL will
+          // refetch the dir via trpc.chat.directoryFor.
+          if (contextDir) {
+            recordContextDir.mutate({
+              sessionId: data.sessionId,
+              contextDir,
+            });
+          }
           navigate({
             to: href(`/${boxSlug}/chat`),
             search: { session: data.sessionId } as never,
@@ -1246,7 +1289,9 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
           });
         }
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, navigate, boxSlug]),
+    // recordContextDir excluded — useMutation returns a stable object across renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, navigate, boxSlug, contextDir]),
   });
 
   const handleCancelSchedule = useCallback((label: string) => {
@@ -1404,6 +1449,20 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
     },
     [send]
   );
+
+  // Auto-seed first turn for landmark-started chats. The agent reads the
+  // <context-directory> directive on its first turn, then the user takes
+  // turn 3 with their actual question. The ref guards against double-fire
+  // across StrictMode re-renders.
+  useEffect(() => {
+    if (sessionInput !== "new") return;
+    if (!contextDir) return;
+    if (seedSentRef.current) return;
+    if (isLoading) return;
+    seedSentRef.current = true;
+    const seed = `<context-directory ref="${contextDir}">Familiarize yourself with ${contextDir} before beginning</context-directory>`;
+    doSend(seed);
+  }, [sessionInput, contextDir, isLoading, doSend]);
 
   const zoomedViewAttr = useCallback(() => {
     if (!activeView) return "";
@@ -1811,7 +1870,9 @@ export function InteractiveChat({ sessionInput }: InteractiveChatProps) {
     <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
       {/* Header with debug controls */}
       <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
-        <h2 className="flex-1 text-sm font-semibold text-white tracking-wide">Chat</h2>
+        <h2 className="text-sm font-semibold text-white tracking-wide">Chat</h2>
+        <ChatContextLink sessionId={sessionId} boxSlug={boxSlug ?? ""} />
+        <div className="flex-1" />
         <RecentFilesButton
           entries={messages}
           onPanel={(summary) => onZoomView({

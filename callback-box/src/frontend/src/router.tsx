@@ -82,6 +82,7 @@ const chatRoute = createRoute({
   component: ChatPage,
   validateSearch: z.object({
     session: z.string().optional(),
+    contextDir: z.string().optional(),
   }),
 });
 

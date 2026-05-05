@@ -86,6 +86,21 @@ function stripUserDisplayTags(text: string): string {
 }
 
 /**
+ * Detect if a user message is exactly a `<context-directory>` directive
+ * (the auto-seed sent when a chat is started from a landmark). When it
+ * is, the message renders as a small "Context: <dir>/" chip rather than
+ * a normal bubble — see ContextDirectoryChip.
+ */
+const CONTEXT_DIRECTORY_RE = /^\s*<context-directory\s+ref="([^"]+)"\s*>[\S\s]*?<\/context-directory>\s*$/;
+
+function parseContextDirective(allTexts: string[]): { dir: string } | null {
+  const combined = allTexts.map((t) => stripUserDisplayTags(t)).join("\n").trim();
+  const match = combined.match(CONTEXT_DIRECTORY_RE);
+  if (!match) return null;
+  return { dir: match[1] };
+}
+
+/**
  * Extract file attachments from a user message's text. Looks for the
  * `<attachments>` block written by the chat composer and parses
  * `[fileN]: tmp/<timestamp>_<original-name>` reference lines.
@@ -967,6 +982,13 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
     return <TaskNotificationMessage notification={taskNotification} />;
   }
 
+  // Auto-seed messages from a landmark-started chat render as a chip,
+  // not a bubble — they're context for the agent, not user speech.
+  const contextDirective = parseContextDirective(allTexts);
+  if (contextDirective && !debugView) {
+    return <ContextDirectoryChip dir={contextDirective.dir} />;
+  }
+
   const senderName = getUserName(entries[0]);
   const senderEmail = entries[0].userEmail;
   // Compare by email if available (same user across devices), fall back to name
@@ -1014,6 +1036,25 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
 function PendingIndicator() {
   return (
     <div className="text-xs text-white/70 mt-1 italic">queued — waiting</div>
+  );
+}
+
+/**
+ * Inline chip for the auto-seed context directive in landmark-started
+ * chats. Replaces the user message bubble — the directive is system
+ * context, not something the user said.
+ */
+function ContextDirectoryChip({ dir }: { dir: string }) {
+  return (
+    <div className="py-2 flex justify-center">
+      <span
+        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-warm-100 text-warm-700 text-xs"
+        title={`Familiarising with ${dir}/`}
+      >
+        <span aria-hidden>📍</span>
+        Context: {dir}/
+      </span>
+    </div>
   );
 }
 

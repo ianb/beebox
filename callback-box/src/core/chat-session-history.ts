@@ -1,13 +1,20 @@
 /**
- * chat-session-history — tracks which session ids belong to web chat for this box.
+ * chat-session-history — tracks which session ids belong to web chat for
+ * this box, and (optionally) which directory each one is "associated with"
+ * via a landmark.
  *
- * Persisted at `.callback-box/chat-session-history.json`:
+ * Persisted at `.callback-box/chat-session-history.json`. The format
+ * evolved from a flat string array to per-session entries:
  *
- *   { "sessionIds": ["abc-123", ...], "migrated": true }
+ *   v1 (legacy): { "sessionIds": ["abc-123", ...], "migrated": true }
+ *   v2 (current): { "sessions": [{ "id": "abc-123", "contextDir": "store/recipes" }, ...], "migrated": true }
  *
- * The list drives the session dropdown — only sessions in here show up.
- * The `migrated` flag gates a one-shot backfill that scans existing JSONLs
- * for `<speech>`/`<typed>` user content and treats those as web chat sessions.
+ * v1 files are auto-converted on first read. The list drives the session
+ * dropdown — only sessions in here show up.
+ *
+ * The `migrated` flag gates a one-shot backfill that scans existing
+ * JSONLs for `<speech>`/`<typed>` user content and treats those as web
+ * chat sessions.
  *
  * Also owns the "most-active" pointer at `.callback-box/chat-session-id.json`,
  * which is what bare `/chat` (no session param) resolves to.
@@ -22,8 +29,14 @@ import { listSessions } from "../cli/lib/session.js";
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".callback-box/chat-session-id.json";
 
+export interface SessionHistoryEntry {
+  id: string;
+  /** Directory this chat is associated with (from a landmark). Undefined for unassociated chats. */
+  contextDir?: string;
+}
+
 interface HistoryFile {
-  sessionIds: string[];
+  sessions: SessionHistoryEntry[];
   migrated: boolean;
 }
 
@@ -40,11 +53,31 @@ async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
   const filePath = path.join(boxRoot, HISTORY_FILE);
   try {
     const data = await fs.readFile(filePath, "utf-8");
-    const parsed = JSON.parse(data) as Partial<HistoryFile>;
-    return {
-      sessionIds: Array.isArray(parsed.sessionIds) ? parsed.sessionIds : [],
-      migrated: parsed.migrated === true,
+    // The file is read in two compatible shapes — v1 had `sessionIds`,
+    // v2 has `sessions`. Tolerate either, and let the next write upgrade.
+    const parsed = JSON.parse(data) as {
+      sessions?: unknown;
+      sessionIds?: unknown;
+      migrated?: unknown;
     };
+    const sessions: SessionHistoryEntry[] = [];
+    if (Array.isArray(parsed.sessions)) {
+      for (const raw of parsed.sessions) {
+        if (raw && typeof raw === "object" && typeof (raw as { id?: unknown }).id === "string") {
+          const entry: SessionHistoryEntry = { id: (raw as { id: string }).id };
+          const contextDir = (raw as { contextDir?: unknown }).contextDir;
+          if (typeof contextDir === "string" && contextDir.length > 0) {
+            entry.contextDir = contextDir;
+          }
+          sessions.push(entry);
+        }
+      }
+    } else if (Array.isArray(parsed.sessionIds)) {
+      for (const id of parsed.sessionIds) {
+        if (typeof id === "string") sessions.push({ id });
+      }
+    }
+    return { sessions, migrated: parsed.migrated === true };
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return null;
@@ -66,17 +99,78 @@ async function writeHistoryFile(boxRoot: string, contents: HistoryFile): Promise
 export async function loadHistory(boxRoot: string): Promise<string[]> {
   const file = await readHistoryFile(boxRoot);
   if (file === null) return [];
-  return file.sessionIds;
+  return file.sessions.map((s) => s.id);
+}
+
+/**
+ * Load the full per-session entries (id + optional contextDir).
+ */
+export async function loadHistoryEntries(boxRoot: string): Promise<SessionHistoryEntry[]> {
+  const file = await readHistoryFile(boxRoot);
+  if (file === null) return [];
+  return file.sessions;
+}
+
+interface AppendHistoryOptions {
+  sessionId: string;
+  /** Directory this chat is associated with (when started from a landmark). */
+  contextDir?: string;
 }
 
 /**
  * Append a session id to the history. Idempotent — duplicates are ignored.
+ * Pass `contextDir` to associate the session with a directory (e.g. when
+ * the session was started from a landmark).
  */
-export async function appendHistory(boxRoot: string, sessionId: string): Promise<void> {
-  const file = (await readHistoryFile(boxRoot)) ?? { sessionIds: [], migrated: false };
-  if (file.sessionIds.includes(sessionId)) return;
-  file.sessionIds.push(sessionId);
+export async function appendHistory(
+  boxRoot: string,
+  opts: AppendHistoryOptions,
+): Promise<void> {
+  const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
+  const existing = file.sessions.find((s) => s.id === opts.sessionId);
+  if (existing) {
+    // Don't clobber a previously-recorded contextDir, but fill one in if
+    // missing (e.g. user opens an old session from a landmark).
+    if (opts.contextDir && !existing.contextDir) {
+      existing.contextDir = opts.contextDir;
+      await writeHistoryFile(boxRoot, file);
+    }
+    return;
+  }
+  const entry: SessionHistoryEntry = { id: opts.sessionId };
+  if (opts.contextDir) entry.contextDir = opts.contextDir;
+  file.sessions.push(entry);
   await writeHistoryFile(boxRoot, file);
+}
+
+/**
+ * Look up the directory a session is associated with (if any).
+ */
+export async function getDirectoryForSession(
+  boxRoot: string,
+  sessionId: string,
+): Promise<string | null> {
+  const entries = await loadHistoryEntries(boxRoot);
+  const entry = entries.find((s) => s.id === sessionId);
+  if (!entry || !entry.contextDir) return null;
+  return entry.contextDir;
+}
+
+/**
+ * Find the most-recently-created session associated with a directory.
+ * "Most recent" means later in the history file's session list — entries
+ * are appended in creation order, so the last match wins.
+ */
+export async function getLastSessionForDirectory(
+  boxRoot: string,
+  contextDir: string,
+): Promise<string | null> {
+  const entries = await loadHistoryEntries(boxRoot);
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    if (entry && entry.contextDir === contextDir) return entry.id;
+  }
+  return null;
 }
 
 /**
@@ -157,18 +251,18 @@ async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
  * `<speech>` or `<typed>` markers.
  */
 export async function runBackfillIfNeeded(boxRoot: string): Promise<void> {
-  const file = (await readHistoryFile(boxRoot)) ?? { sessionIds: [], migrated: false };
+  const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
   if (file.migrated) return;
 
   log("backfill", "Scanning JSONLs for web chat sessions");
   const sessions = await listSessions(boxRoot);
-  const known = new Set(file.sessionIds);
+  const known = new Set(file.sessions.map((s) => s.id));
   let added = 0;
   for (const s of sessions) {
     if (known.has(s.sessionId)) continue;
     try {
       if (await logHasWebChatMarkers(s.path)) {
-        file.sessionIds.push(s.sessionId);
+        file.sessions.push({ id: s.sessionId });
         known.add(s.sessionId);
         added += 1;
       }

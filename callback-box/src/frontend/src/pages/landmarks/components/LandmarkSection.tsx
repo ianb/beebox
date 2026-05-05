@@ -1,10 +1,15 @@
 /**
  * One landmark rendered as a section: symbol + label header, plus a
  * grid of resolved link tiles. Click a tile to open the target card.
+ *
+ * The "Chat" button opens (or starts) a chat associated with this
+ * landmark's directory — see chat-session-history.ts and
+ * docs/landmarks.md for the association model.
  */
 
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { href } from "../../../lib/routing";
+import { trpc } from "../../../lib/trpc";
 import { Card } from "../../../components/ui/Card";
 import { Stack } from "../../../components/ui/Stack";
 import { Text } from "../../../components/ui/Text";
@@ -44,6 +49,11 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
               </Link>
             ) : null}
           </Stack>
+          {landmark.dir ? (
+            <div className="ml-auto">
+              <ChatButton dir={landmark.dir} boxSlug={boxSlug} />
+            </div>
+          ) : null}
         </div>
 
         {landmark.links.length > 0 ? (
@@ -55,6 +65,39 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
         ) : null}
       </Stack>
     </Card>
+  );
+}
+
+function ChatButton({ dir, boxSlug }: { dir: string; boxSlug: string }) {
+  const navigate = useNavigate();
+  const utils = trpc.useUtils();
+
+  const onClick = async () => {
+    const { sessionId } = await utils.chat.lastSessionForDirectory.fetch({ contextDir: dir });
+    if (sessionId) {
+      navigate({
+        to: href(`/${boxSlug}/chat`),
+        search: { session: sessionId } as never,
+      });
+      return;
+    }
+    // No prior chat for this dir — start a new one. The InteractiveChat
+    // component will auto-send a <context-directory> seed on mount and
+    // record the association once the session id is assigned.
+    navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: { session: "new", contextDir: dir } as never,
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
+    >
+      Chat
+    </button>
   );
 }
 

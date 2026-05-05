@@ -186,7 +186,7 @@ export class ChatSessionRegistry extends EventEmitter {
   ): (sessionId: string) => Promise<void> {
     return async (sessionId: string): Promise<void> => {
       try {
-        await appendHistory(this.boxRoot, sessionId);
+        await appendHistory(this.boxRoot, { sessionId });
         await setMostActive(this.boxRoot, sessionId);
       } catch (e) {
         log("on-assigned", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);

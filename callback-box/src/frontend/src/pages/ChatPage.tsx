@@ -16,6 +16,13 @@ import { href } from "../lib/routing";
 
 interface ChatSearch {
   session?: string;
+  /**
+   * When starting a new chat from a landmark, this is the directory the
+   * chat is associated with. The first user turn is auto-seeded with a
+   * <context-directory ref="..."> directive, and once the session id is
+   * assigned the dir is recorded in chat-session-history.
+   */
+  contextDir?: string;
 }
 
 export function ChatPage() {
@@ -23,6 +30,7 @@ export function ChatPage() {
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
   const sessionParam = search.session;
+  const contextDir = search.contextDir;
   const [resolved, setResolved] = useState<string | null>(null);
 
   // Bare `/chat`: resolve the box's most-active session and navigate to it.
@@ -54,5 +62,14 @@ export function ChatPage() {
 
   // Key on sessionInput so a session switch (or new-chat reset) cleanly
   // remounts the machine and reloads history for the new session.
-  return <InteractiveChat key={sessionInput} sessionInput={sessionInput} />;
+  // contextDir is only meaningful when starting a "new" chat; once we
+  // navigate to the assigned id, it's no longer needed (the dir is
+  // recorded server-side).
+  return (
+    <InteractiveChat
+      key={sessionInput}
+      sessionInput={sessionInput}
+      contextDir={sessionInput === "new" ? contextDir : undefined}
+    />
+  );
 }
