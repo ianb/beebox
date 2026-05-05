@@ -11,6 +11,7 @@ import { FileView } from "./FileView";
 import type { LightboxImage } from "./ImageLightbox";
 import type { Components } from "react-markdown";
 import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { parseContextDirective } from "../lib/context-directive";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
@@ -85,20 +86,6 @@ function stripUserDisplayTags(text: string): string {
     .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "");
 }
 
-/**
- * Detect if a user message is exactly a `<context-directory>` directive
- * (the auto-seed sent when a chat is started from a landmark). When it
- * is, the message renders as a small "Context: <dir>/" chip rather than
- * a normal bubble — see ContextDirectoryChip.
- */
-const CONTEXT_DIRECTORY_RE = /^\s*<context-directory\s+ref="([^"]+)"\s*>[\S\s]*?<\/context-directory>\s*$/;
-
-function parseContextDirective(allTexts: string[]): { dir: string } | null {
-  const combined = allTexts.map((t) => stripUserDisplayTags(t)).join("\n").trim();
-  const match = combined.match(CONTEXT_DIRECTORY_RE);
-  if (!match) return null;
-  return { dir: match[1] };
-}
 
 /**
  * Extract file attachments from a user message's text. Looks for the
