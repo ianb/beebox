@@ -1,0 +1,60 @@
+# Knowledge Audits
+
+Tests that verify what agents in a box actually know — by prompting a real box agent, watching its tool use, and checking its response. Periodic execution catches knowledge drift as schemas, prompts, and conventions evolve.
+
+The harness lives in `src/dev/`:
+
+- `knowledge-audit.ts` — CLI entry
+- `knowledge-audits.yaml` — test definitions
+- `lib/test-runner.ts`, `lib/report.ts`, `lib/session-report.ts` — internals
+- `reports/` — gitignored output
+
+## When to run
+
+- After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
+- On a periodic cadence (monthly is probably enough) to catch slow drift.
+
+`docs/maintenance.md` lists this alongside the other periodic tasks.
+
+## Running
+
+```bash
+npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>]
+npx tsx src/dev/knowledge-audit.ts list
+```
+
+## Recording results
+
+After running audits, **update the status comments in `knowledge-audits.yaml`** with the date and results. Each test section (e.g., `# === Don't Drop Important Information ===`) should have a `# Status (YYYY-MM-DD):` comment noting:
+
+- How many tests pass/fail
+- Any notable failure patterns (turn limits, tool issues, knowledge gaps)
+- What fixed previous failures (if relevant)
+
+The status comment is the durable record. Reports in `reports/` are gitignored and ephemeral — they're a working artifact, not a result log.
+
+## Test structure
+
+Each entry in `knowledge-audits.yaml` has these fields:
+
+- `prompt` — what to ask the agent.
+- `expected_level` — one of:
+  - `knows_directly` — should answer without reading any files.
+  - `knows_about` — should know which docs to read, then answer.
+  - `discoverable` — should be able to find the answer by exploring the filesystem.
+- `correct_contains` / `correct_contains_any` — strings that must appear in the response.
+- `cards_contain` — strings that must appear in card files created by the agent.
+- `should_read` — files the agent should read before answering.
+- `max_turns` — override the default 10-turn limit (use for tests requiring multi-step card creation).
+- `tags` — for filtering with `--filter`.
+
+## Interpreting failures
+
+Common failure patterns and what they mean:
+
+- **Hits `max_turns`** — the agent didn't converge. Either the prompt is ambiguous, the right docs aren't loadable from the agent's perspective, or the task is too multi-step for the default 10-turn limit. Try `max_turns: 20` first; if that doesn't help, the prompt or the underlying knowledge is the problem.
+- **Tool issues** — the agent tried to use a tool that's not available in this box, or used an available tool wrong. Usually means a CLAUDE.md or rule file is misleading.
+- **Knowledge gap** — the agent answered confidently but wrong. The doc that should have taught the right answer either doesn't exist, isn't loaded into the agent's context, or contradicts itself.
+- **Reads wrong files** — `should_read` is wrong, or the doc structure changed and the agent is following a stale pointer.
+
+When fixing failures, prefer changing docs/prompts to changing the test — the test is asserting an expectation about agent behavior, and silently weakening it defeats the point.
