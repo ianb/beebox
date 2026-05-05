@@ -842,38 +842,64 @@ function VirtualizedMessageList({
     return () => el.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Pin scroll to the bottom using the actual rendered scrollHeight, and
+  // re-issue across the next two frames to ride out measurement settling
+  // (ResizeObserver flushes after visibility changes, image decode, etc.).
+  // Direct DOM scroll is more robust than virtualizer.scrollToIndex(last,
+  // "end") in dynamic-measurement mode, where a stale totalSize can leave
+  // the call landing mid-list. See TanStack/virtual#615, #468, #1001.
+  const pinToBottom = useCallback(() => {
+    let frame = 0;
+    const pin = () => {
+      const el = scrollRef.current;
+      if (!el) return;
+      el.scrollTop = el.scrollHeight;
+      frame++;
+      if (frame < 3) requestAnimationFrame(pin);
+    };
+    pin();
+  }, []);
+
+  // Re-pin to bottom when the tab regains visibility, in case background
+  // throttling left the scroll position drifting while measurements
+  // updated out from under us.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && isAtBottomRef.current) {
+        pinToBottom();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [pinToBottom]);
+
   // Auto-scroll to bottom when new messages arrive or stream updates, if user was at bottom
   const prevItemCount = useRef(itemCount);
   useEffect(() => {
     if (itemCount !== prevItemCount.current) {
-      // New group added — scroll to bottom if we were there
       prevItemCount.current = itemCount;
-      if (isAtBottomRef.current) {
-        virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
-      }
+      if (isAtBottomRef.current) pinToBottom();
     }
-  }, [itemCount, virtualizer]);
+  }, [itemCount, pinToBottom]);
 
   // During streaming, keep scrolling to bottom as content grows
   useEffect(() => {
     if (snapshot.matches("streaming") && isAtBottomRef.current) {
-      virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
+      pinToBottom();
     }
-  }, [streamText, streamTools.length, snapshot, virtualizer, itemCount]);
+  }, [streamText, streamTools.length, snapshot, pinToBottom]);
 
   // Scroll to bottom when user sends a message (even if scrolled up)
   useEffect(() => {
     if (scrollToBottomTrigger > 0 && itemCount > 0) {
       isAtBottomRef.current = true;
-      virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
+      pinToBottom();
     }
-  }, [scrollToBottomTrigger, virtualizer, itemCount]);
+  }, [scrollToBottomTrigger, itemCount, pinToBottom]);
 
   // Scroll to bottom on initial mount
   useEffect(() => {
-    if (itemCount > 0) {
-      virtualizer.scrollToIndex(itemCount - 1, { align: "end" });
-    }
+    if (itemCount > 0) pinToBottom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1267,11 +1293,14 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         }
       } else if (event.event === "chat-session-assigned") {
         const data = event.data as { sessionId: string };
-        // We only navigate when this view started in "new" mode and the
-        // assigned id is the one for our pending session. Once the URL
-        // changes, this component will remount with the real id; the
-        // freshly-written JSONL is reloaded by fetchInitial.
+        // Lock the running machine onto the assigned id (so subsequent
+        // sends + the post-stream refresh use it) and update the URL so a
+        // reload lands on the right session. ChatPage stabilizes the React
+        // key across this transition, so the in-flight stream survives —
+        // remounting here would orphan the SSE listener and the chat would
+        // appear empty until the user reloads.
         if (sessionInput === "new" && !sessionId) {
+          send({ type: "SESSION_ASSIGNED", sessionId: data.sessionId });
           // If this chat was started from a landmark, persist the
           // directory association before navigating away. We don't await
           // this — `appendHistory` is idempotent and the new URL will
