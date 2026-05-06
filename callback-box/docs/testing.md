@@ -466,12 +466,12 @@ Not every session has problems. If the critique comes back clean, that's a posit
 | Frequency | Periodic suite runs | After observing issues |
 | Fixes | Documentation, agent guide, rules | CLI output, error messages, rules |
 
-## 5. Card Validator Plugin
+## 5. Card Validator Hook
 
-**Location:** `plugins/card-validator/`
-**Trigger:** Runs automatically during Claude Code sessions on Write/Edit of `.card` files
+**Location:** `src/core/sdk-hooks.ts` (`cardValidatorHook`)
+**Trigger:** Runs automatically during agent sessions on `PostToolUse` of `Write`/`Edit`
 
-Not a test you run manually, but a live validation hook. When an agent writes or edits a `.card` file, the plugin runs `cb validate` and feeds errors back as inline context. This catches XML/schema issues during agent work rather than after.
+Not a test you run manually, but a live validation hook. When an agent writes or edits a `.card` file, the hook calls cardworks' `lintCards` in-process and feeds any issues back as `additionalContext`. This catches XML/schema issues during agent work rather than after.
 
 Also enforces directory structure rules (e.g., trick scripts must be in subdirectories of `tricks/scripts/`).
 

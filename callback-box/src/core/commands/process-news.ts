@@ -517,6 +517,7 @@ async function executeProcessNews(
             prompt: `Triage the ${inboxItems.length} news items in box/inbox/news/. Keep the best ${selectCount}.`,
             model: "claude-haiku-4-5-20251001",
             maxTurns: 10,
+            maxBudgetUsd: 1,
           });
           ctx.writeLine("");
 
@@ -612,6 +613,7 @@ async function executeProcessNews(
             systemPrompt: buildAnalyzePrompt(ctx.boxRoot),
             prompt: `Please analyze these news items:\n  - ${paths}`,
             maxTurns: 20,
+            maxBudgetUsd: 5,
           });
           ctx.writeLine("");
 
@@ -664,6 +666,7 @@ async function executeProcessNews(
             systemPrompt: buildBriefPrompt(ctx.boxRoot),
             prompt: "Please create a news brief from the items in box/pool/news/",
             maxTurns: 40,
+            maxBudgetUsd: 10,
           });
           ctx.writeLine("");
 

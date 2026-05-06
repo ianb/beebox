@@ -15,15 +15,17 @@
  * resume semantics live one level up in `ChatSession`.
  */
 
-import * as path from "node:path";
 import {
   query,
+  startup,
   type Options,
   type Query,
   type SDKMessage,
   type SDKUserMessage,
+  type WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
 import type { MCPServerConfig } from "../activities/index.js";
+import { cardValidatorHook } from "../core/sdk-hooks.js";
 
 // ─── Backend interface ───────────────────────────────────────────────────────
 
@@ -51,8 +53,12 @@ export interface ChatBackendStartOptions {
   mcpConfig?: MCPServerConfig | null;
   /** Pin to a specific model; omit for SDK default. */
   model?: string | undefined;
-  /** Plugin paths to load. */
-  pluginPaths?: string[] | undefined;
+  /**
+   * If true, the SDK emits `stream_event` (`SDKPartialAssistantMessage`)
+   * messages as the model streams its response. Off by default to keep
+   * the message rate low.
+   */
+  includePartialMessages?: boolean | undefined;
   /** Subprocess env. Keys with undefined values are dropped. */
   env: Record<string, string | undefined>;
 }
@@ -75,6 +81,17 @@ export interface ChatBackendRun {
 
 export interface ChatBackend {
   start(opts: ChatBackendStartOptions): ChatBackendRun;
+  /**
+   * Pre-warm a Claude subprocess against `opts` so the next `start()` with
+   * compatible options skips spawn + initialize latency. Compatibility means:
+   * same `cwd`, same `systemPrompt`, no `resumeSessionId`, no `mcpConfig`,
+   * and matching `includePartialMessages`/`model`. The warm slot is
+   * single-use; the backend re-warms automatically after consumption.
+   *
+   * Idempotent (only one slot is held at a time). Optional — fakes don't
+   * have to implement it.
+   */
+  prewarm?(opts: ChatBackendStartOptions): Promise<void>;
 }
 
 // ─── Real implementation ─────────────────────────────────────────────────────
@@ -141,103 +158,175 @@ function createAsyncIterableQueue<T>(): {
   return { push, end, iterable };
 }
 
+/**
+ * Build SDK Options from a ChatBackendStartOptions for either `query()` or
+ * `startup()` calls. Pulled out so the warm-pool path uses the same shape.
+ */
+function buildQueryOptions(opts: ChatBackendStartOptions): Options {
+  const queryOptions: Options = {
+    cwd: opts.cwd,
+    env: dropUndefined(opts.env),
+    permissionMode: "bypassPermissions",
+    systemPrompt: {
+      type: "preset" as const,
+      preset: "claude_code" as const,
+      append: opts.systemPrompt,
+    },
+  };
+  if (opts.resumeSessionId !== undefined) {
+    queryOptions.resume = opts.resumeSessionId;
+  }
+  if (opts.model !== undefined) {
+    queryOptions.model = opts.model;
+  }
+  queryOptions.hooks = { PostToolUse: [cardValidatorHook()] };
+  if (opts.includePartialMessages === true) {
+    queryOptions.includePartialMessages = true;
+  }
+  if (opts.mcpConfig) {
+    queryOptions.mcpServers = {
+      "cb-activity": {
+        type: "stdio",
+        command: opts.mcpConfig.command,
+        args: opts.mcpConfig.args,
+        env: opts.mcpConfig.env,
+      },
+    };
+  }
+  return queryOptions;
+}
+
+/**
+ * Whether a `start()` call's options are compatible with a pre-warmed slot.
+ * The warm subprocess has its options baked in, so we only consume it if
+ * everything that affects the subprocess (cwd, system prompt, model, MCP,
+ * partial-messages, no resume) matches.
+ */
+function warmCompatible(
+  warm: ChatBackendStartOptions,
+  next: ChatBackendStartOptions,
+): boolean {
+  if (next.resumeSessionId !== undefined) return false;
+  if (warm.cwd !== next.cwd) return false;
+  if (warm.systemPrompt !== next.systemPrompt) return false;
+  if ((warm.model ?? null) !== (next.model ?? null)) return false;
+  if (warm.includePartialMessages !== next.includePartialMessages) return false;
+  // mcpConfig: shallow compare — both null/undefined or same command+args.
+  const wm = warm.mcpConfig ?? null;
+  const nm = next.mcpConfig ?? null;
+  if (wm === null && nm === null) return true;
+  if (wm === null || nm === null) return false;
+  if (wm.command !== nm.command) return false;
+  if (wm.args.length !== nm.args.length) return false;
+  for (let i = 0; i < wm.args.length; i++) {
+    if (wm.args[i] !== nm.args[i]) return false;
+  }
+  return true;
+}
+
 export function createChatBackend(): ChatBackend {
+  let warmSlot: { warmQuery: WarmQuery; opts: ChatBackendStartOptions } | null = null;
+  let warming: Promise<void> | null = null;
+
+  function startWarming(opts: ChatBackendStartOptions): Promise<void> {
+    if (warming !== null) return warming;
+    if (warmSlot !== null) return Promise.resolve();
+    warming = (async (): Promise<void> => {
+      try {
+        const wq = await startup({ options: buildQueryOptions(opts) });
+        warmSlot = { warmQuery: wq, opts };
+      } catch {
+        // Warming is best-effort; the next start() will fall back to a cold spawn.
+      } finally {
+        warming = null;
+      }
+    })();
+    return warming;
+  }
+
+  function buildRunFromQuery(params: {
+    q: Query;
+    opts: ChatBackendStartOptions;
+    inputQueue: ReturnType<typeof createAsyncIterableQueue<SDKUserMessage>>;
+    messageQueue: ReturnType<typeof createAsyncIterableQueue<SDKMessage>>;
+  }): ChatBackendRun {
+    const { q, opts, inputQueue, messageQueue } = params;
+    const run: ChatBackendRun = {
+      closed: false,
+      messages: messageQueue.iterable,
+      send(content: ChatContentBlock[]): void {
+        if (run.closed) return;
+        inputQueue.push({
+          type: "user",
+          message: { role: "user", content },
+          session_id: opts.resumeSessionId ?? "",
+          parent_tool_use_id: null,
+        } as SDKUserMessage);
+      },
+      async interrupt(): Promise<void> {
+        if (run.closed) return;
+        await q.interrupt();
+      },
+      async close(): Promise<void> {
+        if (run.closed) return;
+        inputQueue.end();
+        await pump.catch(() => {
+          // Errors already surface via the messages iterator.
+        });
+      },
+    };
+
+    const pump = (async (): Promise<void> => {
+      try {
+        for await (const msg of q) {
+          messageQueue.push(msg);
+        }
+      } finally {
+        messageQueue.end();
+        run.closed = true;
+      }
+    })();
+    pump.catch(() => {
+      // messageQueue.end() already ran in the finally.
+    });
+
+    return run;
+  }
+
   return {
+    async prewarm(opts: ChatBackendStartOptions): Promise<void> {
+      await startWarming(opts);
+    },
     start(opts: ChatBackendStartOptions): ChatBackendRun {
       const inputQueue = createAsyncIterableQueue<SDKUserMessage>();
       const messageQueue = createAsyncIterableQueue<SDKMessage>();
 
-      // Build SDK options.
-      const queryOptions: Options = {
-        cwd: opts.cwd,
-        env: dropUndefined(opts.env),
-        permissionMode: "bypassPermissions",
-        systemPrompt: {
-          type: "preset" as const,
-          preset: "claude_code" as const,
-          append: opts.systemPrompt,
-        },
-      };
-      if (opts.resumeSessionId !== undefined) {
-        queryOptions.resume = opts.resumeSessionId;
+      // Try to consume the warm slot if it matches.
+      if (warmSlot !== null && warmCompatible(warmSlot.opts, opts)) {
+        const consumed = warmSlot;
+        warmSlot = null;
+        const q = consumed.warmQuery.query(inputQueue.iterable);
+        // Re-warm in the background using the same options we just consumed.
+        void startWarming(consumed.opts);
+        return buildRunFromQuery({ q, opts, inputQueue, messageQueue });
       }
-      if (opts.model !== undefined) {
-        queryOptions.model = opts.model;
-      }
-      if (opts.pluginPaths !== undefined && opts.pluginPaths.length > 0) {
-        queryOptions.plugins = opts.pluginPaths.map((p) => ({ type: "local" as const, path: p }));
-      }
-      if (opts.mcpConfig) {
-        queryOptions.mcpServers = {
-          "cb-activity": {
-            type: "stdio",
-            command: opts.mcpConfig.command,
-            args: opts.mcpConfig.args,
-            env: opts.mcpConfig.env,
-          },
-        };
+
+      // Cold path: drop a stale warm slot if its options don't match this
+      // start (we'd never use it for a different cwd/prompt). Caller can
+      // re-prewarm later if they want another slot.
+      if (warmSlot !== null) {
+        warmSlot.warmQuery.close();
+        warmSlot = null;
       }
 
       const q: Query = query({
         prompt: inputQueue.iterable,
-        options: queryOptions,
+        options: buildQueryOptions(opts),
       });
-
-      const run: ChatBackendRun = {
-        closed: false,
-        messages: messageQueue.iterable,
-        send(content: ChatContentBlock[]): void {
-          if (run.closed) return;
-          inputQueue.push({
-            type: "user",
-            message: { role: "user", content },
-            // session_id is populated by the SDK from the active query.
-            session_id: opts.resumeSessionId ?? "",
-            parent_tool_use_id: null,
-          } as SDKUserMessage);
-        },
-        async interrupt(): Promise<void> {
-          if (run.closed) return;
-          await q.interrupt();
-        },
-        async close(): Promise<void> {
-          if (run.closed) return;
-          inputQueue.end();
-          await pump.catch(() => {
-            // Errors already surface via the messages iterator.
-          });
-        },
-      };
-
-      // Background loop: pump SDK events into the message queue.
-      const pump = (async (): Promise<void> => {
-        try {
-          for await (const msg of q) {
-            messageQueue.push(msg);
-          }
-        } finally {
-          messageQueue.end();
-          run.closed = true;
-        }
-      })();
-      pump.catch(() => {
-        // The messageQueue has already been ended by the finally block.
-      });
-
-      return run;
+      return buildRunFromQuery({ q, opts, inputQueue, messageQueue });
     },
   };
 }
-
-// Re-export the bundled card-validator plugin path so callers don't have
-// to know callback-box's repo layout.
-const __dirname = import.meta.dirname;
-const CALLBACK_BOX_ROOT = path.resolve(__dirname, "../..");
-export const CARD_VALIDATOR_PLUGIN_PATH = path.join(
-  CALLBACK_BOX_ROOT,
-  "plugins",
-  "card-validator",
-);
 
 // ─── Fake implementation ─────────────────────────────────────────────────────
 

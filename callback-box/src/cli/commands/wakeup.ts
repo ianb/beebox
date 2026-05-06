@@ -369,6 +369,7 @@ async function runTriageFeedback(boxRoot: string): Promise<number> {
     prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
     model: "claude-haiku-4-5-20251001",
     maxTurns: 10,
+    maxBudgetUsd: 1,
   });
 
   if (result.success) {

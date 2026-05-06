@@ -22,10 +22,10 @@ import { generateDocs } from "./generate-docs.js";
 import { buildScriptEnv } from "./script-env.js";
 import type { MCPServerConfig } from "../activities/index.js";
 import {
-  CARD_VALIDATOR_PLUGIN_PATH,
   createChatBackend,
   type ChatBackend,
   type ChatBackendRun,
+  type ChatBackendStartOptions,
   type ChatContentBlock,
 } from "../services/claude-chat.js";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
@@ -94,6 +94,10 @@ export interface ChatMessage {
   total_cost_usd?: number;
   duration_ms?: number;
   num_turns?: number;
+  /** For `stream_event` messages — the raw `BetaRawMessageStreamEvent` payload. */
+  event?: unknown;
+  /** For `stream_event` — link to the parent assistant turn (or null). */
+  parent_tool_use_id?: string | null;
 }
 
 /**
@@ -139,6 +143,16 @@ function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
         },
       };
       if (msg.session_id !== undefined) out.session_id = msg.session_id;
+      return out;
+    }
+    case "stream_event": {
+      const out: ChatMessage = {
+        type: "stream_event",
+        session_id: msg.session_id,
+        event: msg.event,
+        parent_tool_use_id: msg.parent_tool_use_id,
+      };
+      if (msg.uuid) out.uuid = msg.uuid;
       return out;
     }
     case "result": {
@@ -202,6 +216,13 @@ export interface ChatSessionOptions {
    * mode. Defaults to false (main chat behavior).
    */
   skipBootstrap?: boolean;
+  /**
+   * If true, forward `stream_event` partial-assistant messages from the
+   * SDK out through the `message` event. Off by default — turn on when
+   * the consumer (e.g. an SSE route to a streaming UI) wants delta-level
+   * updates instead of one event per assistant block.
+   */
+  includePartialMessages?: boolean;
 }
 
 export const CHAT_SYSTEM_PROMPT = `You are in CALLBACK_BOX_CHAT_MODE.
@@ -550,6 +571,30 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
+   * Compute the `ChatBackendStartOptions` this session would pass to
+   * `backend.start()` for a fresh run (no resume id, no model override).
+   * Exposed so the registry can pre-warm a backend with the same options
+   * the next start() call would use.
+   */
+  async buildBackendStartOptions(): Promise<ChatBackendStartOptions> {
+    const systemPrompt = await this.resolveSystemPrompt();
+    const baseEnv = await buildScriptEnv(this.boxRoot, {
+      CLAUDECODE: undefined,
+    });
+    const env: Record<string, string | undefined> = {
+      ...baseEnv,
+      ...(this.options.extraEnv ?? {}),
+    };
+    return {
+      cwd: this.boxRoot,
+      systemPrompt,
+      mcpConfig: this.options.mcpConfig ?? null,
+      includePartialMessages: this.options.includePartialMessages === true,
+      env,
+    };
+  }
+
+  /**
    * Start a new SDK chat run.
    */
   private async startRun(): Promise<void> {
@@ -563,26 +608,14 @@ export class ChatSession extends EventEmitter {
       await generateDocs(this.boxRoot);
     }
 
-    const systemPrompt = await this.resolveSystemPrompt();
-
     log("start", "Starting SDK chat run");
 
-    const baseEnv = await buildScriptEnv(this.boxRoot, {
-      CLAUDECODE: undefined,
-    });
-    const env: Record<string, string | undefined> = {
-      ...baseEnv,
-      ...(this.options.extraEnv ?? {}),
-    };
+    const startOpts = await this.buildBackendStartOptions();
 
     const run = this.backend.start({
-      cwd: this.boxRoot,
-      systemPrompt,
+      ...startOpts,
       resumeSessionId: this.sessionId ?? undefined,
-      mcpConfig: this.options.mcpConfig ?? null,
       model: this.currentModel ?? undefined,
-      pluginPaths: [CARD_VALIDATOR_PLUGIN_PATH],
-      env,
     });
     this.run = run;
     this.intentionalStop = false;

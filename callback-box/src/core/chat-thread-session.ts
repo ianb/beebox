@@ -13,7 +13,6 @@ import type { ChatMessage, ChatMessageContent } from "./chat-session.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import {
-  CARD_VALIDATOR_PLUGIN_PATH,
   createChatBackend,
   type ChatBackend,
   type ChatBackendRun,
@@ -177,7 +176,6 @@ export class ChatThreadSession extends EventEmitter {
       cwd: this.boxRoot,
       systemPrompt,
       resumeSessionId: this.sessionId ?? undefined,
-      pluginPaths: [CARD_VALIDATOR_PLUGIN_PATH],
       env,
     });
 

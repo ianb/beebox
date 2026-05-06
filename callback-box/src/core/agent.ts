@@ -22,6 +22,7 @@ import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
+import { cardValidatorHook } from "./sdk-hooks.js";
 
 // ─── Agent interface ─────────────────────────────────────────────────
 
@@ -40,6 +41,11 @@ export interface AgentInvokeOptions {
   model?: string;
   /** Maximum agent turns (default: 20). */
   maxTurns?: number;
+  /**
+   * Hard cost ceiling in USD. The SDK stops with `error_max_budget_usd`
+   * if exceeded — surfaced here as `success: false` with a budget error.
+   */
+  maxBudgetUsd?: number;
   /** Whether to run in dry-run mode (no side effects). */
   dryRun?: boolean;
 }
@@ -94,6 +100,7 @@ export function createAgent(options: {
         onOutput: options.onOutput,
         model: opts.model,
         maxTurns: opts.maxTurns,
+        maxBudgetUsd: opts.maxBudgetUsd,
         dryRun: opts.dryRun,
         resumeSessionId: isResume && sessionId !== null ? sessionId : undefined,
         onSessionId: (id) => {
@@ -208,11 +215,6 @@ function appendSessionManifest(boxRoot: string, entry: ManifestEntry): void {
 }
 
 // ─── SDK plumbing ─────────────────────────────────────────────────────
-
-const __dirname = import.meta.dirname;
-// callback-box repo root — used to locate the bundled card-validator plugin.
-const CALLBACK_BOX_ROOT = path.resolve(__dirname, "../..");
-const CARD_VALIDATOR_PLUGIN = path.join(CALLBACK_BOX_ROOT, "plugins", "card-validator");
 
 /**
  * Render a single SDKMessage event to a human-readable line for `onOutput`.
@@ -386,6 +388,7 @@ interface RunAgentOptions {
   onOutput?: ((text: string) => void) | undefined;
   dryRun?: boolean | undefined;
   maxTurns?: number | undefined;
+  maxBudgetUsd?: number | undefined;
   model?: string | undefined;
   /** Resume an existing session by id. */
   resumeSessionId?: string | undefined;
@@ -484,9 +487,10 @@ async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         env: dropUndefined(env),
         permissionMode: "bypassPermissions",
         maxTurns,
+        ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),
         ...(options.model !== undefined && { model: options.model }),
         ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),
-        plugins: [{ type: "local", path: CARD_VALIDATOR_PLUGIN }],
+        hooks: { PostToolUse: [cardValidatorHook()] },
         // settingSources defaults to ["user", "project"] which auto-loads
         // CLAUDE.md, .claude/settings.json, .claude/rules/, etc.
         ...(appendedSystem !== "" && {

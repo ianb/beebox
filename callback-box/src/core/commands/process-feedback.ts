@@ -308,6 +308,7 @@ async function executeProcessFeedback(
       boxRoot: ctx.boxRoot,
       systemPrompt: buildGuideRevisionPrompt(ctx.boxRoot),
       prompt: `Please process feedback from these briefs and revise the guide:\n  - ${paths}`,
+      maxBudgetUsd: 5,
     });
     ctx.writeLine("");
 

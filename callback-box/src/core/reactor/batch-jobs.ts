@@ -52,6 +52,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
     systemPrompt,
     prompt: userPrompt,
     maxTurns,
+    maxBudgetUsd: 10,
   });
 
   await ensureAgentCommitted({

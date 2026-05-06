@@ -289,6 +289,7 @@ async function executeTriageFeedback(
       boxRoot: ctx.boxRoot,
       systemPrompt: buildFeedbackTriagePrompt(ctx.boxRoot),
       prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
+      maxBudgetUsd: 2,
     });
     ctx.writeLine("");
 

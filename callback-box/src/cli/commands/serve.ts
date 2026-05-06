@@ -95,5 +95,6 @@ export const serveCommand = new Command("serve")
       port,
       host: options.host,
       boxes,
+      prewarmChat: true,
     });
   });

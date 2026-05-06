@@ -57,6 +57,12 @@ export interface ServerOptions {
   activityRegistry?: ActivityRegistry | undefined;
   /** Pool of activity chat sessions — defaults to a fresh pool backed by the activity registry. */
   activityChatPool?: ActivityChatSessionPool | undefined;
+  /**
+   * Pre-warm a Claude subprocess for chat on box init. Set true in
+   * production (`cb serve`); leave undefined in tests so test runs don't
+   * spawn a real Claude subprocess that hangs the test runner.
+   */
+  prewarmChat?: boolean | undefined;
 }
 
 export interface ServerContext {
@@ -269,7 +275,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerHistoryRoutes(instance, box.boxRoot);
       await registerCalendarRoutes({ server: instance, boxRoot: box.boxRoot, calendar: options.services?.calendar });
       await registerSchedulerRoutes(instance, box.boxRoot);
-      await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio });
+      await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
       // Wrap box admin routes in their own sub-scope so the owner-check
       // preHandler (added by addOwnerCheck inside registerBoxAdminRoutes)
       // is encapsulated to /api/admin/* only, not every per-box route.

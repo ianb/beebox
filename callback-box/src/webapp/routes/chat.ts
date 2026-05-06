@@ -82,6 +82,13 @@ interface RegisterChatRoutesOptions {
   boxRoot: string;
   eventBus: EventBus;
   openaiAudio?: OpenAIAudioService | undefined;
+  /**
+   * If true, eagerly pre-warm a Claude subprocess so the first "new chat"
+   * send doesn't pay spawn + initialize latency. Production servers set
+   * this; tests leave it off so spawning a real Claude subprocess doesn't
+   * hold the test runner open.
+   */
+  prewarmChat?: boolean | undefined;
 }
 
 /**
@@ -90,7 +97,7 @@ interface RegisterChatRoutesOptions {
 export async function registerChatRoutes(
   options: RegisterChatRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, eventBus, openaiAudio } = options;
+  const { server, boxRoot, eventBus, openaiAudio, prewarmChat } = options;
 
   // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
   await registerChatUploadRoutes({ server, boxRoot });
@@ -104,6 +111,13 @@ export async function registerChatRoutes(
   // Per-box registry of ChatSession instances, keyed by sessionId.
   const registry = new ChatSessionRegistry(boxRoot);
   registry.startCleanup();
+  if (prewarmChat === true) {
+    // Pre-warm a Claude subprocess against the default chat options so the
+    // first "new chat" send doesn't pay spawn + initialize latency.
+    void registry.prewarm().catch((e: unknown) => {
+      console.error("[chat] prewarm failed:", e instanceof Error ? e.message : e);
+    });
+  }
 
   // Wire any session in the registry to the global event bus on creation.
   // Each entry's events get tagged with sessionId so the frontend can filter.

@@ -22,6 +22,7 @@ import {
   appendHistory,
   setMostActive,
 } from "./chat-session-history.js";
+import { createChatBackend, type ChatBackend } from "../services/claude-chat.js";
 
 interface RegistryEntry {
   session: ChatSession;
@@ -56,6 +57,12 @@ export interface ChatSessionRegistryOptions {
    * on top of whatever this returns.
    */
   buildSessionOptions?: (sessionId: string | null) => ChatSessionOptions;
+  /**
+   * Shared backend for every ChatSession this registry creates. Lets
+   * sessions share a warm-pool slot. Default: a fresh `createChatBackend()`.
+   * Tests pass a fake backend here.
+   */
+  backend?: ChatBackend;
 }
 
 const DEFAULT_MAX_LIVE = 2;
@@ -73,6 +80,7 @@ export class ChatSessionRegistry extends EventEmitter {
   private readonly idleTimeoutMs: number;
   private readonly cleanupIntervalMs: number;
   private readonly buildSessionOptions: (sessionId: string | null) => ChatSessionOptions;
+  private readonly backend: ChatBackend;
   private cleanupTimer: NodeJS.Timeout | null = null;
   /**
    * Tracks pre-id "new" sessions whose Claude assignment hasn't arrived yet.
@@ -88,6 +96,30 @@ export class ChatSessionRegistry extends EventEmitter {
     this.idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
     this.cleanupIntervalMs = options.cleanupIntervalMs ?? DEFAULT_CLEANUP_INTERVAL_MS;
     this.buildSessionOptions = options.buildSessionOptions ?? ((_id) => ({}));
+    this.backend = options.backend ?? createChatBackend();
+  }
+
+  /**
+   * Pre-warm a Claude subprocess against the registry's default session
+   * options so the next "new chat" send doesn't pay spawn + initialize
+   * latency. Best-effort: failures are swallowed and the next send falls
+   * back to a cold spawn.
+   */
+  async prewarm(): Promise<void> {
+    if (this.backend.prewarm === undefined) return;
+    try {
+      const baseOpts = this.buildSessionOptions(null);
+      const probe = new ChatSession(this.boxRoot, {
+        ...baseOpts,
+        backend: this.backend,
+        sessionFile: null,
+        skipBootstrap: true,
+      });
+      const startOpts = await probe.buildBackendStartOptions();
+      await this.backend.prewarm(startOpts);
+    } catch (e) {
+      log("prewarm", `Prewarm failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   /** Begin the periodic idle-cleanup tick. Caller is responsible for `stopCleanup()`. */
@@ -144,6 +176,7 @@ export class ChatSessionRegistry extends EventEmitter {
     const baseOpts = this.buildSessionOptions(sessionId);
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
+      backend: baseOpts.backend ?? this.backend,
       sessionFile: null,
       initialSessionId: sessionId,
       onSessionIdAssigned: this.makeOnAssigned(sessionId, baseOpts.onSessionIdAssigned),
@@ -167,6 +200,7 @@ export class ChatSessionRegistry extends EventEmitter {
     const baseOpts = this.buildSessionOptions(null);
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
+      backend: baseOpts.backend ?? this.backend,
       sessionFile: null,
       onSessionIdAssigned: this.makeOnAssigned(null, baseOpts.onSessionIdAssigned),
     });
