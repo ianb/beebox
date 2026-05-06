@@ -93,28 +93,21 @@ export async function pickDefaultMode(
  * server.
  */
 export function buildModeMcpConfig({
-  activity,
   mode,
-  modeName,
-  instance,
 }: {
   activity: Activity;
   mode: ActivityMode;
   modeName: string;
   instance: ActivityInstance;
 }): MCPServerConfig | null {
-  const base = mode.mcpServer();
-  if (base === null) return null;
-  return {
-    command: base.command,
-    args: base.args,
-    env: {
-      ...base.env,
-      [CB_ACTIVITY_NAME]: activity.type,
-      [CB_ACTIVITY_ROOT]: instance.root,
-      [CB_ACTIVITY_MODE]: modeName,
-    },
-  };
+  // The MCP server is in-process now: tools close over the instance
+  // (set on the mode by `resolveMode`) directly. No env-var injection
+  // needed — that was a subprocess concern. The `activity`, `modeName`,
+  // and `instance` parameters are kept on the signature for backwards
+  // compatibility with callers / tests that still pass them; the chat
+  // layer separately injects CB_ACTIVITY_* into the Claude subprocess
+  // env via `extraEnv` for any agent-side scripts that read them.
+  return mode.mcpServer();
 }
 
 /**

@@ -198,11 +198,11 @@ await box.cleanup();
 
 ## setup mode declares its MCP server
 
-`PolyglotSetupMode.mcpServer()` returns a config pointing at
-`setup-mcp.ts` — the chat layer picks this up, launches it as a
-subprocess with `CB_ACTIVITY_*` env vars, and claude gets access to
-the `configure` tool. Main mode has no tools yet, so `mcpServer()`
-returns `null` (the ActivityMode base-class default).
+`PolyglotSetupMode.mcpServer()` returns an in-process SDK MCP server
+exposing the `configure` tool. The chat layer hands the config (with
+its bound MCP server instance) to the SDK, which loads the tool
+without spawning a subprocess. Main mode has no tools yet, so
+`mcpServer()` returns `null` (the ActivityMode base-class default).
 
 ```
 const box = await makeTmpBox();
@@ -212,10 +212,10 @@ const instance = polyglot.getInstance(polyglot.instanceRoot(box.root, "spanish")
 
 const setup = resolveMode({ activity: polyglot, modeName: "setup", instance });
 const cfg = setup.mcpServer();
-cfg !== null && cfg.command
-=> tsx
+cfg !== null && cfg.name
+=> polyglot-setup
 
-cfg !== null && cfg.args[0].endsWith("setup-mcp.ts")
+cfg !== null && cfg.instance !== undefined
 => true
 
 const main = resolveMode({ activity: polyglot, modeName: "main", instance });

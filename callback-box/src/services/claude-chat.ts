@@ -184,14 +184,10 @@ function buildQueryOptions(opts: ChatBackendStartOptions): Options {
     queryOptions.includePartialMessages = true;
   }
   if (opts.mcpConfig) {
-    queryOptions.mcpServers = {
-      "cb-activity": {
-        type: "stdio",
-        command: opts.mcpConfig.command,
-        args: opts.mcpConfig.args,
-        env: opts.mcpConfig.env,
-      },
-    };
+    // In-process SDK MCP server (built via createSdkMcpServer in the
+    // activity). The SDK accepts the config object — including its
+    // `instance` — directly; no subprocess hop.
+    queryOptions.mcpServers = { "cb-activity": opts.mcpConfig };
   }
   return queryOptions;
 }
@@ -211,17 +207,12 @@ function warmCompatible(
   if (warm.systemPrompt !== next.systemPrompt) return false;
   if ((warm.model ?? null) !== (next.model ?? null)) return false;
   if (warm.includePartialMessages !== next.includePartialMessages) return false;
-  // mcpConfig: shallow compare — both null/undefined or same command+args.
+  // MCP config carries an `instance` (an MCP server object). Two configs
+  // are warm-compatible only if they're the very same instance — otherwise
+  // tools differ and the warm subprocess can't serve the next start.
   const wm = warm.mcpConfig ?? null;
   const nm = next.mcpConfig ?? null;
-  if (wm === null && nm === null) return true;
-  if (wm === null || nm === null) return false;
-  if (wm.command !== nm.command) return false;
-  if (wm.args.length !== nm.args.length) return false;
-  for (let i = 0; i < wm.args.length; i++) {
-    if (wm.args[i] !== nm.args[i]) return false;
-  }
-  return true;
+  return wm === nm;
 }
 
 export function createChatBackend(): ChatBackend {

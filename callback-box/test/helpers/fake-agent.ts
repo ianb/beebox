@@ -100,6 +100,12 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
       return result;
     },
 
+    invokeStructured(): Promise<never> {
+      throw new Error(
+        "FakeAgent.invokeStructured is not implemented — use createFakeAgent({ act }) for free-form agents only, or extend the fake when a structured-output test arrives.",
+      );
+    },
+
     printLog(): string {
       const lines: string[] = [];
       lines.push(`<agent name="${options.name}" session="${sessionId}">`);

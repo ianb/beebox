@@ -103,7 +103,12 @@ abstract class ActivityMode<I extends ActivityInstance = ActivityInstance> {
   constructor(protected readonly instance: I) {}
 
   abstract systemPrompt(): string | Promise<string>;
-  abstract mcpServer(): { command: string; args: string[]; env: Record<string, string> };
+  /**
+   * Returns an in-process MCP server built via the SDK's
+   * `createSdkMcpServer({ name, tools })`. Tools close over `this.instance`
+   * directly — no subprocess hop, no env-var passing.
+   */
+  abstract mcpServer(): import("@anthropic-ai/claude-agent-sdk").McpSdkServerConfigWithInstance | null;
   abstract available(): boolean | Promise<boolean>;
 
   readonly isDefault: boolean = false;
@@ -139,7 +144,15 @@ class PolyglotMain extends ActivityMode {
     inlineTags: { ADDENDUM: lazy(() => import("./main/Addendum")) },
   };
   async systemPrompt() { return compileMainPrompt(await this.instance.readJson("state.json")); }
-  mcpServer() { return { command: "tsx", args: [/* … */], env: { /* see below */ } }; }
+  mcpServer() {
+    return createSdkMcpServer({
+      name: "polyglot-main",
+      tools: [tool("noteProgress", "Save a learning note", { text: z.string() }, async ({ text }) => {
+        await this.instance.appendJsonl("notes.jsonl", { text, at: new Date().toISOString() });
+        return { content: [{ type: "text", text: "saved" }] };
+      })],
+    });
+  }
   async available() { return hasRequiredState(await this.instance.readJson("state.json")); }
 }
 ```

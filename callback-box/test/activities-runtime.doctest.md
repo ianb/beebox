@@ -31,6 +31,7 @@ import {
   CB_ACTIVITY_MODE,
 } from "../src/activities/index.js";
 import type { MCPServerConfig } from "../src/activities/index.js";
+import { createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 interface PolyState { language: string | null }
@@ -39,7 +40,7 @@ class PolyglotSetup extends ActivityMode {
   systemPrompt() { return "Setup: ask for a language to learn."; }
   available() { return true; }
   mcpServer(): MCPServerConfig {
-    return { command: "tsx", args: ["setup-mcp.ts"], env: { TOOL: "setup" } };
+    return createSdkMcpServer({ name: "polyglot-setup", version: "0.1.0", tools: [] });
   }
 }
 
@@ -54,7 +55,7 @@ class PolyglotMain extends ActivityMode {
     return state.language !== null;
   }
   mcpServer(): MCPServerConfig {
-    return { command: "tsx", args: ["main-mcp.ts"], env: { TOOL: "main" } };
+    return createSdkMcpServer({ name: "polyglot-main", version: "0.1.0", tools: [] });
   }
 }
 
@@ -166,11 +167,9 @@ await box.cleanup();
 ## MCP config gets activity env vars
 
 `buildModeMcpConfig` takes the mode's declared MCP config and adds
-three env vars identifying the activity context: `CB_ACTIVITY_NAME`,
-`CB_ACTIVITY_ROOT`, `CB_ACTIVITY_MODE`. The MCP subprocess reads these
-to know which instance dir to operate on.
-
-Existing env vars on the mode's config are preserved.
+the in-process MCP server defined by the mode (via
+`createSdkMcpServer`). Tools close over the instance directly, so no
+env-var hop is needed for them.
 
 ```
 const box = await makeTmpBox();
@@ -180,17 +179,8 @@ const instance = polyglot.getInstance(polyglot.instanceRoot(box.root, "spanish")
 const mode = resolveMode({ activity: polyglot, modeName: "setup", instance });
 
 const cfg = buildModeMcpConfig({ activity: polyglot, mode, modeName: "setup", instance });
-cfg !== null && cfg.command
-=> tsx
-
-cfg !== null && cfg.env[CB_ACTIVITY_NAME]
-=> polyglot
-
-cfg !== null && cfg.env[CB_ACTIVITY_MODE]
-=> setup
-
-cfg !== null && cfg.env.TOOL
-=> setup
+cfg !== null && cfg.name
+=> polyglot-setup
 ```
 
 A mode with no MCP server (the default from `ActivityMode`) gets
@@ -322,18 +312,13 @@ JSON.stringify(opts.systemPrompt)
 => "BASE\n\nMain: you are teaching Spanish."
 ```
 
-The MCP config gets `CB_ACTIVITY_*` env vars stamped on top of whatever
-the mode declared:
+The MCP config is an in-process SDK server — the chat layer hands the
+config (including its instance) directly to the SDK, which then loads
+the tools without spawning a subprocess. We just check the name here:
 
 ``` continue
-opts.mcpConfig !== null && opts.mcpConfig.env[CB_ACTIVITY_NAME]
-=> polyglot
-
-opts.mcpConfig !== null && opts.mcpConfig.env[CB_ACTIVITY_MODE]
-=> main
-
-opts.mcpConfig !== null && opts.mcpConfig.env.TOOL
-=> main
+opts.mcpConfig !== null && opts.mcpConfig.name
+=> polyglot-main
 ```
 
 The session-file path is relative to `boxRoot` — the chat layer stores

@@ -12,8 +12,11 @@
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
+import { z } from "zod";
 import { Activity, ActivityMode } from "../index.js";
 import type { ActivityInstance, MCPServerConfig } from "../index.js";
+import { applyPolyglotConfigure } from "./configure.js";
 
 export interface PolyglotState {
   language: string | null;
@@ -30,7 +33,6 @@ export type PolyglotLevel =
 
 const __dirname = import.meta.dirname;
 const SETUP_PROMPT_PATH = join(__dirname, "setup-prompt.md");
-const SETUP_MCP_SCRIPT_PATH = join(__dirname, "setup-mcp.ts");
 const INSTANCE_CLAUDE_TEMPLATE_PATH = join(__dirname, "instance-claude-template.md");
 
 async function readPolyglotState(instance: ActivityInstance): Promise<PolyglotState> {
@@ -47,11 +49,40 @@ export class PolyglotSetupMode extends ActivityMode {
   }
 
   mcpServer(): MCPServerConfig {
-    return {
-      command: "tsx",
-      args: [SETUP_MCP_SCRIPT_PATH],
-      env: {},
-    };
+    const instanceRoot = this.instance.root;
+    return createSdkMcpServer({
+      name: "polyglot-setup",
+      version: "0.2.0",
+      tools: [
+        tool(
+          "configure",
+          "Save the user's target language and proficiency level. Call this once you've established both; after this call, the user can switch into main mode to start learning.",
+          {
+            language: z
+              .string()
+              .min(1)
+              .describe("The language the user wants to learn, e.g. 'Spanish'"),
+            level: z
+              .enum(["beginner", "elementary", "intermediate", "advanced", "fluent"])
+              .describe("The user's current proficiency level"),
+          },
+          async ({ language, level }) => {
+            const state = await applyPolyglotConfigure({
+              instanceRoot,
+              input: { language, level },
+            });
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Configured: ${state.language} at ${state.level} level. Tell the user they can now switch to main mode to start learning.`,
+                },
+              ],
+            };
+          },
+        ),
+      ],
+    });
   }
 }
 

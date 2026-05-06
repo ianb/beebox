@@ -18,6 +18,8 @@ import {
   type SDKMessage,
   type SDKAssistantMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import type { z } from "zod";
+import { toJSONSchema } from "zod";
 import { fmt } from "../cli/lib/format.js";
 import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
@@ -65,6 +67,31 @@ export interface Agent {
   readonly name: string;
   readonly sessionId: string | null;
   invoke(options: AgentInvokeOptions): Promise<AgentResult>;
+  /**
+   * Structured-output variant: the agent returns JSON matching `schema`
+   * instead of free-form text. The SDK passes the schema to the model,
+   * waits for the structured turn, and surfaces the result via
+   * `result.structured_output`. We validate it against the same Zod
+   * schema and return both the parsed `data` and the regular result
+   * fields.
+   *
+   * Use when the agent's job is "produce a decision/object", not
+   * "do work and commit".
+   */
+  invokeStructured<T>(
+    schema: z.ZodType<T>,
+    options: AgentInvokeOptions,
+  ): Promise<StructuredAgentResult<T>>;
+}
+
+/**
+ * Result of `Agent.invokeStructured`. Same fields as `AgentResult` plus
+ * the parsed `data`. On structured-output failure (no result, schema
+ * mismatch, agent error) `success` is false, `data` is null, and `error`
+ * carries the cause.
+ */
+export interface StructuredAgentResult<T> extends AgentResult {
+  data: T | null;
 }
 
 /**
@@ -117,6 +144,66 @@ export function createAgent(options: {
       });
 
       return result;
+    },
+    async invokeStructured<T>(
+      schema: z.ZodType<T>,
+      opts: AgentInvokeOptions,
+    ): Promise<StructuredAgentResult<T>> {
+      const isResume = invocationCount > 0;
+      invocationCount++;
+
+      const result = await runAgent({
+        boxRoot: opts.boxRoot,
+        systemPrompt: opts.systemPrompt ?? "",
+        prompt: opts.prompt,
+        onOutput: options.onOutput,
+        model: opts.model,
+        maxTurns: opts.maxTurns,
+        maxBudgetUsd: opts.maxBudgetUsd,
+        dryRun: opts.dryRun,
+        resumeSessionId: isResume && sessionId !== null ? sessionId : undefined,
+        outputSchema: toJSONSchema(schema) as Record<string, unknown>,
+        onSessionId: (id) => {
+          if (sessionId === null) sessionId = id;
+          if (!manifestWritten) {
+            appendSessionManifest(opts.boxRoot, {
+              sessionId: id,
+              task: options.name,
+              timestamp: new Date().toISOString(),
+            });
+            manifestWritten = true;
+          }
+        },
+      });
+
+      if (!result.success) {
+        return { ...result, data: null };
+      }
+      // Prefer the SDK-provided structured_output. Fall back to parsing
+      // JSON out of the model's final assistant text — some model/CLI
+      // versions return JSON in the turn instead of populating
+      // structured_output.
+      const candidate =
+        result.structuredOutput ??
+        (result.resultText !== undefined ? extractJsonFromText(result.resultText) : undefined);
+      if (candidate === undefined) {
+        return {
+          ...result,
+          success: false,
+          data: null,
+          error: "Structured output: no JSON found in result",
+        };
+      }
+      const parsed = schema.safeParse(candidate);
+      if (!parsed.success) {
+        return {
+          ...result,
+          success: false,
+          data: null,
+          error: `Structured output failed schema validation: ${parsed.error.message}`,
+        };
+      }
+      return { ...result, data: parsed.data };
     },
   };
 }
@@ -394,6 +481,12 @@ interface RunAgentOptions {
   resumeSessionId?: string | undefined;
   /** Called once with the SDK-assigned session id (from the first system message). */
   onSessionId?: ((id: string) => void) | undefined;
+  /**
+   * If set, the SDK is told to produce structured JSON matching this schema
+   * and `result.structuredOutput` carries the parsed value. The caller is
+   * responsible for validating against its own schema.
+   */
+  outputSchema?: Record<string, unknown> | undefined;
 }
 
 export interface AgentResult {
@@ -402,6 +495,67 @@ export interface AgentResult {
   error?: string;
   exitCode: number;
   sessionId: string;
+  /** Populated when the underlying run was started with `outputSchema`. */
+  structuredOutput?: unknown;
+  /**
+   * The SDK's final-turn assistant text (the `result` field of the
+   * `SDKResultSuccess`). Cleaner than `output`, which carries our rendered
+   * tool-call summaries and ANSI codes.
+   */
+  resultText?: string;
+}
+
+/**
+ * Best-effort: pull a JSON value out of the assistant's free-form result
+ * text. Fallback for when the SDK didn't populate `structured_output`.
+ * Tries fenced ```json blocks first, then a bare object/array span.
+ * Returns undefined if nothing parses.
+ */
+function extractJsonFromText(text: string): unknown {
+  const fence = /```(?:json)?\s*\n([\S\s]*?)\n```/i.exec(text);
+  if (fence !== null && fence[1] !== undefined) {
+    try {
+      return JSON.parse(fence[1]);
+    } catch (_e) {
+      // fall through to bare-span scan
+    }
+  }
+  const start = text.search(/[[{]/);
+  if (start === -1) return undefined;
+  // Walk from `start` to the matching close, respecting strings.
+  const open = text[start];
+  const close = open === "{" ? "}" : "]";
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === open) depth += 1;
+    else if (ch === close) {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(start, i + 1));
+        } catch (_e) {
+          return undefined;
+        }
+      }
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -490,6 +644,9 @@ async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),
         ...(options.model !== undefined && { model: options.model }),
         ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),
+        ...(options.outputSchema !== undefined && {
+          outputFormat: { type: "json_schema" as const, schema: options.outputSchema },
+        }),
         hooks: { PostToolUse: [cardValidatorHook()] },
         // settingSources defaults to ["user", "project"] which auto-loads
         // CLAUDE.md, .claude/settings.json, .claude/rules/, etc.
@@ -554,6 +711,12 @@ async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     exitCode: isError ? 1 : 0,
     sessionId,
   };
+  if (resultMessage.subtype === "success") {
+    if ("structured_output" in resultMessage) {
+      result.structuredOutput = resultMessage.structured_output;
+    }
+    result.resultText = resultMessage.result;
+  }
   if (isError) {
     if (resultMessage.subtype !== "success") {
       const errs = "errors" in resultMessage ? resultMessage.errors : [];
