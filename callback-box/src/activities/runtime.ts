@@ -12,7 +12,7 @@ import { join, relative } from "node:path";
 import type { Activity } from "./Activity.js";
 import type { ActivityInstance } from "./ActivityInstance.js";
 import type { ActivityMode } from "./ActivityMode.js";
-import type { MCPServerConfig } from "./types.js";
+import type { ActivityMcpConfig } from "./types.js";
 
 /** Env vars passed to the mode's MCP server subprocess. */
 export const CB_ACTIVITY_NAME = "CB_ACTIVITY_NAME";
@@ -99,7 +99,7 @@ export function buildModeMcpConfig({
   mode: ActivityMode;
   modeName: string;
   instance: ActivityInstance;
-}): MCPServerConfig | null {
+}): ActivityMcpConfig | null {
   // The MCP server is in-process now: tools close over the instance
   // (set on the mode by `resolveMode`) directly. No env-var injection
   // needed — that was a subprocess concern. The `activity`, `modeName`,
@@ -194,7 +194,7 @@ export interface ActivityChatSessionOptions {
   /** Final system prompt — base + mode prompt, resolved once. */
   systemPrompt: string;
   /** MCP server config with CB_ACTIVITY_* env vars injected. Null if the mode has no tools. */
-  mcpConfig: MCPServerConfig | null;
+  mcpConfig: ActivityMcpConfig | null;
   /**
    * Path (relative to `boxRoot`) where the current-session-id pointer for
    * this `(instance, mode)` is stored. The chat layer reads it on construct

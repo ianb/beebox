@@ -13,7 +13,8 @@ design rationale.
 
 ```ts setup
 import { Activity, ActivityInstance, ActivityMode } from "../src/activities/index.js";
-import type { MCPServerConfig } from "../src/activities/index.js";
+import type { ActivityMcpConfig } from "../src/activities/index.js";
+import { createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 ```
 
@@ -191,21 +192,17 @@ await box.cleanup();
 
 ## Step 6 — MCP tools per mode
 
-Modes that need tools return an `MCPServerConfig` from `mcpServer()`.
-The framework spawns the process with env vars identifying the instance
-and mode (`CB_ACTIVITY_NAME`, `CB_ACTIVITY_ROOT`, `CB_ACTIVITY_MODE`)
-and scopes it to the chat session.
+Modes that need tools return an `ActivityMcpConfig` from `mcpServer()`.
+The framework registers the in-process MCP server with the SDK and the
+tool handlers run in the box server process — no subprocess hop, no
+env-var passing. Handlers close over `this.instance` directly.
 
 ```ts setup
 class GreeterWithTools extends ActivityMode {
   systemPrompt() { return "Use the greet tool."; }
   available() { return true; }
-  mcpServer(): MCPServerConfig {
-    return {
-      command: "tsx",
-      args: ["src/activities/greeter/main-mcp.ts"],
-      env: {},
-    };
+  mcpServer(): ActivityMcpConfig {
+    return createSdkMcpServer({ name: "greeter-main", version: "0.1.0", tools: [] });
   }
 }
 ```
@@ -215,8 +212,8 @@ const box = await makeTmpBox();
 const instance = new ActivityInstance(box.path("instance"));
 const mode = new GreeterWithTools(instance);
 const cfg = mode.mcpServer();
-cfg !== null && cfg.command
-=> tsx
+cfg !== null && cfg.name
+=> greeter-main
 ```
 
 ```cleanup
@@ -232,6 +229,6 @@ You've built a complete activity from the base classes. To ship a real one:
 3. One `Activity` subclass: `type`, `metadata`, `modes`, `listInstances()`, `createInstance()`.
 4. Inside `createInstance`, seed any files the activity needs and write an instance `CLAUDE.md` so non-chat agents have context.
 5. Access instance state from any mode method via `this.instance.readJson / writeJson / …`.
-6. The framework handles spawning the MCP server with the right env vars, resolving the system prompt once per session, and evaluating availability.
+6. The framework registers the in-process MCP server with the SDK, resolves the system prompt once per session, and evaluates availability.
 
 See `src/activities/polyglot/` for a worked example.

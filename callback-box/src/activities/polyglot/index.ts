@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { Activity, ActivityMode } from "../index.js";
-import type { ActivityInstance, MCPServerConfig } from "../index.js";
+import type { ActivityInstance, ActivityMcpConfig } from "../index.js";
 import { applyPolyglotConfigure } from "./configure.js";
 
 export interface PolyglotState {
@@ -48,7 +48,7 @@ export class PolyglotSetupMode extends ActivityMode {
     return true;
   }
 
-  mcpServer(): MCPServerConfig {
+  mcpServer(): ActivityMcpConfig {
     const instanceRoot = this.instance.root;
     return createSdkMcpServer({
       name: "polyglot-setup",

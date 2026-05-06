@@ -22,13 +22,6 @@ export interface InstanceSummary {
  */
 export type ActivityMcpConfig = McpSdkServerConfigWithInstance;
 
-/**
- * @deprecated Use `ActivityMcpConfig`. Retained as a type alias so
- * existing imports compile. The shape is the SDK's in-process server
- * config, NOT the old subprocess `{ command, args, env }` config.
- */
-export type MCPServerConfig = ActivityMcpConfig;
-
 export interface CreateInstanceCtx {
   boxRoot: string;
   name: string;

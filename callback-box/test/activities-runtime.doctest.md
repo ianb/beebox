@@ -30,7 +30,7 @@ import {
   CB_ACTIVITY_ROOT,
   CB_ACTIVITY_MODE,
 } from "../src/activities/index.js";
-import type { MCPServerConfig } from "../src/activities/index.js";
+import type { ActivityMcpConfig } from "../src/activities/index.js";
 import { createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
@@ -39,7 +39,7 @@ interface PolyState { language: string | null }
 class PolyglotSetup extends ActivityMode {
   systemPrompt() { return "Setup: ask for a language to learn."; }
   available() { return true; }
-  mcpServer(): MCPServerConfig {
+  mcpServer(): ActivityMcpConfig {
     return createSdkMcpServer({ name: "polyglot-setup", version: "0.1.0", tools: [] });
   }
 }
@@ -54,7 +54,7 @@ class PolyglotMain extends ActivityMode {
     const state = await this.instance.readJson<PolyState>("state.json");
     return state.language !== null;
   }
-  mcpServer(): MCPServerConfig {
+  mcpServer(): ActivityMcpConfig {
     return createSdkMcpServer({ name: "polyglot-main", version: "0.1.0", tools: [] });
   }
 }

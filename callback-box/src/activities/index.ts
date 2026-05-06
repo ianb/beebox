@@ -34,9 +34,9 @@ export type {
   ActivityChatSessionOptions,
 } from "./runtime.js";
 export type {
+  ActivityMcpConfig,
   ActivityMetadata,
   CreateInstanceCtx,
   InstanceSummary,
   ListInstancesCtx,
-  MCPServerConfig,
 } from "./types.js";

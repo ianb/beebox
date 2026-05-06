@@ -20,7 +20,7 @@ import {
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { generateDocs } from "./generate-docs.js";
 import { buildScriptEnv } from "./script-env.js";
-import type { MCPServerConfig } from "../activities/index.js";
+import type { ActivityMcpConfig } from "../activities/index.js";
 import {
   createChatBackend,
   type ChatBackend,
@@ -188,7 +188,7 @@ export interface ChatSessionOptions {
   /** Resolves the system prompt at process-start. Default: CHAT_SYSTEM_PROMPT + tzContext. */
   systemPrompt?: (boxRoot: string) => Promise<string>;
   /** MCP server config. Passed directly to the SDK as the `cb-activity` server. */
-  mcpConfig?: MCPServerConfig | null;
+  mcpConfig?: ActivityMcpConfig | null;
   /**
    * Path to the current-session-id pointer, relative to boxRoot.
    * Default: .callback-box/chat-session-id.json. Set to `null` to opt out of

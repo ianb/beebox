@@ -1,5 +1,5 @@
 import type { ActivityInstance } from "./ActivityInstance.js";
-import type { MCPServerConfig } from "./types.js";
+import type { ActivityMcpConfig } from "./types.js";
 
 export abstract class ActivityMode<I extends ActivityInstance = ActivityInstance> {
   readonly isDefault: boolean = false;
@@ -9,7 +9,7 @@ export abstract class ActivityMode<I extends ActivityInstance = ActivityInstance
   abstract systemPrompt(): string | Promise<string>;
   abstract available(): boolean | Promise<boolean>;
 
-  mcpServer(): MCPServerConfig | null {
+  mcpServer(): ActivityMcpConfig | null {
     return null;
   }
 }

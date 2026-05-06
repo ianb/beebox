@@ -24,7 +24,7 @@ import {
   type SDKUserMessage,
   type WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { MCPServerConfig } from "../activities/index.js";
+import type { ActivityMcpConfig } from "../activities/index.js";
 import { cardValidatorHook } from "../core/sdk-hooks.js";
 
 // ─── Backend interface ───────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export interface ChatBackendStartOptions {
   /** If set, resumes the given SDK session; otherwise a fresh session. */
   resumeSessionId?: string | undefined;
   /** Optional MCP server (registered as `cb-activity`). */
-  mcpConfig?: MCPServerConfig | null;
+  mcpConfig?: ActivityMcpConfig | null;
   /** Pin to a specific model; omit for SDK default. */
   model?: string | undefined;
   /**
