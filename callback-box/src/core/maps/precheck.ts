@@ -75,6 +75,8 @@ const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
   "tmp",
   "procedure/runs",
   "**/thread-*",
+  "**/capture-*",
+  "**/scan-*",
 ];
 
 const IGNORE_FILE = ".cb-maps-ignore";
@@ -164,32 +166,45 @@ function isIgnored(options: IsIgnoredOptions): boolean {
 /**
  * Recursively list every directory in the box that should have a MAP.md.
  * Returns dir paths relative to boxRoot, with "" representing the root.
+ *
+ * Container rule: a dir is mappable only when it has at least one visible
+ * subdirectory. File-only ("leaf") dirs are skipped — the parent's MAP.md
+ * already lists them, and an `ls` shows their contents directly. Shell
+ * dirs (subdirs hidden by ignore patterns leave the parent looking empty)
+ * are skipped at the dir-itself level but still appear in their parent's
+ * listing — that's where their description belongs.
  */
 async function listMappableDirs(
   boxRoot: string,
   patterns: readonly string[],
 ): Promise<string[]> {
-  const result: string[] = [""];
+  const result: string[] = [];
 
-  async function walk(rel: string): Promise<void> {
+  /** Returns the count of visible immediate subdirs in `rel`. */
+  async function walk(rel: string): Promise<number> {
     const abs = path.join(boxRoot, rel);
     let entries: Dirent[];
     try {
       entries = await fs.readdir(abs, { withFileTypes: true });
     } catch {
-      return;
+      return 0;
     }
+    let visibleSubdirs = 0;
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
       if (isIgnored({ patterns, relPath: childRel, isFile: false })) continue;
-      result.push(childRel);
+      visibleSubdirs += 1;
       await walk(childRel);
     }
+    if (visibleSubdirs > 0) {
+      result.push(rel);
+    }
+    return visibleSubdirs;
   }
 
   await walk("");
-  return result;
+  return result.toSorted();
 }
 
 async function fileExists(absPath: string): Promise<boolean> {

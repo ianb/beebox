@@ -67,24 +67,36 @@
 
         STEP 2 - WRITE EACH MAP.md:
 
+        MAP.md is primarily a directory index. List subdirectories, not
+        every file. Only mention files when they anchor the directory:
+        briefing cards (`*.briefing.card`), `README.md`, landmark cards
+        (`*.landmark.card`), or top-level docs. Don't enumerate per-item
+        card files, attachments, or generated files — the parent's
+        listing already names this dir, and an `ls` shows contents
+        directly.
+
         Format:
 
         ```
         # Map: &lt;dir-path&gt;
 
         - `subdir/` — what kind of contents this subdir holds
-        - `name.type.card` — what this card holds, terse
-        - `notes.md` — one-line summary
+        - `briefing.briefing.card` — context for this area (only if present)
         ```
 
         Rules for annotations:
         - ≤ 100 characters.
-        - Say what's in the file/dir, not what kind of file it is.
-          ("Triaged news items pending fetch", not "directory of cards")
-        - For card files, peek at the XML if the filename isn't telling
-          enough. Title and root element usually suffice.
+        - Say what's in the dir, not what kind of dir it is.
+          ("Per-property document folders", not "directory of subdirs")
         - Skip filler ("this is a", "contains", "directory of").
-        - For empty directories, write `(empty)` as the body.
+
+        SHELL DIRS — when a subdir's contents are hidden by ignore
+        patterns (e.g. `store/archive/captures/` whose dated capture
+        sessions are excluded by `store/archive/captures/*`), the dir
+        appears in the parent's listing but its own children list will
+        look empty. Peek inside with `ls` to give an honest count and
+        characterization, e.g. "captures/ — 143 archived voice/photo
+        capture sessions (per-item maps disabled)".
 
         Use `cb create` or just `Write` to author each MAP.md. Don't
         modify any other files.
