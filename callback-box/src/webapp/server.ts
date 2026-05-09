@@ -90,7 +90,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
     trustProxy: true,
     // tRPC batch requests encode multiple procedure names in the URL path,
     // which can exceed Fastify's default 100-char param length limit.
-    maxParamLength: 500,
+    routerOptions: { maxParamLength: 500 },
   });
 
   // eslint-disable-next-line max-params -- Fastify onSend hook requires 4 params
