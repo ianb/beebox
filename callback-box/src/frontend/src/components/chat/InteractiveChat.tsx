@@ -704,13 +704,27 @@ function MobileTextareaRow({
 }
 
 /**
+ * Trim a streaming text buffer to the last completed paragraph. The
+ * trailing in-progress paragraph (everything after the last "\n\n") is
+ * hidden until it completes — avoids showing twitchy mid-sentence
+ * fragments as the model types. The full text still lands in the
+ * assistant message once the turn ends.
+ */
+function chunkOnParagraphs(text: string): string {
+  const lastBreak = text.lastIndexOf("\n\n");
+  if (lastBreak === -1) return "";
+  return text.slice(0, lastBreak);
+}
+
+/**
  * Streaming content being built up during a turn.
  */
 function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
+  const visible = chunkOnParagraphs(text);
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
-      {text ? (
-        <MarkdownContent text={text} onZoomView={onZoomView} />
+      {visible ? (
+        <MarkdownContent text={visible} onZoomView={onZoomView} />
       ) : null}
       <div className="flex justify-center mt-6">
         <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
