@@ -25,6 +25,7 @@ import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import { cardValidatorHook } from "./sdk-hooks.js";
+import { resolveClaudeCodeBinary } from "./sdk-binary-path.js";
 
 // ─── Agent interface ─────────────────────────────────────────────────
 
@@ -633,6 +634,8 @@ async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   let assignedSessionId: string | null = null;
   let errorText: string | null = null;
 
+  const binaryPath = resolveClaudeCodeBinary();
+
   try {
     const q = query({
       prompt,
@@ -641,6 +644,7 @@ async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         env: dropUndefined(env),
         permissionMode: "bypassPermissions",
         maxTurns,
+        ...(binaryPath !== null && { pathToClaudeCodeExecutable: binaryPath }),
         ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),
         ...(options.model !== undefined && { model: options.model }),
         ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),

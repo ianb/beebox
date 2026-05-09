@@ -26,6 +26,7 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import type { ActivityMcpConfig } from "../activities/index.js";
 import { cardValidatorHook } from "../core/sdk-hooks.js";
+import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
 
 // ─── Backend interface ───────────────────────────────────────────────────────
 
@@ -173,6 +174,10 @@ function buildQueryOptions(opts: ChatBackendStartOptions): Options {
       append: opts.systemPrompt,
     },
   };
+  const binaryPath = resolveClaudeCodeBinary();
+  if (binaryPath !== null) {
+    queryOptions.pathToClaudeCodeExecutable = binaryPath;
+  }
   if (opts.resumeSessionId !== undefined) {
     queryOptions.resume = opts.resumeSessionId;
   }

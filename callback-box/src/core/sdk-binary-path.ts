@@ -1,0 +1,76 @@
+/**
+ * Resolve the path to the Claude Code binary that the agent SDK should
+ * spawn, preferring the glibc variant on Linux.
+ *
+ * The Anthropic agent SDK bundles native binaries as optional npm
+ * sub-packages and tries to resolve one at runtime. Its own search order
+ * on Linux is musl-first, glibc-fallback, which crashes on glibc hosts
+ * when both packages are installed (a common state, since current npm
+ * lockfiles don't always carry the `libc` filter that would skip the
+ * wrong variant). The SDK reports a misleading "binary not found at
+ * <musl path>" because the file exists but the kernel refuses to exec it.
+ *
+ * See https://github.com/anthropics/claude-agent-sdk-typescript/issues/296.
+ *
+ * Future: the SDK's bundled binary is frozen at npm-install time; if we
+ * want fresher Claude Code versions on long-running servers we need a
+ * separate update process (re-run `npm install @anthropic-ai/claude-agent-sdk@latest`
+ * on a schedule, or add deploy-time pinning policy). The system installer
+ * at `~/.local/bin/claude` is *not* what the SDK uses — by Anthropic's
+ * design it ignores `$PATH` and looks only at its npm sub-packages.
+ */
+
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { accessSync, constants } from "node:fs";
+
+const require = createRequire(import.meta.url);
+
+/** Cached resolution, computed once per process. */
+let cached: string | null | undefined;
+
+/**
+ * Returns an absolute path to a usable bundled Claude Code binary, or
+ * null if the platform isn't covered by any installed sub-package.
+ *
+ * Pass the result as `options.pathToClaudeCodeExecutable` on every
+ * SDK `query()` call. When null, omit the option and let the SDK do
+ * whatever it does — preserves behavior on platforms we haven't
+ * thought about (e.g. some BSD with glibc emulation).
+ */
+export function resolveClaudeCodeBinary(): string | null {
+  if (cached !== undefined) return cached;
+  cached = doResolve();
+  return cached;
+}
+
+function doResolve(): string | null {
+  let sdkPkgPath: string;
+  try {
+    sdkPkgPath = require.resolve("@anthropic-ai/claude-agent-sdk/package.json");
+  } catch {
+    return null;
+  }
+  // .../node_modules/@anthropic-ai/claude-agent-sdk/package.json → .../node_modules/@anthropic-ai/
+  const anthropicDir = dirname(dirname(sdkPkgPath));
+
+  const ext = process.platform === "win32" ? ".exe" : "";
+  // On Linux: glibc first, musl second. Reverses the SDK's own (broken)
+  // order so glibc hosts don't crash trying to exec a musl binary.
+  // Off Linux: only one variant per platform, no choice to make.
+  const variantNames: string[] =
+    process.platform === "linux"
+      ? [`linux-${process.arch}`, `linux-${process.arch}-musl`]
+      : [`${process.platform}-${process.arch}`];
+
+  for (const variant of variantNames) {
+    const binPath = join(anthropicDir, `claude-agent-sdk-${variant}`, `claude${ext}`);
+    try {
+      accessSync(binPath, constants.X_OK);
+      return binPath;
+    } catch {
+      // Not present or not executable — try next.
+    }
+  }
+  return null;
+}
