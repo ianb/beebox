@@ -23,6 +23,14 @@ import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefi
 import { generateViewsDoc } from "./views-doc.js";
 import { generateChatVoiceDoc } from "./chat-voice-doc.js";
 import { generateAgentGuide } from "./agent-guide/index.js";
+import {
+  installProcedures,
+  installGuides,
+  installPersonality,
+  installBriefing,
+  installSchedules,
+} from "./box.js";
+import { generateRules } from "./init-rules.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -245,6 +253,23 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
 }
 
 /**
+ * Re-install upstream templates (procedures, guides, schedules, personality,
+ * briefing, card rules) into the box. Each install* helper is idempotent and
+ * only writes when the upstream template differs from the box's copy. Runs
+ * inside generateDocs's cache-invalidated path, so it fires when the
+ * callback-box source has changed (typically right after a deploy) and is a
+ * no-op otherwise.
+ */
+async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
+  await installProcedures(boxRoot);
+  await installGuides(boxRoot);
+  await installPersonality(boxRoot);
+  await installBriefing(boxRoot);
+  await installSchedules(boxRoot);
+  await generateRules(boxRoot);
+}
+
+/**
  * Generate all agent documentation for a box.
  */
 export async function generateDocs(boxRoot: string, options: GenerateDocsOptions = {}): Promise<void> {
@@ -267,6 +292,12 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       // No marker file — first run, generate everything
     }
   }
+
+  // Sync templates from upstream callback-box source. Idempotent — only
+  // writes files where the box's copy differs (and emits .orig-*.card
+  // entries when the user modified a template). Runs before doc generation
+  // so newly-installed procedures are picked up by scanProcedures().
+  await syncTemplatesFromSource(boxRoot);
 
   const debug = options.docIdDebug ?? await hasDocIdMarker(boxRoot);
 
