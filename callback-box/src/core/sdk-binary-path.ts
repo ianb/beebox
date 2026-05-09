@@ -21,7 +21,6 @@
  */
 
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
 import { accessSync, constants } from "node:fs";
 
 const require = createRequire(import.meta.url);
@@ -45,31 +44,32 @@ export function resolveClaudeCodeBinary(): string | null {
 }
 
 function doResolve(): string | null {
-  let sdkPkgPath: string;
-  try {
-    sdkPkgPath = require.resolve("@anthropic-ai/claude-agent-sdk/package.json");
-  } catch {
-    return null;
-  }
-  // .../node_modules/@anthropic-ai/claude-agent-sdk/package.json → .../node_modules/@anthropic-ai/
-  const anthropicDir = dirname(dirname(sdkPkgPath));
-
   const ext = process.platform === "win32" ? ".exe" : "";
   // On Linux: glibc first, musl second. Reverses the SDK's own (broken)
   // order so glibc hosts don't crash trying to exec a musl binary.
   // Off Linux: only one variant per platform, no choice to make.
-  const variantNames: string[] =
+  const variants: string[] =
     process.platform === "linux"
       ? [`linux-${process.arch}`, `linux-${process.arch}-musl`]
       : [`${process.platform}-${process.arch}`];
 
-  for (const variant of variantNames) {
-    const binPath = join(anthropicDir, `claude-agent-sdk-${variant}`, `claude${ext}`);
+  for (const variant of variants) {
+    // Resolve `<pkg>/claude` directly — these binary sub-packages don't
+    // declare an `exports` field, so subpath resolution works. Resolving
+    // the parent SDK's package.json doesn't work because that package
+    // *does* declare `exports` and excludes `./package.json`.
+    const subpath = `@anthropic-ai/claude-agent-sdk-${variant}/claude${ext}`;
+    let resolved: string;
     try {
-      accessSync(binPath, constants.X_OK);
-      return binPath;
+      resolved = require.resolve(subpath);
     } catch {
-      // Not present or not executable — try next.
+      continue;
+    }
+    try {
+      accessSync(resolved, constants.X_OK);
+      return resolved;
+    } catch {
+      // File present but not executable; skip.
     }
   }
   return null;
