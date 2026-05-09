@@ -305,7 +305,13 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
     return { needsWork: false, skippedReason: "no_commits", tasks: [] };
   }
   const status = await getStatus(boxRoot);
-  if (!status.clean) {
+  // Filter out paths inside procedure/runs — the procedure engine
+  // intentionally writes uncommitted state there as a "step is running"
+  // signal, so blanket-bailing on uncommitted work would prevent
+  // refresh-maps from running inside its own procedure step.
+  const dirtyPaths = [...status.staged, ...status.modified, ...status.untracked]
+    .filter((p) => !p.startsWith("procedure/runs/"));
+  if (dirtyPaths.length > 0) {
     return { needsWork: false, skippedReason: "uncommitted_work", tasks: [] };
   }
 

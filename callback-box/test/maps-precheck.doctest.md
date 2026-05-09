@@ -42,6 +42,30 @@ brief.skippedReason
 await box.cleanup();
 ```
 
+But uncommitted state inside `procedure/runs/` is *not* counted —
+the procedure engine intentionally writes "step is running" markers
+there, and blanket-bailing would mean refresh-maps couldn't run
+inside its own procedure step.
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("a/b/note.md", "x");
+box.commitAll("seed");
+await box.write("procedure/runs/refresh-maps_2026-05-09T2052/run.procedure-run.card",
+                "<run-card status=\"running\"/>");
+
+const brief = await precheck({ boxRoot: box.root });
+print(`needsWork=${brief.needsWork}`);
+print(`skipped=${brief.skippedReason ?? "(none)"}`);
+=>
+needsWork=true
+skipped=(none)
+```
+
+``` cleanup
+await box.cleanup();
+```
+
 ## Bootstrap: no MAP.md anywhere yet
 
 A clean box with no MAP.md files and no state — every directory is
