@@ -25,7 +25,7 @@ export interface ScanGroup {
   label: string;
 }
 
-const SCANNER_PREFIX_RE = /^(.+)_\d+\.(jpg|jpeg|png|tif|tiff)$/i;
+const SCANNER_PREFIX_RE = /^(.+)[_-]\d+\.(jpg|jpeg|png|tif|tiff)$/i;
 
 function isImage(file: string): boolean {
   return SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(file).toLowerCase());

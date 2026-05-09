@@ -12,16 +12,11 @@ export const uploadCommand = new Command("upload")
   .requiredOption("--as <kind>", "Destination kind (currently: scan)")
   .option("--force", "Re-import files already in the ledger")
   .option("--context <text>", "Per-batch context passed to the destination handler")
-  .option("--treat-as <mode>", "Force PDF mode: 'scan' or 'document' (default: auto-detect)")
-  .action(async (files: string[], options: { as: string; force?: boolean; context?: string; treatAs?: string }) => {
+  .option("--limit <n>", "Process at most N files (sorted; useful for smoke tests)")
+  .action(async (files: string[], options: { as: string; force?: boolean; context?: string; limit?: string }) => {
     try {
       const boxRoot = await requireBoxRoot();
       const ctx = createCliContext(boxRoot);
-
-      if (options.treatAs && options.treatAs !== "scan" && options.treatAs !== "document") {
-        console.error(`Error: --treat-as must be 'scan' or 'document', got '${options.treatAs}'`);
-        process.exit(1);
-      }
 
       const args: Record<string, unknown> = {
         files,
@@ -29,7 +24,7 @@ export const uploadCommand = new Command("upload")
       };
       if (options.force) args["force"] = true;
       if (options.context) args["context"] = options.context;
-      if (options.treatAs) args["treatAs"] = options.treatAs;
+      if (options.limit) args["limit"] = Number(options.limit);
 
       const result = await runCommand({ name: "upload", args, ctx });
 

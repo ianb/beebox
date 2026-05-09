@@ -42,8 +42,6 @@ import {
   SUPPORTED_IMAGE_EXTENSIONS,
 } from "./upload-helpers.js";
 import {
-  detectPdfNeedsFlash,
-  renderPdfPages,
   runScanBatches,
   resolveScanPages,
   bundleResolvedPages,
@@ -52,10 +50,7 @@ import {
 
 export interface ScanImportArgs {
   inputs: string[];
-  archiveDpi?: number;
-  apiScaleTo?: number;
   context?: string;
-  treatAs?: "scan" | "document";
 }
 
 interface SessionLayout {
@@ -66,10 +61,6 @@ interface SessionLayout {
   sessionCardFilename: string;
   startedAt: string;
 }
-
-type PhotoSource =
-  | { kind: "pdf"; pdfPath: string; archiveDpi: number; apiScaleTo: number }
-  | { kind: "images"; imagePaths: string[] };
 
 const isImageFile = (p: string): boolean =>
   SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(p).toLowerCase());
@@ -112,13 +103,7 @@ async function executeScanImport(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const {
-    inputs,
-    archiveDpi = 600,
-    apiScaleTo = 2000,
-    context: extraContext,
-    treatAs,
-  } = args as unknown as ScanImportArgs;
+  const { inputs, context: extraContext } = args as unknown as ScanImportArgs;
 
   if (!inputs || inputs.length === 0) {
     return { success: false, error: "inputs argument is required (at least one file)" };
@@ -144,8 +129,6 @@ async function executeScanImport(
     };
   }
 
-  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
-
   if (allPdf) {
     if (resolved.length > 1) {
       return {
@@ -153,119 +136,24 @@ async function executeScanImport(
         error: "scan-import takes a single PDF at a time (use cb upload for batches)",
       };
     }
-    const pdfPath = resolved[0]!;
-
-    let mode: "photo" | "document";
-    if (treatAs === "scan") mode = "photo";
-    else if (treatAs === "document") mode = "document";
-    else {
-      ctx.writeLine(`Detecting PDF mode for ${path.basename(pdfPath)}...`);
-      try {
-        const det = await detectPdfNeedsFlash(pdfPath);
-        ctx.writeLine(
-          `  pages=${det.pageCount}, chars/page=${det.charsPerPage.toFixed(1)} → ${det.needsFlash ? "photo (scanned)" : "document (text-bearing)"}`
-        );
-        mode = det.needsFlash ? "photo" : "document";
-      } catch (e) {
-        return { success: false, error: `PDF mode detection failed: ${(e as Error).message}` };
-      }
-    }
-
-    if (mode === "document") {
-      return runDocumentMode(ctx, { pdfPath });
-    }
-    if (!apiKey) {
-      return { success: false, error: "GEMINI_KEY environment variable is required for photo flow" };
-    }
-    return runPhotoMode(ctx, {
-      apiKey,
-      source: { kind: "pdf", pdfPath, archiveDpi, apiScaleTo },
-      extraContext,
-    });
+    // PDFs are always filed as documents — Flash treatment for PDFs is deferred.
+    return runDocumentMode(ctx, { pdfPath: resolved[0]! });
   }
 
-  // All-image path
+  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
   if (!apiKey) {
     return { success: false, error: "GEMINI_KEY environment variable is required" };
   }
   return runPhotoMode(ctx, {
     apiKey,
-    source: { kind: "images", imagePaths: resolved },
+    imagePaths: resolved,
     extraContext,
   });
 }
 
-interface MaterializeArgs {
-  source: PhotoSource;
-  scratchArchiveDir: string;
-  scratchApiDir: string;
-}
-
-async function materializePhotoSource(
-  ctx: CommandContext,
-  { source, scratchArchiveDir, scratchApiDir }: MaterializeArgs
-): Promise<
-  | { ok: true; archivePages: string[]; apiPages: string[]; sourceLabel: string; sourceFileRef: string | null; sourceStaged: string[] }
-  | { ok: false; error: string }
-> {
-  if (source.kind === "pdf") {
-    ctx.writeLine(`Source PDF: ${source.pdfPath}`);
-    ctx.writeLine(`Rendering archive copies at ${source.archiveDpi}dpi...`);
-    const archivePages = await renderPdfPages({
-      pdfPath: source.pdfPath,
-      outDir: scratchArchiveDir,
-      prefix: "page",
-      mode: { dpi: source.archiveDpi },
-    });
-    ctx.writeLine(`  ${archivePages.length} pages rendered`);
-    ctx.writeLine(`Rendering API copies at scale-to=${source.apiScaleTo}...`);
-    const apiPages = await renderPdfPages({
-      pdfPath: source.pdfPath,
-      outDir: scratchApiDir,
-      prefix: "page",
-      mode: { scaleTo: source.apiScaleTo },
-      jpegQuality: 85,
-    });
-    ctx.writeLine(`  ${apiPages.length} pages rendered`);
-    if (archivePages.length !== apiPages.length) {
-      return {
-        ok: false,
-        error: `Page count mismatch between archive (${archivePages.length}) and API (${apiPages.length}) renders`,
-      };
-    }
-    return {
-      ok: true,
-      archivePages,
-      apiPages,
-      sourceLabel: path.basename(source.pdfPath),
-      sourceFileRef: "source.file.card",
-      sourceStaged: ["source.pdf", "source.file.card"],
-    };
-  }
-
-  ctx.writeLine(`Source: ${source.imagePaths.length} image file(s)`);
-  await fs.mkdir(scratchArchiveDir, { recursive: true });
-  const archivePages: string[] = [];
-  for (const [i, src] of source.imagePaths.entries()) {
-    const idx = String(i + 1).padStart(3, "0");
-    const dst = path.join(scratchArchiveDir, `page-${idx}${path.extname(src).toLowerCase()}`);
-    await fs.copyFile(src, dst);
-    archivePages.push(dst);
-  }
-  // No API copy — Gemini handles ~3000-pixel JPEGs fine; saves a render step.
-  return {
-    ok: true,
-    archivePages,
-    apiPages: archivePages,
-    sourceLabel: `${source.imagePaths.length} images`,
-    sourceFileRef: null,
-    sourceStaged: [],
-  };
-}
-
 interface RunPhotoModeArgs {
   apiKey: string;
-  source: PhotoSource;
+  imagePaths: string[];
   extraContext: string | undefined;
 }
 
@@ -273,39 +161,29 @@ async function runPhotoMode(
   ctx: CommandContext,
   args: RunPhotoModeArgs
 ): Promise<CommandResult> {
-  const { apiKey, source, extraContext } = args;
+  const { apiKey, imagePaths, extraContext } = args;
   const layout = await createSessionLayout(ctx);
   const { sessionAbsDir, sessionRelDir, sessionCardFilename, sessionId, startedAt } = layout;
   ctx.writeLine(`Photo intake → ${sessionRelDir}`);
+  ctx.writeLine(`Source: ${imagePaths.length} image file(s)`);
 
   const filesToStage: string[] = [];
 
-  // Write source.pdf + source.file.card up front so they're recoverable even if
-  // we crash mid-flow.
-  if (source.kind === "pdf") {
-    await fs.copyFile(source.pdfPath, path.join(sessionAbsDir, "source.pdf"));
-    const stat = await fs.stat(path.join(sessionAbsDir, "source.pdf"));
-    const fileCard = createFileTemplate({
-      capturedAt: startedAt,
-      source: "scan-import",
-      filename: "source.pdf",
-      originalName: path.basename(source.pdfPath),
-      mimeType: "application/pdf",
-      size: stat.size,
-    });
-    await fs.writeFile(path.join(sessionAbsDir, "source.file.card"), fileCard);
-  }
-
+  // Copy each input into a scratch dir so the originals stay untouched and
+  // the archive copy lives inside the session for safety. Gemini handles
+  // ~3000-pixel JPEGs directly, so we send the same files for analysis —
+  // no separate API render needed.
   const archiveDir = path.join(sessionAbsDir, ".scan-archive");
-  const apiDir = path.join(sessionAbsDir, ".scan-api");
-  const mat = await materializePhotoSource(ctx, {
-    source,
-    scratchArchiveDir: archiveDir,
-    scratchApiDir: apiDir,
-  });
-  if (!mat.ok) return { success: false, error: mat.error };
-  const { archivePages, apiPages, sourceLabel, sourceFileRef } = mat;
-  for (const f of mat.sourceStaged) filesToStage.push(`${sessionRelDir}/${f}`);
+  await fs.mkdir(archiveDir, { recursive: true });
+  const archivePages: string[] = [];
+  for (const [i, src] of imagePaths.entries()) {
+    const idx = String(i + 1).padStart(3, "0");
+    const dst = path.join(archiveDir, `page-${idx}${path.extname(src).toLowerCase()}`);
+    await fs.copyFile(src, dst);
+    archivePages.push(dst);
+  }
+  const apiPages = archivePages;
+  const sourceLabel = `${imagePaths.length} images`;
 
   const fileContext = await readScanContextFile(ctx.boxRoot);
   const contextParts: string[] = [];
@@ -437,7 +315,6 @@ async function runPhotoMode(
   }
 
   await fs.rm(archiveDir, { recursive: true, force: true });
-  if (apiDir !== archiveDir) await fs.rm(apiDir, { recursive: true, force: true });
 
   const sessionCardContent = createCaptureSessionTemplate({
     sessionId,
@@ -445,7 +322,7 @@ async function runPhotoMode(
     endedAt: startedAt,
     imageRefs,
     audioRefs: [],
-    fileRefs: sourceFileRef ? [sourceFileRef] : [],
+    fileRefs: [],
   });
   const sessionCardPath = path.join(sessionAbsDir, sessionCardFilename);
   await fs.writeFile(sessionCardPath, sessionCardContent);
@@ -621,7 +498,7 @@ async function applyBundleAnalysisToCard(
 
 registerCommand({
   name: "scan-import",
-  description: "Import a scanned PDF, image batch, or document PDF as a session in box/inbox/scan-…/",
+  description: "Import an image batch as photo image cards, or a PDF as a document, into box/inbox/scan-…/",
   args: [
     {
       name: "inputs",
@@ -630,28 +507,8 @@ registerCommand({
       type: "string[]",
     },
     {
-      name: "archiveDpi",
-      description: "DPI for archival JPEG render of each PDF page (PDF inputs only)",
-      required: false,
-      default: 600,
-      type: "number",
-    },
-    {
-      name: "apiScaleTo",
-      description: "Longest-side pixel size for the API copy sent to Gemini (PDF inputs only)",
-      required: false,
-      default: 2000,
-      type: "number",
-    },
-    {
       name: "context",
       description: "Extra context appended to CLAUDE_SCANS.md content for this run",
-      required: false,
-      type: "string",
-    },
-    {
-      name: "treatAs",
-      description: "Force PDF mode: 'scan' (run Flash) or 'document' (file as PDF, no Flash)",
       required: false,
       type: "string",
     },

@@ -190,6 +190,20 @@ groups4.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
 => image-batch:IMG=2
 ```
 
+The separator before the digit suffix can be either `_` or `-` —
+`photo-0001.jpg` clusters by the `photo` prefix the same way
+`Scan_001.jpg` clusters by `Scan`.
+
+```
+const groups5 = groupScanFiles([
+  "/in/photo-0001.jpg",
+  "/in/photo-0002.jpg",
+  "/in/photo-0003.jpg",
+]);
+groups5.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
+=> image-batch:photo=3
+```
+
 ## groupScanFiles: rejects unsupported types
 
 ```

@@ -32,7 +32,8 @@ export interface UploadArgs {
   kind: string;
   force?: boolean;
   context?: string;
-  treatAs?: "scan" | "document";
+  /** Process at most this many files (after sort, before grouping). For smoke tests. */
+  limit?: number;
 }
 
 const SUPPORTED_KINDS = ["scan"] as const;
@@ -46,7 +47,7 @@ async function executeUpload(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { files, kind, force, context: extraContext, treatAs } = args as unknown as UploadArgs;
+  const { files, kind, force, context: extraContext, limit } = args as unknown as UploadArgs;
 
   if (!files || files.length === 0) {
     return { success: false, error: "At least one file is required" };
@@ -76,9 +77,18 @@ async function executeUpload(
     absoluteFiles.push(abs);
   }
 
+  // For smoke tests: cap the number of files before grouping so a paired batch
+  // still gets its photo-and-back together (sorted, so first N are contiguous).
+  const limitedFiles = typeof limit === "number" && limit > 0 && limit < absoluteFiles.length
+    ? absoluteFiles.toSorted().slice(0, limit)
+    : absoluteFiles;
+  if (limitedFiles.length < absoluteFiles.length) {
+    ctx.writeLine(`Limit applied: processing ${limitedFiles.length} of ${absoluteFiles.length} file(s)`);
+  }
+
   let groups: ScanGroup[];
   try {
-    groups = groupScanFiles(absoluteFiles);
+    groups = groupScanFiles(limitedFiles);
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
@@ -114,7 +124,6 @@ async function executeUpload(
 
     const scanArgs: Record<string, unknown> = { inputs: group.files };
     if (extraContext && extraContext.trim().length > 0) scanArgs["context"] = extraContext;
-    if (treatAs) scanArgs["treatAs"] = treatAs;
     const result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
 
     if (!result.success) {
@@ -157,7 +166,7 @@ registerCommand({
     { name: "kind", description: "Destination kind (currently: scan)", required: true, type: "string" },
     { name: "force", description: "Re-import files already in the ledger", required: false, default: false, type: "boolean" },
     { name: "context", description: "Per-batch context passed to the destination handler", required: false, type: "string" },
-    { name: "treatAs", description: "Force PDF mode: 'scan' (run Flash) or 'document' (file as PDF, no Flash)", required: false, type: "string" },
+    { name: "limit", description: "Process at most N files (sorted; useful for smoke tests)", required: false, type: "number" },
   ],
   execute: executeUpload,
 });

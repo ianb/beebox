@@ -1,134 +1,14 @@
 /**
  * Helpers for the scan-import command.
  *
- * PDF page rendering via pdftoppm, scan-mode Gemini analysis (per-page
- * description + photo/back pairing), sliding-overlap batching, and pair
- * reconciliation across overlapping batches.
+ * Scan-mode Gemini analysis (per-image description + photo/back pairing),
+ * sliding-overlap batching, and pair reconciliation across overlapping
+ * batches.
  */
 
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { spawn } from "node:child_process";
 import { GoogleGenAI } from "@google/genai";
 import { getMimeType, GeminiEmptyResponseError } from "./describe-images-helpers.js";
-
-/**
- * Spawn a child process and reject on non-zero exit. Captures stderr in the
- * error message so failures from pdftoppm surface usefully.
- */
-async function runProcess(cmd: string, args: string[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
-    let stderr = "";
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`${cmd} exited with code ${code}: ${stderr.trim()}`));
-    });
-  });
-}
-
-/**
- * Spawn a child process and capture stdout. Used for short-output tools
- * like pdftotext and pdfinfo where we need the result, not just the exit code.
- */
-async function runProcessCaptureStdout(cmd: string, args: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve(stdout);
-        return;
-      }
-      reject(new Error(`${cmd} exited with code ${code}: ${stderr.trim()}`));
-    });
-  });
-}
-
-/**
- * Average extracted text characters per page below which we treat a PDF as
- * a scanned image (i.e. no embedded text → needs Flash for OCR + description).
- *
- * The gap between scanned PDFs (effectively zero chars) and document PDFs
- * (typically hundreds to thousands per page) is wide, so the threshold
- * doesn't need to be precisely tuned.
- */
-export const PDF_FLASH_CHARS_PER_PAGE_THRESHOLD = 50;
-
-export interface PdfFlashDetection {
-  needsFlash: boolean;
-  charsPerPage: number;
-  pageCount: number;
-}
-
-/**
- * Decide whether a PDF needs Flash treatment (per-page image analysis) or
- * is already a text-bearing document. Uses pdftotext to extract embedded
- * text; if the average is below the threshold the PDF is treated as a scan.
- */
-export async function detectPdfNeedsFlash(pdfPath: string): Promise<PdfFlashDetection> {
-  const info = await runProcessCaptureStdout("pdfinfo", [pdfPath]);
-  const pagesMatch = info.match(/^Pages:\s*(\d+)/m);
-  const pageCount = pagesMatch ? Number(pagesMatch[1]) : 0;
-
-  const text = await runProcessCaptureStdout("pdftotext", [pdfPath, "-"]);
-  const textChars = text.trim().length;
-  const charsPerPage = pageCount > 0 ? textChars / pageCount : 0;
-
-  return {
-    needsFlash: charsPerPage < PDF_FLASH_CHARS_PER_PAGE_THRESHOLD,
-    charsPerPage,
-    pageCount,
-  };
-}
-
-export interface RenderPdfOptions {
-  pdfPath: string;
-  outDir: string;
-  prefix: string;
-  /** Resolution mode — either DPI ({ dpi: 600 }) or longest-side pixels ({ scaleTo: 2000 }). */
-  mode: { dpi: number } | { scaleTo: number };
-  jpegQuality?: number;
-}
-
-/**
- * Render every page of a PDF to JPEGs via pdftoppm. Returns the produced
- * file paths in page order. Files are named `<prefix>-<NN>.jpg`.
- */
-export async function renderPdfPages(opts: RenderPdfOptions): Promise<string[]> {
-  await fs.mkdir(opts.outDir, { recursive: true });
-  const args = ["-jpeg"];
-  const quality = opts.jpegQuality ?? 88;
-  args.push("-jpegopt", `quality=${quality}`);
-  if ("dpi" in opts.mode) {
-    args.push("-r", String(opts.mode.dpi));
-  } else {
-    args.push("-scale-to", String(opts.mode.scaleTo));
-  }
-  args.push(opts.pdfPath, path.join(opts.outDir, opts.prefix));
-  await runProcess("pdftoppm", args);
-
-  const entries = await fs.readdir(opts.outDir);
-  const matched = entries
-    .filter((name) => name.startsWith(`${opts.prefix}-`) && name.endsWith(".jpg"))
-    .toSorted();
-  return matched.map((name) => path.join(opts.outDir, name));
-}
 
 /**
  * Per-page output from the scan-mode analyzer. The model classifies each
@@ -170,7 +50,7 @@ interface RawScanAnalysis {
   flag_reason: string | null;
 }
 
-const SCAN_PROMPT = `You are analyzing pages from a single PDF that was produced by scanning a stack of physical photographs. Each photo's front (the picture) and back (often handwriting: a name, date, or short description; sometimes blank) appear as consecutive pages. Most often the front is first and the back is second, but occasionally the user fed the back in first.
+const SCAN_PROMPT = `You are analyzing scanned pages from a stack of physical photographs. Some photos have backs (often handwriting: a name, date, or short description; sometimes blank); some photos are single-sided with no back. Where a photo has a back, the back almost always immediately follows the photo — a photo at index i is paired with its back at i+1. Treat "back follows photo at i+1" as a strong default; deviate only on clear visual evidence (e.g. the page at i+1 is itself another photograph).
 
 The pages you see are numbered 0..N-1 in the order they appear in this batch. Your job, for each page, is to:
 
@@ -180,7 +60,7 @@ The pages you see are numbered 0..N-1 in the order they appear in this batch. Yo
    - "blank": an entirely blank page with no markings worth keeping.
    - "unsure": you can't confidently classify it.
 
-2. For "photo" and "back" pages, identify the partner page by index within this batch using paired_with_index. A pair is one "photo" page next to one "back" page that describes it. Pairs are usually adjacent (i+1 or i-1), but use your judgment based on visual cues — handwriting referring to the photo's content, a date that fits the photo's apparent era, etc. If a photo has no back in this batch, set paired_with_index to null. If a back has no matching photo in this batch, set paired_with_index to null.
+2. For "photo" and "back" pages, identify the partner page by index within this batch using paired_with_index. The dominant pattern is photo at i, back at i+1 — start there. Use other visual cues (handwriting referring to the photo's content, a date that fits the photo's apparent era) only as tiebreakers. If a photo has no back in this batch (single-sided photo, or partner is in another batch), set paired_with_index to null. Same for a back with no matching photo in this batch.
 
 3. For PHOTO pages, fill:
    - description: one sentence describing what's in the photo (subjects, setting, era cues if visible).
