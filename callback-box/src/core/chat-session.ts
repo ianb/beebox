@@ -11,6 +11,8 @@
 import { EventEmitter } from "node:events";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { randomBytes } from "node:crypto";
+import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule-state.js";
 import {
   getSessionLogPath,
   parseSessionLog,
@@ -451,6 +453,8 @@ export class ChatSession extends EventEmitter {
   private sessionId: string | null = null;
   private boxRoot: string;
   private busy = false;
+  /** Path of the chat-active lock held while a run is in flight, or null. */
+  private chatLockPath: string | null = null;
   private turnText = "";
   private messageQueue: ChatSendInput[] = [];
   private readonly options: ChatSessionOptions;
@@ -610,6 +614,11 @@ export class ChatSession extends EventEmitter {
 
     log("start", "Starting SDK chat run");
 
+    // Hold a chat-active lock for the duration of the SDK run so that
+    // `cb tick` (and any other housekeeping process) can detect a chat is
+    // mid-response and defer commits that would race with agent writes.
+    await this.acquireRunLock();
+
     const startOpts = await this.buildBackendStartOptions();
 
     const run = this.backend.start({
@@ -623,6 +632,32 @@ export class ChatSession extends EventEmitter {
     // Background loop: pump SDK messages into handleMessage. Capture errors
     // and emit as "error" events.
     void this.consumeMessages(run);
+  }
+
+  private async acquireRunLock(): Promise<void> {
+    if (this.chatLockPath !== null) return;
+    try {
+      const lockId = randomBytes(8).toString("hex");
+      this.chatLockPath = await acquireChatActiveLock({
+        boxRoot: this.boxRoot,
+        lockId,
+        sessionId: this.sessionId,
+      });
+    } catch (e) {
+      log("error", `Failed to acquire chat-active lock: ${(e as Error).message}`);
+      this.chatLockPath = null;
+    }
+  }
+
+  private async releaseRunLock(): Promise<void> {
+    if (this.chatLockPath === null) return;
+    const lockPath = this.chatLockPath;
+    this.chatLockPath = null;
+    try {
+      await releaseChatActiveLock(lockPath);
+    } catch (e) {
+      log("error", `Failed to release chat-active lock: ${(e as Error).message}`);
+    }
   }
 
   private async consumeMessages(run: ChatBackendRun): Promise<void> {
@@ -640,6 +675,7 @@ export class ChatSession extends EventEmitter {
       const wasIntentional = this.intentionalStop;
       this.run = null;
       this.busy = false;
+      await this.releaseRunLock();
       this.emit("close", wasIntentional ? 0 : null);
       // Drain any messages queued while the run was busy into a fresh run,
       // unless this was an intentional stop (queue is already cleared).

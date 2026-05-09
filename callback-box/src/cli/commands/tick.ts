@@ -23,6 +23,8 @@ import {
   acquireScriptLock,
   releaseScriptLock,
   loadRunningScripts,
+  loadRunningProcedures,
+  loadActiveChats,
 } from "../../core/schedule-state.js";
 import { execWithTimeout, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../lib/git.js";
@@ -85,6 +87,28 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
 
   // Load currently running scripts for lock-group conflict detection
   const running = await loadRunningScripts(boxRoot);
+
+  // Bail out if anything else is in flight. Tick's post-script housekeeping
+  // commit sweeps the entire working tree, so if a procedure, another
+  // script, or a chat run is mid-flight with uncommitted writes, those get
+  // pulled into a generic "Tick: housekeeping" commit — clobbering the
+  // in-flight work's own commit shape. The system has to be fully at rest
+  // for tick to fire.
+  const runningProcedures = await loadRunningProcedures(boxRoot);
+  const activeChats = await loadActiveChats(boxRoot);
+  if (running.size > 0 || runningProcedures.length > 0 || activeChats.size > 0) {
+    const blockers = [
+      ...[...running.keys()].map((s) => `script:${s}`),
+      ...runningProcedures.map((p) => `procedure:${p}`),
+      ...[...activeChats.values()].map(
+        (c) => `chat:${c.sessionId ?? "(unassigned)"}`
+      ),
+    ];
+    if (!options.quiet) {
+      console.log(`Tick deferred — system busy: ${blockers.join(", ")}`);
+    }
+    return { ranCount: 0, skipCount: files.length, errorCount: 0, scripts: [] };
+  }
 
   for (const file of files) {
     const scriptName = file.replace(".scheduled-script.card", "");

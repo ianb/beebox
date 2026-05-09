@@ -164,3 +164,98 @@ export async function loadRunningScripts(boxRoot: string): Promise<Map<string, S
   }
   return running;
 }
+
+// --- Chat-active locks ---
+//
+// Chat sessions in the webapp acquire a lock around each SDK run so that
+// other processes (notably `cb tick`) can detect a chat is actively
+// producing a response and defer housekeeping work that would otherwise
+// race with mid-response writes from the agent's tools.
+
+const CHAT_LOCK_DIR_NAME = ".callback-box/active-chats";
+const CHAT_LOCK_SUFFIX = ".lock";
+
+export interface ChatLock {
+  pid: number;
+  startedAt: string;
+  /** SDK session id when assigned, otherwise null (new chat hasn't gotten one yet). */
+  sessionId: string | null;
+}
+
+function chatLockDir(boxRoot: string): string {
+  return path.join(boxRoot, CHAT_LOCK_DIR_NAME);
+}
+
+export interface AcquireChatLockOptions {
+  boxRoot: string;
+  /** Stable identifier for the lock filename — typically a per-run uuid. */
+  lockId: string;
+  sessionId?: string | null;
+}
+
+export async function acquireChatActiveLock(options: AcquireChatLockOptions): Promise<string> {
+  const dir = chatLockDir(options.boxRoot);
+  await fs.mkdir(dir, { recursive: true });
+  const lockPath = path.join(dir, `${options.lockId}${CHAT_LOCK_SUFFIX}`);
+  const metadata: Record<string, unknown> = {};
+  if (options.sessionId !== undefined && options.sessionId !== null) {
+    metadata["sessionId"] = options.sessionId;
+  }
+  await acquireFileLock(lockPath, metadata);
+  return lockPath;
+}
+
+export async function releaseChatActiveLock(lockPath: string): Promise<void> {
+  await releaseFileLock(lockPath);
+}
+
+/**
+ * Returns active chat-run locks keyed by lockId. Stale locks (dead PID)
+ * are cleaned up as a side effect.
+ */
+export async function loadActiveChats(boxRoot: string): Promise<Map<string, ChatLock>> {
+  const holders = await scanLocks(chatLockDir(boxRoot), CHAT_LOCK_SUFFIX);
+  const result = new Map<string, ChatLock>();
+  for (const [lockId, holder] of holders) {
+    const sessionId = holder.metadata["sessionId"];
+    result.set(lockId, {
+      pid: holder.pid,
+      startedAt: holder.acquiredAt,
+      sessionId: typeof sessionId === "string" ? sessionId : null,
+    });
+  }
+  return result;
+}
+
+/**
+ * Return the names of any procedure runs whose root status is non-terminal
+ * (pending or running). Used to gate housekeeping/tick activity so the
+ * system can be "fully at rest" before scheduled work fires.
+ *
+ * Reads `procedure/runs/<runDir>/run.procedure-run.card` and matches the
+ * root `status="..."` attribute via regex — full XML parsing is overkill
+ * here and would couple this helper to the schemas package.
+ */
+export async function loadRunningProcedures(boxRoot: string): Promise<string[]> {
+  const runsDir = path.join(boxRoot, "procedure/runs");
+  let entries: string[];
+  try {
+    entries = await fs.readdir(runsDir);
+  } catch {
+    return [];
+  }
+  const running: string[] = [];
+  for (const entry of entries) {
+    const cardPath = path.join(runsDir, entry, "run.procedure-run.card");
+    let content: string;
+    try {
+      content = await fs.readFile(cardPath, "utf-8");
+    } catch {
+      continue;
+    }
+    if (/<procedure-run[^>]*\bstatus=["'](?:pending|running)["']/.test(content)) {
+      running.push(entry);
+    }
+  }
+  return running;
+}
