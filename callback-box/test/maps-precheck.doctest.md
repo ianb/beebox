@@ -238,3 +238,67 @@ inbox:update added=[triage/]
 ``` cleanup
 await box.cleanup();
 ```
+
+## Ignore patterns
+
+Default patterns exclude `procedure/runs` (entire subtree) and any
+directory whose basename matches `thread-*`:
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("inbox/foo.card", "<card/>");
+await box.write("procedure/runs/run-2026-01-01/log.txt", "x");
+await box.write("store/email/thread-Foo/a.card", "<card/>");
+await box.write("store/email/thread-Foo/attachments/x.pdf", "x");
+await box.write("store/email/regular-dir/y.card", "<card/>");
+box.commitAll("seed");
+
+const brief = await precheck({ boxRoot: box.root });
+const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
+print(dirs.join("\n"));
+=>
+<root>
+inbox
+procedure
+store
+store/email
+store/email/regular-dir
+```
+
+`procedure/` itself is mapped, but `runs/` (matching the ignore pattern)
+doesn't show up in its listing or descend into:
+
+``` continue
+const proc = brief.tasks.find((t) => t.dir === "procedure")!;
+print(`procedure children: ${proc.children.join(", ") || "(none)"}`);
+const email = brief.tasks.find((t) => t.dir === "store/email")!;
+print(`store/email children: ${email.children.join(", ")}`);
+=>
+procedure children: (none)
+store/email children: regular-dir/
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## User-supplied .cb-maps-ignore extends the defaults
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("keep/a.card", "<card/>");
+await box.write("dump/b.card", "<card/>");
+await box.write(".cb-maps-ignore", "dump\n# comment line\n");
+box.commitAll("seed");
+
+const brief = await precheck({ boxRoot: box.root });
+const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
+print(dirs.join("\n"));
+=>
+<root>
+keep
+```
+
+``` cleanup
+await box.cleanup();
+```

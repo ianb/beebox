@@ -48,25 +48,104 @@ export interface MapBrief {
 
 export interface PrecheckOptions {
   boxRoot: string;
-  /** Directory names to skip when walking. Defaults if not provided. */
-  excludeNames?: string[];
+  /** Override ignore patterns. If unset, uses defaults plus .cb-maps-ignore. */
+  ignorePatterns?: readonly string[];
 }
 
-const DEFAULT_EXCLUDED_NAMES: readonly string[] = [
+/**
+ * Built-in ignore patterns for directory walking and listing.
+ *
+ * Pattern syntax (subset of gitignore):
+ *   - "name"           basename match (any depth). E.g. "node_modules"
+ *   - "path/to/dir"    exact relative-path match
+ *   - "STARSTAR/X"     where STARSTAR is two asterisks: basename match
+ *                      where X may contain "*" wildcards
+ *
+ * Users extend via a `.cb-maps-ignore` file at the box root, one pattern
+ * per line, "#" for comments. Negation (gitignore "!") is not supported.
+ */
+const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
   ".git",
   ".callback-box",
   "node_modules",
   ".tap",
   "tmp",
+  "procedure/runs",
+  "**/thread-*",
 ];
+
+const IGNORE_FILE = ".cb-maps-ignore";
 
 /** Names that appear in directories but should never appear in the listing. */
 const META_FILES: readonly string[] = ["MAP.md", "CLAUDE.md", MAP_STATE_FILE];
 
-function shouldSkipName(name: string, exclude: ReadonlySet<string>): boolean {
-  if (exclude.has(name)) return true;
-  // Skip dotfiles in listings — infrastructure (.cb-box, .gitignore, etc.).
-  if (name.startsWith(".")) return true;
+async function loadUserIgnorePatterns(boxRoot: string): Promise<string[]> {
+  try {
+    const raw = await fs.readFile(path.join(boxRoot, IGNORE_FILE), "utf-8");
+    return raw
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"));
+  } catch {
+    return [];
+  }
+}
+
+/** Match a name against a pattern containing only `*` wildcards. */
+function basenameGlobMatch(pattern: string, name: string): boolean {
+  if (!pattern.includes("*")) return pattern === name;
+  let regex = "";
+  for (const ch of pattern) {
+    if (ch === "*") {
+      regex += "[^/]*";
+    } else if ("$()+.[\\]^{|}?".includes(ch)) {
+      regex += "\\" + ch;
+    } else {
+      regex += ch;
+    }
+  }
+  return new RegExp("^" + regex + "$").test(name);
+}
+
+interface MatchIgnoreOptions {
+  pattern: string;
+  relPath: string;
+  basename: string;
+}
+
+function matchIgnorePattern(options: MatchIgnoreOptions): boolean {
+  const { pattern, relPath, basename } = options;
+  if (pattern.startsWith("**/")) {
+    return basenameGlobMatch(pattern.slice(3), basename);
+  }
+  if (pattern.includes("/")) {
+    return pattern === relPath;
+  }
+  return basenameGlobMatch(pattern, basename);
+}
+
+interface IsIgnoredOptions {
+  patterns: readonly string[];
+  relPath: string;
+  isFile: boolean;
+}
+
+/**
+ * Should this entry be excluded from walking and listing?
+ *
+ * Always-true cases: dotfiles (we never index `.gitignore`, `.cb-box`, etc.)
+ * and meta files (the MAP.md / CLAUDE.md / state file we generate ourselves).
+ * Then any matching ignore pattern.
+ */
+function isIgnored(options: IsIgnoredOptions): boolean {
+  const { patterns, relPath, isFile } = options;
+  if (relPath === "") return false;
+  const basename = path.basename(relPath);
+  if (basename.startsWith(".")) return true;
+  if (isFile && META_FILES.includes(basename)) return true;
+  for (const pattern of patterns) {
+    if (matchIgnorePattern({ pattern, relPath, basename })) return true;
+  }
   return false;
 }
 
@@ -76,7 +155,7 @@ function shouldSkipName(name: string, exclude: ReadonlySet<string>): boolean {
  */
 async function listMappableDirs(
   boxRoot: string,
-  exclude: ReadonlySet<string>,
+  patterns: readonly string[],
 ): Promise<string[]> {
   const result: string[] = [""];
 
@@ -90,8 +169,8 @@ async function listMappableDirs(
     }
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
-      if (shouldSkipName(entry.name, exclude)) continue;
       const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
+      if (isIgnored({ patterns, relPath: childRel, isFile: false })) continue;
       result.push(childRel);
       await walk(childRel);
     }
@@ -110,20 +189,24 @@ async function fileExists(absPath: string): Promise<boolean> {
   }
 }
 
+function joinChildPath(parentRel: string, name: string): string {
+  return parentRel === "" ? name : `${parentRel}/${name}`;
+}
+
 interface ListChildrenAtCommitOptions {
   boxRoot: string;
   dirRel: string;
   commit: string;
-  exclude: ReadonlySet<string>;
+  patterns: readonly string[];
 }
 
 /**
  * Get immediate children of dirRel at the given commit. Names ending in "/"
  * are subdirectories; everything else is a file. Returns sorted; meta files
- * (MAP.md, CLAUDE.md, the state file) and excluded names are filtered out.
+ * and ignored names are filtered out.
  */
 async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): Promise<string[]> {
-  const { boxRoot, dirRel, commit, exclude } = opts;
+  const { boxRoot, dirRel, commit, patterns } = opts;
   const ref = dirRel === "" ? commit : `${commit}:${dirRel}`;
   let raw: string;
   try {
@@ -139,9 +222,9 @@ async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): Promise<
     if (meta.length < 3) continue;
     const type = meta[1];
     const name = line.slice(tabIdx + 1);
-    if (shouldSkipName(name, exclude)) continue;
-    if (META_FILES.includes(name)) continue;
-    items.push(type === "tree" ? `${name}/` : name);
+    const isFile = type !== "tree";
+    if (isIgnored({ patterns, relPath: joinChildPath(dirRel, name), isFile })) continue;
+    items.push(isFile ? name : `${name}/`);
   }
   return items.toSorted();
 }
@@ -149,7 +232,7 @@ async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): Promise<
 interface ListChildrenOnDiskOptions {
   boxRoot: string;
   dirRel: string;
-  exclude: ReadonlySet<string>;
+  patterns: readonly string[];
 }
 
 /**
@@ -157,7 +240,7 @@ interface ListChildrenOnDiskOptions {
  * prior state exists, since there's nothing to diff against).
  */
 async function listChildrenOnDisk(opts: ListChildrenOnDiskOptions): Promise<string[]> {
-  const { boxRoot, dirRel, exclude } = opts;
+  const { boxRoot, dirRel, patterns } = opts;
   const abs = path.join(boxRoot, dirRel);
   let entries: Dirent[];
   try {
@@ -167,9 +250,9 @@ async function listChildrenOnDisk(opts: ListChildrenOnDiskOptions): Promise<stri
   }
   const items: string[] = [];
   for (const entry of entries) {
-    if (shouldSkipName(entry.name, exclude)) continue;
-    if (META_FILES.includes(entry.name)) continue;
-    items.push(entry.isDirectory() ? `${entry.name}/` : entry.name);
+    const isFile = !entry.isDirectory();
+    if (isIgnored({ patterns, relPath: joinChildPath(dirRel, entry.name), isFile })) continue;
+    items.push(isFile ? entry.name : `${entry.name}/`);
   }
   return items.toSorted();
 }
@@ -180,8 +263,13 @@ async function listChildrenOnDisk(opts: ListChildrenOnDiskOptions): Promise<stri
  */
 export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
   const { boxRoot } = options;
-  const excludeList = options.excludeNames ?? DEFAULT_EXCLUDED_NAMES;
-  const exclude = new Set(excludeList);
+  let patterns: readonly string[];
+  if (options.ignorePatterns) {
+    patterns = options.ignorePatterns;
+  } else {
+    const userPatterns = await loadUserIgnorePatterns(boxRoot);
+    patterns = [...DEFAULT_IGNORE_PATTERNS, ...userPatterns];
+  }
 
   if (!(await isRepo(boxRoot))) {
     return { needsWork: false, skippedReason: "not_a_repo", tasks: [] };
@@ -196,7 +284,7 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
 
   const head = await getHead(boxRoot);
   const state = await loadMapState(boxRoot);
-  const dirs = await listMappableDirs(boxRoot, exclude);
+  const dirs = await listMappableDirs(boxRoot, patterns);
   const tasks: MapTask[] = [];
 
   for (const dirRel of dirs) {
@@ -206,7 +294,7 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
     const stateEntry = state.maps[dirRel];
 
     if (!mapExists || !stateEntry) {
-      const children = await listChildrenOnDisk({ boxRoot, dirRel, exclude });
+      const children = await listChildrenOnDisk({ boxRoot, dirRel, patterns });
       tasks.push({
         map: mapRel,
         dir: dirRel,
@@ -225,13 +313,13 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
       boxRoot,
       dirRel,
       commit: stateEntry.asOf,
-      exclude,
+      patterns,
     });
     const currChildren = await listChildrenAtCommit({
       boxRoot,
       dirRel,
       commit: head,
-      exclude,
+      patterns,
     });
     const prevSet = new Set(prevChildren);
     const currSet = new Set(currChildren);
