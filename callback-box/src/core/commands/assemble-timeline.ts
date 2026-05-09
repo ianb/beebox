@@ -166,7 +166,7 @@ registerCommand({
         if (!filenameEl) continue;
 
         const capturedAt = filenameEl.attrs["captured"] as string;
-        const imageFilename = filenameEl.attrs["name"] as string;
+        const imageFilename = filenameEl.attrs["ref"] as string;
 
         allImages.push({
           ref: ic,

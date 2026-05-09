@@ -83,7 +83,7 @@ const box = await makeTmpBox();
 const dir = join(box.root, "box/inbox/capture-test");
 await mkdir(dir, { recursive: true });
 
-await writeFile(join(dir, "photo-001.image.card"), "<image status=\"new\">\n<filename name=\"photo-001.jpg\" captured=\"2024-01-01T00:00:00Z\" source=\"camera-user\" />\n<description></description>\n</image>\n");
+await writeFile(join(dir, "photo-001.image.card"), "<image status=\"new\">\n<filename ref=\"photo-001.jpg\" captured=\"2024-01-01T00:00:00Z\" source=\"camera-user\" />\n<description></description>\n</image>\n");
 await writeFile(join(dir, "photo-001.jpg"), "fake-jpg-data");
 
 const result = await findAttachedImage(join(dir, "photo-001.image.card"));

@@ -49,7 +49,7 @@ function parseImageCard(element: ElementNode): ParsedImageCard {
     rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
 
   return {
-    filename: filenameEl ? (filenameEl.attrs.name as string) : null,
+    filename: filenameEl ? (filenameEl.attrs.ref as string) : null,
     description: descEl ? (descEl.text as string) || null : null,
     status: (element.attrs.status as string) || "new",
     hasText: element.attrs["has-text"] === "true",

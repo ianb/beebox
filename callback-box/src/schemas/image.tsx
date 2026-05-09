@@ -15,7 +15,7 @@ export type ImageStatus = z.infer<typeof ImageStatus>;
 
 export const ImageFilename = element("filename", {
   attrs: {
-    name: z.string(),
+    ref: z.string(),
     captured: z.string().datetime({ offset: true }),
     source: z.enum(["camera-user", "camera-environment", "gallery"]),
   },
@@ -72,7 +72,7 @@ export const ImageDocument = element("document", {
  * Example:
  * ```xml
  * <image status="analyzed" has-text="true">
- * <filename name="photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
+ * <filename ref="photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
  * <description>Whiteboard with project timeline and milestones</description>
  * <text source="whiteboard">## Project Timeline\n- Phase 1: Jan-Feb\n- Phase 2: Mar-Apr</text>
  * </image>
@@ -138,8 +138,8 @@ export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
   let filename: string | undefined;
   for (const child of el.children) {
     if (child.tagName === "filename") {
-      const name = child.attrs["name"];
-      if (typeof name === "string" && name.length > 0) filename = name;
+      const ref = child.attrs["ref"];
+      if (typeof ref === "string" && ref.length > 0) filename = ref;
     }
     if (child.tagName === "description" && typeof child.text === "string" && child.text.trim()) {
       title = child.text.trim();
@@ -174,7 +174,7 @@ export function createImageTemplate(options: {
 }): string {
   const image = (
     <image status="new">
-      <filename name={options.filename} captured={options.capturedAt} source={options.source} />
+      <filename ref={options.filename} captured={options.capturedAt} source={options.source} />
       <description></description>
     </image>
   );

@@ -17,7 +17,7 @@ export type AudioStatus = z.infer<typeof AudioStatus>;
 
 export const AudioFilename = element("filename", {
   attrs: {
-    name: z.string(),
+    ref: z.string(),
     recorded: z.string().datetime({ offset: true }),
     source: z.string(),
     duration: z.string().optional(),
@@ -50,7 +50,7 @@ export const AudioTranscriptionError = element("transcription-error", {
  * Example:
  * ```xml
  * <audio status="new">
- * <filename name="audio-001.webm" recorded="2024-01-15T10:00:00Z" source="microphone" />
+ * <filename ref="audio-001.webm" recorded="2024-01-15T10:00:00Z" source="microphone" />
  * <summary></summary>
  * <transcript></transcript>
  * </audio>
@@ -94,7 +94,7 @@ export function createAudioTemplate(options: {
 }): string {
   const audio = (
     <audio status="new">
-      <filename name={options.filename} recorded={options.recordedAt} source={options.source} />
+      <filename ref={options.filename} recorded={options.recordedAt} source={options.source} />
     </audio>
   );
 

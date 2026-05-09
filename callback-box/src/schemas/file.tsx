@@ -16,7 +16,7 @@ export type FileStatus = z.infer<typeof FileStatus>;
 
 export const FileFilename = element("filename", {
   attrs: {
-    name: z.string(),
+    ref: z.string(),
     captured: z.string().datetime({ offset: true }),
     source: z.string(),
     "original-name": z.string().optional(),
@@ -35,7 +35,7 @@ export const FileDescription = element("description", {
  * Example:
  * ```xml
  * <file status="new">
- * <filename name="file-001-tax-return.pdf" captured="2026-04-14T15:00:00Z" source="disk" original-name="tax-return-2025.pdf" mime-type="application/pdf" />
+ * <filename ref="file-001-tax-return.pdf" captured="2026-04-14T15:00:00Z" source="disk" original-name="tax-return-2025.pdf" mime-type="application/pdf" />
  * <description></description>
  * </file>
  * ```
@@ -53,7 +53,7 @@ A file card represents an arbitrary file uploaded via the capture UI (e.g. a PDF
 
 Elements:
 - \`<filename>\` — the attached file. Attributes:
-  - \`name\` — the stored filename (sibling on disk)
+  - \`ref\` — the stored filename (sibling on disk)
   - \`captured\` — upload timestamp
   - \`source\` — origin of the file (e.g. \`disk\`)
   - \`original-name\` — the filename as the user uploaded it
@@ -80,7 +80,7 @@ export function createFileTemplate(options: {
   const file = (
     <file status="new">
       <filename
-        name={options.filename}
+        ref={options.filename}
         captured={options.capturedAt}
         source={options.source}
         original-name={options.originalName}

@@ -95,7 +95,7 @@ imageLoader({ path: "photo.image.card", element: image }).title
 
 ```
 const image = el("image", { status: "new" }, [
-  el("filename", { name: "photo-001.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" }),
+  el("filename", { ref: "photo-001.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" }),
 ]);
 imageLoader({ path: "box/capture/session.image.card", element: image }).title
 => photo 001

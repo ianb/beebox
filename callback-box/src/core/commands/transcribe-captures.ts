@@ -69,7 +69,7 @@ registerCommand({
           continue;
         }
 
-        // Get the audio filename from <filename name="...">
+        // Get the audio filename from <filename ref="...">
         const children = element.children as ElementNode[];
         const filenameEl = children.find((c) => c.tagName === "filename");
         if (!filenameEl) {
@@ -77,7 +77,7 @@ registerCommand({
           continue;
         }
 
-        const audioFilename = filenameEl.attrs["name"] as string;
+        const audioFilename = filenameEl.attrs["ref"] as string;
         const audioPath = path.join(dirPath, audioFilename);
 
         // Check audio file exists

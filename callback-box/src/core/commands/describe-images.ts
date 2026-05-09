@@ -293,7 +293,7 @@ async function executeDescribeImages(
         const now = new Date().toISOString();
         const cardXml = [
           "<image status=\"new\">",
-          `<filename name="${path.basename(item.imagePath)}" captured="${now}" source="camera-environment" />`,
+          `<filename ref="${path.basename(item.imagePath)}" captured="${now}" source="camera-environment" />`,
           "<description></description>",
           "</image>",
         ].join("\n") + "\n";
