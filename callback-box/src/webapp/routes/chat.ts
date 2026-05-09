@@ -109,7 +109,12 @@ export async function registerChatRoutes(
   });
 
   // Per-box registry of ChatSession instances, keyed by sessionId.
-  const registry = new ChatSessionRegistry(boxRoot);
+  // Turn on partial-message streaming so the per-turn SSE feed delivers
+  // token-level text deltas to the frontend; the chat machine and the
+  // speech queue pick them up live.
+  const registry = new ChatSessionRegistry(boxRoot, {
+    buildSessionOptions: () => ({ includePartialMessages: true }),
+  });
   registry.startCleanup();
   if (prewarmChat === true) {
     // Pre-warm a Claude subprocess against the default chat options so the

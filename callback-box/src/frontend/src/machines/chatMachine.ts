@@ -52,7 +52,8 @@ type ChatEvent =
   | { type: "REFRESH" }
   | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
   | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }
-  | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] };
+  | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] }
+  | { type: "SESSION_ASSIGNED"; sessionId: string };
 
 // -- Context --
 
@@ -152,6 +153,12 @@ const streamActor = fromCallback(
     // the machine would otherwise sit in `streaming` forever.
     let terminalFired = false;
     let msgCount = 0;
+    // When the backend has `includePartialMessages` on, text deltas arrive
+    // before the final `assistant` message. We accumulate them via
+    // STREAM_TEXT events; the final assistant message would re-deliver the
+    // same text, so we suppress its text blocks (tool_use blocks still
+    // come through, as those don't stream as deltas the same way).
+    let sawTextPartial = false;
     const terminal = (event: ChatEvent) => {
       terminalFired = true;
       logFsm("stream-terminal", { event: event.type, msgCount });
@@ -190,6 +197,27 @@ const streamActor = fromCallback(
           return;
         }
 
+        if (type === "stream_event") {
+          // Anthropic raw streaming events. We surface text_delta for live
+          // text rendering and the speech-tag accumulator. Other event
+          // shapes (input_json_delta for tool_use, message_start/stop,
+          // ping, etc.) are ignored — the final assistant message still
+          // delivers tool_use blocks atomically.
+          const event = (msg as { event?: { type?: string; delta?: { type?: string; text?: string } } }).event;
+          if (
+            event !== undefined &&
+            event.type === "content_block_delta" &&
+            event.delta !== undefined &&
+            event.delta.type === "text_delta" &&
+            typeof event.delta.text === "string" &&
+            event.delta.text.length > 0
+          ) {
+            sawTextPartial = true;
+            sendBack({ type: "STREAM_TEXT", text: event.delta.text });
+          }
+          return;
+        }
+
         if (type === "assistant") {
           const message = msg.message as
             | {
@@ -205,6 +233,9 @@ const streamActor = fromCallback(
           if (message?.content) {
             for (const block of message.content) {
               if (block.type === "text" && block.text) {
+                // If we already accumulated this text via stream_event
+                // deltas, skip it — otherwise we'd double-append.
+                if (sawTextPartial) continue;
                 sendBack({ type: "STREAM_TEXT", text: block.text });
               } else if (block.type === "tool_use") {
                 sendBack({
@@ -366,6 +397,16 @@ export const chatMachine = setup({
     PREPEND_MESSAGES: {
       actions: assign(({ context, event }) => ({
         messages: [...event.messages, ...context.messages],
+      })),
+    },
+    // Global handler: backend assigned an id to a session that started as
+    // "new". Lock subsequent sends and history fetches onto the real id so
+    // we don't accidentally start another fresh session, and so refreshing
+    // mid-stream uses the correct sessionInput rather than the "new" branch.
+    SESSION_ASSIGNED: {
+      actions: assign(({ event }) => ({
+        sessionInput: event.sessionId,
+        sessionId: event.sessionId,
       })),
     },
   },
