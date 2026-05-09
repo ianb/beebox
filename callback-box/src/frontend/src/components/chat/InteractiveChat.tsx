@@ -808,6 +808,12 @@ function VirtualizedMessageList({
 }) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const atBottomRef = useRef(true);
+  // Whether we've performed the on-mount scroll-to-bottom yet. Initial
+  // load of an existing chat should land at the latest message, not the
+  // top — `initialTopMostItemIndex` alone isn't reliable here because data
+  // is empty on first render (the parent shows a placeholder until history
+  // arrives) and Virtuoso doesn't reapply the prop when data later populates.
+  const initialScrollDoneRef = useRef(false);
   const { boxSlug } = useParams({ strict: false });
 
   const hasOlder = totalEntries > messages.length;
@@ -886,6 +892,23 @@ function VirtualizedMessageList({
       });
     }
   }, [scrollToBottomTrigger, data.length]);
+
+  // First time data populates after mount, jump to the latest message.
+  // The Virtuoso `initialTopMostItemIndex` prop is captured on virtuoso's
+  // own mount; if the parent renders the placeholder until history arrives
+  // (the common case for an existing chat), Virtuoso's first commit sees
+  // empty data and the later data populate doesn't re-trigger the initial
+  // index. Doing it imperatively here covers that path.
+  useEffect(() => {
+    if (initialScrollDoneRef.current) return;
+    if (data.length === 0) return;
+    initialScrollDoneRef.current = true;
+    virtuosoRef.current?.scrollToIndex({
+      index: "LAST",
+      align: "end",
+      behavior: "auto",
+    });
+  }, [data.length]);
 
   const headerContext = useMemo<ChatListContext>(() => ({
     hasOlder,

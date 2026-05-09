@@ -56,18 +56,31 @@ export function ChatPage() {
   }, [sessionParam, boxSlug, navigate]);
 
   const sessionInput = sessionParam ?? resolved;
+
+  // Key InteractiveChat so a real session switch (or "new chat" reset)
+  // remounts the machine and reloads history. The `"new" → assigned id`
+  // transition is the *same* logical session getting its real id mid-stream;
+  // remounting then would orphan the live SSE listener and the user would
+  // see an empty chat until reload. We keep the key stable across that one
+  // transition and let InteractiveChat update the running machine in place.
+  const [keyState, setKeyState] = useState<{ epoch: number; prev: string | null }>({ epoch: 0, prev: null });
+  if (sessionInput !== null && sessionInput !== keyState.prev) {
+    const isNewResolution = keyState.prev === "new" && sessionInput !== "new";
+    setKeyState({
+      epoch: isNewResolution ? keyState.epoch : keyState.epoch + 1,
+      prev: sessionInput,
+    });
+  }
+
   if (sessionInput === null) {
     return <div className="h-full" />;
   }
 
-  // Key on sessionInput so a session switch (or new-chat reset) cleanly
-  // remounts the machine and reloads history for the new session.
-  // contextDir is only meaningful when starting a "new" chat; once we
-  // navigate to the assigned id, it's no longer needed (the dir is
-  // recorded server-side).
+  // contextDir is only meaningful when starting a "new" chat; once the
+  // session is assigned, the dir is recorded server-side.
   return (
     <InteractiveChat
-      key={sessionInput}
+      key={keyState.epoch}
       sessionInput={sessionInput}
       contextDir={sessionInput === "new" ? contextDir : undefined}
     />
