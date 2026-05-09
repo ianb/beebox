@@ -176,13 +176,30 @@ function UserMessageText({ text }: { text: string }) {
 
 /**
  * Strip speech tags and instructions from assistant content for markdown rendering.
+ *
+ * Handles partial-streaming cases as well: an opened-but-not-yet-closed
+ * `<instructions>` or `<schedule>` body is stripped through end-of-text,
+ * and a trailing incomplete tag like `<spee` or `</instr` is hidden so
+ * we don't flicker raw markup for a frame as deltas arrive.
  */
 function stripSpeechTags(content: string): string {
+  // Closed forms first.
   let result = content.replace(/<instructions>[\S\s]*?<\/instructions>/gi, "");
+  result = result.replace(/<schedule[\S\s]*?<\/schedule>/gi, "");
   result = result.replace(/<speech[^>]*>/gi, "");
   result = result.replace(/<\/speech>/gi, "");
-  result = result.replace(/<schedule[\S\s]*?<\/schedule>/gi, "");
   result = result.replace(/<cancel-schedule[^>]*>/gi, "");
+  // Streaming: unclosed instructions/schedule body — drop from the opening
+  // tag through end-of-text. Safe on finalized text (no unclosed tags
+  // expected there).
+  result = result.replace(/<instructions>[\S\s]*$/i, "");
+  result = result.replace(/<schedule\b[\S\s]*$/i, "");
+  // Streaming: a trailing incomplete tag like `<spee` or `</instr` whose
+  // closing `>` hasn't arrived yet. Match `<` (optionally with `/`)
+  // followed by tag-name chars to end-of-string. The `[^<>]*` body keeps
+  // a dangling `<a href="x` from leaking. Safe for `2 < 3` (no letter
+  // after the `<`).
+  result = result.replace(/<\/?[a-z][^<>]*$/i, "");
   return result.trim();
 }
 
