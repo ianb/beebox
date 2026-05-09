@@ -58,8 +58,11 @@ export interface PrecheckOptions {
  * Pattern syntax (subset of gitignore):
  *   - "name"           basename match (any depth). E.g. "node_modules"
  *   - "path/to/dir"    exact relative-path match
- *   - "STARSTAR/X"     where STARSTAR is two asterisks: basename match
- *                      where X may contain "*" wildcards
+ *   - "path/STAR"      direct-child match (any single segment under path).
+ *                      STAR is one asterisk. E.g. "store/catalogs/STAR".
+ *   - "path/STARSTAR"  any descendant of path (path itself stays mappable).
+ *                      STARSTAR is two asterisks.
+ *   - "STARSTAR/X"     basename match where X may contain "STAR" wildcards.
  *
  * Users extend via a `.cb-maps-ignore` file at the box root, one pattern
  * per line, "#" for comments. Negation (gitignore "!") is not supported.
@@ -117,6 +120,15 @@ function matchIgnorePattern(options: MatchIgnoreOptions): boolean {
   const { pattern, relPath, basename } = options;
   if (pattern.startsWith("**/")) {
     return basenameGlobMatch(pattern.slice(3), basename);
+  }
+  if (pattern.endsWith("/**")) {
+    const prefix = pattern.slice(0, -3);
+    return relPath === prefix || relPath.startsWith(prefix + "/");
+  }
+  if (pattern.endsWith("/*")) {
+    const prefix = pattern.slice(0, -2);
+    if (!relPath.startsWith(prefix + "/")) return false;
+    return !relPath.slice(prefix.length + 1).includes("/");
   }
   if (pattern.includes("/")) {
     return pattern === relPath;

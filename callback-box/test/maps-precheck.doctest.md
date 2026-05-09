@@ -302,3 +302,59 @@ keep
 ``` cleanup
 await box.cleanup();
 ```
+
+## path/* matches direct children only
+
+`store/items/*` excludes the per-item subdirs (one level deeper) but
+keeps `store/items/` itself mappable so its parent's listing still
+points there:
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("store/items/a/note.md", "a");
+await box.write("store/items/b/note.md", "b");
+await box.write("store/items/c/deeper/x.md", "x");
+await box.write("store/keep/note.md", "keep");
+box.commitAll("seed");
+
+const brief = await precheck({
+  boxRoot: box.root,
+  ignorePatterns: ["store/items/*"],
+});
+const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
+print(dirs.join("\n"));
+=>
+<root>
+store
+store/items
+store/keep
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## path/** matches the prefix and all descendants
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("store/items/a/note.md", "a");
+await box.write("store/items/b/note.md", "b");
+await box.write("store/keep/note.md", "keep");
+box.commitAll("seed");
+
+const brief = await precheck({
+  boxRoot: box.root,
+  ignorePatterns: ["store/items/**"],
+});
+const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
+print(dirs.join("\n"));
+=>
+<root>
+store
+store/keep
+```
+
+``` cleanup
+await box.cleanup();
+```
