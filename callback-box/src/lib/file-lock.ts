@@ -1,14 +1,67 @@
 /**
  * Machine-local file lock primitive.
  *
- * The lock file itself contains the holder's metadata as JSON (pid, boot
- * epoch, hostname, timestamp, caller-supplied fields). Liveness is checked
- * directly via process.kill(pid, 0) rather than mtime-based stale detection,
- * which makes the lock robust under macOS sleep and after SIGKILL.
+ * This is the canonical lock for the project. All cross-process locks
+ * (wakeup mutex in cli/lib/lock.ts, scheduled-script + lock-group locks
+ * in core/schedule-state.ts, reactor mutex in core/reactor/engine.ts) sit
+ * on top of it. Don't add a new lock surface elsewhere — extend or wrap
+ * this instead.
  *
- * Designed for single-machine use: the state directories that consume this
- * are gitignored, so cross-machine concurrency is not in scope. We still
- * record hostname and refuse to clean cross-host locks defensively.
+ * ## How it works
+ *
+ * The lock *is* a single JSON file at the caller-chosen path. Acquisition
+ * is atomic via `fs.open(path, "wx")` (O_CREAT|O_EXCL). The file body
+ * carries the holder's identity:
+ *
+ *   { pid, bootEpochSeconds, hostname, acquiredAt, metadata }
+ *
+ * Liveness is checked directly with `process.kill(pid, 0)` plus a
+ * boot-epoch comparison (`Date.now()/1000 - os.uptime()`, ±30s tolerance
+ * for NTP jitter). PID-reuse after a reboot is caught by the boot-epoch
+ * mismatch. Different hostname → treated as live and never reclaimed.
+ *
+ * Dead holders self-heal: any read path that finds a holder whose PID is
+ * gone (or whose boot epoch differs by more than the tolerance) deletes
+ * the file and proceeds. Malformed JSON / missing required fields are
+ * treated the same way.
+ *
+ * ## Why not proper-lockfile / mtime staleness?
+ *
+ * The previous implementation used `proper-lockfile`, which detects stale
+ * locks via mtime heartbeats. Two failure modes drove the rewrite:
+ *
+ *   1. macOS sleep paused the heartbeat, so live locks looked stale on
+ *      wake and got stolen.
+ *   2. SIGKILL (e.g. a per-script timeout firing) left orphaned
+ *      `.lock.lock` directories that no code path cleaned up.
+ *
+ * PID-based liveness is immune to both: process state is the source of
+ * truth, no clocks involved.
+ *
+ * ## Scope
+ *
+ * Single machine. The state directories that consume this primitive
+ * (`config/schedules/.state/`, `.cb-lock`, `.cb-reactor.lock`) are
+ * gitignored, so cross-machine contention is out of scope. The hostname
+ * field is recorded for inspectability and to defensively skip cleanup
+ * of locks owned by another host.
+ *
+ * In-process async serialization (e.g. capture.ts's per-session promise
+ * chain) is a different problem — there's no other process to coordinate
+ * with, only concurrent async tasks within one Node process. Use a
+ * `Map<id, Promise>` for that, not file locks.
+ *
+ * ## API
+ *
+ * - `acquireLock(path, metadata)` — atomic; throws LockHeldError if a
+ *   live holder owns it. Reclaims dead/malformed holders automatically.
+ * - `releaseLock(path)` — idempotent; only deletes the file if the
+ *   recorded holder is us (PID + bootEpoch + hostname).
+ * - `inspectLock(path)` — read holder; returns null if not held or dead
+ *   (cleans up dead as a side effect).
+ * - `forceAcquireLock(path, metadata)` — steal whoever owns it.
+ * - `scanLocks(dir, suffix)` — read all matching lock files; returns a
+ *   map of name → holder for live ones, deletes dead ones.
  */
 
 import * as fs from "node:fs/promises";

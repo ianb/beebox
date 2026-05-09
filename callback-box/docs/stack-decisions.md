@@ -15,7 +15,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | 931 tests, 53 files. Doctest system built. DI pattern established. |
 | 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | In use via react-markdown + remark-gfm. |
-| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | All adopted: execa, date-fns, html-entities, sanitize-filename, proper-lockfile, ky. |
+| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, date-fns, html-entities, sanitize-filename, ky. proper-lockfile reverted in 2026-04 — replaced by `src/lib/file-lock.ts` after sleep / SIGKILL failure modes. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated. 5 machine files (~1050 lines), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
 | 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Procfile.dev + standalone server.ts entry point. `cb serve --dev` uses node --watch directly. |
 | 4 | [TanStack Router](#decision-4-routing--tanstack-router) | Code-based route tree, typed params, `href()` helper for dynamic paths. Replaced react-router-dom. |
@@ -1062,7 +1062,7 @@ Not started. highlight.js is used directly. Moving it into the remark pipeline v
 | **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | ✅ Done — used in 40+ files |
 | **html-entities** | Regex-based HTML stripping and entity decoding in `rss.ts` | ✅ Done — `decode()` replaces 6 hardcoded entity regexes in `stripHtml()` |
 | **sanitize-filename** | Multiple duplicate `safeFilename()` functions | ✅ Done — wraps sanitize-filename with existing alphanumeric/underscore/50-char constraints |
-| **proper-lockfile** | Two separate file-locking implementations | ✅ Done — atomic mkdir-based locking in lock.ts, schedule-state.ts, engine.ts |
+| ~~**proper-lockfile**~~ | Two separate file-locking implementations | ❌ Reverted 2026-04 — see note below |
 | **ky** | Bare `fetch()` with no retry or error normalization | ✅ Done — 10 files migrated, retry + timeout for external APIs |
 
 ### Why these and not others
@@ -1072,7 +1072,15 @@ Each replaces code that was written because the project needed the functionality
 - **html-entities** handles edge cases (named entities, surrogate pairs) the regex approach misses
 - **ky** adds retry with backoff (critical for connectors hitting rate-limited APIs) while staying close to native fetch
 - **sanitize-filename** handles platform-specific reserved names and characters the custom functions miss
-- **proper-lockfile** handles stale lock detection and race conditions the custom implementations don't
+
+### Reverting proper-lockfile (2026-04)
+
+`proper-lockfile` was adopted to consolidate two hand-rolled lock implementations, but its mtime-heartbeat staleness model failed in practice on this codebase:
+
+1. **macOS sleep paused the heartbeat**, so live locks looked stale on wake and could be stolen mid-run.
+2. **SIGKILL (per-script timeouts firing) left orphaned `.lock.lock` directories** that no read path cleaned up — once `proper-lockfile` saw one of these, future acquisitions on the same name failed until the directory was manually removed.
+
+Replaced by `src/lib/file-lock.ts`: a JSON lock file whose body records `{pid, bootEpochSeconds, hostname, acquiredAt, metadata}`. Liveness via `process.kill(pid, 0)` plus a boot-epoch comparison — no clocks, no heartbeats, no auxiliary directories. Dead holders self-heal on the next read. See the file's header for full rationale.
 
 ### Why ky over ofetch
 
