@@ -1223,9 +1223,17 @@ tests:
   # `context_dir` and `fixture` are the audit-runner fields that drive
   # this — see docs/knowledge-audits.md.
   #
-  # Status (2026-05-10): Passes — agent answered "ZK-4827-LANDMARK"
-  # with 0 file reads and 0 searches, confirming the SDK auto-loads
-  # the subdirectory CLAUDE.md when cwd is set there.
+  # Status (2026-05-10): landmark-subdir-claude-md-loads passes —
+  # agent answered "ZK-4827-LANDMARK" with 0 file reads and 0
+  # searches, confirming the SDK auto-loads the subdirectory
+  # CLAUDE.md when cwd is set there.
+  #
+  # Status (2026-05-11): landmark-parent-claude-md-loads added and
+  # passes — agent quoted the box-root CLAUDE.md's CLAUDE_SCANS.md
+  # paragraph (handwriting clues + cb scan-import + Gemini Flash)
+  # with 0 reads / 0 searches, confirming the walk-up from a
+  # landmark cwd still picks up the box root's CLAUDE.md and its
+  # @-imports.
 
   - id: landmark-subdir-claude-md-loads
     prompt: "What is the zone code for this directory?"
@@ -1256,3 +1264,36 @@ tests:
       reads the CLAUDE.md before answering — it's still discoverable
       but the cheap auto-load isn't happening, which means MAP.md
       content under a landmark wouldn't be free either.
+
+  - id: landmark-parent-claude-md-loads
+    prompt: "In this box, what does CLAUDE_SCANS.md hold, and where does its content get used outside the chat?"
+    expected_level: knows_directly
+    watch_for: >
+      Answers from the box-root CLAUDE.md's CLAUDE_SCANS.md
+      paragraph — mentions scan-specific context (recurring people,
+      eras, places, handwriting clues) and that `cb scan-import`
+      injects it into the Gemini Flash prompt for each page. Does
+      NOT need to Read any CLAUDE.md or CLAUDE_SCANS.md: the SDK's
+      walk-up from the landmark cwd picks up the box root's
+      CLAUDE.md and follows its @-imports automatically.
+    context_dir: audit-landmark-fixture
+    fixture:
+      audit-landmark-fixture/CLAUDE.md: |
+        # Landmark Audit Fixture (parent-loading)
+
+        This directory exists only to verify that the box root's
+        CLAUDE.md still loads when the SDK runs from a subdirectory.
+        It deliberately contains no information about CLAUDE_SCANS,
+        scans, or scan-import — the answer must come from the
+        parent CLAUDE.md, not this fixture.
+    correct_contains_any: ["handwriting", "scan-import", "Gemini Flash"]
+    should_not_read: ["CLAUDE_SCANS.md", "CLAUDE.md"]
+    tags: [landmarks, sessions, sdk]
+    notes: >
+      Sibling to landmark-subdir-claude-md-loads. That test confirms
+      the landmark-dir CLAUDE.md auto-loads; this one confirms the
+      walk-up still picks up the box root's CLAUDE.md (and the
+      `@CLAUDE_SCANS.md` import chain) so core box-wide instructions
+      don't go missing when a chat is bound to a landmark. Failure
+      mode: agent says it has to look, or its answer matches some
+      generic notion of "scans" without the box-specific details.
