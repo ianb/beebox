@@ -46,20 +46,31 @@ export interface SessionEntry {
 }
 
 /**
- * Get the path to a Claude Code session log file.
+ * Encode a cwd into Claude Code's `~/.claude/projects/<dir>` key. The
+ * SDK replaces every non-alphanumeric character with `-`, not just `/`
+ * — so paths with `_`, `.`, spaces, etc. all collapse to the same shape.
+ * Match that here, otherwise `getSessionLogPath` mis-resolves for any
+ * cwd containing non-`/` separators (e.g. landmark-session audits).
  */
-export function getSessionLogPath(boxRoot: string, sessionId: string): string {
-  const encodedPath = boxRoot.replace(/\//g, "-");
-  const claudeDir = path.join(os.homedir(), ".claude", "projects", encodedPath);
+function encodeProjectDir(cwd: string): string {
+  return cwd.replace(/[^\dA-Za-z]/g, "-");
+}
+
+/**
+ * Get the path to a Claude Code session log file. `cwd` is whatever
+ * was passed as the SDK's `cwd` for the run — usually the box root,
+ * but a landmark-bound chat or audit uses a subdirectory.
+ */
+export function getSessionLogPath(cwd: string, sessionId: string): string {
+  const claudeDir = path.join(os.homedir(), ".claude", "projects", encodeProjectDir(cwd));
   return path.join(claudeDir, `${sessionId}.jsonl`);
 }
 
 /**
- * Get the Claude Code projects directory for a box.
+ * Get the Claude Code projects directory for a given SDK cwd.
  */
-export function getSessionDir(boxRoot: string): string {
-  const encodedPath = boxRoot.replace(/\//g, "-");
-  return path.join(os.homedir(), ".claude", "projects", encodedPath);
+export function getSessionDir(cwd: string): string {
+  return path.join(os.homedir(), ".claude", "projects", encodeProjectDir(cwd));
 }
 
 /**
