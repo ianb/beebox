@@ -1006,17 +1006,27 @@ function VirtualizedMessageList({
 }
 
 /**
- * Small "Context: <dir>" link in the chat header for chats that were
- * started from a landmark. Pulled out as its own component so the trpc
- * query and the conditional render don't bump InteractiveChat over the
- * cyclomatic-complexity ceiling.
+ * Resolve the directory a chat is bound to. Returns the prop value
+ * immediately for fresh "new" landmark chats (server hasn't seen the
+ * session id yet) and falls back to the persisted association for
+ * resumed sessions.
  */
-function ChatContextLink({ sessionId, boxSlug }: { sessionId: string | null; boxSlug: string }) {
+function useEffectiveContextDir(params: {
+  sessionId: string | null;
+  contextDir: string | undefined;
+}): string | null {
   const query = trpc.chat.directoryFor.useQuery(
-    { sessionId: sessionId ?? "" },
-    { enabled: Boolean(sessionId) },
+    { sessionId: params.sessionId ?? "" },
+    { enabled: Boolean(params.sessionId) },
   );
-  const dir = query.data?.contextDir;
+  return params.contextDir ?? query.data?.contextDir ?? null;
+}
+
+/**
+ * Small "Context: <dir>" link in the chat header for chats that were
+ * started from a landmark.
+ */
+function ChatContextLink({ dir, boxSlug }: { dir: string | null; boxSlug: string }) {
   if (!dir) return null;
   return (
     <a
@@ -1046,6 +1056,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     input: { sessionInput, contextDir },
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries } = snapshot.context;
+  const effectiveContextDir = useEffectiveContextDir({ sessionId, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
@@ -1717,11 +1728,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   }, [send]);
 
   const handleNewSession = useCallback(() => {
+    const search: { session: string; contextDir?: string } = { session: "new" };
+    if (effectiveContextDir) search.contextDir = effectiveContextDir;
     navigate({
       to: href(`/${boxSlug}/chat`),
-      search: { session: "new" } as never,
+      search: search as never,
     });
-  }, [navigate, boxSlug]);
+  }, [navigate, boxSlug, effectiveContextDir]);
 
   const handleStopProcess = useCallback(() => {
     send({ type: "INTERRUPT" });
@@ -1874,7 +1887,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       {/* Header with debug controls */}
       <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h2 className="text-sm font-semibold text-white tracking-wide">Chat</h2>
-        <ChatContextLink sessionId={sessionId} boxSlug={boxSlug ?? ""} />
+        <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
         <div className="flex-1" />
         <RecentFilesButton
           entries={messages}
