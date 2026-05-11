@@ -694,10 +694,13 @@ function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZo
 }
 
 /**
- * Group consecutive messages by role for merged display.
- * Compaction entries always get their own group (never merged).
- * Self-notes (agent-authored user-position entries) also get their own
- * group — they should not merge with human-typed messages.
+ * One displayed item in the chat transcript. Each entry from the session log
+ * becomes its own group — consecutive same-role entries are not merged,
+ * because the merged form hid the fact that they were separate sends and
+ * made the queued-message UI ambiguous.
+ *
+ * Self-note groups still carry their parsed `notes` payload alongside the
+ * entry. Local-command entries are filtered out entirely (see below).
  */
 export type MessageGroup =
   | { type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }
@@ -735,12 +738,7 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
       groups.push({ type: "self-note", entries: [entry], notes });
       continue;
     }
-    const last = groups[groups.length - 1];
-    if (last && (last.type === "user" || last.type === "assistant") && last.type === entry.type) {
-      last.entries.push(entry);
-    } else {
-      groups.push({ type: entry.type, entries: [entry] });
-    }
+    groups.push({ type: entry.type, entries: [entry] });
   }
   return groups;
 }

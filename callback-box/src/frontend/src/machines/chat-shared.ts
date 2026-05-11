@@ -73,13 +73,23 @@ export function entryText(entry: SessionEntry): string {
 }
 
 /**
+ * Strip attributes from `<typed>` / `<speech>` opening tags so the optimistic
+ * client-side text and the server-stored text compare equal. The server
+ * injects `user="…" user-email="…"` (and the route may append `<pending-schedules>`
+ * suffixes), neither of which the optimistic copy carries.
+ */
+function normalizeForCompare(text: string): string {
+  return text.replace(/<(typed|speech)\b[^>]*>/g, "<$1>");
+}
+
+/**
  * After fetching server history, filter out pending messages that the server
  * has caught up to, then append remaining pending messages so they stay visible.
  *
  * The backend's drainQueue() combines multiple queued messages into one turn
  * (joined with \n\n), so we use substring matching: a pending message is
- * considered delivered if its text appears as a substring of any recent
- * server user message.
+ * considered delivered if its (normalized) text appears as a substring of any
+ * recent (normalized) server user message.
  */
 export function reconcilePending(params: {
   serverMessages: SessionEntry[];
@@ -98,12 +108,12 @@ export function reconcilePending(params: {
   ) {
     const entry = serverMessages[i];
     if (entry && entry.type === "user") {
-      serverUserTexts.push(entryText(entry));
+      serverUserTexts.push(normalizeForCompare(entryText(entry)));
     }
   }
 
   const stillPending = pendingMessages.filter((pm) => {
-    const pmText = entryText(pm);
+    const pmText = normalizeForCompare(entryText(pm));
     return !serverUserTexts.some((st) => st === pmText || st.includes(pmText));
   });
 

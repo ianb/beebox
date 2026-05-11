@@ -7,3 +7,5 @@ node-arg:
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md
+exclude:
+  - test/manual/**
