@@ -7,10 +7,8 @@ import * as fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { simpleGit } from "simple-git";
 import { getLogPaginated, getCommitDiff } from "../../cli/lib/git.js";
-import {
-  getSessionLogPath,
-  parseSessionLog,
-} from "../../cli/lib/session.js";
+import { parseSessionLog } from "../../cli/lib/session.js";
+import { resolveSessionLogPath } from "../../core/chat-session-history.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -82,7 +80,7 @@ export async function registerHistoryRoutes(
       return { sessionId, found: false, entries: [], total: 0, hasMore: false };
     }
 
-    const logPath = getSessionLogPath(boxRoot, sessionId);
+    const logPath = await resolveSessionLogPath(boxRoot, sessionId);
 
     // Check if file exists
     if (!fs.existsSync(logPath)) {

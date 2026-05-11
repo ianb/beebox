@@ -27,6 +27,7 @@ import {
   getMostActive,
   loadHistory,
   runBackfillIfNeeded,
+  resolveSessionLogPath,
 } from "../../core/chat-session-history.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
@@ -34,7 +35,6 @@ import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import { getSessionUser, type SessionUser } from "../auth.js";
 import {
-  getSessionLogPath,
   getSessionMetadata,
   parseSessionLog,
   tailForMinUserMessages,
@@ -482,7 +482,7 @@ export async function registerChatRoutes(
     const minRealUserMessages = request.query.minRealUserMessages
       ? parseInt(request.query.minRealUserMessages, 10)
       : undefined;
-    const logPath = getSessionLogPath(boxRoot, sessionId);
+    const logPath = await resolveSessionLogPath(boxRoot, sessionId);
     try {
       const result = await parseSessionLog({ logPath, ...(offset != null ? { offset } : {}), ...(limit != null ? { limit } : {}) });
       const { entries, total } = result;
@@ -506,7 +506,7 @@ export async function registerChatRoutes(
 
     const sessions = await Promise.all(
       ids.map(async (sessionId) => {
-        const logPath = getSessionLogPath(boxRoot, sessionId);
+        const logPath = await resolveSessionLogPath(boxRoot, sessionId);
         let label = sessionId.slice(0, 8);
         let lastUsedAt = new Date(0).toISOString();
         try {

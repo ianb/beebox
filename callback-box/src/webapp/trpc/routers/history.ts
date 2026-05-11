@@ -9,7 +9,8 @@ import {
   getLogPaginated,
   getTrailerFacets,
 } from "../../../cli/lib/git.js";
-import { getSessionLogPath, parseSessionLog } from "../../../cli/lib/session.js";
+import { parseSessionLog } from "../../../cli/lib/session.js";
+import { resolveSessionLogPath } from "../../../core/chat-session-history.js";
 
 /** Escape values so they can be interpolated into a git --grep ERE pattern. */
 function escapeRegex(value: string): string {
@@ -108,7 +109,7 @@ export const historyRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const logPath = getSessionLogPath(ctx.boxRoot, input.sessionId);
+      const logPath = await resolveSessionLogPath(ctx.boxRoot, input.sessionId);
 
       if (!fs.existsSync(logPath)) {
         return {

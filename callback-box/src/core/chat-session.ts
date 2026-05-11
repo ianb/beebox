@@ -13,9 +13,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
 import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule-state.js";
-import { getDirectoryForSession } from "./chat-session-history.js";
+import { getDirectoryForSession, resolveSessionLogPath } from "./chat-session-history.js";
 import {
-  getSessionLogPath,
   parseSessionLog,
   tailForMinUserMessages,
   type SessionEntry,
@@ -700,6 +699,14 @@ export class ChatSession extends EventEmitter {
 
     const startOpts = await this.buildBackendStartOptions();
 
+    // For a landmark-bound resume, the existing JSONL may live at the
+    // pre-e440586 box-root path. Trigger the migration before the SDK
+    // resumes against the new cwd-encoded path, otherwise the SDK can't
+    // find the prior history.
+    if (this.sessionId !== null) {
+      await resolveSessionLogPath(this.boxRoot, this.sessionId);
+    }
+
     const run = this.backend.start({
       ...startOpts,
       resumeSessionId: this.sessionId ?? undefined,
@@ -927,7 +934,7 @@ export class ChatSession extends EventEmitter {
       return { sessionId: null, entries: [], total: 0 };
     }
 
-    const logPath = getSessionLogPath(this.boxRoot, this.sessionId);
+    const logPath = await resolveSessionLogPath(this.boxRoot, this.sessionId);
     if (!fs.existsSync(logPath)) {
       return { sessionId: this.sessionId, entries: [], total: 0 };
     }
