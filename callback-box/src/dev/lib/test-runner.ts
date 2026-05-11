@@ -29,6 +29,20 @@ export interface AuditTest {
   tags?: string[];
   notes?: string;
   max_turns?: number;
+  /**
+   * Box-relative subdirectory to run the agent from — simulates a
+   * landmark session. The SDK's `cwd` becomes `<boxRoot>/<context_dir>`
+   * and the box root is added via `additionalDirectories`, mirroring
+   * what `ChatSession` does for landmark-bound chats. The directory's
+   * own `CLAUDE.md` walk-up is what's being audited.
+   */
+  context_dir?: string;
+  /**
+   * Files to write before the test (box-relative path → content). Used
+   * to stage a `CLAUDE.md` or other fixture inside `context_dir` without
+   * checking it into the box. Cleaned up after the test runs.
+   */
+  fixture?: Record<string, string>;
 }
 
 export interface TestSuite {
@@ -98,24 +112,44 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   const memoryDir = path.join(boxRoot, ".claude", "memory");
   await fs.rm(memoryDir, { recursive: true, force: true });
 
+  // Stage fixture files (e.g. a subdirectory CLAUDE.md for landmark
+  // audits). Tracked here so post-test cleanup runs even if the agent
+  // throws, since `git clean -fd` won't touch gitignored paths.
+  const fixturePaths = await writeFixtures(boxRoot, test.fixture);
+
   // Snapshot card files before the agent runs (for cards_contain checks)
   const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
+
+  const invokeOpts: Parameters<ReturnType<typeof createAgent>["invoke"]>[0] = {
+    boxRoot,
+    systemPrompt: `WORKING DIRECTORY: ${boxRoot}`,
+    prompt,
+    maxTurns: test.max_turns ?? 10,
+  };
+  if (test.context_dir) {
+    invokeOpts.cwd = path.join(boxRoot, test.context_dir);
+    invokeOpts.additionalDirectories = [boxRoot];
+  }
 
   const agent = createAgent({
     name: "knowledge-audit",
     ...(onOutput && { onOutput }),
   });
-  const result = await agent.invoke({
-    boxRoot,
-    systemPrompt: `WORKING DIRECTORY: ${boxRoot}`,
-    prompt,
-    maxTurns: test.max_turns ?? 10,
-  });
+  let result;
+  try {
+    result = await agent.invoke(invokeOpts);
+  } finally {
+    await removeFixtures(fixturePaths);
+  }
 
   // Snapshot card files after the agent runs
   const cardsAfter = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
 
-  const behavior = await extractBehavior(boxRoot, result.sessionId);
+  // Claude Code stores session logs keyed by the SDK's cwd — for
+  // landmark-style audits the log lives under the subdirectory's
+  // encoded path, not the box root's.
+  const logDir = invokeOpts.cwd ?? boxRoot;
+  const behavior = await extractBehavior(logDir, result.sessionId);
   const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
   const checks = runChecks(test, { behavior, newOrModifiedCards });
 
@@ -124,6 +158,31 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   execSync("git clean -fd", { cwd: boxRoot, encoding: "utf-8" });
 
   return { test, sessionId: result.sessionId, behavior, checks };
+}
+
+/**
+ * Write fixture files declared by an audit's `fixture` field. Returns
+ * the absolute paths written so `removeFixtures` can clean up.
+ */
+async function writeFixtures(
+  boxRoot: string,
+  fixture: Record<string, string> | undefined,
+): Promise<string[]> {
+  if (!fixture) return [];
+  const written: string[] = [];
+  for (const [relPath, content] of Object.entries(fixture)) {
+    const absPath = path.join(boxRoot, relPath);
+    await fs.mkdir(path.dirname(absPath), { recursive: true });
+    await fs.writeFile(absPath, content, "utf-8");
+    written.push(absPath);
+  }
+  return written;
+}
+
+async function removeFixtures(paths: string[]): Promise<void> {
+  for (const p of paths) {
+    await fs.rm(p, { force: true });
+  }
 }
 
 /**
@@ -137,10 +196,10 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
  * agent's text reply is evaluated.
  */
 async function extractBehavior(
-  boxRoot: string,
+  logDir: string,
   sessionId: string,
 ): Promise<AgentBehavior> {
-  const logPath = getSessionLogPath(boxRoot, sessionId);
+  const logPath = getSessionLogPath(logDir, sessionId);
   const { entries } = await parseSessionLog({ logPath });
 
   const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };

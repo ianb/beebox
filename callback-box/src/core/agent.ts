@@ -51,6 +51,19 @@ export interface AgentInvokeOptions {
   maxBudgetUsd?: number;
   /** Whether to run in dry-run mode (no side effects). */
   dryRun?: boolean;
+  /**
+   * Override the SDK's working directory. Defaults to `boxRoot`. Set to a
+   * subdirectory to reproduce a landmark-style session — the CLAUDE.md
+   * walk-up at that path is auto-loaded into the agent's context. Pair
+   * with `additionalDirectories: [boxRoot]` to keep the rest of the box
+   * accessible.
+   */
+  cwd?: string;
+  /**
+   * Extra directories the agent can read/write beyond `cwd`. Forwarded to
+   * the SDK's `additionalDirectories` option.
+   */
+  additionalDirectories?: string[];
 }
 
 /**
@@ -130,6 +143,8 @@ export function createAgent(options: {
         maxTurns: opts.maxTurns,
         maxBudgetUsd: opts.maxBudgetUsd,
         dryRun: opts.dryRun,
+        cwd: opts.cwd,
+        additionalDirectories: opts.additionalDirectories,
         resumeSessionId: isResume && sessionId !== null ? sessionId : undefined,
         onSessionId: (id) => {
           if (sessionId === null) sessionId = id;
@@ -162,6 +177,8 @@ export function createAgent(options: {
         maxTurns: opts.maxTurns,
         maxBudgetUsd: opts.maxBudgetUsd,
         dryRun: opts.dryRun,
+        cwd: opts.cwd,
+        additionalDirectories: opts.additionalDirectories,
         resumeSessionId: isResume && sessionId !== null ? sessionId : undefined,
         outputSchema: toJSONSchema(schema) as Record<string, unknown>,
         onSessionId: (id) => {
@@ -488,6 +505,10 @@ interface RunAgentOptions {
    * responsible for validating against its own schema.
    */
   outputSchema?: Record<string, unknown> | undefined;
+  /** SDK working directory. Defaults to `boxRoot` when omitted. */
+  cwd?: string | undefined;
+  /** Forwarded to the SDK's `additionalDirectories` option. */
+  additionalDirectories?: string[] | undefined;
 }
 
 export interface AgentResult {
@@ -640,7 +661,7 @@ async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     const q = query({
       prompt,
       options: {
-        cwd: boxRoot,
+        cwd: options.cwd ?? boxRoot,
         env: dropUndefined(env),
         permissionMode: "bypassPermissions",
         maxTurns,
@@ -650,6 +671,9 @@ async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),
         ...(options.outputSchema !== undefined && {
           outputFormat: { type: "json_schema" as const, schema: options.outputSchema },
+        }),
+        ...(options.additionalDirectories && options.additionalDirectories.length > 0 && {
+          additionalDirectories: options.additionalDirectories,
         }),
         hooks: { PostToolUse: [cardValidatorHook()] },
         // settingSources defaults to ["user", "project"] which auto-loads

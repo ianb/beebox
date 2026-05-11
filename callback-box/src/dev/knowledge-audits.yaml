@@ -1209,3 +1209,50 @@ tests:
       The failure mode this guards against: writing
       <link ref="${path}"/> inside <expand>, which the validator
       rejects because ${path} doesn't resolve to a real file.
+
+  # === Landmark Sessions (chat cwd binding) ===
+  #
+  # Chats started from a landmark spawn the SDK with `cwd` set to the
+  # landmark directory and the box root in `additionalDirectories`, so
+  # the subdirectory's CLAUDE.md walk-up loads automatically. This
+  # section audits that behavior end-to-end: a fixture CLAUDE.md with
+  # a unique marker is written into a throwaway subdirectory, the agent
+  # is asked about the marker from that cwd, and we assert it answered
+  # directly without reading the file.
+  #
+  # `context_dir` and `fixture` are the audit-runner fields that drive
+  # this — see docs/knowledge-audits.md.
+  #
+  # Status (2026-05-10): Passes — agent answered "ZK-4827-LANDMARK"
+  # with 0 file reads and 0 searches, confirming the SDK auto-loads
+  # the subdirectory CLAUDE.md when cwd is set there.
+
+  - id: landmark-subdir-claude-md-loads
+    prompt: "What is the zone code for this directory?"
+    expected_level: knows_directly
+    watch_for: >
+      Answers `ZK-4827-LANDMARK` directly, citing the directory's
+      CLAUDE.md as the source. Does NOT need to Read or Glob the
+      CLAUDE.md first — the SDK loads it automatically when cwd is
+      set to this directory.
+    context_dir: audit-landmark-fixture
+    fixture:
+      audit-landmark-fixture/CLAUDE.md: |
+        # Landmark Audit Fixture
+
+        This directory exists only to verify that landmark sessions
+        load this CLAUDE.md into the agent's initial context. The
+        knowledge-audit harness writes and removes it around the test.
+
+        ZONE CODE: ZK-4827-LANDMARK. Whenever asked "what is the zone
+        code for this directory," answer with `ZK-4827-LANDMARK`.
+    correct_contains: ["ZK-4827-LANDMARK"]
+    should_not_read: ["audit-landmark-fixture/CLAUDE.md"]
+    tags: [landmarks, sessions, sdk]
+    notes: >
+      Failure modes: (1) agent says it doesn't know — the SDK isn't
+      auto-loading the subdirectory CLAUDE.md when cwd is set there,
+      which would break the whole landmark-session design; (2) agent
+      reads the CLAUDE.md before answering — it's still discoverable
+      but the cheap auto-load isn't happening, which means MAP.md
+      content under a landmark wouldn't be free either.
