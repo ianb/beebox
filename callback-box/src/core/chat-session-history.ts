@@ -170,6 +170,9 @@ export async function getDirectoryForSession(
  * Returns the path you should read from. When neither location has a file,
  * returns the new (cwd-encoded) path so the caller's `existsSync` check
  * fails cleanly there.
+ *
+ * Transitional — see docs/ideas.md ("Drop the resolveSessionLogPath
+ * migration") for the removal trigger.
  */
 export async function resolveSessionLogPath(
   boxRoot: string,
