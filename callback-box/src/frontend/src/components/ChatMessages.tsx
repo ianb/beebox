@@ -11,7 +11,6 @@ import { FileView } from "./FileView";
 import type { LightboxImage } from "./ImageLightbox";
 import type { Components } from "react-markdown";
 import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../lib/view-url";
-import { parseContextDirective } from "../lib/context-directive";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
@@ -984,13 +983,6 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
     return <TaskNotificationMessage notification={taskNotification} />;
   }
 
-  // Auto-seed messages from a landmark-started chat render as a chip,
-  // not a bubble — they're context for the agent, not user speech.
-  const contextDirective = parseContextDirective(allTexts);
-  if (contextDirective && !debugView) {
-    return <ContextDirectoryChip dir={contextDirective.dir} />;
-  }
-
   const senderName = getUserName(entries[0]);
   const senderEmail = entries[0].userEmail;
   // Compare by email if available (same user across devices), fall back to name
@@ -1038,25 +1030,6 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
 function PendingIndicator() {
   return (
     <div className="text-xs text-white/70 mt-1 italic">queued — waiting</div>
-  );
-}
-
-/**
- * Inline chip for the auto-seed context directive in landmark-started
- * chats. Replaces the user message bubble — the directive is system
- * context, not something the user said.
- */
-function ContextDirectoryChip({ dir }: { dir: string }) {
-  return (
-    <div className="py-2 flex justify-center">
-      <span
-        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-warm-100 text-warm-700 text-xs"
-        title={`Familiarising with ${dir}/`}
-      >
-        <span aria-hidden>📍</span>
-        Context: {dir}/
-      </span>
-    </div>
   );
 }
 

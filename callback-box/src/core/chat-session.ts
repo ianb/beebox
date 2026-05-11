@@ -13,6 +13,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
 import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule-state.js";
+import { getDirectoryForSession } from "./chat-session-history.js";
 import {
   getSessionLogPath,
   parseSessionLog,
@@ -225,6 +226,18 @@ export interface ChatSessionOptions {
    * updates instead of one event per assistant block.
    */
   includePartialMessages?: boolean;
+  /**
+   * Box-relative directory this chat is bound to (set when the chat was
+   * started from a landmark). When present, the SDK's `cwd` is the landmark
+   * directory so its `CLAUDE.md` / `MAP.md` auto-load, the box root is added
+   * via `additionalDirectories` so the rest of the box stays accessible, and
+   * a one-line note is appended to the system prompt naming the directory.
+   *
+   * For fresh "new" sessions the registry passes this in directly. For
+   * resumed sessions it's left undefined and ChatSession looks it up from
+   * `chat-session-history` using the session id.
+   */
+  contextDir?: string;
 }
 
 export const CHAT_SYSTEM_PROMPT = `You are in CALLBACK_BOX_CHAT_MODE.
@@ -338,6 +351,17 @@ Use schedules proactively, not just for explicit timer requests:
 COMMITS:
 - If you make file changes, commit with a descriptive message.
 - Do NOT add Co-Authored-By trailers — the system adds appropriate trailers automatically.`;
+
+/**
+ * Note appended to the system prompt when this chat is bound to a
+ * landmark directory. The CLAUDE.md / MAP.md inside that dir already load
+ * automatically (they're under cwd) and may have been authored without
+ * knowing they'd be read in a landmark context — this note tells the
+ * agent the session itself is scoped to the directory.
+ */
+function buildLandmarkSessionNote(contextDir: string): string {
+  return `\n\nLANDMARK SESSION:\nThis chat was started from the landmark for the directory \`${contextDir}\`. Treat the user's questions as scoped to that directory unless they say otherwise.`;
+}
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatSession:${context}]`, ...args);
@@ -465,6 +489,12 @@ export class ChatSession extends EventEmitter {
   /** Marker so the close listener can distinguish intentional shutdown
    *  (which clears the queue) from unexpected death (which drains it). */
   private intentionalStop = false;
+  /**
+   * Cached landmark binding. `undefined` = not resolved yet. `null` = resolved,
+   * no binding. String = resolved binding. Set once on first `startRun` and
+   * reused on drain/restart so we don't re-read history every turn.
+   */
+  private resolvedContextDir: string | null | undefined = undefined;
 
   constructor(boxRoot: string, options: ChatSessionOptions = {}) {
     super();
@@ -575,13 +605,58 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
+   * Resolve the directory this chat is bound to, or null if none.
+   * Explicit `options.contextDir` wins. Otherwise we only consult
+   * `chat-session-history` when the session was constructed with a known
+   * id (a resume) — for fresh-new sessions a binding can't predate the id
+   * assignment, so there's nothing to look up and we skip the I/O. Cached
+   * after first resolution so drain/restart paths don't repeat the read.
+   */
+  private async resolveContextDir(): Promise<string | null> {
+    if (this.options.contextDir !== undefined) return this.options.contextDir;
+    if (this.resolvedContextDir !== undefined) return this.resolvedContextDir;
+    if (this.options.initialSessionId === undefined) {
+      this.resolvedContextDir = null;
+      return null;
+    }
+    try {
+      this.resolvedContextDir = await getDirectoryForSession(
+        this.boxRoot,
+        this.options.initialSessionId,
+      );
+    } catch (e) {
+      log("context-dir", `Lookup failed: ${e instanceof Error ? e.message : e}`);
+      this.resolvedContextDir = null;
+    }
+    return this.resolvedContextDir;
+  }
+
+  /**
    * Compute the `ChatBackendStartOptions` this session would pass to
    * `backend.start()` for a fresh run (no resume id, no model override).
    * Exposed so the registry can pre-warm a backend with the same options
    * the next start() call would use.
    */
   async buildBackendStartOptions(): Promise<ChatBackendStartOptions> {
-    const systemPrompt = await this.resolveSystemPrompt();
+    const baseSystemPrompt = await this.resolveSystemPrompt();
+    // Resolve the landmark binding sync when possible so the common
+    // (non-landmark) startRun path doesn't add a microtask hop — tests
+    // rely on a stable tick count between send/drain.
+    let contextDir: string | null;
+    if (this.options.contextDir !== undefined) {
+      contextDir = this.options.contextDir;
+    } else if (this.resolvedContextDir !== undefined) {
+      contextDir = this.resolvedContextDir;
+    } else if (this.options.initialSessionId === undefined) {
+      this.resolvedContextDir = null;
+      contextDir = null;
+    } else {
+      contextDir = await this.resolveContextDir();
+    }
+    const systemPrompt = contextDir
+      ? baseSystemPrompt + buildLandmarkSessionNote(contextDir)
+      : baseSystemPrompt;
+    const cwd = contextDir ? path.join(this.boxRoot, contextDir) : this.boxRoot;
     const baseEnv = await buildScriptEnv(this.boxRoot, {
       CLAUDECODE: undefined,
     });
@@ -589,13 +664,17 @@ export class ChatSession extends EventEmitter {
       ...baseEnv,
       ...(this.options.extraEnv ?? {}),
     };
-    return {
-      cwd: this.boxRoot,
+    const startOpts: ChatBackendStartOptions = {
+      cwd,
       systemPrompt,
       mcpConfig: this.options.mcpConfig ?? null,
       includePartialMessages: this.options.includePartialMessages === true,
       env,
     };
+    if (contextDir) {
+      startOpts.additionalDirectories = [this.boxRoot];
+    }
+    return startOpts;
   }
 
   /**

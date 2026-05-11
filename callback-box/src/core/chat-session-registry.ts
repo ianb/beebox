@@ -179,7 +179,10 @@ export class ChatSessionRegistry extends EventEmitter {
       backend: baseOpts.backend ?? this.backend,
       sessionFile: null,
       initialSessionId: sessionId,
-      onSessionIdAssigned: this.makeOnAssigned(sessionId, baseOpts.onSessionIdAssigned),
+      onSessionIdAssigned: this.makeOnAssigned({
+        knownId: sessionId,
+        chained: baseOpts.onSessionIdAssigned,
+      }),
     });
     this.entries.set(sessionId, {
       session,
@@ -195,17 +198,27 @@ export class ChatSessionRegistry extends EventEmitter {
    * Construct a fresh session with no resume id. The real id arrives via
    * `onSessionIdAssigned` after the first send; the entry gets keyed under
    * that id at that point.
+   *
+   * Pass `contextDir` (box-relative) to bind the session to a landmark
+   * directory — the SDK is spawned with `cwd` set to that directory and the
+   * association is persisted to `chat-session-history` once the session id
+   * is assigned, so resumes (here or on a fresh server boot) reapply it.
    */
-  createNew(): ChatSession {
+  createNew(contextDir?: string): ChatSession {
     const baseOpts = this.buildSessionOptions(null);
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
       backend: baseOpts.backend ?? this.backend,
       sessionFile: null,
-      onSessionIdAssigned: this.makeOnAssigned(null, baseOpts.onSessionIdAssigned),
+      ...(contextDir !== undefined ? { contextDir } : {}),
+      onSessionIdAssigned: this.makeOnAssigned({
+        knownId: null,
+        chained: baseOpts.onSessionIdAssigned,
+        contextDir,
+      }),
     });
     this.pending.add(session);
-    log("create-new", `Pending new session created (pending=${this.pending.size})`);
+    log("create-new", `Pending new session created (pending=${this.pending.size}${contextDir ? `, contextDir=${contextDir}` : ""})`);
     return session;
   }
 
@@ -214,13 +227,18 @@ export class ChatSessionRegistry extends EventEmitter {
    * most-active pointer, register the entry under the real id (for "new"
    * sessions), then chain to the base option's callback if any.
    */
-  private makeOnAssigned(
-    knownId: string | null,
-    chained?: (sessionId: string) => Promise<void> | void,
-  ): (sessionId: string) => Promise<void> {
+  private makeOnAssigned(params: {
+    knownId: string | null;
+    chained?: ((sessionId: string) => Promise<void> | void) | undefined;
+    contextDir?: string | undefined;
+  }): (sessionId: string) => Promise<void> {
+    const { knownId, chained, contextDir } = params;
     return async (sessionId: string): Promise<void> => {
       try {
-        await appendHistory(this.boxRoot, { sessionId });
+        await appendHistory(this.boxRoot, {
+          sessionId,
+          ...(contextDir !== undefined ? { contextDir } : {}),
+        });
         await setMostActive(this.boxRoot, sessionId);
       } catch (e) {
         log("on-assigned", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);

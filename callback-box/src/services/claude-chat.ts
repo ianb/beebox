@@ -46,6 +46,12 @@ export type ChatContentBlock =
 export interface ChatBackendStartOptions {
   /** Working directory for the underlying SDK subprocess. */
   cwd: string;
+  /**
+   * Extra directories the agent can read/write beyond `cwd`. Equivalent to
+   * the CLI's `--add-dir`. Landmark sessions set `cwd` to the landmark dir
+   * and add the box root here so the agent retains full box access.
+   */
+  additionalDirectories?: string[] | undefined;
   /** Appended to the `claude_code` system-prompt preset. */
   systemPrompt: string;
   /** If set, resumes the given SDK session; otherwise a fresh session. */
@@ -174,6 +180,9 @@ function buildQueryOptions(opts: ChatBackendStartOptions): Options {
       append: opts.systemPrompt,
     },
   };
+  if (opts.additionalDirectories && opts.additionalDirectories.length > 0) {
+    queryOptions.additionalDirectories = opts.additionalDirectories;
+  }
   const binaryPath = resolveClaudeCodeBinary();
   if (binaryPath !== null) {
     queryOptions.pathToClaudeCodeExecutable = binaryPath;
@@ -212,6 +221,12 @@ function warmCompatible(
   if (warm.systemPrompt !== next.systemPrompt) return false;
   if ((warm.model ?? null) !== (next.model ?? null)) return false;
   if (warm.includePartialMessages !== next.includePartialMessages) return false;
+  const wd = warm.additionalDirectories ?? [];
+  const nd = next.additionalDirectories ?? [];
+  if (wd.length !== nd.length) return false;
+  for (const [i, dir] of wd.entries()) {
+    if (dir !== nd[i]) return false;
+  }
   // MCP config carries an `instance` (an MCP server object). Two configs
   // are warm-compatible only if they're the very same instance — otherwise
   // tools differ and the warm subprocess can't serve the next start.

@@ -329,9 +329,15 @@ export async function sendChatMessage(params: {
    *  callers (e.g. an actor body that runs twice under StrictMode). */
   messageId?: string;
   images?: ChatImageAttachment[];
+  /**
+   * Box-relative landmark directory to bind a fresh chat to. Only honored
+   * when `session === "new"`; the backend uses it to spawn the SDK with
+   * `cwd` set to that directory and persists the association.
+   */
+  contextDir?: string;
   onMessage: (msg: Record<string, unknown>) => void;
 }): Promise<void> {
-  const { session, message, images, onMessage } = params;
+  const { session, message, images, contextDir, onMessage } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const attempt = async (_retry: boolean): Promise<Response> => {
@@ -343,6 +349,7 @@ export async function sendChatMessage(params: {
         message,
         messageId,
         ...(images && images.length > 0 ? { images } : {}),
+        ...(contextDir ? { contextDir } : {}),
       }),
     });
 

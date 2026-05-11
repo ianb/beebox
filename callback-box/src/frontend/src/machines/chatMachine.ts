@@ -79,6 +79,14 @@ interface ChatContext {
    */
   sessionInput: string;
   sessionId: string | null;
+  /**
+   * Box-relative landmark directory this chat is bound to, set only when
+   * the chat was opened from a landmark with `sessionInput === "new"`.
+   * Passed to the backend on the first send so the SDK is spawned with
+   * `cwd` at that directory; cleared once the session id is assigned (by
+   * which point the backend has persisted the association).
+   */
+  contextDir?: string;
   /** Subprocess is alive (true once first send has started; stays true between turns). */
   processRunning: boolean;
   /** Subprocess is currently mid-turn — drives the "agent is processing" indicator. */
@@ -90,6 +98,12 @@ interface ChatContext {
 interface ChatMachineInput {
   /** `"new"` for a fresh conversation, or an existing session id. */
   sessionInput: string;
+  /**
+   * Landmark directory binding for fresh chats. Only honored when
+   * `sessionInput === "new"`; ignored for resumed sessions (those read
+   * the binding from `chat-session-history` on the backend).
+   */
+  contextDir?: string | undefined;
 }
 
 // -- Actors --
@@ -145,7 +159,7 @@ const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[] };
+    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string };
   }) => {
     // Track whether the stream ever produced a terminal event. If the SSE
     // ends cleanly without one (proxy timeout, server closed the socket
@@ -175,6 +189,7 @@ const streamActor = fromCallback(
       message: input.message,
       messageId: input.messageId,
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
+      ...(input.contextDir ? { contextDir: input.contextDir } : {}),
       onMessage: (msg) => {
         msgCount++;
         const type = msg.type as string;
@@ -345,6 +360,9 @@ export const chatMachine = setup({
     error: null,
     sessionInput: input.sessionInput,
     sessionId: input.sessionInput === "new" ? null : input.sessionInput,
+    ...(input.sessionInput === "new" && input.contextDir
+      ? { contextDir: input.contextDir }
+      : {}),
     processRunning: false,
     processBusy: false,
     totalEntries: 0,
@@ -407,6 +425,9 @@ export const chatMachine = setup({
       actions: assign(({ event }) => ({
         sessionInput: event.sessionId,
         sessionId: event.sessionId,
+        // Drop the in-memory binding now that the backend has persisted
+        // it to chat-session-history; future resumes look it up there.
+        contextDir: undefined,
       })),
     },
   },
@@ -483,6 +504,9 @@ export const chatMachine = setup({
             messageId: sendEvent.messageId,
             ...(sendEvent.images && sendEvent.images.length > 0
               ? { images: sendEvent.images }
+              : {}),
+            ...(context.sessionInput === "new" && context.contextDir
+              ? { contextDir: context.contextDir }
               : {}),
           };
         },

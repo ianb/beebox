@@ -57,6 +57,12 @@ interface SendBody {
    * Claude; unreferenced images are appended at the end.
    */
   images?: ChatImage[];
+  /**
+   * Box-relative directory to bind a "new" chat to (landmark association).
+   * Ignored when `session` is anything other than `"new"` — resumed sessions
+   * read the binding from `chat-session-history` instead.
+   */
+  contextDir?: string;
 }
 
 interface SelfNoteBody {
@@ -230,9 +236,12 @@ export async function registerChatRoutes(
    * Returns the session and its current id (`null` for a still-pending new
    * session).
    */
-  function resolveSendTarget(sessionParam: string): { session: ChatSession; id: string | null } {
+  function resolveSendTarget(
+    sessionParam: string,
+    contextDir?: string,
+  ): { session: ChatSession; id: string | null } {
     if (sessionParam === "new") {
-      const session = registry.createNew();
+      const session = registry.createNew(contextDir);
       wireSession(session);
       return { session, id: null };
     }
@@ -246,7 +255,7 @@ export async function registerChatRoutes(
     "/api/chat/send",
     async (request, reply) => {
       const body = request.body ?? ({} as Partial<SendBody>);
-      const { message, messageId, images, session: sessionParam } = body;
+      const { message, messageId, images, session: sessionParam, contextDir } = body;
 
       if (!message) {
         return reply.status(400).send({ error: "message is required" });
@@ -272,7 +281,7 @@ export async function registerChatRoutes(
         }
       }
 
-      const { session: chatSession, id: knownId } = resolveSendTarget(sessionParam);
+      const { session: chatSession, id: knownId } = resolveSendTarget(sessionParam, contextDir);
 
       // Identify the sender from the session (may be null if auth is disabled)
       const user = getSessionUser(request);

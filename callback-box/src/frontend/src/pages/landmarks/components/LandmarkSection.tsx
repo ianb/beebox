@@ -81,9 +81,9 @@ function ChatButton({ dir, boxSlug }: { dir: string; boxSlug: string }) {
       });
       return;
     }
-    // No prior chat for this dir — start a new one. The InteractiveChat
-    // component will auto-send a <context-directory> seed on mount and
-    // record the association once the session id is assigned.
+    // No prior chat for this dir — start a new one. The backend reads
+    // `contextDir` off the first send and spawns the SDK with `cwd` at
+    // that directory; the association is persisted on session assignment.
     navigate({
       to: href(`/${boxSlug}/chat`),
       search: { session: "new", contextDir: dir } as never,

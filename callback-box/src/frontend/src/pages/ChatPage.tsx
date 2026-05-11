@@ -18,9 +18,9 @@ interface ChatSearch {
   session?: string;
   /**
    * When starting a new chat from a landmark, this is the directory the
-   * chat is associated with. The first user turn is auto-seeded with a
-   * <context-directory ref="..."> directive, and once the session id is
-   * assigned the dir is recorded in chat-session-history.
+   * chat is bound to. Forwarded to the backend on the first send; the SDK
+   * is spawned with `cwd` at that directory and the association is
+   * persisted to chat-session-history.
    */
   contextDir?: string;
 }
