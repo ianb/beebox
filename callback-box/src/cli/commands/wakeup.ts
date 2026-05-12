@@ -35,6 +35,7 @@ import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus, pushToRemote } from "../lib/git.js";
 import { expireOldBriefs, cleanupOldTmpUploads } from "../../core/housekeeping.js";
+import { installRootLandmark } from "../../core/box.js";
 import { getTranscribedFeedbackCards, buildFeedbackTriagePrompt } from "../../core/commands/triage-feedback.js";
 import { getUnprocessedBriefs } from "../../core/commands/process-feedback.js";
 import { createAgent, ensureAgentCommitted, captureBaseline } from "../../core/agent.js";
@@ -94,7 +95,11 @@ export const wakeupCommand = new Command("wakeup")
       console.log("[Housekeeping]");
       const expired = await expireOldBriefs(boxRoot, (msg) => console.log(msg));
       const swept = await cleanupOldTmpUploads(boxRoot, (msg) => console.log(msg));
-      if (expired === 0 && swept === 0) {
+      const rootLandmarkRefilled = await installRootLandmark(boxRoot);
+      if (rootLandmarkRefilled) {
+        console.log("  Refilled Box.landmark.card (root landmark was missing)");
+      }
+      if (expired === 0 && swept === 0 && !rootLandmarkRefilled) {
         console.log("  Nothing to clean up");
       }
       console.log("");

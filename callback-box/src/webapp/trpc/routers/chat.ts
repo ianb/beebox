@@ -17,7 +17,7 @@ export const chatRouter = router({
    * if no chat has been started for that directory.
    */
   lastSessionForDirectory: publicProcedure
-    .input(z.object({ contextDir: z.string().min(1) }))
+    .input(z.object({ contextDir: z.string() }))
     .query(async ({ ctx, input }) => {
       const sessionId = await getLastSessionForDirectory(ctx.boxRoot, input.contextDir);
       return { sessionId };

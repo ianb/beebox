@@ -1729,7 +1729,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
   const handleNewSession = useCallback(() => {
     const search: { session: string; contextDir?: string } = { session: "new" };
-    if (effectiveContextDir) search.contextDir = effectiveContextDir;
+    // Propagate the binding even when it's the empty-string root binding,
+    // so a fresh chat from a root-bound session stays root-bound rather
+    // than becoming an unbound legacy chat.
+    if (effectiveContextDir !== null) search.contextDir = effectiveContextDir;
     navigate({
       to: href(`/${boxSlug}/chat`),
       search: search as never,

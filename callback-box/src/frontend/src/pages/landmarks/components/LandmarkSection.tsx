@@ -49,11 +49,9 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
               </Link>
             ) : null}
           </Stack>
-          {landmark.dir ? (
-            <div className="ml-auto">
-              <ChatButton dir={landmark.dir} boxSlug={boxSlug} />
-            </div>
-          ) : null}
+          <div className="ml-auto">
+            <ChatButton dir={landmark.dir} boxSlug={boxSlug} />
+          </div>
         </div>
 
         {landmark.links.length > 0 ? (

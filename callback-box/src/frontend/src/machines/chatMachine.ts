@@ -360,7 +360,7 @@ export const chatMachine = setup({
     error: null,
     sessionInput: input.sessionInput,
     sessionId: input.sessionInput === "new" ? null : input.sessionInput,
-    ...(input.sessionInput === "new" && input.contextDir
+    ...(input.sessionInput === "new" && input.contextDir !== undefined
       ? { contextDir: input.contextDir }
       : {}),
     processRunning: false,
@@ -505,7 +505,7 @@ export const chatMachine = setup({
             ...(sendEvent.images && sendEvent.images.length > 0
               ? { images: sendEvent.images }
               : {}),
-            ...(context.sessionInput === "new" && context.contextDir
+            ...(context.sessionInput === "new" && context.contextDir !== undefined
               ? { contextDir: context.contextDir }
               : {}),
           };

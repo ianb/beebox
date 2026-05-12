@@ -10,7 +10,7 @@
 import { Command } from "commander";
 import { resolve, join } from "node:path";
 import { readFile, writeFile, rename, access } from "node:fs/promises";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, symlinkClaudeMemory } from "../../core/box.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installRootLandmark, symlinkClaudeMemory } from "../../core/box.js";
 import { stageAll, commit } from "../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
@@ -84,6 +84,14 @@ export const initCommand = new Command("init")
       const briefingInstalled = await installBriefing(resolve(targetPath));
       if (briefingInstalled) {
         console.log("\nInstalled briefing.briefing.card");
+      }
+
+      // Install the root landmark so the Landmarks page can offer
+      // "chat scoped to the box root." Magical — refilled on wakeup
+      // if the user deletes it.
+      const rootLandmarkInstalled = await installRootLandmark(resolve(targetPath));
+      if (rootLandmarkInstalled) {
+        console.log("\nInstalled Box.landmark.card (edit to customize the root landmark)");
       }
 
       // Install default scheduled scripts

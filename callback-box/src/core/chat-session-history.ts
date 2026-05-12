@@ -114,14 +114,17 @@ export async function loadHistoryEntries(boxRoot: string): Promise<SessionHistor
 
 interface AppendHistoryOptions {
   sessionId: string;
-  /** Directory this chat is associated with (when started from a landmark). */
+  /**
+   * Directory this chat is associated with. A non-empty path means the
+   * chat is bound to a landmark subdirectory; an empty string means the
+   * chat is bound to the box root. Omit entirely for legacy unbound
+   * sessions (the picker treats those as root-bound).
+   */
   contextDir?: string;
 }
 
 /**
  * Append a session id to the history. Idempotent — duplicates are ignored.
- * Pass `contextDir` to associate the session with a directory (e.g. when
- * the session was started from a landmark).
  */
 export async function appendHistory(
   boxRoot: string,
@@ -130,22 +133,25 @@ export async function appendHistory(
   const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
   const existing = file.sessions.find((s) => s.id === opts.sessionId);
   if (existing) {
-    // Don't clobber a previously-recorded contextDir, but fill one in if
-    // missing (e.g. user opens an old session from a landmark).
-    if (opts.contextDir && !existing.contextDir) {
+    // Fill in a binding if the entry didn't have one yet — empty string
+    // ("root-bound") is just as much a binding as a real subdirectory.
+    if (opts.contextDir !== undefined && existing.contextDir === undefined) {
       existing.contextDir = opts.contextDir;
       await writeHistoryFile(boxRoot, file);
     }
     return;
   }
   const entry: SessionHistoryEntry = { id: opts.sessionId };
-  if (opts.contextDir) entry.contextDir = opts.contextDir;
+  if (opts.contextDir !== undefined) entry.contextDir = opts.contextDir;
   file.sessions.push(entry);
   await writeHistoryFile(boxRoot, file);
 }
 
 /**
- * Look up the directory a session is associated with (if any).
+ * Look up the directory a session is associated with. Returns the
+ * recorded `contextDir` if any — note that an empty string is a real
+ * binding (the box-root landmark) and is distinguished from `null`
+ * (no entry, or entry has no binding recorded).
  */
 export async function getDirectoryForSession(
   boxRoot: string,
@@ -153,7 +159,7 @@ export async function getDirectoryForSession(
 ): Promise<string | null> {
   const entries = await loadHistoryEntries(boxRoot);
   const entry = entries.find((s) => s.id === sessionId);
-  if (!entry || !entry.contextDir) return null;
+  if (!entry || entry.contextDir === undefined) return null;
   return entry.contextDir;
 }
 
@@ -179,7 +185,9 @@ export async function resolveSessionLogPath(
   sessionId: string,
 ): Promise<string> {
   const contextDir = await getDirectoryForSession(boxRoot, sessionId);
-  if (!contextDir) return getSessionLogPath(boxRoot, sessionId);
+  // Empty string and null both mean "log lives at the box-root path" —
+  // a root-bound chat doesn't shift cwd, so the SDK encodes boxRoot.
+  if (contextDir === null || contextDir === "") return getSessionLogPath(boxRoot, sessionId);
 
   const cwd = path.join(boxRoot, contextDir);
   const newPath = getSessionLogPath(cwd, sessionId);
@@ -206,6 +214,10 @@ export async function resolveSessionLogPath(
  * Find the most-recently-created session associated with a directory.
  * "Most recent" means later in the history file's session list — entries
  * are appended in creation order, so the last match wins.
+ *
+ * Pre-landmark sessions have no recorded `contextDir`. They're treated
+ * as box-root chats, so a query for `""` (the root binding) matches
+ * both empty-string entries and entries with no `contextDir` at all.
  */
 export async function getLastSessionForDirectory(
   boxRoot: string,
@@ -214,7 +226,9 @@ export async function getLastSessionForDirectory(
   const entries = await loadHistoryEntries(boxRoot);
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const entry = entries[i];
-    if (entry && entry.contextDir === contextDir) return entry.id;
+    if (!entry) continue;
+    if (entry.contextDir === contextDir) return entry.id;
+    if (contextDir === "" && entry.contextDir === undefined) return entry.id;
   }
   return null;
 }

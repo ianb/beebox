@@ -349,7 +349,7 @@ export async function sendChatMessage(params: {
         message,
         messageId,
         ...(images && images.length > 0 ? { images } : {}),
-        ...(contextDir ? { contextDir } : {}),
+        ...(contextDir !== undefined ? { contextDir } : {}),
       }),
     });
 

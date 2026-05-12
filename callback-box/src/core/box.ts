@@ -12,6 +12,7 @@ import { createInitialGuideTemplate } from "../schemas/guide.js";
 import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";
 import { createBriefingTemplate } from "../schemas/briefing.js";
+import { createLandmarkTemplate } from "../schemas/landmark.js";
 
 const __dirname = import.meta.dirname;
 
@@ -350,6 +351,31 @@ export async function installPersonality(boxRoot: string): Promise<boolean> {
     await fs.writeFile(targetPath, createInitialPersonalityTemplate());
     return true;
   }
+}
+
+/**
+ * Install a default landmark card in the box root if no landmark card
+ * exists there. The root landmark is "magical" — it always exists on
+ * the Landmarks page so chats can be bound to the box root. The user
+ * can rename or edit the file freely; we only refill when the box
+ * root has no `*.landmark.card` at all.
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installRootLandmark(boxRoot: string): Promise<boolean> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(boxRoot);
+  } catch {
+    return false;
+  }
+  if (entries.some((name) => name.endsWith(".landmark.card"))) return false;
+  const targetPath = path.join(boxRoot, "Box.landmark.card");
+  await fs.writeFile(
+    targetPath,
+    createLandmarkTemplate({ label: "Box", symbol: "📦" })
+  );
+  return true;
 }
 
 /**
