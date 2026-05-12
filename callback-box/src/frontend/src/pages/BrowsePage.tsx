@@ -93,6 +93,12 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
+  // Reset selection / clear transient errors when navigation changes
+  // the file. Both are "external signal → local state" syncs; the
+  // values can't be derived in render because they're decoupled from
+  // initialFile (selection can change without nav, and contextMenu /
+  // deleteError live independently of selection until the prop moves).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setSelectedFilePath(initialFile);
   }, [initialFile]);
@@ -101,6 +107,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
     setDeleteError(null);
     setContextMenu(null);
   }, [selectedFilePath]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (contextMenu === null) return;

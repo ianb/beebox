@@ -85,21 +85,6 @@ export function CommandRunner({
   const argsString = formatArgsForDisplay(args);
   const fullCommand = argsString ? `cb ${command} ${argsString}` : `cb ${command}`;
 
-  // Auto-scroll output
-  useEffect(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    }
-  }, [output]);
-
-  // Auto-run on mount if requested
-  useEffect(() => {
-    if (autoRun) {
-      runCommand();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const runCommand = async () => {
     setState("running");
     setOutput([]);
@@ -128,6 +113,24 @@ export function CommandRunner({
       onComplete?.({ success: false, error: (err as Error).message });
     }
   };
+
+  // Auto-scroll output
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [output]);
+
+  // Auto-run on mount if requested. Mount-only by design — the initial
+  // setState burst (transition to "running", clear outputs) is the
+  // whole point of the autoRun trigger.
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  useEffect(() => {
+    if (autoRun) {
+      runCommand();
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const stateColors = {
     idle: "bg-warm-100 border-warm-400",

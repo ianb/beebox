@@ -76,7 +76,11 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
   const [cards, setCards] = useState<ViewCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const versionRef = useRef(Date.now());
+  // Cache-bust suffix for re-imports — set on first load and bumped per
+  // reload. Initial value is 0; the first `loadModule()` writes a real
+  // timestamp. Was `useRef(Date.now())` but the react-hooks/purity rule
+  // (rightly) flags Date.now() in render.
+  const versionRef = useRef(0);
 
   const apiBase = getApiBase();
 
@@ -111,13 +115,17 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase, slug, paramsString]);
 
-  // Initial load
+  // Initial load. setLoading(true) is intentionally synchronous here so
+  // the spinner shows before the awaits resolve; the trailing
+  // setLoading(false) lands after Promise.all settles.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setLoading(true);
     Promise.all([loadModule(), loadCards()]).then(() => {
       setLoading(false);
     });
   }, [loadModule, loadCards]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Subscribe to SSE for live updates
   useSSE(`${getEventSourceBase()}/events`, {

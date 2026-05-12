@@ -40,9 +40,12 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
     }
   }, [apiBase]);
 
+  // Mount-only fetch.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchStatus().finally(() => setLoading(false));
   }, [fetchStatus]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleConnect = async () => {
     if (!botToken.trim()) return;

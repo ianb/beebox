@@ -44,11 +44,16 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
     }
   }, [apiBase]);
 
+  // Mount-only fetch.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchStatus().finally(() => setLoading(false));
   }, [fetchStatus]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Handle redirect back from Google OAuth
+  // Handle redirect back from Google OAuth — mount-only state read of
+  // window.location query params.
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const googleParam = params.get("google");
@@ -61,7 +66,8 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
       setError(message);
       window.history.replaceState(null, "", window.location.pathname);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleAuthorize = async () => {
     setConnecting(true);
