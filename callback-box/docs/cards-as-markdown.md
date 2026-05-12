@@ -31,7 +31,9 @@ scan-XXXX.capture-session.card
 - `Random_Notes.md` — plain markdown
 - `Foo.unknown-type.card` — error: filename claims to be a card but type isn't in the registry
 
-`cb cards` lists every `.card` file under the box; `cb validate` checks each. The "is this a card" check is purely filename + registry lookup, no file read needed.
+Attachments can be plain `.md` files (not cards — they're attached markdown) or cards themselves (e.g., a capture session's photo cards). The `.attach/` scope doesn't restrict the format inside it; cards within an attachment scope are still cards, plain `.md` inside is still plain markdown.
+
+`cb ls` lists files under the box with whatever glob you give it. `cb validate` checks every card. The "is this a card" check is purely filename + registry lookup, no file read needed.
 
 #### Globs
 
@@ -100,7 +102,11 @@ Resolution rules for any reference value:
 - Has a URI scheme (`https://`, `http://`, `mailto:`, etc.) → external URL
 - Anything else → literal path (relative to card's directory if no leading `/`, box-root absolute if leading `/`)
 
-The `attach/` prefix being reserved means a real top-level directory called `attach/` at the box root is forbidden (lint error). Virtual interpretation only fires when `attach/` is the *first* path segment — mid-path occurrences (`store/captures/audio-001.attach/clip.webm`) are literal directory names, not virtual prefixes.
+The `attach/` prefix being reserved means a real directory literally named `attach/` is forbidden **anywhere in the regular box tree** (lint error) — not just at the root. The one place this rule loosens is inside an attachment scope: `Foo.attach/` directories are more free-form, and contents can be named whatever fits the data.
+
+Underscore-prefixed directories (`Foo.attach/_files/`, `Foo.attach/_raw/`, etc.) are conventionally treated as opaque by lint and most queries — useful when an agent or pipeline really needs to dump arbitrary unpacked content somewhere without each file being scrutinized. The convention is "underscore-prefixed = don't look inside."
+
+Virtual interpretation in reference values only fires when `attach/` is the *first* path segment of a value — mid-path occurrences (`store/captures/audio-001.attach/clip.webm`) are literal directory names within `Foo.attach/` scopes, not virtual prefixes.
 
 ## Today's format (for reference)
 
@@ -135,19 +141,22 @@ Cross-card references use a uniform `ref="..."` attribute pointing at a path.
 ## Proposed format
 
 ```
-inbox/scan-XXXXX/
+inbox/
   scan-XXXXX.capture-session.card
-  photo-001.image.card
-  photo-001.attach/
-    photo-001.jpg
-    photo-001-back.jpg
-  photo-002.image.card
-  photo-002.attach/
-    photo-002.jpg
-  source.file.card
-  source.attach/
-    source.pdf
+  scan-XXXXX.attach/
+    photo-001.image.card
+    photo-001.attach/
+      photo-001.jpg
+      photo-001-back.jpg
+    photo-002.image.card
+    photo-002.attach/
+      photo-002.jpg
+    source.file.card
+    source.attach/
+      source.pdf
 ```
+
+Note the uniform `Foo.attach/` rule — capture session children live inside `scan-XXXXX.attach/`, same as any other card's attachments. The session card and its attachment dir share the basename; nested cards (image, file) follow the same pattern recursively.
 
 Card body example (initial sketch — later sections refine the schema and use Markdoc tags for inline structure):
 
@@ -173,33 +182,39 @@ Note: the type (`image`) lives in the filename, not in frontmatter. Schemas move
 
 ## The case for
 
-### 1. Attachment directories normalize ownership
+### 1. Easier to explain (and less friction in agent use)
+
+> "A box is mostly markdown files. Each one has frontmatter saying its metadata. Anything attached to a card lives in a sibling `.attach/` directory."
+
+That's the whole pitch. Today's pitch involves "XML cards validated by Zod via cardworks, with sibling files matched by basename" — true, but more concepts.
+
+The friction this saves shows up in agent behavior: less correction needed to get the agent to comply with conventions, less re-prompting around "no, write the card like this." Coding agents have a strong training-data bias toward producing markdown when asked to write a structured document, and they fight that bias slightly when asked to produce XML. The friction is small per-instance but compounding across hundreds of card writes per box.
+
+This is the load-bearing reason. The other items below are real but secondary.
+
+### 2. Attachment directories normalize ownership
 
 Today the inbox is a flat soup of cards and binaries; a fresh agent has to infer that `photo-001-back.jpg` belongs to `photo-001.image.card` by basename matching. With `.attach/` directories, ownership is mechanical: anything inside `Foo.attach/` belongs to `Foo`. Searches scoped to a card become a directory walk.
 
-This benefit is largely independent of the body-format change. We could adopt `.attach/` while keeping XML cards.
-
-### 2. Markdown is a native idiom for agents
-
-LLMs have seen orders of magnitude more `.md` with YAML frontmatter (Hugo, Jekyll, Obsidian, every static site generator) than they have bespoke XML schemas. The format is self-documenting in a way XML cardworks isn't.
+This benefit is fully independent of the body-format change. We could adopt `.attach/` while keeping XML cards — and should, as phase 1, regardless of whether phases 2–4 happen.
 
 ### 3. Prose content goes in the body where prose belongs
 
 `<content>...</content>`, `<description>...</description>`, `<transcription>...</transcription>` are all wrappers for what is fundamentally a prose body. Markdown bodies don't need a wrapper. Editing a memo in any text editor is just typing.
 
-### 4. JSON Schema is a portable artifact
+(Note: today the XML text inside `<content>` etc. is already treated as markdown when rendered. The change is "drop the wrapper element," not "introduce markdown.")
 
-External tools (UI form generators, validators in other languages, OpenAPI, JSON Schema-aware editors) can consume JSON Schema. cardworks `element()` outputs aren't portable. Boxes that want to add custom schemas could author them as plain JSON.
+### 4. JSON Schema as agent-readable documentation
 
-### 5. Renders for free, everywhere
+Less about portability (the cross-language story is real but not what we need); more that **agents read JSON Schema natively**. When the per-card-type doc embeds the actual schema as a JSON code block, the agent gets the spec in a format it can reason about directly — no custom prose rendering in between. See the schema-authoring section.
 
-GitHub previews, IDE preview panes, Obsidian, iA Writer, web viewers — all render markdown without a custom renderer. The current frontend has bespoke renderers per card type; some of that complexity could go away (or at least become an enhancement layer).
+External tools can also consume JSON Schema (form generators, IDE validators) but that's a side benefit.
 
-### 6. Easier to explain
+### 5. Format-neutral on markdown-vs-XML for the agent
 
-> "A box is mostly markdown files. Each one has frontmatter saying what type it is. Anything attached to a card lives in a sibling `.attach/` directory."
+Agents handle both markdown and XML well. XML is also "native" — it's not the case that markdown is intrinsically more legible to an LLM. The training-data bias toward markdown for free-form writing is real (see #1), but XML's self-documenting tags are a genuine advantage that markdown gives up.
 
-That's the whole pitch. Today's pitch involves "XML cards validated by Zod via cardworks, with sibling files matched by basename" — true, but more concepts.
+This proposal trades XML's tag self-documentation for the friction reduction in #1 and the uniform inline-tag system Markdoc provides. It's a swap, not an unambiguous win on the format-quality axis.
 
 ## The case against
 
@@ -214,7 +229,9 @@ The fix is a convention: "primary prose goes in the body; everything else, inclu
 
 ### 2. JSON Schema is verbose for repeating heterogeneous children
 
-cardworks `element()` was designed around the patterns we use: arrays of unioned child elements with loose order, attribute typing with Zod, ref validation. JSON Schema can express all of this, but `oneOf` arrays of object schemas with discriminator properties are verbose and awkward to author by hand. We'd want to keep authoring schemas in Zod and emit JSON Schema as a build artifact — which means the "JSON Schema is portable" benefit is real but the authoring experience doesn't simplify.
+cardworks `element()` was designed around the patterns we use: arrays of unioned child elements with loose order, attribute typing with Zod, ref validation. JSON Schema can express all of this, but `oneOf` arrays of object schemas with discriminator properties are verbose and awkward to author by hand. We'd want to keep authoring schemas in Zod and emit JSON Schema as a build artifact — and as a downstream concern, **review the emitted JSON Schema for agent legibility**, because Zod-derived JSON Schemas can sometimes be ugly enough to undermine the "agents read JSON Schema as docs" benefit. See the schema-authoring section.
+
+Some of this verbosity is absorbed by the Markdoc body tags: the schemas that today have `z.array(z.union([…]))` for child elements often translate to "this card allows these body tag types" rather than a complex JSON Schema array shape. Where the unioned-children pattern survives into frontmatter (e.g. `news-brief.curation.children`), it'll need restructuring during the migration rather than mechanical translation.
 
 ### 3. Migration is large and easy to half-finish
 
@@ -233,17 +250,11 @@ Mid-migration is the worst possible state: agents seeing both formats and unclea
 
 Cardworks already does parsing, serialization, formatting (the flat-no-indent rule that keeps diffs clean), JSX templating, validation. It's not a huge codebase but it's tested and stable. JSON-Schema-based replacements would need to relearn some lessons (e.g., what's the equivalent of "no indentation, one paragraph per line" for YAML frontmatter? YAML is whitespace-sensitive — diffs may be worse, not better).
 
-### 5. Refs lose their uniformity
+### 5. The `Foo.attach/` indirection is slightly verbose
 
-Today every reference is a `ref="..."` attribute on some XML element. Easy to find with grep, easy to validate uniformly. In YAML frontmatter, refs become a convention — either an object `{ ref: "path" }` or a string with a sentinel (`!ref path`). Discoverable, but takes a convention. JSON Schema validators don't natively know what a "ref" is; we'd need a custom validator pass.
+Today: `ref="photo-001.jpg"`. Tomorrow with the explicit prefix: `ref: attach/photo-001.jpg`. A small cost, paid uniformly. The `attach/` virtual prefix discussed later in this doc resolves this — the prefix lets the writer use just the filename, with the card's `.attach/` directory inferred.
 
-### 6. Markdown body parsing has its own ambiguities
-
-If the body is rendered as Markdown, parser quirks matter (CommonMark vs GFM, embedded HTML, link reference styles). If treated as plain text, we lose the "renders everywhere" benefit. Probably we'd say "the body is CommonMark" and accept the trade-off, but it's a choice.
-
-### 7. The `Foo.attach/` indirection is slightly verbose
-
-Today: `ref="photo-001.jpg"`. Tomorrow: `ref: photo-001.attach/photo-001.jpg`. A small cost, paid uniformly. Could be mitigated by relative refs interpreted from the card's own attachment scope (`ref: photo-001.jpg` resolved within `photo-001.attach/`) — but then refs across cards need a different syntax and uniformity is back on the table.
+(Note: "refs lose their uniformity" was an earlier concern in this section that's been removed. Refs in the new format are tracked as discussed in the Ref design section — the same vigilance the XML format already requires applies here too, just with `ref:` as the convention instead of an XML attribute. The earlier sentinel-string idea was overcomplication.)
 
 ## Open design problems
 
@@ -290,7 +301,26 @@ Options:
 2. **Big bang for the whole system:** branch, do everything, switch in one PR. Highest risk of stalling.
 3. **Coexistence with `.card` and `.md` both supported:** highest risk of confusion; rejected.
 
-(1) is the only viable one if we do this.
+(1) is the only viable one if we do this. Phase 1 (`.attach/` adoption, no body format change) is fully separable from any of these and should happen first regardless.
+
+### F. Name of the body in the parsed card object
+
+When code reads a parsed card, what's the API for the body content?
+
+```ts
+card.frontmatter     // YAML metadata, parsed
+card.???             // the markdown body + Markdoc tags, parsed
+```
+
+Candidates:
+- `card.body` — generic, matches HTML; what markdown-with-frontmatter ecosystem conventionally calls it
+- `card.content` — more specific (suggests content vs metadata); matches today's `<content>` XML elements
+- `card.markdown` — explicit about the underlying format
+- Schema-specific names like `memo.content`, `image.description` — preserves today's per-type-element vocabulary
+
+Default proposal: `card.body`. Generic, neutral, matches the convention. Schema-specific shortcuts can exist as convenience getters where today's vocabulary is well-established (e.g., a `memo.content` getter that returns the body), but the canonical name is `body`.
+
+The body's *type* is a parsed Markdoc tree (not a raw string) — agents and code can walk it for structured content or call a render-to-string for plain output.
 
 ## How to tell if it works
 
@@ -2207,6 +2237,14 @@ The same Zod schemas drive both runtime validation AND the documentation that ag
 5. **Examples** — complete cards from `examples:` in the schema
 
 This collapses two artifacts (today's hand-rendered `docs/generated/card-<name>.md` AND the runtime schema) into a derived view of one source. No possibility of drift.
+
+#### Watch the emitted JSON Schema
+
+Zod-to-JSON-Schema is not lossless and the output can be ugly — deep `anyOf` nestings, indirect `$ref` indirection through `definitions`, structural artifacts that don't reflect how a human would have hand-written the schema. When the emitted JSON Schema is the documentation an agent reads, ugly output undermines the benefit.
+
+**Practice for schema authors:** after writing or modifying a Zod schema, look at the emitted JSON Schema (`dist/schemas/cards/<name>.schema.json` or via `defineCard().toJsonSchema()`). If it's incomprehensible at a glance, restructure the Zod schema to produce something cleaner. Sometimes that means using simpler Zod primitives, sometimes flattening a nested object, sometimes hand-writing the JSON Schema as the source and deriving a Zod schema from it for runtime validation.
+
+This is a manual discipline, not a tooling requirement. The schema-authoring doc in this RFC should make it explicit: "review the emitted JSON Schema; if it's ugly, fix it."
 
 #### Example: `docs/generated/card-memo.md`
 
