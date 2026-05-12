@@ -79,7 +79,7 @@ user to review and send.
 ## Required children
 
 - \`<to>\` — recipient address(es), comma-separated
-- \`<subject>\` — subject line. For replies, prefix with \`Re: \` to match the
+- \`<subject>\` — subject line. For replies, prefix with \`Re:\` (space included) to match the
   source thread's subject.
 - \`<body>\` — the message body. Markdown subset only:
   \`**bold**\`, \`*italic*\`, \`[text](url)\`. Nothing else.

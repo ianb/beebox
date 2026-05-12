@@ -365,7 +365,7 @@ registerTemplate({
   argsSchema: z.object({
     runs: z.string().describe("The command to execute"),
     description: z.string().optional().describe("Human-readable summary of what this schedule does"),
-    cron: z.string().optional().describe("Cron expression (e.g., '0 6 * * *')"),
+    cron: z.string().optional().describe("Cron expression (e.g., `0 6 * * *`)"),
     at: z.string().optional().describe("ISO datetime for one-shot execution"),
     rrule: z.string().optional().describe("iCalendar RRULE string"),
     notBefore: z.string().optional().describe("Minimum interval since last run (e.g., '5m', '1h')"),

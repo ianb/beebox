@@ -179,3 +179,7 @@ export function buildCardName(name: string, type: string): string {
 export function isCardFile(filePath: string): boolean {
   return filePath.endsWith(".card");
 }
+
+export function isMarkdownFile(filePath: string): boolean {
+  return filePath.endsWith(".md");
+}
