@@ -370,4 +370,76 @@ Surfaces:
 
 Combine well with the search feature above: search results that include a backlink count give a quick "popularity" signal for which cards are central to the box.
 
+**Show the version each backlink pins.** Refs carry a version (`@1.0.0`), and the design stance is that those versions should be preserved — a ref captures what the linker meant *at link time*, not whatever the target looks like now. So the backlinks panel should visually distinguish refs to the current version from refs to older versions, and clicking through to an old-version ref should display the historical card content (from git) rather than silently substituting current. See the addressability section below — same principle.
+
 Not urgent for the same reason as search — the agent navigates by path conventions and the user navigates via chat. Becomes important once humans start browsing cards directly, or once we want the agent to do graph-aware reasoning ("clean up cards with no incoming refs older than 90 days").
+
+## Addressable URIs for cards, elements, and versions
+
+Goal: every card, every addressable element inside a card, and every version of either should have a stable URI that can be pasted anywhere — emails, calendar events, chat assistants, other cards, external scripts — and resolved by the callback web UI.
+
+Shape:
+
+```
+https://box.example.com/<box>/<path/to/Card.card>[@<version>][#<fragment>]
+```
+
+Where `<fragment>` follows cardworks' existing scheme (`id`, `query(xpath)`, `query-all(xpath)`).
+
+The design stance is **historical truth over current validity**:
+
+- Path rewrites on `cb mv` continue to be applied to existing refs — that preserves identity, which is the right move.
+- Version pins are sacred — a URI with `@1.0.0` should always resolve to that version's content, served from git history if the live card has moved past it. The web view shows a banner "viewing version 1.0.0; current is 1.2.0" with a link to current.
+- An unversioned URI resolves to current (the common case).
+- An invalid version (deleted, garbage-collected) shows a clear "version no longer available" rather than silently substituting.
+
+This sidesteps the Obsidian failure mode where `[[Note]]` always resolves to current and link intent decays as notes evolve.
+
+**Prerequisite work**: version semantics need to be deliberate again. Card root-tag versions got lazy after the ske era — for URI version pinning to be meaningful, versions need to change on meaningful events (schema-incompatible change, significant content revision) rather than be noise or always-1.0.0. Worth a deliberate pass on what bumps a version, who does the bumping (agent at edit time? schema-driven?), and how garbage collection interacts with the "every old version is addressable" promise (it probably means *never* GC versions referenced by any live ref).
+
+No `callback://` URI scheme needed — plain `https://` does the job and works across email, calendar, external apps, and chat without any handler registration.
+
+## Cmd-K: document-scoped fast chat
+
+The web UI gets a Cmd-K palette that's not really a "command palette" in the Obsidian sense — it's a **lightweight chat session scoped to the current document**, backed by a fast/cheap model (Haiku). Distinct from the main chat assistant (which is cross-context, agentic, can dispatch jobs).
+
+Use cases:
+
+- "find me the section about X" — jumps within the current card or across a small surrounding set
+- "open the recipe Jane sent me last week" — quick navigation
+- "summarize this" — local summary, no work dispatched
+- "what does `<fragment>` mean here?" — schema-aware explanation of a card element
+- "what links to this?" — backlinks query, surfaced inline
+
+The cheap-model choice keeps latency in the keyboard-shortcut tier and cost negligible enough to leave it always-on. It resolves the "is this a command palette or a chat?" tension by collapsing it: a Cmd-K palette where the input is natural language and the affordances are navigation + Q&A about what you're looking at.
+
+## "Today" view as a recurring procedure
+
+Rather than build a hardcoded "today" page like Obsidian's daily notes, make it a procedure that emits a `daily-digest` card each morning. Aggregates whatever the boxholder configures: today's calendar, recently arrived inbox, jobs run overnight, the latest news brief, fresh commits. Renders as a regular card with the box's existing view machinery — no special UI path.
+
+Optional / opt-in during initial box setup, edited like any other procedure. Fits the agentic-composition model: today-view isn't a feature, it's a pattern. Different boxes want different aggregations (a hearth box vs. a research box vs. a family box) and the procedure form lets them differ without core changes.
+
+## iOS share-sheet capture (PWA + Shortcuts)
+
+Both routes avoid needing a native iOS app, which avoids Apple's developer fee, App Store review, and the IAP question entirely.
+
+**Primary**: register the box web UI as a PWA with `share_target` in the manifest. When a user adds the PWA to their home screen, callback shows up as a share destination from any iOS app — Photos, Safari, Voice Memos, etc. Worth verifying current iOS Safari support before committing; share-target support has historically been partial and behind Chrome's. Test on a real device with iOS 17+ before promising the workflow.
+
+**Fallback**: an iOS Shortcut that POSTs to the box's capture endpoint. Five-step setup, no app required, supports any input type the Shortcut can produce. Worth shipping a pre-built Shortcut file users can install in one tap, plus a `docs/ios-shortcut.md` walkthrough.
+
+Either route gives the boxholder one-tap capture from anywhere on iOS — the input-surface gap with native apps largely closes without callback ever entering the App Store.
+
+## Canonical wisdom corpus (in lieu of plugins)
+
+Obsidian's plugin ecosystem solves "how do I extend the tool to do X?" by letting any developer publish installable code. In an agentic system the question is different: the agent can already compose primitives, so the missing piece isn't *code* but *knowledge* — what's a good way to track books? How do recipe collections usually get organized? What's the right schema shape for a CRM-lite?
+
+The proposed analog is a **Wikipedia-shaped corpus of canonical knowledge** the agent consults when the boxholder expresses intent. Not installable, not executable — just documents (probably cards themselves) describing patterns, conventions, and design considerations for common goals. The agent reads, then assembles primitives within the box accordingly.
+
+Properties this would want:
+
+- **Browsable by humans** as well as agents — the boxholder can read "how people structure book tracking" and decide they want a variant.
+- **Versioned and stable** — older boxes referencing older guidance shouldn't see it silently rewritten.
+- **Collaborative / curated** — a shared remote (or set of remotes) rather than per-box, so wisdom accumulates across the user base.
+- **Discoverable on intent** — when a user asks for X, the agent searches the corpus and surfaces relevant entries; the user can override or extend before the agent commits to a build.
+
+Long horizon. The minimum viable version is just a `docs/patterns/` directory inside callback-box itself with a handful of curated examples, surfaced to the agent via the existing rule system. The maximum is something like a federated wiki of agentic-design patterns across many systems. Worth flagging now so the architecture doesn't accidentally foreclose it (e.g., by hardcoding patterns into core rather than treating them as content).
