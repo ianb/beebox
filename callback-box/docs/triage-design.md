@@ -1,0 +1,235 @@
+# Triage — Design
+
+Status: early notes, design in progress.
+
+## Motivation
+
+The system already does triage in several places — capture sessions sort voice-in to a card type; the inbox processor decides where an unknown item belongs. Each path was built ad hoc for its own input shape. There is no shared notion of "triage" as a thing the box does, no shared substrate for categories, and no consistent way to handle the cases triage doesn't resolve cleanly.
+
+As use expands to new input types — calendar events, emails, share-sheet pastes from arbitrary apps — the lack of a formal system shows up as:
+
+- Categories invented ad hoc per pipeline, with overlap and drift.
+- Items that don't fit cleanly get force-fit or silently land in `inbox/unhandled/`.
+- Ambiguity (this looks like a memo *or* a todo) handled by the categorizer guessing, with no record that it guessed.
+- No back-pressure to the boxholder when the category set itself is the problem.
+
+A formal triage system would name the operation, define what a category is, and give the box a consistent way to handle low-confidence cases.
+
+## Three stages: intake → triage → handle
+
+The pipeline has three named stages. Items move through them in order:
+
+1. **Intake** — enhance content, in place. Transcription, OCR, EXIF extraction, format normalization (including filenames). May delete (filter junk), combine (group related items), or explode (split one into many). Does *not* decide where the item goes.
+
+2. **Triage** — decide what process should handle the item, and move it to a holding location for that process. Reads the category rules, picks a category, moves the item. The destination of triage is still *not* the final resting place — it's a per-category holding spot.
+
+3. **Handle** — run the procedure called for by the category. May move to a subdirectory, merge into another file, schedule a follow-up, etc. This is where the item reaches its final state for this cycle.
+
+Each stage is materialized in the filesystem (see §Batching), so each is interruptible and observable. A given wakeup pass can run any subset; items that finish intake but not triage just sit there until the next pass.
+
+## Design tensions
+
+The five things this design has to answer for, framed as the boxholder originally posed them.
+
+### 1. New categories appear as use expands
+
+New inputs will need new categories (book recommendations from chat, recipes from photos, receipts from emails). The system must (a) tolerate items that fit no existing category, (b) make it cheap to introduce a new one, and (c) signal to the boxholder when the existing set is straining rather than papering over it.
+
+**The category list is distributed by marker files.** Each category is a single card that lives at its destination directory; the category set is "every marker file in the box," discovered by glob. Dropping a new card adds a category. No central registry to keep in sync. See §3 for the artifact shape.
+
+The two possible workflows for introducing one are still live:
+
+- **Promotion from unhandled.** Items the categorizer can't place accumulate; the boxholder eventually drops a destination card; future items route there.
+- **Inline proposal.** The triage agent proposes a category mid-run and leaves a note for review; the proposal sticks if the boxholder doesn't override.
+
+### 2. Ambiguity, and what we want to learn from it
+
+Even a well-defined category accrues edge cases. When the categorizer is unsure, the goal is **to extract a general rule**, not to accumulate examples.
+
+If the agent had to ask a question, it means the rules currently in place didn't suffice. The right follow-up isn't "remember this specific item as a labeled example" — it's "what general rule would have made the answer obvious?" Sometimes the boxholder's answer is genuinely a one-off; mostly it's a small principle the agent could have applied if it had been written down ("anything from this sender is a receipt," "photos with text in them go to documents, not photos").
+
+Direction:
+
+- Categories carry **rules** (prose, addressable to the agent) plus, optionally, **applied examples** that illustrate how a rule resolved a tricky case. Bare unlabeled examples are bounded — useful as memory, but not the main mechanism.
+- A low-confidence answer feeds back into a category's rules before the next pass, not (only) as a labeled exemplar.
+- The category card grows. When rules contradict or accumulate noisily, that's a signal for the boxholder to review the category.
+
+Open: how is the rule update performed? Direct edit by the answering pass, an agent that proposes a diff for review, or a separate "rules update" question kind?
+
+### 3. The category card
+
+A category is not just a label — it carries the rules for *triaging* into it and the procedure for *handling* it. The artifact:
+
+**A category card is a landmark — but for triage destinations.** It lives *at* the destination directory (not in a central config dir), and *by existing there* it declares "items of this kind belong here, with this rubric and this handler." Discovery is a glob: `**/*.triage-destination.card` (tentative name — long-winded, but maybe right) finds the set. The card is the editable surface for everything about that category — name, rules, applied examples, handler.
+
+Why "at the destination" rather than "in config":
+
+- The card and the directory are the same fact. Editing the rubric and seeing what's in the bucket are one action.
+- Moving a category = moving its card = moving its directory. No registry to sync.
+- The destination is already named (it's the filesystem path). The card just *labels* a tree location as a triage destination.
+
+The compiled triage-instructions doc the categorizer reads is built by globbing across the box. Same idea as before — landmarks compiled into a map — only the source files are distributed throughout the tree rather than collected in one place.
+
+**A triage category IS a card type.** Each category corresponds to the card type that lives in the destination directory. The destination card's "what kind of item" *is* the type. This unifies what could otherwise have been two parallel taxonomies (card schemas vs. triage categories) into one.
+
+**The handler is a procedure** — but it runs at the *handle* stage, not as part of triage. The category card carries the procedure (or a `ref` to one); the triage stage uses the card's *rules* to route; the handle stage uses the card's *procedure* to run. Same artifact, two consumers. Two carriage options:
+
+- **Inline.** Procedure steps live inside the destination card. One artifact per category — unified editable surface.
+- **By reference.** `<procedure ref="..."/>`. Reuses the existing procedure-running machinery directly, lets one procedure serve multiple categories, lets the handler grow without bloating the destination card.
+
+Both are reasonable. The `ref` form is implementation-cheaper (the engine already runs procedure cards as-is). The inline form is editorially nicer. Likely shape: support both, default to inline, with `ref` available for genuine reuse — and the inline form can desugar to "an inline procedure card embedded in the destination card" so the engine doesn't need two code paths.
+
+The handler procedure receives the bucket of files as input — likely as an env variable (`$TRIAGE_ITEMS` containing null-delimited filenames) for shell steps. Filenames are normalized at intake (no spaces, no special characters), so quoting hazards stay manageable.
+
+### 4. Comparable: Projects in Claude / ChatGPT
+
+The hosted assistants have "Projects" (Claude) and project-level instructions / Custom GPTs (ChatGPT). Useful overlap:
+
+- Named buckets, each with its own instructions and context.
+- A lightweight surface for the user to see and edit the bucket list.
+- Items/conversations scoped to a bucket inherit its setup.
+
+Worth borrowing: a category should be a *single artifact the boxholder can read and edit in one place*, not state scattered across prompts and code.
+
+Differences to keep in mind:
+
+- Our categories are routing destinations with concrete downstream processes — a category exists to *do something* with an item, not just to scope context.
+- Items arrive from many channels (connectors, capture, chat), not just from a user picking a project at compose-time.
+- Categorization is automatic by default; the boxholder corrects rather than chooses.
+
+### 5. Confidence, and the question system
+
+**Confidence is a small set of named levels, not a number.** Numeric confidence is a lie — the categorizer doesn't actually compute calibrated probabilities, and acting on `0.6` vs. `0.7` invites false precision. Levels are defined by what they let the pipeline do without waiting for review:
+
+- **confident** — pipeline proceeds. No marker. "Confident" rather than "certain": the agent doesn't need to be 100% sure to act — just sure enough that flagging would be noise. Most successful triages are this.
+- **probable** — pipeline proceeds, with a marker for review. Same action as `confident`, but the boxholder is told "this one was a judgment call — you may want to look back." Retrospective, not gating.
+- **guess** — pipeline blocks. Item moves to the unsure holding spot, a question is raised, and nothing further happens for this item until the boxholder answers.
+
+"Wrong" is not a level. The agent doesn't file items it considers wrong — those go to the holding spot.
+
+Two distinct cuts:
+
+- `confident` vs. `probable`: whether a marker is left for review. Both let the work proceed; only one is auditable as a judgment call.
+- `probable` vs. `guess`: the review gate. `guess` is the only level that stops the pipeline pending the boxholder's answer.
+
+**Low-confidence handling: a holding spot + a question.** When the categorizer can't (or shouldn't) commit, the items move to a holding spot, and a question references them. After the boxholder answers, a **second categorization pass** runs:
+
+1. Optionally update the relevant category's rules — the answer often reveals a missing rule (§2).
+2. Place the held items into their categories. The answer might be distributive ("the first two go in photos, the second two in finance"), so this is not an automatable "apply the same answer to all items" step — it's an explicit re-placement guided by the answer.
+
+This is the case the question system is *for*. The current question card design covers `select`, `text`, `confirm` with a `directive` that creates a follow-up job. Triage will push on it — needing to address multiple items at once, needing to carry both a rule-update and a placement instruction in one answer. **Evolve the question system to fit this case**; don't work around its limits. This is the most demanding use of questions we're going to build; if it works here, it's working.
+
+Open: does the second-pass placement need its own agent invocation, or can a simpler script handle "the answer told me where each item goes; move them"?
+
+## Intake (stage 1)
+
+Some incoming items need work *before* a category can be assigned: voice memos need transcription, photos might want EXIF extraction, screenshots want OCR. Filenames usually need normalization (no spaces, no special characters — shell-quoting hazards are too persistent to live with).
+
+Properties:
+
+- **No taxonomy decisions.** Intake never decides destination.
+- **Shape changes are allowed.** Deletion (filter junk), combination (group related items), explosion (split one into many) are intake operations — they shape content, they don't categorize it.
+- **Filename normalization belongs here.** Strip spaces and special characters at intake, before any downstream code has to escape them.
+
+**Intake is a directory: `inbox/intake/`.** Items arrive there (or get moved there immediately on inbox arrival). The intake stage scans the directory and, for each item, runs any intake step whose precondition matches.
+
+This works because **intake-step preconditions are fast** even when the step itself is heavy. Telling whether an image needs OCR ("does the card lack a `<transcription>` element?") is cheap; running the OCR is not. So repeatedly scanning `inbox/intake/` and checking "is there work to do here?" is cheap, and idempotent — applying the same intake pass twice is a no-op on items that are already done.
+
+When all applicable intake steps' preconditions are false for an item, it's intake-complete and moves out of `inbox/intake/` into the triage workspace.
+
+Open: where intake-complete items live before triage picks them up — `inbox/` root, `inbox/staged/`, or a sibling. The location should be clearly distinct from both `inbox/intake/` (still working) and `inbox/triaged/<category>/` (already triaged).
+
+Some current intake work (transcription, the early steps of capture-session sort) fits this frame and could be reframed as intake. Worth a pass.
+
+## Triage (stage 2)
+
+Triage is the named categorization step. It reads the compiled triage-instructions doc (built from all the destination cards), examines the batch of intake-complete items, and for each item: assigns a category at a given confidence level, then moves the item accordingly.
+
+For `confident` / `probable` items: move into the category's holding spot — `inbox/triaged/<category>/` (working name).
+
+For `guess` items: move into the low-confidence holding spot — `inbox/triaged/_unsure/` (working name) — and create a question card referencing them. The same triage pass can produce a mix of confident and unsure results in a single batch.
+
+### Surface
+
+A named triage agent. Candidates:
+
+- **Subagent.** Invoked with the batch plus the compiled triage instructions as system prompt. Returns a structured result per item: category, confidence level, optional question draft. Matches the existing pattern of small focused subagents.
+- **Procedure.** A procedure card with explicit steps. More visible to the boxholder, heavier for one classification operation.
+- **CLI command.** `cb triage <items>` as a thin wrapper around one of the above. Beyond inbox processing this is useful for: testing the triage live, introspecting how a specific item categorizes, re-triaging items that need a second look, and chaining — a handler procedure can call `cb triage` after processing items to send them back through the system. Probably matches how other subagents are exposed.
+
+Working direction: subagent invoked by `cb triage` wrapper.
+
+Open:
+
+- Does the same agent both classify *and* create the question card, or is question-creation a separate pass?
+- Does the agent read only the compiled doc, or also pull in per-category rules cards when those rules are richer than the index?
+
+## Handle (stage 3)
+
+The name stays generic on purpose. `deliver` was considered and rejected — it implies the item might leave the box, which isn't true: handle outputs usually stay in the box's filesystem (archive directories, merged collections, etc.).
+
+Handle is whatever the category's procedure does. Properties:
+
+- **Procedure-driven.** Reads from the category card (inline or via `ref`).
+- **Operates on the holding spot's bucket.** Receives the file list (via `$TRIAGE_ITEMS` env var or similar — see §3).
+- **Final-state moves are handler-specific.** A receipts handler might move items to `archive/receipts/<year>/`; a recipes handler might re-render the recipe collection; a calendar-event handler might create a follow-up question and leave the item where it is.
+
+The handle stage is where the system's "do something useful with this kind of thing" knowledge lives. Triage is dumb compared to it — triage just routes.
+
+**Recursive triage falls out for free.** A handler can choose to move some items back to an inbox subdirectory (or call `cb triage` directly on them); the next wakeup picks them up. Useful when category A's handler decides that some items it received are actually category B's problem.
+
+## Batching
+
+The typical case is many items arriving together and going through together. Batching is the default — single-item is N=1.
+
+**Each stage is materialized in the filesystem and interruptible.** Items at each stage live in a known location:
+
+| Stage | Location | Meaning |
+|---|---|---|
+| Pre/in intake | `inbox/intake/` | Just arrived; intake stage operates here, scanning for items with applicable intake steps. |
+| Post-intake / pre-triage | TBD (e.g. `inbox/` root or `inbox/staged/`) | Intake-complete, ready for triage. |
+| Post-triage / pre-handle | `inbox/triaged/<category>/` | Categorized, awaiting handle. |
+| Low-confidence | `inbox/triaged/_unsure/` | Held, paired with a question card. |
+| Post-handle | wherever the handler put them | Done. |
+
+A crash mid-handler doesn't lose the categorization work — items still sit in `inbox/triaged/<category>/` and can be picked up again.
+
+Two levels of batching:
+
+- **Triage-time.** Multiple intake-complete items in one categorizer pass, sorted into K buckets. Reuses one model call.
+- **Handle-time.** Each category's procedure runs once over its holding spot. The procedure receives the file list and iterates as it needs to.
+
+Not building question-card batching (one multi-confirm card covering many uncertain items) yet — the triage pass already batches incoming items into one categorization run; if some of those need questions, the question-system evolution (§5) can decide how to group them later.
+
+Implications:
+
+- **Cadence fits wakeup.** Wakeup → intake → triage → per-category handle → done.
+- **Per-item failure inside a handler.** A handler operating on a bucket needs a clear story for "succeeded on items 1–6, failed on item 7." Likely a per-item subloop within the procedure step.
+
+Open:
+
+- Pre-triage / post-intake state signal (how does triage know "this item is ready for me to look at"?).
+- Per-category batch-size limits — does a category with 500 items run as one handler invocation, or chunk?
+
+## Existing triage points to inventory
+
+These exist in some form. The new system has to either replace them or coexist:
+
+- **Capture session sort** — voice-in → card type. Likely subsumed by intake + triage.
+- **Inbox processor** — wakeup agent routes unknown items. Subsumed by triage.
+- **Calendar review** — event triage (action needed / FYI / ignore). Partly aligned; the categories map to triage destinations.
+- **Feedback intake** — `inbox/feedback/` integration into briefs and guides. Probably fits.
+- **News triage** — *not the same kind of triage.* News triage (`process-news --triage-only`) is a keep/discard filter on a homogenous stream; this design is about assigning a type and routing to a handler. Shared name, different operation. The news pipeline stays as it is.
+
+## Open questions
+
+1. **Granularity** — *Resolved: box-wide.* The system is aware of how content came in (channel: gmail, voice, share-sheet, etc.) and category rules can reference channel. Channel is metadata, not a separate categorization axis.
+2. **Category storage** — *Resolved: distributed marker files.* One destination card per category, living at its destination directory, discovered by glob (`**/*.triage-destination.card`). Compiled into the triage-instructions doc on demand. Open: compilation cadence and whether the compiled doc is a real file or virtual.
+3. **Categorizer surface** — working direction: subagent + `cb triage` wrapper. Confirm against how other subagents are exposed.
+4. **Rules vs. examples accumulation** — confirmed-answer flow updates *rules* in the category card; bare examples are bounded. Open: how the rule update is performed (direct edit, diff-for-review, separate question kind).
+5. **Confidence levels** — *Resolved.* Named: `confident`, `probable`, `guess`. No `wrong`. No numbers. Cuts: `confident` vs. `probable` is whether a marker is left for review; `probable` vs. `guess` is the review gate.
+6. **Holding spot layout** — *Resolved (working):* `inbox/triaged/<category>/` for category buckets, `inbox/triaged/_unsure/` for low-confidence.
+7. **Intake staging** — *Resolved: `inbox/intake/` is a directory.* Intake scans it, runs steps with cheap preconditions, items leave when intake-complete. Open: where intake-complete items wait for triage (`inbox/` root vs. `inbox/staged/` vs. similar).
+8. **Stage 3 name** — *Resolved: `handle`.* `deliver` was considered and rejected — it implies the item might leave the box.
+9. **Unhandled lifecycle** — *pinned for later.* How long items linger before triggering a category-proposal review, what evicts them.
+10. **Relationship to schemas** — *Resolved: a triage category is a card type.* The destination card's type *is* the category. No parallel taxonomy.
