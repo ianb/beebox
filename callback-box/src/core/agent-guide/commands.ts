@@ -20,6 +20,7 @@ export function keyCommandsSection(): string[] {
     "- `cb procedure run <name-or-path>` — Run a procedure (see `docs/generated/procedures.md`)",
     "- `cb calendar [timespan]` — View upcoming calendar events (default 7d; supports `today`, `3d`, `2w`, `1m`)",
     "- `cb chat self-note \"<body>\" [--ref <path>] [--commit <hash>]` — Post an agent-authored record into the live chat session. For use by scheduled sub-agents (daily rumination, weekly research) to leave a short summary of what they did, so the boxholder sees it on next chat revisit. Not a conversational message — Claude in chat knows not to reply. Requires `CB_BOX_NAME` and `CB_SERVER_URL` in env (set automatically by the scheduler).",
+    "- `cb feedback \"<message>\"` — Record an observation about CLI friction, confusing options, odd file placements, or unclear conventions. Silent: writes a file to `config/feedback/` and commits it without interrupting the current task. Use this any time something feels off about the tooling — confusing flag names, unclear error messages, awkward workflows, surprising behavior. Good feedback is specific and describes what was confusing and why.",
     "",
   ];
 }

@@ -43,3 +43,4 @@ export { driveCommand } from "./drive.js";
 export { chatCommand } from "./chat.js";
 export { activityCommand } from "./activity.js";
 export { refreshMapsCommand } from "./refresh-maps.js";
+export { feedbackCommand } from "./feedback.js";

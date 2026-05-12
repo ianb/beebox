@@ -1297,3 +1297,65 @@ tests:
       don't go missing when a chat is bound to a landmark. Failure
       mode: agent says it has to look, or its answer matches some
       generic notion of "scans" without the box-specific details.
+
+  # === Agent Feedback (cb feedback) ===
+  #
+  # Verifies agents know about the cb feedback command, when to use it,
+  # and will actually use it when they notice something confusing.
+  #
+  # Status: Untested — added 2026-05-12.
+
+  - id: cb-feedback-purpose
+    prompt: "There's a cb feedback command. What is it for and who uses it?"
+    expected_level: knows_directly
+    watch_for: >
+      Explains it's for agents to record CLI friction, confusing conventions,
+      odd file placements, or unclear behaviors — without interrupting the
+      current task. Should mention it writes to config/feedback/ and commits.
+      Should not confuse this with the feedback card type (user feedback on
+      news briefs etc.).
+    correct_contains: ["config/feedback", "commit"]
+    correct_contains_any: ["friction", "confusing", "conventions", "unclear", "tooling"]
+    tags: [feedback, cli]
+
+  - id: cb-feedback-when-to-use
+    prompt: >
+      Give me three examples of situations where you would use cb feedback,
+      and three where you would not.
+    expected_level: knows_directly
+    watch_for: >
+      "Would use" examples should be about CLI tooling observations: confusing
+      flag names, unclear error messages, awkward workflows, files landing in
+      odd places, surprising behavior. "Would not use" examples should contrast
+      with other channels: chat for questions the user needs to answer, cb
+      answer for pending question cards, self-note for scheduled-task summaries,
+      just fixing something vs. noting it.
+    correct_contains_any: ["flag", "option", "error", "confus", "awkward", "workflow", "convention"]
+    tags: [feedback, cli]
+    notes: >
+      The key distinction: cb feedback is for tooling observations the developer
+      (not the boxholder) should act on. It's NOT for user-facing feedback,
+      questions for the boxholder, or things the agent can fix itself right now.
+
+  - id: cb-feedback-uses-it
+    prompt: >
+      While looking at the validate command docs, you notice that the --committed
+      flag is confusingly named — it sounds like it validates committed cards,
+      but it actually checks that the git working tree is clean. Note this
+      observation appropriately and then tell me what cb validate --committed
+      actually does.
+    expected_level: knows_directly
+    watch_for: >
+      Agent runs `cb feedback` with a specific observation about the --committed
+      flag naming, then correctly explains what the flag actually does (checks
+      git working tree cleanliness). Should not ask the user about it or use
+      any other channel for the observation.
+    correct_contains: ["clean", "working tree"]
+    max_turns: 15
+    tags: [feedback, cli, behavioral]
+    notes: >
+      This is a behavioral test — we're checking that the agent actually uses
+      cb feedback rather than just knowing it exists. The prompt says "note this
+      observation appropriately" which should trigger cb feedback. If the agent
+      instead asks the user or uses a self-note, it has the wrong model of the
+      command's purpose.
