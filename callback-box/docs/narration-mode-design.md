@@ -111,6 +111,13 @@ Initial closed set (subject to design):
 
 New card types reuse `CAPTURED`, `NOTED`, or the file-CRUD kinds. The closed set keeps icon mapping reliable. Earcons come later — design once kinds are stable.
 
+**Rendering:**
+
+- Default chat view: a row of compact chips. Multiple acks of the same kind may visually group.
+- Narrow display contexts: chips reduce to a single summary indicator ("3 actions"). Tap to expand.
+- History rendering: chips remain — structural, not ephemeral.
+- TTS: silent.
+
 ### `<callout>` — durable, self-contained content
 
 The agent emits a `<callout>` when part of the response needs to be lifted out of the response flow: shown in narrow views, surfaced later in digests, quoted in notification previews. The author writes it knowing it may travel.
@@ -138,13 +145,20 @@ Your dentist appointment overlaps with the soccer match — both at 10am Saturda
 
 `context` is an attribute (not a nested element) because it's a short label, not body content. Keeping it terse keeps the agent honest about whether a single callout is the right granularity — if the context can't be summed up shortly, that's a sign there should be two callouts.
 
+**Rendering:**
+
+- Default chat view: rendered inline with mild visual treatment — context as a small heading, body below, distinct from surrounding prose.
+- Narrow display contexts (camera view, document view, phone in narration mode): callouts render at full visibility in the visible chat strip; surrounding prose hides; `<ack>` chips collapse. Tap-to-expand reveals the rest of the response.
+- Digest / notification / preview: `context` and body together, or `context` alone if heavily compressed. The "context-carries-the-question" convention is what makes this work.
+- History rendering: preserved; structural metadata.
+- TTS: independent. `<callout>` does not imply speech. To speak the answer, the agent emits `<speech>` separately. Same-content-twice is the agent's responsibility — different jobs, decoupled paths.
+
 **Authoring rules** (covered in the system-prompt overlay):
 
 - Use `<callout>` only when the user must see the content. Most turns have zero callouts.
 - Always write callout body as if it's standalone. If the user re-encounters this in a notification three days later with no chat history, does it still make sense?
 - If the user asked a clear question, the question (or paraphrase) goes in `context`. The body answers it.
 - For proactive observations, `context` is a topic line, body is the observation.
-- TTS is independent. `<callout>` does not imply speech. To speak, the agent emits a sibling `<speech>` block.
 
 ### Display design
 
@@ -189,11 +203,10 @@ Speech via `<speech>` plays in any state, independent of the visual collapse. TT
 
 ### Open questions
 
-- Bare `<ack/>` with no `kind`: error, or fall back to `NOTED`? (Probably error.)
+- Bare `<ack/>` with no `kind`: error, or fall back to `noted`? (Probably error.)
 - Is the `kind` set box-extensible? (Probably yes — boxes can register additional kinds with icon, renderer falls back for unknowns.)
 - Composition of `<callout>` with `<speech>`: siblings, not nested (proposed). Cost: repeat content when both are wanted. Benefit: one tag, one job; decoupled rendering and audio paths.
 - Multiple callouts per turn: allowed; in narrow views, stack or page through? Probably stack.
-- Overlay-state callout dismissal: time-based fade, tap-to-dismiss, or attribute-driven?
 
 ## (3) Control plane
 
@@ -336,7 +349,6 @@ Design-level:
 - Closed `kind` set for `<ack>` — what's the initial list, and is it box-extensible?
 - Does the system-prompt overlay live with the feature-flag, or in a separate prompts directory?
 - Single-turn `<chat-app>` flips — needed, or always sticky?
-- Overlay-state callout dismissal behavior.
 
 Implementation-level (not design-blocking):
 

@@ -145,7 +145,7 @@ Some current intake work (transcription, the early steps of capture-session sort
 
 Triage is the named categorization step. It reads the compiled triage-instructions doc (built from all the destination cards), examines the batch of intake-complete items, and for each item: assigns a category at a given confidence level, then moves the item accordingly.
 
-For `confident` / `probable` items: move into the category's holding spot — `inbox/triaged/<category>/` (working name).
+For `certain` / `probable` items: move into the category's holding spot — `inbox/triaged/<category>/` (working name).
 
 For `guess` items: move into the low-confidence holding spot — `inbox/triaged/_unsure/` (working name) — and create a question card referencing them. The same triage pass can produce a mix of confident and unsure results in a single batch.
 
@@ -227,7 +227,7 @@ These exist in some form. The new system has to either replace them or coexist:
 2. **Category storage** — *Resolved: distributed marker files.* One destination card per category, living at its destination directory, discovered by glob (`**/*.triage-destination.card`). Compiled into the triage-instructions doc on demand. Open: compilation cadence and whether the compiled doc is a real file or virtual.
 3. **Categorizer surface** — working direction: subagent + `cb triage` wrapper. Confirm against how other subagents are exposed.
 4. **Rules vs. examples accumulation** — confirmed-answer flow updates *rules* in the category card; bare examples are bounded. Open: how the rule update is performed (direct edit, diff-for-review, separate question kind).
-5. **Confidence levels** — *Resolved.* Named: `confident`, `probable`, `guess`. No `wrong`. No numbers. Cuts: `confident` vs. `probable` is whether a marker is left for review; `probable` vs. `guess` is the review gate.
+5. **Confidence levels** — *Resolved.* Named: `confident`, `probable`, `guess`. No `wrong`. No numbers. The `confident`/`probable` distinction is behavioral (note-for-review or not), not gradient.
 6. **Holding spot layout** — *Resolved (working):* `inbox/triaged/<category>/` for category buckets, `inbox/triaged/_unsure/` for low-confidence.
 7. **Intake staging** — *Resolved: `inbox/intake/` is a directory.* Intake scans it, runs steps with cheap preconditions, items leave when intake-complete. Open: where intake-complete items wait for triage (`inbox/` root vs. `inbox/staged/` vs. similar).
 8. **Stage 3 name** — *Resolved: `handle`.* `deliver` was considered and rejected — it implies the item might leave the box.
