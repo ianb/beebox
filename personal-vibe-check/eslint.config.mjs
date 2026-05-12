@@ -1,7 +1,25 @@
-import baseConfig from "eslint-config-agent";
+import baseConfigRaw from "eslint-config-agent";
+import dddPlugin from "eslint-plugin-ddd";
+import reactHooksPlugin from "eslint-plugin-react-hooks";
 import unicornPlugin from "eslint-plugin-unicorn";
 import importXPlugin from "eslint-plugin-import-x";
 import vibePlugin from "./plugin.mjs";
+
+// Some plugins eslint-config-agent depends on still ship legacy-eslintrc
+// configs whose `plugins:` is a string array — newer ESLint flat config
+// rejects that. Rewrite any such entry to the object form before spreading.
+const PLUGIN_OBJECTS = {
+  ddd: dddPlugin,
+  "react-hooks": reactHooksPlugin,
+};
+const baseConfig = baseConfigRaw.map((entry) => {
+  if (!entry || typeof entry !== "object" || !Array.isArray(entry.plugins)) return entry;
+  const plugins = {};
+  for (const name of entry.plugins) {
+    if (name in PLUGIN_OBJECTS) plugins[name] = PLUGIN_OBJECTS[name];
+  }
+  return { ...entry, plugins };
+});
 
 // ── Enabled rules ──────────────────────────────────────────────────
 // Rules reviewed and accepted. Each has a comment explaining why.
