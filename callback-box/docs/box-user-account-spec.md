@@ -51,9 +51,17 @@ Constraints:
 │   └── hooks/post-receive        # runs cb upgrade
 └── box-repo/                     # working tree — the actual box
     ├── package.json
+    ├── pnpm-lock.yaml
     ├── node_modules/
-    ├── src/                      # custom views, schemas, connectors
-    ├── box/, store/, config/, .callback-box/   # the data side
+    ├── src/                      # custom views, schemas, connectors, tricks
+    │   ├── views/
+    │   ├── schemas/
+    │   ├── tricks/
+    │   └── connectors/
+    ├── data/                     # the box itself — cards, configs, runtime state
+    │   ├── .cb-box               # marker
+    │   ├── box/, store/, config/, people/, procedure/, ...
+    │   └── .callback-box/        # runtime state, sqlite, logs
     └── .git/
 ```
 
@@ -61,6 +69,8 @@ Permissions:
 - Home dir mode `0700` (other boxes cannot read).
 - `.env` and `.credentials.json` mode `0600`.
 - `box-repo/` mode `0700` (the box owns its data; nothing else on the system reads it directly).
+
+The `src/` ↔ `data/` split inside the box repo is the layout adopted in [boxes-as-packages.md §2.3](boxes-as-packages.md). Code on one side, the box's actual content on the other.
 
 ---
 
@@ -75,7 +85,7 @@ Description=callback-box server (%u)
 After=network.target
 
 [Service]
-ExecStart=%h/box-repo/node_modules/.bin/cb serve --socket %t/cb.sock
+ExecStart=%h/box-repo/node_modules/.bin/cb serve --socket %t/cb.sock --data %h/box-repo/data
 WorkingDirectory=%h/box-repo
 EnvironmentFile=%h/.env
 Restart=on-failure
@@ -96,31 +106,36 @@ WantedBy=default.target
 
 ---
 
-## 5. nginx integration
+## 5. nginx + oauth2-proxy integration
 
 **Decision: unix sockets, not TCP loopback ports.**
 
-Each box's socket lives at `/run/user/<uid>/cb.sock`, owned by `cb-<boxname>:www-data`, mode `0660`. nginx (running as `www-data` and a member of every `cb-<boxname>` group via `www-data` group membership) can connect; nothing else on the system can.
+Each box's socket lives at `/run/user/<uid>/cb.sock`, owned by `cb-<boxname>:www-data`, mode `0660`. nginx (running as `www-data`, member of every `cb-<boxname>` group) can connect; nothing else on the system can.
 
 Setup at provision time:
 1. Add `www-data` to the `cb-<boxname>` group.
 2. The backend opens its socket with `chmod 0660` and `chown :www-data` after binding (handled in `cb serve --socket`).
 
-Per-box nginx fragment (rendered by `cb provision-box`, included from the main config):
+**Authentication flow:** oauth2-proxy sits in front of the per-box backends, handling Google OAuth and session cookies. nginx uses `auth_request` to delegate authentication to oauth2-proxy and injects `X-Authenticated-Email` into the upstream request. See [boxes-as-packages.md §3.5](boxes-as-packages.md) for the rationale on using oauth2-proxy rather than rolling our own.
 
 ```nginx
 # /etc/nginx/sites-available/box.example.com.d/<boxname>.conf
 upstream cb_<boxname> {
   server unix:/run/user/<uid>/cb.sock;
 }
+
 location /<boxname>/ {
-  auth_request /auth/verify;          # delegates to identity service
-  auth_request_set $auth_email $upstream_http_x_authenticated_email;
+  auth_request /oauth2/auth;
+  auth_request_set $auth_email $upstream_http_x_auth_request_email;
+  error_page 401 = /oauth2/sign_in;
+
   proxy_set_header X-Authenticated-Email $auth_email;
   proxy_pass http://cb_<boxname>/;
   # ... standard proxy headers, websocket upgrade, etc.
 }
 ```
+
+oauth2-proxy itself runs on a loopback port (e.g., 4180) under its own `oauth2-proxy` system user, fronted by an nginx `location /oauth2/` block.
 
 URL shape (`box.example.com/<boxname>/`) is preserved. Subdomains are a deferred future phase.
 
@@ -151,12 +166,12 @@ git --git-dir=$GIT_DIR --work-tree=$WORK_TREE checkout -f main
 
 CHANGED=$(git --git-dir=$GIT_DIR diff --name-only "$PREV" "$NEW" 2>/dev/null || echo "")
 
-# Reinstall if package.json changed
-if echo "$CHANGED" | grep -qx package.json; then
+# Reinstall if package.json or lockfile changed
+if echo "$CHANGED" | grep -qE '^(package\.json|pnpm-lock\.yaml)$'; then
   pnpm install --prefer-offline
 fi
 
-# Restart if source or deps changed
+# Restart if source or deps changed (data/ changes never restart)
 if echo "$CHANGED" | grep -qE '^(src/|package\.json|pnpm-lock\.yaml)'; then
   systemctl --user restart cb-server.service
 fi
@@ -175,6 +190,8 @@ Pull (to receive agent-authored commits made on the server):
 ```bash
 git pull prod main
 ```
+
+The hook's restart-on-`src/`-change behaviour is Stance A from [boxes-as-packages.md §7.4](boxes-as-packages.md). Under Stance B (recommended start), plugin file changes (views, schemas, tricks) trigger an in-process hot reload rather than a systemd restart — the hook would skip the restart for changes confined to `src/views/`, `src/schemas/`, `src/tricks/`.
 
 ---
 
@@ -246,7 +263,7 @@ WantedBy=timers.target
 # ~/.config/systemd/user/cb-tick.service
 [Service]
 Type=oneshot
-ExecStart=%h/box-repo/node_modules/.bin/cb tick
+ExecStart=%h/box-repo/node_modules/.bin/cb tick --data %h/box-repo/data
 EnvironmentFile=%h/.env
 ```
 
@@ -261,7 +278,8 @@ Some things stay shared, owned by non-box system accounts:
 | Resource | Where | Owner | Why |
 |----------|-------|-------|-----|
 | nginx | `/etc/nginx/` | root | One TLS endpoint, one process |
-| Identity service | `/srv/callback-id/` | `callback-id` user (UID 1100 or similar) | Single login authority |
+| oauth2-proxy | `/etc/oauth2-proxy/` | `oauth2-proxy` user | Single forward-auth gate |
+| Box-picker service | `/srv/callback-id/` | `callback-id` user (UID 1100 or similar) | Per-user box discovery + server-level allow-list |
 | Bare git repos for callback-box, cardworks | `/srv/git/` | `git` user, `git` group with read access for box users | Library distribution |
 | pnpm content-addressed store | `/var/lib/pnpm/store/` | `pnpm` group (box users are members) | Disk dedup; safe because content-addressed |
 | Claude Code credentials | `/var/lib/claude-shared/credentials.json` | root, 0640, group `cb-claude` (box users are members) | Shared agent identity (see below) |
@@ -310,7 +328,7 @@ done
 du -sh /home/cb-*/ 2>/dev/null
 ```
 
-The supervisor (and identity service, for the box-picker page) read `getent passwd` on startup to build their routing/discovery tables. No separate registry to maintain.
+The box-picker service reads `getent passwd` on startup (and re-reads periodically) to build its routing/discovery tables. It also reads each box's `data/config/box.json` to compute per-user access. No separate registry to maintain.
 
 ---
 
@@ -321,7 +339,7 @@ Per-box backup script (run as root, daily):
 ```bash
 for u in $(getent passwd | awk -F: '$3>=2000 && $3<3000 {print $1}'); do
   tar --exclude='node_modules' --exclude='.pnpm-store' \
-      --exclude='.callback-box/events.db-wal' \
+      --exclude='box-repo/data/.callback-box/events.db-wal' \
       -czf "/var/backups/cb/$(date +%Y%m%d)-$u.tar.gz" \
       "/home/$u/"
 done
@@ -338,7 +356,7 @@ The shared resources (claude credentials, bare git repos, pnpm store) need their
 For each of the 8 boxes currently at `/home/callback/boxes/<name>/`:
 
 1. `cb provision-box <name>` — creates `cb-<name>` user, empty home, bare repo, systemd unit, nginx fragment.
-2. As root: `cp -a /home/callback/boxes/<name>/. /home/cb-<name>/box-repo/`. Preserves working tree and `.git/`.
+2. As root: copy the box content into the new layout — its current `box/`, `store/`, `config/`, etc. go into `/home/cb-<name>/box-repo/data/`, and a scaffold provides `package.json`, `tsconfig.json`, `pnpm-lock.yaml`, and an empty `src/` at the repo root. Preserves `.git/` history.
 3. `chown -R cb-<name>:cb-<name> /home/cb-<name>/box-repo/`.
 4. Generate per-box `.env` from the relevant subset of `/home/callback/.env` (manual: review which keys this box uses).
 5. As `cb-<name>`: `cd ~/box-repo && pnpm install`.
@@ -364,6 +382,7 @@ After all 8 are migrated:
 - **Multi-tenant / public hosting.** This spec is single-operator. Hosting other people's boxes adds: stronger isolation (containers), per-user resource accounting/billing, abuse handling, an account-creation flow. Out of scope.
 - **Per-box network egress policy.** Possible via nftables `--gid-owner` rules; deferred.
 - **Cross-server replication.** A box is one server's user account; if you want a box to span servers, you need a sync layer that doesn't exist today. Out of scope.
+- **Data migration during library updates.** See [boxes-as-packages.md §7.7](boxes-as-packages.md) — deferred to its own design pass.
 
 ---
 
@@ -375,7 +394,7 @@ A box has been successfully migrated to the user-account model when:
 - [ ] `loginctl show-user cb-<name>` shows `Linger=yes`.
 - [ ] `sudo -u cb-<name> systemctl --user is-active cb-server.service` returns `active`.
 - [ ] `/run/user/<uid>/cb.sock` exists, owned `cb-<name>:www-data`, mode 0660.
-- [ ] `box.example.com/<name>/` responds with the expected box page.
+- [ ] `box.example.com/<name>/` responds with the expected box page (via oauth2-proxy login flow).
 - [ ] `git push prod main` from a developer laptop triggers a service restart visible in `journalctl --user`.
 - [ ] `sudo -u <other-cb-user> ls /home/cb-<name>/` is denied.
 - [ ] `sudo -u <other-cb-user> cat /home/cb-<name>/.env` is denied.
