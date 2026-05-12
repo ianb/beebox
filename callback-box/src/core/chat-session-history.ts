@@ -21,7 +21,6 @@
  */
 
 import * as fs from "node:fs/promises";
-import { existsSync } from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
@@ -164,50 +163,19 @@ export async function getDirectoryForSession(
 }
 
 /**
- * Resolve where a session's JSONL actually lives on disk, accounting for
- * the landmark-cwd binding introduced in e440586. The SDK encodes its cwd
- * into the `~/.claude/projects/<dir>/` path, so a landmark-bound chat's
- * log is under `<boxRoot>/<contextDir>`, not `<boxRoot>`.
- *
- * Existing landmark sessions whose logs were created *before* e440586 sit
- * at the old box-root path. We migrate them on first read so subsequent
- * resumes find them at the cwd-encoded path the SDK now expects.
- *
- * Returns the path you should read from. When neither location has a file,
- * returns the new (cwd-encoded) path so the caller's `existsSync` check
- * fails cleanly there.
- *
- * Transitional — see docs/ideas.md ("Drop the resolveSessionLogPath
- * migration") for the removal trigger.
+ * Resolve where a session's JSONL lives on disk. A landmark-bound chat
+ * runs the SDK with `cwd = boxRoot/<contextDir>`, so its log sits under
+ * the cwd-encoded `~/.claude/projects/<dir>/` rather than the box-root
+ * one. Empty-string / null contextDir means a root-bound chat — log at
+ * the box-root path.
  */
 export async function resolveSessionLogPath(
   boxRoot: string,
   sessionId: string,
 ): Promise<string> {
   const contextDir = await getDirectoryForSession(boxRoot, sessionId);
-  // Empty string and null both mean "log lives at the box-root path" —
-  // a root-bound chat doesn't shift cwd, so the SDK encodes boxRoot.
   if (contextDir === null || contextDir === "") return getSessionLogPath(boxRoot, sessionId);
-
-  const cwd = path.join(boxRoot, contextDir);
-  const newPath = getSessionLogPath(cwd, sessionId);
-  if (existsSync(newPath)) return newPath;
-
-  const oldPath = getSessionLogPath(boxRoot, sessionId);
-  if (!existsSync(oldPath)) return newPath;
-
-  try {
-    await fs.mkdir(path.dirname(newPath), { recursive: true });
-    await fs.rename(oldPath, newPath);
-    log("migrate", `Moved ${sessionId}.jsonl to landmark cwd path`);
-    return newPath;
-  } catch (e) {
-    // Another process may have migrated concurrently, or the file moved
-    // out from under us. Return whichever path now exists.
-    log("migrate", `Migrate failed: ${(e as Error).message}`);
-    if (existsSync(newPath)) return newPath;
-    return oldPath;
-  }
+  return getSessionLogPath(path.join(boxRoot, contextDir), sessionId);
 }
 
 /**

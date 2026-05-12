@@ -699,14 +699,6 @@ export class ChatSession extends EventEmitter {
 
     const startOpts = await this.buildBackendStartOptions();
 
-    // For a landmark-bound resume, the existing JSONL may live at the
-    // pre-e440586 box-root path. Trigger the migration before the SDK
-    // resumes against the new cwd-encoded path, otherwise the SDK can't
-    // find the prior history.
-    if (this.sessionId !== null) {
-      await resolveSessionLogPath(this.boxRoot, this.sessionId);
-    }
-
     const run = this.backend.start({
       ...startOpts,
       resumeSessionId: this.sessionId ?? undefined,

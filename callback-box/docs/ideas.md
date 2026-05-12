@@ -107,16 +107,6 @@ Ideas for automatic normalization:
 - The card loader could normalize refs on save (convert relative→absolute)
 - A lint rule could warn on relative refs that go above the card's parent directory
 
-## Drop the `resolveSessionLogPath` migration
-
-`src/core/chat-session-history.ts` `resolveSessionLogPath` exists only to migrate landmark-bound session JSONLs from the pre-`e440586` box-root path to the new cwd-encoded path on first read. It's a transitional shim: every box where every existing landmark session has either been touched once (migrating) or expired/forgotten can drop it.
-
-Removal:
-- Delete `resolveSessionLogPath` and the `existsSync`/`getSessionLogPath` imports it adds.
-- Revert the four call sites (`chat-session.ts` `getHistory` + the migration call in `startRun`, `routes/chat.ts` ×2, `routes/history.ts`, `trpc/routers/history.ts`) back to `getSessionLogPath(boxRoot/cwd, sessionId)` directly — they need to pass the cwd-encoded path now (i.e. `path.join(boxRoot, contextDir)` when contextDir is set).
-
-Trigger: when no live boxes are still running landmark sessions started before `e440586` (Sun May 10 2026). Safe to remove once the only remaining sessions in `chat-session-history.json` were created after that date, or when we're willing to break resume on the stragglers.
-
 ## CLI Design for Agents
 
 `cb` is increasingly invoked by agents as well as humans. We don't have a dedicated CLI design doc, but should — and it needs ongoing vigilance, not just a one-time pass.
