@@ -660,7 +660,7 @@ curation:
   rationale: |
     Focusing on security themes that connect multiple stories
 sources:
-  - { path: store/archive/news/Article.news-item.card, usage: primary, title: "Article Title" }
+  - { ref: store/archive/news/Article.news-item.card, usage: primary, title: "Article Title" }
 ---
 
 The past week has been remarkable for AI developments...
@@ -766,7 +766,7 @@ curation:
     - { id: h1, text: Technical depth will resonate }
   rationale: Focusing on security themes that connect multiple stories
 sources:
-  - { path: store/archive/news/Article.news-item.card, usage: primary, title: "Article Title" }
+  - { ref: store/archive/news/Article.news-item.card, usage: primary, title: "Article Title" }
 ---
 
 The past week has been remarkable for AI developments...
