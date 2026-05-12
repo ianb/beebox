@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../hooks/useCurrentUser";
+import { trpc } from "../lib/trpc";
 import { useErrorCount, clearErrorCount } from "./DebugLog";
 import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
 import { Avatar } from "./ui/Avatar";
@@ -90,9 +91,27 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
 
   const base = `/${boxSlug}`;
 
-  const links = [
+  // The picker query feeds both the Chats page and the freshness badge
+  // on the Chats nav entry. React Query dedupes so this isn't a second
+  // fetch on the picker page itself.
+  const chatPicker = trpc.chat.byLandmark.useQuery(undefined, {
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+  const freshCount = chatPicker.data ? chatPicker.data.freshCount : 0;
+
+  const links: Array<{
+    to: string;
+    label: string;
+    match: (p: string) => boolean;
+    badge?: number;
+  }> = [
     { to: `${base}/`, label: "Dashboard", match: (p: string) => p === base || p === `${base}/` },
-    { to: `${base}/chat`, label: "Chat", match: (p: string) => p.startsWith(`${base}/chat`) },
+    // "Chat" used to mean "go to the most-active session." It still does —
+    // renamed to "Recent" so "Chats" (the picker) can sit next to it
+    // without two entries fighting over the same word.
+    { to: `${base}/chat`, label: "Recent", match: (p: string) => p === `${base}/chat` || p.startsWith(`${base}/chat?`) || p.startsWith(`${base}/chat/`) },
+    { to: `${base}/chats`, label: "Chats", match: (p: string) => p.startsWith(`${base}/chats`), badge: freshCount },
     { to: `${base}/questions`, label: "Questions", match: (p: string) => p.startsWith(`${base}/questions`) },
     { to: `${base}/news`, label: "News", match: (p: string) => p.startsWith(`${base}/news`) },
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
@@ -163,6 +182,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
                 }`}
               >
                 {link.label}
+                {link.badge && link.badge > 0 ? <FreshBadge count={link.badge} /> : null}
               </Link>
             ))}
           </div>
@@ -182,6 +202,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
             }`}
           >
             {link.label}
+            {link.badge && link.badge > 0 ? <FreshBadge count={link.badge} /> : null}
           </Link>
         ))}
         <div className="ml-auto flex items-center gap-2">
@@ -190,6 +211,18 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
         </div>
       </div>
     </nav>
+  );
+}
+
+/**
+ * Inline count badge next to a nav link — used for the Chats link to
+ * show how many fresh chats are sitting in the picker.
+ */
+function FreshBadge({ count }: { count: number }) {
+  return (
+    <span className="ml-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-white/20 text-white text-[10px] font-semibold align-middle">
+      {count}
+    </span>
   );
 }
 
