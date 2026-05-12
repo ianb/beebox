@@ -258,108 +258,125 @@ Today: `ref="photo-001.jpg"`. Tomorrow with the explicit prefix: `ref: attach/ph
 
 ## Open design problems
 
-These need answers before this becomes a real proposal.
+Several of these are now resolved; the resolutions are recorded inline below. Items still open are flagged.
 
-### A. Body-vs-frontmatter rule
+### A. Body-vs-frontmatter rule — RESOLVED
 
-Candidates:
-1. **"Primary prose in body, everything else in frontmatter, body is optional."** Simple. Forces conventions like "memo body is the user's content; transcription goes in frontmatter as a `transcription:` field with a `|`-block string."
-2. **"Everything in frontmatter; body is rendered notes only."** Uniform — every card validates the same way regardless of body. Loses the "natural prose body" benefit.
-3. **"Bodies are sections delimited by headings, schema declares which sections exist."** Most expressive, most novel, biggest cognitive cost.
+**Rule:** Primary prose in body, everything else in frontmatter, body is optional.
 
-I lean (1).
+Where a card has multiple prose blocks (memo content + transcription, audio transcript + summary, etc.), the secondary prose goes into Markdoc block tags within the body. The "transcription" of a voice memo is `{% transcription %}...{% /transcription %}`, not a `transcription:` field in frontmatter.
 
-### B. Are some cards directories?
+**Possible future extension: multiple equally-primary bodies via reserved `{% body %}` tag.** Not needed for current schemas (Markdoc block tags cover the multi-prose cases), but worth keeping in mind for future card types that might genuinely need it. Sketch:
 
-`capture-session` naturally IS its directory of photos. Two answers:
-1. **Sentinel file:** every card is a directory containing `_card.<type>.md` plus its attachments. Uniform but every card pays the directory cost.
-2. **Sibling-or-self:** a card is `Foo.<type>.md` with optional sibling `Foo.attach/`. A "container card" is just one whose attachments include other cards. Most natural for capture-session: `scan-XXX.capture-session.card` lives in `inbox/scan-XXX/` alongside the photos, no `.attach/` needed because the directory is the scope.
+```markdown
+---
+status: new
+---
 
-I lean (2). It mirrors today's capture-session layout.
+Default body content (the unnamed primary body — `card.body`).
 
-### C. Refs
+# Can include H1 headings naturally.
 
-Candidates:
-1. **String with prefix:** `ref:photo-001.image.card`. Easy to grep. Custom YAML tag.
-2. **Object form:** `{ ref: "photo-001.image.card" }`. Self-describing, JSON-Schema-validatable as `{ type: object, properties: { ref: { type: string } } }`. Slightly more verbose.
-3. **Bare string in known fields:** `audio: photo-001.attach/clip.m4a`. Schema declares which fields are refs.
+{% body name="notes" %}
+A separate body, its own free-form markdown with headings, lists, anything.
 
-(2) is most uniform and most lintable. (3) is most ergonomic. Probably (2) for cross-card refs and (3) for "this card's own attachment paths."
+## Subsections work normally inside.
+{% /body %}
 
-### D. Schema authoring
-
-- Keep authoring in Zod, emit JSON Schema as build artifact? — preserves DX, gets portability.
-- Author in JSON Schema directly? — portable but verbose.
-- Author in TypeScript types and derive both? — interesting, more research.
-
-Likely Zod with `zod-to-json-schema`.
-
-### E. Migration strategy
-
-Options:
-1. **Big bang per card type:** convert one type fully (schema + loader + renderer + migrator + all box content), commit, move to next.
-2. **Big bang for the whole system:** branch, do everything, switch in one PR. Highest risk of stalling.
-3. **Coexistence with `.card` and `.md` both supported:** highest risk of confusion; rejected.
-
-(1) is the only viable one if we do this. Phase 1 (`.attach/` adoption, no body format change) is fully separable from any of these and should happen first regardless.
-
-### F. Name of the body in the parsed card object
-
-When code reads a parsed card, what's the API for the body content?
-
-```ts
-card.frontmatter     // YAML metadata, parsed
-card.???             // the markdown body + Markdoc tags, parsed
+{% body name="transcription" %}
+Another named body. Schema declares which names are allowed.
+{% /body %}
 ```
 
-Candidates:
-- `card.body` — generic, matches HTML; what markdown-with-frontmatter ecosystem conventionally calls it
-- `card.content` — more specific (suggests content vs metadata); matches today's `<content>` XML elements
-- `card.markdown` — explicit about the underlying format
-- Schema-specific names like `memo.content`, `image.description` — preserves today's per-type-element vocabulary
+Schema would declare `bodies: ["notes", "transcription"]`. Parser splits the document, returning `card.body` for the default and `card.bodies.notes` / `card.bodies.transcription` for the named ones.
 
-Default proposal: `card.body`. Generic, neutral, matches the convention. Schema-specific shortcuts can exist as convenience getters where today's vocabulary is well-established (e.g., a `memo.content` getter that returns the body), but the canonical name is `body`.
+Other delimiter options considered and rejected: H1 headings as section boundaries (collides with H1s in content), fence-style `~~~ name ~~~` (visual collision with code blocks), `----- name -----` long-dash (arbitrary, no benefit over Markdoc tags), YAML multi-document `---` (conflicts with frontmatter).
 
-The body's *type* is a parsed Markdoc tree (not a raw string) — agents and code can walk it for structured content or call a render-to-string for plain output.
+### B. Are some cards directories? — RESOLVED via attachments
+
+The "uniform `Foo.attach/`" rule from earlier in this doc resolves this: capture-session children live in `scan-XXXXX.attach/` like any other card's attachments. There's no special "directory IS the card" case — cards always have a single file, and attachments always live in a sibling `Foo.attach/` directory.
+
+#### Still open: tagging cards and category polymorphism
+
+A related question doesn't fully resolve with attachments: how do "tagging" cards relate to their directory? Landmarks bookmark a directory (`store/recipes/Recipes.landmark.card`). Future triage-destination markers might similarly mark a directory. Categories with associated procedures might too. These don't have a clear primary-owner relationship — they're peer attributes of the directory itself.
+
+Three plausible models:
+
+1. **Peer cards in the directory** (current pattern for landmarks). Each tagging card is a sibling in the directory. The directory is what's being tagged, not any single card.
+2. **One card owns the directory; others attached to it.** An arbitrary "main" card claims ownership; tagging cards live in its `.attach/`. Forced and unnatural for things that genuinely are peers.
+3. **Multiple-types-per-basename** (would require relaxing the no-collision rule). `Recipes.landmark.card` + `Recipes.category.card` + `Recipes.triage-destination.card` as peer-typed views of the same conceptual object — ECS-style. Strongly associated, share a basename.
+
+(1) is what we have today and continues to work under the new format. (3) is interesting but conflicts with the no-basename-collision rule we adopted for attachment-dir disambiguation.
+
+This is genuinely open. The "cards all the way down — every directory is a card with a header about what the directory is for" line of thinking is a bridge too far for now, but it's the underlying intuition. Worth revisiting after living with the new format.
+
+### C. Refs — RESOLVED
+
+Decisions:
+- **Bare strings in schema-declared fields:** rejected. Too high-context; the value's meaning depends entirely on schema knowledge, which makes the file unreadable without it.
+- **String with prefix** (`ref:photo-001.image.card` or `attach/foo.jpg`): viable. The `attach/` virtual prefix we adopted IS this approach for attachment paths. Easy to grep (search the value, not just keys). Works for content situations and lists.
+- **Object form** (`{ ref: "..." }`): viable. Verbosity is a feature — self-documents as a ref, makes JSON Schema validation explicit, and we're usually adding sibling annotations (`reason`, `usage`) anyway, so the object wrapper isn't extra structure for those cases.
+
+The design as it stands uses object form `{ ref: "..." }` for refs that wrap metadata, and bare paths with the `attach/` virtual prefix for attachments. The Ref design section details this.
+
+### D. Schema authoring — RESOLVED
+
+Author in Zod; emit JSON Schema as build artifact. Review the emitted JSON Schema for agent legibility (see schema-authoring section); restructure Zod or hand-write JSON Schema if the output is ugly enough to undermine the docs use.
+
+### E. Migration strategy — RESOLVED
+
+**For phase 1 (`.attach/` adoption):** standalone, no body-format change, can happen before any of the rest. Fixes a real cleanliness wart in the current ad-hoc system.
+
+**For phase 2+ (body format change):** big bang on a branch — convert everything, test throughout, merge as a single switchover. Per-card-type incremental migration creates a coexistence period that's worse than either format alone. We accept the longer branch time as the price of avoiding mid-migration confusion.
+
+**If we do phase 2+, cardworks goes away.** The new system uses Markdoc + Zod + custom helpers. Cardworks' XML parser, JSX templating, and validation primitives all get replaced. The cardworks repo would either be archived or removed.
+
+### F. Name of the body field — RESOLVED
+
+The parsed card object exposes frontmatter fields at the top level alongside `body`:
+
+```ts
+card.status        // from frontmatter
+card.created       // from frontmatter
+card.source        // from frontmatter
+card.body          // the parsed body (Markdoc tree)
+```
+
+No `card.frontmatter` wrapper. Frontmatter fields ARE card fields.
+
+**`body:` is banned as a frontmatter key.** No collision possible because the body of the card is `card.body` directly. If a schema needs a field called something other than the obvious — fine, pick a different name; `body` is reserved.
+
+If the multi-body extension (section A) is ever implemented, `card.body` stays as the default-unnamed-body, and named bodies live at `card.bodies.<name>` (or `card.<name>` if we decide named bodies are top-level too — to be revisited).
 
 ## How to tell if it works
 
-We need signals before deciding. Proposed evaluation:
+The honest assessment after working through the design: **quantitative tests are hard to do without doing the full conversion first.** The thing the proposal optimizes for is cognitive overhead — fewer corrections to agents, less re-prompting, less context-juggling — and that doesn't show up in tool-call counts as cleanly as we'd like. The qualitative checks are where the signal actually lives.
 
-### Quantitative
+### Quantitative (hard to do without committing first)
 
-1. **Scenario test comparison.** Pick the 5 most representative scenarios in `src/scenario/`. Run them on a branch with the new format. Compare:
-   - Total tool calls per scenario
-   - Total input tokens consumed
-   - Number of file reads per scenario
-   - Pass rate
-   - Wall time
-   A win is fewer tool calls / tokens with equal-or-better pass rate. A wash on tokens but a win on agent-perceived clarity is suspicious — verify via the qualitative checks.
+1. **Ledger-box clone-and-migrate test.** Take a complex real box (the ledger box is a good candidate — many card types, rich history), clone it, run the migration on the clone, then run a fixed set of agent tasks against both. Compare. **Big effort upfront** — you'd have to have most of the migration done before this test produces signal. The reward isn't a clear win/loss verdict so much as a "feel" for whether the new format is easier to work in.
 
-2. **Targeted task suite.** Define ~10 agent tasks of escalating difficulty, e.g.:
-   - "Find all memos that mention Priya."
-   - "Add a transcription to this voice memo."
-   - "Create a new image card with two back-of-photo texts."
-   - "Locate the audio file attached to this memo."
-   - "Find every card that references `<some-target>`."
-   - "Move this card and its attachments to `archive/`."
-   Run each task in both formats. Compare tool-call count and success rate. Big wins on attachment-related tasks would justify the `.attach/` change alone.
+2. **Schema expressiveness audit** (can run before full conversion). Convert every existing schema in `src/schemas/` to (Zod →) JSON Schema + frontmatter shape + bodyTags + validators. For each, note: clean / mildly awkward / fights the format. The per-schema feasibility audit earlier in this RFC already did most of this; doing it again after the actual schema-authoring helpers exist would catch surprises.
 
-3. **Schema expressiveness audit.** Convert every existing schema in `src/schemas/` to (Zod →) JSON Schema + frontmatter shape. For each, note: clean / mildly awkward / fights the format. If >10 fight it, that's a stop signal.
+3. **Code volume delta.** Lines of code for the new format (schemas, loaders, validation, renderers, migrator) vs. today's cardworks-based code. Indirect signal but interesting.
 
-4. **Code volume delta.** Lines of code for the new format (schemas, loaders, validation, renderers) vs. today. Indirect signal but interesting.
+These quantitative checks are useful but they require sunk effort to produce signal. Treat them as confirmations during/after the migration, not gates before.
 
-### Qualitative
+### Qualitative (easier; this is where the real signal lives)
 
-5. **Explanation-length test.** Re-write the "Cards" section of `CLAUDE.md` for the new format. If it's not shorter and clearer, the "easier to explain" claim is bogus.
+4. **Explanation-length test.** Re-write the "Cards" section of `CLAUDE.md` for the new format. If it's not shorter and clearer, the "easier to explain" claim is bogus. Quick to do; high-signal.
 
-6. **Editability test.** Open ten randomly selected cards in a plain editor (not the box UI). How readable, how editable, how scary-if-mistyped? Compare to XML.
+5. **Editability test.** Open ten randomly selected cards in a plain editor (not the box UI). How readable, how editable, how scary-if-mistyped? Compare to XML. Quick to do.
 
-7. **Migration friction record.** Keep a running log during the conversion of each card type: what was awkward, what required convention invention, what JSON Schema couldn't quite express. The size of this log is the actual cost.
+6. **Migration friction record.** Keep a running log during the conversion of each card type: what was awkward, what required convention invention, what JSON Schema couldn't quite express, where Markdoc tags helped or hurt. The size of this log is the actual cost; entries are themselves useful for the design.
+
+7. **Agent-correction-rate observation.** Over a few weeks of normal use after migration, note how often you have to correct the agent's card writes. Compare to recollection of the XML period. Subjective but probably the most honest signal of whether the friction reduction is real.
 
 ### Decision criterion
 
-Roughly: **don't proceed unless the migration log is short AND scenario tests show measurable wins.** Either alone isn't enough — a clean migration that doesn't help agents is wasted work; a big agent win behind a chaotic migration is a footgun.
+For phase 1 (`.attach/`): feels-right is enough. Cleaner ad-hoc layout is its own justification; no measurement needed.
+
+For phase 2+ (body format change): proceed if the migration friction record stays short AND the explanation-length test shows meaningful simplification AND the agent-correction observation suggests real reduction. Skip or roll back if any of those don't show up.
 
 ## Possible incremental paths
 
@@ -377,11 +394,13 @@ If full migration looks too expensive, smaller versions:
 
 ## Recommendation (tentative)
 
-Do (1) — adopt `.attach/` directories with the existing XML format — as a standalone change. Re-evaluate the rest after living with it. The big migration is the kind of thing whose cost we'll only really know once we've started; doing the cheap, separable piece first lets us test the strongest claim ("attachment directories normalize ownership") in isolation.
+**Phase 1 (`.attach/`) is unambiguously worth doing**, regardless of whether the body-format change ever happens. The current layout is ad hoc — sibling binaries that pair by basename, no clear "this file belongs to that card" rule. The cleanup is its own justification. It's not optimized for agent legibility (that's not really the point); it's optimized for not-being-ad-hoc.
 
-If after living with (1) the strongest remaining motivation is "agents handle MD+frontmatter more naturally than XML," do the schema expressiveness audit. If it comes back clean, do the full migration as one big-bang per-card-type project on a branch, with a migrator and updated scenario tests, behind a single switchover commit.
+**Phase 2+ (body format change) is a separate judgment.** Worth doing if the cognitive-overhead reduction is real, which the explanation-length test and lived experience after migration can confirm. The case is mostly about easier-to-explain and reduced agent-correction friction, not measurable quantitative wins. If the qualitative signals after phase 1 don't suggest improvement is needed, don't do phase 2.
 
-If the audit comes back ugly, stop. The case for the full migration isn't strong enough to justify the cost without the agent-clarity argument being well-backed.
+**If phase 2+ does happen, cardworks goes away.** The new system uses Markdoc + Zod + custom helpers; cardworks' XML parser, JSX templating, and validation primitives all get replaced. The cardworks repo would be archived. (Phase 1 alone doesn't affect cardworks — it stays as the XML library.)
+
+**Migration shape for phase 2+:** big bang on a branch. Convert everything, test throughout, merge as a single switchover. Per-card-type incremental migration creates a coexistence period that's worse than either format alone. The branch will be long-lived; that's accepted.
 
 ## Open questions for the next pass
 
