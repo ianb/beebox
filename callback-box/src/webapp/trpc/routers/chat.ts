@@ -229,6 +229,20 @@ export const chatRouter = router({
       };
     });
 
+    // Sort by latest activity (most-recent landmark first). Landmarks
+    // with no fresh chats sink to the bottom — root first within that
+    // group so it's always reachable, then alphabetical by label.
+    picker.sort((a, b) => {
+      const aLatest = a.sessions[0] ? Date.parse(a.sessions[0].lastActivity) : null;
+      const bLatest = b.sessions[0] ? Date.parse(b.sessions[0].lastActivity) : null;
+      if (aLatest !== null && bLatest !== null) return bLatest - aLatest;
+      if (aLatest !== null) return -1;
+      if (bLatest !== null) return 1;
+      if (a.dir === "") return -1;
+      if (b.dir === "") return 1;
+      return a.label.localeCompare(b.label);
+    });
+
     const freshCount = picker.reduce((n, l) => n + l.sessions.length, 0);
     return { landmarks: picker, freshCount };
   }),

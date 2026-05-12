@@ -32,13 +32,14 @@ export function ChatsLandmarkCard({
   landmark: PickerLandmark;
   boxSlug: string;
 }) {
+  const isEmpty = landmark.sessions.length === 0;
   return (
-    <Card padding="md" border="subtle" shadow>
+    <Card padding={isEmpty ? "sm" : "md"} border="subtle" shadow={!isEmpty} muted={isEmpty}>
       <Stack gap="sm">
         <div className="flex items-center gap-3">
-          <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
+          <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} compact={isEmpty} />
           <Stack gap="xs">
-            <Text as="h2" size="lg" weight="bold">{landmark.label}</Text>
+            <Text as="h2" size={isEmpty ? "base" : "lg"} weight="bold">{landmark.label}</Text>
             {landmark.dir ? (
               <Text as="span" size="xs" tone="muted">{landmark.dir}/</Text>
             ) : null}
@@ -54,9 +55,7 @@ export function ChatsLandmarkCard({
           </div>
         </div>
 
-        {landmark.sessions.length === 0 ? (
-          <Text as="p" size="sm" tone="muted">No recent chats here.</Text>
-        ) : (
+        {isEmpty ? null : (
           <Stack gap="xs">
             {landmark.sessions.map((s) => (
               <SessionRow key={s.sessionId} session={s} boxSlug={boxSlug} />
@@ -68,18 +67,26 @@ export function ChatsLandmarkCard({
   );
 }
 
-function LandmarkSymbol({ landmark, boxSlug }: { landmark: PickerLandmark; boxSlug: string }) {
+function LandmarkSymbol({
+  landmark,
+  boxSlug,
+  compact,
+}: {
+  landmark: PickerLandmark;
+  boxSlug: string;
+  compact?: boolean;
+}) {
   if (landmark.symbolSrc) {
     return (
       <img
         src={`/${boxSlug}/api/files/${landmark.symbolSrc}`}
         alt=""
-        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+        className={compact ? "w-8 h-8 rounded-full object-cover flex-shrink-0" : "w-12 h-12 rounded-full object-cover flex-shrink-0"}
       />
     );
   }
   return (
-    <span className="text-3xl leading-none flex-shrink-0" aria-hidden>
+    <span className={compact ? "text-xl leading-none flex-shrink-0" : "text-3xl leading-none flex-shrink-0"} aria-hidden>
       {landmark.symbol || "📍"}
     </span>
   );
