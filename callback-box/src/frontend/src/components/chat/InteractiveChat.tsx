@@ -1796,8 +1796,20 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         e.preventDefault();
         handleSend();
       }
+      if (e.key === "j" && e.ctrlKey) {
+        e.preventDefault();
+        const ta = textareaRef.current;
+        if (ta) {
+          const { selectionStart, selectionEnd, value } = ta;
+          const newValue = value.slice(0, selectionStart) + "\n" + value.slice(selectionEnd);
+          setInput(newValue);
+          requestAnimationFrame(() => {
+            ta.selectionStart = ta.selectionEnd = selectionStart + 1;
+          });
+        }
+      }
     },
-    [handleSend, isTranscribing]
+    [handleSend, isTranscribing, textareaRef, setInput]
   );
 
   // When transcription ends with an error, preserve partial text into the input field.
