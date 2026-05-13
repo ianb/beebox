@@ -31,12 +31,12 @@ export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
   // Mount-only fetch — the setLoading calls are the standard
   // "show spinner, fetch, hide spinner" pattern; nothing to be derived
   // from existing state here.
-  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     setLoading(true);
     fetchConfig().finally(() => setLoading(false));
   }, [fetchConfig]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
 
   const saveEmails = async (updated: string[]) => {
     setSaving(true);

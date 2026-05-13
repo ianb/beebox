@@ -118,14 +118,14 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
   // Initial load. setLoading(true) is intentionally synchronous here so
   // the spinner shows before the awaits resolve; the trailing
   // setLoading(false) lands after Promise.all settles.
-  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     setLoading(true);
     Promise.all([loadModule(), loadCards()]).then(() => {
       setLoading(false);
     });
   }, [loadModule, loadCards]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
 
   // Subscribe to SSE for live updates
   useSSE(`${getEventSourceBase()}/events`, {

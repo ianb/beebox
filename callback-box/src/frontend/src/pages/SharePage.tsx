@@ -79,7 +79,7 @@ export function SharePage() {
   // without producing new text. setState is intentional: this is a
   // bridge from an external transcription stream to local form state.
   const prevTranscriptRef = useRef("");
-  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     if (
       transcription.state === "idle" &&
@@ -93,7 +93,7 @@ export function SharePage() {
       prevTranscriptRef.current = transcription.transcript;
     }
   }, [transcription.state, transcription.transcript]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
 
   const handleSave = useCallback(async () => {
     if (!sharedUrl || !boxSlug) return;

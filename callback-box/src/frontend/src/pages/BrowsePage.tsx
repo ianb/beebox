@@ -98,7 +98,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
   // values can't be derived in render because they're decoupled from
   // initialFile (selection can change without nav, and contextMenu /
   // deleteError live independently of selection until the prop moves).
-  /* eslint-disable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     setSelectedFilePath(initialFile);
   }, [initialFile]);
@@ -107,7 +107,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
     setDeleteError(null);
     setContextMenu(null);
   }, [selectedFilePath]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
 
   useEffect(() => {
     if (contextMenu === null) return;
