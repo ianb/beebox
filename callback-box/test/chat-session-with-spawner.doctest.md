@@ -19,6 +19,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import {
   runTurn,
   tick,
+  waitForRuns,
   setupSystemPrompt,
   testPrompt,
   testPromptShort,
@@ -250,8 +251,7 @@ session.enqueue("third");
 // Simulate the run ending mid-turn (no result emitted)
 const run1 = backend.lastRun();
 await run1.close();
-await tick();
-await tick();
+await waitForRuns(backend, { count: 2, timeoutMs: 1000 });
 
 // A second run got started and received the combined queued text
 backend.runs.length
@@ -288,8 +288,7 @@ await tick();
 session.enqueue("queued after restart");
 
 session.restart();
-await tick();
-await tick();
+await waitForRuns(backend, { count: 2, timeoutMs: 1000 });
 
 backend.runs.length
 => 2

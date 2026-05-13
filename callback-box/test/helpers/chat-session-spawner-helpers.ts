@@ -39,6 +39,25 @@ export async function tick(): Promise<void> {
   await new Promise((r) => setImmediate(r));
 }
 
+/**
+ * Wait until `backend.runs.length >= count`, or throw after `timeoutMs`.
+ * Replaces fixed-tick waits in tests that watch for a new run to spawn —
+ * `startRun` now has more async hops (lock file I/O, env build, optional
+ * landmark contextDir lookup) than tick counts can reliably cover.
+ */
+export async function waitForRuns(
+  backend: FakeChatBackend,
+  { count, timeoutMs }: { count: number; timeoutMs: number },
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (backend.runs.length < count) {
+    if (Date.now() > deadline) {
+      throw new Error(`waitForRuns: expected ${count} run(s), got ${backend.runs.length} after ${timeoutMs}ms`);
+    }
+    await new Promise((r) => setImmediate(r));
+  }
+}
+
 export async function runTurn(
   session: ChatSession,
   { backend, sessionIdToEmit }: { backend: FakeChatBackend; sessionIdToEmit: string },
