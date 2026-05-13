@@ -182,15 +182,13 @@ Note: the type (`image`) lives in the filename, not in frontmatter. Schemas move
 
 ## The case for
 
-### 1. Easier to explain (and less friction in agent use)
+### 1. Lower friction in agent authoring
 
-> "A box is mostly markdown files. Each one has frontmatter saying its metadata. Anything attached to a card lives in a sibling `.attach/` directory."
+Coding agents have a strong training-data bias toward producing markdown when asked to write a structured document, and they fight that bias slightly when asked to produce XML. Per write the friction is small; across hundreds of card writes per box per week it compounds — corrections, re-prompts, "no, write the card like this."
 
-That's the whole pitch. Today's pitch involves "XML cards validated by Zod via cardworks, with sibling files matched by basename" — true, but more concepts.
+The explanation-length test (see Test results section) confirms this is modest, not dramatic: the full Cards section in `CLAUDE.md` is roughly the same length under all three formats. But the *concepts* in the new version are more familiar — bespoke project-specific things (cardworks, `element()`, flat-XML formatting) shrink in favor of widely-known ones (Markdown, YAML, JSON Schema). Familiarity is what reduces friction at authoring time, not section length.
 
-The friction this saves shows up in agent behavior: less correction needed to get the agent to comply with conventions, less re-prompting around "no, write the card like this." Coding agents have a strong training-data bias toward producing markdown when asked to write a structured document, and they fight that bias slightly when asked to produce XML. The friction is small per-instance but compounding across hundreds of card writes per box.
-
-This is the load-bearing reason. The other items below are real but secondary.
+This is the load-bearing reason for the body-format change. The other items below are real but secondary.
 
 ### 2. Attachment directories normalize ownership
 
@@ -377,6 +375,94 @@ These quantitative checks are useful but they require sunk effort to produce sig
 For phase 1 (`.attach/`): feels-right is enough. Cleaner ad-hoc layout is its own justification; no measurement needed.
 
 For phase 2+ (body format change): proceed if the migration friction record stays short AND the explanation-length test shows meaningful simplification AND the agent-correction observation suggests real reduction. Skip or roll back if any of those don't show up.
+
+## Test results: explanation-length
+
+Ran the explanation-length test by rewriting the "Cards" section of `CLAUDE.md` under three scenarios: current (baseline), `.attach/` change only, full migration to `.attach/` + Markdown.
+
+### Baseline (current XML)
+
+```markdown
+## Cards
+
+Cards are the core data format — XML files validated by Zod schemas via cardworks. Each card type has a root XML element matching its type name; schemas live in `src/schemas/` and use cardworks' `element()` helper with Zod validators. `src/schemas/registry.ts` lists the built-in set; boxes can add local schemas under `config/schemas/`.
+
+**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `Weekly_Digest.news-brief.card`). Attachments share the basename: `Voice_Memo.memo.card` + `Voice_Memo.m4a`.
+
+**Formatting**: Card XML is flat — no indentation at any nesting level. One long line per paragraph in text content, not soft-wrapped at 80 columns. Keeps diffs clean.
+
+**Schemas can include `instructions`** — prose embedded in the schema that's injected into agent context when processing cards of that type.
+
+**Validation**: Cards validate on load and before commit (pre-commit plugin). `cb validate` checks all cards.
+```
+
+~145 words. 9 concepts. Bespoke project-specific: cardworks, `element()`, flat-XML formatting, `instructions` field, `registry.ts` pattern.
+
+### Scenario B — `.attach/` only
+
+```markdown
+## Cards
+
+Cards are the core data format — XML files validated by Zod schemas via cardworks. Each card type has a root XML element matching its type name; schemas live in `src/schemas/` and use cardworks' `element()` helper with Zod validators. `src/schemas/registry.ts` lists the built-in set; boxes can add local schemas under `config/schemas/`.
+
+**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `Weekly_Digest.news-brief.card`). Attachments live in a sibling `Name.attach/` directory: `Voice_Memo.memo.card` + `Voice_Memo.attach/voice-memo.webm`. No two cards in the same directory may share a basename.
+
+**Formatting**: Card XML is flat — no indentation at any nesting level. One long line per paragraph in text content, not soft-wrapped at 80 columns. Keeps diffs clean.
+
+**Schemas can include `instructions`** — prose embedded in the schema that's injected into agent context when processing cards of that type.
+
+**Validation**: Cards validate on load and before commit (pre-commit plugin). `cb validate` checks all cards.
+```
+
+~155 words. 10 concepts. One paragraph touched (naming/attachments); the rest verbatim. The change is mechanical and replaces an ambiguous pairing convention with an explicit directory rule.
+
+### Scenario C — `.attach/` + Markdown
+
+```markdown
+## Cards
+
+Cards are the core data format — Markdown files with YAML frontmatter, validated by per-type schemas in `src/schemas/cards/`. Boxes can add local schemas under `config/schemas/`.
+
+**Naming**: `Name.type.card` — the middle extension is the type. Attachments live in `Name.attach/`. No basename collisions across types in the same directory.
+
+**Body**: Markdown for primary prose; Markdoc tags for structured content and secondary prose blocks. Inline refs use `{% person ref="people/Alice.person.card" reason="..." /%}`; longer content uses block tags like `{% transcription %}...{% /transcription %}`.
+
+**Refs**: `ref:` for box-internal pointers, `href:` for external URLs. Paths starting with `attach/` resolve to this card's attachment scope. Refs usually carry a reason — body content or a `reason=` attribute.
+
+**Schemas** are `.ts` files using `defineCard()` (frontmatter Zod schema + allowed body tags + optional validators). They drive both runtime validation and the per-type docs in `docs/generated/`, which embed JSON Schema directly for agents to consume.
+
+**Validation**: `cb validate` runs schema + Markdoc + ref + per-card-validator checks. Diagnostics include line numbers.
+```
+
+~165 words. 11 concepts. Bespoke project-specific shrinks to 3: `defineCard()`, Markdoc, `attach/` virtual prefix. The XML-specific items (`cardworks`, `element()`, flat-XML formatting, `instructions` field) disappear; in their place are concepts more likely to be familiar (Markdown, YAML, JSON Schema, Markdoc).
+
+### Findings
+
+| | Words | Concepts | Bespoke concepts |
+|---|---|---|---|
+| Current | ~145 | 9 | 5 |
+| B (`.attach/` only) | ~155 | 10 | 6 |
+| C (full migration) | ~165 | 11 | 3 |
+
+1. **Length is roughly the same across all three.** The full Cards section needs to cover the same surface area (naming, attachments, body, schemas, validation) regardless of underlying format. Word counts within ~20 words of each other.
+
+2. **Where C wins: concept familiarity.** "Markdown files with YAML frontmatter" is one phrase that conveys what "XML files validated by Zod schemas via cardworks" takes a sentence to convey, and the first is more familiar to anyone (human or agent) who's worked with Hugo, Jekyll, Obsidian, Astro, etc. Bespoke project-specific concepts shrink from 5 to 3.
+
+3. **Where C doesn't win cleanly: Markdoc adds a new concept.** Markdoc is less ubiquitous than Markdown/YAML/JSON Schema. It's a real new thing to learn, partly offsetting the familiarity gain.
+
+4. **B is a real but small win.** One concept added (the `.attach/` directory pattern), one rule added (no basename collisions), in exchange for eliminating the "which files exactly belong to this card?" ambiguity. Net cognitive load: slightly lower. Worth doing.
+
+5. **The biggest C-vs-current difference isn't visible in the section length.** Once you're working with a card, the per-type doc (with JSON Schema embedded) is more useful than today's compiled prose. That doesn't show up here; it'd show up in agent task performance or in lived authoring experience after migration.
+
+### Implication for the "case for" framing
+
+The "easier to explain" pitch is supported but not dramatically. The headline reasons for the body-format change should be tuned:
+
+- The format-friction reduction during agent authoring (training-data bias toward markdown; less correction needed)
+- Schema-as-agent-documentation via embedded JSON Schema
+- Familiar concepts replacing bespoke ones
+
+"Easier to explain" alone is too thin a claim to carry the proposal. The earlier reordering of the "case for" reasons already reflects this; the test results confirm that calibration was right.
 
 ## Possible incremental paths
 
