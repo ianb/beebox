@@ -30,6 +30,7 @@ import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { recordingStop } from "../lib/earcons";
 import { trpcClient } from "../lib/trpc";
 import { deepgramKeyManager } from "../lib/deepgram-key";
+import { encodePcmChunksAsWav } from "../lib/wav-encode";
 
 export type TranscriptionState = "idle" | "connecting" | "recording" | "finalizing";
 
@@ -53,7 +54,7 @@ type TranscriptionEvent =
   | { type: "WS_ERROR"; message: string }
   | { type: "WS_CLOSED" }
   | { type: "TEXT_UPDATE"; finalText: string; interimText: string }
-  | { type: "TRANSCRIPTION_DONE"; text?: string }
+  | { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob }
   | { type: "SERVER_ERROR"; message: string }
   | { type: "SETUP_ERROR"; message: string };
 
@@ -203,6 +204,18 @@ const transcriptionActor = fromCallback<
   let workletNode: AudioWorkletNode | null = null;
   let disposed = false;
   let connectedFired = false;
+  /**
+   * PCM s16le chunks captured for this segment. Concatenated and WAV-wrapped
+   * on TRANSCRIPTION_DONE so narration mode can re-send to the HQ pass.
+   */
+  const audioChunks: ArrayBuffer[] = [];
+
+  function takeAudioBlob(): Blob | undefined {
+    if (audioChunks.length === 0) return undefined;
+    const blob = encodePcmChunksAsWav(audioChunks);
+    audioChunks.length = 0;
+    return blob;
+  }
 
   function cleanup() {
     disposed = true;
@@ -253,7 +266,8 @@ const transcriptionActor = fromCallback<
         },
         onDone: (text) => {
           if (disposed) return;
-          sendBack({ type: "TRANSCRIPTION_DONE", text });
+          const audioBlob = takeAudioBlob();
+          sendBack({ type: "TRANSCRIPTION_DONE", text, audioBlob });
         },
         onServerError: (message) => {
           if (disposed) return;
@@ -286,15 +300,20 @@ const transcriptionActor = fromCallback<
         // emit a TRANSCRIPTION_DONE so the machine can leave finalizing.
         const dgFinal = (ws as WebSocket & { __dgFinal?: () => string }).__dgFinal;
         if (dgFinal) {
-          sendBack({ type: "TRANSCRIPTION_DONE", text: dgFinal() });
+          const audioBlob = takeAudioBlob();
+          sendBack({ type: "TRANSCRIPTION_DONE", text: dgFinal(), audioBlob });
         } else {
           sendBack({ type: "WS_CLOSED" });
         }
       };
 
       workletNode.port.onmessage = (event) => {
-        if (event.data.type === "pcm" && connection) {
-          connection.sendPcm(event.data.samples);
+        if (event.data.type === "pcm") {
+          // Also keep a copy for the HQ pass (narration mode). Clone before
+          // forwarding because the worklet transfers ownership of the
+          // ArrayBuffer to the main thread.
+          audioChunks.push(event.data.samples.slice(0));
+          if (connection) connection.sendPcm(event.data.samples);
         }
       };
     } catch (err) {
@@ -339,6 +358,9 @@ export const realtimeTranscriptionMachine = setup({
       finalTranscript: string;
       interimTranscript: string;
       error: string | null;
+      /** WAV blob of the segment's audio, set on TRANSCRIPTION_DONE.
+       *  Consumed by narration mode for the HQ pass. */
+      audioBlob: Blob | null;
     },
     events: {} as TranscriptionEvent,
   },
@@ -350,15 +372,19 @@ export const realtimeTranscriptionMachine = setup({
       const e = event as { type: "TEXT_UPDATE"; finalText: string; interimText: string };
       return { finalTranscript: e.finalText, interimTranscript: e.interimText };
     }),
-    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", error: null }),
+    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", error: null, audioBlob: null }),
     setError: assign(({ event }) => {
       const msg = (event as { message: string }).message;
       return { error: msg };
     }),
     setFinalTranscript: assign(({ context, event }) => {
-      const text = (event as { type: "TRANSCRIPTION_DONE"; text?: string }).text;
-      const final = text && text.length > 0 ? text : context.finalTranscript;
-      return { finalTranscript: final, interimTranscript: "" };
+      const e = event as { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob };
+      const final = e.text && e.text.length > 0 ? e.text : context.finalTranscript;
+      return {
+        finalTranscript: final,
+        interimTranscript: "",
+        audioBlob: e.audioBlob ?? context.audioBlob,
+      };
     }),
     setTimeoutWarning: assign({
       error: "Transcription timed out — partial text preserved",
@@ -385,6 +411,7 @@ export const realtimeTranscriptionMachine = setup({
     finalTranscript: "",
     interimTranscript: "",
     error: null,
+    audioBlob: null,
   },
   states: {
     idle: {

@@ -283,6 +283,32 @@ export async function setChatFeature(params: { sessionId: string; feature: strin
   });
 }
 
+/**
+ * Send a recorded audio blob to the HQ transcription pass used by narration
+ * mode. Returns the transcribed text, or null on failure — the caller falls
+ * back to the realtime transcript in that case.
+ */
+export async function postAudioForHqTranscription(blob: Blob): Promise<string | null> {
+  const form = new FormData();
+  const ext = blob.type.includes("wav") ? "wav" : "webm";
+  form.append("file", blob, `segment.${ext}`);
+  try {
+    const res = await fetch(`${getApiBase()}/chat/transcribe-audio`, {
+      method: "POST",
+      body: form,
+    });
+    if (!res.ok) {
+      console.warn(`[hq-transcribe] HTTP ${res.status}: ${await res.text()}`);
+      return null;
+    }
+    const body = (await res.json()) as { text?: string };
+    return typeof body.text === "string" ? body.text : null;
+  } catch (e) {
+    console.warn(`[hq-transcribe] request failed: ${e instanceof Error ? e.message : String(e)}`);
+    return null;
+  }
+}
+
 export async function getChatHistory(params: { sessionId: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
   const searchParams = new URLSearchParams();
   searchParams.set("session", params.sessionId);

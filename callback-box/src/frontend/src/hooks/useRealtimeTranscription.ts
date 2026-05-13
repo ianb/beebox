@@ -25,7 +25,12 @@ const STILL_LISTENING_DELAY_MS = 10000;
 export type { TranscriptionState };
 
 export interface UseRealtimeTranscriptionOptions {
-  onKeywordSend?: (processedTranscript: string) => void;
+  /**
+   * Called when a send keyword fires. Receives the processed transcript
+   * and (if the segment captured any audio) a WAV blob the caller can
+   * use for narration mode's HQ pass.
+   */
+  onKeywordSend?: (processedTranscript: string, audioBlob: Blob | null) => void;
   onKeywordCancel?: () => void;
   onKeywordMicOff?: () => void;
   onKeywordErase?: () => void;
@@ -63,6 +68,13 @@ export function useRealtimeTranscription(
   });
   const doneResolveRef = useRef<((text: string) => void) | null>(null);
   const prevFinalRef = useRef("");
+  /**
+   * When a send-keyword fires, we send STOP to the machine and wait for it
+   * to transition to idle so the audio blob lands in context. The pending
+   * text is parked here in the meantime; the idle-transition effect picks
+   * it up and fires onKeywordSend(text, audioBlob).
+   */
+  const pendingSendTextRef = useRef<string | null>(null);
   /**
    * Identifier of the most recent keyword fired against an *interim*
    * transcript ("<action>:<matchedPhrase>"). Suppresses re-firing when an
@@ -131,7 +143,11 @@ export function useRealtimeTranscription(
 
   const fireKeyword = useCallback((keyword: KeywordResult) => {
     if (keyword.action === "send") {
-      optionsRef.current?.onKeywordSend?.(keyword.processedTranscript);
+      // Park the text and STOP the machine so it can finalize and emit
+      // the segment's audio blob. The idle-transition effect below fires
+      // onKeywordSend with both text and blob once the machine settles.
+      pendingSendTextRef.current = keyword.processedTranscript;
+      send({ type: "STOP" });
     } else if (keyword.action === "micOff") {
       send({ type: "CANCEL" });
       optionsRef.current?.onKeywordMicOff?.();
@@ -142,6 +158,15 @@ export function useRealtimeTranscription(
       send({ type: "START" });
     }
   }, [send]);
+
+  // Fire onKeywordSend after the machine has finalized and the audio blob
+  // is in context. Triggered by the state transition back to idle.
+  useEffect(() => {
+    if (state !== "idle" || pendingSendTextRef.current === null) return;
+    const text = pendingSendTextRef.current;
+    pendingSendTextRef.current = null;
+    optionsRef.current?.onKeywordSend?.(text, snapshot.context.audioBlob);
+  }, [state, snapshot.context.audioBlob]);
 
   // Keyword detection on confirmed (final) text — matches anywhere, so it
   // catches phrases that span multiple final segments.

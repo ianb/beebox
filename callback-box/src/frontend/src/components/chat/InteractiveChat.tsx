@@ -14,7 +14,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, getChatFeatures, setChatFeature, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
+import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, getChatFeatures, setChatFeature, postAudioForHqTranscription, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
@@ -1829,13 +1829,25 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
   // Realtime transcription with voice keyword spotting
   const transcription = useRealtimeTranscription({
-    onKeywordSend: (text) => {
-      // Cancel current recording then immediately restart to keep mic open
-      transcription.cancel();
-      if (text.trim()) {
-        sendSound.play();
-        stopTickRef.current = tick.repeatPlay(1000, 30000);
-        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+    onKeywordSend: (text, audioBlob) => {
+      if (!text.trim()) {
+        transcription.start();
+        return;
+      }
+      sendSound.play();
+      stopTickRef.current = tick.repeatPlay(1000, 30000);
+      // Narration mode swaps in a high-quality transcription before sending
+      // to the agent — the realtime text is good enough for the live UI
+      // but accuracy matters more for the persistent record.
+      const submit = (finalText: string) => {
+        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
+      };
+      if (narrationEnabled && audioBlob) {
+        void postAudioForHqTranscription(audioBlob).then((hqText) => {
+          submit(hqText ?? text);
+        });
+      } else {
+        submit(text);
       }
       // Restart recording so the user can keep talking
       transcription.start();
