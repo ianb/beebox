@@ -13,7 +13,20 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
 import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule-state.js";
-import { getDirectoryForSession, resolveSessionLogPath } from "./chat-session-history.js";
+import {
+  getDirectoryForSession,
+  getFeaturesForSession,
+  resolveSessionLogPath,
+  updateFeaturesForSession,
+} from "./chat-session-history.js";
+import {
+  composeChatAppSnapshot,
+  isKnownFeature,
+  isValidValue,
+  parseChatAppDeltas,
+  resolveFeatures,
+  type FeatureMap,
+} from "./chat-features.js";
 import {
   parseSessionLog,
   tailForMinUserMessages,
@@ -485,6 +498,10 @@ export class ChatSession extends EventEmitter {
   private readonly modelFile: string;
   private readonly backend: ChatBackend;
   private currentModel: string | null = null;
+  /** Chat-feature flags resolved against the registry. Null = not loaded
+   *  yet; first access triggers an async load from chat-session-history. */
+  private currentFeatures: FeatureMap | null = null;
+  private featuresLoadPromise: Promise<void> | null = null;
   /** Marker so the close listener can distinguish intentional shutdown
    *  (which clears the queue) from unexpected death (which drains it). */
   private intentionalStop = false;
@@ -796,6 +813,15 @@ export class ChatSession extends EventEmitter {
       this.emit("done", msg);
       if (completedText) {
         this.emit("turn-text", completedText);
+        // Apply any <chat-app> mutation tags the agent emitted in this turn.
+        // Done after the busy flag flips so listeners reacting to features-changed
+        // can call setFeature etc. without hitting the in-flight check.
+        const { deltas } = parseChatAppDeltas(completedText);
+        if (deltas.length > 0) {
+          void this.applyFeatureDeltas(deltas).catch((e: unknown) => {
+            log("features", `Failed to apply agent deltas: ${e instanceof Error ? e.message : e}`);
+          });
+        }
       }
       this.drainQueue();
     }
@@ -875,9 +901,22 @@ export class ChatSession extends EventEmitter {
     this.busy = true;
     this.turnText = "";
 
-    const input: ChatSendInput = typeof message === "string"
+    const rawInput: ChatSendInput = typeof message === "string"
       ? { text: message }
       : message;
+
+    // Prepend the chat-app snapshot: feature flags + fresh wall-clock time.
+    // Visible to the agent on every user turn; encapsulated to one tag so
+    // it's easy for the agent to skim past when not relevant.
+    await this.ensureFeaturesLoaded();
+    const snapshot = composeChatAppSnapshot({
+      features: this.currentFeatures ?? resolveFeatures(),
+      time: new Date().toISOString(),
+    });
+    const input: ChatSendInput = {
+      ...rawInput,
+      text: `${snapshot}\n${rawInput.text}`,
+    };
 
     const content = buildContentBlocks(input);
     const imgCount = (input.images ?? []).length;
@@ -912,6 +951,87 @@ export class ChatSession extends EventEmitter {
 
   getCurrentModel(): string | null {
     return this.currentModel;
+  }
+
+  /**
+   * Lazy-load the persisted feature map from chat-session-history. Idempotent:
+   * once loaded, the in-memory map is the source of truth and subsequent calls
+   * are no-ops. Concurrent callers share the load promise.
+   */
+  private async ensureFeaturesLoaded(): Promise<void> {
+    if (this.currentFeatures !== null) return;
+    if (this.featuresLoadPromise !== null) {
+      await this.featuresLoadPromise;
+      return;
+    }
+    this.featuresLoadPromise = (async () => {
+      let stored: Record<string, string> | null = null;
+      if (this.sessionId !== null) {
+        try {
+          stored = await getFeaturesForSession(this.boxRoot, this.sessionId);
+        } catch (e) {
+          log("features", `Failed to load features: ${e instanceof Error ? e.message : e}`);
+        }
+      }
+      this.currentFeatures = resolveFeatures(stored ?? undefined);
+    })();
+    await this.featuresLoadPromise;
+  }
+
+  /** Current feature map with defaults applied. Safe to call before features
+   *  are loaded — returns pure defaults until the lazy load completes. */
+  getFeatures(): FeatureMap {
+    return resolveFeatures(this.currentFeatures ?? undefined);
+  }
+
+  /**
+   * Set a single feature. Validates against the registry; throws for unknown
+   * features or illegal values. Persists to session history if a session id
+   * has been assigned. Emits `features-changed`.
+   */
+  async setFeature(name: string, value: string): Promise<void> {
+    if (!isKnownFeature(name)) throw new Error(`Unknown feature: ${name}`);
+    if (!isValidValue(name, value)) throw new Error(`Invalid value for ${name}: ${value}`);
+    await this.ensureFeaturesLoaded();
+    if (this.currentFeatures === null) this.currentFeatures = resolveFeatures();
+    if (this.currentFeatures[name] === value) return; // no-op
+    this.currentFeatures[name] = value;
+    if (this.sessionId !== null) {
+      await updateFeaturesForSession(this.boxRoot, {
+        sessionId: this.sessionId,
+        updates: { [name]: value },
+      });
+    }
+    log("features", `setFeature ${name}=${value}`);
+    this.emit("features-changed", { features: this.getFeatures() });
+  }
+
+  /**
+   * Apply a batch of agent-emitted `<chat-app>` deltas. Same persistence and
+   * event path as `setFeature`. Caller has already validated entries against
+   * the registry (parseChatAppDeltas drops unknowns).
+   */
+  private async applyFeatureDeltas(
+    deltas: Array<{ feature: string; value: string }>,
+  ): Promise<void> {
+    if (deltas.length === 0) return;
+    await this.ensureFeaturesLoaded();
+    if (this.currentFeatures === null) this.currentFeatures = resolveFeatures();
+    const updates: Record<string, string> = {};
+    for (const d of deltas) {
+      if (this.currentFeatures[d.feature] === d.value) continue;
+      this.currentFeatures[d.feature] = d.value;
+      updates[d.feature] = d.value;
+    }
+    if (Object.keys(updates).length === 0) return;
+    if (this.sessionId !== null) {
+      await updateFeaturesForSession(this.boxRoot, {
+        sessionId: this.sessionId,
+        updates,
+      });
+    }
+    log("features", `applied agent deltas: ${JSON.stringify(updates)}`);
+    this.emit("features-changed", { features: this.getFeatures() });
   }
 
   /**

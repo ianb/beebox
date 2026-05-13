@@ -272,6 +272,17 @@ export async function setChatModel(params: { sessionId: string; model: string | 
   });
 }
 
+export async function getChatFeatures(params: { sessionId: string }): Promise<{ features: Record<string, string> }> {
+  return fetchJson(`${getApiBase()}/chat/features?session=${encodeURIComponent(params.sessionId)}`);
+}
+
+export async function setChatFeature(params: { sessionId: string; feature: string; value: string }): Promise<{ ok: boolean; features: Record<string, string> }> {
+  return fetchJson(`${getApiBase()}/chat/set-feature`, {
+    method: "POST",
+    body: JSON.stringify({ session: params.sessionId, feature: params.feature, value: params.value }),
+  });
+}
+
 export async function getChatHistory(params: { sessionId: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
   const searchParams = new URLSearchParams();
   searchParams.set("session", params.sessionId);

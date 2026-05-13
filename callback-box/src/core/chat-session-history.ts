@@ -33,6 +33,12 @@ export interface SessionHistoryEntry {
   id: string;
   /** Directory this chat is associated with (from a landmark). Undefined for unassociated chats. */
   contextDir?: string;
+  /**
+   * Chat feature flags for this session (see `chat-features.ts`). Missing
+   * keys take the registry default. Missing field entirely means "all
+   * defaults" — backwards-compatible with pre-feature sessions.
+   */
+  features?: Record<string, string>;
 }
 
 interface HistoryFile {
@@ -68,6 +74,14 @@ async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
           const contextDir = (raw as { contextDir?: unknown }).contextDir;
           if (typeof contextDir === "string" && contextDir.length > 0) {
             entry.contextDir = contextDir;
+          }
+          const features = (raw as { features?: unknown }).features;
+          if (features !== undefined && features !== null && typeof features === "object" && !Array.isArray(features)) {
+            const sanitized: Record<string, string> = {};
+            for (const [k, v] of Object.entries(features as Record<string, unknown>)) {
+              if (typeof v === "string") sanitized[k] = v;
+            }
+            if (Object.keys(sanitized).length > 0) entry.features = sanitized;
           }
           sessions.push(entry);
         }
@@ -199,6 +213,44 @@ export async function getLastSessionForDirectory(
     if (contextDir === "" && entry.contextDir === undefined) return entry.id;
   }
   return null;
+}
+
+/**
+ * Read the feature map persisted for a session, or null if no entry
+ * exists (or the entry has no features field — which means "use
+ * defaults"). The caller is expected to merge with registry defaults.
+ */
+export async function getFeaturesForSession(
+  boxRoot: string,
+  sessionId: string,
+): Promise<Record<string, string> | null> {
+  const entries = await loadHistoryEntries(boxRoot);
+  const entry = entries.find((s) => s.id === sessionId);
+  if (!entry || !entry.features) return null;
+  return { ...entry.features };
+}
+
+/**
+ * Persist feature-map updates for a session. Creates the entry if it
+ * doesn't exist yet — handy when features are toggled before the first
+ * message has assigned a session id. Caller passes only the keys it
+ * wants to change; existing keys not in `updates` are preserved.
+ */
+export async function updateFeaturesForSession(
+  boxRoot: string,
+  opts: { sessionId: string; updates: Record<string, string> },
+): Promise<void> {
+  const { sessionId, updates } = opts;
+  const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
+  let entry = file.sessions.find((s) => s.id === sessionId);
+  if (!entry) {
+    entry = { id: sessionId };
+    file.sessions.push(entry);
+  }
+  const merged: Record<string, string> = { ...(entry.features ?? {}) };
+  for (const [k, v] of Object.entries(updates)) merged[k] = v;
+  entry.features = merged;
+  await writeHistoryFile(boxRoot, file);
 }
 
 /**

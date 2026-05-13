@@ -24,11 +24,13 @@ import type { FastifyInstance } from "fastify";
 import { type ChatMessage, type ChatImage, type ChatSession } from "../../core/chat-session.js";
 import { ChatSessionRegistry } from "../../core/chat-session-registry.js";
 import {
+  getFeaturesForSession,
   getMostActive,
   loadHistory,
   runBackfillIfNeeded,
   resolveSessionLogPath,
 } from "../../core/chat-session-history.js";
+import { resolveFeatures } from "../../core/chat-features.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { EventBus } from "../../core/event-bus.js";
@@ -154,6 +156,17 @@ export async function registerChatRoutes(
       eventBus.emit("chat-complete", {
         sessionId: session.getSessionId(),
         timestamp: new Date().toISOString(),
+      });
+    });
+
+    // Bridge per-session feature changes (from setFeature or agent deltas)
+    // out to the shared event bus so subscribed clients sync.
+    session.on("features-changed", (payload: { features: Record<string, string> }) => {
+      const sessionId = session.getSessionId();
+      if (sessionId === null) return;
+      eventBus.emitTransient("chat-features-changed", {
+        sessionId,
+        features: payload.features,
       });
     });
   }
@@ -608,6 +621,44 @@ export async function registerChatRoutes(
       }
       return { ok: true, model: target.getCurrentModel(), restarted };
     }
+  );
+
+  // GET /api/chat/features?session=<id> — read the feature map for a session.
+  // Returns the resolved map (defaults filled in). Reads directly from
+  // history so it doesn't churn the session registry just to surface state.
+  server.get<{ Querystring: { session?: string } }>(
+    "/api/chat/features",
+    async (request, reply) => {
+      const sessionId = request.query.session;
+      if (!sessionId) return reply.status(400).send({ error: "session is required" });
+      const stored = await getFeaturesForSession(boxRoot, sessionId).catch(() => null);
+      const features = resolveFeatures(stored);
+      return { features };
+    },
+  );
+
+  // POST /api/chat/set-feature — change a single feature flag for a session.
+  // Validates against the registry inside ChatSession.setFeature; throws on
+  // unknown features or illegal values. Broadcasts a `chat-features-changed`
+  // event so other tabs sync.
+  server.post<{ Body: { session?: string; feature?: string; value?: string } }>(
+    "/api/chat/set-feature",
+    async (request, reply) => {
+      const { session: sessionId, feature, value } = request.body;
+      if (!sessionId) return reply.status(400).send({ error: "session is required" });
+      if (!feature) return reply.status(400).send({ error: "feature is required" });
+      if (typeof value !== "string") return reply.status(400).send({ error: "value is required" });
+      const target = registry.getOrCreate(sessionId);
+      wireSession(target);
+      try {
+        await target.setFeature(feature, value);
+      } catch (e) {
+        return reply.status(400).send({ error: e instanceof Error ? e.message : String(e) });
+      }
+      // `wireSession` bridges the session's `features-changed` event onto the
+      // bus, so the SSE broadcast already fired. No explicit emit here.
+      return { ok: true, features: target.getFeatures() };
+    },
   );
 
   // GET /api/chat/schedules — list active schedules (single per-box manager).

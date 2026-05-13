@@ -1,0 +1,181 @@
+/**
+ * Chat feature flags — the control plane shared by user UI, agent
+ * (`<chat-app>` deltas), and landmark seeding.
+ *
+ * Each feature is a named slot with a closed set of allowed values. The
+ * server is the source of truth: callers update via `ChatSession.setFeature`,
+ * the snapshot serializer composes the `<chat-app>` tag prepended to each
+ * user message, and the delta parser pulls mutations out of agent output.
+ *
+ * Values are strings (not just on/off) so non-boolean features like
+ * `model="opus"` slot in by adding a registry entry, no shape change.
+ */
+
+export type FeatureValue = string;
+export type FeatureMap = Record<string, FeatureValue>;
+
+export interface FeatureDescriptor {
+  /** Stable identifier — appears as both attribute name in <chat-app> and key in storage. */
+  readonly name: string;
+  /** Closed set of legal values. */
+  readonly allowedValues: readonly FeatureValue[];
+  /** Default value when no override is in effect. */
+  readonly default: FeatureValue;
+  /** Hint for the settings UI — toggle for binary on/off, select for enums. */
+  readonly uiKind: "toggle" | "select";
+  /** Short human-readable label for the settings UI. */
+  readonly label: string;
+}
+
+const FEATURE_LIST: readonly FeatureDescriptor[] = [
+  {
+    name: "narration",
+    allowedValues: ["on", "off"],
+    default: "off",
+    uiKind: "toggle",
+    label: "Narration mode",
+  },
+  {
+    name: "prose",
+    allowedValues: ["on", "off"],
+    default: "on",
+    uiKind: "toggle",
+    label: "Show agent prose",
+  },
+] as const;
+
+const FEATURE_INDEX = new Map<string, FeatureDescriptor>(
+  FEATURE_LIST.map((f) => [f.name, f]),
+);
+
+/** All registered features, in declaration order. */
+export function listFeatures(): readonly FeatureDescriptor[] {
+  return FEATURE_LIST;
+}
+
+/** Look up a descriptor by name, or null if unknown. */
+export function getFeature(name: string): FeatureDescriptor | null {
+  return FEATURE_INDEX.get(name) ?? null;
+}
+
+/** True if the name is a registered feature. */
+export function isKnownFeature(name: string): boolean {
+  return FEATURE_INDEX.has(name);
+}
+
+/** True if the value is legal for the named feature. Unknown feature → false. */
+export function isValidValue(name: string, value: string): boolean {
+  const f = FEATURE_INDEX.get(name);
+  if (!f) return false;
+  return f.allowedValues.includes(value);
+}
+
+/** Map of all features in their default state. */
+export function getDefaults(): FeatureMap {
+  const out: FeatureMap = {};
+  for (const f of FEATURE_LIST) out[f.name] = f.default;
+  return out;
+}
+
+/**
+ * Merge stored features over defaults. Unknown stored keys and illegal
+ * stored values are dropped (with a warning) so the result is always a
+ * sound state, even if the on-disk file is corrupted or written by an
+ * older version that knew different features.
+ */
+export function resolveFeatures(stored?: FeatureMap | null): FeatureMap {
+  const out = getDefaults();
+  if (!stored) return out;
+  for (const [name, value] of Object.entries(stored)) {
+    if (!isKnownFeature(name)) {
+      console.warn(`[chat-features] Ignoring unknown stored feature: ${name}`);
+      continue;
+    }
+    if (!isValidValue(name, value)) {
+      console.warn(`[chat-features] Ignoring invalid value ${value} for ${name}`);
+      continue;
+    }
+    out[name] = value;
+  }
+  return out;
+}
+
+/**
+ * Serialize the system → agent snapshot. Carries `time` (lowercase,
+ * free-form ISO string) plus all current feature states.
+ *
+ * Example output:
+ *   <chat-app narration="on" prose="off" time="2026-05-13T14:23:00-05:00"/>
+ */
+export function composeChatAppSnapshot(input: {
+  features: FeatureMap;
+  time: string;
+}): string {
+  const resolved = resolveFeatures(input.features);
+  const attrs: string[] = [];
+  for (const f of FEATURE_LIST) {
+    const val = resolved[f.name];
+    if (val === undefined) continue;
+    attrs.push(`${f.name}="${escapeAttr(val)}"`);
+  }
+  attrs.push(`time="${escapeAttr(input.time)}"`);
+  return `<chat-app ${attrs.join(" ")}/>`;
+}
+
+export interface ChatAppDelta {
+  feature: string;
+  value: string;
+}
+
+/**
+ * Parse `<chat-app …/>` tags out of agent output and return the deltas
+ * plus the stripped content. The agent emits deltas as feature mutations;
+ * each tag's attributes (excluding `time`, which is read-only) become a
+ * delta. Unknown features and invalid values are dropped with a warning.
+ *
+ * The parsed tags are removed from the returned content so they don't
+ * surface in chat history. Tags can be self-closing (`<chat-app .../>`)
+ * or have an empty body (`<chat-app ...></chat-app>`); both are accepted.
+ */
+export function parseChatAppDeltas(content: string): {
+  deltas: ChatAppDelta[];
+  cleaned: string;
+} {
+  const deltas: ChatAppDelta[] = [];
+  // Match both self-closing and paired forms. The body (if any) is ignored.
+  const re = /<chat-app\b([^>]*?)(?:\/\s*>|>\s*<\/chat-app\s*>)/gi;
+  const cleaned = content.replace(re, (_match, attrsRaw: string) => {
+    const attrs = parseAttrs(attrsRaw);
+    for (const [name, value] of attrs) {
+      if (name === "time") continue; // read-only, ignored on input
+      if (!isKnownFeature(name)) {
+        console.warn(`[chat-features] Ignoring unknown feature in agent delta: ${name}`);
+        continue;
+      }
+      if (!isValidValue(name, value)) {
+        console.warn(`[chat-features] Ignoring invalid value ${value} for ${name} in agent delta`);
+        continue;
+      }
+      deltas.push({ feature: name, value });
+    }
+    return "";
+  });
+  return { deltas, cleaned };
+}
+
+function parseAttrs(raw: string): Array<[string, string]> {
+  const out: Array<[string, string]> = [];
+  const re = /([A-Z_a-z][\w-]*)\s*=\s*"([^"]*)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    const name = m[1];
+    const value = m[2];
+    if (name === undefined || value === undefined) continue;
+    out.push([name, value]);
+  }
+  return out;
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}

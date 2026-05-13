@@ -14,7 +14,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
+import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, getChatFeatures, setChatFeature, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
@@ -206,6 +206,8 @@ function ChatDebugMenu({
   onToggleDebugLog,
   selectedModel,
   onSelectModel,
+  narrationEnabled,
+  onToggleNarration,
 }: {
   onStopProcess: () => void;
   onRestartProcess: () => void;
@@ -220,6 +222,8 @@ function ChatDebugMenu({
   onToggleDebugLog: () => void;
   selectedModel: string | null;
   onSelectModel: (model: string | null) => void;
+  narrationEnabled: boolean;
+  onToggleNarration: () => void;
 }) {
   const transcriptionConfigQuery = trpc.transcription.config.useQuery();
   const setTranscriptionService = trpc.transcription.setService.useMutation();
@@ -259,6 +263,10 @@ function ChatDebugMenu({
       <MenuItem onClick={onRestartProcess} disabled={!running}>Restart Subprocess</MenuItem>
       <MenuItem onClick={onCompactSession} disabled={busy}>Compact Session</MenuItem>
       <MenuItem onClick={onRunSync}>Sync (cb wakeup)</MenuItem>
+      <MenuDivider />
+      <MenuItem onClick={onToggleNarration} disabled={sessionId === null}>
+        {narrationEnabled ? "✓ " : "  "}Narration mode
+      </MenuItem>
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Model</div>
       {MODEL_OPTIONS.map((opt) => (
@@ -1092,6 +1100,30 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       .catch(() => {});
   }, [sessionId]);
 
+  // Chat-feature flags (narration, prose, ...). Server-side state synced via
+  // /api/chat/features on mount, then kept fresh through chat-features-changed
+  // events on the global SSE stream (see useSSE below).
+  const [chatFeatures, setChatFeatures] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!sessionId) return;
+    getChatFeatures({ sessionId })
+      .then((res) => { setChatFeatures(res.features); })
+      .catch(() => {});
+  }, [sessionId]);
+  const narrationEnabled = chatFeatures.narration === "on";
+
+  const handleToggleNarration = useCallback(() => {
+    if (!sessionId) return;
+    const next = narrationEnabled ? "off" : "on";
+    // Optimistic — server-confirmed value lands via the SSE event handler.
+    setChatFeatures((prev) => ({ ...prev, narration: next }));
+    setChatFeature({ sessionId, feature: "narration", value: next })
+      .then((res) => { setChatFeatures(res.features); })
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] set-feature narration failed: ${e instanceof Error ? e.message : String(e)}`);
+      });
+  }, [sessionId, narrationEnabled]);
+
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
     const label = MODEL_OPTIONS.find((o) => o.model === model)?.label ?? "default";
@@ -1302,6 +1334,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
             timestamp: data.timestamp,
           });
         }
+      } else if (event.event === "chat-features-changed") {
+        const data = event.data as { sessionId: string; features: Record<string, string> };
+        if (sessionId && data.sessionId !== sessionId) return;
+        setChatFeatures(data.features);
       } else if (event.event === "chat-session-assigned") {
         const data = event.data as { sessionId: string };
         // Lock the running machine onto the assigned id (so subsequent
@@ -1930,6 +1966,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           onToggleDebugLog={() => setShowDebugLog((v) => !v)}
           selectedModel={selectedModel}
           onSelectModel={handleSelectModel}
+          narrationEnabled={narrationEnabled}
+          onToggleNarration={handleToggleNarration}
         />
       </div>
       {/* Messages area — virtualized */}
