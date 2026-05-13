@@ -922,6 +922,14 @@ tests:
     correct_contains: ["<chat-app", "narration"]
     tags: [chat, structured-output, chat-app]
 
+  - id: chat-app-features-list
+    prompt: "What chat-app features can you set, and what do they do?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Names both narration and prose. Identifies narration as a turn-expectation shift and prose as a UI visibility toggle for untagged response prose."
+    correct_contains: ["narration", "prose"]
+    tags: [chat, structured-output, chat-app]
+
   - id: ack-purpose
     prompt: "When should you use an <ack> tag instead of just describing what you did in prose?"
     expected_level: knows_directly
@@ -988,6 +996,8 @@ tests:
   # sharpened with concrete don't-do examples ("don't reply to musings",
   # "<callout>, not <speech>"). The agent correctly ignores rhetorical
   # asides ("maybe pasta?") and routes real questions through <callout>.
+  # The chat-app-features-list audit (in the section above) also passes
+  # cleanly — agent names both narration and prose with effects.
 
   - id: narration-defaults-silent
     prompt: |
