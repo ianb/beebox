@@ -38,12 +38,17 @@ Phase 1 doesn't change what cardworks does. The application code that *uses* an 
 
 ### Callback-box: file-walking and card loading
 
-Today's loader (`cardworks/loader/loader.ts` and callers in `src/core/`) walks the filesystem and identifies cards. It needs to learn:
+Today's loader (`cardworks/loader/loader.ts` and callers in `src/core/`) walks the filesystem and identifies cards. **`.attach/` directories are not opaque** — they can contain real cards (a capture-session's children are image cards living inside its `.attach/`), and the walker must recurse into them normally to find every card in the box.
 
-- When listing a directory's cards, treat `Foo.attach/` directories as opaque — don't recurse into them as if they were regular box content.
-- When computing "what files belong to this card," include `<basename>.attach/**`.
+What the walker DOES need to know:
 
-Look at `src/core/CardLoader` (or wherever the file walker is) — needs an attachment-aware mode.
+- A card's `<basename>.attach/` directory is conceptually part of that card's scope. "What files belong to this card" includes `<basename>.attach/**` recursively, including any nested cards and their own `.attach/` subdirectories.
+- The lint rule that forbids a directory literally named `attach/` applies only outside an existing `.attach/` scope.
+- Inside a `.attach/` scope, underscore-prefixed subdirectories (`Foo.attach/_files/`, etc.) are the actual opaque case — lint and most queries skip them. This is the escape hatch for "I just need to dump some files."
+
+So the walker walks everything; only `_*` directories inside attach scopes get skipped. Regular `.attach/` contents (cards, attached files, nested attach dirs) are first-class box content.
+
+Look at `src/core/CardLoader` (or wherever the file walker is) — needs scope-awareness for path resolution but no recursion-skipping for `.attach/` itself.
 
 ### Callback-box: schemas with attachment refs
 
@@ -135,37 +140,69 @@ Each test that creates a card with an attachment now creates the `.attach/` dire
 
 ## Migration tooling
 
-A migrator script (`scripts/migrate-attachments.ts` or similar) that walks an existing box and converts:
+A migrator script (`scripts/migrate-attachments.ts` or similar) that walks an existing box and does **two coordinated passes**:
 
-```
-inbox/Voice_Memo.memo.card        →  inbox/Voice_Memo.memo.card
-inbox/Voice_Memo.m4a              →  inbox/Voice_Memo.attach/Voice_Memo.m4a
+1. **File move pass.** Move sibling files into `<basename>.attach/` directories.
+2. **Ref rewrite pass.** Walk every card and rewrite any ref that points at a path that was moved.
 
-inbox/scan-XX/photo-001.image.card    →  inbox/scan-XX/photo-001.image.card
-inbox/scan-XX/photo-001.jpg           →  inbox/scan-XX/photo-001.attach/photo-001.jpg
-inbox/scan-XX/photo-001-back.jpg      →  inbox/scan-XX/photo-001.attach/photo-001-back.jpg
-```
+The ref rewrite is the larger, trickier piece. Refs to attached files exist in two forms today, and they migrate differently:
 
-Algorithm:
+| Today's form | After migration | Rewrite needed? |
+|---|---|---|
+| `<filename ref="photo-001.jpg">` on the owning card (bare filename, implicit-sibling) | `<filename ref="photo-001.jpg">` (same) — but resolves to `<basename>.attach/photo-001.jpg` | **No.** Bare filename stays; resolution logic in the schema looks in `.attach/` now. |
+| `<source ref="/box/inbox/scan-XX/photo-001.jpg">` on a different card (full path to a sibling-located file) | `<source ref="/box/inbox/scan-XX/photo-001.image.attach/photo-001.jpg">` | **Yes.** Cross-card refs that include the file's path break when the file moves; migrator must rewrite. |
+| `<source ref="scan-XX/photo-001.jpg">` (relative path including dir) | `<source ref="scan-XX/photo-001.image.attach/photo-001.jpg">` | **Yes.** Same as above. |
+| `<sheet-tab ref="Budget/Summary.csv">` on a sheet card pointing into its data dir | `<sheet-tab ref="Summary.csv">` — if we collapse the path into the attach scope | **Yes, schema-specific.** The sheet card today uses a subdirectory ref that's effectively an attachment path. The migrator needs to rewrite per-schema. |
+| `<content ref="Project_Notes.md">` on a doc card pointing at its sibling .md | `<content ref="Project_Notes.md">` (same — bare filename stays under the same convention) | **No.** Same logic as `<filename>`: bare filename resolves into `.attach/`. |
 
-1. Walk every card under the box.
-2. For each card, find sibling files matching `<basename>*` (excluding other cards).
-3. Create `<basename>.attach/` if it doesn't exist.
-4. Move matching siblings into `<basename>.attach/`.
-5. For schemas that need it, ensure the `<filename ref="...">` value matches (no change for the bare-filename convention).
+### Algorithm
 
-Edge cases:
+1. **First pass: build the move map.**
+   - Walk every card under the box.
+   - For each card, find sibling files matching `<basename>*` (excluding other cards). These are the files that will move into `<basename>.attach/`.
+   - Record old-path → new-path for every file to be moved. Resolve paths to box-root absolute for unambiguous lookup.
+   - Do not yet write anything.
 
-- **Capture-session children:** The current layout has the session card + image cards + audio cards + binary files all as siblings in `scan-XXX/`. Under the new layout, the session's children (image cards, audio cards) become attachments of the session: `scan-XXX/scan-XXX.capture-session.card` + `scan-XXX/scan-XXX.attach/photo-001.image.card` + `scan-XXX/scan-XXX.attach/photo-001.attach/photo-001.jpg`. The migrator must handle nested attach dirs.
-- **Multiple cards sharing the directory:** today's structure sometimes has same-basename-different-type. The lint rule forbids this going forward. The migrator should flag (not auto-fix) these as user-intervention-required.
-- **Email-thread directories:** today they have `attachments/` as a literal sibling subdirectory inside the thread folder. Under the rule, `attachments/` is forbidden as a top-level directory but the thread folder is itself inside the box. Probably fine; `attachments/` is a child of the thread directory (`box/inbox/email/thread-X/attachments/`), not a top-level reserved name. Validate the rule doesn't accidentally trigger here.
+2. **Second pass: ref rewrite plan.**
+   - Walk every card again. Parse it. For each `ref="..."` attribute (and other ref-shaped attributes — `path`, `src`, `link` for older cards, etc.), check whether the resolved path appears in the move map.
+   - If yes, record the rewrite: this ref in this card should change to the new path.
+   - Per-schema adapters handle the cases that need more than a path substitution (sheet's directory-collapse, etc.).
+
+3. **Third pass: validate the plan.**
+   - Same-basename-different-type collisions in the same directory: flag, abort. The user must resolve manually before re-running.
+   - Empty `.attach/` directories already present in the source: warn, leave alone.
+   - Any ref that resolves to a path that DOESN'T exist in the source box: log as a dangling ref, don't rewrite. (These were already broken before migration.)
+
+4. **Fourth pass: execute (under `--apply`).**
+   - Move files in the order computed in pass 1 (creating `.attach/` directories as needed).
+   - Write back updated card content for each card with rewritten refs.
+   - Log everything.
+
+### Edge cases
+
+- **Capture-session children.** Today the session card + image cards + audio cards + binary files all as siblings in `scan-XXX/`. Under the new layout the children get **doubly-nested**: `scan-XXX/scan-XXX.attach/photo-001.image.card` + `scan-XXX/scan-XXX.attach/photo-001.attach/photo-001.jpg`. The migrator must handle this carefully — the photo's `.attach/` directory is nested inside the session's `.attach/` directory, and refs to the photo file may currently be `/box/inbox/scan-XX/photo-001.jpg` (becoming `/box/inbox/scan-XX/scan-XX.attach/photo-001.attach/photo-001.jpg`). Lots of path segments shift; rebuild the move map accordingly.
+
+  Also check: do any internal refs in the session card itself (`<image-ref ref="photo-001.image.card">`) need updating? Today the session refs to children by bare filename ("relative to the session directory"). Tomorrow the children live inside `.attach/`, so the refs become `<image-ref ref="scan-XX.attach/photo-001.image.card">` — OR — we keep the bare-filename convention with schema-specific resolution that knows to look in the parent's `.attach/`. Lean toward the latter for the same reason we don't introduce the `attach/` virtual prefix in phase 1: minimum textual change to existing cards.
+
+- **Email-thread internal `attachments/` dir.** Today threads have a literal `attachments/` subdirectory inside the thread folder. The reserved-`attach/` lint rule must not trigger on this — it's a child of the thread folder, not a top-level reserved name. The lint rule needs to be scope-aware: "no directory named `attach/` anywhere in the box tree" is the right phrasing for the rule, but the migration plan needs to either rename the email `attachments/` directory to avoid collision OR adjust the lint rule to permit non-`attach/`-named-but-similar-purpose directories.
+
+  Cleanest path: rename `attachments/` to `attach/` during migration so it becomes a proper attach scope, then the email-message card's `<attachment ref="...">` refs follow the same convention as everywhere else. The lint rule then only forbids `attach/` literally named at the top level — actually, even more specifically, it forbids `attach/` outside of attach scopes. An `attach/` directory that's a child of a thread folder IS the email-message card's attach scope (or arguably the thread's). Subtle; needs a clean call during implementation.
+
+- **Sheet's `Budget/` directory.** Today's drive-sheets connector writes JSON tab files into a `Budget/` subdirectory next to `Budget.sheet.card`. Migration renames `Budget/` to `Budget.attach/`, and the sheet's `<sheet-tab ref="Budget/Summary.csv" />` becomes `<sheet-tab ref="Summary.csv" />` (within the attach scope). Per-schema migrator adapter needed.
+
+- **Doc's sibling `.md`.** Today the drive-docs connector writes `Project_Notes.md` next to `Project_Notes.doc.card`. Migration moves it into `Project_Notes.attach/Project_Notes.md`. The card's `<content ref="Project_Notes.md">` stays the same (bare filename convention).
+
+- **Same-basename-different-type collisions.** Today's structure may have `Foo.memo.card` + `Foo.image.card` in the same directory. Lint forbids this going forward. The migrator should flag these as user-intervention-required and abort before any moves until they're resolved (rename one of them, or move one to a different directory).
+
+### Behavior requirements
 
 The migrator should:
 
-- Run in dry-run mode by default. Print proposed moves; require `--apply` to execute.
-- Make a backup of the box before any moves (git commit, or filesystem snapshot).
-- Be idempotent (running it again on a migrated box is a no-op).
-- Produce a log of what moved.
+- Run in dry-run mode by default. Print proposed moves and ref rewrites; require `--apply` to execute.
+- Be wrapped in a git commit boundary — the box should be in a clean git state before running, and the migrator's output is a single commit (or refuses to run if the tree is dirty).
+- Be idempotent (running it again on an already-migrated box is a no-op).
+- Produce a structured log: every file moved (old → new), every ref rewritten (card path, old value, new value), every same-basename collision flagged.
+- Support `--abort-on-collision` (default true) and `--allow-collisions` (skip those cards, migrate the rest) for the user to choose.
 
 ### Migration tests
 
@@ -240,9 +277,6 @@ Total scope: probably 1-2 weeks of focused work for a single engineer, plus livi
 
 ## Open questions
 
-- **Capture-session restructuring.** Today's capture-session directory has children as direct siblings. The migration moves them into `<session>.attach/`. Does anything in the capture pipeline assume direct-sibling placement that would break? The `cb capture import` flow, the transcript-assembly step, the timeline generator — all need a quick audit.
-- **Email-thread `attachments/` subdirectory.** Today's threads have `attachments/` as a literal directory name inside the thread folder. The reserved-`attach/` lint rule must not trigger on this (it's a child of the thread folder, not a top-level reserved name). Confirm the rule is correctly scoped.
-- **Sheet `Budget/` directory.** Today's drive-sheets connector writes JSON tab files into a `Budget/` subdirectory next to `Budget.sheet.card`. The migration renames `Budget/` to `Budget.attach/` and the sheet's internal `<sheet-tab ref="Budget/Summary.csv" />` becomes `<sheet-tab ref="Summary.csv" />` (since refs are now within the attach scope). This is a per-card ref-rewrite the migrator needs to handle for sheet cards specifically.
-- **Doc `.md` siblings.** Today's drive-docs connector writes `Project_Notes.md` next to `Project_Notes.doc.card`. The migration moves the `.md` into `Project_Notes.attach/Project_Notes.md`. The card's `<content ref="...">` value needs to be rewritten accordingly.
-
-These per-schema ref-rewrites are the largest non-mechanical part of the migrator. Each schema with attachments needs a small adapter in the migrator that knows how to update its refs after the file move.
+- **Capture pipeline assumptions.** The migration moves capture-session children into `<session>.attach/`. Does anything in `cb capture import`, the transcript-assembly step, or the timeline generator assume direct-sibling placement of image/audio cards under the session directory? Quick audit needed before migrating fixture-heavy areas.
+- **Lint rule scope precision.** The reserved-`attach/` rule needs careful scoping. The intended rule: a directory literally named `attach/` is forbidden anywhere except as a card's attachment scope (i.e., `<basename>.attach/` where `<basename>.<type>.card` exists as a sibling). The email-thread case (where today there's an `attachments/` literal subdirectory) gets migrated to a proper `<msg-id>.attach/` and the rule applies cleanly. Confirm the rule's check is implementable without false positives.
+- **Should the bare-filename convention extend to capture-session children?** Today the session card refs to children as `<image-ref ref="photo-001.image.card">` — relative to the session directory. After migration, photo-001.image.card lives in `scan-XX.attach/`. The cleanest answer is "bare basename within the parent's attach scope" — same convention as `<filename ref="photo-001.jpg">`. Schemas with refs-into-attach-scope use bare names; the resolution logic knows where to look. Confirm this works across all the capture-session-internal refs without weird edge cases.
