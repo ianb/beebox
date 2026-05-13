@@ -275,6 +275,22 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
     cardsByDir.set(dir, m);
   }
 
+  // For each card, collect the leaf filenames it references as attachments.
+  // This filters out compiled-output siblings (e.g. `briefing.md` written
+  // by generateDocs() but not referenced from the card) — they share a
+  // basename but aren't user-managed attachments.
+  const cardReferencedFilenames = new Map<string, Set<string>>();
+  for (const rel of allRel) {
+    if (!rel.endsWith(".card")) continue;
+    try {
+      const content = await fs.readFile(path.join(boxRoot, rel), "utf-8");
+      const filenames = extractReferencedFilenames(content);
+      cardReferencedFilenames.set(rel, filenames);
+    } catch {
+      cardReferencedFilenames.set(rel, new Set());
+    }
+  }
+
   // First pass: compute new path for every CARD in the box.
   const cardNewPath = new Map<string, string>();
   for (const rel of allRel) {
@@ -361,19 +377,29 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
 
     if (owningCardName) {
       // The file belongs to a card with matching basename in the same dir.
-      // Place it inside that card's attach scope after the card has moved.
+      // But only nest it into the card's attach scope if the card actually
+      // references it (filters out generated-output siblings like a
+      // briefing card's `.md` that's emitted by generateDocs but not
+      // referenced from the card).
       const owningCardRel = `${dirRel === "." ? "" : `${dirRel}/`}${owningCardName}`;
-      const owningCardNewPath = cardNewPath.get(owningCardRel) ?? owningCardRel;
-      const owningCardNewBase = cardBasename(path.basename(owningCardNewPath));
-      const owningCardNewDir = path.dirname(owningCardNewPath);
-      const newAttachRel = owningCardNewDir === "."
-        ? `${owningCardNewBase}.attach`
-        : `${owningCardNewDir}/${owningCardNewBase}.attach`;
-      const newPath = `${newAttachRel}/${leafName}`;
-      if (newPath !== rel) {
-        plan.moves.push({ from: rel, to: newPath, isDirectory: isDir });
+      const referenced = cardReferencedFilenames.get(owningCardRel);
+      const isReferenced = referenced ? referenced.has(leafName) : false;
+
+      if (isReferenced) {
+        const owningCardNewPath = cardNewPath.get(owningCardRel) ?? owningCardRel;
+        const owningCardNewBase = cardBasename(path.basename(owningCardNewPath));
+        const owningCardNewDir = path.dirname(owningCardNewPath);
+        const newAttachRel = owningCardNewDir === "."
+          ? `${owningCardNewBase}.attach`
+          : `${owningCardNewDir}/${owningCardNewBase}.attach`;
+        const newPath = `${newAttachRel}/${leafName}`;
+        if (newPath !== rel) {
+          plan.moves.push({ from: rel, to: newPath, isDirectory: isDir });
+        }
+        continue;
       }
-      continue;
+      // Sibling matches by basename but isn't a referenced attachment;
+      // fall through to wrapper-orphan or stay-put behavior.
     }
 
     if (wrapper) {
@@ -416,6 +442,41 @@ interface FindWrappersArgs {
   scanDirAbs: string;
   cardType: string;
   out: WrapperInfo[];
+}
+
+/**
+ * Pull out leaf filenames referenced from a card's content. Picks up
+ * `ref="..."`, `src="..."`, and text content of `<body-file>` / `<content>`-
+ * style elements. Returns just the leaf filename (path-stripped) of each ref.
+ *
+ * Used to filter sibling-basename matches: only files actually referenced
+ * by the card should be treated as that card's attachments. Files that
+ * happen to share a basename but aren't referenced (e.g. a generateDocs()
+ * output sitting next to a briefing card) stay put.
+ */
+function extractReferencedFilenames(cardContent: string): Set<string> {
+  const out = new Set<string>();
+  // Match ref="value", refs="value", src="value", path="value"
+  const attrMatches = cardContent.matchAll(/\b(?:ref|refs|src|path)\s*=\s*"([^"]+)"/g);
+  for (const m of attrMatches) {
+    const value = m[1] ?? "";
+    for (const ref of value.split(/\s+/)) {
+      if (!ref) continue;
+      const stripped = ref.startsWith("attach/") ? ref.slice("attach/".length) : ref;
+      const leaf = stripped.includes("/") ? stripped.slice(stripped.lastIndexOf("/") + 1) : stripped;
+      if (leaf) out.add(leaf);
+    }
+  }
+  // Match <body-file>value</body-file> and similar single-line element text
+  const elMatches = cardContent.matchAll(/<(?:body-file|content)>([^<]+)<\/(?:body-file|content)>/g);
+  for (const m of elMatches) {
+    const value = (m[1] ?? "").trim();
+    if (!value) continue;
+    const stripped = value.startsWith("attach/") ? value.slice("attach/".length) : value;
+    const leaf = stripped.includes("/") ? stripped.slice(stripped.lastIndexOf("/") + 1) : stripped;
+    if (leaf) out.add(leaf);
+  }
+  return out;
 }
 
 async function findWrappers(args: FindWrappersArgs): Promise<void> {
