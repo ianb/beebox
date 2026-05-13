@@ -2,18 +2,18 @@
  * Custom ListComponent for image cards — renders a thumbnail alongside the
  * title in the FileEntry middle slot. Demonstrates the extension point.
  *
- * The attached image file sits in the same directory as the .image.card,
- * with its filename recorded in the loader's computed attrs.
+ * The attached image file lives in the card's attach scope; the loader's
+ * computed `filename` attr uses the `attach/…` virtual prefix.
  */
 
 import type { ListProps } from "../../file-types/registry";
 import type { ImageAttrs } from "../../../../schemas/image";
 import { getApiBase } from "../../api";
+import { resolveRelativePath } from "../../lib/view-url";
 
-function imageSrc(cardPath: string, filename: string): string {
-  const slash = cardPath.lastIndexOf("/");
-  const dir = slash === -1 ? "" : cardPath.slice(0, slash + 1);
-  return `${getApiBase()}/files/${dir}${filename}`;
+function imageSrc(cardPath: string, filenameRef: string): string {
+  const resolved = resolveRelativePath(cardPath, filenameRef);
+  return `${getApiBase()}/files/${resolved}`;
 }
 
 export function ImageCardListEntry({ data, compact }: ListProps<ImageAttrs>) {

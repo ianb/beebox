@@ -20,6 +20,8 @@ export interface BrowseCard {
   tagName: string;
   status?: string | undefined;
   title?: string | undefined;
+  /** True if this card has a `<basename>.attach/` directory (i.e. attachments). */
+  hasAttachments?: boolean;
 }
 
 export interface BrowseFile {
@@ -117,9 +119,25 @@ export const statusRouter = router({
       const files: BrowseFile[] = [];
       const loader = await createLoader(ctx.boxRoot);
 
+      // Build a set of card basenames so we can fold owned `<basename>.attach/`
+      // directories into their owning card (cards-as-directories UI).
+      const cardBasenames = new Set<string>();
+      for (const e of entries) {
+        if (e.isDirectory()) continue;
+        if (!e.name.endsWith(".card")) continue;
+        const parsed = parseCardName(e.name);
+        if (parsed) cardBasenames.add(parsed.name);
+      }
+
       for (const entry of entries) {
         if (entry.name.startsWith(".")) continue;
         if (entry.isDirectory()) {
+          // Hide `<basename>.attach/` when an owning card sits next to it.
+          // Stray attach dirs (no owner) still show up so they can be cleaned.
+          if (entry.name.endsWith(".attach")) {
+            const owner = entry.name.slice(0, -".attach".length);
+            if (cardBasenames.has(owner)) continue;
+          }
           const dirFullPath = path.join(resolved, entry.name);
           let fileCount = 0;
           try {
@@ -138,6 +156,11 @@ export const statusRouter = router({
           const parsed = parseCardName(entry.name);
           if (!parsed) continue;
 
+          const attachDirName = `${parsed.name}.attach`;
+          const hasAttachments = entries.some(
+            (e) => e.isDirectory() && e.name === attachDirName,
+          );
+
           try {
             const card = await loader.load(fullPath);
             cards.push({
@@ -147,9 +170,10 @@ export const statusRouter = router({
               tagName: card.element.tagName,
               status: card.element.attrs["status"],
               title: card.element.attrs["title"],
+              hasAttachments,
             });
           } catch {
-            cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown" });
+            cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown", hasAttachments });
           }
           continue;
         }

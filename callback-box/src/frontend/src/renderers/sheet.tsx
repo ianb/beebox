@@ -13,6 +13,7 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { SheetTable, type CellValue } from "../components/SheetTable";
+import { resolveRelativePath } from "../lib/view-url";
 
 // ─── Parsing ────────────────────────────────────────────────────────────────
 
@@ -75,8 +76,6 @@ function SheetView({ data }: RendererProps) {
   const [tabData, setTabData] = useState<Map<string, CellValue[][]>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  const cardDir = data.path.replace(/[^/]+$/, "");
-
   useEffect(() => {
     if (!sheet) return;
     let cancelled = false;
@@ -87,7 +86,7 @@ function SheetView({ data }: RendererProps) {
 
       for (const tab of sheet!.tabs) {
         try {
-          const filePath = cardDir + tab.ref;
+          const filePath = resolveRelativePath(data.path, tab.ref);
           const resp = await fetch(`${getApiBase()}/files/${filePath}`);
           if (resp.ok) {
             const json = await resp.json();

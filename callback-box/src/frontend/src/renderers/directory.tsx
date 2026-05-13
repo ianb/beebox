@@ -23,19 +23,34 @@ function CardAccordion({
   name,
   type,
   status,
+  hasAttachments,
+  boxSlug,
   onNavigate,
 }: {
   cardPath: string;
   name: string;
   type: string;
   status?: string;
+  hasAttachments?: boolean;
+  boxSlug: string | undefined;
   onNavigate: RendererProps["onNavigate"];
 }) {
+  // Card-as-directory: when a card has its own attach scope, expose a link to
+  // browse INTO it. The literal segment is `<basename>.<type>.attach` — we
+  // surface it as "contents" rather than the .attach implementation detail.
+  const attachPath = hasAttachments
+    ? cardPath.replace(/\.card$/, ".attach")
+    : null;
   const title = (
     <Row gap="sm">
       <Text size="sm" weight="medium" tone="emphasis">{name}</Text>
       <Text size="xs" tone="muted">.{type}.card</Text>
       {status ? <Badge size="sm">{status}</Badge> : null}
+      {attachPath && boxSlug ? (
+        <TextLink to={href(`/${boxSlug}/browse/${attachPath}`)}>
+          <Text size="xs" tone="muted">contents →</Text>
+        </TextLink>
+      ) : null}
     </Row>
   );
   return (
@@ -116,6 +131,8 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
               name={card.name}
               type={card.type}
               status={card.status}
+              hasAttachments={card.hasAttachments}
+              boxSlug={boxSlug}
               onNavigate={onNavigate}
             />
           ))}
