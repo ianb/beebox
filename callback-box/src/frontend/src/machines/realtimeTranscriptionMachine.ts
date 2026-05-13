@@ -369,13 +369,20 @@ export const realtimeTranscriptionMachine = setup({
   },
   actions: {
     applyTextUpdate: assign(({ event }) => {
-      const e = event as { type: "TEXT_UPDATE"; finalText: string; interimText: string };
-      return { finalTranscript: e.finalText, interimTranscript: e.interimText };
+      if (event.type !== "TEXT_UPDATE") {
+        throw new Error(`applyTextUpdate: unexpected event type "${event.type}"`);
+      }
+      return { finalTranscript: event.finalText, interimTranscript: event.interimText };
     }),
     clearTranscript: assign({ finalTranscript: "", interimTranscript: "", error: null, audioBlob: null }),
     setError: assign(({ event }) => {
-      const msg = (event as { message: string }).message;
-      return { error: msg };
+      // setError is wired to WS_ERROR / SERVER_ERROR / SETUP_ERROR — all
+      // share a `message: string` field. Narrow by checking the field
+      // directly so the shared parent shape stays type-safe.
+      if (!("message" in event) || typeof event.message !== "string") {
+        throw new Error(`setError: event "${event.type}" has no message field`);
+      }
+      return { error: event.message };
     }),
     setFinalTranscript: assign(({ context, event }) => {
       if (event.type !== "TRANSCRIPTION_DONE") {
