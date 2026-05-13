@@ -188,7 +188,7 @@ Coding agents have a strong training-data bias toward producing markdown when as
 
 The explanation-length test (see Test results section) confirms this is modest, not dramatic: the full Cards section in `CLAUDE.md` is roughly the same length under all three formats. But the *concepts* in the new version are more familiar — bespoke project-specific things (cardworks, `element()`, flat-XML formatting) shrink in favor of widely-known ones (Markdown, YAML, JSON Schema). Familiarity is what reduces friction at authoring time, not section length.
 
-This is the load-bearing reason for the body-format change. The other items below are real but secondary.
+This is the primary reason for the body-format change. The other items below are real but secondary.
 
 ### 2. Attachment directories normalize ownership
 
@@ -1772,7 +1772,7 @@ The case for proceeding is stronger than it was at the start of this RFC. The ca
 
 ## Ref design (detailed)
 
-The early "Open design problems" section sketched ref handling. This section goes deeper because refs are the load-bearing surface for everything that depends on the card graph: validation, doc-graph navigation, `cb mv` rewrite, source editor cross-links, the doc-image generation pipeline.
+The early "Open design problems" section sketched ref handling. This section goes deeper because refs are the foundational surface for everything that depends on the card graph: validation, doc-graph navigation, `cb mv` rewrite, source editor cross-links, the doc-image generation pipeline.
 
 ### Today's situation, for reference
 
