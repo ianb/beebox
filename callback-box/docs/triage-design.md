@@ -141,6 +141,8 @@ Open: where intake-complete items live before triage picks them up — `inbox/` 
 
 Some current intake work (transcription, the early steps of capture-session sort) fits this frame and could be reframed as intake. Worth a pass.
 
+**Photo and PDF canonicalization is an intake step.** Raw phone images (HEIC/JPEG) arrive in `inbox/intake/`, get transcoded to AVIF, have metadata preserved and enriched, and are uploaded to the blob store before the card is committed to git. The original bytes never enter git history — only the finished card does. PDFs get similar treatment (Ghostscript compression, metadata preservation). See `docs/photo-storage-investigation.md` for details on format choices, compression, and the blob store design.
+
 ## Triage (stage 2)
 
 Triage is the named categorization step. It reads the compiled triage-instructions doc (built from all the destination cards), examines the batch of intake-complete items, and for each item: assigns a category at a given confidence level, then moves the item accordingly.
