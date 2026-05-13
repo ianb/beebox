@@ -77,17 +77,23 @@ interface StoredTranscriptionConfig {
 export async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
   const defaults: TranscriptionConfig = { service: "voxtral", hqService: "whisper" };
   if (!boxRoot) return defaults;
+  const configPath = path.join(boxRoot, "config/transcription.json");
+  let content: string;
   try {
-    const configPath = path.join(boxRoot, "config/transcription.json");
-    const content = await fs.readFile(configPath, "utf-8");
-    const stored = JSON.parse(content) as StoredTranscriptionConfig;
-    return {
-      service: stored.service ?? defaults.service,
-      hqService: stored.hqService ?? defaults.hqService,
-    };
-  } catch (_e) {
-    return defaults;
+    content = await fs.readFile(configPath, "utf-8");
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === "ENOENT") return defaults;
+    // Permissions / I/O failures are not the same as "no config" — surface
+    // them rather than silently returning defaults.
+    throw e;
   }
+  // JSON parse errors are real bugs (corrupted config); let them bubble.
+  const stored = JSON.parse(content) as StoredTranscriptionConfig;
+  return {
+    service: stored.service ?? defaults.service,
+    hqService: stored.hqService ?? defaults.hqService,
+  };
 }
 
 /**
@@ -99,11 +105,18 @@ export async function updateTranscriptionConfig(
 ): Promise<TranscriptionConfig> {
   const configPath = path.join(boxRoot, "config/transcription.json");
   let current: StoredTranscriptionConfig = {};
+  let content: string | null = null;
   try {
-    const content = await fs.readFile(configPath, "utf-8");
+    content = await fs.readFile(configPath, "utf-8");
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code !== "ENOENT") throw e;
+    // No file yet — start fresh.
+  }
+  if (content !== null) {
+    // Parse errors are a real bug — let them bubble rather than silently
+    // overwriting a corrupted config.
     current = JSON.parse(content) as StoredTranscriptionConfig;
-  } catch (_e) {
-    // No file yet, start fresh.
   }
   const merged: StoredTranscriptionConfig = { ...current, ...updates };
   await fs.mkdir(path.dirname(configPath), { recursive: true });

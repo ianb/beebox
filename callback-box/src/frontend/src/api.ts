@@ -301,8 +301,12 @@ export async function postAudioForHqTranscription(blob: Blob): Promise<string | 
       console.warn(`[hq-transcribe] HTTP ${res.status}: ${await res.text()}`);
       return null;
     }
-    const body = (await res.json()) as { text?: string };
-    return typeof body.text === "string" ? body.text : null;
+    const body: unknown = await res.json();
+    if (body === null || typeof body !== "object" || !("text" in body) || typeof body.text !== "string") {
+      console.warn(`[hq-transcribe] response missing text field: ${JSON.stringify(body)}`);
+      return null;
+    }
+    return body.text;
   } catch (e) {
     console.warn(`[hq-transcribe] request failed: ${e instanceof Error ? e.message : String(e)}`);
     return null;

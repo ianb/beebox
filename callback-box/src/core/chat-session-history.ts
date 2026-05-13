@@ -55,6 +55,29 @@ function log(context: string, ...args: unknown[]): void {
   console.log(`[chat-history:${context}]`, ...args);
 }
 
+/**
+ * Narrow a single entry from the persisted JSON into a SessionHistoryEntry.
+ * Returns null if the value doesn't look like an entry (missing or non-string
+ * id). All field reads use `in`-operator narrowing so the function avoids
+ * type-casts on untrusted input.
+ */
+function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
+  if (raw === null || typeof raw !== "object") return null;
+  if (!("id" in raw) || typeof raw.id !== "string") return null;
+  const entry: SessionHistoryEntry = { id: raw.id };
+  if ("contextDir" in raw && typeof raw.contextDir === "string" && raw.contextDir.length > 0) {
+    entry.contextDir = raw.contextDir;
+  }
+  if ("features" in raw && raw.features !== null && typeof raw.features === "object" && !Array.isArray(raw.features)) {
+    const sanitized: Record<string, string> = {};
+    for (const [k, v] of Object.entries(raw.features)) {
+      if (typeof v === "string") sanitized[k] = v;
+    }
+    if (Object.keys(sanitized).length > 0) entry.features = sanitized;
+  }
+  return entry;
+}
+
 async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
   const filePath = path.join(boxRoot, HISTORY_FILE);
   try {
@@ -69,22 +92,8 @@ async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
     const sessions: SessionHistoryEntry[] = [];
     if (Array.isArray(parsed.sessions)) {
       for (const raw of parsed.sessions) {
-        if (raw && typeof raw === "object" && typeof (raw as { id?: unknown }).id === "string") {
-          const entry: SessionHistoryEntry = { id: (raw as { id: string }).id };
-          const contextDir = (raw as { contextDir?: unknown }).contextDir;
-          if (typeof contextDir === "string" && contextDir.length > 0) {
-            entry.contextDir = contextDir;
-          }
-          const features = (raw as { features?: unknown }).features;
-          if (features !== undefined && features !== null && typeof features === "object" && !Array.isArray(features)) {
-            const sanitized: Record<string, string> = {};
-            for (const [k, v] of Object.entries(features as Record<string, unknown>)) {
-              if (typeof v === "string") sanitized[k] = v;
-            }
-            if (Object.keys(sanitized).length > 0) entry.features = sanitized;
-          }
-          sessions.push(entry);
-        }
+        const entry = parseSessionEntry(raw);
+        if (entry) sessions.push(entry);
       }
     } else if (Array.isArray(parsed.sessionIds)) {
       for (const id of parsed.sessionIds) {

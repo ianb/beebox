@@ -378,12 +378,16 @@ export const realtimeTranscriptionMachine = setup({
       return { error: msg };
     }),
     setFinalTranscript: assign(({ context, event }) => {
-      const e = event as { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob };
-      const final = e.text && e.text.length > 0 ? e.text : context.finalTranscript;
+      if (event.type !== "TRANSCRIPTION_DONE") {
+        // Wired only to the TRANSCRIPTION_DONE transition; anything else is
+        // a configuration bug — surface it loudly rather than silently no-op.
+        throw new Error(`setFinalTranscript: unexpected event type "${event.type}"`);
+      }
+      const final = event.text && event.text.length > 0 ? event.text : context.finalTranscript;
       return {
         finalTranscript: final,
         interimTranscript: "",
-        audioBlob: e.audioBlob ?? context.audioBlob,
+        audioBlob: event.audioBlob ?? context.audioBlob,
       };
     }),
     setTimeoutWarning: assign({

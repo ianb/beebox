@@ -105,6 +105,48 @@ function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSchedule;
 /**
  * Format the current local time as HH:MM for the typed tag.
  */
+/**
+ * Type guard for the `chat-features-changed` SSE event payload. Returns
+ * the narrowed payload if shape matches, otherwise null — keeps the
+ * `event.data: unknown` from the SSE machine type-safe at the use site.
+ */
+function parseFeaturesChangedPayload(
+  data: unknown,
+): { sessionId: string; features: Record<string, string> } | null {
+  function reject(reason: string): null {
+    // Server contract violation — log so it doesn't slip past in production.
+    console.warn(`[chat] chat-features-changed payload rejected: ${reason}`);
+    return null;
+  }
+  if (data === null || typeof data !== "object") return reject("not an object");
+  if (!("sessionId" in data) || typeof data.sessionId !== "string") return reject("missing sessionId");
+  if (!("features" in data) || data.features === null || typeof data.features !== "object") {
+    return reject("missing features");
+  }
+  const features: Record<string, string> = {};
+  for (const [k, v] of Object.entries(data.features)) {
+    if (typeof v === "string") features[k] = v;
+    else console.warn(`[chat] chat-features-changed: dropping non-string value for ${k}`);
+  }
+  return { sessionId: data.sessionId, features };
+}
+
+/**
+ * Apply a chat-features-changed payload to local state if the session id
+ * matches (or no session id filter is in effect). Module-scoped so the
+ * SSE dispatcher useCallback can stay under the complexity budget.
+ */
+function applyFeaturesChange(opts: {
+  data: unknown;
+  currentSessionId: string | null;
+  setFeatures: (features: Record<string, string>) => void;
+}): void {
+  const payload = parseFeaturesChangedPayload(opts.data);
+  if (!payload) return;
+  if (opts.currentSessionId && payload.sessionId !== opts.currentSessionId) return;
+  opts.setFeatures(payload.features);
+}
+
 function localTime(): string {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -1368,9 +1410,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           });
         }
       } else if (event.event === "chat-features-changed") {
-        const data = event.data as { sessionId: string; features: Record<string, string> };
-        if (sessionId && data.sessionId !== sessionId) return;
-        setChatFeatures(data.features);
+        applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
       } else if (event.event === "chat-session-assigned") {
         const data = event.data as { sessionId: string };
         // Lock the running machine onto the assigned id (so subsequent
