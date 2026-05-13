@@ -43,12 +43,15 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   const box = await replay.createBox();
   t.teardown(() => box.cleanup());
 
-  const captureDir = join(box.root, "box/inbox", CAPTURE_DIR_NAME);
+  // Session card lives at the inbox level; child cards and their media live
+  // inside the session's attach scope (each child has its own attach scope).
+  const sessionCardRel = join("box/inbox", `${CAPTURE_DIR_NAME}.capture-session.card`);
+  const sessionAttachDir = join(box.root, "box/inbox", `${CAPTURE_DIR_NAME}.attach`);
 
   // ── Step 1: Transcription ──
 
-  const audioCardPath = join(captureDir, "audio-001.audio.card");
-  const audioFilePath = join(captureDir, "audio-001.webm");
+  const audioCardPath = join(sessionAttachDir, "audio-001.audio.card");
+  const audioFilePath = join(sessionAttachDir, "audio-001.attach", "audio-001.webm");
 
   const transcriptionResult = await replay.recordOrReplay(
     "transcription-audio-001",
@@ -70,8 +73,8 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
 
   // Apply transcription to card (same logic as transcribe-captures command)
   const loader = await createLoader(box.root);
-  const cardDir = join("box/inbox", CAPTURE_DIR_NAME);
-  const audioCard = await loader.load(box.path(join(cardDir, "audio-001.audio.card")));
+  const attachRelDir = join("box/inbox", `${CAPTURE_DIR_NAME}.attach`);
+  const audioCard = await loader.load(box.path(join(attachRelDir, "audio-001.audio.card")));
   const audioEl = audioCard.element;
   const audioChildren = audioEl.children as ElementNode[];
 
@@ -91,8 +94,9 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   audioEl.dirty = true;
   await loader.save(audioCard);
 
-  // Write timing JSON sidecar
-  const timingPath = join(captureDir, "audio-001.timing.json");
+  // Write timing JSON sidecar inside the audio card's own attach scope
+  const audioCardAttachDir = join(sessionAttachDir, "audio-001.attach");
+  const timingPath = join(audioCardAttachDir, "audio-001.timing.json");
   await writeFile(timingPath, JSON.stringify({
     words: transcriptionResult.words,
     duration: transcriptionResult.duration,
@@ -100,14 +104,18 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   }, null, 2) + "\n");
 
   // Verify card was updated
-  const updatedAudioCard = await box.read(join("box/inbox", CAPTURE_DIR_NAME, "audio-001.audio.card"));
+  const updatedAudioCard = await box.read(join(attachRelDir, "audio-001.audio.card"));
   t.ok(updatedAudioCard.includes('status="transcribed"'), "audio card status is transcribed");
   t.ok(updatedAudioCard.includes("duration="), "audio card has duration");
 
   // ── Step 2: Image Analysis ──
 
+  // Each image lives inside its own attach scope (e.g. photo-001.attach/photo-001.jpg).
   const imageFiles = ["photo-001.jpg", "photo-002.jpg", "photo-003.jpg"];
-  const imagePaths = imageFiles.map((f) => join(captureDir, f));
+  const imagePaths = imageFiles.map((f) => {
+    const base = f.replace(/\.jpg$/, "");
+    return join(sessionAttachDir, `${base}.attach`, f);
+  });
 
   const geminiResult = await replay.recordOrReplay(
     "gemini-image-analysis",
@@ -130,7 +138,7 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   const imageCardFiles = ["photo-001.image.card", "photo-002.image.card", "photo-003.image.card"];
 
   for (let i = 0; i < imageCardFiles.length; i++) {
-    const cardRelPath = join(cardDir, imageCardFiles[i]);
+    const cardRelPath = join(attachRelDir, imageCardFiles[i]);
     const card = await loader.load(box.path(cardRelPath));
     const el = card.element;
     const analysis = geminiResult.analyses.find((a: ImageAnalysis) => a.index === i);
@@ -197,7 +205,7 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
 
   // Verify image cards were updated
   for (const cardFile of imageCardFiles) {
-    const content = await box.read(join("box/inbox", CAPTURE_DIR_NAME, cardFile));
+    const content = await box.read(join(attachRelDir, cardFile));
     t.ok(
       content.includes('status="analyzed"') || content.includes('status="invalid"'),
       `${cardFile} has analyzed/invalid status`
@@ -221,9 +229,7 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   t.ok(assembleResult.success, "assemble-timeline succeeded");
 
   // Verify the session card now has a structured transcript
-  const sessionCard = await box.read(
-    join("box/inbox", CAPTURE_DIR_NAME, `${CAPTURE_DIR_NAME}.capture-session.card`)
-  );
+  const sessionCard = await box.read(sessionCardRel);
   t.ok(sessionCard.includes("<text>"), "session card has <text> elements in transcript");
   t.ok(sessionCard.includes("<image "), "session card has <image> elements in transcript");
   t.notOk(

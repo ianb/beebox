@@ -15,17 +15,17 @@
  *
  * New layout:
  *   inbox/Voice_Memo.memo.card
- *   inbox/Voice_Memo.memo.attach/Voice_Memo.m4a
+ *   inbox/Voice_Memo.attach/Voice_Memo.m4a
  *   inbox/capture-XX.capture-session.card +
- *     inbox/capture-XX.capture-session.attach/photo-001.image.card +
- *     photo-001.image.attach/photo-001.jpg
+ *     inbox/capture-XX.attach/photo-001.image.card +
+ *     photo-001.attach/photo-001.jpg
  *   inbox/email/thread-Y-abc12345.email-thread.card +
- *     thread-Y-abc12345.email-thread.attach/msg-001.email-message.card +
- *     msg-001.email-message.attach/{msg-001.body.txt, attachments/...}
+ *     thread-Y-abc12345.attach/msg-001.email-message.card +
+ *     msg-001.attach/{msg-001.body.txt, attachments/...}
  *   store/drive/Budget.sheet.card +
- *     Budget.sheet.attach/Summary.json
+ *     Budget.attach/Summary.json
  *   store/drive/Project_Notes.doc.card +
- *     Project_Notes.doc.attach/Project_Notes.md
+ *     Project_Notes.attach/Project_Notes.md
  *
  * Refs inside the cards are rewritten so that pointers to the moved files
  * resolve correctly. Refs to a card's OWN attached files use the `attach/`
@@ -55,7 +55,7 @@ interface MoveRecord {
   from: string;
   /** Box-rel new path. */
   to: string;
-  /** True for the directory case (Budget/ → Budget.sheet.attach/). */
+  /** True for the directory case (Budget/ → Budget.attach/). */
   isDirectory: boolean;
 }
 
@@ -242,7 +242,12 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
       continue;
     }
 
-    const attachDirName = `${base}.${type}.attach`;
+    // Attach dir name is just `<basename>.attach` (no type suffix); basename
+    // collisions across types in the same directory are forbidden by the
+    // lint rule, so a single `<basename>.attach/` unambiguously belongs to
+    // exactly one card.
+    void type;
+    const attachDirName = `${base}.attach`;
     const attachDirRel = dirRel === "." ? attachDirName : `${dirRel}/${attachDirName}`;
 
     for (const e of entries) {
@@ -338,7 +343,7 @@ async function dissolveSessionWrappers(opts: DissolveOpts): Promise<void> {
     );
     const newAttachRel = path.relative(
       boxRoot,
-      path.join(scanDirAbs, `${sessionBasename}.${cardType}.attach`),
+      path.join(scanDirAbs, `${sessionBasename}.attach`),
     );
     const oldWrapperRel = path.relative(boxRoot, wrapperAbs);
     const oldCardRel = `${oldWrapperRel}/${cardFile}`;
@@ -398,7 +403,7 @@ async function planRefRewrites(args: PlanRefArgs): Promise<void> {
     const newCardRel = moveMap.get(cardRel) ?? cardRel;
     const newCardDir = path.dirname(newCardRel);
     const newCardBasename = cardBasename(path.basename(newCardRel));
-    const newCardAttachRel = `${newCardDir === "." ? "" : `${newCardDir}/`}${newCardBasename}.${cardType(path.basename(newCardRel))}.attach`;
+    const newCardAttachRel = `${newCardDir === "." ? "" : `${newCardDir}/`}${newCardBasename}.attach`;
 
     // First: for any moved file (from → to), if the card's CURRENT content
     // references `from` (or just its basename), rewrite to the new ref form.

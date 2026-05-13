@@ -8,7 +8,7 @@
  *
  * Example layout:
  *   store/drive/Project_Notes.doc.card
- *   store/drive/Project_Notes.doc.attach/Project_Notes.md
+ *   store/drive/Project_Notes.attach/Project_Notes.md
  */
 
 import { element, serialize } from "cardworks";
@@ -94,7 +94,7 @@ export const DocSchema = element("doc", {
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
 Each synced Google Doc has a \`.doc.card\` plus a markdown file inside the
-card's attach scope (e.g. \`Project_Notes.doc.attach/Project_Notes.md\`).
+card's attach scope (e.g. \`Project_Notes.attach/Project_Notes.md\`).
 The \`<content ref="attach/…">\` element points at it.
 
 ## Editing

@@ -48,7 +48,7 @@ function makeDoc(opts: {
 
 ## Pull — creates card and markdown file from a Google Doc
 
-A new doc card produces a sibling `.md` file with the exported markdown.
+A new doc card produces a `.md` file inside the card's attach scope.
 
 ```
 const box = await makeTmpBox({ git: true });
@@ -88,7 +88,7 @@ const result = await connector.sync();
 result.success
 => true
 
-JSON.stringify(await box.read("store/drive/Project_Notes.md"))
+JSON.stringify(await box.read("store/drive/Project_Notes.attach/Project_Notes.md"))
 => "# Notes\n\nFirst paragraph.\n"
 ```
 
@@ -161,7 +161,7 @@ card2.includes('<item type="images" count="2"/>')
 
 ## Push — local markdown edit pushes to Drive
 
-When the local `.md` differs from the last-pulled content and remote hasn't changed, the new content is uploaded.
+When the local `.md` (inside the doc's attach scope) differs from the last-pulled content and remote hasn't changed, the new content is uploaded.
 
 ```
 const box3 = await makeTmpBox({ git: true });
@@ -199,8 +199,8 @@ box3.commitAll("add editable");
 const conn3 = createGoogleDriveConnector(box3.root, drive3);
 await conn3.sync();
 
-// Edit locally.
-await box3.seed("store/drive/Editable.md", "Edited body.\n");
+// Edit locally — the .md lives inside the doc's attach scope.
+await box3.seed("store/drive/Editable.attach/Editable.md", "Edited body.\n");
 box3.commitAll("local edit");
 
 await conn3.sync();
@@ -217,7 +217,7 @@ drive3.contentUpdateLog[0]?.content
 
 ## Conflict — remote changed since last pull
 
-When both local and remote have changed, push refuses to overwrite. The upstream content is written to a `.remote.md` sibling and the card status flips to `conflict`.
+When both local and remote have changed, push refuses to overwrite. The upstream content is written to a `.remote.md` inside the attach scope and the card status flips to `conflict`.
 
 ```
 const box4 = await makeTmpBox({ git: true });
@@ -257,7 +257,7 @@ const conn4 = createGoogleDriveConnector(box4.root, drive4);
 await conn4.sync();
 
 // Local edit.
-await box4.seed("store/drive/Contended.md", "Local edit.\n");
+await box4.seed("store/drive/Contended.attach/Contended.md", "Local edit.\n");
 box4.commitAll("local edit");
 
 // Remote edit (simulated by changing the doc's revision and exported markdown
@@ -270,11 +270,11 @@ if (remoteFile) remoteFile.modifiedTime = "2026-04-26T12:00:00Z";
 await conn4.sync();
 
 // Local file is unchanged — push refused.
-await box4.read("store/drive/Contended.md")
+await box4.read("store/drive/Contended.attach/Contended.md")
 => Local edit.
 
 // .remote.md was written with the upstream content.
-await box4.read("store/drive/Contended.remote.md")
+await box4.read("store/drive/Contended.attach/Contended.remote.md")
 => Remote edit.
 
 // No content was uploaded (push aborted).
@@ -298,8 +298,8 @@ drive4.contentUpdateLog.length
 => 0
 
 // User resolves: writes the merged version, deletes .remote.md, commits.
-await box4.seed("store/drive/Contended.md", "Merged.\n");
-await unlink(join(box4.root, "store/drive/Contended.remote.md"));
+await box4.seed("store/drive/Contended.attach/Contended.md", "Merged.\n");
+await unlink(join(box4.root, "store/drive/Contended.attach/Contended.remote.md"));
 box4.commitAll("resolve conflict");
 
 await conn4.sync();
@@ -360,7 +360,7 @@ result5.success
 => true
 
 // Markdown still pulled.
-await box5.read("store/drive/Degraded.md")
+await box5.read("store/drive/Degraded.attach/Degraded.md")
 => Body.
 
 // Card still written, falls back to Drive metadata title.

@@ -96,7 +96,7 @@ export const ImageSchema = element("image", {
   ),
   instructions: `# Image Cards
 
-An image card represents a photo, typically from a capture session. The attached image file lives in the card's attach scope (e.g. \`photo-001.image.card\` with \`photo-001.image.attach/photo-001.jpg\`); the \`<filename ref="attach/…">\` prefix points into that scope.
+An image card represents a photo, typically from a capture session. The attached image file lives in the card's attach scope (e.g. \`photo-001.image.card\` with \`photo-001.attach/photo-001.jpg\`); the \`<filename ref="attach/…">\` prefix points into that scope.
 
 Elements:
 - \`<filename>\` — the attached image file. The \`captured\` attribute is updated from EXIF data when available.

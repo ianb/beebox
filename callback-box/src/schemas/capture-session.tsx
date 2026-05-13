@@ -123,7 +123,7 @@ export const CaptureSessionSchema = element("capture-session", {
   ),
   instructions: `# Capture Session Cards
 
-A capture session groups images, audio clips, and uploaded files from a single recording session (e.g., a voice walkthrough with photos, or a batch of documents). The session card lives at the inbox level; its child cards (audio, image, file) live inside the session's attach scope (\`<basename>.capture-session.attach/\`). Refs to children use the \`attach/\` virtual prefix.
+A capture session groups images, audio clips, and uploaded files from a single recording session (e.g., a voice walkthrough with photos, or a batch of documents). The session card lives at the inbox level; its child cards (audio, image, file) live inside the session's attach scope (\`<basename>.attach/\`). Refs to children use the \`attach/\` virtual prefix.
 
 Elements:
 - \`<images>\` — contains \`<image ref="...">\` references to child image cards

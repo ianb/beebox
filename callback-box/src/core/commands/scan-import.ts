@@ -2,7 +2,7 @@
  * Scan-Import command — turn a scanned PDF, OCR'd document PDF, or batch of
  * scanned JPEGs into a session whose card lands at
  * `box/inbox/scan-<date>-<id>.capture-session.card`. Child cards and files
- * live in the session's attach scope (`scan-….capture-session.attach/`).
+ * live in the session's attach scope (`scan-….attach/`).
  *
  * Internal dispatch:
  *   - All inputs are images (.jpg/.png/etc) → photo flow with image batch
@@ -10,18 +10,18 @@
  *   - Single PDF with embedded text → document mode (no Flash, file the PDF)
  *   - Multiple PDFs or mixed types → error (callers must split)
  *
- * Photo flow output (`<sessionAttach>` = `scan-…capture-session.attach`):
- *   <sessionAttach>/photo-NNN.image.card + photo-NNN.image.attach/photo-NNN.jpg
+ * Photo flow output (`<sessionAttach>` = `scan-….attach`):
+ *   <sessionAttach>/photo-NNN.image.card + photo-NNN.attach/photo-NNN.jpg
  *     and (optionally) photo-NNN-back.jpg in the same image attach scope
  *   <sessionAttach>/photo-NNN.review.question.card (optional)
  *   <sessionAttach>/orphan-back-NNN.jpg + orphan-back-NNN.question.card
  *   <sessionAttach>/unsure-NNN.jpg + unsure-NNN.question.card
  *   box/inbox/<name>.capture-session.card  (at inbox level)
- *   <sessionAttach>/source.file.card + source.file.attach/source.pdf
+ *   <sessionAttach>/source.file.card + source.attach/source.pdf
  *     (when imported from a PDF source)
  *
  * Document flow output:
- *   <sessionAttach>/source.file.card + source.file.attach/source.pdf
+ *   <sessionAttach>/source.file.card + source.attach/source.pdf
  *   box/inbox/<name>.capture-session.card  (no image refs)
  */
 
@@ -105,7 +105,7 @@ async function createSessionLayout(ctx: CommandContext): Promise<SessionLayout> 
   const inboxRelDir = "box/inbox";
   const inboxAbsDir = path.join(ctx.boxRoot, inboxRelDir);
   const sessionCardFilename = `${sessionBasename}.capture-session.card`;
-  const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.capture-session.attach`;
+  const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.attach`;
   const sessionAttachAbsDir = path.join(ctx.boxRoot, sessionAttachRelDir);
   await fs.mkdir(sessionAttachAbsDir, { recursive: true });
   return {
@@ -258,16 +258,16 @@ async function runPhotoMode(
     const cardFilename = `${photoBasename}.image.card`;
 
     // Photo and its back live in the image card's attach scope.
-    const photoAttachAbs = path.join(sessionAttachAbsDir, `${photoBasename}.image.attach`);
+    const photoAttachAbs = path.join(sessionAttachAbsDir, `${photoBasename}.attach`);
     await fs.mkdir(photoAttachAbs, { recursive: true });
     await fs.rename(archivePages[bundle.photoIndex]!, path.join(photoAttachAbs, photoFilename));
-    filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.image.attach/${photoFilename}`);
+    filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.attach/${photoFilename}`);
 
     let backFilename: string | null = null;
     if (bundle.backIndex !== null) {
       backFilename = `${photoBasename}-back.jpg`;
       await fs.rename(archivePages[bundle.backIndex]!, path.join(photoAttachAbs, backFilename));
-      filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.image.attach/${backFilename}`);
+      filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.attach/${backFilename}`);
     }
 
     const cardContent = createImageTemplate({
@@ -288,7 +288,7 @@ async function runPhotoMode(
       ].join("\n");
       const directiveParts = [`Open ${sessionAttachRelDir}/${cardFilename} and adjust description or text blocks.`];
       if (backFilename) {
-        directiveParts.push(`Cross-check the back transcription against ${sessionAttachRelDir}/${photoBasename}.image.attach/${backFilename}.`);
+        directiveParts.push(`Cross-check the back transcription against ${sessionAttachRelDir}/${photoBasename}.attach/${backFilename}.`);
       }
       const questionContent = createTextQuestionTemplate({
         memo,
@@ -418,7 +418,7 @@ async function runDocumentMode(
   // The PDF lives in the file-card's own attach scope.
   const fileCardBasename = "source";
   const fileCardFilename = `${fileCardBasename}.file.card`;
-  const fileAttachAbsDir = path.join(sessionAttachAbsDir, `${fileCardBasename}.file.attach`);
+  const fileAttachAbsDir = path.join(sessionAttachAbsDir, `${fileCardBasename}.attach`);
   await fs.mkdir(fileAttachAbsDir, { recursive: true });
   const pdfDestPath = path.join(fileAttachAbsDir, "source.pdf");
   await fs.copyFile(args.pdfPath, pdfDestPath);
@@ -444,7 +444,7 @@ async function runDocumentMode(
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
 
   const filesToStage = [
-    `${sessionAttachRelDir}/${fileCardBasename}.file.attach/source.pdf`,
+    `${sessionAttachRelDir}/${fileCardBasename}.attach/source.pdf`,
     `${sessionAttachRelDir}/${fileCardFilename}`,
     sessionCardRelPath,
   ];

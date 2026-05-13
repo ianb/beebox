@@ -509,7 +509,7 @@ class GmailConnector implements Connector {
         const actualCardFilename = `${actualBasename}.email-thread.card`;
         const actualAttachDir = path.join(
           emailDir,
-          `${actualBasename}.email-thread.attach`,
+          `${actualBasename}.attach`,
         );
         await fs.mkdir(actualAttachDir, { recursive: true });
 
@@ -547,7 +547,7 @@ class GmailConnector implements Connector {
           const bodyFilename = `${messageBasename}.body.txt`;
           const messageAttachDir = path.join(
             actualAttachDir,
-            `${messageBasename}.email-message.attach`,
+            `${messageBasename}.attach`,
           );
 
           const templateOpts: Parameters<typeof createEmailMessageTemplate>[0] = {

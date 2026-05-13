@@ -111,16 +111,16 @@ await box3.seed("store/drive/Expenses.sheet.card", tpl3({
   modified: "2026-03-29T10:00:00Z",
   link: "https://docs.google.com/spreadsheets/d/sheet-push1/edit",
   owner: "test@example.com",
-  sheets: [{ ref: "Expenses/Sheet1.json", title: "Sheet1", gid: "0" }],
+  sheets: [{ ref: "Sheet1.json", title: "Sheet1", gid: "0" }],
 }));
-await box3.seed("store/drive/Expenses/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
+await box3.seed("store/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
 box3.commitAll("add expenses");
 
 const conn3 = createGoogleDriveConnector(box3.root, drive3);
 await conn3.sync();
 
 // Edit the JSON locally — change Coffee price and add Tea
-await box3.seed("store/drive/Expenses/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","6"],\n["Tea","3"]\n]\n');
+await box3.seed("store/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","6"],\n["Tea","3"]\n]\n');
 box3.commitAll("edit expenses");
 
 const result3 = await conn3.sync();

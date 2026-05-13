@@ -70,7 +70,7 @@ export const AudioSchema = element("audio", {
   ),
   instructions: `# Audio Cards
 
-An audio card represents a chunk of recorded speech from a capture session. The attached audio file lives in the card's attach scope (e.g. \`audio-001.audio.card\` with \`audio-001.audio.attach/audio-001.webm\`); the \`<filename ref="attach/…">\` prefix points into that scope.
+An audio card represents a chunk of recorded speech from a capture session. The attached audio file lives in the card's attach scope (e.g. \`audio-001.audio.card\` with \`audio-001.attach/audio-001.webm\`); the \`<filename ref="attach/…">\` prefix points into that scope.
 
 Elements:
 - \`<filename>\` — the attached audio file (ref uses \`attach/\` prefix)

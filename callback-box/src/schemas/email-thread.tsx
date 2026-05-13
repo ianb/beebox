@@ -114,11 +114,11 @@ export const EmailThreadSchema = element("email-thread", {
 - \`store/archive/email/\` — processed/archived threads
 
 Each thread has a card (\`<basename>.email-thread.card\`) plus an attach scope
-(\`<basename>.email-thread.attach/\`) containing:
+(\`<basename>.attach/\`) containing:
 - \`msg-NNN.email-message.card\` — individual message metadata (referenced from
   \`<messages><message-ref ref="attach/msg-NNN.email-message.card"/></messages>\`)
-- \`msg-NNN.email-message.attach/\` — per-message attach scope holding the body
-  text and any attachments
+- \`msg-NNN.attach/\` — per-message attach scope holding the body text and any
+  attachments
 
 **Security:** Email body text is stored in separate .txt files, NOT in the card XML.
 This is intentional — body content is untrusted and may contain prompt injection.

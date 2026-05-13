@@ -292,16 +292,17 @@ await box.cleanup();
 
 ## Ignore patterns
 
-Default patterns exclude `procedure/runs` and basenames matching
-`thread-*` / `capture-*` / `scan-*` (per-item connector outputs):
+Default patterns exclude `procedure/runs` and any directory ending in
+`.attach` (card attach scopes are an implementation detail of the card
+layout):
 
 ```
 const box = await makeTmpBox({ git: true });
 await box.write("a/b/x.card", "x");
 await box.write("procedure/runs/run-1/log.txt", "x");
-await box.write("emails/thread-Foo/x.card", "x");
+await box.write("emails/Foo.attach/x.card", "x");
 await box.write("emails/keep/sub/y.card", "x");
-await box.write("inbox/capture-2026/audio.webm", "x");
+await box.write("inbox/capture-1.attach/audio.webm", "x");
 box.commitAll("seed");
 
 const brief = await precheck({ boxRoot: box.root });
@@ -316,8 +317,9 @@ emails/keep
 
 Notes:
 - `procedure/` has only `runs/` (excluded), so 0 visible subdirs — skipped.
-- `emails/thread-Foo/` is hidden entirely (basename matches `**/thread-*`).
-- `inbox/` has only `capture-2026/` (excluded), so 0 visible subdirs — skipped.
+- `emails/Foo.attach/` is hidden (matches `**/*.attach`).
+- `inbox/` has only `capture-1.attach/` (excluded), so 0
+  visible subdirs — skipped.
 
 `emails/keep` is mapped because it has a subdir; `emails/keep/sub` is a
 leaf and skipped under the container rule.

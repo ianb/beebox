@@ -131,10 +131,12 @@ const sheetsHandler: DriveTypeHandler = {
       }
     }
 
-    // Update gid mapping in state
+    // Update gid mapping in state, keyed by the bare in-scope filename
+    // (matches contentHashes' key shape — push() uses the same).
     const tabGids: Record<string, string> = {};
     for (const r of sheetRefs) {
-      tabGids[r.ref] = r.gid;
+      const key = r.ref.startsWith("attach/") ? r.ref.slice("attach/".length) : r.ref;
+      tabGids[key] = r.gid;
     }
     state.extra["tabGids"] = tabGids;
     state.lastModified = file.modifiedTime;

@@ -4,9 +4,8 @@
  * Sessions accumulate files in a temp directory. Session metadata is stored
  * as session.json inside the temp dir so it survives server restarts.
  * On finalize, a capture-session card lands at `box/inbox/<basename>.capture-session.card`,
- * and its attach scope (`box/inbox/<basename>.capture-session.attach/`) holds the
- * audio/image/file cards plus their attached media (each child has its own
- * attach scope inside).
+ * and its attach scope (`box/inbox/<basename>.attach/`) holds the audio/image/file
+ * cards plus their attached media (each child has its own attach scope inside).
  */
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -225,7 +224,7 @@ export async function registerCaptureRoutes(
     const sessionBasename = `capture-${formattedDate}-${shortId}`;
     // Session card lives at inbox level; its attach scope holds the children.
     const inboxRelDir = "box/inbox";
-    const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.capture-session.attach`;
+    const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.attach`;
     const sessionAttachAbsDir = path.join(boxRoot, sessionAttachRelDir);
     const inboxAbsDir = path.join(boxRoot, inboxRelDir);
 
@@ -247,7 +246,7 @@ export async function registerCaptureRoutes(
       mediaContent: Buffer;
       cardContent: string;
     }): Promise<void> {
-      const childAttachRel = `${sessionAttachRelDir}/${opts.childBasename}.${opts.cardType}.attach`;
+      const childAttachRel = `${sessionAttachRelDir}/${opts.childBasename}.attach`;
       const childAttachAbs = path.join(boxRoot, childAttachRel);
       await fs.mkdir(childAttachAbs, { recursive: true });
       const mediaAbsPath = path.join(childAttachAbs, opts.mediaFilename);

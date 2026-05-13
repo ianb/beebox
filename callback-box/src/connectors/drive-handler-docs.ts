@@ -2,7 +2,7 @@
  * Drive type handler for Google Docs.
  *
  * Exports the document body as markdown inside the card's attach scope
- * (`<basename>.doc.attach/<basename>.md`). On push, replaces the upstream
+ * (`<basename>.attach/<basename>.md`). On push, replaces the upstream
  * content with the local markdown.
  *
  * Conflict detection: stores `headRevisionId` and `modifiedTime` after each

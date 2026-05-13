@@ -7,8 +7,8 @@
  *
  * Example layout:
  *   store/drive/Budget.sheet.card
- *   store/drive/Budget.sheet.attach/Summary.json
- *   store/drive/Budget.sheet.attach/Expenses.json
+ *   store/drive/Budget.attach/Summary.json
+ *   store/drive/Budget.attach/Expenses.json
  */
 
 import { element, serialize } from "cardworks";
@@ -84,7 +84,7 @@ export const SheetSchema = element("sheet", {
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
 Each synced Google Spreadsheet has a \`.sheet.card\` metadata file plus an
-attach scope (\`<basename>.sheet.attach/\`) containing one JSON file per sheet
+attach scope (\`<basename>.attach/\`) containing one JSON file per sheet
 tab. The \`<sheet-tab ref="attach/…">\` entries point into that scope.
 
 ## Data format
