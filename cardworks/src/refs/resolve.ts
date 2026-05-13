@@ -166,15 +166,46 @@ function formatFragment(fragment: RefFragment): string {
 
 /**
  * Resolve a path from a parsed reference.
+ *
+ * The path part of a ref is one of:
+ * - Absolute (`/box/...`) — resolved against project root
+ * - `attach/<rest>` — virtual prefix; resolved against the current card's
+ *   attach scope (`<basename>.attach/`)
+ * - Relative — resolved from the current file's directory
  */
 function resolvePath(parsed: ParsedRef, resolver: RefResolver): string {
   if (parsed.isAbsolute) {
-    // Absolute paths are relative to project root
     return resolver.projectRoot + parsed.path;
   }
 
-  // Relative paths are resolved from current file
+  // `attach/` virtual prefix — resolve against the current card's
+  // <basename>.attach/ scope.
+  if (parsed.path === "attach" || parsed.path.startsWith("attach/")) {
+    const attachDir = computeAttachDir(resolver.currentFile);
+    if (attachDir !== null) {
+      const rest = parsed.path === "attach" ? "" : parsed.path.slice("attach/".length);
+      return rest === "" ? attachDir : `${attachDir}/${rest}`;
+    }
+  }
+
   return resolver.fs.resolve(resolver.currentFile, parsed.path);
+}
+
+/**
+ * Given a card's absolute path, return its attach scope directory:
+ * `<basename>.attach` next to the card. Returns null if the path doesn't
+ * look like a `.card` file.
+ */
+function computeAttachDir(cardPath: string): string | null {
+  const slash = cardPath.lastIndexOf("/");
+  const dir = slash === -1 ? "" : cardPath.slice(0, slash);
+  const name = slash === -1 ? cardPath : cardPath.slice(slash + 1);
+  if (!name.endsWith(".card")) return null;
+  const withoutCard = name.slice(0, -".card".length);
+  const lastDot = withoutCard.lastIndexOf(".");
+  const basename = lastDot === -1 ? withoutCard : withoutCard.slice(0, lastDot);
+  const attachName = `${basename}.attach`;
+  return dir === "" ? attachName : `${dir}/${attachName}`;
 }
 
 /**

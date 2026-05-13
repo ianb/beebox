@@ -30,6 +30,9 @@
     "lint:circular": "madge --circular --extensions ts src/",
     "prepare": "husky"
   },
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "xml",
     "cards",
@@ -63,5 +66,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "unrs-resolver"]
   }
 }
