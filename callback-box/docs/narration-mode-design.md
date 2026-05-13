@@ -4,13 +4,12 @@ Status: proposal, for discussion.
 
 ## Motivation
 
-Today's chat assumes turn-taking. Voice goes through realtime transcription, every utterance becomes a user message, every user message gets an agent reply. That's the right default for a conversational assistant — and the wrong shape when the user wants to *narrate*: speak for a long stretch, dump content the agent should sort and file, only sometimes ask a question that needs a real answer.
+Today's chat assumes a conversational rhythm: each user message is a discrete utterance or question, the agent replies, repeat. That's the right default for a conversational assistant — and the wrong shape when the user wants to *narrate*: speak for a long stretch, dump content the agent should sort and file, only sometimes ask a question that needs a real answer.
 
-Narration mode is a chat feature where:
+Narration is **still turn-based** — the user sends a message at a checkpoint, the agent gets a turn to respond. The mechanics don't change. What changes is the *expectations* on each turn:
 
-- The user speaks freely, often at length, without expecting a reply per utterance.
-- The agent's primary job is to receive — listen, capture, sort, schedule — not to converse.
-- Embedded questions ("what's on my calendar tomorrow?") get real answers; the rest of the dump does not.
+- The user's turn carries a long, loose dump rather than a discrete utterance.
+- The agent's turn is mostly silent: a few `<ack>` chips, maybe a `<callout>` if a real question got asked, no obligation to converse back.
 - Transcript quality outweighs transcript latency, because the content is the durable artifact.
 
 ## Three features plus a behavior overlay
@@ -19,97 +18,106 @@ Narration mode is three features and a system-prompt overlay. The features each 
 
 | # | Feature | Standalone use |
 |---|---|---|
-| 1 | **Voice intake redesign** — voice no longer reaches the agent in realtime. A checkpoint keyword commits a segment; the segment is transcribed at high quality (Whisper/Voxtral non-streaming) and sent as a single user message. The realtime transcript drives keyword spotting and UI feedback only. | Any chat where voice input wants accuracy over latency, and the user prefers to commit segments deliberately rather than per-utterance. |
+| 1 | **Voice intake redesign** — commitment is checkpoint-driven (not natural end-of-utterance), and the committed text comes from a non-streaming HQ transcription pass (Whisper/Voxtral) instead of the realtime track. Realtime stays where it already lives: UI feedback and keyword spotting. | Any chat where voice input wants accuracy over latency, and the user prefers to commit segments deliberately rather than per-utterance. |
 | 2 | **Structured response output** — two new tags (`<ack>`, `<callout>`) sit alongside `<speech>` and shape the visible portion of the agent's reply. Backed by a new display pane that gives them dedicated rendering. | Any chat where the agent does real work and the response wants more structure than a wall of prose. |
 | 3 | **Control plane** — three coordinated surfaces (user, landmark, agent) for flipping chat-feature flags, with precedence rules and a shared closed set of feature names. | Any chat feature beyond narration: TTS, camera view, doc-pinning, etc. The infrastructure that lets activities go away. |
 
 The "narration" UI toggle uses the control plane to enable voice intake redesign and adds a **system-prompt overlay** that tells the agent how to behave: receive content, mostly stay silent, prefer structured output, surface real answers via `<callout>`. Each feature can also be enabled independently — the overlay is the part that's narration-specific.
 
-## Naming convention
-
-State identifiers — feature names (`NARRATION`, `TTS`, `STRUCTURED_OUTPUT`), state values (`ON`, `OFF`), and `<ack>` kinds (`FILE_UPDATED`, `TODO_ADDED`, etc.) — are written in `SCREAMING_SNAKE_CASE` everywhere they appear: as XML attribute names, attribute values, and references in system prompts and docs. The visual shouty-ness signals "this is a named state, not a colloquial word."
-
-Tag names (`chat-app`, `callout`, `ack`, `speech`) and free-form/verb attribute names (`time`, `ref`, `context`, `kind`, `enable`) stay lowercase/kebab — matches existing project convention. The visual rhythm — uppercase identifiers next to lowercase metadata attributes — makes it easy to scan which attributes are state-flags vs free-form data.
-
 ## (1) Voice intake redesign
 
-The microphone stays open. Two transcription tracks run on the same audio stream, used for different purposes:
+Today's voice path already separates the live transcript (UI feedback, keyword spotting) from what reaches the agent — only on send / end-of-utterance does the realtime text become a user message. Narration changes two things about that flow:
+
+1. **HQ transcription** replaces the realtime transcript as the source of the committed user message.
+2. **The user's existing send-message keywords** drive commitment, not natural end-of-utterance.
+
+The microphone stays open across segments. Two transcription tracks run on the audio:
 
 | Track | Service | Latency | Used for |
 |---|---|---|---|
-| Realtime | Voxtral Realtime / Deepgram (existing) | ~100ms | Keyword spotting, live UI text, segmentation |
-| HQ | Whisper / Voxtral non-streaming | seconds | Agent-visible user message, persistent record |
+| Realtime | Voxtral Realtime / Deepgram (existing) | ~100ms | Keyword spotting, live UI text, segmentation cues |
+| HQ | Whisper / Voxtral non-streaming | seconds | The text the agent sees, persistent record |
 
-The realtime transcript is **not** sent to the agent. Its only jobs are:
+The realtime track keeps doing what it already does — keyword spotting (existing `speech-keywords.ts`), live UI display, and `cancel` / `erase` segment boundaries. The user sees the realtime transcript throughout, including as the draft of the message that's about to be committed. The HQ track is new: when a checkpoint fires, the segment's audio is sent for HQ transcription, and the HQ result **replaces the realtime text in the committed user message** before it reaches the agent. Trade-off: slightly higher latency (HQ is non-streaming) for substantially better accuracy.
 
-- Live keyword spotting (existing `speech-keywords.ts`).
-- UI feedback — showing the user what's been recognized so far.
-- Defining segment boundaries for `cancel` / `erase`.
+The existing send-message keywords ("send message", "deliver message", etc. — see `speech-keywords.ts`) act as **checkpoints** in narration mode. No new keyword vocabulary; narration reuses today's trigger set as-is. A checkpoint triggers:
 
-A **checkpoint** keyword (likely reuses the existing `send`, or adds narration-specific phrases like "checkpoint" / "save that") triggers:
+1. Capture the audio recorded since the last checkpoint (browser-side buffer).
+2. Flush it to the backend HQ transcription service.
+3. While waiting, the realtime transcript remains visible as a ghosted placeholder of the pending user message.
+4. On HQ result, the user message is committed with the HQ text; the realtime buffer clears; mic stays open for the next segment.
+5. On HQ failure, fall back to the realtime transcript with a visible error indicator — the user message still goes through.
 
-1. Capture the audio recorded since the last checkpoint.
-2. Submit it to the HQ transcription service.
-3. On result, send to the agent as a single user message.
-4. Clear the realtime UI buffer; mic stays open for the next segment.
+Existing keywords still work: `mic off` ends the loop; `cancel` / `erase` discard the current buffer. Multiple checkpoints can be in flight — checkpoint flushes the buffer and lets the user keep talking; HQ jobs queue and commit in order.
 
-Existing keywords still work: `mic off` ends the loop; `cancel` / `erase` discard the current buffer.
+**Storage.** The HQ transcript is canonical text. The audio is **not** retained after HQ transcription — keeping audio for every segment would stack up fast. The realtime track is throwaway.
 
-**Storage.** The HQ transcript is canonical text. The audio file may persist as an attachment (mirroring the existing memo+attachment pattern). The realtime track is throwaway.
+**Reuse.** The HQ transcription service is generally useful — capture pipeline, manual upload — but those uses are out of scope here. Designing it as a typed service in `src/services/` (real + fake) keeps future reuse cheap. The HQ provider (Whisper API, Voxtral non-streaming, self-hosted whisper.cpp) is configurable per box/setting.
 
-**Reuse.** The HQ transcription service is generally useful — capture pipeline, manual upload — but those uses are out of scope here. Designing it as a typed service in `src/services/` (real + fake) keeps future reuse cheap.
+### UI notes
 
-**Open questions**
+- Realtime transcript displays as it does today, including during checkpoint processing.
+- Some indicator distinguishes narration mode from ordinary recording — wording TBD ("narration mode" is the working name but the chat surface may say something else). Revisit at implementation time.
 
-- Multiple checkpoints in flight: does checkpoint immediately reset the local buffer so the user can keep talking while HQ is processing the previous chunk? (Probably yes — that's the natural narration cadence.)
-- HQ failure: fall back to the realtime transcript, or show an error and let the user retry from the audio?
-- Audio transport: browser-side buffer flushed at checkpoint, or streamed to the backend continuously and assembled there?
-- HQ provider: Whisper API, self-hosted whisper.cpp, Voxtral non-realtime? (Not blocking — the interface is the same.)
-- Pending-state UI: while HQ is in flight, show the realtime transcript as a ghosted placeholder user message and swap on completion? Or just a spinner?
+### Future considerations
+
+Not in this design, noted for later:
+
+- **Temporary audio retention**: keep the segment audio briefly (e.g., one session, then discarded) so the agent can re-read or re-transcribe on demand if a transcription looks wrong. Costs storage; only worth doing if real cases motivate it.
+- **Multimodal audio input**: instead of (or alongside) HQ transcription, feed the raw audio to a multimodal model. Genuinely useful for language learning, accent work, pronunciation correction — anything where the *audio itself* is the content, not just a vehicle for words. Would be a separate setting/feature, composing with narration.
 
 ## (2) Structured response output
 
 Two new tags shape the visible portion of the agent's reply, backed by a new display pane that gives them dedicated rendering. They sit alongside `<speech>` (auditory) and existing structural tags.
 
-Three tiers of agent output, sorted by how much of the user's attention each asks for:
+Three tiers of agent output, sorted by how prominent each is intended to be:
 
-| Tier | Tag | When to use |
+| Tier | Tag | Nature |
 |---|---|---|
-| Background | (untagged prose) | Thinking-aloud, sorting decisions, processing notes. Hidden by default in narration; visible in regular chat. |
-| Compact | `<ack kind="…" ref="…">` | "I did the thing you asked" — confirmations of discrete work. |
-| Durable | `<callout context="…">` | Content the user must read, written to stand alone in any future view. |
+| Background | (untagged prose) | Thinking-aloud, sorting decisions, processing notes. Visibility is a separate concern (see below). |
+| Transient | `<ack kind="…" ref="…">` | Indication, not reading material. Icon + earcon primary, with optional brief text. The user becomes aware the action happened; doesn't need to read details. |
+| Durable | `<callout context="…">` | Presented and persistent. Content the user must read, written to stand alone in any future view. Survives in feeds, digests, notification previews. |
 
-The two tags are complementary, not alternatives. A turn might emit several `<ack>` chips and one `<callout>`, with surrounding untagged prose that gets hidden in narrow views.
+The two tags are complementary, not alternatives. A turn might emit several `<ack>` indications and one `<callout>`, with surrounding untagged prose that may or may not display depending on the prose-visibility setting.
 
-### `<ack>` — compact acknowledgements
+**Untagged prose visibility is a separable concern**, not intrinsic to narration. There will be cases where hiding untagged prose makes sense outside narration (focused work, low-distraction reading) and cases where showing it makes sense within narration (debugging, agent training). The frontend may bundle it with the narration toggle for UI simplicity, but architecturally it's its own control-plane flag (e.g., `prose="off"`), defaulted to `on` outside narration and `off` when narration is on.
 
-The agent emits an `<ack>` chip to confirm a discrete action, instead of describing it in prose.
+### `<ack>` — transient action indication
+
+The agent emits an `<ack>` to indicate "yes, I'm doing what you asked" — not to write about it. The primary expression is an **icon + earcon**; inner text is optional and is used only when the action isn't obvious from the user's input.
 
 ```xml
-<ack kind="FILE_UPDATED" ref="recipes/Bread.recipe.card">Added cardamom note</ack>
-<ack kind="TODO_ADDED" ref="todos/Call_Mom.todo.card"/>
-<ack kind="SCHEDULED" ref="schedules/Saturday_Reminder.schedule.card">Saturday morning</ack>
-<ack kind="NOTED">Got it</ack>          <!-- no ref; bare acknowledgement -->
+<ack kind="appended" ref="recipes/Bread.recipe.card"/>     <!-- user asked to add a note; the action is obvious -->
+<ack kind="todo-added" ref="todos/Call_Mom.todo.card"/>
+<ack kind="edited" ref="recipes/Bread.recipe.card">Rewrote the proofing section for clarity</ack>  <!-- not obvious; text earns its place -->
+<ack kind="created" ref="recipes/Sourdough.recipe.card"/>
 ```
 
 **Schema:**
 
-- **`kind`** (required): closed set of state identifiers. Each kind has a default icon and default verb-phrase used when the inner text is empty.
+- **`kind`** (required): closed set of named actions. Each kind has a default icon, default earcon, and default verb-phrase used when the inner text is empty.
 - **`ref`** (optional): path to the affected card or file. Renders as a tap link.
-- **Inner text** (optional): a short modifier — what changed, when, where. Falls back to the kind's default phrase when empty.
+- **Inner text** (optional): a short modifier — only included when the action isn't already obvious from the user's input. If the user said "add cardamom to the recipe" and the agent appended a cardamom note, no text is needed. If the agent did something less obvious (chose a specific amount, restructured a section, picked a related file), text earns its place.
 
 Initial closed set (subject to design):
 
-| `kind` | Default phrase | Typical ref |
+| `kind` | Default phrase | Notes |
 |---|---|---|
-| `FILE_UPDATED` | "Updated" | a card or file path |
-| `FILE_CREATED` | "Created" | new card path |
-| `TODO_ADDED` | "Added to todos" | the todo card |
-| `SCHEDULED` | "Scheduled" | the schedule card |
-| `CAPTURED` | "Captured" | the captured artifact |
-| `NOTED` | "Noted" | none — generic ack |
+| `created` | "Created" | A new file/card now exists. |
+| `appended` | "Added to it" | Content was added to an existing file/card. Semantic append — may be added to a specific section, not strictly end-of-file. Light editing for flow is OK; the action is still "added content." |
+| `edited` | "Edited" | Existing content was changed (not just added to). Wording undecided — `revised` is the other candidate. |
+| `todo-added` | "Added to todos" | A new todo. |
+| `todo-completed` | "Done" | A todo marked complete. |
 
-New card types reuse `CAPTURED`, `NOTED`, or the file-CRUD kinds. The closed set keeps icon mapping reliable. Earcons come later — design once kinds are stable.
+The closed set keeps icon and earcon mapping reliable. **If no kind fits the action, don't use `<ack>` at all** — fall back to prose or a `<callout>` if the user needs to see it.
+
+Authoring rules (covered in the system-prompt overlay):
+
+- Use `<ack>` for discrete actions that map to a `kind`. Don't shoehorn other things into it.
+- Use inner text conservatively. Default to no text when the action is the obvious thing the user asked for. Only add text when the agent did something the user couldn't have predicted from their input.
+- Don't emit `<ack>` just to say "I heard you" — silence is the default acknowledgement in narration. Only emit when actual work happened.
+
+Earcons come later — design once kinds are stable.
 
 **Rendering:**
 
@@ -164,14 +172,13 @@ Your dentist appointment overlaps with the soccer match — both at 10am Saturda
 
 Both tags depend on a new chat display surface with distinct visual treatments. Pixel-precise specs come at implementation time; this section pins the visual model.
 
-**Ack chips.** A row of small inline pills, typically at the end of the agent's message but rendered wherever they appear in the response stream. Each chip:
+**Ack indications.** On emit: a brief earcon plays and a small icon flashes into view, the user's signal that an action happened. After the flash, the indication settles into a compact form attached to the agent's message — a thin chip with the type icon, optional inner text if present, and `ref` as a tap target. Visually muted; not asking for attention, just there if the user looks for it.
 
-- Type icon (~16-20px) at the left, a short label to its right (the inner text, falling back to the kind's default phrase when empty).
-- The whole chip is a tap target if `ref` is present, navigating to the affected card or file.
-- Muted/secondary surface color — designed to be low attention budget. Acks should read as "the thing happened" without competing with surrounding content.
-- Multiple chips wrap horizontally, with normal inline-flow gap.
+- Icon + earcon are the **primary** expression. Inner text is secondary; when omitted, the chip is essentially just the icon.
+- Tap target opens the affected card/file if `ref` is present.
+- Multiple chips wrap horizontally on the message. When several acks of the same kind appear consecutively, the renderer may visually group them into a count indication ("📋 3 todos") that taps to expand.
 
-When several acks of the same kind appear consecutively, the renderer may visually group them into a count chip (e.g. "📋 3 todos added") that taps to expand the individual chips with refs. This avoids visual repetition when the agent files a flurry of similar work.
+In strip and overlay display states, even the compact persistent form recedes (see Display states below).
 
 **Callouts.** Block-level cards with elevated visual treatment, separated from surrounding prose:
 
@@ -218,18 +225,18 @@ One envelope tag — `<chat-app>` — carries chat-app state in both directions.
 
 ```xml
 <!-- Server-injected on each user message (full snapshot): -->
-<chat-app NARRATION="ON" TTS="OFF" STRUCTURED_OUTPUT="ON" time="2026-05-09T14:23:00-05:00"/>
+<chat-app narration="on" tts="off" structured-output="on" time="2026-05-09T14:23:00-05:00"/>
 
 <!-- Agent emits to mutate state (delta — only what to change): -->
-<chat-app TTS="OFF"/>
+<chat-app tts="off"/>
 
 <!-- Landmark seeds initial state (snapshot at session open): -->
-<chat-app NARRATION="ON" TTS="OFF"/>
+<chat-app narration="on" tts="off"/>
 ```
 
 Same outer tag, same attribute shape, semantics implicit by direction:
 
-- **System → agent**: full snapshot, prepended to each user message. Carries `time` (lowercase, free-form) plus all current feature states (UPPERCASE state identifiers). The agent always sees the latest world.
+- **System → agent**: full snapshot, prepended to each user message. Carries `time` plus all current feature states. The agent always sees the latest world.
 - **Agent → system**: delta. Only the attributes present count; absent attributes mean "no opinion."
 - **Landmark → system**: snapshot at session open. User can override afterward.
 
@@ -247,7 +254,7 @@ Some children are read-only by convention (`time`, future read-only state like `
 <landmark>
 <label>Daily dump</label>
 <symbol>🎙️</symbol>
-<chat-app NARRATION="ON" TTS="OFF"/>
+<chat-app narration="on" tts="off"/>
 <link ref="..."/>
 </landmark>
 ```
@@ -257,17 +264,17 @@ Landmark settings are seed values applied at session open. The user can still ov
 **Agent control.** The agent emits a `<chat-app>` delta in its response.
 
 ```xml
-<chat-app NARRATION="ON"/>
-<chat-app TTS="OFF"/>
+<chat-app narration="on"/>
+<chat-app tts="off"/>
 ```
 
-Use cases: detecting that the user has shifted into narration shape and adjusting; confirming a voice toggle the user requested ("turn on narration mode" → agent confirms with `<chat-app NARRATION="ON"/>` plus an `<ack>`); turning off TTS because the user asked for quiet.
+Use cases: detecting that the user has shifted into narration shape and adjusting; confirming a voice toggle the user requested ("turn on narration mode" → agent confirms with `<chat-app narration="on"/>` plus an `<ack>`); turning off TTS because the user asked for quiet.
 
 ### Closed feature-name set
 
-All three surfaces speak a **shared closed set of feature names**. Adding a new chat feature means registering its name; all three surfaces understand it without further plumbing. Initial set: `NARRATION`, `TTS`, `STRUCTURED_OUTPUT`. Future additions: `CAMERA`, `DOC_PINNED`, etc.
+All three surfaces speak a **shared closed set of feature names**. Adding a new chat feature means registering its name; all three surfaces understand it without further plumbing. Initial set: `narration`, `tts`, `structured-output`. Future additions: `camera`, `doc-pinned`, etc.
 
-Values are `ON` / `OFF` — also UPPERCASE state identifiers.
+Values are `on` / `off`.
 
 ### Snapshot vs delta
 
@@ -314,10 +321,10 @@ Feature state lives server-side per chat session, with the browser syncing. The 
 
 ## System-prompt overlay
 
-When `NARRATION="ON"` (visible to the agent in the `<chat-app>` snapshot on each user message), the chat system prompt gets an overlay along these lines (final wording TBD):
+When `narration="on"` (visible to the agent in the `<chat-app>` snapshot on each user message), the chat system prompt gets an overlay along these lines (final wording TBD):
 
 - The user is dumping content, not chatting. Receive it: capture memos, file todos, schedule follow-ups, ask clarifying questions only when essential.
-- Don't reply per checkpoint just to acknowledge. Silence is the default response. Confirm work with `<ack>` chips (e.g. `kind="TODO_ADDED"`, `kind="FILE_UPDATED"`), not prose.
+- Don't reply per checkpoint just to acknowledge. Silence is the default response. Confirm work with `<ack>` indications (e.g. `kind="todo-added"`, `kind="appended"`), not prose. Use inner text on the ack only when the action isn't obvious from the user's input.
 - When the user asks a real question, put the answer in a `<callout>` with the question (or paraphrase) as the `context` attribute. Write the body to stand alone — assume the user might re-encounter this callout in a digest with no surrounding context.
 - Use `<speech>` only when the answer is worth speaking aloud. `<callout>` and `<speech>` are siblings; emit both when you want the same content shown and spoken.
 - Tool-driven action (capture, schedule, file) is the primary work; conversation is incidental.
@@ -359,3 +366,7 @@ Implementation-level (not design-blocking):
 - Earcons for `<ack kind>` — designed once kinds are stable.
 - Feature-flag persistence layer: server-side session storage, per-thread persistence, per-box defaults file?
 - Feature-name registry: where the closed set is declared and how a feature registers itself.
+
+## Note: possible SCREAMING_SNAKE_CASE pass
+
+`SCREAMING_SNAKE_CASE` for state identifiers (feature names, `on`/`off` values, `<ack>` kinds) was considered — it would make these references read unambiguously in prompts and docs ("when `NARRATION="ON"`…"). Deferred for now, since the project hasn't used that convention elsewhere yet. If we end up doing a project-wide pass on chat-interaction tag naming, this would land naturally with it.
