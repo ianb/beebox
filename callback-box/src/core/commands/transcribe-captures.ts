@@ -3,10 +3,10 @@
  * and runs Whisper with word-level timestamps.
  *
  * For each audio card with status="new":
- * 1. Read the audio file
+ * 1. Read the audio file (from the audio card's attach scope)
  * 2. Call transcribeAudio() with word timestamps
  * 3. Write transcript text to <transcript>
- * 4. Write timing JSON to .timing.json sidecar
+ * 4. Write timing JSON to .timing.json inside the audio card's attach scope
  * 5. Set duration on <filename>
  * 6. Set status="transcribed"
  */
@@ -22,6 +22,10 @@ import {
   type TranscriptionError,
 } from "../transcription.js";
 import type { ElementNode } from "cardworks";
+import {
+  attachDirFor,
+  resolveAttachRef,
+} from "../../lib/attach-path.js";
 
 registerCommand({
   name: "transcribe-captures",
@@ -31,7 +35,7 @@ registerCommand({
     const inboxDir = getBoxDir(ctx.boxRoot, "inbox");
     const loader = await createLoader(ctx.boxRoot);
 
-    // Find capture directories
+    // Find capture-session cards at the inbox level
     let entries: Array<{ name: string; isDirectory: () => boolean }>;
     try {
       entries = await fs.readdir(inboxDir, { withFileTypes: true });
@@ -40,11 +44,11 @@ registerCommand({
       return { success: true, data: { transcribed: 0 } };
     }
 
-    const captureDirs = entries
-      .filter((e) => e.isDirectory() && e.name.startsWith("capture-"))
+    const sessionCards = entries
+      .filter((e) => !e.isDirectory() && e.name.endsWith(".capture-session.card"))
       .map((e) => e.name);
 
-    if (captureDirs.length === 0) {
+    if (sessionCards.length === 0) {
       ctx.writeLine("No capture sessions found.");
       return { success: true, data: { transcribed: 0 } };
     }
@@ -52,24 +56,31 @@ registerCommand({
     let transcribed = 0;
     let errors = 0;
 
-    for (const dir of captureDirs) {
-      const dirPath = path.join(inboxDir, dir);
-      const files = await fs.readdir(dirPath);
-      const audioCards = files.filter((f) => f.endsWith(".audio.card"));
+    for (const sessionCardName of sessionCards) {
+      const sessionCardPath = path.join(inboxDir, sessionCardName);
+      const sessionAttachDir = attachDirFor(sessionCardPath);
+
+      let attachEntries: string[];
+      try {
+        attachEntries = await fs.readdir(sessionAttachDir);
+      } catch {
+        // Empty or missing attach dir — skip
+        continue;
+      }
+
+      const audioCards = attachEntries.filter((f) => f.endsWith(".audio.card"));
+      const sessionLabel = sessionCardName.replace(/\.capture-session\.card$/, "");
 
       for (const cardFile of audioCards) {
-        const cardPath = path.join(inboxDir, dir, cardFile);
+        const cardPath = path.join(sessionAttachDir, cardFile);
 
-        // Load the card
         const card = await loader.load(cardPath);
         const element = card.element;
 
-        // Skip if not status="new"
         if (element.attrs["status"] !== "new") {
           continue;
         }
 
-        // Get the audio filename from <filename ref="...">
         const children = element.children as ElementNode[];
         const filenameEl = children.find((c) => c.tagName === "filename");
         if (!filenameEl) {
@@ -77,22 +88,25 @@ registerCommand({
           continue;
         }
 
-        const audioFilename = filenameEl.attrs["ref"] as string;
-        const audioPath = path.join(dirPath, audioFilename);
-
-        // Check audio file exists
-        try {
-          await fs.access(audioPath);
-        } catch {
-          ctx.writeLine(`  Skipping ${cardFile}: audio file ${audioFilename} not found`);
+        const audioRef = filenameEl.attrs["ref"] as string;
+        const audioPath = resolveAttachRef(cardPath, audioRef);
+        if (audioPath === null) {
+          ctx.writeLine(`  Skipping ${cardFile}: ref does not use attach/ prefix: ${audioRef}`);
           continue;
         }
 
-        ctx.writeLine(`  Transcribing ${dir}/${audioFilename}...`);
+        try {
+          await fs.access(audioPath);
+        } catch {
+          ctx.writeLine(`  Skipping ${cardFile}: audio file ${audioRef} not found`);
+          continue;
+        }
+
+        ctx.writeLine(`  Transcribing ${sessionLabel}/${audioRef}...`);
 
         try {
-          // Read audio and transcribe with word timestamps
           const audioBuffer = await fs.readFile(audioPath);
+          const audioFilename = path.basename(audioPath);
           const result = (await transcribeAudio({
             audioBuffer,
             filename: audioFilename,
@@ -143,13 +157,13 @@ registerCommand({
           element.attrs["status"] = "transcribed";
           element.dirty = true;
 
-          // Save the card
           await loader.save(card);
 
-          // Write timing JSON sidecar
-          // audio-000.audio.card -> audio-000.timing.json
-          const basename = cardFile.replace(/\.audio\.card$/, "");
-          const timingPath = path.join(dirPath, `${basename}.timing.json`);
+          // Write timing JSON sidecar inside this audio card's own attach scope
+          const audioBasename = cardFile.replace(/\.audio\.card$/, "");
+          const audioCardAttachDir = attachDirFor(cardPath);
+          await fs.mkdir(audioCardAttachDir, { recursive: true });
+          const timingPath = path.join(audioCardAttachDir, `${audioBasename}.timing.json`);
           const timingData = {
             words: result.words,
             duration: result.duration,
@@ -158,12 +172,12 @@ registerCommand({
           await fs.writeFile(timingPath, JSON.stringify(timingData, null, 2) + "\n");
 
           ctx.writeLine(
-            `  Transcribed ${dir}/${audioFilename}: ${Math.round(result.duration)}s, ${result.words.length} words`
+            `  Transcribed ${sessionLabel}/${audioRef}: ${Math.round(result.duration)}s, ${result.words.length} words`
           );
           transcribed++;
         } catch (error) {
           const err = error as TranscriptionError;
-          ctx.writeLine(`  Error transcribing ${dir}/${audioFilename}: ${err.message}`);
+          ctx.writeLine(`  Error transcribing ${sessionLabel}/${audioRef}: ${err.message}`);
           errors++;
         }
       }

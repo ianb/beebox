@@ -35,7 +35,7 @@ export const FileDescription = element("description", {
  * Example:
  * ```xml
  * <file status="new">
- * <filename ref="file-001-tax-return.pdf" captured="2026-04-14T15:00:00Z" source="disk" original-name="tax-return-2025.pdf" mime-type="application/pdf" />
+ * <filename ref="attach/file-001-tax-return.pdf" captured="2026-04-14T15:00:00Z" source="disk" original-name="tax-return-2025.pdf" mime-type="application/pdf" />
  * <description></description>
  * </file>
  * ```
@@ -49,11 +49,11 @@ export const FileSchema = element("file", {
   ),
   instructions: `# File Cards
 
-A file card represents an arbitrary file uploaded via the capture UI (e.g. a PDF, text document, spreadsheet, archive). The attached file shares the card's basename (e.g. \`file-001-tax-return.pdf\` alongside \`file-001-tax-return.file.card\`).
+A file card represents an arbitrary file uploaded via the capture UI (e.g. a PDF, text document, spreadsheet, archive). The attached file lives in the card's attach scope (e.g. \`file-001-tax-return.file.card\` with \`file-001-tax-return.file.attach/file-001-tax-return.pdf\`); the \`<filename ref="attach/…">\` prefix points into that scope.
 
 Elements:
 - \`<filename>\` — the attached file. Attributes:
-  - \`ref\` — the stored filename (sibling on disk)
+  - \`ref\` — path into the card's attach scope (e.g. \`attach/<stored-name>\`)
   - \`captured\` — upload timestamp
   - \`source\` — origin of the file (e.g. \`disk\`)
   - \`original-name\` — the filename as the user uploaded it
@@ -68,6 +68,9 @@ export type File = z.infer<typeof FileSchema>;
 
 /**
  * Template for creating a file card.
+ *
+ * `filename` is the bare attached filename. The template emits it with the
+ * `attach/` virtual prefix.
  */
 export function createFileTemplate(options: {
   capturedAt: string;
@@ -80,7 +83,7 @@ export function createFileTemplate(options: {
   const file = (
     <file status="new">
       <filename
-        ref={options.filename}
+        ref={`attach/${options.filename}`}
         captured={options.capturedAt}
         source={options.source}
         original-name={options.originalName}

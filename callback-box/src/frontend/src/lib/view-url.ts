@@ -77,9 +77,24 @@ export function serializeViewUrl(target: ViewTarget): string {
  * would). `basePath` is the path of the containing document — the filename on
  * the end is stripped and `relative` is resolved against the remaining dir.
  * Empty/undefined `basePath` treats `relative` as already box-root-relative.
+ *
+ * Special case: if `relative` starts with `attach/`, the prefix is resolved
+ * against the base card's attach scope (`<basename>.attach/`) instead of the
+ * base's directory.
  */
 export function resolveRelativePath(basePath: string | undefined, relative: string): string {
   if (relative.startsWith("/")) return relative.replace(/^\/+/, "");
+
+  if ((relative === "attach" || relative.startsWith("attach/")) && basePath) {
+    const baseName = basePath.includes("/") ? basePath.slice(basePath.lastIndexOf("/") + 1) : basePath;
+    const baseDir =
+      basePath.includes("/") ? basePath.slice(0, basePath.lastIndexOf("/")) : "";
+    const cardBasename = cardBasenameOf(baseName);
+    const rest = relative === "attach" ? "" : relative.slice("attach/".length);
+    const attachPath = `${cardBasename}.attach${rest ? `/${rest}` : ""}`;
+    return baseDir ? `${baseDir}/${attachPath}` : attachPath;
+  }
+
   const baseDir =
     basePath && basePath.includes("/") ? basePath.slice(0, basePath.lastIndexOf("/")) : "";
   const parts = [...baseDir.split("/"), ...relative.split("/")];
@@ -93,6 +108,14 @@ export function resolveRelativePath(basePath: string | undefined, relative: stri
     out.push(part);
   }
   return out.join("/");
+}
+
+/** Strip `.<type>.card` from a card filename, leaving just the basename. */
+function cardBasenameOf(filename: string): string {
+  if (!filename.endsWith(".card")) return filename;
+  const withoutCard = filename.slice(0, -".card".length);
+  const lastDot = withoutCard.lastIndexOf(".");
+  return lastDot === -1 ? withoutCard : withoutCard.slice(0, lastDot);
 }
 
 /**

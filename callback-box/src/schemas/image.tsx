@@ -72,7 +72,7 @@ export const ImageDocument = element("document", {
  * Example:
  * ```xml
  * <image status="analyzed" has-text="true">
- * <filename ref="photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
+ * <filename ref="attach/photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
  * <description>Whiteboard with project timeline and milestones</description>
  * <text source="whiteboard">## Project Timeline\n- Phase 1: Jan-Feb\n- Phase 2: Mar-Apr</text>
  * </image>
@@ -96,7 +96,7 @@ export const ImageSchema = element("image", {
   ),
   instructions: `# Image Cards
 
-An image card represents a photo, typically from a capture session. The attached image file shares the card's basename (e.g. \`photo-001.jpg\` alongside \`photo-001.image.card\`).
+An image card represents a photo, typically from a capture session. The attached image file lives in the card's attach scope (e.g. \`photo-001.image.card\` with \`photo-001.image.attach/photo-001.jpg\`); the \`<filename ref="attach/…">\` prefix points into that scope.
 
 Elements:
 - \`<filename>\` — the attached image file. The \`captured\` attribute is updated from EXIF data when available.
@@ -166,6 +166,10 @@ export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
 
 /**
  * Template for creating an image card.
+ *
+ * `filename` is the bare attached filename (e.g. `photo-001.jpg`). The template
+ * emits it with the `attach/` virtual prefix, pointing into the card's attach
+ * scope.
  */
 export function createImageTemplate(options: {
   capturedAt: string;
@@ -174,7 +178,7 @@ export function createImageTemplate(options: {
 }): string {
   const image = (
     <image status="new">
-      <filename ref={options.filename} captured={options.capturedAt} source={options.source} />
+      <filename ref={`attach/${options.filename}`} captured={options.capturedAt} source={options.source} />
       <description></description>
     </image>
   );

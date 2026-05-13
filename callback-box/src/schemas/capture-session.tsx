@@ -89,19 +89,19 @@ export const SessionTranscript = element("transcript", {
  * <capture-session status="intake-complete" session-id="abc123">
  * <time start="2024-01-15T10:00:00Z" end="2024-01-15T10:15:00Z" duration="15m0s" />
  * <images>
- * <image-ref ref="photo-001-whiteboard.image.card" />
- * <image-ref ref="photo-002-diagram.image.card" />
+ * <image-ref ref="attach/photo-001-whiteboard.image.card" />
+ * <image-ref ref="attach/photo-002-diagram.image.card" />
  * </images>
  * <audio-clips>
- * <audio-ref ref="audio-001.audio.card" />
+ * <audio-ref ref="attach/audio-001.audio.card" />
  * </audio-clips>
  * <transcript>
  * <text>So let me walk through the timeline we've got here...</text>
- * <image ref="photo-001-whiteboard.image.card" description="Whiteboard with Q2 milestones" filename="photo-001-whiteboard.jpg" />
+ * <image ref="attach/photo-001-whiteboard.image.card" description="Whiteboard with Q2 milestones" filename="photo-001-whiteboard.jpg" />
  * <text>And then phase two starts in March.</text>
  * <silence duration="15s" />
  * <text>OK let me get a photo of this diagram too.</text>
- * <image ref="photo-002-diagram.image.card" description="Architecture diagram" filename="photo-002-diagram.jpg" />
+ * <image ref="attach/photo-002-diagram.image.card" description="Architecture diagram" filename="photo-002-diagram.jpg" />
  * </transcript>
  * </capture-session>
  * ```
@@ -123,7 +123,7 @@ export const CaptureSessionSchema = element("capture-session", {
   ),
   instructions: `# Capture Session Cards
 
-A capture session groups images, audio clips, and uploaded files from a single recording session (e.g., a voice walkthrough with photos, or a batch of documents). All child cards live in the same directory.
+A capture session groups images, audio clips, and uploaded files from a single recording session (e.g., a voice walkthrough with photos, or a batch of documents). The session card lives at the inbox level; its child cards (audio, image, file) live inside the session's attach scope (\`<basename>.capture-session.attach/\`). Refs to children use the \`attach/\` virtual prefix.
 
 Elements:
 - \`<images>\` — contains \`<image ref="...">\` references to child image cards
@@ -161,6 +161,10 @@ function formatDuration(ms: number): string {
 
 /**
  * Template for creating a capture session card.
+ *
+ * `imageRefs`, `audioRefs`, `fileRefs` are bare child-card filenames
+ * (e.g. `photo-001.image.card`). The template emits them with the
+ * `attach/` virtual prefix, pointing into the session's attach scope.
  */
 export function createCaptureSessionTemplate(options: {
   sessionId: string;
@@ -181,18 +185,18 @@ export function createCaptureSessionTemplate(options: {
       <time start={options.startedAt} end={options.endedAt || undefined} duration={duration} />
       <images>
         {options.imageRefs.map((ref) => (
-          <image-ref ref={ref} />
+          <image-ref ref={`attach/${ref}`} />
         ))}
       </images>
       <audio-clips>
         {options.audioRefs.map((ref) => (
-          <audio-ref ref={ref} />
+          <audio-ref ref={`attach/${ref}`} />
         ))}
       </audio-clips>
       {fileRefs.length > 0 ? (
         <files>
           {fileRefs.map((ref) => (
-            <file-ref ref={ref} />
+            <file-ref ref={`attach/${ref}`} />
           ))}
         </files>
       ) : null}

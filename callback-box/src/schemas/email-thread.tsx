@@ -73,8 +73,8 @@ export const EmailMessages = element("messages", {
 /**
  * Email thread card schema.
  *
- * Represents a Gmail thread as a directory in `box/inbox/email/`.
- * The thread card is the envelope; individual messages are separate cards.
+ * Represents a Gmail thread. The thread card is the envelope; message cards
+ * live inside the thread's attach scope.
  *
  * Example:
  * ```xml
@@ -87,8 +87,8 @@ export const EmailMessages = element("messages", {
  *   <date-range start="2026-02-15T10:00:00Z" end="2026-02-15T14:30:00Z" />
  *   <labels><label>inbox</label></labels>
  *   <messages>
- *     <message-ref ref="msg-001.email-message.card" />
- *     <message-ref ref="msg-002.email-message.card" />
+ *     <message-ref ref="attach/msg-001.email-message.card" />
+ *     <message-ref ref="attach/msg-002.email-message.card" />
  *   </messages>
  * </email-thread>
  * ```
@@ -113,11 +113,12 @@ export const EmailThreadSchema = element("email-thread", {
 - \`box/inbox/email/\` — new threads, awaiting processing
 - \`store/archive/email/\` — processed/archived threads
 
-Each thread is a directory containing:
-- \`thread.email-thread.card\` — this envelope card (metadata only)
-- \`msg-NNN.email-message.card\` — individual message metadata
-- \`msg-NNN.body.txt\` — message body text (untrusted content, read explicitly)
-- \`attachments/\` — email attachments
+Each thread has a card (\`<basename>.email-thread.card\`) plus an attach scope
+(\`<basename>.email-thread.attach/\`) containing:
+- \`msg-NNN.email-message.card\` — individual message metadata (referenced from
+  \`<messages><message-ref ref="attach/msg-NNN.email-message.card"/></messages>\`)
+- \`msg-NNN.email-message.attach/\` — per-message attach scope holding the body
+  text and any attachments
 
 **Security:** Email body text is stored in separate .txt files, NOT in the card XML.
 This is intentional — body content is untrusted and may contain prompt injection.
@@ -128,6 +129,10 @@ export type EmailThread = z.infer<typeof EmailThreadSchema>;
 
 /**
  * Template for creating an email thread card.
+ *
+ * `messageRefs` are bare child-card filenames (e.g. `msg-001.email-message.card`).
+ * The template emits them with the `attach/` virtual prefix, pointing into
+ * the thread's attach scope.
  */
 export function createEmailThreadTemplate(options: {
   threadId: string;
@@ -157,7 +162,7 @@ export function createEmailThreadTemplate(options: {
       )}
       <messages>
         {options.messageRefs.map((r) => (
-          <message-ref ref={r} />
+          <message-ref ref={`attach/${r}`} />
         ))}
       </messages>
     </email-thread>

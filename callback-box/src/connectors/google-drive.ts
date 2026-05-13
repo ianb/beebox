@@ -27,6 +27,7 @@ import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
 import type { FileState } from "./drive-types.js";
 import { safeFilename } from "./chat-utils.js";
+import { attachDirFor } from "../lib/attach-path.js";
 
 // Ensure handlers are registered
 import "./drive-handler-sheets.js";
@@ -225,8 +226,7 @@ class GoogleDriveConnector implements Connector {
     }
     const fileState = state.files[driveId];
 
-    const cardBasename = path.basename(cardPath, `.${handler.cardType}.card`);
-    const localDir = path.join(path.dirname(cardPath), cardBasename);
+    const localDir = attachDirFor(cardPath);
 
     const isNew = fileState.lastModified === "";
 

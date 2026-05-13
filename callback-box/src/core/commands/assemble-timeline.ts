@@ -20,6 +20,7 @@ import { registerCommand } from "../command-runner.js";
 import { getBoxDir } from "../../cli/lib/paths.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import type { ElementNode } from "cardworks";
+import { attachDirFor, resolveAttachRef } from "../../lib/attach-path.js";
 
 interface TimedWord {
   word: string;
@@ -56,21 +57,24 @@ registerCommand({
       return { success: true, data: { assembled: 0 } };
     }
 
-    const captureDirs = entries
-      .filter((e) => e.isDirectory() && e.name.startsWith("capture-"))
+    const sessionCardNames = entries
+      .filter((e) => !e.isDirectory() && e.name.endsWith(".capture-session.card"))
       .map((e) => e.name);
 
     let assembled = 0;
 
-    for (const dir of captureDirs) {
-      const dirPath = path.join(inboxDir, dir);
-      const files = await fs.readdir(dirPath);
+    for (const sessionCardName of sessionCardNames) {
+      const sessionPath = path.join(inboxDir, sessionCardName);
+      const sessionAttachDir = attachDirFor(sessionPath);
+      const sessionLabel = sessionCardName.replace(/\.capture-session\.card$/, "");
 
-      // Find session card
-      const sessionFile = files.find((f) => f.endsWith(".capture-session.card"));
-      if (!sessionFile) continue;
+      let attachFiles: string[];
+      try {
+        attachFiles = await fs.readdir(sessionAttachDir);
+      } catch {
+        continue;
+      }
 
-      const sessionPath = path.join(dirPath, sessionFile);
       const sessionCard = await loader.load(sessionPath);
       const sessionEl = sessionCard.element;
 
@@ -87,25 +91,25 @@ registerCommand({
       }
 
       // Check all audio is transcribed
-      const audioCards = files.filter((f) => f.endsWith(".audio.card"));
+      const audioCards = attachFiles.filter((f) => f.endsWith(".audio.card"));
       let allAudioReady = true;
       for (const ac of audioCards) {
-        const acCard = await loader.load(path.join(dirPath, ac));
+        const acCard = await loader.load(path.join(sessionAttachDir, ac));
         if (acCard.element.attrs["status"] !== "transcribed") {
           allAudioReady = false;
           break;
         }
       }
       if (!allAudioReady) {
-        ctx.writeLine(`  Skipping ${dir}: not all audio transcribed`);
+        ctx.writeLine(`  Skipping ${sessionLabel}: not all audio transcribed`);
         continue;
       }
 
       // Check all images are analyzed or invalid
-      const imageCards = files.filter((f) => f.endsWith(".image.card"));
+      const imageCards = attachFiles.filter((f) => f.endsWith(".image.card"));
       let allImagesReady = true;
       for (const ic of imageCards) {
-        const icCard = await loader.load(path.join(dirPath, ic));
+        const icCard = await loader.load(path.join(sessionAttachDir, ic));
         const status = icCard.element.attrs["status"] as string;
         if (status !== "analyzed" && status !== "invalid") {
           allImagesReady = false;
@@ -113,17 +117,18 @@ registerCommand({
         }
       }
       if (!allImagesReady) {
-        ctx.writeLine(`  Skipping ${dir}: not all images analyzed`);
+        ctx.writeLine(`  Skipping ${sessionLabel}: not all images analyzed`);
         continue;
       }
 
-      ctx.writeLine(`  Assembling timeline for ${dir}...`);
+      ctx.writeLine(`  Assembling timeline for ${sessionLabel}...`);
 
       // Collect timed words from all audio clips
       const allWords: TimedWord[] = [];
 
       for (const ac of audioCards) {
-        const acCard = await loader.load(path.join(dirPath, ac));
+        const audioCardPath = path.join(sessionAttachDir, ac);
+        const acCard = await loader.load(audioCardPath);
         const acChildren = acCard.element.children as ElementNode[];
         const filenameEl = acChildren.find((c) => c.tagName === "filename");
         if (!filenameEl) continue;
@@ -131,9 +136,12 @@ registerCommand({
         const recordedAt = filenameEl.attrs["recorded"] as string;
         const recordedMs = new Date(recordedAt).getTime();
 
-        // Load timing JSON
-        const basename = ac.replace(/\.audio\.card$/, "");
-        const timingPath = path.join(dirPath, `${basename}.timing.json`);
+        // Load timing JSON from the audio card's own attach scope
+        const audioBasename = ac.replace(/\.audio\.card$/, "");
+        const timingPath = path.join(
+          attachDirFor(audioCardPath),
+          `${audioBasename}.timing.json`,
+        );
         let timingData: { words: Array<{ word: string; start: number; end: number }> };
         try {
           const raw = await fs.readFile(timingPath, "utf-8");
@@ -156,7 +164,8 @@ registerCommand({
       const allImages: TimedImage[] = [];
 
       for (const ic of imageCards) {
-        const icCard = await loader.load(path.join(dirPath, ic));
+        const imageCardPath = path.join(sessionAttachDir, ic);
+        const icCard = await loader.load(imageCardPath);
         const icEl = icCard.element;
         if (icEl.attrs["status"] === "invalid") continue;
 
@@ -166,10 +175,15 @@ registerCommand({
         if (!filenameEl) continue;
 
         const capturedAt = filenameEl.attrs["captured"] as string;
-        const imageFilename = filenameEl.attrs["ref"] as string;
+        const imageRef = filenameEl.attrs["ref"] as string;
+        const resolvedImagePath = resolveAttachRef(imageCardPath, imageRef);
+        const imageFilename = resolvedImagePath
+          ? path.basename(resolvedImagePath)
+          : imageRef;
 
         allImages.push({
-          ref: ic,
+          // Session-scope ref points at the image card inside the session's attach
+          ref: `attach/${ic}`,
           description: descriptionEl?.text?.trim() || "",
           filename: imageFilename,
           absoluteTime: new Date(capturedAt).getTime(),
@@ -258,7 +272,7 @@ registerCommand({
       await loader.save(sessionCard);
 
       ctx.writeLine(
-        `  Assembled ${dir}: ${allWords.length} words, ${allImages.length} images, ${transcriptChildren.length} segments`
+        `  Assembled ${sessionLabel}: ${allWords.length} words, ${allImages.length} images, ${transcriptChildren.length} segments`
       );
       assembled++;
     }

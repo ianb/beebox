@@ -16,6 +16,7 @@ import { getApiBase } from "../api";
 import type { RendererProps } from "./index";
 import { registerCardRenderer, registerFileRenderer } from "./index";
 import type { ElementNode } from "../api";
+import { resolveRelativePath } from "../lib/view-url";
 
 const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg|ico)$/i;
 
@@ -73,8 +74,11 @@ function ImageCardRenderer({ data, onNavigate }: RendererProps) {
   const card = parseImageCard(data.element as ElementNode);
   if (!card.filename) return null;
 
-  const cardDir = data.path.split("/").slice(0, -1).join("/");
-  const imageSrc = `${getApiBase()}/files/${cardDir}/${card.filename}`;
+  // Resolve the ref against the card's path. Refs use the `attach/` virtual
+  // prefix (e.g. `attach/photo-001.jpg`) which resolves to the card's
+  // `<basename>.attach/` directory.
+  const resolvedPath = resolveRelativePath(data.path, card.filename);
+  const imageSrc = `${getApiBase()}/files/${resolvedPath}`;
   const altText = card.description || card.filename;
 
   const rotationTransform = card.rotation !== 0 ? `rotate(${card.rotation}deg)` : undefined;

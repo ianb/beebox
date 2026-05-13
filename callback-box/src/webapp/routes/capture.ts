@@ -3,9 +3,10 @@
  *
  * Sessions accumulate files in a temp directory. Session metadata is stored
  * as session.json inside the temp dir so it survives server restarts.
- * On finalize, a capture-session directory is created in box/inbox/ with
- * audio.card, image.card, and capture-session.card files matching the
- * structure expected by the process-captures procedure.
+ * On finalize, a capture-session card lands at `box/inbox/<basename>.capture-session.card`,
+ * and its attach scope (`box/inbox/<basename>.capture-session.attach/`) holds the
+ * audio/image/file cards plus their attached media (each child has its own
+ * attach scope inside).
  */
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -221,18 +222,43 @@ export async function registerCaptureRoutes(
     // e.g. 20260310T1924
     const formattedDate = `${datePart.slice(0, 8)}T${datePart.slice(9, 13)}`;
     const shortId = session.id.slice(0, 8);
-    const sessionDirName = `capture-${formattedDate}-${shortId}`;
-    const sessionRelDir = `box/inbox/${sessionDirName}`;
-    const sessionAbsDir = path.join(boxRoot, sessionRelDir);
+    const sessionBasename = `capture-${formattedDate}-${shortId}`;
+    // Session card lives at inbox level; its attach scope holds the children.
+    const inboxRelDir = "box/inbox";
+    const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.capture-session.attach`;
+    const sessionAttachAbsDir = path.join(boxRoot, sessionAttachRelDir);
+    const inboxAbsDir = path.join(boxRoot, inboxRelDir);
 
-    await fs.mkdir(sessionAbsDir, { recursive: true });
+    await fs.mkdir(sessionAttachAbsDir, { recursive: true });
 
-    console.log(`[capture] Finalizing session ${session.id} → ${sessionDirName}: ${audioChunks.length} audio chunks, ${photoFiles.length} photos, ${uploadedFiles.length} files`);
+    console.log(`[capture] Finalizing session ${session.id} → ${sessionBasename}: ${audioChunks.length} audio chunks, ${photoFiles.length} photos, ${uploadedFiles.length} files`);
 
     const filesToStage: string[] = [];
     const audioRefs: string[] = [];
     const imageRefs: string[] = [];
     const fileRefs: string[] = [];
+
+    // Each child card (audio/image/file) gets its own attach scope holding
+    // the bound media. Helper writes media + card + returns the ref filename.
+    async function writeChildCard(opts: {
+      childBasename: string;
+      cardType: string;
+      mediaFilename: string;
+      mediaContent: Buffer;
+      cardContent: string;
+    }): Promise<void> {
+      const childAttachRel = `${sessionAttachRelDir}/${opts.childBasename}.${opts.cardType}.attach`;
+      const childAttachAbs = path.join(boxRoot, childAttachRel);
+      await fs.mkdir(childAttachAbs, { recursive: true });
+      const mediaAbsPath = path.join(childAttachAbs, opts.mediaFilename);
+      await fs.writeFile(mediaAbsPath, opts.mediaContent);
+      filesToStage.push(`${childAttachRel}/${opts.mediaFilename}`);
+
+      const cardFilename = `${opts.childBasename}.${opts.cardType}.card`;
+      const cardAbsPath = path.join(sessionAttachAbsDir, cardFilename);
+      await fs.writeFile(cardAbsPath, opts.cardContent);
+      filesToStage.push(`${sessionAttachRelDir}/${cardFilename}`);
+    }
 
     // Concatenate audio chunks into a single file.
     // MediaRecorder with timeslice produces chunks where only the first has
@@ -240,33 +266,32 @@ export async function registerCaptureRoutes(
     // them produces a valid WebM file. Individual chunks (except the first)
     // are not playable or transcribable on their own.
     if (audioChunks.length > 0) {
-      const mediaFilename = "audio-001.webm";
-      const cardFilename = "audio-001.audio.card";
+      const audioBasename = "audio-001";
+      const mediaFilename = `${audioBasename}.webm`;
 
-      // Concatenate all chunks in order
       const chunkBuffers: Buffer[] = [];
       for (const chunk of audioChunks) {
         const srcPath = path.join(tmpDir, chunk.name);
         chunkBuffers.push(await fs.readFile(srcPath));
       }
       const concatenated = Buffer.concat(chunkBuffers);
-      const destMediaPath = path.join(sessionAbsDir, mediaFilename);
-      await fs.writeFile(destMediaPath, concatenated);
-      filesToStage.push(`${sessionRelDir}/${mediaFilename}`);
 
-      // Use the first chunk's timestamp as the recording start
       const firstChunk = audioChunks[0]!;
       const cardContent = createAudioTemplate({
         recordedAt: firstChunk.startedAt,
         source: firstChunk.source,
         filename: mediaFilename,
       });
-      const destCardPath = path.join(sessionAbsDir, cardFilename);
-      await fs.writeFile(destCardPath, cardContent);
-      filesToStage.push(`${sessionRelDir}/${cardFilename}`);
-      audioRefs.push(cardFilename);
 
-      // Track latest chunk timestamp for session end
+      await writeChildCard({
+        childBasename: audioBasename,
+        cardType: "audio",
+        mediaFilename,
+        mediaContent: concatenated,
+        cardContent,
+      });
+      audioRefs.push(`${audioBasename}.audio.card`);
+
       const lastChunk = audioChunks[audioChunks.length - 1]!;
       if (lastChunk.startedAt > endedAt) {
         endedAt = lastChunk.startedAt;
@@ -279,27 +304,27 @@ export async function registerCaptureRoutes(
       const photoBasename = `photo-${idx}`;
       const ext = file.name.endsWith(".png") ? ".png" : ".jpg";
       const mediaFilename = `${photoBasename}${ext}`;
-      const cardFilename = `${photoBasename}.image.card`;
 
       // Determine camera source from upload source header
       const imageSource = file.source === "camera-environment" ? "camera-environment" : "camera-user";
 
-      // Copy media file
       const srcPath = path.join(tmpDir, file.name);
-      const destMediaPath = path.join(sessionAbsDir, mediaFilename);
-      await fs.copyFile(srcPath, destMediaPath);
-      filesToStage.push(`${sessionRelDir}/${mediaFilename}`);
+      const mediaContent = await fs.readFile(srcPath);
 
-      // Create image card
       const cardContent = createImageTemplate({
         capturedAt: file.startedAt,
         source: imageSource,
         filename: mediaFilename,
       });
-      const destCardPath = path.join(sessionAbsDir, cardFilename);
-      await fs.writeFile(destCardPath, cardContent);
-      filesToStage.push(`${sessionRelDir}/${cardFilename}`);
-      imageRefs.push(cardFilename);
+
+      await writeChildCard({
+        childBasename: photoBasename,
+        cardType: "image",
+        mediaFilename,
+        mediaContent,
+        cardContent,
+      });
+      imageRefs.push(`${photoBasename}.image.card`);
 
       if (file.startedAt > endedAt) {
         endedAt = file.startedAt;
@@ -310,12 +335,9 @@ export async function registerCaptureRoutes(
     for (const file of uploadedFiles) {
       const mediaFilename = file.name; // stored as client-provided (file-NNN-<sanitized>.ext)
       const baseWithoutExt = mediaFilename.replace(/\.[^./]+$/, "");
-      const cardFilename = `${baseWithoutExt}.file.card`;
 
       const srcPath = path.join(tmpDir, file.name);
-      const destMediaPath = path.join(sessionAbsDir, mediaFilename);
-      await fs.copyFile(srcPath, destMediaPath);
-      filesToStage.push(`${sessionRelDir}/${mediaFilename}`);
+      const mediaContent = await fs.readFile(srcPath);
 
       const cardOptions: Parameters<typeof createFileTemplate>[0] = {
         capturedAt: file.startedAt,
@@ -326,18 +348,23 @@ export async function registerCaptureRoutes(
       if (file.originalName) cardOptions.originalName = file.originalName;
       if (file.mimeType) cardOptions.mimeType = file.mimeType;
       const cardContent = createFileTemplate(cardOptions);
-      const destCardPath = path.join(sessionAbsDir, cardFilename);
-      await fs.writeFile(destCardPath, cardContent);
-      filesToStage.push(`${sessionRelDir}/${cardFilename}`);
-      fileRefs.push(cardFilename);
+
+      await writeChildCard({
+        childBasename: baseWithoutExt,
+        cardType: "file",
+        mediaFilename,
+        mediaContent,
+        cardContent,
+      });
+      fileRefs.push(`${baseWithoutExt}.file.card`);
 
       if (file.startedAt > endedAt) {
         endedAt = file.startedAt;
       }
     }
 
-    // Create capture-session card
-    const sessionCardFilename = `${sessionDirName}.capture-session.card`;
+    // Create capture-session card at the inbox level
+    const sessionCardFilename = `${sessionBasename}.capture-session.card`;
     const sessionCardContent = createCaptureSessionTemplate({
       sessionId: session.id,
       startedAt: actualStartedAt,
@@ -346,9 +373,9 @@ export async function registerCaptureRoutes(
       audioRefs,
       fileRefs,
     });
-    const sessionCardPath = path.join(sessionAbsDir, sessionCardFilename);
+    const sessionCardPath = path.join(inboxAbsDir, sessionCardFilename);
     await fs.writeFile(sessionCardPath, sessionCardContent);
-    filesToStage.push(`${sessionRelDir}/${sessionCardFilename}`);
+    filesToStage.push(`${inboxRelDir}/${sessionCardFilename}`);
 
     // Single commit for the whole session
     if (filesToStage.length > 0) {
@@ -370,7 +397,7 @@ export async function registerCaptureRoutes(
     await cleanupDir(tmpDir);
     sessionLocks.delete(session.id);
 
-    const sessionCardRelPath = `${sessionRelDir}/${sessionCardFilename}`;
+    const sessionCardRelPath = `${inboxRelDir}/${sessionCardFilename}`;
     console.log(`[capture] Created capture session: ${sessionCardRelPath}`);
 
     // Broadcast

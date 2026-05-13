@@ -55,7 +55,7 @@ const sheetsHandler: DriveTypeHandler = {
     const written: string[] = [];
     let changed = false;
 
-    // Ensure data directory exists
+    // Ensure attach directory exists
     await fs.mkdir(localDir, { recursive: true });
 
     const sheetRefs: Array<{ ref: string; title: string; gid: string }> = [];
@@ -66,9 +66,11 @@ const sheetsHandler: DriveTypeHandler = {
       const safeName = safeFilename(tabTitle, "sheet");
       const jsonFileName = `${safeName}.json`;
       const jsonPath = path.join(localDir, jsonFileName);
-      const jsonRelPath = path.relative(path.dirname(cardPath), jsonPath);
+      // State uses the bare filename within the attach scope as its key; the
+      // card ref uses the "attach/" virtual prefix.
+      const jsonRelPath = jsonFileName;
 
-      sheetRefs.push({ ref: jsonRelPath, title: tabTitle, gid });
+      sheetRefs.push({ ref: `attach/${jsonFileName}`, title: tabTitle, gid });
 
       // Fetch formula values and formatted values
       const formulaValues = await service.getSheetValues(file.id, {
@@ -118,7 +120,7 @@ const sheetsHandler: DriveTypeHandler = {
       const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
       const gid = tabGids[relPath];
       if (gid && !currentGids.has(gid)) {
-        const filePath = path.join(path.dirname(cardPath), relPath);
+        const filePath = path.join(localDir, relPath);
         try {
           await fs.unlink(filePath);
         } catch {
@@ -167,7 +169,7 @@ const sheetsHandler: DriveTypeHandler = {
   },
 
   async push(opts): Promise<PushResult> {
-    const { file, cardPath, boxRoot, service, state } = opts;
+    const { file, localDir, boxRoot, service, state } = opts;
     const pushed: string[] = [];
 
     const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
@@ -175,7 +177,7 @@ const sheetsHandler: DriveTypeHandler = {
     for (const [relPath, storedHash] of Object.entries(state.contentHashes)) {
       if (!relPath.endsWith(".json")) continue;
 
-      const filePath = path.join(path.dirname(cardPath), relPath);
+      const filePath = path.join(localDir, relPath);
       let localContent: string;
       try {
         localContent = await fs.readFile(filePath, "utf-8");
@@ -203,8 +205,7 @@ const sheetsHandler: DriveTypeHandler = {
       });
 
       state.contentHashes[relPath] = localHash;
-      const absPath = path.join(path.dirname(cardPath), relPath);
-      pushed.push(path.relative(boxRoot, absPath));
+      pushed.push(path.relative(boxRoot, filePath));
     }
 
     return { pushed };

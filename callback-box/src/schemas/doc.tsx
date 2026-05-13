@@ -2,13 +2,13 @@
 /**
  * Doc card schema — metadata for a Google Docs document synced to the box.
  *
- * Each Google Doc gets a `.doc.card` plus a sibling markdown file with the
- * same basename. Lossy content (comments, footnotes, embedded images, etc.)
+ * Each Google Doc gets a `.doc.card` plus a markdown file inside the card's
+ * attach scope. Lossy content (comments, footnotes, embedded images, etc.)
  * is enumerated in `<lossy>` so agents know what won't survive a push.
  *
  * Example layout:
  *   store/drive/Project_Notes.doc.card
- *   store/drive/Project_Notes.md
+ *   store/drive/Project_Notes.doc.attach/Project_Notes.md
  */
 
 import { element, serialize } from "cardworks";
@@ -93,8 +93,9 @@ export const DocSchema = element("doc", {
 
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
-Each synced Google Doc has a \`.doc.card\` and a sibling markdown file
-(same basename, \`.md\` extension) with the document body.
+Each synced Google Doc has a \`.doc.card\` plus a markdown file inside the
+card's attach scope (e.g. \`Project_Notes.doc.attach/Project_Notes.md\`).
+The \`<content ref="attach/…">\` element points at it.
 
 ## Editing
 Edit the \`.md\` file and commit. On the next sync the change pushes back
@@ -104,9 +105,9 @@ Do not modify the card XML — it is managed by the connector.
 ## Conflicts
 If the upstream Doc was edited in Drive between your last pull and your
 push, the card status becomes \`conflict\` and the upstream version is
-written to \`<basename>.remote.md\`. Resolve by merging the two files,
-deleting \`<basename>.remote.md\`, and committing — the next sync will
-push the resolved version.
+written next to the local \`.md\` as \`<basename>.remote.md\` (inside the
+attach scope). Resolve by merging the two files, deleting the \`.remote.md\`,
+and committing — the next sync will push the resolved version.
 
 ## Lossy content
 The \`<lossy>\` block enumerates features in the upstream Doc that don't
@@ -117,8 +118,8 @@ If \`<lossy>\` is non-empty and a push is intended, surface the loss to
 the user before committing.
 
 ## Moving docs
-Moving the card and its \`.md\` to a new location is safe — the
-\`drive-id\` attribute maintains the link to Google Drive.`,
+Moving the card moves its attach scope (and the \`.md\` inside) atomically —
+the \`drive-id\` attribute maintains the link to Google Drive.`,
 });
 
 export type Doc = z.infer<typeof DocSchema>;
@@ -134,6 +135,9 @@ export type DocLossyType =
 
 /**
  * Create a doc card from metadata.
+ *
+ * `contentFile` is the bare filename of the markdown body (e.g.
+ * `Project_Notes.md`). The template emits it with the `attach/` prefix.
  */
 export function createDocTemplate(options: {
   driveId: string;
@@ -154,7 +158,7 @@ export function createDocTemplate(options: {
       <revision>{options.revision}</revision>
       <link>{options.link}</link>
       <owner>{options.owner}</owner>
-      <content ref={options.contentFile} />
+      <content ref={`attach/${options.contentFile}`} />
       {lossy.length > 0 ? (
         <lossy>
           {lossy.map((item) => (

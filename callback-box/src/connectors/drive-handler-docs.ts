@@ -1,13 +1,15 @@
 /**
  * Drive type handler for Google Docs.
  *
- * Exports the document body as markdown to a sibling `.md` file.
- * On push, replaces the upstream content with the local markdown.
+ * Exports the document body as markdown inside the card's attach scope
+ * (`<basename>.doc.attach/<basename>.md`). On push, replaces the upstream
+ * content with the local markdown.
  *
  * Conflict detection: stores `headRevisionId` and `modifiedTime` after each
  * successful pull. Before pushing, re-reads remote state — if either has
  * changed, refuses to push, sets card status="conflict", and writes the
- * upstream version to `<basename>.remote.md` for manual merge.
+ * upstream version to `<basename>.remote.md` inside the attach scope for
+ * manual merge.
  *
  * Lossy detection: walks the Docs API structure to count features that
  * don't survive markdown export (comments, footnotes, embedded images,
@@ -157,14 +159,16 @@ const docsHandler: DriveTypeHandler = {
   },
 
   async pull(opts): Promise<PullResult> {
-    const { file, cardPath, boxRoot, service, state } = opts;
+    const { file, cardPath, localDir, boxRoot, service, state } = opts;
     const written: string[] = [];
     let changed = false;
 
     const cardBasename = path.basename(cardPath, ".doc.card");
-    const cardDir = path.dirname(cardPath);
-    const mdRelPath = `${cardBasename}.md`;
-    const mdPath = path.join(cardDir, mdRelPath);
+    const mdFilename = `${cardBasename}.md`;
+    const mdPath = path.join(localDir, mdFilename);
+    // mdRelPath is the key used in state.contentHashes and the card's content ref
+    // (always written as "<basename>.md" — the bare filename within the attach scope).
+    const mdRelPath = mdFilename;
 
     // Fetch upstream state in parallel. `getDocument` requires the
     // `documents.readonly` scope; if it's missing we still want pull to
@@ -184,7 +188,7 @@ const docsHandler: DriveTypeHandler = {
 
     if (storedHash === undefined) {
       // First pull.
-      await fs.mkdir(cardDir, { recursive: true });
+      await fs.mkdir(localDir, { recursive: true });
       await fs.writeFile(mdPath, markdown);
       state.contentHashes[mdRelPath] = newHash;
       written.push(path.relative(boxRoot, mdPath));
@@ -218,7 +222,7 @@ const docsHandler: DriveTypeHandler = {
 
     // Determine card status: keep `conflict` if push set it on a previous
     // sync and there's still a `.remote.md` file. Otherwise `synced`.
-    const remoteMdPath = path.join(cardDir, `${cardBasename}.remote.md`);
+    const remoteMdPath = path.join(localDir, `${cardBasename}.remote.md`);
     let hasRemoteFile = false;
     try {
       await fs.access(remoteMdPath);
@@ -250,7 +254,7 @@ const docsHandler: DriveTypeHandler = {
       // New card
     }
     if (cardContent !== existingCard) {
-      await fs.mkdir(cardDir, { recursive: true });
+      await fs.mkdir(path.dirname(cardPath), { recursive: true });
       await fs.writeFile(cardPath, cardContent);
       written.push(path.relative(boxRoot, cardPath));
       changed = true;
@@ -260,13 +264,13 @@ const docsHandler: DriveTypeHandler = {
   },
 
   async push(opts): Promise<PushResult> {
-    const { file, cardPath, boxRoot, service, state } = opts;
+    const { file, cardPath, localDir, boxRoot, service, state } = opts;
     const pushed: string[] = [];
 
     const cardBasename = path.basename(cardPath, ".doc.card");
-    const cardDir = path.dirname(cardPath);
-    const mdRelPath = `${cardBasename}.md`;
-    const mdPath = path.join(cardDir, mdRelPath);
+    const mdFilename = `${cardBasename}.md`;
+    const mdPath = path.join(localDir, mdFilename);
+    const mdRelPath = mdFilename;
 
     let localContent: string;
     try {
@@ -289,7 +293,7 @@ const docsHandler: DriveTypeHandler = {
 
     // If a previous sync left an unresolved conflict, don't push until the
     // user resolves and deletes `.remote.md`.
-    const remoteMdPath = path.join(cardDir, `${cardBasename}.remote.md`);
+    const remoteMdPath = path.join(localDir, `${cardBasename}.remote.md`);
     try {
       await fs.access(remoteMdPath);
       console.warn(

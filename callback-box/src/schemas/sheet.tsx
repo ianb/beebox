@@ -2,13 +2,13 @@
 /**
  * Sheet card schema — metadata for a Google Sheets spreadsheet synced to the box.
  *
- * Each spreadsheet gets a `.sheet.card` with metadata, linking to CSV files
- * per sheet tab in a subdirectory with the same basename.
+ * Each spreadsheet gets a `.sheet.card` with metadata, linking to JSON tab
+ * files inside the card's attach scope.
  *
  * Example layout:
  *   store/drive/Budget.sheet.card
- *   store/drive/Budget/Summary.csv
- *   store/drive/Budget/Expenses.csv
+ *   store/drive/Budget.sheet.attach/Summary.json
+ *   store/drive/Budget.sheet.attach/Expenses.json
  */
 
 import { element, serialize } from "cardworks";
@@ -59,8 +59,8 @@ export const SheetTabs = element("sheets", {
  * <link>https://docs.google.com/spreadsheets/d/1abc.../edit</link>
  * <owner>ian@example.com</owner>
  * <sheets>
- * <sheet-tab ref="Budget/Summary.csv" title="Summary" gid="0"/>
- * <sheet-tab ref="Budget/Expenses.csv" title="Expenses" gid="123456"/>
+ * <sheet-tab ref="attach/Summary.json" title="Summary" gid="0"/>
+ * <sheet-tab ref="attach/Expenses.json" title="Expenses" gid="123456"/>
  * </sheets>
  * </sheet>
  * ```
@@ -83,8 +83,9 @@ export const SheetSchema = element("sheet", {
 
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
-Each synced Google Spreadsheet has a \`.sheet.card\` metadata file plus a subdirectory
-(same basename) containing one JSON file per sheet tab.
+Each synced Google Spreadsheet has a \`.sheet.card\` metadata file plus an
+attach scope (\`<basename>.sheet.attach/\`) containing one JSON file per sheet
+tab. The \`<sheet-tab ref="attach/…">\` entries point into that scope.
 
 ## Data format
 Each tab is a JSON file with one row per line. Cell values are:
@@ -111,8 +112,8 @@ On next sync (\`cb wakeup\` or \`cb drive sync\`), local changes are pushed to G
 Do NOT modify the card XML — it is managed by the connector.
 
 ## Moving spreadsheets
-Moving the card (and its data directory) to a new location is safe — the \`drive-id\`
-attribute in the card maintains the link to Google Drive.`,
+Moving the card moves its attach scope (with the tab data inside) atomically —
+the \`drive-id\` attribute in the card maintains the link to Google Drive.`,
 });
 
 export type Sheet = z.infer<typeof SheetSchema>;

@@ -50,7 +50,7 @@ export const AudioTranscriptionError = element("transcription-error", {
  * Example:
  * ```xml
  * <audio status="new">
- * <filename ref="audio-001.webm" recorded="2024-01-15T10:00:00Z" source="microphone" />
+ * <filename ref="attach/audio-001.webm" recorded="2024-01-15T10:00:00Z" source="microphone" />
  * <summary></summary>
  * <transcript></transcript>
  * </audio>
@@ -70,10 +70,10 @@ export const AudioSchema = element("audio", {
   ),
   instructions: `# Audio Cards
 
-An audio card represents a chunk of recorded speech from a capture session. The attached audio file shares the card's basename (e.g. \`audio-001.webm\` alongside \`audio-001.audio.card\`).
+An audio card represents a chunk of recorded speech from a capture session. The attached audio file lives in the card's attach scope (e.g. \`audio-001.audio.card\` with \`audio-001.audio.attach/audio-001.webm\`); the \`<filename ref="attach/…">\` prefix points into that scope.
 
 Elements:
-- \`<filename>\` — the attached audio file
+- \`<filename>\` — the attached audio file (ref uses \`attach/\` prefix)
 - \`<transcript>\` — full text transcription (added during transcription, absent when new)
 - \`<summary>\` — brief summary of what was said (added during transcription)
 
@@ -86,6 +86,9 @@ export type Audio = z.infer<typeof AudioSchema>;
 
 /**
  * Template for creating an audio card.
+ *
+ * `filename` is the bare attached filename (e.g. `audio-001.webm`). The template
+ * emits it with the `attach/` virtual prefix.
  */
 export function createAudioTemplate(options: {
   recordedAt: string;
@@ -94,7 +97,7 @@ export function createAudioTemplate(options: {
 }): string {
   const audio = (
     <audio status="new">
-      <filename ref={options.filename} recorded={options.recordedAt} source={options.source} />
+      <filename ref={`attach/${options.filename}`} recorded={options.recordedAt} source={options.source} />
     </audio>
   );
 

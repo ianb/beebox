@@ -74,9 +74,9 @@ const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
   ".tap",
   "tmp",
   "procedure/runs",
-  "**/thread-*",
-  "**/capture-*",
-  "**/scan-*",
+  // Card attach scopes are an implementation detail of the card layout —
+  // skip them when generating maps; the card itself stands for its scope.
+  "**/*.attach",
 ];
 
 const IGNORE_FILE = ".cb-maps-ignore";

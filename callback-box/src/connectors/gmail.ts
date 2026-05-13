@@ -476,7 +476,7 @@ class GmailConnector implements Connector {
         threads.set(msg.threadId, existing);
       }
 
-      // Create/update thread directories
+      // Create/update thread cards and their attach scopes
       const emailDir = path.join(this.boxRoot, "box/inbox/email");
       await fs.mkdir(emailDir, { recursive: true });
 
@@ -487,27 +487,35 @@ class GmailConnector implements Connector {
 
         const firstMsg = threadMessages[0]!;
         const subject = firstMsg.subject;
-        const dirName = safeDirectoryName(subject, threadId);
-        const threadDir = path.join(emailDir, dirName);
+        const threadBasename = safeDirectoryName(subject, threadId);
 
-        // Check if a directory for this thread already exists (matched by short ID suffix)
-        let existingDir: string | null = null;
+        // Check if a thread card for this thread already exists
+        // (matched by the short ID suffix in the basename)
+        let existingBasename: string | null = null;
         try {
           const entries = await fs.readdir(emailDir);
-          existingDir =
-            entries.find((e) => e.endsWith(`-${threadId.slice(-8)}`)) || null;
+          const suffix = `-${threadId.slice(-8)}`;
+          const existingCard = entries.find(
+            (e) => e.endsWith(`${suffix}.email-thread.card`),
+          );
+          if (existingCard) {
+            existingBasename = existingCard.slice(0, -".email-thread.card".length);
+          }
         } catch {
           // emailDir doesn't exist yet
         }
 
-        const actualDir = existingDir
-          ? path.join(emailDir, existingDir)
-          : threadDir;
-        await fs.mkdir(actualDir, { recursive: true });
+        const actualBasename = existingBasename ?? threadBasename;
+        const actualCardFilename = `${actualBasename}.email-thread.card`;
+        const actualAttachDir = path.join(
+          emailDir,
+          `${actualBasename}.email-thread.attach`,
+        );
+        await fs.mkdir(actualAttachDir, { recursive: true });
 
         let existingCount = 0;
         try {
-          const files = await fs.readdir(actualDir);
+          const files = await fs.readdir(actualAttachDir);
           existingCount = files.filter((f) =>
             f.match(/^msg-\d+\.email-message\.card$/),
           ).length;
@@ -534,8 +542,13 @@ class GmailConnector implements Connector {
         for (const [i, threadMessage] of threadMessages.entries()) {
           const tmsg = threadMessage!;
           const msgNum = String(existingCount + i + 1).padStart(3, "0");
-          const cardFilename = `msg-${msgNum}.email-message.card`;
-          const bodyFilename = `msg-${msgNum}.body.txt`;
+          const messageBasename = `msg-${msgNum}`;
+          const cardFilename = `${messageBasename}.email-message.card`;
+          const bodyFilename = `${messageBasename}.body.txt`;
+          const messageAttachDir = path.join(
+            actualAttachDir,
+            `${messageBasename}.email-message.attach`,
+          );
 
           const templateOpts: Parameters<typeof createEmailMessageTemplate>[0] = {
             messageId: tmsg.messageId,
@@ -559,19 +572,20 @@ class GmailConnector implements Connector {
           }
           const cardContent = createEmailMessageTemplate(templateOpts);
 
-          const cardPath = path.join(actualDir, cardFilename);
+          const cardPath = path.join(actualAttachDir, cardFilename);
           await fs.writeFile(cardPath, cardContent);
           created.push(path.relative(this.boxRoot, cardPath));
 
-          const bodyPath = path.join(actualDir, bodyFilename);
+          await fs.mkdir(messageAttachDir, { recursive: true });
+          const bodyPath = path.join(messageAttachDir, bodyFilename);
           await fs.writeFile(bodyPath, tmsg.textBody);
           created.push(path.relative(this.boxRoot, bodyPath));
 
           if (tmsg.attachments.length > 0) {
-            const attachDir = path.join(actualDir, "attachments");
-            await fs.mkdir(attachDir, { recursive: true });
+            const attachmentsSubdir = path.join(messageAttachDir, "attachments");
+            await fs.mkdir(attachmentsSubdir, { recursive: true });
             for (const att of tmsg.attachments) {
-              const attPath = path.join(attachDir, att.filename);
+              const attPath = path.join(attachmentsSubdir, att.filename);
               await fs.writeFile(attPath, att.content);
               created.push(path.relative(this.boxRoot, attPath));
             }
@@ -581,7 +595,7 @@ class GmailConnector implements Connector {
         }
 
         try {
-          const files = await fs.readdir(actualDir);
+          const files = await fs.readdir(actualAttachDir);
           const existingRefs = files
             .filter((f) => f.match(/^msg-\d+\.email-message\.card$/))
             .toSorted();
@@ -613,14 +627,14 @@ class GmailConnector implements Connector {
         if (allLabels.size > 0) {
           threadOpts.labels = Array.from(allLabels);
         }
-        if (!existingDir) {
+        if (!existingBasename) {
           threadOpts.status = "new";
         }
         const threadCard = createEmailThreadTemplate(threadOpts);
 
-        const threadCardPath = path.join(actualDir, "thread.email-thread.card");
+        const threadCardPath = path.join(emailDir, actualCardFilename);
         await fs.writeFile(threadCardPath, threadCard);
-        if (existingDir) {
+        if (existingBasename) {
           updated.push(path.relative(this.boxRoot, threadCardPath));
         } else {
           created.push(path.relative(this.boxRoot, threadCardPath));
@@ -629,7 +643,7 @@ class GmailConnector implements Connector {
         threadNotes.push({
           subject,
           from: firstMsg.from,
-          isNew: !existingDir,
+          isNew: !existingBasename,
           messageCount: threadMessages.length,
         });
 

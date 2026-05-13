@@ -347,14 +347,32 @@ export async function registerApiRoutes(
         type: string;
         tagName: string;
         status?: string | undefined;
+        hasAttachments?: boolean;
       }> = [];
 
       const loader = await createLoader(boxRoot);
+
+      // Build basename → owning-card lookup so we can fold `<basename>.attach/`
+      // directories into their owning cards (rendered as navigable cards, not
+      // as standalone directories).
+      const cardBasenames = new Set<string>();
+      for (const entry of entries) {
+        if (entry.isDirectory()) continue;
+        if (!entry.name.endsWith(".card")) continue;
+        const parsed = parseCardName(entry.name);
+        if (parsed) cardBasenames.add(parsed.name);
+      }
 
       for (const entry of entries) {
         if (entry.name.startsWith(".")) continue;
 
         if (entry.isDirectory()) {
+          // Hide `<basename>.attach/` when a sibling card owns it. Stray
+          // .attach/ directories (no owning card) still surface for triage.
+          if (entry.name.endsWith(".attach")) {
+            const owner = entry.name.slice(0, -".attach".length);
+            if (cardBasenames.has(owner)) continue;
+          }
           dirs.push(entry.name);
           continue;
         }
@@ -366,6 +384,10 @@ export async function registerApiRoutes(
 
         const fullPath = path.join(resolved, entry.name);
         const relativePath = path.relative(boxRoot, fullPath);
+        const attachDirName = `${parsed.name}.attach`;
+        const hasAttachments = entries.some(
+          (e) => e.isDirectory() && e.name === attachDirName,
+        );
 
         try {
           const card = await loader.load(fullPath);
@@ -375,6 +397,7 @@ export async function registerApiRoutes(
             type: parsed.type,
             tagName: card.element.tagName,
             status: card.element.attrs["status"],
+            hasAttachments,
           });
         } catch {
           cards.push({
@@ -382,6 +405,7 @@ export async function registerApiRoutes(
             name: parsed.name,
             type: parsed.type,
             tagName: "unknown",
+            hasAttachments,
           });
         }
       }
