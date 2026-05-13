@@ -1,72 +1,117 @@
 /**
- * Renders a single `<ack>` indication as a small inline chip.
- * Icon + earcon are the primary expression; inner text is optional.
- * The chip is a tap target when a `ref` is present.
+ * Renders `<ack>` indications as small icons clustered in the top-right of
+ * the assistant message — out of the prose flow, signalling "thing done"
+ * without competing with the response content. Each icon is a tap target
+ * when a `ref` is present; hover/tap surfaces the kind label, optional
+ * inner text, and ref path.
  *
  * See `lib/structured-output-parsing.ts` for the data model and
  * `docs/narration-mode-design.md` for the design rationale.
  */
 
-import { getAckKind, type AckIndication } from "../../lib/structured-output-parsing";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
+import { getAckKind, type AckIndication } from "../../lib/structured-output-parsing";
 import { href } from "../../lib/routing";
 import { cn } from "../../lib/cn";
-
-export function AckIndicator({ ack, className }: { ack: AckIndication; className?: string }) {
-  const { boxSlug } = useParams({ strict: false });
-  const descriptor = getAckKind(ack.kind);
-  if (!descriptor) return null;
-
-  const label = ack.text ?? descriptor.defaultPhrase;
-  const refDisplay = ack.ref ? refLabel(ack.ref) : null;
-
-  const inner = (
-    <span className="inline-flex items-center gap-1.5 text-xs">
-      <span aria-hidden className="text-sm leading-none">{descriptor.icon}</span>
-      <span className="font-medium">{label}</span>
-      {refDisplay ? (
-        <span className="text-warm-500 truncate max-w-[12rem]">{refDisplay}</span>
-      ) : null}
-    </span>
-  );
-
-  const chipClasses = cn(
-    "inline-flex items-center px-2 py-0.5 rounded-full",
-    "bg-warm-100 text-warm-700 border border-warm-200",
-    className,
-  );
-
-  if (ack.ref && boxSlug) {
-    return (
-      <a
-        href={href(`/${boxSlug}/view`) + `?path=${encodeURIComponent(ack.ref)}`}
-        className={cn(chipClasses, "hover:bg-warm-200 transition-colors")}
-        title={ack.ref}
-      >
-        {inner}
-      </a>
-    );
-  }
-
-  return <span className={chipClasses}>{inner}</span>;
-}
-
-/**
- * Render a group of acks as a horizontal-wrapping row.
- */
-export function AckRow({ acks, className }: { acks: AckIndication[]; className?: string }) {
-  if (acks.length === 0) return null;
-  return (
-    <div className={cn("flex flex-wrap gap-1.5 mt-2", className)}>
-      {acks.map((ack, i) => <AckIndicator key={i} ack={ack} />)}
-    </div>
-  );
-}
 
 function refLabel(ref: string): string {
   const slash = ref.lastIndexOf("/");
   const name = slash !== -1 ? ref.slice(slash + 1) : ref;
-  // Strip the .type.card / .ext suffixes for compactness; full path is in the tooltip.
   const firstDot = name.indexOf(".");
   return firstDot !== -1 ? name.slice(0, firstDot) : name;
+}
+
+function tooltipText(ack: AckIndication, defaultPhrase: string): string {
+  const parts = [ack.text ?? defaultPhrase];
+  if (ack.ref) parts.push(ack.ref);
+  return parts.join(" · ");
+}
+
+/**
+ * Single ack rendered as an icon-only badge. On press, opens a details
+ * popover with the kind label, optional inner text, and ref link. The
+ * native title attribute provides the same info on hover for pointer
+ * users.
+ */
+export function AckIndicator({ ack, className }: { ack: AckIndication; className?: string }) {
+  const { boxSlug } = useParams({ strict: false });
+  const descriptor = getAckKind(ack.kind);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocPointer(e: MouseEvent) {
+      if (!containerRef.current) return;
+      if (containerRef.current.contains(e.target as Node)) return;
+      setOpen(false);
+    }
+    function onEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocPointer);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", onDocPointer);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [open]);
+
+  if (!descriptor) return null;
+
+  const title = tooltipText(ack, descriptor.defaultPhrase);
+  const refViewHref = ack.ref && boxSlug
+    ? `${href(`/${boxSlug}/view`)}?path=${encodeURIComponent(ack.ref)}`
+    : null;
+
+  return (
+    <span ref={containerRef} className={cn("relative inline-flex", className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={`${descriptor.defaultPhrase}${ack.text ? ` — ${ack.text}` : ""}`}
+        title={title}
+        className={cn(
+          "inline-flex items-center justify-center w-6 h-6 rounded-full",
+          "bg-warm-100 text-warm-700 hover:bg-warm-200 transition-colors",
+          "text-sm leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+        )}
+      >
+        <span aria-hidden>{descriptor.icon}</span>
+      </button>
+      {open ? (
+        <span
+          role="dialog"
+          className="absolute right-0 top-full mt-1 z-10 min-w-[12rem] max-w-xs rounded shadow-lg border border-warm-200 bg-white px-3 py-2 text-xs text-warm-700"
+        >
+          <span className="block font-medium text-warm-900">{descriptor.defaultPhrase}</span>
+          {ack.text ? <span className="block mt-1">{ack.text}</span> : null}
+          {ack.ref ? (
+            refViewHref ? (
+              <a href={refViewHref} className="block mt-1 text-primary hover:underline truncate">
+                {refLabel(ack.ref)}
+              </a>
+            ) : (
+              <span className="block mt-1 text-warm-500 truncate">{ack.ref}</span>
+            )
+          ) : null}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Cluster of acks rendered as a tight row of icons. Positioned by the
+ * caller — typically in the top-right of the assistant message, sharing
+ * space with the speech icon.
+ */
+export function AckCluster({ acks, className }: { acks: AckIndication[]; className?: string }) {
+  if (acks.length === 0) return null;
+  return (
+    <span className={cn("inline-flex items-center gap-1", className)}>
+      {acks.map((ack, i) => <AckIndicator key={i} ack={ack} />)}
+    </span>
+  );
 }

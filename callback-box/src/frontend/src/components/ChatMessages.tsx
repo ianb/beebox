@@ -15,7 +15,7 @@ import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
 import { parseAcks, parseCallouts, stripStructuredOutputTags } from "../lib/structured-output-parsing";
-import { AckRow } from "./chat/AckIndicator";
+import { AckCluster } from "./chat/AckIndicator";
 import { CalloutStack } from "./chat/CalloutBlock";
 
 /**
@@ -1133,9 +1133,10 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
 
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
-      {hasSpeech && !debugView ? (
-        <div className="absolute right-2 top-2">
-          <SpeechIcon playing={isPlaying} onStop={onStopSpeech} />
+      {!debugView && (hasSpeech || acks.length > 0) ? (
+        <div className="absolute right-2 top-2 flex items-center gap-2">
+          <AckCluster acks={acks} />
+          {hasSpeech ? <SpeechIcon playing={isPlaying} onStop={onStopSpeech} /> : null}
         </div>
       ) : null}
       {grouped.map((group, i) =>
@@ -1150,7 +1151,6 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
         )
       )}
       {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
-      {!debugView ? <AckRow acks={acks} /> : null}
     </div>
   );
 }
