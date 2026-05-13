@@ -10,7 +10,8 @@
 - Files in `<basename>.attach/` belong to the card with that basename.
 - Two cards in the same directory may not share a basename. Lint error.
 - A literal directory named `attach/` is forbidden anywhere in the regular box tree (lint error). Inside `Foo.attach/` scopes the rule loosens.
-- Underscore-prefixed directories inside `Foo.attach/` (e.g. `Foo.attach/_files/`) are conventionally opaque to lint and most queries — for when an agent or pipeline needs to dump unpacked content somewhere.
+
+(An earlier idea — treating `_`-prefixed subdirectories as opaque escape hatches — is **not** part of phase 1. Revisit later if a real use case emerges.)
 
 For phase 1 (XML cards), refs to attachments continue to use the bare filename: `<filename ref="photo-001.jpg">` continues to mean "the file called `photo-001.jpg` in this card's attachment scope." The schema declares which `ref` attributes are attachment paths; the resolver knows to look in `<basename>.attach/`. We do not introduce the `attach/` virtual prefix until phase 2 (body format change), so existing card content stays unchanged in shape — only the on-disk location of attached files moves.
 
@@ -44,11 +45,10 @@ What the walker DOES need to know:
 
 - A card's `<basename>.attach/` directory is conceptually part of that card's scope. "What files belong to this card" includes `<basename>.attach/**` recursively, including any nested cards and their own `.attach/` subdirectories.
 - The lint rule that forbids a directory literally named `attach/` applies only outside an existing `.attach/` scope.
-- Inside a `.attach/` scope, underscore-prefixed subdirectories (`Foo.attach/_files/`, etc.) are the actual opaque case — lint and most queries skip them. This is the escape hatch for "I just need to dump some files."
 
-So the walker walks everything; only `_*` directories inside attach scopes get skipped. Regular `.attach/` contents (cards, attached files, nested attach dirs) are first-class box content.
+The walker walks everything. Regular `.attach/` contents (cards, attached files, nested attach dirs) are first-class box content.
 
-Look at `src/core/CardLoader` (or wherever the file walker is) — needs scope-awareness for path resolution but no recursion-skipping for `.attach/` itself.
+Look at `src/core/CardLoader` (or wherever the file walker is) — needs scope-awareness for path resolution. No recursion-skipping for `.attach/`.
 
 ### Callback-box: schemas with attachment refs
 

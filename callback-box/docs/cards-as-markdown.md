@@ -104,7 +104,7 @@ Resolution rules for any reference value:
 
 The `attach/` prefix being reserved means a real directory literally named `attach/` is forbidden **anywhere in the regular box tree** (lint error) — not just at the root. The one place this rule loosens is inside an attachment scope: `Foo.attach/` directories are more free-form, and contents can be named whatever fits the data.
 
-Underscore-prefixed directories (`Foo.attach/_files/`, `Foo.attach/_raw/`, etc.) are conventionally treated as opaque by lint and most queries — useful when an agent or pipeline really needs to dump arbitrary unpacked content somewhere without each file being scrutinized. The convention is "underscore-prefixed = don't look inside."
+(An idea floated earlier — treating underscore-prefixed directories inside attach scopes as opaque to lint and queries — is not part of the initial design. Possible future addition if a real use case emerges for an opaque-content escape hatch; otherwise the rule is just "attach scopes are normal box content, walk them like anything else.")
 
 Virtual interpretation in reference values only fires when `attach/` is the *first* path segment of a value — mid-path occurrences (`store/captures/audio-001.attach/clip.webm`) are literal directory names within `Foo.attach/` scopes, not virtual prefixes.
 
