@@ -273,6 +273,14 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
  * Generate all agent documentation for a box.
  */
 export async function generateDocs(boxRoot: string, options: GenerateDocsOptions = {}): Promise<void> {
+  // TEMPORARY — diagnose unexpected writes to the callback-box source repo
+  // (`.callback-box/` and `docs/generated/` showing up here as untracked).
+  // Remove once the caller is identified.
+  if (boxRoot.endsWith("/callback/callback-box") || boxRoot.endsWith("/src/callback/callback-box")) {
+    console.warn(`[generateDocs:DIAG] called with boxRoot=${boxRoot}`);
+    console.warn(new Error("generateDocs called against the callback-box repo").stack);
+  }
+
   // Fast path: skip if no input files changed and source code unchanged.
   // Skipped entirely when force is set — see GenerateDocsOptions.force for why.
   const markerPath = join(boxRoot, GENERATE_MARKER);
