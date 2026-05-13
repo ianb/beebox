@@ -893,6 +893,90 @@ tests:
       Failure: using just <instructions> (which adds and would leave a
       warm-and-urgent mashup), or inventing a different attribute.
 
+  # === Chat Structured-Output Tags (chat-app, ack, callout) ===
+  #
+  # Verify the chat-mode agent has direct knowledge of the structured
+  # output tags from CHAT_SYSTEM_PROMPT — no doc-reading needed for the
+  # basics. All tests in this section run with `chat_mode: true` so the
+  # audit harness loads the chat system prompt the same way a real chat
+  # session would.
+  #
+  # Status (2026-05-13): All 8 pass. Agent has clean direct knowledge of
+  # all three tags — names the snapshot purpose, emits the right mutation
+  # form, lists the closed kind set without inventing extras, and picks
+  # bare <ack> over prose for the obvious-action case.
+
+  - id: chat-app-snapshot-purpose
+    prompt: "I'm in a chat session, and each of my messages starts with a <chat-app .../> tag. What is it and what should you do with it?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Identifies it as a per-turn snapshot carrying chat feature flags and current time. Says the agent should treat it as context, not act on it directly."
+    correct_contains_any: ["snapshot", "feature flags", "state"]
+    tags: [chat, structured-output, chat-app]
+
+  - id: chat-app-mutation
+    prompt: "The user just said 'switch into narration mode for the rest of this chat.' How do you actually flip that on in your response?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Emits a <chat-app narration=\"on\"/> tag in the response (not just promises to switch in prose)."
+    correct_contains: ["<chat-app", "narration"]
+    tags: [chat, structured-output, chat-app]
+
+  - id: ack-purpose
+    prompt: "When should you use an <ack> tag instead of just describing what you did in prose?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Explains <ack> is for discrete actions you actually took (file edits, todos, etc.), rendered as compact icon chips. Notes it should NOT be emitted just to say 'I heard you' — only when actual work happened."
+    correct_contains_any: ["discrete", "action", "chip", "icon"]
+    tags: [chat, structured-output, ack]
+
+  - id: ack-kinds
+    prompt: "What kind values can <ack kind=\"...\"> use? List them."
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Lists the closed kind set: created, appended, edited, todo-added, todo-completed. Doesn't invent extras like 'noted' or 'scheduled'."
+    correct_contains: ["created", "appended", "edited", "todo-added", "todo-completed"]
+    tags: [chat, structured-output, ack]
+
+  - id: ack-conservative-text
+    prompt: "I said 'add a note about cardamom to my bread recipe.' You went and did it. How do you confirm — with prose, an <ack>, or a <callout>? If you use <ack>, does it need inner text?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Picks <ack> with kind=\"appended\". Either omits inner text or notes that inner text isn't needed because the action is obvious from the user's request."
+    correct_contains: ["appended"]
+    tags: [chat, structured-output, ack]
+    notes: >
+      Tests the conservative-inner-text rule. The action (appending a cardamom
+      note to a specific recipe) is exactly what the user asked for, so the
+      agent should emit a bare <ack kind="appended" ref="..."/> — no text.
+      Failure: writes "I added the note about cardamom" inside the ack (the
+      thing the prompt explicitly says to avoid).
+
+  - id: callout-purpose-and-context
+    prompt: "When should you wrap content in a <callout> tag, and what does the context attribute do?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Identifies callouts as durable content the user must read (answers, alerts, observations). Explains context as a short label answering 'why are you telling me this' so the callout still makes sense when surfaced detached."
+    correct_contains: ["context"]
+    correct_contains_any: ["stand alone", "standalone", "self-contained", "detached"]
+    tags: [chat, structured-output, callout]
+
+  - id: callout-for-a-question
+    prompt: "The user asked me, in chat: 'what's the weather Saturday?' You looked it up — sunny, high of 72. Show me your reply exactly as you'd emit it."
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Wraps the answer in <callout context=\"...\">...</callout> with the question (or a paraphrase) as the context value. Body stands alone — no 'as you said' or 'that thing you asked about'."
+    correct_contains: ["<callout", "context", "Saturday"]
+    tags: [chat, structured-output, callout]
+
+  - id: callout-speech-relationship
+    prompt: "Can <callout> and <speech> be nested inside each other? If I want the same content both shown visually and spoken aloud, how should you write it?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "States they're siblings, never nested. To show and speak the same content, emit both tags with the same body."
+    correct_contains_any: ["sibling", "separate", "not nest"]
+    tags: [chat, structured-output, callout]
+
   # === Calendar ===
   #
   # Status (2026-03-29): All 3 pass. Agent knows from agent guide that calendar

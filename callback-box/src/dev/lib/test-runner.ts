@@ -8,6 +8,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { createAgent } from "../../core/agent.js";
+import { CHAT_SYSTEM_PROMPT } from "../../core/chat-session.js";
 import {
   getSessionLogPath,
   parseSessionLog,
@@ -43,6 +44,14 @@ export interface AuditTest {
    * checking it into the box. Cleaned up after the test runs.
    */
   fixture?: Record<string, string>;
+  /**
+   * Run the agent with `CHAT_SYSTEM_PROMPT` instead of the default
+   * working-directory prompt. Use for tests that audit chat-mode
+   * knowledge (e.g. the `<chat-app>`, `<ack>`, `<callout>` tags) — the
+   * agent in a chat session sees these via the chat prompt, so the
+   * audit has to load them too.
+   */
+  chat_mode?: boolean;
 }
 
 export interface TestSuite {
@@ -120,9 +129,12 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   // Snapshot card files before the agent runs (for cards_contain checks)
   const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
 
+  const systemPrompt = test.chat_mode
+    ? `${CHAT_SYSTEM_PROMPT}\n\nWORKING DIRECTORY: ${boxRoot}`
+    : `WORKING DIRECTORY: ${boxRoot}`;
   const invokeOpts: Parameters<ReturnType<typeof createAgent>["invoke"]>[0] = {
     boxRoot,
-    systemPrompt: `WORKING DIRECTORY: ${boxRoot}`,
+    systemPrompt,
     prompt,
     maxTurns: test.max_turns ?? 10,
   };
