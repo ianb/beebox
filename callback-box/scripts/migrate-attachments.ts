@@ -179,6 +179,24 @@ async function fileExists(absPath: string): Promise<boolean> {
   }
 }
 
+/**
+ * A wrapper dir holds a session or thread card plus its child files. We
+ * record where the wrapper lives, what session/thread card it owns, and the
+ * basename we'll give the dissolved layout (typically the wrapper's name).
+ */
+interface WrapperInfo {
+  /** Box-rel path of the wrapper directory (e.g. `box/inbox/capture-XX`). */
+  wrapperRel: string;
+  /** Wrapper's parent directory (box-rel). */
+  parentRel: string;
+  /** Basename used for the dissolved card (== wrapper directory name). */
+  basename: string;
+  /** Card type of the session/thread card (e.g. `capture-session`). */
+  type: string;
+  /** Filename of the session/thread card inside the wrapper. */
+  innerCardName: string;
+}
+
 async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
   const plan: MigrationPlan = {
     moves: [],
@@ -189,124 +207,219 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
     errors: [],
   };
 
-  // -------- Pass A: dissolve capture-session wrapper directories --------
-  // Wrapper dirs hold a *.capture-session.card and child files. After
-  // migration, the session card lives at the parent dir and children live in
-  // a sibling attach scope.
-  const inboxAbs = path.join(boxRoot, "box/inbox");
-  await dissolveSessionWrappers({
-    plan,
+  // Step 1: discover wrapper dirs (capture-session and email-thread).
+  const wrappers: WrapperInfo[] = [];
+  await findWrappers({
     boxRoot,
-    scanDirAbs: inboxAbs,
+    scanDirAbs: path.join(boxRoot, "box/inbox"),
     cardType: "capture-session",
-    moveCollector: plan.sessionMoves,
+    out: wrappers,
   });
-
-  // Email thread wrappers — same shape (a directory with one *.email-thread.card
-  // and msg-NNN.email-message.card siblings).
-  await dissolveSessionWrappers({
-    plan,
+  await findWrappers({
     boxRoot,
     scanDirAbs: path.join(boxRoot, "box/inbox/email"),
     cardType: "email-thread",
-    moveCollector: plan.threadMoves,
+    out: wrappers,
   });
-  await dissolveSessionWrappers({
-    plan,
+  await findWrappers({
     boxRoot,
     scanDirAbs: path.join(boxRoot, "store/archive/email"),
     cardType: "email-thread",
-    moveCollector: plan.threadMoves,
+    out: wrappers,
   });
 
-  // -------- Pass B: peer-sibling attachments --------
-  // For every *.card in the box, find sibling files sharing its basename
-  // and queue them to move into <basename>.<type>.attach/.
+  for (const w of wrappers) {
+    const newSessionCardRel = w.parentRel === "."
+      ? `${w.basename}.${w.type}.card`
+      : `${w.parentRel}/${w.basename}.${w.type}.card`;
+    const newAttachRel = w.parentRel === "."
+      ? `${w.basename}.attach`
+      : `${w.parentRel}/${w.basename}.attach`;
+    const record: SessionMoveRecord = {
+      oldWrapperDir: w.basename,
+      sessionBasename: w.basename,
+      oldWrapperRel: w.wrapperRel,
+      newSessionCardRel,
+      newAttachRel,
+    };
+    if (w.type === "capture-session") plan.sessionMoves.push(record);
+    else plan.threadMoves.push(record);
+  }
+
+  // Quick lookup: which wrapper a given old path is inside, if any.
+  const wrapperByRel = new Map<string, WrapperInfo>();
+  for (const w of wrappers) wrapperByRel.set(w.wrapperRel, w);
+
+  function findOwningWrapper(oldRel: string): WrapperInfo | null {
+    for (const w of wrappers) {
+      if (oldRel === w.wrapperRel) return w;
+      if (oldRel.startsWith(w.wrapperRel + "/")) return w;
+    }
+    return null;
+  }
+
+  // Step 2: enumerate every file/dir and place each entry.
   const allRel = await walkAll(boxRoot);
+
+  // Build basename → card map per directory so we can identify "who owns
+  // this non-card file?" by sibling-basename match in the file's own dir.
+  const cardsByDir = new Map<string, Map<string, string>>(); // dir -> (basename -> cardFileName)
   for (const rel of allRel) {
     if (!rel.endsWith(".card")) continue;
-    const cardName = path.basename(rel);
-    const dirRel = path.dirname(rel);
-    const base = cardBasename(cardName);
-    const type = cardType(cardName);
-    if (!type) continue;
+    const dir = path.dirname(rel);
+    const name = path.basename(rel);
+    const base = cardBasename(name);
+    if (base === name) continue;
+    const m = cardsByDir.get(dir) ?? new Map<string, string>();
+    m.set(base, name);
+    cardsByDir.set(dir, m);
+  }
 
-    // Skip cards that already live inside an attach scope.
-    if (/\.attach($|\/)/.test(rel)) continue;
-
-    const dirAbs = path.join(boxRoot, dirRel);
-    let entries: Array<{ name: string; isDirectory: () => boolean; isFile: () => boolean }>;
-    try {
-      entries = await fs.readdir(dirAbs, { withFileTypes: true });
-    } catch {
+  // First pass: compute new path for every CARD in the box.
+  const cardNewPath = new Map<string, string>();
+  for (const rel of allRel) {
+    if (!rel.endsWith(".card")) continue;
+    if (/\.attach\//.test(rel)) {
+      // Already inside an attach scope (rare in test1 boxes, but defensive)
+      cardNewPath.set(rel, rel);
       continue;
     }
 
-    // Attach dir name is just `<basename>.attach` (no type suffix); basename
-    // collisions across types in the same directory are forbidden by the
-    // lint rule, so a single `<basename>.attach/` unambiguously belongs to
-    // exactly one card.
-    void type;
-    const attachDirName = `${base}.attach`;
-    const attachDirRel = dirRel === "." ? attachDirName : `${dirRel}/${attachDirName}`;
-
-    for (const e of entries) {
-      if (e.name === cardName) continue;
-      if (e.name === attachDirName) continue; // already migrated
-      // Skip other cards in same dir — they have their own scope.
-      if (e.name.endsWith(".card")) continue;
-      // Same basename means it belongs to this card.
-      const sharedStem = e.isDirectory()
-        ? e.name
-        : (() => {
-            const dot = e.name.lastIndexOf(".");
-            return dot === -1 ? e.name : e.name.slice(0, dot);
-          })();
-      if (sharedStem !== base) {
-        // Special case for sheets: legacy layout puts CSV/JSON inside a
-        // <basename>/ subdirectory that shares the card's *basename* but NOT
-        // its type-suffix.
-        if (e.isDirectory() && e.name === base) {
-          // Fall through to handle as sheet/drive subdir below
-        } else {
-          continue;
-        }
-      }
-
-      // Plan the move
-      const fromRel = dirRel === "." ? e.name : `${dirRel}/${e.name}`;
-      let toRel: string;
-      if (e.isDirectory() && e.name === base) {
-        // Move *contents* of the legacy subdir into the attach scope.
-        // Handled below — for now, just plan the directory move (rename).
-        toRel = attachDirRel;
+    const wrapper = findOwningWrapper(rel);
+    if (wrapper) {
+      const innerName = path.basename(rel);
+      if (innerName === wrapper.innerCardName) {
+        // The session/thread card itself — lifts up to wrapper's parent.
+        const newCardRel = wrapper.parentRel === "."
+          ? `${wrapper.basename}.${wrapper.type}.card`
+          : `${wrapper.parentRel}/${wrapper.basename}.${wrapper.type}.card`;
+        cardNewPath.set(rel, newCardRel);
       } else {
-        toRel = `${attachDirRel}/${e.name}`;
+        // Child card — lands inside the session's attach scope, preserving
+        // any subdirectory structure it had within the wrapper.
+        const insideWrapper = rel.slice(wrapper.wrapperRel.length + 1);
+        const attachDir = wrapper.parentRel === "."
+          ? `${wrapper.basename}.attach`
+          : `${wrapper.parentRel}/${wrapper.basename}.attach`;
+        cardNewPath.set(rel, `${attachDir}/${insideWrapper}`);
       }
-      plan.moves.push({ from: fromRel, to: toRel, isDirectory: e.isDirectory() });
+    } else {
+      // Not in a wrapper — card stays put.
+      cardNewPath.set(rel, rel);
     }
   }
 
-  // -------- Pass C: ref rewrites --------
-  // After we know every move, every card needs its refs adjusted so:
-  //   - refs to the OWN card's attached files use the `attach/` virtual prefix
-  //   - cross-card refs that pointed at an old absolute path get rewritten
-  //     to the new path
+  // Second pass: compute new path for every NON-CARD file/dir.
+  for (const rel of allRel) {
+    if (rel.endsWith(".card")) continue;
+    if (/\.attach\//.test(rel)) continue;
+    if (/\.attach$/.test(rel)) continue;
+
+    const dirRel = path.dirname(rel);
+    const leafName = path.basename(rel);
+    const absPath = path.join(boxRoot, rel);
+    const isDir = await isDirectory(absPath);
+
+    // Skip wrapper directories themselves — they go away as containers.
+    if (wrapperByRel.has(rel)) continue;
+
+    const wrapper = findOwningWrapper(rel);
+
+    // sharedStem = strip a single extension from filename; for a directory,
+    // use the name as-is. Used to match sibling cards (`Foo.image.card` <-> `Foo.jpg`).
+    const sharedStem = isDir
+      ? leafName
+      : (() => {
+          const dot = leafName.lastIndexOf(".");
+          return dot === -1 ? leafName : leafName.slice(0, dot);
+        })();
+
+    // Check whether a sibling card in the same directory shares the basename.
+    const siblingCards = cardsByDir.get(dirRel);
+    const owningCardName = siblingCards ? siblingCards.get(sharedStem) : undefined;
+
+    // Special case: sheet's `<basename>/` legacy subdir (directory whose name
+    // matches a sibling .sheet.card's basename, but the sub-files are loose
+    // inside it, not nested attach scopes).
+    const isSheetLegacySubdir = isDir
+      && siblingCards
+      && siblingCards.get(leafName)
+      && (siblingCards.get(leafName) ?? "").endsWith(".sheet.card");
+
+    if (isSheetLegacySubdir) {
+      // Rename `<dir>/<basename>/` → `<dir>/<basename>.attach/`.
+      const owningCardRel = `${dirRel === "." ? "" : `${dirRel}/`}${siblingCards!.get(leafName)}`;
+      const owningCardNewPath = cardNewPath.get(owningCardRel) ?? owningCardRel;
+      const owningCardNewBase = cardBasename(path.basename(owningCardNewPath));
+      const owningCardNewDir = path.dirname(owningCardNewPath);
+      const newAttachRel = owningCardNewDir === "."
+        ? `${owningCardNewBase}.attach`
+        : `${owningCardNewDir}/${owningCardNewBase}.attach`;
+      plan.moves.push({ from: rel, to: newAttachRel, isDirectory: true });
+      continue;
+    }
+
+    if (owningCardName) {
+      // The file belongs to a card with matching basename in the same dir.
+      // Place it inside that card's attach scope after the card has moved.
+      const owningCardRel = `${dirRel === "." ? "" : `${dirRel}/`}${owningCardName}`;
+      const owningCardNewPath = cardNewPath.get(owningCardRel) ?? owningCardRel;
+      const owningCardNewBase = cardBasename(path.basename(owningCardNewPath));
+      const owningCardNewDir = path.dirname(owningCardNewPath);
+      const newAttachRel = owningCardNewDir === "."
+        ? `${owningCardNewBase}.attach`
+        : `${owningCardNewDir}/${owningCardNewBase}.attach`;
+      const newPath = `${newAttachRel}/${leafName}`;
+      if (newPath !== rel) {
+        plan.moves.push({ from: rel, to: newPath, isDirectory: isDir });
+      }
+      continue;
+    }
+
+    if (wrapper) {
+      // Skip directories inside wrappers — their files will be moved
+      // individually below, and the directory itself will be left empty
+      // (cleaned up at the end). Planning a directory rename here would
+      // collide with the per-file moves into the same destination.
+      if (isDir) continue;
+      // Orphan file inside a wrapper — lifts into the session's attach scope
+      // flat (no per-card nesting). Preserves any subdir structure.
+      const insideWrapper = rel.slice(wrapper.wrapperRel.length + 1);
+      const attachDir = wrapper.parentRel === "."
+        ? `${wrapper.basename}.attach`
+        : `${wrapper.parentRel}/${wrapper.basename}.attach`;
+      const newPath = `${attachDir}/${insideWrapper}`;
+      if (newPath !== rel) {
+        plan.moves.push({ from: rel, to: newPath, isDirectory: false });
+      }
+      continue;
+    }
+
+    // Else: standalone file with no owning card and no wrapper. Stays put.
+  }
+
+  // Card moves are also part of the plan.
+  for (const [oldRel, newRel] of cardNewPath) {
+    if (oldRel !== newRel) {
+      plan.moves.push({ from: oldRel, to: newRel, isDirectory: false });
+    }
+  }
+
+  // Ref rewrites — uses the final move map.
   await planRefRewrites({ plan, boxRoot, allRel });
 
   return plan;
 }
 
-interface DissolveOpts {
-  plan: MigrationPlan;
+interface FindWrappersArgs {
   boxRoot: string;
   scanDirAbs: string;
   cardType: string;
-  moveCollector: SessionMoveRecord[];
+  out: WrapperInfo[];
 }
 
-async function dissolveSessionWrappers(opts: DissolveOpts): Promise<void> {
-  const { plan, boxRoot, scanDirAbs, cardType, moveCollector } = opts;
+async function findWrappers(args: FindWrappersArgs): Promise<void> {
+  const { boxRoot, scanDirAbs, cardType, out } = args;
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
     entries = await fs.readdir(scanDirAbs, { withFileTypes: true });
@@ -317,7 +430,6 @@ async function dissolveSessionWrappers(opts: DissolveOpts): Promise<void> {
     if (!e.isDirectory()) continue;
     if (SKIP_DIRS.has(e.name)) continue;
     const wrapperAbs = path.join(scanDirAbs, e.name);
-    // Look for the session/thread card inside
     let inner: string[];
     try {
       inner = await fs.readdir(wrapperAbs);
@@ -326,47 +438,13 @@ async function dissolveSessionWrappers(opts: DissolveOpts): Promise<void> {
     }
     const cardFile = inner.find((f) => f.endsWith(`.${cardType}.card`));
     if (!cardFile) continue;
-    // Choose a basename for the new card. For capture sessions the wrapper
-    // dir name == old session basename; for email threads the wrapper dir
-    // name is the safe-subject form, but the card is conventionally named
-    // `thread.email-thread.card` and the wrapper provides the identity.
-    let sessionBasename = e.name;
-    // If the existing card has a meaningful basename other than "thread",
-    // prefer it. Otherwise fall back to the wrapper dir name.
-    const innerCardBase = cardBasename(cardFile);
-    if (innerCardBase && innerCardBase !== "thread") {
-      sessionBasename = innerCardBase;
-    }
-    const newSessionCardRel = path.relative(
-      boxRoot,
-      path.join(scanDirAbs, `${sessionBasename}.${cardType}.card`),
-    );
-    const newAttachRel = path.relative(
-      boxRoot,
-      path.join(scanDirAbs, `${sessionBasename}.attach`),
-    );
-    const oldWrapperRel = path.relative(boxRoot, wrapperAbs);
-    const oldCardRel = `${oldWrapperRel}/${cardFile}`;
-
-    moveCollector.push({
-      oldWrapperDir: e.name,
-      sessionBasename,
-      oldWrapperRel,
-      newSessionCardRel,
-      newAttachRel,
+    out.push({
+      wrapperRel: path.relative(boxRoot, wrapperAbs),
+      parentRel: path.relative(boxRoot, scanDirAbs),
+      basename: e.name,
+      type: cardType,
+      innerCardName: cardFile,
     });
-
-    // Move the card to the parent dir under its new name.
-    plan.moves.push({ from: oldCardRel, to: newSessionCardRel, isDirectory: false });
-
-    // Everything else in the wrapper directory goes into the new attach scope.
-    for (const f of inner) {
-      if (f === cardFile) continue;
-      const fromRel = `${oldWrapperRel}/${f}`;
-      const toRel = `${newAttachRel}/${f}`;
-      const isDir = await isDirectory(path.join(boxRoot, fromRel));
-      plan.moves.push({ from: fromRel, to: toRel, isDirectory: isDir });
-    }
   }
 }
 
@@ -512,17 +590,34 @@ async function executePlan(boxRoot: string, plan: MigrationPlan): Promise<void> 
     await fs.rename(fromAbs, toAbs);
   }
 
-  // 3. Clean up any leftover empty wrapper directories.
+  // 3. Clean up any leftover empty directories inside (and including) each
+  // dissolved wrapper. We walk depth-first so child empties get removed
+  // before their parents.
   for (const sm of [...plan.sessionMoves, ...plan.threadMoves]) {
     const wrapperAbs = path.join(boxRoot, sm.oldWrapperRel);
-    try {
-      const remaining = await fs.readdir(wrapperAbs);
-      if (remaining.length === 0) {
-        await fs.rmdir(wrapperAbs);
-      }
-    } catch {
-      // already gone
+    await removeEmptyDirsRecursively(wrapperAbs);
+  }
+}
+
+async function removeEmptyDirsRecursively(dirAbs: string): Promise<void> {
+  let entries: Array<{ name: string; isDirectory: () => boolean }>;
+  try {
+    entries = await fs.readdir(dirAbs, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      await removeEmptyDirsRecursively(path.join(dirAbs, e.name));
     }
+  }
+  try {
+    const remaining = await fs.readdir(dirAbs);
+    if (remaining.length === 0) {
+      await fs.rmdir(dirAbs);
+    }
+  } catch {
+    // already gone
   }
 }
 
