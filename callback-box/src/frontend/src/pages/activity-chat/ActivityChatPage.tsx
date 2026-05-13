@@ -17,6 +17,7 @@ import {
   UserMessage,
   AssistantMessage,
   CompactionMessage,
+  InterruptedMessage,
   groupMessages,
 } from "../../components/ChatMessages";
 import { Column } from "../../components/ui/Column";
@@ -158,6 +159,9 @@ function ActivityChatSession({
             {groups.map((group, i) => {
               if (group.type === "compaction") {
                 return <CompactionMessage key={i} entries={group.entries} />;
+              }
+              if (group.type === "interrupted") {
+                return <InterruptedMessage key={i} />;
               }
               if (group.type === "user") {
                 return <UserMessage key={i} entries={group.entries} />;

@@ -702,7 +702,7 @@ function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZo
  * entry. Local-command entries are filtered out entirely (see below).
  */
 export type MessageGroup =
-  | { type: "user" | "assistant" | "compaction"; entries: SessionEntry[] }
+  | { type: "user" | "assistant" | "compaction" | "interrupted"; entries: SessionEntry[] }
   | { type: "self-note"; entries: SessionEntry[]; notes: SelfNoteInfo[] };
 
 /**
@@ -730,6 +730,10 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
     if (isLocalCommandEntry(entry)) continue;
     if (entry.type === "compaction") {
       groups.push({ type: "compaction", entries: [entry] });
+      continue;
+    }
+    if (entry.type === "interrupted") {
+      groups.push({ type: "interrupted", entries: [entry] });
       continue;
     }
     const notes = entrySelfNotes(entry);
@@ -1160,6 +1164,17 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
           </div>
         ) : null}
       </details>
+    </div>
+  );
+}
+
+/**
+ * Render an interrupted-turn marker — shown where a response was cancelled.
+ */
+export function InterruptedMessage() {
+  return (
+    <div className="flex justify-center py-2">
+      <span className="text-xs text-warm-500">Request interrupted</span>
     </div>
   );
 }

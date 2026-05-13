@@ -36,7 +36,7 @@ export interface SessionContentBlock {
  */
 export interface SessionEntry {
   uuid: string;
-  type: "user" | "assistant" | "compaction";
+  type: "user" | "assistant" | "compaction" | "interrupted";
   timestamp: string;
   content: SessionContentBlock[];
   /** Display name of the sender (for user messages in multi-user chat) */
@@ -383,6 +383,10 @@ export async function getSessionMetadata(args: {
     const message = raw.message as Record<string, unknown> | undefined;
     if (!message) continue;
 
+    // Skip SDK meta prompts and synthetic assistant responses
+    if (raw.isMeta === true) continue;
+    if (raw.type === "assistant" && message.model === "<synthetic>") continue;
+
     const content = message.content;
     const blocks: Array<Record<string, unknown>> =
       typeof content === "string"
@@ -518,6 +522,12 @@ export async function parseSessionLog(
 
     const content = transformContent(message.content);
 
+    // Skip SDK meta prompts (e.g. "Continue from where you left off.") — internal wakeup plumbing
+    if (raw.isMeta === true) continue;
+
+    // Skip synthetic assistant responses (model === "<synthetic>") — generated locally, not by the LLM
+    if (raw.type === "assistant" && message.model === "<synthetic>") continue;
+
     // Skip user entries that are API plumbing (tool_result blocks, "Tool loaded." etc.)
     if (raw.type === "user") {
       const textBlocks = content.filter(
@@ -537,6 +547,17 @@ export async function parseSessionLog(
           type: "compaction",
           timestamp: String(raw.timestamp || ""),
           content,
+        });
+        continue;
+      }
+
+      // Detect interrupted-turn markers
+      if (firstText.trim() === "[Request interrupted by user]") {
+        filtered.push({
+          uuid: String(raw.uuid || ""),
+          type: "interrupted",
+          timestamp: String(raw.timestamp || ""),
+          content: [],
         });
         continue;
       }

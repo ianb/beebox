@@ -342,6 +342,8 @@ Shape of the work:
 
 Not urgent. The agent doesn't currently need it (path conventions + rules cover its discovery), and humans get by with the chat assistant. But it's a high-value, low-risk addition when human direct-browsing becomes a friction point.
 
+Another option worth looking at: **mempalace** — <https://github.com/mempalace/mempalace> — framed as a memory-palace tool but effectively a search/recall surface over arbitrary notes. Different ergonomics from Orama-style index search; worth a side-by-side if/when this work lands.
+
 ## Backlinks surface ("what links here?")
 
 Cardworks already exposes the ref graph — `findIncomingRefs(targetPath)` and `findOutgoingRefs(sourcePath)` in `cardworks/src/loader/loader.ts`. The data exists; no read surface does. Obsidian's Backlinks pane is widely considered its most-used navigation surface, and we have a richer (typed, versioned, fragment-addressable) reference model — closing the UI gap is mostly plumbing.
@@ -433,3 +435,14 @@ Properties this would want:
 - **Discoverable on intent** — when a user asks for X, the agent searches the corpus and surfaces relevant entries; the user can override or extend before the agent commits to a build.
 
 Long horizon. The minimum viable version is just a `docs/patterns/` directory inside callback-box itself with a handful of curated examples, surfaced to the agent via the existing rule system. The maximum is something like a federated wiki of agentic-design patterns across many systems. Worth flagging now so the architecture doesn't accidentally foreclose it (e.g., by hardcoding patterns into core rather than treating them as content).
+
+## Filed for later: redraw
+
+<https://wcandillon.github.io/redraw/> — no obvious use case in callback today, but worth remembering exists if we ever want richer visual / hand-drawn rendering in the UI.
+
+## Fancier PDF manipulation
+
+If we ever want richer PDF handling than scan-import currently does — form-field detection, structured extraction, layout-aware parsing — `commonforms` looks worth a look.
+
+- <https://github.com/jbarrow/commonforms>
+- HN discussion: <https://news.ycombinator.com/item?id=47984675>

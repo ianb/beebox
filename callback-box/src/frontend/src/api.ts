@@ -105,7 +105,7 @@ export interface ChatImageAttachment {
 
 export interface SessionEntry {
   uuid: string;
-  type: "user" | "assistant" | "compaction";
+  type: "user" | "assistant" | "compaction" | "interrupted";
   timestamp: string;
   content: SessionContentBlock[];
   /** Display name of the sender (for user messages in multi-user chat) */

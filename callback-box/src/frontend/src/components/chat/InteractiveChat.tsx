@@ -30,7 +30,7 @@ import { sendSound, tick, recordingStart, recordingStop, alarm } from "../../lib
 import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
 import { chatMachine, HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
 import { CloseButton } from "../ui/CloseButton";
@@ -975,6 +975,9 @@ function VirtualizedMessageList({
           const groupIndex = item.groupIndex;
           if (group.type === "compaction") {
             return <div className="py-0.5"><CompactionMessage entries={group.entries} /></div>;
+          }
+          if (group.type === "interrupted") {
+            return <div className="py-0.5"><InterruptedMessage /></div>;
           }
           if (group.type === "self-note") {
             return (
