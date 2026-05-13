@@ -67,10 +67,10 @@ export function AckIndicator({ ack, className }: { ack: AckIndication; className
         aria-label={`${descriptor.defaultPhrase}${ack.text ? ` — ${ack.text}` : ""}`}
         title={title}
         className={cn(
-          "inline-flex items-center justify-center w-6 h-6 rounded-full",
-          "bg-accent text-white shadow-sm",
-          "hover:bg-accent-dark transition-colors",
-          "text-sm leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+          "inline-flex items-center justify-center w-7 h-7 rounded-full",
+          "bg-accent-dark text-white shadow-sm",
+          "hover:bg-accent transition-colors",
+          "text-base font-semibold leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
         )}
       >
         <span aria-hidden>{descriptor.icon}</span>

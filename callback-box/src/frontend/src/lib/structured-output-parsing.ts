@@ -136,5 +136,5 @@ export function stripStructuredOutputTags(content: string): string {
   return content
     .replace(/<ack\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/ack\s*>)/gi, "")
     .replace(/<callout\b[^>]*?>[\S\s]*?<\/callout\s*>/gi, "")
-    .replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)/gi, "");
+    .replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)\n?/gi, "");
 }
