@@ -14,6 +14,7 @@ import {
 } from "../command-runner.js";
 import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
+import { attachDirFor } from "../../lib/attach-path.js";
 
 /**
  * Arguments for the trash command.
@@ -80,36 +81,38 @@ async function trashOne(
   // Ensure trash directory exists
   await fs.mkdir(trashDir, { recursive: true });
 
-  // Find related files (attachments share the same basename prefix)
-  const sourceDir = path.dirname(sourcePath);
-  const cardBasename = basename.replace(/\.[^.]+\.card$/, "");
-  const relatedFiles: string[] = [];
-
-  try {
-    const dirEntries = await fs.readdir(sourceDir);
-    for (const entry of dirEntries) {
-      if (entry.startsWith(cardBasename) && entry !== basename) {
-        relatedFiles.push(entry);
-      }
-    }
-  } catch {
-    // Ignore errors reading directory
-  }
-
   // Move the card file
   await fs.rename(sourcePath, finalDestPath);
   const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
   const relDestPath = path.relative(ctx.boxRoot, finalDestPath);
   ctx.writeLine(`Trashed: ${relSourcePath} → ${relDestPath}`);
 
-  // Move related files (attachments)
+  // Move the card's attach scope (if it exists) — the whole directory tree,
+  // including nested cards and their attach scopes.
+  const sourceAttachDir = attachDirFor(sourcePath);
+  const destAttachDir = attachDirFor(finalDestPath);
+  const relatedFiles: string[] = [];
   const movedFiles: string[] = [relSourcePath];
-  for (const relatedFile of relatedFiles) {
-    const relatedSource = path.join(sourceDir, relatedFile);
-    const relatedDest = path.join(trashDir, relatedFile);
-    await fs.rename(relatedSource, relatedDest);
-    movedFiles.push(path.relative(ctx.boxRoot, relatedSource));
-    ctx.writeLine(`  Also moved: ${relatedFile}`);
+
+  try {
+    await fs.access(sourceAttachDir);
+    // Resolve a non-colliding destination (in case the trash already holds one).
+    let finalAttachDest = destAttachDir;
+    try {
+      await fs.access(destAttachDir);
+      const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
+      finalAttachDest = `${destAttachDir}_${timestamp}`;
+    } catch {
+      // No collision
+    }
+    await fs.rename(sourceAttachDir, finalAttachDest);
+    const relAttachSource = path.relative(ctx.boxRoot, sourceAttachDir);
+    const relAttachDest = path.relative(ctx.boxRoot, finalAttachDest);
+    relatedFiles.push(path.basename(sourceAttachDir));
+    movedFiles.push(relAttachSource);
+    ctx.writeLine(`  Also moved attach scope: ${relAttachSource} → ${relAttachDest}`);
+  } catch {
+    // No attach scope — nothing to move
   }
 
   return { relSourcePath, relDestPath, relatedFiles, movedFiles };

@@ -17,6 +17,7 @@ import {
 } from "../command-runner.js";
 import { isCardFile, boxPath } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
+import { attachDirFor } from "../../lib/attach-path.js";
 
 /**
  * Remove empty ancestor directories up to (but not including) stopAt.
@@ -165,11 +166,23 @@ interface MoveOneParams {
 
 /**
  * Move a single card, returning structured results.
+ *
+ * Beyond what cardworks' built-in move handles (card file + same-basename
+ * siblings, including the `<basename>.attach/` directory, plus cross-card
+ * refs that point at the moved card), this also rewrites refs from OTHER
+ * cards that point at non-card files inside the moved attach scope. Those
+ * refs use full paths (not the `attach/` virtual prefix, which is scoped to
+ * the owning card) and aren't picked up by cardworks' card-ref handler.
  */
 async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   const { ctx, sourcePath, destPath } = params;
   const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
   const relDestPath = path.relative(ctx.boxRoot, destPath);
+
+  const oldAttachAbsDir = attachDirFor(sourcePath);
+  const newAttachAbsDir = attachDirFor(destPath);
+  const oldAttachRel = path.relative(ctx.boxRoot, oldAttachAbsDir);
+  const newAttachRel = path.relative(ctx.boxRoot, newAttachAbsDir);
 
   const loader = new CardLoader(ctx.boxRoot);
   const card = await loader.load(sourcePath);
@@ -193,6 +206,37 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
     }
   }
 
+  // Rewrite refs that pointed into the old attach scope (from cards outside
+  // the moved subtree). cardworks already handled refs to cards; here we
+  // catch refs to non-card files like `<source ref="/box/.../photo.jpg">`.
+  // Crude but reliable: substring replace of the old attach-rel path in
+  // every other card's content.
+  const extraStaged: string[] = [];
+  const extraUpdated: Array<{ path: string; refsUpdated: number }> = [];
+  if (oldAttachRel !== newAttachRel) {
+    const allCards = await loader.listCards();
+    for (const cardPath of allCards) {
+      // Skip cards inside the new attach scope (just moved there) and the
+      // moved card itself.
+      if (cardPath === destPath) continue;
+      if (cardPath.startsWith(newAttachAbsDir + "/")) continue;
+      try {
+        const content = await fs.readFile(cardPath, "utf-8");
+        if (!content.includes(oldAttachRel)) continue;
+        const updated = content.replaceAll(oldAttachRel, newAttachRel);
+        if (updated === content) continue;
+        await fs.writeFile(cardPath, updated);
+        const refsUpdated = content.split(oldAttachRel).length - 1;
+        const relPath = path.relative(ctx.boxRoot, cardPath);
+        extraUpdated.push({ path: relPath, refsUpdated });
+        extraStaged.push(relPath);
+        ctx.writeLine(`  Updated attach-scope refs in ${relPath} (${refsUpdated})`);
+      } catch {
+        // Skip cards that can't be read
+      }
+    }
+  }
+
   // Clean up empty source directory
   await removeEmptyAncestors(path.dirname(sourcePath), ctx.boxRoot);
 
@@ -204,6 +248,7 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   for (const update of result.updatedCards) {
     filesToStage.push(path.relative(ctx.boxRoot, update.path));
   }
+  filesToStage.push(...extraStaged);
 
   return {
     from: relSourcePath,
@@ -212,10 +257,13 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
       from: path.relative(ctx.boxRoot, f.from),
       to: path.relative(ctx.boxRoot, f.to),
     })),
-    updatedCards: result.updatedCards.map((u) => ({
-      path: path.relative(ctx.boxRoot, u.path),
-      refsUpdated: u.refsUpdated,
-    })),
+    updatedCards: [
+      ...result.updatedCards.map((u) => ({
+        path: path.relative(ctx.boxRoot, u.path),
+        refsUpdated: u.refsUpdated,
+      })),
+      ...extraUpdated,
+    ],
     filesToStage,
   };
 }

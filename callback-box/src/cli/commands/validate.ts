@@ -12,6 +12,7 @@ import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lin
 import { requireBoxRoot, isCardFile, isMarkdownFile } from "../lib/paths.js";
 import { createLoader } from "../lib/loader.js";
 import { getStatus } from "../lib/git.js";
+import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 
 const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 const SKIP_FILES = new Set(["CLAUDE.md"]);
@@ -81,6 +82,15 @@ function formatMarkdownResults(summary: MarkdownLintSummary, { colors }: { color
   return lines.join("\n");
 }
 
+function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors: boolean }): string {
+  if (errors.length === 0) return "";
+  const ESC = "";
+  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
+  return errors
+    .map((e) => `${red("error")}  ${e.path}  [${e.rule}] ${e.message}`)
+    .join("\n");
+}
+
 export const validateCommand = new Command("validate")
   .description("Validate cards and markdown in the box")
   .argument("[path]", "Path to validate (file or directory)")
@@ -98,6 +108,7 @@ export const validateCommand = new Command("validate")
 
         let cardSummary: LintSummary | null = null;
         let mdSummary: MarkdownLintSummary | null = null;
+        let attachErrors: AttachLintError[] = [];
 
         if (options.all || !targetPath) {
           cardSummary = await lintAll(loader);
@@ -105,6 +116,7 @@ export const validateCommand = new Command("validate")
           if (mdFiles.length > 0) {
             mdSummary = await lintMarkdownFiles(mdFiles);
           }
+          attachErrors = await lintAttachLayout(boxRoot);
         } else {
           const fullPath = path.isAbsolute(targetPath)
             ? targetPath
@@ -121,7 +133,7 @@ export const validateCommand = new Command("validate")
         }
 
         if (options.json) {
-          console.log(JSON.stringify({ cards: cardSummary, markdown: mdSummary }, null, 2));
+          console.log(JSON.stringify({ cards: cardSummary, markdown: mdSummary, attach: attachErrors }, null, 2));
         } else {
           if (cardSummary !== null) {
             const output = formatLintResults(cardSummary, { colors: true });
@@ -140,6 +152,11 @@ export const validateCommand = new Command("validate")
               `${mdSummary.filesChecked - mdSummary.filesWithErrors} valid, ` +
               `${mdSummary.filesWithErrors} with issues`
             );
+          }
+          if (attachErrors.length > 0) {
+            const output = formatAttachLintErrors(attachErrors, { colors: true });
+            console.log(`\n${output}`);
+            console.log(`\nAttach layout: ${attachErrors.length} issue(s)`);
           }
         }
 
@@ -160,7 +177,8 @@ export const validateCommand = new Command("validate")
 
         const totalErrors =
           (cardSummary !== null ? cardSummary.totalErrors : 0) +
-          (mdSummary !== null ? mdSummary.totalErrors : 0);
+          (mdSummary !== null ? mdSummary.totalErrors : 0) +
+          attachErrors.length;
         if (totalErrors > 0) {
           process.exit(1);
         }
