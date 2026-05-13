@@ -1303,7 +1303,9 @@ tests:
   # Verifies agents know about the cb feedback command, when to use it,
   # and will actually use it when they notice something confusing.
   #
-  # Status: Untested — added 2026-05-12.
+  # Status (2026-05-13): All 3 pass. cb-feedback-purpose and cb-feedback-when-to-use
+  # answered with 0 file reads (knows_directly). cb-feedback-uses-it read 1 file
+  # (cb-commands.md to check validate docs) then ran cb feedback correctly.
 
   - id: cb-feedback-purpose
     prompt: "There's a cb feedback command. What is it for and who uses it?"
