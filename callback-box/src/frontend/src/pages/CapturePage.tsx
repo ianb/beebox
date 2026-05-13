@@ -72,6 +72,7 @@ interface UploadFileOptions {
 
 const MAX_UPLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
+const UPLOAD_TIMEOUT_MS = 30_000;
 
 async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
   const { sessionId, filename, blob, startedAt, source, originalName, mimeType } = options;
@@ -100,6 +101,7 @@ async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
         method: "POST",
         headers,
         body: formData,
+        signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
       });
     } catch (networkErr) {
       // Network error (offline, DNS failure, etc.) — retry
