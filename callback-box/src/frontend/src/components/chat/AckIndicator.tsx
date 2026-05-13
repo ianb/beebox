@@ -10,9 +10,7 @@
  */
 
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "@tanstack/react-router";
 import { getAckKind, type AckIndication } from "../../lib/structured-output-parsing";
-import { href } from "../../lib/routing";
 import { cn } from "../../lib/cn";
 
 function refLabel(ref: string): string {
@@ -35,7 +33,6 @@ function tooltipText(ack: AckIndication, defaultPhrase: string): string {
  * users.
  */
 export function AckIndicator({ ack, className }: { ack: AckIndication; className?: string }) {
-  const { boxSlug } = useParams({ strict: false });
   const descriptor = getAckKind(ack.kind);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
@@ -61,9 +58,6 @@ export function AckIndicator({ ack, className }: { ack: AckIndication; className
   if (!descriptor) return null;
 
   const title = tooltipText(ack, descriptor.defaultPhrase);
-  const refViewHref = ack.ref && boxSlug
-    ? `${href(`/${boxSlug}/view`)}?path=${encodeURIComponent(ack.ref)}`
-    : null;
 
   return (
     <span ref={containerRef} className={cn("relative inline-flex", className)}>
@@ -74,7 +68,8 @@ export function AckIndicator({ ack, className }: { ack: AckIndication; className
         title={title}
         className={cn(
           "inline-flex items-center justify-center w-6 h-6 rounded-full",
-          "bg-warm-100 text-warm-700 hover:bg-warm-200 transition-colors",
+          "bg-accent text-white shadow-sm",
+          "hover:bg-accent-dark transition-colors",
           "text-sm leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
         )}
       >
@@ -88,13 +83,9 @@ export function AckIndicator({ ack, className }: { ack: AckIndication; className
           <span className="block font-medium text-warm-900">{descriptor.defaultPhrase}</span>
           {ack.text ? <span className="block mt-1">{ack.text}</span> : null}
           {ack.ref ? (
-            refViewHref ? (
-              <a href={refViewHref} className="block mt-1 text-primary hover:underline truncate">
-                {refLabel(ack.ref)}
-              </a>
-            ) : (
-              <span className="block mt-1 text-warm-500 truncate">{ack.ref}</span>
-            )
+            <span className="block mt-1 text-warm-500 truncate" title={ack.ref}>
+              {refLabel(ack.ref)}
+            </span>
           ) : null}
         </span>
       ) : null}
