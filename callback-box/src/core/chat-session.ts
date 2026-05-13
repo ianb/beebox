@@ -391,6 +391,25 @@ COMMITS:
 - Do NOT add Co-Authored-By trailers — the system adds appropriate trailers automatically.`;
 
 /**
+ * Appended to the system prompt when `<chat-app narration="on"/>` is
+ * active for the session. Tells the agent how the expectations of each
+ * turn shift in narration mode: receive content, stay quiet, prefer
+ * structured-output tags over conversational prose.
+ */
+export const NARRATION_OVERLAY = `
+
+NARRATION MODE:
+This session is in narration mode. The user is dumping content via voice — long, loose, often a stream of thoughts — not chatting. The mechanics of turns don't change (each <speech> message still gets a turn), but the expectations on YOUR turn change sharply:
+
+- **Most turns produce no prose, no <speech>, and no <callout>** — only tool work (capture, file, follow up) and the <ack> indications that record it. Silence is the default.
+- **Don't echo the user.** No "Got it," no recap of what was said, no acknowledgement-by-prose ("I'll add that to your todos"). The <ack> chip is the acknowledgement. Treat narrated thoughts the way you'd treat someone thinking out loud near you.
+- **Don't reply to musings.** A stream-of-thought dump may include rhetorical asides — "maybe pasta?", "the kitchen is a mess", "I should probably do X" — which are NOT requests for input. Don't suggest pasta sauces, don't offer cleaning tips, don't respond at all.
+- **<ack> confirms work.** Inner text on the ack only when the action wasn't the obvious thing the user asked for.
+- **Real questions get a <callout>.** A real question is one where the user is asking you for something specific — to know something, to look something up, to double-check on something ("What's the weather Saturday?" "Is there anything overdue?"). Put the answer in a <callout> with the question (or paraphrase) as the context attribute. <callout>, not <speech>.
+- **<speech> is rare.** Only when the user is hands-busy and the answer is genuinely worth hearing aloud (driving, cooking). Default is no speech, even alongside a <callout>.
+- Tool-driven action (capture, file, follow up, schedule) is the primary work. Conversation is incidental.`;
+
+/**
  * Note appended to the system prompt when this chat is bound to a
  * landmark directory. The CLAUDE.md / MAP.md inside that dir already load
  * automatically (they're under cwd) and may have been authored without
@@ -636,14 +655,17 @@ export class ChatSession extends EventEmitter {
   /**
    * Resolve the system prompt for a new run. Uses the options override
    * if provided; otherwise falls back to the main-chat default
-   * (CHAT_SYSTEM_PROMPT + tzContext).
+   * (CHAT_SYSTEM_PROMPT + tzContext + optional narration overlay).
    */
   private async resolveSystemPrompt(): Promise<string> {
     if (this.options.systemPrompt !== undefined) {
       return this.options.systemPrompt(this.boxRoot);
     }
     const tzContext = await buildTimezoneContext(this.boxRoot);
-    return CHAT_SYSTEM_PROMPT + tzContext;
+    await this.ensureFeaturesLoaded();
+    const features = this.getFeatures();
+    const narrationOverlay = features.narration === "on" ? NARRATION_OVERLAY : "";
+    return CHAT_SYSTEM_PROMPT + tzContext + narrationOverlay;
   }
 
   /**

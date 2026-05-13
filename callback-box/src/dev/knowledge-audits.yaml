@@ -977,6 +977,48 @@ tests:
     correct_contains_any: ["sibling", "separate", "not nest"]
     tags: [chat, structured-output, callout]
 
+  # === Narration Mode Behavior ===
+  #
+  # When `<chat-app narration="on"/>` is in the snapshot, the system prompt
+  # gets a narration overlay. These audits verify the agent shifts its
+  # turn-expectations accordingly: receive content, stay quiet, prefer
+  # structured-output tags over conversational prose.
+  #
+  # Status (2026-05-13): Both pass after the narration overlay was
+  # sharpened with concrete don't-do examples ("don't reply to musings",
+  # "<callout>, not <speech>"). The agent correctly ignores rhetorical
+  # asides ("maybe pasta?") and routes real questions through <callout>.
+
+  - id: narration-defaults-silent
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-13T10:00:00Z"/>
+      <speech>I need to remember to call mom on Saturday. Also I'm thinking about the bread recipe — I want to try adding cardamom next time. And, you know what, the kitchen counter is a mess.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Does not write conversational prose summarizing what the user said. Either silent or emits <ack> indications for any actions taken. No <callout> because the user didn't ask a question."
+    should_not_read: []
+    tags: [chat, narration]
+    notes: >
+      The narration overlay rule: receive content, no chatty replies, no
+      summaries, no "got it." The agent should either be silent or emit
+      structured-output indications for actions. Failure: writes a prose
+      response like "I'll remember to call mom and try cardamom next time."
+
+  - id: narration-callout-on-real-question
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-13T10:00:00Z"/>
+      <speech>So I was thinking about dinner tonight, and I'm not sure what to make. Maybe pasta? Anyway, what's the weather Saturday? I'm trying to figure out if I should plan outdoor stuff.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Recognizes the embedded question ('what's the weather Saturday'). Emits a <callout context=\"...\"> answering it (or noting it doesn't know). Doesn't reply to the dinner musing — that's narration, not a question."
+    correct_contains: ["<callout"]
+    tags: [chat, narration, callout]
+    notes: >
+      Tests the agent's judgment about which parts of a stream-of-thought
+      dump merit a real response. Only the explicit question deserves a
+      callout. Failure: replying to the dinner musing with a pasta suggestion,
+      or skipping the weather question entirely.
+
   # === Calendar ===
   #
   # Status (2026-03-29): All 3 pass. Agent knows from agent guide that calendar

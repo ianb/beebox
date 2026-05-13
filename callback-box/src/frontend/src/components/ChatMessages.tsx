@@ -1120,7 +1120,22 @@ function SpeechIcon({ playing, onStop }: { playing: boolean; onStop?: () => void
   );
 }
 
-export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpeech, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; speechPlaying?: boolean; onStopSpeech?: () => void; onZoomView?: OnZoomView }) {
+export function AssistantMessage({
+  entries,
+  debugView,
+  speechPlaying,
+  onStopSpeech,
+  onZoomView,
+  proseEnabled,
+}: {
+  entries: SessionEntry[];
+  debugView?: boolean;
+  speechPlaying?: boolean;
+  onStopSpeech?: () => void;
+  onZoomView?: OnZoomView;
+  /** When false, untagged prose hides; only callouts and acks render. Default true. */
+  proseEnabled?: boolean;
+}) {
   const grouped = groupIntoParts(entries);
   const allText = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
@@ -1131,6 +1146,7 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
   // rendered in their own surfaces below/after the markdown groups.
   const callouts = useMemo(() => parseCallouts(allText), [allText]);
   const acks = useMemo(() => parseAcks(allText), [allText]);
+  const showProse = proseEnabled !== false;
 
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
@@ -1140,7 +1156,7 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
           {hasSpeech ? <SpeechIcon playing={isPlaying} onStop={onStopSpeech} /> : null}
         </div>
       ) : null}
-      {grouped.map((group, i) =>
+      {showProse ? grouped.map((group, i) =>
         group.kind === "text" ? (
           debugView ? (
             <Pre key={i} size="xs" boxed>{group.text}</Pre>
@@ -1150,7 +1166,7 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
         ) : (
           <ActivityGroup key={i} parts={group.parts} />
         )
-      )}
+      ) : null}
       {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
     </div>
   );

@@ -50,20 +50,65 @@ export interface TranscribeAudioParams {
 }
 
 export type TranscriptionService = "whisper" | "voxtral" | "deepgram";
+/** Narration mode's checkpoint HQ pass — non-streaming services only. */
+export type HqTranscriptionService = "whisper" | "voxtral";
 
-interface TranscriptionConfig {
+export interface TranscriptionConfig {
+  /**
+   * Realtime / batch service used by the live transcription path and the
+   * existing batch `transcribeAudio` call. Allowed values include all
+   * three because the batch path supports them; the realtime path falls
+   * back from `whisper` to voxtral since whisper has no streaming.
+   */
   service: TranscriptionService;
+  /**
+   * Service used by the narration-mode HQ pass (POST /api/chat/transcribe-audio).
+   * Independent from `service` so a box can stream with deepgram but run
+   * HQ with whisper. Defaults to `whisper` when not stored.
+   */
+  hqService: HqTranscriptionService;
+}
+
+interface StoredTranscriptionConfig {
+  service?: TranscriptionService;
+  hqService?: HqTranscriptionService;
 }
 
 export async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
-  if (!boxRoot) return { service: "voxtral" };
+  const defaults: TranscriptionConfig = { service: "voxtral", hqService: "whisper" };
+  if (!boxRoot) return defaults;
   try {
     const configPath = path.join(boxRoot, "config/transcription.json");
     const content = await fs.readFile(configPath, "utf-8");
-    return JSON.parse(content) as TranscriptionConfig;
+    const stored = JSON.parse(content) as StoredTranscriptionConfig;
+    return {
+      service: stored.service ?? defaults.service,
+      hqService: stored.hqService ?? defaults.hqService,
+    };
   } catch (_e) {
-    return { service: "voxtral" };
+    return defaults;
   }
+}
+
+/**
+ * Persist a partial config update, merging with whatever's on disk.
+ */
+export async function updateTranscriptionConfig(
+  boxRoot: string,
+  updates: Partial<StoredTranscriptionConfig>,
+): Promise<TranscriptionConfig> {
+  const configPath = path.join(boxRoot, "config/transcription.json");
+  let current: StoredTranscriptionConfig = {};
+  try {
+    const content = await fs.readFile(configPath, "utf-8");
+    current = JSON.parse(content) as StoredTranscriptionConfig;
+  } catch (_e) {
+    // No file yet, start fresh.
+  }
+  const merged: StoredTranscriptionConfig = { ...current, ...updates };
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(configPath, JSON.stringify(merged, null, 2) + "\n");
+  return loadTranscriptionConfig(boxRoot);
 }
 
 /**
@@ -82,6 +127,22 @@ export async function transcribeAudio(
   }
   if (config.service === "deepgram") {
     return transcribeAudioDeepgram(params);
+  }
+  return transcribeAudioWhisper(params);
+}
+
+/**
+ * HQ transcription pass for narration mode's checkpoint flow. Uses the
+ * `hqService` config field (whisper or voxtral — never deepgram, which
+ * is realtime-only). Same shape as `transcribeAudio` so callers can use
+ * either interchangeably; this just routes by the HQ field.
+ */
+export async function transcribeAudioHq(
+  params: TranscribeAudioParams
+): Promise<TranscriptionResult | DetailedTranscriptionResult> {
+  const config = await loadTranscriptionConfig(params.boxRoot);
+  if (config.hqService === "voxtral") {
+    return transcribeAudioVoxtral(params);
   }
   return transcribeAudioWhisper(params);
 }

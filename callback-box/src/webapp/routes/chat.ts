@@ -31,6 +31,7 @@ import {
   resolveSessionLogPath,
 } from "../../core/chat-session-history.js";
 import { resolveFeatures } from "../../core/chat-features.js";
+import { transcribeAudioHq } from "../../core/transcription.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { EventBus } from "../../core/event-bus.js";
@@ -657,9 +658,47 @@ export async function registerChatRoutes(
       }
       // `wireSession` bridges the session's `features-changed` event onto the
       // bus, so the SSE broadcast already fired. No explicit emit here.
-      return { ok: true, features: target.getFeatures() };
+      //
+      // Some features (narration) affect the system prompt, which is fixed
+      // at subprocess start — mirror set-model's restart pattern so the
+      // change actually takes effect. Mid-turn restarts defer to the next
+      // "done" event so the in-progress response isn't lost.
+      let restarted = false;
+      if (target.isRunning()) {
+        if (target.isBusy()) {
+          target.once("done", () => {
+            if (target.isRunning()) target.restart();
+          });
+        } else {
+          target.restart();
+          restarted = true;
+        }
+      }
+      return { ok: true, features: target.getFeatures(), restarted };
     },
   );
+
+  // POST /api/chat/transcribe-audio — narration-mode checkpoint HQ pass.
+  // Accepts a single audio file upload; dispatches to the configured HQ
+  // service (whisper or voxtral) and returns the transcribed text.
+  server.post("/api/chat/transcribe-audio", async (request, reply) => {
+    const data = await request.file();
+    if (!data) return reply.status(400).send({ error: "No audio uploaded" });
+    const buffer = await data.toBuffer();
+    const filename = data.filename || "segment.webm";
+    try {
+      const result = await transcribeAudioHq({
+        audioBuffer: buffer,
+        filename,
+        boxRoot,
+      });
+      return { text: result.text };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[transcribe-audio] HQ transcription failed:", msg);
+      return reply.status(500).send({ error: msg });
+    }
+  });
 
   // GET /api/chat/schedules — list active schedules (single per-box manager).
   server.get("/api/chat/schedules", async () => {

@@ -167,6 +167,7 @@ const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
 ];
 
 type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper";
+type HqTranscriptionOption = "whisper" | "voxtral";
 
 const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   label: string;
@@ -174,6 +175,14 @@ const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
 }> = [
   { label: "Voxtral (Mistral)", service: "voxtral" },
   { label: "Deepgram", service: "deepgram" },
+];
+
+const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
+  label: string;
+  service: HqTranscriptionOption;
+}> = [
+  { label: "Whisper (OpenAI)", service: "whisper" },
+  { label: "Voxtral (Mistral)", service: "voxtral" },
 ];
 
 /**
@@ -227,8 +236,10 @@ function ChatDebugMenu({
 }) {
   const transcriptionConfigQuery = trpc.transcription.config.useQuery();
   const setTranscriptionService = trpc.transcription.setService.useMutation();
+  const setHqTranscriptionService = trpc.transcription.setHqService.useMutation();
   const utils = trpc.useUtils();
   const currentService = transcriptionConfigQuery.data?.service ?? null;
+  const currentHqService = transcriptionConfigQuery.data?.hqService ?? null;
 
   const onSelectTranscriptionService = async (service: TranscriptionServiceOption) => {
     if (currentService === service) return;
@@ -237,6 +248,16 @@ function ChatDebugMenu({
       utils.transcription.config.invalidate();
     } catch (e) {
       console.error("[chat] Failed to set transcription service", e);
+    }
+  };
+
+  const onSelectHqTranscriptionService = async (hqService: HqTranscriptionOption) => {
+    if (currentHqService === hqService) return;
+    try {
+      await setHqTranscriptionService.mutateAsync({ hqService });
+      utils.transcription.config.invalidate();
+    } catch (e) {
+      console.error("[chat] Failed to set HQ transcription service", e);
     }
   };
 
@@ -278,13 +299,23 @@ function ChatDebugMenu({
         </MenuItem>
       ))}
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Transcription</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Transcription (live)</div>
       {TRANSCRIPTION_OPTIONS.map((opt) => (
         <MenuItem
           key={opt.service}
           onClick={() => onSelectTranscriptionService(opt.service)}
         >
           {currentService === opt.service ? "\u2713 " : "\u2007\u2007"}{opt.label}
+        </MenuItem>
+      ))}
+      <MenuDivider />
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Transcription (HQ)</div>
+      {HQ_TRANSCRIPTION_OPTIONS.map((opt) => (
+        <MenuItem
+          key={opt.service}
+          onClick={() => onSelectHqTranscriptionService(opt.service)}
+        >
+          {currentHqService === opt.service ? "\u2713 " : "\u2007\u2007"}{opt.label}
         </MenuItem>
       ))}
       <MenuDivider />
@@ -794,7 +825,7 @@ function LoadOlderHeader({ context }: { context?: ChatListContext }) {
 function VirtualizedMessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger,
+  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, proseEnabled,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -813,6 +844,7 @@ function VirtualizedMessageList({
   onLoadOlder: () => void;
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
+  proseEnabled: boolean;
 }) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const atBottomRef = useRef(true);
@@ -1007,6 +1039,7 @@ function VirtualizedMessageList({
                 speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
                 onStopSpeech={handleStopSpeech}
                 onZoomView={onZoomView}
+                proseEnabled={proseEnabled}
               />
             </div>
           );
@@ -1989,6 +2022,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         onLoadOlder={handleLoadOlder}
         loadingOlder={loadingOlder}
         scrollToBottomTrigger={scrollToBottomTrigger}
+        proseEnabled={chatFeatures.prose !== "off"}
       />
 
       {/* Error display */}

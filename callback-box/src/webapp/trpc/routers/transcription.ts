@@ -1,36 +1,36 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { z } from "zod";
 import ky, { type HTTPError } from "ky";
 import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import {
   loadTranscriptionConfig,
-  type TranscriptionService,
+  updateTranscriptionConfig,
 } from "../../../core/transcription.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
 
 const serviceSchema = z.enum(["voxtral", "deepgram", "whisper"]);
+const hqServiceSchema = z.enum(["whisper", "voxtral"]);
 
 export const transcriptionRouter = router({
   config: publicProcedure.query(async ({ ctx }) => {
     const cfg = await loadTranscriptionConfig(ctx.boxRoot);
-    return { service: cfg.service };
+    return { service: cfg.service, hqService: cfg.hqService };
   }),
 
   setService: publicProcedure
     .input(z.object({ service: serviceSchema }))
     .mutation(async ({ ctx, input }) => {
-      const service: TranscriptionService = input.service;
-      const configPath = path.join(ctx.boxRoot, "config/transcription.json");
-      await fs.mkdir(path.dirname(configPath), { recursive: true });
-      await fs.writeFile(
-        configPath,
-        JSON.stringify({ service }, null, 2) + "\n"
-      );
-      return { service };
+      const cfg = await updateTranscriptionConfig(ctx.boxRoot, { service: input.service });
+      return { service: cfg.service };
+    }),
+
+  setHqService: publicProcedure
+    .input(z.object({ hqService: hqServiceSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const cfg = await updateTranscriptionConfig(ctx.boxRoot, { hqService: input.hqService });
+      return { hqService: cfg.hqService };
     }),
 
   deepgramTempKey: publicProcedure.mutation(async ({ ctx }) => {
