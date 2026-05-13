@@ -14,6 +14,9 @@ import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } fro
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
+import { parseAcks, parseCallouts, stripStructuredOutputTags } from "../lib/structured-output-parsing";
+import { AckRow } from "./chat/AckIndicator";
+import { CalloutStack } from "./chat/CalloutBlock";
 
 /**
  * Parse a self-note block out of user-position text. Self-notes are
@@ -668,7 +671,10 @@ function ExternalLinkIndicator() {
  * Render markdown content with prose styling.
  */
 function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
-  const cleaned = useMemo(() => stripSpeechTags(text), [text]);
+  const cleaned = useMemo(
+    () => stripStructuredOutputTags(stripSpeechTags(text)),
+    [text],
+  );
   const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useCallback(
     (target: ViewTarget) => {
@@ -1120,6 +1126,10 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
   ).join("\n");
   const hasSpeech = hasAssistantSpeech(allText);
   const isPlaying = speechPlaying === true;
+  // Pulled out of the message body so prose rendering doesn't show raw XML;
+  // rendered in their own surfaces below/after the markdown groups.
+  const callouts = useMemo(() => parseCallouts(allText), [allText]);
+  const acks = useMemo(() => parseAcks(allText), [allText]);
 
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
@@ -1139,6 +1149,8 @@ export function AssistantMessage({ entries, debugView, speechPlaying, onStopSpee
           <ActivityGroup key={i} parts={group.parts} />
         )
       )}
+      {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
+      {!debugView ? <AckRow acks={acks} /> : null}
     </div>
   );
 }
