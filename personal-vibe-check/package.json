@@ -49,6 +49,7 @@
     "typescript-eslint": "^8.55.0"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "patch-package": "^8.0.0"
   },
   "license": "ISC",
