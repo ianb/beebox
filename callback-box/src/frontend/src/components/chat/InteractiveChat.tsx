@@ -19,6 +19,7 @@ import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAtt
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
+import { detectKeyword } from "../../lib/speech-keywords";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
 import { parseAllSpeechTags, VALID_VOICES, type SpeechSegment } from "../../lib/speech-parsing";
 import { getTTSClient } from "../../lib/tts-client";
@@ -1915,9 +1916,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
             if (hqText === null) {
               console.warn("[hq-transcribe] returned null — falling back to realtime");
               submit(text);
-            } else {
-              submit(hqText);
+              return;
             }
+            // Re-run keyword detection on the HQ text so the agent sees the
+            // send-message (or other) keyword as a pill, not plain words.
+            // If HQ misheard the keyword entirely, just submit the raw text.
+            const keyword = detectKeyword(hqText);
+            submit(keyword ? keyword.processedTranscript : hqText);
           })
           .finally(() => { setHqInFlight(false); });
       } else {
