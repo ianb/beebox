@@ -22,7 +22,7 @@ The closed set of recognized kinds.
 
 ```
 ACK_KINDS.map((k) => k.kind).join(",")
-=> created,appended,edited,todo-added,todo-completed
+=> created,appended,edited,todo-added,todo-completed,no-response
 
 getAckKind("appended")?.defaultPhrase
 => Added to it

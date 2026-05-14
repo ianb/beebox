@@ -58,6 +58,9 @@ export function AckIndicator({ ack, className }: { ack: AckIndication; className
   if (!descriptor) return null;
 
   const title = tooltipText(ack, descriptor.defaultPhrase);
+  // no-response is a "deliberate silence" signal — render quietly rather
+  // than with the loud accent treatment used for action-style acks.
+  const isMuted = ack.kind === "no-response";
 
   return (
     <span ref={containerRef} className={cn("relative inline-flex", className)}>
@@ -68,9 +71,10 @@ export function AckIndicator({ ack, className }: { ack: AckIndication; className
         title={title}
         className={cn(
           "inline-flex items-center justify-center w-7 h-7 rounded-full",
-          "bg-accent-dark text-white shadow-sm",
-          "hover:bg-accent transition-colors",
-          "text-base font-semibold leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+          isMuted
+            ? "bg-warm-100 text-warm-500 hover:bg-warm-200"
+            : "bg-accent-dark text-white shadow-sm hover:bg-accent",
+          "transition-colors text-base font-semibold leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
         )}
       >
         <span aria-hidden>{descriptor.icon}</span>

@@ -354,8 +354,9 @@ The \`kind\` attribute is required and must be one of:
 - \`edited\` — existing content was changed (not just added to)
 - \`todo-added\` — a new todo
 - \`todo-completed\` — a todo marked complete
+- \`no-response\` — you deliberately produced no reply (no prose, no callout, no action). Use this **instead of** writing "No response requested" or similar — it's the structured way to say "I heard you, nothing to do." No \`ref\` needed; no inner text needed.
 
-If no kind fits, don't use \`<ack>\` — write prose or a \`<callout>\` instead. Use inner text **conservatively**: omit it when the action is the obvious thing the user asked for; include it only when you did something the user couldn't have predicted from their input. Don't emit \`<ack>\` just to say "I heard you" — silence is the default acknowledgement when no actual work happened.
+If no kind fits an action-style ack, don't use \`<ack>\` — write prose or a \`<callout>\` instead. Use inner text **conservatively**: omit it when the action is the obvious thing the user asked for; include it only when you did something the user couldn't have predicted from their input. Don't emit \`<ack kind="no-response"/>\` and other acks together — the no-response tag means "I literally did nothing."
 
 CALLOUTS (\`<callout>\`):
 When part of your response is content the user must read — an answer to a real question, a proactive observation, an alert — wrap it in a \`<callout context="...">\` block. \`context\` is a short label that answers "why are you telling me this?" if the user encounters the callout cold (in a digest, notification, or feed preview). The body must stand alone — no "as you said" / "that thing" / "the one we discussed."
@@ -400,7 +401,7 @@ export const NARRATION_OVERLAY = `
 NARRATION MODE:
 This session is in narration mode. The user is dumping content — typically voice, long and loose, a stream of thoughts — not chatting. The mechanics of turns don't change (each user message still gets a turn), but the expectations on YOUR turn change sharply:
 
-- **Most turns produce no prose, no <speech>, and no <callout>** — only tool work (capture, file, follow up) and the <ack> indications that record it. Silence is the default.
+- **Most turns produce no prose, no <speech>, and no <callout>** — only tool work (capture, file, follow up) and the <ack> indications that record it. Silence is the default. If you do absolutely nothing in response to a turn, emit \`<ack kind="no-response"/>\` to signal that — never write "No response requested" or similar as prose.
 - **Don't echo the user.** No "Got it," no recap of what was said, no acknowledgement-by-prose ("I'll add that to your todos"). The <ack> chip is the acknowledgement. Treat narrated thoughts the way you'd treat someone thinking out loud near you.
 - **Don't reply to musings.** A stream-of-thought dump may include rhetorical asides — "maybe pasta?", "the kitchen is a mess", "I should probably do X" — which are NOT requests for input. Don't suggest pasta sauces, don't offer cleaning tips, don't respond at all.
 - **<ack> confirms work.** Inner text on the ack only when the action wasn't the obvious thing the user asked for.

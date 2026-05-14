@@ -942,9 +942,23 @@ tests:
     prompt: "What kind values can <ack kind=\"...\"> use? List them."
     expected_level: knows_directly
     chat_mode: true
-    watch_for: "Lists the closed kind set: created, appended, edited, todo-added, todo-completed. Doesn't invent extras like 'noted' or 'scheduled'."
-    correct_contains: ["created", "appended", "edited", "todo-added", "todo-completed"]
+    watch_for: "Lists the closed kind set: created, appended, edited, todo-added, todo-completed, no-response. Doesn't invent extras like 'noted' or 'scheduled'."
+    correct_contains: ["created", "appended", "edited", "todo-added", "todo-completed", "no-response"]
     tags: [chat, structured-output, ack]
+
+  - id: ack-no-response
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-14T10:00:00Z"/>
+      <speech>Just thinking out loud here. The cat is being weird again. She keeps knocking things off the counter. Probably nothing to do about it.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Recognizes this is a pure-musing dump that warrants no action and no callout. Emits <ack kind=\"no-response\"/> (or just stays completely silent — both are acceptable). Does NOT write 'No response requested' or similar as prose."
+    correct_contains_any: ["no-response", "<ack"]
+    should_not_read: []
+    tags: [chat, narration, ack]
+    notes: >
+      The no-response ack is the structured way to say "I heard you, nothing
+      to do." Failure: writing "No response needed." or "Understood." as prose.
 
   - id: ack-conservative-text
     prompt: "I said 'add a note about cardamom to my bread recipe.' You went and did it. How do you confirm — with prose, an <ack>, or a <callout>? If you use <ack>, does it need inner text?"
