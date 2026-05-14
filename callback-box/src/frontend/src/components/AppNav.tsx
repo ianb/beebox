@@ -116,7 +116,6 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
     { to: `${base}/news`, label: "News", match: (p: string) => p.startsWith(`${base}/news`) },
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
     { to: `${base}/landmarks`, label: "Landmarks", match: (p: string) => p.startsWith(`${base}/landmarks`) },
-    { to: `${base}/activities`, label: "Activities", match: (p: string) => p.startsWith(`${base}/activities`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
     { to: `${base}/capture`, label: "Capture", match: (p: string) => p.startsWith(`${base}/capture`) },
   ];

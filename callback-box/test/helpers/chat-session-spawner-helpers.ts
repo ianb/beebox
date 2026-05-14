@@ -9,21 +9,15 @@ import type { ChatSession, ChatSessionOptions } from "../../src/core/chat-sessio
 import type { FakeChatBackend } from "../../src/services/claude-chat.js";
 
 export async function setupSystemPrompt(): Promise<string> { return "setup"; }
-export async function mainSystemPrompt(): Promise<string> { return "main"; }
 export async function testPrompt(): Promise<string> { return "TEST PROMPT"; }
 export async function testPromptShort(): Promise<string> { return "TEST"; }
-export async function xPrompt(): Promise<string> { return "x"; }
 export async function plainTestPrompt(): Promise<string> { return "test"; }
 
-export const SETUP_FILE = "store/activities/poly/x/.callback-box/current-session-setup.json";
-export const MAIN_FILE = "store/activities/poly/x/.callback-box/current-session-main.json";
+export const SETUP_FILE = "store/chats/x/.callback-box/current-session-setup.json";
+export const MAIN_FILE = "store/chats/x/.callback-box/current-session-main.json";
 
 export function buildSetupOpts(backend: FakeChatBackend): ChatSessionOptions {
   return { backend, systemPrompt: setupSystemPrompt, sessionFile: SETUP_FILE, skipBootstrap: true };
-}
-
-export function buildMainOpts(backend: FakeChatBackend): ChatSessionOptions {
-  return { backend, systemPrompt: mainSystemPrompt, sessionFile: MAIN_FILE, skipBootstrap: true };
 }
 
 export function buildReopenSetupOpts(backend: FakeChatBackend): ChatSessionOptions {

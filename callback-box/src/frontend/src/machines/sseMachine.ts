@@ -45,10 +45,6 @@ const EVENT_TYPES = [
   "chat-history",
   "chat-user-message",
   "chat-session-assigned",
-  "activity-chat-message",
-  "activity-chat-turn-text",
-  "activity-chat-done",
-  "activity-chat-close",
 ];
 
 interface SSEActorInput {

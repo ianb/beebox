@@ -48,7 +48,6 @@ import {
   usageCommand,
   driveCommand,
   chatCommand,
-  activityCommand,
   refreshMapsCommand,
   feedbackCommand,
 } from "./commands/index.js";
@@ -101,7 +100,6 @@ program.addCommand(lsCommand);
 program.addCommand(renderCommand);
 program.addCommand(usageCommand);
 program.addCommand(chatCommand);
-program.addCommand(activityCommand);
 program.addCommand(refreshMapsCommand);
 program.addCommand(feedbackCommand);
 

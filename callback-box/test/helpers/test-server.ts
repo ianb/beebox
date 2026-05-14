@@ -22,7 +22,6 @@ import type { FastifyInstance } from "fastify";
 import { initBox } from "../../src/core/box.js";
 import { createServer } from "../../src/webapp/server.js";
 import type { Services } from "../../src/services/index.js";
-import type { ActivityChatSessionPool, ActivityRegistry } from "../../src/activities/index.js";
 
 export const TEST_SLUG = "test";
 
@@ -34,8 +33,6 @@ export interface TestServerContext {
 
 export interface TestServerOptions {
   services?: Services;
-  activityRegistry?: ActivityRegistry;
-  activityChatPool?: ActivityChatSessionPool;
 }
 
 export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
@@ -54,8 +51,6 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   const server = await createServer({
     boxes: [{ slug: TEST_SLUG, boxRoot: tmpDir }],
     services: opts?.services,
-    activityRegistry: opts?.activityRegistry,
-    activityChatPool: opts?.activityChatPool,
   });
 
   return {

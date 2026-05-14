@@ -1,6 +1,6 @@
 # Activities — Design Proposal
 
-Status: proposal, for review. Not yet a spec.
+> **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in features. See [activities-retrospective.md](activities-retrospective.md). The rest of this doc is kept as historical record.
 
 ## Motivation
 

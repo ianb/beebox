@@ -1,7 +1,6 @@
 /**
- * Pure helpers shared by chatMachine (regular chat) and activityChatMachine
- * (per-activity chat). Kept free of tRPC / SSE / API concerns so both
- * machines can drop them in unchanged.
+ * Pure helpers shared by chat machines. Kept free of tRPC / SSE / API
+ * concerns so machines can drop them in unchanged.
  */
 
 import type {

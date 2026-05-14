@@ -35,7 +35,6 @@ import {
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { generateDocs } from "./generate-docs.js";
 import { buildScriptEnv } from "./script-env.js";
-import type { ActivityMcpConfig } from "../activities/index.js";
 import {
   createChatBackend,
   type ChatBackend,
@@ -194,16 +193,10 @@ const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 /**
  * Configurable knobs for a ChatSession. All fields are optional — the
  * defaults match the pre-existing "main chat" behavior.
- *
- * Activity sessions pass overrides for `systemPrompt` (base + mode prompt),
- * `mcpConfig` (tools), `sessionFile` (per-instance pointer), `extraEnv`
- * (CB_ACTIVITY_*), and `onSessionIdAssigned` (per-session bookkeeping).
  */
 export interface ChatSessionOptions {
   /** Resolves the system prompt at process-start. Default: CHAT_SYSTEM_PROMPT + tzContext. */
   systemPrompt?: (boxRoot: string) => Promise<string>;
-  /** MCP server config. Passed directly to the SDK as the `cb-activity` server. */
-  mcpConfig?: ActivityMcpConfig | null;
   /**
    * Path to the current-session-id pointer, relative to boxRoot.
    * Default: .callback-box/chat-session-id.json. Set to `null` to opt out of
@@ -737,7 +730,6 @@ export class ChatSession extends EventEmitter {
     const startOpts: ChatBackendStartOptions = {
       cwd,
       systemPrompt,
-      mcpConfig: this.options.mcpConfig ?? null,
       includePartialMessages: this.options.includePartialMessages === true,
       env,
     };

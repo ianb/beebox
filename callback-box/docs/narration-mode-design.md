@@ -2,6 +2,8 @@
 
 Status: proposal, for discussion.
 
+> Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phased out work"). Activities have since been removed entirely — see [activities-retrospective.md](activities-retrospective.md). The narration-as-piecemeal-feature direction described here is what stuck.
+
 ## Motivation
 
 Today's chat assumes a conversational rhythm: each user message is a discrete utterance or question, the agent replies, repeat. That's the right default for a conversational assistant — and the wrong shape when the user wants to *narrate*: speak for a long stretch, dump content the agent should sort and file, only sometimes ask a question that needs a real answer.

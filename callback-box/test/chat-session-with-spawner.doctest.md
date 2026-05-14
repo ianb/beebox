@@ -20,13 +20,10 @@ import {
   runTurn,
   tick,
   waitForRuns,
-  setupSystemPrompt,
   testPrompt,
   testPromptShort,
-  xPrompt,
   plainTestPrompt,
   buildSetupOpts,
-  buildMainOpts,
   buildReopenSetupOpts,
   buildReopenMainOpts,
   SETUP_FILE,
@@ -37,14 +34,14 @@ import { once } from "node:events";
 
 ## Backend sees the right options
 
-`ChatSession` builds system prompt + env + resume id + MCP config and
-hands them to the backend. With an override prompt and extra env the
-fake captures both:
+`ChatSession` builds system prompt + env + resume id and hands them to
+the backend. With an override prompt and extra env the fake captures
+both:
 
 ```
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
-const opts = { backend, systemPrompt: testPrompt, extraEnv: { CB_ACTIVITY_NAME: "polyglot", CB_ACTIVITY_MODE: "setup" }, skipBootstrap: true };
+const opts = { backend, systemPrompt: testPrompt, extraEnv: { CB_TEST_FOO: "foo", CB_TEST_BAR: "bar" }, skipBootstrap: true };
 const session = new ChatSession(box.root, opts);
 
 await session.send("hello");
@@ -54,11 +51,11 @@ const run = backend.lastRun();
 run !== null && run.startOptions.systemPrompt
 => TEST PROMPT
 
-run !== null && run.startOptions.env.CB_ACTIVITY_NAME
-=> polyglot
+run !== null && run.startOptions.env.CB_TEST_FOO
+=> foo
 
-run !== null && run.startOptions.env.CB_ACTIVITY_MODE
-=> setup
+run !== null && run.startOptions.env.CB_TEST_BAR
+=> bar
 
 run !== null && run.startOptions.resumeSessionId
 => undefined
@@ -116,12 +113,10 @@ session.stop();
 await box.cleanup();
 ```
 
-## Custom sessionFile isolates activity sessions
+## Custom sessionFile isolates per-thread sessions
 
-Activity chat sessions store their session-id pointer inside the
-instance dir, keyed by mode. A session with a custom `sessionFile`
-writes its id to that file; a session pointed at a different
-`sessionFile` sees a blank slate.
+A session with a custom `sessionFile` writes its id to that file; a
+session pointed at a different `sessionFile` sees a blank slate.
 
 ```
 const box = await makeTmpBox();
@@ -145,38 +140,6 @@ reopen.getSessionId()
 const mainSession = new ChatSession(box.root, buildReopenMainOpts(backend));
 mainSession.getSessionId()
 => null
-```
-
-```cleanup
-session.stop();
-await box.cleanup();
-```
-
-## MCP config flows through to the backend
-
-When `mcpConfig` is provided, ChatSession passes it through to the
-backend as the `cb-activity` MCP server. The SDK takes it directly
-(no temp file needed).
-
-```
-const box = await makeTmpBox();
-const backend = createFakeChatBackend();
-const mcp = { command: "tsx", args: ["mcp.ts"], env: { FOO: "bar" } };
-const opts = { backend, systemPrompt: xPrompt, mcpConfig: mcp, skipBootstrap: true };
-const session = new ChatSession(box.root, opts);
-
-await session.send("hi");
-await tick();
-
-const run = backend.lastRun();
-run.startOptions.mcpConfig.command
-=> tsx
-
-run.startOptions.mcpConfig.args[0]
-=> mcp.ts
-
-run.startOptions.mcpConfig.env.FOO
-=> bar
 ```
 
 ```cleanup

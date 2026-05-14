@@ -24,7 +24,6 @@ import {
   type SDKUserMessage,
   type WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { ActivityMcpConfig } from "../activities/index.js";
 import { cardValidatorHook } from "../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
 
@@ -56,8 +55,6 @@ export interface ChatBackendStartOptions {
   systemPrompt: string;
   /** If set, resumes the given SDK session; otherwise a fresh session. */
   resumeSessionId?: string | undefined;
-  /** Optional MCP server (registered as `cb-activity`). */
-  mcpConfig?: ActivityMcpConfig | null;
   /** Pin to a specific model; omit for SDK default. */
   model?: string | undefined;
   /**
@@ -91,7 +88,7 @@ export interface ChatBackend {
   /**
    * Pre-warm a Claude subprocess against `opts` so the next `start()` with
    * compatible options skips spawn + initialize latency. Compatibility means:
-   * same `cwd`, same `systemPrompt`, no `resumeSessionId`, no `mcpConfig`,
+   * same `cwd`, same `systemPrompt`, no `resumeSessionId`,
    * and matching `includePartialMessages`/`model`. The warm slot is
    * single-use; the backend re-warms automatically after consumption.
    *
@@ -197,19 +194,13 @@ function buildQueryOptions(opts: ChatBackendStartOptions): Options {
   if (opts.includePartialMessages === true) {
     queryOptions.includePartialMessages = true;
   }
-  if (opts.mcpConfig) {
-    // In-process SDK MCP server (built via createSdkMcpServer in the
-    // activity). The SDK accepts the config object — including its
-    // `instance` — directly; no subprocess hop.
-    queryOptions.mcpServers = { "cb-activity": opts.mcpConfig };
-  }
   return queryOptions;
 }
 
 /**
  * Whether a `start()` call's options are compatible with a pre-warmed slot.
  * The warm subprocess has its options baked in, so we only consume it if
- * everything that affects the subprocess (cwd, system prompt, model, MCP,
+ * everything that affects the subprocess (cwd, system prompt, model,
  * partial-messages, no resume) matches.
  */
 function warmCompatible(
@@ -227,12 +218,7 @@ function warmCompatible(
   for (const [i, dir] of wd.entries()) {
     if (dir !== nd[i]) return false;
   }
-  // MCP config carries an `instance` (an MCP server object). Two configs
-  // are warm-compatible only if they're the very same instance — otherwise
-  // tools differ and the warm subprocess can't serve the next start.
-  const wm = warm.mcpConfig ?? null;
-  const nm = next.mcpConfig ?? null;
-  return wm === nm;
+  return true;
 }
 
 export function createChatBackend(): ChatBackend {

@@ -35,7 +35,6 @@ Cards are the core data format — XML files validated by Zod schemas via cardwo
 ```
 src/cli/          CLI commands (wakeup, validate, execute-commands, etc.)
 src/core/         Wakeup cycle, agent invocation, state, procedure engine
-src/activities/   Activity runtime (Activity classes, registry, modes, session pool)
 src/connectors/   External integrations (rss, gmail, telegram, etc.)
 src/webapp/       Fastify server, API routes, SSE
   routes/         HTTP route handlers
