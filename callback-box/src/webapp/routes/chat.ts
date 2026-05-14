@@ -683,15 +683,20 @@ export async function registerChatRoutes(
   // service (whisper or voxtral) and returns the transcribed text.
   server.post("/api/chat/transcribe-audio", async (request, reply) => {
     const data = await request.file();
-    if (!data) return reply.status(400).send({ error: "No audio uploaded" });
+    if (!data) {
+      console.warn("[transcribe-audio] no audio in request");
+      return reply.status(400).send({ error: "No audio uploaded" });
+    }
     const buffer = await data.toBuffer();
     const filename = data.filename || "segment.webm";
+    console.info(`[transcribe-audio] received ${buffer.length} bytes (${filename})`);
     try {
       const result = await transcribeAudioHq({
         audioBuffer: buffer,
         filename,
         boxRoot,
       });
+      console.info(`[transcribe-audio] HQ returned ${result.text.length} chars: "${result.text.slice(0, 80)}${result.text.length > 80 ? "…" : ""}"`);
       return { text: result.text };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

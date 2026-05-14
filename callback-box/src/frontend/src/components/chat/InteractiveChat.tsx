@@ -1910,10 +1910,22 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       };
       if (narrationEnabledRef.current && audioBlob) {
         setHqInFlight(true);
+        console.info(`[hq-transcribe] POST starting (audioBlobSize=${audioBlob.size}, realtimeText="${text.slice(0, 80)}${text.length > 80 ? "…" : ""}")`);
         void postAudioForHqTranscription(audioBlob)
-          .then((hqText) => { submit(hqText ?? text); })
+          .then((hqText) => {
+            if (hqText === null) {
+              console.warn("[hq-transcribe] returned null — falling back to realtime");
+              submit(text);
+            } else {
+              console.info(`[hq-transcribe] returned (hqLen=${hqText.length}): "${hqText.slice(0, 80)}${hqText.length > 80 ? "…" : ""}"`);
+              submit(hqText);
+            }
+          })
           .finally(() => { setHqInFlight(false); });
       } else {
+        if (narrationEnabledRef.current) {
+          console.warn("[hq-transcribe] narration enabled but no audioBlob — submitting realtime text");
+        }
         submit(text);
       }
       // Restart recording so the user can keep talking
