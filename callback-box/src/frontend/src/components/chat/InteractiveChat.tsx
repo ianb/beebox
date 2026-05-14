@@ -819,6 +819,26 @@ function chunkOnParagraphs(text: string): string {
 }
 
 /**
+ * In-flight user message during narration's HQ transcription pass. Shows
+ * the realtime transcript as a faded user bubble with a "finalizing
+ * transcript…" caption, so the user sees that the system is working on
+ * their message rather than nothing happening.
+ */
+function PendingHqMessage({ text }: { text: string }) {
+  return (
+    <div className="pl-4 sm:pl-24 pr-3 sm:pr-6 py-2 flex flex-col items-end gap-1">
+      <div className="max-w-[80%] rounded-2xl px-4 py-2 bg-primary/60 text-white">
+        {text}
+      </div>
+      <div className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
+        <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
+        finalizing transcript…
+      </div>
+    </div>
+  );
+}
+
+/**
  * Streaming content being built up during a turn.
  */
 function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
@@ -846,13 +866,15 @@ type DataItem =
   | { kind: "group"; group: MessageGroup; groupIndex: number }
   | { kind: "marker"; marker: ModelMarker }
   | { kind: "stream" }
-  | { kind: "processing" };
+  | { kind: "processing" }
+  | { kind: "pendingHq"; text: string };
 
 function dataItemKey(d: DataItem): string {
   switch (d.kind) {
     case "marker": return `marker-${d.marker.id}`;
     case "stream": return "stream";
     case "processing": return "processing";
+    case "pendingHq": return "pendingHq";
     case "group": return d.group.entries[0].uuid;
   }
 }
@@ -888,7 +910,7 @@ function LoadOlderHeader({ context }: { context?: ChatListContext }) {
 function VirtualizedMessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, proseEnabled,
+  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, proseEnabled, pendingHqDraft,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -908,6 +930,7 @@ function VirtualizedMessageList({
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
   proseEnabled: boolean;
+  pendingHqDraft: string | null;
 }) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const atBottomRef = useRef(true);
@@ -937,10 +960,11 @@ function VirtualizedMessageList({
         if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
       }
     }
+    if (pendingHqDraft !== null) items.push({ kind: "pendingHq", text: pendingHqDraft });
     if (streamingShown) items.push({ kind: "stream" });
     else if (processingShown) items.push({ kind: "processing" });
     return items;
-  }, [groups, modelMarkers, streamingShown, processingShown]);
+  }, [groups, modelMarkers, streamingShown, processingShown, pendingHqDraft]);
 
   // Track first-data-key across renders. When older messages prepend, the
   // key shifts from data[0] to data[N], and we decrement firstItemIndex by
@@ -1073,6 +1097,9 @@ function VirtualizedMessageList({
                 Agent is processing…
               </div>
             );
+          }
+          if (item.kind === "pendingHq") {
+            return <PendingHqMessage text={item.text} />;
           }
           const group = item.group;
           const groupIndex = item.groupIndex;
@@ -1894,6 +1921,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const narrationEnabledRef = useRef(narrationEnabled);
   useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
   const [hqInFlight, setHqInFlight] = useState(false);
+  // Realtime transcript shown as a pending user-message bubble while the
+  // HQ pass runs. Null when no narration submit is in flight. Driven by
+  // the same lifecycle as hqInFlight but carries the text to render.
+  const [pendingHqDraft, setPendingHqDraft] = useState<string | null>(null);
   const transcription = useRealtimeTranscription({
     wantAudioBlob: () => narrationEnabledRef.current,
     onKeywordSend: (text, audioBlob) => {
@@ -1911,8 +1942,12 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       };
       if (narrationEnabledRef.current && audioBlob) {
         setHqInFlight(true);
+        setPendingHqDraft(text);
         void postAudioForHqTranscription(audioBlob)
           .then((hqText) => {
+            // Clear the pending bubble before submit so it doesn't overlap
+            // with the real user message about to land in the chat history.
+            setPendingHqDraft(null);
             if (hqText === null) {
               console.warn("[hq-transcribe] returned null — falling back to realtime");
               submit(text);
@@ -2118,6 +2153,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         loadingOlder={loadingOlder}
         scrollToBottomTrigger={scrollToBottomTrigger}
         proseEnabled={chatFeatures.prose !== "off"}
+        pendingHqDraft={pendingHqDraft}
       />
 
       {/* Error display */}
