@@ -152,7 +152,6 @@ export function useRealtimeTranscription(
   const fireKeyword = useCallback((keyword: KeywordResult) => {
     if (keyword.action === "send") {
       const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
-      console.info(`[transcription] send keyword fired (wantBlob=${wantBlob}, textLen=${keyword.processedTranscript.length})`);
       if (wantBlob) {
         // Slow path: park the text and STOP so the machine finalizes and
         // emits the segment's audio blob. The idle-transition effect below
@@ -185,9 +184,7 @@ export function useRealtimeTranscription(
     if (state !== "idle" || pendingSendTextRef.current === null) return;
     const text = pendingSendTextRef.current;
     pendingSendTextRef.current = null;
-    const blob = snapshot.context.audioBlob;
-    console.info(`[transcription] slow-path firing onKeywordSend (textLen=${text.length}, audioBlobSize=${blob ? blob.size : "null"})`);
-    optionsRef.current?.onKeywordSend?.(text, blob);
+    optionsRef.current?.onKeywordSend?.(text, snapshot.context.audioBlob);
   }, [state, snapshot.context.audioBlob]);
 
   // Keyword detection on confirmed (final) text — matches anywhere, so it

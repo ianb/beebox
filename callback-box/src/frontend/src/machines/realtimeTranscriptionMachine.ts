@@ -211,7 +211,6 @@ const transcriptionActor = fromCallback<
   const audioChunks: ArrayBuffer[] = [];
 
   function takeAudioBlob(): Blob | undefined {
-    console.info(`[transcription-actor] takeAudioBlob called, audioChunks.length=${audioChunks.length}`);
     if (audioChunks.length === 0) return undefined;
     const blob = encodePcmChunksAsWav(audioChunks);
     audioChunks.length = 0;
@@ -308,17 +307,12 @@ const transcriptionActor = fromCallback<
         }
       };
 
-      let chunkCount = 0;
       workletNode.port.onmessage = (event) => {
         if (event.data.type === "pcm") {
           // Also keep a copy for the HQ pass (narration mode). Clone before
           // forwarding because the worklet transfers ownership of the
           // ArrayBuffer to the main thread.
           audioChunks.push(event.data.samples.slice(0));
-          chunkCount += 1;
-          if (chunkCount === 1 || chunkCount % 20 === 0) {
-            console.info(`[transcription-actor] PCM chunk #${chunkCount} arrived, audioChunks.length=${audioChunks.length}`);
-          }
           if (connection) connection.sendPcm(event.data.samples);
         }
       };
@@ -333,7 +327,6 @@ const transcriptionActor = fromCallback<
   })();
 
   receive((event) => {
-    console.info(`[transcription-actor] receive got event type=${event.type}`);
     if (event.type === "STOP") {
       // Stop capturing audio; tell the service we're done.
       if (stream) {
@@ -355,7 +348,6 @@ const transcriptionActor = fromCallback<
       // the machine is already in idle and the event is ignored. The audio
       // blob is the thing we actually need for narration's HQ pass.
       const audioBlob = takeAudioBlob();
-      console.info(`[transcription-actor] STOP handler sending TRANSCRIPTION_DONE (audioBlob=${audioBlob ? audioBlob.size : "undefined"})`);
       sendBack({ type: "TRANSCRIPTION_DONE", audioBlob });
     } else if (event.type === "CANCEL") {
       cleanup();
@@ -417,7 +409,6 @@ export const realtimeTranscriptionMachine = setup({
     }),
     sendStopToTranscriber: ({ system }) => {
       const transcriber = system.get("transcriber");
-      console.info(`[machine] sendStopToTranscriber — transcriber=${transcriber ? "present" : "null"}`);
       if (transcriber) {
         transcriber.send({ type: "STOP" });
       }

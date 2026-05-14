@@ -1910,14 +1910,12 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       };
       if (narrationEnabledRef.current && audioBlob) {
         setHqInFlight(true);
-        console.info(`[hq-transcribe] POST starting (audioBlobSize=${audioBlob.size}, realtimeText="${text.slice(0, 80)}${text.length > 80 ? "…" : ""}")`);
         void postAudioForHqTranscription(audioBlob)
           .then((hqText) => {
             if (hqText === null) {
               console.warn("[hq-transcribe] returned null — falling back to realtime");
               submit(text);
             } else {
-              console.info(`[hq-transcribe] returned (hqLen=${hqText.length}): "${hqText.slice(0, 80)}${hqText.length > 80 ? "…" : ""}"`);
               submit(hqText);
             }
           })
