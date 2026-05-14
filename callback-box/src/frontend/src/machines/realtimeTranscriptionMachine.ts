@@ -211,6 +211,7 @@ const transcriptionActor = fromCallback<
   const audioChunks: ArrayBuffer[] = [];
 
   function takeAudioBlob(): Blob | undefined {
+    console.info(`[transcription-actor] takeAudioBlob called, audioChunks.length=${audioChunks.length}`);
     if (audioChunks.length === 0) return undefined;
     const blob = encodePcmChunksAsWav(audioChunks);
     audioChunks.length = 0;
@@ -307,12 +308,17 @@ const transcriptionActor = fromCallback<
         }
       };
 
+      let chunkCount = 0;
       workletNode.port.onmessage = (event) => {
         if (event.data.type === "pcm") {
           // Also keep a copy for the HQ pass (narration mode). Clone before
           // forwarding because the worklet transfers ownership of the
           // ArrayBuffer to the main thread.
           audioChunks.push(event.data.samples.slice(0));
+          chunkCount += 1;
+          if (chunkCount === 1 || chunkCount % 20 === 0) {
+            console.info(`[transcription-actor] PCM chunk #${chunkCount} arrived, audioChunks.length=${audioChunks.length}`);
+          }
           if (connection) connection.sendPcm(event.data.samples);
         }
       };
