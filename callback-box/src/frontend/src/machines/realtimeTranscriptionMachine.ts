@@ -333,6 +333,7 @@ const transcriptionActor = fromCallback<
   })();
 
   receive((event) => {
+    console.info(`[transcription-actor] receive got event type=${event.type}`);
     if (event.type === "STOP") {
       // Stop capturing audio; tell the service we're done.
       if (stream) {
@@ -354,6 +355,7 @@ const transcriptionActor = fromCallback<
       // the machine is already in idle and the event is ignored. The audio
       // blob is the thing we actually need for narration's HQ pass.
       const audioBlob = takeAudioBlob();
+      console.info(`[transcription-actor] STOP handler sending TRANSCRIPTION_DONE (audioBlob=${audioBlob ? audioBlob.size : "undefined"})`);
       sendBack({ type: "TRANSCRIPTION_DONE", audioBlob });
     } else if (event.type === "CANCEL") {
       cleanup();
