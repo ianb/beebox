@@ -1141,16 +1141,16 @@ Procedure cards in \`config/procedures/\` are installed by \`cb init\` from buil
 
 - **\`cb init\` on a fresh box**: Templates are copied directly.
 - **\`cb init\` on an existing box (unchanged procedures)**: Templates are updated in place.
-- **\`cb init\` on an existing box (modified procedures)**: The new template is written as \`<name>.orig-procedure.card\` alongside your modified version. You can diff them and merge manually.
+- **\`cb init\` on an existing box (modified procedures)**: The new template is parked under \`config/_template-updates/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`config/procedures/<name>.procedure.card\` is left untouched.
 
 To check for updates:
 \`\`\`bash
-ls config/procedures/*.orig-procedure.card
+ls config/_template-updates/procedures/
 # If any exist, compare with the main version and merge changes
-diff config/procedures/process-news.procedure.card config/procedures/process-news.orig-procedure.card
+diff config/procedures/process-news.procedure.card config/_template-updates/procedures/process-news.procedure.card
 \`\`\`
 
-After merging, delete the \`.orig-procedure.card\` file. The next \`cb init\` will see your merged version as the current copy.
+After merging, delete the file under \`config/_template-updates/procedures/\`. The next \`cb init\` will see your merged version as the current copy.
 
 ## Git History
 

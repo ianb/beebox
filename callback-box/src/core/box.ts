@@ -204,12 +204,32 @@ export async function getBoxMetadata(
 }
 
 /**
+ * Subdirectory under `config/` that holds template-update notifications.
+ * When `cb init` runs on a box whose copy of a procedure/guide/scheduled-script
+ * differs from the bundled template, the latest template is written here
+ * (mirroring the parent layout) so the user can diff and merge manually.
+ *
+ * Hidden via the leading underscore so it doesn't clutter the active config
+ * listing, but tracked in git (unlike `.callback-box/`).
+ */
+const TEMPLATE_UPDATES_DIRNAME = "_template-updates";
+
+/**
+ * Compute the path under `config/_template-updates/` that mirrors a file's
+ * location under `config/`. e.g. `config/procedures/foo.procedure.card`
+ * → `config/_template-updates/procedures/foo.procedure.card`.
+ */
+function templateUpdatePath(boxRoot: string, relativeUnderConfig: string): string {
+  return path.join(boxRoot, "config", TEMPLATE_UPDATES_DIRNAME, relativeUnderConfig);
+}
+
+/**
  * Install procedure templates into a box.
  *
  * On fresh install: copies template procedure cards to config/procedures/.
  * On update: if the box's copy matches the previously installed version,
  * updates it. If the box's copy has been modified, writes the new version
- * as a .orig-procedure.card file for manual merging.
+ * into `config/_template-updates/procedures/` for manual merging.
  *
  * @returns List of installed/updated procedure names
  */
@@ -253,10 +273,12 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
     } else if (existingContent === templateContent) {
       // Already up to date
     } else {
-      // Box copy differs from template — write as .orig for manual merge
-      const origName = file.replace(".procedure.card", ".orig-procedure.card");
-      await fs.writeFile(path.join(targetDir, origName), templateContent);
-      installed.push(`${origName} (update available)`);
+      // Box copy differs from template — park the new template in
+      // config/_template-updates/procedures/ for manual merge.
+      const updatePath = templateUpdatePath(boxRoot, path.join("procedures", file));
+      await fs.mkdir(path.dirname(updatePath), { recursive: true });
+      await fs.writeFile(updatePath, templateContent);
+      installed.push(`${TEMPLATE_UPDATES_DIRNAME}/procedures/${file} (update available)`);
     }
   }
 
@@ -283,7 +305,7 @@ function normalizeGuideForComparison(content: string): string {
  * On fresh install: writes default guide cards to config/.
  * On update: if the box's copy matches the template (ignoring timestamps),
  * overwrites it with the latest template. If the user has modified the guide,
- * writes the new version as a .orig-guide.card for manual merging.
+ * parks the new template under `config/_template-updates/` for manual merging.
  *
  * Skips any domain where a guide already exists from migration (e.g., news
  * guide migrated from the legacy news-guide format).
@@ -319,10 +341,11 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
       // Template content matches (user hasn't modified it) — overwrite with latest
       await fs.writeFile(targetPath, templateContent);
     } else {
-      // User has modified the guide — write .orig for manual merge
-      const origName = `${domain}.orig-guide.card`;
-      await fs.writeFile(path.join(configDir, origName), templateContent);
-      installed.push(`${origName} (update available)`);
+      // User has modified the guide — park the new template for manual merge.
+      const updatePath = templateUpdatePath(boxRoot, `${domain}.guide.card`);
+      await fs.mkdir(path.dirname(updatePath), { recursive: true });
+      await fs.writeFile(updatePath, templateContent);
+      installed.push(`${TEMPLATE_UPDATES_DIRNAME}/${domain}.guide.card (update available)`);
     }
   }
 
@@ -515,9 +538,10 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
     } else if (existingContent === templateContent) {
       // Already up to date
     } else {
-      const origName = `${sched.name}.orig-scheduled-script.card`;
-      await fs.writeFile(path.join(schedulesDir, origName), templateContent);
-      installed.push(`${origName} (update available)`);
+      const updatePath = templateUpdatePath(boxRoot, path.join("schedules", fileName));
+      await fs.mkdir(path.dirname(updatePath), { recursive: true });
+      await fs.writeFile(updatePath, templateContent);
+      installed.push(`${TEMPLATE_UPDATES_DIRNAME}/schedules/${fileName} (update available)`);
     }
   }
 
