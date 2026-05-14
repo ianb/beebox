@@ -455,6 +455,13 @@ export const realtimeTranscriptionMachine = setup({
     active: {
       invoke: {
         id: "transcriber",
+        // systemId makes the actor reachable via `system.get("transcriber")`
+        // in actions. Without it, `id` is only scoped to the invocation
+        // and system.get returns null — which silently broke
+        // sendStopToTranscriber (pre-existing; never noticed because the
+        // old voice flow used CANCEL which exits `active` and tears down
+        // the actor that way).
+        systemId: "transcriber",
         src: "transcriptionActor",
         input: {},
       },
