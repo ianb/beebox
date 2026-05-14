@@ -334,8 +334,7 @@ const transcriptionActor = fromCallback<
 
   receive((event) => {
     if (event.type === "STOP") {
-      // Stop capturing audio; tell the service we're done; keep WS open
-      // so the final transcript can arrive.
+      // Stop capturing audio; tell the service we're done.
       if (stream) {
         for (const track of stream.getTracks()) {
           track.stop();
@@ -348,6 +347,14 @@ const transcriptionActor = fromCallback<
       if (connection) {
         connection.endStream();
       }
+      // Finalize the segment immediately rather than waiting on the WS to
+      // send transcription.done — that often takes seconds or never arrives
+      // (FINALIZE_TIMEOUT fallback). The realtime transcript in machine
+      // context is what we have; if a better text arrives later from the WS,
+      // the machine is already in idle and the event is ignored. The audio
+      // blob is the thing we actually need for narration's HQ pass.
+      const audioBlob = takeAudioBlob();
+      sendBack({ type: "TRANSCRIPTION_DONE", audioBlob });
     } else if (event.type === "CANCEL") {
       cleanup();
     }
