@@ -33,7 +33,10 @@ export interface PickerLandmark {
   label: string;
   symbol: string;
   symbolSrc: string | null;
+  /** Sessions touched within the fresh window (last 7 days). */
   sessions: PickerSession[];
+  /** Sessions older than the fresh window, same landmark. */
+  olderSessions: PickerSession[];
 }
 
 function readChildText(element: ElementNode, tagName: string): string {
@@ -119,9 +122,8 @@ interface SessionRow {
   label: string;
 }
 
-async function loadFreshSessions(
+async function loadAllSessions(
   boxRoot: string,
-  cutoff: number,
 ): Promise<SessionRow[]> {
   const entries = await loadHistoryEntries(boxRoot);
   const rows: SessionRow[] = [];
@@ -139,11 +141,10 @@ async function loadFreshSessions(
     } catch {
       continue; // log missing — session was cleaned up
     }
-    if (mtime.getTime() < cutoff) continue;
 
     let label = entry.id.slice(0, 8);
     try {
-      const meta = await getSessionMetadata({ sessionId: entry.id, logPath });
+      const meta = await getSessionMetadata({ sessionId: entry.id, logPath, snippetMaxLen: 400 });
       if (meta.firstUserSnippet) label = meta.firstUserSnippet;
     } catch {
       // keep the id-prefix fallback
@@ -197,35 +198,43 @@ export const chatRouter = router({
     freshCount: number;
   }> => {
     const cutoff = Date.now() - FRESH_WINDOW_MS;
-    const [landmarks, freshSessions] = await Promise.all([
+    const [landmarks, allSessions] = await Promise.all([
       loadLandmarkSummaries(ctx.boxRoot),
-      loadFreshSessions(ctx.boxRoot, cutoff),
+      loadAllSessions(ctx.boxRoot),
     ]);
 
-    // Group fresh sessions by binding. `contextDir === undefined`
-    // (legacy unbound) and `contextDir === ""` (explicit root) both
-    // belong to the root bucket.
+    // Group sessions by binding. `contextDir === undefined` (legacy
+    // unbound) and `contextDir === ""` (explicit root) both belong to
+    // the root bucket.
     const byDir = new Map<string, SessionRow[]>();
-    for (const session of freshSessions) {
+    for (const session of allSessions) {
       const bucket = session.contextDir ?? "";
       const list = byDir.get(bucket);
       if (list) list.push(session);
       else byDir.set(bucket, [session]);
     }
 
+    const toPicker = (s: SessionRow): PickerSession => ({
+      sessionId: s.sessionId,
+      label: s.label,
+      lastActivity: s.mtime.toISOString(),
+    });
+
     const picker: PickerLandmark[] = landmarks.map((lm) => {
-      const sessions = byDir.get(lm.dir) ?? [];
-      const visible = lm.dir === "" ? sessions : sessions.slice(0, 1);
+      const all = byDir.get(lm.dir) ?? [];
+      const fresh = all.filter((s) => s.mtime.getTime() >= cutoff);
+      const older = all.filter((s) => s.mtime.getTime() < cutoff);
+      // Non-root tiles only show the latest fresh chat inline; older
+      // ones go in the collapsible "Older" list.
+      const visibleFresh = lm.dir === "" ? fresh : fresh.slice(0, 1);
+      const inlineOlder = lm.dir === "" ? [] : fresh.slice(1);
       return {
         dir: lm.dir,
         label: lm.label,
         symbol: lm.symbol,
         symbolSrc: lm.symbolSrc,
-        sessions: visible.map((s) => ({
-          sessionId: s.sessionId,
-          label: s.label,
-          lastActivity: s.mtime.toISOString(),
-        })),
+        sessions: visibleFresh.map(toPicker),
+        olderSessions: [...inlineOlder, ...older].map(toPicker),
       };
     });
 

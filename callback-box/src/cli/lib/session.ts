@@ -323,6 +323,8 @@ export function stripSpeechWrappers(text: string): string {
   out = out.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/g, "");
   // Drop self-closing voice-keyword marker tags
   out = out.replace(/<(?:send-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
+  // Drop the <chat-app .../> snapshot tag prepended to every user message
+  out = out.replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)/gi, "");
   // Unwrap outer <speech>/<typed> shells, keeping their text content
   out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
   return out;
@@ -358,6 +360,8 @@ export interface SessionMetadata {
 export async function getSessionMetadata(args: {
   sessionId: string;
   logPath: string;
+  /** Max chars of the first user message captured in `firstUserSnippet`. Default 60. */
+  snippetMaxLen?: number;
 }): Promise<SessionMetadata> {
   const fileStream = fs.createReadStream(args.logPath, { encoding: "utf-8" });
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
@@ -404,7 +408,7 @@ export async function getSessionMetadata(args: {
       if (isPlumbingMessage(text) || isCompactionSummary(text)) continue;
       if (parseSelfNote(text)) continue;
       userTurns += 1;
-      if (firstUserSnippet === null) firstUserSnippet = extractSnippet(text);
+      if (firstUserSnippet === null) firstUserSnippet = extractSnippet(text, args.snippetMaxLen);
     } else {
       let hasVisible = false;
       for (const block of blocks) {

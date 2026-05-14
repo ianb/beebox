@@ -4,6 +4,7 @@
  * allowed on raw elements — the page itself sticks to primitives.
  */
 
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../../lib/routing";
 import { Card } from "../../../components/ui/Card";
@@ -23,6 +24,7 @@ export interface PickerLandmark {
   symbol: string;
   symbolSrc: string | null;
   sessions: PickerSession[];
+  olderSessions: PickerSession[];
 }
 
 export function ChatsLandmarkCard({
@@ -32,7 +34,10 @@ export function ChatsLandmarkCard({
   landmark: PickerLandmark;
   boxSlug: string;
 }) {
-  const isEmpty = landmark.sessions.length === 0;
+  const hasFresh = landmark.sessions.length > 0;
+  const hasOlder = landmark.olderSessions.length > 0;
+  const isEmpty = !hasFresh && !hasOlder;
+  const [showOlder, setShowOlder] = useState(false);
   return (
     <Card padding={isEmpty ? "sm" : "md"} border="subtle" shadow={!isEmpty} muted={isEmpty}>
       <Stack gap="sm">
@@ -55,13 +60,32 @@ export function ChatsLandmarkCard({
           </div>
         </div>
 
-        {isEmpty ? null : (
+        {hasFresh ? (
           <Stack gap="xs">
             {landmark.sessions.map((s) => (
               <SessionRow key={s.sessionId} session={s} boxSlug={boxSlug} />
             ))}
           </Stack>
-        )}
+        ) : null}
+
+        {hasOlder ? (
+          <Stack gap="xs">
+            <button
+              type="button"
+              onClick={() => setShowOlder((v) => !v)}
+              className="self-start text-xs text-info-dark hover:underline"
+            >
+              {showOlder ? "Hide" : "Show"} older ({landmark.olderSessions.length})
+            </button>
+            {showOlder ? (
+              <Stack gap="xs">
+                {landmark.olderSessions.map((s) => (
+                  <SessionRow key={s.sessionId} session={s} boxSlug={boxSlug} />
+                ))}
+              </Stack>
+            ) : null}
+          </Stack>
+        ) : null}
       </Stack>
     </Card>
   );
@@ -111,8 +135,8 @@ function SessionRow({ session, boxSlug }: { session: PickerSession; boxSlug: str
       search={{ session: session.sessionId } as never}
       className="block px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors"
     >
-      <div className="flex items-center gap-3">
-        <Text as="div" size="sm" truncate className="flex-1">{session.label}</Text>
+      <div className="flex items-start gap-3">
+        <Text as="div" size="sm" className="flex-1 line-clamp-2">{session.label}</Text>
         <Text as="span" size="xs" tone="muted" className="flex-shrink-0">
           {formatRelativeTime(session.lastActivity)}
         </Text>

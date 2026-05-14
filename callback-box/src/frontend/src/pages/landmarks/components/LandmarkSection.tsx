@@ -30,6 +30,14 @@ interface Landmark {
   links: ResolvedLink[];
 }
 
+function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
+  return (
+    <Link to={href(`/${boxSlug}/browse/${dir}`)} className="hover:underline">
+      <Text as="span" size="xs" tone="muted">{dir ? `${dir}/` : "/"}</Text>
+    </Link>
+  );
+}
+
 export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; boxSlug: string }) {
   const labelText = landmark.label || landmark.path;
 
@@ -40,14 +48,7 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
           <Stack gap="xs">
             <Text as="h2" size="lg" weight="bold">{labelText}</Text>
-            {landmark.dir ? (
-              <Link
-                to={href(`/${boxSlug}/browse/${landmark.dir}`)}
-                className="hover:underline"
-              >
-                <Text as="span" size="xs" tone="muted">{landmark.dir}/</Text>
-              </Link>
-            ) : null}
+            <PathLink dir={landmark.dir} boxSlug={boxSlug} />
           </Stack>
           <div className="ml-auto">
             <ChatButton dir={landmark.dir} boxSlug={boxSlug} />

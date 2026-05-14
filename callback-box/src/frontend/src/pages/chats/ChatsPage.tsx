@@ -32,7 +32,7 @@ export function ChatsPage() {
 
   return (
     <Column overflow="auto" className="h-full">
-      <Stack gap="lg" className="max-w-4xl mx-auto py-8 px-4 w-full">
+      <Stack gap="lg" className="max-w-6xl mx-auto py-8 px-4 w-full">
         <Text as="h1" size="2xl" weight="bold">Chats</Text>
         <Text as="p" tone="subtle">
           Fresh chats (last 7 days), grouped by landmark. Picking one resumes
