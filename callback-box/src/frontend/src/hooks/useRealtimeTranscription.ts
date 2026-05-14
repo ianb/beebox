@@ -27,13 +27,21 @@ export type { TranscriptionState };
 export interface UseRealtimeTranscriptionOptions {
   /**
    * Called when a send keyword fires. Receives the processed transcript
-   * and (if the segment captured any audio) a WAV blob the caller can
-   * use for narration mode's HQ pass.
+   * and (if `wantAudioBlob` returned true and the segment captured any
+   * audio) a WAV blob the caller can use for narration mode's HQ pass.
    */
   onKeywordSend?: (processedTranscript: string, audioBlob: Blob | null) => void;
   onKeywordCancel?: () => void;
   onKeywordMicOff?: () => void;
   onKeywordErase?: () => void;
+  /**
+   * Predicate checked at keyword-fire time. When it returns false, the
+   * machine is canceled immediately (fast path) and `onKeywordSend` fires
+   * synchronously with `audioBlob = null`. When true, the machine is
+   * stopped and the callback fires after the WS finalizes with the
+   * recorded segment's WAV blob in hand. Default: false.
+   */
+  wantAudioBlob?: () => boolean;
 }
 
 export interface UseRealtimeTranscriptionResult {
@@ -143,11 +151,21 @@ export function useRealtimeTranscription(
 
   const fireKeyword = useCallback((keyword: KeywordResult) => {
     if (keyword.action === "send") {
-      // Park the text and STOP the machine so it can finalize and emit
-      // the segment's audio blob. The idle-transition effect below fires
-      // onKeywordSend with both text and blob once the machine settles.
-      pendingSendTextRef.current = keyword.processedTranscript;
-      send({ type: "STOP" });
+      const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
+      if (wantBlob) {
+        // Slow path: park the text and STOP so the machine finalizes and
+        // emits the segment's audio blob. The idle-transition effect below
+        // fires onKeywordSend with both text and blob once the machine
+        // settles. Used by narration mode to get the HQ-quality transcript.
+        pendingSendTextRef.current = keyword.processedTranscript;
+        send({ type: "STOP" });
+      } else {
+        // Fast path: drop the in-flight stream and fire immediately so
+        // the message commits with the realtime text — no waiting on WS
+        // finalization (which adds 1-2s of dead air).
+        send({ type: "CANCEL" });
+        optionsRef.current?.onKeywordSend?.(keyword.processedTranscript, null);
+      }
     } else if (keyword.action === "micOff") {
       send({ type: "CANCEL" });
       optionsRef.current?.onKeywordMicOff?.();
@@ -159,8 +177,9 @@ export function useRealtimeTranscription(
     }
   }, [send]);
 
-  // Fire onKeywordSend after the machine has finalized and the audio blob
-  // is in context. Triggered by the state transition back to idle.
+  // Slow-path completion: fire onKeywordSend after the machine has finalized
+  // and the audio blob is in context. Triggered by the state transition back
+  // to idle. No-op when the fast path was taken (ref is null).
   useEffect(() => {
     if (state !== "idle" || pendingSendTextRef.current === null) return;
     const text = pendingSendTextRef.current;

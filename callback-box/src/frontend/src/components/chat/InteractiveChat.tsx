@@ -1867,8 +1867,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     send({ type: "SEND", message: "/compact", messageId: newMessageId() });
   }, [send]);
 
-  // Realtime transcription with voice keyword spotting
+  // Realtime transcription with voice keyword spotting. `wantAudioBlob`
+  // is a predicate read at keyword-fire time so a mid-session toggle of
+  // narration takes effect on the next send.
+  const narrationEnabledRef = useRef(narrationEnabled);
+  useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
   const transcription = useRealtimeTranscription({
+    wantAudioBlob: () => narrationEnabledRef.current,
     onKeywordSend: (text, audioBlob) => {
       if (!text.trim()) {
         transcription.start();
@@ -1882,7 +1887,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       const submit = (finalText: string) => {
         doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
       };
-      if (narrationEnabled && audioBlob) {
+      if (narrationEnabledRef.current && audioBlob) {
         void postAudioForHqTranscription(audioBlob).then((hqText) => {
           submit(hqText ?? text);
         });
