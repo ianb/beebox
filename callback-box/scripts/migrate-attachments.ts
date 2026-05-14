@@ -207,24 +207,14 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
     errors: [],
   };
 
-  // Step 1: discover wrapper dirs (capture-session and email-thread).
+  // Step 1: discover wrapper dirs (any directory containing a *.<type>.card
+  // for a wrapper-style type). Walks the whole box, since wrappers can live
+  // anywhere — box/inbox, store/archive, store/archive/captures, etc.
   const wrappers: WrapperInfo[] = [];
-  await findWrappers({
+  await findWrappersRecursive({
     boxRoot,
-    scanDirAbs: path.join(boxRoot, "box/inbox"),
-    cardType: "capture-session",
-    out: wrappers,
-  });
-  await findWrappers({
-    boxRoot,
-    scanDirAbs: path.join(boxRoot, "box/inbox/email"),
-    cardType: "email-thread",
-    out: wrappers,
-  });
-  await findWrappers({
-    boxRoot,
-    scanDirAbs: path.join(boxRoot, "store/archive/email"),
-    cardType: "email-thread",
+    scanDirAbs: boxRoot,
+    wrapperTypes: ["capture-session", "email-thread"],
     out: wrappers,
   });
 
@@ -291,6 +281,24 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
     }
   }
 
+  // Per-directory: filename → owning card (the card in this dir that
+  // references the file). Lets us route a file into the right card's
+  // attach scope even when basenames don't match — common when image
+  // cards are renamed with descriptive suffixes (`photo-001-foo.image.card`
+  // still references `photo-001.jpg` by short name).
+  const fileOwnerByDir = new Map<string, Map<string, string>>();
+  for (const [cardRel, refs] of cardReferencedFilenames) {
+    if (refs.size === 0) continue;
+    const dir = path.dirname(cardRel);
+    const m = fileOwnerByDir.get(dir) ?? new Map<string, string>();
+    for (const filename of refs) {
+      // Only consider files that actually exist as siblings — skip refs
+      // pointing into subdirs or to nonexistent files.
+      if (!m.has(filename)) m.set(filename, path.basename(cardRel));
+    }
+    fileOwnerByDir.set(dir, m);
+  }
+
   // First pass: compute new path for every CARD in the box.
   const cardNewPath = new Map<string, string>();
   for (const rel of allRel) {
@@ -350,9 +358,17 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
           return dot === -1 ? leafName : leafName.slice(0, dot);
         })();
 
-    // Check whether a sibling card in the same directory shares the basename.
+    // Find an owning card for this file. Two paths:
+    //   (1) A sibling card explicitly references the file by leaf name.
+    //   (2) A sibling card shares the file's sharedStem (legacy convention
+    //       for cards that don't have an explicit `<filename>` ref).
+    // (1) wins when it disagrees with (2) — explicit refs are authoritative
+    // and handle the descriptive-suffix case (`photo-001-foo.image.card`
+    // referencing `photo-001.jpg`).
     const siblingCards = cardsByDir.get(dirRel);
-    const owningCardName = siblingCards ? siblingCards.get(sharedStem) : undefined;
+    const explicitOwner = fileOwnerByDir.get(dirRel)?.get(leafName);
+    const stemOwner = siblingCards ? siblingCards.get(sharedStem) : undefined;
+    const owningCardName = explicitOwner ?? stemOwner;
 
     // Special case: sheet's `<basename>/` legacy subdir (directory whose name
     // matches a sibling .sheet.card's basename, but the sub-files are loose
@@ -376,16 +392,17 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
     }
 
     if (owningCardName) {
-      // The file belongs to a card with matching basename in the same dir.
-      // But only nest it into the card's attach scope if the card actually
-      // references it (filters out generated-output siblings like a
-      // briefing card's `.md` that's emitted by generateDocs but not
-      // referenced from the card).
+      // Two cases:
+      //   - Explicit owner: card has a ref to this leaf name; route it in.
+      //   - Stem-only owner: file shares basename with a card. Route in
+      //     only if the card actually references the file (filters out
+      //     generated-output siblings like briefing.md).
       const owningCardRel = `${dirRel === "." ? "" : `${dirRel}/`}${owningCardName}`;
       const referenced = cardReferencedFilenames.get(owningCardRel);
       const isReferenced = referenced ? referenced.has(leafName) : false;
+      const shouldNest = owningCardName === explicitOwner || isReferenced;
 
-      if (isReferenced) {
+      if (shouldNest) {
         const owningCardNewPath = cardNewPath.get(owningCardRel) ?? owningCardRel;
         const owningCardNewBase = cardBasename(path.basename(owningCardNewPath));
         const owningCardNewDir = path.dirname(owningCardNewPath);
@@ -505,6 +522,78 @@ async function findWrappers(args: FindWrappersArgs): Promise<void> {
       basename: e.name,
       type: cardType,
       innerCardName: cardFile,
+    });
+  }
+}
+
+interface FindWrappersRecursiveArgs {
+  boxRoot: string;
+  scanDirAbs: string;
+  wrapperTypes: string[];
+  out: WrapperInfo[];
+}
+
+/**
+ * Recursively walk the box looking for wrapper directories. A directory is a
+ * wrapper iff:
+ *   - it has multiple children (a *.session/thread.card plus child files), AND
+ *   - exactly one of its children is a *.<wrapper-type>.card, AND
+ *   - it isn't already an attach scope.
+ *
+ * Recurses into non-wrapper directories. Stops at wrappers (children inside
+ * them aren't themselves wrappers — they're attached files).
+ *
+ * The "parent dir contains a wrapper card" check prevents misclassifying a
+ * regular directory like `box/inbox/` (which itself holds session-cards
+ * after migration) as a wrapper of its own.
+ */
+async function findWrappersRecursive(args: FindWrappersRecursiveArgs): Promise<void> {
+  const { boxRoot, scanDirAbs, wrapperTypes, out } = args;
+  let entries: Array<{ name: string; isDirectory: () => boolean }>;
+  try {
+    entries = await fs.readdir(scanDirAbs, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    if (SKIP_DIRS.has(e.name)) continue;
+    if (e.name.endsWith(".attach")) continue;
+
+    const childAbs = path.join(scanDirAbs, e.name);
+    let inner: string[];
+    try {
+      inner = await fs.readdir(childAbs);
+    } catch {
+      continue;
+    }
+    let cardFile: string | undefined;
+    let cardType: string | undefined;
+    for (const type of wrapperTypes) {
+      const found = inner.find((f) => f.endsWith(`.${type}.card`));
+      if (found) {
+        cardFile = found;
+        cardType = type;
+        break;
+      }
+    }
+    if (cardFile && cardType) {
+      out.push({
+        wrapperRel: path.relative(boxRoot, childAbs),
+        parentRel: path.relative(boxRoot, scanDirAbs),
+        basename: e.name,
+        type: cardType,
+        innerCardName: cardFile,
+      });
+      continue; // Don't recurse into a wrapper.
+    }
+    // Not a wrapper — recurse.
+    await findWrappersRecursive({
+      boxRoot,
+      scanDirAbs: childAbs,
+      wrapperTypes,
+      out,
     });
   }
 }
