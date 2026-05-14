@@ -417,6 +417,7 @@ export const realtimeTranscriptionMachine = setup({
     }),
     sendStopToTranscriber: ({ system }) => {
       const transcriber = system.get("transcriber");
+      console.info(`[machine] sendStopToTranscriber — transcriber=${transcriber ? "present" : "null"}`);
       if (transcriber) {
         transcriber.send({ type: "STOP" });
       }
