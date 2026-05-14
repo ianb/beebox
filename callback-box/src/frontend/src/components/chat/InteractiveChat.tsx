@@ -147,6 +147,26 @@ function applyFeaturesChange(opts: {
   opts.setFeatures(payload.features);
 }
 
+/**
+ * Header chip that signals narration mode is active. Shows a "transcribing…"
+ * sub-label while the HQ pass is in flight after a send-message checkpoint,
+ * so the user can see the agent isn't ignoring them — it's waiting on the
+ * round-trip to the HQ transcription service.
+ */
+function NarrationStatusBadge({ enabled, hqInFlight }: { enabled: boolean; hqInFlight: boolean }) {
+  if (!enabled) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium"
+      title="Narration mode is on — silent responses, structured output, HQ transcription on send"
+    >
+      <span aria-hidden>🎙️</span>
+      <span>narration</span>
+      {hqInFlight ? <span className="opacity-80">· transcribing…</span> : null}
+    </span>
+  );
+}
+
 function localTime(): string {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -1872,6 +1892,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   // narration takes effect on the next send.
   const narrationEnabledRef = useRef(narrationEnabled);
   useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
+  const [hqInFlight, setHqInFlight] = useState(false);
   const transcription = useRealtimeTranscription({
     wantAudioBlob: () => narrationEnabledRef.current,
     onKeywordSend: (text, audioBlob) => {
@@ -1888,9 +1909,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
       };
       if (narrationEnabledRef.current && audioBlob) {
-        void postAudioForHqTranscription(audioBlob).then((hqText) => {
-          submit(hqText ?? text);
-        });
+        setHqInFlight(true);
+        void postAudioForHqTranscription(audioBlob)
+          .then((hqText) => { submit(hqText ?? text); })
+          .finally(() => { setHqInFlight(false); });
       } else {
         submit(text);
       }
@@ -2029,9 +2051,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       ) : null}
     <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
       {/* Header with debug controls */}
-      <div className="flex-shrink-0 flex items-center px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h2 className="text-sm font-semibold text-white tracking-wide">Chat</h2>
         <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
+        <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} />
         <div className="flex-1" />
         <RecentFilesButton
           entries={messages}
