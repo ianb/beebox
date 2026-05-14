@@ -50,11 +50,26 @@ for repo in cardworks callback-box; do
   rsync "${RSYNC_OPTS[@]}" "$local_path" "root@$SERVER_IP:$INSTALL_DIR/$repo/"
 done
 
+# personal-vibe-check lives outside the monorepo but is a file: dep of
+# callback-box, so it must be present at /opt/personal-vibe-check on the
+# server. Its own prepare script (husky) runs during npm pack, so it needs
+# its own node_modules installed too.
+PVC_LOCAL="$MONO_DIR/../personal-vibe-check/"
+if [[ -d "$PVC_LOCAL" ]]; then
+  echo "Syncing personal-vibe-check..."
+  rsync "${RSYNC_OPTS[@]}" "$PVC_LOCAL" "root@$SERVER_IP:/opt/personal-vibe-check/"
+fi
+
 # Install deps if package-lock changed (compare hash)
 echo "Checking dependencies..."
 ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
+  set -e
+  cd /opt/personal-vibe-check
+  if [[ ! -d node_modules ]] || ! npm ls --depth=0 &>/dev/null 2>&1; then
+    echo "  Installing personal-vibe-check deps..."
+    npm install --no-audit --no-fund --legacy-peer-deps
+  fi
   cd /opt/callback/callback-box
-  # Quick check: if node_modules is missing or package-lock changed, reinstall
   if [[ ! -d node_modules ]] || ! npm ls --depth=0 &>/dev/null 2>&1; then
     echo "  Installing callback-box deps..."
     npm install --no-audit --no-fund
