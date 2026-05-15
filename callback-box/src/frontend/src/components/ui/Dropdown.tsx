@@ -33,11 +33,25 @@ export interface DropdownProps {
   width?: string;
   /** Outer-layout classes for the relative-positioned wrapper (margin, padding, flex item, sizing, position). */
   className?: string;
+  /** Called whenever the menu transitions from open to closed. Use to reset
+   *  per-open ephemeral state (e.g. submenu page). */
+  onClose?: () => void;
 }
 
-export function Dropdown({ trigger, children, align = "right", vertical = "below", width = "w-48", className }: DropdownProps) {
+export function Dropdown({ trigger, children, align = "right", vertical = "below", width = "w-48", className, onClose }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+  // Fire onClose on the open→closed transition.
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      const cb = onCloseRef.current;
+      if (cb) cb();
+    }
+    prevOpenRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,6 +107,11 @@ interface MenuItemBase {
   danger?: boolean;
   /** Highlights the row as the current selection. */
   active?: boolean;
+  /**
+   * Don't close the dropdown on click. Use for items that open a nested
+   * panel inside the same menu (e.g. submenu swap pattern).
+   */
+  keepOpen?: boolean;
 }
 
 export type MenuItemProps = MenuItemBase & (
@@ -133,7 +152,7 @@ function noop() {}
 export function MenuItem(props: MenuItemProps) {
   const ctx = useContext(DropdownContext);
   const close = ctx !== null ? ctx.close : noop;
-  const { children, icon, disabled = false, danger = false, active = false } = props;
+  const { children, icon, disabled = false, danger = false, active = false, keepOpen = false } = props;
   const className = rowClass({ active, danger, disabled });
   const content = <MenuItemContent icon={icon}>{children}</MenuItemContent>;
 
@@ -167,7 +186,7 @@ export function MenuItem(props: MenuItemProps) {
       disabled={disabled}
       onClick={async () => {
         if (disabled || onClick === undefined) return;
-        close();
+        if (!keepOpen) close();
         await onClick();
       }}
       className={className}

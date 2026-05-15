@@ -368,10 +368,18 @@ function ChatDebugMenu({
     }
   };
 
+  // Single-panel submenu pattern: the dropdown swaps which set of rows
+  // it renders rather than spawning a flyout. Better on touch and avoids
+  // positioning complexity. Resets to "root" when the dropdown closes.
+  const [panel, setPanel] = useState<"root" | "model" | "voice">("root");
+  const currentModelLabel =
+    MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
+
   return (
     <Dropdown
       align="right"
       width="w-56"
+      onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
@@ -387,51 +395,65 @@ function ChatDebugMenu({
         </button>
       )}
     >
-      <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
-      <MenuItem onClick={onRestartProcess} disabled={!running}>Restart Subprocess</MenuItem>
-      <MenuItem onClick={onCompactSession} disabled={busy}>Compact Session</MenuItem>
-      <MenuDivider />
+      {panel === "root" ? (<>
+      <MenuItem onClick={onToggleDebugView}>{debugView ? "✓ " : "  "}Debug View</MenuItem>
       <MenuItem onClick={onToggleNarration} disabled={sessionId === null}>
-        {narrationEnabled ? "✓ " : "  "}Narration mode
+        {narrationEnabled ? "✓ " : "  "}Narration mode
       </MenuItem>
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Model</div>
-      {MODEL_OPTIONS.map((opt) => (
-        <MenuItem
-          key={opt.label}
-          onClick={() => onSelectModel(opt.model)}
-        >
-          {selectedModel === opt.model ? "\u2713 " : "\u2007\u2007"}{opt.label}
-        </MenuItem>
-      ))}
+      <MenuItem onClick={() => setPanel("model")} keepOpen>
+        <span className="flex justify-between gap-2 w-full">
+          <span>Model</span>
+          <span className="text-warm-500 truncate">{currentModelLabel} ›</span>
+        </span>
+      </MenuItem>
+      <MenuItem onClick={() => setPanel("voice")} keepOpen>
+        <span className="flex justify-between gap-2 w-full">
+          <span>Voice settings</span>
+          <span className="text-warm-500">›</span>
+        </span>
+      </MenuItem>
+      <span className="sm:hidden">
+        <MenuItem onClick={onToggleDebugLog}>{showDebugLog ? "✓ " : "  "}Debug Log</MenuItem>
+      </span>
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Transcription (live)</div>
-      {TRANSCRIPTION_OPTIONS.map((opt) => (
-        <MenuItem
-          key={opt.service}
-          onClick={() => onSelectTranscriptionService(opt.service)}
-        >
-          {currentService === opt.service ? "\u2713 " : "\u2007\u2007"}{opt.label}
-        </MenuItem>
-      ))}
-      <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Transcription (HQ)</div>
-      {HQ_TRANSCRIPTION_OPTIONS.map((opt) => (
-        <MenuItem
-          key={opt.service}
-          onClick={() => onSelectHqTranscriptionService(opt.service)}
-        >
-          {currentHqService === opt.service ? "\u2713 " : "\u2007\u2007"}{opt.label}
-        </MenuItem>
-      ))}
-      <MenuDivider />
-      <MenuItem onClick={onToggleDebugView}>{debugView ? "\u2713 " : ""}Debug View</MenuItem>
-      <MenuItem onClick={onToggleDebugLog}>{showDebugLog ? "\u2713 " : ""}Debug Log</MenuItem>
+      <MenuItem onClick={onCompactSession} disabled={busy}>Compact Session</MenuItem>
+      <MenuItem onClick={onRestartProcess} disabled={!running}>Restart Subprocess</MenuItem>
+      <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
       <MenuDivider />
       <div className="px-3 py-1.5 text-xs text-warm-500">
         <div>Session: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
         <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
       </div>
+      </>) : panel === "model" ? (<>
+      <MenuItem onClick={() => setPanel("root")} keepOpen>
+        <span className="text-warm-500">‹ Model</span>
+      </MenuItem>
+      <MenuDivider />
+      {MODEL_OPTIONS.map((opt) => (
+        <MenuItem key={opt.label} onClick={() => onSelectModel(opt.model)}>
+          {selectedModel === opt.model ? "✓ " : "  "}{opt.label}
+        </MenuItem>
+      ))}
+      </>) : (<>
+      <MenuItem onClick={() => setPanel("root")} keepOpen>
+        <span className="text-warm-500">‹ Voice settings</span>
+      </MenuItem>
+      <MenuDivider />
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Live transcription</div>
+      {TRANSCRIPTION_OPTIONS.map((opt) => (
+        <MenuItem key={opt.service} onClick={() => onSelectTranscriptionService(opt.service)} keepOpen>
+          {currentService === opt.service ? "✓ " : "  "}{opt.label}
+        </MenuItem>
+      ))}
+      <MenuDivider />
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">HQ transcription</div>
+      {HQ_TRANSCRIPTION_OPTIONS.map((opt) => (
+        <MenuItem key={opt.service} onClick={() => onSelectHqTranscriptionService(opt.service)} keepOpen>
+          {currentHqService === opt.service ? "✓ " : "  "}{opt.label}
+        </MenuItem>
+      ))}
+      </>)}
     </Dropdown>
   );
 }
