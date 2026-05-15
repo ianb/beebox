@@ -986,7 +986,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string }) {
+export function UserMessage({ entries, debugView, currentUserEmail, acknowledged }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; acknowledged?: boolean }) {
   const allTexts = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
@@ -1035,7 +1035,8 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
   }
 
   return (
-    <div className="flex justify-end pl-12 sm:pl-24 py-1">
+    <div className="flex justify-end items-end pl-12 sm:pl-24 py-1 gap-1.5">
+      {acknowledged ? <AcknowledgedBadge /> : null}
       <div
         className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
         title={pendingTitle}
@@ -1046,6 +1047,24 @@ export function UserMessage({ entries, debugView, currentUserEmail }: { entries:
         {isPending ? <PendingIndicator /> : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * Small checkmark badge shown alongside a user message when the agent's
+ * reply was just `<ack kind="no-response"/>` — visible confirmation that
+ * the message was received and intentionally not responded to (as opposed
+ * to silence-from-failure or silence-from-thinking).
+ */
+function AcknowledgedBadge() {
+  return (
+    <span
+      title="Acknowledged — no response needed"
+      aria-label="Acknowledged — no response needed"
+      className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success text-white text-sm font-semibold shadow-sm self-end mb-1"
+    >
+      ✓
+    </span>
   );
 }
 

@@ -139,3 +139,18 @@ export function stripStructuredOutputTags(content: string): string {
     .replace(/<callout\b[^>]*?>[\S\s]*?<\/callout\s*>/gi, "")
     .replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)\n?/gi, "");
 }
+
+/**
+ * True when the assistant content is just one (or more) no-response acks
+ * and nothing else — no prose, no callouts, no other ack kinds. Used by
+ * the UI to suppress the empty agent bubble and instead mark the
+ * preceding user message as acknowledged.
+ */
+export function isNoResponseOnly(content: string): boolean {
+  const acks = parseAcks(content);
+  if (acks.length === 0) return false;
+  if (acks.some((a) => a.kind !== "no-response")) return false;
+  // After stripping the structured-output tags, anything that remains
+  // (callouts, plain prose) means the response isn't purely no-response.
+  return stripStructuredOutputTags(content).trim() === "";
+}

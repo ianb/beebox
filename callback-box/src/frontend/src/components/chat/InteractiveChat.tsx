@@ -33,6 +33,7 @@ import { DebugLogPanel } from "../DebugLog";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { chatMachine, HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
+import { isNoResponseOnly } from "../../lib/structured-output-parsing";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
 import { CloseButton } from "../ui/CloseButton";
@@ -871,11 +872,26 @@ function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZ
  * doesn't visually jump the user.
  */
 type DataItem =
-  | { kind: "group"; group: MessageGroup; groupIndex: number }
+  | { kind: "group"; group: MessageGroup; groupIndex: number; acknowledged?: boolean }
   | { kind: "marker"; marker: ModelMarker }
   | { kind: "stream" }
   | { kind: "processing" }
   | { kind: "pendingHq"; text: string };
+
+/**
+ * True when an assistant group's content is exactly one or more
+ * `<ack kind="no-response"/>` tags and nothing else. Drives the
+ * acknowledged-checkmark badge: instead of rendering an empty assistant
+ * bubble, the preceding user message gets the badge so the user sees
+ * "received, intentionally silent."
+ */
+function groupIsNoResponseOnly(group: MessageGroup): boolean {
+  if (group.type !== "assistant") return false;
+  const allText = group.entries.flatMap((e) =>
+    e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
+  ).join("\n");
+  return isNoResponseOnly(allText);
+}
 
 function dataItemKey(d: DataItem): string {
   switch (d.kind) {
@@ -957,12 +973,28 @@ function VirtualizedMessageList({
   // plus the streaming/processing tail as its own item so virtuoso's
   // followOutput fires when it appears, and so scrollToIndex("LAST")
   // targets it directly during stream growth.
+  //
+  // Special case: when an assistant group is just `<ack kind="no-response"/>`,
+  // suppress its bubble and tag the preceding user item as `acknowledged`,
+  // which renders a checkmark badge alongside the user message instead.
   const data = useMemo<DataItem[]>(() => {
     const items: DataItem[] = [];
     for (const m of modelMarkers) {
       if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
     }
     for (const [i, group] of groups.entries()) {
+      if (group.type === "assistant" && groupIsNoResponseOnly(group)) {
+        const last = items[items.length - 1];
+        if (last && last.kind === "group" && last.group.type === "user") {
+          last.acknowledged = true;
+        }
+        // Still emit any markers anchored to this group's position so
+        // they land in chronological order.
+        for (const m of modelMarkers) {
+          if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
+        }
+        continue;
+      }
       items.push({ kind: "group", group, groupIndex: i });
       for (const m of modelMarkers) {
         if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
@@ -1128,7 +1160,7 @@ function VirtualizedMessageList({
               </div>
             );
           } else if (group.type === "user") {
-            body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} /></div>;
+            body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acknowledged={item.acknowledged} /></div>;
           } else {
             body = (
               <div className="py-0.5">
