@@ -32,7 +32,7 @@ import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { chatMachine, HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
 import { CloseButton } from "../ui/CloseButton";
@@ -827,13 +827,20 @@ function chunkOnParagraphs(text: string): string {
  */
 function PendingHqMessage({ text }: { text: string }) {
   return (
-    <div className="pl-4 sm:pl-24 pr-3 sm:pr-6 py-2 flex flex-col items-end gap-1">
-      <div className="max-w-[80%] rounded-2xl px-4 py-2 bg-primary/60 text-white">
-        {text}
-      </div>
-      <div className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
-        <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
-        finalizing transcript…
+    <div className="flex justify-end pl-12 sm:pl-24 py-1">
+      <div className="flex flex-col items-end gap-1">
+        <div
+          className="rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words opacity-60"
+          title="Finalizing high-quality transcription…"
+        >
+          <div className="text-sm whitespace-pre-wrap">
+            <UserMessageText text={text} />
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
+          finalizing transcript…
+        </div>
       </div>
     </div>
   );

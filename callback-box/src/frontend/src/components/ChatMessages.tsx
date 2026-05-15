@@ -136,7 +136,7 @@ function getUserName(entry: SessionEntry): string | null {
   return null;
 }
 
-function UserMessageText({ text }: { text: string }) {
+export function UserMessageText({ text }: { text: string }) {
   const stripped = stripUserDisplayTags(text);
 
   const parts: Array<{ type: "text"; value: string } | { type: "send"; phrase: string }> = [];
@@ -700,10 +700,14 @@ function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZo
 }
 
 /**
- * One displayed item in the chat transcript. Each entry from the session log
- * becomes its own group — consecutive same-role entries are not merged,
- * because the merged form hid the fact that they were separate sends and
- * made the queued-message UI ambiguous.
+ * One displayed item in the chat transcript.
+ *
+ * User entries are never merged — each send is its own bubble, so the
+ * queued-message UI stays unambiguous. Assistant entries DO merge with
+ * their immediate predecessor, because tool/thinking folding
+ * (`groupIntoParts` → `ActivityGroup`) only works within a single
+ * AssistantMessage. Without merging, every tool call shows as its own
+ * unfoldable line.
  *
  * Self-note groups still carry their parsed `notes` payload alongside the
  * entry. Local-command entries are filtered out entirely (see below).
@@ -747,6 +751,13 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
     if (notes) {
       groups.push({ type: "self-note", entries: [entry], notes });
       continue;
+    }
+    if (entry.type === "assistant") {
+      const last = groups[groups.length - 1];
+      if (last && last.type === "assistant") {
+        last.entries.push(entry);
+        continue;
+      }
     }
     groups.push({ type: entry.type, entries: [entry] });
   }
