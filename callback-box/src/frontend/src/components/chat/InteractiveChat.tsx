@@ -156,6 +156,21 @@ function applyFeaturesChange(opts: {
  * so the user can see the agent isn't ignoring them — it's waiting on the
  * round-trip to the HQ transcription service.
  */
+/**
+ * Studio-mic icon used in place of the standard handheld mic when narration
+ * is enabled. Distinct silhouette (suspended mic + arm) so the user can
+ * tell at a glance what mode the next press will go into.
+ */
+function NarrationMicIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="9" y="3" width="6" height="11" rx="3" strokeWidth={2} />
+      <path strokeWidth={2} strokeLinecap="round" d="M6 11a6 6 0 0012 0M12 17v4m-3 0h6" />
+      <path strokeWidth={1.5} strokeLinecap="round" d="M11 7h2M11 10h2" />
+    </svg>
+  );
+}
+
 function NarrationStatusBadge({ enabled, hqInFlight }: { enabled: boolean; hqInFlight: boolean }) {
   if (!enabled) return null;
   return (
@@ -500,7 +515,7 @@ function ChatInputArea({
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
   isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles,
+  onPaste, onDrop, onAttachFiles, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -526,6 +541,7 @@ function ChatInputArea({
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   onAttachFiles: () => void;
+  narrationEnabled: boolean;
 }) {
   const circleBtn = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
@@ -688,8 +704,8 @@ function ChatInputArea({
               onVoice();
             }
           }}
-          className={`${circleBtn} ${voicePaused ? "bg-primary/50 text-white animate-pulse" : isTranscribing ? "bg-danger text-white hover:bg-danger-dark active:opacity-80" : "bg-primary text-white hover:bg-primary-dark active:opacity-80"}`}
-          title={voicePaused ? "Resume recording (stops speech)" : isTranscribing ? "Stop recording" : "Voice input"}
+          className={`${circleBtn} ${narrationEnabled && !voicePaused && !isTranscribing ? "ring-2 ring-accent ring-offset-2 ring-offset-warm-100 " : ""}${voicePaused ? "bg-primary/50 text-white animate-pulse" : isTranscribing ? "bg-danger text-white hover:bg-danger-dark active:opacity-80" : narrationEnabled ? "bg-accent text-white hover:bg-accent-dark active:opacity-80" : "bg-primary text-white hover:bg-primary-dark active:opacity-80"}`}
+          title={voicePaused ? "Resume recording (stops speech)" : isTranscribing ? "Stop recording" : narrationEnabled ? "Voice input (narration mode)" : "Voice input"}
         >
           {voicePaused ? (
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -699,6 +715,8 @@ function ChatInputArea({
             <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
               <rect x="6" y="6" width="12" height="12" rx="2" />
             </svg>
+          ) : narrationEnabled ? (
+            <NarrationMicIcon className="w-7 h-7" />
           ) : (
             <MicrophoneIcon className="w-7 h-7" />
           )}
@@ -2295,6 +2313,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           onPaste={handlePaste}
           onDrop={handleDrop}
           onAttachFiles={handleAttachFiles}
+          narrationEnabled={narrationEnabled}
         />
       {/* Mobile typing row: replaces button bar when typing/transcribing */}
       {(typingMode || isTranscribing) ? (
