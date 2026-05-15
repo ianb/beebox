@@ -163,8 +163,17 @@ export async function transcribeAudioVoxtral(
     // Falls back to the flat `text` if no segments came back labeled.
     const labeledText = diarization ? buildDiarizedText(result.segments) : null;
 
+    // Voxtral's top-level `text` sometimes concatenates sentence-end
+    // segments without spacing ("have gone.Generic tools"). When segments
+    // are present, rebuild text from them joined with a single space —
+    // this fixes the bug at its source. Falls back to the raw `text`
+    // (then a regex safety net) when segments are empty.
+    const text = labeledText
+      ?? joinSegmentTexts(result.segments)
+      ?? repairMissingSentenceSpaces(result.text);
+
     return {
-      text: repairMissingSentenceSpaces(labeledText ?? result.text),
+      text,
       duration,
       language,
     };
@@ -195,6 +204,33 @@ export async function transcribeAudioVoxtral(
  * tools". Insert a space after `.`/`!`/`?` when the next char is a
  * letter, leaving decimal numbers ("v1.2"), ellipses ("..."), and other
  * non-letter sequences alone.
+ */
+/**
+ * Rebuild transcript text from Voxtral segments — segments carry the
+ * authoritative per-chunk text without the inter-sentence spacing bug
+ * that affects the top-level `text` field. Joined with a single space;
+ * empty/whitespace-only segments dropped. Returns null when no usable
+ * segment text is available (callers fall back to `text`).
+ *
+ * Only safe in the non-word-timestamps path — when word timestamps are
+ * on, each segment is a single word and joining is the caller's job.
+ */
+export function joinSegmentTexts(
+  segments: Array<{ text: string }> | undefined,
+): string | null {
+  if (!segments || segments.length === 0) return null;
+  const pieces = segments
+    .map((s) => s.text.trim())
+    .filter((s) => s.length > 0);
+  if (pieces.length === 0) return null;
+  return pieces.join(" ");
+}
+
+/**
+ * Safety net for when `segments` is empty — same intent as joining from
+ * segments, but applied directly to the joined text. Inserts a space
+ * after `.`/`!`/`?` when the next char is a letter, leaving decimals,
+ * money, and ellipses alone.
  */
 export function repairMissingSentenceSpaces(text: string): string {
   return text.replace(/([!.?])([A-Za-z])/g, "$1 $2");

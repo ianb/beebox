@@ -1,13 +1,51 @@
 # Voxtral transcription helpers
 
-The Voxtral non-streaming API occasionally returns `text` with
-sentence-end + next-sentence concatenated without a space ("have
-gone.Generic tools"). `repairMissingSentenceSpaces` inserts the
-missing space so the agent sees readable prose, while leaving
-decimals, ellipses, and other non-letter sequences alone.
+The Voxtral non-streaming API returns both a top-level `text` field
+(the joined transcript) and a `segments` array with per-chunk text.
+The `text` field occasionally concatenates sentence-end + next
+sentence without a space ("have gone.Generic tools"). Primary fix is
+to rebuild the transcript from segments, joined with a single space —
+that's the source level. `repairMissingSentenceSpaces` is a fallback
+for responses where segments is empty.
 
 ```ts setup
-import { repairMissingSentenceSpaces } from "../src/core/transcription-voxtral.js";
+import {
+  joinSegmentTexts,
+  repairMissingSentenceSpaces,
+} from "../src/core/transcription-voxtral.js";
+```
+
+## joinSegmentTexts — rebuild from segments
+
+Two segments where the second starts with a new sentence: spaced
+correctly even if Voxtral's own `text` had no space.
+
+```
+joinSegmentTexts([
+  { text: "It went the way a lot of these things have gone." },
+  { text: "Generic tools were better." },
+])
+=> It went the way a lot of these things have gone. Generic tools were better.
+```
+
+Empty / whitespace-only segments are dropped; the rest still join.
+
+```
+joinSegmentTexts([
+  { text: "First sentence." },
+  { text: "   " },
+  { text: "Second sentence." },
+])
+=> First sentence. Second sentence.
+
+joinSegmentTexts([])
+=> null
+
+joinSegmentTexts(undefined)
+=> null
+
+joinSegmentTexts([{ text: "" }, { text: "  " }])
+=> null
 ```
 
 ## The bug case — sentence-end followed by a letter
