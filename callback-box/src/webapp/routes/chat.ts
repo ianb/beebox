@@ -659,22 +659,11 @@ export async function registerChatRoutes(
       // `wireSession` bridges the session's `features-changed` event onto the
       // bus, so the SSE broadcast already fired. No explicit emit here.
       //
-      // Some features (narration) affect the system prompt, which is fixed
-      // at subprocess start — mirror set-model's restart pattern so the
-      // change actually takes effect. Mid-turn restarts defer to the next
-      // "done" event so the in-progress response isn't lost.
-      let restarted = false;
-      if (target.isRunning()) {
-        if (target.isBusy()) {
-          target.once("done", () => {
-            if (target.isRunning()) target.restart();
-          });
-        } else {
-          target.restart();
-          restarted = true;
-        }
-      }
-      return { ok: true, features: target.getFeatures(), restarted };
+      // No subprocess restart needed: feature state is communicated to the
+      // agent via the per-turn <chat-app> snapshot, and the rules for each
+      // feature live in always-included prompt overlays gated on what the
+      // snapshot reports. The next user message will reflect the change.
+      return { ok: true, features: target.getFeatures() };
     },
   );
 

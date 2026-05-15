@@ -132,17 +132,11 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   // Snapshot card files before the agent runs (for cards_contain checks)
   const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
 
-  // In chat mode, mirror what ChatSession.resolveSystemPrompt builds: the
-  // base prompt plus, if the test prompt declares narration="on" via the
-  // <chat-app> snapshot, the NARRATION_OVERLAY. Detecting from the prompt
-  // body means audits stay self-describing — just put the snapshot in the
-  // prompt and the harness composes the right system prompt for it.
-  const narrationOn = /<chat-app\b[^>]*\bnarration="on"/i.test(prompt);
-  const chatPrompt = narrationOn
-    ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}`
-    : CHAT_SYSTEM_PROMPT;
+  // In chat mode, mirror what ChatSession.resolveSystemPrompt builds:
+  // base prompt + NARRATION_OVERLAY (always included; rules gated on the
+  // per-turn <chat-app> snapshot inside the user message).
   const systemPrompt = test.chat_mode
-    ? `${chatPrompt}\n\nWORKING DIRECTORY: ${boxRoot}`
+    ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}\n\nWORKING DIRECTORY: ${boxRoot}`
     : `WORKING DIRECTORY: ${boxRoot}`;
   const invokeOpts: Parameters<ReturnType<typeof createAgent>["invoke"]>[0] = {
     boxRoot,

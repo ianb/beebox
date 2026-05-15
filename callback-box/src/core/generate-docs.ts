@@ -22,6 +22,7 @@ import { parsePersonality, compilePersonality, compileSpeakingVoice, type Person
 import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefing.js";
 import { generateViewsDoc } from "./views-doc.js";
 import { generateChatVoiceDoc } from "./chat-voice-doc.js";
+import { generateNarrationModeDoc } from "./narration-mode-doc.js";
 import { generateAgentGuide } from "./agent-guide/index.js";
 import {
   installProcedures,
@@ -332,6 +333,8 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       withDocId({ relativePath: `${DOCS_DIR}/views.md`, content: generateViewsDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "chat-voice.md"),
       withDocId({ relativePath: `${DOCS_DIR}/chat-voice.md`, content: generateChatVoiceDoc(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "narration-mode.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/narration-mode.md`, content: generateNarrationModeDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     ...allSchemas
