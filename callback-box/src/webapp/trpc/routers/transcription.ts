@@ -11,7 +11,7 @@ import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
 
 const serviceSchema = z.enum(["voxtral", "deepgram", "whisper"]);
-const hqServiceSchema = z.enum(["whisper", "voxtral"]);
+const hqServiceSchema = z.enum(["whisper", "whisper-llm", "whisper-llm-mini", "voxtral", "voxtral-diarized"]);
 
 export const transcriptionRouter = router({
   config: publicProcedure.query(async ({ ctx }) => {

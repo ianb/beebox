@@ -16,11 +16,18 @@ const VOXTRAL_MODEL = "voxtral-mini-latest";
 
 /**
  * Transcribe audio using Mistral Voxtral API.
+ *
+ * `opts.diarization` enables Voxtral's speaker-labeling. When on, each
+ * returned segment includes a `speaker_id` and the function rewrites
+ * the response text as speaker-prefixed lines ("Speaker 0: …\n
+ * Speaker 1: …") so the agent sees who said what.
  */
 export async function transcribeAudioVoxtral(
-  params: TranscribeAudioParams
+  params: TranscribeAudioParams,
+  opts: { diarization?: boolean } = {},
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   const { audioBuffer, filename, prompt, options, boxRoot } = params;
+  const diarization = opts.diarization === true;
   const apiKey = await getMistralApiKey(boxRoot);
   if (!apiKey) {
     const error: TranscriptionError = {
@@ -68,6 +75,17 @@ export async function transcribeAudioVoxtral(
         `--${boundary}\r\n` +
           'Content-Disposition: form-data; name="timestamp_granularities"\r\n\r\n' +
           "word\r\n"
+      )
+    );
+  }
+
+  // Add diarization flag — Voxtral returns speaker_id per segment when on.
+  if (diarization) {
+    formParts.push(
+      Buffer.from(
+        `--${boundary}\r\n` +
+          'Content-Disposition: form-data; name="diarization"\r\n\r\n' +
+          "true\r\n"
       )
     );
   }
@@ -139,8 +157,14 @@ export async function transcribeAudioVoxtral(
       } as DetailedTranscriptionResult;
     }
 
+    // Diarization: rewrite the text as speaker-prefixed lines using each
+    // segment's speaker_id. Voxtral returns ids like "speaker_0";
+    // formatSpeakerLabel turns those into "Speaker 0" for readability.
+    // Falls back to the flat `text` if no segments came back labeled.
+    const labeledText = diarization ? buildDiarizedText(result.segments) : null;
+
     return {
-      text: result.text,
+      text: labeledText ?? result.text,
       duration,
       language,
     };
@@ -163,6 +187,48 @@ export async function transcribeAudioVoxtral(
     };
     throw transcriptionError;
   }
+}
+
+/**
+ * Build a speaker-prefixed transcript from Voxtral diarized segments.
+ * Consecutive segments from the same speaker are merged into one block.
+ * Returns null if no segments have a speaker_id (e.g. mono speaker, or
+ * diarization didn't run).
+ */
+function buildDiarizedText(
+  segments: Array<{ text: string; speaker_id?: string | null }> | undefined,
+): string | null {
+  if (!segments || segments.length === 0) return null;
+  if (!segments.some((s) => typeof s.speaker_id === "string" && s.speaker_id.length > 0)) {
+    return null;
+  }
+  const lines: string[] = [];
+  let currentSpeaker: string | null = null;
+  let currentText: string[] = [];
+  function flush(): void {
+    if (currentSpeaker === null || currentText.length === 0) return;
+    lines.push(`${formatSpeakerLabel(currentSpeaker)}: ${currentText.join(" ").trim()}`);
+    currentText = [];
+  }
+  for (const seg of segments) {
+    const speaker = (typeof seg.speaker_id === "string" && seg.speaker_id.length > 0)
+      ? seg.speaker_id
+      : "unknown";
+    if (speaker !== currentSpeaker) {
+      flush();
+      currentSpeaker = speaker;
+    }
+    currentText.push(seg.text.trim());
+  }
+  flush();
+  return lines.join("\n");
+}
+
+function formatSpeakerLabel(speakerId: string): string {
+  // "speaker_0" → "Speaker 0", "speaker_1" → "Speaker 1", fallback to raw.
+  const m = speakerId.match(/^speaker[_-]?(\d+)$/i);
+  if (m) return `Speaker ${m[1]}`;
+  return speakerId;
 }
 
 function getContentType(ext: string | undefined): string {

@@ -10,7 +10,24 @@ import { transcribeAudioVoxtral } from "./transcription-voxtral.js";
 import { transcribeAudioDeepgram } from "./transcription-deepgram.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
-const OPENAI_MODEL = "whisper-1";
+
+/**
+ * Map our HQ service identifiers to OpenAI model names. The classic
+ * Whisper model (`whisper-1`) returns verbose_json with duration/language
+ * and supports word timestamps. The newer LLM-based audio models
+ * (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`) only support
+ * `response_format: "json"` and don't return timestamps — same endpoint,
+ * different request shape.
+ */
+const OPENAI_WHISPER_MODELS = {
+  whisper: "whisper-1",
+  "whisper-llm": "gpt-4o-transcribe",
+  "whisper-llm-mini": "gpt-4o-mini-transcribe",
+} as const;
+type WhisperVariant = keyof typeof OPENAI_WHISPER_MODELS;
+function isLlmWhisperVariant(variant: WhisperVariant): boolean {
+  return variant === "whisper-llm" || variant === "whisper-llm-mini";
+}
 
 export interface TranscriptionResult {
   text: string;
@@ -50,8 +67,18 @@ export interface TranscribeAudioParams {
 }
 
 export type TranscriptionService = "whisper" | "voxtral" | "deepgram";
-/** Narration mode's checkpoint HQ pass — non-streaming services only. */
-export type HqTranscriptionService = "whisper" | "voxtral";
+/**
+ * Narration mode's checkpoint HQ pass — non-streaming services only.
+ * - `whisper`: OpenAI's classic `whisper-1` model.
+ * - `whisper-llm`: OpenAI's full LLM-based audio transcription
+ *   (`gpt-4o-transcribe`). Higher quality, slower, more expensive.
+ * - `whisper-llm-mini`: Smaller/faster/cheaper LLM variant
+ *   (`gpt-4o-mini-transcribe`).
+ * - `voxtral`: Mistral's Voxtral non-streaming model.
+ * - `voxtral-diarized`: Voxtral with diarization on — output is
+ *   speaker-prefixed lines ("Speaker 0: …\nSpeaker 1: …").
+ */
+export type HqTranscriptionService = "whisper" | "whisper-llm" | "whisper-llm-mini" | "voxtral" | "voxtral-diarized";
 
 export interface TranscriptionConfig {
   /**
@@ -146,8 +173,8 @@ export async function transcribeAudio(
 
 /**
  * HQ transcription pass for narration mode's checkpoint flow. Uses the
- * `hqService` config field (whisper or voxtral — never deepgram, which
- * is realtime-only). Same shape as `transcribeAudio` so callers can use
+ * `hqService` config field (any non-deepgram service — deepgram is
+ * realtime-only). Same shape as `transcribeAudio` so callers can use
  * either interchangeably; this just routes by the HQ field.
  */
 export async function transcribeAudioHq(
@@ -157,14 +184,26 @@ export async function transcribeAudioHq(
   if (config.hqService === "voxtral") {
     return transcribeAudioVoxtral(params);
   }
-  return transcribeAudioWhisper(params);
+  if (config.hqService === "voxtral-diarized") {
+    return transcribeAudioVoxtral(params, { diarization: true });
+  }
+  return transcribeAudioWhisper(params, { variant: config.hqService });
 }
 
 /**
  * Transcribe audio using OpenAI Whisper API.
+ *
+ * `variant` picks the underlying model:
+ * - `whisper` (default): classic `whisper-1`. Returns verbose_json with
+ *   duration, language, and optional word timestamps.
+ * - `whisper-llm` / `whisper-llm-mini`: the newer LLM-based audio models
+ *   (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`). These only support
+ *   `response_format: "json"` and don't return duration, language, or
+ *   timestamps — we fill those with empty defaults.
  */
 async function transcribeAudioWhisper(
-  params: TranscribeAudioParams
+  params: TranscribeAudioParams,
+  opts: { variant: WhisperVariant } = { variant: "whisper" },
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   const { audioBuffer, filename, prompt, options } = params;
   const apiKey = process.env["THINKING_OPENAI_API_KEY"];
@@ -176,6 +215,8 @@ async function transcribeAudioWhisper(
     };
     throw error;
   }
+  const model = OPENAI_WHISPER_MODELS[opts.variant];
+  const isLlm = isLlmWhisperVariant(opts.variant);
 
   // Detect content type from extension
   const ext = filename.split(".").pop()?.toLowerCase();
@@ -201,21 +242,21 @@ async function transcribeAudioWhisper(
     Buffer.from(
       `--${boundary}\r\n` +
         "Content-Disposition: form-data; name=\"model\"\r\n\r\n" +
-        `${OPENAI_MODEL}\r\n`
+        `${model}\r\n`
     )
   );
 
-  // Add response_format field
+  // Add response_format field. LLM models only support `json`.
   formParts.push(
     Buffer.from(
       `--${boundary}\r\n` +
         "Content-Disposition: form-data; name=\"response_format\"\r\n\r\n" +
-        "verbose_json\r\n"
+        `${isLlm ? "json" : "verbose_json"}\r\n`
     )
   );
 
-  // Add timestamp_granularities if word timestamps requested
-  if (options?.wordTimestamps) {
+  // timestamp_granularities is whisper-1 only; the LLM models reject it.
+  if (!isLlm && options?.wordTimestamps) {
     formParts.push(
       Buffer.from(
         `--${boundary}\r\n` +
@@ -254,16 +295,16 @@ async function transcribeAudioWhisper(
       })
       .json<{
         text: string;
-        duration: number;
-        language: string;
+        duration?: number;
+        language?: string;
         words?: Array<{ word: string; start: number; end: number }>;
       }>();
 
-    if (options?.wordTimestamps && result.words) {
+    if (!isLlm && options?.wordTimestamps && result.words) {
       return {
         text: result.text,
-        duration: result.duration,
-        language: result.language,
+        duration: result.duration ?? 0,
+        language: result.language ?? "",
         words: result.words.map((w) => ({
           word: w.word,
           start: w.start,
@@ -274,8 +315,8 @@ async function transcribeAudioWhisper(
 
     return {
       text: result.text,
-      duration: result.duration,
-      language: result.language,
+      duration: result.duration ?? 0,
+      language: result.language ?? "",
     };
   } catch (error) {
     if (isTranscriptionError(error)) {

@@ -276,7 +276,7 @@ const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
 ];
 
 type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper";
-type HqTranscriptionOption = "whisper" | "voxtral";
+type HqTranscriptionOption = "whisper" | "whisper-llm" | "whisper-llm-mini" | "voxtral" | "voxtral-diarized";
 
 const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   label: string;
@@ -291,7 +291,10 @@ const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   service: HqTranscriptionOption;
 }> = [
   { label: "Whisper (OpenAI)", service: "whisper" },
+  { label: "Whisper LLM", service: "whisper-llm" },
+  { label: "Whisper LLM mini", service: "whisper-llm-mini" },
   { label: "Voxtral (Mistral)", service: "voxtral" },
+  { label: "Voxtral + diarization", service: "voxtral-diarized" },
 ];
 
 /**
