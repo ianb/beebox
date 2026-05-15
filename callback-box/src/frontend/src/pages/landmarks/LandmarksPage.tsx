@@ -10,7 +10,6 @@ import { Column } from "../../components/ui/Column";
 import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
 import { LandmarkSection } from "./components/LandmarkSection";
-import { LandmarksGrid } from "./components/LandmarksGrid";
 
 export function LandmarksPage() {
   const { boxSlug } = useParams({ strict: false });
@@ -40,11 +39,11 @@ export function LandmarksPage() {
             want to surface here.
           </Text>
         ) : (
-          <LandmarksGrid>
+          <Stack gap="md">
             {landmarks.map((lm) => (
               <LandmarkSection key={lm.path} landmark={lm} boxSlug={boxSlug ?? ""} />
             ))}
-          </LandmarksGrid>
+          </Stack>
         )}
       </Stack>
     </Column>

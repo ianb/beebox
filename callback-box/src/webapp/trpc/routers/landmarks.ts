@@ -29,6 +29,8 @@ export interface LandmarkPayload {
   symbolSrc: string | null;
   /** Resolved hand-listed + expanded links, in source order with dedup. */
   links: ResolvedLink[];
+  /** Nesting depth relative to ancestor landmarks (root = 0). */
+  depth: number;
 }
 
 function readChildText(element: ElementNode, tagName: string): string {
@@ -101,10 +103,44 @@ export const landmarksRouter = router({
         symbol: symbol.text,
         symbolSrc: symbol.src,
         links,
+        depth: 0,
       });
     }
 
-    payloads.sort((a, b) => a.path.localeCompare(b.path));
+    // Sort by dir so each landmark follows its nearest landmark ancestor:
+    // root first, then lexicographic by dir (a parent dir always lex-precedes
+    // its child dirs because "Parent" < "Parent/Child").
+    payloads.sort((a, b) => {
+      if (a.dir === "" && b.dir !== "") return -1;
+      if (b.dir === "" && a.dir !== "") return 1;
+      return a.dir.localeCompare(b.dir);
+    });
+
+    // Assign depth: each landmark's depth is 1 + the depth of its nearest
+    // ancestor landmark. The root landmark is special — it pins to the top
+    // but doesn't act as a parent, so top-level landmarks stay at depth 0.
+    const byDir = new Map<string, LandmarkPayload>();
+    for (const lm of payloads) byDir.set(lm.dir, lm);
+    for (const lm of payloads) {
+      if (lm.dir === "") {
+        lm.depth = 0;
+        continue;
+      }
+      let cursor = path.dirname(lm.dir);
+      if (cursor === ".") cursor = "";
+      let depth = 0;
+      while (cursor !== "") {
+        const ancestor = byDir.get(cursor);
+        if (ancestor) {
+          depth = ancestor.depth + 1;
+          break;
+        }
+        const next = path.dirname(cursor);
+        cursor = next === "." ? "" : next;
+      }
+      lm.depth = depth;
+    }
+
     return { landmarks: payloads };
   }),
 });

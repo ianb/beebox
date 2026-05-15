@@ -28,21 +28,28 @@ interface Landmark {
   symbol: string;
   symbolSrc: string | null;
   links: ResolvedLink[];
+  depth: number;
 }
 
 function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   return (
-    <Link to={href(`/${boxSlug}/browse/${dir}`)} className="hover:underline">
+    <Link
+      to={href(`/${boxSlug}/browse/${dir}`)}
+      className="inline-block self-start px-2 py-0.5 -mx-2 rounded hover:bg-warm-100"
+    >
       <Text as="span" size="xs" tone="muted">{dir ? `${dir}/` : "/"}</Text>
     </Link>
   );
 }
 
+const INDENT_CLASSES = ["", "ml-8", "ml-16", "ml-24", "ml-32"];
+
 export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; boxSlug: string }) {
   const labelText = landmark.label || landmark.path;
+  const indentClass = INDENT_CLASSES[Math.min(landmark.depth, INDENT_CLASSES.length - 1)];
 
   return (
-    <Card padding="md" border="subtle" shadow>
+    <Card padding="md" border="subtle" shadow className={indentClass}>
       <Stack gap="md">
         <div className="flex items-center gap-3">
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
