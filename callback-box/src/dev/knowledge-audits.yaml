@@ -946,6 +946,22 @@ tests:
     correct_contains: ["created", "appended", "edited", "todo-added", "todo-completed", "no-response"]
     tags: [chat, structured-output, ack]
 
+  - id: narration-self-correction-cleanup
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-15T10:00:00Z"/>
+      <speech>Add to my todos: call Maria on Thursday. No, sorry, Friday. <send-message phrase="send message" /></speech>
+    expected_level: knows_about
+    chat_mode: true
+    watch_for: "Recognizes the self-correction (Thursday → Friday) and records only the corrected day. The todo content should mention Friday, not Thursday."
+    cards_contain: ["Friday"]
+    should_not_read: []
+    tags: [chat, narration, recording]
+    notes: >
+      Tests the self-correction cleanup rule from the narration-mode doc.
+      Failure mode: writing "call Maria on Thursday, no sorry Friday" or
+      bothering the user with both versions.
+    max_turns: 15
+
   - id: ack-no-response
     prompt: |
       <chat-app narration="on" prose="off" time="2026-05-14T10:00:00Z"/>
