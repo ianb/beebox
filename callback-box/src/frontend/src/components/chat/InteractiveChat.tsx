@@ -157,16 +157,28 @@ function applyFeaturesChange(opts: {
  * round-trip to the HQ transcription service.
  */
 /**
- * Studio-mic icon used in place of the standard handheld mic when narration
- * is enabled. Distinct silhouette (suspended mic + arm) so the user can
- * tell at a glance what mode the next press will go into.
+ * Mic-with-chat-bubble icon used in place of the standard handheld mic
+ * when narration is enabled. Hints at "long talking" — the mic with a
+ * speech bubble suggests an extended utterance rather than a one-shot
+ * command.
  */
 function NarrationMicIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="9" y="3" width="6" height="11" rx="3" strokeWidth={2} />
-      <path strokeWidth={2} strokeLinecap="round" d="M6 11a6 6 0 0012 0M12 17v4m-3 0h6" />
-      <path strokeWidth={1.5} strokeLinecap="round" d="M11 7h2M11 10h2" />
+      {/* Chat bubble (top-right) */}
+      <path
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M14 3h6a1 1 0 011 1v5a1 1 0 01-1 1h-3.5L14 12.5V3z"
+      />
+      {/* Mic body (bottom-left) */}
+      <rect x="5" y="9" width="5" height="8" rx="2.5" strokeWidth={2} />
+      <path
+        strokeWidth={2}
+        strokeLinecap="round"
+        d="M3 14a4.5 4.5 0 009 0M7.5 19v2.5m-2 0h4"
+      />
     </svg>
   );
 }
