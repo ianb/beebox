@@ -1035,16 +1035,18 @@ export function UserMessage({ entries, debugView, currentUserEmail, acknowledged
   }
 
   return (
-    <div className="flex justify-end items-end pl-12 sm:pl-24 py-1 gap-1.5">
-      {acknowledged ? <AcknowledgedBadge /> : null}
-      <div
-        className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
-        title={pendingTitle}
-      >
-        {entries.map((entry) => (
-          <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
-        ))}
-        {isPending ? <PendingIndicator /> : null}
+    <div className="flex justify-end pl-12 sm:pl-24 py-1">
+      <div className="relative">
+        {acknowledged ? <AcknowledgedBadge /> : null}
+        <div
+          className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
+          title={pendingTitle}
+        >
+          {entries.map((entry) => (
+            <UserEntryContent key={entry.uuid} entry={entry} debugView={debugView ?? false} />
+          ))}
+          {isPending ? <PendingIndicator /> : null}
+        </div>
       </div>
     </div>
   );
@@ -1061,7 +1063,7 @@ function AcknowledgedBadge() {
     <span
       title="Acknowledged — no response needed"
       aria-label="Acknowledged — no response needed"
-      className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-info/40 text-white/80 text-[10px] self-end mb-1.5"
+      className="absolute -top-1.5 -left-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-info/70 text-white/90 text-[10px] ring-1 ring-warm-50"
     >
       ✓
     </span>
