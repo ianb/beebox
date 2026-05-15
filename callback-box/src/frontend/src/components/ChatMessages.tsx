@@ -401,12 +401,15 @@ function ActivityGroupInner({ parts }: { parts: Array<{ type: "thinking" | "tool
         if (part.type === "thinking") {
           if (!part.text?.trim()) return null;
           return (
-            <div key={i} className="py-0.5">
-              <div className="text-[10px] uppercase tracking-wider text-primary">thinking</div>
-              <div className="mt-0.5 text-xs text-warm-600 italic whitespace-pre-wrap ml-3">
+            <details key={i} className="group/think">
+              <summary className="cursor-pointer list-none flex items-center gap-1 text-primary hover:text-primary-dark py-0.5">
+                <span className="text-warm-500 group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
+                <span>thinking</span>
+              </summary>
+              <div className="mt-0.5 mb-1 ml-3 text-xs text-warm-600 italic whitespace-pre-wrap">
                 {part.text}
               </div>
-            </div>
+            </details>
           );
         }
         return part.tools?.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} />);
