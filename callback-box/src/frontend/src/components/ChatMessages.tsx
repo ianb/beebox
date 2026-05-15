@@ -1061,7 +1061,7 @@ function AcknowledgedBadge() {
     <span
       title="Acknowledged — no response needed"
       aria-label="Acknowledged — no response needed"
-      className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success text-white text-sm font-semibold shadow-sm self-end mb-1"
+      className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-info/40 text-white/80 text-[10px] self-end mb-1.5"
     >
       ✓
     </span>
