@@ -69,6 +69,10 @@ function formatTestResult(result: TestResult): string {
   for (const c of checks.containsChecks) {
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains "${c.expected}"`);
   }
+  for (const c of checks.notContainsChecks) {
+    // Forbidden: pass when *not* found, fail when found.
+    checkLines.push(`- ${c.found ? "\u2717" : "\u2713"} Response does NOT contain "${c.forbidden}"`);
+  }
   if (checks.containsAnyCheck) {
     const c = checks.containsAnyCheck;
     const detail = c.found && c.matched ? ` (matched "${c.matched}")` : "";

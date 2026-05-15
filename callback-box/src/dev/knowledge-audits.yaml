@@ -1028,6 +1028,20 @@ tests:
       structured-output indications for actions. Failure: writes a prose
       response like "I'll remember to call mom and try cardamom next time."
 
+  - id: narration-no-voice-out-by-default
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-15T10:00:00Z"/>
+      <speech>Quick question — what's two plus two?</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Does NOT emit <speech>. The general 'voice-in implies voice-out' rule is overridden in narration mode. Whether the answer comes back as a <callout> or just a silent ack is fine; the failure mode is using speech."
+    response_not_contains: ["<speech"]
+    tags: [chat, narration]
+    notes: >
+      Tests the override of the global voice-in-voice-out rule. In narration
+      mode the agent should default to silent even when the user spoke. A
+      <callout> answer is fine; <speech> alongside it is the failure mode.
+
   - id: narration-callout-on-real-question
     prompt: |
       <chat-app narration="on" prose="off" time="2026-05-13T10:00:00Z"/>

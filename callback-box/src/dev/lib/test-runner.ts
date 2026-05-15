@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { createAgent } from "../../core/agent.js";
-import { CHAT_SYSTEM_PROMPT } from "../../core/chat-session.js";
+import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat-session.js";
 import {
   getSessionLogPath,
   parseSessionLog,
@@ -22,6 +22,8 @@ export interface AuditTest {
   watch_for: string;
   correct_contains?: string[];
   correct_contains_any?: string[];
+  /** Substrings that must NOT appear in the agent's response. */
+  response_not_contains?: string[];
   cards_contain?: string[];
   should_read?: string[];
   should_not_read?: string[];
@@ -70,6 +72,7 @@ export interface AgentBehavior {
 
 export interface AutomatedChecks {
   containsChecks: Array<{ expected: string; found: boolean }>;
+  notContainsChecks: Array<{ forbidden: string; found: boolean }>;
   containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
@@ -129,8 +132,17 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   // Snapshot card files before the agent runs (for cards_contain checks)
   const cardsBefore = test.cards_contain ? await snapshotCardFiles(boxRoot) : new Map();
 
+  // In chat mode, mirror what ChatSession.resolveSystemPrompt builds: the
+  // base prompt plus, if the test prompt declares narration="on" via the
+  // <chat-app> snapshot, the NARRATION_OVERLAY. Detecting from the prompt
+  // body means audits stay self-describing — just put the snapshot in the
+  // prompt and the harness composes the right system prompt for it.
+  const narrationOn = /<chat-app\b[^>]*\bnarration="on"/i.test(prompt);
+  const chatPrompt = narrationOn
+    ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}`
+    : CHAT_SYSTEM_PROMPT;
   const systemPrompt = test.chat_mode
-    ? `${CHAT_SYSTEM_PROMPT}\n\nWORKING DIRECTORY: ${boxRoot}`
+    ? `${chatPrompt}\n\nWORKING DIRECTORY: ${boxRoot}`
     : `WORKING DIRECTORY: ${boxRoot}`;
   const invokeOpts: Parameters<ReturnType<typeof createAgent>["invoke"]>[0] = {
     boxRoot,
@@ -352,6 +364,11 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
     found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),
   }));
 
+  const notContainsChecks = (test.response_not_contains ?? []).map((forbidden) => ({
+    forbidden,
+    found: behavior.responseText.toLowerCase().includes(forbidden.toLowerCase()),
+  }));
+
   let containsAnyCheck: AutomatedChecks["containsAnyCheck"];
   if (test.correct_contains_any) {
     const lowerText = behavior.responseText.toLowerCase();
@@ -385,5 +402,5 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
     return { expected, found: !!matched, ...(matched && { matchedCommand: matched }) };
   });
 
-  return { containsChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks, bashContainsChecks };
+  return { containsChecks, notContainsChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks, bashContainsChecks };
 }
