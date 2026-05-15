@@ -62,7 +62,12 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
         text = text.replace(/<instructions>[\S\s]*?<\/instructions>/i, "").trim();
       }
     }
-    text = text.trim();
+    // Strip any orphan instructions open/close fragments (e.g. a stray extra
+    // </instructions> the agent emitted alongside the real one, or a typo'd
+    // close like </intructions>). Pattern matches `instructions`,
+    // `intructions`, with optional trailing `s`. Without this strip the TTS
+    // would speak the literal tag markup.
+    text = text.replace(/<\/?in[a-z]*tructions?[^>]*>/gi, "").trim();
 
     // Validate voice attribute against known list
     let voice: TTSVoice | undefined;

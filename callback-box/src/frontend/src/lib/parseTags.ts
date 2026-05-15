@@ -51,21 +51,22 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
     }
 
     if (isEnd) {
-      let foundMatch = false;
-      while (stack.length > 0) {
+      // Peek at the top of the stack. Only close if it matches the tag name.
+      // The old behavior popped through the whole stack looking for a match,
+      // which meant a stray `</instructions>` would silently close out an
+      // outer `<speech>` and lose the real body. Treating an unmatched close
+      // as literal text (no-op on the stack) keeps malformed input from
+      // unraveling the tree.
+      if (stack.length > 0 && stack[stack.length - 1].tag.type === tagName) {
         const currentItem = stack.pop()!;
         const currentTag = currentItem.tag;
-        if (tagName === currentTag.type) {
-          foundMatch = true;
-          currentTag.content = s.slice(currentItem.contentStart, matchStart);
-          const parentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
-          parentTag.content += s.slice(currentItem.startPos, matchEnd);
-          pos = matchEnd;
-          break;
-        }
-      }
-      if (!foundMatch) {
+        currentTag.content = s.slice(currentItem.contentStart, matchStart);
+        const parentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+        parentTag.content += s.slice(currentItem.startPos, matchEnd);
+      } else {
         console.warn("Unexpected closing tag", nextMatch[0]);
+        const currentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+        currentTag.content += s.slice(matchStart, matchEnd);
       }
       pos = matchEnd;
       continue;

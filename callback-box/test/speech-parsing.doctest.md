@@ -101,3 +101,43 @@ hasAssistantSpeech("Just regular text")
 hasAssistantSpeech("<speech>unclosed tag")
 => false
 ```
+
+## Malformed instructions tags don't break the speech body
+
+Real-world failure: the agent occasionally emits an extra `</instructions>` after
+the legitimate close — sometimes from a typo, sometimes from the model
+"correcting" itself. The speech body that follows should still be parsed
+correctly. The TTS pipeline should never end up speaking the literal word
+"instructions" or the stripped tag markup.
+
+### Stray duplicate `</instructions>`
+
+```
+const segs = parseAllSpeechTags(
+  "<speech><instructions>Speak warmly</instructions></instructions>Hello there.</speech>"
+);
+segs.length
+=> 1
+
+segs[0].text
+=> Hello there.
+
+segs[0].instructions
+=> Speak warmly
+```
+
+### Typo'd close followed by correct close
+
+```
+const segs = parseAllSpeechTags(
+  "<speech><instructions>Slow and clipped</intructions></instructions>The alarm fired.</speech>"
+);
+segs.length
+=> 1
+
+segs[0].text
+=> The alarm fired.
+```
+
+The instructions content may be lost when the open tag has a typo'd close
+that doesn't match, but the spoken text must still come through.
