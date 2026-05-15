@@ -268,7 +268,7 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
  * Ordered as presented to the user.
  */
 const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
-  { label: "Default", model: null },
+  { label: "Default (Opus)", model: null },
   { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
   { label: "Opus 4.7", model: "claude-opus-4-7" },
   { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
@@ -417,7 +417,7 @@ function ChatDebugMenu({
         <MenuItem onClick={onToggleDebugLog}>{showDebugLog ? "✓ " : "  "}Debug Log</MenuItem>
       </span>
       <MenuDivider />
-      <MenuItem onClick={onCompactSession} disabled={busy}>Compact Session</MenuItem>
+      <MenuItem onClick={onCompactSession} disabled={busy}>Run /compact</MenuItem>
       <MenuItem onClick={onRestartProcess} disabled={!running}>Restart Subprocess</MenuItem>
       <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
       <MenuDivider />
