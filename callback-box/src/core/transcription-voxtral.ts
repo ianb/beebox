@@ -164,7 +164,7 @@ export async function transcribeAudioVoxtral(
     const labeledText = diarization ? buildDiarizedText(result.segments) : null;
 
     return {
-      text: labeledText ?? result.text,
+      text: repairMissingSentenceSpaces(labeledText ?? result.text),
       duration,
       language,
     };
@@ -187,6 +187,17 @@ export async function transcribeAudioVoxtral(
     };
     throw transcriptionError;
   }
+}
+
+/**
+ * Voxtral occasionally concatenates segments without inter-sentence
+ * spacing — "have gone.Generic tools" instead of "have gone. Generic
+ * tools". Insert a space after `.`/`!`/`?` when the next char is a
+ * letter, leaving decimal numbers ("v1.2"), ellipses ("..."), and other
+ * non-letter sequences alone.
+ */
+export function repairMissingSentenceSpaces(text: string): string {
+  return text.replace(/([!.?])([A-Za-z])/g, "$1 $2");
 }
 
 /**
