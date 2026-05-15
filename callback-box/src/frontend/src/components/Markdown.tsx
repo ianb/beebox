@@ -20,6 +20,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import type { Components } from "react-markdown";
 import { remarkComments, isCommentCode } from "../lib/remark-comments";
+import { rehypeStripRef } from "../lib/rehype-strip-ref";
 import { href as routeHref } from "../lib/routing";
 import { Image } from "./ui/Image";
 import {
@@ -46,7 +47,7 @@ function viewUrlTransform(url: string): string {
 
 const defaultPlugins = [remarkGfm];
 const pluginsWithComments = [remarkGfm, remarkComments];
-const rehypePlugins = [rehypeRaw];
+const rehypePlugins = [rehypeRaw, rehypeStripRef];
 
 function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
   return routeHref(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
