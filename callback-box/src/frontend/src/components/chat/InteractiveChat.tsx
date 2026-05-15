@@ -47,8 +47,6 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
-import { useSyncRun } from "../../hooks/useSyncRun";
-import { SyncRunModal } from "./SyncRunModal";
 import { trpc } from "../../lib/trpc";
 
 /**
@@ -316,7 +314,6 @@ function ChatDebugMenu({
   onStopProcess,
   onRestartProcess,
   onCompactSession,
-  onRunSync,
   sessionId,
   running,
   busy,
@@ -332,7 +329,6 @@ function ChatDebugMenu({
   onStopProcess: () => void;
   onRestartProcess: () => void;
   onCompactSession: () => void;
-  onRunSync: () => void;
   sessionId: string | null;
   running: boolean;
   busy: boolean;
@@ -394,7 +390,6 @@ function ChatDebugMenu({
       <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
       <MenuItem onClick={onRestartProcess} disabled={!running}>Restart Subprocess</MenuItem>
       <MenuItem onClick={onCompactSession} disabled={busy}>Compact Session</MenuItem>
-      <MenuItem onClick={onRunSync}>Sync (cb wakeup)</MenuItem>
       <MenuDivider />
       <MenuItem onClick={onToggleNarration} disabled={sessionId === null}>
         {narrationEnabled ? "✓ " : "  "}Narration mode
@@ -1300,8 +1295,6 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const [debugView, setDebugView] = useState(false);
   const [showDebugLog, setShowDebugLog] = useState(false);
 
-  const sync = useSyncRun();
-  const handleRunSync = sync.start;
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
   const groups = useMemo(() => groupMessages(messages), [messages]);
@@ -2211,7 +2204,6 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           onStopProcess={handleStopProcess}
           onRestartProcess={handleRestartProcess}
           onCompactSession={handleCompactSession}
-          onRunSync={handleRunSync}
           sessionId={sessionId}
           running={processRunning}
           busy={isStreaming}
@@ -2396,7 +2388,6 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     </div>
     </div>
     {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
-    <SyncRunModal run={sync} />
     </>
   );
 }
