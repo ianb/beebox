@@ -10,7 +10,7 @@
  * a session switch (or new-chat reset) cleanly remounts the machine.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
@@ -30,6 +30,7 @@ import "ldrs/react/Grid.css";
 import { sendSound, tick, recordingStart, recordingStop, alarm } from "../../lib/earcons";
 import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
+import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { chatMachine, HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
 import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
 import { FileView } from "../FileView";
@@ -1081,14 +1082,16 @@ function VirtualizedMessageList({
           }
           if (item.kind === "stream") {
             return (
-              <div className="py-0.5">
-                <StreamingMessage text={streamText} onZoomView={onZoomView} />
-                {streamTools.length > 0 ? (
-                  <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
-                    <ToolList blocks={streamTools} />
-                  </div>
-                ) : null}
-              </div>
+              <MessageErrorBoundary label="stream">
+                <div className="py-0.5">
+                  <StreamingMessage text={streamText} onZoomView={onZoomView} />
+                  {streamTools.length > 0 ? (
+                    <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
+                      <ToolList blocks={streamTools} />
+                    </div>
+                  ) : null}
+                </div>
+              </MessageErrorBoundary>
             );
           }
           if (item.kind === "processing") {
@@ -1103,36 +1106,37 @@ function VirtualizedMessageList({
           }
           const group = item.group;
           const groupIndex = item.groupIndex;
+          const boundaryLabel = `${group.type}#${groupIndex}:${group.entries[0]?.uuid ?? ""}`;
+          let body: ReactNode;
           if (group.type === "compaction") {
-            return <div className="py-0.5"><CompactionMessage entries={group.entries} /></div>;
-          }
-          if (group.type === "interrupted") {
-            return <div className="py-0.5"><InterruptedMessage /></div>;
-          }
-          if (group.type === "self-note") {
-            return (
+            body = <div className="py-0.5"><CompactionMessage entries={group.entries} /></div>;
+          } else if (group.type === "interrupted") {
+            body = <div className="py-0.5"><InterruptedMessage /></div>;
+          } else if (group.type === "self-note") {
+            body = (
               <div className="py-0.5">
                 {group.notes.map((note, i) => (
                   <SelfNoteMessage key={i} note={note} />
                 ))}
               </div>
             );
+          } else if (group.type === "user") {
+            body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} /></div>;
+          } else {
+            body = (
+              <div className="py-0.5">
+                <AssistantMessage
+                  entries={group.entries}
+                  debugView={debugView}
+                  speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
+                  onStopSpeech={handleStopSpeech}
+                  onZoomView={onZoomView}
+                  proseEnabled={proseEnabled}
+                />
+              </div>
+            );
           }
-          if (group.type === "user") {
-            return <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} /></div>;
-          }
-          return (
-            <div className="py-0.5">
-              <AssistantMessage
-                entries={group.entries}
-                debugView={debugView}
-                speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
-                onStopSpeech={handleStopSpeech}
-                onZoomView={onZoomView}
-                proseEnabled={proseEnabled}
-              />
-            </div>
-          );
+          return <MessageErrorBoundary label={boundaryLabel}>{body}</MessageErrorBoundary>;
         }}
       />
     </div>
