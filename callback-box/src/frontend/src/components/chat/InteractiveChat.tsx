@@ -183,16 +183,35 @@ function NarrationMicIcon({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
-function NarrationStatusBadge({ enabled, hqInFlight }: { enabled: boolean; hqInFlight: boolean }) {
+function NarrationStatusBadge({
+  enabled,
+  hqInFlight,
+  onTurnOff,
+}: {
+  enabled: boolean;
+  hqInFlight: boolean;
+  onTurnOff: () => void;
+}) {
   if (!enabled) return null;
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium"
+      className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium"
       title="Narration mode is on — silent responses, structured output, HQ transcription on send"
     >
       <span aria-hidden>🎙️</span>
       <span>narration</span>
       {hqInFlight ? <span className="opacity-80">· transcribing…</span> : null}
+      <button
+        type="button"
+        onClick={onTurnOff}
+        aria-label="Turn off narration mode"
+        title="Turn off narration"
+        className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-white/20 focus:outline-none focus-visible:ring-1 focus-visible:ring-white"
+      >
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
     </span>
   );
 }
@@ -716,7 +735,7 @@ function ChatInputArea({
               onVoice();
             }
           }}
-          className={`${circleBtn} ${narrationEnabled && !voicePaused && !isTranscribing ? "ring-2 ring-accent ring-offset-2 ring-offset-warm-100 " : ""}${voicePaused ? "bg-primary/50 text-white animate-pulse" : isTranscribing ? "bg-danger text-white hover:bg-danger-dark active:opacity-80" : narrationEnabled ? "bg-accent text-white hover:bg-accent-dark active:opacity-80" : "bg-primary text-white hover:bg-primary-dark active:opacity-80"}`}
+          className={`${circleBtn} ${voicePaused ? "bg-primary/50 text-white animate-pulse" : isTranscribing ? "bg-danger text-white hover:bg-danger-dark active:opacity-80" : "bg-primary text-white hover:bg-primary-dark active:opacity-80"}`}
           title={voicePaused ? "Resume recording (stops speech)" : isTranscribing ? "Stop recording" : narrationEnabled ? "Voice input (narration mode)" : "Voice input"}
         >
           {voicePaused ? (
@@ -2177,7 +2196,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h2 className="text-sm font-semibold text-white tracking-wide">Chat</h2>
         <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
-        <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} />
+        <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={handleToggleNarration} />
         <div className="flex-1" />
         <RecentFilesButton
           entries={messages}
