@@ -532,6 +532,32 @@ export async function parseSessionLog(
     // Skip synthetic assistant responses (model === "<synthetic>") — generated locally, not by the LLM
     if (raw.type === "assistant" && message.model === "<synthetic>") continue;
 
+    // Harvest tool_result blocks from user entries and graft each result's
+    // summary onto its matching tool_use block in the prior assistant entry.
+    // The chat UI treats tool calls as a single unit (call + response), so
+    // results need to ride alongside their tool_use rather than appearing as
+    // standalone messages.
+    if (raw.type === "user") {
+      const resultsById = new Map<string, string>();
+      for (const block of content) {
+        if (block.type === "tool_result" && block.toolUseId) {
+          resultsById.set(block.toolUseId, block.resultSummary || "");
+        }
+      }
+      if (resultsById.size > 0) {
+        for (let i = filtered.length - 1; i >= 0; i--) {
+          const prev = filtered[i];
+          if (!prev || prev.type !== "assistant") break;
+          for (const b of prev.content) {
+            if (b.type === "tool_use" && b.toolId) {
+              const r = resultsById.get(b.toolId);
+              if (r !== undefined) b.resultSummary = r;
+            }
+          }
+        }
+      }
+    }
+
     // Skip user entries that are API plumbing (tool_result blocks, "Tool loaded." etc.)
     if (raw.type === "user") {
       const textBlocks = content.filter(

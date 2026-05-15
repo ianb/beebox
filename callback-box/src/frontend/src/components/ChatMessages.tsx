@@ -338,6 +338,7 @@ function categoryPlural(cat: string): string {
  */
 function ToolDetail({ block }: { block: SessionContentBlock }) {
   const input = block.input;
+  const result = block.resultSummary;
   const description = describeToolCall(block);
 
   if (nonExpandableTools.has(block.toolName || "")) {
@@ -355,6 +356,14 @@ function ToolDetail({ block }: { block: SessionContentBlock }) {
           {JSON.stringify(input, null, 2)}
         </Pre>
       ) : null}
+      {result ? (
+        <>
+          <div className="text-[10px] uppercase tracking-wider text-warm-500 ml-3 mt-1">result</div>
+          <Pre size="xs" boxed scroll="sm" muted className="mt-0.5 mb-1 ml-3">
+            {result}
+          </Pre>
+        </>
+      ) : null}
     </details>
   );
 }
@@ -371,24 +380,37 @@ function countToolCalls(parts: Array<{ type: "thinking" | "tools"; text?: string
   return count;
 }
 
+function ThinkingCornerMark() {
+  return (
+    <span
+      title="Agent reasoned silently (no thinking text recorded)"
+      aria-label="thought"
+      className="inline-flex items-center text-primary opacity-40"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+        <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v1.3h6v-1.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" />
+      </svg>
+    </span>
+  );
+}
+
 function ActivityGroupInner({ parts }: { parts: Array<{ type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }> }) {
   return (
     <>
-      {parts.map((part, i) =>
-        part.type === "thinking" ? (
-          <details key={i} className="group/think">
-            <summary className="cursor-pointer list-none flex items-center gap-1 text-primary hover:text-primary-dark py-0.5">
-              <span className="group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
-              thinking
-            </summary>
-            <div className="mt-1 text-xs text-warm-600 whitespace-pre-wrap max-h-60 overflow-auto ml-3">
-              {part.text}
+      {parts.map((part, i) => {
+        if (part.type === "thinking") {
+          if (!part.text?.trim()) return null;
+          return (
+            <div key={i} className="py-0.5">
+              <div className="text-[10px] uppercase tracking-wider text-primary">thinking</div>
+              <div className="mt-0.5 text-xs text-warm-600 italic whitespace-pre-wrap ml-3">
+                {part.text}
+              </div>
             </div>
-          </details>
-        ) : (
-          part.tools?.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} />)
-        )
-      )}
+          );
+        }
+        return part.tools?.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} />);
+      })}
     </>
   );
 }
@@ -1174,6 +1196,9 @@ export function AssistantMessage({
   ).join("\n");
   const hasSpeech = hasAssistantSpeech(allText);
   const isPlaying = speechPlaying === true;
+  const hasSilentThinking = entries.some((e) =>
+    e.content.some((b) => b.type === "thinking" && !b.text?.trim()),
+  );
   // Pulled out of the message body so prose rendering doesn't show raw XML;
   // rendered in their own surfaces below/after the markdown groups.
   const callouts = useMemo(() => parseCallouts(allText), [allText]);
@@ -1182,9 +1207,10 @@ export function AssistantMessage({
 
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
-      {!debugView && (hasSpeech || acks.length > 0) ? (
+      {!debugView && (hasSpeech || acks.length > 0 || hasSilentThinking) ? (
         <div className="absolute right-2 top-2 flex items-center gap-2">
           <AckCluster acks={acks} />
+          {hasSilentThinking ? <ThinkingCornerMark /> : null}
           {hasSpeech ? <SpeechIcon playing={isPlaying} onStop={onStopSpeech} /> : null}
         </div>
       ) : null}
