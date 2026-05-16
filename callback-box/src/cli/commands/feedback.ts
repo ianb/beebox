@@ -48,26 +48,31 @@ function formatEntry(entry: SessionEntry): string {
   return lines.join("\n");
 }
 
-async function getSessionContext(boxRoot: string): Promise<string | null> {
-  const sessionId = process.env["CLAUDE_CODE_SESSION_ID"];
-  if (!sessionId) return null;
+async function resolveSession(
+  boxRoot: string
+): Promise<{ sessionId: string; logPath: string } | null> {
+  const envSessionId = process.env["CLAUDE_CODE_SESSION_ID"];
+  if (envSessionId) {
+    return { sessionId: envSessionId, logPath: getSessionLogPath(boxRoot, envSessionId) };
+  }
+  // CLAUDE_CODE_SESSION_ID is not propagated when agents are spawned by the SDK.
+  // Fall back to the most recently modified session log.
+  const sessions = await listSessions(boxRoot);
+  if (sessions.length === 0) return null;
+  const newest = sessions[0]!;
+  return { sessionId: newest.sessionId, logPath: newest.path };
+}
 
-  const logPath = getSessionLogPath(boxRoot, sessionId);
+async function getSessionContext(boxRoot: string): Promise<string | null> {
+  const session = await resolveSession(boxRoot);
+  if (!session) return null;
 
   let entries: SessionEntry[];
   try {
-    const result = await parseSessionLog({ logPath });
+    const result = await parseSessionLog({ logPath: session.logPath });
     entries = result.entries;
   } catch {
-    const sessions = await listSessions(boxRoot);
-    const match = sessions.find((s) => s.sessionId === sessionId);
-    if (!match) return null;
-    try {
-      const result = await parseSessionLog({ logPath: match.path });
-      entries = result.entries;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   if (entries.length === 0) return null;
@@ -105,7 +110,8 @@ export const feedbackCommand = new Command("feedback")
 
       await fs.promises.mkdir(feedbackDir, { recursive: true });
 
-      const sessionId = process.env["CLAUDE_CODE_SESSION_ID"] ?? null;
+      const session = await resolveSession(boxRoot);
+      const serverUrl = process.env["CB_SERVER_URL"] ?? null;
       const context = await getSessionContext(boxRoot);
 
       const lines: string[] = [
@@ -114,7 +120,8 @@ export const feedbackCommand = new Command("feedback")
         `**Date:** ${now.toISOString()}`,
         `**Box:** ${path.basename(boxRoot)}`,
         `**Box path:** ${boxRoot}`,
-        ...(sessionId ? [`**Session:** ${sessionId}`] : []),
+        ...(serverUrl ? [`**Server:** ${serverUrl}`] : []),
+        ...(session ? [`**Session:** ${session.sessionId}`] : []),
         "",
         "## Feedback",
         "",
