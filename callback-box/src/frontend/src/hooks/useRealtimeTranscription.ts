@@ -19,6 +19,7 @@ import {
 } from "../machines/realtimeTranscriptionMachine";
 import { detectKeyword, type KeywordResult } from "../lib/speech-keywords";
 import { stillListening } from "../lib/earcons";
+import { useWakeLock } from "./useWakeLock";
 
 const STILL_LISTENING_DELAY_MS = 10000;
 
@@ -104,50 +105,19 @@ export function useRealtimeTranscription(
   const { finalTranscript, interimTranscript, error } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);
 
-  // Screen Wake Lock: keep device awake while recording
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  // Screen wake lock — keep the device awake while the mic is open.
+  // The hook is always mounted; we drive request/release imperatively
+  // from the machine state so the sentinel lifetime matches mic
+  // activity exactly. Visibility-change re-acquire is handled by the hook.
+  const { requestWakeLock, releaseWakeLock } = useWakeLock();
   const isActive = state !== "idle";
-
   useEffect(() => {
-    if (!isActive) {
-      if (wakeLockRef.current) {
-        wakeLockRef.current.release().catch(() => {});
-        wakeLockRef.current = null;
-      }
-      return;
+    if (isActive) {
+      void requestWakeLock();
+    } else {
+      void releaseWakeLock();
     }
-    let cancelled = false;
-    navigator.wakeLock?.request("screen").then((sentinel) => {
-      if (cancelled) {
-        sentinel.release().catch(() => {});
-      } else {
-        wakeLockRef.current = sentinel;
-      }
-    }).catch((err) => {
-      console.warn("[realtime-transcription] Wake lock failed:", err);
-    });
-    return () => {
-      cancelled = true;
-      if (wakeLockRef.current) {
-        wakeLockRef.current.release().catch(() => {});
-        wakeLockRef.current = null;
-      }
-    };
-  }, [isActive]);
-
-  // Re-acquire wake lock when tab regains focus (browser releases it on hide)
-  useEffect(() => {
-    if (!isActive) return;
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible" && wakeLockRef.current && wakeLockRef.current.released) {
-        navigator.wakeLock?.request("screen").then((sentinel) => {
-          wakeLockRef.current = sentinel;
-        }).catch(() => {});
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [isActive]);
+  }, [isActive, requestWakeLock, releaseWakeLock]);
 
   const fireKeyword = useCallback((keyword: KeywordResult) => {
     if (keyword.action === "send") {
