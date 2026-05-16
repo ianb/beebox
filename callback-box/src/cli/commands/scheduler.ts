@@ -11,13 +11,17 @@ import { execSync } from "node:child_process";
 import { Command } from "commander";
 import {
   loadSchedulerConfig,
-  saveSchedulerConfig,
   isBox,
   runScheduler,
   boxLogFile,
   LOG_DIR,
   type LogEntry,
 } from "../../core/scheduler.js";
+import {
+  loadBoxesConfig,
+  addBoxToManifest,
+  removeBoxFromManifest,
+} from "../../core/boxes-config.js";
 
 const PLIST_LABEL = "com.callback.scheduler";
 const PLIST_PATH = path.join(
@@ -38,55 +42,56 @@ schedulerCommand
     await runScheduler({ intervalSeconds: parseInt(options.interval, 10) });
   });
 
+// `cb scheduler {add,remove,list}` are deprecated aliases — the box
+// manifest is now shared with `cb serve`, so the canonical commands
+// live under `cb boxes`. Keep these working for scripts that already
+// use them.
+
+function deprecationNotice(newCommand: string): void {
+  console.error(
+    `[deprecated] Use \`cb boxes ${newCommand}\` instead — ` +
+      "`cb scheduler` box management will be removed in a future release.",
+  );
+}
+
 schedulerCommand
   .command("add")
-  .description("Add a box to the scheduler")
+  .description("[deprecated] Use `cb boxes add` instead")
   .argument("<path>", "Path to the box")
   .action(async (boxPath: string) => {
+    deprecationNotice("add");
     const resolved = path.resolve(boxPath);
-
     if (!(await isBox(resolved))) {
       console.error(`Not a valid box (missing .cb-box): ${resolved}`);
       process.exit(1);
     }
-
-    const config = await loadSchedulerConfig();
-    if (config.boxes.includes(resolved)) {
-      console.log(`Already configured: ${resolved}`);
-      return;
-    }
-
-    config.boxes.push(resolved);
-    await saveSchedulerConfig(config);
-    console.log(`Added: ${resolved}`);
+    const added = await addBoxToManifest(resolved);
+    console.log(added ? `Added: ${resolved}` : `Already configured: ${resolved}`);
   });
 
 schedulerCommand
   .command("remove")
-  .description("Remove a box from the scheduler")
+  .description("[deprecated] Use `cb boxes remove` instead")
   .argument("<path>", "Path to the box")
   .action(async (boxPath: string) => {
+    deprecationNotice("remove");
     const resolved = path.resolve(boxPath);
-    const config = await loadSchedulerConfig();
-    const idx = config.boxes.indexOf(resolved);
-
-    if (idx === -1) {
+    const removed = await removeBoxFromManifest(resolved);
+    if (!removed) {
       console.error(`Not configured: ${resolved}`);
       process.exit(1);
     }
-
-    config.boxes.splice(idx, 1);
-    await saveSchedulerConfig(config);
     console.log(`Removed: ${resolved}`);
   });
 
 schedulerCommand
   .command("list")
-  .description("Show configured boxes")
+  .description("[deprecated] Use `cb boxes list` instead")
   .action(async () => {
-    const config = await loadSchedulerConfig();
+    deprecationNotice("list");
+    const config = await loadBoxesConfig();
     if (config.boxes.length === 0) {
-      console.log("No boxes configured. Use `cb scheduler add <path>` to add one.");
+      console.log("No boxes configured. Use `cb boxes add <path>` to add one.");
       return;
     }
     for (const box of config.boxes) {

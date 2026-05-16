@@ -3,14 +3,17 @@
  *
  * Serves one or more boxes, each at its own URL slug based on directory basename.
  * Usage: cb serve [dirs...]
- *   - No args: serves current directory
- *   - Multiple dirs: each dir's basename becomes its URL slug
+ *   - With args: uses the given dirs directly.
+ *   - No args, manifest populated: serves every box in ~/.config/cb/boxes.json.
+ *   - No args, manifest empty: serves the current directory (legacy fallback,
+ *     useful for one-off local development).
  */
 
 import { Command } from "commander";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
+import { loadBoxesConfig } from "../../core/boxes-config.js";
 
 /**
  * Resolve directory arguments into BoxSpec array.
@@ -51,8 +54,24 @@ export const serveCommand = new Command("serve")
       process.exit(1);
     }
 
-    // Default to current directory if no dirs specified
-    const boxDirs = dirs.length > 0 ? dirs : [process.cwd()];
+    // Resolve which box dirs to serve. Precedence:
+    //   1. Explicit positional args.
+    //   2. Manifest at ~/.config/cb/boxes.json (the production path on
+    //      servers — added/removed via `cb boxes add|remove`).
+    //   3. Current directory (legacy fallback for one-off local dev).
+    let boxDirs: string[];
+    if (dirs.length > 0) {
+      boxDirs = dirs;
+    } else {
+      const manifest = await loadBoxesConfig();
+      if (manifest.boxes.length > 0) {
+        boxDirs = manifest.boxes;
+        console.log(`Serving ${manifest.boxes.length} box(es) from manifest:`);
+        for (const b of manifest.boxes) console.log(`  ${b}`);
+      } else {
+        boxDirs = [process.cwd()];
+      }
+    }
     const boxes = resolveBoxes(boxDirs);
 
     if (options.dev) {

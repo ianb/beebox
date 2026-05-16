@@ -1,9 +1,8 @@
 /**
- * Scheduler — config management and daemon loop for running scheduled scripts
- * across multiple boxes.
- *
- * Config lives at ~/.config/cb/scheduler.json (machine-local, not per-box).
- * Per-box logs are written to <boxRoot>/.callback-box/scheduler.jsonl (gitignored).
+ * Scheduler — daemon loop for running scheduled scripts across multiple
+ * boxes. The list of boxes lives in the shared manifest at
+ * `~/.config/cb/boxes.json` (see ../core/boxes-config.ts); per-box logs
+ * land in `<boxRoot>/.callback-box/scheduler.jsonl` (gitignored).
  */
 
 import * as fs from "node:fs/promises";
@@ -12,13 +11,14 @@ import * as os from "node:os";
 import { BOX_MARKER } from "../cli/lib/paths.js";
 import { runTick, type TickResult } from "../cli/commands/tick.js";
 import { getStatus, isRepo } from "../cli/lib/git.js";
+import {
+  loadBoxesConfig,
+  saveBoxesConfig,
+  type BoxesConfig,
+} from "./boxes-config.js";
 
-export interface SchedulerConfig {
-  boxes: string[];
-}
-
-const CONFIG_DIR = path.join(os.homedir(), ".config/cb");
-const CONFIG_FILE = path.join(CONFIG_DIR, "scheduler.json");
+/** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */
+export type SchedulerConfig = BoxesConfig;
 
 /** Per-box log filename inside .callback-box/ */
 export const SCHEDULER_LOG_FILENAME = "scheduler.jsonl";
@@ -34,18 +34,14 @@ export function boxLogFile(boxRoot: string): string {
   return path.join(boxRoot, ".callback-box", SCHEDULER_LOG_FILENAME);
 }
 
+/** @deprecated — call `loadBoxesConfig` from `./boxes-config.js` directly. */
 export async function loadSchedulerConfig(): Promise<SchedulerConfig> {
-  try {
-    const content = await fs.readFile(CONFIG_FILE, "utf-8");
-    return JSON.parse(content) as SchedulerConfig;
-  } catch {
-    return { boxes: [] };
-  }
+  return loadBoxesConfig();
 }
 
+/** @deprecated — call `saveBoxesConfig` from `./boxes-config.js` directly. */
 export async function saveSchedulerConfig(config: SchedulerConfig): Promise<void> {
-  await fs.mkdir(CONFIG_DIR, { recursive: true });
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+  await saveBoxesConfig(config);
 }
 
 /**

@@ -130,6 +130,11 @@ echo "Creating systemd services..."
 BOXES_DIR="$CB_HOME/boxes"
 BOX_DIRS=$(find "$BOXES_DIR" -maxdepth 1 -mindepth 1 -type d | sort | tr '\n' ' ')
 
+# Both serve and scheduler consult the same manifest at
+# ~/.config/cb/boxes.json. The systemd unit no longer hard-codes box
+# paths; `cb serve` reads the manifest at startup, and a future
+# `cb boxes add <path>` just requires `systemctl restart callback-serve`
+# (no unit rewrite needed).
 cat > /etc/systemd/system/callback-serve.service <<EOF
 [Unit]
 Description=Callback Box Web Server
@@ -139,7 +144,7 @@ After=network.target
 Type=simple
 User=$CB_USER
 Group=$CB_USER
-ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210 $BOX_DIRS
+ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210
 WorkingDirectory=$BOXES_DIR
 EnvironmentFile=$CB_HOME/.env
 Restart=on-failure
@@ -150,9 +155,10 @@ WantedBy=multi-user.target
 EOF
 
 # ── Systemd: callback-scheduler ────────────────────────────────────
-# Register all boxes with the scheduler
+# Register all existing boxes in the manifest used by both serve and
+# scheduler. Idempotent — re-runs are safe.
 for box in $BOX_DIRS; do
-  su - "$CB_USER" -c "cb scheduler add '$box'" 2>/dev/null || true
+  su - "$CB_USER" -c "cb boxes add '$box'" 2>/dev/null || true
 done
 
 cat > /etc/systemd/system/callback-scheduler.service <<EOF

@@ -81,33 +81,12 @@ su - $CB_USER -c "cd '$BOX_PATH' && cb init . --skip-git" 2>&1 || echo "Warning:
 # Re-chown in case cb init created files as root (shouldn't happen, but safe)
 chown -R $CB_USER:$CB_USER "$BOX_PATH"
 
-# Register with scheduler
-su - $CB_USER -c "cb scheduler add '$BOX_PATH'" 2>/dev/null && echo "Registered with scheduler" || echo "Already registered with scheduler"
+# Register with the shared box manifest (used by both serve and scheduler).
+su - $CB_USER -c "cb boxes add '$BOX_PATH'" 2>/dev/null && echo "Registered with manifest" || echo "Already in manifest"
 
-# Rebuild the serve service to include all boxes
-echo "Updating systemd services..."
-BOX_DIRS=\$(find $BOXES_DIR -maxdepth 1 -mindepth 1 -type d | sort | tr '\n' ' ')
-
-cat > /etc/systemd/system/callback-serve.service <<EOF
-[Unit]
-Description=Callback Box Web Server
-After=network.target
-
-[Service]
-Type=simple
-User=$CB_USER
-Group=$CB_USER
-ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210 \$BOX_DIRS
-WorkingDirectory=$BOXES_DIR
-EnvironmentFile=$CB_HOME/.env
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
+# Restart services so they pick up the new box from the manifest.
+# (No unit rewrite needed — `cb serve` reads ~/.config/cb/boxes.json
+# at startup.)
 systemctl restart callback-serve callback-scheduler
 
 echo ""
