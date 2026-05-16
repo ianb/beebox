@@ -25,7 +25,7 @@ export const ACK_KINDS: readonly AckKindDescriptor[] = [
   { kind: "edited",         defaultPhrase: "Edited",         icon: "✎"  },
   { kind: "todo-added",     defaultPhrase: "Added to todos", icon: "📋" },
   { kind: "todo-completed", defaultPhrase: "Done",           icon: "✓"  },
-  { kind: "no-response",    defaultPhrase: "No response",    icon: "·"  },
+  { kind: "no-response",    defaultPhrase: "No response",    icon: "✓"  },
 ] as const;
 
 const ACK_KIND_INDEX = new Map<string, AckKindDescriptor>(

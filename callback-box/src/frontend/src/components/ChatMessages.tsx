@@ -14,8 +14,7 @@ import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } fro
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { hasAssistantSpeech } from "../lib/speech-parsing";
-import { parseAcks, parseCallouts, stripStructuredOutputTags } from "../lib/structured-output-parsing";
-import { AckCluster } from "./chat/AckIndicator";
+import { getAckKind, parseCallouts, stripStructuredOutputTags, type AckIndication } from "../lib/structured-output-parsing";
 import { CalloutStack } from "./chat/CalloutBlock";
 
 /**
@@ -1011,7 +1010,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail, acknowledged }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; acknowledged?: boolean }) {
+export function UserMessage({ entries, debugView, currentUserEmail, acks }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; acks?: AckIndication[] }) {
   const allTexts = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
@@ -1062,7 +1061,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, acknowledged
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
       <div className="relative">
-        {acknowledged ? <AcknowledgedBadge /> : null}
+        <AckBadgeCluster acks={acks} />
         <div
           className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
           title={pendingTitle}
@@ -1078,19 +1077,32 @@ export function UserMessage({ entries, debugView, currentUserEmail, acknowledged
 }
 
 /**
- * Small checkmark badge shown alongside a user message when the agent's
- * reply was just `<ack kind="no-response"/>` — visible confirmation that
- * the message was received and intentionally not responded to (as opposed
- * to silence-from-failure or silence-from-thinking).
+ * Small ack badges shown alongside a user message — one per `<ack>` the
+ * agent emitted in its reply. The first sits at the top-left of the
+ * bubble; additional badges extend to the right. Same background as the
+ * user bubble so they read as part of it.
  */
-function AcknowledgedBadge() {
+function AckBadgeCluster({ acks }: { acks: AckIndication[] | undefined }) {
+  if (!acks || acks.length === 0) return null;
+  return (
+    <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
+      {acks.map((ack, i) => <AckBadge key={i} ack={ack} />)}
+    </span>
+  );
+}
+
+function AckBadge({ ack }: { ack: AckIndication }) {
+  const descriptor = getAckKind(ack.kind);
+  if (!descriptor) return null;
+  const label = ack.text ? `${descriptor.defaultPhrase} — ${ack.text}` : descriptor.defaultPhrase;
+  const title = ack.ref ? `${label} · ${ack.ref}` : label;
   return (
     <span
-      title="Acknowledged — no response needed"
-      aria-label="Acknowledged — no response needed"
-      className="absolute -top-1 -left-1 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info text-white text-[9px] ring-1 ring-warm-50"
+      title={title}
+      aria-label={label}
+      className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info text-white text-[9px] leading-none ring-1 ring-warm-50"
     >
-      ✓
+      <span aria-hidden>{descriptor.icon}</span>
     </span>
   );
 }
@@ -1203,16 +1215,15 @@ export function AssistantMessage({
     e.content.some((b) => b.type === "thinking" && !b.text?.trim()),
   );
   // Pulled out of the message body so prose rendering doesn't show raw XML;
-  // rendered in their own surfaces below/after the markdown groups.
+  // rendered in their own surfaces below/after the markdown groups. Acks
+  // are rendered as badges on the preceding user message — see InteractiveChat.
   const callouts = useMemo(() => parseCallouts(allText), [allText]);
-  const acks = useMemo(() => parseAcks(allText), [allText]);
   const showProse = proseEnabled !== false;
 
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
-      {!debugView && (hasSpeech || acks.length > 0 || hasSilentThinking) ? (
+      {!debugView && (hasSpeech || hasSilentThinking) ? (
         <div className="absolute right-2 top-2 flex items-center gap-2">
-          <AckCluster acks={acks} />
           {hasSilentThinking ? <ThinkingCornerMark /> : null}
           {hasSpeech ? <SpeechIcon playing={isPlaying} onStop={onStopSpeech} /> : null}
         </div>
