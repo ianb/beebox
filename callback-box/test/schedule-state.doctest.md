@@ -12,9 +12,11 @@ import {
   acquireScriptLock,
   releaseScriptLock,
   loadRunningScripts,
+  loadRunningProcedures,
 } from "../src/core/schedule-state.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
+import { utimes } from "node:fs/promises";
 ```
 
 ## pruneRecentRuns
@@ -228,6 +230,75 @@ const box = await makeTmpBox();
 const running = await loadRunningScripts(box.root);
 running.size
 => 0
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## loadRunningProcedures
+
+Reads `procedure/runs/*/run.procedure-run.card` and reports runs whose
+root status is pending or running.
+
+### Reports recent running runs
+
+```
+const box = await makeTmpBox();
+const runDir = box.root + "/procedure/runs/test-run_2026-05-16T1200";
+await fs.mkdir(runDir, { recursive: true });
+await fs.writeFile(runDir + "/run.procedure-run.card",
+  `<procedure-run procedure="test" status="running" started-at="2026-05-16T12:00:00Z"/>\n`);
+
+await loadRunningProcedures(box.root)
+=> [
+  "test-run_2026-05-16T1200"
+]
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+### Ignores stale run cards (mtime > 1 hour)
+
+A procedure that crashed mid-step leaves its run card at status="running"
+forever. To avoid blocking housekeeping on orphan corpses, cards whose
+mtime is older than one hour are treated as dead.
+
+```
+const box = await makeTmpBox();
+const runDir = box.root + "/procedure/runs/orphan_2026-03-16T2056";
+await fs.mkdir(runDir, { recursive: true });
+const cardPath = runDir + "/run.procedure-run.card";
+await fs.writeFile(cardPath,
+  `<procedure-run procedure="test" status="running" started-at="2026-03-16T20:56:00Z"/>\n`);
+
+// Backdate the run card to two hours ago.
+const twoHoursAgo = (Date.now() - 2 * 60 * 60 * 1000) / 1000;
+await utimes(cardPath, twoHoursAgo, twoHoursAgo);
+
+await loadRunningProcedures(box.root)
+=> []
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+### Ignores terminal statuses
+
+```
+const box = await makeTmpBox();
+for (const [name, status] of [["completed_run", "completed"], ["failed_run", "failed"]]) {
+  const runDir = box.root + "/procedure/runs/" + name;
+  await fs.mkdir(runDir, { recursive: true });
+  await fs.writeFile(runDir + "/run.procedure-run.card",
+    `<procedure-run procedure="test" status="${status}"/>\n`);
+}
+
+await loadRunningProcedures(box.root)
+=> []
 ```
 
 ``` cleanup

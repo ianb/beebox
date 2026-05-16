@@ -228,13 +228,27 @@ export async function loadActiveChats(boxRoot: string): Promise<Map<string, Chat
 }
 
 /**
+ * A run card whose mtime is older than this is treated as orphaned —
+ * the engine has no signal handler, so when a procedure process is
+ * killed (script-timeout, OOM, crash) the run card stays at its
+ * last-written status forever. Anything actively running updates the
+ * card on every step boundary, and `cb tick` kills scripts after 10
+ * minutes regardless. One hour leaves headroom for unusually long
+ * agent steps without letting a months-old corpse block housekeeping.
+ */
+const STALE_RUN_CARD_AGE_MS = 60 * 60 * 1000;
+
+/**
  * Return the names of any procedure runs whose root status is non-terminal
- * (pending or running). Used to gate housekeeping/tick activity so the
- * system can be "fully at rest" before scheduled work fires.
+ * (pending or running) AND whose run card has been touched recently. Used
+ * to gate housekeeping/tick activity so the system can be "fully at rest"
+ * before scheduled work fires.
  *
  * Reads `procedure/runs/<runDir>/run.procedure-run.card` and matches the
  * root `status="..."` attribute via regex — full XML parsing is overkill
- * here and would couple this helper to the schemas package.
+ * here and would couple this helper to the schemas package. Stale cards
+ * (older than STALE_RUN_CARD_AGE_MS) are skipped so an orphaned card from
+ * a long-dead procedure doesn't permanently block the at-rest gate.
  */
 export async function loadRunningProcedures(boxRoot: string): Promise<string[]> {
   const runsDir = path.join(boxRoot, "procedure/runs");
@@ -244,10 +258,19 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
   } catch {
     return [];
   }
+  const now = Date.now();
   const running: string[] = [];
   for (const entry of entries) {
     const cardPath = path.join(runsDir, entry, "run.procedure-run.card");
+    let mtimeMs: number;
     let content: string;
+    try {
+      const stat = await fs.stat(cardPath);
+      mtimeMs = stat.mtimeMs;
+    } catch {
+      continue;
+    }
+    if (now - mtimeMs > STALE_RUN_CARD_AGE_MS) continue;
     try {
       content = await fs.readFile(cardPath, "utf-8");
     } catch {
