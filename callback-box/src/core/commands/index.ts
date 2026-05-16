@@ -21,6 +21,7 @@ import "./assemble-timeline.js";
 import "./describe-images.js";
 import "./scan-import.js";
 import "./upload.js";
+import "./attachments.js";
 import "./ls.js";
 import "./wakeup.js";
 

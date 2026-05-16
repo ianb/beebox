@@ -43,6 +43,7 @@ import {
   describeImagesCommand,
   scanImportCommand,
   uploadCommand,
+  attachmentsCommand,
   lsCommand,
   renderCommand,
   usageCommand,
@@ -96,6 +97,7 @@ program.addCommand(schedulerCommand);
 program.addCommand(describeImagesCommand);
 program.addCommand(scanImportCommand);
 program.addCommand(uploadCommand);
+program.addCommand(attachmentsCommand);
 program.addCommand(lsCommand);
 program.addCommand(renderCommand);
 program.addCommand(usageCommand);

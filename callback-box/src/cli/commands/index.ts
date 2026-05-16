@@ -36,6 +36,7 @@ export { schedulerCommand } from "./scheduler.js";
 export { describeImagesCommand } from "./describe-images.js";
 export { scanImportCommand } from "./scan-import.js";
 export { uploadCommand } from "./upload.js";
+export { attachmentsCommand } from "./attachments.js";
 export { lsCommand } from "./ls.js";
 export { renderCommand } from "./render.js";
 export { usageCommand } from "./usage.js";
