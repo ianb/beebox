@@ -134,6 +134,8 @@ export const feedbackCommand = new Command("feedback")
         message: `agent feedback: ${message.slice(0, 72)}`,
         trailers: { "Feedback-Source": "agent" },
       });
+
+      process.stdout.write(`Feedback recorded: ${relPath}\n`);
     } catch (error) {
       // Silent failure — feedback is best-effort and shouldn't block work
       process.stderr.write(`cb feedback: ${(error as Error).message}\n`);
