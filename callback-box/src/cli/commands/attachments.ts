@@ -36,6 +36,11 @@ attachmentsCommand
   .description("Explicitly claim an on-disk file into its manifest.")
   .action(async (relPath: string) => dispatch("add", relPath));
 
+attachmentsCommand
+  .command("untrack-binaries")
+  .description("Migration step: git rm --cached every attachment binary covered by a manifest. Idempotent.")
+  .action(async () => dispatch("untrack-binaries"));
+
 async function dispatch(subcommand: string, relPath?: string): Promise<void> {
   try {
     const boxRoot = await requireBoxRoot();

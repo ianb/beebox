@@ -122,6 +122,26 @@ tmp/
 *.tmp
 *.swp
 *~
+
+# Binary attachments inside .attach/ scopes are tracked via per-dir
+# manifest.json (size + sha256), not committed directly. See
+# docs/attach-manifests.md.
+**/*.attach/**/*.jpg
+**/*.attach/**/*.jpeg
+**/*.attach/**/*.png
+**/*.attach/**/*.webp
+**/*.attach/**/*.avif
+**/*.attach/**/*.heic
+**/*.attach/**/*.tif
+**/*.attach/**/*.tiff
+**/*.attach/**/*.gif
+**/*.attach/**/*.webm
+**/*.attach/**/*.mp3
+**/*.attach/**/*.m4a
+**/*.attach/**/*.wav
+**/*.attach/**/*.pdf
+**/*.attach/**/*.mp4
+**/*.attach/**/*.mov
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
 

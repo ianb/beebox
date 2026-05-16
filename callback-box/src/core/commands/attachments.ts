@@ -16,6 +16,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import {
   registerCommand,
   type CommandContext,
@@ -27,9 +29,9 @@ import {
   loadManifest,
   saveManifest,
 } from "../attach-manifest.js";
-import {
-  scanBoxAttachments,
-} from "../attach-manifest-scan.js";
+import { scanBoxAttachments } from "../attach-manifest-scan.js";
+
+const execFileAsync = promisify(execFile);
 
 interface AttachmentsArgs {
   subcommand: string;
@@ -56,9 +58,110 @@ async function executeAttachments(
     case "add":
       if (!pathArg) return { success: false, error: "add requires a path" };
       return runAdd(ctx, { relPath: pathArg, apply: apply !== false });
+    case "untrack-binaries":
+      return runUntrackBinaries(ctx);
     default:
       return { success: false, error: `Unknown subcommand: ${subcommand}` };
   }
+}
+
+/**
+ * Migration step: ask git which currently-tracked files would now be ignored
+ * by the box's `.gitignore`, and `git rm --cached` them. Working-tree files
+ * stay (they're on disk and the manifests reference them); only the git
+ * index drops them. Pre-existing history still carries the blobs, but
+ * future commits will not.
+ *
+ * Idempotent: a second run finds no tracked-but-ignored files and is a no-op.
+ *
+ * Refuses to run if the manifests don't cover everything we're about to
+ * untrack — running this before `cb attachments migrate` would lose the
+ * inventory.
+ */
+async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
+  // List tracked files that the current .gitignore would ignore. `git
+  // ls-files -i --exclude-standard -c` does exactly that: tracked-but-now-
+  // ignored.
+  let stdout: string;
+  try {
+    const res = await execFileAsync(
+      "git",
+      ["ls-files", "-z", "-i", "-c", "--exclude-standard"],
+      { cwd: ctx.boxRoot, maxBuffer: 64 * 1024 * 1024 }
+    );
+    stdout = res.stdout;
+  } catch (e) {
+    return { success: false, error: `git ls-files failed: ${(e as Error).message}` };
+  }
+  const trackedIgnored = stdout
+    .split("\0")
+    .filter((s) => s.length > 0);
+  if (trackedIgnored.length === 0) {
+    ctx.writeLine("Nothing to untrack — no currently-tracked files match the gitignore.");
+    return { success: true, data: { untracked: 0 } };
+  }
+
+  // Safety check: every file we're about to untrack must be either covered
+  // by an attach manifest (so we can verify integrity later) or be a non-
+  // attach file (in which case the user is doing something we don't know
+  // about — refuse). Files outside .attach/ scopes aren't our concern; we
+  // only handle attachment binaries here.
+  const inAttach: string[] = [];
+  const outsideAttach: string[] = [];
+  for (const relPath of trackedIgnored) {
+    if (relPath.includes(".attach/")) inAttach.push(relPath);
+    else outsideAttach.push(relPath);
+  }
+  if (outsideAttach.length > 0) {
+    ctx.writeLine(`Skipping ${outsideAttach.length} file(s) outside .attach/ scopes (gitignored for other reasons):`);
+    for (const p of outsideAttach.slice(0, 5)) ctx.writeLine(`  ${p}`);
+    if (outsideAttach.length > 5) ctx.writeLine(`  ...and ${outsideAttach.length - 5} more`);
+  }
+  if (inAttach.length === 0) {
+    ctx.writeLine("No tracked attachment binaries to untrack.");
+    return { success: true, data: { untracked: 0 } };
+  }
+
+  // Verify each file is covered by its attach dir's manifest. If not, abort
+  // — running this before `cb attachments migrate` would lose the inventory.
+  const uncovered: string[] = [];
+  // Cache loaded manifests by dir to avoid re-reading.
+  const manifestCache = new Map<string, AttachManifest>();
+  for (const relPath of inAttach) {
+    const absPath = path.join(ctx.boxRoot, relPath);
+    const dir = path.dirname(absPath);
+    let manifest = manifestCache.get(dir);
+    if (!manifest) {
+      try { manifest = await loadManifest(dir); }
+      catch { manifest = { files: {} }; }
+      manifestCache.set(dir, manifest);
+    }
+    const fileName = path.basename(relPath);
+    if (!manifest.files[fileName]) uncovered.push(relPath);
+  }
+  if (uncovered.length > 0) {
+    ctx.writeLine(`Refusing to untrack: ${uncovered.length} file(s) are not covered by a manifest.`);
+    ctx.writeLine("Run 'cb attachments migrate' first so every binary is tracked.");
+    for (const p of uncovered.slice(0, 5)) ctx.writeLine(`  ${p}`);
+    if (uncovered.length > 5) ctx.writeLine(`  ...and ${uncovered.length - 5} more`);
+    return {
+      success: false,
+      error: `${uncovered.length} attachment(s) not in manifest`,
+    };
+  }
+
+  // git rm --cached --quiet -- <files>. Chunk to avoid argv overflow.
+  const CHUNK = 100;
+  for (let i = 0; i < inAttach.length; i += CHUNK) {
+    const slice = inAttach.slice(i, i + CHUNK);
+    await execFileAsync("git", ["rm", "--cached", "--quiet", "--", ...slice], {
+      cwd: ctx.boxRoot,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  }
+  ctx.writeLine(`Untracked ${inAttach.length} attachment binary file(s) from the git index.`);
+  ctx.writeLine("Working-tree files are preserved. Manifests cover them. Commit to finalize.");
+  return { success: true, data: { untracked: inAttach.length } };
 }
 
 /**

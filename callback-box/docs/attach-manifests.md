@@ -185,6 +185,48 @@ scope or `git rm`-ing it").
 | Hand-edited manifest broken JSON | Parse error → block | Fix or revert |
 | `git checkout` of old commit | Manifest reflects that commit; disk may be newer | `cb attachments verify` reports drift |
 
+## Migration runbook (existing boxes)
+
+Goal: stop committing new attachment binaries while keeping every existing
+binary on disk and recoverable. Pre-existing history retains the blobs; we
+accept that.
+
+Do this per box, in the box's working tree:
+
+```bash
+# 1. Sanity check: working tree is clean.
+git status
+
+# 2. Write a manifest.json for every binary already committed.
+#    No content changes; just inventory.
+cb attachments migrate
+
+# 3. Commit the manifests. Binaries are still tracked at this point.
+git add -A
+git commit -m "Migrate: add attach manifests"
+
+# 4. Re-init the box to pick up the new .gitignore patterns. This is
+#    safe — cb init is idempotent.
+cb init .
+
+# 5. Untrack the binaries that the new .gitignore would now ignore.
+#    Working-tree files are preserved; the git index drops them.
+#    Refuses to run if any of those binaries are not covered by a manifest.
+cb attachments untrack-binaries
+
+# 6. Commit the untracking. Future commits no longer include the binaries.
+git add .gitignore
+git commit -m "Untrack attach binaries"
+
+# 7. Verify.
+cb attachments verify
+```
+
+After this, `du -sh .git` doesn't shrink (history still carries the
+blobs), but `git status` and `git log --stat` no longer surface
+binaries, and new commits stay small. To actually reclaim history-side
+space, run `git filter-repo` later — separate, riskier operation.
+
 ## Out of scope (for v1)
 
 - **Backup / remote storage.** No R2, no rsync. Binaries live on the
