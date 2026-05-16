@@ -32,6 +32,7 @@ import {
   installSchedules,
 } from "./box.js";
 import { generateRules } from "./init-rules.js";
+import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/lib/git.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -254,12 +255,38 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
 }
 
 /**
+ * Paths that the `install*` and `generateRules` helpers own. Used by
+ * `syncTemplatesFromSource` to commit just their output without sweeping
+ * up user work in progress. Glob-style globs avoided: simple regex over
+ * relative paths is enough for what we generate.
+ */
+const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
+  /^config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
+  /^config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
+  /^config\/.+\.(?:guide|orig-guide)\.card$/,
+  /^config\/.+\.(?:personality|orig-personality)\.card$/,
+  /^config\/_template-updates\/.+$/,
+  /^briefing\.(?:briefing|orig-briefing)\.card$/,
+  /^briefing\.md$/,
+  /^\.claude\/rules\/.+\.md$/,
+];
+
+function isTemplateManagedPath(relPath: string): boolean {
+  return TEMPLATE_MANAGED_PATTERNS.some((re) => re.test(relPath));
+}
+
+/**
  * Re-install upstream templates (procedures, guides, schedules, personality,
  * briefing, card rules) into the box. Each install* helper is idempotent and
  * only writes when the upstream template differs from the box's copy. Runs
  * inside generateDocs's cache-invalidated path, so it fires when the
  * callback-box source has changed (typically right after a deploy) and is a
  * no-op otherwise.
+ *
+ * Any tracked-file changes the helpers leave behind get committed in a
+ * single surgical commit so the box's working tree doesn't accumulate drift
+ * on hosts that don't routinely run `cb tick` (which would otherwise sweep
+ * the changes via its post-script housekeeping commit).
  */
 async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installProcedures(boxRoot);
@@ -268,6 +295,34 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installBriefing(boxRoot);
   await installSchedules(boxRoot);
   await generateRules(boxRoot);
+
+  await commitTemplateSyncChanges(boxRoot);
+}
+
+/**
+ * Commit any template-managed paths the install/generateRules helpers
+ * dirtied, leaving user work in progress (in other paths) alone.
+ */
+async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
+  if (!(await isRepo(boxRoot))) return;
+  if (!(await hasCommits(boxRoot))) return;
+
+  const status = await getStatus(boxRoot);
+  const candidates = [
+    ...status.staged,
+    ...status.modified,
+    ...status.untracked,
+  ];
+  const toCommit = candidates.filter(isTemplateManagedPath);
+  if (toCommit.length === 0) return;
+
+  // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
+  await stageFiles(boxRoot, toCommit);
+  await commitPaths(boxRoot, {
+    paths: toCommit,
+    message: "Sync templates from upstream",
+    trailers: { "Triggered-By": "generateDocs" },
+  });
 }
 
 /**

@@ -358,8 +358,10 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
       normalizeGuideForComparison(existingContent) ===
       normalizeGuideForComparison(templateContent)
     ) {
-      // Template content matches (user hasn't modified it) — overwrite with latest
-      await fs.writeFile(targetPath, templateContent);
+      // Template content matches the box copy modulo timestamps. Leave
+      // the existing file alone — overwriting would just rewrite the
+      // timestamps and dirty the working tree on every install with no
+      // semantic change.
     } else {
       // User has modified the guide — park the new template for manual merge.
       const updatePath = templateUpdatePath(boxRoot, `${domain}.guide.card`);
