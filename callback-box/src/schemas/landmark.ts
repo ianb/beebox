@@ -60,6 +60,27 @@ export const LandmarkLink = element("link", {
 });
 
 /**
+ * Optional chat-feature seed for chats opened from this landmark.
+ * Each attribute is a feature name (from the chat-features registry)
+ * and its initial value. Only applied at session open — the user can
+ * still toggle features afterward.
+ *
+ * Mirrors the `<chat-app>` envelope tag used in chat itself, so the
+ * same vocabulary covers both the landmark seed and the agent-emitted
+ * delta. See `docs/narration-mode-design.md`.
+ *
+ * ```xml
+ * <chat-app narration="on" prose="off"/>
+ * ```
+ */
+export const LandmarkChatApp = element("chat-app", {
+  attrs: {
+    narration: z.enum(["on", "off"]).optional(),
+    prose: z.enum(["on", "off"]).optional(),
+  },
+});
+
+/**
  * Templated fan-out. Runs `query` (a glob) against the landmark's
  * directory and emits a `<link>` per match.
  *
@@ -102,7 +123,7 @@ export const LandmarkExpand = element("expand", {
  */
 export const LandmarkSchema = element("landmark", {
   children: z.array(
-    z.union([LandmarkLabel, LandmarkSymbol, LandmarkLink, LandmarkExpand])
+    z.union([LandmarkLabel, LandmarkSymbol, LandmarkLink, LandmarkExpand, LandmarkChatApp])
   ),
   instructions: `# Landmark Cards
 

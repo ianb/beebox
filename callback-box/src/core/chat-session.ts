@@ -211,6 +211,15 @@ export interface ChatSessionOptions {
   /** Called once when the SDK assigns a new session ID. Used for per-session bookkeeping. */
   onSessionIdAssigned?: (sessionId: string) => Promise<void> | void;
   /**
+   * Initial chat-feature flags for this session (e.g. `{ narration: "on" }`).
+   * Used by landmark seeding: when a chat is opened from a landmark that
+   * declares feature defaults, those defaults seed the session. The values
+   * land in the in-memory feature map immediately so the first user message's
+   * snapshot reflects them, and they persist to history once the session id
+   * is assigned. User toggles afterward override the seed.
+   */
+  seedFeatures?: Record<string, string>;
+  /**
    * Pre-set the session id (skips loading from `sessionFile`). Used by the
    * registry to construct an instance bound to a specific existing session.
    */
@@ -1012,7 +1021,10 @@ export class ChatSession extends EventEmitter {
           log("features", `Failed to load features: ${e instanceof Error ? e.message : e}`);
         }
       }
-      this.currentFeatures = resolveFeatures(stored ?? undefined);
+      // Stored (persisted) state wins. If none, fall back to a seed (landmark
+      // default for new sessions). If neither, registry defaults via
+      // resolveFeatures.
+      this.currentFeatures = resolveFeatures(stored ?? this.options.seedFeatures);
     })();
     await this.featuresLoadPromise;
   }

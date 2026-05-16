@@ -31,6 +31,7 @@ import {
   resolveSessionLogPath,
 } from "../../core/chat-session-history.js";
 import { resolveFeatures } from "../../core/chat-features.js";
+import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { transcribeAudioHq } from "../../core/transcription.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
@@ -250,12 +251,22 @@ export async function registerChatRoutes(
    * Returns the session and its current id (`null` for a still-pending new
    * session).
    */
-  function resolveSendTarget(
+  async function resolveSendTarget(
     sessionParam: string,
     contextDir?: string,
-  ): { session: ChatSession; id: string | null } {
+  ): Promise<{ session: ChatSession; id: string | null }> {
     if (sessionParam === "new") {
-      const session = registry.createNew(contextDir);
+      // Read landmark feature seeds (if any) for the bound directory and
+      // hand them to createNew, so the very first user message's <chat-app>
+      // snapshot reflects the landmark's defaults.
+      let seedFeatures: Record<string, string> | null = null;
+      if (contextDir !== undefined && contextDir !== "") {
+        seedFeatures = await readLandmarkFeaturesForDir(boxRoot, contextDir);
+      }
+      const session = registry.createNew({
+        ...(contextDir !== undefined ? { contextDir } : {}),
+        ...(seedFeatures !== null ? { seedFeatures } : {}),
+      });
       wireSession(session);
       return { session, id: null };
     }
@@ -295,7 +306,7 @@ export async function registerChatRoutes(
         }
       }
 
-      const { session: chatSession, id: knownId } = resolveSendTarget(sessionParam, contextDir);
+      const { session: chatSession, id: knownId } = await resolveSendTarget(sessionParam, contextDir);
 
       // Identify the sender from the session (may be null if auth is disabled)
       const user = getSessionUser(request);

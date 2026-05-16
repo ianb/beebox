@@ -21,6 +21,7 @@ import { ChatSession, type ChatSessionOptions } from "./chat-session.js";
 import {
   appendHistory,
   setMostActive,
+  updateFeaturesForSession,
 } from "./chat-session-history.js";
 import { createChatBackend, type ChatBackend } from "../services/claude-chat.js";
 
@@ -204,21 +205,26 @@ export class ChatSessionRegistry extends EventEmitter {
    * association is persisted to `chat-session-history` once the session id
    * is assigned, so resumes (here or on a fresh server boot) reapply it.
    */
-  createNew(contextDir?: string): ChatSession {
+  createNew(opts: { contextDir?: string; seedFeatures?: Record<string, string> } = {}): ChatSession {
+    const { contextDir, seedFeatures } = opts;
     const baseOpts = this.buildSessionOptions(null);
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
       backend: baseOpts.backend ?? this.backend,
       sessionFile: null,
       ...(contextDir !== undefined ? { contextDir } : {}),
+      ...(seedFeatures !== undefined ? { seedFeatures } : {}),
       onSessionIdAssigned: this.makeOnAssigned({
         knownId: null,
         chained: baseOpts.onSessionIdAssigned,
         contextDir,
+        seedFeatures,
       }),
     });
     this.pending.add(session);
-    log("create-new", `Pending new session created (pending=${this.pending.size}${contextDir ? `, contextDir=${contextDir}` : ""})`);
+    const seedSummary = seedFeatures && Object.keys(seedFeatures).length > 0
+      ? `, seedFeatures=${JSON.stringify(seedFeatures)}` : "";
+    log("create-new", `Pending new session created (pending=${this.pending.size}${contextDir ? `, contextDir=${contextDir}` : ""}${seedSummary})`);
     return session;
   }
 
@@ -231,14 +237,25 @@ export class ChatSessionRegistry extends EventEmitter {
     knownId: string | null;
     chained?: ((sessionId: string) => Promise<void> | void) | undefined;
     contextDir?: string | undefined;
+    seedFeatures?: Record<string, string> | undefined;
   }): (sessionId: string) => Promise<void> {
-    const { knownId, chained, contextDir } = params;
+    const { knownId, chained, contextDir, seedFeatures } = params;
     return async (sessionId: string): Promise<void> => {
       try {
         await appendHistory(this.boxRoot, {
           sessionId,
           ...(contextDir !== undefined ? { contextDir } : {}),
         });
+        // Persist landmark feature seeds alongside the new history entry so
+        // a future resume of this session (or a fresh server boot) still
+        // sees the seed as the session's starting state. User toggles
+        // afterward overwrite specific keys via updateFeaturesForSession.
+        if (seedFeatures && Object.keys(seedFeatures).length > 0) {
+          await updateFeaturesForSession(this.boxRoot, {
+            sessionId,
+            updates: seedFeatures,
+          });
+        }
         await setMostActive(this.boxRoot, sessionId);
       } catch (e) {
         log("on-assigned", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);

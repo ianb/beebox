@@ -15,6 +15,7 @@ import {
   resolveLandmark,
   type ResolvedLink,
 } from "../../../core/landmark/resolve.js";
+import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 
 export interface LandmarkPayload {
   /** Box-relative path of the landmark card. */
@@ -31,6 +32,12 @@ export interface LandmarkPayload {
   links: ResolvedLink[];
   /** Nesting depth relative to ancestor landmarks (root = 0). */
   depth: number;
+  /**
+   * Chat-feature seeds (e.g. `{ narration: "on" }`) declared via a
+   * `<chat-app>` child of the landmark. Applied at session-open time
+   * for chats bound to this landmark's directory.
+   */
+  features: Record<string, string>;
 }
 
 function readChildText(element: ElementNode, tagName: string): string {
@@ -104,6 +111,7 @@ export const landmarksRouter = router({
         symbolSrc: symbol.src,
         links,
         depth: 0,
+        features: readLandmarkFeatures(element),
       });
     }
 
