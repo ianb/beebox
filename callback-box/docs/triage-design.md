@@ -56,30 +56,40 @@ Direction:
 
 Open: how is the rule update performed? Direct edit by the answering pass, an agent that proposes a diff for review, or a separate "rules update" question kind?
 
-### 3. The category card
+### 3. The destination card
 
-A category is not just a label — it carries the rules for *triaging* into it and the procedure for *handling* it. The artifact:
+A category is not just a label — it's a *named spot in the box* that carries rules for triaging into it and a procedure for handling its contents. The artifact is a **destination card**, which generalizes today's landmark concept.
 
-**A category card is a landmark — but for triage destinations.** It lives *at* the destination directory (not in a central config dir), and *by existing there* it declares "items of this kind belong here, with this rubric and this handler." Discovery is a glob: `**/*.triage-destination.card` (tentative name — long-winded, but maybe right) finds the set. The card is the editable surface for everything about that category — name, rules, applied examples, handler.
+**One card, multiple roles.** Landmarks (hand-curated bookmarks for human navigation) and triage destinations (named routing targets for the categorizer) are both "a directory the system cares about, with metadata." Rather than ship them as separate card types, the destination card has **role-bearing child elements** — each wrapping the fields for that role:
+
+- `<navigation>` — human-facing: label, symbol, pinned links, expands. (What `<landmark>` carries today.)
+- `<triage-destination>` — agent-facing: rules, applied examples, handler procedure.
+- `<chat>` — *tentative third role.* If a spot can be a chat target (e.g. a character), this is where that role's metadata lives. Open whether to split this out of `<navigation>` now or leave it for later.
+
+A destination card must have at least one role and can have any combination. A recipes directory might be `<navigation>` + `<triage-destination>` (shows on the Landmarks page, receives triaged recipe items). A character with their own chat thread might be `<navigation>` + `<chat>`. A pure routing target — an archive humans don't browse — might be `<triage-destination>` only.
+
+**Discovery: glob, filter by role.** `**/*.destination.card` (working name) finds all destinations; triage filters to cards with `<triage-destination>`; the Landmarks UI filters to ones with `<navigation>`.
 
 Why "at the destination" rather than "in config":
 
 - The card and the directory are the same fact. Editing the rubric and seeing what's in the bucket are one action.
-- Moving a category = moving its card = moving its directory. No registry to sync.
-- The destination is already named (it's the filesystem path). The card just *labels* a tree location as a triage destination.
+- Moving a spot = moving its card = moving its directory. No registry to sync.
+- The destination is already named (it's the filesystem path). The card just *labels* a tree location with its roles.
 
-The compiled triage-instructions doc the categorizer reads is built by globbing across the box. Same idea as before — landmarks compiled into a map — only the source files are distributed throughout the tree rather than collected in one place.
+The compiled triage-instructions doc the categorizer reads is built by globbing across the box, filtering to cards with `<triage-destination>`, and pulling the rules and examples out.
 
-**A triage category IS a card type.** Each category corresponds to the card type that lives in the destination directory. The destination card's "what kind of item" *is* the type. This unifies what could otherwise have been two parallel taxonomies (card schemas vs. triage categories) into one.
+**A triage category IS a card type.** Each triage-destination corresponds to the card type that lives in its directory. The destination card's "what kind of item" *is* the type. This unifies what could have been two parallel taxonomies (card schemas vs. triage categories) into one.
 
-**The handler is a procedure** — but it runs at the *handle* stage, not as part of triage. The category card carries the procedure (or a `ref` to one); the triage stage uses the card's *rules* to route; the handle stage uses the card's *procedure* to run. Same artifact, two consumers. Two carriage options:
+**The handler is a procedure** — but it runs at the *handle* stage, not as part of triage. The `<triage-destination>` carries the procedure (or a `ref` to one); the triage stage uses the destination's *rules* to route; the handle stage uses its *procedure* to run. Same artifact, two consumers. Two carriage options:
 
-- **Inline.** Procedure steps live inside the destination card. One artifact per category — unified editable surface.
-- **By reference.** `<procedure ref="..."/>`. Reuses the existing procedure-running machinery directly, lets one procedure serve multiple categories, lets the handler grow without bloating the destination card.
+- **Inline.** Procedure steps live inside `<triage-destination>`. One artifact per category — unified editable surface.
+- **By reference.** `<procedure ref="..."/>` inside `<triage-destination>`. Reuses the existing procedure-running machinery directly, lets one procedure serve multiple categories, lets the handler grow without bloating the destination card.
 
 Both are reasonable. The `ref` form is implementation-cheaper (the engine already runs procedure cards as-is). The inline form is editorially nicer. Likely shape: support both, default to inline, with `ref` available for genuine reuse — and the inline form can desugar to "an inline procedure card embedded in the destination card" so the engine doesn't need two code paths.
 
 The handler procedure receives the bucket of files as input — likely as an env variable (`$TRIAGE_ITEMS` containing null-delimited filenames) for shell steps. Filenames are normalized at intake (no spaces, no special characters), so quoting hazards stay manageable.
+
+**Relationship to `briefing.briefing.card`.** Briefings remain separate — they're agent-facing per-directory context for any agent working in that area, not a named spot with discoverable roles. A directory can have a destination card *and* a briefing card; they answer different questions ("what roles does this spot play?" vs. "what should an agent know when working here?").
 
 ### 4. Comparable: Projects in Claude / ChatGPT
 
@@ -226,7 +236,7 @@ These exist in some form. The new system has to either replace them or coexist:
 ## Open questions
 
 1. **Granularity** — *Resolved: box-wide.* The system is aware of how content came in (channel: gmail, voice, share-sheet, etc.) and category rules can reference channel. Channel is metadata, not a separate categorization axis.
-2. **Category storage** — *Resolved: distributed marker files.* One destination card per category, living at its destination directory, discovered by glob (`**/*.triage-destination.card`). Compiled into the triage-instructions doc on demand. Open: compilation cadence and whether the compiled doc is a real file or virtual.
+2. **Category storage** — *Resolved: distributed destination cards.* One destination card per spot, living at its directory, discovered by glob (`**/*.destination.card`, working name). Triage filters to cards with `<triage-destination>` child. Compiled into the triage-instructions doc on demand. Open: compilation cadence; outer file extension / type name; migration of existing `*.landmark.card` files; whether `<chat>` ships as a role now or later.
 3. **Categorizer surface** — working direction: subagent + `cb triage` wrapper. Confirm against how other subagents are exposed.
 4. **Rules vs. examples accumulation** — confirmed-answer flow updates *rules* in the category card; bare examples are bounded. Open: how the rule update is performed (direct edit, diff-for-review, separate question kind).
 5. **Confidence levels** — *Resolved.* Named: `confident`, `probable`, `guess`. No `wrong`. No numbers. The `confident`/`probable` distinction is behavioral (note-for-review or not), not gradient.
