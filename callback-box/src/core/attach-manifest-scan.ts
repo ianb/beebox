@@ -88,6 +88,32 @@ const SKIP_DIRS = new Set([
 ]);
 
 /**
+ * Walk an attach scope and return scope-relative paths of every binary file.
+ * Recurses into plain subdirectories (e.g. an email's `attachments/` dir)
+ * but stops at nested `.attach/` directories — those are separate scopes
+ * managed by their own manifests.
+ */
+async function listScopeBinaries(scopeAbs: string): Promise<string[]> {
+  const out: string[] = [];
+  async function walk(absDir: string, relPrefix: string): Promise<void> {
+    const dirents = await fs.readdir(absDir, { withFileTypes: true });
+    for (const d of dirents) {
+      if (d.isDirectory()) {
+        if (d.name.endsWith(".attach")) continue; // nested attach scope; skip
+        await walk(path.join(absDir, d.name), relPrefix === "" ? d.name : `${relPrefix}/${d.name}`);
+        continue;
+      }
+      if (!d.isFile()) continue;
+      if (d.name === MANIFEST_FILENAME && relPrefix === "") continue;
+      if (d.name.endsWith(".card")) continue;
+      out.push(relPrefix === "" ? d.name : `${relPrefix}/${d.name}`);
+    }
+  }
+  await walk(scopeAbs, "");
+  return out;
+}
+
+/**
  * Find every `.attach/` directory under boxRoot. Returns absolute and
  * relative paths so callers can log readably.
  */
@@ -150,17 +176,13 @@ export async function scanAttachScope(
     return result;
   }
 
-  // List direct children that are regular files and aren't the manifest itself.
-  // Cards (.card files) commit normally and aren't manifest-tracked. Nested
-  // attach dirs are handled by their own scans.
-  const dirents = await fs.readdir(scope.absPath, { withFileTypes: true });
-  const fileNames: string[] = [];
-  for (const d of dirents) {
-    if (!d.isFile()) continue;
-    if (d.name === MANIFEST_FILENAME) continue;
-    if (d.name.endsWith(".card")) continue;
-    fileNames.push(d.name);
-  }
+  // List every binary file inside this attach scope. We recurse into
+  // non-`.attach/` subdirectories (e.g. an email-thread's `attachments/`
+  // dir), but stop at nested `.attach/` boundaries — those are separate
+  // attach scopes with their own manifests. Cards (.card files) commit
+  // normally and aren't manifest-tracked. Names in the manifest are
+  // scope-relative paths (e.g. `photo.jpg`, `attachments/Outlook.png`).
+  const fileNames: string[] = await listScopeBinaries(scope.absPath);
 
   const startedFromEmpty = Object.keys(manifest.files).length === 0;
   const fileNameSet = new Set(fileNames);

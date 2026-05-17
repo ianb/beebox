@@ -249,6 +249,34 @@ manifest file exists: false
 await box9.cleanup();
 ```
 
+## Recursion into plain subdirectories within a scope
+
+An attach scope's manifest covers every binary anywhere inside it, except
+inside nested `.attach/` directories (which have their own manifests).
+The classic case: email threads store attachments under
+`<thread>.attach/msg-001.attach/attachments/<file>`. The `attachments/`
+subdir is part of the surrounding `msg-001.attach` scope, not a separate
+scope.
+
+```
+const boxR = await makeTmpBox();
+await boxR.write("msg.attach/attachments/Outlook.png", "alpha");
+await boxR.write("msg.attach/attachments/img/inline.jpg", "beta");
+await boxR.write("msg.attach/photo-001.attach/photo-001.jpg", "gamma");
+const r = await scanAttachScope({ absPath: boxR.path("msg.attach"), relPath: "msg.attach" });
+print(`claimed: ${r.claimed.toSorted().join(", ")}`);
+print(`errors: ${r.errors.length}`)
+=>
+claimed: attachments/Outlook.png, attachments/img/inline.jpg
+errors: 0
+```
+
+The nested `.attach/` scope is left to its own scan — not picked up here.
+
+```cleanup
+await boxR.cleanup();
+```
+
 ## scanBoxAttachments walks the whole box
 
 Combined "find scopes + scan each" — what the pre-commit hook calls.

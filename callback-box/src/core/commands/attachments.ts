@@ -122,22 +122,26 @@ async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
     return { success: true, data: { untracked: 0 } };
   }
 
-  // Verify each file is covered by its attach dir's manifest. If not, abort
-  // — running this before `cb attachments migrate` would lose the inventory.
+  // Verify each file is covered by its enclosing attach scope's manifest.
+  // A binary at `msg-001.attach/attachments/foo.png` belongs to
+  // `msg-001.attach/manifest.json` under key `attachments/foo.png`.
   const uncovered: string[] = [];
-  // Cache loaded manifests by dir to avoid re-reading.
   const manifestCache = new Map<string, AttachManifest>();
   for (const relPath of inAttach) {
-    const absPath = path.join(ctx.boxRoot, relPath);
-    const dir = path.dirname(absPath);
-    let manifest = manifestCache.get(dir);
-    if (!manifest) {
-      try { manifest = await loadManifest(dir); }
-      catch { manifest = { files: {} }; }
-      manifestCache.set(dir, manifest);
+    const scope = enclosingAttachScope(relPath);
+    if (!scope) {
+      uncovered.push(relPath);
+      continue;
     }
-    const fileName = path.basename(relPath);
-    if (!manifest.files[fileName]) uncovered.push(relPath);
+    const scopeAbs = path.join(ctx.boxRoot, scope);
+    let manifest = manifestCache.get(scopeAbs);
+    if (!manifest) {
+      try { manifest = await loadManifest(scopeAbs); }
+      catch { manifest = { files: {} }; }
+      manifestCache.set(scopeAbs, manifest);
+    }
+    const scopeRel = relPath.slice(scope.length + 1);  // strip "<scope>/"
+    if (!manifest.files[scopeRel]) uncovered.push(relPath);
   }
   if (uncovered.length > 0) {
     ctx.writeLine(`Refusing to untrack: ${uncovered.length} file(s) are not covered by a manifest.`);
@@ -314,6 +318,24 @@ async function writeAttachment({ absPath, content }: { absPath: string; content:
   await fs.writeFile(tmp, content);
   await fs.rename(tmp, absPath);
   try { await fs.chmod(absPath, 0o444); } catch (_e) { /* ignore */ }
+}
+
+/**
+ * Find the deepest `.attach/` directory enclosing a path. Returns the
+ * scope's box-relative path, or null if none.
+ *
+ * Example:
+ *   thread.attach/msg-001.attach/attachments/foo.png
+ *   → thread.attach/msg-001.attach   (NOT thread.attach — deepest wins)
+ */
+function enclosingAttachScope(relPath: string): string | null {
+  const parts = relPath.split("/");
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (parts[i]!.endsWith(".attach")) {
+      return parts.slice(0, i + 1).join("/");
+    }
+  }
+  return null;
 }
 
 async function readStdin(): Promise<Buffer> {
