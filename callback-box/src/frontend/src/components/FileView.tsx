@@ -261,7 +261,7 @@ export function FileView({ path, mode = "page", rendererName, onNavigate }: File
 
   if (mode === "chat") {
     return (
-      <div className="not-prose border rounded-lg overflow-hidden bg-white">
+      <div className="border rounded-lg overflow-hidden bg-white">
         <ChatHeader path={path} renderers={renderers} active={active} onSelect={selectForPath} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
