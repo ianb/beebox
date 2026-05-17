@@ -562,12 +562,13 @@ async function findWrappersRecursive(args: FindWrappersRecursiveArgs): Promise<v
     if (e.name.endsWith(".attach")) continue;
 
     const childAbs = path.join(scanDirAbs, e.name);
-    let inner: string[];
+    let innerEntries: Array<{ name: string; isDirectory: () => boolean }>;
     try {
-      inner = await fs.readdir(childAbs);
+      innerEntries = await fs.readdir(childAbs, { withFileTypes: true });
     } catch {
       continue;
     }
+    const inner = innerEntries.map((d) => d.name);
     let cardFile: string | undefined;
     let cardType: string | undefined;
     for (const type of wrapperTypes) {
@@ -578,7 +579,20 @@ async function findWrappersRecursive(args: FindWrappersRecursiveArgs): Promise<v
         break;
       }
     }
-    if (cardFile && cardType) {
+
+    // A wrapper holds a session card plus loose sibling cards/files. A
+    // regular containing directory (like `box/inbox/`, where new-layout
+    // capture-session cards live as siblings of their `.attach/` dirs)
+    // also contains a session card, but additionally has subdirectories
+    // that themselves house data (`capture-XX/`, `capture-XX.attach/`,
+    // `email/`, etc.). Use the presence of any non-`.attach` subdir as
+    // the signal: a real wrapper's only subdirs are `<base>.attach/`
+    // (rare in the old layout, but possible) or none.
+    const hasNonAttachSubdir = innerEntries.some(
+      (d) => d.isDirectory() && !d.name.endsWith(".attach")
+    );
+
+    if (cardFile && cardType && !hasNonAttachSubdir) {
       out.push({
         wrapperRel: path.relative(boxRoot, childAbs),
         parentRel: path.relative(boxRoot, scanDirAbs),
@@ -737,7 +751,19 @@ async function executePlan(boxRoot: string, plan: MigrationPlan): Promise<void> 
       continue;
     }
     await fs.mkdir(path.dirname(toAbs), { recursive: true });
-    await fs.rename(fromAbs, toAbs);
+    try {
+      await fs.rename(fromAbs, toAbs);
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      // Destination already exists (partial prior migration, or an .attach
+      // dir that was hand-created). Merge the source contents into it
+      // instead of failing the whole run.
+      if (err.code === "ENOTEMPTY" || err.code === "EEXIST") {
+        await mergeMove(fromAbs, toAbs);
+      } else {
+        throw e;
+      }
+    }
   }
 
   // 3. Clean up any leftover empty directories inside (and including) each
@@ -747,6 +773,44 @@ async function executePlan(boxRoot: string, plan: MigrationPlan): Promise<void> 
     const wrapperAbs = path.join(boxRoot, sm.oldWrapperRel);
     await removeEmptyDirsRecursively(wrapperAbs);
   }
+}
+
+/**
+ * Recursively move `from` into `to`, where `to` already exists. For each child:
+ * if it doesn't collide, rename(); if it does and both sides are directories,
+ * recurse. If both sides are files and identical, drop the source; if they
+ * differ, throw — that's a real conflict the user needs to resolve.
+ */
+async function mergeMove(fromAbs: string, toAbs: string): Promise<void> {
+  const sourceStat = await fs.stat(fromAbs);
+  if (!sourceStat.isDirectory()) {
+    // File-on-file collision. If contents identical, drop the source.
+    const [a, b] = await Promise.all([
+      fs.readFile(fromAbs),
+      fs.readFile(toAbs).catch(() => null as Buffer | null),
+    ]);
+    if (b && a.equals(b)) {
+      await fs.unlink(fromAbs);
+      return;
+    }
+    throw new Error(`mergeMove conflict: file ${fromAbs} and ${toAbs} differ`);
+  }
+  const children = await fs.readdir(fromAbs);
+  for (const name of children) {
+    const childFrom = path.join(fromAbs, name);
+    const childTo = path.join(toAbs, name);
+    try {
+      await fs.rename(childFrom, childTo);
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code === "ENOTEMPTY" || err.code === "EEXIST") {
+        await mergeMove(childFrom, childTo);
+      } else {
+        throw e;
+      }
+    }
+  }
+  await fs.rmdir(fromAbs);
 }
 
 async function removeEmptyDirsRecursively(dirAbs: string): Promise<void> {
