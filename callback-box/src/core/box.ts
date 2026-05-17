@@ -123,6 +123,7 @@ tmp/
 *.swp
 *~
 
+# cb-attach-binaries (managed by cb attachments init-gitignore)
 # Binary attachments inside .attach/ scopes are tracked via per-dir
 # manifest.json (size + sha256), not committed directly. See
 # docs/attach-manifests.md.

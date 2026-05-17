@@ -60,9 +60,65 @@ async function executeAttachments(
       return runAdd(ctx, { relPath: pathArg, apply: apply !== false });
     case "untrack-binaries":
       return runUntrackBinaries(ctx);
+    case "init-gitignore":
+      return runInitGitignore(ctx);
     default:
       return { success: false, error: `Unknown subcommand: ${subcommand}` };
   }
+}
+
+/**
+ * Marker that scopes the auto-appended attach-binary block in `.gitignore`.
+ * Lets us detect "already present" idempotently and (in the future) update
+ * the block if we change the extension list.
+ */
+const GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attachments init-gitignore)";
+
+const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
+# Binary attachments inside .attach/ scopes are tracked via per-dir
+# manifest.json (size + sha256), not committed directly. See
+# docs/attach-manifests.md.
+**/*.attach/**/*.jpg
+**/*.attach/**/*.jpeg
+**/*.attach/**/*.png
+**/*.attach/**/*.webp
+**/*.attach/**/*.avif
+**/*.attach/**/*.heic
+**/*.attach/**/*.tif
+**/*.attach/**/*.tiff
+**/*.attach/**/*.gif
+**/*.attach/**/*.webm
+**/*.attach/**/*.mp3
+**/*.attach/**/*.m4a
+**/*.attach/**/*.wav
+**/*.attach/**/*.pdf
+**/*.attach/**/*.mp4
+**/*.attach/**/*.mov
+`;
+
+/**
+ * Append the binary-attachment block to the box's `.gitignore` if missing.
+ * Idempotent: detected via the block marker, so running twice is a no-op.
+ * Creates `.gitignore` if absent.
+ */
+async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
+  const gitignorePath = path.join(ctx.boxRoot, ".gitignore");
+  let existing = "";
+  try {
+    existing = await fs.readFile(gitignorePath, "utf-8");
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code !== "ENOENT") throw e;
+  }
+  if (existing.includes(GITIGNORE_BLOCK_MARKER)) {
+    ctx.writeLine("Already present in .gitignore — no change.");
+    return { success: true, data: { changed: false } };
+  }
+  const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
+  const updated = existing + sep + GITIGNORE_BLOCK;
+  await fs.writeFile(gitignorePath, updated);
+  ctx.writeLine(`Appended attach-binary block to ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
+  return { success: true, data: { changed: true } };
 }
 
 /**

@@ -205,30 +205,9 @@ cb attachments migrate
 git add -A
 git commit -m "Migrate: add attach manifests"
 
-# 4. Add the attach-binary patterns to the box's .gitignore.
-#    (cb init also writes this template, but init clobbers the whole
-#    file — we append instead to preserve any box-local additions.)
-cat >> .gitignore <<'EOF'
-
-# Binary attachments (managed via per-dir manifest.json — see
-# docs/attach-manifests.md)
-**/*.attach/**/*.jpg
-**/*.attach/**/*.jpeg
-**/*.attach/**/*.png
-**/*.attach/**/*.webp
-**/*.attach/**/*.avif
-**/*.attach/**/*.heic
-**/*.attach/**/*.tif
-**/*.attach/**/*.tiff
-**/*.attach/**/*.gif
-**/*.attach/**/*.webm
-**/*.attach/**/*.mp3
-**/*.attach/**/*.m4a
-**/*.attach/**/*.wav
-**/*.attach/**/*.pdf
-**/*.attach/**/*.mp4
-**/*.attach/**/*.mov
-EOF
+# 4. Add the attach-binary patterns to the box's .gitignore. Idempotent
+#    (detected via a marker line), so re-running is safe.
+cb attachments init-gitignore
 
 # 5. Untrack the binaries that the new .gitignore would now ignore.
 #    Working-tree files are preserved; the git index drops them.

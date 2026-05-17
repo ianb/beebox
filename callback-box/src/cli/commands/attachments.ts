@@ -41,6 +41,11 @@ attachmentsCommand
   .description("Migration step: git rm --cached every attachment binary covered by a manifest. Idempotent.")
   .action(async () => dispatch("untrack-binaries"));
 
+attachmentsCommand
+  .command("init-gitignore")
+  .description("Append the attach-binary gitignore patterns to the box's .gitignore. Idempotent.")
+  .action(async () => dispatch("init-gitignore"));
+
 async function dispatch(subcommand: string, relPath?: string): Promise<void> {
   try {
     const boxRoot = await requireBoxRoot();
