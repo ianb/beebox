@@ -877,16 +877,29 @@ function MobileTextareaRow({
 }
 
 /**
- * Trim a streaming text buffer to the last completed paragraph. The
- * trailing in-progress paragraph (everything after the last "\n\n") is
- * hidden until it completes — avoids showing twitchy mid-sentence
- * fragments as the model types. The full text still lands in the
- * assistant message once the turn ends.
+ * Trim a streaming text buffer to the last safe boundary. Either a
+ * paragraph break ("\n\n") or the end of a completed structured tag
+ * (`</speech>`, `</ack>`, `</callout>`, or a self-closing `<ack/>` /
+ * `<chat-app/>`) counts as safe. Without the tag boundary, a turn
+ * that begins with `<speech>…</speech>` plays its audio (the speech
+ * dispatcher runs off closed `</speech>` tags directly) before any
+ * visible text appears — the trailing fragment sits in the
+ * in-progress region until the first `\n\n` arrives.
+ *
+ * Trailing in-progress plain text is still hidden so mid-sentence
+ * fragments don't twitch as the model types.
  */
 function chunkOnParagraphs(text: string): string {
-  const lastBreak = text.lastIndexOf("\n\n");
-  if (lastBreak === -1) return "";
-  return text.slice(0, lastBreak);
+  const para = text.lastIndexOf("\n\n");
+  const closeRe = /<\/(?:speech|ack|callout)\s*>|<(?:ack|chat-app)\b[^>]*?\/\s*>/gi;
+  let lastTagEnd = -1;
+  let m: RegExpExecArray | null;
+  while ((m = closeRe.exec(text)) !== null) {
+    lastTagEnd = m.index + m[0].length;
+  }
+  const cut = Math.max(para, lastTagEnd);
+  if (cut < 0) return "";
+  return text.slice(0, cut);
 }
 
 /**
