@@ -1100,7 +1100,7 @@ function AckBadge({ ack }: { ack: AckIndication }) {
     <span
       title={title}
       aria-label={label}
-      className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info text-white text-[9px] leading-none ring-1 ring-warm-50"
+      className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info text-white text-[9px] leading-none ring-1 ring-warm-50 cursor-pointer"
     >
       <span aria-hidden>{descriptor.icon}</span>
     </span>

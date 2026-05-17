@@ -21,7 +21,7 @@ export interface AckKindDescriptor {
 
 export const ACK_KINDS: readonly AckKindDescriptor[] = [
   { kind: "created",        defaultPhrase: "Created",        icon: "✨" },
-  { kind: "appended",       defaultPhrase: "Added to it",    icon: "➕" },
+  { kind: "appended",       defaultPhrase: "Added to it",    icon: "＋" },
   { kind: "edited",         defaultPhrase: "Edited",         icon: "✎"  },
   { kind: "todo-added",     defaultPhrase: "Added to todos", icon: "📋" },
   { kind: "todo-completed", defaultPhrase: "Done",           icon: "✓"  },
