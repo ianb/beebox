@@ -855,6 +855,21 @@ export class ChatSession extends EventEmitter {
 
     if (msg.type === "result") {
       log("done", `Turn complete, is_error: ${msg.is_error}`);
+      if (msg.is_error === true) {
+        // A turn that errors without ever producing assistant content can
+        // leave a "ghost" row in chat-session-history: appendHistory fires
+        // the moment the SDK assigns an id (handleMessage above), but the
+        // SDK won't write a JSONL if there's nothing to record. Future
+        // landmark "Chat" clicks would then route at this id and re-hit the
+        // same resume failure. Warn loudly so this is recoverable from logs.
+        const sid = this.sessionId === null ? "<unassigned>" : this.sessionId;
+        const subtype = msg.subtype === undefined ? "unknown" : msg.subtype;
+        const turns = msg.num_turns === undefined ? "?" : String(msg.num_turns);
+        const dur = msg.duration_ms === undefined ? "?" : String(msg.duration_ms);
+        console.warn(
+          `[chat-session] Turn ended with is_error=true; session ${sid} may now be a ghost entry in chat-session-history. subtype=${subtype} num_turns=${turns} duration_ms=${dur}`,
+        );
+      }
       const completedText = this.turnText;
       this.turnText = "";
       this.busy = false;

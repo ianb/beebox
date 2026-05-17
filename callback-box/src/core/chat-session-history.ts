@@ -215,11 +215,29 @@ export async function getLastSessionForDirectory(
   contextDir: string,
 ): Promise<string | null> {
   const entries = await loadHistoryEntries(boxRoot);
+  // Walk newest → oldest and skip ghost entries — history rows are written
+  // when the SDK first assigns an id (before any output is committed), so a
+  // turn that errors immediately leaves an entry pointing at a JSONL that
+  // never gets created. Returning the ghost id sends the user to a chat the
+  // SDK can't resume and silently fails. fs.access is cheap relative to
+  // user-facing latency on a "Chat" click.
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const entry = entries[i];
     if (!entry) continue;
-    if (entry.contextDir === contextDir) return entry.id;
-    if (contextDir === "" && entry.contextDir === undefined) return entry.id;
+    const matches = entry.contextDir === contextDir
+      || (contextDir === "" && entry.contextDir === undefined);
+    if (!matches) continue;
+    const logPath = await resolveSessionLogPath(boxRoot, entry.id);
+    try {
+      await fs.access(logPath);
+      return entry.id;
+    } catch {
+      // Ghost entry — no log on disk. Skip and keep looking. Logged so a
+      // recurring ghost-creation bug shows up as repeated skips for the
+      // same id across sessions.
+      console.warn(`[chat-session-history] Skipping ghost entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id} (no JSONL at ${logPath})`);
+      continue;
+    }
   }
   return null;
 }

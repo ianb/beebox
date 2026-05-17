@@ -269,7 +269,21 @@ const streamActor = fromCallback(
         }
 
         if (type === "result") {
-          terminal({ type: "STREAM_RESULT" });
+          // The SDK signals turn-level failures (e.g. asked to resume a
+          // session id with no log on disk) by setting is_error on an
+          // otherwise empty result. Treat those as stream errors so the
+          // UI shows a message instead of silently going idle while the
+          // optimistic bubble sits stranded.
+          const isError = (msg as { is_error?: boolean }).is_error === true;
+          if (isError) {
+            const subtype = (msg as { subtype?: string }).subtype ?? "unknown";
+            terminal({
+              type: "STREAM_ERROR",
+              error: `Agent turn failed (${subtype}). The session id in this tab's URL has no log on disk — start a new chat.`,
+            });
+          } else {
+            terminal({ type: "STREAM_RESULT" });
+          }
         }
       },
     })
