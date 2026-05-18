@@ -249,6 +249,29 @@ function formatTimePassed(ms: number): string | null {
   return hours > 0 ? `${days}d${hours}h` : `${days}d`;
 }
 
+function MuteButton({ muted, onToggle }: { muted: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
+      title={muted ? "Unmute speech" : "Mute speech"}
+      aria-label={muted ? "Unmute speech" : "Mute speech"}
+      aria-pressed={muted}
+    >
+      {muted ? (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM17 9l4 6m0-6-4 6" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M18.36 5.64a9 9 0 0 1 0 12.72" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function NewSessionButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -1368,6 +1391,26 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       });
   }, [sessionId, narrationEnabled]);
 
+  const [muted, setMuted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("chat-muted") === "1";
+    } catch (_e) {
+      return false;
+    }
+  });
+  const handleToggleMute = useCallback(() => {
+    setMuted((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("chat-muted", next ? "1" : "0");
+      } catch (_e) {
+        // storage unavailable
+      }
+      return next;
+    });
+  }, []);
+
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
     const label = MODEL_OPTIONS.find((o) => o.model === model)?.label ?? "default";
@@ -1645,6 +1688,11 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
       speechPlayedRef.current = true;
 
+      if (muted) {
+        speechPlayback.markAsPlayed(messageId);
+        return true;
+      }
+
       // Suppress TTS if user has in-progress voice text
       const hasActiveTranscript = transcriptionRef.current &&
         transcriptionRef.current.transcript.trim().length > 0;
@@ -1663,8 +1711,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       speechPlayback.playSegments({ messageId, segments: newSegments });
       return true;
     },
-    [speechPlayback]
+    [speechPlayback, muted]
   );
+
+  // Stop any in-flight speech the moment mute is engaged.
+  useEffect(() => {
+    if (muted) speechPlayback.stop();
+  }, [muted, speechPlayback]);
 
   // Mid-stream: play complete <speech>...</speech> segments as they arrive.
   // Counts closing </speech> tags to avoid parsing a half-received segment.
@@ -2227,6 +2280,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
         <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={handleToggleNarration} />
         <div className="flex-1" />
+        <MuteButton muted={muted} onToggle={handleToggleMute} />
         <RecentFilesButton
           entries={messages}
           onPanel={(summary) => onZoomView({
