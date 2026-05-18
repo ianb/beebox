@@ -52,14 +52,22 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
     lastEnd = closeIndex !== -1 ? closeIndex + "</speech>".length : content.length;
     posIndex++;
 
-    // Extract instructions from subTags
+    // Extract instructions from subTags. If multiple <instructions> blocks
+    // appear inside one <speech>, keep only the last non-empty one — the
+    // agent occasionally emits a leading instructions block and then a
+    // second, more specific one for the same speech.
     let instructions: string | undefined;
     let text = tag.content;
     if (tag.subTags) {
-      const instrTag = tag.subTags.find((t) => t.type === "instructions");
-      if (instrTag) {
-        instructions = instrTag.content.trim() || undefined;
-        text = text.replace(/<instructions>[\S\s]*?<\/instructions>/i, "").trim();
+      const instrTags = tag.subTags
+        .filter((t) => t.type === "instructions")
+        .map((t) => t.content.trim())
+        .filter((c) => c.length > 0);
+      if (instrTags.length > 0) {
+        instructions = instrTags[instrTags.length - 1];
+      }
+      if (tag.subTags.some((t) => t.type === "instructions")) {
+        text = text.replace(/<instructions>[\S\s]*?<\/instructions>/gi, "").trim();
       }
     }
     // Strip any orphan instructions open/close fragments (e.g. a stray extra

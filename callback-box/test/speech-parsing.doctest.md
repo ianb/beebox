@@ -141,3 +141,32 @@ segs[0].text
 
 The instructions content may be lost when the open tag has a typo'd close
 that doesn't match, but the spoken text must still come through.
+
+### Multiple `<instructions>` blocks in one `<speech>`
+
+When the agent emits two instructions blocks inside one speech tag, keep
+only the last non-empty one and strip both from the spoken text.
+
+```
+const segs = parseAllSpeechTags(
+  "<speech><instructions>First note.</instructions>Hello there.<instructions>Second, more specific note.</instructions></speech>"
+);
+segs.length
+=> 1
+
+segs[0].text
+=> Hello there.
+
+segs[0].instructions
+=> Second, more specific note.
+```
+
+Empty instructions blocks are ignored when picking the last one.
+
+```
+const segs = parseAllSpeechTags(
+  "<speech><instructions>Real note.</instructions>Body.<instructions>   </instructions></speech>"
+);
+segs[0].instructions
+=> Real note.
+```
