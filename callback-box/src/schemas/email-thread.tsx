@@ -113,8 +113,8 @@ export const EmailThreadSchema = element("email-thread", {
 - \`box/inbox/email/\` — new threads, awaiting processing
 - \`store/archive/email/\` — processed/archived threads
 
-Each thread has a card (\`<basename>.email-thread.card\`) plus an attach scope
-(\`<basename>.attach/\`) containing:
+Each thread has a card (\`{basename}.email-thread.card\`) plus an attach scope
+(\`{basename}.attach/\`) containing:
 - \`msg-NNN.email-message.card\` — individual message metadata (referenced from
   \`<messages><message-ref ref="attach/msg-NNN.email-message.card"/></messages>\`)
 - \`msg-NNN.attach/\` — per-message attach scope holding the body text and any

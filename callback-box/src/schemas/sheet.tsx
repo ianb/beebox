@@ -84,7 +84,7 @@ export const SheetSchema = element("sheet", {
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
 Each synced Google Spreadsheet has a \`.sheet.card\` metadata file plus an
-attach scope (\`<basename>.attach/\`) containing one JSON file per sheet
+attach scope (\`{basename}.attach/\`) containing one JSON file per sheet
 tab. The \`<sheet-tab ref="attach/…">\` entries point into that scope.
 
 ## Data format

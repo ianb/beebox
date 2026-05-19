@@ -105,7 +105,7 @@ Do not modify the card XML — it is managed by the connector.
 ## Conflicts
 If the upstream Doc was edited in Drive between your last pull and your
 push, the card status becomes \`conflict\` and the upstream version is
-written next to the local \`.md\` as \`<basename>.remote.md\` (inside the
+written next to the local \`.md\` as \`{basename}.remote.md\` (inside the
 attach scope). Resolve by merging the two files, deleting the \`.remote.md\`,
 and committing — the next sync will push the resolved version.
 

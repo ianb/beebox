@@ -59,9 +59,9 @@ A guide-revision job means archived briefs have reader feedback that should info
    - **Actions**: adjust instructions based on feedback patterns
    - **Experiments**: add \`<observation>\` elements; mark successful/unsuccessful based on clear signals
    - Keep 1-3 active/proposed experiments
-6. Mark each processed brief with \`guide-revision="<current-timestamp>"\` attribute on the root element
+6. Mark each processed brief with \`guide-revision="{currentTimestamp}"\` attribute on the root element
 7. Commit with a detailed message summarizing the revision
-8. Run \`cb finish <this-job-file>\` to complete the job
+8. Run \`cb finish {thisJobFile}\` to complete the job
 
 ## Confidence Ladder
 

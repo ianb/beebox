@@ -45,7 +45,7 @@ An intake job means new items have arrived in the inbox and need triage.
    - **Trash** with \`cb rm <path>\` if it's not useful
    - **Ask** the user a question if you need guidance (create a question card)
 5. When all items are triaged, commit your work
-6. Run \`cb finish <this-job-file>\` to complete the job
+6. Run \`cb finish {thisJobFile}\` to complete the job
 
 ## Important
 

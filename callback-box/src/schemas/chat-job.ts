@@ -60,7 +60,7 @@ A chat job means there are new messages (or a scheduled callback) in a chat thre
    - **Respond**: append \`<message sender="agent">Your response</message>\` at the end
    - **Acknowledge**: append \`<seen />\` (optionally with \`callback-in\` and/or a note-to-self)
 5. Commit the thread file
-6. Run \`cb finish <this-job-file>\` to complete the job
+6. Run \`cb finish {thisJobFile}\` to complete the job
 
 ## Important
 

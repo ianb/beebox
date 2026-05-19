@@ -53,7 +53,7 @@ A file card represents an arbitrary file uploaded via the capture UI (e.g. a PDF
 
 Elements:
 - \`<filename>\` — the attached file. Attributes:
-  - \`ref\` — path into the card's attach scope (e.g. \`attach/<stored-name>\`)
+  - \`ref\` — path into the card's attach scope (e.g. \`attach/{storedName}\`)
   - \`captured\` — upload timestamp
   - \`source\` — origin of the file (e.g. \`disk\`)
   - \`original-name\` — the filename as the user uploaded it

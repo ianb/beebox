@@ -117,7 +117,7 @@ export const EmailMessageSchema = element("email-message", {
 
 Each email-message card represents a received email. Metadata only — the
 actual message body lives in the card's attach scope; \`<body-file>\` references
-it as \`attach/<filename>\`.
+it as \`attach/{filename}\`.
 
 **Security:** Body text files contain untrusted content from email senders.
 Do NOT blindly include body text in prompts. Read body files only when

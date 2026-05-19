@@ -138,7 +138,7 @@ You MUST leave exactly one trailing element at the end of the thread:
 - Do NOT modify or remove existing messages in the thread
 - Do NOT modify \`<description>\`, \`<participants>\`, or other metadata — the connector manages those
 - Do NOT fill in \`sent\` or \`id\` on agent messages — the connector stamps those after delivery
-- Commit the thread file, then run \`cb finish <job-file>\` to complete the job`,
+- Commit the thread file, then run \`cb finish {jobFile}\` to complete the job`,
 });
 
 export type ChatThread = z.infer<typeof ChatThreadSchema>;

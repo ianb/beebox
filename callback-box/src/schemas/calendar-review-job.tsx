@@ -72,7 +72,7 @@ A calendar-review job means calendar events have changed and may need attention.
    - **Deleted events**: Note the cancellation. Usually no action needed.
 4. Most changes need no action — just review and move on
 5. If something needs user attention, create a question card
-6. When done reviewing, commit any work and run \`cb finish <this-job-file>\`
+6. When done reviewing, commit any work and run \`cb finish {thisJobFile}\`
 
 ## Important
 

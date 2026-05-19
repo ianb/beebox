@@ -54,7 +54,7 @@ A news job means new RSS/news items have arrived and need processing.
 3. Triage: run \`cb rm <path>\` on items that aren't interesting based on the guide
 4. Fetch: run \`cb fetch-all-news --dir box/inbox/news\` to get full article content for remaining items
 5. Analyze: use \`cb process-news\` to analyze and create a brief
-6. When all work is done and committed, run \`cb finish <this-job-file>\` to complete the job
+6. When all work is done and committed, run \`cb finish {thisJobFile}\` to complete the job
 
 ## Important
 

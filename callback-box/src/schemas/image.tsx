@@ -17,11 +17,15 @@ export const ImageFilename = element("filename", {
   attrs: {
     ref: z.string(),
     captured: z.string().datetime({ offset: true }),
-    source: z.enum(["camera-user", "camera-environment", "gallery"]),
+    source: z.enum(["camera-user", "camera-environment", "gallery", "screenshot", "download", "scan", "generated"]),
   },
 });
 
 export const ImageDescription = element("description", {
+  text: z.string().optional(),
+});
+
+export const ImageCreation = element("creation", {
   text: z.string().optional(),
 });
 
@@ -88,6 +92,7 @@ export const ImageSchema = element("image", {
     z.union([
       ImageFilename,
       ImageDescription,
+      ImageCreation,
       ImageText,
       ImageExif,
       ImageSubjectBbox,
@@ -101,6 +106,7 @@ An image card represents a photo, typically from a capture session. The attached
 Elements:
 - \`<filename>\` — the attached image file. The \`captured\` attribute is updated from EXIF data when available.
 - \`<description>\` — one-sentence summary of what's in the image (filled during analysis)
+- \`<creation>\` — optional free-text notes on how the image came to be. Only include when there's something worth recording. For AI-generated images (\`source="generated"\`), use the form \`model: {modelId}\nprompt: {prompt text}\`. For other sources, use whatever shape fits (e.g. the URL for a download, the app for a screenshot).
 - \`<text source="...">\` — transcribed text content from the image, if any (source describes what the text is on: "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements allowed for different sources.
 - \`<exif>\` — EXIF metadata extracted from the image file (date, camera, GPS, dimensions)
 - \`<subject-bbox y1="..." x1="..." y2="..." x2="...">\` — bounding box of the main subject on a 0-1000 scale (coordinates are [y1, x1, y2, x2]). Present when the subject doesn't fill the entire frame.

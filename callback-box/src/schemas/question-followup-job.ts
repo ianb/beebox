@@ -64,7 +64,7 @@ A user has answered a question. Your job is to act on their answer.
 4. The \`<answer>\` is what the user chose or typed
 5. Do the work described in the directive, using the answer to guide your actions
 6. Commit your changes with a meaningful message
-7. Run \`cb finish <this-job-file>\` to complete the job
+7. Run \`cb finish {thisJobFile}\` to complete the job
 
 ## Important
 
