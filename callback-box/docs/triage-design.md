@@ -176,6 +176,23 @@ Open:
 - Does the same agent both classify *and* create the question card, or is question-creation a separate pass?
 - Does the agent read only the compiled doc, or also pull in per-category rules cards when those rules are richer than the index?
 
+### Compiled doc as decision tree
+
+The current direction has the compiled triage-instructions doc as (roughly) a flat list of category cards. A richer form is worth considering: a *decision tree* — an organized set of disambiguating questions that distinguish the categories from each other, not just a list of "here's category A, here's category B." Questions like "external counterparty?" / "deadline?" / "single-action vs. multi-step?" structure the routing so the agent traverses a tree rather than pattern-matching against a flat list.
+
+Why a tree probably outperforms a flat list:
+
+- The agent's classification quality degrades when many similar-looking categories sit side-by-side in the prompt. A tree forces commitment at each level (the disambiguating question) rather than vibe-matching across the whole set.
+- The tree surfaces *which axes the categories actually differ on*, which is itself useful — flat lists hide the structure.
+- When new categories are added, the tree-builder can identify where they slot in or whether they require a new axis, flagging conflicts that flat-list compilation misses.
+
+The tree can't be hand-written (categories are dynamic, distributed via marker cards) and can't be trivially compiled (categories don't carry explicit "I differ from X by Y" metadata). It probably requires an **agent pass after assembly of the destinations** — read all category cards, synthesize a disambiguating decision tree, write it as the compiled instructions doc. The pass runs whenever categories change, not per-triage.
+
+Open questions:
+- What's the output shape — a literal tree (nested questions), an ordered set of questions with a category-match-matrix, or both?
+- Does the boxholder review the tree before it's used? (Probably yes initially — the agent's read of "what distinguishes these categories" can miss the boxholder's actual intent.)
+- How does the tree handle items that don't fit any path? (Falls through to `_unsure` as before.)
+
 ## Handle (stage 3)
 
 The name stays generic on purpose. `deliver` was considered and rejected — it implies the item might leave the box, which isn't true: handle outputs usually stay in the box's filesystem (archive directories, merged collections, etc.).

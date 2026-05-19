@@ -1,5 +1,345 @@
 # Ideas & Planned Features
 
+## Capability map for the boxholder agent
+
+The agent sees its tool list each turn, so it knows individual tools exist, but it doesn't necessarily know the *compositions* — "I can set up a recurring check-in," "I can pull a photo from Drive and attach it to a card," "I can ask you a question later via Telegram." Those are capabilities that span multiple tools, and an agent reasoning from the tool list alone tends to miss them. Symptoms: agent says "I can't do that" when it actually can; agent proposes a clunky path when a clean one exists; agent doesn't think to offer something because no single tool maps to it.
+
+Shape: written at the boxholder's level of abstraction (what the boxholder can *ask for*), grouped by domain (scheduling, capture, retrieval, notification, narration). Each entry: what it does, what triggers it, what it can't do — the negative space matters as much as the positive ("can attach photos by Drive link, can't currently search Drive for them").
+
+Open questions:
+- **Global vs. conditional load.** One always-loaded document is simple but costs tokens every turn for unused capabilities. Per-domain files loaded via `paths:` rules scales better but the agent has to know to look.
+- **Generated vs. hand-written.** Generated from schema/tool annotations stays fresh but misses the *composed* capabilities, which are the whole point. Hand-written captures composition but drifts. Probably hand-written with an audit hook that complains when tools are added without capability-map updates.
+
+## Memory-writing guidance for the boxholder agent
+
+Callback-box doesn't currently give the boxholder agent guidance on *how* to write down what it learns — when to note something, where, in what shape, when to update vs. create, what NOT to write. Without guidance the corpus either becomes a transcript (everything noted, nothing findable) or stays empty (nothing noted, agent re-asks the same questions). The auto-memory section in `~/.claude/CLAUDE.md` is a decent template — its structure (types with when-to-save / how-to-use / examples / body-structure) could be adapted.
+
+Dimensions guidance should cover:
+
+1. **What deserves a note at all.** Default to nothing. Threshold: surprising, non-obvious, or contradicts a prior assumption. Without this rule, volume kills searchability.
+2. **Update vs. create.** Always check for an existing note on the same subject before creating a new one. Otherwise five overlapping notes accumulate on the same person/topic.
+3. **What NOT to write down.** Anything derivable from cards already in the box, from the calendar, from the conversation log. Memory is the residue that *can't* be reconstructed, not a transcript.
+4. **Domain separation.** "Domain" needs to be defined in callback-box's terms — people, recurring topics, preferences, ongoing situations — not invented per-conversation.
+5. **Freshness and decay.** Notes about state (mood, plans, current projects) go stale fast; notes about traits decay slowly. The agent should know which kind it's writing and verify volatile notes before acting on them.
+6. **Linking.** A note naming another entity should link to it. Without this, retrieval misses related context.
+7. **Why, not just what.** "User prefers terse responses — they read the diff themselves" generalizes to edge cases. "User prefers terse responses" doesn't.
+
+## User-model dimensions to accumulate
+
+Related to the memory-writing guidance above: a deep model of the principal (boxholder) is something that *develops over time* from observed interactions, not something written upfront. But for accumulation to add up to a model rather than a pile of facts, the agent needs scaffolding of *which dimensions to pay attention to*. Candidates:
+
+- Decision style — data-driven vs. intuitive; wants alternatives with tradeoffs vs. wants a single recommendation
+- Tolerance for ambiguity — comfortable with "it depends" vs. wants a concrete call
+- Pushback preference — wants the agent to challenge vs. wants the agent to execute
+- Communication style — terse vs. expansive; clinical vs. warm
+- When to recommend vs. when to enumerate
+- What kinds of errors are tolerable vs. costly
+
+The static part of the system isn't the principal's content; it's the *axes* the system watches for evidence along. Boxholder-specific: harder than the coding-assistant case because the boxholder may not articulate preferences directly — the agent has to infer from how conversations land.
+
+## Session hot-context with explicit TTL
+
+Cross-session continuity: a short doc the agent loads at session start describing what was in progress last time, what decisions were pending, what the user was about to do. Currently the agent reconstructs this from cards + conversation log, which is slow and incomplete.
+
+The non-obvious design point is the TTL. Stale hot-context is worse than no hot-context, because the agent confidently presents outdated state as current ("you were about to call Alice" — when that was last Tuesday and is no longer relevant). After some threshold (72h is the tip's suggestion, but probably varies by content type) the entry should be ignored or actively flagged as stale.
+
+Open design questions:
+- **When is it written.** End of session is the natural moment but conversations don't have clean endings in callback-box. Continuous update during the session is more robust but more expensive.
+- **What goes in it.** "Decisions pending" and "in-progress threads" are clearer than "what we talked about." The summary should be operational, not narrative.
+- **Where it lives.** In the box (visible to all agents on that box), or per-agent scratch. Probably in the box.
+- **How TTL works.** Per-entry timestamps with the agent skipping expired ones is cleaner than whole-file expiry — different items have different shelf lives ("user prefers warm tone" doesn't expire in 72h; "user is mid-decision about the kitchen contractor" probably does).
+- **Connection to cache-freshness.** Same shape as the `data_through` / `last_sync` pattern: the hot-context doc is a synthesized cache of state, and inherits the same staleness-propagation problem.
+
+## Universal confidence rubric
+
+Percentage confidence numbers have no shared meaning — neither model nor user has calibrated 65%-vs-70% intuitions, so "60% confidence" is theater. But gradation itself is real and useful, provided each level is defined by an operational rubric: what evidence justifies it, what behavior it licenses, what promotes or demotes it. Draft bands:
+
+- **Fact** — observed directly or stated by the user/source. Acted on without hedging. (Effectively "100%.")
+- **Likely** — multiple consistent signals, or one strong direct signal not yet confirmed. Agent acts on it but stays ready to be corrected; may surface as "I'm assuming X — say if that's off."
+- **Suspected** — one signal, or a pattern that fits but could be coincidence. Agent uses it to *steer* (e.g., avoid asking the wrong question) but doesn't act on it directly. Refutation trigger required.
+- **Speculative** — possibility worth holding onto in case more evidence appears. Agent watches; does not act, does not hint.
+
+Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses (see below), cache-staleness assessments (see [[cache-freshness-audit]] in prompt-audits.md), user-model dimensions, anything inferred from observation. A single shared vocabulary means the agent reasons consistently across these domains and the boxholder sees consistent hedging language.
+
+Open questions:
+- Are four bands the right count? Three (fact / likely / hunch) might be enough.
+- How is band assignment surfaced — inline tag, separate field, structural placement (different files)?
+- Demotion path: does evidence-against move a "likely" to "suspected," or straight out? Probably depends on the kind of evidence.
+
+## Aging policy for the questions/waiting queue
+
+We already have a notion of questions/answers the agent surfaces to the boxholder; the piece probably missing is an operational aging policy so the queue actually drains rather than accumulating dead items. Sketch (numbers tunable):
+
+- **7 days unanswered** — proactive nudge. The agent surfaces the item again, possibly in a different channel.
+- **30 days unanswered** — auto-close with a note. Mark as abandoned, not answered. Future-agent can see it was asked and dropped, which is itself a signal (this kind of question tends to go unanswered → maybe stop asking it).
+- **Per-item override.** Some questions are time-sensitive (decisions before a date) and should escalate faster; some are evergreen and shouldn't auto-close at all. The default policy is for the middle case.
+
+Auto-close behavior is the non-obvious part: silent decay loses information; flagged abandonment preserves the signal that the question was asked and got no traction.
+
+## Behavioral profile: autonomy-vs-escalation calibration
+
+A specific cut of the user-model work (see [[user-model-dimensions]]): a profile of what the boxholder wants done autonomously vs. wants to be consulted on. The agent decides this constantly ("just do it, or confirm first?") and miscalibration is visible in both directions — too cautious produces nag fatigue, too autonomous produces unwelcome surprises.
+
+The harder question is meta: we have spaces for this kind of reflective material and some reflective processes, but it's unclear whether the profile actually progresses over time or just sits. A profile that doesn't update is worse than none, because the agent trusts it.
+
+Possible answer: measure the profile by its *predictions*, not its size. When the profile licenses autonomous action on X, does the boxholder later object? When it triggers escalation on Y, does the boxholder say "you didn't need to ask"? Those mismatches are the learning signal. Without a feedback loop the profile drifts toward whatever the agent's prior was at write-time and stays there.
+
+Implementation thoughts:
+- The profile entries should be falsifiable ("act autonomously on calendar moves under 30 min"), not vague ("user likes when you take initiative").
+- Each entry probably wants a "last validated" timestamp — if it hasn't been exercised in N weeks, lower its weight or re-check.
+- The reflective process needs explicit prompts that *evaluate* existing entries, not just generate new ones. Generation without evaluation is what produces a pile rather than a model.
+
+## Pre-wired knowledge stacks per project / relationship
+
+The agent currently mostly wings it on domain reasoning — uses general training plus what's in the box. For recurring contexts (an active project the boxholder works on repeatedly, a key relationship) it could be more useful by drawing on canonical references: 2–3 sources whose frameworks apply directly to that project or person. The frameworks load automatically when the context is active, so application becomes reflexive rather than improvised.
+
+Distinct from the [[canonical-wisdom-corpus]] entry: that's about *how to structure things in the box* (book-tracking patterns). This is about *domain frameworks for the things in the box* (negotiation lens for a vendor relationship, communication framework for a family member, methodology for a project).
+
+The real risk: pre-wiring makes application reflexive, and *reflexive misuse* is the dangerous failure mode. A framework that doesn't fit the situation, applied confidently because it was pre-wired, is worse than the agent winging it from observation. The boxholder's sister wired to attachment-theory frameworks that don't actually fit produces confident wrongness the agent wouldn't otherwise reach.
+
+Design tension: pre-wiring trades accuracy-from-observation for speed-of-application. Probably useful for domains where frameworks are mature and broadly applicable (negotiation, basic communication styles, project-management methodologies). Probably risky for contested or person-specific domains (psychology, family dynamics, anything where fit is the whole question).
+
+Open questions:
+- **Who picks the canon?** Boxholder explicit choice, agent proposes for confirmation, or shared corpus the boxholder opts into?
+- **How is the binding represented?** Per-project frontmatter, a wiring file, tags on person cards?
+- **How does the agent know when to apply vs. set aside?** A wired framework that observation contradicts should defer to observation — needs an explicit precedence rule.
+- **Discoverability for the boxholder.** They should be able to see "the agent is reasoning about Alice through framework X" and override.
+- **Connection to [[hypothesis-tracking]] and [[universal-confidence-rubric]]** — framework-derived conclusions are inferences, not facts, and should carry the appropriate confidence band.
+
+## Subagent strategy for callback-box
+
+Currently most agent work happens in one main loop. Some tasks would benefit from parallel subagent dispatch — the question is what shape the subagents should take, and which tasks actually benefit.
+
+**Candidate shapes:**
+
+- *Function-shaped helpers* (like Claude Code's Explore/Plan): each subagent does a specific operation type. "Search across cards," "fetch+summarize email thread," "draft response in style X." Composable; the main agent orchestrates. Lower per-call leverage but consistent.
+- *Domain-shaped helpers*: each subagent specializes in a domain (calendar, email, a specific project). The main agent dispatches a question and gets a domain-aware answer. Higher per-call leverage but raises the procedure-vs-agent boundary question — if the domain helper makes judgment calls the main agent should be making, you get inconsistent reasoning.
+
+Probably function-shaped is the better default, with domain-shaped reserved for genuinely procedural domains (like a calendar helper that handles event creation mechanics).
+
+**Where parallelism actually buys something:**
+
+- Multi-source synthesis ("what's going on with Alice this month" → calendar + email + card-history searches in parallel, main agent stitches).
+- Triage processing — multiple incoming items handled in parallel rather than serially.
+- Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-model-different-prompts perspectives is the iterate-loop theater problem in a different shape (see [[iterative-refinement-grounded-critique]] in prompt-audits.md).
+
+**Where parallelism doesn't help:**
+
+- Tasks where steps depend on each other.
+- Tasks where the main agent's accumulated context is what makes the work good — subagents lose that context.
+- Tasks small enough that subagent spawning overhead exceeds the wall-clock savings.
+
+Connected concern: subagents in callback-box don't inherit CLAUDE.md or rules (per [[claude-code-memory-concerns]] entry), so any subagent strategy has to pass relevant context explicitly. This makes domain-shaped subagents harder to build well than the surface tip suggests.
+
+## Decision-shaped thinking discipline (instead of councils)
+
+"Council" architectures (multiple agents deliberating in rounds) are mostly theater when the agents share the same underlying model and inputs — the diversity is in prompts, not priors, and they converge. The valuable *outputs* of a council (multiple paths considered, strongest cases surfaced, committed decision with dissent) come from a thinking discipline, not the architecture. A single agent with a good deliberation prompt produces the same outputs cheaper.
+
+Draft template for a reusable deliberation prompt, applicable to any decision-shaped task:
+
+1. **Enumerate the valid paths** — at least two, genuinely distinct, no strawmen.
+2. **Steelman each** — what makes it the right call? Best version, not weakest.
+3. **Name the decisive question** — what evidence or consideration would distinguish them? If there isn't one, the paths aren't actually distinct.
+4. **Commit, with named dissent** — pick a path. State the strongest case against it explicitly. Commitments with named dissent are more trustworthy than commitments without.
+
+When the architecture version (actual subagents) still earns its keep: only when perspectives need to be grounded in *genuinely different inputs* (one agent sees only calendar, another only email, etc.) — the case already covered in the [[subagent-strategy]] entry.
+
+Worth drafting as a reusable prompt fragment the boxholder agent can invoke for non-trivial decisions, rather than per-decision improvisation.
+
+## Overnight session compaction with custom compaction message
+
+Chat sessions currently leave transcripts but no synthesized residue. A nightly (or end-of-session-plus-delay) compaction pass would extract what's worth keeping: decisions made, action items, hunches formed, things learned about the boxholder, things to follow up on. The standard auto-compaction in chat systems is generic; for callback-box it should be driven by a *custom compaction message* shaped to extract the things this system cares about, not generic compression.
+
+This is also the *engine* that would update several other ideas in this file. None of them update themselves; something has to look back at recent sessions and extract from them:
+
+- [[session-hot-context]] — what's pending, what was in progress
+- [[hypothesis-tracking]] — hunches formed during the session
+- [[behavioral-profile]] — observed autonomy/escalation calibration moments
+- [[memory-writing-guidance]] — new facts about people, preferences, situations
+
+Tiered closure (the tip's idea) is worth applying:
+
+- **Light** — always happens. Transcript + short summary. Cheap. Even when heavier passes get skipped, nothing is lost.
+- **Medium** — memory sync, task/question queue updates, hunch extraction. Runs nightly per active session.
+- **Full** — broader synthesis, daily/weekly rollups across sessions. Periodic, not per-session.
+
+Open design questions:
+- **Triggering.** Time-based (overnight cron), event-based (session idle > N hours), or both?
+- **Where outputs land.** Each extraction type has a different destination — hunches → hunch file, action items → questions queue, facts → person/topic cards. Compaction is fan-out, not a single output.
+- **The custom compaction prompt itself.** This is the artifact that determines extraction quality. Worth designing carefully, probably iteratively against real session transcripts.
+- **Idempotence.** Re-running compaction shouldn't duplicate extractions. Either dedupe at write-time or mark sessions as "compacted at level X."
+
+## Richer session-start context injection
+
+Currently the boxholder agent gets the date but not derived context that frequently matters in conversation. Cheap additions:
+
+- **Day of week (named)** — comes up constantly ("plans this weekend," "Tuesday's call," "the Monday meeting"). The agent currently has to compute or guess.
+- **Phase of day** — morning / afternoon / evening / late-night. "What's left on today" reads differently at 9am vs 9pm; offering to schedule something "later today" means different things.
+- **Time since last session** — lets the agent calibrate between quick continuity ("picking up where we left off") and full re-orientation ("it's been three weeks, here's what's still pending").
+- **Near-horizon time-sensitivity** — anything scheduled in the next few hours / today that's worth being aware of before answering.
+
+**Channel / device.** Desktop web vs. mobile web vs. Telegram (and any future channel) currently look the same to the agent, but the appropriate output shape differs: on mobile, tables, multi-column structures, and long-form prose with headers don't render well; on desktop they're fine. The agent should know the channel and adapt output mode (length, structure complexity) without the user having to ask. Same intelligence, different presentation.
+
+Implementation is trivial (compute at session start, inject into context) but the quality dividend is real because these are things conversations *constantly* reference and currently the agent has to derive or fudge.
+
+## Scheduled-task health surfacing
+
+Scheduled automation (wakeup, scheduler ticks, overnight compaction once that exists, sync jobs) can silently stop running, and the failure isn't noticed until something downstream breaks (briefings stop updating, hunches stop being extracted, calendar drift). Stuff gets lost.
+
+Primary mechanism should be *active monitoring*: each scheduled task records `last_run_attempted` and `last_run_succeeded` (which can diverge — see the same shape in the cache-freshness audit). Anything overdue past threshold or failing repeatedly triggers proactive notification, independent of any session.
+
+Session-start surfacing is the *backup* layer: if you missed the proactive alert, the next chat session opens with a brief health-check note. Only surface when there's something to surface — "all green" every session is noise. Threshold: any task that's overdue, failed, or has been failing repeatedly.
+
+Notes:
+- This is the process-shape of the cache-freshness pattern. `data_through` for data; `last_run_succeeded` for tasks. Same divergence trick (attempted vs. succeeded ≈ checked vs. found-fresh-data).
+- Should also be visible somewhere as an always-available view (status page, `cb health`) so it doesn't *only* surface at session start.
+- The reason the agent should still check at session start, even with proactive alerting in place: catches bugs in the alerting itself. Belt and suspenders.
+
+## Correction counting → spec promotion
+
+Corrections that stay in chat disappear. The fix is to extract them (during overnight compaction or a retrospective pass), count how often the *same* correction recurs across sessions, and promote frequent ones to permanent spec-level instructions.
+
+The count is what makes this useful. Without it:
+- Save every correction → spec bloats with one-offs the boxholder wouldn't actually want as permanent rules.
+- Save none → keep getting the same correction repeatedly, which is exactly the failure this addresses.
+
+Threshold worth experimenting with (the tip suggests 3). What matters is the promotion: from per-session-correction → tracked-recurring-correction → spec-level rule.
+
+Design notes:
+- **Promotion should be explicit, not automatic.** The agent's read of "this is the same correction I got before" can be wrong (surface similarity ≠ same underlying rule). Surface candidates during retrospectives: "you corrected me on X three times this month — make this a permanent rule?" User confirms before spec changes.
+- **Counting requires extraction.** Compaction needs to recognize "this was a correction" as a distinct extraction type, separate from facts or hunches. Tag at extraction time so counting is just aggregation.
+- **Same connection to [[behavioral-profile]]** — corrections aren't only "rules to add," they're signals about what the boxholder cares about, which feeds the user model.
+- **Demotion path.** If a promoted rule starts causing different corrections (because circumstances changed), the rule should be flagged for review, not silently fought.
+
+Probably belongs in the same flow as retrospectives the user already runs. The mechanism is what's missing more than the concept.
+
+## Declared per-box autonomy matrix with encounter queue
+
+A fixed L0-L4 autonomy ladder is too rigid — what's appropriate varies per box (personal vs. work vs. shared-with-family) and per situation within a box. Cleaner shape:
+
+**Per-box declared autonomy** for known operation categories. Most file operations are always-OK; reading the box is always-OK; sending external messages is box-specific (some boxes allow, some require confirm, some forbid); financial commitments need explicit per-action approval everywhere. The declaration lives with the box, not the agent, so each box sets its own tolerance.
+
+**Per-channel conditioning (optional).** Beyond per-box and per-operation, the autonomy matrix can optionally condition on source/channel. The boxholder might want stricter confirmation requirements from mobile (faster fat-finger errors, harder to review drafts in flight) than from desktop, or stricter rules from Telegram than from the web UI. Treat this as an opt-in dimension of the matrix, not a hard universal cap — the framing "phone is untrusted" is overstated for the boxholder's own authenticated phone. But the dimension should exist so those who want it can declare it.
+
+**Reversibility as the primary axis.** Cleaner than "risk level" because it's more verifiable and less subjective. Reversible actions (file edits in version control, memory updates with history, draft creation) need *visibility* — boxholder can see what was done and undo if wrong. Irreversible actions (sent emails, financial transfers, calendar invites others were notified of) need *explicit confirmation* before the agent acts. Important: reversibility-in-the-world matters, not reversibility-on-the-system. Deleting a sent email's record doesn't unsend it; deleting a calendar event others were notified about doesn't un-notify them. The matrix should classify by world-effect, not system-effect.
+
+**Confirmation level per operation, not per tier.** "Calendar entry creation" might be auto-OK in general but require confirm for entries spanning unusual time ranges. "Send Telegram message" might be auto-OK for short confirmations but need check for novel content. The matrix should support this granularity, not just discrete levels.
+
+**Queue-on-encounter for unclassified operations.** When the agent encounters an action not yet classified by the box's matrix, it asks the boxholder *and* queues the question for explicit addition to the matrix. The same question shouldn't have to be re-asked next time. This is the mechanism that lets the matrix grow without requiring exhaustive upfront enumeration.
+
+Connections:
+- **[[behavioral-profile]]** — declared autonomy handles known categories; the learned behavioral profile handles edges where category-level rules aren't enough. They feed each other.
+- **[[correction-counting-spec-promotion]]** — same pattern in a different domain. Recurring per-session decisions get promoted to spec-level declarations. The encounter queue is the autonomy-domain version of correction counting.
+- **[[session-hot-context]]** / retrospectives — natural surface for "here are operations the agent asked about this week, which ones should become declared rules?"
+
+**Earned autonomy through accumulated evidence.** Symmetrical to [[correction-counting-spec-promotion]]: corrections push the autonomy boundary toward more restriction; successes push it toward less. When the agent has handled a task-class N times without corrections that suggested it should have been confirmed differently, surface during retrospective: "you've approved this kind of action N times without changes — promote it to auto-OK?" Earned autonomy is more durable than granted autonomy because the evidence backs it and the boxholder can see why.
+
+Caveats on earned-autonomy promotion:
+- "Zero corrections" is too strict as a literal threshold — corrections happen for reasons unrelated to whether this class needs confirmation. The signal is corrections that *suggested confirmation was needed differently*.
+- Promotion is proposed, not automatic. The boxholder might know the next case will differ from previous ones (e.g., higher-stakes context).
+- **Demotion path** is required. A promoted class that starts going wrong should restore confirmation, not be silently re-corrected each time. Same shape as the demotion path in [[universal-confidence-rubric]] — evidence-against should move classifications, not just be absorbed.
+
+The friction this addresses: without it, you get either constant permission requests (everything asks) or unpleasant surprises (the agent decided something you'd have wanted to know about). With it, the boundary is explicit and grows deliberately.
+
+## /spark mode — batch harvest of the proactive layer
+
+Conceptual inverse of narration mode (see [narration-mode-design.md](narration-mode-design.md)). Narration is user-talks-mostly (long dumps, agent files quietly). /spark is agent-talks-mostly (agent surfaces everything it's been holding back; user triages). Both intentionally break the turn-balanced rhythm in opposite directions.
+
+The premise: the agent runs a proactive layer continuously, with normal suppression discipline (park-on-ignore, thresholded surfacing, silent consultation as default). Observations the agent would have surfaced eventually but didn't yet — because timing was wrong, because the boxholder was focused elsewhere, because the quota was already spent — accumulate. /spark is the deliberate harvest of that accumulation.
+
+This presupposes the full suppression-discipline stack. Without it the bin is empty and spark is just "the agent rambling." Inputs probably come from:
+
+- Parked proactive observations (see [[park-ignored-proactive-observations]] audit)
+- Hypotheses crossing confirmation/refutation thresholds (see [[hypothesis-tracking]])
+- Behavioral-profile and autonomy-matrix promotion candidates (see [[autonomy-matrix]], [[correction-counting-spec-promotion]])
+- Recurring corrections worth surfacing as proposed rules
+- Health-check residue (quiet failures, drift)
+- Stale items from the questions queue (see [[questions-aging-policy]])
+
+Open design questions:
+
+- **Confidence floor stays.** Suppression-lifting isn't confidence-lifting. The point isn't "show me everything you've ever thought" — it's "show me everything you'd have surfaced eventually but didn't yet." Speculative hunches still shouldn't appear.
+- **Output structure.** Flat list overwhelms. Probably grouped: opportunities / risks / patterns / pending decisions / observations-about-you / proposed promotions.
+- **Triage actions per item.** Each item needs quick action: act-now / park-again / kill / tell-me-more. Pure monologue produces overwhelm without resolution. This is where the mode differs from a passive summary report.
+- **Termination.** Done when the bin drains, when the user calls it, or some combination. Probably the user can leave with items un-triaged and they stay parked for next time.
+- **Cadence vs. on-demand.** Should /spark be entirely on-demand, or also offered proactively when the bin reaches some size threshold? Either way the boxholder retains control over entry.
+
+## Introspectable feedback as the storage layer for accumulated observations
+
+Several ideas in this file — parked proactive observations, hypothesis tracking, behavioral-profile candidates, correction-counting, autonomy-promotion candidates, agent-noticed self-failures — all involve the same shape: *the agent writes structured entries that accumulate over time and get surfaced during /spark or retrospectives*. The naive implementation is parallel files (ideas_log.md, development_backlog.md, hunches.md, parked-observations.md, corrections.md...), which is sprawl with overlapping concerns.
+
+Cleaner shape: extend `cb feedback` (or whatever the existing feedback mechanism is) to be the single storage layer for all of these. Each entry has:
+
+- **Type/category** — parked-observation, hypothesis, correction, self-noticed-failure, autonomy-promotion-candidate, etc.
+- **Subject** — what it's about (person, project, behavior, operation class).
+- **Body** — the content itself.
+- **State** — fresh / parked-until-date / killed / promoted.
+- **Aging metadata** — when written, when last surfaced, when last engaged with.
+
+The point isn't to enforce a rigid schema — different types need different fields. The point is *one introspectable surface* the boxholder can query ("what's been accumulating about Alice?", "what hunches haven't been confirmed?", "what corrections have repeated?") and the agent can scan during /spark, retrospectives, and compaction.
+
+Connections:
+- [[spark-mode]] reads this surface as its input.
+- [[park-ignored-proactive-observations]] writes parked items here.
+- [[hypothesis-tracking]] writes hunches here.
+- [[correction-counting-spec-promotion]] writes correction events here.
+- [[autonomy-matrix]] writes promotion candidates here.
+
+The discipline that makes this work: nothing in the system writes accumulated observations to a *new* file — everything goes through the feedback layer with its type tag. Otherwise the sprawl returns under different filenames.
+
+## Reflexive person-profile loading + person-as-directory promotion
+
+Two related questions about how the agent handles people.
+
+**Reflexive profile load.** Before producing output that involves a specific person (drafting a message to them, prepping for a meeting, summarizing their situation), the agent should *always* load that person's profile file if one exists — not rely on session memory, not improvise from general training. Session memory degrades; the profile file is the canonical reference. This should be a pre-condition for the operation class, not a judgment call — analogous to the autonomy matrix's reversibility-driven requirements ([[autonomy-matrix]]). No "VIP tier" framing needed; presence-of-profile is the signal.
+
+**People are directories, not cards.** Each person gets a directory under `people/` with:
+
+- **A header card** — the canonical, structured profile. This is what the reflexive-load mechanism targets. Contains preferences, relationship context, sensitivities, active items, last-interaction notes, anything else that has consistent slots.
+- **Free-form attachments** — anything else that helps track or explain the person. Notes the agent jotted down, photos, document copies, draft fragments, past correspondence excerpts, scanned letters, voice memos. No required shape, no schema, just "stuff related to this person."
+
+The header card itself should document this expectation: it notes that attachments are intentionally free-form and the agent (or boxholder) can put whatever helps in there. Without that explicit note, agents tend to either over-constrain (refusing to add things because there's no schema for them) or under-utilize (sticking only to the structured header).
+
+Decision rationale for directories-from-the-start rather than card-then-promote: the migration cost is real (links break, agents have to relearn paths), and the simplicity gain of single-card people is small. Setting up the directory structure once and never re-shaping it is cleaner.
+
+Open questions:
+- **Naming convention for the header.** `people/alice/alice.person.card`? `people/alice/profile.card`? `people/alice/_header.card`? Whatever fits the existing card conventions.
+- **Connection to [[introspectable-feedback-storage]].** Per-person feedback entries (hunches about Alice, parked observations) probably live in the central feedback layer with a person reference, so cross-cutting queries still work — not scattered into each person's directory.
+
+## Hooks at the agent-loop level (not just at the system level)
+
+Callback-box already uses hook-shaped mechanisms at the system level: pre-commit card validation, post-commit auto-deploy, the wakeup cycle as a scheduled trigger. What it doesn't currently expose is *agent-loop* hooks — runtime events that fire before/after specific agent actions, executed deterministically by the runtime rather than relying on the agent to remember.
+
+The principle: if a behavior must happen reliably every time, it's a hook, not an instruction. Memory and prompts *recommend*; hooks *enforce*. Anything currently encoded as "the agent should always..." is a candidate.
+
+Candidates from ideas already in this file:
+
+- **Reflexive person-profile loading** ([[reflexive-person-profile-loading]]). Currently framed as a rule. A hook that runs before any draft-message operation and injects the recipient's profile makes this enforced, not optional.
+- **Session-end compaction triggering** ([[overnight-session-compaction]]). A session-end hook fires the compaction deterministically.
+- **Health-check surfacing at session start** ([[scheduled-task-health-surfacing]]). Session-start hook reads task health and prepends to the agent's context if anything's overdue.
+- **Pre-irreversible-action gates** ([[autonomy-matrix]]). A hook on irreversible operations triggers confirmation, rather than relying on the agent to check.
+- **Link enforcement** ([[link-dont-name]] audit). A post-output hook could detect bare resource names and either reject the output or rewrite to link form.
+
+Open questions:
+- **Where does the hook live?** In `cb` (the CLI) for operations going through it. In the chat runtime for chat-context hooks. Probably both, with a shared definition format.
+- **What's the right event vocabulary?** `pre-tool-use`, `post-tool-use`, `session-start`, `session-end` map well from Claude Code. Callback-box has additional candidates: `pre-card-create`, `post-card-create`, `pre-external-send`, etc. Worth defining the set explicitly.
+- **Where do hooks get configured?** Per-box in `config/hooks.json`? At the system level? Both, with precedence?
+- **Failure behavior.** What happens if a hook fails? Block the operation, log and continue, ask the boxholder? Probably depends on hook type (validation hooks block, observation hooks log).
+
+The bigger framing question: this is the same insight as "use hooks instead of memory" at the personal-config layer, applied to the agent-loop layer. Callback-box has hooks at the git layer (pre-commit/post-commit) and at the scheduler layer (wakeup). Adding them at the agent-loop layer would be a third tier.
+
+## Hypothesis tracking for the boxholder agent
+
+The agent forms suspicions constantly — "boxholder seems stressed about work this week," "the kitchen project may have stalled," "they're avoiding the topic of their sister." These are different from facts and currently have nowhere to live: too provisional for a person/topic card, too important to discard. Without persistence the agent re-derives them each session or, worse, forgets and asks something the suspicion would have steered it away from.
+
+Design notes:
+
+- **No percentage confidence.** Fake precision; neither model nor user has calibrated 65%-vs-70% intuitions. If gradation matters at all, qualitative bands (hunch / suspect / likely). Probably even those are overkill — binary "is-a-hunch" plus a refutation trigger does the real work.
+- **Every hunch carries a refutation/confirmation trigger.** "If Alice mentions the kitchen project, ask if it stalled" is more useful than any confidence score. The trigger is what makes the hunch operationally actionable.
+- **Aging.** Hunches go stale fast — most suspicions about state ("seems stressed this week") shouldn't survive past a couple weeks. Trait-shaped hunches ("seems uncomfortable discussing finances") last longer. Per-hunch TTL, not a global one.
+- **Promotion to fact.** When a hunch is confirmed it should become a normal note on the relevant person/topic card, not a permanent resident of the hunches file.
+- **Connection to user-model dimensions** (see [[user-model-dimensions]] entry above) — hunches along the same axes the agent watches for are the raw material; over time, repeated hunches in the same direction become facts.
+
 ## Review attach-manifest scope
 
 The attach-manifest hook (`docs/attach-manifests.md`) scopes its discipline to `**/*.attach/**` only. Binaries outside attach scopes commit normally, with a soft "this is big, consider moving it" advisory. Revisit once we have real usage: if agents routinely drop binaries outside attach scopes anyway (logs, screenshots, scratch files), either tighten enforcement (gitignore more aggressively, hard-block large binaries anywhere), or accept the looser model and beef up the advisory. Also worth revisiting: per-dir JSON manifest vs per-binary sidecar — if per-dir produces noisy diffs in practice, the sidecar form is a drop-in replacement.
