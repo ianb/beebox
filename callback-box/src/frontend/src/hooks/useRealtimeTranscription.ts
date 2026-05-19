@@ -106,17 +106,37 @@ export function useRealtimeTranscription(
   const transcript = combine(finalTranscript, interimTranscript);
 
   // Screen wake lock — keep the device awake while the mic is open.
-  // The hook is always mounted; we drive request/release imperatively
-  // from the machine state so the sentinel lifetime matches mic
-  // activity exactly. Visibility-change re-acquire is handled by the hook.
+  // The mic state cycles idle → active → idle on every send-message
+  // checkpoint in narration mode. Releasing on each idle and re-requesting
+  // moments later fails on mobile (wake-lock requests outside a fresh
+  // user gesture are often refused), so we debounce the release: only
+  // actually release if we stay idle for WAKE_LOCK_RELEASE_DELAY_MS. If
+  // the mic re-opens within that window, the pending release is canceled
+  // and the existing lock is retained.
+  const WAKE_LOCK_RELEASE_DELAY_MS = 3000;
   const { requestWakeLock, releaseWakeLock } = useWakeLock();
+  const releaseTimerRef = useRef<number | null>(null);
   const isActive = state !== "idle";
   useEffect(() => {
     if (isActive) {
+      if (releaseTimerRef.current !== null) {
+        window.clearTimeout(releaseTimerRef.current);
+        releaseTimerRef.current = null;
+      }
       void requestWakeLock();
     } else {
-      void releaseWakeLock();
+      if (releaseTimerRef.current !== null) return;
+      releaseTimerRef.current = window.setTimeout(() => {
+        releaseTimerRef.current = null;
+        void releaseWakeLock();
+      }, WAKE_LOCK_RELEASE_DELAY_MS);
     }
+    return () => {
+      if (releaseTimerRef.current !== null) {
+        window.clearTimeout(releaseTimerRef.current);
+        releaseTimerRef.current = null;
+      }
+    };
   }, [isActive, requestWakeLock, releaseWakeLock]);
 
   const fireKeyword = useCallback((keyword: KeywordResult) => {
