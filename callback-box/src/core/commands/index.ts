@@ -26,6 +26,7 @@ import "./ls.js";
 import "./wakeup.js";
 import "./intake.js";
 import "./triage.js";
+import "./handle.js";
 
 // Re-export for convenience
 export {

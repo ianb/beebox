@@ -54,6 +54,7 @@ import {
   boxesCommand,
   intakeCommand,
   triageCommand,
+  handleCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -110,6 +111,7 @@ program.addCommand(feedbackCommand);
 program.addCommand(boxesCommand);
 program.addCommand(intakeCommand);
 program.addCommand(triageCommand);
+program.addCommand(handleCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)
