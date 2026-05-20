@@ -70,9 +70,14 @@ tests:
   - id: wakeup-intake-flow
     prompt: "Walk me through what happens when new items arrive in the inbox during a wakeup cycle."
     expected_level: knows_about
-    watch_for: "Describes: connectors sync, items land in inbox, intake jobs created in box/jobs/, reactor processes them"
+    watch_for: >
+      Describes the legacy reactor path: connectors sync, items land in inbox,
+      intake jobs created in box/jobs/, reactor processes them. Bonus credit if
+      the agent acknowledges the parallel new pipeline (intake → triage → handle,
+      docs/triage-design.md) — but wakeup currently only drives the reactor path,
+      so naming that flow is the primary expectation.
     correct_contains: ["job", "inbox"]
-    tags: [intake, lifecycle]
+    tags: [intake, lifecycle, legacy-flow]
 
   # === Card Types and Schemas ===
 
@@ -627,14 +632,15 @@ tests:
   - id: processing-pattern-where
     prompt: "You've noticed that voice memos from the boxholder always start with a location name. Where should you record this pattern?"
     expected_level: knows_about
-    watch_for: "Records it somewhere persistent — the briefing card's agent-needs-to-know or the intake guide are both reasonable"
+    watch_for: "Records it somewhere persistent — the briefing card's agent-needs-to-know, an `<intake>` element on a relevant guide, or a similar durable location"
     correct_contains_any: ["briefing", "guide"]
     tags: [knowledge, processing]
     notes: >
-      Both the briefing card (agent-needs-to-know) and the intake guide are
-      acceptable destinations. The pattern is a processing observation (guides)
-      but also general context (briefing). The test passes if either is mentioned.
-      The failure would be not recording it at all, or putting it in memory.
+      The briefing card (agent-needs-to-know) and per-domain guide cards
+      (e.g., a `config/*.guide.card`) are both acceptable destinations. The
+      pattern is a processing observation (guide territory) but also general
+      context (briefing territory). The test passes if either is mentioned.
+      The failure mode is not recording it at all, or putting it in memory.
 
   - id: user-prefers-terse
     prompt: "The user has told you they prefer short, bullet-point responses over long paragraphs. Where in the box should this preference be captured so all agents respect it?"
@@ -645,10 +651,16 @@ tests:
 
   - id: triage-rule-where
     prompt: "The user says 'always archive insurance documents, don't ask me about them.' Where does this go?"
-    expected_level: knows_directly
-    watch_for: "Intake guide — this is a processing rule, not background context"
-    correct_contains: ["guide"]
-    tags: [knowledge, guides]
+    expected_level: knows_about
+    watch_for: >
+      Either a per-domain guide card (`config/*.guide.card`) for an existing
+      pipeline that already handles insurance, OR a landmark `<triage-destination><rules>`
+      at the archive directory the items should route to (the new
+      intake→triage→handle pipeline; see docs/triage-design.md). Both are
+      valid; the choice depends on which path actually routes insurance items
+      in this box.
+    correct_contains_any: ["guide", "landmark", "triage-destination"]
+    tags: [knowledge, guides, triage-pipeline]
 
   - id: new-category-needed
     prompt: "You keep finding vehicle-related records that don't fit the current archive categories. What do you do?"
@@ -1541,3 +1553,126 @@ tests:
       observation appropriately" which should trigger cb feedback. If the agent
       instead asks the user or uses a self-note, it has the wrong model of the
       command's purpose.
+
+  # === Triage Pipeline ===
+  #
+  # Status (2026-05-20): Not yet run. New section covering the formal three-stage
+  # pipeline (intake → triage → handle) added in commits 480f7d4f..7e2b2080.
+  # The pipeline is NOT wired into `cb wakeup` yet — agents in a live box won't
+  # see it run during normal operation. These tests check that the agent
+  # understands the model and can answer questions about it on demand. Filter
+  # with `--filter triage-pipeline`.
+
+  - id: triage-pipeline-stages
+    prompt: "What are the stages of the triage pipeline, in order?"
+    expected_level: knows_about
+    watch_for: >
+      Names three stages in order: intake → triage → handle. Reads
+      docs/triage-design.md if needed; should not invent extra stages or
+      conflate with the legacy reactor inbox-job flow.
+    should_read: ["docs/triage-design.md"]
+    correct_contains: ["intake", "triage", "handle"]
+    tags: [triage-pipeline]
+
+  - id: triage-pipeline-directories
+    prompt: "Where do items live at each stage of the triage pipeline?"
+    expected_level: knows_about
+    watch_for: >
+      Names box/inbox/intake/ (stage 1), box/inbox/staged/ (between stages 1 and 2),
+      box/inbox/triaged/<category>/ (after stage 2), box/inbox/triaged/_unsure/
+      for low-confidence holds.
+    should_read: ["docs/triage-design.md", "docs/box-layout.md"]
+    correct_contains: ["intake", "staged", "triaged"]
+    tags: [triage-pipeline, navigation]
+
+  - id: triage-confidence-levels
+    prompt: "The triage agent assigns a confidence level to each item. What are the levels and what do they mean?"
+    expected_level: knows_about
+    watch_for: >
+      Names confident (proceed silently), probable (proceed but flag for review),
+      guess (block pending a question). Does NOT invent a "wrong" level — the
+      design doc is explicit that wrong is not a confidence level.
+    should_read: ["docs/triage-design.md"]
+    correct_contains: ["confident", "probable", "guess"]
+    tags: [triage-pipeline, behavioral]
+    notes: >
+      Failure mode: returns numeric confidence or invents a fourth level like
+      "wrong" / "unknown". The design doc explicitly rejects both. The
+      pipeline's confidence enum is the authority.
+
+  - id: triage-rules-location
+    prompt: "I want the triage agent to stop sending recipes to the todos directory. Where do I change that rule?"
+    expected_level: knows_about
+    watch_for: >
+      Edits the relevant landmark's `<triage-destination><rules>` — either the
+      recipes landmark (clarifying what a recipe is) or the todos landmark
+      (excluding recipes). Does NOT point at a guide card or a generic config
+      file as the canonical location for pipeline routing rules.
+    should_read: ["docs/triage-design.md", "docs/landmarks.md"]
+    correct_contains_any: ["landmark", "triage-destination"]
+    tags: [triage-pipeline, landmarks]
+
+  - id: landmark-roles
+    prompt: "What roles can a landmark card carry?"
+    expected_level: knows_about
+    watch_for: >
+      Names `<navigation>` (human-facing bookmark) and `<triage-destination>`
+      (agent-facing routing target). A landmark must carry at least one role
+      and can carry both.
+    should_read: ["docs/landmarks.md"]
+    correct_contains: ["navigation", "triage-destination"]
+    tags: [triage-pipeline, landmarks, schemas]
+
+  - id: triage-vs-reactor-flow
+    prompt: "What's the difference between the triage pipeline's intake stage and the reactor's intake jobs?"
+    expected_level: knows_about
+    watch_for: >
+      Distinguishes the two paths. Triage-pipeline intake (`cb intake`) is
+      stage 1 of a formal three-stage pipeline — scans box/inbox/intake/,
+      runs prep steps like filename normalization, advances items to
+      box/inbox/staged/. Reactor intake jobs are the legacy path —
+      connectors drop items in box/inbox/, wakeup creates job cards in
+      box/jobs/, the reactor agent processes them. The two paths coexist.
+    should_read: ["docs/triage-design.md"]
+    correct_contains_any: ["legacy", "coexist", "two", "parallel", "reactor"]
+    tags: [triage-pipeline, lifecycle, behavioral]
+    notes: >
+      The terminology collision (both call themselves "intake") is the failure
+      mode this test guards against. The agent should not conflate them.
+
+  - id: triage-guess-handling
+    prompt: "What happens when the triage agent isn't sure where an item belongs?"
+    expected_level: knows_about
+    watch_for: >
+      Item moves to box/inbox/triaged/_unsure/, a select question card is
+      created listing candidate categories (plus an `_other` escape option),
+      and the pipeline does NOT advance the item further until the user
+      answers.
+    should_read: ["docs/triage-design.md"]
+    correct_contains: ["_unsure", "question"]
+    tags: [triage-pipeline, questions]
+
+  - id: triage-handler-env
+    prompt: "If I'm writing a handler procedure for a triage category, how do I see the items in the bucket?"
+    expected_level: knows_about
+    watch_for: >
+      The handler reads the TRIAGE_ITEMS environment variable, which contains
+      null-delimited box-relative paths of items in the bucket. Useful idiom:
+      pipe through `xargs -0` for shell steps.
+    should_read: ["docs/triage-design.md"]
+    correct_contains: ["TRIAGE_ITEMS"]
+    tags: [triage-pipeline, procedures]
+
+  - id: triage-pipeline-not-wired
+    prompt: "If I run `cb wakeup`, does the new intake → triage → handle pipeline run?"
+    expected_level: knows_about
+    watch_for: >
+      No — the pipeline is not wired into wakeup yet. To exercise it, run
+      `cb intake`, `cb triage`, and `cb handle` manually. Wakeup currently
+      drives only the legacy reactor inbox-job path.
+    should_read: ["docs/triage-design.md"]
+    correct_contains_any: ["not wired", "manual", "manually", "not yet", "legacy"]
+    tags: [triage-pipeline, lifecycle]
+    notes: >
+      This pins the current state. When wakeup eventually invokes the
+      pipeline, this test needs to be updated rather than failing silently.
