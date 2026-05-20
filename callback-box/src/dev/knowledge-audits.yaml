@@ -659,8 +659,11 @@ tests:
       intake→triage→handle pipeline; see docs/triage-design.md). Both are
       valid; the choice depends on which path actually routes insurance items
       in this box.
-    correct_contains_any: ["guide", "landmark", "triage-destination"]
+    correct_contains_any: ["landmark", "triage-destination", ".guide.card"]
     tags: [knowledge, guides, triage-pipeline]
+    notes: >
+      `correct_contains_any` deliberately avoids bare "guide" — a correct
+      "landmark, not a guide card" answer would false-positive on that token.
 
   - id: new-category-needed
     prompt: "You keep finding vehicle-related records that don't fit the current archive categories. What do you do?"
@@ -1556,32 +1559,49 @@ tests:
 
   # === Triage Pipeline ===
   #
-  # Status (2026-05-20): Not yet run. New section covering the formal three-stage
-  # pipeline (intake → triage → handle) added in commits 480f7d4f..7e2b2080.
-  # The pipeline is NOT wired into `cb wakeup` yet — agents in a live box won't
-  # see it run during normal operation. These tests check that the agent
-  # understands the model and can answer questions about it on demand. Filter
-  # with `--filter triage-pipeline`.
+  # Status (2026-05-20): 8/10 pass on substance against test1 (run via
+  # `knowledge-audit run --box ~/src/boxes/test1 --filter triage-pipeline`).
+  # Two real knowledge gaps:
+  #
+  #   - `triage-confidence-levels`: agent invented a "confidence ladder"
+  #     (hypothesis/low/medium/high/confirmed) from `docs/generated/card-guide.md`
+  #     instead of naming the pipeline's confident/probable/guess. The
+  #     pipeline's enum lives in `docs/triage-design.md` in the callback-box
+  #     monorepo, which the box agent can't see.
+  #   - `triage-handler-env`: agent spent 20+ tool calls looking for the
+  #     TRIAGE_ITEMS env contract, found nothing, returned an empty response.
+  #     Same root cause: design doc isn't distributed into boxes.
+  #
+  # Fix direction (separate work): propagate triage-design.md (or a
+  # `docs/generated/triage-pipeline.md` derivative) into boxes so the agent
+  # has access. Until then these two tests fail honestly.
+  #
+  # Several other tests fail only on `should_read` — the agent answered
+  # correctly from agent-guide context without needing to crack the design
+  # doc. That's a false-fail: the harness penalizes "knows directly" when
+  # we expected "knows about." Reviewed by hand; not a real defect.
+  #
+  # The pipeline is NOT wired into `cb wakeup` yet. Filter with
+  # `--filter triage-pipeline`.
 
   - id: triage-pipeline-stages
     prompt: "What are the stages of the triage pipeline, in order?"
-    expected_level: knows_about
+    expected_level: knows_directly
     watch_for: >
-      Names three stages in order: intake → triage → handle. Reads
-      docs/triage-design.md if needed; should not invent extra stages or
-      conflate with the legacy reactor inbox-job flow.
-    should_read: ["docs/triage-design.md"]
+      Names three stages in order: intake → triage → handle. Should not
+      invent extra stages or conflate with the legacy reactor inbox-job flow.
+      The pipeline names are in the always-loaded agent guide; reading the
+      design doc is OK but not required.
     correct_contains: ["intake", "triage", "handle"]
     tags: [triage-pipeline]
 
   - id: triage-pipeline-directories
     prompt: "Where do items live at each stage of the triage pipeline?"
-    expected_level: knows_about
+    expected_level: knows_directly
     watch_for: >
       Names box/inbox/intake/ (stage 1), box/inbox/staged/ (between stages 1 and 2),
       box/inbox/triaged/<category>/ (after stage 2), box/inbox/triaged/_unsure/
-      for low-confidence holds.
-    should_read: ["docs/triage-design.md", "docs/box-layout.md"]
+      for low-confidence holds. Layout is in the always-loaded agent guide.
     correct_contains: ["intake", "staged", "triaged"]
     tags: [triage-pipeline, navigation]
 
@@ -1602,13 +1622,13 @@ tests:
 
   - id: triage-rules-location
     prompt: "I want the triage agent to stop sending recipes to the todos directory. Where do I change that rule?"
-    expected_level: knows_about
+    expected_level: knows_directly
     watch_for: >
       Edits the relevant landmark's `<triage-destination><rules>` — either the
       recipes landmark (clarifying what a recipe is) or the todos landmark
       (excluding recipes). Does NOT point at a guide card or a generic config
-      file as the canonical location for pipeline routing rules.
-    should_read: ["docs/triage-design.md", "docs/landmarks.md"]
+      file as the canonical location for pipeline routing rules. The agent
+      guide names landmark <triage-destination> as the home for these rules.
     correct_contains_any: ["landmark", "triage-destination"]
     tags: [triage-pipeline, landmarks]
 
@@ -1618,8 +1638,8 @@ tests:
     watch_for: >
       Names `<navigation>` (human-facing bookmark) and `<triage-destination>`
       (agent-facing routing target). A landmark must carry at least one role
-      and can carry both.
-    should_read: ["docs/landmarks.md"]
+      and can carry both. Confirmed by reading `docs/generated/card-landmark.md`.
+    should_read: ["docs/generated/card-landmark.md"]
     correct_contains: ["navigation", "triage-destination"]
     tags: [triage-pipeline, landmarks, schemas]
 
@@ -1642,13 +1662,12 @@ tests:
 
   - id: triage-guess-handling
     prompt: "What happens when the triage agent isn't sure where an item belongs?"
-    expected_level: knows_about
+    expected_level: knows_directly
     watch_for: >
       Item moves to box/inbox/triaged/_unsure/, a select question card is
       created listing candidate categories (plus an `_other` escape option),
       and the pipeline does NOT advance the item further until the user
-      answers.
-    should_read: ["docs/triage-design.md"]
+      answers. _unsure/ is named in the always-loaded agent guide.
     correct_contains: ["_unsure", "question"]
     tags: [triage-pipeline, questions]
 
@@ -1665,12 +1684,12 @@ tests:
 
   - id: triage-pipeline-not-wired
     prompt: "If I run `cb wakeup`, does the new intake → triage → handle pipeline run?"
-    expected_level: knows_about
+    expected_level: knows_directly
     watch_for: >
       No — the pipeline is not wired into wakeup yet. To exercise it, run
       `cb intake`, `cb triage`, and `cb handle` manually. Wakeup currently
-      drives only the legacy reactor inbox-job path.
-    should_read: ["docs/triage-design.md"]
+      drives only the legacy reactor inbox-job path. The agent guide is
+      explicit: "the new pipeline isn't wired into wakeup yet."
     correct_contains_any: ["not wired", "manual", "manually", "not yet", "legacy"]
     tags: [triage-pipeline, lifecycle]
     notes: >
