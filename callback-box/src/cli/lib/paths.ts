@@ -18,6 +18,14 @@ export const BOX_DIRS = {
   // Working state
   inbox: "box/inbox",
   inboxUnhandled: "box/inbox/unhandled",
+  /** Pre-triage stage 1: items currently being prepared (transcription, OCR, filename normalization). */
+  inboxIntake: "box/inbox/intake",
+  /** Pre-triage stage 2: intake-complete items waiting for the triage agent. */
+  inboxStaged: "box/inbox/staged",
+  /** Post-triage holding spots; per-category subdirectories live below this. */
+  inboxTriaged: "box/inbox/triaged",
+  /** Low-confidence triage results; paired with a question card. */
+  inboxTriagedUnsure: "box/inbox/triaged/_unsure",
   jobs: "box/jobs",
   output: "box/output",
   questions: "box/questions",
