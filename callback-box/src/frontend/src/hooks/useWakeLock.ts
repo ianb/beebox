@@ -22,6 +22,40 @@ export interface WakeLockApi {
   releaseWakeLock: () => Promise<boolean>;
 }
 
+/**
+ * Convenience: drive a wake-lock from a boolean "active" signal with a
+ * debounced release. When `active` flips true the lock is requested; when
+ * it flips false the release is scheduled `releaseDelayMs` later. If
+ * `active` flips back to true before the timer fires, the release is
+ * canceled and the existing lock is retained — no fresh wake-lock
+ * request needed, which matters on mobile where the re-request often
+ * fails outside a user gesture.
+ */
+export function useDebouncedWakeLock(active: boolean, releaseDelayMs = 3000): void {
+  const { requestWakeLock, releaseWakeLock } = useWakeLock();
+  const timerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (active) {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      void requestWakeLock();
+    } else if (timerRef.current === null) {
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        void releaseWakeLock();
+      }, releaseDelayMs);
+    }
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [active, releaseDelayMs, requestWakeLock, releaseWakeLock]);
+}
+
 export function useWakeLock(): WakeLockApi {
   const wakeLock = useRef<WakeLockSentinel | null>(null);
 

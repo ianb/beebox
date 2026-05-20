@@ -19,6 +19,7 @@ import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAtt
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
+import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { detectKeyword } from "../../lib/speech-keywords";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
 import { parseAllSpeechTags, VALID_VOICES, type SpeechSegment } from "../../lib/speech-parsing";
@@ -2161,6 +2162,18 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     transcription.state === "connecting" ||
     transcription.state === "recording" ||
     transcription.state === "finalizing";
+
+  // Screen wake lock — held for the entire voice-conversation window:
+  // mic recording, mic paused for speech, OR TTS actively playing.
+  // Release is debounced (in useDebouncedWakeLock) so the brief idle
+  // gap between narration segments doesn't churn request/release —
+  // re-requesting outside a user gesture fails on mobile.
+  const voiceModeActive = [
+    isTranscribing,
+    voicePaused,
+    speechPlayback.isPlaying,
+  ].some(Boolean);
+  useDebouncedWakeLock(voiceModeActive);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
