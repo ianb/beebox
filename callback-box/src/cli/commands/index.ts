@@ -46,3 +46,4 @@ export { refreshMapsCommand } from "./refresh-maps.js";
 export { feedbackCommand } from "./feedback.js";
 export { boxesCommand } from "./boxes.js";
 export { intakeCommand } from "./intake.js";
+export { triageCommand } from "./triage.js";

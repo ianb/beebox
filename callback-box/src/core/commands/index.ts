@@ -25,6 +25,7 @@ import "./attachments.js";
 import "./ls.js";
 import "./wakeup.js";
 import "./intake.js";
+import "./triage.js";
 
 // Re-export for convenience
 export {
