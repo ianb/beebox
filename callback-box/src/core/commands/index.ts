@@ -24,6 +24,7 @@ import "./upload.js";
 import "./attachments.js";
 import "./ls.js";
 import "./wakeup.js";
+import "./intake.js";
 
 // Re-export for convenience
 export {

@@ -52,6 +52,7 @@ import {
   refreshMapsCommand,
   feedbackCommand,
   boxesCommand,
+  intakeCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -106,6 +107,7 @@ program.addCommand(chatCommand);
 program.addCommand(refreshMapsCommand);
 program.addCommand(feedbackCommand);
 program.addCommand(boxesCommand);
+program.addCommand(intakeCommand);
 
 // ============================================
 // Placeholder commands (to be implemented)
