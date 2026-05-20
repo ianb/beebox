@@ -42,6 +42,9 @@ const PLACEHOLDER_RE = /\${([^}]+)}/g;
 /**
  * Resolve a landmark element's links. Hand-listed and expanded links merge
  * in source order; duplicates by ref are dropped (first wins).
+ *
+ * Links live inside the landmark's `<navigation>` role. A landmark
+ * without `<navigation>` resolves to no links.
  */
 export async function resolveLandmark(
   element: ElementNode,
@@ -50,7 +53,10 @@ export async function resolveLandmark(
   const out: ResolvedLink[] = [];
   const seen = new Set<string>();
 
-  for (const child of element.children) {
+  const navigation = element.children.find((c) => c.tagName === "navigation");
+  if (!navigation) return out;
+
+  for (const child of navigation.children) {
     if (child.tagName === "link") {
       const link = await resolveHandLink(child, options);
       if (link !== null) addUnique(link, { out, seen });

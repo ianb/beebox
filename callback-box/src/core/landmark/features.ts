@@ -1,9 +1,13 @@
 /**
  * Read the chat-feature seed (if any) from a landmark card. The seed
- * lives in a `<chat-app>` child of `<landmark>` with feature attributes
- * mirroring the chat-app envelope tag used in chat itself:
+ * lives in a `<chat-app>` element nested inside the landmark's
+ * `<navigation>` role:
  *
- *   <chat-app narration="on" prose="off"/>
+ *   <landmark>
+ *     <navigation>
+ *       <chat-app narration="on" prose="off"/>
+ *     </navigation>
+ *   </landmark>
  *
  * Used at chat-session creation time to seed features for chats opened
  * from a landmark.
@@ -23,13 +27,16 @@ import { isKnownFeature, isValidValue } from "../chat-features.js";
  */
 export function readLandmarkFeatures(element: ElementNode): Record<string, string> {
   const features: Record<string, string> = {};
-  for (const child of element.children) {
-    if (child.tagName !== "chat-app") continue;
-    for (const [name, value] of Object.entries(child.attrs)) {
-      if (typeof value !== "string") continue;
-      if (!isKnownFeature(name)) continue;
-      if (!isValidValue(name, value)) continue;
-      features[name] = value;
+  for (const role of element.children) {
+    if (role.tagName !== "navigation") continue;
+    for (const child of role.children) {
+      if (child.tagName !== "chat-app") continue;
+      for (const [name, value] of Object.entries(child.attrs)) {
+        if (typeof value !== "string") continue;
+        if (!isKnownFeature(name)) continue;
+        if (!isValidValue(name, value)) continue;
+        features[name] = value;
+      }
     }
   }
   return features;

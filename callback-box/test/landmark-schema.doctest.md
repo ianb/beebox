@@ -1,7 +1,8 @@
 # Landmark Schema and Resolution
 
-A landmark card marks a directory as a notable spot in the box. Each
-landmark holds a label, an iconic symbol, and a curated list of links
+A landmark card marks a directory as a notable spot in the box. A
+landmark carries one or more *role* child elements; the `<navigation>`
+role holds a label, an iconic symbol, and a curated list of links
 to other cards (hand-listed and/or templated via `<expand>`).
 
 See `docs/landmarks.md` for the full design.
@@ -38,14 +39,16 @@ registry.get("landmark")?.tagName
 
 ## Template
 
-`createLandmarkTemplate` produces a starter card with label and symbol:
+`createLandmarkTemplate` produces a starter card wrapping label and symbol in the `<navigation>` role:
 
 ```
 createLandmarkTemplate({ label: "Recipes", symbol: "🍳" })
 =>
 <landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
+</navigation>
 </landmark>
 ```
 
@@ -55,8 +58,10 @@ Special characters in label are XML-escaped:
 createLandmarkTemplate({ label: "A & B", symbol: "📍" })
 =>
 <landmark>
+<navigation>
 <label>A &amp; B</label>
 <symbol>📍</symbol>
+</navigation>
 </landmark>
 ```
 
@@ -67,16 +72,19 @@ at an image. Both forms validate cleanly.
 
 ```
 const xml = `<landmark>
-<label>Marisol</label>
-<symbol src="images/Marisol.webp"/>
+<navigation>
+<label>Character</label>
+<symbol src="images/portrait.webp"/>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");
-const symbolEl = root.children.find((c) => c.tagName === "symbol");
+const nav = root.children.find((c) => c.tagName === "navigation");
+const symbolEl = nav.children.find((c) => c.tagName === "symbol");
 JSON.stringify({ src: symbolEl.attrs.src, text: symbolEl.text || "" }, null, 2)
 =>
 {
-  "src": "images/Marisol.webp",
+  "src": "images/portrait.webp",
   "text": ""
 }
 ```
@@ -93,10 +101,12 @@ await box.write("store/recipes/Bread.recipe.card", "<recipe><title>Bread</title>
 await box.write("store/recipes/Pasta.recipe.card", "<recipe><title>Pasta</title></recipe>");
 
 const xml = `<landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <link ref="Bread.recipe.card">the bread</link>
 <link ref="Pasta.recipe.card"/>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");
@@ -134,10 +144,12 @@ const box = await makeTmpBox();
 await box.write("store/recipes/Bread.recipe.card", "<recipe><title>Bread</title></recipe>");
 
 const xml = `<landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <link ref="Bread.recipe.card"/>
 <link ref="Vanished.recipe.card"/>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");
@@ -176,9 +188,11 @@ await box.write("store/recipes/Bread.recipe.card", "<recipe><title>Bread</title>
 await box.write("store/recipes/Carrot.recipe.card", "<recipe><title>Carrot</title></recipe>");
 
 const xml = `<landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <expand query="*.recipe.card"/>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");
@@ -212,11 +226,13 @@ await box.write("store/recipes/Bread.recipe.card", "<recipe><title>Crusty Bread<
 await box.write("store/recipes/Pasta.recipe.card", "<recipe><title>Cacio e Pepe</title></recipe>");
 
 const xml = `<landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <expand query="*.recipe.card">
 <link template-ref="\${path}">\${title}</link>
 </expand>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");
@@ -255,10 +271,12 @@ await box.write("store/recipes/Bread.recipe.card", "<recipe><title>Bread</title>
 await box.write("store/recipes/Pasta.recipe.card", "<recipe><title>Pasta</title></recipe>");
 
 const xml = `<landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <link ref="Bread.recipe.card">the bread</link>
 <expand query="*.recipe.card"/>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");
@@ -299,9 +317,11 @@ await utimes(aPath, new Date(2020, 0, 1), new Date(2020, 0, 1));
 await box.write("store/recipes/B.recipe.card", "<recipe/>");
 
 const xml = `<landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <expand query="*.recipe.card" order="modified-desc"/>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");
@@ -331,10 +351,12 @@ await box.write("store/recipes/Bread.recipe.card", "<recipe/>");
 await box.write("docs/About.doc.card", "<doc/>");
 
 const xml = `<landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <link ref="Bread.recipe.card"/>
 <link ref="../../docs/About.doc.card">about</link>
+</navigation>
 </landmark>`;
 
 const root = await parseXml(xml, "test.xml");

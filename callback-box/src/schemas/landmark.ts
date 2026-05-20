@@ -2,9 +2,16 @@
  * Landmark card schema — a hand-curated bookmark for a directory.
  *
  * One landmark per directory; the file lives inside the directory it
- * describes (e.g. `store/recipes/Recipes.landmark.card`). The Landmarks
- * page collects all `**\/*.landmark.card` and presents them as a flat list
- * of tiles. See docs/landmarks.md.
+ * describes (e.g. `store/recipes/Recipes.landmark.card`). A landmark
+ * carries one or more *roles* as child elements:
+ *
+ *   <landmark>
+ *     <navigation>…label/symbol/links…</navigation>     (human-facing surface)
+ *     <triage-destination>…rules/procedure…</triage-destination>  (routing target)
+ *   </landmark>
+ *
+ * At least one role must be present; any combination is allowed.
+ * See docs/landmarks.md and docs/triage-design.md.
  */
 
 import { element, escapeAttr, escapeText } from "cardworks";
@@ -22,7 +29,7 @@ export const LandmarkLabel = element("label", {
  * The iconic mark for the landmark. Two forms:
  *
  *   <symbol>🍳</symbol>                            — emoji or short text
- *   <symbol src="images/Marisol.webp"/>            — image (path relative
+ *   <symbol src="images/character.webp"/>          — image (path relative
  *                                                    to the landmark's
  *                                                    directory)
  *
@@ -108,36 +115,95 @@ export const LandmarkExpand = element("expand", {
 });
 
 /**
+ * Human-facing role: the navigation surface for this spot. Carries
+ * the label, symbol, and curated links shown on the Landmarks page.
+ *
+ * Everything that used to sit directly under `<landmark>` lives here.
+ */
+export const LandmarkNavigation = element("navigation", {
+  children: z.array(
+    z.union([LandmarkLabel, LandmarkSymbol, LandmarkLink, LandmarkExpand, LandmarkChatApp])
+  ),
+});
+
+/**
+ * Triage rules — prose describing what kinds of items belong in this
+ * destination. The triage agent reads this when deciding category.
+ */
+export const TriageRules = element("rules", {
+  text: z.string(),
+});
+
+/**
+ * Inline handler procedure step. A `<procedure>` element with no
+ * children and a `ref` attribute references a procedure card living
+ * elsewhere; with children, it's an inline procedure.
+ *
+ * Procedure-step internals are intentionally loose at this layer —
+ * the procedure engine validates them.
+ */
+export const TriageProcedure = element("procedure", {
+  attrs: {
+    ref: z.string().optional(),
+  },
+  children: z.array(z.unknown()).optional(),
+});
+
+/**
+ * Agent-facing role: a triage destination. The triage stage reads
+ * `<rules>` to decide what routes here; the handle stage runs
+ * `<procedure>` against the items collected in the holding spot.
+ */
+export const LandmarkTriageDestination = element("triage-destination", {
+  children: z.array(z.union([TriageRules, TriageProcedure])),
+});
+
+/**
  * Landmark card schema.
  *
  * ```xml
  * <landmark>
- * <label>Recipes</label>
- * <symbol>🍳</symbol>
- * <link ref="Bread.recipe.card">the bread</link>
- * <expand query="*.recipe.card" order="modified-desc">
- *   <link template-ref="${path}">${title}</link>
- * </expand>
+ * <navigation>
+ *   <label>Recipes</label>
+ *   <symbol>🍳</symbol>
+ *   <link ref="Bread.recipe.card">the bread</link>
+ *   <expand query="*.recipe.card" order="modified-desc">
+ *     <link template-ref="${path}">${title}</link>
+ *   </expand>
+ * </navigation>
+ * <triage-destination>
+ *   <rules>Recipes — anything describing how to cook a dish.</rules>
+ *   <procedure ref="archive-recipe.procedure.card"/>
+ * </triage-destination>
  * </landmark>
  * ```
  */
 export const LandmarkSchema = element("landmark", {
-  children: z.array(
-    z.union([LandmarkLabel, LandmarkSymbol, LandmarkLink, LandmarkExpand, LandmarkChatApp])
-  ),
+  children: z.array(z.union([LandmarkNavigation, LandmarkTriageDestination])),
   instructions: `# Landmark Cards
 
-A landmark marks a directory as a notable spot in the box. It's a hand-curated bookmark, not a museum plaque — most appearances are tiles in the Landmarks page, and the iconic form (symbol + label) is the entire content most of the time.
+A landmark marks a directory as a notable spot in the box. It's a hand-curated bookmark that can also be a triage destination — anywhere the system needs a named spot with metadata.
 
-**One per directory.** The file lives inside the directory it describes, e.g. \`store/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page; that's the point.
+**One per directory.** The file lives inside the directory it describes, e.g. \`store/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page and to triage.
 
-**Structure:**
+**Roles.** A landmark carries one or more role child elements:
+- \`<navigation>\` — human-facing: appears on the Landmarks page, carries the bookmark fields.
+- \`<triage-destination>\` — agent-facing: a routing target for triage, carries the rules and handler procedure.
+
+A landmark must have at least one role; many will have both. A pure routing target (an archive humans don't browse) can have only \`<triage-destination>\`; a pure bookmark (a Recipes tile) can have only \`<navigation>\`.
+
+**\`<navigation>\` fields:**
 - \`<label>\` — short bookmark name. Treat like a tab name, not a sentence.
-- \`<symbol>\` — the iconic mark. Either an emoji / short text (\`<symbol>🍳</symbol>\`) or an image (\`<symbol src="images/Marisol.webp"/>\`). Image \`src\` is a path relative to the landmark's directory; cross-directory paths are allowed. For character-driven landmarks the portrait makes a stronger bookmark than an emoji.
+- \`<symbol>\` — the iconic mark. Either an emoji / short text (\`<symbol>🍳</symbol>\`) or an image (\`<symbol src="images/portrait.webp"/>\`). Image \`src\` is a path relative to the landmark's directory; cross-directory paths are allowed.
 - \`<link ref="...">\` — optional curated references to other cards. Inner text is a per-landmark label; falls back to the target's title if omitted. The \`ref\` is a literal path relative to the landmark's directory; cross-directory refs are allowed. \`ref\` is validated like any other ref — it must point at a real file.
 - \`<expand query="..." order="...">\` — optional templated fan-out. \`query\` is a glob (like \`cb ls\`). The element's children form the template; inside that template, links use \`template-ref="..."\` (NOT \`ref=""\`) so the validator doesn't try to resolve placeholders. Placeholders are \`\${path}\` (matched card's path) and \`\${xpath-expr}\` (XPath against the matched card's root). \`order\` is one of \`alphabetical\` (default), \`modified-desc\`, \`modified-asc\`.
+- \`<chat-app>\` — optional chat-feature seed for chats opened from this landmark.
 
 **Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and \`<link>\` to it.
+
+**\`<triage-destination>\` fields:**
+- \`<rules>\` — prose describing what kinds of items belong here. Read by the triage agent. Aim for general rules over enumerated examples.
+- \`<procedure>\` — the handler procedure run at the *handle* stage. Either inline (children are procedure steps) or by reference (\`<procedure ref="path/to/proc.procedure.card"/>\`).
 
 **Dedup**: a card appearing in both a hand-listed \`<link>\` and an \`<expand>\` result shows once — first occurrence in source order wins.`,
 });
@@ -145,7 +211,8 @@ A landmark marks a directory as a notable spot in the box. It's a hand-curated b
 export type Landmark = z.infer<typeof LandmarkSchema>;
 
 /**
- * Landmark loader — title is the `<label>` text, falling back to the filename.
+ * Landmark loader — title is the `<label>` text inside `<navigation>`,
+ * falling back to the filename.
  */
 export const landmarkLoader: FileLoader<Record<string, never>> = (raw) => {
   const fallback = titleFromFilename(raw.path);
@@ -155,11 +222,15 @@ export const landmarkLoader: FileLoader<Record<string, never>> = (raw) => {
   }
 
   let title = "";
-  for (const child of el.children) {
-    if (child.tagName === "label" && typeof child.text === "string" && child.text.trim()) {
-      title = child.text.trim();
-      break;
+  for (const role of el.children) {
+    if (role.tagName !== "navigation") continue;
+    for (const child of role.children) {
+      if (child.tagName === "label" && typeof child.text === "string" && child.text.trim()) {
+        title = child.text.trim();
+        break;
+      }
     }
+    if (title) break;
   }
   if (!title) title = fallback;
 
@@ -167,7 +238,8 @@ export const landmarkLoader: FileLoader<Record<string, never>> = (raw) => {
 };
 
 /**
- * Template for `cb create` — produces a starter landmark with placeholders.
+ * Template for `cb create` — produces a starter landmark with a
+ * `<navigation>` role containing label + symbol.
  *
  * Pass `symbol` for an emoji/text symbol, or `symbolSrc` for an image
  * path (relative to the landmark's directory).
@@ -181,8 +253,10 @@ export function createLandmarkTemplate(options: {
     ? `<symbol src="${escapeAttr(options.symbolSrc)}"/>`
     : `<symbol>${escapeText(options.symbol ?? "")}</symbol>`;
   return `<landmark>
+<navigation>
 <label>${escapeText(options.label)}</label>
 ${symbol}
+</navigation>
 </landmark>
 `;
 }

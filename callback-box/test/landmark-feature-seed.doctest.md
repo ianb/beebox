@@ -21,7 +21,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ```
 const el = await parseXml(
-  '<landmark><label>Daily dump</label><symbol>🎙️</symbol><chat-app narration="on" prose="off"/></landmark>',
+  '<landmark><navigation><label>Daily dump</label><symbol>🎙️</symbol><chat-app narration="on" prose="off"/></navigation></landmark>',
   "in-memory.landmark.card",
 );
 JSON.stringify(readLandmarkFeatures(el))
@@ -32,7 +32,7 @@ A landmark without a `<chat-app>` child returns an empty map.
 
 ```
 const el = await parseXml(
-  '<landmark><label>Plain</label><symbol>📁</symbol></landmark>',
+  '<landmark><navigation><label>Plain</label><symbol>📁</symbol></navigation></landmark>',
   "in-memory.landmark.card",
 );
 JSON.stringify(readLandmarkFeatures(el))
@@ -45,7 +45,7 @@ might bypass validation).
 
 ```
 const el = await parseXml(
-  '<landmark><label>x</label><chat-app narration="on" bogus="yes" prose="maybe"/></landmark>',
+  '<landmark><navigation><label>x</label><chat-app narration="on" bogus="yes" prose="maybe"/></navigation></landmark>',
   "in-memory.landmark.card",
 );
 JSON.stringify(readLandmarkFeatures(el))
@@ -58,7 +58,7 @@ JSON.stringify(readLandmarkFeatures(el))
 const box = await makeTmpBox();
 await box.write(
   "store/dump/Daily.landmark.card",
-  '<landmark><label>Daily dump</label><symbol>🎙️</symbol><chat-app narration="on"/></landmark>\n',
+  '<landmark><navigation><label>Daily dump</label><symbol>🎙️</symbol><chat-app narration="on"/></navigation></landmark>\n',
 );
 JSON.stringify(await readLandmarkFeaturesForDir(box.root, "store/dump"))
 => {"narration":"on"}
@@ -88,7 +88,7 @@ landmark look the same to callers.
 const box = await makeTmpBox();
 await box.write(
   "store/plain/Plain.landmark.card",
-  '<landmark><label>Plain</label><symbol>📁</symbol></landmark>\n',
+  '<landmark><navigation><label>Plain</label><symbol>📁</symbol></navigation></landmark>\n',
 );
 await readLandmarkFeaturesForDir(box.root, "store/plain")
 => null

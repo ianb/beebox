@@ -39,8 +39,16 @@ export interface PickerLandmark {
   olderSessions: PickerSession[];
 }
 
-function readChildText(element: ElementNode, tagName: string): string {
+function findNavigation(element: ElementNode): ElementNode | null {
   for (const child of element.children) {
+    if (child.tagName === "navigation") return child;
+  }
+  return null;
+}
+
+function readChildText(navigation: ElementNode | null, tagName: string): string {
+  if (!navigation) return "";
+  for (const child of navigation.children) {
     if (child.tagName === tagName && typeof child.text === "string") {
       return child.text.trim();
     }
@@ -49,10 +57,11 @@ function readChildText(element: ElementNode, tagName: string): string {
 }
 
 function readSymbol(
-  element: ElementNode,
+  navigation: ElementNode | null,
   { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
 ): { text: string; src: string | null } {
-  for (const child of element.children) {
+  if (!navigation) return { text: "", src: null };
+  for (const child of navigation.children) {
     if (child.tagName !== "symbol") continue;
     const rawSrc = child.attrs["src"];
     let src: string | null = null;
@@ -97,10 +106,11 @@ async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]
     if (element.tagName !== "landmark") continue;
 
     const dir = path.dirname(relPath);
-    const symbol = readSymbol(element, { landmarkDir: path.dirname(absPath), boxRoot });
+    const navigation = findNavigation(element);
+    const symbol = readSymbol(navigation, { landmarkDir: path.dirname(absPath), boxRoot });
     out.push({
       dir: dir === "." ? "" : dir,
-      label: readChildText(element, "label") || path.basename(relPath, ".landmark.card"),
+      label: readChildText(navigation, "label") || path.basename(relPath, ".landmark.card"),
       symbol: symbol.text,
       symbolSrc: symbol.src,
     });

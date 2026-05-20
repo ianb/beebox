@@ -30,8 +30,11 @@ Both can coexist in the same directory.
 
 ## Card schema
 
+A landmark is a root `<landmark>` with one or more **role** child elements. The navigation role (`<navigation>`) carries the bookmark fields; the triage-destination role (`<triage-destination>`) carries category rules and a handler procedure. A landmark can carry one or both; everything below describes the navigation role. See `docs/triage-design.md` for the triage role.
+
 ```xml
 <landmark>
+<navigation>
 <label>Recipes</label>
 <symbol>🍳</symbol>
 <link ref="Bread.recipe.card">the bread</link>
@@ -39,10 +42,13 @@ Both can coexist in the same directory.
 <expand query="*.recipe.card" order="modified-desc">
   <link template-ref="${path}">${title}</link>
 </expand>
+</navigation>
 </landmark>
 ```
 
 ### Elements
+
+All of these are children of `<navigation>`.
 
 **`<label>`** (required, one) — short bookmark name. Displayed prominently on the tile. Not a sentence; treat it like a tab name.
 
@@ -50,7 +56,7 @@ Both can coexist in the same directory.
 
 ```xml
 <symbol>🍳</symbol>                            <!-- emoji or short text -->
-<symbol src="images/Marisol.webp"/>            <!-- image -->
+<symbol src="images/portrait.webp"/>            <!-- image -->
 ```
 
 For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a path relative to the landmark's directory; cross-directory paths are allowed. The symbol carries most of the "iconic and unique expression" weight — pick well.

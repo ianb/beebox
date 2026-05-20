@@ -40,8 +40,16 @@ export interface LandmarkPayload {
   features: Record<string, string>;
 }
 
-function readChildText(element: ElementNode, tagName: string): string {
+function findNavigation(element: ElementNode): ElementNode | null {
   for (const child of element.children) {
+    if (child.tagName === "navigation") return child;
+  }
+  return null;
+}
+
+function readChildText(navigation: ElementNode | null, tagName: string): string {
+  if (!navigation) return "";
+  for (const child of navigation.children) {
     if (child.tagName === tagName && typeof child.text === "string") {
       return child.text.trim();
     }
@@ -55,10 +63,11 @@ function readChildText(element: ElementNode, tagName: string): string {
  * the frontend can pipe it directly to /api/files.
  */
 function readSymbol(
-  element: ElementNode,
+  navigation: ElementNode | null,
   { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
 ): { text: string; src: string | null } {
-  for (const child of element.children) {
+  if (!navigation) return { text: "", src: null };
+  for (const child of navigation.children) {
     if (child.tagName !== "symbol") continue;
     const rawSrc = child.attrs["src"];
     let src: string | null = null;
@@ -97,16 +106,17 @@ export const landmarksRouter = router({
 
       const dir = path.dirname(relPath);
       const landmarkDir = path.dirname(absPath);
+      const navigation = findNavigation(element);
       const links = await resolveLandmark(element, {
         landmarkDir,
         boxRoot: ctx.boxRoot,
       });
-      const symbol = readSymbol(element, { landmarkDir, boxRoot: ctx.boxRoot });
+      const symbol = readSymbol(navigation, { landmarkDir, boxRoot: ctx.boxRoot });
 
       payloads.push({
         path: relPath,
         dir: dir === "." ? "" : dir,
-        label: readChildText(element, "label"),
+        label: readChildText(navigation, "label"),
         symbol: symbol.text,
         symbolSrc: symbol.src,
         links,
