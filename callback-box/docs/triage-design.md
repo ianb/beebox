@@ -35,11 +35,11 @@ The five things this design has to answer for, framed as the boxholder originall
 
 New inputs will need new categories (book recommendations from chat, recipes from photos, receipts from emails). The system must (a) tolerate items that fit no existing category, (b) make it cheap to introduce a new one, and (c) signal to the boxholder when the existing set is straining rather than papering over it.
 
-**The category list is distributed by marker files.** Each category is a single card that lives at its destination directory; the category set is "every marker file in the box," discovered by glob. Dropping a new card adds a category. No central registry to keep in sync. See §3 for the artifact shape.
+**The category list is distributed by marker files.** Each category is a single landmark card that lives at its destination directory; the category set is "every landmark with a `<triage-destination>` role in the box," discovered by glob. Dropping a new card adds a category. No central registry to keep in sync. See §3 for the artifact shape.
 
 The two possible workflows for introducing one are still live:
 
-- **Promotion from unhandled.** Items the categorizer can't place accumulate; the boxholder eventually drops a destination card; future items route there.
+- **Promotion from unhandled.** Items the categorizer can't place accumulate; the boxholder eventually drops a landmark with `<triage-destination>`; future items route there.
 - **Inline proposal.** The triage agent proposes a category mid-run and leaves a note for review; the proposal sticks if the boxholder doesn't override.
 
 ### 2. Ambiguity, and what we want to learn from it
@@ -54,21 +54,22 @@ Direction:
 - A low-confidence answer feeds back into a category's rules before the next pass, not (only) as a labeled exemplar.
 - The category card grows. When rules contradict or accumulate noisily, that's a signal for the boxholder to review the category.
 
-Open: how is the rule update performed? Direct edit by the answering pass, an agent that proposes a diff for review, or a separate "rules update" question kind?
+*Pinned for later:* how is the rule update performed? Direct edit by the answering pass, an agent that proposes a diff for review, or a separate "rules update" question kind? First implementation will land items into categories without auto-updating rules; the boxholder edits the category card by hand when a pattern emerges.
 
-### 3. The destination card
+### 3. The landmark card (extended)
 
-A category is not just a label — it's a *named spot in the box* that carries rules for triaging into it and a procedure for handling its contents. The artifact is a **destination card**, which generalizes today's landmark concept.
+A category is not just a label — it's a *named spot in the box* that carries rules for triaging into it and a procedure for handling its contents. Rather than introduce a new card type, **landmarks are extended** to carry the new role.
 
-**One card, multiple roles.** Landmarks (hand-curated bookmarks for human navigation) and triage destinations (named routing targets for the categorizer) are both "a directory the system cares about, with metadata." Rather than ship them as separate card types, the destination card has **role-bearing child elements** — each wrapping the fields for that role:
+**One card, multiple roles.** Today's landmark (a hand-curated bookmark for human navigation) and a triage destination (a named routing target for the categorizer) are both "a directory the system cares about, with metadata." The landmark card grows **role-bearing child elements** — each wrapping the fields for that role:
 
-- `<navigation>` — human-facing: label, symbol, pinned links, expands. (What `<landmark>` carries today.)
+- `<navigation>` — human-facing: label, symbol, pinned links, expands. (What the current landmark schema carries today, lifted into this wrapper.)
 - `<triage-destination>` — agent-facing: rules, applied examples, handler procedure.
-- `<chat>` — *tentative third role.* If a spot can be a chat target (e.g. a character), this is where that role's metadata lives. Open whether to split this out of `<navigation>` now or leave it for later.
 
-A destination card must have at least one role and can have any combination. A recipes directory might be `<navigation>` + `<triage-destination>` (shows on the Landmarks page, receives triaged recipe items). A character with their own chat thread might be `<navigation>` + `<chat>`. A pure routing target — an archive humans don't browse — might be `<triage-destination>` only.
+A landmark must have at least one role and can have any combination. A recipes directory might be `<navigation>` + `<triage-destination>` (shows on the Landmarks page, receives triaged recipe items). A pure routing target — an archive humans don't browse — might be `<triage-destination>` only.
 
-**Discovery: glob, filter by role.** `**/*.destination.card` (working name) finds all destinations; triage filters to cards with `<triage-destination>`; the Landmarks UI filters to ones with `<navigation>`.
+Chat-target metadata is out of scope for the first pass; if it becomes a role later it slots in as another child element next to these two.
+
+**Discovery: glob, filter by role.** `**/*.landmark.card` finds all landmarks; triage filters to cards with `<triage-destination>`; the Landmarks UI filters to ones with `<navigation>`.
 
 Why "at the destination" rather than "in config":
 
@@ -78,18 +79,18 @@ Why "at the destination" rather than "in config":
 
 The compiled triage-instructions doc the categorizer reads is built by globbing across the box, filtering to cards with `<triage-destination>`, and pulling the rules and examples out.
 
-**A triage category IS a card type.** Each triage-destination corresponds to the card type that lives in its directory. The destination card's "what kind of item" *is* the type. This unifies what could have been two parallel taxonomies (card schemas vs. triage categories) into one.
+**A triage category IS a card type.** Each triage-destination corresponds to the card type that lives in its directory. The landmark's "what kind of item" *is* the type. This unifies what could have been two parallel taxonomies (card schemas vs. triage categories) into one.
 
-**The handler is a procedure** — but it runs at the *handle* stage, not as part of triage. The `<triage-destination>` carries the procedure (or a `ref` to one); the triage stage uses the destination's *rules* to route; the handle stage uses its *procedure* to run. Same artifact, two consumers. Two carriage options:
+**The handler is a procedure** — but it runs at the *handle* stage, not as part of triage. The `<triage-destination>` carries the procedure (or a `ref` to one); the triage stage uses the landmark's *rules* to route; the handle stage uses its *procedure* to run. Same artifact, two consumers. Two carriage options:
 
 - **Inline.** Procedure steps live inside `<triage-destination>`. One artifact per category — unified editable surface.
-- **By reference.** `<procedure ref="..."/>` inside `<triage-destination>`. Reuses the existing procedure-running machinery directly, lets one procedure serve multiple categories, lets the handler grow without bloating the destination card.
+- **By reference.** `<procedure ref="..."/>` inside `<triage-destination>`. Reuses the existing procedure-running machinery directly, lets one procedure serve multiple categories, lets the handler grow without bloating the landmark.
 
-Both are reasonable. The `ref` form is implementation-cheaper (the engine already runs procedure cards as-is). The inline form is editorially nicer. Likely shape: support both, default to inline, with `ref` available for genuine reuse — and the inline form can desugar to "an inline procedure card embedded in the destination card" so the engine doesn't need two code paths.
+Both are reasonable. The `ref` form is implementation-cheaper (the engine already runs procedure cards as-is). The inline form is editorially nicer. Likely shape: support both, default to inline, with `ref` available for genuine reuse — and the inline form can desugar to "an inline procedure card embedded in the landmark" so the engine doesn't need two code paths.
 
 The handler procedure receives the bucket of files as input — likely as an env variable (`$TRIAGE_ITEMS` containing null-delimited filenames) for shell steps. Filenames are normalized at intake (no spaces, no special characters), so quoting hazards stay manageable.
 
-**Relationship to `briefing.briefing.card`.** Briefings remain separate — they're agent-facing per-directory context for any agent working in that area, not a named spot with discoverable roles. A directory can have a destination card *and* a briefing card; they answer different questions ("what roles does this spot play?" vs. "what should an agent know when working here?").
+**Relationship to `briefing.briefing.card`.** Briefings remain separate — they're agent-facing per-directory context for any agent working in that area, not a named spot with discoverable roles. A directory can have a landmark *and* a briefing card; they answer different questions ("what roles does this spot play?" vs. "what should an agent know when working here?").
 
 ### 4. Comparable: Projects in Claude / ChatGPT
 
@@ -145,9 +146,7 @@ Properties:
 
 This works because **intake-step preconditions are fast** even when the step itself is heavy. Telling whether an image needs OCR ("does the card lack a `<transcription>` element?") is cheap; running the OCR is not. So repeatedly scanning `inbox/intake/` and checking "is there work to do here?" is cheap, and idempotent — applying the same intake pass twice is a no-op on items that are already done.
 
-When all applicable intake steps' preconditions are false for an item, it's intake-complete and moves out of `inbox/intake/` into the triage workspace.
-
-Open: where intake-complete items live before triage picks them up — `inbox/` root, `inbox/staged/`, or a sibling. The location should be clearly distinct from both `inbox/intake/` (still working) and `inbox/triaged/<category>/` (already triaged).
+**Intake-complete items move out before triage runs.** When all applicable intake steps' preconditions are false for an item, intake moves it out of `inbox/intake/` into a triage staging spot (working name: `inbox/staged/`). Triage reads from that staging spot. Two reasons the move matters: (1) the boundary between "still being prepared" and "ready to categorize" is visible in the filesystem, and (2) triage doesn't have to re-check intake preconditions on every pass.
 
 Some current intake work (transcription, the early steps of capture-session sort) fits this frame and could be reframed as intake. Worth a pass.
 
@@ -155,7 +154,7 @@ Some current intake work (transcription, the early steps of capture-session sort
 
 ## Triage (stage 2)
 
-Triage is the named categorization step. It reads the compiled triage-instructions doc (built from all the destination cards), examines the batch of intake-complete items, and for each item: assigns a category at a given confidence level, then moves the item accordingly.
+Triage is the named categorization step. It reads the compiled triage-instructions doc (built from all landmarks with `<triage-destination>`), examines the batch of intake-complete items sitting in `inbox/staged/`, and for each item: assigns a category at a given confidence level, then moves the item accordingly.
 
 For `certain` / `probable` items: move into the category's holding spot — `inbox/triaged/<category>/` (working name).
 
@@ -216,7 +215,7 @@ The typical case is many items arriving together and going through together. Bat
 | Stage | Location | Meaning |
 |---|---|---|
 | Pre/in intake | `inbox/intake/` | Just arrived; intake stage operates here, scanning for items with applicable intake steps. |
-| Post-intake / pre-triage | TBD (e.g. `inbox/` root or `inbox/staged/`) | Intake-complete, ready for triage. |
+| Post-intake / pre-triage | `inbox/staged/` | Intake-complete, ready for triage. Items are moved here by intake when all applicable steps' preconditions are false. |
 | Post-triage / pre-handle | `inbox/triaged/<category>/` | Categorized, awaiting handle. |
 | Low-confidence | `inbox/triaged/_unsure/` | Held, paired with a question card. |
 | Post-handle | wherever the handler put them | Done. |
@@ -237,7 +236,6 @@ Implications:
 
 Open:
 
-- Pre-triage / post-intake state signal (how does triage know "this item is ready for me to look at"?).
 - Per-category batch-size limits — does a category with 500 items run as one handler invocation, or chunk?
 
 ## Existing triage points to inventory
@@ -253,12 +251,12 @@ These exist in some form. The new system has to either replace them or coexist:
 ## Open questions
 
 1. **Granularity** — *Resolved: box-wide.* The system is aware of how content came in (channel: gmail, voice, share-sheet, etc.) and category rules can reference channel. Channel is metadata, not a separate categorization axis.
-2. **Category storage** — *Resolved: distributed destination cards.* One destination card per spot, living at its directory, discovered by glob (`**/*.destination.card`, working name). Triage filters to cards with `<triage-destination>` child. Compiled into the triage-instructions doc on demand. Open: compilation cadence; outer file extension / type name; migration of existing `*.landmark.card` files; whether `<chat>` ships as a role now or later.
+2. **Category storage** — *Resolved: landmark cards, extended.* The existing `*.landmark.card` type carries the new `<triage-destination>` role alongside `<navigation>`. One landmark per spot, living at its directory, discovered by glob (`**/*.landmark.card`). Triage filters to cards with `<triage-destination>` child. Compiled into the triage-instructions doc on demand. Existing landmarks get their current fields wrapped in `<navigation>` during migration. `<chat>` deferred. Open: compilation cadence.
 3. **Categorizer surface** — working direction: subagent + `cb triage` wrapper. Confirm against how other subagents are exposed.
-4. **Rules vs. examples accumulation** — confirmed-answer flow updates *rules* in the category card; bare examples are bounded. Open: how the rule update is performed (direct edit, diff-for-review, separate question kind).
+4. **Rules vs. examples accumulation** — confirmed-answer flow updates *rules* in the category card; bare examples are bounded. *Pinned for later:* how the rule update is performed (direct edit, diff-for-review, separate question kind). First implementation lands items into categories without auto-updating rules; boxholder edits the landmark by hand.
 5. **Confidence levels** — *Resolved.* Named: `confident`, `probable`, `guess`. No `wrong`. No numbers. The `confident`/`probable` distinction is behavioral (note-for-review or not), not gradient.
 6. **Holding spot layout** — *Resolved (working):* `inbox/triaged/<category>/` for category buckets, `inbox/triaged/_unsure/` for low-confidence.
-7. **Intake staging** — *Resolved: `inbox/intake/` is a directory.* Intake scans it, runs steps with cheap preconditions, items leave when intake-complete. Open: where intake-complete items wait for triage (`inbox/` root vs. `inbox/staged/` vs. similar).
+7. **Intake staging** — *Resolved: `inbox/intake/` is a directory.* Intake scans it, runs steps with cheap preconditions, items leave when intake-complete. Intake-complete items move to `inbox/staged/` before triage looks at them.
 8. **Stage 3 name** — *Resolved: `handle`.* `deliver` was considered and rejected — it implies the item might leave the box.
 9. **Unhandled lifecycle** — *pinned for later.* How long items linger before triggering a category-proposal review, what evicts them.
 10. **Relationship to schemas** — *Resolved: a triage category is a card type.* The destination card's type *is* the category. No parallel taxonomy.
