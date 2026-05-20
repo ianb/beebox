@@ -153,6 +153,24 @@ const fetchHistoryActor = fromPromise<
   };
 });
 
+/**
+ * The SDK's `system/init` message is the first frame of every stream and
+ * carries the session id this turn is running under (possibly different from
+ * what we sent — the SDK rotates on resume in some paths). Forward it onto
+ * the machine immediately so the URL update / id pinning doesn't have to wait
+ * for the side-channel `chat-session-assigned` event on /events, which can be
+ * lost across a backend restart and leave the frontend stuck on `session=new`.
+ */
+function handleSystemInit(
+  msg: { subtype?: string; session_id?: string },
+  ctx: { sessionInput: string; sendBack: (event: ChatEvent) => void },
+): void {
+  if (msg.subtype !== "init") return;
+  const assigned = msg.session_id;
+  if (!assigned || assigned === ctx.sessionInput) return;
+  ctx.sendBack({ type: "SESSION_ASSIGNED", sessionId: assigned });
+}
+
 const streamActor = fromCallback(
   ({
     sendBack,
@@ -193,6 +211,11 @@ const streamActor = fromCallback(
       onMessage: (msg) => {
         msgCount++;
         const type = msg.type as string;
+
+        if (type === "system") {
+          handleSystemInit(msg, { sessionInput: input.sessionInput, sendBack });
+          return;
+        }
 
         if (type === "busy") {
           terminal({ type: "STREAM_BUSY" });

@@ -1628,25 +1628,32 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       } else if (event.event === "chat-session-assigned") {
         const data = event.data as { sessionId: string };
         // Lock the running machine onto the assigned id (so subsequent
-        // sends + the post-stream refresh use it) and update the URL so a
-        // reload lands on the right session. ChatPage stabilizes the React
-        // key across this transition, so the in-flight stream survives —
-        // remounting here would orphan the SSE listener and the chat would
-        // appear empty until the user reloads.
+        // sends + the post-stream refresh use it). URL navigation is handled
+        // by the useEffect below, which also covers the faster in-stream
+        // `system/init` path. ChatPage stabilizes the React key across this
+        // transition so the in-flight stream survives.
         if (sessionInput === "new" && !sessionId) {
           send({ type: "SESSION_ASSIGNED", sessionId: data.sessionId });
-          // The landmark binding (if any) is persisted by the backend in
-          // `chat-session-history` when the SDK assigns the id, so we just
-          // navigate to the assigned-id URL.
-          navigate({
-            to: href(`/${boxSlug}/chat`),
-            search: { session: data.sessionId } as never,
-            replace: true,
-          });
         }
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, navigate, boxSlug]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput]),
   });
+
+  // Update the URL when the machine learns the assigned session id. Fires for
+  // both signal paths — the in-stream `system/init` (first frame of every
+  // turn, dispatched from chatMachine's streamActor) and the side-channel
+  // `chat-session-assigned` SSE event — so a backend restart that loses one
+  // can't strand the chat on `?session=new`. `replace: true` so reload lands
+  // on the right session.
+  useEffect(() => {
+    if (sessionInput !== "new") return;
+    if (!sessionId) return;
+    navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: { session: sessionId } as never,
+      replace: true,
+    });
+  }, [sessionInput, sessionId, navigate, boxSlug]);
 
   const handleCancelSchedule = useCallback((label: string) => {
     fetch(`${getApiBase()}/chat/schedules/cancel`, {
