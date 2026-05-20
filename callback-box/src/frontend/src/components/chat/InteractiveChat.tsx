@@ -299,7 +299,7 @@ const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Opus 4.7 (1M context)", model: "claude-opus-4-7[1m]" },
 ];
 
-type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper";
+type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper" | "openai-realtime";
 type HqTranscriptionOption = "whisper" | "whisper-llm" | "whisper-llm-mini" | "voxtral" | "voxtral-diarized";
 
 const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
@@ -308,6 +308,7 @@ const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
 }> = [
   { label: "Voxtral (Mistral)", service: "voxtral" },
   { label: "Deepgram", service: "deepgram" },
+  { label: "OpenAI Realtime Whisper", service: "openai-realtime" },
 ];
 
 const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{

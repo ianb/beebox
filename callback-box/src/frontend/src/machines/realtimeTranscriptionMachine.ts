@@ -16,6 +16,14 @@
  *                 toggled — interim updates set interimTranscript, final
  *                 updates append to finalTranscript.
  *
+ *   - "openai-realtime": Direct browser → OpenAI Realtime WebSocket using
+ *                 a short-lived ephemeral client secret (`ek_...`) minted
+ *                 by the backend against `gpt-realtime-whisper`. Audio
+ *                 goes up as base64 PCM via `input_audio_buffer.append`.
+ *                 Deltas (`conversation.item.input_audio_transcription
+ *                 .delta`) update interim; `.completed` events append to
+ *                 final.
+ *
  * Both branches feed the same internal events:
  *   TEXT_UPDATE { finalText, interimText }
  *   TRANSCRIPTION_DONE { text }
@@ -30,6 +38,7 @@ import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { recordingStop } from "../lib/earcons";
 import { trpcClient } from "../lib/trpc";
 import { deepgramKeyManager } from "../lib/deepgram-key";
+import { openaiRealtimeKeyManager } from "../lib/openai-realtime-key";
 import { encodePcmChunksAsWav } from "../lib/wav-encode";
 
 export type TranscriptionState = "idle" | "connecting" | "recording" | "finalizing";
@@ -187,6 +196,109 @@ async function startDeepgramConnection(callbacks: ServiceCallbacks): Promise<Con
   };
 }
 
+/**
+ * Linear-interpolate 16kHz Int16 PCM up to 24kHz (3 output samples per 2
+ * input samples). OpenAI's realtime audio input requires rate >= 24000;
+ * the shared pcm-processor worklet emits 16kHz for Deepgram/Voxtral, so we
+ * upsample on this path rather than forking the worklet.
+ */
+function upsamplePcm16To24(buf: ArrayBuffer): ArrayBuffer {
+  const src = new Int16Array(buf);
+  if (src.length === 0) return new ArrayBuffer(0);
+  const outLen = Math.floor((src.length * 3) / 2);
+  const out = new Int16Array(outLen);
+  const lastIdx = src.length - 1;
+  for (let i = 0; i < outLen; i++) {
+    const pos = (i * 2) / 3;
+    const i0 = Math.floor(pos);
+    const i1 = i0 < lastIdx ? i0 + 1 : lastIdx;
+    const frac = pos - i0;
+    out[i] = Math.round(src[i0] * (1 - frac) + src[i1] * frac);
+  }
+  return out.buffer;
+}
+
+async function startOpenAIRealtimeConnection(callbacks: ServiceCallbacks): Promise<ConnectionHandle> {
+  const tempKey = await openaiRealtimeKeyManager.getKey();
+  // Browsers can't set an Authorization header on WebSocket, so OpenAI
+  // accepts the ephemeral client secret via subprotocol.
+  // Transcription sessions: no `?model=` param (the server rejects it) and
+  // no `?intent=transcription` (that was beta-only). The session's type and
+  // transcription model are set via the session.update sent on open.
+  const wsUrl = "wss://api.openai.com/v1/realtime";
+  const ws = new WebSocket(wsUrl, [
+    "realtime",
+    `openai-insecure-api-key.${tempKey}`,
+  ]);
+  let accumulatedFinal = "";
+
+  ws.addEventListener("open", () => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      type: "session.update",
+      session: {
+        type: "transcription",
+        audio: {
+          input: {
+            format: { type: "audio/pcm", rate: 24000 },
+            transcription: { model: "gpt-realtime-whisper" },
+          },
+        },
+      },
+    }));
+  });
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "conversation.item.input_audio_transcription.delta") {
+        // Whisper deltas are stable (no LLM-style revisions), and without
+        // turn_detection the .completed event won't fire until the user
+        // stops — so keyword spotting (which runs on finalTranscript only)
+        // would never see anything mid-utterance. Treat each delta as final.
+        const delta: string = msg.delta ?? "";
+        if (delta) {
+          accumulatedFinal = accumulatedFinal + delta;
+          callbacks.onTextUpdate(accumulatedFinal, "");
+        }
+      } else if (msg.type === "conversation.item.input_audio_transcription.completed") {
+        // Deltas already streamed the full text into accumulatedFinal; the
+        // completed event is just a segment marker. Nothing to append.
+        callbacks.onTextUpdate(accumulatedFinal, "");
+      } else if (msg.type === "conversation.item.input_audio_transcription.failed") {
+        const errMsg = msg.error?.message || "Transcription failed";
+        callbacks.onServerError(String(errMsg));
+      } else if (msg.type === "error") {
+        const errMsg = msg.error?.message || JSON.stringify(msg.error ?? msg);
+        callbacks.onServerError(String(errMsg));
+      }
+      // session.created, session.updated, input_audio_buffer.* — ignore
+    } catch (_e) {
+      // Non-JSON message, ignore
+    }
+  };
+
+  // Mirror the Deepgram pattern: the actor's onclose finalizes from the
+  // accumulated text on the handle.
+  (ws as WebSocket & { __openaiFinal?: () => string }).__openaiFinal = () => accumulatedFinal;
+
+  return {
+    ws,
+    sendPcm: (samples) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      const upsampled = upsamplePcm16To24(samples);
+      ws.send(JSON.stringify({
+        type: "input_audio_buffer.append",
+        audio: arrayBufferToBase64(upsampled),
+      }));
+    },
+    endStream: () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+    },
+  };
+}
+
 // -- Callback actor: owns WebSocket + AudioContext + MediaStream + Worklet --
 
 interface TranscriptionActorInput {
@@ -277,6 +389,8 @@ const transcriptionActor = fromCallback<
 
       if (service === "deepgram") {
         connection = await startDeepgramConnection(callbacks);
+      } else if (service === "openai-realtime") {
+        connection = await startOpenAIRealtimeConnection(callbacks);
       } else {
         // Default: voxtral (whisper has no realtime path; treat like voxtral)
         connection = startVoxtralConnection(callbacks);
@@ -296,12 +410,17 @@ const transcriptionActor = fromCallback<
       };
       ws.onclose = () => {
         if (disposed) return;
-        // For Deepgram, the final transcript lives on the handle —
-        // emit a TRANSCRIPTION_DONE so the machine can leave finalizing.
-        const dgFinal = (ws as WebSocket & { __dgFinal?: () => string }).__dgFinal;
-        if (dgFinal) {
+        // For Deepgram and OpenAI realtime, the final transcript lives on
+        // the handle — emit a TRANSCRIPTION_DONE so the machine can leave
+        // finalizing.
+        const handle = ws as WebSocket & {
+          __dgFinal?: () => string;
+          __openaiFinal?: () => string;
+        };
+        const finalFn = handle.__dgFinal ?? handle.__openaiFinal;
+        if (finalFn) {
           const audioBlob = takeAudioBlob();
-          sendBack({ type: "TRANSCRIPTION_DONE", text: dgFinal(), audioBlob });
+          sendBack({ type: "TRANSCRIPTION_DONE", text: finalFn(), audioBlob });
         } else {
           sendBack({ type: "WS_CLOSED" });
         }

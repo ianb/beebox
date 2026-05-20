@@ -10,7 +10,7 @@ import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
 
-const serviceSchema = z.enum(["voxtral", "deepgram", "whisper"]);
+const serviceSchema = z.enum(["voxtral", "deepgram", "whisper", "openai-realtime"]);
 const hqServiceSchema = z.enum(["whisper", "whisper-llm", "whisper-llm-mini", "voxtral", "voxtral-diarized"]);
 
 export const transcriptionRouter = router({
@@ -80,5 +80,82 @@ export const transcriptionRouter = router({
         message: `Failed to mint Deepgram temp key: ${detail}`,
       });
     }
+  }),
+
+  openaiRealtimeKey: publicProcedure.mutation(async () => {
+    const apiKey = process.env["THINKING_OPENAI_API_KEY"];
+    if (!apiKey) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message:
+          "OpenAI not configured (THINKING_OPENAI_API_KEY env var is required for openai-realtime transcription)",
+      });
+    }
+    const requestBody = {
+      session: {
+        type: "transcription",
+        audio: {
+          input: {
+            format: { type: "audio/pcm", rate: 24000 },
+            transcription: { model: "gpt-realtime-whisper" },
+          },
+        },
+      },
+    };
+    let response: Response;
+    try {
+      response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+    } catch (e) {
+      const detail = (e as Error).message;
+      console.error("[openaiRealtimeKey] network error:", detail);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to mint OpenAI realtime client secret: ${detail}`,
+      });
+    }
+    const rawText = await response.text();
+    if (!response.ok) {
+      console.error(
+        `[openaiRealtimeKey] HTTP ${response.status} ${response.statusText}: ${rawText}`,
+      );
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to mint OpenAI realtime client secret (HTTP ${response.status}): ${rawText || response.statusText}`,
+      });
+    }
+    let parsed: { value?: string; expires_at?: number; client_secret?: { value?: string; expires_at?: number } };
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (e) {
+      console.error(
+        `[openaiRealtimeKey] non-JSON body (status ${response.status}, ${rawText.length} bytes):`,
+        rawText.slice(0, 500),
+      );
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `OpenAI returned non-JSON response (${response.status}): ${(e as Error).message}`,
+      });
+    }
+    // Handle both flat and nested response shapes — the docs show flat
+    // (`{ value, expires_at }`) but some clients have reported nested
+    // (`{ client_secret: { value, expires_at } }`).
+    const value = parsed.value ?? parsed.client_secret?.value;
+    const expiresAt = parsed.expires_at ?? parsed.client_secret?.expires_at;
+    if (!value || !expiresAt) {
+      console.error("[openaiRealtimeKey] missing value/expires_at in response:", rawText.slice(0, 500));
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `OpenAI client_secrets response missing value/expires_at: ${rawText.slice(0, 200)}`,
+      });
+    }
+    const ttlSeconds = Math.max(10, expiresAt - Math.floor(Date.now() / 1000));
+    return { key: value, ttlSeconds };
   }),
 });

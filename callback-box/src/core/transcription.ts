@@ -66,7 +66,7 @@ export interface TranscribeAudioParams {
   boxRoot?: string;
 }
 
-export type TranscriptionService = "whisper" | "voxtral" | "deepgram";
+export type TranscriptionService = "whisper" | "voxtral" | "deepgram" | "openai-realtime";
 /**
  * Narration mode's checkpoint HQ pass — non-streaming services only.
  * - `whisper`: OpenAI's classic `whisper-1` model.
@@ -83,9 +83,11 @@ export type HqTranscriptionService = "whisper" | "whisper-llm" | "whisper-llm-mi
 export interface TranscriptionConfig {
   /**
    * Realtime / batch service used by the live transcription path and the
-   * existing batch `transcribeAudio` call. Allowed values include all
-   * three because the batch path supports them; the realtime path falls
-   * back from `whisper` to voxtral since whisper has no streaming.
+   * existing batch `transcribeAudio` call. Streaming-capable values:
+   * `voxtral`, `deepgram`, `openai-realtime`. The non-streaming `whisper`
+   * falls back to voxtral on the realtime path. The `openai-realtime`
+   * service (OpenAI gpt-realtime-whisper) is realtime-only — batch calls
+   * fall back to classic whisper.
    */
   service: TranscriptionService;
   /**
@@ -168,6 +170,8 @@ export async function transcribeAudio(
   if (config.service === "deepgram") {
     return transcribeAudioDeepgram(params);
   }
+  // openai-realtime is streaming-only; fall back to classic whisper for
+  // file-based batch transcription.
   return transcribeAudioWhisper(params);
 }
 

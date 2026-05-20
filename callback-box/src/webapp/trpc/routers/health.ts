@@ -158,7 +158,7 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     severity: "warning",
   });
 
-  // store/archive/ writable (intake processing archives here)
+  // store/archive/ writable (inbox processing archives here)
   const archiveDir = path.join(boxRoot, "store/archive");
   const archiveWritable = await isWritable(archiveDir);
   checks.push({
@@ -166,7 +166,7 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     ok: archiveWritable,
     message: archiveWritable
       ? "store/archive/ is writable"
-      : "store/archive/ is not writable — intake processing will fail",
+      : "store/archive/ is not writable — inbox processing will fail",
     severity: "error",
   });
 
@@ -193,6 +193,16 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
       message: deepgramCreds !== null
         ? "Deepgram credentials configured"
         : "Deepgram credentials not found — voice transcription will not work. Add config/connectors/deepgram.secret.json (apiKey + projectId) or set CALLBACK_DEEPGRAM_API_KEY + CALLBACK_DEEPGRAM_PROJECT",
+      severity: "warning",
+    });
+  } else if (transcriptionConfig.service === "openai-realtime") {
+    const hasKey = !!process.env["THINKING_OPENAI_API_KEY"];
+    checks.push({
+      name: "openai-api-key",
+      ok: hasKey,
+      message: hasKey
+        ? "OpenAI API key configured (gpt-realtime-whisper)"
+        : "THINKING_OPENAI_API_KEY not set — OpenAI realtime transcription will not work.",
       severity: "warning",
     });
   }
