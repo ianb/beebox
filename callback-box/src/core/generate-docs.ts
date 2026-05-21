@@ -23,6 +23,7 @@ import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefi
 import { generateViewsDoc } from "./views-doc.js";
 import { generateChatVoiceDoc } from "./chat-voice-doc.js";
 import { generateNarrationModeDoc } from "./narration-mode-doc.js";
+import { generatePythonToolsDoc } from "./python-tools-doc.js";
 import { generateAgentGuide } from "./agent-guide/index.js";
 import {
   installProcedures,
@@ -392,6 +393,8 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       withDocId({ relativePath: `${DOCS_DIR}/narration-mode.md`, content: generateNarrationModeDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
     ...allSchemas
       .filter((s) => s.instructions)
       .map((s) => {

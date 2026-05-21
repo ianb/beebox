@@ -9,6 +9,8 @@ export function externalToolsSection(): string[] {
     "",
     "`pandoc` is installed for converting document formats (.doc, .docx, .rtf, .odt, etc.) to plain text or markdown.",
     "",
+    "Python CLI tools: `docs/generated/python-tools.md`.",
+    "",
   ];
 }
 
