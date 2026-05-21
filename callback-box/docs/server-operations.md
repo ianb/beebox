@@ -15,6 +15,49 @@ Services run as the **`callback` user** (User/Group in systemd unit files), not 
 
 Server IP is pinned at [`deploy/server-ip`](../deploy/server-ip). SSH as root for admin (`ssh root@$(cat deploy/server-ip)`); SSH as `callback` for manual data work.
 
+## Connecting for debugging / inspection
+
+For ad-hoc inspection of the running server (reading logs, checking box state, running `cb` commands, etc.) — **not** initial setup, which is covered in [`deploy/README.md`](../deploy/README.md).
+
+**Always SSH to the IP, never the hostname.** `box.example.com` resolves to Cloudflare (the web proxy in front of the box), so `ssh root@box.example.com` fails with "No route to host." Use the pinned IP:
+
+```bash
+ssh root@$(cat deploy/server-ip)
+# or for data work as the service user:
+ssh callback@$(cat deploy/server-ip)
+```
+
+**Do not pass `-o StrictHostKeyChecking=no`.** That flag belongs in first-contact provisioning scripts (`add-box.sh`, `setup-server.sh`) where the host hasn't been seen yet. For ad-hoc work the host is already in `~/.ssh/known_hosts` and disabling the check just removes a real safety. If you get a host-key error, investigate it — don't suppress it.
+
+**Common inspection targets** (run via `ssh root@<ip> '<cmd>'`):
+
+| What | Where |
+|------|-------|
+| Box data | `/home/callback/boxes/<box>/` |
+| Box manifest (which boxes serve+scheduler see) | `/home/callback/.config/cb/boxes.json` |
+| Service logs | `journalctl -u callback-serve -n 200 --no-pager` / `journalctl -u callback-scheduler -n 200 --no-pager` |
+| Service status | `systemctl status callback-serve callback-scheduler --no-pager` |
+| Client debug log per box | `/home/callback/boxes/<box>/.callback-box/client-debug.log` |
+| Procedure runs | `/home/callback/boxes/<box>/procedure/runs/` |
+| Claude Code update log | `/home/callback/claude-update.log` |
+| Source the server is actually running | `/opt/callback/callback-box/src/` (rsynced `.ts`, no `dist/`) |
+
+**Running `cb` commands on the server** — must be as the `callback` user so file ownership stays correct:
+
+```bash
+ssh root@$(cat deploy/server-ip) "su - callback -c 'cb boxes list'"
+# or after sshing in as root:
+su - callback -c "cd /home/callback/boxes/<box> && cb validate"
+```
+
+**Restart services after deploying or after manual config changes:**
+
+```bash
+ssh root@$(cat deploy/server-ip) "systemctl restart callback-serve callback-scheduler"
+```
+
+For helper `ssh-server.sh` see `deploy/`.
+
 ## Code runs from source, not dist
 
 `cb serve` uses `node --import tsx` to execute TypeScript source directly. **Building to `dist/` and deploying that has no effect** — the server reads `.ts` files. `deploy/deploy.sh` rsyncs source files to `/opt/callback/callback-box/src/`.
