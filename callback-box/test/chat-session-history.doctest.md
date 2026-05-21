@@ -3,16 +3,39 @@
 `chat-session-history.json` tracks which Claude session ids belong to web chat for this box, plus an optional per-session `contextDir` association used by landmark-started chats. The on-disk format evolved from a flat string array (v1) to per-session entries (v2); this doctest covers the migration and the directory-association helpers.
 
 ```ts setup
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, mkdir, writeFile, rm } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import {
   loadHistory,
   loadHistoryEntries,
   appendHistory,
   getDirectoryForSession,
   getLastSessionForDirectory,
+  resolveSessionLogPath,
 } from "../src/core/chat-session-history.js";
+import { getSessionDir } from "../src/cli/lib/session.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
+
+// `getLastSessionForDirectory` skips entries whose JSONL doesn't exist
+// on disk (the "ghost" check guards against resuming sessions the SDK
+// never wrote). Tests that exercise that helper need to seed empty
+// JSONLs at the resolved path, plus clean up the ~/.claude/projects
+// directories that creates.
+async function seedSessionLog(boxRoot: string, sessionId: string): Promise<void> {
+  const logPath = await resolveSessionLogPath(boxRoot, sessionId);
+  await mkdir(dirname(logPath), { recursive: true });
+  await writeFile(logPath, "");
+}
+
+async function cleanupSessionLogs(boxRoot: string, contextDirs: string[]): Promise<void> {
+  const dirs = new Set<string>([getSessionDir(boxRoot)]);
+  for (const d of contextDirs) {
+    if (d) dirs.add(getSessionDir(join(boxRoot, d)));
+  }
+  for (const dir of dirs) {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 ```
 
 ## Reading a v1 file
@@ -177,6 +200,10 @@ await appendHistory(box.root, { sessionId: "first", contextDir: "store/recipes" 
 await appendHistory(box.root, { sessionId: "other", contextDir: "store/todos" });
 await appendHistory(box.root, { sessionId: "second", contextDir: "store/recipes" });
 await appendHistory(box.root, { sessionId: "third", contextDir: "store/recipes" });
+await seedSessionLog(box.root, "first");
+await seedSessionLog(box.root, "other");
+await seedSessionLog(box.root, "second");
+await seedSessionLog(box.root, "third");
 
 await getLastSessionForDirectory(box.root, "store/recipes")
 => third
@@ -189,6 +216,7 @@ await getLastSessionForDirectory(box.root, "store/never")
 ```
 
 ```cleanup
+await cleanupSessionLogs(box.root, ["store/recipes", "store/todos"]);
 await box.cleanup();
 ```
 
@@ -202,11 +230,15 @@ const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "plain" });
 await appendHistory(box.root, { sessionId: "bound", contextDir: "store/recipes" });
 await appendHistory(box.root, { sessionId: "another-plain" });
+await seedSessionLog(box.root, "plain");
+await seedSessionLog(box.root, "bound");
+await seedSessionLog(box.root, "another-plain");
 
 await getLastSessionForDirectory(box.root, "store/recipes")
 => bound
 ```
 
 ```cleanup
+await cleanupSessionLogs(box.root, ["store/recipes"]);
 await box.cleanup();
 ```
