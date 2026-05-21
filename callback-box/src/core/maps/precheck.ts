@@ -73,10 +73,47 @@ const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
   "node_modules",
   ".tap",
   "tmp",
-  "procedure/runs",
   // Card attach scopes are an implementation detail of the card layout —
   // skip them when generating maps; the card itself stands for its scope.
   "**/*.attach",
+];
+
+/**
+ * Standard cb-init skeleton paths whose contents are pure scaffolding —
+ * either high-churn machinery (inbox stages, procedure runs), mirrors of
+ * external state (drive sync, calendar sync), or structural config that
+ * varies little across boxes and is already documented globally
+ * (`config/connectors/`, `config/schemas/`). Per-box MAPs add nothing
+ * here, so we hide the whole subtree: the dir itself is excluded from its
+ * parent's listing AND no MAP is generated inside it.
+ *
+ * Listed separately from DEFAULT_IGNORE_PATTERNS to make intent visible:
+ * these are part of the box's structural contract, not generic ignore
+ * rules. Functionally they extend the ignore set the same way.
+ */
+const SKELETON_HIDDEN_PATHS: readonly string[] = [
+  "box/inbox/**",
+  "box/jobs/**",
+  "box/output/**",
+  "box/pool/**",
+  "box/questions/**",
+  "box/resources/**",
+  "box/commands/**",
+  "box/briefs/**",
+  "procedure/**",
+  "store/archive/**",
+  "store/trash/**",
+  "store/calendar/**",
+  "store/drive/**",
+  "store/chat/**",
+  "config/_template-updates/**",
+  "config/connectors/**",
+  "config/schemas/**",
+  "config/procedures/**",
+  "config/schedules/**",
+  "docs/generated/**",
+  "tricks/lib/**",
+  "tricks/scripts/**",
 ];
 
 const IGNORE_FILE = ".cb-maps-ignore";
@@ -165,14 +202,22 @@ function isIgnored(options: IsIgnoredOptions): boolean {
 
 /**
  * Recursively list every directory in the box that should have a MAP.md.
- * Returns dir paths relative to boxRoot, with "" representing the root.
+ * Returns dir paths relative to boxRoot.
  *
- * Container rule: a dir is mappable only when it has at least one visible
- * subdirectory. File-only ("leaf") dirs are skipped — the parent's MAP.md
- * already lists them, and an `ls` shows their contents directly. Shell
- * dirs (subdirs hidden by ignore patterns leave the parent looking empty)
- * are skipped at the dir-itself level but still appear in their parent's
- * listing — that's where their description belongs.
+ * Rules:
+ * - **Container rule**: a dir needs at least one visible subdirectory to
+ *   qualify. File-only ("leaf") dirs are skipped — the parent's MAP.md
+ *   already lists them, and an `ls` shows their contents directly. Shell
+ *   dirs (subdirs hidden by ignore patterns leave the parent looking empty)
+ *   are skipped at the dir-itself level but still appear in their parent's
+ *   listing — that's where their description belongs.
+ * - **Useful-content rule**: a dir needs ≥2 total visible children
+ *   (subdirs + files) to qualify. A single-entry MAP just restates one
+ *   bullet; not worth a file.
+ * - **Root is always skipped**: every top-level directory in a box is part
+ *   of the cb-init skeleton (`store/`, `box/`, `config/`, ...) and is
+ *   already documented in CLAUDE.md / `docs/box-layout.md`. The root MAP
+ *   would be pure boilerplate.
  */
 async function listMappableDirs(
   boxRoot: string,
@@ -190,14 +235,21 @@ async function listMappableDirs(
       return 0;
     }
     let visibleSubdirs = 0;
+    let visibleFiles = 0;
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+      const isDir = entry.isDirectory();
       const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
-      if (isIgnored({ patterns, relPath: childRel, isFile: false })) continue;
-      visibleSubdirs += 1;
-      await walk(childRel);
+      if (isIgnored({ patterns, relPath: childRel, isFile: !isDir })) continue;
+      if (isDir) {
+        visibleSubdirs += 1;
+        await walk(childRel);
+      } else {
+        visibleFiles += 1;
+      }
     }
-    if (visibleSubdirs > 0) {
+    const isRoot = rel === "";
+    const totalVisible = visibleSubdirs + visibleFiles;
+    if (!isRoot && visibleSubdirs > 0 && totalVisible >= 2) {
       result.push(rel);
     }
     return visibleSubdirs;
@@ -295,7 +347,7 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
     patterns = options.ignorePatterns;
   } else {
     const userPatterns = await loadUserIgnorePatterns(boxRoot);
-    patterns = [...DEFAULT_IGNORE_PATTERNS, ...userPatterns];
+    patterns = [...DEFAULT_IGNORE_PATTERNS, ...SKELETON_HIDDEN_PATHS, ...userPatterns];
   }
 
   if (!(await isRepo(boxRoot))) {

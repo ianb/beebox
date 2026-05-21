@@ -81,11 +81,17 @@
         # Map: &lt;dir-path&gt;
 
         - `subdir/` — what kind of contents this subdir holds
+        - `self-explanatory-name/`
         - `briefing.briefing.card` — context for this area (only if present)
         ```
 
         Rules for annotations:
-        - ≤ 100 characters.
+        - Annotations are OPTIONAL. If the filename or directory name is
+          already self-explanatory (e.g. `2024/`, `recipes/`, `README.md`,
+          a person's name), just list it as a bare bullet — no ` — …`.
+          The annotation only earns its place when it tells a reader
+          something the name doesn't.
+        - When you do annotate: ≤ 100 characters.
         - Say what's in the dir, not what kind of dir it is.
           ("Per-property document folders", not "directory of subdirs")
         - Skip filler ("this is a", "contains", "directory of").

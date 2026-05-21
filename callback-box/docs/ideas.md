@@ -1,5 +1,13 @@
 # Ideas & Planned Features
 
+## MAP.md for docs/generated/
+
+The per-box `docs/generated/` tree is fully templated from this repo by `cb init` / `generateDocs` — every box gets the same contents. The recursive box-side MAP generator hides this subtree (it's not box-specific information), so agents working in a box currently have no index of what's in `docs/generated/`.
+
+The right place to produce that index is here in `callback-box`, as a build step that emits a `MAP.md` (or a small set of them) alongside the generated content. `cb init` copies the MAP along with everything else. Single source of truth, no per-box churn.
+
+Open questions: where the generator lives (a new script under `src/dev/`? part of an existing generator?); whether it covers just the top of `docs/generated/` or recurses; whether it ships in this repo's `templates/` or is computed at `cb init` time from the templates directory.
+
 ## Capability map for the boxholder agent
 
 The agent sees its tool list each turn, so it knows individual tools exist, but it doesn't necessarily know the *compositions* — "I can set up a recurring check-in," "I can pull a photo from Drive and attach it to a card," "I can ask you a question later via Telegram." Those are capabilities that span multiple tools, and an agent reasoning from the tool list alone tends to miss them. Symptoms: agent says "I can't do that" when it actually can; agent proposes a clunky path when a clean one exists; agent doesn't think to offer something because no single tool maps to it.
