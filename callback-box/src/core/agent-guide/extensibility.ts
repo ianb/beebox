@@ -19,7 +19,7 @@ export function proceduresSection(procedures: ProcedureSummary[]): string[] {
     lines.push(`- **${p.name}** — ${p.description}`);
   }
   lines.push("");
-  lines.push("Run with `cb procedure run <name>`. Read `docs/generated/procedures.md` before writing or modifying procedures.");
+  lines.push("Run with `cb procedure run <name>`. Read `docs/generated/procedures.md` before writing or modifying.");
   lines.push("");
   return lines;
 }
@@ -58,7 +58,7 @@ export function schedulesSection(): string[] {
     "Each entry records which scripts ran, were skipped, or errored, with timestamps and durations.",
     "",
     "Agents can create or modify scheduled scripts for custom automation.",
-    "Schedule format includes cron expressions, throttling (`not-before`), chaining (`create-after-success`), and one-shot options — see `docs/generated/card-scheduled-script.md` for the full schema.",
+    "Schedule format includes cron expressions, throttling (`not-before`), chaining (`create-after-success`), and one-shot options — see `docs/generated/card-scheduled-script.md`.",
     "",
   ];
 }

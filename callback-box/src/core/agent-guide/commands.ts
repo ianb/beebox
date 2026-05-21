@@ -6,7 +6,7 @@ export function keyCommandsSection(): string[] {
   return [
     "## Key Commands",
     "",
-    "Use `cb` for all card operations. See `docs/generated/cb-commands.md` for full reference.",
+    "Use `cb` for all card operations. See `docs/generated/cb-commands.md`.",
     "",
     "- `cb create <path>` — Create a card from template (auto-detects type from filename)",
     "- `cb mv <src> <dest>` — Move a card, updating all references",
