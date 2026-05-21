@@ -44,6 +44,10 @@ await listDirs(tmp)
 .claude/rules
 box
 box/inbox
+box/inbox/intake
+box/inbox/staged
+box/inbox/triaged
+box/inbox/triaged/_unsure
 box/inbox/unhandled
 box/jobs
 box/output
