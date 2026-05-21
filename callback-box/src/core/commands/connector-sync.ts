@@ -2,8 +2,9 @@
  * Connector sync command - Sync data with connectors.
  *
  * This is a lightweight command that only runs connector sync.
- * The full wakeup flow (preprocessing, triage, intake jobs, reactor, etc.)
- * lives in src/cli/commands/wakeup.ts.
+ * The full wakeup flow (preprocessing, feedback-triage, reactor inbox jobs, etc.)
+ * lives in src/cli/commands/wakeup.ts. Distinct from `cb triage` (the
+ * triage-pipeline stage; see docs/triage-design.md).
  */
 
 import {

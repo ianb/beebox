@@ -35,7 +35,7 @@ The agent's daily surface stays flat — frequency wins over taxonomic purity.
 | `cb ls <pattern>` | List cards (XPath-templated) |
 | `cb finish-job <path>` | Delete a job card and commit (renamed from `cb finish`) |
 | `cb status` | Full state summary |
-| `cb wakeup` | Full intake → reactor → push cycle |
+| `cb wakeup` | Full multi-phase wakeup cycle: connector sync → reactor → push |
 | `cb reactor` | Process jobs in `box/jobs/` (debug entry) |
 | `cb session <id>` | Introspect a Claude Code transcript (agents use) |
 | `cb trick <name>` | Run a box-local agent script |
@@ -57,7 +57,7 @@ Singular noun, parallel with `cb job` / `cb schedule`. Optional `[name]` scopes 
 | `cb connector sync [name]` | (was `cb wakeup --connector X`) | Pull inbound for a connector ad-hoc |
 | `cb connector flush [name]` | `cb finalize` | Send outbound (Telegram messages, push notifications) |
 
-`cb wakeup` still does its full multi-phase intake; `cb connector sync` is the cleaner ad-hoc form when you just want to pull from one source without the wakeup machinery.
+`cb wakeup` still does its full multi-phase cycle; `cb connector sync` is the cleaner ad-hoc form when you just want to pull from one source without the wakeup machinery.
 
 ## `cb schedule` group
 
@@ -83,14 +83,16 @@ Naturally extensible to `cb calendar refresh`, `cb calendar conflicts`, etc.
 
 Already exists in this shape. Keep as is.
 
-## `cb intake` group
+## `cb import` group (file → box)
 
-*True intake* only — file → box, agent-runnable. Processing-of-already-intaken (transcribe, describe) stays top-level.
+> **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now occupied by the triage-pipeline stage-1 command (`docs/triage-design.md`). Renaming the file-import group to `cb import` resolves the collision and matches the verb better — these commands *import* external files into the box; they don't run the pipeline's intake stage.
+
+*File ingestion* only — file → box, agent-runnable. Processing-of-already-imported items (transcribe, describe) stays top-level.
 
 | New | Was | What it does |
 |-----|-----|--------------|
-| `cb intake scan <pdf>` | `cb scan-import` | Import a scanned PDF / image batch |
-| `cb intake upload <files>` | `cb upload` | Batch-upload files (dedup by hash) |
+| `cb import scan <pdf>` | `cb scan-import` | Import a scanned PDF / image batch |
+| `cb import upload <files>` | `cb upload` | Batch-upload files (dedup by hash) |
 
 If `cb image describe` / `cb audio transcribe` ever feels right, revisit. With only one command each (`describe-images`, `transcribe-captures`), grouping is over-organization.
 

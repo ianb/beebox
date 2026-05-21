@@ -239,7 +239,8 @@ cb prompt "How would I add a daily task?"
 ### Things the agent CAN do today (in-box):
 - **Create new card types/schemas** — write `.ts` files in `config/schemas/` using `element()` + Zod (see `config/schemas/CLAUDE.md`)
 - **Create new procedures** — write XML to `config/procedures/`
-- **Modify guides** — edit `config/*.guide.card` to change triage/processing rules
+- **Modify guides** — edit `config/*.guide.card` to change per-domain processing rules (news selection, feedback handling, calendar review)
+- **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-cutting intake → triage → handle pipeline; see `docs/triage-design.md`)
 - **Add tricks** — create scripts in `tricks/scripts/`
 - **Add scheduled tasks** — create `config/scheduled/*.scheduled-script.card`
 - **Create any card** — using `cb create` or writing XML directly
@@ -369,7 +370,7 @@ Does the agent know what connectors exist, how data flows in and out?
   - Expected: traces RSS feeds, dropbox relay, manual inbox — from connector configs
 
 ### Routing Domain-Specific Inputs
-The generic triage agent gets something domain-specific. Can it figure out the right destination?
+Per-domain pipelines (news, feedback, etc.) get something that needs routing. Can the agent figure out the right destination — including escalating to a guide-rule update when the input is a meta-preference, not a single item?
 
 - "Here's a card from the inbox that says 'I want to follow more stories about renewable energy.' What do you do with it?"
   - Expected: recognizes this as a preference that should update the news guide's triage rules, not just archive it

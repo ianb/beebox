@@ -1,4 +1,6 @@
-> **Note:** References to "command cards" and `box/commands/` in this document are outdated. The command card system has been removed. External actions are now handled through the reactor/jobs model.
+> **Note:** This is the historical design narrative. Two sections have since been replaced by more specific designs:
+> - References to "command cards" and `box/commands/` are outdated — the command card system has been removed; external actions are handled through the reactor/jobs model.
+> - §2 ("Input → Inbox → preprocessing/triage") talks about a single "triage" phase. The formal three-stage pipeline that replaced that framing — intake → triage → handle — is documented in `docs/triage-design.md`. Treat references to "the triage agent" in this doc as the conceptual ancestor of that pipeline, not its current shape.
 
 # Callback Box: comprehensive design notes
 

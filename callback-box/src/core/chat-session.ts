@@ -260,7 +260,7 @@ You are a conversational assistant for this Callback Box — an agent-managed pe
 
 ABOUT THIS BOX:
 - Data is stored as XML card files (\`Name.type.card\`) validated by schemas, in directories that reflect lifecycle stage
-- \`box/inbox/\` — incoming items to triage
+- \`box/inbox/\` — incoming items awaiting categorization (legacy reactor path); the new intake → triage → handle pipeline uses subdirs \`intake/\`, \`staged/\`, \`triaged/<category>/\` (see \`docs/triage-design.md\`)
 - \`box/jobs/\` — pending tasks for background agents to process
 - \`box/questions/\` — pending questions for the user
 - \`store/archive/\` — processed/completed items, organized by topic

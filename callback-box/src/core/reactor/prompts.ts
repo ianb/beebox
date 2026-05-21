@@ -15,7 +15,7 @@ WORKING DIRECTORY: ${boxRoot}
 
 A Callback Box organizes information through XML card files (validated by schemas), stored in directories that reflect lifecycle stage:
 
-- \`box/inbox/\` — incoming items to triage
+- \`box/inbox/\` — incoming items awaiting categorization (legacy reactor path); the new intake → triage → handle pipeline uses subdirs \`intake/\`, \`staged/\`, \`triaged/<category>/\`
 - \`box/jobs/\` — pending jobs for agents to process (including yours)
 - \`box/questions/\` — pending questions for the user
 - \`store/archive/\` — processed/completed items

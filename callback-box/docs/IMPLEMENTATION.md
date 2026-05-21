@@ -1,4 +1,6 @@
-> **Note:** References to "command cards", `box/commands/`, `cb do`, and `cb execute-commands` in this document are outdated. The command card system has been removed. External actions are now handled through the reactor/jobs model.
+> **Note:** Several sections are now historical:
+> - References to "command cards", `box/commands/`, `cb do`, and `cb execute-commands` — the command card system has been removed; external actions are handled through the reactor/jobs model.
+> - References to a single "triage" agent / "triage" run-mode / `--agent triage` predate both the reactor and the new sorting pipeline. The current sorting pipeline (intake → triage → handle) is documented in `docs/triage-design.md`; legacy inbox processing runs through reactor jobs.
 
 # Callback Box: Implementation Guide
 
