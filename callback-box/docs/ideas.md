@@ -849,3 +849,11 @@ If we ever want richer PDF handling than scan-import currently does — form-fie
 
 - <https://github.com/jbarrow/commonforms>
 - HN discussion: <https://news.ycombinator.com/item?id=47984675>
+
+## Redacted text (Threads-style spoiler/reveal)
+
+Threads (and a few other apps) render spoiler text as a blurred / blocked-out span that the reader taps to reveal. Useful for the agent when it wants to surface something the boxholder shouldn't see at a glance — quiz-style answers the boxholder asked to attempt first, hints that would spoil a guess in progress, intermediate reasoning offered as a tap-to-check.
+
+Agent-authored only. The boxholder has no UI affordance for producing redacted spans, so the syntax doesn't need to be ergonomic to type — a markup tag (e.g. `<redacted>...</redacted>`) fits the agent's existing speech/instruction tag vocabulary better than a Markdown extension.
+
+Rendering: a blurred or solid-block span, tap to reveal. Should also work in printed/SSR output (CSS-only reveal-on-tap, no JS dependency).
