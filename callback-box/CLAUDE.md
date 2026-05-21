@@ -114,7 +114,8 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Periodic maintenance | `docs/maintenance.md` |
 | Knowledge audits | `docs/knowledge-audits.md` |
 | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
-| Calendar integration plan | `docs/calendar-plan.md` |
+| Calendar integration | `docs/calendar.md` |
+| PDF intake design | `docs/pdf-intake-design.md` |
 | Source editor plan | `docs/source-editor.md` |
 | Feature ideas | `docs/ideas.md` |
 | Glossary | `docs/glossary.md` |
