@@ -340,6 +340,47 @@ Design notes:
 - **Promotion to fact.** When a hunch is confirmed it should become a normal note on the relevant person/topic card, not a permanent resident of the hunches file.
 - **Connection to user-model dimensions** (see [[user-model-dimensions]] entry above) — hunches along the same axes the agent watches for are the raw material; over time, repeated hunches in the same direction become facts.
 
+## Capitalize glossary terms as Proper Nouns?
+
+Open question: should the project's coined/narrowed terms (Card, Box, Asset, Attachment, Wakeup Cycle, Procedure, ...) be written with initial caps in prose to mark them as Proper Nouns of the system? Pros: visually distinguishes "an asset" (project term, manifest-tracked file) from "an asset" (English). Lets readers spot terms-of-art at a glance, the way "Linux" or "Python" do. Cons: feels precious in casual writing; risks inconsistency between code identifiers (lowercase) and prose (capitalized); easy to drift. Decide before the glossary fill-out pass below so the whole sweep lands in one style.
+
+## Fill out the glossary
+
+`docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific meanings. The starter set covers box, card, attach scope, attachment, asset, asset manifest, wakeup cycle, connector, procedure, service, cardworks, inbox, archive, cb, cb attachments. Things to add:
+
+- **Card-related**: tagName, ref, ref graph, schema instructions, validation, virtual `attach/` prefix, basename, card title
+- **Layout**: store/, box/inbox/, box/jobs/, box/commands/, box/questions/, config/, .callback-box/, landmark
+- **Wakeup / agent loop**: command, question, job, dispatch, agent invocation, Claude Code harness
+- **Connectors / services**: sync, fake vs real, observable state, the service/connector boundary
+- **Procedures**: run, step, scenario
+- **Capture / intake**: capture session, scan-import, intake, source (the `<filename source>` enum)
+- **Frontend**: page, renderer, UI primitive, semantic palette, restrict-component-classes
+- **Persistence**: pre-commit hook, post-commit hook, deploy, trailer (git trailer), `cb commit`
+- **Testing**: doctest, makeTestServer, makeTmpBox, the three tiers
+- **Misc**: hunch, knowledge audit, landmark, file-lock
+
+Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write entries. Keep them short (one paragraph), link to deeper docs rather than restating. The glossary is for *naming the thing*, not explaining it in full.
+
+Worth treating as a single pass — partial glossaries are worse than none because readers stop trusting them as comprehensive.
+
+## Introduce "asset" as the term for manifest-tracked attachments
+
+Vocabulary distinction worth landing in docs:
+
+- **attachment** — any file inside a `.attach/` scope, regardless of storage. A `.md` sidecar, a `.txt` notes file, etc. are attachments and commit to git normally.
+- **asset** — the subset of attachments whose bytes live on disk only, tracked via the manifest (currently jpg/png/pdf/mp3/mp4/gz/... — the gitignored extensions). Assets are *also* attachments.
+
+Today the codebase and docs blur these — "attach binaries," "binary attachments," and "attachments" all refer to the manifest-tracked subset in different places. Audit and tighten:
+
+- `docs/attach-manifests.md` — rename the doc concept to "asset manifest"; reserve "attachment" for the broader directory-membership sense
+- Gitignore marker line (`# cb-attach-binaries ...`) — update to `# cb-assets ...`; migration should rewrite existing markers
+- Source identifiers (`AttachManifest`, `attach-manifest.ts`, scan helpers, etc.) — rename to `AssetManifest` / `asset-manifest.ts`
+- Pre-commit hook output strings — use "asset" where the noun appears
+- `cb attachments` command — **keep the name**; the command operates on the whole attach scope (verify, migrate, init-gitignore, untrack-binaries), even though its job is to manage the asset subset. The CLI surface stays stable.
+- `.attach/` directory name and `<filename ref="attach/...">` virtual prefix — both stay; they're about the directory metaphor, not the file noun.
+
+Worth doing as a single sweep so the vocabulary lands consistently.
+
 ## Review attach-manifest scope
 
 The attach-manifest hook (`docs/attach-manifests.md`) scopes its discipline to `**/*.attach/**` only. Binaries outside attach scopes commit normally, with a soft "this is big, consider moving it" advisory. Revisit once we have real usage: if agents routinely drop binaries outside attach scopes anyway (logs, screenshots, scratch files), either tighten enforcement (gitignore more aggressively, hard-block large binaries anywhere), or accept the looser model and beef up the advisory. Also worth revisiting: per-dir JSON manifest vs per-binary sidecar — if per-dir produces noisy diffs in practice, the sidecar form is a drop-in replacement.

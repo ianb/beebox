@@ -117,5 +117,6 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Calendar integration plan | `docs/calendar-plan.md` |
 | Source editor plan | `docs/source-editor.md` |
 | Feature ideas | `docs/ideas.md` |
+| Glossary | `docs/glossary.md` |
 
 @CODE-STYLE.md
