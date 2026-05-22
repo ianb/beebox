@@ -87,49 +87,50 @@ test("cardSchema rejects empty field set", (t) => {
   t.end();
 });
 
-test("extractRefs walks declared ref paths", (t) => {
-  const schema = cardSchema("email-thread", {
-    fields: {
-      messages: z.array(z.string()),
-    },
-    refs: ["messages[]"],
-  });
-  const refs = extractRefs(schema, {
+test("extractRefs picks up `ref` keys inside arrays of objects", (t) => {
+  const refs = extractRefs({
     type: "email-thread",
-    messages: ["attach/msg-001.email-message.card", "attach/msg-002.email-message.card"],
+    messages: [
+      { ref: "attach/msg-001.email-message.card" },
+      { ref: "attach/msg-002.email-message.card" },
+    ],
   });
   t.equal(refs.length, 2);
-  t.equal(refs[0]?.path, "messages[0]");
+  t.equal(refs[0]?.path, "messages[0].ref");
   t.equal(refs[0]?.ref, "attach/msg-001.email-message.card");
-  t.equal(refs[1]?.path, "messages[1]");
+  t.equal(refs[1]?.path, "messages[1].ref");
   t.end();
 });
 
-test("extractRefs follows nested object paths", (t) => {
-  const schema = cardSchema("with-nested", {
-    fields: {
-      attachments: z.array(z.object({ ref: z.string() })),
-    },
-    refs: ["attachments[].ref"],
+test("extractRefs handles top-level single ref fields", (t) => {
+  const refs = extractRefs({
+    type: "email-message",
+    "body-file": { ref: "attach/msg-001.body.txt" },
   });
-  const refs = extractRefs(schema, {
-    type: "with-nested",
-    attachments: [{ ref: "a.card" }, { ref: "b.card" }],
+  t.equal(refs.length, 1);
+  t.equal(refs[0]?.path, "body-file.ref");
+  t.equal(refs[0]?.ref, "attach/msg-001.body.txt");
+  t.end();
+});
+
+test("extractRefs picks up `refs` arrays of strings", (t) => {
+  const refs = extractRefs({
+    type: "x",
+    items: { refs: ["a.card", "b.card"] },
   });
   t.equal(refs.length, 2);
-  t.equal(refs[0]?.path, "attachments[0].ref");
+  t.equal(refs[0]?.path, "items.refs[0]");
   t.equal(refs[1]?.ref, "b.card");
   t.end();
 });
 
-test("extractRefs skips missing/undefined ref values", (t) => {
-  const schema = cardSchema("optional-refs", {
-    fields: {
-      maybe: z.string().optional(),
-    },
-    refs: ["maybe"],
+test("extractRefs ignores non-string `ref` values and unrelated keys", (t) => {
+  const refs = extractRefs({
+    type: "x",
+    ref: 42, // not a string — skipped
+    title: "not a ref",
+    nested: { description: "also not a ref" },
   });
-  t.equal(extractRefs(schema, { type: "optional-refs" }).length, 0);
-  t.equal(extractRefs(schema, { type: "optional-refs", maybe: "x.card" }).length, 1);
+  t.equal(refs.length, 0);
   t.end();
 });

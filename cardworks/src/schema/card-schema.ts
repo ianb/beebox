@@ -62,17 +62,6 @@ export type FieldDecl = ZodType | BodyField;
 export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
   /** All fields keyed by name. At most one may be body()-wrapped. */
   fields: TFields;
-  /**
-   * Field paths whose string values are refs to other cards/files.
-   * Use `[]` suffix to denote that each element of an array field is a ref:
-   *   ["messages[]"]            — every entry in `messages` is a ref
-   *   ["content.source"]        — `content.source` is a ref
-   *   ["attachments[].ref"]     — every `attachments[i].ref` is a ref
-   *
-   * Validators (e.g. lintCardsDispatch) read this to check that the refs
-   * resolve to existing files.
-   */
-  refs?: string[];
   /** Handling instructions for agents working with this card type. */
   instructions?: string;
 }
@@ -93,8 +82,6 @@ export interface CardSchema<
   readonly bodyField: BodyField | null;
   /** Zod schema for the frontmatter object (everything except the body field, plus `type`). */
   readonly frontmatterSchema: ZodType;
-  /** Field paths whose string values are refs to other cards/files. */
-  readonly refs: readonly string[];
   /** Handling instructions for agents. */
   readonly instructions?: string;
 }
@@ -138,7 +125,6 @@ export function cardSchema<
     bodyFieldName,
     bodyField,
     frontmatterSchema: z.object(frontmatterShape),
-    refs: config.refs === undefined ? [] : config.refs,
   };
   if (config.instructions !== undefined) {
     return { ...schema, instructions: config.instructions };
@@ -147,49 +133,52 @@ export function cardSchema<
 }
 
 /**
- * Walk a CardSchema's `refs` declaration and pull out every ref string
- * from a parsed fields object. Each result carries the resolved JSON
- * path (with indices filled in) so callers can attach lint errors to
- * specific positions.
+ * Walk a parsed fields object and pull out every reference.
+ *
+ * Refs are identified by convention, not by schema declaration:
+ *   - any key literally named `ref` whose value is a string
+ *   - any key literally named `refs` whose value is an array of strings
+ *
+ * Refs can appear at any depth — inside nested objects, inside array
+ * elements, etc. Each result carries a JSON path (with indices filled
+ * in) so callers can attach lint errors to a specific position.
  */
 export function extractRefs(
-  schema: CardSchema,
   fields: Record<string, unknown>
 ): Array<{ path: string; ref: string }> {
   const out: Array<{ path: string; ref: string }> = [];
-  for (const pathSpec of schema.refs) {
-    walkRefPath(fields, pathSpec.split("."), "", out);
-  }
+  walkForRefs(fields, "", out);
   return out;
 }
 
-function walkRefPath(
+function walkForRefs(
   value: unknown,
-  segments: string[],
   currentPath: string,
   out: Array<{ path: string; ref: string }>
 ): void {
-  if (segments.length === 0) {
-    if (typeof value === "string") {
-      out.push({ path: currentPath, ref: value });
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      walkForRefs(value[i], `${currentPath}[${String(i)}]`, out);
     }
     return;
   }
-  const [head, ...rest] = segments;
-  if (head === undefined) return;
-  const isArray = head.endsWith("[]");
-  const fieldName = isArray ? head.slice(0, -"[]".length) : head;
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    return;
-  }
-  const next = (value as Record<string, unknown>)[fieldName];
-  const nextPath = currentPath === "" ? fieldName : `${currentPath}.${fieldName}`;
-  if (isArray) {
-    if (!Array.isArray(next)) return;
-    for (let i = 0; i < next.length; i++) {
-      walkRefPath(next[i], rest, `${nextPath}[${String(i)}]`, out);
+  if (value === null || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const childPath = currentPath === "" ? key : `${currentPath}.${key}`;
+    if (key === "ref" && typeof child === "string") {
+      out.push({ path: childPath, ref: child });
+      continue;
     }
-  } else {
-    walkRefPath(next, rest, nextPath, out);
+    if (key === "refs" && Array.isArray(child)) {
+      const items = child as unknown[];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (typeof item === "string") {
+          out.push({ path: `${childPath}[${String(i)}]`, ref: item });
+        }
+      }
+      continue;
+    }
+    walkForRefs(child, childPath, out);
   }
 }
