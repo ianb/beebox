@@ -10,7 +10,7 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
-import { SchemaRegistry, type ElementSchema } from "cardworks";
+import { SchemaRegistry, type ElementSchema, type CardSchema } from "cardworks";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { NewsItemSchema } from "./news-item.js";
@@ -67,7 +67,6 @@ export const schemas: ElementSchema[] = [
   CaptureSessionSchema,
   RecordSchema,
   RecipeSchema,
-  EmailThreadSchema,
   EmailMessageSchema,
   EmailOutboundSchema,
   NewsJobSchema,
@@ -87,6 +86,15 @@ export const schemas: ElementSchema[] = [
   SheetSchema,
   DocSchema,
   LandmarkSchema,
+];
+
+/**
+ * Phase-2 markdown-frontmatter card schemas. Loaded into a separate
+ * Map<type, CardSchema> by createCardSchemaMap below. As schemas migrate
+ * from XML to frontmatter, they move from the array above to this one.
+ */
+export const cardSchemas: CardSchema[] = [
+  EmailThreadSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
@@ -234,14 +242,31 @@ export async function getAllSchemas(boxRoot?: string): Promise<ElementSchema[]> 
  * Get the list of known card types.
  */
 export function getCardTypes(): string[] {
-  return schemas.map(s => s.tagName);
+  return [
+    ...schemas.map(s => s.tagName),
+    ...cardSchemas.map(s => s.type),
+  ];
 }
 
 /**
  * Check if a card type is known.
  */
 export function isKnownCardType(type: string): boolean {
-  return schemas.some(s => s.tagName === type);
+  return (
+    schemas.some(s => s.tagName === type)
+    || cardSchemas.some(s => s.type === type)
+  );
+}
+
+/**
+ * Build a Map<type, CardSchema> for the markdown-frontmatter loader path.
+ */
+export function createCardSchemaMap(): Map<string, CardSchema> {
+  const map = new Map<string, CardSchema>();
+  for (const schema of cardSchemas) {
+    map.set(schema.type, schema);
+  }
+  return map;
 }
 
 // Re-export individual schemas for direct access
