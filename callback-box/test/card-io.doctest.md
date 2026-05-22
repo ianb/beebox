@@ -6,8 +6,19 @@ and the frontmatter splitter.
 
 ```ts setup
 import { z } from "zod";
-import { cardSchema, body, type CardSchema } from "cardworks";
-import { parseCardText, serializeCardText } from "../src/core/card-io.js";
+import {
+  cardSchema,
+  body,
+  element,
+  type CardSchema,
+  type ElementSchema,
+} from "cardworks";
+import {
+  parseCardText,
+  serializeCardText,
+  loadCardFromText,
+  type LoadCardContext,
+} from "../src/core/card-io.js";
 
 const docSchema: CardSchema = cardSchema("doc", {
   fields: {
@@ -93,4 +104,52 @@ function tryParse2(text: string, source: string): string {
 ```
 tryParse2("---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\n---\nunexpected body\n", "extra.card")
 => extra.card: schema "email-thread" declares no body, but file has body content
+```
+
+## Loader dispatch routes new and legacy cards to the right path
+
+```ts setup
+const xmlMemo: ElementSchema = element("memo", {
+  attrs: { status: z.string() },
+});
+
+const ctx: LoadCardContext = {
+  cardSchemas: new Map<string, CardSchema>([
+    ["doc", docSchema],
+    ["email-thread", threadSchema],
+  ]),
+  elementSchemas: new Map<string, ElementSchema>([
+    ["memo", xmlMemo],
+  ]),
+};
+```
+
+A file whose `type:` matches a CardSchema dispatches to the frontmatter path.
+
+```
+const text = "---\ntype: email-thread\nthread-id: t9\nsubject: hi\nparticipants:\n  - a@x\n---\n";
+const loaded = await loadCardFromText({ content: text, source: "thread.card", ctx });
+loaded.kind
+=> frontmatter
+
+loaded.kind === "frontmatter" ? loaded.schema.type : "?"
+=> email-thread
+
+loaded.kind === "frontmatter" ? loaded.fields["thread-id"] : "?"
+=> t9
+```
+
+A file whose frontmatter `type:` is unknown falls through to the XML path so legacy XML cards (with a content-type frontmatter only) keep working.
+
+```
+const text = "---\ncontent-type: application/x-card+xml\n---\n<memo status=\"new\"/>";
+const loaded = await loadCardFromText({ content: text, source: "legacy.card", ctx });
+loaded.kind
+=> xml
+
+loaded.kind === "xml" ? loaded.element.tagName : "?"
+=> memo
+
+loaded.kind === "xml" ? loaded.schema?.tagName : "?"
+=> memo
 ```
