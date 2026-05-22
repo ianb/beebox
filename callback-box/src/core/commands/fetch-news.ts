@@ -8,6 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import TurndownService from "turndown";
+import { stringify as stringifyYaml } from "yaml";
 import {
   registerCommand,
   type CommandContext,
@@ -15,10 +16,11 @@ import {
 } from "../command-runner.js";
 import { isCardFile, boxPath } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
-import { createLoader } from "../../cli/lib/loader.js";
 import { getBoxTimeISO } from "../../cli/lib/time.js";
 import { boxFetch } from "../../cli/lib/fetch.js";
-import { serialize, createElement, type ElementNode } from "cardworks";
+import { parseCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import type { NewsItemFields } from "../../schemas/news-item.js";
 import type { ArticleFetcherService } from "../../services/article-fetcher.js";
 
 /**
@@ -169,6 +171,13 @@ async function fetchArticle(
 /**
  * Execute the fetch-news command.
  */
+async function writeNewsItem(absPath: string, fields: NewsItemFields): Promise<void> {
+  const { body, ...frontmatter } = fields;
+  const yamlText = stringifyYaml(frontmatter);
+  const bodyTail = body === "" ? "" : `${body}${body.endsWith("\n") ? "" : "\n"}`;
+  await fs.writeFile(absPath, `---\n${yamlText}---\n${bodyTail}`);
+}
+
 async function executeFetchNews(
   ctx: CommandContext,
   args: Record<string, unknown>
@@ -192,29 +201,27 @@ async function executeFetchNews(
     return { success: false, error: "Path must be a .card file" };
   }
 
-  // Load the card
-  const loader = await createLoader(ctx.boxRoot);
-  let card;
+  // Load the card (Phase 2 frontmatter format)
+  let raw: string;
+  let fields: NewsItemFields;
   try {
-    card = await loader.load(fullPath);
+    raw = await fs.readFile(fullPath, "utf8");
+    const parsed = parseCardText(raw, {
+      source: fullPath,
+      schemas: createCardSchemaMap(),
+    });
+    if (parsed.schema.type !== "news-item") {
+      return { success: false, error: `Not a news-item card (found: ${parsed.schema.type})` };
+    }
+    fields = parsed.fields as unknown as NewsItemFields;
   } catch (error) {
     return { success: false, error: `Failed to load card: ${(error as Error).message}` };
   }
 
-  // Verify it's a news-item
-  if (card.element.tagName !== "news-item") {
-    return { success: false, error: `Not a news-item card (found: ${card.element.tagName})` };
-  }
-
-  // Find the link element
-  const linkElement = (card.element.children as ElementNode[]).find(
-    (c) => c.tagName === "link"
-  );
-  if (!linkElement || !linkElement.text) {
+  const url = fields.link;
+  if (!url) {
     return { success: false, error: "News item has no link" };
   }
-
-  const url = linkElement.text;
   const timeout = fetchArgs.timeout ?? 30000;
   const now = getBoxTimeISO(ctx.boxRoot);
 
@@ -226,35 +233,18 @@ async function executeFetchNews(
       ? await fetcher.fetch(url, timeout)
       : await fetchArticle(url, timeout);
 
-    // Create content element using createElement helper
-    const contentAttrs: Record<string, unknown> = {
-      format: "markdown",
-      "fetched-at": now,
-      children: markdown,
-    };
-    if (finalUrl !== url) {
-      contentAttrs["fetched-url"] = finalUrl;
-    }
+    fields.status = "fetched";
+    const fetched: NonNullable<NewsItemFields["fetched"]> = { at: now };
+    if (finalUrl !== url) fetched.url = finalUrl;
+    fields.fetched = fetched;
+    delete fields["fetch-error"];
+    fields.body = markdown;
 
-    const contentElement = createElement("content", contentAttrs);
-
-    // Remove any existing content or fetch-error elements
-    const filteredChildren = (card.element.children as ElementNode[]).filter(
-      (c) => c.tagName !== "content" && c.tagName !== "fetch-error"
-    );
-
-    // Update the card
-    card.element.attrs["status"] = "fetched";
-    card.element.children = [...filteredChildren, contentElement];
-
-    // Serialize and write
-    const content = serialize(card.element) + "\n";
-    await fs.writeFile(fullPath, content);
+    await writeNewsItem(fullPath, fields);
 
     const relativePath = path.relative(ctx.boxRoot, fullPath);
-    ctx.writeLine(`Updated: ${relativePath} (${markdown.length} chars)`);
+    ctx.writeLine(`Updated: ${relativePath} (${String(markdown.length)} chars)`);
 
-    // Optionally commit
     if (fetchArgs.commit) {
       await stageFiles(ctx.boxRoot, [relativePath]);
       await commit(ctx.boxRoot, {
@@ -279,29 +269,17 @@ async function executeFetchNews(
   } catch (error) {
     const err = error as Error & { statusCode?: number };
 
-    // Create fetch-error element using createElement helper
-    const errorAttrs: Record<string, unknown> = {
+    fields.status = "fetch-failed";
+    const errInfo: NonNullable<NewsItemFields["fetch-error"]> = {
       "attempted-at": now,
-      children: err.message,
+      message: err.message,
     };
-    if (err.statusCode) {
-      errorAttrs["status-code"] = err.statusCode;
-    }
+    if (err.statusCode !== undefined) errInfo["status-code"] = err.statusCode;
+    fields["fetch-error"] = errInfo;
+    delete fields.fetched;
+    fields.body = "";
 
-    const errorElement = createElement("fetch-error", errorAttrs);
-
-    // Remove any existing content or fetch-error elements
-    const filteredChildren = (card.element.children as ElementNode[]).filter(
-      (c) => c.tagName !== "content" && c.tagName !== "fetch-error"
-    );
-
-    // Update the card
-    card.element.attrs["status"] = "fetch-failed";
-    card.element.children = [...filteredChildren, errorElement];
-
-    // Serialize and write
-    const content = serialize(card.element) + "\n";
-    await fs.writeFile(fullPath, content);
+    await writeNewsItem(fullPath, fields);
 
     const relativePath = path.relative(ctx.boxRoot, fullPath);
     ctx.writeLine(`Fetch failed: ${err.message}`);

@@ -14,9 +14,9 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { executeFetchNews } from "./fetch-news.js";
-import { createLoader } from "../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
-import { type ElementNode } from "cardworks";
+import { parseCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
 import type { ArticleFetcherService } from "../../services/article-fetcher.js";
 
 /**
@@ -30,17 +30,20 @@ export interface FetchAllResult {
 }
 
 /**
- * Check if a card already has a <content> element.
+ * Check if a news-item card already has fetched content (non-empty body).
  */
 async function hasContent(boxRoot: string, cardPath: string): Promise<boolean> {
   try {
-    const loader = await createLoader(boxRoot);
     const fullPath = path.isAbsolute(cardPath)
       ? cardPath
       : path.join(boxRoot, cardPath);
-    const card = await loader.load(fullPath);
-    const children = card.element.children as ElementNode[];
-    return children.some((c) => c.tagName === "content");
+    const raw = await fs.readFile(fullPath, "utf8");
+    const parsed = parseCardText(raw, {
+      source: fullPath,
+      schemas: createCardSchemaMap(),
+    });
+    const body = parsed.fields["body"];
+    return typeof body === "string" && body.trim() !== "";
   } catch {
     return false;
   }
@@ -197,17 +200,23 @@ async function executeFetchAllNews(
 
     // Collect feed sources from fetched items
     const feedCounts = new Map<string, number>();
-    const loader = await createLoader(ctx.boxRoot);
     for (const itemPath of result.fetched) {
       try {
         const fullPath = path.isAbsolute(itemPath)
           ? itemPath
           : path.join(ctx.boxRoot, itemPath);
-        const card = await loader.load(fullPath);
-        const feedEl = (card.element.children as ElementNode[]).find(
-          (c) => c.tagName === "feed"
-        );
-        const feedName = feedEl?.text ?? "unknown";
+        const raw = await fs.readFile(fullPath, "utf8");
+        const parsed = parseCardText(raw, {
+          source: fullPath,
+          schemas: createCardSchemaMap(),
+        });
+        const feedField = parsed.fields["feed"];
+        const feedName = feedField !== null
+          && typeof feedField === "object"
+          && !Array.isArray(feedField)
+          && typeof (feedField as Record<string, unknown>)["title"] === "string"
+          ? ((feedField as Record<string, unknown>)["title"] as string)
+          : "unknown";
         feedCounts.set(feedName, (feedCounts.get(feedName) ?? 0) + 1);
       } catch {
         // Skip items we can't read

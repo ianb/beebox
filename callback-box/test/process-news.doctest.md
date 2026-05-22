@@ -202,7 +202,7 @@ await initBox(box.root);
 box.commitAll("init box");
 
 await box.seed("box/inbox/news/AI_Research.news-item.card",
-  `<news-item><content>Full article text here</content></news-item>`);
+  "---\ntype: news-item\ntitle: AI Research\nlink: https://example.com/ai\npublished: 2026-02-01T00:00:00Z\n---\nFull article text here\n");
 box.commitAll("add news with content");
 
 const agent = createFakeAgent({

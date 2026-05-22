@@ -53,7 +53,6 @@ import { registerTemplate, type TemplateDefinition } from "./templates.js";
  */
 export const schemas: ElementSchema[] = [
   QuestionSchema,
-  NewsItemSchema,
   NewsSummarySchema,
   NewsBriefSchema,
   NewsGuideSchema,
@@ -95,6 +94,7 @@ export const cardSchemas: CardSchema[] = [
   TodoListSchema,
   TelegramMessageSchema,
   FeedbackSchema,
+  NewsItemSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
