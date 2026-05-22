@@ -19,7 +19,9 @@ import type { ElementSchema } from "cardworks";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
 import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 import { parsePersonality, compilePersonality, compileSpeakingVoice, type Personality } from "../schemas/personality.js";
-import { parseBriefing, compileBriefing, type Briefing } from "../schemas/briefing.js";
+import { compileBriefing, type BriefingFields } from "../schemas/briefing.js";
+import { parseCardText } from "./card-io.js";
+import { createCardSchemaMap } from "../schemas/registry.js";
 import { generateViewsDoc } from "./views-doc.js";
 import { generateChatVoiceDoc } from "./chat-voice-doc.js";
 import { generateNarrationModeDoc } from "./narration-mode-doc.js";
@@ -435,9 +437,11 @@ async function compileBriefings(boxRoot: string, debug: boolean): Promise<string
   const rootBriefingPath = join(boxRoot, "briefing.briefing.card");
   try {
     const content = await readFile(rootBriefingPath, "utf-8");
-    const root = await parseCard(content, { source: "briefing.briefing.card" }) as Briefing;
-    const parsed = parseBriefing(root);
-    const compiled = compileBriefing(parsed);
+    const parsed = parseCardText(content, {
+      source: "briefing.briefing.card",
+      schemas: createCardSchemaMap(),
+    });
+    const compiled = compileBriefing(parsed.fields as unknown as BriefingFields);
     const mdPath = join(boxRoot, "briefing.md");
     await writeFile(
       mdPath,
