@@ -47,7 +47,7 @@ export type { ImageFields, ImageStatus } from "./image.js";
 export type { AudioFields, AudioStatus } from "./audio.js";
 export type { FileFields, FileStatus } from "./file.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
-export type { Record, RecordStatus } from "./record.js";
+export type { RecordFields, RecordStatus } from "./record.js";
 export type { Recipe } from "./recipe.js";
 export type { NewsJob } from "./news-job.js";
 export type { IntakeJob } from "./intake-job.js";

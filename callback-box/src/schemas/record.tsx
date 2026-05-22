@@ -1,181 +1,157 @@
-/** @jsxImportSource cardworks/jsx */
 /**
- * Record card schema - generic extracted units from capture sessions.
+ * Record card schema — generic extracted units from capture sessions.
  *
  * Records are domain-flexible: a home inventory item, an archived document,
  * a recipe, a contact — whatever discrete thing was captured. Fields are
- * intentionally loose; use only the ones that are salient.
+ * intentionally loose; use only the ones that are salient. The card's
+ * markdown body is the textual content of the record (a document body, a
+ * letter, recipe instructions) — empty when the record represents
+ * something with no textual content (e.g., a couch).
  */
 
-import { element, serialize } from "cardworks";
+import { body, cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const RecordStatus = z.enum(["draft", "reviewed", "archived"]);
 export type RecordStatus = z.infer<typeof RecordStatus>;
 
-export const RecordName = element("name", {
-  text: z.string(),
+const SourceEntry = z.object({
+  ref: z.string(),
+  time: z.string().optional(),
+  note: z.string().optional(),
 });
 
-export const RecordDescription = element("description", {
+const DateEntry = z.object({
+  value: z.string(),
+  note: z.string().optional(),
+});
+
+const PersonEntry = z.object({
+  name: z.string(),
+  ref: z.string().optional(),
+  note: z.string().optional(),
+});
+
+const LocationEntry = z.object({
   text: z.string().optional(),
+  ref: z.string().optional(),
 });
 
-export const RecordContent = element("content", {
-  text: z.string().optional(),
+const MeasureEntry = z.object({
+  value: z.string(),
+  note: z.string().optional(),
 });
 
-export const RecordSource = element("source", {
-  attrs: {
-    ref: z.string(),
-    time: z.string().optional(),
-  },
-  text: z.string().optional(),
-});
-
-export const RecordSources = element("sources", {
-  children: z.array(RecordSource).optional(),
-});
-
-export const RecordDate = element("date", {
-  attrs: { value: z.string() },
-  text: z.string().optional(),
-});
-
-export const RecordPerson = element("person", {
-  attrs: {
-    name: z.string(),
-    ref: z.string().optional(),
-  },
-  text: z.string().optional(),
-});
-
-export const RecordLocation = element("location", {
-  attrs: { ref: z.string().optional() },
-  text: z.string().optional(),
-});
-
-export const RecordMeasure = element("measure", {
-  attrs: { value: z.string() },
-  text: z.string().optional(),
-});
-
-export const RecordLanguage = element("language", {
-  text: z.string(),
-});
-
-export const RecordTriage = element("triage", {
-  text: z.string(),
-});
-
-export const RecordNotes = element("notes", {
-  text: z.string().optional(),
-});
-
-/**
- * Record card schema.
- *
- * Example:
- * ```xml
- * <record status="draft">
- *   <name>Brown Leather Couch</name>
- *   <description>Three-seat sofa in the living room, purchased 2019</description>
- *   <sources>
- *     <source ref="/box/inbox/capture-20260210T1430-Living_Room/session.capture-session.card" time="2:15">
- *       User points at the couch and describes its condition
- *     </source>
- *   </sources>
- *   <location>Living room</location>
- *   <measure value="1200 USD">Estimated purchase price</measure>
- *   <measure value="7 feet">Length of the couch</measure>
- *   <date value="2019">Year purchased</date>
- * </record>
- * ```
- */
-export const RecordSchema = element("record", {
-  attrs: {
+export const RecordSchema: CardSchema = cardSchema("record", {
+  fields: {
     status: RecordStatus.default("draft"),
+    name: z.string(),
+    description: z.string().optional(),
+    sources: z.array(SourceEntry).optional(),
+    dates: z.array(DateEntry).optional(),
+    persons: z.array(PersonEntry).optional(),
+    location: LocationEntry.optional(),
+    measures: z.array(MeasureEntry).optional(),
+    language: z.string().optional(),
+    triage: z.string().optional(),
+    notes: z.string().optional(),
+    body: body(z.string()),
   },
-  children: z.array(
-    z.union([
-      RecordName,
-      RecordDescription,
-      RecordContent,
-      RecordSources,
-      RecordDate,
-      RecordPerson,
-      RecordLocation,
-      RecordMeasure,
-      RecordLanguage,
-      RecordTriage,
-      RecordNotes,
-    ])
-  ),
   instructions: `# Record Cards
 
-Records are generic extracted units — discrete things pulled from capture sessions or other sources. A record might be a home inventory item, an archived document, a recipe, a contact, or any other identifiable thing.
+Records are generic extracted units — discrete things pulled from
+capture sessions or other sources. A record might be a home inventory
+item, an archived document, a recipe, a contact, or any other
+identifiable thing.
 
-## Fields
+## Frontmatter fields
 
-- **<name>**: Always present. A short identifying label for this record (e.g., "Brown Leather Couch", "Grandma's Cookie Recipe", "2019 Tax Return").
+- \`name:\` — Always present. A short identifying label for this
+  record (e.g., "Brown Leather Couch", "Grandma's Cookie Recipe",
+  "2019 Tax Return").
+- \`description:\` — About the thing — context, what it is, its
+  condition, why it matters. This describes the record; it doesn't
+  contain the content itself.
+- \`sources:\` — Array of \`{ref, time?, note?}\`. References to where
+  this record was extracted from. Use **absolute paths** for refs
+  (starting with /, e.g.
+  \`/box/inbox/capture-.../session.capture-session.card\`). The
+  optional \`time\` pinpoints a moment in a transcript. The \`note\`
+  explains why this source is relevant.
+- \`dates:\` — Array of \`{value, note?}\`. Parseable date strings
+  with context ("Year purchased", "Date of letter").
+- \`persons:\` — Array of \`{name, ref?, note?}\`. People relevant to
+  this record.
+- \`location:\` — \`{text?, ref?}\`. Where the thing is, was, or
+  relates to.
+- \`measures:\` — Array of \`{value, note?}\`. Natural language with
+  number and unit together: \`"2 pages"\`, \`"7 feet"\`, \`"1200 USD"\`.
+- \`language:\` — Only include when notable.
+- \`triage:\` — Only used when a triage procedure is active.
+- \`notes:\` — Anything that doesn't fit elsewhere — observations,
+  caveats, follow-up items.
 
-- **<description>**: About the thing — context, what it is, its condition, why it matters. This describes the record, it doesn't contain the content itself.
+## Body (markdown)
 
-- **<content>**: IS the thing — the actual text of a document, recipe instructions, letter text, etc. Only use when the record represents textual content that should be preserved verbatim.
-
-- **<sources>**: References to where this record was extracted from. Each <source ref="..."> must include body text explaining WHY this source is relevant — not just a list of files. Use **absolute paths** for refs (starting with /, e.g., ref="/box/inbox/capture-.../session.capture-session.card"). The optional time attribute pinpoints a moment in a transcript.
-
-- **<date value="...">**: A parseable date, year, or datetime in the value attribute. Body text explains what the date means ("Year purchased", "Date of letter", "Expiration"). Only include dates that are salient to this kind of record — don't extract every date you can find.
-
-- **<person name="...">**: A person relevant to this record. The name attribute is required. Optional ref links to a person card. Body text explains why this person is relevant ("Author", "Previous owner", "Mentioned in letter").
-
-- **<location>**: Where the thing is, was, or relates to. Free text. Optional ref attribute for linking to a location card.
-
-- **<measure value="...">**: A measurement, quantity, dimension, weight, price, or count. The value attribute is natural language with number and unit together: "2 pages", "7 feet", "1200 USD", "45 pounds", "12 servings". Body text provides context about what's being measured.
-
-- **<language>**: Only include when notable — non-default language, multilingual content, or language is a significant attribute of the record.
-
-- **<triage>**: Only used when a triage procedure is active. Contains triage status or disposition.
-
-- **<notes>**: Anything that doesn't fit elsewhere — observations, caveats, follow-up items.
+The actual textual content of the record — a document body, recipe
+instructions, letter text, etc. Empty when the record represents
+something with no textual content.
 
 ## Guidelines
 
-Use fields that are appropriate for the domain. A home inventory item needs location and measure but probably not content or language. A document archive entry needs content and date but maybe not measure. Don't exhaustively apply every field to every record.
+Use only fields that are appropriate for the domain. A home inventory
+item needs \`location\` and \`measures\` but probably no body. A
+document archive entry needs a body and \`dates\` but maybe no
+\`measures\`.
 
 Status lifecycle:
-- **draft**: Freshly extracted, may need human review.
-- **reviewed**: Human has verified the record is accurate.
-- **archived**: Record is finalized and stored long-term.`,
+- \`draft\` — Freshly extracted, may need human review.
+- \`reviewed\` — Human has verified the record is accurate.
+- \`archived\` — Record is finalized and stored long-term.`,
 });
 
-export type Record = z.infer<typeof RecordSchema>;
+export interface RecordFields {
+  type: "record";
+  status: RecordStatus;
+  name: string;
+  description?: string;
+  sources?: Array<{ ref: string; time?: string; note?: string }>;
+  dates?: Array<{ value: string; note?: string }>;
+  persons?: Array<{ name: string; ref?: string; note?: string }>;
+  location?: { text?: string; ref?: string };
+  measures?: Array<{ value: string; note?: string }>;
+  language?: string;
+  triage?: string;
+  notes?: string;
+  body: string;
+}
 
-/**
- * Template for creating a record card.
- */
 export function createRecordTemplate(options: {
   name: string;
   description?: string | undefined;
   content?: string | undefined;
   sources?: Array<{ ref: string; text?: string | undefined }> | undefined;
 }): string {
-  const record = (
-    <record status="draft">
-      <name>{options.name}</name>
-      {options.description && <description>{options.description}</description>}
-      {options.content && <content>{options.content}</content>}
-      {options.sources && options.sources.length > 0 ? (
-        <sources>
-          {options.sources.map((s) => (
-            <source ref={s.ref}>{s.text || ""}</source>
-          ))}
-        </sources>
-      ) : (
-        <sources />
-      )}
-      <notes />
-    </record>
-  );
-  return serialize(record) + "\n";
+  const fields: Record<string, unknown> = {
+    type: "record",
+    status: "draft",
+    name: options.name,
+  };
+  if (options.description !== undefined && options.description !== "") {
+    fields["description"] = options.description;
+  }
+  if (options.sources !== undefined && options.sources.length > 0) {
+    fields["sources"] = options.sources.map((s) => {
+      const entry: Record<string, unknown> = { ref: s.ref };
+      if (s.text !== undefined && s.text !== "") entry["note"] = s.text;
+      return entry;
+    });
+  }
+  const yamlText = stringifyYaml(fields);
+  const bodyText = options.content === undefined ? "" : options.content;
+  const bodyTail = bodyText === ""
+    ? ""
+    : `${bodyText}${bodyText.endsWith("\n") ? "" : "\n"}`;
+  return `---\n${yamlText}---\n${bodyTail}`;
 }

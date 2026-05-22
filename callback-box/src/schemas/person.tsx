@@ -1,99 +1,83 @@
-/** @jsxImportSource cardworks/jsx */
 /**
  * Person card schema — key people referenced from briefings.
  *
- * Person cards live at `people/First_Last.person.card`.
- * They capture identity, contact info, and relationship context.
- * Referenced from briefing cards via the `ref` attribute on `<person>`.
+ * Person cards live at `people/First_Last.person.card`. Identity, contact
+ * info, and aliases live in the frontmatter; the markdown body is freeform
+ * "notes" context.
+ *
+ * Referenced from briefing cards via the `key-people[].ref` field.
  */
 
-import { element, serialize } from "cardworks";
+import { body, cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-// ============================================
-// Person elements
-// ============================================
+export const PersonStatus = z.enum(["active", "inactive", "archived"]);
+export type PersonStatusType = z.infer<typeof PersonStatus>;
 
-export const PersonName = element("name", {
-  text: z.string(),
-});
-
-export const PersonCalled = element("called", {
-  text: z.string(),
-});
-
-export const PersonRole = element("role", {
-  text: z.string(),
-});
-
-export const PersonContact = element("contact", {
-  text: z.string(),
-});
-
-export const PersonNotes = element("notes", {
-  text: z.string().optional(),
-});
-
-// ============================================
-// Person schema
-// ============================================
-
-export const PersonSchema = element("person", {
-  attrs: {
-    status: z.enum(["active", "inactive", "archived"]).default("active"),
+export const PersonSchema: CardSchema = cardSchema("person", {
+  fields: {
+    status: PersonStatus.default("active"),
+    name: z.string(),
+    called: z.array(z.string()).optional(),
+    role: z.string().optional(),
+    contact: z.string().optional(),
+    body: body(z.string()),
   },
-  children: z.array(
-    z.union([
-      PersonName,
-      PersonCalled,
-      PersonRole,
-      PersonContact,
-      PersonNotes,
-    ])
-  ),
   instructions: `# Person Cards
 
-Person cards track key people referenced in briefings and throughout the box.
+Person cards track key people referenced in briefings and throughout
+the box.
 
-They live at \`people/First_Last.person.card\`. The filename uses the person's name with underscores.
+They live at \`people/First_Last.person.card\`. The filename uses the
+person's name with underscores.
 
-**Structure:**
-- \`<name>\` — Full name. Required.
-- \`<called>\` — Alias or nickname. Multiple allowed. Include if the boxholder uses this name (e.g., "Dad", "Mom").
-- \`<role>\` — Relationship or function (e.g., "Ledger subject — boxholder's father", "Financial advisor").
-- \`<contact>\` — Freeform contact info (phone, email, address).
-- \`<notes>\` — Freeform context.
-- \`status\` attr — \`active\` (default), \`inactive\`, or \`archived\`.
+**Frontmatter:**
+- \`name:\` — Full name. Required.
+- \`called:\` — Array of aliases / nicknames. Include if the boxholder
+  uses these names (e.g., ["Dad", "Papa"]).
+- \`role:\` — Relationship or function (e.g., "Ledger subject —
+  boxholder's father", "Financial advisor").
+- \`contact:\` — Freeform contact info (phone, email, address).
+- \`status:\` — \`active\` (default), \`inactive\`, or \`archived\`.
+
+**Body (markdown):** freeform notes / context about the person.
 
 **When to create a person card:**
-- When adding someone to a briefing's \`<key-people>\` — always create the person card if it doesn't exist
-- When a person keeps coming up and you need a place to consolidate info about them
+- When adding someone to a briefing's \`key-people:\` — always create
+  the person card if it doesn't exist.
+- When a person keeps coming up and you need a place to consolidate
+  info about them.
 
-**Filename convention:** \`people/First_Last.person.card\` — use the person's actual name, not a slug or alias.`,
+**Filename convention:** \`people/First_Last.person.card\` — use the
+person's actual name, not a slug or alias.`,
 });
 
-export type Person = z.infer<typeof PersonSchema>;
+export interface PersonFields {
+  type: "person";
+  status: PersonStatusType;
+  name: string;
+  called?: string[];
+  role?: string;
+  contact?: string;
+  body: string;
+}
 
-// ============================================
-// Person template
-// ============================================
-
-/**
- * Create a person card template.
- */
 export function createPersonTemplate(options: {
   name: string;
-  called?: string | undefined;
-  role?: string | undefined;
+  called?: string;
+  role?: string;
 }): string {
-  const card = (
-    <person status="active">
-      <name>{options.name}</name>
-      {options.called && <called>{options.called}</called>}
-      {options.role && <role>{options.role}</role>}
-      <notes />
-    </person>
-  );
-
-  return serialize(card) + "\n";
+  const fields: Record<string, unknown> = {
+    type: "person",
+    status: "active",
+    name: options.name,
+  };
+  if (options.called !== undefined && options.called !== "") {
+    fields["called"] = [options.called];
+  }
+  if (options.role !== undefined && options.role !== "") {
+    fields["role"] = options.role;
+  }
+  return `---\n${stringifyYaml(fields)}---\n`;
 }
