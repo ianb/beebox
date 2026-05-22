@@ -14,7 +14,21 @@
 
 import { element, serialize } from "cardworks";
 import { z } from "zod";
-import { EmailTo, EmailCc, EmailMessageSubject } from "./email-message.js";
+
+// Outbound-drafts borrow the same header element shapes as inbound messages.
+// They used to import these from email-message.tsx but that schema is now
+// frontmatter-based; redeclare here so the outbound XML schema is self-contained.
+const EmailTo = element("to", {
+  text: z.string().optional(),
+});
+
+const EmailCc = element("cc", {
+  text: z.string(),
+});
+
+const EmailMessageSubject = element("subject", {
+  text: z.string(),
+});
 
 /**
  * BCC recipient(s).
