@@ -15,7 +15,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseCard, escapeAttr, type ElementNode } from "cardworks";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { splitCardContent } from "cardworks";
+import { parseCardText } from "../core/card-io.js";
+import { createCardSchemaMap } from "../schemas/registry.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 
 interface DraftFields {
@@ -97,10 +100,11 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
       const cardPath = path.join(threadDir, file);
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseCard(content, { source: file });
-        // status defaults to "draft" — only skip explicit non-draft cards
-        const status = root.attrs.status ?? "draft";
-        if (status === "draft" && !root.attrs["gmail-draft-id"]) {
+        const fm = peekFrontmatter(content);
+        if (fm === null) continue;
+        const status = typeof fm["status"] === "string" ? fm["status"] : "draft";
+        const stamped = typeof fm["gmail-draft-id"] === "string";
+        if (status === "draft" && !stamped) {
           drafts.push(cardPath);
         }
       } catch {
@@ -118,8 +122,11 @@ async function uploadOneDraft(opts: {
   cardPath: string;
 }): Promise<boolean> {
   const content = await fs.readFile(opts.cardPath, "utf-8");
-  const root = await parseCard(content, { source: path.basename(opts.cardPath) });
-  const fields = readDraftFields(root);
+  const parsed = parseCardText(content, {
+    source: path.basename(opts.cardPath),
+    schemas: createCardSchemaMap(),
+  });
+  const fields = readDraftFields(parsed.fields);
 
   // Resolve threading from in-reply-to ref (if present). The ref points at
   // a received `email-message` card, in any of three forms:
@@ -175,22 +182,17 @@ async function uploadOneDraft(opts: {
   return true;
 }
 
-function readDraftFields(root: ElementNode): DraftFields {
-  let to = "";
-  let cc: string | undefined;
-  let bcc: string | undefined;
-  let subject = "";
-  let body = "";
+function readDraftFields(fields: Record<string, unknown>): DraftFields {
+  const to = typeof fields["to"] === "string" ? fields["to"] : "";
+  const cc = typeof fields["cc"] === "string" && fields["cc"] !== "" ? fields["cc"] : undefined;
+  const bcc = typeof fields["bcc"] === "string" && fields["bcc"] !== "" ? fields["bcc"] : undefined;
+  const subject = typeof fields["subject"] === "string" ? fields["subject"] : "";
+  const body = typeof fields["body"] === "string" ? fields["body"] : "";
+  const irt = fields["in-reply-to"];
   let inReplyToRef: string | undefined;
-  for (const child of root.children) {
-    if (child.tagName === "to") to = child.text || "";
-    else if (child.tagName === "cc") cc = child.text || undefined;
-    else if (child.tagName === "bcc") bcc = child.text || undefined;
-    else if (child.tagName === "subject") subject = child.text || "";
-    else if (child.tagName === "body") body = child.text || "";
-    else if (child.tagName === "in-reply-to") {
-      inReplyToRef = child.attrs.ref;
-    }
+  if (irt !== null && typeof irt === "object" && !Array.isArray(irt)) {
+    const ref = (irt as Record<string, unknown>)["ref"];
+    if (typeof ref === "string" && ref !== "") inReplyToRef = ref;
   }
   if (!to) throw new MissingFieldError("to");
   if (!subject) throw new MissingFieldError("subject");
@@ -198,15 +200,37 @@ function readDraftFields(root: ElementNode): DraftFields {
   return { to, cc, bcc, subject, body, inReplyToRef };
 }
 
+/**
+ * Pull the YAML frontmatter object out of a card file's text without
+ * loading the whole schema machinery — just for the cheap status/stamped
+ * check inside findDraftCards.
+ */
+function peekFrontmatter(content: string): Record<string, unknown> | null {
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return null;
+  try {
+    const parsed = parseYaml(split.frontmatterText) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 async function readSourceMessage(
   absPath: string,
 ): Promise<{ messageId: string; threadId: string } | null> {
   try {
     const content = await fs.readFile(absPath, "utf-8");
-    const root = await parseCard(content, { source: path.basename(absPath) });
-    const messageId = root.attrs["message-id"];
-    const threadId = root.attrs["thread-id"];
-    if (!messageId || !threadId) return null;
+    const parsed = parseCardText(content, {
+      source: path.basename(absPath),
+      schemas: createCardSchemaMap(),
+    });
+    const messageId = parsed.fields["message-id"];
+    const threadId = parsed.fields["thread-id"];
+    if (typeof messageId !== "string" || typeof threadId !== "string") return null;
     return { messageId, threadId };
   } catch {
     return null;
@@ -296,14 +320,24 @@ async function stampDraftCard(opts: {
   draftUrl: string;
 }): Promise<void> {
   const content = await fs.readFile(opts.cardPath, "utf-8");
-  // Append the two new attrs to the opening <email-outbound ... > tag.
-  // We assume the existing card is status="draft" with no gmail-draft-id.
-  const stamped = content.replace(
-    /<email-outbound\b([^>]*)>/,
-    (_match, attrs: string) =>
-      `<email-outbound${attrs} gmail-draft-id="${escapeAttr(opts.draftId)}" gmail-draft-url="${escapeAttr(opts.draftUrl)}">`,
-  );
-  await fs.writeFile(opts.cardPath, stamped);
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) {
+    throw new Error(`stampDraftCard: ${opts.cardPath} has no frontmatter`);
+  }
+  let fm: unknown;
+  try {
+    fm = parseYaml(split.frontmatterText);
+  } catch (e) {
+    throw new Error(`stampDraftCard: invalid YAML in ${opts.cardPath}: ${(e as Error).message}`);
+  }
+  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) {
+    throw new Error(`stampDraftCard: frontmatter in ${opts.cardPath} is not a mapping`);
+  }
+  const fields = fm as Record<string, unknown>;
+  fields["gmail-draft-id"] = opts.draftId;
+  fields["gmail-draft-url"] = opts.draftUrl;
+  const yamlText = stringifyYaml(fields);
+  await fs.writeFile(opts.cardPath, `---\n${yamlText}---\n${split.body}`);
 }
 
 class MissingFieldError extends Error {

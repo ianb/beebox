@@ -24,7 +24,7 @@ box.commitAll("init box");
 await mkdir(join(box.root, "box/inbox/email/draft-2026-04-28-hello"), { recursive: true });
 await box.seed(
   "box/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card",
-  '<email-outbound status="draft">\n<to>alice@example.com</to>\n<subject>Hello</subject>\n<body>Hi there.</body>\n</email-outbound>\n',
+  "---\ntype: email-outbound\nstatus: draft\nto: alice@example.com\nsubject: Hello\n---\nHi there.\n",
 );
 box.commitAll("agent writes draft");
 
@@ -43,10 +43,10 @@ The card is stamped with the returned draft id and URL:
 ``` continue
 const stampedPath = "box/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card";
 const stamped = await readFile(join(box.root, stampedPath), "utf-8");
-stamped.includes('gmail-draft-id="r-fake-1"')
+stamped.includes("gmail-draft-id: r-fake-1")
 => true
 
-stamped.includes('gmail-draft-url="https://mail.google.com/mail/u/0/#drafts/m-fake-1"')
+stamped.includes("gmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-fake-1")
 => true
 ```
 
@@ -80,11 +80,11 @@ box.commitAll("init box");
 await mkdir(join(box.root, "box/inbox/email/thread-Test-abc12345"), { recursive: true });
 await box.seed(
   "box/inbox/email/thread-Test-abc12345/msg-001.email-message.card",
-  '<email-message message-id="orig-msg-id-123" thread-id="thread-abc12345">\n<from>alice@example.com</from>\n<to>me@example.com</to>\n<subject>Test</subject>\n<body-file>msg-001.body.txt</body-file>\n</email-message>\n',
+  "---\ntype: email-message\nmessage-id: orig-msg-id-123\nthread-id: thread-abc12345\nfrom: alice@example.com\nto: me@example.com\ndate: 2026-02-15T10:00:00Z\nsubject: Test\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 await box.seed(
   "box/inbox/email/thread-Test-abc12345/draft-001.email-outbound.card",
-  '<email-outbound status="draft">\n<to>alice@example.com</to>\n<subject>Re: Test</subject>\n<in-reply-to ref="msg-001.email-message.card" />\n<body>Thanks for the note.</body>\n</email-outbound>\n',
+  "---\ntype: email-outbound\nstatus: draft\nto: alice@example.com\nsubject: \"Re: Test\"\nin-reply-to:\n  ref: msg-001.email-message.card\n---\nThanks for the note.\n",
 );
 box.commitAll("agent writes reply draft");
 
@@ -125,12 +125,12 @@ box.commitAll("init box");
 await mkdir(join(box.root, "box/inbox/email/thread-Test-zzz99999"), { recursive: true });
 await box.seed(
   "box/inbox/email/thread-Test-zzz99999/msg-001.email-message.card",
-  '<email-message message-id="abs-msg-id" thread-id="thread-zzz99999">\n<from>a@b.com</from>\n<to>me@x.com</to>\n<subject>X</subject>\n<body-file>msg-001.body.txt</body-file>\n</email-message>\n',
+  "---\ntype: email-message\nmessage-id: abs-msg-id\nthread-id: thread-zzz99999\nfrom: a@b.com\nto: me@x.com\ndate: 2026-02-15T10:00:00Z\nsubject: X\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 // Box-anchored absolute path (leading slash, relative to box root)
 await box.seed(
   "box/inbox/email/thread-Test-zzz99999/draft-001.email-outbound.card",
-  '<email-outbound status="draft">\n<to>a@b.com</to>\n<subject>Re: X</subject>\n<in-reply-to ref="/box/inbox/email/thread-Test-zzz99999/msg-001.email-message.card" />\n<body>Reply 1.</body>\n</email-outbound>\n',
+  "---\ntype: email-outbound\nstatus: draft\nto: a@b.com\nsubject: \"Re: X\"\nin-reply-to:\n  ref: /box/inbox/email/thread-Test-zzz99999/msg-001.email-message.card\n---\nReply 1.\n",
 );
 box.commitAll("setup");
 
@@ -159,7 +159,7 @@ box.commitAll("init box");
 await mkdir(join(box.root, "box/inbox/email/thread-Bad-aaa00000"), { recursive: true });
 await box.seed(
   "box/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card",
-  '<email-outbound status="draft">\n<to>x@y.com</to>\n<subject>Re: missing</subject>\n<in-reply-to ref="does-not-exist.email-message.card" />\n<body>...</body>\n</email-outbound>\n',
+  "---\ntype: email-outbound\nstatus: draft\nto: x@y.com\nsubject: \"Re: missing\"\nin-reply-to:\n  ref: does-not-exist.email-message.card\n---\n...\n",
 );
 box.commitAll("setup");
 
@@ -193,7 +193,7 @@ box.commitAll("init box");
 await mkdir(join(box.root, "box/inbox/email/draft-2026-04-28-already"), { recursive: true });
 await box.seed(
   "box/inbox/email/draft-2026-04-28-already/draft-001.email-outbound.card",
-  '<email-outbound status="draft" gmail-draft-id="r-existing" gmail-draft-url="https://mail.google.com/mail/u/0/#drafts/m-existing">\n<to>bob@example.com</to>\n<subject>Already done</subject>\n<body>Test.</body>\n</email-outbound>\n',
+  "---\ntype: email-outbound\nstatus: draft\nto: bob@example.com\nsubject: Already done\ngmail-draft-id: r-existing\ngmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-existing\n---\nTest.\n",
 );
 box.commitAll("setup");
 
@@ -218,7 +218,7 @@ box.commitAll("init box");
 await mkdir(join(box.root, "box/inbox/email/thread-Hello-xyz12345"), { recursive: true });
 await box.seed(
   "box/inbox/email/thread-Hello-xyz12345/msg-001.email-message.card",
-  '<email-message message-id="m1-at-example.com" thread-id="thread-xyz12345">\n<from>alice@example.com</from>\n<to>me@example.com</to>\n<subject>Hello</subject>\n<body-file>msg-001.body.txt</body-file>\n</email-message>\n',
+  "---\ntype: email-message\nmessage-id: m1-at-example.com\nthread-id: thread-xyz12345\nfrom: alice@example.com\nto: me@example.com\ndate: 2026-02-15T10:00:00Z\nsubject: Hello\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 box.commitAll("setup");
 
