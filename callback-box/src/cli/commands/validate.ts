@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { lintAll, lintCards, formatLintResults, type LintSummary } from "cardworks";
+import { formatLintResults, type LintSummary, type ElementSchema } from "cardworks";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lint-rules.js";
@@ -13,6 +13,9 @@ import { requireBoxRoot, isCardFile, isMarkdownFile } from "../lib/paths.js";
 import { createLoader } from "../lib/loader.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
+import { lintCardsDispatch } from "../../core/card-lint.js";
+import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
+import type { LoadCardContext } from "../../core/card-io.js";
 
 const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 const SKIP_FILES = new Set(["CLAUDE.md"]);
@@ -91,6 +94,19 @@ function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors:
     .join("\n");
 }
 
+async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
+  const registry = await createSchemaRegistry(boxRoot);
+  const elementSchemas = new Map<string, ElementSchema>();
+  for (const tag of registry.tagNames()) {
+    const s = registry.get(tag);
+    if (s) elementSchemas.set(tag, s as ElementSchema);
+  }
+  return {
+    cardSchemas: createCardSchemaMap(),
+    elementSchemas,
+  };
+}
+
 export const validateCommand = new Command("validate")
   .description("Validate cards and markdown in the box")
   .argument("[path]", "Path to validate (file or directory)")
@@ -105,13 +121,15 @@ export const validateCommand = new Command("validate")
       try {
         const boxRoot = await requireBoxRoot();
         const loader = await createLoader(boxRoot);
+        const ctx = await buildLoadContext(boxRoot);
 
         let cardSummary: LintSummary | null = null;
         let mdSummary: MarkdownLintSummary | null = null;
         let attachErrors: AttachLintError[] = [];
 
         if (options.all || !targetPath) {
-          cardSummary = await lintAll(loader);
+          const cardPaths = await loader.listCards();
+          cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
           const mdFiles = await findMarkdownFiles(boxRoot);
           if (mdFiles.length > 0) {
             mdSummary = await lintMarkdownFiles(mdFiles);
@@ -123,7 +141,7 @@ export const validateCommand = new Command("validate")
             : path.join(process.cwd(), targetPath);
 
           if (isCardFile(fullPath)) {
-            cardSummary = await lintCards(loader, [fullPath]);
+            cardSummary = await lintCardsDispatch([fullPath], { loader, ctx });
           } else if (isMarkdownFile(fullPath)) {
             mdSummary = await lintMarkdownFiles([fullPath]);
           } else {
