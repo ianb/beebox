@@ -45,7 +45,7 @@ export type { NewsGuide } from "./news-guide.js";
 export type { Feedback } from "./feedback.js";
 export type { Image, ImageStatus } from "./image.js";
 export type { Audio, AudioStatus } from "./audio.js";
-export type { File, FileStatus } from "./file.js";
+export type { FileFields, FileStatus } from "./file.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
 export type { Record, RecordStatus } from "./record.js";
 export type { Recipe } from "./recipe.js";

@@ -63,7 +63,6 @@ export const schemas: ElementSchema[] = [
   ProcedureRunSchema,
   ImageSchema,
   AudioSchema,
-  FileSchema,
   CaptureSessionSchema,
   RecordSchema,
   RecipeSchema,
@@ -95,6 +94,7 @@ export const cardSchemas: CardSchema[] = [
   BriefingSchema,
   DocSchema,
   SheetSchema,
+  FileSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
