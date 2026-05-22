@@ -1,6 +1,20 @@
 import { DOMParser } from "@xmldom/xmldom";
 import type { ElementNode, Location } from "./provenance.js";
 import { domToObject, createLineTracker } from "./dom-to-object.js";
+import { splitCardContent } from "./frontmatter.js";
+
+/**
+ * Options for parseXml.
+ *
+ * `lineOffset` shifts reported line numbers so a caller that parses only the
+ * body of a frontmatter-prefixed file still gets locations relative to the
+ * original file. The number of lines preceding the body — for a file whose
+ * body starts on file-line N, pass `lineOffset: N - 1`.
+ */
+export interface ParseXmlOptions {
+  source: string;
+  lineOffset?: number;
+}
 
 /**
  * Error thrown when XML parsing fails.
@@ -31,11 +45,16 @@ export class ParseError extends Error {
  * Parse XML content into an ElementNode tree.
  *
  * @param xml - The XML string to parse
- * @param source - Source identifier for location tracking
+ * @param options - Source identifier and optional line offset
  * @returns The parsed ElementNode tree
  * @throws ParseError if the XML is malformed
  */
-export function parseXml(xml: string, source: string): Promise<ElementNode> {
+export function parseXml(xml: string, options: ParseXmlOptions): Promise<ElementNode> {
+  const source = options.source;
+  const lineOffset = options.lineOffset === undefined ? 0 : options.lineOffset;
+  const shift = (line: number | undefined): number | undefined =>
+    line === undefined ? undefined : line + lineOffset;
+
   const errors: Array<{ message: string; line?: number; column?: number }> = [];
 
   const parser = new DOMParser({
@@ -58,7 +77,7 @@ export function parseXml(xml: string, source: string): Promise<ElementNode> {
       new ParseError(
         err.message,
         source,
-        err.locator?.lineNumber,
+        shift(err.locator?.lineNumber),
         err.locator?.columnNumber
       )
     );
@@ -71,7 +90,7 @@ export function parseXml(xml: string, source: string): Promise<ElementNode> {
       new ParseError(
         firstError?.message ?? "Unknown parse error",
         source,
-        firstError?.line,
+        shift(firstError?.line),
         firstError?.column
       )
     );
@@ -84,7 +103,7 @@ export function parseXml(xml: string, source: string): Promise<ElementNode> {
   }
 
   // Create line tracker for location
-  const tracker = createLineTracker(xml, source);
+  const tracker = createLineTracker(xml, source, lineOffset);
 
   // Transform to our object model
   const result = domToObject(root as unknown as Element, tracker, xml);
@@ -116,5 +135,21 @@ export async function parseXmlFile(
   path: string
 ): Promise<ElementNode> {
   const content = await fs.read(path);
-  return parseXml(content, path);
+  return parseCard(content, { source: path });
+}
+
+/**
+ * Parse a `.card` file's text content.
+ *
+ * Strips optional YAML frontmatter (delimited by `---` fences) before
+ * parsing the body as XML. cardworks does not interpret the frontmatter;
+ * callers that need its values must parse it themselves.
+ */
+export function parseCard(content: string, options: ParseXmlOptions): Promise<ElementNode> {
+  const baseOffset = options.lineOffset === undefined ? 0 : options.lineOffset;
+  const split = splitCardContent(content);
+  return parseXml(split.body, {
+    source: options.source,
+    lineOffset: baseOffset + split.lineOffset,
+  });
 }

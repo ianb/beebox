@@ -1,7 +1,7 @@
 import type { ICardLoader } from "../loader/loader.js";
 import type { ElementNode, Location } from "../parser/provenance.js";
 import { parseRef, parseRefs } from "../refs/parse-ref.js";
-import { parseXml } from "../parser/parse.js";
+import { parseCard } from "../parser/parse.js";
 
 /**
  * A lint issue (error or warning).
@@ -251,7 +251,7 @@ export async function lintContent(
   const warnings: LintIssue[] = [];
 
   try {
-    const node = await parseXml(content, sourceName);
+    const node = await parseCard(content, { source: sourceName });
 
     // Check if schema exists
     if (loader.hasAnySchemas() && !loader.hasSchema(node.tagName)) {

@@ -1,6 +1,6 @@
 import type { FileSystem } from "../fs/types.js";
 import type { ElementNode } from "../parser/provenance.js";
-import { parseXml } from "../parser/parse.js";
+import { parseCard } from "../parser/parse.js";
 import { serialize as serializeElement } from "../serialize/serialize.js";
 import { resolveRef, resolveRefs, type ResolvedRef } from "../refs/resolve.js";
 import { parseRef } from "../refs/parse-ref.js";
@@ -337,7 +337,7 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   async load(path: string): Promise<Card> {
     const content = await this.fs.read(path);
-    const node = await parseXml(content, path);
+    const node = await parseCard(content, { source: path });
 
     // Validate against schema if registered
     const schema = this.schemas.get(node.tagName);
@@ -451,7 +451,7 @@ abstract class BaseCardLoader implements ICardLoader {
    * Validate XML content in memory without writing to disk.
    */
   async validateContent(content: string, sourceName: string = "<inline>"): Promise<ElementNode> {
-    const node = await parseXml(content, sourceName);
+    const node = await parseCard(content, { source: sourceName });
 
     const schema = this.schemas.get(node.tagName);
     if (schema) {
@@ -522,7 +522,7 @@ abstract class BaseCardLoader implements ICardLoader {
 
       try {
         const content = await this.fs.read(cardPath);
-        const node = await parseXml(content, cardPath);
+        const node = await parseCard(content, { source: cardPath });
 
         const refsUpdated = await this.updateRefsInNode(node, cardPath, from, to);
 
@@ -573,7 +573,7 @@ abstract class BaseCardLoader implements ICardLoader {
 
       try {
         const content = await this.fs.read(cardPath);
-        const node = await parseXml(content, cardPath);
+        const node = await parseCard(content, { source: cardPath });
         const refs = await this.collectRefsFromNode(node, cardPath);
 
         // Filter to refs that point to the target
@@ -598,7 +598,7 @@ abstract class BaseCardLoader implements ICardLoader {
    */
   async findOutgoingRefs(sourcePath: string): Promise<CardReference[]> {
     const content = await this.fs.read(sourcePath);
-    const node = await parseXml(content, sourcePath);
+    const node = await parseCard(content, { source: sourcePath });
     return this.collectRefsFromNode(node, sourcePath);
   }
 

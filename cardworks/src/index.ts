@@ -9,7 +9,8 @@ export { NodeFileSystem } from "./fs/node-fs.js";
 export { MemoryFileSystem } from "./fs/memory-fs.js";
 
 // Parser
-export { parseXml, parseXmlFile, ParseError } from "./parser/parse.js";
+export { parseXml, parseXmlFile, parseCard, ParseError } from "./parser/parse.js";
+export { splitCardContent, type SplitCardContent } from "./parser/frontmatter.js";
 export {
   type ElementNode,
   type Location,

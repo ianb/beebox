@@ -6,15 +6,21 @@ import type { ElementNode, Location, Comments, MixedContent } from "./provenance
 interface LineTracker {
   lines: string[];
   source: string;
+  lineOffset: number;
 }
 
 /**
  * Create a line tracker from XML content.
+ *
+ * `lineOffset` shifts reported `startLine`/`endLine` values so locations
+ * line up with the original file when the caller has stripped a prefix
+ * (e.g. YAML frontmatter) before handing the body to the parser.
  */
-export function createLineTracker(xml: string, source: string): LineTracker {
+export function createLineTracker(xml: string, source: string, lineOffset: number): LineTracker {
   return {
     lines: xml.split("\n"),
     source,
+    lineOffset,
   };
 }
 
@@ -73,8 +79,9 @@ function getNodeLocation(
     columnNumber?: number;
   };
 
-  const startLine = nodeWithPos.lineNumber ?? 1;
-  const startColumn = nodeWithPos.columnNumber ?? 1;
+  const rawLine = nodeWithPos.lineNumber === undefined ? 1 : nodeWithPos.lineNumber;
+  const startLine = rawLine + tracker.lineOffset;
+  const startColumn = nodeWithPos.columnNumber === undefined ? 1 : nodeWithPos.columnNumber;
 
   return {
     source: tracker.source,

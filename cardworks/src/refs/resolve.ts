@@ -1,6 +1,6 @@
 import type { FileSystem } from "../fs/types.js";
 import type { ElementNode } from "../parser/provenance.js";
-import { parseXml } from "../parser/parse.js";
+import { parseCard } from "../parser/parse.js";
 import { parseRef, parseRefs } from "./parse-ref.js";
 import { executeXPath } from "./xpath.js";
 import type { ResolvedRef, ParsedRef, RefFragment } from "./types.js";
@@ -73,7 +73,7 @@ export async function resolveRef(
   let targetNode: ElementNode;
   try {
     const content = await resolver.fs.read(resolvedPath);
-    targetNode = await parseXml(content, resolvedPath);
+    targetNode = await parseCard(content, { source: resolvedPath });
   } catch (e) {
     return {
       original: ref,

@@ -7,9 +7,9 @@ test("round-trip: simple element", async (t) => {
   <child>content</child>
 </root>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "test.card");
+  const reparsed = await parseXml(serialized, { source: "test.card" });
 
   t.equal(parsed.tagName, reparsed.tagName);
   t.equal(parsed.attrs["version"], reparsed.attrs["version"]);
@@ -20,9 +20,9 @@ test("round-trip: simple element", async (t) => {
 test("round-trip: multiple attributes", async (t) => {
   const xml = `<element version="1.0.0" attr1="value1" attr2="value2" attr3="value3"/>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "test.card");
+  const reparsed = await parseXml(serialized, { source: "test.card" });
 
   t.equal(reparsed.attrs["attr1"], "value1");
   t.equal(reparsed.attrs["attr2"], "value2");
@@ -38,9 +38,9 @@ test("round-trip: nested elements", async (t) => {
   </level1>
 </root>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "test.card");
+  const reparsed = await parseXml(serialized, { source: "test.card" });
 
   const level1 = reparsed.children[0];
   const level2 = level1?.children[0];
@@ -53,9 +53,9 @@ test("round-trip: nested elements", async (t) => {
 test("round-trip: text with special characters", async (t) => {
   const xml = `<element version="1.0.0">Text with &lt;brackets&gt; and &amp; ampersand</element>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "test.card");
+  const reparsed = await parseXml(serialized, { source: "test.card" });
 
   t.equal(reparsed.text, "Text with <brackets> and & ampersand");
 });
@@ -67,7 +67,7 @@ test("round-trip: preserves comments", async (t) => {
   <!-- Comment after -->
 </root>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
 
   // Serialized should contain comments
@@ -78,9 +78,9 @@ test("round-trip: preserves comments", async (t) => {
 test("round-trip: empty elements", async (t) => {
   const xml = `<root version="1.0.0"><empty/></root>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "test.card");
+  const reparsed = await parseXml(serialized, { source: "test.card" });
 
   t.equal(reparsed.children.length, 1);
   t.equal(reparsed.children[0]?.tagName, "empty");
@@ -94,9 +94,9 @@ test("round-trip: multiline text content", async (t) => {
     Line three
   </content>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "test.card");
+  const reparsed = await parseXml(serialized, { source: "test.card" });
 
   t.equal(reparsed.text, "Line one\nLine two\nLine three");
 });
@@ -104,9 +104,9 @@ test("round-trip: multiline text content", async (t) => {
 test("round-trip: mixed content", async (t) => {
   const xml = `<paragraph version="1.0.0">Some text <link>here</link> and more</paragraph>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "test.card");
+  const reparsed = await parseXml(serialized, { source: "test.card" });
 
   t.equal(reparsed.children.length, 1);
   t.equal(reparsed.children[0]?.tagName, "link");
@@ -117,7 +117,7 @@ test("round-trip: mixed content", async (t) => {
 test("serialize: configurable indentation", async (t) => {
   const xml = `<root version="1.0.0"><child>content</child></root>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
 
   const withTwoSpaces = serialize(parsed, { indent: "  " });
   const withFourSpaces = serialize(parsed, { indent: "    " });
@@ -129,7 +129,7 @@ test("serialize: configurable indentation", async (t) => {
 test("serialize: attribute escaping", async (t) => {
   const xml = `<element version="1.0.0" attr="value with &quot;quotes&quot;"/>`;
 
-  const parsed = await parseXml(xml, "test.card");
+  const parsed = await parseXml(xml, { source: "test.card" });
   const serialized = serialize(parsed);
 
   // Serialized should escape quotes in attributes
@@ -145,9 +145,9 @@ test("round-trip: test fixture - Simple.audience.card", async (t) => {
   <short-description>A simple test card</short-description>
 </audience>`;
 
-  const parsed = await parseXml(xml, "Simple.audience.card");
+  const parsed = await parseXml(xml, { source: "Simple.audience.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "Simple.audience.card");
+  const reparsed = await parseXml(serialized, { source: "Simple.audience.card" });
 
   t.equal(reparsed.tagName, "audience");
   t.equal(reparsed.attrs["version"], "1.0.0");
@@ -165,9 +165,9 @@ test("round-trip: test fixture - With_Interleaved.technique.card", async (t) => 
   <guidance match="special">Second guidance</guidance>
 </technique>`;
 
-  const parsed = await parseXml(xml, "With_Interleaved.technique.card");
+  const parsed = await parseXml(xml, { source: "With_Interleaved.technique.card" });
   const serialized = serialize(parsed);
-  const reparsed = await parseXml(serialized, "With_Interleaved.technique.card");
+  const reparsed = await parseXml(serialized, { source: "With_Interleaved.technique.card" });
 
   t.equal(reparsed.tagName, "technique");
   t.equal(reparsed.children.length, 4);
