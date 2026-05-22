@@ -77,6 +77,27 @@ function abortPending(items: QueueItem[]): void {
   }
 }
 
+/**
+ * Watchdog timeout for a single segment. ttsClient.speak() can hang
+ * indefinitely (network stall mid-stream, audio element wedged); when that
+ * happens the promise neither resolves nor rejects, the machine stays in
+ * `playing` forever, and downstream consumers (mic resume on onComplete)
+ * stay wedged. Estimate based on text length (rough upper bound on speech
+ * duration) plus generous fetch/decode headroom, with a floor.
+ */
+function speechTimeoutMs(text: string): number {
+  // ~12 chars/sec is a slow speaking rate; double it for buffer.
+  const estimatedSec = (text.length / 12) * 2;
+  return Math.max(15_000, estimatedSec * 1000);
+}
+
+class SpeechTimeoutError extends Error {
+  constructor(ms: number) {
+    super(`speech segment exceeded ${ms}ms watchdog`);
+    this.name = "SpeechTimeoutError";
+  }
+}
+
 const playOneActor = fromPromise(
   async ({
     input,
@@ -86,10 +107,27 @@ const playOneActor = fromPromise(
       ttsClient: TTSClient;
     };
   }) => {
-    await input.ttsClient.speak(input.item.segment.text, {
+    const timeoutMs = speechTimeoutMs(input.item.segment.text);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timedOut = false;
+    const watchdog = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        const err = new SpeechTimeoutError(timeoutMs);
+        reject(err);
+      }, timeoutMs);
+    });
+    const speakPromise = input.ttsClient.speak(input.item.segment.text, {
       ...speechOptions(input.item.segment),
       prefetch: input.item.prefetch ?? undefined,
     });
+    const cleanup = () => {
+      if (timer !== null) clearTimeout(timer);
+      // On timeout, abandon the underlying playback so it doesn't keep going
+      // after we've moved on (or fire a late onComplete into a stale state).
+      if (timedOut) input.ttsClient.stop();
+    };
+    return Promise.race([speakPromise, watchdog]).finally(cleanup);
   }
 );
 
