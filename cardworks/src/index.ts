@@ -32,6 +32,7 @@ export { CommentsSchema, LocationSchema } from "./schema/base.js";
 export {
   cardSchema,
   body,
+  extractRefs,
   isBodyField,
   type BodyKind,
   type BodyField,

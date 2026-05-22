@@ -1,6 +1,6 @@
 import { test } from "tap";
 import { z } from "zod";
-import { cardSchema, body, isBodyField } from "../src/schema/card-schema.js";
+import { cardSchema, body, isBodyField, extractRefs } from "../src/schema/card-schema.js";
 
 test("body() marks a Zod schema as a body field", (t) => {
   const field = body(z.string());
@@ -84,5 +84,52 @@ test("cardSchema rejects two body fields", (t) => {
 
 test("cardSchema rejects empty field set", (t) => {
   t.throws(() => cardSchema("empty", { fields: {} }), /at least one field/);
+  t.end();
+});
+
+test("extractRefs walks declared ref paths", (t) => {
+  const schema = cardSchema("email-thread", {
+    fields: {
+      messages: z.array(z.string()),
+    },
+    refs: ["messages[]"],
+  });
+  const refs = extractRefs(schema, {
+    type: "email-thread",
+    messages: ["attach/msg-001.email-message.card", "attach/msg-002.email-message.card"],
+  });
+  t.equal(refs.length, 2);
+  t.equal(refs[0]?.path, "messages[0]");
+  t.equal(refs[0]?.ref, "attach/msg-001.email-message.card");
+  t.equal(refs[1]?.path, "messages[1]");
+  t.end();
+});
+
+test("extractRefs follows nested object paths", (t) => {
+  const schema = cardSchema("with-nested", {
+    fields: {
+      attachments: z.array(z.object({ ref: z.string() })),
+    },
+    refs: ["attachments[].ref"],
+  });
+  const refs = extractRefs(schema, {
+    type: "with-nested",
+    attachments: [{ ref: "a.card" }, { ref: "b.card" }],
+  });
+  t.equal(refs.length, 2);
+  t.equal(refs[0]?.path, "attachments[0].ref");
+  t.equal(refs[1]?.ref, "b.card");
+  t.end();
+});
+
+test("extractRefs skips missing/undefined ref values", (t) => {
+  const schema = cardSchema("optional-refs", {
+    fields: {
+      maybe: z.string().optional(),
+    },
+    refs: ["maybe"],
+  });
+  t.equal(extractRefs(schema, { type: "optional-refs" }).length, 0);
+  t.equal(extractRefs(schema, { type: "optional-refs", maybe: "x.card" }).length, 1);
   t.end();
 });
