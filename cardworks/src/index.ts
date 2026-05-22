@@ -29,6 +29,17 @@ export {
   type ElementSchema,
 } from "./schema/element.js";
 export { CommentsSchema, LocationSchema } from "./schema/base.js";
+export {
+  cardSchema,
+  body,
+  isBodyField,
+  type BodyKind,
+  type BodyField,
+  type BodyFieldOptions,
+  type FieldDecl,
+  type CardSchemaConfig,
+  type CardSchema,
+} from "./schema/card-schema.js";
 export { SchemaRegistry } from "./schema/registry.js";
 export { formatValidationError } from "./schema/format-error.js";
 
