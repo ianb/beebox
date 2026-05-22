@@ -1,173 +1,109 @@
 /**
- * Feedback card schema - user feedback on editions.
+ * Feedback card schema — user feedback on editions.
  *
  * Feedback cards capture user responses to:
  * - Query prompts in editions (text or voice)
  * - Comments on specific sections/expandos (text or voice)
  *
- * Uses cardworks references to target specific elements.
- *
- * Voice feedback works like voice memos - uses the same <source>,
- * <transcription>, and <transcription-error> elements so the
- * transcriber pre-action can process them generically.
+ * Voice feedback works like voice memos — the same transcribe
+ * pre-action handles them via `source: voice` + audio attachment.
+ * Transcribed text ends up in `transcription.text`; the markdown
+ * body holds the user's text response when given typed (rather
+ * than spoken).
  */
 
-import { element } from "cardworks";
+import { body, cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-/**
- * Target element for the feedback.
- * Uses a cardworks reference (path#fragment) to identify the target.
- *
- * Examples:
- * - `box/output/editions/2026-02-01_news.news-edition.card#q1` - targets query q1
- * - `box/output/editions/2026-02-01_news.news-edition.card#s1` - targets section s1
- * - `box/output/editions/2026-02-01_news.news-edition.card#h1` - targets hypothesis h1
- */
-export const FeedbackTarget = element("target", {
-  attrs: {
-    /** Reference to the target element (path#fragment) */
-    ref: z.string(),
-  },
-});
+export const FeedbackType = z.enum(["query-response", "comment", "brief"]);
+export type FeedbackTypeValue = z.infer<typeof FeedbackType>;
 
-/**
- * User's response to a query prompt.
- * Text is optional for voice feedback (populated by transcription).
- */
-export const FeedbackResponse = element("response", {
-  text: z.string().optional(),
-});
+export const FeedbackSource = z.enum(["text", "voice"]);
+export type FeedbackSourceValue = z.infer<typeof FeedbackSource>;
 
-/**
- * User's comment on a section or element.
- * Text is optional for voice feedback (populated by transcription).
- */
-export const FeedbackComment = element("comment", {
-  text: z.string().optional(),
-});
+const TargetEntry = z.object({ ref: z.string() });
 
-/**
- * When the feedback was submitted.
- */
-export const FeedbackTimestamp = element("timestamp", {
-  text: z.string().datetime({ offset: true }),
-});
-
-/**
- * Source of the feedback - "text" or "voice".
- * Same element name as memo schema for generic transcription.
- */
-export const FeedbackSource = element("source", {
-  text: z.enum(["text", "voice"]),
-});
-
-/**
- * Transcription of voice feedback (added by pre-action).
- * Same element as memo schema for generic transcription.
- */
-export const FeedbackTranscription = element("transcription", {
-  attrs: {
-    language: z.string().optional(),
-    "transcribed-at": z.string().datetime({ offset: true }).optional(),
-  },
-  text: z.string().optional(),
-});
-
-/**
- * Transcription error (added by pre-action if transcription fails).
- * Same element as memo schema for generic transcription.
- */
-export const FeedbackTranscriptionError = element("transcription-error", {
-  attrs: {
-    permanent: z.enum(["true", "false"]),
-    code: z.string().optional(),
-    "attempted-at": z.string().datetime({ offset: true }).optional(),
-  },
+const TranscriptionEntry = z.object({
+  language: z.string().optional(),
+  "transcribed-at": z.string().datetime({ offset: true }).optional(),
   text: z.string(),
 });
 
-/**
- * Feedback card schema.
- *
- * Example (text query response):
- * ```xml
- * <feedback type="query-response">
- * <target ref="box/output/editions/2026-02-01_news.news-edition.card#q1" />
- * <source>text</source>
- * <response>I'm most interested in the AI safety developments.</response>
- * <timestamp>2026-02-01T18:48:52.641Z</timestamp>
- * </feedback>
- * ```
- *
- * Example (voice feedback, after transcription):
- * ```xml
- * <feedback type="edition">
- * <target ref="box/output/editions/2026-02-01_news.news-edition.card#s1" />
- * <source>voice</source>
- * <comment></comment>
- * <timestamp>2026-02-01T18:48:52.641Z</timestamp>
- * <transcription language="en" transcribed-at="2026-02-01T18:49:00.000Z">
- * This section was really helpful, especially the part about...
- * </transcription>
- * </feedback>
- * ```
- */
-/**
- * Triage status for feedback cards.
- *
- * - pending: Awaiting triage (default)
- * - feedback: Categorized as feedback about the brief, ready for integration
- * - task: Categorized as a reminder/follow-up, to be routed to tasks
- * - split: This card was split into multiple cards
- * - integrated: Feedback has been integrated into the target brief
- * - unhandled: Unclear intent, moved to inbox/unhandled
- */
-export const TriageStatus = z.enum([
-  "pending",
-  "feedback",
-  "task",
-  "split",
-  "integrated",
-  "unhandled",
-]);
-export type TriageStatus = z.infer<typeof TriageStatus>;
-
-export const FeedbackSchema = element("feedback", {
-  attrs: {
-    /** Type of feedback: query-response, edition (legacy), or brief */
-    type: z.enum(["query-response", "edition", "brief"]),
-    /** Triage status - set during triage phase */
-    "triage-status": TriageStatus.optional(),
-    /** If this card was split from another, reference to the original */
-    "split-from": z.string().optional(),
-    /** Brief summary added during triage (for split portions or clarification) */
-    "triage-summary": z.string().optional(),
-  },
-  children: z.array(
-    z.union([
-      FeedbackTarget,
-      FeedbackSource,
-      FeedbackResponse,
-      FeedbackComment,
-      FeedbackTimestamp,
-      FeedbackTranscription,
-      FeedbackTranscriptionError,
-    ])
-  ),
-  instructions: `# Handling Feedback
-
-**Wait for transcription.** Voice feedback (<source>voice</source>) needs a <transcription> element before it can be processed. If it has <transcription-error permanent="true">, skip it — the audio can't be transcribed. If transcription is just missing, leave the card alone for the transcriber to handle.
-
-**Triage before integrating.** Set \`triage-status\` to categorize what the feedback is:
-- "feedback" → comment about the brief, integrate as <user-comment> on the target
-- "task" → reminder or follow-up, route to tasks
-- "split" → feedback covers multiple topics, split into separate cards
-- "unhandled" → unclear intent
-
-When integrating feedback into a brief: add a <user-comment> child element to the targeted section/expando in the brief card. Include the timestamp, source, and optionally the audio path. Then set triage-status="integrated" on this feedback card.
-
-The <target ref="..."> uses path#fragment format. The fragment identifies which element in the brief (section ID, expando ID, query ID, or hypothesis ID).`,
+const TranscriptionError = z.object({
+  permanent: z.boolean(),
+  code: z.string().optional(),
+  "attempted-at": z.string().datetime({ offset: true }).optional(),
+  message: z.string(),
 });
 
-export type Feedback = z.infer<typeof FeedbackSchema>;
+export const FeedbackSchema: CardSchema = cardSchema("feedback", {
+  fields: {
+    "type-of-feedback": FeedbackType.optional(),
+    target: TargetEntry,
+    source: FeedbackSource,
+    timestamp: z.string().datetime({ offset: true }),
+    transcription: TranscriptionEntry.optional(),
+    "transcription-error": TranscriptionError.optional(),
+    body: body(z.string()),
+  },
+  instructions: `# Feedback Cards
+
+Feedback cards capture user responses inside the box.
+
+Frontmatter:
+- \`type-of-feedback:\` — \`query-response\`, \`comment\`, or \`brief\`.
+- \`target:\` — \`{ref}\` pointing at the target element. The ref uses
+  the cardworks \`path#fragment\` form, e.g.
+  \`box/output/editions/2026-02-01_news.news-edition.card#q1\`.
+- \`source:\` — \`text\` or \`voice\`.
+- \`timestamp:\` — when the feedback was submitted.
+- \`transcription:\` — populated by the transcribe pre-action for
+  voice feedback. \`{text, language?, transcribed-at?}\`.
+- \`transcription-error:\` — set if transcription failed.
+
+Body (markdown): the user's typed text. For voice feedback the body
+may be empty; \`transcription.text\` is the source of truth.`,
+});
+
+export interface FeedbackFields {
+  type: "feedback";
+  "type-of-feedback"?: FeedbackTypeValue;
+  target: { ref: string };
+  source: FeedbackSourceValue;
+  timestamp: string;
+  transcription?: { text: string; language?: string; "transcribed-at"?: string };
+  "transcription-error"?: {
+    permanent: boolean;
+    code?: string;
+    "attempted-at"?: string;
+    message: string;
+  };
+  body: string;
+}
+
+export function createFeedbackTemplate(options: {
+  typeOfFeedback?: FeedbackTypeValue;
+  targetRef: string;
+  source: FeedbackSourceValue;
+  text?: string;
+  timestamp?: string;
+}): string {
+  const fields: Record<string, unknown> = {
+    type: "feedback",
+  };
+  if (options.typeOfFeedback !== undefined) {
+    fields["type-of-feedback"] = options.typeOfFeedback;
+  }
+  fields["target"] = { ref: options.targetRef };
+  fields["source"] = options.source;
+  fields["timestamp"] = options.timestamp === undefined
+    ? new Date().toISOString()
+    : options.timestamp;
+  const yamlText = stringifyYaml(fields);
+  const bodyText = options.text === undefined ? "" : options.text;
+  const bodyTail = bodyText === ""
+    ? ""
+    : `${bodyText}${bodyText.endsWith("\n") ? "" : "\n"}`;
+  return `---\n${yamlText}---\n${bodyTail}`;
+}

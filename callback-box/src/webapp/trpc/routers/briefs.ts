@@ -7,6 +7,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { parseNewsBrief, type NewsBrief } from "../../../schemas/news-brief.js";
 import { parseNewsGuide, type NewsGuide } from "../../../schemas/news-guide.js";
 import { parseGuide, type Guide } from "../../../schemas/guide.js";
+import { createFeedbackTemplate } from "../../../schemas/feedback.js";
 import { stageFiles, commit, getLog } from "../../../cli/lib/git.js";
 
 interface BriefInfo {
@@ -93,15 +94,6 @@ async function getReadingSession(boxRoot: string, briefPath: string): Promise<{
     }
   } catch { /* */ }
   return { shouldAmend: false, actions: [] };
-}
-
-function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 function updateElementFeedback(
@@ -239,13 +231,12 @@ export const briefsRouter = router({
         await fs.writeFile(audioPath, audioBuffer);
       }
 
-      const feedbackContent = `<feedback type="brief">
-  <target ref="${input.briefPath}#${input.targetId}" />
-  <source>${isVoice ? "voice" : "text"}</source>
-  <comment>${isVoice ? "" : escapeXml(input.comment ?? "")}</comment>
-  <timestamp>${new Date().toISOString()}</timestamp>
-</feedback>
-`;
+      const feedbackContent = createFeedbackTemplate({
+        typeOfFeedback: "brief",
+        targetRef: `${input.briefPath}#${input.targetId}`,
+        source: isVoice ? "voice" : "text",
+        ...(isVoice ? {} : { text: input.comment ?? "" }),
+      });
 
       await fs.writeFile(feedbackPath, feedbackContent);
 
@@ -301,13 +292,12 @@ export const briefsRouter = router({
         await fs.writeFile(audioPath, audioBuffer);
       }
 
-      const responseContent = `<feedback type="query-response">
-  <target ref="${input.briefPath}#${input.queryId}" />
-  <source>${isVoice ? "voice" : "text"}</source>
-  <response>${isVoice ? "" : escapeXml(input.response ?? "")}</response>
-  <timestamp>${new Date().toISOString()}</timestamp>
-</feedback>
-`;
+      const responseContent = createFeedbackTemplate({
+        typeOfFeedback: "query-response",
+        targetRef: `${input.briefPath}#${input.queryId}`,
+        source: isVoice ? "voice" : "text",
+        ...(isVoice ? {} : { text: input.response ?? "" }),
+      });
 
       await fs.writeFile(responsePath, responseContent);
 
