@@ -30,7 +30,13 @@ export interface FileSummary<T = unknown> {
  */
 export interface LoaderInput {
   path: string;
+  /** Populated for Phase 1 XML-bodied cards. */
   element?: ElementNode;
+  /** Populated for Phase 2 frontmatter-bodied cards. */
+  fields?: Record<string, unknown>;
+  /** Card type — from `element.tagName` (XML) or `fields.type` (frontmatter). */
+  type?: string;
+  /** Plain text content for non-card files. */
   content?: string;
 }
 

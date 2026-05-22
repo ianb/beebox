@@ -81,33 +81,44 @@ JSON.stringify(memoLoader({ path: "x.memo.card", element: memo }).attrs)
 => {"status":"new"}
 ```
 
-## Image — title from `<description>`
+## Image — title from description field
 
 ```
-const image = el("image", { status: "analyzed", "has-text": "true" }, [
-  textChild("description", "Whiteboard with project timeline"),
-]);
-imageLoader({ path: "photo.image.card", element: image }).title
+const fields1 = {
+  type: "image",
+  status: "analyzed",
+  "has-text": true,
+  filename: { ref: "attach/photo.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
+  description: "Whiteboard with project timeline",
+};
+imageLoader({ path: "photo.image.card", fields: fields1 }).title
 => Whiteboard with project timeline
 ```
 
-## Image — falls back to filename element
+## Image — falls back to filename ref
 
 ```
-const image = el("image", { status: "new" }, [
-  el("filename", { ref: "photo-001.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" }),
-]);
-imageLoader({ path: "box/capture/session.image.card", element: image }).title
+const fields2 = {
+  type: "image",
+  status: "new",
+  filename: { ref: "photo-001.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
+};
+imageLoader({ path: "box/capture/session.image.card", fields: fields2 }).title
 => photo 001
 ```
 
 ## Image — passes through optional attrs
 
 ```
-const image = el("image", { status: "analyzed", "has-text": "true", rotation: "90" }, [
-  textChild("description", "Note"),
-]);
-const s = imageLoader({ path: "p.image.card", element: image });
+const fields3 = {
+  type: "image",
+  status: "analyzed",
+  "has-text": true,
+  rotation: "90",
+  filename: { ref: "attach/p.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
+  description: "Note",
+};
+const s = imageLoader({ path: "p.image.card", fields: fields3 });
 JSON.stringify(s.attrs)
-=> {"status":"analyzed","has-text":"true","rotation":"90"}
+=> {"status":"analyzed","has-text":true,"rotation":"90","filename":"attach/p.jpg"}
 ```

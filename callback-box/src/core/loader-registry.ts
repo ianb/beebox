@@ -80,7 +80,7 @@ export const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
  *   3. fallback
  */
 export function resolveLoader(input: LoaderInput): FileLoader<unknown> {
-  const tagName = input.element ? input.element.tagName : undefined;
+  const tagName = input.type ?? (input.element ? input.element.tagName : undefined);
   if (tagName) {
     const match = registrations.find(r => r.kind === "tagName" && r.tagName === tagName);
     if (match) return match.loader;

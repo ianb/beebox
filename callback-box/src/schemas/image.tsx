@@ -1,193 +1,199 @@
-/** @jsxImportSource cardworks/jsx */
 /**
- * Image card schema - photos from capture sessions.
+ * Image card schema — photos from capture sessions.
  *
- * Created by the capture connector when pulling sessions.
- * Processed by the agent to add descriptions and OCR text.
+ * Created by the capture connector. Processed by `cb describe-images`
+ * (Gemini Flash) to add description, OCR text blocks, subject bbox,
+ * rotation, and document metadata.
+ *
+ * Layout: `photo-001.image.card` next to `photo-001.attach/photo-001.jpg`.
+ * `filename.ref:` points into the attach scope via the `attach/` virtual
+ * prefix.
  */
 
-import { element, serialize } from "cardworks";
+import { cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
 export const ImageStatus = z.enum(["new", "analyzed", "invalid"]);
 export type ImageStatus = z.infer<typeof ImageStatus>;
 
-export const ImageFilename = element("filename", {
-  attrs: {
-    ref: z.string(),
-    captured: z.string().datetime({ offset: true }),
-    source: z.enum(["camera-user", "camera-environment", "gallery", "screenshot", "download", "scan", "generated"]),
-  },
+export const ImageSource = z.enum([
+  "camera-user",
+  "camera-environment",
+  "gallery",
+  "screenshot",
+  "download",
+  "scan",
+  "generated",
+]);
+export type ImageSource = z.infer<typeof ImageSource>;
+
+export const ImageRotation = z.enum(["0", "90", "180", "270"]);
+export type ImageRotation = z.infer<typeof ImageRotation>;
+
+const FilenameEntry = z.object({
+  ref: z.string(),
+  captured: z.string().datetime({ offset: true }),
+  source: ImageSource,
 });
 
-export const ImageDescription = element("description", {
-  text: z.string().optional(),
+const TextBlock = z.object({
+  source: z.string().optional(),
+  content: z.string(),
 });
 
-export const ImageCreation = element("creation", {
-  text: z.string().optional(),
+const ExifMeta = z.object({
+  date: z.string().datetime({ offset: true }).optional(),
+  camera: z.string().optional(),
+  gps: z.string().optional(),
+  width: z.string().optional(),
+  height: z.string().optional(),
 });
 
-export const ImageText = element("text", {
-  attrs: {
-    source: z.string().optional(),
-  },
-  text: z.string().optional(),
+const SubjectBbox = z.object({
+  y1: z.string(),
+  x1: z.string(),
+  y2: z.string(),
+  x2: z.string(),
 });
 
-export const ImageExif = element("exif", {
-  attrs: {
-    date: z.string().datetime({ offset: true }).optional(),
-    camera: z.string().optional(),
-    gps: z.string().optional(),
-    width: z.string().optional(),
-    height: z.string().optional(),
-  },
+const DocumentDate = z.object({
+  label: z.string(),
+  value: z.string(),
 });
 
-export const ImageSubjectBbox = element("subject-bbox", {
-  attrs: {
-    y1: z.string(),
-    x1: z.string(),
-    y2: z.string(),
-    x2: z.string(),
-  },
+const DocumentMeta = z.object({
+  kind: z.string().optional(),
+  from: z.string().optional(),
+  dates: z.array(DocumentDate).optional(),
 });
 
-export const ImageDate = element("date", {
-  attrs: {
-    label: z.string(),
-  },
-  text: z.string(),
-});
-
-export const ImageDocument = element("document", {
-  attrs: {
-    kind: z.string().optional(),
-    from: z.string().optional(),
-  },
-  children: z.array(ImageDate).optional(),
-});
-
-/**
- * Image card schema.
- *
- * Example:
- * ```xml
- * <image status="analyzed" has-text="true">
- * <filename ref="attach/photo-001.jpg" captured="2024-01-15T10:00:00Z" source="camera-environment" />
- * <description>Whiteboard with project timeline and milestones</description>
- * <text source="whiteboard">## Project Timeline\n- Phase 1: Jan-Feb\n- Phase 2: Mar-Apr</text>
- * </image>
- * ```
- */
-export const ImageSchema = element("image", {
-  attrs: {
+export const ImageSchema: CardSchema = cardSchema("image", {
+  fields: {
     status: ImageStatus.default("new"),
-    "has-text": z.enum(["true", "false"]).optional(),
-    rotation: z.enum(["0", "90", "180", "270"]).optional(),
+    "has-text": z.boolean().optional(),
+    rotation: ImageRotation.optional(),
+    filename: FilenameEntry,
+    description: z.string().optional(),
+    creation: z.string().optional(),
+    text: z.array(TextBlock).optional(),
+    exif: ExifMeta.optional(),
+    "subject-bbox": SubjectBbox.optional(),
+    document: DocumentMeta.optional(),
   },
-  children: z.array(
-    z.union([
-      ImageFilename,
-      ImageDescription,
-      ImageCreation,
-      ImageText,
-      ImageExif,
-      ImageSubjectBbox,
-      ImageDocument,
-    ])
-  ),
   instructions: `# Image Cards
 
-An image card represents a photo, typically from a capture session. The attached image file lives in the card's attach scope (e.g. \`photo-001.image.card\` with \`photo-001.attach/photo-001.jpg\`); the \`<filename ref="attach/…">\` prefix points into that scope.
+An image card represents a photo, typically from a capture session.
+The attached image file lives in the card's attach scope (e.g.
+\`photo-001.image.card\` with \`photo-001.attach/photo-001.jpg\`);
+\`filename.ref:\` points into that scope via the \`attach/\` prefix.
 
-Elements:
-- \`<filename>\` — the attached image file. The \`captured\` attribute is updated from EXIF data when available.
-- \`<description>\` — one-sentence summary of what's in the image (filled during analysis)
-- \`<creation>\` — optional free-text notes on how the image came to be. Only include when there's something worth recording. For AI-generated images (\`source="generated"\`), use the form \`model: {modelId}\nprompt: {prompt text}\`. For other sources, use whatever shape fits (e.g. the URL for a download, the app for a screenshot).
-- \`<text source="...">\` — transcribed text content from the image, if any (source describes what the text is on: "whiteboard", "business card", "printed page", "screen"). Multiple \`<text>\` elements allowed for different sources.
-- \`<exif>\` — EXIF metadata extracted from the image file (date, camera, GPS, dimensions)
-- \`<subject-bbox y1="..." x1="..." y2="..." x2="...">\` — bounding box of the main subject on a 0-1000 scale (coordinates are [y1, x1, y2, x2]). Present when the subject doesn't fill the entire frame.
-- \`<document kind="..." from="...">\` — present when the image is a photograph of a document (bill, letter, form, receipt, statement, etc.). \`kind\` is a short free-text category ("utility bill", "lab results"), \`from\` is the issuer/sender. Contains \`<date label="...">value</date>\` children, one per date on the document. Date values are kept as they appear in the document; normalization happens downstream.
-- \`has-text\` attribute — "true" if the image contains readable text, "false" otherwise. Always "true" when a \`<document>\` child is present.
-- \`rotation\` attribute — degrees clockwise the image needs to be rotated to appear upright: "0", "90", "180", or "270"
+Frontmatter fields:
+- \`filename:\` — \`{ref, captured, source}\` for the attached image
+  file. \`captured\` is set from EXIF when available.
+- \`description:\` — one-sentence summary of what's in the image
+  (filled during analysis).
+- \`creation:\` — optional free-text notes on how the image came to
+  be. Only include when there's something worth recording. For
+  AI-generated images (\`source: generated\`), use \`model: {modelId}\\nprompt: {prompt text}\`.
+- \`text:\` — array of \`{source?, content}\` entries with transcribed
+  text content from the image, if any. \`source\` describes what the
+  text is on ("whiteboard", "business card", "printed page",
+  "screen").
+- \`exif:\` — EXIF metadata extracted from the image file.
+- \`subject-bbox:\` — bounding box of the main subject on a 0-1000
+  scale (\`{y1, x1, y2, x2}\`). Present when the subject doesn't fill
+  the entire frame.
+- \`document:\` — present when the image is a photograph of a document
+  (bill, letter, form, receipt, statement, …). \`kind\` is a short
+  free-text category ("utility bill", "lab results"), \`from\` is the
+  issuer/sender, \`dates\` is an array of \`{label, value}\` entries.
+  Date values are kept as they appear in the document; normalization
+  happens downstream.
+- \`has-text\` — true if the image contains readable text, false
+  otherwise. Always true when a \`document:\` field is present.
+- \`rotation\` — degrees clockwise the image needs to be rotated to
+  appear upright: \`"0"\`, \`"90"\`, \`"180"\`, or \`"270"\`.
 
-Analysis is done by \`cb describe-images\`, which sends images to Gemini Flash for OCR, description, subject detection, and rotation, and extracts EXIF metadata. Pass multiple image cards or image files to process them as a batch (provides better context when images are related). Use \`--no-rename\` to skip automatic renaming.
+Analysis is done by \`cb describe-images\`, which sends images to
+Gemini Flash for OCR, description, subject detection, and rotation,
+and extracts EXIF metadata. Pass multiple image cards or image files
+to process them as a batch (provides better context when images are
+related). Use \`--no-rename\` to skip automatic renaming.
 
-Status: new (unanalyzed) → analyzed (description filled in) → invalid (accidental capture, too blurry, not useful).`,
+Status: new (unanalyzed) → analyzed (description filled in) → invalid
+(accidental capture, too blurry, not useful).`,
 });
 
-export type Image = z.infer<typeof ImageSchema>;
+export interface ImageFields {
+  type: "image";
+  status: ImageStatus;
+  "has-text"?: boolean;
+  rotation?: ImageRotation;
+  filename: { ref: string; captured: string; source: ImageSource };
+  description?: string;
+  creation?: string;
+  text?: Array<{ source?: string; content: string }>;
+  exif?: { date?: string; camera?: string; gps?: string; width?: string; height?: string };
+  "subject-bbox"?: { y1: string; x1: string; y2: string; x2: string };
+  document?: { kind?: string; from?: string; dates?: Array<{ label: string; value: string }> };
+}
 
 /**
- * Attrs shape returned by the image loader. Includes the schema's own attrs
- * plus the attached image filename pulled from the `<filename>` child — useful
- * for rendering a thumbnail without re-parsing the card.
+ * Loader summary used by the file viewer: derives a title from
+ * description, filename, or path. Falls back gracefully when the file
+ * isn't a parsed card yet.
  */
-export type ImageAttrs = Image["attrs"] & {
+export interface ImageAttrs {
+  status: ImageStatus;
+  "has-text"?: boolean;
+  rotation?: ImageRotation;
   filename?: string;
-};
+}
 
-/**
- * Image loader — title derived from <description>, <filename name>, or the path.
- */
 export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
-  const el = raw.element;
   const fallback = titleFromFilename(raw.path);
-  if (!el) {
+  // For Phase 2 image cards the raw input is the parsed YAML fields object.
+  const fields = (raw as { fields?: Partial<ImageFields> }).fields;
+  if (fields === undefined) {
     return { path: raw.path, tagName: "image", title: fallback, attrs: { status: "new" } };
   }
-
+  const description = fields.description;
+  const ref = fields.filename?.ref;
   let title = "";
-  let filename: string | undefined;
-  for (const child of el.children) {
-    if (child.tagName === "filename") {
-      const ref = child.attrs["ref"];
-      if (typeof ref === "string" && ref.length > 0) filename = ref;
-    }
-    if (child.tagName === "description" && typeof child.text === "string" && child.text.trim()) {
-      title = child.text.trim();
-    }
+  if (typeof description === "string" && description.trim() !== "") {
+    title = description.trim();
+  } else if (typeof ref === "string" && ref !== "") {
+    title = titleFromFilename(ref);
   }
-  if (!title && filename) title = titleFromFilename(filename);
-  if (!title) title = fallback;
+  if (title === "") title = fallback;
   title = truncateTitle(title, 80);
-
-  const status = el.attrs["status"];
-  const hasText = el.attrs["has-text"];
-  const rotation = el.attrs["rotation"];
-  const attrs: ImageAttrs = {
-    status: (status === "new" || status === "analyzed" || status === "invalid") ? status : "new",
-    ...(hasText === "true" || hasText === "false" ? { "has-text": hasText } : {}),
-    ...(rotation === "0" || rotation === "90" || rotation === "180" || rotation === "270"
-      ? { rotation }
-      : {}),
-    ...(filename ? { filename } : {}),
-  };
-
+  const attrs: ImageAttrs = { status: fields.status ?? "new" };
+  if (typeof fields["has-text"] === "boolean") attrs["has-text"] = fields["has-text"];
+  if (fields.rotation !== undefined) attrs.rotation = fields.rotation;
+  if (typeof ref === "string" && ref !== "") attrs.filename = ref;
   return { path: raw.path, tagName: "image", title, attrs };
 };
 
 /**
- * Template for creating an image card.
- *
- * `filename` is the bare attached filename (e.g. `photo-001.jpg`). The template
- * emits it with the `attach/` virtual prefix, pointing into the card's attach
- * scope.
+ * Build the file content for a new image card. Used by the capture
+ * connector when first storing a photo — analysis fields are filled
+ * in later by `cb describe-images`.
  */
 export function createImageTemplate(options: {
   capturedAt: string;
-  source: string;
+  source: ImageSource;
   filename: string;
 }): string {
-  const image = (
-    <image status="new">
-      <filename ref={`attach/${options.filename}`} captured={options.capturedAt} source={options.source} />
-      <description></description>
-    </image>
-  );
-
-  return serialize(image) + "\n";
+  const fields = {
+    type: "image",
+    status: "new",
+    filename: {
+      ref: `attach/${options.filename}`,
+      captured: options.capturedAt,
+      source: options.source,
+    },
+  };
+  return `---\n${stringifyYaml(fields)}---\n`;
 }

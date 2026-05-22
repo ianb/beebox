@@ -14,13 +14,16 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { stringify as stringifyYaml } from "yaml";
 import {
   registerCommand,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { createLoader } from "../../cli/lib/loader.js";
 import { parseCardName } from "../../cli/lib/paths.js";
+import { parseCardText, serializeCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { type ImageFields } from "../../schemas/image.js";
 import {
   isImageFile,
   isImageCard,
@@ -167,8 +170,6 @@ async function executeDescribeImages(
   // Resolve each path to { cardPath, imagePath }
   const items: BatchItem[] = [];
 
-  const loader = await createLoader(ctx.boxRoot);
-
   for (const rawPath of paths) {
     const fullPath = path.isAbsolute(rawPath) ? rawPath : path.join(ctx.boxRoot, rawPath);
 
@@ -247,14 +248,8 @@ async function executeDescribeImages(
         // an accepted enum value and tells downstream steps to skip this image.
         if (item.cardPath) {
           try {
-            const cardContent = await fs.readFile(item.cardPath, "utf-8");
-            if (cardContent.includes('status="new"')) {
-              const updated = cardContent
-                .replace('status="new"', 'status="invalid"')
-                .replace("<description/>", "<description>Image could not be analyzed (Gemini RECITATION filter blocked this image even with thinking disabled)</description>");
-              await fs.writeFile(item.cardPath, updated);
-              ctx.writeLine(`  Marked ${path.relative(ctx.boxRoot, item.cardPath)} as invalid (RECITATION)`);
-            }
+            await markCardInvalid(item.cardPath, "Image could not be analyzed (Gemini RECITATION filter blocked this image even with thinking disabled)");
+            ctx.writeLine(`  Marked ${path.relative(ctx.boxRoot, item.cardPath)} as invalid (RECITATION)`);
           } catch (_e) {
             // Best-effort — don't fail the whole command over a status update
           }
@@ -291,13 +286,16 @@ async function executeDescribeImages(
         const baseName = path.basename(item.imagePath, path.extname(item.imagePath));
         const cardPath = path.join(path.dirname(item.imagePath), `${baseName}.image.card`);
         const now = new Date().toISOString();
-        const cardXml = [
-          "<image status=\"new\">",
-          `<filename ref="${path.basename(item.imagePath)}" captured="${now}" source="camera-environment" />`,
-          "<description></description>",
-          "</image>",
-        ].join("\n") + "\n";
-        await fs.writeFile(cardPath, cardXml);
+        const fields = {
+          type: "image",
+          status: "new",
+          filename: {
+            ref: path.basename(item.imagePath),
+            captured: now,
+            source: "camera-environment",
+          },
+        };
+        await fs.writeFile(cardPath, `---\n${stringifyYaml(fields)}---\n`);
         item.cardPath = cardPath;
         ctx.writeLine(`  Created card: ${path.relative(ctx.boxRoot, cardPath)}`);
       }
@@ -315,7 +313,7 @@ async function executeDescribeImages(
         }
       }
 
-      await applyAnalysisToCard(loader, { cardPath: item.cardPath, analysis, exif });
+      await applyAnalysisToCard({ cardPath: item.cardPath, analysis, exif });
 
       // Rename if requested
       if (!noRename && analysis.title) {
@@ -347,109 +345,104 @@ async function executeDescribeImages(
   }
 }
 
-async function applyAnalysisToCard(
-  loader: Awaited<ReturnType<typeof createLoader>>,
-  { cardPath, analysis, exif }: { cardPath: string; analysis: ImageAnalysis; exif: Awaited<ReturnType<typeof extractExif>> }
-): Promise<void> {
-  const card = await loader.load(cardPath);
-  const el = card.element;
+async function loadImageCard(cardPath: string): Promise<ImageFields> {
+  const content = await fs.readFile(cardPath, "utf-8");
+  const parsed = parseCardText(content, {
+    source: cardPath,
+    schemas: createCardSchemaMap(),
+  });
+  return parsed.fields as unknown as ImageFields;
+}
 
-  el.attrs["status"] = analysis.invalid ? "invalid" : "analyzed";
+async function saveImageCard(cardPath: string, fields: ImageFields): Promise<void> {
+  const parsed = parseCardText(`---\n${stringifyYaml(fields)}---\n`, {
+    source: cardPath,
+    schemas: createCardSchemaMap(),
+  });
+  await fs.writeFile(cardPath, serializeCardText({
+    schema: parsed.schema,
+    fields: fields as unknown as Record<string, unknown>,
+  }));
+}
+
+async function markCardInvalid(cardPath: string, description: string): Promise<void> {
+  const fields = await loadImageCard(cardPath);
+  if (fields.status !== "new") return;
+  fields.status = "invalid";
+  fields.description = description;
+  await saveImageCard(cardPath, fields);
+}
+
+async function applyAnalysisToCard(input: {
+  cardPath: string;
+  analysis: ImageAnalysis;
+  exif: Awaited<ReturnType<typeof extractExif>>;
+}): Promise<void> {
+  const { cardPath, analysis, exif } = input;
+  const fields = await loadImageCard(cardPath);
+
+  fields.status = analysis.invalid ? "invalid" : "analyzed";
   // Documents always count as has-text, even if the model forgot to set it.
-  el.attrs["has-text"] = (analysis.has_text || analysis.is_document) ? "true" : "false";
+  fields["has-text"] = analysis.has_text || analysis.is_document;
   if (analysis.rotation !== 0) {
-    el.attrs["rotation"] = String(analysis.rotation);
+    fields.rotation = String(analysis.rotation) as NonNullable<ImageFields["rotation"]>;
+  } else {
+    delete fields.rotation;
   }
 
-  const descChild = el.children.find((c) => c.tagName === "description");
-  if (descChild) {
-    descChild.text = analysis.description;
-  }
+  fields.description = analysis.description;
 
   // Update captured date from EXIF if the card doesn't already have one.
-  // Capture-pipeline cards have accurate UTC timestamps from the client;
-  // EXIF dates lack timezone info and are unreliable on UTC servers.
-  if (exif && exif.date) {
-    const filenameChild = el.children.find((c) => c.tagName === "filename");
-    if (filenameChild && !filenameChild.attrs["captured"]) {
-      filenameChild.attrs["captured"] = exif.date;
-    }
+  if (exif && exif.date && !fields.filename.captured) {
+    fields.filename.captured = exif.date;
   }
 
-  // Remove old text, exif, subject-bbox, and document children, add new ones
-  el.children = el.children.filter((c) => c.tagName !== "text" && c.tagName !== "exif" && c.tagName !== "subject-bbox" && c.tagName !== "document");
-  for (const block of analysis.text_blocks) {
-    el.children.push({
-      tagName: "text",
-      attrs: { source: block.source },
-      text: block.text,
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
+  // Replace text / exif / subject-bbox / document with the new analysis.
+  if (analysis.text_blocks.length > 0) {
+    fields.text = analysis.text_blocks.map((b) => ({
+      source: b.source,
+      content: b.text,
+    }));
+  } else {
+    delete fields.text;
   }
 
   if (exif) {
-    const exifAttrs: Record<string, string> = {};
-    if (exif.date) exifAttrs["date"] = exif.date;
-    if (exif.camera) exifAttrs["camera"] = exif.camera;
-    if (exif.gps) exifAttrs["gps"] = exif.gps;
-    if (exif.width) exifAttrs["width"] = exif.width;
-    if (exif.height) exifAttrs["height"] = exif.height;
-    el.children.push({
-      tagName: "exif",
-      attrs: exifAttrs,
-      text: "",
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
+    const exifFields: NonNullable<ImageFields["exif"]> = {};
+    if (exif.date) exifFields.date = exif.date;
+    if (exif.camera) exifFields.camera = exif.camera;
+    if (exif.gps) exifFields.gps = exif.gps;
+    if (exif.width) exifFields.width = exif.width;
+    if (exif.height) exifFields.height = exif.height;
+    fields.exif = exifFields;
+  } else {
+    delete fields.exif;
   }
 
   if (analysis.subject_bbox && analysis.subject_bbox.length === 4) {
-    el.children.push({
-      tagName: "subject-bbox",
-      attrs: {
-        y1: String(analysis.subject_bbox[0]),
-        x1: String(analysis.subject_bbox[1]),
-        y2: String(analysis.subject_bbox[2]),
-        x2: String(analysis.subject_bbox[3]),
-      },
-      text: "",
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
+    fields["subject-bbox"] = {
+      y1: String(analysis.subject_bbox[0]),
+      x1: String(analysis.subject_bbox[1]),
+      y2: String(analysis.subject_bbox[2]),
+      x2: String(analysis.subject_bbox[3]),
+    };
+  } else {
+    delete fields["subject-bbox"];
   }
 
   if (analysis.is_document) {
-    const docAttrs: Record<string, string> = {};
-    if (analysis.document_kind) docAttrs["kind"] = analysis.document_kind;
-    if (analysis.document_from) docAttrs["from"] = analysis.document_from;
-    const dateChildren = analysis.document_dates.map((d) => ({
-      tagName: "date",
-      attrs: { label: d.label },
-      text: d.value,
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    }));
-    el.children.push({
-      tagName: "document",
-      attrs: docAttrs,
-      text: "",
-      children: dateChildren,
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
+    const doc: NonNullable<ImageFields["document"]> = {};
+    if (analysis.document_kind) doc.kind = analysis.document_kind;
+    if (analysis.document_from) doc.from = analysis.document_from;
+    if (analysis.document_dates.length > 0) {
+      doc.dates = analysis.document_dates.map((d) => ({ label: d.label, value: d.value }));
+    }
+    fields.document = doc;
+  } else {
+    delete fields.document;
   }
 
-  await loader.save(card);
+  await saveImageCard(cardPath, fields);
 }
 
 async function renameCard(
