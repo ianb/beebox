@@ -18,6 +18,7 @@ import { readFile } from "node:fs/promises";
 import {
   lintCard,
   splitCardContent,
+  extractRefs,
   type LintResult,
   type LintSummary,
   type LintIssue,
@@ -81,18 +82,39 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
   return lintCard(options.loader, path);
 }
 
-function lintFrontmatterCard(input: {
+async function lintFrontmatterCard(input: {
   path: string;
   content: string;
   options: LintDispatchOptions;
-}): LintResult {
+}): Promise<LintResult> {
   const { path, content, options } = input;
+  let parsed;
   try {
-    parseCardText(content, { source: path, schemas: options.ctx.cardSchemas });
-    return { path, errors: [], warnings: [] };
+    parsed = parseCardText(content, { source: path, schemas: options.ctx.cardSchemas });
   } catch (e) {
     return errorResult(path, (e as Error).message);
   }
+  const refs = extractRefs(parsed.schema, parsed.fields);
+  const errors: LintIssue[] = [];
+  for (const { path: refPath, ref } of refs) {
+    try {
+      const resolved = await options.loader.resolveRef(ref, path);
+      if (!resolved.exists) {
+        errors.push({
+          type: "reference",
+          severity: "error",
+          message: `Broken reference at ${refPath}: ${ref} does not exist`,
+        });
+      }
+    } catch (e) {
+      errors.push({
+        type: "reference",
+        severity: "error",
+        message: `Reference at ${refPath} failed to resolve: ${(e as Error).message}`,
+      });
+    }
+  }
+  return { path, errors, warnings: [] };
 }
 
 function errorResult(path: string, message: string): LintResult {

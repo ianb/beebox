@@ -28,6 +28,7 @@ const threadSchema: CardSchema = cardSchema("email-thread", {
     }),
     messages: z.array(z.string()),
   },
+  refs: ["messages[]"],
 });
 
 const memoSchema: ElementSchema = element("memo", {
@@ -46,7 +47,11 @@ const ctx: LoadCardContext = {
 const box = await makeTmpBox();
 await box.write(
   "box/inbox/email/thread-x.email-thread.card",
-  "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - attach/msg-001.email-message.card\n---\n",
+  "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - thread-x.attach/msg-001.email-message.card\n---\n",
+);
+await box.write(
+  "box/inbox/email/thread-x.attach/msg-001.email-message.card",
+  "---\ncontent-type: application/x-card+xml\n---\n<email-message message-id=\"m1\" thread-id=\"t1\"><from>a@x</from><date>2026-02-15T10:00:00Z</date><subject>hi</subject><body-file>attach/msg-001.body.txt</body-file></email-message>\n",
 );
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
@@ -78,6 +83,29 @@ result.totalErrors
 
 result.results[0]!.errors[0]!.message.includes("frontmatter validation failed")
 => true
+```
+
+## Broken refs in frontmatter cards are reported
+
+Each entry in a ref-declared field is resolved against the loader; missing
+targets surface as lint errors carrying the field path.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/inbox/email/thread-x/thread.email-thread.card",
+  "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - thread.attach/missing.email-message.card\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/email/thread-x/thread.email-thread.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 1
+
+result.results[0]!.errors[0]!.message
+=> Broken reference at messages[0]: thread.attach/missing.email-message.card does not exist
 ```
 
 ## XML cards still flow through the existing cardworks lintCard path

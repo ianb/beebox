@@ -45,6 +45,7 @@ export const EmailThreadSchema: CardSchema = cardSchema("email-thread", {
     labels: z.array(z.string()).optional(),
     messages: z.array(z.string()),
   },
+  refs: ["messages[]"],
   instructions: `# Handling Email Threads
 
 **Location IS state.** The filesystem path tells you the lifecycle stage:
