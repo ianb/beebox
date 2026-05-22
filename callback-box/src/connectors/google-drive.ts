@@ -54,8 +54,12 @@ export function emptyFileState(): FileState {
 async function readDriveIdFromCard(cardPath: string): Promise<string | null> {
   try {
     const content = await fs.readFile(cardPath, "utf-8");
-    const match = content.match(/drive-id="([^"]+)"/);
-    return match ? match[1]! : null;
+    // YAML frontmatter form: `drive-id: value` (optionally quoted)
+    const yamlMatch = /^drive-id:\s*"?([^\n"]+?)"?\s*$/m.exec(content);
+    if (yamlMatch) return yamlMatch[1]!;
+    // Legacy XML form (kept while older boxes still have unmigrated cards)
+    const xmlMatch = /drive-id="([^"]+)"/.exec(content);
+    return xmlMatch ? xmlMatch[1]! : null;
   } catch {
     return null;
   }

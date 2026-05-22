@@ -66,10 +66,10 @@ The card file contains the spreadsheet metadata:
 
 ``` continue
 const card = await box.read("store/drive/Budget.sheet.card");
-card.includes('drive-id="sheet-abc123"')
+card.includes("drive-id: sheet-abc123")
 => true
 
-card.includes("<title>Test Budget</title>")
+card.includes("title: Test Budget")
 => true
 ```
 

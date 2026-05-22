@@ -80,8 +80,6 @@ export const schemas: ElementSchema[] = [
   QuestionFollowupJobSchema,
   TodoListSchema,
   PersonSchema,
-  SheetSchema,
-  DocSchema,
   LandmarkSchema,
 ];
 
@@ -95,6 +93,8 @@ export const cardSchemas: CardSchema[] = [
   EmailMessageSchema,
   EmailOutboundSchema,
   BriefingSchema,
+  DocSchema,
+  SheetSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */

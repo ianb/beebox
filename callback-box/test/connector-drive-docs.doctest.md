@@ -96,13 +96,13 @@ The card now has status synced and the upstream revision recorded:
 
 ``` continue
 const card = await box.read("store/drive/Project_Notes.doc.card");
-card.includes('drive-id="doc-1"')
+card.includes("drive-id: doc-1")
 => true
 
-card.includes('status="synced"')
+card.includes("status: synced")
 => true
 
-card.includes("<revision>rev-1</revision>")
+card.includes("revision: rev-1")
 => true
 ```
 
@@ -149,13 +149,13 @@ box2.commitAll("add reviewed doc");
 await createGoogleDriveConnector(box2.root, drive2).sync();
 
 const card2 = await box2.read("store/drive/Reviewed_Doc.doc.card");
-card2.includes('<item type="comments" count="3"/>')
+card2.includes("type: comments") && card2.includes("count: 3")
 => true
 
-card2.includes('<item type="footnotes" count="1"/>')
+card2.includes("type: footnotes") && card2.includes("count: 1")
 => true
 
-card2.includes('<item type="images" count="2"/>')
+card2.includes("type: images") && card2.includes("count: 2")
 => true
 ```
 
@@ -283,7 +283,7 @@ drive4.contentUpdateLog.length
 
 // Card flipped to conflict status.
 const card4 = await box4.read("store/drive/Contended.doc.card");
-card4.includes('status="conflict"')
+card4.includes("status: conflict")
 => true
 ```
 
@@ -365,13 +365,13 @@ await box5.read("store/drive/Degraded.attach/Degraded.md")
 
 // Card still written, falls back to Drive metadata title.
 const card5 = await box5.read("store/drive/Degraded.doc.card");
-card5.includes("<title>Degraded</title>")
+card5.includes("title: Degraded")
 => true
 
 // Lossy block contains comments (Drive API) but NOT images (Docs API).
-card5.includes('<item type="comments" count="2"/>')
+card5.includes("type: comments") && card5.includes("count: 2")
 => true
 
-card5.includes('type="images"')
+card5.includes("type: images")
 => false
 ```

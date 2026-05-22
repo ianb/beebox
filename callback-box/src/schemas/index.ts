@@ -59,7 +59,8 @@ export type { TelegramMessage } from "./telegram-message.js";
 export type { ChatThread } from "./chat-thread.js";
 export type { ChatJob } from "./chat-job.js";
 export type { TodoList, TodoItem, TodoItemStatusType } from "./todo-list.js";
-export type { Sheet } from "./sheet.js";
+export type { SheetFields } from "./sheet.js";
+export type { DocFields } from "./doc.js";
 export type { Landmark } from "./landmark.js";
 
 // Re-export template functions
