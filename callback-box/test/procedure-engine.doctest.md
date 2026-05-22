@@ -6,7 +6,7 @@ tracking state in run cards, and handling various step outcomes.
 ```ts setup
 import { startProcedure } from "../src/core/procedure/engine.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 ```
 
 ## Shell-only procedure: happy path
@@ -44,7 +44,7 @@ print(`greeting: ${greeting.trim()}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("greet_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseXml(runCard, "run.card");
+const root = await parseCard(runCard, { source: "run.card" });
 print(`procedure status: ${root.attrs["status"]}`);
 print(`step status: ${root.children[0].attrs["status"]}`);
 =>
@@ -101,7 +101,7 @@ print(`good.txt exists: ${files.includes("good.txt")}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("maybe_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseXml(runCard, "run.card");
+const root = await parseCard(runCard, { source: "run.card" });
 const steps = root.children.filter(c => c.tagName === "step");
 print(`skipped step: ${steps[0].attrs["id"]} = ${steps[0].attrs["status"]}`);
 print(`runs step: ${steps[1].attrs["id"]} = ${steps[1].attrs["status"]}`);
@@ -208,7 +208,7 @@ print(`still.txt: ${files.includes("still.txt")}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("validate_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseXml(runCard, "run.card");
+const root = await parseCard(runCard, { source: "run.card" });
 const warnedStep = root.children.find(c => c.attrs?.["id"] === "warned");
 const valEl = warnedStep.children.find(c => c.tagName === "validate");
 print(`validate status: ${valEl.attrs["status"]}`);

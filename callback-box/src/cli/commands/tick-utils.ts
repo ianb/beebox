@@ -7,7 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { performance } from "node:perf_hooks";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   isDueForWakeup,
@@ -166,7 +166,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     let parsed;
     try {
       const content = await fs.readFile(cardPath, "utf-8");
-      const root = await parseXml(content, file);
+      const root = await parseCard(content, { source: file });
       parsed = parseScheduledScript(root as ScheduledScript);
     } catch (err) {
       console.error(`  Error parsing ${file}: ${(err as Error).message}`);

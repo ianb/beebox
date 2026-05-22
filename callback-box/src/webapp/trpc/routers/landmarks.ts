@@ -9,7 +9,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseXml, type ElementNode } from "cardworks";
+import { parseCard, type ElementNode } from "cardworks";
 import { router, publicProcedure } from "../trpc.js";
 import {
   resolveLandmark,
@@ -96,7 +96,7 @@ export const landmarksRouter = router({
       let element: ElementNode;
       try {
         const content = await fs.readFile(absPath, "utf-8");
-        element = await parseXml(content, absPath);
+        element = await parseCard(content, { source: absPath });
       } catch (e) {
         console.warn(`landmarks.list: failed to read ${relPath}: ${(e as Error).message}`);
         continue;

@@ -15,7 +15,7 @@ import {
 import { createNewsJobTemplate } from "../src/schemas/news-job.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../src/schemas/calendar-review-job.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 ```
 
 ## Schema Registry

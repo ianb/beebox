@@ -11,7 +11,7 @@ import * as path from "node:path";
 import { glob } from "glob";
 import {
   type ElementNode,
-  parseXml,
+  parseCard,
   evaluateXPathString,
 } from "cardworks";
 import { isCardFile } from "../../cli/lib/paths.js";
@@ -174,7 +174,7 @@ function applyTemplate(template: string, vars: TemplateVars): string {
 async function loadRoot(absPath: string): Promise<ElementNode | null> {
   try {
     const content = await fs.readFile(absPath, "utf-8");
-    return await parseXml(content, absPath);
+    return await parseCard(content, { source: absPath });
   } catch (_e) {
     return null;
   }

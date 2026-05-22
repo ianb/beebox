@@ -9,7 +9,7 @@ See `src/core/landmark/features.ts` for the readers and
 
 ```ts setup
 import { join } from "node:path";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import {
   readLandmarkFeatures,
   readLandmarkFeaturesForDir,
@@ -20,9 +20,9 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 ## readLandmarkFeatures — parse from a landmark element
 
 ```
-const el = await parseXml(
+const el = await parseCard(
   '<landmark><navigation><label>Daily dump</label><symbol>🎙️</symbol><chat-app narration="on" prose="off"/></navigation></landmark>',
-  "in-memory.landmark.card",
+  { source: "in-memory.landmark.card" },
 );
 JSON.stringify(readLandmarkFeatures(el))
 => {"narration":"on","prose":"off"}
@@ -31,9 +31,9 @@ JSON.stringify(readLandmarkFeatures(el))
 A landmark without a `<chat-app>` child returns an empty map.
 
 ```
-const el = await parseXml(
+const el = await parseCard(
   '<landmark><navigation><label>Plain</label><symbol>📁</symbol></navigation></landmark>',
-  "in-memory.landmark.card",
+  { source: "in-memory.landmark.card" },
 );
 JSON.stringify(readLandmarkFeatures(el))
 => {}
@@ -44,9 +44,9 @@ depth — the schema rejects them at parse time, but hand-edited cards
 might bypass validation).
 
 ```
-const el = await parseXml(
+const el = await parseCard(
   '<landmark><navigation><label>x</label><chat-app narration="on" bogus="yes" prose="maybe"/></navigation></landmark>',
-  "in-memory.landmark.card",
+  { source: "in-memory.landmark.card" },
 );
 JSON.stringify(readLandmarkFeatures(el))
 => {"narration":"on"}

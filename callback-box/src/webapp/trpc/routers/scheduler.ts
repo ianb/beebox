@@ -7,7 +7,7 @@ import { performance } from "node:perf_hooks";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { boxLogFile } from "../../../core/scheduler.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   isWithinBudget,
@@ -137,7 +137,7 @@ export const schedulerRouter = router({
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseXml(content, file);
+        const root = await parseCard(content, { source: file });
         parsed = parseScheduledScript(root as ScheduledScript);
       } catch {
         schedules.push({
@@ -265,7 +265,7 @@ export const schedulerRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
       }
 
-      const root = await parseXml(content, fileName);
+      const root = await parseCard(content, { source: fileName });
       const parsed = parseScheduledScript(root as ScheduledScript);
 
       if (!parsed.enabled) {

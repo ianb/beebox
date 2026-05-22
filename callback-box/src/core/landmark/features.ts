@@ -15,7 +15,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseXml, type ElementNode } from "cardworks";
+import { parseCard, type ElementNode } from "cardworks";
 import { isKnownFeature, isValidValue } from "../chat-features.js";
 
 /**
@@ -66,7 +66,7 @@ export async function readLandmarkFeaturesForDir(
   let element: ElementNode;
   try {
     const content = await fs.readFile(absPath, "utf-8");
-    element = await parseXml(content, absPath);
+    element = await parseCard(content, { source: absPath });
   } catch (e) {
     console.warn(`readLandmarkFeaturesForDir: failed to read ${landmarkName}: ${(e as Error).message}`);
     return null;

@@ -13,7 +13,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseXml, escapeAttr } from "cardworks";
+import { parseCard, escapeAttr } from "cardworks";
 import { createIntakeJobTemplate } from "../schemas/intake-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 
@@ -115,7 +115,7 @@ async function findExistingIntakeJob(
     const filePath = path.join(jobsDir, entry);
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const root = await parseXml(content, entry);
+      const root = await parseCard(content, { source: entry });
       if (
         root.attrs.status === "pending" &&
         root.attrs.source === source

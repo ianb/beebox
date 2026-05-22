@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { type ElementNode, parseXml, evaluateXPathString } from "cardworks";
+import { type ElementNode, parseCard, evaluateXPathString } from "cardworks";
 import {
   registerCommand,
   type CommandContext,
@@ -112,7 +112,7 @@ async function executeLs(
     // Parse and apply template
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const root = await parseXml(content, filePath);
+      const root = await parseCard(content, { source: filePath });
       const formatted = applyTemplate(format, root);
       const line = `${relativePath}\t${formatted}`;
       ctx.writeLine(line);

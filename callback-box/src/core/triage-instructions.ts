@@ -9,7 +9,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseXml, type ElementNode } from "cardworks";
+import { parseCard, type ElementNode } from "cardworks";
 
 /**
  * One triage category, derived from a landmark with a
@@ -80,7 +80,7 @@ function extractProcedureRef(triageDest: ElementNode): string | null {
 async function loadLandmark(absPath: string): Promise<ElementNode | null> {
   try {
     const content = await fs.readFile(absPath, "utf-8");
-    return await parseXml(content, absPath);
+    return await parseCard(content, { source: absPath });
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return null;

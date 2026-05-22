@@ -14,7 +14,7 @@ import { initBox, installProcedures, installGuides, installSchedules, installPer
 import { stageAll, commit } from "../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import { parseNewsGuide, type NewsGuide } from "../../schemas/news-guide.js";
 
 export const initCommand = new Command("init")
@@ -175,7 +175,7 @@ async function migrateGuides(boxRoot: string): Promise<void> {
 
   try {
     const content = await readFile(oldPath, "utf-8");
-    const root = await parseXml(content, "news-guide.news-guide.card");
+    const root = await parseCard(content, { source: "news-guide.news-guide.card" });
     const parsed = parseNewsGuide(root as NewsGuide);
 
     // Build triage rules from interests and disinterests

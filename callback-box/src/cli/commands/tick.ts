@@ -8,7 +8,7 @@ import { performance } from "node:perf_hooks";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   isDue,
@@ -117,7 +117,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     let parsed;
     try {
       const content = await fs.readFile(cardPath, "utf-8");
-      const root = await parseXml(content, file);
+      const root = await parseCard(content, { source: file });
       parsed = parseScheduledScript(root as ScheduledScript);
     } catch (err) {
       if (!options.quiet) console.error(`  Error parsing ${file}: ${(err as Error).message}`);

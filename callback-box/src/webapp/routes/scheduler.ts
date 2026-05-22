@@ -8,7 +8,7 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { boxLogFile, type LogEntry } from "../../core/scheduler.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   isWithinBudget,
@@ -110,7 +110,7 @@ export async function registerSchedulerRoutes(
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseXml(content, file);
+        const root = await parseCard(content, { source: file });
         parsed = parseScheduledScript(root as ScheduledScript);
       } catch {
         schedules.push({

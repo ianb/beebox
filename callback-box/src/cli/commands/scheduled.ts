@@ -7,7 +7,7 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   type ScheduledScript,
@@ -46,7 +46,7 @@ export const scheduledCommand = new Command("scheduled")
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseXml(content, file);
+        const root = await parseCard(content, { source: file });
         parsed = parseScheduledScript(root as ScheduledScript);
       } catch (err) {
         console.log(`  ${scriptName.padEnd(22)} [parse error: ${(err as Error).message}]`);

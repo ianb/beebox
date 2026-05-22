@@ -8,7 +8,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { createElement, serialize, parseXml, type ElementNode } from "cardworks";
+import { createElement, serialize, parseCard, type ElementNode } from "cardworks";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
 import {
   getStatus,
@@ -293,7 +293,7 @@ export async function procedureStatus(
 
   try {
     const content = await fs.readFile(runCardPath, "utf-8");
-    const element = await parseXml(content, runCardPath);
+    const element = await parseCard(content, { source: runCardPath });
 
     ctx.writeLine(
       fmt.header(`Procedure Run: ${element.attrs["procedure"]}`)
@@ -340,7 +340,7 @@ async function loadProcedureDefinition(
   cardPath: string
 ): Promise<ParsedProcedure> {
   const content = await fs.readFile(cardPath, "utf-8");
-  const root = await parseXml(content, cardPath);
+  const root = await parseCard(content, { source: cardPath });
 
   const name = root.attrs["name"] ?? "unknown";
 
@@ -1008,7 +1008,7 @@ interface UpdateRunCardStatusParams {
 async function updateRunCardStatus(params: UpdateRunCardStatusParams): Promise<void> {
   const { runCardPath, status, completedAt } = params;
   const content = await fs.readFile(runCardPath, "utf-8");
-  const root = await parseXml(content, runCardPath);
+  const root = await parseCard(content, { source: runCardPath });
 
   root.attrs["status"] = status;
   if (completedAt) {
@@ -1033,7 +1033,7 @@ interface UpdateStepInRunCardParams {
 async function updateStepInRunCard(params: UpdateStepInRunCardParams): Promise<void> {
   const { runCardPath, stepId, update } = params;
   const content = await fs.readFile(runCardPath, "utf-8");
-  const root = await parseXml(content, runCardPath);
+  const root = await parseCard(content, { source: runCardPath });
 
   for (const child of root.children as ElementNode[]) {
     if (child.tagName === "step" && child.attrs["id"] === stepId) {

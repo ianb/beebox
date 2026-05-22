@@ -13,7 +13,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import type { ZodTypeAny } from "zod";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import { schemas, loadBoxSchemas } from "../schemas/registry.js";
 import type { ElementSchema } from "cardworks";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
@@ -172,7 +172,7 @@ async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[]> {
   for (const filename of cards) {
     try {
       const content = await readFile(join(procedureDir, filename), "utf-8");
-      const root = await parseXml(content, filename);
+      const root = await parseCard(content, { source: filename });
       const name = root.attrs["name"] ?? filename.replace(".procedure.card", "");
       const descEl = (root.children ?? []).find(
         (c: { tagName?: string }) => c.tagName === "description"
@@ -435,7 +435,7 @@ async function compileBriefings(boxRoot: string, debug: boolean): Promise<string
   const rootBriefingPath = join(boxRoot, "briefing.briefing.card");
   try {
     const content = await readFile(rootBriefingPath, "utf-8");
-    const root = await parseXml(content, "briefing.briefing.card") as Briefing;
+    const root = await parseCard(content, { source: "briefing.briefing.card" }) as Briefing;
     const parsed = parseBriefing(root);
     const compiled = compileBriefing(parsed);
     const mdPath = join(boxRoot, "briefing.md");
@@ -513,7 +513,7 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
 
     try {
       const content = await readFile(join(configDir, filename), "utf-8");
-      const root = await parseXml(content, filename) as Guide;
+      const root = await parseCard(content, { source: filename }) as Guide;
       const parsed = parseGuide(root);
       const compiled = compileGuide(parsed, guideName);
       const compiledFilename = `${guideName}-guide.md`;
@@ -615,7 +615,7 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
       }
 
       try {
-        const root = await parseXml(content, "chat.guide.card") as Guide;
+        const root = await parseCard(content, { source: "chat.guide.card" }) as Guide;
         const parsed = parseGuide(root);
         const guideName = `chat-${connector}-${slug}`;
         const compiled = compileGuide(parsed, guideName);
@@ -673,7 +673,7 @@ async function compilePersonalities(boxRoot: string, debug: boolean): Promise<st
 
   try {
     const content = await readFile(join(configDir, filename), "utf-8");
-    const root = await parseXml(content, filename) as Personality;
+    const root = await parseCard(content, { source: filename }) as Personality;
     const parsed = parsePersonality(root);
     const compiled = compilePersonality(parsed);
     const compiledFilename = `personality-${personalityName}.md`;

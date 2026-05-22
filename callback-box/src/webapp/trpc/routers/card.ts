@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { createLoader } from "../../../cli/lib/loader.js";
-import { parseXml, type ElementNode } from "cardworks";
+import { parseCard, type ElementNode } from "cardworks";
 
 /**
  * JSON-safe element node for the frontend.
@@ -130,7 +130,7 @@ export const cardRouter = router({
         let element: JsonElement | undefined;
         let tagName: string | undefined;
         try {
-          const parsed = await parseXml(rawXml, input.path);
+          const parsed = await parseCard(rawXml, { source: input.path });
           element = sanitizeElement(parsed);
           tagName = parsed.tagName;
         } catch {

@@ -16,7 +16,7 @@ import {
   getCardTypes,
   createSchemaRegistry,
 } from "../src/schemas/index.js";
-import { parseXml } from "cardworks";
+import { parseCard } from "cardworks";
 import { resolveLandmark } from "../src/core/landmark/resolve.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 ```
@@ -78,7 +78,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const nav = root.children.find((c) => c.tagName === "navigation");
 const symbolEl = nav.children.find((c) => c.tagName === "symbol");
 JSON.stringify({ src: symbolEl.attrs.src, text: symbolEl.text || "" }, null, 2)
@@ -109,7 +109,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const links = await resolveLandmark(root, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
@@ -152,7 +152,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const links = await resolveLandmark(root, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
@@ -195,7 +195,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const links = await resolveLandmark(root, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
@@ -235,7 +235,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const links = await resolveLandmark(root, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
@@ -279,7 +279,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const links = await resolveLandmark(root, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
@@ -324,7 +324,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const links = await resolveLandmark(root, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
@@ -359,7 +359,7 @@ const xml = `<landmark>
 </navigation>
 </landmark>`;
 
-const root = await parseXml(xml, "test.xml");
+const root = await parseCard(xml, { source: "test.xml" });
 const links = await resolveLandmark(root, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,

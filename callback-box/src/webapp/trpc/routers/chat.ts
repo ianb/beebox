@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseXml, type ElementNode } from "cardworks";
+import { parseCard, type ElementNode } from "cardworks";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import {
@@ -99,7 +99,7 @@ async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]
     let element: ElementNode;
     try {
       const content = await fs.readFile(absPath, "utf-8");
-      element = await parseXml(content, absPath);
+      element = await parseCard(content, { source: absPath });
     } catch {
       continue;
     }

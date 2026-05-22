@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import sanitize from "sanitize-filename";
-import { parseXml, escapeAttr, type ElementNode } from "cardworks";
+import { parseCard, escapeAttr, type ElementNode } from "cardworks";
 import {
   createChatThreadTemplate,
   createMessageElement,
@@ -142,7 +142,7 @@ export async function findUnsentAgentMessages(
   unsent: ElementNode[];
 }> {
   const content = await fs.readFile(absPath, "utf-8");
-  const root = await parseXml(content, path.basename(absPath));
+  const root = await parseCard(content, { source: path.basename(absPath) });
   const unsent: ElementNode[] = [];
 
   for (const child of root.children) {
@@ -215,7 +215,7 @@ export async function findExistingChatJob(
     const filePath = path.join(jobsDir, entry);
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const root = await parseXml(content, entry);
+      const root = await parseCard(content, { source: entry });
       if (root.attrs.status !== "pending") continue;
       for (const child of root.children) {
         if (child.tagName === "thread" && child.attrs.ref === threadRef) {

@@ -15,7 +15,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseXml, escapeAttr, type ElementNode } from "cardworks";
+import { parseCard, escapeAttr, type ElementNode } from "cardworks";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 
 interface DraftFields {
@@ -97,7 +97,7 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
       const cardPath = path.join(threadDir, file);
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseXml(content, file);
+        const root = await parseCard(content, { source: file });
         // status defaults to "draft" — only skip explicit non-draft cards
         const status = root.attrs.status ?? "draft";
         if (status === "draft" && !root.attrs["gmail-draft-id"]) {
@@ -118,7 +118,7 @@ async function uploadOneDraft(opts: {
   cardPath: string;
 }): Promise<boolean> {
   const content = await fs.readFile(opts.cardPath, "utf-8");
-  const root = await parseXml(content, path.basename(opts.cardPath));
+  const root = await parseCard(content, { source: path.basename(opts.cardPath) });
   const fields = readDraftFields(root);
 
   // Resolve threading from in-reply-to ref (if present). The ref points at
@@ -203,7 +203,7 @@ async function readSourceMessage(
 ): Promise<{ messageId: string; threadId: string } | null> {
   try {
     const content = await fs.readFile(absPath, "utf-8");
-    const root = await parseXml(content, path.basename(absPath));
+    const root = await parseCard(content, { source: path.basename(absPath) });
     const messageId = root.attrs["message-id"];
     const threadId = root.attrs["thread-id"];
     if (!messageId || !threadId) return null;

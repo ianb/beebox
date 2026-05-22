@@ -8,7 +8,7 @@
  * essentially a function call.
  */
 
-import { parseXml, type ElementNode } from "cardworks";
+import { parseCard, type ElementNode } from "cardworks";
 import { startProcedure } from "../procedure/engine.js";
 import { finishJob } from "../finish-job.js";
 import { fmt } from "../../cli/lib/format.js";
@@ -21,7 +21,7 @@ import type { JobWithContent, ProcedureJobInfo } from "./types.js";
  */
 export async function detectProcedureInJob(content: string, filePath: string): Promise<ProcedureJobInfo | null> {
   try {
-    const root = await parseXml(content, filePath);
+    const root = await parseCard(content, { source: filePath });
     for (const child of root.children as ElementNode[]) {
       if (child.tagName === "procedure" && child.attrs["ref"]) {
         let directive: string | undefined;
