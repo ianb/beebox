@@ -21,8 +21,8 @@
  *   labels:
  *     - inbox
  *   messages:
- *     - attach/msg-001.email-message.card
- *     - attach/msg-002.email-message.card
+ *     - ref: attach/msg-001.email-message.card
+ *     - ref: attach/msg-002.email-message.card
  *   ---
  */
 
@@ -43,9 +43,8 @@ export const EmailThreadSchema: CardSchema = cardSchema("email-thread", {
       end: z.string().datetime({ offset: true }),
     }),
     labels: z.array(z.string()).optional(),
-    messages: z.array(z.string()),
+    messages: z.array(z.object({ ref: z.string() })),
   },
-  refs: ["messages[]"],
   instructions: `# Handling Email Threads
 
 **Location IS state.** The filesystem path tells you the lifecycle stage:
@@ -72,7 +71,7 @@ export interface EmailThreadFields {
   participants: string[];
   "date-range": { start: string; end: string };
   labels?: string[];
-  messages: string[];
+  messages: Array<{ ref: string }>;
 }
 
 /**
@@ -103,6 +102,6 @@ export function createEmailThreadTemplate(options: {
   if (options.labels !== undefined && options.labels.length > 0) {
     fields["labels"] = options.labels;
   }
-  fields["messages"] = options.messageRefs.map((r) => `attach/${r}`);
+  fields["messages"] = options.messageRefs.map((r) => ({ ref: `attach/${r}` }));
   return `---\n${stringifyYaml(fields)}---\n`;
 }

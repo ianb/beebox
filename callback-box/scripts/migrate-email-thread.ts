@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+/* eslint-disable security/detect-non-literal-fs-filename */
 /**
  * Phase 2 (per-schema): migrate `*.email-thread.card` files from the Phase 1
  * frontmatter-with-XML-body shape to the flat frontmatter shape.
@@ -50,7 +51,7 @@ interface ThreadFields {
   participants: string[];
   "date-range": { start: string; end: string };
   labels?: string[];
-  messages: string[];
+  messages: Array<{ ref: string }>;
 }
 
 async function findThreadCards(root: string): Promise<string[]> {
@@ -135,11 +136,12 @@ function convertOne(node: ElementNode, source: string): ThreadFields {
     itemTag: "label",
     pluck: (l) => l.text,
   });
-  const messages = childList(node, {
+  const messageRefs = childList(node, {
     containerTag: "messages",
     itemTag: "message-ref",
     pluck: (m) => m.attrs["ref"],
   });
+  const messages = messageRefs.map((ref) => ({ ref }));
 
   const fields: ThreadFields = {
     type: "email-thread",

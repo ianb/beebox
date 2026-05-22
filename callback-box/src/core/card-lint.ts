@@ -94,7 +94,7 @@ async function lintFrontmatterCard(input: {
   } catch (e) {
     return errorResult(path, (e as Error).message);
   }
-  const refs = extractRefs(parsed.schema, parsed.fields);
+  const refs = extractRefs(parsed.fields);
   const errors: LintIssue[] = [];
   for (const { path: refPath, ref } of refs) {
     try {
