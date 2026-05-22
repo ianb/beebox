@@ -1,218 +1,173 @@
 /**
- * Memo card schema - simple test input type.
+ * Memo card schema — text or voice notes.
  *
- * Memos are generic text content that can be used for testing
- * and for any input that doesn't fit a more specific type.
- * Voice memos have audio attachments and get transcribed.
+ * Memos are generic content that can carry any input not fitting a more
+ * specific type. Voice memos have an audio attachment and a
+ * transcription that ends up in the markdown body.
  */
 
-import { element, escapeText, escapeAttr } from "cardworks";
+import { body, cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
-/**
- * Valid memo statuses.
- */
 export const MemoStatus = z.enum(["new", "processing", "processed"]);
 export type MemoStatusType = z.infer<typeof MemoStatus>;
 
-/**
- * Child element for created timestamp.
- */
-export const MemoCreated = element("created", {
-  text: z.string().datetime({ offset: true }),
-});
-
-/**
- * Child element for memo content.
- * Text is optional for voice memos which may have empty content initially.
- */
-export const MemoContent = element("content", {
+const ContextEntry = z.object({
+  url: z.string().url().optional(),
+  title: z.string().optional(),
   text: z.string().optional(),
 });
 
-/**
- * Child element for optional source information.
- */
-export const MemoSource = element("source", {
+const TranscriptionEntry = z.object({
+  language: z.string().optional(),
+  "transcribed-at": z.string().datetime({ offset: true }).optional(),
   text: z.string(),
 });
 
-/**
- * Child element for context (URL, page title, selected text from browser).
- */
-export const MemoContext = element("context", {
-  attrs: {
-    url: z.string().url().optional(),
-    title: z.string().optional(),
-  },
-  text: z.string().optional(),
+const TranscriptionError = z.object({
+  permanent: z.boolean(),
+  code: z.string().optional(),
+  "attempted-at": z.string().datetime({ offset: true }).optional(),
+  message: z.string(),
 });
 
-/**
- * Child element for transcription (added by pre-action).
- */
-export const MemoTranscription = element("transcription", {
-  attrs: {
-    language: z.string().optional(),
-    "transcribed-at": z.string().datetime({ offset: true }).optional(),
-  },
-  text: z.string(),
-});
-
-/**
- * Child element for transcription error (added by pre-action).
- */
-export const MemoTranscriptionError = element("transcription-error", {
-  attrs: {
-    permanent: z.enum(["true", "false"]),
-    code: z.string().optional(),
-    "attempted-at": z.string().datetime({ offset: true }).optional(),
-  },
-  text: z.string(),
-});
-
-/**
- * Memo card schema.
- *
- * Text memo example:
- * ```xml
- * <memo status="new">
- * <created>2024-01-15T10:00:00Z</created>
- * <content>Test content here</content>
- * <source>text</source>
- * </memo>
- * ```
- *
- * Voice memo example (after transcription):
- * ```xml
- * <memo status="new">
- * <created>2024-01-15T10:00:00Z</created>
- * <content></content>
- * <source>voice</source>
- * <transcription language="en" transcribed-at="2024-01-15T10:01:00Z">
- * The transcribed text goes here.
- * </transcription>
- * </memo>
- * ```
- */
-export const MemoSchema = element("memo", {
-  attrs: {
+export const MemoSchema: CardSchema = cardSchema("memo", {
+  fields: {
     status: MemoStatus.default("new"),
+    created: z.string().datetime({ offset: true }),
+    source: z.string().optional(),
+    context: ContextEntry.optional(),
+    transcription: TranscriptionEntry.optional(),
+    "transcription-error": TranscriptionError.optional(),
+    body: body(z.string()),
   },
-  // Use loose array validation to allow transcription elements
-  children: z.array(
-    z.union([
-      MemoCreated,
-      MemoContent,
-      MemoSource,
-      MemoContext,
-      MemoTranscription,
-      MemoTranscriptionError,
-    ])
-  ),
   instructions: `# Memo Cards
 
-A memo is a text or voice note. It has a \`<content>\` element with the text, a \`<source>\` indicating origin ("text", "voice", "email", etc.), and optional \`<context ref="...">\` links to related cards.
+A memo is a text or voice note. The card's markdown body is the
+content of the note (the text the user wrote, or the transcribed
+audio).
 
-Voice memos have an attached audio file and a \`<transcription>\` child with the transcribed text. The \`<content>\` may be empty for voice memos — the transcription is the content. If \`<source>\` is "voice" and there's no \`<transcription>\`, the memo hasn't been transcribed yet.
+Frontmatter:
+- \`source:\` — origin of the memo: \`text\`, \`voice\`, \`email\`,
+  \`dropbox\`, \`telegram\`, etc.
+- \`context:\` — optional \`{url?, title?, text?}\` for memos that
+  originate from a browser selection or a referenced page.
+- \`transcription:\` — for voice memos: \`{text, language?, transcribed-at?}\`
+  set by the transcribe pre-action. The transcribed text also lands
+  in the body when the agent processes the memo.
+- \`transcription-error:\` — set if transcription failed; \`permanent: true\`
+  means don't retry.
 
-A \`<transcription-error permanent="true">\` means the audio cannot be transcribed — don't retry.
+If \`source: voice\` with no \`transcription:\` and no
+\`transcription-error:\`, the memo hasn't been transcribed yet —
+don't treat the empty body as empty content.
 
-Status: new → processing → processed.`,
+Status: \`new\` → \`processing\` → \`processed\`.`,
 });
 
-export type Memo = z.infer<typeof MemoSchema>;
+export interface MemoFields {
+  type: "memo";
+  status: MemoStatusType;
+  created: string;
+  source?: string;
+  context?: { url?: string; title?: string; text?: string };
+  transcription?: { text: string; language?: string; "transcribed-at"?: string };
+  "transcription-error"?: {
+    permanent: boolean;
+    code?: string;
+    "attempted-at"?: string;
+    message: string;
+  };
+  body: string;
+}
 
-export type MemoAttrs = Memo["attrs"];
+export interface MemoAttrs {
+  status: MemoStatusType;
+}
 
 /**
- * Memo loader — title is derived from the <content> text (truncated) or the
- * transcription for voice memos, falling back to the filename.
+ * Memo loader — title comes from the body (text content of the memo)
+ * or the transcription, falling back to the filename.
  */
 export const memoLoader: FileLoader<MemoAttrs> = (raw) => {
-  const el = raw.element;
   const fallback = titleFromFilename(raw.path);
-  if (!el) {
+  const fields = (raw as { fields?: Partial<MemoFields> }).fields;
+  if (fields === undefined) {
     return { path: raw.path, tagName: "memo", title: fallback, attrs: { status: "new" } };
   }
-
   let title = "";
-  for (const child of el.children) {
-    if (child.tagName === "content" && typeof child.text === "string" && child.text.trim()) {
-      title = child.text.trim();
-      break;
-    }
+  if (typeof fields.body === "string" && fields.body.trim() !== "") {
+    title = fields.body.trim();
+  } else if (fields.transcription?.text !== undefined && fields.transcription.text.trim() !== "") {
+    title = fields.transcription.text.trim();
   }
-  if (!title) {
-    for (const child of el.children) {
-      if (child.tagName === "transcription" && typeof child.text === "string" && child.text.trim()) {
-        title = child.text.trim();
-        break;
-      }
-    }
-  }
-  if (!title) title = fallback;
+  if (title === "") title = fallback;
   title = truncateTitle(title, 80);
-
-  const status = el.attrs["status"];
-  const attrs: MemoAttrs = {
-    status: (status === "new" || status === "processing" || status === "processed") ? status : "new",
+  return {
+    path: raw.path,
+    tagName: "memo",
+    title,
+    attrs: { status: fields.status ?? "new" },
   };
-
-  return { path: raw.path, tagName: "memo", title, attrs };
 };
 
-/**
- * Template for creating a new text memo card.
- */
+function buildMemoCard(input: {
+  content: string;
+  source?: string;
+  context?: { url?: string; title?: string; text?: string };
+  created?: string;
+}): string {
+  const fields: Record<string, unknown> = {
+    type: "memo",
+    status: "new",
+    created: input.created ?? new Date().toISOString(),
+  };
+  if (input.source !== undefined && input.source !== "") {
+    fields["source"] = input.source;
+  }
+  if (input.context !== undefined) {
+    const ctx: Record<string, unknown> = {};
+    if (input.context.url !== undefined) ctx["url"] = input.context.url;
+    if (input.context.title !== undefined) ctx["title"] = input.context.title;
+    if (input.context.text !== undefined) ctx["text"] = input.context.text;
+    if (Object.keys(ctx).length > 0) fields["context"] = ctx;
+  }
+  const yamlText = stringifyYaml(fields);
+  const bodyTail = input.content === ""
+    ? ""
+    : `${input.content}${input.content.endsWith("\n") ? "" : "\n"}`;
+  return `---\n${yamlText}---\n${bodyTail}`;
+}
+
 export function createMemoTemplate(content: string, source?: string): string {
-  const now = new Date().toISOString();
-  const sourceElement = source ? `\n<source>${escapeText(source)}</source>` : "";
-
-  return `<memo status="new">
-<created>${now}</created>
-<content>${escapeText(content)}</content>${sourceElement}
-</memo>
-`;
+  return buildMemoCard({
+    content,
+    ...(source !== undefined && { source }),
+  });
 }
 
-/**
- * Template for creating a voice memo card (audio will be attached separately).
- */
 export function createVoiceMemoTemplate(): string {
-  const now = new Date().toISOString();
-
-  return `<memo status="new">
-<created>${now}</created>
-<content></content>
-<source>voice</source>
-</memo>
-`;
+  return buildMemoCard({ content: "", source: "voice" });
 }
 
-/**
- * Template for creating a memo card from the browser extension (legacy dropbox name).
- */
 export function createDropboxMemoTemplate(options: {
   content: string;
   timestamp?: string | undefined;
   context?: { url?: string | undefined; title?: string | undefined; selectedText?: string | undefined } | undefined;
 }): string {
-  const created = options.timestamp || new Date().toISOString();
-  let contextElement = "";
-  if (options.context) {
-    const attrs: string[] = [];
-    if (options.context.url) attrs.push(` url="${escapeAttr(options.context.url)}"`);
-    if (options.context.title) attrs.push(` title="${escapeAttr(options.context.title)}"`);
-    const text = options.context.selectedText ? escapeText(options.context.selectedText) : "";
-    contextElement = `\n<context${attrs.join("")}>${text}</context>`;
-  }
-
-  return `<memo status="new">
-<created>${created}</created>
-<content>${escapeText(options.content)}</content>
-<source>dropbox</source>${contextElement}
-</memo>
-`;
+  const context = options.context === undefined
+    ? undefined
+    : {
+        ...(options.context.url !== undefined && { url: options.context.url }),
+        ...(options.context.title !== undefined && { title: options.context.title }),
+        ...(options.context.selectedText !== undefined && { text: options.context.selectedText }),
+      };
+  return buildMemoCard({
+    content: options.content,
+    source: "dropbox",
+    ...(context !== undefined && { context }),
+    ...(options.timestamp !== undefined && { created: options.timestamp }),
+  });
 }

@@ -1,11 +1,24 @@
-import type { Card } from "cardworks";
-import type { ICardLoader } from "cardworks";
+import type { Card, ICardLoader, CardSchema } from "cardworks";
 
-export interface PreActionContext {
+/**
+ * Context for a pre-action invocation. Exactly one of `xml` or
+ * `frontmatter` is present, depending on whether the card was loaded
+ * via cardworks's XML loader (Phase 1) or via the frontmatter card-io
+ * dispatcher (Phase 2).
+ */
+export type PreActionContext = PreActionContextBase &
+  ({ xml: { card: Card } } | { frontmatter: PreActionFrontmatter });
+
+export interface PreActionFrontmatter {
+  schema: CardSchema;
+  fields: Record<string, unknown>;
+}
+
+interface PreActionContextBase {
   boxRoot: string;
   loader: ICardLoader;
-  card: Card;
   cardPath: string;
+  cardType: string;
 }
 
 export interface PreActionResult {
@@ -28,8 +41,9 @@ export interface PreAction {
   shouldRun(context: PreActionContext): Promise<boolean>;
 
   /**
-   * Execute the pre-action.
-   * Should modify the card in place and return the result.
+   * Execute the pre-action. Implementations branch on
+   * `"xml" in context` vs `"frontmatter" in context` to mutate the
+   * right shape. The runner persists the result.
    */
   execute(context: PreActionContext): Promise<PreActionResult>;
 }

@@ -52,7 +52,6 @@ import { registerTemplate, type TemplateDefinition } from "./templates.js";
  * All built-in card schemas.
  */
 export const schemas: ElementSchema[] = [
-  MemoSchema,
   QuestionSchema,
   NewsItemSchema,
   NewsSummarySchema,
@@ -95,6 +94,7 @@ export const cardSchemas: CardSchema[] = [
   AudioSchema,
   RecordSchema,
   PersonSchema,
+  MemoSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */

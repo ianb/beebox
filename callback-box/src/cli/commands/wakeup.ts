@@ -302,11 +302,9 @@ async function runPreprocessors(boxRoot: string): Promise<number> {
 
   for (const item of state.inbox) {
     try {
-      const card = await loader.load(item.path);
       const results = await runPreActions({
         boxRoot,
         loader,
-        card,
         cardPath: item.path,
       });
 

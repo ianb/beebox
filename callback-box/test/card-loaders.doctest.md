@@ -23,13 +23,16 @@ function textChild(tagName: string, text: string): ElementNode {
 }
 ```
 
-## Memo — title from `<content>`
+## Memo — title from body
 
 ```
-const memo = el("memo", { status: "new" }, [
-  textChild("content", "Pick up milk on the way home."),
-]);
-const s = memoLoader({ path: "box/inbox/Groceries.memo.card", element: memo });
+const m1 = {
+  type: "memo",
+  status: "new",
+  created: "2024-01-15T10:00:00Z",
+  body: "Pick up milk on the way home.",
+};
+const s = memoLoader({ path: "box/inbox/Groceries.memo.card", fields: m1 });
 s.title
 => Pick up milk on the way home.
 
@@ -40,32 +43,43 @@ JSON.stringify(s.attrs)
 => {"status":"new"}
 ```
 
-## Memo — falls back to `<transcription>` when content is empty
+## Memo — falls back to `transcription.text` when body is empty
 
 ```
-const memo = el("memo", { status: "processing" }, [
-  textChild("content", ""),
-  textChild("transcription", "This is the transcribed audio."),
-]);
-memoLoader({ path: "Voice.memo.card", element: memo }).title
+const m2 = {
+  type: "memo",
+  status: "processing",
+  created: "2024-01-15T10:00:00Z",
+  body: "",
+  transcription: { text: "This is the transcribed audio." },
+};
+memoLoader({ path: "Voice.memo.card", fields: m2 }).title
 => This is the transcribed audio.
 ```
 
 ## Memo — filename fallback when neither is present
 
 ```
-const memo = el("memo", { status: "new" });
-memoLoader({ path: "box/inbox/Blank_Thought.memo.card", element: memo }).title
+const m3 = {
+  type: "memo",
+  status: "new",
+  created: "2024-01-15T10:00:00Z",
+  body: "",
+};
+memoLoader({ path: "box/inbox/Blank_Thought.memo.card", fields: m3 }).title
 => Blank Thought
 ```
 
 ## Memo — truncates long titles
 
 ```
-const memo = el("memo", { status: "new" }, [
-  textChild("content", "a".repeat(200)),
-]);
-const s = memoLoader({ path: "x.memo.card", element: memo });
+const m4 = {
+  type: "memo",
+  status: "new",
+  created: "2024-01-15T10:00:00Z",
+  body: "a".repeat(200),
+};
+const s = memoLoader({ path: "x.memo.card", fields: m4 });
 s.title.length
 => 80
 
@@ -73,11 +87,11 @@ s.title.endsWith("…")
 => true
 ```
 
-## Memo — invalid status collapses to "new"
+## Memo — defaults to "new" when fields are missing
 
 ```
-const memo = el("memo", { status: "bogus" }, [textChild("content", "x")]);
-JSON.stringify(memoLoader({ path: "x.memo.card", element: memo }).attrs)
+const s = memoLoader({ path: "x.memo.card" });
+JSON.stringify(s.attrs)
 => {"status":"new"}
 ```
 

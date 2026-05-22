@@ -18,7 +18,28 @@ import {
   getDefaultTemplate,
   getTemplateNames,
 } from "../../schemas/index.js";
-import { createLoader } from "../../cli/lib/loader.js";
+import { loadCardFromText } from "../card-io.js";
+import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
+import type { ElementSchema } from "cardworks";
+
+async function validateGeneratedCard(input: {
+  boxRoot: string;
+  content: string;
+  fullPath: string;
+}): Promise<void> {
+  const { boxRoot, content, fullPath } = input;
+  const registry = await createSchemaRegistry(boxRoot);
+  const elementSchemas = new Map<string, ElementSchema>();
+  for (const tag of registry.tagNames()) {
+    const s = registry.get(tag);
+    if (s) elementSchemas.set(tag, s as ElementSchema);
+  }
+  await loadCardFromText({
+    content,
+    source: fullPath,
+    ctx: { cardSchemas: createCardSchemaMap(), elementSchemas },
+  });
+}
 
 /**
  * Arguments for the create command.
@@ -120,10 +141,12 @@ async function executeCreate(
   // Generate content from template
   const content = template.generate(parseResult.data);
 
-  // Validate the generated content in memory before writing
+  // Validate the generated content in memory before writing. Use the
+  // card-io dispatcher so frontmatter (Phase 2) cards are validated
+  // against their CardSchema, and XML (Phase 1) cards still go
+  // through cardworks's loader.
   try {
-    const loader = await createLoader(ctx.boxRoot);
-    await loader.validateContent(content, fullPath);
+    await validateGeneratedCard({ boxRoot: ctx.boxRoot, content, fullPath });
   } catch (err) {
     return {
       success: false,

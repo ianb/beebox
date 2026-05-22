@@ -6,66 +6,71 @@
  * - Transcribe voice memos
  * - Extract text from images (OCR)
  * - Parse email attachments
+ *
+ * Pre-actions work against both shapes of card:
+ * - Phase 1 XML-bodied cards (loaded via cardworks ICardLoader)
+ * - Phase 2 frontmatter cards (loaded via card-io)
+ *
+ * The runner dispatches based on what `loadCardFile` returns; the
+ * pre-action's `execute()` branches on `"xml" in ctx` vs
+ * `"frontmatter" in ctx`.
  */
 
+import { writeFile } from "node:fs/promises";
+import { stringify as stringifyYaml } from "yaml";
+import type { ICardLoader, ElementSchema } from "cardworks";
 import type { PreAction, PreActionContext, PreActionResult } from "./types.js";
+import { loadCardFile } from "../card-io.js";
+import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
 
-// Import and register pre-actions
 import { transcribePreAction } from "./transcribe.js";
 
-export type { PreAction, PreActionContext, PreActionResult };
+export type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 
 const registry: PreAction[] = [];
 
-/**
- * Register a pre-action.
- */
 export function registerPreAction(action: PreAction): void {
   registry.push(action);
 }
 
-/**
- * Get all registered pre-actions.
- */
 export function getPreActions(): PreAction[] {
   return [...registry];
 }
 
-/**
- * Get pre-actions that apply to a given card type.
- */
 export function getPreActionsForType(cardType: string): PreAction[] {
   return registry.filter((a) => a.appliesTo.includes(cardType));
 }
 
 /**
- * Run all applicable pre-actions for a card.
- *
- * @param context - The pre-action context
- * @returns Results from all pre-actions that ran
+ * Run all applicable pre-actions for a card. Returns one result per
+ * action that ran (skipping ones that decline via `shouldRun`).
  */
-export async function runPreActions(
-  context: PreActionContext
-): Promise<Array<{ name: string; result: PreActionResult }>> {
-  const cardType = context.card.element.tagName;
-  const applicable = getPreActionsForType(cardType);
+export async function runPreActions(input: {
+  boxRoot: string;
+  loader: ICardLoader;
+  cardPath: string;
+}): Promise<Array<{ name: string; result: PreActionResult }>> {
+  const { boxRoot, loader, cardPath } = input;
+  const ctx = await buildContext({ boxRoot, loader, cardPath });
+  if (ctx === null) return [];
+
+  const applicable = getPreActionsForType(ctx.cardType);
   const results: Array<{ name: string; result: PreActionResult }> = [];
 
   for (const action of applicable) {
     try {
-      if (await action.shouldRun(context)) {
+      if (await action.shouldRun(ctx)) {
         console.log(`  Running pre-action: ${action.name}`);
-        const result = await action.execute(context);
+        const result = await action.execute(ctx);
         results.push({ name: action.name, result });
 
         if (result.modified) {
-          // Save the card after modification
-          await context.loader.save(context.card);
+          await persistContext(ctx);
         }
 
-        if (result.error) {
+        if (result.error !== undefined && result.error !== "") {
           console.log(`    Error: ${result.error}`);
-        } else if (result.message) {
+        } else if (result.message !== undefined && result.message !== "") {
           console.log(`    ${result.message}`);
         }
       }
@@ -73,14 +78,63 @@ export async function runPreActions(
       console.error(`  Pre-action ${action.name} failed:`, error);
       results.push({
         name: action.name,
-        result: {
-          modified: false,
-          error: (error as Error).message,
-        },
+        result: { modified: false, error: (error as Error).message },
       });
     }
   }
 
   return results;
 }
+
+async function buildContext(input: {
+  boxRoot: string;
+  loader: ICardLoader;
+  cardPath: string;
+}): Promise<PreActionContext | null> {
+  const { boxRoot, loader, cardPath } = input;
+
+  // Try frontmatter (Phase 2) first; if the file isn't a CardSchema card
+  // it will fall through to the XML path on its own.
+  const schemaRegistry = await createSchemaRegistry(boxRoot);
+  const elementSchemas = new Map<string, ElementSchema>();
+  for (const tag of schemaRegistry.tagNames()) {
+    const s = schemaRegistry.get(tag);
+    if (s) elementSchemas.set(tag, s as ElementSchema);
+  }
+  try {
+    const loaded = await loadCardFile(cardPath, {
+      cardSchemas: createCardSchemaMap(),
+      elementSchemas,
+    });
+    if (loaded.kind === "frontmatter") {
+      return {
+        boxRoot,
+        loader,
+        cardPath,
+        cardType: loaded.schema.type,
+        frontmatter: { schema: loaded.schema, fields: loaded.fields },
+      };
+    }
+    // XML branch
+    return {
+      boxRoot,
+      loader,
+      cardPath,
+      cardType: loaded.element.tagName,
+      xml: { card: await loader.load(cardPath) },
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function persistContext(ctx: PreActionContext): Promise<void> {
+  if ("xml" in ctx) {
+    await ctx.loader.save(ctx.xml.card);
+    return;
+  }
+  // Frontmatter path: rewrite the file with the (possibly mutated) fields.
+  await writeFile(ctx.cardPath, `---\n${stringifyYaml(ctx.frontmatter.fields)}---\n`);
+}
+
 registerPreAction(transcribePreAction);

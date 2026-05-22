@@ -36,7 +36,7 @@ export {
 } from "./registry.js";
 
 // Re-export individual schema types
-export type { Memo, MemoStatus } from "./memo.js";
+export type { MemoFields, MemoStatusType } from "./memo.js";
 export type { Question, QuestionStatus, QuestionInputType } from "./question.js";
 export type { NewsItem, NewsItemStatus } from "./news-item.js";
 export type { NewsSummary, NewsSummaryStatus } from "./news-summary.js";

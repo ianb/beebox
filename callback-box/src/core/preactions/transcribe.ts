@@ -1,275 +1,227 @@
 /**
  * Transcribe voice content pre-action.
  *
- * Looks for cards with audio attachments and transcribes them
- * using OpenAI Whisper API.
+ * Looks for cards with audio attachments and transcribes them via OpenAI
+ * Whisper. Works on memo (Phase 2 frontmatter) and feedback (still
+ * XML); the audio attachment lives as a sibling file sharing the card's
+ * basename.
  *
- * Works with any card type that:
- * - Has an audio attachment (shares basename with card)
- * - Uses <source>voice</source> to indicate voice input
- * - Uses <transcription> and <transcription-error> elements
- *
- * Currently supports: memo, feedback
+ * `audio` was historically handled here too; that path is dead now —
+ * capture-session audio is transcribed by `cb transcribe-captures`
+ * which uses the per-audio-card attach scope.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { PreAction, PreActionContext, PreActionResult } from "./types.js";
+import type { PreAction, PreActionContext } from "./types.js";
 import { transcribeAudio, type TranscriptionError } from "../transcription.js";
 import type { ElementNode } from "cardworks";
 
-/** Audio file extensions we can transcribe */
+/** Audio file extensions we can transcribe. */
 const AUDIO_EXTENSIONS = [".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac"];
+
+interface TranscriptionFields {
+  language: string;
+  "transcribed-at": string;
+  text: string;
+}
+
+interface TranscriptionErrorFields {
+  permanent: boolean;
+  code?: string;
+  "attempted-at": string;
+  message: string;
+}
 
 export const transcribePreAction: PreAction = {
   name: "transcribe-voice",
-  appliesTo: ["memo", "feedback", "audio"],
+  appliesTo: ["memo", "feedback"],
 
-  async shouldRun(context: PreActionContext): Promise<boolean> {
-    const { card, cardPath } = context;
-    const element = card.element;
-    const isAudioCard = element.tagName === "audio";
-
-    // Check if it's a voice memo (has audio attachment)
-    const audioFile = await findAudioAttachment(cardPath);
-    if (!audioFile) {
-      return false;
+  async shouldRun(ctx: PreActionContext): Promise<boolean> {
+    const audioFile = await findAudioAttachment(ctx.cardPath);
+    if (audioFile === null) return false;
+    if ("frontmatter" in ctx) {
+      const fields = ctx.frontmatter.fields;
+      if (fields["transcription"] !== undefined) return false;
+      if (isPermanentError(fields["transcription-error"])) return false;
+      return true;
     }
-
-    // Check if already transcribed
-    if (isAudioCard ? hasTranscript(element) : hasTranscription(element)) {
-      return false;
-    }
-
-    // Check if there's a permanent error
-    if (hasPermanentError(element)) {
-      return false;
-    }
-
+    const element = ctx.xml.card.element;
+    if (hasXmlTranscription(element)) return false;
+    if (hasXmlPermanentError(element)) return false;
     return true;
   },
 
-  async execute(context: PreActionContext): Promise<PreActionResult> {
-    const { card, cardPath } = context;
-    const element = card.element;
-    const isAudioCard = element.tagName === "audio";
-
-    // Find the audio file
-    const audioFile = await findAudioAttachment(cardPath);
-    if (!audioFile) {
+  async execute(ctx: PreActionContext) {
+    const audioFile = await findAudioAttachment(ctx.cardPath);
+    if (audioFile === null) {
       return { modified: false, error: "No audio attachment found" };
     }
 
     try {
-      // Read the audio file
       const audioBuffer = await fs.readFile(audioFile);
       const filename = path.basename(audioFile);
-
-      // Get any existing content for context
-      const existingContent = getExistingContent(element);
-      // Transcribe
+      const existingContent = "frontmatter" in ctx
+        ? getFrontmatterContent(ctx.frontmatter.fields)
+        : getXmlContent(ctx.xml.card.element);
       const result = await transcribeAudio({
         audioBuffer,
         filename,
-        ...(existingContent && { prompt: existingContent }),
-        boxRoot: context.boxRoot,
+        ...(existingContent !== null && { prompt: existingContent }),
+        boxRoot: ctx.boxRoot,
       });
 
-      // Add transcription to the card
-      if (isAudioCard) {
-        addTranscript({ element, text: result.text });
+      if ("frontmatter" in ctx) {
+        applyFrontmatterTranscription({ fields: ctx.frontmatter.fields, text: result.text, language: result.language });
       } else {
-        addTranscription({ element, text: result.text, language: result.language });
+        applyXmlTranscription({ element: ctx.xml.card.element, text: result.text, language: result.language });
       }
 
       return {
         modified: true,
-        message: `Transcribed ${Math.round(result.duration)}s of audio`,
+        message: `Transcribed ${String(Math.round(result.duration))}s of audio`,
       };
     } catch (error) {
       const transcriptionError = error as TranscriptionError;
-
-      // Record the error in the card
-      addTranscriptionError({
-        element,
-        message: transcriptionError.message,
-        permanent: transcriptionError.permanent,
-        ...(transcriptionError.code && { code: transcriptionError.code }),
-      });
-
-      return {
-        modified: true, // We modified the card to add the error
-        error: transcriptionError.message,
-      };
+      const attemptedAt = new Date().toISOString();
+      if ("frontmatter" in ctx) {
+        applyFrontmatterError(ctx.frontmatter.fields, {
+          permanent: transcriptionError.permanent,
+          ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
+          "attempted-at": attemptedAt,
+          message: transcriptionError.message,
+        });
+      } else {
+        applyXmlError(ctx.xml.card.element, {
+          permanent: transcriptionError.permanent,
+          ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
+          attemptedAt,
+          message: transcriptionError.message,
+        });
+      }
+      return { modified: true, error: transcriptionError.message };
     }
   },
 };
 
-/**
- * Find an audio attachment for a card.
- * Attachments share the same basename as the card.
- */
+// ─── Audio attachment discovery ─────────────────────────────────────────────
+
 async function findAudioAttachment(cardPath: string): Promise<string | null> {
   const dir = path.dirname(cardPath);
   const basename = path.basename(cardPath, ".card");
-  // Remove the .type part too (e.g., "Voice_Memo.memo" -> "Voice_Memo")
   const nameParts = basename.split(".");
   const name = nameParts.slice(0, -1).join(".") || basename;
-
   for (const ext of AUDIO_EXTENSIONS) {
     const audioPath = path.join(dir, name + ext);
     try {
       await fs.access(audioPath);
       return audioPath;
     } catch {
-      // File doesn't exist, try next extension
+      // try next extension
     }
   }
-
   return null;
 }
 
-/**
- * Check if the memo already has a transcription.
- */
-function hasTranscription(element: ElementNode): boolean {
-  const children = element.children as ElementNode[];
+// ─── Frontmatter (Phase 2) helpers ──────────────────────────────────────────
+
+function isPermanentError(raw: unknown): boolean {
+  if (raw === null || typeof raw !== "object") return false;
+  const e = raw as Record<string, unknown>;
+  return e["permanent"] === true;
+}
+
+function getFrontmatterContent(fields: Record<string, unknown>): string | null {
+  if (typeof fields["body"] === "string" && fields["body"].trim() !== "") {
+    return fields["body"];
+  }
+  return null;
+}
+
+function applyFrontmatterTranscription(input: {
+  fields: Record<string, unknown>;
+  text: string;
+  language: string;
+}): void {
+  const { fields, text, language } = input;
+  delete fields["transcription-error"];
+  const entry: TranscriptionFields = {
+    language,
+    "transcribed-at": new Date().toISOString(),
+    text,
+  };
+  fields["transcription"] = entry;
+}
+
+function applyFrontmatterError(
+  fields: Record<string, unknown>,
+  err: TranscriptionErrorFields,
+): void {
+  fields["transcription-error"] = err;
+}
+
+// ─── XML (Phase 1) helpers ──────────────────────────────────────────────────
+
+function hasXmlTranscription(element: ElementNode): boolean {
+  const children = element.children;
   return children.some((c) => c.tagName === "transcription");
 }
 
-/**
- * Check if an audio card already has a non-empty transcript.
- */
-function hasTranscript(element: ElementNode): boolean {
-  const children = element.children as ElementNode[];
-  const transcript = children.find((c) => c.tagName === "transcript");
-  if (!transcript) return false;
-  // Empty <transcript/> doesn't count — that's an untranscribed card from the old template
-  return Boolean(transcript.text?.trim());
+function hasXmlPermanentError(element: ElementNode): boolean {
+  const errEl = element.children.find((c) => c.tagName === "transcription-error");
+  return errEl !== undefined && errEl.attrs["permanent"] === "true";
 }
 
-/**
- * Check if the memo has a permanent transcription error.
- */
-function hasPermanentError(element: ElementNode): boolean {
-  const children = element.children as ElementNode[];
-  const errorEl = children.find((c) => c.tagName === "transcription-error");
-  if (!errorEl) {
-    return false;
-  }
-  return errorEl.attrs["permanent"] === "true";
+function getXmlContent(element: ElementNode): string | null {
+  const contentEl = element.children.find((c) => c.tagName === "content");
+  return contentEl?.text === undefined || contentEl.text === "" ? null : contentEl.text;
 }
 
-/**
- * Get existing content from the memo for context.
- */
-function getExistingContent(element: ElementNode): string | null {
-  const children = element.children as ElementNode[];
-  const contentEl = children.find((c) => c.tagName === "content");
-  return contentEl?.text ?? null;
-}
-
-/**
- * Parameters for addTranscription
- */
-interface AddTranscriptionParams {
+function applyXmlTranscription(input: {
   element: ElementNode;
   text: string;
   language: string;
-}
-
-/**
- * Add transcription to a memo element.
- */
-function addTranscription(params: AddTranscriptionParams): void {
-  const { element, text, language } = params;
-  const children = element.children as ElementNode[];
-
-  // Remove any previous transcription error
+}): void {
+  const { element, text, language } = input;
+  const children = element.children;
   const errorIndex = children.findIndex((c) => c.tagName === "transcription-error");
   if (errorIndex !== -1) {
     children.splice(errorIndex, 1);
   }
-
-  // Add transcription element
-  const transcriptionEl: ElementNode = {
+  children.push({
     tagName: "transcription",
-    attrs: {
-      language,
-      "transcribed-at": new Date().toISOString(),
-    },
+    attrs: { language, "transcribed-at": new Date().toISOString() },
     children: [],
     text,
     location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
     comments: {},
     dirty: true,
-  };
-
-  children.push(transcriptionEl);
-}
-
-/**
- * Add transcript to an audio card element and set status to transcribed.
- */
-function addTranscript(params: { element: ElementNode; text: string }): void {
-  const { element, text } = params;
-  const children = element.children as ElementNode[];
-
-  // Add transcript element
-  const transcriptEl: ElementNode = {
-    tagName: "transcript",
-    attrs: {},
-    children: [],
-    text,
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    comments: {},
-    dirty: true,
-  };
-
-  children.push(transcriptEl);
-
-  // Set status to transcribed
-  element.attrs["status"] = "transcribed";
+  });
   element.dirty = true;
 }
 
-/**
- * Parameters for addTranscriptionError
- */
-interface AddTranscriptionErrorParams {
-  element: ElementNode;
-  message: string;
-  permanent: boolean;
-  code?: string;
-}
-
-/**
- * Add a transcription error to a memo element.
- */
-function addTranscriptionError(params: AddTranscriptionErrorParams): void {
-  const { element, message, permanent, code } = params;
-  const children = element.children as ElementNode[];
-
-  // Remove any previous error
+function applyXmlError(
+  element: ElementNode,
+  err: { permanent: boolean; code?: string; attemptedAt: string; message: string },
+): void {
+  const children = element.children;
   const errorIndex = children.findIndex((c) => c.tagName === "transcription-error");
   if (errorIndex !== -1) {
     children.splice(errorIndex, 1);
   }
-
-  // Add error element
-  const errorEl: ElementNode = {
+  const attrs: Record<string, string> = {
+    permanent: err.permanent ? "true" : "false",
+    code: err.code ?? "unknown",
+    "attempted-at": err.attemptedAt,
+  };
+  children.push({
     tagName: "transcription-error",
-    attrs: {
-      permanent: permanent ? "true" : "false",
-      code: code ?? "unknown",
-      "attempted-at": new Date().toISOString(),
-    },
+    attrs,
     children: [],
-    text: message,
+    text: err.message,
     location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
     comments: {},
     dirty: true,
-  };
-
-  children.push(errorEl);
+  });
+  element.dirty = true;
 }

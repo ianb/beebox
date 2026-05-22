@@ -40,10 +40,11 @@ getCardTypes().includes("calendar-review-job")
 
 ```
 
-Schemas have a `tagName` matching the XML element:
+XML schemas have a `tagName`; Phase 2 frontmatter schemas (memo,
+email-thread, etc.) carry a `type` instead.
 
 ```
-MemoSchema.tagName
+MemoSchema.type
 => memo
 
 QuestionSchema.tagName
@@ -51,13 +52,10 @@ QuestionSchema.tagName
 
 ```
 
-The full registry is available via `createSchemaRegistry()`:
+The full registry of XML schemas is available via `createSchemaRegistry()`:
 
 ```
 const registry = await createSchemaRegistry();
-registry.get("memo")?.tagName
-=> memo
-
 registry.get("question")?.tagName
 => question
 ```
@@ -68,16 +66,20 @@ Template generators produce XML card content for the core card types. All templa
 
 ## Memo
 
-A memo captures a piece of content, optionally with a source:
+A memo captures a piece of content, optionally with a source. The
+content lives in the markdown body; created/source/etc. are in the
+YAML frontmatter.
 
 ```
 createMemoTemplate("Test content", "test-source")
 =>
-<memo status="new">
-<created>«date»</created>
-<content>Test content</content>
-<source>test-source</source>
-</memo>
+---
+type: memo
+status: new
+created: «*»
+source: test-source
+---
+Test content
 ```
 
 Source is optional:
@@ -85,21 +87,26 @@ Source is optional:
 ```
 createMemoTemplate("Just content")
 =>
-<memo status="new">
-<created>«date»</created>
-<content>Just content</content>
-</memo>
+---
+type: memo
+status: new
+created: «*»
+---
+Just content
 ```
 
-Special characters in content are XML-escaped:
+Special characters in content pass through verbatim — markdown bodies
+don't need XML-style escaping:
 
 ```
 createMemoTemplate("Test <content> & more")
 =>
-<memo status="new">
-<created>«date»</created>
-<content>Test &lt;content&gt; &amp; more</content>
-</memo>
+---
+type: memo
+status: new
+created: «*»
+---
+Test <content> & more
 ```
 
 ## Question
