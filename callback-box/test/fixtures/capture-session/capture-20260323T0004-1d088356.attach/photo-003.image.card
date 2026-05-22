@@ -1,4 +1,8 @@
-<image status="new">
-<filename ref="attach/photo-003.jpg" captured="2026-03-23T00:05:22.785Z" source="camera-environment"/>
-<description/>
-</image>
+---
+type: image
+status: new
+filename:
+  ref: attach/photo-003.jpg
+  captured: 2026-03-23T00:05:22.785Z
+  source: camera-environment
+---

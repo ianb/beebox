@@ -20,7 +20,37 @@ import { registerCommand } from "../command-runner.js";
 import { getBoxDir } from "../../cli/lib/paths.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import type { ElementNode } from "cardworks";
+import { parseCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import type { ImageFields } from "../../schemas/image.js";
+import type { AudioFields } from "../../schemas/audio.js";
 import { attachDirFor, resolveAttachRef } from "../../lib/attach-path.js";
+
+async function readImageCard(cardPath: string): Promise<ImageFields | null> {
+  try {
+    const content = await fs.readFile(cardPath, "utf-8");
+    const parsed = parseCardText(content, {
+      source: cardPath,
+      schemas: createCardSchemaMap(),
+    });
+    return parsed.fields as unknown as ImageFields;
+  } catch {
+    return null;
+  }
+}
+
+async function readAudioCard(cardPath: string): Promise<AudioFields | null> {
+  try {
+    const content = await fs.readFile(cardPath, "utf-8");
+    const parsed = parseCardText(content, {
+      source: cardPath,
+      schemas: createCardSchemaMap(),
+    });
+    return parsed.fields as unknown as AudioFields;
+  } catch {
+    return null;
+  }
+}
 
 interface TimedWord {
   word: string;
@@ -94,8 +124,8 @@ registerCommand({
       const audioCards = attachFiles.filter((f) => f.endsWith(".audio.card"));
       let allAudioReady = true;
       for (const ac of audioCards) {
-        const acCard = await loader.load(path.join(sessionAttachDir, ac));
-        if (acCard.element.attrs["status"] !== "transcribed") {
+        const fields = await readAudioCard(path.join(sessionAttachDir, ac));
+        if (!fields || fields.status !== "transcribed") {
           allAudioReady = false;
           break;
         }
@@ -109,9 +139,8 @@ registerCommand({
       const imageCards = attachFiles.filter((f) => f.endsWith(".image.card"));
       let allImagesReady = true;
       for (const ic of imageCards) {
-        const icCard = await loader.load(path.join(sessionAttachDir, ic));
-        const status = icCard.element.attrs["status"] as string;
-        if (status !== "analyzed" && status !== "invalid") {
+        const fields = await readImageCard(path.join(sessionAttachDir, ic));
+        if (!fields || (fields.status !== "analyzed" && fields.status !== "invalid")) {
           allImagesReady = false;
           break;
         }
@@ -128,12 +157,9 @@ registerCommand({
 
       for (const ac of audioCards) {
         const audioCardPath = path.join(sessionAttachDir, ac);
-        const acCard = await loader.load(audioCardPath);
-        const acChildren = acCard.element.children as ElementNode[];
-        const filenameEl = acChildren.find((c) => c.tagName === "filename");
-        if (!filenameEl) continue;
-
-        const recordedAt = filenameEl.attrs["recorded"] as string;
+        const acFields = await readAudioCard(audioCardPath);
+        if (!acFields) continue;
+        const recordedAt = acFields.filename.recorded;
         const recordedMs = new Date(recordedAt).getTime();
 
         // Load timing JSON from the audio card's own attach scope
@@ -165,17 +191,12 @@ registerCommand({
 
       for (const ic of imageCards) {
         const imageCardPath = path.join(sessionAttachDir, ic);
-        const icCard = await loader.load(imageCardPath);
-        const icEl = icCard.element;
-        if (icEl.attrs["status"] === "invalid") continue;
+        const icFields = await readImageCard(imageCardPath);
+        if (!icFields) continue;
+        if (icFields.status === "invalid") continue;
 
-        const icChildren = icEl.children as ElementNode[];
-        const filenameEl = icChildren.find((c) => c.tagName === "filename");
-        const descriptionEl = icChildren.find((c) => c.tagName === "description");
-        if (!filenameEl) continue;
-
-        const capturedAt = filenameEl.attrs["captured"] as string;
-        const imageRef = filenameEl.attrs["ref"] as string;
+        const capturedAt = icFields.filename.captured;
+        const imageRef = icFields.filename.ref;
         const resolvedImagePath = resolveAttachRef(imageCardPath, imageRef);
         const imageFilename = resolvedImagePath
           ? path.basename(resolvedImagePath)
@@ -184,7 +205,7 @@ registerCommand({
         allImages.push({
           // Session-scope ref points at the image card inside the session's attach
           ref: `attach/${ic}`,
-          description: descriptionEl?.text?.trim() || "",
+          description: (icFields.description ?? "").trim(),
           filename: imageFilename,
           absoluteTime: new Date(capturedAt).getTime(),
         });

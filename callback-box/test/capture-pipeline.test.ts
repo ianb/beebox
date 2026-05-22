@@ -16,10 +16,13 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { stringify as stringifyYaml } from "yaml";
 import { test } from "tap";
-import type { ElementNode } from "cardworks";
-import { createLoader } from "../src/cli/lib/loader.js";
 import { runCommand, createCollectorContext } from "../src/core/command-runner.js";
+import { parseCardText, serializeCardText } from "../src/core/card-io.js";
+import { createCardSchemaMap } from "../src/schemas/registry.js";
+import type { AudioFields } from "../src/schemas/audio.js";
+import type { ImageFields } from "../src/schemas/image.js";
 // Import commands to register them
 import "../src/core/commands/assemble-timeline.js";
 import {
@@ -72,27 +75,23 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   t.ok(transcriptionResult.duration > 0, "transcription has duration");
 
   // Apply transcription to card (same logic as transcribe-captures command)
-  const loader = await createLoader(box.root);
   const attachRelDir = join("box/inbox", `${CAPTURE_DIR_NAME}.attach`);
-  const audioCard = await loader.load(box.path(join(attachRelDir, "audio-001.audio.card")));
-  const audioEl = audioCard.element;
-  const audioChildren = audioEl.children as ElementNode[];
-
-  const transcriptEl = audioChildren.find((c) => c.tagName === "transcript");
-  if (transcriptEl) {
-    transcriptEl.text = transcriptionResult.text;
-    transcriptEl.dirty = true;
+  {
+    const cardPath = box.path(join(attachRelDir, "audio-001.audio.card"));
+    const content = await readFile(cardPath, "utf-8");
+    const parsed = parseCardText(content, {
+      source: cardPath,
+      schemas: createCardSchemaMap(),
+    });
+    const fields = parsed.fields as unknown as AudioFields;
+    fields.transcript = transcriptionResult.text;
+    fields.filename.duration = `${String(Math.round(transcriptionResult.duration))}s`;
+    fields.status = "transcribed";
+    await writeFile(cardPath, serializeCardText({
+      schema: parsed.schema,
+      fields: fields as unknown as Record<string, unknown>,
+    }));
   }
-
-  const filenameEl = audioChildren.find((c) => c.tagName === "filename");
-  if (filenameEl) {
-    filenameEl.attrs["duration"] = `${Math.round(transcriptionResult.duration)}s`;
-    filenameEl.dirty = true;
-  }
-
-  audioEl.attrs["status"] = "transcribed";
-  audioEl.dirty = true;
-  await loader.save(audioCard);
 
   // Write timing JSON sidecar inside the audio card's own attach scope
   const audioCardAttachDir = join(sessionAttachDir, "audio-001.attach");
@@ -105,8 +104,8 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
 
   // Verify card was updated
   const updatedAudioCard = await box.read(join(attachRelDir, "audio-001.audio.card"));
-  t.ok(updatedAudioCard.includes('status="transcribed"'), "audio card status is transcribed");
-  t.ok(updatedAudioCard.includes("duration="), "audio card has duration");
+  t.ok(updatedAudioCard.includes("status: transcribed"), "audio card status is transcribed");
+  t.ok(updatedAudioCard.includes("duration:"), "audio card has duration");
 
   // ── Step 2: Image Analysis ──
 
@@ -138,76 +137,55 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   const imageCardFiles = ["photo-001.image.card", "photo-002.image.card", "photo-003.image.card"];
 
   for (let i = 0; i < imageCardFiles.length; i++) {
-    const cardRelPath = join(attachRelDir, imageCardFiles[i]);
-    const card = await loader.load(box.path(cardRelPath));
-    const el = card.element;
+    const cardRelPath = join(attachRelDir, imageCardFiles[i]!);
+    const cardPath = box.path(cardRelPath);
+    const content = await readFile(cardPath, "utf-8");
+    const parsed = parseCardText(content, {
+      source: cardPath,
+      schemas: createCardSchemaMap(),
+    });
+    const fields = parsed.fields as unknown as ImageFields;
     const analysis = geminiResult.analyses.find((a: ImageAnalysis) => a.index === i);
 
     if (!analysis) {
-      t.fail(`No analysis for image ${i}`);
+      t.fail(`No analysis for image ${String(i)}`);
       continue;
     }
 
-    el.attrs["status"] = analysis.invalid ? "invalid" : "analyzed";
-    el.attrs["has-text"] = analysis.has_text ? "true" : "false";
+    fields.status = analysis.invalid ? "invalid" : "analyzed";
+    fields["has-text"] = analysis.has_text;
+    fields.description = analysis.description;
 
-    const descChild = el.children.find((c: ElementNode) => c.tagName === "description");
-    if (descChild) {
-      descChild.text = analysis.description;
-      descChild.dirty = true;
-    }
-
-    // Update captured date from EXIF
     const exif = exifResults[i];
     if (exif && exif.date) {
-      const fnChild = el.children.find((c: ElementNode) => c.tagName === "filename");
-      if (fnChild) {
-        fnChild.attrs["captured"] = exif.date;
-        fnChild.dirty = true;
-      }
+      fields.filename.captured = exif.date;
     }
 
-    // Add text blocks
-    el.children = el.children.filter((c: ElementNode) => c.tagName !== "text" && c.tagName !== "exif");
-    for (const block of analysis.text_blocks) {
-      el.children.push({
-        tagName: "text",
-        attrs: { source: block.source },
-        text: block.text,
-        children: [],
-        comments: {},
-        location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-        dirty: true,
-      });
+    if (analysis.text_blocks.length > 0) {
+      fields.text = analysis.text_blocks.map((b) => ({
+        source: b.source,
+        content: b.text,
+      }));
     }
 
-    // Add EXIF element
     if (exif) {
-      const exifAttrs: Record<string, string> = {};
-      if (exif.date) exifAttrs["date"] = exif.date;
-      if (exif.camera) exifAttrs["camera"] = exif.camera;
-      if (exif.gps) exifAttrs["gps"] = exif.gps;
-      if (exif.width) exifAttrs["width"] = exif.width;
-      if (exif.height) exifAttrs["height"] = exif.height;
-      el.children.push({
-        tagName: "exif",
-        attrs: exifAttrs,
-        children: [],
-        comments: {},
-        location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-        dirty: true,
-      });
+      const exifFields: NonNullable<ImageFields["exif"]> = {};
+      if (exif.date) exifFields.date = exif.date;
+      if (exif.camera) exifFields.camera = exif.camera;
+      if (exif.gps) exifFields.gps = exif.gps;
+      if (exif.width) exifFields.width = exif.width;
+      if (exif.height) exifFields.height = exif.height;
+      fields.exif = exifFields;
     }
 
-    el.dirty = true;
-    await loader.save(card);
+    await writeFile(cardPath, `---\n${stringifyYaml(fields)}---\n`);
   }
 
   // Verify image cards were updated
   for (const cardFile of imageCardFiles) {
     const content = await box.read(join(attachRelDir, cardFile));
     t.ok(
-      content.includes('status="analyzed"') || content.includes('status="invalid"'),
+      content.includes("status: analyzed") || content.includes("status: invalid"),
       `${cardFile} has analyzed/invalid status`
     );
   }
