@@ -18,9 +18,6 @@ import {
   createTextQuestionTemplate,
   createConfirmQuestionTemplate,
 } from "./question.js";
-import { createNewsItemTemplate } from "./news-item.js";
-import { createNewsSummaryTemplate } from "./news-summary.js";
-import { createInitialGuideTemplate as createInitialNewsGuideTemplate } from "./news-guide.js";
 import { createInitialGuideTemplate } from "./guide.js";
 import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
@@ -232,80 +229,6 @@ registerTemplate({
     prompt: z.string().describe("The question to ask"),
   }),
   generate: (args) => createConfirmQuestionTemplate({ memo: args.memo, prompt: args.prompt }),
-});
-
-registerTemplate({
-  name: "news-item",
-  description: "A news item card from RSS/Atom feeds",
-  cardTypes: ["news-item"],
-  argsSchema: z.object({
-    title: z.string().describe("Article title"),
-    link: z.string().url().describe("Article URL"),
-    published: z.string().datetime({ offset: true }).describe("Publication date (ISO 8601)"),
-    feedUrl: z.string().url().describe("Feed source URL"),
-    feedTitle: z.string().describe("Feed name/title"),
-    summary: z.string().optional().describe("Article summary/description"),
-    author: z.string().optional().describe("Article author"),
-    guid: z.string().describe("Unique identifier for the article"),
-  }),
-  generate: (args) => {
-    const templateArgs: Parameters<typeof createNewsItemTemplate>[0] = {
-      title: args.title,
-      link: args.link,
-      published: args.published,
-      feedUrl: args.feedUrl,
-      feedTitle: args.feedTitle,
-      guid: args.guid,
-    };
-    if (args.summary) templateArgs.summary = args.summary;
-    if (args.author) templateArgs.author = args.author;
-    return createNewsItemTemplate(templateArgs);
-  },
-});
-
-registerTemplate({
-  name: "news-summary",
-  description: "A compiled summary of news items",
-  cardTypes: ["news-summary"],
-  argsSchema: z.object({
-    periodFrom: z.string().datetime({ offset: true }).describe("Start of period covered (ISO 8601)"),
-    periodTo: z.string().datetime({ offset: true }).describe("End of period covered (ISO 8601)"),
-    content: z.string().describe("Markdown summary content"),
-    sources: z
-      .array(
-        z.object({
-          path: z.string().describe("Path to source news-item card"),
-          title: z.string().describe("Title of the source article"),
-        })
-      )
-      .describe("Source news items referenced in the summary"),
-    status: z.enum(["draft", "final"]).optional().default("draft").describe("Summary status"),
-  }),
-  generate: (args) =>
-    createNewsSummaryTemplate({
-      periodFrom: args.periodFrom,
-      periodTo: args.periodTo,
-      content: args.content,
-      sources: args.sources,
-      status: args.status,
-    }),
-});
-
-registerTemplate({
-  name: "news-guide",
-  description: "User guide for news curation - captures interests, preferences, and experiments",
-  cardTypes: ["news-guide"],
-  defaultForTypes: ["news-guide"],
-  argsSchema: z.object({
-    feedTitles: z
-      .array(z.string())
-      .optional()
-      .describe("Feed titles to infer initial interests from"),
-  }),
-  generate: (args) =>
-    createInitialNewsGuideTemplate(
-      args.feedTitles ? { feedTitles: args.feedTitles } : {}
-    ),
 });
 
 registerTemplate({

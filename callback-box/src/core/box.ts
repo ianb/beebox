@@ -307,7 +307,7 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
 }
 
 /** Known guide domains that get default templates */
-const GUIDE_DOMAINS = ["news", "intake", "calendar"];
+const GUIDE_DOMAINS = ["intake", "calendar"];
 
 /**
  * Strip ISO timestamps from guide content so we can compare
@@ -463,28 +463,6 @@ interface DefaultSchedule {
 }
 
 const DEFAULT_SCHEDULES: DefaultSchedule[] = [
-  {
-    name: "check-rss",
-    description: "Sync RSS feeds for new articles to triage and brief",
-    cron: "0 6,18 * * *",
-    notBefore: "4h",
-    onWakeup: true,
-    enabled: false,
-    runs: "cb wakeup --connector rss",
-    source: "Check RSS feeds twice daily and on wakeup",
-    lockGroup: "news",
-    requires: [],
-    createAfterSuccess: [{
-      path: "config/schedules/process-news.scheduled-script.card",
-      args: {
-        runs: "cb process-news",
-        once: "true",
-        onWakeup: "true",
-        description: "Process news: triage, fetch, analyze, create brief",
-        "lock-group": "news",
-      },
-    }],
-  },
   {
     name: "check-email",
     description: "Pull new emails from Gmail for triage and response",

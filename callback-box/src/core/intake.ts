@@ -61,7 +61,6 @@ const INBOX_RESERVED_SUBDIRS = new Set([
   "staged",
   "triaged",
   "unhandled",
-  "news",
   "feedback",
 ]);
 
@@ -127,8 +126,7 @@ async function routeArrivals(opts: { boxRoot: string }): Promise<string[]> {
   for (const entry of entries) {
     if (entry.isDirectory()) {
       // Reserved subdirs are part of the pipeline; non-reserved ones
-      // (legacy buckets like news/) are left alone so existing code
-      // keeps working.
+      // (legacy buckets) are left alone so existing code keeps working.
       if (!INBOX_RESERVED_SUBDIRS.has(entry.name)) continue;
       continue;
     }

@@ -16,7 +16,6 @@ import { registerSseRoutes } from "./routes/sse.js";
 import { createEventBus } from "../core/event-bus.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
-import { registerBriefRoutes } from "./routes/briefs.js";
 import { registerHistoryRoutes } from "./routes/history.js";
 import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
@@ -259,7 +258,6 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
       await registerApiRoutes(instance, { boxRoot: box.boxRoot, eventBus });
       await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
       await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
-      await registerBriefRoutes(instance, box.boxRoot);
       await registerHistoryRoutes(instance, box.boxRoot);
       await registerCalendarRoutes({ server: instance, boxRoot: box.boxRoot, calendar: options.services?.calendar });
       await registerSchedulerRoutes(instance, box.boxRoot);

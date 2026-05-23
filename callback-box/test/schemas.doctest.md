@@ -12,7 +12,6 @@ import {
   getCardTypes,
   getDefaultTemplate,
 } from "../src/schemas/index.js";
-import { createNewsJobTemplate } from "../src/schemas/news-job.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../src/schemas/calendar-review-job.js";
 import { parseCard } from "cardworks";
@@ -27,9 +26,6 @@ getCardTypes().includes("memo")
 => true
 
 getCardTypes().includes("question")
-=> true
-
-getCardTypes().includes("news-job")
 => true
 
 getCardTypes().includes("intake-job")
@@ -151,55 +147,6 @@ createSelectQuestionTemplate({
 </question>
 ```
 
-## News Job
-
-A news job groups incoming RSS items for the reactor agent to process:
-
-```
-createNewsJobTemplate({
-  source: "rss-connector",
-  description: "3 new items from RSS feeds",
-  items: [
-    "box/inbox/news/item1.news-item.card",
-    "box/inbox/news/item2.news-item.card",
-    "box/inbox/news/item3.news-item.card",
-  ],
-})
-=>
-<news-job created="«date»" source="rss-connector">
-<description>3 new items from RSS feeds</description>
-<item ref="box/inbox/news/item1.news-item.card" />
-<item ref="box/inbox/news/item2.news-item.card" />
-<item ref="box/inbox/news/item3.news-item.card" />
-</news-job>
-```
-
-Special characters are XML-escaped:
-
-```
-createNewsJobTemplate({
-  source: "test",
-  description: "Items with <special> & chars",
-  items: ['path/with"quotes.card'],
-})
-=>
-<news-job created="«date»" source="test">
-<description>Items with &lt;special&gt; &amp; chars</description>
-<item ref="path/with&quot;quotes.card" />
-</news-job>
-```
-
-A specific timestamp can be provided instead of auto-generating one:
-
-```
-createNewsJobTemplate({
-  created: "2026-02-21T08:00:00Z",
-  source: "test",
-  description: "test",
-  items: [],
-}).includes('created="2026-02-21T08:00:00Z"')
-=> true
-```
 
 ## Intake Job
 

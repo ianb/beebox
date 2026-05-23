@@ -10,7 +10,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { createDropboxMemoTemplate } from "../../schemas/memo.js";
-import { createNewsItemTemplate } from "../../schemas/news-item.js";
 import { createRecordTemplate } from "../../schemas/record.js";
 import { safeFilename } from "../../connectors/chat-utils.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
@@ -25,12 +24,6 @@ const memoSchema = z.object({
     })
     .optional(),
   url: z.string().url().optional(),
-  timestamp: z.string().optional(),
-});
-
-const saveToBriefSchema = z.object({
-  url: z.string().url(),
-  title: z.string().min(1),
   timestamp: z.string().optional(),
 });
 
@@ -87,33 +80,6 @@ export async function registerClerkRoutes(
 
     await writeCard(absPath, content);
     await gitCommit(boxRoot, { relPaths: [relPath], message: `Add memo from Clerk: "${title}"` });
-
-    return { created: relPath };
-  });
-
-  server.post("/api/clerk/save-to-brief", async (request, reply) => {
-    applyExtensionCors(request, reply);
-    const parsed = saveToBriefSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Invalid brief payload" });
-    }
-
-    const { url, title, timestamp } = parsed.data;
-    const filename = buildFilename(title, "Brief");
-    const relPath = path.join("box/inbox/news", `${filename}.news-item.card`);
-    const absPath = path.join(boxRoot, relPath);
-
-    const content = createNewsItemTemplate({
-      title,
-      link: url,
-      published: timestamp ?? new Date().toISOString(),
-      feedTitle: "Saved from browser",
-      guid: url,
-      source: "user",
-    });
-
-    await writeCard(absPath, content);
-    await gitCommit(boxRoot, { relPaths: [relPath], message: `Add brief from Clerk: "${title}"` });
 
     return { created: relPath };
   });

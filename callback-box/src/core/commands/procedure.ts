@@ -20,7 +20,7 @@ registerCommand({
       name: "name",
       type: "string",
       required: true,
-      description: "Procedure name (e.g., process-news) or path to .procedure.card",
+      description: "Procedure name (e.g., process-captures) or path to .procedure.card",
     },
     {
       name: "dryRun",

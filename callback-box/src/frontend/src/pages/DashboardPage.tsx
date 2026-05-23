@@ -10,7 +10,6 @@ import { HeaderStrip } from "../components/dashboard/HeaderStrip";
 import { AttentionCards } from "../components/dashboard/AttentionCards";
 import { ScheduleOverview } from "../components/dashboard/ScheduleOverview";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
-import { NewsPipelineStatus } from "../components/dashboard/NewsPipelineStatus";
 import { SystemInfo } from "../components/dashboard/SystemInfo";
 import { HealthWarnings } from "../components/dashboard/HealthWarnings";
 import { ActionModal, type ActionType } from "../components/dashboard/ActionModal";
@@ -27,7 +26,6 @@ export function DashboardPage() {
   const ticksQuery = trpc.scheduler.log.useQuery({ limit: 20, event: "tick" });
   const commitsQuery = trpc.status.activity.useQuery({ count: 15 });
   const questionsQuery = trpc.status.questions.useQuery();
-  const newsStatusQuery = trpc.status.newsStatus.useQuery();
 
   const invalidateAll = () => {
     utils.status.invalidate();
@@ -52,7 +50,6 @@ export function DashboardPage() {
   const ticks = ticksQuery.data?.entries ?? [];
   const commits = commitsQuery.data?.entries ?? [];
   const questions = questionsQuery.data?.items ?? [];
-  const newsStatus = newsStatusQuery.data ?? { inbox: 0, pool: 0, archive: 0, trash: 0 };
 
   const schedulesLoading = schedulesQuery.isLoading || ticksQuery.isLoading;
   const schedulesError = schedulesQuery.error || ticksQuery.error;
@@ -89,8 +86,6 @@ export function DashboardPage() {
             loading={activityLoading}
             error={activityError}
           />
-
-          <NewsPipelineStatus newsStatus={newsStatus} />
         </Stack>
       </Column>
 
@@ -100,8 +95,6 @@ export function DashboardPage() {
         action={activeAction}
         onClose={() => setActiveAction(null)}
         onComplete={invalidateAll}
-        newsInboxCount={newsStatus.inbox}
-        newsPoolCount={newsStatus.pool}
       />
     </Column>
   );

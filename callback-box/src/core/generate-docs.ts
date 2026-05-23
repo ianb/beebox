@@ -57,11 +57,6 @@ interface ConnectorInfo {
 
 const CONNECTORS: ConnectorInfo[] = [
   {
-    name: "rss",
-    produces: ["news-item", "news-job"],
-    description: "Pulls RSS/Atom feeds and creates news-item cards. Creates a news job in `box/jobs/` when new items arrive.",
-  },
-  {
     name: "gmail",
     produces: ["email-thread", "email-message"],
     description: "Pulls emails from Gmail via IMAP. Creates thread directories with message cards and body text files.",

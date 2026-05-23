@@ -49,43 +49,6 @@ memoContent.includes("Example Article")
 await ctx.cleanup();
 ```
 
-## POST `/api/clerk/save-to-brief`
-
-Creates a news-item card under `box/inbox/news/`:
-
-```
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST",
-  url: "/api/clerk/save-to-brief",
-  payload: {
-    url: "https://news.example.com/story",
-    title: "Breaking Story",
-    timestamp: "2026-03-01T13:00:00Z",
-  },
-});
-res.statusCode
-=> 200
-```
-
-``` continue
-const newsFiles = await readdir(join(ctx.boxRoot, "box/inbox/news"));
-const briefFile = newsFiles.find((name) => name.endsWith(".news-item.card"));
-briefFile !== undefined
-=> true
-
-const briefContent = await ctx.read(`box/inbox/news/${briefFile}`);
-briefContent.includes("Breaking Story")
-=> true
-
-briefContent.includes("https://news.example.com/story")
-=> true
-```
-
-``` cleanup
-await ctx.cleanup();
-```
-
 ## POST `/api/clerk/save-page`
 
 Saves the extracted page as a record card (and optional frozen HTML). The intent controls the destination directory:

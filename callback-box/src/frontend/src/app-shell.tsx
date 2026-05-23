@@ -8,7 +8,6 @@
 
 import { useState } from "react";
 import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
-import { NewsPage } from "./pages/news/NewsPage";
 import { BrowsePage } from "./pages/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
@@ -45,27 +44,6 @@ export function AppLayout() {
       {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
       <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
     </Column>
-  );
-}
-
-/**
- * News page wrapper with route parameters.
- */
-export function NewsPageWrapper() {
-  const navigate = useNavigate();
-  const { boxSlug, _splat: briefPath } = useParams({ strict: false });
-
-  return (
-    <NewsPage
-      initialPath={briefPath}
-      onNavigate={(path) => {
-        if (path) {
-          navigate({ to: href(`/${boxSlug}/news/${path}`) });
-        } else {
-          navigate({ to: href(`/${boxSlug}/news`) });
-        }
-      }}
-    />
   );
 }
 

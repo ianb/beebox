@@ -29,10 +29,6 @@ export function registerBuiltinFileTypes(): void {
   });
   registerFileType({ tagName: "audio" }, { icon: AudioIcon });
   registerFileType({ tagName: "question" }, { icon: QuestionIcon });
-  registerFileType({ tagName: "news-item" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "news-brief" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "news-summary" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "news-guide" }, { icon: DocumentIcon });
   registerFileType({ tagName: "email-message" }, { icon: DocumentIcon });
   registerFileType({ tagName: "email-thread" }, { icon: DocumentIcon });
   registerFileType({ tagName: "recipe" }, { icon: DocumentIcon });
@@ -41,10 +37,8 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ tagName: "procedure" }, { icon: JobIcon });
   registerFileType({ tagName: "procedure-run" }, { icon: JobIcon });
   registerFileType({ tagName: "chat-job" }, { icon: JobIcon });
-  registerFileType({ tagName: "news-job" }, { icon: JobIcon });
   registerFileType({ tagName: "intake-job" }, { icon: JobIcon });
   registerFileType({ tagName: "calendar-review-job" }, { icon: JobIcon });
-  registerFileType({ tagName: "guide-revision-job" }, { icon: JobIcon });
   registerFileType({ tagName: "question-followup-job" }, { icon: JobIcon });
   registerFileType({ tagName: "todo-list" }, { icon: CardIcon });
   registerFileType({ tagName: "briefing" }, { icon: DocumentIcon });

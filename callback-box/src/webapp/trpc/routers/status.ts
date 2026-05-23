@@ -29,19 +29,6 @@ export interface BrowseFile {
   name: string;
 }
 
-/**
- * Count news items in a directory.
- */
-async function countNewsInDir(boxRoot: string, relativeDir: string): Promise<number> {
-  const dir = path.join(boxRoot, relativeDir);
-  try {
-    const files = await fs.readdir(dir);
-    return files.filter((f) => f.endsWith(".news-item.card")).length;
-  } catch {
-    return 0;
-  }
-}
-
 export const statusRouter = router({
   status: publicProcedure.query(async ({ ctx }) => {
     const state = await getSystemState(ctx.boxRoot);
@@ -83,16 +70,6 @@ export const statusRouter = router({
       const entries = await getLog(ctx.boxRoot, input.count);
       return { entries };
     }),
-
-  newsStatus: publicProcedure.query(async ({ ctx }) => {
-    const [inbox, pool, archive, trash] = await Promise.all([
-      countNewsInDir(ctx.boxRoot, "box/inbox/news"),
-      countNewsInDir(ctx.boxRoot, "box/pool/news"),
-      countNewsInDir(ctx.boxRoot, "store/archive/news"),
-      countNewsInDir(ctx.boxRoot, "store/trash/news"),
-    ]);
-    return { inbox, pool, archive, trash };
-  }),
 
   browse: publicProcedure
     .input(z.object({ path: z.string().default("") }))

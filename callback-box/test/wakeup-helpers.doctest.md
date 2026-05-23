@@ -8,10 +8,7 @@ import { join } from "node:path";
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { initBox } from "../src/core/box.js";
-import {
-  createIntakeJobsForUnjobbed,
-  createGuideRevisionJobIfNeeded,
-} from "../src/cli/commands/wakeup.js";
+import { createIntakeJobsForUnjobbed } from "../src/cli/commands/wakeup.js";
 ```
 
 ## createIntakeJobsForUnjobbed
@@ -108,17 +105,16 @@ allContent.includes("snap.capture-session.card")
 => true
 ```
 
-### Skips excluded subdirectories (news, feedback, editions)
+### Skips excluded subdirectories (feedback, editions)
 
-Items in `box/inbox/news/`, `box/inbox/feedback/`, and `box/inbox/editions/`
-have their own pipelines and are not picked up for intake:
+Items in `box/inbox/feedback/` and `box/inbox/editions/` have their
+own pipelines and are not picked up for intake:
 
 ```
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed("box/inbox/news/headline.news-item.card", "<news-item>News</news-item>");
 await box.seed("box/inbox/feedback/fb1.feedback.card", "<feedback>Good</feedback>");
 await box.seed("box/inbox/editions/ed1.edition.card", "<edition>V1</edition>");
 // One real inbox item
@@ -176,145 +172,3 @@ content.includes("pages-saved")
 => false
 ```
 
-## createGuideRevisionJobIfNeeded
-
-### Creates a guide-revision job when briefs have feedback
-
-When archived briefs have `overall-rating=` (meaning the user read and rated
-them) and no `guide-revision=` attribute (meaning they haven't been processed),
-a guide-revision job is created:
-
-```
-const box = await makeTmpBox({ git: true });
-await initBox(box.root);
-box.commitAll("init box");
-
-// Set a fixed time for deterministic filenames
-process.env.CB_TIME = "2026-02-15T10:00:00Z";
-
-// Create an archived brief with feedback
-await mkdir(join(box.root, "store/archive/briefs"), { recursive: true });
-await box.seed(
-  "store/archive/briefs/2026-02-14_tech.news-brief.card",
-  '<news-brief overall-rating="great" read-at="2026-02-14T20:00:00Z">Good stuff</news-brief>',
-);
-box.commitAll("add brief");
-
-const jobPath = await createGuideRevisionJobIfNeeded(box.root);
-typeof jobPath
-=> string
-
-// Job references the brief
-const content = await readFile(join(box.root, jobPath), "utf-8");
-content.includes("guide-revision-job")
-=> true
-
-content.includes('ref="store/archive/briefs/2026-02-14_tech.news-brief.card"')
-=> true
-
-content.includes('source="feedback-sync"')
-=> true
-
-delete process.env.CB_TIME;
-```
-
-### Returns null when no briefs have feedback
-
-Briefs without `overall-rating=` haven't been read yet and shouldn't
-trigger a guide revision:
-
-```
-const box = await makeTmpBox({ git: true });
-await initBox(box.root);
-box.commitAll("init box");
-
-await mkdir(join(box.root, "store/archive/briefs"), { recursive: true });
-await box.seed(
-  "store/archive/briefs/2026-02-14_tech.news-brief.card",
-  "<news-brief>Unread brief</news-brief>",
-);
-box.commitAll("add brief");
-
-const jobPath = await createGuideRevisionJobIfNeeded(box.root);
-jobPath
-=> null
-```
-
-### Skips already-processed briefs
-
-Briefs that already have `guide-revision=` are already processed:
-
-```
-const box = await makeTmpBox({ git: true });
-await initBox(box.root);
-box.commitAll("init box");
-
-await mkdir(join(box.root, "store/archive/briefs"), { recursive: true });
-await box.seed(
-  "store/archive/briefs/2026-02-14_tech.news-brief.card",
-  '<news-brief overall-rating="great" guide-revision="2026-02-15T00:00:00Z">Already processed</news-brief>',
-);
-box.commitAll("add brief");
-
-const jobPath = await createGuideRevisionJobIfNeeded(box.root);
-jobPath
-=> null
-```
-
-### Skips if a guide-revision job already exists
-
-Only one guide-revision job at a time:
-
-```
-const box = await makeTmpBox({ git: true });
-await initBox(box.root);
-box.commitAll("init box");
-
-process.env.CB_TIME = "2026-02-15T10:00:00Z";
-
-// Brief with feedback
-await mkdir(join(box.root, "store/archive/briefs"), { recursive: true });
-await box.seed(
-  "store/archive/briefs/2026-02-14_tech.news-brief.card",
-  '<news-brief overall-rating="ok">Decent</news-brief>',
-);
-// Existing guide-revision job
-await box.seed(
-  "box/jobs/2026-02-13_feedback.guide-revision.job.card",
-  '<guide-revision-job created="2026-02-13T00:00:00Z" source="feedback-sync"><description>Already queued</description></guide-revision-job>',
-);
-box.commitAll("setup");
-
-const jobPath = await createGuideRevisionJobIfNeeded(box.root);
-jobPath
-=> null
-
-delete process.env.CB_TIME;
-```
-
-### Includes guide path when news guide exists
-
-```
-const box = await makeTmpBox({ git: true });
-await initBox(box.root);
-box.commitAll("init box");
-
-process.env.CB_TIME = "2026-02-15T10:00:00Z";
-
-// Brief with feedback
-await mkdir(join(box.root, "store/archive/briefs"), { recursive: true });
-await box.seed(
-  "store/archive/briefs/2026-02-14_tech.news-brief.card",
-  '<news-brief overall-rating="great">Nice</news-brief>',
-);
-// News guide exists
-await box.seed("config/news.guide.card", "<news-guide>Be interesting</news-guide>");
-box.commitAll("setup");
-
-const jobPath = await createGuideRevisionJobIfNeeded(box.root);
-const content = await readFile(join(box.root, jobPath), "utf-8");
-content.includes('guide="config/news.guide.card"')
-=> true
-
-delete process.env.CB_TIME;
-```

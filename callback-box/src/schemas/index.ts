@@ -10,10 +10,6 @@ export {
   isKnownCardType,
   MemoSchema,
   QuestionSchema,
-  NewsItemSchema,
-  NewsSummarySchema,
-  NewsBriefSchema,
-  NewsGuideSchema,
   FeedbackSchema,
   ImageSchema,
   AudioSchema,
@@ -21,7 +17,6 @@ export {
   CaptureSessionSchema,
   RecordSchema,
   RecipeSchema,
-  NewsJobSchema,
   IntakeJobSchema,
   CalendarReviewJobSchema,
   QuestionFollowupJobSchema,
@@ -38,10 +33,6 @@ export {
 // Re-export individual schema types
 export type { MemoFields, MemoStatusType } from "./memo.js";
 export type { Question, QuestionStatus, QuestionInputType } from "./question.js";
-export type { NewsItemFields, NewsItemStatus } from "./news-item.js";
-export type { NewsSummary, NewsSummaryStatus } from "./news-summary.js";
-export type { NewsBrief } from "./news-brief.js";
-export type { NewsGuide } from "./news-guide.js";
 export type { FeedbackFields } from "./feedback.js";
 export type { ImageFields, ImageStatus } from "./image.js";
 export type { AudioFields, AudioStatus } from "./audio.js";
@@ -49,7 +40,6 @@ export type { FileFields, FileStatus } from "./file.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
 export type { RecordFields, RecordStatus } from "./record.js";
 export type { Recipe } from "./recipe.js";
-export type { NewsJob } from "./news-job.js";
 export type { IntakeJob } from "./intake-job.js";
 export type { CalendarReviewJob } from "./calendar-review-job.js";
 export type { QuestionFollowupJob } from "./question-followup-job.js";
@@ -70,15 +60,12 @@ export {
   createTextQuestionTemplate,
   createConfirmQuestionTemplate,
 } from "./question.js";
-export { createNewsItemTemplate } from "./news-item.js";
-export { createNewsSummaryTemplate } from "./news-summary.js";
 export { createImageTemplate } from "./image.js";
 export { createAudioTemplate } from "./audio.js";
 export { createFileTemplate } from "./file.js";
 export { createCaptureSessionTemplate } from "./capture-session.js";
 export { createRecordTemplate } from "./record.js";
 export { createRecipeTemplate } from "./recipe.js";
-export { createNewsJobTemplate } from "./news-job.js";
 export { createIntakeJobTemplate } from "./intake-job.js";
 export { createCalendarReviewJobTemplate } from "./calendar-review-job.js";
 export { createQuestionFollowupJobTemplate } from "./question-followup-job.js";

@@ -24,7 +24,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
-import { createRssConnector } from "../../connectors/rss.js";
 import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
@@ -34,13 +33,9 @@ import { runPreActions } from "../../core/preactions/index.js";
 import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus, pushToRemote } from "../lib/git.js";
-import { expireOldBriefs, cleanupOldTmpUploads } from "../../core/housekeeping.js";
+import { cleanupOldTmpUploads } from "../../core/housekeeping.js";
 import { installRootLandmark } from "../../core/box.js";
-import { getTranscribedFeedbackCards, buildFeedbackTriagePrompt } from "../../core/commands/triage-feedback.js";
-import { getUnprocessedBriefs } from "../../core/commands/process-feedback.js";
-import { createAgent, ensureAgentCommitted, captureBaseline } from "../../core/agent.js";
-import { createGuideRevisionJobTemplate } from "../../schemas/guide-revision-job.js";
-import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
+import { getBoxTime } from "../lib/time.js";
 import { createNewIntakeJob } from "../../connectors/intake-utils.js";
 import { runOnWakeupScripts } from "./tick-utils.js";
 import { runReactor } from "../../core/reactor/index.js";
@@ -78,28 +73,15 @@ export const wakeupCommand = new Command("wakeup")
       console.log("");
     }
 
-    // Step 2: Triage feedback
-    if (!options.skipTriage) {
-      console.log("[Triaging feedback]");
-      const triaged = await runTriageFeedback(boxRoot);
-      if (triaged > 0) {
-        console.log(`  Triaged ${triaged} feedback card(s)`);
-      } else {
-        console.log("  No feedback to triage");
-      }
-      console.log("");
-    }
-
-    // Step 3: Housekeeping
+    // Step 2: Housekeeping
     if (!options.skipHousekeeping) {
       console.log("[Housekeeping]");
-      const expired = await expireOldBriefs(boxRoot, (msg) => console.log(msg));
       const swept = await cleanupOldTmpUploads(boxRoot, (msg) => console.log(msg));
       const rootLandmarkRefilled = await installRootLandmark(boxRoot);
       if (rootLandmarkRefilled) {
         console.log("  Refilled Box.landmark.card (root landmark was missing)");
       }
-      if (expired === 0 && swept === 0 && !rootLandmarkRefilled) {
+      if (swept === 0 && !rootLandmarkRefilled) {
         console.log("  Nothing to clean up");
       }
       console.log("");
@@ -122,7 +104,6 @@ export const wakeupCommand = new Command("wakeup")
     console.log("[Running connectors]");
 
     // Initialize connectors
-    createRssConnector(boxRoot);
     createGmailConnector(boxRoot);
     createGoogleCalendarConnector(boxRoot);
     createTelegramConnector(boxRoot);
@@ -240,17 +221,7 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 6: Create guide-revision jobs if needed
-    console.log("[Checking for guide revision]");
-    const jobPath = await createGuideRevisionJobIfNeeded(boxRoot);
-    if (jobPath) {
-      console.log(`  Created guide-revision job: ${jobPath}`);
-    } else {
-      console.log("  No guide revision needed");
-    }
-    console.log("");
-
-    // Step 7: Process pending jobs. Under --connector X, the source
+    // Step 6: Process pending jobs. Under --connector X, the source
     // filter restricts processing to jobs tagged source="X" so a
     // gmail-scoped tick doesn't drain RSS or feedback work.
     console.log("[Processing pending jobs]");
@@ -346,122 +317,6 @@ async function runPreprocessors(boxRoot: string): Promise<number> {
   }
 
   return actionNotes.length;
-}
-
-/**
- * Triage feedback cards using a lightweight agent.
- * Classifies feedback and integrates it into target briefs.
- * Returns the number of feedback cards triaged.
- */
-async function runTriageFeedback(boxRoot: string): Promise<number> {
-  const feedbackCards = await getTranscribedFeedbackCards(boxRoot);
-  if (feedbackCards.length === 0) return 0;
-
-  const paths = feedbackCards.join("\n  - ");
-  console.log(`  Found ${feedbackCards.length} feedback card(s) to triage`);
-
-  const agent = createAgent({
-    name: "triage",
-    onOutput: (text) => process.stdout.write(text),
-  });
-
-  const baseline = await captureBaseline(boxRoot);
-  const result = await agent.invoke({
-    boxRoot,
-    systemPrompt: buildFeedbackTriagePrompt(boxRoot),
-    prompt: `Please triage and integrate these feedback cards:\n  - ${paths}`,
-    model: "claude-haiku-4-5-20251001",
-    maxTurns: 10,
-    maxBudgetUsd: 1,
-  });
-
-  if (result.success) {
-    await ensureAgentCommitted({
-      boxRoot,
-      agent,
-      baseline,
-      fallbackMessage: `Triage ${feedbackCards.length} feedback card(s)`,
-      fallbackTrailers: { "Triggered-By": "cb wakeup", Phase: "triage-feedback" },
-      onOutput: (text) => process.stdout.write(text),
-    });
-  } else {
-    console.error(`  Triage agent error: ${result.error}`);
-  }
-
-  return feedbackCards.length;
-}
-
-/**
- * Check for archived briefs with unprocessed feedback and create a
- * guide-revision job if any are found.
- * Returns the job file path, or null if no job was needed.
- */
-export async function createGuideRevisionJobIfNeeded(boxRoot: string): Promise<string | null> {
-  const unprocessed = await getUnprocessedBriefs(boxRoot);
-  if (unprocessed.length === 0) return null;
-
-  // Only include briefs that have actual feedback (overall-rating means user read it)
-  const withFeedback: string[] = [];
-  for (const briefPath of unprocessed) {
-    const fullPath = path.join(boxRoot, briefPath);
-    const content = await fs.readFile(fullPath, "utf-8");
-    if (content.includes("overall-rating=")) {
-      withFeedback.push(briefPath);
-    }
-  }
-
-  if (withFeedback.length === 0) return null;
-
-  // Check if a guide-revision job already exists
-  const jobsDir = path.join(boxRoot, "box/jobs");
-  await fs.mkdir(jobsDir, { recursive: true });
-  const existingJobs = await fs.readdir(jobsDir);
-  if (existingJobs.some((f) => f.endsWith(".guide-revision.job.card"))) {
-    console.log("  Guide-revision job already exists, skipping");
-    return null;
-  }
-
-  // Find the news guide (new format first, then legacy)
-  let guidePath: string | undefined;
-  try {
-    await fs.access(path.join(boxRoot, "config/news.guide.card"));
-    guidePath = "config/news.guide.card";
-  } catch {
-    try {
-      await fs.access(path.join(boxRoot, "config/news-guide.news-guide.card"));
-      guidePath = "config/news-guide.news-guide.card";
-    } catch {
-      // No guide found — still create the job, agent can handle it
-    }
-  }
-
-  const now = getBoxTimeISO(boxRoot);
-  const jobContent = createGuideRevisionJobTemplate({
-    created: now,
-    source: "feedback-sync",
-    description: `${withFeedback.length} brief(s) with unprocessed feedback`,
-    briefs: withFeedback,
-    ...(guidePath && { guide: guidePath }),
-  });
-
-  const datePrefix = now.slice(0, 10);
-  const jobFileName = `${datePrefix}_feedback.guide-revision.job.card`;
-  const jobPath = path.join("box/jobs", jobFileName);
-  const fullJobPath = path.join(boxRoot, jobPath);
-
-  await fs.writeFile(fullJobPath, jobContent, "utf-8");
-
-  // Stage and commit
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: `Guide revision job: ${withFeedback.length} brief(s) with feedback`,
-    trailers: {
-      "Triggered-By": "cb wakeup",
-      Phase: "guide-revision-check",
-    },
-  });
-
-  return jobPath;
 }
 
 /**

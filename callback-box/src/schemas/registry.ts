@@ -13,10 +13,6 @@ import { registerHooks } from "node:module";
 import { SchemaRegistry, type ElementSchema, type CardSchema } from "cardworks";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
-import { NewsItemSchema } from "./news-item.js";
-import { NewsSummarySchema } from "./news-summary.js";
-import { NewsBriefSchema } from "./news-brief.js";
-import { NewsGuideSchema } from "./news-guide.js";
 import { FeedbackSchema } from "./feedback.js";
 import { ProcedureSchema } from "./procedure.js";
 import { ProcedureRunSchema } from "./procedure-run.js";
@@ -29,8 +25,6 @@ import { RecipeSchema } from "./recipe.js";
 import { EmailThreadSchema } from "./email-thread.js";
 import { EmailMessageSchema } from "./email-message.js";
 import { EmailOutboundSchema } from "./email-outbound.js";
-import { NewsJobSchema } from "./news-job.js";
-import { GuideRevisionJobSchema } from "./guide-revision-job.js";
 import { IntakeJobSchema } from "./intake-job.js";
 import { CalendarReviewJobSchema } from "./calendar-review-job.js";
 import { GuideSchema } from "./guide.js";
@@ -53,15 +47,10 @@ import { registerTemplate, type TemplateDefinition } from "./templates.js";
  */
 export const schemas: ElementSchema[] = [
   QuestionSchema,
-  NewsSummarySchema,
-  NewsBriefSchema,
-  NewsGuideSchema,
   ProcedureSchema,
   ProcedureRunSchema,
   CaptureSessionSchema,
   RecipeSchema,
-  NewsJobSchema,
-  GuideRevisionJobSchema,
   IntakeJobSchema,
   CalendarReviewJobSchema,
   GuideSchema,
@@ -94,7 +83,6 @@ export const cardSchemas: CardSchema[] = [
   TodoListSchema,
   TelegramMessageSchema,
   FeedbackSchema,
-  NewsItemSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
@@ -272,10 +260,6 @@ export function createCardSchemaMap(): Map<string, CardSchema> {
 // Re-export individual schemas for direct access
 export { MemoSchema } from "./memo.js";
 export { QuestionSchema } from "./question.js";
-export { NewsItemSchema } from "./news-item.js";
-export { NewsSummarySchema } from "./news-summary.js";
-export { NewsBriefSchema } from "./news-brief.js";
-export { NewsGuideSchema } from "./news-guide.js";
 export { FeedbackSchema } from "./feedback.js";
 export { ProcedureSchema } from "./procedure.js";
 export { ProcedureRunSchema } from "./procedure-run.js";
@@ -288,8 +272,6 @@ export { RecipeSchema } from "./recipe.js";
 export { EmailThreadSchema } from "./email-thread.js";
 export { EmailMessageSchema } from "./email-message.js";
 export { EmailOutboundSchema } from "./email-outbound.js";
-export { NewsJobSchema } from "./news-job.js";
-export { GuideRevisionJobSchema } from "./guide-revision-job.js";
 export { IntakeJobSchema } from "./intake-job.js";
 export { CalendarReviewJobSchema } from "./calendar-review-job.js";
 export { GuideSchema } from "./guide.js";

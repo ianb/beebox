@@ -15,9 +15,6 @@ import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../core/reacto
 import { CHAT_SYSTEM_PROMPT } from "../core/chat-session.js";
 import { buildThreadSystemPrompt } from "../core/chat-thread-session.js";
 import { COMMIT_NUDGE_PROMPT } from "../core/agent.js";
-import { buildNewsTriagePrompt, buildAnalyzePrompt, buildBriefPrompt } from "../core/commands/process-news.js";
-import { buildFeedbackTriagePrompt } from "../core/commands/triage-feedback.js";
-import { buildGuideRevisionPrompt } from "../core/commands/process-feedback.js";
 import { connectorRules } from "../core/init-rules.js";
 
 const PLACEHOLDER = "${boxRoot}";
@@ -96,48 +93,7 @@ async function collectPrompts(): Promise<PromptEntry[]> {
     text: COMMIT_NUDGE_PROMPT,
   });
 
-  // ── 2. Job-specific prompts (process-news pipeline) ──────────────
-
-  entries.push({
-    title: "News Triage Prompt",
-    source: "src/core/commands/process-news.ts → buildNewsTriagePrompt()",
-    scope: "System prompt for the news triage phase (legacy command-based pipeline, not procedure). Agent reviews inbox items against the news guide and trashes uninteresting ones.",
-    text: buildNewsTriagePrompt({
-      guideContent: "${guideContent}",
-      selectCount: 0,
-      boxRoot: PLACEHOLDER,
-    }),
-  });
-
-  entries.push({
-    title: "News Analyze Prompt",
-    source: "src/core/commands/process-news.ts → buildAnalyzePrompt()",
-    scope: "System prompt for the news analysis phase (legacy pipeline). Agent adds <analysis> elements to triaged items and moves them to the pool.",
-    text: buildAnalyzePrompt(PLACEHOLDER),
-  });
-
-  entries.push({
-    title: "News Brief Prompt",
-    source: "src/core/commands/process-news.ts → buildBriefPrompt()",
-    scope: "System prompt for the brief creation phase (legacy pipeline). Agent creates a narrative news-brief card from pooled items. This is one of the largest prompts.",
-    text: buildBriefPrompt(PLACEHOLDER),
-  });
-
-  entries.push({
-    title: "Feedback Triage Prompt",
-    source: "src/core/commands/triage-feedback.ts → buildFeedbackTriagePrompt()",
-    scope: "System prompt for feedback triage (legacy pipeline). Agent categorizes feedback cards and integrates feedback into briefs.",
-    text: buildFeedbackTriagePrompt(PLACEHOLDER),
-  });
-
-  entries.push({
-    title: "Guide Revision Prompt",
-    source: "src/core/commands/process-feedback.ts → buildGuideRevisionPrompt()",
-    scope: "System prompt for guide revision (legacy pipeline). Agent reads accumulated feedback from briefs and updates the news guide.",
-    text: buildGuideRevisionPrompt(PLACEHOLDER),
-  });
-
-  // ── 3. Schema instructions ───────────────────────────────────────
+  // ── 2. Schema instructions ───────────────────────────────────────
 
   for (const schema of schemas) {
     if (!schema.instructions) continue;

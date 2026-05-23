@@ -12,7 +12,6 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { createRssConnector } from "../../connectors/rss.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 /**
@@ -31,9 +30,6 @@ async function executeSync(
   args: Record<string, unknown>
 ): Promise<CommandResult> {
   const syncArgs = args as unknown as SyncArgs;
-
-  // Initialize connectors
-  createRssConnector(ctx.boxRoot);
 
   const connectors = getAllConnectors();
 

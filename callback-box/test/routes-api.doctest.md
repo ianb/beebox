@@ -279,31 +279,6 @@ Saved before user delete: store/images/dirty-delete.webp
 await ctx.cleanup();
 ```
 
-## News status
-
-`GET /api/news-status` returns counts of news items by location:
-
-```
-const ctx = await makeTestServer();
-await ctx.seed(
-  "box/inbox/news/test.news-item.card",
-  '<news-item status="new"><title>Test</title><source-url>https://example.com</source-url></news-item>\n',
-);
-await ctx.inject({ method: "GET", url: "/api/news-status" })
-=>
-200
-{
-  "inbox": 1,
-  "pool": 0,
-  "archive": 0,
-  "trash": 0
-}
-```
-
-``` cleanup
-await ctx.cleanup();
-```
-
 ## Debug log
 
 The debug log supports a POST/GET/DELETE cycle for client-side logging:

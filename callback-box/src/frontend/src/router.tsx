@@ -18,8 +18,7 @@ import { CapturePage } from "./pages/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { SharePage } from "./pages/SharePage";
-import { PrintBriefView } from "./pages/news/PrintBriefView";
-import { AppLayout, BoxRedirect, ShareRedirect, NewsPageWrapper, BrowsePageWrapper } from "./app-shell";
+import { AppLayout, BoxRedirect, ShareRedirect, BrowsePageWrapper } from "./app-shell";
 import { CardViewPage } from "./pages/card/CardViewPage";
 import { ViewPage } from "./pages/ViewPage";
 import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
@@ -46,12 +45,6 @@ const shareRedirectRoute = createRoute({
 });
 
 // --- Box-scoped standalone routes (no nav) ---
-
-const printRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/$boxSlug/print/$",
-  component: PrintBriefView,
-});
 
 const shareRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -89,12 +82,6 @@ const questionsRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/questions",
   component: QuestionsPage,
-});
-
-const newsRoute = createRoute({
-  getParentRoute: () => boxLayoutRoute,
-  path: "/news/$",
-  component: NewsPageWrapper,
 });
 
 const browseRoute = createRoute({
@@ -186,13 +173,11 @@ const boxCatchAllRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   shareRedirectRoute,
-  printRoute,
   shareRoute,
   boxLayoutRoute.addChildren([
     dashboardRoute,
     chatRoute,
     questionsRoute,
-    newsRoute,
     browseRoute,
     historyRoute,
     historyDetailRoute,

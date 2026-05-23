@@ -8,7 +8,14 @@
 
 import { element, escapeText, escapeAttr } from "cardworks";
 import { z } from "zod";
-import { JobDescription, JobItem } from "./news-job.js";
+
+// Shared job sub-elements. These used to be exported from news-job.tsx;
+// now that the news subsystem is gone, the few remaining job schemas
+// each declare their own (or use these inlined here).
+const JobDescription = element("description", { text: z.string() });
+const JobItem = element("item", {
+  attrs: { ref: z.string() },
+});
 
 /**
  * Intake job card schema.

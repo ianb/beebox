@@ -7,7 +7,9 @@
 
 import { element, escapeText, escapeAttr } from "cardworks";
 import { z } from "zod";
-import { JobDescription } from "./news-job.js";
+
+// Shared job description element, formerly in news-job.tsx.
+const JobDescription = element("description", { text: z.string() });
 
 /**
  * Child element for embedded ICS content (used for deleted events).

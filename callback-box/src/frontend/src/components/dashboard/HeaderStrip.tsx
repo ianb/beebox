@@ -11,7 +11,7 @@ type StatusResponse = RouterOutput["status"]["status"];
 interface HeaderStripProps {
   status: StatusResponse | null;
   connected: boolean;
-  onAction: (action: "wakeup" | "sync" | "create-memo" | "process-news") => void;
+  onAction: (action: "wakeup" | "sync" | "create-memo") => void;
 }
 
 function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {

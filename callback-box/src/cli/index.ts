@@ -20,11 +20,6 @@ import {
   wakeupCommand,
   trashCommand,
   moveCommand,
-  fetchNewsCommand,
-  fetchAllNewsCommand,
-  processNewsCommand,
-  processFeedbackCommand,
-  triageFeedbackCommand,
   procedureCommand,
   transcribeCapturesCommand,
   assembleTimelineCommand,
@@ -77,11 +72,6 @@ program.addCommand(answerCommand);
 program.addCommand(wakeupCommand);
 program.addCommand(trashCommand);
 program.addCommand(moveCommand);
-program.addCommand(fetchNewsCommand);
-program.addCommand(fetchAllNewsCommand);
-program.addCommand(processNewsCommand);
-program.addCommand(processFeedbackCommand);
-program.addCommand(triageFeedbackCommand);
 program.addCommand(procedureCommand);
 program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);

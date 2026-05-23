@@ -195,7 +195,6 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
   const queries: Array<{ key: unknown[]; fn: () => Promise<unknown> }> = [
     { key: queryKey(["status", "status"]), fn: () => caller.status.status() },
     { key: queryKey(["status", "questions"]), fn: () => caller.status.questions() },
-    { key: queryKey(["status", "newsStatus"]), fn: () => caller.status.newsStatus() },
     { key: queryKey(["status", "activity"], { count: 15 }), fn: () => caller.status.activity({ count: 15 }) },
     { key: queryKey(["scheduler", "schedules"]), fn: () => caller.scheduler.schedules() },
     { key: queryKey(["scheduler", "log"], { limit: 20, event: "tick" }), fn: () => caller.scheduler.log({ limit: 20, event: "tick" }) },
@@ -203,13 +202,7 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
 
   // Route-specific queries
   const pagePath = routePath.replace(/^\//, "");
-  if (pagePath.startsWith("news/") || pagePath === "news") {
-    const briefPath = pagePath.slice("news/".length) || undefined;
-    queries.push({ key: queryKey(["briefs", "list"]), fn: () => caller.briefs.list() });
-    if (briefPath) {
-      queries.push({ key: queryKey(["briefs", "get"], { path: briefPath }), fn: () => caller.briefs.get({ path: briefPath }) });
-    }
-  } else if (pagePath.startsWith("browse/") || pagePath === "browse") {
+  if (pagePath.startsWith("browse/") || pagePath === "browse") {
     const browsePath = pagePath.slice("browse/".length) || undefined;
     queries.push({ key: queryKey(["status", "browse"], { path: browsePath }), fn: () => caller.status.browse({ path: browsePath }) });
   } else if (pagePath.startsWith("history")) {

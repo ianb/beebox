@@ -13,8 +13,6 @@ import type { GoogleAuthService } from "./google-auth.js";
 import type { GoogleCalendarService } from "./google-calendar.js";
 import type { GoogleGmailService } from "./google-gmail.js";
 import type { OpenAIAudioService } from "./openai-audio.js";
-import type { FeedFetcherService } from "./feed-fetcher.js";
-import type { ArticleFetcherService } from "./article-fetcher.js";
 import type { GoogleDriveService } from "./google-drive.js";
 
 // ─── Re-exports ─────────────────────────────────────────────────────────────
@@ -66,18 +64,6 @@ export {
   createFakeOpenAIAudio,
 } from "./openai-audio.js";
 
-export type { FeedFetcherService, FeedResponse } from "./feed-fetcher.js";
-export {
-  createFeedFetcherService,
-  createFakeFeedFetcher,
-} from "./feed-fetcher.js";
-
-export type { ArticleFetcherService, ArticleFetchResult } from "./article-fetcher.js";
-export {
-  createArticleFetcherService,
-  createFakeArticleFetcher,
-} from "./article-fetcher.js";
-
 export type { GoogleDriveService, DriveFile, SpreadsheetMetadata, SheetProperties, FakeGoogleDriveService } from "./google-drive.js";
 export {
   createGoogleDriveService,
@@ -96,7 +82,5 @@ export interface Services {
   calendar?: GoogleCalendarService | undefined;
   gmail?: GoogleGmailService | undefined;
   openaiAudio?: OpenAIAudioService | undefined;
-  feedFetcher?: FeedFetcherService | undefined;
-  articleFetcher?: ArticleFetcherService | undefined;
   drive?: GoogleDriveService | undefined;
 }

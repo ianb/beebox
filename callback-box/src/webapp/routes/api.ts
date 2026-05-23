@@ -108,18 +108,6 @@ function sanitizeElement(el: ElementNode): JsonElement {
   return result;
 }
 
-/**
- * Count news items in a directory.
- */
-async function countNewsInDir(boxRoot: string, relativeDir: string): Promise<number> {
-  const dir = path.join(boxRoot, relativeDir);
-  try {
-    const files = await fs.readdir(dir);
-    return files.filter((f) => f.endsWith(".news-item.card")).length;
-  } catch {
-    return 0;
-  }
-}
 
 /**
  * Register API routes on the Fastify server.
@@ -587,23 +575,6 @@ export async function registerApiRoutes(
       }
     }
   );
-
-  // GET /api/news-status - News pipeline status by location
-  server.get("/api/news-status", async () => {
-    const [inboxCount, poolCount, archiveCount, trashCount] = await Promise.all([
-      countNewsInDir(boxRoot, "box/inbox/news"),
-      countNewsInDir(boxRoot, "box/pool/news"),
-      countNewsInDir(boxRoot, "store/archive/news"),
-      countNewsInDir(boxRoot, "store/trash/news"),
-    ]);
-
-    return {
-      inbox: inboxCount,
-      pool: poolCount,
-      archive: archiveCount,
-      trash: trashCount,
-    };
-  });
 
   // --- Client debug log collector ---
   // The frontend always captures console.error/warn and forwards them here.
