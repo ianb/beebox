@@ -113,7 +113,7 @@ export function formatLintResults(summary: LintSummary, options: FormatOptions =
     const parts = [errorPart, warningPart].filter(Boolean).join(" and ");
 
     lines.push(
-      `${String(summary.filesChecked)} files checked, ${parts} in ${String(summary.filesWithErrors)} file${summary.filesWithErrors === 1 ? "" : "s"}`
+      `${String(summary.filesChecked)} file${summary.filesChecked === 1 ? "" : "s"} checked, ${parts} in ${String(summary.filesWithErrors)} file${summary.filesWithErrors === 1 ? "" : "s"}`
     );
   }
 
