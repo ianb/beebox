@@ -19,7 +19,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { type ElementNode } from "cardworks";
+import type { ChatThreadFields } from "../schemas/chat-thread.js";
 import {
   registerConnector,
   type Connector,
@@ -507,14 +507,14 @@ class TelegramConnector implements Connector {
       const threadRelPath = path.relative(this.boxRoot, absPath);
 
       try {
-        const { root, unsent } = await findUnsentAgentMessages(absPath);
+        const { fields, unsent } = await findUnsentAgentMessages(absPath);
         if (unsent.length === 0) continue;
 
-        const chatId = root.attrs["chat-id"];
+        const chatId = fields["chat-id"];
         if (!chatId) continue;
 
-        // Record callback-in from <seen> elements for later
-        await this.recordCallbackTimers(root, threadRelPath);
+        // Record callback-in from trailing seen entry for later
+        await this.recordCallbackTimers(fields, threadRelPath);
 
         for (const msg of unsent) {
           const text = msg.text?.trim();
@@ -555,14 +555,14 @@ class TelegramConnector implements Connector {
    * Scan for <seen callback-in="..."> elements and record timers in state.
    */
   private async recordCallbackTimers(
-    root: ElementNode,
+    fields: ChatThreadFields,
     threadRelPath: string
   ): Promise<void> {
-    // Find the last element in the thread
-    const lastChild = root.children[root.children.length - 1];
-    if (!lastChild || lastChild.tagName !== "seen") return;
+    const entries = fields.entries ?? [];
+    const lastEntry = entries[entries.length - 1];
+    if (!lastEntry || lastEntry.kind !== "seen") return;
 
-    const callbackIn = lastChild.attrs["callback-in"];
+    const callbackIn = lastEntry["callback-in"];
     if (!callbackIn) return;
 
     const durationMs = parseDuration(callbackIn);

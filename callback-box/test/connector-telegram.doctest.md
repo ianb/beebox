@@ -95,7 +95,7 @@ content.includes("Hi from Telegram!")
 ```
 
 ``` continue
-content.includes('sender="Alice"')
+content.includes("sender: Alice")
 => true
 ```
 
@@ -182,7 +182,7 @@ await box.seed("config/box.json", JSON.stringify({ publicUrl: "https://example.c
 // Create a thread file with an unsent agent message
 await box.seed(
   "store/chat/telegram/TestUser/thread.chat-thread.card",
-  '<chat-thread connector="telegram" chat-id="999">\n<message sender="TestUser" time="2024-01-01T00:00:00Z">Hello</message>\n<message sender="agent" time="2024-01-01T00:01:00Z">Hi there!</message>\n</chat-thread>\n',
+  `---\ntype: chat-thread\nchat-id: "999"\nconnector: telegram\nentries:\n  - kind: message\n    sender: TestUser\n    time: "2024-01-01T00:00:00Z"\n    text: Hello\n  - kind: message\n    sender: agent\n    time: "2024-01-01T00:01:00Z"\n    text: Hi there!\n---\n`,
 );
 box.commitAll("add thread");
 

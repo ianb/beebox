@@ -2,7 +2,7 @@
  * Shared utilities for chat thread manipulation.
  *
  * Used by messaging connectors (Telegram, etc.) to:
- * - Append messages to thread XML files
+ * - Append messages to thread YAML files
  * - Find unsent agent messages for outbound delivery
  * - Find pending chat jobs for deduplication
  * - Manage people directory entries
@@ -11,24 +11,33 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import sanitize from "sanitize-filename";
-import { parseCard, escapeAttr, type ElementNode } from "cardworks";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { splitCardContent } from "cardworks";
 import {
   createChatThreadTemplate,
-  createMessageElement,
+  createMessageEntry,
+  type ChatThreadFields,
+  type ChatThreadMessage,
 } from "../schemas/chat-thread.js";
-import { createChatJobTemplate } from "../schemas/chat-job.js";
+import { createChatJobTemplate, type ChatJobFields } from "../schemas/chat-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 import { sanitizeFilenameStem } from "../lib/filename.js";
 
-/**
- * Safe filename stem for a display name/title. Runs through the
- * OS-forbidden-char pass from `sanitize-filename` before applying our
- * shared {@link sanitizeFilenameStem}. Does NOT preserve file extensions —
- * callers that need to keep `.pdf` etc should use
- * {@link sanitizeFilename} from `src/lib/filename.ts` instead.
- */
 export function safeFilename(text: string, fallback = "untitled"): string {
   return sanitizeFilenameStem(sanitize(text), { fallback });
+}
+
+async function readThreadFields(absPath: string): Promise<ChatThreadFields> {
+  const content = await fs.readFile(absPath, "utf-8");
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) {
+    throw new Error(`Chat thread missing frontmatter: ${absPath}`);
+  }
+  return parseYaml(split.frontmatterText) as ChatThreadFields;
+}
+
+async function writeThreadFields(absPath: string, fields: ChatThreadFields): Promise<void> {
+  await fs.writeFile(absPath, `---\n${stringifyYaml(fields)}---\n`);
 }
 
 /**
@@ -43,12 +52,7 @@ export async function ensureThreadFile(options: {
   participants?: string[];
 }): Promise<string> {
   const { boxRoot, connector, chatSlug, chatId } = options;
-  const threadDir = path.join(
-    boxRoot,
-    "store/chat",
-    connector,
-    chatSlug
-  );
+  const threadDir = path.join(boxRoot, "store/chat", connector, chatSlug);
   const threadPath = path.join(threadDir, "thread.chat-thread.card");
 
   try {
@@ -68,8 +72,7 @@ export async function ensureThreadFile(options: {
 }
 
 /**
- * Add a participant to a thread's <participants> block if not already present.
- * Creates the <participants> block if it doesn't exist.
+ * Add a participant to a thread's participants[] if not already present.
  */
 export async function ensureParticipant(options: {
   boxRoot: string;
@@ -77,36 +80,15 @@ export async function ensureParticipant(options: {
   personRef: string;
 }): Promise<void> {
   const absPath = path.join(options.boxRoot, options.threadRelPath);
-  let content = await fs.readFile(absPath, "utf-8");
-
-  // Already listed?
-  if (content.includes(`ref="${options.personRef}"`)) return;
-
-  const personLine = `    <person ref="${escapeAttr(options.personRef)}" />`;
-
-  if (content.includes("</participants>")) {
-    // Append inside existing block
-    content = content.replace(
-      /<\/participants>/,
-      `${personLine}\n  </participants>`
-    );
-  } else {
-    // Insert a participants block after <description> or at the start
-    const insertPoint = content.includes("</description>")
-      ? content.indexOf("</description>") + "</description>".length
-      : content.indexOf(">") + 1;
-
-    const before = content.slice(0, insertPoint);
-    const after = content.slice(insertPoint);
-    content = `${before}\n  <participants>\n${personLine}\n  </participants>${after}`;
-  }
-
-  await fs.writeFile(absPath, content);
+  const fields = await readThreadFields(absPath);
+  const participants = fields.participants ?? [];
+  if (participants.some((p) => p.ref === options.personRef)) return;
+  fields.participants = [...participants, { ref: options.personRef }];
+  await writeThreadFields(absPath, fields);
 }
 
 /**
- * Append a message element to a thread file.
- * Inserts before the closing </chat-thread> tag.
+ * Append a message entry to a thread's entries[].
  */
 export async function appendMessageToThread(options: {
   boxRoot: string;
@@ -121,46 +103,33 @@ export async function appendMessageToThread(options: {
   };
 }): Promise<void> {
   const absPath = path.join(options.boxRoot, options.threadRelPath);
-  const content = await fs.readFile(absPath, "utf-8");
-  const msgXml = createMessageElement(options.message);
-
-  const updated = content.replace(
-    /<\/chat-thread>/,
-    `${msgXml}\n</chat-thread>`
-  );
-  await fs.writeFile(absPath, updated);
+  const fields = await readThreadFields(absPath);
+  fields.entries = [...(fields.entries ?? []), createMessageEntry(options.message)];
+  await writeThreadFields(absPath, fields);
 }
 
 /**
  * Find unsent agent messages in a thread file.
- * Returns the parsed thread root and an array of unsent message nodes.
  */
 export async function findUnsentAgentMessages(
   absPath: string
 ): Promise<{
-  root: ElementNode;
-  unsent: ElementNode[];
+  fields: ChatThreadFields;
+  unsent: ChatThreadMessage[];
 }> {
-  const content = await fs.readFile(absPath, "utf-8");
-  const root = await parseCard(content, { source: path.basename(absPath) });
-  const unsent: ElementNode[] = [];
-
-  for (const child of root.children) {
-    if (
-      child.tagName === "message" &&
-      child.attrs.sender === "agent" &&
-      !child.attrs.sent
-    ) {
-      unsent.push(child);
+  const fields = await readThreadFields(absPath);
+  const unsent: ChatThreadMessage[] = [];
+  for (const entry of fields.entries ?? []) {
+    if (entry.kind === "message" && entry.sender === "agent" && entry.sent === undefined) {
+      unsent.push(entry);
     }
   }
-
-  return { root, unsent };
+  return { fields, unsent };
 }
 
 /**
- * Stamp a sent attribute and optional id on an agent message in the thread file.
- * Finds the message by matching text content (since unsent messages have no id).
+ * Stamp a sent timestamp and optional id on an unsent agent message.
+ * Finds the message by matching text content.
  */
 export async function stampSentMessage(options: {
   absPath: string;
@@ -168,35 +137,24 @@ export async function stampSentMessage(options: {
   sentAt: string;
   messageId?: string;
 }): Promise<void> {
-  let content = await fs.readFile(options.absPath, "utf-8");
-
-  // Find the unsent agent message and add sent attribute
-  // Match: <message ... sender="agent"...>text</message> without sent=
-  // We use a targeted approach: find the specific message line
-  const escapedText = options.messageText.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-  const pattern = new RegExp(
-    `(<message[^>]*sender="agent"[^>]*)(>)(${escapedText}</message>)`
-  );
-
-  const match = content.match(pattern);
-  if (!match) return;
-
-  // Only stamp if it doesn't already have sent=
-  if (match[1]!.includes("sent=")) return;
-
-  let replacement = `${match[1]} sent="${options.sentAt}"`;
-  if (options.messageId) {
-    replacement += ` id="${options.messageId}"`;
+  const fields = await readThreadFields(options.absPath);
+  for (const entry of fields.entries ?? []) {
+    if (
+      entry.kind === "message" &&
+      entry.sender === "agent" &&
+      entry.sent === undefined &&
+      entry.text === options.messageText
+    ) {
+      entry.sent = options.sentAt;
+      if (options.messageId !== undefined) entry.id = options.messageId;
+      await writeThreadFields(options.absPath, fields);
+      return;
+    }
   }
-  replacement += `${match[2]}${match[3]}`;
-
-  content = content.replace(pattern, replacement);
-  await fs.writeFile(options.absPath, content);
 }
 
 /**
  * Find an existing pending chat job for a given thread ref.
- * Returns the relative path if found, null otherwise.
  */
 export async function findExistingChatJob(
   boxRoot: string,
@@ -215,12 +173,12 @@ export async function findExistingChatJob(
     const filePath = path.join(jobsDir, entry);
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const root = await parseCard(content, { source: entry });
-      if (root.attrs.status !== "pending") continue;
-      for (const child of root.children) {
-        if (child.tagName === "thread" && child.attrs.ref === threadRef) {
-          return path.relative(boxRoot, filePath);
-        }
+      const split = splitCardContent(content);
+      if (!split.hasFrontmatter) continue;
+      const fields = parseYaml(split.frontmatterText) as ChatJobFields;
+      if (fields.status !== "pending") continue;
+      if (fields.thread?.ref === threadRef) {
+        return path.relative(boxRoot, filePath);
       }
     } catch {
       continue;
@@ -231,7 +189,6 @@ export async function findExistingChatJob(
 
 /**
  * Create a chat job for a thread, unless one already exists.
- * Returns the relative path to the job (new or existing).
  */
 export async function createChatJob(options: {
   boxRoot: string;
@@ -292,12 +249,11 @@ export async function updatePersonEntry(options: {
   if (lastName) data.lastName = lastName;
   if (username) data.username = username;
 
-  // Check if file exists and data hasn't changed
   try {
     const existing = await fs.readFile(filePath, "utf-8");
     const parsed = JSON.parse(existing);
     if (JSON.stringify(parsed) === JSON.stringify(data)) {
-      return null; // No change
+      return null;
     }
   } catch {
     // File doesn't exist — create it
