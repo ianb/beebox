@@ -1,5 +1,29 @@
 # Ideas & Planned Features
 
+## Migration tracking per box
+
+`scripts/migrate-*.ts` scripts are one-shot data migrations (Phase 1 frontmatter wrap, the per-schema YAML migrations, the `.attach/` layout flip). There's no record on disk of which ones a given box has been through. So today you have to either:
+
+- Remember which migrations a box has seen.
+- Re-run everything and rely on each migrator's idempotency check (most look for a frontmatter marker like `type: image` and skip if present).
+
+This is fine when there are five migrations, but the order matters (Phase 1 wrap must run before any per-schema migrator), the set grows over time, and new migrations may have implicit prerequisites that aren't enforced — so "run everything in chronological order" is the current safe bet.
+
+A small tracking file would fix this. Shape: `.callback-box/migrations.json` (or similar) holding a list of `{name, applied-at}` entries. A new `cb migrate` command would:
+
+- Read the manifest.
+- Compare against a canonical ordered list of migrations baked into callback-box source.
+- Run only the missing ones, in order, and append entries on success.
+- Refuse to run if any migration fails partway (so the manifest stays truthful).
+
+Open questions:
+- **Where to declare the canonical list.** A single registry file (`scripts/migrations.ts` exporting an ordered array of `{name, run}` entries) is the obvious shape — easy to grep, easy to review chronological order.
+- **Manifest format and scope.** JSONL append-only is the lowest-friction shape; one entry per applied migration. Goes in `.callback-box/` (already excluded from box commits) or `config/.migrations.jsonl` (committed so failures are visible in git history).
+- **Dry-run vs. apply.** Same CLI shape as the current scripts: default dry-run, `--apply` to commit.
+- **Schema-level vs. data-level migrations.** Phase 1 wrap and per-schema YAML rewrites are data-level. The `.attach/` flip is structural. Both should be tracked, but they may want different runners.
+
+Related: every migrator should report unrecognized attrs/children before writing, so silent data loss surfaces during the run. The three newest migrators (scheduled-script, question, chat-thread) do this; older ones don't.
+
 ## MAP.md for docs/generated/
 
 The per-box `docs/generated/` tree is fully templated from this repo by `cb init` / `generateDocs` — every box gets the same contents. The recursive box-side MAP generator hides this subtree (it's not box-specific information), so agents working in a box currently have no index of what's in `docs/generated/`.
