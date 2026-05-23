@@ -13,8 +13,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseCard, escapeAttr } from "cardworks";
-import { createIntakeJobTemplate } from "../schemas/intake-job.js";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { splitCardContent } from "cardworks";
+import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 
 export interface IntakeJobOptions {
@@ -113,21 +114,28 @@ async function findExistingIntakeJob(
   for (const entry of entries) {
     if (!entry.endsWith(".intake.job.card")) continue;
     const filePath = path.join(jobsDir, entry);
-    try {
-      const content = await fs.readFile(filePath, "utf-8");
-      const root = await parseCard(content, { source: entry });
-      if (
-        root.attrs.status === "pending" &&
-        root.attrs.source === source
-      ) {
-        return { path: filePath };
-      }
-    } catch {
-      // Skip unparseable files
-      continue;
+    const fields = await readIntakeJobFields(filePath);
+    if (fields === null) continue;
+    if (fields.status === "pending" && fields.source === source) {
+      return { path: filePath };
     }
   }
   return null;
+}
+
+async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | null> {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    const split = splitCardContent(content);
+    if (!split.hasFrontmatter) return null;
+    const parsed = parseYaml(split.frontmatterText) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed as IntakeJobFields;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -137,24 +145,11 @@ async function appendToIntakeJob(
   jobPath: string,
   opts: { items: string[]; description: string }
 ): Promise<void> {
-  const content = await fs.readFile(jobPath, "utf-8");
-
-  // Build new item elements
-  const newItemElements = opts.items
-    .map((ref) => `<item ref="${escapeAttr(ref)}" />`)
-    .join("\n");
-
-  // Insert new items before the closing tag
-  const updated = content.replace(
-    /<\/intake-job>/,
-    `${newItemElements}\n</intake-job>`
-  );
-
-  // Update description to reflect new count
-  const descUpdated = updated.replace(
-    /<description>.*?<\/description>/,
-    `<description>${opts.description}</description>`
-  );
-
-  await fs.writeFile(jobPath, descUpdated);
+  const fields = await readIntakeJobFields(jobPath);
+  if (fields === null) {
+    throw new Error(`appendToIntakeJob: failed to read ${jobPath}`);
+  }
+  fields.description = opts.description;
+  fields.items = [...fields.items, ...opts.items.map((ref) => ({ ref }))];
+  await fs.writeFile(jobPath, `---\n${stringifyYaml(fields)}---\n`);
 }

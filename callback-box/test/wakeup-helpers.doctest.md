@@ -40,10 +40,10 @@ jobFiles.length
 
 // The job references both items
 const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
-content.includes('ref="box/inbox/note1.memo.card"')
+content.includes("ref: box/inbox/note1.memo.card")
 => true
 
-content.includes('ref="box/inbox/note2.task.card"')
+content.includes("ref: box/inbox/note2.task.card")
 => true
 ```
 
@@ -165,7 +165,7 @@ count
 const allFiles = await readdir(join(box.root, "box/jobs"));
 const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
 const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
-content.includes('source="gmail"')
+content.includes("source: gmail")
 => true
 
 content.includes("pages-saved")

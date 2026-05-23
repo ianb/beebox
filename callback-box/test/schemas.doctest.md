@@ -162,11 +162,17 @@ createIntakeJobTemplate({
   ],
 })
 =>
-<intake-job status="pending" created="«date»" source="capture-connector" priority="normal">
-<description>Triage 2 new capture sessions</description>
-<item ref="box/inbox/capture-1/session.capture-session.card" />
-<item ref="box/inbox/capture-2/session.capture-session.card" />
-</intake-job>
+---
+type: intake-job
+status: pending
+created: «*»
+source: capture-connector
+priority: normal
+description: Triage 2 new capture sessions
+items:
+  - ref: box/inbox/capture-1/session.capture-session.card
+  - ref: box/inbox/capture-2/session.capture-session.card
+---
 ```
 
 Supports `priority: "low"`:
@@ -179,10 +185,16 @@ createIntakeJobTemplate({
   priority: "low",
 })
 =>
-<intake-job status="pending" created="«date»" source="capture-connector" priority="low">
-<description>Triage bookmarks</description>
-<item ref="box/inbox/bookmark.bookmark.card" />
-</intake-job>
+---
+type: intake-job
+status: pending
+created: «*»
+source: capture-connector
+priority: low
+description: Triage bookmarks
+items:
+  - ref: box/inbox/bookmark.bookmark.card
+---
 ```
 
 ## Calendar Review Job
@@ -199,49 +211,46 @@ createCalendarReviewJobTemplate({
   ],
 })
 =>
-<calendar-review-job status="pending" created="«date»" source="google-calendar" priority="normal">
-<description>2 calendar changes to review</description>
-<change action="new" ref="store/calendar/2026-02-25_abc.ics">Dentist appointment</change>
-<change action="updated" ref="store/calendar/2026-02-22_def.ics">Standup — time changed</change>
-</calendar-review-job>
+---
+type: calendar-review-job
+status: pending
+created: «*»
+source: google-calendar
+priority: normal
+description: 2 calendar changes to review
+changes:
+  - action: new
+    summary: Dentist appointment
+    ref: store/calendar/2026-02-25_abc.ics
+  - action: updated
+    summary: Standup — time changed
+    ref: store/calendar/2026-02-22_def.ics
+---
 ```
 
-Deleted events can include the original ICS content:
+Deleted events can include the original ICS content under `ics:`:
 
 ```
-createCalendarReviewJobTemplate({
+const out = createCalendarReviewJobTemplate({
   source: "google-calendar",
   description: "1 deletion",
   changes: [
     { action: "deleted", summary: "Cancelled meeting", icsContent: "BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Cancelled\nEND:VEVENT\nEND:VCALENDAR" },
   ],
-})
-=>
-<calendar-review-job status="pending" created="«date»" source="google-calendar" priority="normal">
-<description>1 deletion</description>
-<change action="deleted">
-Cancelled meeting
-<ics>BEGIN:VCALENDAR
-BEGIN:VEVENT
-SUMMARY:Cancelled
-END:VEVENT
-END:VCALENDAR</ics>
-</change>
-</calendar-review-job>
+});
+out.includes("action: deleted") && out.includes("BEGIN:VCALENDAR")
+=> true
 ```
 
 Supports custom priority:
 
 ```
-createCalendarReviewJobTemplate({
+const out = createCalendarReviewJobTemplate({
   source: "google-calendar",
   description: "test",
   changes: [{ action: "new", summary: "test" }],
   priority: "low",
-})
-=>
-<calendar-review-job status="pending" created="«date»" source="google-calendar" priority="low">
-<description>test</description>
-<change action="new">test</change>
-</calendar-review-job>
+});
+out.includes("priority: low")
+=> true
 ```

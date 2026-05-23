@@ -1,64 +1,47 @@
 /**
  * Chat job card schema — a job to process new messages in a chat thread.
  *
- * Created by messaging connectors (e.g. Telegram) when new messages arrive
- * or when a callback timer expires. The agent reads the referenced thread,
- * decides whether to respond, and appends its response or acknowledgment.
+ * Created by messaging connectors (e.g. Telegram) when new messages
+ * arrive or when a callback timer expires. The agent reads the
+ * referenced thread, decides whether to respond, and appends its
+ * response or acknowledgment.
  */
 
-import { element, escapeText, escapeAttr } from "cardworks";
+import { cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-/**
- * Child element for job description.
- */
-export const ChatJobDescription = element("description", {
-  text: z.string(),
-});
-
-/**
- * Reference to the chat thread file to process.
- */
-export const ChatJobThread = element("thread", {
-  attrs: {
-    ref: z.string(),
-  },
-});
-
-/**
- * Chat job card schema.
- *
- * Example:
- * ```xml
- * <chat-job status="pending" created="2026-02-26T20:00:00Z" source="telegram">
- *   <description>New messages in Family Group</description>
- *   <thread ref="store/chat/telegram/Family_Group/thread.chat-thread.card" />
- * </chat-job>
- * ```
- *
- * The `source` attribute names the connector that owns the thread, so
- * `cb wakeup --connector telegram` can drain telegram-originated chat
- * jobs without picking up unrelated work.
- */
-export const ChatJobSchema = element("chat-job", {
-  attrs: {
+export const ChatJobSchema: CardSchema = cardSchema("chat-job", {
+  fields: {
     status: z.string().default("pending"),
     created: z.string().datetime({ offset: true }),
     source: z.string(),
+    description: z.string(),
+    thread: z.object({ ref: z.string() }),
   },
-  children: z.array(z.union([ChatJobDescription, ChatJobThread])),
   instructions: `# Processing Chat Jobs
 
-A chat job means there are new messages (or a scheduled callback) in a chat thread.
+A chat job means there are new messages (or a scheduled callback) in
+a chat thread.
+
+The \`source\` field names the connector that owns the thread, so
+\`cb wakeup --connector telegram\` can drain telegram-originated chat
+jobs without picking up unrelated work.
 
 ## Steps
 
-1. The job content and thread content are provided in the prompt — do NOT re-read them
-2. Find new messages: scan backward from the end for the last \`<seen>\` or \`<message sender="agent">\` — everything after that is new
-3. If there are no new messages, check the last \`<seen>\` for a note-to-self about what to do
+1. The job content and thread content are provided in the prompt — do
+   NOT re-read them
+2. Find new messages: scan backward from the end for the last
+   \`<seen>\` or \`<message sender="agent">\` — everything after that
+   is new
+3. If there are no new messages, check the last \`<seen>\` for a
+   note-to-self about what to do
 4. Decide whether to respond or acknowledge:
-   - **Respond**: append \`<message sender="agent">Your response</message>\` at the end
-   - **Acknowledge**: append \`<seen />\` (optionally with \`callback-in\` and/or a note-to-self)
+   - **Respond**: append \`<message sender="agent">Your response</message>\`
+     at the end
+   - **Acknowledge**: append \`<seen />\` (optionally with
+     \`callback-in\` and/or a note-to-self)
 5. Commit the thread file
 6. Run \`cb finish {thisJobFile}\` to complete the job
 
@@ -66,25 +49,33 @@ A chat job means there are new messages (or a scheduled callback) in a chat thre
 
 - Only append ONE element at the end of the thread
 - Do NOT modify existing messages
-- Do NOT fill in \`sent\` or \`id\` on agent messages — the connector handles delivery
+- Do NOT fill in \`sent\` or \`id\` on agent messages — the connector
+  handles delivery
 - Commit the thread file before finishing the job`,
 });
 
-export type ChatJob = z.infer<typeof ChatJobSchema>;
+export interface ChatJobFields {
+  type: "chat-job";
+  status: string;
+  created: string;
+  source: string;
+  description: string;
+  thread: { ref: string };
+}
 
-/**
- * Template for creating a chat job card.
- */
 export function createChatJobTemplate(options: {
   created?: string;
   description: string;
   threadRef: string;
   source: string;
 }): string {
-  const created = options.created ?? new Date().toISOString();
-  return `<chat-job status="pending" created="${escapeAttr(created)}" source="${escapeAttr(options.source)}">
-<description>${escapeText(options.description)}</description>
-<thread ref="${escapeAttr(options.threadRef)}" />
-</chat-job>
-`;
+  const fields: Record<string, unknown> = {
+    type: "chat-job",
+    status: "pending",
+    created: options.created ?? new Date().toISOString(),
+    source: options.source,
+    description: options.description,
+    thread: { ref: options.threadRef },
+  };
+  return `---\n${stringifyYaml(fields)}---\n`;
 }

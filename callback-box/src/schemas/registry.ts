@@ -51,14 +51,10 @@ export const schemas: ElementSchema[] = [
   ProcedureRunSchema,
   CaptureSessionSchema,
   RecipeSchema,
-  IntakeJobSchema,
-  CalendarReviewJobSchema,
   GuideSchema,
   ScheduledScriptSchema,
   ChatThreadSchema,
-  ChatJobSchema,
   PersonalitySchema,
-  QuestionFollowupJobSchema,
   LandmarkSchema,
 ];
 
@@ -83,6 +79,10 @@ export const cardSchemas: CardSchema[] = [
   TodoListSchema,
   TelegramMessageSchema,
   FeedbackSchema,
+  IntakeJobSchema,
+  CalendarReviewJobSchema,
+  ChatJobSchema,
+  QuestionFollowupJobSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
