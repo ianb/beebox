@@ -452,7 +452,7 @@ Zod is installed and used in service definitions and test helpers. Expansion to 
 ## Decision 8: File-Based Storage with Queryable Index
 
 **Status:** Directional — design settled, build when needed
-**Current state:** Files (XML cards) are canonical storage. Git provides history. No structured index.
+**Current state:** Files (cards — mostly YAML frontmatter, some legacy XML) are canonical storage. Git provides history. No structured index.
 
 ### The need
 
@@ -514,7 +514,7 @@ A resource subscription service where a client says "I want this resource" and g
 2. A subscription that notifies when the resource changes, with the new content
 
 The server knows how to parse different file types into their typed representations:
-- **Cards** (`.card` XML files) → structured JSON via Cardworks parser
+- **Cards** (`.card` files — YAML frontmatter or legacy XML) → structured JSON via cardworks `parseCardText` / `loadCardFile`
 - **JSON files** → parsed JSON
 - **JSONL files** → array of parsed JSON lines
 - **Other files** → raw text or binary, depending on type

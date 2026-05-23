@@ -19,7 +19,7 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See CLAUDE.md note on avoiding personal names.
 
-**card** — An XML file validated by a cardworks schema. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). See `docs/adding-schemas.md`.
+**card** — A typed file validated by a cardworks schema. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Most cards are YAML frontmatter + markdown body; a handful with inline-attributed prose remain XML. See `docs/adding-schemas.md` and `docs/cards-as-markdown.md`.
 
 **attach scope** — A directory named `<basename>.attach/` sitting next to a card with the same basename. Holds the card's attached files. Cards reference into it via `<filename ref="attach/...">`. Nested cards have nested attach scopes.
 
@@ -35,11 +35,11 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
 
-**procedure** — A multi-step XML-defined workflow. Config in `config/procedures/`, runs in `procedure/runs/`. See `docs/procedure-implementation.md`.
+**procedure** — A multi-step workflow defined as a `*.procedure.card` (currently still XML; one of the deferred Markdoc-shaped schemas). Config in `config/procedures/`, runs in `procedure/runs/`. See `docs/procedure-implementation.md`.
 
 **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observable state for testing. See `src/services/CLAUDE.md`.
 
-**cardworks** — The XML card library at `~/src/cardworks/`. Provides parsing, serialization, Zod-based validation, and JSX support. Shared between callback-box and other projects in the monorepo.
+**cardworks** — The card library at `~/src/cardworks/`. Provides two schema primitives — `cardSchema()` for YAML-frontmatter cards and `element()` for legacy XML cards — plus parsing, serialization, Zod-based validation, the frontmatter splitter, and JSX support. Shared between callback-box and other projects in the monorepo.
 
 **inbox** — `box/inbox/`. Where new cards land before processing.
 

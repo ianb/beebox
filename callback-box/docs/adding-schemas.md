@@ -1,186 +1,191 @@
 # Adding a New Card Schema
 
-How to add a new card type to callback-box. Follow the recipe schema (`src/schemas/recipe.tsx`) as a reference.
+How to add a new card type to callback-box. Reference: `src/schemas/briefing.tsx` (frontmatter with body) or `src/schemas/intake-job.tsx` (frontmatter, no body) for the current format. The older XML form (`element()` + child element schemas) is still used by guide, recipe, procedure, procedure-run, capture-session, and landmark — see those files only if your card has Markdoc-shaped inline content. For new card types, default to the frontmatter form below.
 
 ## When to Create a New Card Type
 
 Create a new schema when:
 - The data has a distinct structure that doesn't fit `record` or `memo`
-- You need specific validation (typed attributes, required children)
+- You need specific validation (typed fields, required values)
 - The agent needs domain-specific instructions for handling the data
 
 If it's just a generic captured thing, use `record` instead.
 
 ## Files to Touch
 
-Adding a schema touches 5 files, plus creates 1 new one:
+Adding a frontmatter schema touches 4 files, plus creates 1 new one.
 
 ### 1. Create the Schema File
 
-`src/schemas/<name>.tsx` (use `.tsx` if you need a JSX template, `.ts` otherwise)
+`src/schemas/<name>.ts` (use `.tsx` only if you need JSX somewhere; templates emit YAML strings now, not JSX).
 
-```tsx
-import { element, serialize } from "cardworks";
+```ts
+import { body, cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-// Define child elements
-export const MyThingTitle = element("title", {
+export const MyThingStatus = z.enum(["draft", "final"]);
+export type MyThingStatusType = z.infer<typeof MyThingStatus>;
+
+const NoteEntry = z.object({
   text: z.string(),
+  added: z.string().datetime({ offset: true }).optional(),
 });
 
-export const MyThingNotes = element("notes", {
-  text: z.string().optional(),
-});
-
-// Define root element
-export const MyThingSchema = element("my-thing", {
-  attrs: {
-    status: z.enum(["draft", "final"]).optional(),
+export const MyThingSchema: CardSchema = cardSchema("my-thing", {
+  fields: {
+    status: MyThingStatus.default("draft"),
+    title: z.string(),
+    notes: z.array(NoteEntry).optional(),
+    body: body(z.string()),  // omit this line if the card has no prose body
   },
-  children: z.array(
-    z.union([MyThingTitle, MyThingNotes])
-  ),
   instructions: `# My Thing Cards
 
 Instructions for agents on how to handle this card type.
 This becomes docs/generated/card-my-thing.md in boxes.
 
 Include:
-- What each field means
+- What each frontmatter field means
+- Whether the body is required and what goes there
 - Where cards should be stored
 - Any special conventions`,
 });
 
-export type MyThing = z.infer<typeof MyThingSchema>;
-
-// Template function (uses JSX — requires .tsx extension)
-export function createMyThingTemplate(options: {
+export interface MyThingFields {
+  type: "my-thing";
+  status: MyThingStatusType;
   title: string;
-}): string {
-  const thing = (
-    <my-thing>
-      <title>{options.title}</title>
-      <notes />
-    </my-thing>
-  );
-  return serialize(thing) + "\n";
+  notes?: Array<{ text: string; added?: string }>;
+  body: string;  // omit if no body
+}
+
+export function createMyThingTemplate(options: { title: string }): string {
+  const fields: Record<string, unknown> = {
+    type: "my-thing",
+    status: "draft",
+    title: options.title,
+  };
+  return `---\n${stringifyYaml(fields)}---\n`;
 }
 ```
 
 Key patterns:
-- Each XML element gets its own `element()` call with a Zod schema
-- Use `z.coerce.number()` for numeric attributes (XML attrs are always strings)
-- `text: z.string().optional()` for elements that can be empty
-- The `instructions` string on the root element is what agents see — make it thorough
-- Template functions return XML strings via `serialize(jsx) + "\n"`
+- `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
+- `body(z.string())` declares a markdown body field. Omit to declare a body-less card (then any non-empty body errors on load).
+- The `type` field in YAML is the discriminator — the loader uses it to look up the schema. Templates must emit it.
+- Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.
+- Avoid `?: T | undefined` in `*Fields` interfaces — use `?: T` and spread conditionally at call sites. Zod recursive types are the exception (they need the explicit `| undefined`).
+- The `instructions` string is what agents see — make it thorough.
 
 ### 2. Register in `src/schemas/registry.ts`
 
 ```ts
-import { RecipeSchema } from "./recipe.js";
+import { MyThingSchema } from "./my-thing.js";
 
-export const schemas: ElementSchema[] = [
+// Add to cardSchemas[] (frontmatter cards):
+export const cardSchemas: CardSchema[] = [
   // ...existing schemas...
-  RecipeSchema,  // add to array
+  MyThingSchema,
 ];
 
 // Add re-export at bottom:
-export { RecipeSchema } from "./recipe.js";
+export { MyThingSchema } from "./my-thing.js";
 ```
+
+(If you're adding a legacy XML schema instead, add it to `schemas[]` and `getCardTypes()` picks it up via `s.tagName` rather than `s.type`.)
 
 ### 3. Register in `src/schemas/index.ts`
 
-Add the schema, type, and template function to the three re-export sections:
-
 ```ts
-// Schema
-RecipeSchema,
-
 // Type
-export type { Recipe } from "./recipe.js";
+export type { MyThingFields, MyThingStatusType } from "./my-thing.js";
 
 // Template
-export { createRecipeTemplate } from "./recipe.js";
+export { createMyThingTemplate } from "./my-thing.js";
 ```
 
 ### 4. Register Template in `src/schemas/templates.ts`
 
 ```ts
-import { createRecipeTemplate } from "./recipe.js";
+import { createMyThingTemplate } from "./my-thing.js";
 
 registerTemplate({
-  name: "recipe",
-  description: "A recipe card with ingredients, steps, and scaling support",
-  cardTypes: ["recipe"],
+  name: "my-thing",
+  description: "A my-thing card — short description for `cb create -t`",
+  cardTypes: ["my-thing"],
+  defaultForTypes: ["my-thing"],
   argsSchema: z.object({
-    title: z.string().describe("Recipe name"),
+    title: z.string().describe("Display title"),
   }),
-  generate: (args) => {
-    // Note: use this pattern for optional args with exactOptionalPropertyTypes
-    const templateArgs: Parameters<typeof createRecipeTemplate>[0] = {
-      title: args.title,
-    };
-    if (args.description) templateArgs.description = args.description;
-    return createRecipeTemplate(templateArgs);
-  },
+  generate: (args) => createMyThingTemplate({ title: args.title }),
 });
 ```
 
-**Gotcha:** The project uses `exactOptionalPropertyTypes: true` in tsconfig. You can't pass `undefined` to optional properties directly. Use the `const templateArgs = { required }; if (val) templateArgs.optional = val;` pattern.
-
-### 5. Add to `src/core/commands/create.ts`
-
-The `create` command has its own hardcoded template maps (separate from `templates.ts`). Add entries to both:
+The project uses `exactOptionalPropertyTypes: true`. When forwarding optional args, build the options object incrementally:
 
 ```ts
-import { createRecipeTemplate } from "../../schemas/recipe.js";
-
-// In TEMPLATES:
-recipe: (args) =>
-  createRecipeTemplate({
-    title: args.content ?? "Untitled Recipe",
-  }),
-
-// In TYPE_TO_TEMPLATE:
-recipe: "recipe",
+generate: (args) => {
+  const opts: Parameters<typeof createMyThingTemplate>[0] = { title: args.title };
+  if (args.description !== undefined) opts.description = args.description;
+  return createMyThingTemplate(opts);
+},
 ```
 
-### 6. (Optional) Add a Storage Directory
+### 5. (Optional) Add a Storage Directory
 
 If the card type has its own storage location, add it to `BOX_DIRS` in `src/cli/lib/paths.ts`:
 
 ```ts
 export const BOX_DIRS = {
   // ...
-  recipes: "store/recipes",
-  // ...
+  mythings: "store/mythings",
 };
 ```
 
-And add a row to the directory layout table in `src/core/generate-docs.ts`:
+`cb init` iterates `Object.values(BOX_DIRS)` and creates each directory automatically.
+
+### 6. (Optional) Frontend file-type entry
+
+If the card needs an icon or a custom list-component in the file browser, register it in `src/frontend/src/file-types/builtins.tsx`:
 
 ```ts
-"| `store/recipes/` | Recipe collection (subdirectories for organization) |",
+registerFileType({ tagName: "my-thing" }, { icon: CardIcon });
 ```
 
-Adding to `BOX_DIRS` is sufficient — `cb init` iterates `Object.values(BOX_DIRS)` and creates each directory automatically.
+## Mutating an Existing Frontmatter Card
+
+When code needs to update a frontmatter card on disk (e.g. setting `status: answered` on a question), use `splitCardContent` + `yaml`:
+
+```ts
+import { splitCardContent } from "cardworks";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+
+const content = await fs.readFile(absPath, "utf-8");
+const split = splitCardContent(content);
+const fields = parseYaml(split.frontmatterText) as MyThingFields;
+fields.status = "final";
+await fs.writeFile(absPath, `---\n${stringifyYaml(fields)}---\n${split.body}`);
+```
+
+For typed reads, use `parseCardText({content, source, schemas: createCardSchemaMap()})` — it validates against the schema and returns `{schema, fields, rawBody, contentType}`. See `src/core/commands/answer.ts` for a worked example.
 
 ## How Agent Discovery Works
 
 1. `cb init` or `cb wakeup` calls `generateDocs(boxRoot)`
-2. `generateDocs()` reads the `schemas` array from `registry.ts`
-3. For each schema with an `instructions` string, it writes `docs/generated/card-<tagname>.md`
+2. `generateDocs()` reads both `schemas` (XML) and `cardSchemas` (frontmatter) from `registry.ts`
+3. For each schema with an `instructions` string, it writes `docs/generated/card-<type>.md`
 4. The agent guide (`.callback-box/agent-guide.md`) lists all card types and links to their docs
 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
-6. Agents read `docs/generated/card-<tagname>.md` on demand for detailed instructions
+6. Agents read `docs/generated/card-<type>.md` on demand for detailed instructions
 
 ## Verification Checklist
 
 After implementing:
 
-1. `npm run build` — compiles without errors
-2. `cb init <box>` — creates storage directory (if added), generates docs
-3. `cb create <box>/path/Name.my-type.card` — template works
-4. `cb validate <box>/path/Name.my-type.card` — validates
-5. Check `<box>/docs/generated/card-my-type.md` exists and has your instructions
-6. Check `<box>/.callback-box/agent-guide.md` lists the new type
+1. `npm run typecheck` — TypeScript clean
+2. `npm run lint` — ESLint clean
+3. `cb init <box>` — creates storage directory (if added), generates docs
+4. `cb create <box>/path/Name.my-thing.card -t my-thing title="..."` — template emits valid YAML
+5. `cb validate <box>/path/Name.my-thing.card` — validates
+6. Check `<box>/docs/generated/card-my-thing.md` exists and has your instructions
+7. Check `<box>/.callback-box/agent-guide.md` lists the new type

@@ -1,6 +1,7 @@
-> **Note:** This is the historical design narrative. Two sections have since been replaced by more specific designs:
+> **Note:** This is the historical design narrative. Several sections have since been replaced by more specific designs:
 > - References to "command cards" and `box/commands/` are outdated — the command card system has been removed; external actions are handled through the reactor/jobs model.
 > - §2 ("Input → Inbox → preprocessing/triage") talks about a single "triage" phase. The formal three-stage pipeline that replaced that framing — intake → triage → handle — is documented in `docs/triage-design.md`. Treat references to "the triage agent" in this doc as the conceptual ancestor of that pipeline, not its current shape.
+> - §3–§4 describe an XML envelope as the canonical card format. As of May 2026, most schemas are YAML frontmatter + markdown body; a handful with inline-attributed prose remain XML. See `docs/cards-as-markdown.md` for the format, migration, and current per-schema status.
 
 # Callback Box: comprehensive design notes
 

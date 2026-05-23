@@ -20,15 +20,26 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 ## Cards
 
-Cards are the core data format — XML files validated by Zod schemas via cardworks. Each card type has a root XML element matching its type name; schemas live in `src/schemas/` and use cardworks' `element()` helper with Zod validators. `src/schemas/registry.ts` lists the built-in set; boxes can add local schemas under `config/schemas/`.
+Cards are the core data format. The current format is **YAML frontmatter + markdown body** (Phase 2, May 2026); a handful of schemas with inline-attributed structure (guide, recipe, procedure, procedure-run, capture-session, landmark) remain on the older **XML body** until cardworks grows Markdoc-style body tags. Both formats coexist behind the loader.
 
-**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `Weekly_Digest.news-brief.card`). Attachments share the basename: `Voice_Memo.memo.card` + `Voice_Memo.m4a`.
+```
+---
+type: memo
+status: new
+created: 2026-05-22T10:00:00Z
+---
+Body content as plain markdown.
+```
 
-**Formatting**: Card XML is flat — no indentation at any nesting level. One long line per paragraph in text content, not soft-wrapped at 80 columns. Keeps diffs clean.
+**Schemas** live in `src/schemas/`. Phase-2 cards use `cardSchema(type, { fields, instructions? })` from cardworks. Legacy XML cards use `element(tagName, ...)`. `src/schemas/registry.ts` lists both sets (`cardSchemas[]` for frontmatter, `schemas[]` for XML); boxes can add local schemas under `config/schemas/`. The `type:` field in frontmatter (or root element tag for XML) selects the schema.
+
+**Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a discriminated `FrontmatterLoadedCard | XmlLoadedCard`. Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations to frontmatter cards are parse-mutate-reserialize via `yaml`'s `parse`/`stringify`.
+
+**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`). Attachments live in a sibling `Name.attach/` directory; refs starting with `attach/` resolve into this scope. No two cards in the same directory may share a basename (lint error).
 
 **Schemas can include `instructions`** — prose embedded in the schema that's injected into agent context when processing cards of that type.
 
-**Validation**: Cards validate on load and before commit (pre-commit plugin). `cb validate` checks all cards.
+**Validation**: Cards validate on load and before commit. `cb validate` checks all cards. See `docs/cards-as-markdown.md` for the format design and migration history; `scripts/migrate-*.ts` + `scripts/_migrate-warnings.ts` are the per-schema migrators with noisy-mode field-loss detection.
 
 ## Source Layout
 
@@ -49,7 +60,7 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/hooks/          Shared React hooks
   src/lib/            Helpers (cn, source-tag, view-url, trpc, audio-context, ...)
   src/ssr/            Server-side rendering setup for `cb render`
-src/schemas/      Card type definitions (Zod + cardworks)
+src/schemas/      Card type definitions (Zod + cardworks: cardSchema for frontmatter, element for legacy XML)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
@@ -102,6 +113,8 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Testing philosophy | `docs/testing.md` |
 | Doctest syntax | `.claude/rules/doctest.md`, `src/test-lib/docs/` |
 | Adding a card type | `docs/adding-schemas.md` |
+| Card format & migration history | `docs/cards-as-markdown.md` |
+| Box migration runbook | `docs/migrations.md` |
 | Adding API endpoints | `docs/adding-api-endpoints.md` |
 | Connectors | `docs/connectors.md` |
 | Procedures | `docs/procedure-implementation.md` |

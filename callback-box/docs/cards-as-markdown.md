@@ -1,8 +1,51 @@
 # RFC: Cards as Markdown + YAML Frontmatter
 
-**Status:** Thinking. Not a decision. May not be implemented.
+**Status:** Implemented (2026-05). Most schemas converted; a handful deferred pending a Markdoc story.
 
-**Question:** Should cards change format — keeping `Name.type.card` filenames but moving the contents from XML (Zod-validated via cardworks) to Markdown body + YAML frontmatter + Markdoc inline tags (validated by per-type schemas), with related files moving into a sibling `Name.attach/` directory?
+> **History:** This document started as exploration. The "case for / case against / open problems" sections below are the original RFC; the Implementation status section directly below records what was actually built. Treat the RFC body as historical reasoning, the status section as current truth.
+
+## Implementation status
+
+**Phase 1 — frontmatter wrapper** (May 21–22): every `.card` file gained a YAML frontmatter block, initially with `content-type: application/x-card+xml` so legacy XML bodies kept parsing through cardworks. This is the substrate that lets per-schema cards flip to flat YAML without breaking the loader. See `scripts/migrate-card-frontmatter.ts`.
+
+**Phase 2 — per-schema flat-YAML migration** (May 22–23): each card type's body XML moved into the YAML frontmatter as typed fields. Body, where it exists, is plain markdown (no inline-attributed prose yet). Migrated schemas:
+
+| Schema | Body? | Notes |
+|--------|-------|-------|
+| email-thread, email-message | no | structured headers/refs only |
+| briefing | markdown | "agent needs to know" prose in body; legal/properties/finances added during the production migration |
+| doc, sheet | no | drive metadata |
+| file | no | filename + description |
+| image | no | filename, exif, document, text blocks, subject-bbox |
+| audio | no | filename + summary/transcript |
+| record | markdown | record content as body; sources/dates/persons/measures/location/etc. in frontmatter |
+| person | markdown | notes as body |
+| memo | markdown | content as body |
+| todo-list, telegram-message, feedback | mixed | feedback keeps prose response as body; others structured |
+| intake-job, calendar-review-job, chat-job, question-followup-job | no | job dispatch metadata |
+| personality | markdown | description as body; tone/traits/experiments etc. in frontmatter |
+| scheduled-script | no | cron/at/rrule + runs + requires |
+| question | no | prompt/input/options/answer all structured |
+| chat-thread | no | metadata + entries[] discriminated union of message/seen |
+
+**Deferred — Markdoc-shaped schemas** (these have inline structured content where flat YAML would lose attribution):
+- `guide` — triage rules/actions with per-statement confidence/source
+- `recipe` — `@ingredient` references inline in step prose
+- `procedure`, `procedure-run` — step internals with intentionally loose validation
+- `capture-session` — transcript with interleaved text/silence/image elements
+- `landmark` — navigation/expand templates + inline triage-destination procedures
+
+Each of these has cases where a YAML array of items would either lose inline-prose context or require an awkward nested workaround. They stay XML until cardworks grows a body-tag (Markdoc-style) story. See "Awkward cases in detail" below.
+
+**Loader dispatch:** `src/core/card-io.ts` `loadCardFile()` returns a discriminated union of `FrontmatterLoadedCard | XmlLoadedCard`. Frontmatter dispatch uses `cardSchemas` (Map keyed by `type:` field); XML falls through to the legacy cardworks `parseCard`. This lets XML and frontmatter cards coexist during and after the migration.
+
+**Migration infrastructure:** `scripts/migrate-*.ts` per schema, plus `scripts/_migrate-warnings.ts` shared helper that declares the known attrs/children per element and surfaces anything outside that allow-list at the end of the run. Surfaced real data loss during the production migration (e.g. ledger's box-local `<legal>`/`<properties>`/`<finances>` children on briefing; `role`/`notes` attrs on `<person>` children in records; `<boxholder ref="...">` on personality). All known gaps fixed in the migrators and re-run cleanly.
+
+**Tracking which migrations have been applied per box** is a known gap (no manifest, no `cb migrate` command). See `docs/ideas.md` § "Migration tracking per box".
+
+---
+
+**Question (original):** Should cards change format — keeping `Name.type.card` filenames but moving the contents from XML (Zod-validated via cardworks) to Markdown body + YAML frontmatter + Markdoc inline tags (validated by per-type schemas), with related files moving into a sibling `Name.attach/` directory?
 
 This document captures the case for, the case against, the open design problems, and a proposed evaluation plan. Read it as exploratory, not prescriptive.
 

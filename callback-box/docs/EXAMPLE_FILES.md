@@ -1,4 +1,9 @@
-> **Note:** References to "command cards" and `box/commands/` in this document are outdated. The command card system has been removed.
+> **Note:** This document is largely outdated. Specifically:
+> - **Card format**: Most schemas are now YAML frontmatter + markdown body, not XML. The XML examples below show the old format. For current per-schema shape, look at the live schema files in `src/schemas/` or the compiled per-type docs at `<box>/docs/generated/card-<type>.md`. See `docs/cards-as-markdown.md` for the format design.
+> - **Command cards**: References to "command cards" and `box/commands/` reflect a removed subsystem.
+> - **Schema authoring**: For how to add a new schema today, see `docs/adding-schemas.md`.
+
+The directory-layout overview and broad category breakdown below are still useful for understanding the box shape; treat the per-card XML snippets as historical.
 
 # Callback Box: Example Files
 
