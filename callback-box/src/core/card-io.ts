@@ -39,6 +39,50 @@ export class CardIOError extends Error {
   }
 }
 
+interface ZodIssueLike {
+  path: ReadonlyArray<string | number | symbol>;
+  message: string;
+  code?: string;
+  expected?: string;
+  received?: string;
+}
+
+/**
+ * Render Zod issues as a compact, one-line-per-issue list:
+ *
+ *   - status: invalid option (expected "new"|"processing"|"processed")
+ *   - boxholder.relationships[0].text: required
+ *
+ * Replaces the multi-line JSON dump Zod's `.message` produces.
+ */
+function formatZodIssues(issues: ReadonlyArray<ZodIssueLike>): string {
+  return issues
+    .map((issue) => {
+      const pathStr =
+        issue.path.length === 0
+          ? "(root)"
+          : issue.path
+              .map((seg, i) => {
+                if (typeof seg === "number") return `[${String(seg)}]`;
+                return i === 0 ? String(seg) : `.${String(seg)}`;
+              })
+              .join("");
+      return `  - ${pathStr}: ${shortenIssueMessage(issue)}`;
+    })
+    .join("\n");
+}
+
+function shortenIssueMessage(issue: ZodIssueLike): string {
+  const m = issue.message;
+  // Zod's stock "Invalid input: expected <X>, received <Y>" → "expected X, got Y"
+  const expectedReceived = m.match(/^Invalid input: expected (.+?), received (.+)$/);
+  if (expectedReceived) {
+    if (expectedReceived[2] === "undefined") return `required (expected ${expectedReceived[1]})`;
+    return `expected ${expectedReceived[1]}, got ${expectedReceived[2]}`;
+  }
+  return m;
+}
+
 /**
  * A parsed card. `fields` is the validated, typed object — the union of
  * frontmatter fields and (if the schema declares one) the body field, keyed
@@ -91,7 +135,7 @@ export function parseCardText(
   const fmParse = schema.frontmatterSchema.safeParse(fm);
   if (!fmParse.success) {
     throw new CardIOError(
-      `${source}: frontmatter validation failed for type "${type}": ${fmParse.error.message}`
+      `${source}: invalid ${type} frontmatter:\n${formatZodIssues(fmParse.error.issues)}`
     );
   }
   const fmFields = fmParse.data as Record<string, unknown>;
@@ -113,7 +157,7 @@ export function parseCardText(
     const bodyParse = schema.bodyField.schema.safeParse(bodyValue);
     if (!bodyParse.success) {
       throw new CardIOError(
-        `${source}: body validation failed for type "${type}": ${bodyParse.error.message}`
+        `${source}: invalid ${type} body:\n${formatZodIssues(bodyParse.error.issues)}`
       );
     }
     bodyValue = bodyParse.data;

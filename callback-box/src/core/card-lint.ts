@@ -118,10 +118,15 @@ async function lintFrontmatterCard(input: {
 }
 
 function errorResult(path: string, message: string): LintResult {
+  // The cardworks formatter prints the file path as a header above each
+  // result's issues, so strip any leading "<path>: " prefix the underlying
+  // error (e.g. CardIOError) included to avoid printing the path twice.
+  const prefix = `${path}: `;
+  const cleaned = message.startsWith(prefix) ? message.slice(prefix.length) : message;
   const issue: LintIssue = {
     type: "validation",
     severity: "error",
-    message,
+    message: cleaned,
   };
   return { path, errors: [issue], warnings: [] };
 }

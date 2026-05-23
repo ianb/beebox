@@ -104,28 +104,6 @@ program.addCommand(triageCommand);
 program.addCommand(handleCommand);
 
 // ============================================
-// Placeholder commands (to be implemented)
-// ============================================
-
-program
-  .command("commit")
-  .description("Commit changes with validation")
-  .option("-m, --message <message>", "Commit message")
-  .action((options: { message?: string }) => {
-    console.log(`cb commit: would commit with message "${options.message ?? "(no message)"}"`);
-    console.log("Not yet implemented");
-  });
-
-
-program
-  .command("tail")
-  .description("Run tailing phase (indexing, scheduling)")
-  .action(() => {
-    console.log("cb tail: would run tailing phase");
-    console.log("Not yet implemented");
-  });
-
-// ============================================
 // Inspection commands
 // ============================================
 

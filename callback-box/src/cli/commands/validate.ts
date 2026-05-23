@@ -225,20 +225,18 @@ export const validateCommand = new Command("validate")
           if (cardSummary !== null) {
             const output = formatLintResults(cardSummary, { colors: true });
             if (output) console.log(output);
-            console.log(
-              `\nValidated ${cardSummary.filesChecked} card(s): ` +
-              `${cardSummary.filesChecked - cardSummary.filesWithErrors} valid, ` +
-              `${cardSummary.filesWithErrors} with issues`
-            );
           }
           if (mdSummary !== null) {
             const output = formatMarkdownResults(mdSummary, { colors: true });
             if (output) console.log(`\n${output}`);
-            console.log(
-              `\nValidated ${mdSummary.filesChecked} markdown file(s): ` +
-              `${mdSummary.filesChecked - mdSummary.filesWithErrors} valid, ` +
-              `${mdSummary.filesWithErrors} with issues`
-            );
+            if (mdSummary.totalErrors > 0) {
+              const fileWord = mdSummary.filesWithErrors === 1 ? "file" : "files";
+              console.log(
+                `\n${String(mdSummary.filesChecked)} markdown file${mdSummary.filesChecked === 1 ? "" : "s"} checked, ` +
+                `${String(mdSummary.totalErrors)} error${mdSummary.totalErrors === 1 ? "" : "s"} in ` +
+                `${String(mdSummary.filesWithErrors)} ${fileWord}`
+              );
+            }
           }
           if (attachErrors.length > 0) {
             const output = formatAttachLintErrors(attachErrors, { colors: true });
