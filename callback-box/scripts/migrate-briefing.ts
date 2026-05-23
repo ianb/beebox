@@ -13,6 +13,34 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const SPEC: ElementSpec = {
+  attrs: ["version"],
+  children: {
+    purpose: { attrs: [] },
+    "key-people": {
+      attrs: [],
+      children: { person: { attrs: ["name", "called", "role", "ref"] } },
+    },
+    "project-phase": { attrs: ["date"] },
+    corrections: {
+      attrs: [],
+      children: {
+        correction: {
+          attrs: [],
+          children: {
+            instruction: { attrs: [] },
+            test: { attrs: [] },
+          },
+        },
+      },
+    },
+    "agent-needs-to-know": { attrs: [] },
+  },
+};
+
+const warnings = new WarningCollector();
 
 interface PersonEntry {
   name: string;
@@ -124,6 +152,7 @@ async function migrateFile(absPath: string): Promise<"converted" | "already-migr
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: SPEC, warnings });
   const { fields, body } = convertOne(node, absPath);
   const yamlText = stringifyYaml(fields);
   const bodyTail = body === "" ? "" : `${body}${body.endsWith("\n") ? "" : "\n"}`;
@@ -165,6 +194,7 @@ async function main(): Promise<void> {
   for (const f of failed) {
     console.log(`  ${relative(absRoot, f.file)}: ${f.error}`);
   }
+  warnings.dump(absRoot);
   if (failed.length > 0) process.exit(2);
 }
 

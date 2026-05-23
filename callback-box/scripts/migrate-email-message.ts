@@ -47,6 +47,28 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const SPEC: ElementSpec = {
+  attrs: ["message-id", "thread-id", "version"],
+  children: {
+    from: { attrs: [] },
+    to: { attrs: [] },
+    cc: { attrs: [] },
+    date: { attrs: [] },
+    subject: { attrs: [] },
+    snippet: { attrs: [] },
+    "body-file": { attrs: [] },
+    attachments: {
+      attrs: [],
+      children: {
+        attachment: { attrs: ["ref", "content-type", "size"] },
+      },
+    },
+  },
+};
+
+const warnings = new WarningCollector();
 
 interface AttachmentEntry {
   ref: string;
@@ -170,6 +192,7 @@ async function migrateFile(absPath: string): Promise<"converted" | "already-migr
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: SPEC, warnings });
   const fields = convertOne(node, absPath);
   const yamlText = stringifyYaml(fields);
   await writeFile(absPath, `---\n${yamlText}---\n`);
@@ -210,6 +233,7 @@ async function main(): Promise<void> {
   for (const f of failed) {
     console.log(`  ${relative(absRoot, f.file)}: ${f.error}`);
   }
+  warnings.dump(absRoot);
   if (failed.length > 0) process.exit(2);
 }
 

@@ -42,6 +42,20 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const SPEC: ElementSpec = {
+  attrs: ["thread-id", "status", "version"],
+  children: {
+    subject: { attrs: [] },
+    participants: { attrs: [], children: { participant: { attrs: [] } } },
+    "date-range": { attrs: ["start", "end"] },
+    labels: { attrs: [], children: { label: { attrs: [] } } },
+    messages: { attrs: [], children: { "message-ref": { attrs: ["ref"] } } },
+  },
+};
+
+const warnings = new WarningCollector();
 
 interface ThreadFields {
   type: "email-thread";
@@ -167,6 +181,7 @@ async function migrateFile(absPath: string): Promise<"converted" | "already-migr
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: SPEC, warnings });
   const fields = convertOne(node, absPath);
   const yamlText = stringifyYaml(fields);
   await writeFile(absPath, `---\n${yamlText}---\n`);
@@ -216,6 +231,7 @@ async function main(): Promise<void> {
   for (const f of failed) {
     console.log(`  ${relative(absRoot, f.file)}: ${f.error}`);
   }
+  warnings.dump(absRoot);
   if (failed.length > 0) process.exit(2);
 }
 

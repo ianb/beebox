@@ -14,6 +14,40 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const RECORD_SPEC: ElementSpec = {
+  attrs: ["status", "version"],
+  children: {
+    name: { attrs: [] },
+    description: { attrs: [] },
+    sources: {
+      attrs: [],
+      children: { source: { attrs: ["ref", "time"] } },
+    },
+    date: { attrs: ["value"] },
+    person: { attrs: ["name", "ref"] },
+    location: { attrs: ["ref"] },
+    measure: { attrs: ["value"] },
+    language: { attrs: [] },
+    triage: { attrs: [] },
+    notes: { attrs: [] },
+    content: { attrs: [] },
+  },
+};
+
+const PERSON_SPEC: ElementSpec = {
+  attrs: ["status", "version"],
+  children: {
+    name: { attrs: [] },
+    called: { attrs: [] },
+    role: { attrs: [] },
+    contact: { attrs: [] },
+    notes: { attrs: [] },
+  },
+};
+
+const warnings = new WarningCollector();
 
 async function findCards(root: string, suffix: string): Promise<string[]> {
   const out: string[] = [];
@@ -183,6 +217,7 @@ async function migrateFile(
   const re = new RegExp(`^---\\r?\\n[\\s\\S]*?\\b${typeMarker}`, "m");
   if (re.test(raw)) return "already-migrated";
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: kind === "record" ? RECORD_SPEC : PERSON_SPEC, warnings });
   const { fields, body } = kind === "record"
     ? convertRecord(node, absPath)
     : convertPerson(node, absPath);
@@ -236,6 +271,7 @@ async function main(): Promise<void> {
   const absRoot = resolve(boxRoot);
   await migrateKind({ absRoot, kind: "record", apply });
   await migrateKind({ absRoot, kind: "person", apply });
+  warnings.dump(absRoot);
 }
 
 main().catch((e) => {

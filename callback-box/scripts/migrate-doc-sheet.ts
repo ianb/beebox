@@ -14,6 +14,36 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const DOC_SPEC: ElementSpec = {
+  attrs: ["drive-id", "status", "version"],
+  children: {
+    title: { attrs: [] },
+    modified: { attrs: [] },
+    revision: { attrs: [] },
+    link: { attrs: [] },
+    owner: { attrs: [] },
+    content: { attrs: ["ref"] },
+    lossy: { attrs: [], children: { item: { attrs: ["type", "count"] } } },
+  },
+};
+
+const SHEET_SPEC: ElementSpec = {
+  attrs: ["drive-id", "status", "version"],
+  children: {
+    title: { attrs: [] },
+    modified: { attrs: [] },
+    link: { attrs: [] },
+    owner: { attrs: [] },
+    sheets: {
+      attrs: [],
+      children: { "sheet-tab": { attrs: ["ref", "title", "gid"] } },
+    },
+  },
+};
+
+const warnings = new WarningCollector();
 
 async function findCards(root: string, suffix: string): Promise<string[]> {
   const out: string[] = [];
@@ -134,6 +164,7 @@ async function migrateFile(
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: kind === "doc" ? DOC_SPEC : SHEET_SPEC, warnings });
   const fields = kind === "doc" ? convertDoc(node, absPath) : convertSheet(node, absPath);
   const yamlText = stringifyYaml(fields);
   await writeFile(absPath, `---\n${yamlText}---\n`);
@@ -184,6 +215,7 @@ async function main(): Promise<void> {
   const absRoot = resolve(boxRoot);
   await migrateKind({ absRoot, kind: "doc", apply });
   await migrateKind({ absRoot, kind: "sheet", apply });
+  warnings.dump(absRoot);
 }
 
 main().catch((e) => {

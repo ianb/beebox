@@ -13,6 +13,61 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const EVIDENCE_ATTRS = ["confidence", "source", "ref"];
+
+const EXPERIMENT_SPEC: ElementSpec = {
+  attrs: ["id", "status", "created-at", "updated-at"],
+  children: {
+    hypothesis: { attrs: [] },
+    approach: { attrs: [] },
+    observation: { attrs: ["ref", "date"] },
+    conclusion: { attrs: [] },
+  },
+};
+
+const SPEC: ElementSpec = {
+  attrs: ["version"],
+  children: {
+    "goes-by": { attrs: [] },
+    role: { attrs: [] },
+    boxholder: {
+      attrs: [],
+      children: {
+        "full-name": { attrs: [] },
+        called: { attrs: [] },
+        relationship: { attrs: EVIDENCE_ATTRS },
+      },
+    },
+    "speaking-voice": {
+      attrs: ["model"],
+      children: { instruction: { attrs: [] } },
+    },
+    tone: {
+      attrs: [],
+      children: { instruction: { attrs: EVIDENCE_ATTRS } },
+    },
+    traits: {
+      attrs: [],
+      children: {
+        trait: { attrs: EVIDENCE_ATTRS },
+        unresolved: { attrs: [], children: { note: { attrs: [] } } },
+        description: { attrs: [] },
+      },
+    },
+    experiments: {
+      attrs: [],
+      children: { experiment: EXPERIMENT_SPEC },
+    },
+    "context-notes": {
+      attrs: [],
+      children: { context: { attrs: ["duration", "added-at"] } },
+    },
+  },
+};
+
+const warnings = new WarningCollector();
 
 async function findCards(root: string): Promise<string[]> {
   const out: string[] = [];
@@ -185,6 +240,7 @@ async function migrateFile(absPath: string): Promise<"converted" | "already-migr
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: SPEC, warnings });
   const { fields, body } = convertOne(node, absPath);
   const yamlText = stringifyYaml(fields);
   const bodyTail = body === "" ? "" : `${body}${body.endsWith("\n") ? "" : "\n"}`;
@@ -221,6 +277,7 @@ async function main(): Promise<void> {
   for (const f of failed) {
     console.log(`  ${relative(absRoot, f.file)}: ${f.error}`);
   }
+  warnings.dump(absRoot);
   if (failed.length > 0) process.exit(2);
 }
 

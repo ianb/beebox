@@ -17,6 +17,53 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const INTAKE_SPEC: ElementSpec = {
+  attrs: ["status", "created", "source", "priority", "version"],
+  children: {
+    description: { attrs: [] },
+    item: { attrs: ["ref"] },
+  },
+};
+
+const CALENDAR_SPEC: ElementSpec = {
+  attrs: ["status", "created", "source", "priority", "version"],
+  children: {
+    description: { attrs: [] },
+    change: {
+      attrs: ["action", "ref"],
+      children: { ics: { attrs: [] } },
+    },
+  },
+};
+
+const CHAT_JOB_SPEC: ElementSpec = {
+  attrs: ["status", "created", "source", "version"],
+  children: {
+    description: { attrs: [] },
+    thread: { attrs: ["ref"] },
+  },
+};
+
+const QFU_SPEC: ElementSpec = {
+  attrs: ["status", "created", "source", "version"],
+  children: {
+    description: { attrs: [] },
+    "question-ref": { attrs: ["ref"] },
+    directive: { attrs: [] },
+    answer: { attrs: [] },
+  },
+};
+
+const SPECS: Record<Kind, ElementSpec> = {
+  "intake-job": INTAKE_SPEC,
+  "calendar-review-job": CALENDAR_SPEC,
+  "chat-job": CHAT_JOB_SPEC,
+  "question-followup-job": QFU_SPEC,
+};
+
+const warnings = new WarningCollector();
 
 type Kind = "intake-job" | "calendar-review-job" | "chat-job" | "question-followup-job";
 
@@ -161,6 +208,7 @@ async function migrateFile(absPath: string, kind: Kind): Promise<"converted" | "
   const re = new RegExp(`^---\\r?\\n[\\s\\S]*?\\b${typeMarker}`, "m");
   if (re.test(raw)) return "already-migrated";
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: SPECS[kind], warnings });
   const fields = CONVERTERS[kind](node, absPath);
   await writeFile(absPath, `---\n${stringifyYaml(fields)}---\n`);
   return "converted";
@@ -203,6 +251,7 @@ async function main(): Promise<void> {
   for (const kind of Object.keys(SUFFIXES) as Kind[]) {
     await migrateKind({ absRoot, kind, apply });
   }
+  warnings.dump(absRoot);
 }
 
 main().catch((e) => {

@@ -15,6 +15,57 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
+import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+
+const ITEM_SPEC: ElementSpec = {
+  attrs: ["name", "status", "completed"],
+  children: {
+    details: { attrs: [] },
+    "agent-notes": { attrs: [] },
+    // self-recursive via constructor below
+  },
+};
+ITEM_SPEC.children!.item = ITEM_SPEC;
+
+const TODO_SPEC: ElementSpec = {
+  attrs: ["name", "version"],
+  children: {
+    details: { attrs: [] },
+    "agent-notes": { attrs: [] },
+    item: ITEM_SPEC,
+  },
+};
+
+const TELEGRAM_SPEC: ElementSpec = {
+  attrs: ["status", "chat-id", "version"],
+  children: {
+    text: { attrs: [] },
+    "reply-to": { attrs: [] },
+    response: { attrs: ["sent-at", "message-id"] },
+    error: { attrs: [] },
+  },
+};
+
+const FEEDBACK_SPEC: ElementSpec = {
+  attrs: ["type", "version"],
+  children: {
+    target: { attrs: ["ref"] },
+    source: { attrs: [] },
+    timestamp: { attrs: [] },
+    transcription: { attrs: ["language", "transcribed-at"] },
+    "transcription-error": { attrs: ["permanent", "code", "attempted-at"] },
+    response: { attrs: [] },
+    comment: { attrs: [] },
+  },
+};
+
+const SPECS: Record<Kind, ElementSpec> = {
+  "todo-list": TODO_SPEC,
+  "telegram-message": TELEGRAM_SPEC,
+  feedback: FEEDBACK_SPEC,
+};
+
+const warnings = new WarningCollector();
 
 type Kind = "todo-list" | "telegram-message" | "feedback";
 
@@ -173,6 +224,7 @@ async function migrateFile(absPath: string, kind: Kind): Promise<"converted" | "
   const re = new RegExp(`^---\\r?\\n[\\s\\S]*?\\b${typeMarker}`, "m");
   if (re.test(raw)) return "already-migrated";
   const node = await parseCard(raw, { source: absPath });
+  checkElement({ node, source: absPath, spec: SPECS[kind], warnings });
   let fields: Record<string, unknown>;
   let body = "";
   if (kind === "todo-list") {
@@ -231,6 +283,7 @@ async function main(): Promise<void> {
   await migrateKind({ absRoot, kind: "todo-list", apply });
   await migrateKind({ absRoot, kind: "telegram-message", apply });
   await migrateKind({ absRoot, kind: "feedback", apply });
+  warnings.dump(absRoot);
 }
 
 main().catch((e) => {
