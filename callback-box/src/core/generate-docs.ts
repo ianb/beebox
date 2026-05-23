@@ -35,6 +35,7 @@ import {
   installSchedules,
 } from "./box.js";
 import { generateRules } from "./init-rules.js";
+import { installValidationHooks } from "./install-validation-hooks.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/lib/git.js";
 
 const execFileAsync = promisify(execFile);
@@ -267,6 +268,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^briefing\.(?:briefing|orig-briefing)\.card$/,
   /^briefing\.md$/,
   /^\.claude\/rules\/.+\.md$/,
+  /^\.claude\/settings\.json$/,
 ];
 
 function isTemplateManagedPath(relPath: string): boolean {
@@ -293,6 +295,7 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installBriefing(boxRoot);
   await installSchedules(boxRoot);
   await generateRules(boxRoot);
+  await installValidationHooks(boxRoot);
 
   await commitTemplateSyncChanges(boxRoot);
 }

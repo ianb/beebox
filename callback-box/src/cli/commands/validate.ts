@@ -2,9 +2,11 @@
  * cb validate - Validate cards and markdown against schemas/rules
  */
 
-import { Command } from "commander";
+import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { promisify } from "node:util";
+import { Command } from "commander";
 import { formatLintResults, type LintSummary, type ElementSchema } from "cardworks";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
@@ -16,6 +18,39 @@ import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js
 import { lintCardsDispatch } from "../../core/card-lint.js";
 import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
 import type { LoadCardContext } from "../../core/card-io.js";
+
+const execFileP = promisify(execFile);
+
+async function listStagedCards(boxRoot: string): Promise<string[]> {
+  const { stdout } = await execFileP(
+    "git",
+    ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+    { cwd: boxRoot, maxBuffer: 10 * 1024 * 1024 }
+  );
+  return stdout
+    .split("\n")
+    .filter((line) => line.endsWith(".card"))
+    .map((rel) => path.join(boxRoot, rel));
+}
+
+/**
+ * Read the file path from a Claude Code PostToolUse hook payload on stdin.
+ * Returns undefined if stdin isn't JSON or doesn't carry a card path —
+ * the hook just exits 0 silently in that case.
+ */
+async function readHookFilePath(): Promise<string | undefined> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  const raw = Buffer.concat(chunks).toString("utf-8").trim();
+  if (raw === "") return undefined;
+  try {
+    const parsed = JSON.parse(raw) as { tool_input?: { file_path?: unknown } };
+    const fp = parsed.tool_input?.file_path;
+    return typeof fp === "string" ? fp : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 const SKIP_FILES = new Set(["CLAUDE.md"]);
@@ -109,16 +144,35 @@ async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
 
 export const validateCommand = new Command("validate")
   .description("Validate cards and markdown in the box")
-  .argument("[path]", "Path to validate (file or directory)")
-  .option("--all", "Validate all files in the box")
+  .argument("[paths...]", "Files to validate (cards or markdown). Omit to validate everything; pair with --staged to validate staged cards.")
+  .option("--all", "Validate all files in the box (default when no path given)")
+  .option("--staged", "Validate the cards currently staged in git")
+  .option("--hook", "Hook mode: read Claude Code PostToolUse JSON payload from stdin, validate the touched card. Errors go to stderr with exit code 2 so the agent sees feedback; non-card paths exit 0 silently.")
   .option("--json", "Output results as JSON")
   .option("--committed", "Also check that git working tree is clean")
   .action(
     async (
-      targetPath: string | undefined,
-      options: { all?: boolean; json?: boolean; committed?: boolean }
+      targetPaths: string[],
+      options: { all?: boolean; staged?: boolean; hook?: boolean; json?: boolean; committed?: boolean }
     ) => {
       try {
+        if (options.hook) {
+          const fp = await readHookFilePath();
+          if (fp === undefined || !isCardFile(fp)) {
+            process.exit(0);
+          }
+          const boxRoot = await requireBoxRoot();
+          const loader = await createLoader(boxRoot);
+          const ctx = await buildLoadContext(boxRoot);
+          const summary = await lintCardsDispatch([fp], { loader, ctx });
+          if (summary.totalErrors > 0) {
+            const output = formatLintResults(summary, { colors: false });
+            process.stderr.write(`${output}\n`);
+            process.exit(2);
+          }
+          process.exit(0);
+        }
+
         const boxRoot = await requireBoxRoot();
         const loader = await createLoader(boxRoot);
         const ctx = await buildLoadContext(boxRoot);
@@ -127,7 +181,21 @@ export const validateCommand = new Command("validate")
         let mdSummary: MarkdownLintSummary | null = null;
         let attachErrors: AttachLintError[] = [];
 
-        if (options.all || !targetPath) {
+        const resolved = targetPaths.map((p) =>
+          path.isAbsolute(p) ? p : path.join(process.cwd(), p)
+        );
+
+        if (options.staged) {
+          const staged = await listStagedCards(boxRoot);
+          const explicit = resolved.filter(isCardFile);
+          const all = [...staged, ...explicit];
+          if (all.length === 0 && !options.json) {
+            console.log("No staged cards to validate.");
+          }
+          if (all.length > 0) {
+            cardSummary = await lintCardsDispatch(all, { loader, ctx });
+          }
+        } else if (options.all || resolved.length === 0) {
           const cardPaths = await loader.listCards();
           cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
           const mdFiles = await findMarkdownFiles(boxRoot);
@@ -136,17 +204,18 @@ export const validateCommand = new Command("validate")
           }
           attachErrors = await lintAttachLayout(boxRoot);
         } else {
-          const fullPath = path.isAbsolute(targetPath)
-            ? targetPath
-            : path.join(process.cwd(), targetPath);
-
-          if (isCardFile(fullPath)) {
-            cardSummary = await lintCardsDispatch([fullPath], { loader, ctx });
-          } else if (isMarkdownFile(fullPath)) {
-            mdSummary = await lintMarkdownFiles([fullPath]);
-          } else {
-            console.error("Error: Path must be a card file (*.card) or markdown file (*.md)");
+          const cardPaths = resolved.filter(isCardFile);
+          const mdPaths = resolved.filter(isMarkdownFile);
+          const unknown = resolved.filter((p) => !isCardFile(p) && !isMarkdownFile(p));
+          if (unknown.length > 0) {
+            console.error(`Error: not a card or markdown file: ${unknown.join(", ")}`);
             process.exit(1);
+          }
+          if (cardPaths.length > 0) {
+            cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
+          }
+          if (mdPaths.length > 0) {
+            mdSummary = await lintMarkdownFiles(mdPaths);
           }
         }
 

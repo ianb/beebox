@@ -39,7 +39,12 @@ Body content as plain markdown.
 
 **Schemas can include `instructions`** — prose embedded in the schema that's injected into agent context when processing cards of that type.
 
-**Validation**: Cards validate on load and before commit. `cb validate` checks all cards. See `docs/cards-as-markdown.md` for the format design and migration history; `scripts/migrate-*.ts` + `scripts/_migrate-warnings.ts` are the per-schema migrators with noisy-mode field-loss detection.
+**Validation**: Cards validate on load. `cb validate` checks all cards (or a list of files, or `--staged`). Boxes get two hooks installed during `cb init`:
+
+- `.claude/settings.json` — PostToolUse hook that runs `cb validate --hook` after Edit/Write/MultiEdit. On a card path with errors it exits 2 with the error on stderr so Claude Code surfaces it to the agent (warning, not blocking).
+- `.git/hooks/pre-commit` — runs `cb validate --staged`, blocks commits that include cards failing validation.
+
+See `src/core/install-validation-hooks.ts`. The hook commands embed the absolute path to the installing `bin/cb` so they don't depend on the user's PATH. See `docs/cards-as-markdown.md` for the format design and migration history; `scripts/migrate-*.ts` + `scripts/_migrate-warnings.ts` are the per-schema migrators with noisy-mode field-loss detection.
 
 ## Source Layout
 
