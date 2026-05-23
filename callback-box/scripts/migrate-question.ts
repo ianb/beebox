@@ -13,6 +13,43 @@ import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 
+const KNOWN_ATTRS = new Set(["status", "answered-by"]);
+const KNOWN_CHILDREN = new Set([
+  "memo", "prompt", "input", "directive", "context",
+  "answer", "answered-at", "answered-via",
+]);
+const KNOWN_INPUT_ATTRS = new Set(["type"]);
+const KNOWN_INPUT_CHILDREN = new Set(["option"]);
+
+interface Warning { file: string; message: string }
+const warnings: Warning[] = [];
+
+function checkUnknown(node: ElementNode, source: string): void {
+  for (const attr of Object.keys(node.attrs)) {
+    if (!KNOWN_ATTRS.has(attr)) {
+      warnings.push({ file: source, message: `unknown attr on <question>: ${attr}="${String(node.attrs[attr])}"` });
+    }
+  }
+  for (const child of node.children) {
+    if (!KNOWN_CHILDREN.has(child.tagName)) {
+      warnings.push({ file: source, message: `unknown child element: <${child.tagName}>` });
+      continue;
+    }
+    if (child.tagName === "input") {
+      for (const a of Object.keys(child.attrs)) {
+        if (!KNOWN_INPUT_ATTRS.has(a)) {
+          warnings.push({ file: source, message: `unknown attr on <input>: ${a}` });
+        }
+      }
+      for (const sub of child.children) {
+        if (!KNOWN_INPUT_CHILDREN.has(sub.tagName)) {
+          warnings.push({ file: source, message: `unknown <input> child: <${sub.tagName}>` });
+        }
+      }
+    }
+  }
+}
+
 async function findCards(root: string): Promise<string[]> {
   const out: string[] = [];
   async function walk(dir: string): Promise<void> {
@@ -114,6 +151,7 @@ async function migrateFile(absPath: string): Promise<"converted" | "already-migr
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
+  checkUnknown(node, absPath);
   const fields = convertOne(node, absPath);
   await writeFile(absPath, `---\n${stringifyYaml(fields)}---\n`);
   return "converted";
@@ -147,6 +185,12 @@ async function main(): Promise<void> {
   console.log(`Converted ${String(converted)}, already migrated ${String(already)}, failed ${String(failed.length)}.`);
   for (const f of failed) {
     console.log(`  ${relative(absRoot, f.file)}: ${f.error}`);
+  }
+  if (warnings.length > 0) {
+    console.log(`\n${String(warnings.length)} warning(s) about unrecognized fields:`);
+    for (const w of warnings) {
+      console.log(`  ${relative(absRoot, w.file)}: ${w.message}`);
+    }
   }
   if (failed.length > 0) process.exit(2);
 }
