@@ -36,6 +36,14 @@ const SPEC: ElementSpec = {
         },
       },
     },
+    legal: { attrs: [] },
+    properties: {
+      attrs: [],
+      children: {
+        property: { attrs: ["name", "address", "address-uncertain"] },
+      },
+    },
+    finances: { attrs: [] },
     "agent-needs-to-know": { attrs: [] },
   },
 };
@@ -50,12 +58,22 @@ interface PersonEntry {
   description?: string;
 }
 
+interface PropertyEntry {
+  name?: string;
+  address?: string;
+  "address-uncertain"?: boolean;
+  description?: string;
+}
+
 interface BriefingOut {
   type: "briefing";
   purpose?: string;
   "key-people"?: PersonEntry[];
   "project-phase"?: { date: string; text: string };
   corrections?: Array<{ instruction: string; test?: string }>;
+  legal?: string;
+  properties?: PropertyEntry[];
+  finances?: string;
 }
 
 async function findBriefingCards(root: string): Promise<string[]> {
@@ -138,6 +156,31 @@ function convertOne(node: ElementNode, source: string): { fields: BriefingOut; b
       }
     }
     if (out.length > 0) fields.corrections = out;
+  }
+
+  const legalEl = firstChild(node, "legal");
+  if (legalEl !== undefined && legalEl.text !== undefined && legalEl.text.trim() !== "") {
+    fields.legal = legalEl.text.trim();
+  }
+
+  const propertiesEl = firstChild(node, "properties");
+  if (propertiesEl !== undefined && propertiesEl.children.length > 0) {
+    const props: PropertyEntry[] = [];
+    for (const p of propertiesEl.children) {
+      if (p.tagName !== "property") continue;
+      const entry: PropertyEntry = {};
+      if (p.attrs["name"] !== undefined) entry.name = p.attrs["name"];
+      if (p.attrs["address"] !== undefined) entry.address = p.attrs["address"];
+      if (p.attrs["address-uncertain"] === "true") entry["address-uncertain"] = true;
+      if (p.text !== undefined && p.text.trim() !== "") entry.description = p.text.trim();
+      if (Object.keys(entry).length > 0) props.push(entry);
+    }
+    if (props.length > 0) fields.properties = props;
+  }
+
+  const financesEl = firstChild(node, "finances");
+  if (financesEl !== undefined && financesEl.text !== undefined && financesEl.text.trim() !== "") {
+    fields.finances = financesEl.text.trim();
   }
 
   const needsToKnow = firstChild(node, "agent-needs-to-know");

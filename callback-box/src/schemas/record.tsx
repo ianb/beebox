@@ -30,6 +30,8 @@ const DateEntry = z.object({
 const PersonEntry = z.object({
   name: z.string(),
   ref: z.string().optional(),
+  role: z.string().optional(),
+  notes: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -81,8 +83,10 @@ identifiable thing.
   explains why this source is relevant.
 - \`dates:\` — Array of \`{value, note?}\`. Parseable date strings
   with context ("Year purchased", "Date of letter").
-- \`persons:\` — Array of \`{name, ref?, note?}\`. People relevant to
-  this record.
+- \`persons:\` — Array of \`{name, ref?, role?, notes?, note?}\`.
+  People relevant to this record. \`role\` is the person's role in
+  this record (e.g. "Sender", "Recipient", "Manager"); \`notes\` or
+  \`note\` is freeform context.
 - \`location:\` — \`{text?, ref?}\`. Where the thing is, was, or
   relates to.
 - \`measures:\` — Array of \`{value, note?}\`. Natural language with
@@ -118,7 +122,7 @@ export interface RecordFields {
   description?: string;
   sources?: Array<{ ref: string; time?: string; note?: string }>;
   dates?: Array<{ value: string; note?: string }>;
-  persons?: Array<{ name: string; ref?: string; note?: string }>;
+  persons?: Array<{ name: string; ref?: string; role?: string; notes?: string; note?: string }>;
   location?: { text?: string; ref?: string };
   measures?: Array<{ value: string; note?: string }>;
   language?: string;

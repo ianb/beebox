@@ -26,7 +26,7 @@ const RECORD_SPEC: ElementSpec = {
       children: { source: { attrs: ["ref", "time"] } },
     },
     date: { attrs: ["value"] },
-    person: { attrs: ["name", "ref"] },
+    person: { attrs: ["name", "ref", "role", "notes"] },
     location: { attrs: ["ref"] },
     measure: { attrs: ["value"] },
     language: { attrs: [] },
@@ -136,6 +136,8 @@ function convertRecord(node: ElementNode, source: string): { fields: Record<stri
     if (personName === undefined) continue;
     const entry: Record<string, unknown> = { name: personName };
     if (c.attrs["ref"] !== undefined) entry["ref"] = c.attrs["ref"];
+    if (c.attrs["role"] !== undefined) entry["role"] = c.attrs["role"];
+    if (c.attrs["notes"] !== undefined) entry["notes"] = c.attrs["notes"];
     if (c.text !== undefined && c.text !== "") entry["note"] = c.text;
     persons.push(entry);
   }

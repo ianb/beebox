@@ -31,12 +31,22 @@ const Correction = z.object({
   test: z.string().optional(),
 });
 
+const PropertyEntry = z.object({
+  name: z.string().optional(),
+  address: z.string().optional(),
+  "address-uncertain": z.boolean().optional(),
+  description: z.string().optional(),
+});
+
 export const BriefingSchema: CardSchema = cardSchema("briefing", {
   fields: {
     purpose: z.string().optional(),
     "key-people": z.array(PersonEntry).optional(),
     "project-phase": ProjectPhase.optional(),
     corrections: z.array(Correction).optional(),
+    legal: z.string().optional(),
+    properties: z.array(PropertyEntry).optional(),
+    finances: z.string().optional(),
     body: body(z.string()),
   },
   instructions: `# Briefing Cards
@@ -61,6 +71,12 @@ Frontmatter:
   there's no clear phase.
 - \`corrections:\` — Array of \`{instruction, test?}\` entries. Only add
   in response to observed agent behavior that needs correcting.
+- \`legal:\` — Optional prose about the box's legal context (ledger
+  planning, contracts, IP). Include when legal facts shape decisions.
+- \`properties:\` — Optional array of \`{name?, address?, address-uncertain?, description?}\`
+  for physical properties tied to the box (ledger, household, business).
+- \`finances:\` — Optional prose about the box's financial context
+  (accounts, distribution plans, obligations).
 
 Body (markdown): freeform catch-all for facts every agent must have
 that don't fit the structured fields. This is the "agent needs to
@@ -92,6 +108,14 @@ export interface BriefingFields {
   }>;
   "project-phase"?: { date: string; text: string };
   corrections?: Array<{ instruction: string; test?: string }>;
+  legal?: string;
+  properties?: Array<{
+    name?: string;
+    address?: string;
+    "address-uncertain"?: boolean;
+    description?: string;
+  }>;
+  finances?: string;
   body: string;
 }
 
@@ -149,6 +173,34 @@ export function compileBriefing(fields: BriefingFields, directoryLabel?: string)
     for (const correction of corrections) {
       lines.push(`- ${correction.instruction.trim()}`);
     }
+    lines.push("");
+  }
+
+  if (fields.legal !== undefined && fields.legal !== "") {
+    lines.push("**Legal:**");
+    lines.push(fields.legal.trim());
+    lines.push("");
+  }
+
+  const properties = fields.properties ?? [];
+  if (properties.length > 0) {
+    lines.push("**Properties:**");
+    for (const p of properties) {
+      const heading = p.name ?? p.address ?? "(unnamed)";
+      const addr = p.address !== undefined && p.address !== p.name
+        ? ` — ${p.address}${p["address-uncertain"] ? " (uncertain)" : ""}`
+        : "";
+      lines.push(`- **${heading}**${addr}`);
+      if (p.description !== undefined && p.description !== "") {
+        lines.push(`  ${p.description.trim()}`);
+      }
+    }
+    lines.push("");
+  }
+
+  if (fields.finances !== undefined && fields.finances !== "") {
+    lines.push("**Finances:**");
+    lines.push(fields.finances.trim());
     lines.push("");
   }
 
