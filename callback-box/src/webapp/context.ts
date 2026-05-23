@@ -7,10 +7,12 @@
  * inventory lives in `getSystemState()` in core/state.ts.
  */
 
-import type { ElementNode } from "cardworks";
-import { createLoader } from "../cli/lib/loader.js";
+import * as fs from "node:fs/promises";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 import { getSystemState } from "../core/state.js";
+import { parseCardText } from "../core/card-io.js";
+import { createCardSchemaMap } from "../schemas/registry.js";
+import type { QuestionFields } from "../schemas/question.js";
 
 export interface PendingQuestion {
   path: string;
@@ -27,7 +29,7 @@ export interface ContextOutput {
 export async function generateContext(boxRoot?: string): Promise<ContextOutput> {
   const root = boxRoot ?? await requireBoxRoot();
   const state = await getSystemState(root);
-  const loader = await createLoader(root);
+  const schemas = createCardSchemaMap();
 
   const pendingQuestions: PendingQuestion[] = [];
 
@@ -35,30 +37,14 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
     if (q.status !== "pending") continue;
 
     try {
-      const card = await loader.load(q.path);
-      const element = card.element;
-
-      let prompt = "";
-      let options: string[] | undefined;
-
-      for (const child of element.children as ElementNode[]) {
-        if (child.tagName === "prompt") {
-          prompt = child.text ?? "";
-        }
-        if (child.tagName === "input") {
-          const opts = (child.children as ElementNode[])
-            .filter((c: ElementNode) => c.tagName === "option")
-            .map((c: ElementNode) => c.text ?? "");
-          if (opts.length > 0) {
-            options = opts;
-          }
-        }
-      }
-
+      const content = await fs.readFile(q.path, "utf-8");
+      const card = parseCardText(content, { source: q.path, schemas });
+      const fields = card.fields as unknown as QuestionFields;
+      const options = fields.input.options?.map((o) => o.label);
       pendingQuestions.push({
         path: q.relativePath,
-        prompt,
-        options,
+        prompt: fields.prompt,
+        options: options && options.length > 0 ? options : undefined,
       });
     } catch {
       // Skip invalid cards

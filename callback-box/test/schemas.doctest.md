@@ -43,7 +43,7 @@ email-thread, etc.) carry a `type` instead.
 MemoSchema.type
 => memo
 
-QuestionSchema.tagName
+QuestionSchema.type
 => question
 
 ```
@@ -52,8 +52,8 @@ The full registry of XML schemas is available via `createSchemaRegistry()`:
 
 ```
 const registry = await createSchemaRegistry();
-registry.get("question")?.tagName
-=> question
+registry.get("memo")
+=> «*»
 ```
 
 ## Templates
@@ -119,17 +119,23 @@ createSelectQuestionTemplate({
   ],
 })
 =>
-<question status="pending">
-<memo>Context here</memo>
-<prompt>What do you want?</prompt>
-<input type="select">
-<option id="a">Choice A</option>
-<option id="b">Choice B</option>
-</input>
-</question>
+---
+type: question
+status: pending
+memo: Context here
+prompt: What do you want?
+input:
+  type: select
+  options:
+    - id: a
+      label: Choice A
+    - id: b
+      label: Choice B
+---
+
 ```
 
-Special characters in questions are escaped:
+Special characters in content pass through YAML verbatim:
 
 ```
 createSelectQuestionTemplate({
@@ -138,13 +144,18 @@ createSelectQuestionTemplate({
   options: [{ id: "a", label: "Option <A>" }],
 })
 =>
-<question status="pending">
-<memo>Context with &lt;special&gt; &amp; chars</memo>
-<prompt>What's "this"?</prompt>
-<input type="select">
-<option id="a">Option &lt;A&gt;</option>
-</input>
-</question>
+---
+type: question
+status: pending
+memo: Context with <special> & chars
+prompt: What's "this"?
+input:
+  type: select
+  options:
+    - id: a
+      label: Option <A>
+---
+
 ```
 
 

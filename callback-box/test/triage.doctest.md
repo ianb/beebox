@@ -186,14 +186,14 @@ JSON.stringify(result.applications.map((a) => ({
   }
 ]
 
-const xml = await box.read(result.applications[0].questionPath);
-xml.includes("<option id=\"recipes\">recipes</option>")
+const yaml = await box.read(result.applications[0].questionPath);
+yaml.includes("id: recipes")
 => true
 
-xml.includes("<option id=\"todos\">todos</option>")
+yaml.includes("id: todos")
 => true
 
-xml.includes("<option id=\"_other\">")
+yaml.includes("id: _other")
 => true
 ```
 

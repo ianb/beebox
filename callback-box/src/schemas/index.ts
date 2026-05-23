@@ -32,7 +32,7 @@ export {
 
 // Re-export individual schema types
 export type { MemoFields, MemoStatusType } from "./memo.js";
-export type { Question, QuestionStatus, QuestionInputType } from "./question.js";
+export type { QuestionFields, QuestionStatusType, QuestionInputTypeValue } from "./question.js";
 export type { FeedbackFields } from "./feedback.js";
 export type { ImageFields, ImageStatus } from "./image.js";
 export type { AudioFields, AudioStatus } from "./audio.js";

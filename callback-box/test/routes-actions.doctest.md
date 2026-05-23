@@ -5,20 +5,9 @@ The actions API handles mutations — answering questions, creating cards, and t
 ```ts setup
 import { makeTestServer } from "./helpers/doctest-server.js";
 
-const QUESTION_XML = `<question status="pending">
-<prompt>What color?</prompt>
-<input type="text" />
-</question>
-`;
+const QUESTION_YAML = `---\ntype: question\nstatus: pending\nprompt: What color?\ninput:\n  type: text\n---\n`;
 
-const SELECT_QUESTION_XML = `<question status="pending">
-<prompt>Pick one</prompt>
-<input type="select">
-  <option id="red">Red</option>
-  <option id="blue">Blue</option>
-</input>
-</question>
-`;
+const SELECT_QUESTION_YAML = `---\ntype: question\nstatus: pending\nprompt: Pick one\ninput:\n  type: select\n  options:\n    - {id: red, label: Red}\n    - {id: blue, label: Blue}\n---\n`;
 ```
 
 ## Answering a question
@@ -27,7 +16,7 @@ const SELECT_QUESTION_XML = `<question status="pending">
 
 ```
 const ctx = await makeTestServer();
-await ctx.seed("box/inbox/test.question.card", QUESTION_XML);
+await ctx.seed("box/inbox/test.question.card", QUESTION_YAML);
 ctx.commitAll("add question");
 const res = await ctx.request({
   method: "POST",
@@ -46,11 +35,11 @@ res.body.message
 => Question answered
 ```
 
-The card now has `status="answered"`:
+The card now has `status: answered`:
 
 ``` continue
 const content = await ctx.read("box/inbox/test.question.card");
-content.includes('status="answered"')
+content.includes("status: answered")
 => true
 
 content.includes("Blue")

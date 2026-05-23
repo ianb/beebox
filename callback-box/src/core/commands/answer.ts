@@ -6,34 +6,27 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import { stringify as stringifyYaml } from "yaml";
+import { splitCardContent } from "cardworks";
 import {
   registerCommand,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
 import { boxPath, isCardFile } from "../../cli/lib/paths.js";
-import { createLoader } from "../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
+import { parseCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
-import type { ElementNode } from "cardworks";
 
-/**
- * Arguments for the answer command.
- */
 export interface AnswerArgs {
-  /** Question card path (relative to box root or absolute) */
   question: string;
-  /** Answer text or option ID (a, b, c, etc.) */
   answer: string;
-  /** Optional selected ID (for select questions) */
   selectedId?: string;
-  /** Answer source (e.g., "cli", "web") */
   via?: string;
 }
 
-/**
- * Execute the answer command.
- */
 async function executeAnswer(
   ctx: CommandContext,
   args: Record<string, unknown>
@@ -49,7 +42,6 @@ async function executeAnswer(
 
   const via = answerArgs.via ?? "cli";
 
-  // Resolve path
   let fullPath: string;
   if (path.isAbsolute(answerArgs.question)) {
     fullPath = answerArgs.question;
@@ -61,54 +53,42 @@ async function executeAnswer(
     return { success: false, error: "Path must be a card file (*.card)" };
   }
 
-  const loader = await createLoader(ctx.boxRoot);
-
-  // Load the question
-  let card;
+  let content: string;
   try {
-    card = await loader.load(fullPath);
+    content = await fs.readFile(fullPath, "utf-8");
   } catch {
     return { success: false, error: `Could not load card: ${answerArgs.question}` };
   }
 
-  const element = card.element;
-
-  // Verify it's a question
-  if (element.tagName !== "question") {
-    return { success: false, error: `Not a question card (got ${element.tagName})` };
+  let fields: QuestionFields;
+  try {
+    const card = parseCardText(content, {
+      source: fullPath,
+      schemas: createCardSchemaMap(),
+    });
+    if (card.schema.type !== "question") {
+      return { success: false, error: `Not a question card (got ${card.schema.type})` };
+    }
+    fields = card.fields as unknown as QuestionFields;
+  } catch (err) {
+    return { success: false, error: `Could not parse question: ${(err as Error).message}` };
   }
 
-  // Verify it's pending
-  if (element.attrs["status"] !== "pending") {
+  if (fields.status !== "pending") {
     return {
       success: false,
-      error: `Question is not pending (status: ${element.attrs["status"]})`,
+      error: `Question is not pending (status: ${fields.status})`,
     };
   }
 
-  // Find input type and options
-  let inputType = "text";
-  let questionOptions: Array<{ id: string; text: string }> = [];
+  const inputType = fields.input.type;
+  const questionOptions = fields.input.options ?? [];
 
-  for (const child of element.children as ElementNode[]) {
-    if (child.tagName === "input") {
-      inputType = child.attrs["type"] ?? "text";
-      questionOptions = (child.children as ElementNode[])
-        .filter((c) => c.tagName === "option")
-        .map((c) => ({
-          id: c.attrs["id"] ?? "",
-          text: c.text ?? "",
-        }));
-    }
-  }
-
-  // Resolve the answer
   let finalAnswer = answerArgs.answer;
   let selectedId = answerArgs.selectedId;
 
   if (inputType === "select" && !selectedId) {
-    // Check if answer is an option ID (a, b, c, etc.)
-    const optionIndex = (answerArgs.answer.codePointAt(0) ?? 0) - 97; // 'a' = 0, 'b' = 1, etc.
+    const optionIndex = (answerArgs.answer.codePointAt(0) ?? 0) - 97;
     if (
       answerArgs.answer.length === 1 &&
       optionIndex >= 0 &&
@@ -117,19 +97,18 @@ async function executeAnswer(
       const option = questionOptions[optionIndex];
       if (option) {
         selectedId = option.id;
-        finalAnswer = option.text;
+        finalAnswer = option.label;
       }
     } else {
-      // Try to match by text
       const match = questionOptions.find(
-        (o) => o.text.toLowerCase() === answerArgs.answer.toLowerCase()
+        (o) => o.label.toLowerCase() === answerArgs.answer.toLowerCase()
       );
       if (match) {
         selectedId = match.id;
-        finalAnswer = match.text;
+        finalAnswer = match.label;
       } else {
         const optionsList = questionOptions
-          .map((o, i) => `  ${String.fromCodePoint(97 + i)}) ${o.text}`)
+          .map((o, i) => `  ${String.fromCodePoint(97 + i)}) ${o.label}`)
           .join("\n");
         return {
           success: false,
@@ -138,7 +117,6 @@ async function executeAnswer(
       }
     }
   } else if (inputType === "confirm") {
-    // Normalize yes/no answers
     const normalized = answerArgs.answer.toLowerCase();
     if (["yes", "y", "true", "1"].includes(normalized)) {
       finalAnswer = "yes";
@@ -154,46 +132,20 @@ async function executeAnswer(
     }
   }
 
-  // Update the card
-  element.attrs["status"] = "answered";
-
-  // Add answer elements
-  const children = element.children as ElementNode[];
-
-  children.push({
-    tagName: "answer",
-    attrs: selectedId ? { selected: selectedId } : {},
-    children: [],
+  fields.status = "answered";
+  fields.answer = {
     text: finalAnswer,
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    comments: {},
-    dirty: true,
-  });
+    ...(selectedId !== undefined && { selected: selectedId }),
+  };
+  fields["answered-at"] = new Date().toISOString();
+  fields["answered-via"] = via as "web" | "cli" | "api";
 
-  children.push({
-    tagName: "answered-at",
-    attrs: {},
-    children: [],
-    text: new Date().toISOString(),
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    comments: {},
-    dirty: true,
-  });
+  const split = splitCardContent(content);
+  await fs.writeFile(
+    fullPath,
+    `---\n${stringifyYaml(fields)}---\n${split.body}`
+  );
 
-  children.push({
-    tagName: "answered-via",
-    attrs: {},
-    children: [],
-    text: via,
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    comments: {},
-    dirty: true,
-  });
-
-  // Save the card
-  await loader.save(card);
-
-  // Commit the change
   const relativePath = path.relative(ctx.boxRoot, fullPath);
   await stageFiles(ctx.boxRoot, [relativePath]);
   await commit(ctx.boxRoot, {
@@ -209,13 +161,6 @@ async function executeAnswer(
     ctx.writeLine(`  Selected: ${selectedId}`);
   }
 
-  // Create a follow-up job from the question's directive
-  const directive = (element.children as ElementNode[]).find(
-    (c) => c.tagName === "directive"
-  );
-  const questionPrompt = (element.children as ElementNode[]).find(
-    (c) => c.tagName === "prompt"
-  );
   const timestamp = new Date()
     .toISOString()
     .replace(/[.:]/g, "-")
@@ -223,9 +168,9 @@ async function executeAnswer(
   const jobFilename = `${timestamp}-question-followup.question-followup.job.card`;
   const jobPath = path.join(ctx.boxRoot, "box/jobs", jobFilename);
   const jobContent = createQuestionFollowupJobTemplate({
-    description: `Follow up on answered question: ${questionPrompt?.text ?? path.basename(answerArgs.question)}`,
+    description: `Follow up on answered question: ${fields.prompt}`,
     questionRef: relativePath,
-    directive: directive?.text ?? "Process the answer to this question",
+    directive: fields.directive ?? "Process the answer to this question",
     answer: finalAnswer,
   });
 
@@ -248,7 +193,6 @@ async function executeAnswer(
   };
 }
 
-// Register the command
 registerCommand({
   name: "answer",
   description: "Answer a pending question",

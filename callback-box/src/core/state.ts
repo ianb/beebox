@@ -9,8 +9,10 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxDir, parseCardName, requireBoxRoot } from "../cli/lib/paths.js";
 import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../cli/lib/git.js";
-import { createLoader } from "../cli/lib/loader.js";
+import { loadCardFile } from "./card-io.js";
+import { createCardSchemaMap, getAllSchemas } from "../schemas/registry.js";
 import { getBoxMetadata } from "./box.js";
+import type { ElementSchema } from "cardworks";
 
 export interface CardInfo {
   path: string;
@@ -51,7 +53,10 @@ interface ScanCardsParams {
 async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
   const { dir, boxRoot, subdir } = params;
   const cards: CardInfo[] = [];
-  const loader = await createLoader(boxRoot);
+  const cardSchemas = createCardSchemaMap();
+  const elementSchemasArr = await getAllSchemas(boxRoot);
+  const elementSchemas = new Map<string, ElementSchema>();
+  for (const s of elementSchemasArr) elementSchemas.set(s.tagName, s);
 
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
@@ -64,7 +69,6 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
     const name = entry.name;
     const fullPath = path.join(dir, name);
 
-    // Recurse into subdirectories
     if (entry.isDirectory() && !name.startsWith(".")) {
       const subdirCards = await scanCards({ dir: fullPath, boxRoot, subdir: name });
       cards.push(...subdirCards);
@@ -77,20 +81,29 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
     if (!parsed) continue;
 
     try {
-      const card = await loader.load(fullPath);
-      const element = card.element;
-
-      cards.push({
-        path: fullPath,
-        relativePath: path.relative(boxRoot, fullPath),
-        name: parsed.name,
-        type: parsed.type,
-        tagName: element.tagName,
-        status: element.attrs["status"],
-        subdir,
-      });
+      const loaded = await loadCardFile(fullPath, { cardSchemas, elementSchemas });
+      if (loaded.kind === "frontmatter") {
+        cards.push({
+          path: fullPath,
+          relativePath: path.relative(boxRoot, fullPath),
+          name: parsed.name,
+          type: parsed.type,
+          tagName: loaded.schema.type,
+          status: typeof loaded.fields["status"] === "string" ? loaded.fields["status"] : undefined,
+          subdir,
+        });
+      } else {
+        cards.push({
+          path: fullPath,
+          relativePath: path.relative(boxRoot, fullPath),
+          name: parsed.name,
+          type: parsed.type,
+          tagName: loaded.element.tagName,
+          status: loaded.element.attrs["status"],
+          subdir,
+        });
+      }
     } catch {
-      // Skip invalid cards
       cards.push({
         path: fullPath,
         relativePath: path.relative(boxRoot, fullPath),

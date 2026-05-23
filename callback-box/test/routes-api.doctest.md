@@ -346,7 +346,7 @@ await ctx.cleanup();
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/questions/ask.question.card",
-  '<question status="pending"><prompt>What color?</prompt><input type="select"><option id="red">Red</option><option id="blue">Blue</option></input></question>\n',
+  `---\ntype: question\nstatus: pending\nprompt: What color?\ninput:\n  type: select\n  options:\n    - {id: red, label: Red}\n    - {id: blue, label: Blue}\n---\n`,
 );
 ctx.commitAll("seed question");
 const res = await ctx.request({ method: "GET", url: "/api/questions" });
@@ -416,7 +416,7 @@ With a pending question, it appears in context:
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/questions/ctx-q.question.card",
-  '<question status="pending"><prompt>Deploy now?</prompt></question>\n',
+  `---\ntype: question\nstatus: pending\nprompt: Deploy now?\ninput:\n  type: text\n---\n`,
 );
 ctx.commitAll("seed question");
 const res = await ctx.request({ method: "GET", url: "/api/context" });

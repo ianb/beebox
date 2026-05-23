@@ -46,7 +46,6 @@ import { registerTemplate, type TemplateDefinition } from "./templates.js";
  * All built-in card schemas.
  */
 export const schemas: ElementSchema[] = [
-  QuestionSchema,
   ProcedureSchema,
   ProcedureRunSchema,
   CaptureSessionSchema,
@@ -83,6 +82,7 @@ export const cardSchemas: CardSchema[] = [
   QuestionFollowupJobSchema,
   PersonalitySchema,
   ScheduledScriptSchema,
+  QuestionSchema,
 ];
 
 /** Packages that box-local schemas can import from callback-box's tree. */
