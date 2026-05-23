@@ -1724,14 +1724,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   );
 
   // Stop any in-flight speech the moment mute is engaged.
-  // Clear the voice-paused flag too: STOP doesn't fire onComplete, so without
-  // this the ref would stay true and confuse the next playback's resume logic.
   useEffect(() => {
-    if (muted) {
-      speechPlayback.stop();
-      voicePausedRef.current = false;
-      queueMicrotask(() => setVoicePaused(false));
-    }
+    if (muted) speechPlayback.stop();
   }, [muted, speechPlayback]);
 
   // Mid-stream: play complete <speech>...</speech> segments as they arrive.
@@ -2237,13 +2231,6 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
   const handleStopSpeech = useCallback(() => {
     speechPlayback.stop();
-    // STOP doesn't fire onComplete; resume the mic ourselves if speech had
-    // paused it, otherwise voicePausedRef stays wedged.
-    if (voicePausedRef.current) {
-      voicePausedRef.current = false;
-      setVoicePaused(false);
-      transcriptionRef.current?.start();
-    }
   }, [speechPlayback]);
 
   // Keep textarea focused when it's visible and available for input.
