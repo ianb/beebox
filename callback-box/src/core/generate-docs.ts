@@ -18,7 +18,7 @@ import { schemas, loadBoxSchemas } from "../schemas/registry.js";
 import type { ElementSchema } from "cardworks";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
 import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
-import { parsePersonality, compilePersonality, compileSpeakingVoice, type Personality } from "../schemas/personality.js";
+import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../schemas/personality.js";
 import { compileBriefing, type BriefingFields } from "../schemas/briefing.js";
 import { parseCardText } from "./card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
@@ -672,9 +672,12 @@ async function compilePersonalities(boxRoot: string, debug: boolean): Promise<st
 
   try {
     const content = await readFile(join(configDir, filename), "utf-8");
-    const root = await parseCard(content, { source: filename }) as Personality;
-    const parsed = parsePersonality(root);
-    const compiled = compilePersonality(parsed);
+    const parsed = parseCardText(content, {
+      source: filename,
+      schemas: createCardSchemaMap(),
+    });
+    const fields = parsed.fields as unknown as PersonalityFields;
+    const compiled = compilePersonality(fields);
     const compiledFilename = `personality-${personalityName}.md`;
     const compiledPath = `${DOCS_DIR}/${compiledFilename}`;
 
@@ -684,7 +687,7 @@ async function compilePersonalities(boxRoot: string, debug: boolean): Promise<st
     );
 
     // Write speaking-voice JSON for Electron consumption
-    const voice = compileSpeakingVoice(parsed);
+    const voice = compileSpeakingVoice(fields);
     const voicePath = `${DOCS_DIR}/speaking-voice.json`;
     await writeFile(
       join(boxRoot, voicePath),

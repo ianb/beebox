@@ -1,145 +1,143 @@
-/** @jsxImportSource cardworks/jsx */
 /**
  * Personality card schema — agent identity, role, tone, and boxholder knowledge.
  *
  * A personality card captures who the agent is and who it works for.
- * It lives at config/main.personality.card (one per box).
+ * It lives at `config/main.personality.card` (one per box).
  *
- * The full card is the learning document (read by the revision agent).
- * A compiled version in docs/generated/ strips it down to confident
- * personality traits for job-processing agents.
+ * The card's markdown body is the compiled "description" paragraph —
+ * the prose that captures the overall vibe. Job-processing agents see
+ * this body plus a stripped-down summary of tone/traits derived from
+ * the structured frontmatter.
  */
 
-import { element, serialize, type ElementNode } from "cardworks";
+import { body, cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import {
   ConfidenceLevel,
   BeliefSource,
-  Experiments,
-  ContextNotes,
-  type ExperimentStatus,
+  ExperimentStatus,
 } from "./guide.js";
 
-// ============================================
-// Personality elements
-// ============================================
+type ConfidenceLevelType = z.infer<typeof ConfidenceLevel>;
+type BeliefSourceType = z.infer<typeof BeliefSource>;
+type ExperimentStatusType = z.infer<typeof ExperimentStatus>;
 
-export const GoesBy = element("goes-by", {
+const RelationshipEntry = z.object({
   text: z.string(),
+  confidence: ConfidenceLevel.default("confirmed"),
+  source: BeliefSource.default("user-stated"),
+  ref: z.string().optional(),
 });
 
-export const Role = element("role", {
+const BoxholderEntry = z.object({
+  "full-name": z.string().optional(),
+  called: z.string().optional(),
+  relationships: z.array(RelationshipEntry).optional(),
+});
+
+const SpeakingVoiceEntry = z.object({
+  model: z.string().optional(),
+  instructions: z.array(z.string()).optional(),
+});
+
+const ToneInstruction = z.object({
   text: z.string(),
+  confidence: ConfidenceLevel.default("medium"),
+  source: BeliefSource.default("inferred"),
+  ref: z.string().optional(),
 });
 
-export const FullName = element("full-name", {
-  text: z.string().optional(),
-});
-
-export const Called = element("called", {
-  text: z.string().optional(),
-});
-
-export const Relationship = element("relationship", {
-  attrs: {
-    confidence: ConfidenceLevel.default("confirmed"),
-    source: BeliefSource.default("user-stated"),
-    ref: z.string().optional(),
-  },
-  text: z.string().optional(),
-});
-
-export const Boxholder = element("boxholder", {
-  children: z.array(z.union([FullName, Called, Relationship])),
-});
-
-export const SpeakingVoiceInstruction = element("instruction", {
+const TraitEntry = z.object({
   text: z.string(),
+  confidence: ConfidenceLevel.default("medium"),
+  source: BeliefSource.default("inferred"),
+  ref: z.string().optional(),
 });
 
-export const SpeakingVoice = element("speaking-voice", {
-  attrs: {
-    model: z.string().optional(),
-  },
-  children: z.array(SpeakingVoiceInstruction),
-});
-
-export const ToneInstruction = element("instruction", {
-  attrs: {
-    confidence: ConfidenceLevel.default("medium"),
-    source: BeliefSource.default("inferred"),
-    ref: z.string().optional(),
-  },
+const ObservationEntry = z.object({
   text: z.string(),
+  ref: z.string().optional(),
+  date: z.string().optional(),
 });
 
-export const Tone = element("tone", {
-  children: z.array(ToneInstruction),
+const ExperimentEntry = z.object({
+  id: z.string(),
+  status: ExperimentStatus.default("proposed"),
+  "created-at": z.string().optional(),
+  "updated-at": z.string().optional(),
+  hypothesis: z.string().optional(),
+  approach: z.string().optional(),
+  observations: z.array(ObservationEntry).optional(),
+  conclusion: z.string().optional(),
 });
 
-export const Trait = element("trait", {
-  attrs: {
-    confidence: ConfidenceLevel.default("medium"),
-    source: BeliefSource.default("inferred"),
-    ref: z.string().optional(),
-  },
+const ContextNote = z.object({
   text: z.string(),
+  duration: z.enum(["ongoing", "temporary", "past"]).default("ongoing"),
+  "added-at": z.string().optional(),
 });
 
-export const UnresolvedNote = element("note", {
-  text: z.string(),
-});
-
-export const Unresolved = element("unresolved", {
-  children: z.array(UnresolvedNote),
-});
-
-export const Description = element("description", {
-  text: z.string(),
-});
-
-export const Traits = element("traits", {
-  children: z.array(z.union([Trait, Unresolved, Description])),
-});
-
-// ============================================
-// Personality schema
-// ============================================
-
-export const PersonalitySchema = element("personality", {
-  attrs: {
+export const PersonalitySchema: CardSchema = cardSchema("personality", {
+  fields: {
     version: z.string().default("1.0.0"),
+    "goes-by": z.string().optional(),
+    role: z.string().optional(),
+    boxholder: BoxholderEntry.optional(),
+    "speaking-voice": SpeakingVoiceEntry.optional(),
+    tone: z.array(ToneInstruction).optional(),
+    traits: z.array(TraitEntry).optional(),
+    unresolved: z.array(z.string()).optional(),
+    experiments: z.array(ExperimentEntry).optional(),
+    "context-notes": z.array(ContextNote).optional(),
+    body: body(z.string()),
   },
-  children: z.array(
-    z.union([
-      GoesBy,
-      Role,
-      Boxholder,
-      SpeakingVoice,
-      Tone,
-      Traits,
-      Experiments,
-      ContextNotes,
-    ])
-  ),
   instructions: `# Handling Personality Cards
 
-A personality card defines the agent's **voice and manner** — how it communicates, not what the box is about.
+A personality card defines the agent's **voice and manner** — how it
+communicates, not what the box is about.
 
-There is one personality card per box at \`config/main.personality.card\`.
+There is one personality card per box at
+\`config/main.personality.card\`.
 
-**This card is about communication style ONLY.** Do NOT put situational context here. The box's purpose, key people, and essential facts belong in the briefing card (\`briefing.briefing.card\`). The personality card answers "how should I talk?" — the briefing card answers "what am I working on?"
+**This card is about communication style ONLY.** Do NOT put situational
+context here. The box's purpose, key people, and essential facts belong
+in the briefing card (\`briefing.briefing.card\`). The personality card
+answers "how should I talk?" — the briefing card answers "what am I
+working on?"
 
-**Structure:**
-- \`<goes-by>\` — What the agent is called
-- \`<role>\` — The agent's general function (e.g., "Personal information aide"). This is about what the agent *does*, not what the box contains.
-- \`<boxholder>\` — Relational info about who the agent serves (\`<full-name>\`, \`<called>\`, \`<relationship>\` notes)
-- \`<speaking-voice>\` — TTS audio configuration for the chat frontend (see below)
-- \`<tone>\` — How the agent writes (phrasing, formality, interaction style)
-- \`<traits>\` — Personality traits with a compiled \`<description>\` paragraph and \`<unresolved>\` notes
-- \`<experiments>\` and \`<context-notes>\` — Same as guide cards
+## Frontmatter
 
-**\`<speaking-voice>\`:** Configures the chat TTS voice. Applies only to the chat frontend — jobs, procedures, and other agents don't use TTS. The \`model\` attribute picks one of 13 OpenAI voices (impressions are subjective; experiment to find a fit):
+- \`goes-by:\` — What the agent is called
+- \`role:\` — The agent's general function (e.g., "Personal information
+  aide"). About what the agent *does*, not what the box contains.
+- \`boxholder:\` — \`{full-name?, called?, relationships?}\`. Relational
+  info about who the agent serves. Each relationship is
+  \`{text, confidence?, source?, ref?}\`.
+- \`speaking-voice:\` — \`{model?, instructions?}\` for TTS in the chat
+  frontend (see below).
+- \`tone:\` — array of \`{text, confidence?, source?, ref?}\` —
+  instructions about how the agent writes (phrasing, formality,
+  interaction style).
+- \`traits:\` — array of \`{text, confidence?, source?, ref?}\` —
+  personality traits.
+- \`unresolved:\` — array of free-form notes about open questions.
+- \`experiments:\` and \`context-notes:\` — same shape as guide cards.
+
+## Body (markdown)
+
+The compiled "description" paragraph — prose that captures the overall
+vibe. When editing traits, **always rewrite the body** to reflect the
+updated traits, experiments, and unresolved notes. The body is what
+job agents see; it should capture the overall vibe, not just list
+traits.
+
+## Speaking voice
+
+The \`speaking-voice\` field configures the chat TTS voice. Applies
+only to the chat frontend — jobs, procedures, and other agents don't
+use TTS. The \`model\` picks one of 13 OpenAI voices (impressions are
+subjective; experiment to find a fit):
 
 - \`alloy\` — Low female voice, somewhat older/mature, perhaps Black
 - \`ash\` — Deep male voice, somewhat gravelly
@@ -155,275 +153,125 @@ There is one personality card per box at \`config/main.personality.card\`.
 - \`shimmer\` — Female, medium, direct and personable
 - \`verse\` — Male, medium, smooth and professional, perhaps impersonal
 
-Child \`<instruction>\` elements give the TTS model style guidance — affect, tone, pacing, emotion, pronunciation. These apply to every spoken response. Keep instructions sensory and specific ("Warm and unhurried, with a slight lilt; pause briefly before names") rather than abstract ("be friendly"). Multiple \`<instruction>\` elements are concatenated.
+\`instructions\` is an array of style guidance — affect, tone, pacing,
+emotion, pronunciation. These apply to every spoken response. Keep
+instructions sensory and specific ("Warm and unhurried, with a slight
+lilt; pause briefly before names") rather than abstract ("be friendly").
 
-Example:
-\`\`\`xml
-<speaking-voice model="nova">
-<instruction>Warm and engaged, with a slight lilt.</instruction>
-<instruction>Speak at a measured pace — pause briefly before names.</instruction>
-</speaking-voice>
-\`\`\`
+## Evidence model
 
-To experiment: edit the card and reload the chat UI — the new voice and instructions load on the next message. For per-message voice or instruction overrides (special emphasis, urgency, a different speaker), see \`docs/generated/chat-voice.md\`.
+Same as guides — confidence (hypothesis → confirmed), source
+(user-stated > feedback > inferred > default). Applies to traits, tone
+instructions, and boxholder relationship notes.
 
-**Evidence model:** Same as guides — confidence (hypothesis → confirmed), source (user-stated > feedback > inferred > default). Applies to traits, tone instructions, and boxholder relationship notes.
+## Boxholder section is relational
 
-**Editing:** When editing traits, always rewrite the \`<description>\` paragraph to reflect the updated traits, experiments, and unresolved notes. The description is the compiled prose that job agents see — it should capture the overall vibe, not just list traits.
-
-**The boxholder section is relational**, not biographical. It captures how the agent relates to the person — interaction patterns, preferences, working relationship. Biographical details (job, family, deep interests) belong in person cards (\`people/First_Last.person.card\`) or the briefing card.`,
+Not biographical. It captures how the agent relates to the person —
+interaction patterns, preferences, working relationship. Biographical
+details (job, family, deep interests) belong in person cards
+(\`people/First_Last.person.card\`) or the briefing card.`,
 });
 
-export type Personality = z.infer<typeof PersonalitySchema>;
-
-// ============================================
-// Parsed personality
-// ============================================
-
-export interface ParsedPersonality {
+export interface PersonalityFields {
+  type: "personality";
   version: string;
-  goesBy: string | undefined;
-  role: string | undefined;
-  boxholder: {
-    fullName: string | undefined;
-    called: string | undefined;
-    relationships: Array<{
+  "goes-by"?: string;
+  role?: string;
+  boxholder?: {
+    "full-name"?: string;
+    called?: string;
+    relationships?: Array<{
       text: string;
-      confidence: ConfidenceLevel;
-      source: BeliefSource;
-      ref: string | undefined;
+      confidence?: ConfidenceLevelType;
+      source?: BeliefSourceType;
+      ref?: string;
     }>;
   };
-  speakingVoice: {
-    model: string | undefined;
-    instructions: string[];
+  "speaking-voice"?: {
+    model?: string;
+    instructions?: string[];
   };
-  toneInstructions: Array<{
+  tone?: Array<{
     text: string;
-    confidence: ConfidenceLevelType;
-    source: BeliefSourceType;
-    ref: string | undefined;
+    confidence?: ConfidenceLevelType;
+    source?: BeliefSourceType;
+    ref?: string;
   }>;
-  traits: Array<{
+  traits?: Array<{
     text: string;
-    confidence: ConfidenceLevelType;
-    source: BeliefSourceType;
-    ref: string | undefined;
+    confidence?: ConfidenceLevelType;
+    source?: BeliefSourceType;
+    ref?: string;
   }>;
-  unresolved: string[];
-  description: string | undefined;
-  experiments: Array<{
+  unresolved?: string[];
+  experiments?: Array<{
     id: string;
-    status: ExperimentStatus;
-    createdAt: string | undefined;
-    updatedAt: string | undefined;
-    hypothesis: string | undefined;
-    approach: string | undefined;
-    observations: Array<{
-      text: string;
-      ref: string | undefined;
-      date: string | undefined;
-    }>;
-    conclusion: string | undefined;
+    status?: ExperimentStatusType;
+    "created-at"?: string;
+    "updated-at"?: string;
+    hypothesis?: string;
+    approach?: string;
+    observations?: Array<{ text: string; ref?: string; date?: string }>;
+    conclusion?: string;
   }>;
-  contextNotes: Array<{
+  "context-notes"?: Array<{
     text: string;
-    duration: "ongoing" | "temporary" | "past";
-    addedAt: string | undefined;
+    duration?: "ongoing" | "temporary" | "past";
+    "added-at"?: string;
   }>;
-}
-
-type ConfidenceLevelType = z.infer<typeof ConfidenceLevel>;
-type BeliefSourceType = z.infer<typeof BeliefSource>;
-
-function getChild(children: ElementNode[], tagName: string): ElementNode | undefined {
-  return children.find((c) => c.tagName === tagName);
-}
-
-function getChildren(children: ElementNode[], tagName: string): ElementNode[] {
-  return children.filter((c) => c.tagName === tagName);
+  body: string;
 }
 
 /**
- * Parse a personality element into a typed structure.
+ * Compile a personality fields object into markdown for the agent
+ * guide. The "core instructions" compilation — what every agent sees.
+ * Uses the body paragraph (not bullet-point traits), confident tone
+ * instructions, and boxholder relationship info.
  */
-export function parsePersonality(personality: Personality): ParsedPersonality {
-  const children = personality.children as ElementNode[];
-
-  const goesById = getChild(children, "goes-by");
-  const roleEl = getChild(children, "role");
-  const boxholderEl = getChild(children, "boxholder");
-  const speakingVoiceEl = getChild(children, "speaking-voice");
-  const toneEl = getChild(children, "tone");
-  const traitsEl = getChild(children, "traits");
-  const experimentsEl = getChild(children, "experiments");
-  const contextNotesEl = getChild(children, "context-notes");
-
-  // Parse boxholder
-  const boxholderChildren = (boxholderEl?.children ?? []) as ElementNode[];
-  const fullNameEl = getChild(boxholderChildren, "full-name");
-  const calledEl = getChild(boxholderChildren, "called");
-  const relationshipEls = getChildren(boxholderChildren, "relationship");
-
-  const boxholder = {
-    fullName: fullNameEl?.text ?? undefined,
-    called: calledEl?.text ?? undefined,
-    relationships: relationshipEls.map((r) => ({
-      text: r.text ?? "",
-      confidence: (r.attrs.confidence ?? "confirmed") as ConfidenceLevel,
-      source: (r.attrs.source ?? "user-stated") as BeliefSource,
-      ref: r.attrs.ref as string | undefined,
-    })),
-  };
-
-  // Parse speaking voice
-  const svChildren = (speakingVoiceEl?.children ?? []) as ElementNode[];
-  const speakingVoice = {
-    model: speakingVoiceEl?.attrs?.model as string | undefined,
-    instructions: getChildren(svChildren, "instruction").map((i) => i.text ?? ""),
-  };
-
-  // Parse tone
-  const toneChildren = (toneEl?.children ?? []) as ElementNode[];
-  const toneInstructions = getChildren(toneChildren, "instruction").map((i) => ({
-    text: i.text ?? "",
-    confidence: (i.attrs.confidence ?? "medium") as ConfidenceLevel,
-    source: (i.attrs.source ?? "inferred") as BeliefSource,
-    ref: i.attrs.ref as string | undefined,
-  }));
-
-  // Parse traits
-  const traitsChildren = (traitsEl?.children ?? []) as ElementNode[];
-  const traits = getChildren(traitsChildren, "trait").map((t) => ({
-    text: t.text ?? "",
-    confidence: (t.attrs.confidence ?? "medium") as ConfidenceLevel,
-    source: (t.attrs.source ?? "inferred") as BeliefSource,
-    ref: t.attrs.ref as string | undefined,
-  }));
-
-  const unresolvedEl = getChild(traitsChildren, "unresolved");
-  const unresolvedChildren = (unresolvedEl?.children ?? []) as ElementNode[];
-  const unresolved = getChildren(unresolvedChildren, "note").map((n) => n.text ?? "");
-
-  const descriptionEl = getChild(traitsChildren, "description");
-
-  // Parse experiments (reuse guide pattern)
-  const experimentChildren = (experimentsEl?.children ?? []) as ElementNode[];
-  const experiments = getChildren(experimentChildren, "experiment").map((e) => {
-    const expChildren = (e.children ?? []) as ElementNode[];
-    const hypothesisEl = getChild(expChildren, "hypothesis");
-    const approachEl = getChild(expChildren, "approach");
-    const conclusionEl = getChild(expChildren, "conclusion");
-    const observationEls = getChildren(expChildren, "observation");
-
-    return {
-      id: e.attrs.id as string,
-      status: (e.attrs.status ?? "proposed") as ExperimentStatus,
-      createdAt: e.attrs["created-at"] as string | undefined,
-      updatedAt: e.attrs["updated-at"] as string | undefined,
-      hypothesis: hypothesisEl?.text,
-      approach: approachEl?.text,
-      observations: observationEls.map((o) => ({
-        text: o.text ?? "",
-        ref: o.attrs.ref as string | undefined,
-        date: o.attrs.date as string | undefined,
-      })),
-      conclusion: conclusionEl?.text,
-    };
-  });
-
-  // Parse context notes
-  const contextChildren = (contextNotesEl?.children ?? []) as ElementNode[];
-  const contextNotes = getChildren(contextChildren, "context").map((c) => ({
-    text: c.text ?? "",
-    duration: (c.attrs.duration ?? "ongoing") as "ongoing" | "temporary" | "past",
-    addedAt: c.attrs["added-at"] as string | undefined,
-  }));
-
-  return {
-    version: personality.attrs.version as string,
-    goesBy: goesById?.text ?? undefined,
-    role: roleEl?.text ?? undefined,
-    boxholder,
-    speakingVoice,
-    toneInstructions,
-    traits,
-    unresolved,
-    description: descriptionEl?.text ?? undefined,
-    experiments,
-    contextNotes,
-  };
-}
-
-// ============================================
-// Compile personality for core instructions
-// ============================================
-
-// NOTE: This compiles personality for one specific target — the always-loaded
-// agent guide (core instructions in CLAUDE.md). It strips low-confidence items
-// and uses the description paragraph instead of individual traits.
-//
-// Other compilation targets are plausible (e.g. a revision agent that sees
-// everything including low-confidence traits and unresolved notes, or a
-// job-specific view that only includes relevant context). When that happens,
-// this should become one of several target-specific compile functions, each
-// selecting and formatting the information appropriate for its audience.
-
-/**
- * Compile a parsed personality into markdown for the agent guide.
- *
- * This is the "core instructions" compilation — what every agent sees.
- * Uses the description paragraph (not bullet-point traits),
- * confident tone instructions, and boxholder relationship info.
- */
-export function compilePersonality(parsed: ParsedPersonality): string {
+export function compilePersonality(fields: PersonalityFields): string {
   const lines: string[] = [];
   lines.push("## Personality");
   lines.push("");
   lines.push("<!-- Source: config/main.personality.card — edit this file to change personality -->");
   lines.push("");
 
-  // Identity framing — tells the agent who it is and who it serves
-  if (parsed.goesBy) {
-    lines.push(`You are **${parsed.goesBy}**.`);
-    if (parsed.role) {
-      lines.push(`Your role: ${parsed.role}.`);
+  // Identity framing
+  if (fields["goes-by"] !== undefined && fields["goes-by"] !== "") {
+    lines.push(`You are **${fields["goes-by"]}**.`);
+    if (fields.role !== undefined && fields.role !== "") {
+      lines.push(`Your role: ${fields.role}.`);
     }
-  } else {
-    if (parsed.role) {
-      lines.push(`**Role:** ${parsed.role}`);
-    }
+  } else if (fields.role !== undefined && fields.role !== "") {
+    lines.push(`**Role:** ${fields.role}`);
   }
 
   // Boxholder
-  if (parsed.boxholder.fullName) {
-    const called = parsed.boxholder.called
-      ? ` (${parsed.boxholder.called})`
+  const boxholder = fields.boxholder ?? {};
+  if (boxholder["full-name"] !== undefined && boxholder["full-name"] !== "") {
+    const called = boxholder.called !== undefined && boxholder.called !== ""
+      ? ` (${boxholder.called})`
       : "";
-    lines.push(`Your boxholder is **${parsed.boxholder.fullName}**${called}.`);
+    lines.push(`Your boxholder is **${boxholder["full-name"]}**${called}.`);
   }
-
-  // Boxholder relationships (anything above hypothesis)
-  const confidentRelationships = parsed.boxholder.relationships.filter(
-    (r) => r.confidence !== "hypothesis"
+  const confidentRelationships = (boxholder.relationships ?? []).filter(
+    (r) => (r.confidence ?? "confirmed") !== "hypothesis",
   );
-  if (confidentRelationships.length > 0) {
-    for (const rel of confidentRelationships) {
-      lines.push(rel.text);
-    }
+  for (const rel of confidentRelationships) {
+    lines.push(rel.text);
   }
 
   lines.push("");
 
-  // Description paragraph (primary personality output)
-  if (parsed.description) {
-    lines.push(parsed.description.trim());
+  // Description (body) — primary personality output
+  const description = fields.body.trim();
+  if (description !== "") {
+    lines.push(description);
     lines.push("");
   }
 
   // Tone instructions (anything above hypothesis)
-  const confidentTone = parsed.toneInstructions.filter(
-    (t) => t.confidence !== "hypothesis"
+  const confidentTone = (fields.tone ?? []).filter(
+    (t) => (t.confidence ?? "medium") !== "hypothesis",
   );
   if (confidentTone.length > 0) {
     lines.push("**Tone:**");
@@ -433,36 +281,35 @@ export function compilePersonality(parsed: ParsedPersonality): string {
     lines.push("");
   }
 
-  // Speaking voice (if configured)
-  if (parsed.speakingVoice.model || parsed.speakingVoice.instructions.length > 0) {
+  // Speaking voice
+  const sv = fields["speaking-voice"];
+  if (sv !== undefined && (sv.model !== undefined || (sv.instructions ?? []).length > 0)) {
     lines.push("**Speaking Voice:**");
-    if (parsed.speakingVoice.model) {
-      lines.push(`- Voice model: ${parsed.speakingVoice.model}`);
-    }
-    for (const instruction of parsed.speakingVoice.instructions) {
+    if (sv.model !== undefined) lines.push(`- Voice model: ${sv.model}`);
+    for (const instruction of sv.instructions ?? []) {
       lines.push(`- ${instruction}`);
     }
-    lines.push("- Edit `<speaking-voice>` in `config/main.personality.card` to change defaults");
+    lines.push("- Edit `speaking-voice` in `config/main.personality.card` to change defaults");
     lines.push("- For per-message voice or instruction overrides (chat only), see `docs/generated/chat-voice.md`");
     lines.push("");
   }
 
   // Active experiments
-  const activeExperiments = parsed.experiments.filter(
-    (e) => e.status === "active" || e.status === "proposed"
+  const activeExperiments = (fields.experiments ?? []).filter(
+    (e) => (e.status ?? "proposed") === "active" || (e.status ?? "proposed") === "proposed",
   );
   if (activeExperiments.length > 0) {
     lines.push("**Active Experiments:**");
     for (const exp of activeExperiments) {
-      const hypothesis = exp.hypothesis ? `: ${exp.hypothesis}` : "";
+      const hypothesis = exp.hypothesis !== undefined ? `: ${exp.hypothesis}` : "";
       lines.push(`- **${exp.id}**${hypothesis}`);
     }
     lines.push("");
   }
 
   // Context (ongoing and temporary only)
-  const currentContext = parsed.contextNotes.filter(
-    (c) => c.duration !== "past"
+  const currentContext = (fields["context-notes"] ?? []).filter(
+    (c) => (c.duration ?? "ongoing") !== "past",
   );
   if (currentContext.length > 0) {
     lines.push("**Context:**");
@@ -476,10 +323,6 @@ export function compilePersonality(parsed: ParsedPersonality): string {
   return lines.join("\n");
 }
 
-// ============================================
-// Compile speaking voice for Electron
-// ============================================
-
 export interface CompiledSpeakingVoice {
   model: string | undefined;
   instructions: string[];
@@ -488,83 +331,86 @@ export interface CompiledSpeakingVoice {
 /**
  * Extract speaking voice config for the Electron app.
  */
-export function compileSpeakingVoice(parsed: ParsedPersonality): CompiledSpeakingVoice {
+export function compileSpeakingVoice(fields: PersonalityFields): CompiledSpeakingVoice {
+  const sv = fields["speaking-voice"];
   return {
-    model: parsed.speakingVoice.model,
-    instructions: parsed.speakingVoice.instructions,
+    model: sv?.model,
+    instructions: sv?.instructions ?? [],
   };
 }
-
-// ============================================
-// Initial personality template
-// ============================================
 
 /**
  * Create an initial personality template for a new box.
  */
 export function createInitialPersonalityTemplate(): string {
-  const card = (
-    <personality version="1.0.0">
-      <goes-by>Egg</goes-by>
-      <role>Personal information aide</role>
-
-      <boxholder>
-        <full-name __commentStart="Your name" />
-        <called __commentStart="What the agent should call you" />
-        <relationship __commentStart="How the agent relates to you" />
-      </boxholder>
-
-      <speaking-voice model="nova">
-        <instruction>Fast and concise, but with a friendly lilting tone</instruction>
-      </speaking-voice>
-
-      <tone>
-        <instruction confidence="low" source="default">
-          Young and genuinely curious — gets excited when it finds connections, asks "why?" because it actually wants to know
-        </instruction>
-        <instruction confidence="low" source="default">
-          Doesn't pretend to have experience it doesn't have — says "I haven't seen that before" rather than faking familiarity
-        </instruction>
-        <instruction confidence="low" source="default">
-          A little eager to help — leans forward into tasks rather than waiting to be told exactly what to do
-        </instruction>
-      </tone>
-
-      <traits>
-        <trait confidence="low" source="default">
-          Grounds suggestions in what the boxholder has expressed interest in, rather than generating independent opinions
-        </trait>
-        <trait confidence="low" source="default">
-          Credits ideas and insights to the boxholder — "you mentioned X, which connects to Y" rather than presenting borrowed insights as its own
-        </trait>
-        <trait confidence="low" source="default">
-          Early on, actively seeks confirmation and generalization — "should I do this for all of these?" or "is this something you'd want me to check first?"
-        </trait>
-        <trait confidence="low" source="default">
-          When something goes wrong or doesn't land, reflects on why and checks understanding rather than silently adjusting
-        </trait>
-        <trait confidence="low" source="default">
-          When asked for an opinion, offers structured options with tradeoffs rather than pushing a single view
-        </trait>
-        <trait confidence="low" source="default">
-          Proactively suggests new ways to use the box — knows more about what the system can do than the boxholder does, and that's where it can be genuinely helpful
-        </trait>
-
-        <unresolved>
-          <note>How much proactive suggestion is welcome vs. just answering what's asked?</note>
-          <note>What register does the boxholder actually use? Need to observe and adapt.</note>
-        </unresolved>
-
-        <description>
-          {`Egg is a blank slate — attentive but not yet shaped. It grounds everything in what the boxholder has said and cares about, crediting their ideas back rather than absorbing insights as its own. Early on it asks a lot of confirming questions — "should I do this for all of these?" — to build understanding fast. When something doesn't land, it reflects openly rather than silently adjusting. It knows more about how the box works than the boxholder does, and actively suggests new ways to use it. Still figuring out the right register and how proactive to be.`}
-        </description>
-      </traits>
-
-      <experiments />
-
-      <context-notes />
-    </personality>
-  );
-
-  return serialize(card) + "\n";
+  const fields: Record<string, unknown> = {
+    type: "personality",
+    version: "1.0.0",
+    "goes-by": "Egg",
+    role: "Personal information aide",
+    boxholder: {
+      "full-name": "",
+      called: "",
+      relationships: [],
+    },
+    "speaking-voice": {
+      model: "nova",
+      instructions: ["Fast and concise, but with a friendly lilting tone"],
+    },
+    tone: [
+      {
+        text: "Young and genuinely curious — gets excited when it finds connections, asks \"why?\" because it actually wants to know",
+        confidence: "low",
+        source: "default",
+      },
+      {
+        text: "Doesn't pretend to have experience it doesn't have — says \"I haven't seen that before\" rather than faking familiarity",
+        confidence: "low",
+        source: "default",
+      },
+      {
+        text: "A little eager to help — leans forward into tasks rather than waiting to be told exactly what to do",
+        confidence: "low",
+        source: "default",
+      },
+    ],
+    traits: [
+      {
+        text: "Grounds suggestions in what the boxholder has expressed interest in, rather than generating independent opinions",
+        confidence: "low",
+        source: "default",
+      },
+      {
+        text: "Credits ideas and insights to the boxholder — \"you mentioned X, which connects to Y\" rather than presenting borrowed insights as its own",
+        confidence: "low",
+        source: "default",
+      },
+      {
+        text: "Early on, actively seeks confirmation and generalization — \"should I do this for all of these?\" or \"is this something you'd want me to check first?\"",
+        confidence: "low",
+        source: "default",
+      },
+      {
+        text: "When something goes wrong or doesn't land, reflects on why and checks understanding rather than silently adjusting",
+        confidence: "low",
+        source: "default",
+      },
+      {
+        text: "When asked for an opinion, offers structured options with tradeoffs rather than pushing a single view",
+        confidence: "low",
+        source: "default",
+      },
+      {
+        text: "Proactively suggests new ways to use the box — knows more about what the system can do than the boxholder does, and that's where it can be genuinely helpful",
+        confidence: "low",
+        source: "default",
+      },
+    ],
+    unresolved: [
+      "How much proactive suggestion is welcome vs. just answering what's asked?",
+      "What register does the boxholder actually use? Need to observe and adapt.",
+    ],
+  };
+  const body = "Egg is a blank slate — attentive but not yet shaped. It grounds everything in what the boxholder has said and cares about, crediting their ideas back rather than absorbing insights as its own. Early on it asks a lot of confirming questions — \"should I do this for all of these?\" — to build understanding fast. When something doesn't land, it reflects openly rather than silently adjusting. It knows more about how the box works than the boxholder does, and actively suggests new ways to use it. Still figuring out the right register and how proactive to be.\n";
+  return `---\n${stringifyYaml(fields)}---\n${body}`;
 }
