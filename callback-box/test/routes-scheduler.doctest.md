@@ -102,11 +102,7 @@ const schedulesDir = join(ctx.boxRoot, "config/schedules");
 await mkdir(schedulesDir, { recursive: true });
 await writeFile(
   join(schedulesDir, "test-echo.scheduled-script.card"),
-  `<scheduled-script cron="0 * * * *">
-  <description>Echo test</description>
-  <runs>echo hello</runs>
-</scheduled-script>
-`,
+  `---\ntype: scheduled-script\ncron: "0 * * * *"\ndescription: Echo test\nruns: echo hello\n---\n`,
 );
 await ctx.inject({ method: "GET", url: "/api/schedules" })
 =>

@@ -44,7 +44,7 @@ export type { IntakeJobFields } from "./intake-job.js";
 export type { CalendarReviewJobFields } from "./calendar-review-job.js";
 export type { QuestionFollowupJobFields } from "./question-followup-job.js";
 export type { Guide } from "./guide.js";
-export type { ScheduledScript, ParsedScheduledScript, ScheduleCheckContext } from "./scheduled-script.js";
+export type { ScheduledScriptFields, ParsedScheduledScript, ScheduleCheckContext } from "./scheduled-script.js";
 export type { TelegramMessageFields } from "./telegram-message.js";
 export type { ChatThread } from "./chat-thread.js";
 export type { ChatJobFields } from "./chat-job.js";

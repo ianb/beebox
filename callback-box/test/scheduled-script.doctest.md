@@ -196,7 +196,7 @@ JSON.stringify(isWithinBudget({ limitMs: 600_000, windowMs: 3_600_000 }, { recen
 
 ## createScheduledScriptTemplate
 
-Generates XML for scheduled-script cards:
+Generates YAML frontmatter for scheduled-script cards:
 
 ```
 createScheduledScriptTemplate({
@@ -207,10 +207,15 @@ createScheduledScriptTemplate({
   source: "Check RSS feeds",
 })
 =>
-<scheduled-script cron="0 6 * * *" not-before="4h" on-wakeup="true">
-  <runs>cb wakeup --connector rss</runs>
-  <source>Check RSS feeds</source>
-</scheduled-script>
+---
+type: scheduled-script
+cron: 0 6 * * *
+not-before: 4h
+on-wakeup: true
+runs: cb wakeup --connector rss
+source: Check RSS feeds
+---
+
 ```
 
 A one-shot script with `at` and `once`:
@@ -222,9 +227,13 @@ createScheduledScriptTemplate({
   runs: "scripts/remind.sh",
 })
 =>
-<scheduled-script at="2026-03-01T09:00:00Z" once="true">
-  <runs>scripts/remind.sh</runs>
-</scheduled-script>
+---
+type: scheduled-script
+at: 2026-03-01T09:00:00Z
+once: true
+runs: scripts/remind.sh
+---
+
 ```
 
 Minimal wakeup-only script:
@@ -235,7 +244,10 @@ createScheduledScriptTemplate({
   runs: "cb wakeup --connector capture",
 })
 =>
-<scheduled-script on-wakeup="true">
-  <runs>cb wakeup --connector capture</runs>
-</scheduled-script>
+---
+type: scheduled-script
+on-wakeup: true
+runs: cb wakeup --connector capture
+---
+
 ```

@@ -7,11 +7,12 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
-import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
-  type ScheduledScript,
+  type ScheduledScriptFields,
 } from "../../schemas/scheduled-script.js";
+import { parseCardText } from "../../core/card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
 import { loadScriptState } from "../../core/schedule-state.js";
 
 export const scheduledCommand = new Command("scheduled")
@@ -46,8 +47,8 @@ export const scheduledCommand = new Command("scheduled")
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseCard(content, { source: file });
-        parsed = parseScheduledScript(root as ScheduledScript);
+        const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+        parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
       } catch (err) {
         console.log(`  ${scriptName.padEnd(22)} [parse error: ${(err as Error).message}]`);
         continue;

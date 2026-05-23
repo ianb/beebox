@@ -8,77 +8,52 @@
  * The filename stem is the identity (e.g., check-email.scheduled-script.card).
  */
 
-import { element } from "cardworks";
+import { cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
 const { rrulestr } = rrulePkg;
 
 // ============================================
-// Child elements
-// ============================================
-
-export const Runs = element("runs", {
-  text: z.string(),
-});
-
-export const ScriptSource = element("source", {
-  attrs: {
-    ref: z.string().optional(),
-  },
-  text: z.string().optional(),
-});
-
-export const ScheduleDescription = element("description", {
-  text: z.string(),
-});
-
-export const CreateAfterSuccess = element("create-after-success", {
-  attrs: {
-    path: z.string(),
-  },
-  text: z.string().optional(),
-});
-
-export const RequiresConnector = element("connector", {
-  attrs: {
-    /** Name of the connector config (maps to config/connectors/<name>.secret.json) */
-    name: z.string(),
-  },
-});
-
-export const Requires = element("requires", {
-  children: z.array(RequiresConnector),
-});
-
-// ============================================
 // Schema
 // ============================================
 
-export const ScheduledScriptSchema = element("scheduled-script", {
-  attrs: {
-    /** Cron expression (mutually exclusive with at/rrule) */
+const SourceField = z.union([
+  z.string(),
+  z.object({
+    text: z.string().optional(),
+    ref: z.string().optional(),
+  }),
+]);
+
+const CreateAfterSuccessEntry = z.object({
+  path: z.string(),
+  args: z.record(z.string(), z.string()).optional(),
+});
+
+const RequiresField = z.object({
+  connectors: z.array(z.string()).optional(),
+});
+
+export const ScheduledScriptSchema: CardSchema = cardSchema("scheduled-script", {
+  fields: {
     cron: z.string().optional(),
-    /** ISO datetime for one-shot execution (mutually exclusive) */
     at: z.string().optional(),
-    /** iCalendar RRULE string (mutually exclusive) */
     rrule: z.string().optional(),
-    /** Optional end date (ISO datetime) */
     until: z.string().optional(),
-    /** Minimum interval since last run (e.g., "5m", "1h", "1d") */
     "not-before": z.string().optional(),
-    /** Also run during cb wakeup (subject to not-before) */
-    "on-wakeup": z.enum(["true", "false"]).optional(),
-    /** Delete card after successful execution */
-    once: z.enum(["true", "false"]).optional(),
-    /** Enable/disable without deleting */
-    enabled: z.enum(["true", "false"]).optional(),
-    /** Runtime budget: max cumulative runtime within a window, e.g. "10m/5h" */
+    "on-wakeup": z.boolean().optional(),
+    once: z.boolean().optional(),
+    enabled: z.boolean().optional(),
     budget: z.string().optional(),
-    /** Lock group name — scripts in the same group won't run concurrently */
     "lock-group": z.string().optional(),
+    description: z.string().optional(),
+    runs: z.string(),
+    source: SourceField.optional(),
+    "create-after-success": z.array(CreateAfterSuccessEntry).optional(),
+    requires: RequiresField.optional(),
   },
-  children: z.array(z.union([Runs, ScriptSource, ScheduleDescription, CreateAfterSuccess, Requires])),
   instructions: `# Scheduled Script Cards
 
 Scheduled scripts define commands to run on a schedule. They live in \`config/schedules/\`.
@@ -88,7 +63,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **at**: ISO datetime for a one-shot future execution
 - **rrule**: iCalendar RRULE for complex recurrence patterns
 
-## Attributes
+## Frontmatter Fields
 - **not-before**: Minimum time since last run. Prevents running more often than this interval even if the schedule says otherwise. Use duration strings: \`5m\`, \`1h\`, \`4h\`, \`1d\`.
 - **on-wakeup**: If \`true\`, also run opportunistically during \`cb wakeup\`, subject to not-before.
 - **once**: If \`true\`, the card is deleted after successful execution.
@@ -96,24 +71,43 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **enabled**: Set to \`false\` to disable without deleting.
 - **budget**: Max cumulative runtime within a window. Format: \`"LIMIT/WINDOW"\` (e.g., \`"10m/5h"\` = max 10 minutes of runtime in any 5-hour window). Scripts exceeding their budget are skipped until the window clears.
 - **lock-group**: Named concurrency group. Scripts sharing a lock-group won't run concurrently — if one is already running, others in the same group are skipped.
-
-## Children
-- **<runs>**: The command to execute (required). Runs with cwd set to box root.
-- **<description>**: Optional. Human-readable summary of what this schedule does.
-- **<source>**: Optional. Why this schedule exists, with optional \`ref\` to a related card.
-- **<create-after-success path="...">**: Optional. Create a card at the given path after successful execution. Text content is key=value lines (one per line) passed as template args. Skipped if the target file already exists.
-- **<requires>**: Optional. Declares prerequisites. Contains \`<connector name="..." />\` children. The schedule won't run if any required connector isn't configured for this box. Each connector defines its own configured-check (e.g. legacy connectors look for \`config/connectors/<name>.secret.json\`; Google connectors check the shared OAuth tokens plus the per-box \`googleServices\` policy). Example: \`<requires><connector name="gmail" /></requires>\`.
+- **runs**: The command to execute (required). Runs with cwd set to box root.
+- **description**: Human-readable summary of what this schedule does.
+- **source**: Why this schedule exists. Either a plain string, or \`{text?, ref?}\` to link to a related card.
+- **create-after-success**: Optional array of \`{path, args?}\` entries. Create a card at \`path\` after successful execution; \`args\` are template arguments. Skipped if the target file already exists.
+- **requires**: Optional \`{connectors: [name, ...]}\`. The schedule won't run if any required connector isn't configured for this box.
 
 ## Guidelines
 - Set reasonable not-before values to prevent hammering external services.
 - Use on-wakeup for things that should happen whenever the agent is active.
-- For one-shot future tasks, combine \`at\` with \`once="true"\`.`,
+- For one-shot future tasks, combine \`at\` with \`once: true\`.`,
 });
 
-export type ScheduledScript = z.infer<typeof ScheduledScriptSchema>;
+// ============================================
+// Field types (raw frontmatter shape)
+// ============================================
+
+export interface ScheduledScriptFields {
+  type: "scheduled-script";
+  cron?: string;
+  at?: string;
+  rrule?: string;
+  until?: string;
+  "not-before"?: string;
+  "on-wakeup"?: boolean;
+  once?: boolean;
+  enabled?: boolean;
+  budget?: string;
+  "lock-group"?: string;
+  description?: string;
+  runs: string;
+  source?: string | { text?: string; ref?: string };
+  "create-after-success"?: Array<{ path: string; args?: Record<string, string> }>;
+  requires?: { connectors?: string[] };
+}
 
 // ============================================
-// Parsed scheduled script
+// Parsed scheduled script (computed/normalized)
 // ============================================
 
 export interface ScheduleRequirements {
@@ -138,73 +132,41 @@ export interface ParsedScheduledScript {
   requires: ScheduleRequirements | undefined;
 }
 
-function buildSource(ref: string | undefined, text: string | undefined): { ref?: string; text?: string } {
-  const result: { ref?: string; text?: string } = {};
-  if (ref) result.ref = ref;
-  if (text) result.text = text;
-  return result;
+function normalizeSource(src: ScheduledScriptFields["source"]): { ref?: string; text?: string } | undefined {
+  if (src === undefined) return undefined;
+  if (typeof src === "string") return { text: src };
+  const out: { ref?: string; text?: string } = {};
+  if (src.ref !== undefined) out.ref = src.ref;
+  if (src.text !== undefined) out.text = src.text;
+  return out;
 }
 
 /**
- * Parse a scheduled-script element into a typed structure.
+ * Parse a scheduled-script fields object into a typed structure.
  */
-export function parseScheduledScript(script: ScheduledScript): ParsedScheduledScript {
-  const children = script.children as Array<{ tagName: string; text?: string; attrs: Record<string, unknown> }>;
-
-  const runsEl = children.find((c) => c.tagName === "runs");
-  const descEl = children.find((c) => c.tagName === "description");
-  const sourceEl = children.find((c) => c.tagName === "source");
-  const chainEls = children.filter((c) => c.tagName === "create-after-success");
-  const requiresEl = children.find((c) => c.tagName === "requires") as
-    | { tagName: string; children?: Array<{ tagName: string; attrs: Record<string, unknown> }> }
-    | undefined;
-
-  const createAfterSuccess = chainEls.map((el) => {
-    const args: Record<string, string> = {};
-    const text = (el.text as string | undefined)?.trim();
-    if (text) {
-      for (const line of text.split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        const eqIndex = trimmed.indexOf("=");
-        if (eqIndex > 0) {
-          args[trimmed.slice(0, eqIndex)] = trimmed.slice(eqIndex + 1);
-        }
-      }
-    }
-    return { path: el.attrs.path as string, args };
-  });
-
-  const budgetStr = script.attrs.budget as string | undefined;
-
-  let requires: ScheduleRequirements | undefined;
-  if (requiresEl && requiresEl.children) {
-    const connectors = requiresEl.children
-      .filter((c) => c.tagName === "connector")
-      .map((c) => c.attrs.name as string);
-    if (connectors.length > 0) {
-      requires = { connectors };
-    }
-  }
-
+export function parseScheduledScript(fields: ScheduledScriptFields): ParsedScheduledScript {
   return {
-    cron: script.attrs.cron as string | undefined,
-    at: script.attrs.at as string | undefined,
-    rrule: script.attrs.rrule as string | undefined,
-    until: script.attrs.until as string | undefined,
-    notBefore: script.attrs["not-before"] as string | undefined,
-    onWakeup: script.attrs["on-wakeup"] === "true",
-    once: script.attrs.once === "true",
-    enabled: script.attrs.enabled !== "false",
-    runs: runsEl?.text ?? "",
-    description: (descEl?.text as string | undefined) ?? undefined,
-    source: sourceEl
-      ? buildSource(sourceEl.attrs.ref as string | undefined, sourceEl.text)
-      : undefined,
-    createAfterSuccess,
-    budget: budgetStr ? parseBudget(budgetStr) : undefined,
-    lockGroup: script.attrs["lock-group"] as string | undefined,
-    requires,
+    cron: fields.cron,
+    at: fields.at,
+    rrule: fields.rrule,
+    until: fields.until,
+    notBefore: fields["not-before"],
+    onWakeup: fields["on-wakeup"] === true,
+    once: fields.once === true,
+    enabled: fields.enabled !== false,
+    runs: fields.runs,
+    description: fields.description,
+    source: normalizeSource(fields.source),
+    createAfterSuccess: (fields["create-after-success"] ?? []).map((e) => ({
+      path: e.path,
+      args: e.args ?? {},
+    })),
+    budget: fields.budget !== undefined ? parseBudget(fields.budget) : undefined,
+    lockGroup: fields["lock-group"],
+    requires:
+      fields.requires?.connectors && fields.requires.connectors.length > 0
+        ? { connectors: fields.requires.connectors }
+        : undefined,
   };
 }
 
@@ -272,27 +234,23 @@ export interface ScheduleCheckContext {
 export function isDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext): boolean {
   if (!script.enabled) return false;
 
-  // Check until
   if (script.until) {
     const untilDate = new Date(script.until);
     if (ctx.now > untilDate) return false;
   }
 
-  // Check not-before (debounce)
   if (script.notBefore && ctx.lastRun) {
     const minInterval = parseDuration(script.notBefore);
     const elapsed = ctx.now.getTime() - new Date(ctx.lastRun).getTime();
     if (elapsed < minInterval) return false;
   }
 
-  // Check schedule type
   if (script.cron) {
     return isCronDue(script.cron, ctx);
   }
 
   if (script.at) {
     const atDate = new Date(script.at);
-    // Due if the time has passed and we haven't run yet
     return ctx.now >= atDate && !ctx.lastRun;
   }
 
@@ -300,7 +258,6 @@ export function isDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext):
     return isRruleDue(script.rrule, ctx);
   }
 
-  // No schedule type — run during tick if on-wakeup is set
   return script.onWakeup;
 }
 
@@ -312,13 +269,11 @@ export function isDueForWakeup(script: ParsedScheduledScript, ctx: ScheduleCheck
   if (!script.enabled) return false;
   if (!script.onWakeup) return false;
 
-  // Check until
   if (script.until) {
     const untilDate = new Date(script.until);
     if (ctx.now > untilDate) return false;
   }
 
-  // Check not-before
   if (script.notBefore && ctx.lastRun) {
     const minInterval = parseDuration(script.notBefore);
     const elapsed = ctx.now.getTime() - new Date(ctx.lastRun).getTime();
@@ -354,19 +309,12 @@ function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
     const interval = CronExpressionParser.parse(cronExpr, {
       currentDate: ctx.now,
     });
-
-    // Get the most recent scheduled time
     const prev = interval.prev().toDate();
-
     if (!ctx.lastRun) {
-      // Never run — due if there's a scheduled time in the past
       return prev <= ctx.now;
     }
-
-    // Due if the most recent scheduled time is after our last run
     return prev > new Date(ctx.lastRun);
   } catch {
-    // Invalid cron expression — don't run
     return false;
   }
 }
@@ -374,14 +322,10 @@ function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
 function isRruleDue(rruleStr: string, ctx: ScheduleCheckContext): boolean {
   try {
     const rule = rrulestr(rruleStr);
-
-    // Get occurrences between last run and now
     const after = ctx.lastRun ? new Date(ctx.lastRun) : new Date(0);
     const occurrences = rule.between(after, ctx.now, false);
-
     return occurrences.length > 0;
   } catch {
-    // Invalid RRULE — don't run
     return false;
   }
 }
@@ -410,44 +354,42 @@ export interface ScheduledScriptTemplateOptions {
 }
 
 /**
- * Create a scheduled-script card template.
+ * Create a scheduled-script card template (YAML frontmatter + empty body).
  */
 export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOptions): string {
-  const attrs: string[] = [];
-  if (options.cron) attrs.push(`cron="${options.cron}"`);
-  if (options.at) attrs.push(`at="${options.at}"`);
-  if (options.rrule) attrs.push(`rrule="${options.rrule}"`);
-  if (options.until) attrs.push(`until="${options.until}"`);
-  if (options.notBefore) attrs.push(`not-before="${options.notBefore}"`);
-  if (options.onWakeup) attrs.push(`on-wakeup="true"`);
-  if (options.once) attrs.push(`once="true"`);
-  if (options.enabled === false) attrs.push(`enabled="false"`);
-  if (options.budget) attrs.push(`budget="${options.budget}"`);
-  if (options.lockGroup) attrs.push(`lock-group="${options.lockGroup}"`);
-
-  const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
-
-  const children: string[] = [];
-  if (options.description) {
-    children.push(`  <description>${options.description}</description>`);
-  }
-  children.push(`  <runs>${options.runs}</runs>`);
-  if (options.source || options.sourceRef) {
-    const refAttr = options.sourceRef ? ` ref="${options.sourceRef}"` : "";
-    children.push(`  <source${refAttr}>${options.source ?? ""}</source>`);
-  }
-
-  if (options.createAfterSuccess) {
-    for (const chain of options.createAfterSuccess) {
-      const lines = Object.entries(chain.args).map(([k, v]) => `${k}=${v}`).join("\n");
-      children.push(`  <create-after-success path="${chain.path}">\n${lines}\n  </create-after-success>`);
+  const fields: Record<string, unknown> = {
+    type: "scheduled-script",
+  };
+  if (options.cron !== undefined) fields["cron"] = options.cron;
+  if (options.at !== undefined) fields["at"] = options.at;
+  if (options.rrule !== undefined) fields["rrule"] = options.rrule;
+  if (options.until !== undefined) fields["until"] = options.until;
+  if (options.notBefore !== undefined) fields["not-before"] = options.notBefore;
+  if (options.onWakeup === true) fields["on-wakeup"] = true;
+  if (options.once === true) fields["once"] = true;
+  if (options.enabled === false) fields["enabled"] = false;
+  if (options.budget !== undefined) fields["budget"] = options.budget;
+  if (options.lockGroup !== undefined) fields["lock-group"] = options.lockGroup;
+  if (options.description !== undefined) fields["description"] = options.description;
+  fields["runs"] = options.runs;
+  if (options.source !== undefined || options.sourceRef !== undefined) {
+    if (options.sourceRef !== undefined) {
+      const src: Record<string, string> = {};
+      if (options.source !== undefined) src["text"] = options.source;
+      src["ref"] = options.sourceRef;
+      fields["source"] = src;
+    } else {
+      fields["source"] = options.source;
     }
   }
-
-  if (options.requires && options.requires.length > 0) {
-    const connectorEls = options.requires.map((name) => `<connector name="${name}" />`).join("");
-    children.push(`  <requires>${connectorEls}</requires>`);
+  if (options.createAfterSuccess !== undefined && options.createAfterSuccess.length > 0) {
+    fields["create-after-success"] = options.createAfterSuccess.map((e) => ({
+      path: e.path,
+      ...(Object.keys(e.args).length > 0 && { args: e.args }),
+    }));
   }
-
-  return `<scheduled-script${attrStr}>\n${children.join("\n")}\n</scheduled-script>\n`;
+  if (options.requires !== undefined && options.requires.length > 0) {
+    fields["requires"] = { connectors: options.requires };
+  }
+  return `---\n${stringifyYaml(fields)}---\n`;
 }

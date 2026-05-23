@@ -7,14 +7,15 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { performance } from "node:perf_hooks";
-import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   isDueForWakeup,
   isWithinBudget,
-  type ScheduledScript,
+  type ScheduledScriptFields,
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
+import { parseCardText } from "../../core/card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   loadScriptState,
@@ -166,8 +167,8 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     let parsed;
     try {
       const content = await fs.readFile(cardPath, "utf-8");
-      const root = await parseCard(content, { source: file });
-      parsed = parseScheduledScript(root as ScheduledScript);
+      const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+      parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
     } catch (err) {
       console.error(`  Error parsing ${file}: ${(err as Error).message}`);
       continue;

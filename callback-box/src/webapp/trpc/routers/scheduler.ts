@@ -7,12 +7,15 @@ import { performance } from "node:perf_hooks";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { boxLogFile } from "../../../core/scheduler.js";
-import { parseCard } from "cardworks";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { splitCardContent } from "cardworks";
 import {
   parseScheduledScript,
   isWithinBudget,
-  type ScheduledScript,
+  type ScheduledScriptFields,
 } from "../../../schemas/scheduled-script.js";
+import { parseCardText } from "../../../core/card-io.js";
+import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import {
   loadScriptState,
@@ -24,7 +27,6 @@ import {
 } from "../../../core/schedule-state.js";
 import { execWithTimeout, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
 import { buildScriptEnv } from "../../../core/script-env.js";
-import { createLoader } from "../../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 
 /** Clean log entry type without index signature for tRPC serialization */
@@ -137,8 +139,8 @@ export const schedulerRouter = router({
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseCard(content, { source: file });
-        parsed = parseScheduledScript(root as ScheduledScript);
+        const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+        parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
       } catch {
         schedules.push({
           name: scriptName,
@@ -229,16 +231,18 @@ export const schedulerRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
       }
 
-      const loader = await createLoader(ctx.boxRoot);
-      const card = await loader.load(fullPath);
-
-      if (input.enabled) {
-        delete card.element.attrs.enabled;
-      } else {
-        card.element.attrs.enabled = "false";
+      const content = await fs.readFile(fullPath, "utf-8");
+      const split = splitCardContent(content);
+      if (!split.hasFrontmatter) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Schedule "${input.name}" has no frontmatter` });
       }
-
-      await loader.save(card);
+      const fm = parseYaml(split.frontmatterText) as Record<string, unknown>;
+      if (input.enabled) {
+        delete fm["enabled"];
+      } else {
+        fm["enabled"] = false;
+      }
+      await fs.writeFile(fullPath, `---\n${stringifyYaml(fm)}---\n${split.body}`);
 
       const action = input.enabled ? "Enable" : "Disable";
       await stageFiles(ctx.boxRoot, [relPath]);
@@ -265,8 +269,8 @@ export const schedulerRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
       }
 
-      const root = await parseCard(content, { source: fileName });
-      const parsed = parseScheduledScript(root as ScheduledScript);
+      const card = parseCardText(content, { source: fileName, schemas: createCardSchemaMap() });
+      const parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
 
       if (!parsed.enabled) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `Schedule "${input.name}" is disabled` });

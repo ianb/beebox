@@ -8,12 +8,13 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { boxLogFile, type LogEntry } from "../../core/scheduler.js";
-import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   isWithinBudget,
-  type ScheduledScript,
+  type ScheduledScriptFields,
 } from "../../schemas/scheduled-script.js";
+import { parseCardText } from "../../core/card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
 import { loadScriptState, loadRunningScripts } from "../../core/schedule-state.js";
 
 export async function registerSchedulerRoutes(
@@ -110,8 +111,8 @@ export async function registerSchedulerRoutes(
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const root = await parseCard(content, { source: file });
-        parsed = parseScheduledScript(root as ScheduledScript);
+        const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+        parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
       } catch {
         schedules.push({
           name: scriptName,

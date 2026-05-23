@@ -8,13 +8,14 @@ import { performance } from "node:perf_hooks";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
-import { parseCard } from "cardworks";
 import {
   parseScheduledScript,
   isDue,
   isWithinBudget,
-  type ScheduledScript,
+  type ScheduledScriptFields,
 } from "../../schemas/scheduled-script.js";
+import { parseCardText } from "../../core/card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   loadScriptState,
@@ -117,8 +118,8 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     let parsed;
     try {
       const content = await fs.readFile(cardPath, "utf-8");
-      const root = await parseCard(content, { source: file });
-      parsed = parseScheduledScript(root as ScheduledScript);
+      const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+      parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
     } catch (err) {
       if (!options.quiet) console.error(`  Error parsing ${file}: ${(err as Error).message}`);
       errorCount++;
