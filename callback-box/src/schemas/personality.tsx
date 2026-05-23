@@ -31,6 +31,7 @@ const RelationshipEntry = z.object({
 });
 
 const BoxholderEntry = z.object({
+  ref: z.string().optional(),
   "full-name": z.string().optional(),
   called: z.string().optional(),
   relationships: z.array(RelationshipEntry).optional(),
@@ -178,6 +179,7 @@ export interface PersonalityFields {
   "goes-by"?: string;
   role?: string;
   boxholder?: {
+    ref?: string;
     "full-name"?: string;
     called?: string;
     relationships?: Array<{

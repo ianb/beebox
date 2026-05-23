@@ -33,7 +33,7 @@ const SPEC: ElementSpec = {
     "goes-by": { attrs: [] },
     role: { attrs: [] },
     boxholder: {
-      attrs: [],
+      attrs: ["ref"],
       children: {
         "full-name": { attrs: [] },
         called: { attrs: [] },
@@ -153,6 +153,7 @@ function convertOne(node: ElementNode, source: string): { fields: Record<string,
   const boxholderEl = firstChild(node, "boxholder");
   if (boxholderEl !== undefined) {
     const bh: Record<string, unknown> = {};
+    if (boxholderEl.attrs["ref"] !== undefined) bh["ref"] = boxholderEl.attrs["ref"];
     const fullName = childText(boxholderEl, "full-name");
     if (fullName !== undefined) bh["full-name"] = fullName;
     const called = childText(boxholderEl, "called");
