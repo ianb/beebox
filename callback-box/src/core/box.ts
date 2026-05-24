@@ -59,6 +59,21 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
 
+  // Create an empty migration manifest for fresh boxes. Already-initialized
+  // boxes never get one auto-created here — the assumption is that an
+  // existing box without a manifest is a legacy box, and the user must
+  // explicitly run `cb migrate --mark-all-applied` (or --init) to decide
+  // its starting state. See `src/cli/commands/migrate.ts`.
+  if (!isUpdate) {
+    const manifestPath = path.join(resolvedRoot, "config/.migrations.jsonl");
+    await fs.mkdir(path.dirname(manifestPath), { recursive: true });
+    try {
+      await fs.access(manifestPath);
+    } catch {
+      await fs.writeFile(manifestPath, "");
+    }
+  }
+
   // Install default transcription config if missing
   const transcriptionConfigPath = path.join(resolvedRoot, "config/transcription.json");
   try {

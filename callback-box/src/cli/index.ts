@@ -12,6 +12,7 @@ import "./bootstrap.js";
 import { Command } from "commander";
 import {
   initCommand,
+  migrateCommand,
   statusCommand,
   validateCommand,
   createCommand,
@@ -64,6 +65,7 @@ program
 // ============================================
 
 program.addCommand(initCommand);
+program.addCommand(migrateCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
 program.addCommand(createCommand);

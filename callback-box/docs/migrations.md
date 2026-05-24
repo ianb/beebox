@@ -2,9 +2,32 @@
 
 Runbook for replaying card-format migrations against a box. Background: as schemas convert from XML to YAML frontmatter (see `docs/cards-as-markdown.md`), each box has to be brought along. This doc covers how.
 
-## Idea: a box may not have all migrations applied
+## `cb migrate` is the normal entry point
 
-The scripts in `scripts/migrate-*.ts` are one-shot data migrations. There's no per-box manifest today recording which ones have run (a tracking system is sketched in `docs/ideas.md` § "Migration tracking per box"). The conservative default: **re-run all migrators in chronological order**. Each is idempotent (looks for the frontmatter `type:` marker and skips if present).
+Each box has a `config/.migrations.jsonl` manifest recording which migrations it has had applied. `cb migrate` reads the manifest and the canonical ordered list in `src/core/migrations.ts`, runs any pending migrations in order, and appends a manifest entry after each successful run.
+
+```bash
+cb migrate                      # status — show applied + pending
+cb migrate --apply              # run all pending in order
+cb migrate --init               # create empty manifest (fresh box)
+cb migrate --mark-all-applied   # seed manifest with every known migration (legacy box that was already fully migrated before this command existed)
+```
+
+A missing manifest is a hard error: the command refuses to act without the user explicitly opting into either "fresh box" or "legacy box". `cb init` writes an empty manifest for new boxes automatically.
+
+If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Re-running `cb migrate --apply` after fixing the underlying problem picks up where it left off.
+
+## When to add a new migration
+
+Append an entry to `MIGRATIONS` in `src/core/migrations.ts`. Never reorder, rename, or remove existing entries — the `name` is the manifest key, so reordering changes which migrations a box thinks it has applied. The script itself goes under `scripts/`, follows the existing pattern (`<boxRoot> [--apply]`), is idempotent, and emits warnings for unrecognized fields via `scripts/_migrate-warnings.ts`.
+
+## Manual runs
+
+The per-schema scripts are still runnable standalone (`npx tsx scripts/migrate-X.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest isn't updated when scripts are run directly — that only happens via `cb migrate`.
+
+## History: re-run all migrators in order
+
+Before `cb migrate` existed, the conservative path was: **re-run every migrator in chronological order**. Each is idempotent (looks for the frontmatter `type:` marker and skips if present). Still works as a fallback, but `cb migrate` is now the supported way.
 
 ## The migrators
 
