@@ -42,7 +42,7 @@ export const GdocSchema: CardSchema = cardSchema("gdoc", {
     status: z.enum(["synced", "error", "new", "conflict"]).optional(),
     title: z.string(),
     modified: z.string(),
-    revision: z.string(),
+    revision: z.string().optional(),
     link: z.string(),
     owner: z.string(),
     content: z.object({ ref: z.string() }),
@@ -93,7 +93,7 @@ export interface GdocFields {
   status?: "synced" | "error" | "new" | "conflict";
   title: string;
   modified: string;
-  revision: string;
+  revision?: string;
   link: string;
   owner: string;
   content: { ref: string };
@@ -104,7 +104,7 @@ export function createGdocTemplate(options: {
   driveId: string;
   title: string;
   modified: string;
-  revision: string;
+  revision?: string;
   link: string;
   owner: string;
   contentFile: string;
@@ -117,11 +117,13 @@ export function createGdocTemplate(options: {
     status: options.status === undefined ? "synced" : options.status,
     title: options.title,
     modified: options.modified,
-    revision: options.revision,
     link: options.link,
     owner: options.owner,
     content: { ref: `attach/${options.contentFile}` },
   };
+  if (options.revision !== undefined && options.revision !== "") {
+    fields["revision"] = options.revision;
+  }
   if (options.lossy !== undefined && options.lossy.length > 0) {
     fields["lossy"] = options.lossy;
   }
