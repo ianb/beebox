@@ -94,27 +94,34 @@ async function lintFrontmatterCard(input: {
   } catch (e) {
     return errorResult(path, (e as Error).message);
   }
+  // Broken refs are surfaced as WARNINGS, not errors. Refs commonly go
+  // stale via legitimate operations (the referent got moved, archived,
+  // trashed, or hand-deleted), and treating each one as a hard error
+  // would have the pre-commit hook blocking every commit on any box
+  // with accumulated data drift. Schema validation failures (which come
+  // out of parseCardText as a thrown CardIOError → errorResult above)
+  // remain errors and do block.
   const refs = extractRefs(parsed.fields);
-  const errors: LintIssue[] = [];
+  const warnings: LintIssue[] = [];
   for (const { path: refPath, ref } of refs) {
     try {
       const resolved = await options.loader.resolveRef(ref, path);
       if (!resolved.exists) {
-        errors.push({
+        warnings.push({
           type: "reference",
-          severity: "error",
+          severity: "warning",
           message: `Broken reference at ${refPath}: ${ref} does not exist`,
         });
       }
     } catch (e) {
-      errors.push({
+      warnings.push({
         type: "reference",
-        severity: "error",
+        severity: "warning",
         message: `Reference at ${refPath} failed to resolve: ${(e as Error).message}`,
       });
     }
   }
-  return { path, errors, warnings: [] };
+  return { path, errors: [], warnings };
 }
 
 function errorResult(path: string, message: string): LintResult {

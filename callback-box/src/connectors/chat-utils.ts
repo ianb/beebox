@@ -225,6 +225,10 @@ export async function createChatJob(options: {
 
 /**
  * Update or create a person's contact file in the people directory.
+ *
+ * Also ensures a minimal `people/<slug>.person.card` exists so refs from
+ * chat-thread and similar can resolve. Without that, every newly-seen
+ * Telegram correspondent triggers a broken-reference at validate time.
  */
 export async function updatePersonEntry(options: {
   boxRoot: string;
@@ -241,6 +245,17 @@ export async function updatePersonEntry(options: {
 
   const personDir = path.join(boxRoot, "people", slug);
   const filePath = path.join(personDir, `${connector}.json`);
+  const personCardPath = path.join(boxRoot, "people", `${slug}.person.card`);
+
+  // Seed a minimal person card if none exists. The connector knows the
+  // display name and not much else; the boxholder is expected to enrich
+  // the card later. Doesn't overwrite existing cards.
+  try {
+    await fs.access(personCardPath);
+  } catch {
+    const cardYaml = `status: active\nname: ${displayName}\n`;
+    await fs.writeFile(personCardPath, `---\n${cardYaml}---\n`);
+  }
 
   const data: Record<string, string | number> = {
     [`${connector}Id`]: options.connectorId,

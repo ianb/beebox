@@ -352,7 +352,9 @@ class TelegramConnector implements Connector {
     if (msg.from) {
       const displayName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ");
       const personSlug = safeFilename(displayName);
-      if (personSlug) personRef = `people/${personSlug}`;
+      // Absolute box-root path so the ref resolves the same from any
+      // chat-thread location (threads live at varying depths).
+      if (personSlug) personRef = `/people/${personSlug}.person.card`;
 
       personFile = await updatePersonEntry({
         boxRoot: this.boxRoot,
