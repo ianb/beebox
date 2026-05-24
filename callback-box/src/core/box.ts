@@ -13,6 +13,7 @@ import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";
 import { createBriefingTemplate } from "../schemas/briefing.js";
 import { createLandmarkTemplate } from "../schemas/landmark.js";
+import { MIGRATIONS } from "./migrations.js";
 
 const __dirname = import.meta.dirname;
 
@@ -59,18 +60,25 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
 
-  // Create an empty migration manifest for fresh boxes. Already-initialized
-  // boxes never get one auto-created here — the assumption is that an
-  // existing box without a manifest is a legacy box, and the user must
-  // explicitly run `cb migrate --mark-all-applied` (or --init) to decide
-  // its starting state. See `src/cli/commands/migrate.ts`.
+  // Seed the migration manifest for fresh boxes with every known migration
+  // marked applied — a brand-new box's data is created in the current
+  // format, so none of the historical data migrations need to run against
+  // it. Future migrations added after init will show up as pending.
+  // Already-initialized boxes never get one auto-created here: an existing
+  // box without a manifest is a legacy box, and the user must explicitly
+  // run `cb migrate --mark-all-applied` (or --init) to decide its starting
+  // state. See `src/cli/commands/migrate.ts`.
   if (!isUpdate) {
     const manifestPath = path.join(resolvedRoot, "config/.migrations.jsonl");
     await fs.mkdir(path.dirname(manifestPath), { recursive: true });
     try {
       await fs.access(manifestPath);
     } catch {
-      await fs.writeFile(manifestPath, "");
+      const now = new Date().toISOString();
+      const lines = MIGRATIONS
+        .map((m) => `${JSON.stringify({ name: m.name, "applied-at": now })}\n`)
+        .join("");
+      await fs.writeFile(manifestPath, lines);
     }
   }
 

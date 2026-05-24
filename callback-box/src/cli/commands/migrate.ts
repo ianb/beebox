@@ -93,28 +93,15 @@ interface MigrateOptions {
   apply?: boolean;
   status?: boolean;
   markAllApplied?: boolean;
-  init?: boolean;
 }
 
 export const migrateCommand = new Command("migrate")
   .description("Apply pending data migrations to this box")
   .option("--apply", "Run all pending migrations in order")
   .option("--status", "Show applied + pending lists (default when no flag given)")
-  .option("--init", "Create an empty manifest for a fresh box (no migrations applied yet)")
-  .option("--mark-all-applied", "Seed the manifest as if every known migration ran. Use only for legacy boxes that were already migrated before this command existed.")
+  .option("--mark-all-applied", "Seed the manifest as if every known migration ran. Use only for legacy boxes that were already fully migrated before this command existed; new boxes get their manifest seeded automatically by `cb init`.")
   .action(async (options: MigrateOptions) => {
     const boxRoot = await requireBoxRoot();
-
-    if (options.init) {
-      const existing = await readManifest(boxRoot);
-      if (existing !== null) {
-        console.error(`Manifest already exists at ${MANIFEST_PATH}; --init refuses to overwrite.`);
-        process.exit(1);
-      }
-      await writeManifest(boxRoot, []);
-      console.log(`Created empty manifest at ${MANIFEST_PATH}.`);
-      return;
-    }
 
     if (options.markAllApplied) {
       const existing = await readManifest(boxRoot);
@@ -137,7 +124,7 @@ export const migrateCommand = new Command("migrate")
     const applied = await readManifest(boxRoot);
     if (applied === null) {
       console.error(
-        `No migration manifest at ${MANIFEST_PATH}.\n\nFor a fresh box (no migrations needed): run \`cb migrate --init\`.\nFor a legacy box (already fully migrated): run \`cb migrate --mark-all-applied\`.`,
+        `No migration manifest at ${MANIFEST_PATH}.\n\nThis box predates the cb migrate command. If it has already had all data migrations applied, seed the manifest with:\n  cb migrate --mark-all-applied\n\nNew boxes (via cb init) get their manifest automatically.`,
       );
       process.exit(1);
     }
