@@ -123,10 +123,12 @@ export function parseCardText(
     const err = e as Error;
     throw new CardIOError(`${source}: invalid YAML frontmatter: ${err.message}`);
   }
-  if (frontmatter === null || typeof frontmatter !== "object" || Array.isArray(frontmatter)) {
+  // YAML parses an empty block as `null`; treat that as an empty mapping
+  // so cards whose only frontmatter field got stripped still parse.
+  if (Array.isArray(frontmatter) || (frontmatter !== null && typeof frontmatter !== "object")) {
     throw new CardIOError(`${source}: frontmatter must be a YAML mapping`);
   }
-  const fm = frontmatter as Record<string, unknown>;
+  const fm = (frontmatter as Record<string, unknown> | null) ?? {};
 
   // Resolve the type: caller-supplied wins, otherwise derive from the
   // source filename (Foo.<type>.card), otherwise fall back to any

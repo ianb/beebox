@@ -21,6 +21,18 @@ import type { LoadCardContext } from "../../core/card-io.js";
 
 const execFileP = promisify(execFile);
 
+/**
+ * Cards under `store/trash/` are by definition orphaned/discarded and
+ * routinely have broken refs (their attachments and related cards have
+ * been deleted). We skip them from default validation so trash drift
+ * doesn't block normal commits. `cb validate <path>` on an explicit
+ * trash path still validates — the skip only applies to the implicit
+ * scans (--all, --staged, no-args).
+ */
+function isTrashedCard(boxRelOrAbs: string): boolean {
+  return /(^|\/)store\/trash\//.test(boxRelOrAbs);
+}
+
 async function listStagedCards(boxRoot: string): Promise<string[]> {
   const { stdout } = await execFileP(
     "git",
@@ -29,7 +41,7 @@ async function listStagedCards(boxRoot: string): Promise<string[]> {
   );
   return stdout
     .split("\n")
-    .filter((line) => line.endsWith(".card"))
+    .filter((line) => line.endsWith(".card") && !isTrashedCard(line))
     .map((rel) => path.join(boxRoot, rel));
 }
 
@@ -196,7 +208,7 @@ export const validateCommand = new Command("validate")
             cardSummary = await lintCardsDispatch(all, { loader, ctx });
           }
         } else if (options.all || resolved.length === 0) {
-          const cardPaths = await loader.listCards();
+          const cardPaths = (await loader.listCards()).filter((p) => !isTrashedCard(p));
           cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
           const mdFiles = await findMarkdownFiles(boxRoot);
           if (mdFiles.length > 0) {

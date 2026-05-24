@@ -16,7 +16,7 @@
  * rules for job-processing agents.
  */
 
-import { element, type ElementNode } from "cardworks";
+import { element, escapeText, escapeAttr, type ElementNode } from "cardworks";
 import { z } from "zod";
 
 // ============================================
@@ -624,7 +624,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Delete Event",
         when: "User asks to remove a calendar event",
-        instructions: "Add X-CB-DELETE:<reason> property to the .ics file. The event will be deleted from Google Calendar on next sync.",
+        instructions: "Add an X-CB-DELETE property (value: a short reason) to the .ics file. The event will be deleted from Google Calendar on next sync.",
       },
       {
         name: "Ignore",
@@ -678,17 +678,17 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Respond",
         when: "Direct question, request for help, or when you have genuinely useful information",
-        instructions: "Append <message sender=\"agent\">response</message> to the thread. Keep it conversational and concise.",
+        instructions: "Append an entry to the thread's entries[] with kind: message, sender: agent, and text: <your reply>. Keep it conversational and concise.",
       },
       {
         name: "Acknowledge",
         when: "Casual chatter, messages between other people, or when silence is appropriate",
-        instructions: "Append <seen /> to the thread. Optionally include a note-to-self or callback-in.",
+        instructions: "Append an entry to entries[] with kind: seen. Optionally include text (note-to-self) and callback-in.",
       },
       {
         name: "Follow Up",
         when: "Something needs checking later (e.g. unanswered question, pending task)",
-        instructions: "Append <seen callback-in=\"30m\">What to check</seen> to schedule a re-invocation.",
+        instructions: "Append an entry to entries[] with kind: seen, callback-in: 30m (or other duration), and text: <what to check>. Schedules a re-invocation.",
       },
     ],
     triageRules: [
@@ -745,34 +745,34 @@ export function createInitialGuideTemplate(options: { name: string }): string {
   }
 
   const triageRulesXml = seed.triageRules
-    .map((r) => `<rule confidence="low" source="default">${r}</rule>`)
+    .map((r) => `<rule confidence="low" source="default">${escapeText(r)}</rule>`)
     .join("\n");
 
   const actionsXml = seed.actions
     .map(
-      (a) => `<action name="${a.name}">
-<when>${a.when}</when>
-<instructions>${a.instructions}</instructions>
+      (a) => `<action name="${escapeAttr(a.name)}">
+<when>${escapeText(a.when)}</when>
+<instructions>${escapeText(a.instructions)}</instructions>
 </action>`
     )
     .join("\n");
 
   const reactionsXml = seed.reactions
-    .map((r) => `<reaction id="${r.id}" sentiment="${r.sentiment}">${r.text}</reaction>`)
+    .map((r) => `<reaction id="${escapeAttr(r.id)}" sentiment="${escapeAttr(r.sentiment)}">${escapeText(r.text)}</reaction>`)
     .join("\n");
 
-  return `<guide version="1.0.0" job-types="${seed.jobTypes}">
-<applies-to>${seed.appliesTo}</applies-to>
+  return `<guide version="1.0.0" job-types="${escapeAttr(seed.jobTypes)}">
+<applies-to>${escapeText(seed.appliesTo)}</applies-to>
 <triage>
-${triageRulesXml ? triageRulesXml + "\n" : ""}<default-action action="${seed.defaultAction.action}">${seed.defaultAction.text}</default-action>
+${triageRulesXml ? triageRulesXml + "\n" : ""}<default-action action="${escapeAttr(seed.defaultAction.action)}">${escapeText(seed.defaultAction.text)}</default-action>
 </triage>
 <actions>
 ${actionsXml}
 </actions>
 <experiments>
-<experiment id="${seed.experiment.id}" status="active" created-at="${now}">
-<hypothesis>${seed.experiment.hypothesis}</hypothesis>
-<approach>${seed.experiment.approach}</approach>
+<experiment id="${escapeAttr(seed.experiment.id)}" status="active" created-at="${now}">
+<hypothesis>${escapeText(seed.experiment.hypothesis)}</hypothesis>
+<approach>${escapeText(seed.experiment.approach)}</approach>
 </experiment>
 </experiments>
 <reactions>

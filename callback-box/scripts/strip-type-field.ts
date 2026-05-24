@@ -100,9 +100,13 @@ async function processFile(absPath: string): Promise<{ outcome: Outcome; detail?
   }
 
   // Strip the type line in-memory first; we reuse it for both the
-  // plain-rewrite and the rename-and-rewrite branches.
-  const fmAfter = fmText.replace(/^type:\s*[\w-]+\s*\n?/m, "");
+  // plain-rewrite and the rename-and-rewrite branches. If the type was
+  // the only frontmatter field, leave a blank line so the splitter still
+  // recognizes the block as having frontmatter (otherwise we'd produce
+  // `---\n---\n` which fails parsing).
+  let fmAfter = fmText.replace(/^type:\s*[\w-]+\s*\n?/m, "");
   if (fmAfter === fmText) return { outcome: "no-type-field" };
+  if (fmAfter === "") fmAfter = "\n";
   const newRaw = raw.replace(fmText, fmAfter);
 
   if (yamlType === fileType) {
