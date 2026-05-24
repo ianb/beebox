@@ -32,8 +32,8 @@ import type {
   DriveFile,
   DocumentStructure,
 } from "../services/google-drive.js";
-import { createDocTemplate } from "../schemas/doc.js";
-import type { DocLossyType } from "../schemas/doc.js";
+import { createGdocTemplate } from "../schemas/gdoc.js";
+import type { GdocLossyType } from "../schemas/gdoc.js";
 
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
@@ -106,8 +106,8 @@ function tallyLossyFromDocument(doc: DocumentStructure): LossyCounts {
 
 function lossyToTemplateItems(
   counts: LossyCounts,
-): Array<{ type: DocLossyType; count: number }> {
-  const items: Array<{ type: DocLossyType; count: number }> = [];
+): Array<{ type: GdocLossyType; count: number }> {
+  const items: Array<{ type: GdocLossyType; count: number }> = [];
   for (const key of Object.keys(counts) as Array<keyof LossyCounts>) {
     if (counts[key] > 0) items.push({ type: key, count: counts[key] });
   }
@@ -139,7 +139,7 @@ async function tryGetDocument(
 
 const docsHandler: DriveTypeHandler = {
   mimeTypes: [DOC_MIME],
-  cardType: "doc",
+  cardType: "gdoc",
 
   async inspect(file: DriveFile, service: GoogleDriveService): Promise<InspectResult> {
     const [doc, comments] = await Promise.all([
@@ -163,7 +163,7 @@ const docsHandler: DriveTypeHandler = {
     const written: string[] = [];
     let changed = false;
 
-    const cardBasename = path.basename(cardPath, ".doc.card");
+    const cardBasename = path.basename(cardPath, ".gdoc.card");
     const mdFilename = `${cardBasename}.md`;
     const mdPath = path.join(localDir, mdFilename);
     // mdRelPath is the key used in state.contentHashes and the card's content ref
@@ -235,7 +235,7 @@ const docsHandler: DriveTypeHandler = {
     // Docs API call failed (no title/revisionId in that case).
     const owner = file.owners?.[0]?.emailAddress ?? "unknown";
     const link = file.webViewLink ?? `https://docs.google.com/document/d/${file.id}/edit`;
-    const cardContent = createDocTemplate({
+    const cardContent = createGdocTemplate({
       driveId: file.id,
       title: doc ? doc.title : file.name,
       modified: file.modifiedTime,
@@ -267,7 +267,7 @@ const docsHandler: DriveTypeHandler = {
     const { file, cardPath, localDir, boxRoot, service, state } = opts;
     const pushed: string[] = [];
 
-    const cardBasename = path.basename(cardPath, ".doc.card");
+    const cardBasename = path.basename(cardPath, ".gdoc.card");
     const mdFilename = `${cardBasename}.md`;
     const mdPath = path.join(localDir, mdFilename);
     const mdRelPath = mdFilename;

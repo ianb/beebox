@@ -51,6 +51,7 @@ export type { ChatJobFields } from "./chat-job.js";
 export type { TodoListFields, TodoItem, TodoItemStatusType } from "./todo-list.js";
 export type { SheetFields } from "./sheet.js";
 export type { DocFields } from "./doc.js";
+export type { GdocFields, GdocLossyType } from "./gdoc.js";
 export type { Landmark } from "./landmark.js";
 
 // Re-export template functions
@@ -75,6 +76,8 @@ export { createChatJobTemplate } from "./chat-job.js";
 export { createTodoListTemplate } from "./todo-list.js";
 export { createSheetTemplate } from "./sheet.js";
 export { createLandmarkTemplate } from "./landmark.js";
+export { createDocTemplate } from "./doc.js";
+export { createGdocTemplate } from "./gdoc.js";
 
 // Guide exports
 export { parseGuide, compileGuide, createInitialGuideTemplate } from "./guide.js";

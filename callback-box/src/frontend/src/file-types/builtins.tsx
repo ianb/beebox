@@ -34,6 +34,8 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ tagName: "recipe" }, { icon: DocumentIcon });
   registerFileType({ tagName: "record" }, { icon: CardIcon });
   registerFileType({ tagName: "sheet" }, { icon: CardIcon });
+  registerFileType({ tagName: "doc" }, { icon: DocumentIcon });
+  registerFileType({ tagName: "gdoc" }, { icon: DocumentIcon });
   registerFileType({ tagName: "procedure" }, { icon: JobIcon });
   registerFileType({ tagName: "procedure-run" }, { icon: JobIcon });
   registerFileType({ tagName: "chat-job" }, { icon: JobIcon });

@@ -25,6 +25,7 @@ import { createScheduledScriptTemplate } from "./scheduled-script.js";
 import { createTodoListTemplate } from "./todo-list.js";
 import { createBriefingTemplate } from "./briefing.js";
 import { createPersonTemplate } from "./person.js";
+import { createDocTemplate } from "./doc.js";
 
 /**
  * Template definition with typed arguments.
@@ -347,6 +348,22 @@ registerTemplate({
   defaultForTypes: ["briefing"],
   argsSchema: z.object({}),
   generate: () => createBriefingTemplate(),
+});
+
+registerTemplate({
+  name: "doc",
+  description: "A generic typed document — use instead of .md when an agent creates a new document",
+  cardTypes: ["doc"],
+  defaultForTypes: ["doc"],
+  argsSchema: z.object({
+    title: z.string().describe("Display title for the document"),
+    body: z.string().optional().describe("Initial markdown body content"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createDocTemplate>[0] = { title: args.title };
+    if (args.body !== undefined) opts.body = args.body;
+    return createDocTemplate(opts);
+  },
 });
 
 registerTemplate({
