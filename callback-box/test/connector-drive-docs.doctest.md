@@ -12,7 +12,7 @@ import {
   type FakeDocument,
 } from "../src/services/google-drive.js";
 import { createGoogleDriveConnector } from "../src/connectors/google-drive.js";
-import { createDocTemplate } from "../src/schemas/doc.js";
+import { createGdocTemplate } from "../src/schemas/gdoc.js";
 
 function makeDoc(opts: {
   id: string;
@@ -71,7 +71,7 @@ const drive = createFakeGoogleDrive({
   })]]),
 });
 
-await box.seed("store/drive/Project_Notes.doc.card", createDocTemplate({
+await box.seed("store/drive/Project_Notes.gdoc.card", createGdocTemplate({
   driveId: "doc-1",
   title: "Project Notes",
   modified: "2026-04-26T10:00:00Z",
@@ -95,7 +95,7 @@ JSON.stringify(await box.read("store/drive/Project_Notes.attach/Project_Notes.md
 The card now has status synced and the upstream revision recorded:
 
 ``` continue
-const card = await box.read("store/drive/Project_Notes.doc.card");
+const card = await box.read("store/drive/Project_Notes.gdoc.card");
 card.includes("drive-id: doc-1")
 => true
 
@@ -134,7 +134,7 @@ const drive2 = createFakeGoogleDrive({
   })]]),
 });
 
-await box2.seed("store/drive/Reviewed_Doc.doc.card", createDocTemplate({
+await box2.seed("store/drive/Reviewed_Doc.gdoc.card", createGdocTemplate({
   driveId: "doc-2",
   title: "Reviewed Doc",
   modified: "2026-04-26T10:00:00Z",
@@ -148,7 +148,7 @@ box2.commitAll("add reviewed doc");
 
 await createGoogleDriveConnector(box2.root, drive2).sync();
 
-const card2 = await box2.read("store/drive/Reviewed_Doc.doc.card");
+const card2 = await box2.read("store/drive/Reviewed_Doc.gdoc.card");
 card2.includes("type: comments") && card2.includes("count: 3")
 => true
 
@@ -184,7 +184,7 @@ const drive3 = createFakeGoogleDrive({
   })]]),
 });
 
-await box3.seed("store/drive/Editable.doc.card", createDocTemplate({
+await box3.seed("store/drive/Editable.gdoc.card", createGdocTemplate({
   driveId: "doc-3",
   title: "Editable",
   modified: "2026-04-26T10:00:00Z",
@@ -241,7 +241,7 @@ const drive4 = createFakeGoogleDrive({
   documents: new Map([["doc-4", driveDoc]]),
 });
 
-await box4.seed("store/drive/Contended.doc.card", createDocTemplate({
+await box4.seed("store/drive/Contended.gdoc.card", createGdocTemplate({
   driveId: "doc-4",
   title: "Contended",
   modified: "2026-04-26T10:00:00Z",
@@ -282,7 +282,7 @@ drive4.contentUpdateLog.length
 => 0
 
 // Card flipped to conflict status.
-const card4 = await box4.read("store/drive/Contended.doc.card");
+const card4 = await box4.read("store/drive/Contended.gdoc.card");
 card4.includes("status: conflict")
 => true
 ```
@@ -343,7 +343,7 @@ drive5.getDocument = async () => {
   throw new Error("HTTPError: 403 Insufficient Permission");
 };
 
-await box5.seed("store/drive/Degraded.doc.card", createDocTemplate({
+await box5.seed("store/drive/Degraded.gdoc.card", createGdocTemplate({
   driveId: "doc-5",
   title: "Degraded",
   modified: "2026-04-26T10:00:00Z",
@@ -364,7 +364,7 @@ await box5.read("store/drive/Degraded.attach/Degraded.md")
 => Body.
 
 // Card still written, falls back to Drive metadata title.
-const card5 = await box5.read("store/drive/Degraded.doc.card");
+const card5 = await box5.read("store/drive/Degraded.gdoc.card");
 card5.includes("title: Degraded")
 => true
 

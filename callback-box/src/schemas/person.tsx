@@ -69,7 +69,6 @@ export function createPersonTemplate(options: {
   role?: string;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "person",
     status: "active",
     name: options.name,
   };

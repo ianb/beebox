@@ -138,7 +138,6 @@ export function createRecordTemplate(options: {
   sources?: Array<{ ref: string; text?: string | undefined }> | undefined;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "record",
     status: "draft",
     name: options.name,
   };

@@ -187,7 +187,6 @@ export function createImageTemplate(options: {
   filename: string;
 }): string {
   const fields = {
-    type: "image",
     status: "new",
     filename: {
       ref: `attach/${options.filename}`,

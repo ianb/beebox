@@ -101,7 +101,6 @@ export function createTodoListTemplate(options: {
   items?: Array<{ name: string; status?: string | undefined }>;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "todo-list",
     name: options.name,
   };
   if (options.details !== undefined && options.details !== "") {

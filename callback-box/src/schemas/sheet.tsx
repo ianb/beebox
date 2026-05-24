@@ -84,7 +84,6 @@ export function createSheetTemplate(options: {
   status?: "synced" | "error" | "new";
 }): string {
   const fields: Record<string, unknown> = {
-    type: "sheet",
     "drive-id": options.driveId,
     status: options.status === undefined ? "synced" : options.status,
     title: options.title,

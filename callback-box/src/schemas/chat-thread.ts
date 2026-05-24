@@ -116,7 +116,6 @@ export function createChatThreadTemplate(options: {
   participants?: string[];
 }): string {
   const fields: Record<string, unknown> = {
-    type: "chat-thread",
     "chat-id": options.chatId,
     connector: options.connector,
   };

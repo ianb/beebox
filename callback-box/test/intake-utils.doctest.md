@@ -27,7 +27,6 @@ path.startsWith("box/jobs/") && path.endsWith(".intake.job.card")
 await box.read(path)
 =>
 ---
-type: intake-job
 status: pending
 created: «*»
 source: test-connector
@@ -70,7 +69,6 @@ The updated file contains both items with the new description:
 await box.read(path2)
 =>
 ---
-type: intake-job
 status: pending
 created: «*»
 source: test-connector

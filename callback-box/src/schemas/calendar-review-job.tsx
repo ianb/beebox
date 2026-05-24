@@ -86,7 +86,6 @@ export function createCalendarReviewJobTemplate(options: {
   priority?: "normal" | "low";
 }): string {
   const fields: Record<string, unknown> = {
-    type: "calendar-review-job",
     status: "pending",
     created: options.created ?? new Date().toISOString(),
     source: options.source,

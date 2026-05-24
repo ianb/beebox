@@ -24,7 +24,6 @@ import {
   type LintIssue,
   type ICardLoader,
 } from "cardworks";
-import { parse as parseYaml } from "yaml";
 import { parseCardText, type LoadCardContext } from "./card-io.js";
 
 export interface LintDispatchOptions {
@@ -74,9 +73,9 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
 
   const split = splitCardContent(content);
   if (split.hasFrontmatter) {
-    const type = peekFrontmatterType(split.frontmatterText);
+    const type = typeFromFilename(path);
     if (type !== undefined && options.ctx.cardSchemas.has(type)) {
-      return lintFrontmatterCard({ path, content, options });
+      return lintFrontmatterCard({ path, content, options, type });
     }
   }
   return lintCard(options.loader, path);
@@ -86,11 +85,12 @@ async function lintFrontmatterCard(input: {
   path: string;
   content: string;
   options: LintDispatchOptions;
+  type: string;
 }): Promise<LintResult> {
-  const { path, content, options } = input;
+  const { path, content, options, type } = input;
   let parsed;
   try {
-    parsed = parseCardText(content, { source: path, schemas: options.ctx.cardSchemas });
+    parsed = parseCardText(content, { source: path, schemas: options.ctx.cardSchemas, type });
   } catch (e) {
     return errorResult(path, (e as Error).message);
   }
@@ -131,15 +131,8 @@ function errorResult(path: string, message: string): LintResult {
   return { path, errors: [issue], warnings: [] };
 }
 
-function peekFrontmatterType(text: string): string | undefined {
-  try {
-    const parsed = parseYaml(text) as unknown;
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return undefined;
-    }
-    const type = (parsed as Record<string, unknown>)["type"];
-    return typeof type === "string" ? type : undefined;
-  } catch {
-    return undefined;
-  }
+function typeFromFilename(filePath: string): string | undefined {
+  const base = filePath.split("/").pop() ?? filePath;
+  const match = base.match(/^.+\.([^.]+)\.card$/);
+  return match ? match[1] : undefined;
 }

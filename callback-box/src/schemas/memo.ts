@@ -120,7 +120,6 @@ function buildMemoCard(input: {
   created?: string;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "memo",
     status: "new",
     created: input.created ?? new Date().toISOString(),
   };

@@ -92,7 +92,6 @@ export function createEmailThreadTemplate(options: {
   status?: z.infer<typeof StatusEnum>;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "email-thread",
     "thread-id": options.threadId,
     status: options.status === undefined ? "new" : options.status,
     subject: options.subject,

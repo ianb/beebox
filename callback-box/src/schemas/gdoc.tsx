@@ -112,7 +112,6 @@ export function createGdocTemplate(options: {
   status?: "synced" | "error" | "new" | "conflict";
 }): string {
   const fields: Record<string, unknown> = {
-    type: "gdoc",
     "drive-id": options.driveId,
     status: options.status === undefined ? "synced" : options.status,
     title: options.title,

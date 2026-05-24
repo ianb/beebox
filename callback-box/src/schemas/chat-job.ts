@@ -70,7 +70,6 @@ export function createChatJobTemplate(options: {
   source: string;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "chat-job",
     status: "pending",
     created: options.created ?? new Date().toISOString(),
     source: options.source,

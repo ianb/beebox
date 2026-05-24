@@ -346,7 +346,6 @@ export function compileSpeakingVoice(fields: PersonalityFields): CompiledSpeakin
  */
 export function createInitialPersonalityTemplate(): string {
   const fields: Record<string, unknown> = {
-    type: "personality",
     version: "1.0.0",
     "goes-by": "Egg",
     role: "Personal information aide",

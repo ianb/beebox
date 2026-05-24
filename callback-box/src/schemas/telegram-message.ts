@@ -64,7 +64,6 @@ export function createTelegramMessageTemplate(options: {
   replyTo?: number;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "telegram-message",
     status: "pending",
     "chat-id": options.chatId,
     text: options.text,

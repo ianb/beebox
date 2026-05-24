@@ -90,7 +90,6 @@ export function createFeedbackTemplate(options: {
   timestamp?: string;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "feedback",
   };
   if (options.typeOfFeedback !== undefined) {
     fields["type-of-feedback"] = options.typeOfFeedback;

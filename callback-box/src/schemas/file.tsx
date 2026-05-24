@@ -90,7 +90,6 @@ export function createFileTemplate(options: {
   if (options.mimeType !== undefined) filename["mime-type"] = options.mimeType;
   if (options.size !== undefined) filename["size"] = options.size;
   const fields: Record<string, unknown> = {
-    type: "file",
     status: "new",
     filename,
   };

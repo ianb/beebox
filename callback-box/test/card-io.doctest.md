@@ -46,7 +46,7 @@ const schemas = new Map<string, CardSchema>([
 
 ```
 const text = "---\ntype: email-thread\nthread-id: abc123\nsubject: Re Weekend plans\nparticipants:\n  - alice@example.com\n  - bob@example.com\n---\n";
-const card = parseCardText(text, { source: "thread.card", schemas });
+const card = parseCardText(text, { source: "thread.email-thread.card", schemas });
 JSON.stringify(card.fields)
 => {"type":"email-thread","thread-id":"abc123","subject":"Re Weekend plans","participants":["alice@example.com","bob@example.com"]}
 
@@ -58,7 +58,7 @@ card.contentType === undefined
 
 ```
 const text = "---\ntype: doc\ndrive-id: drv-1\ntitle: Project Notes\n---\n# Project Notes\n\nBody content goes here.\n";
-const card = parseCardText(text, { source: "doc.card", schemas });
+const card = parseCardText(text, { source: "x.doc.card", schemas });
 card.fields["title"]
 => Project Notes
 
@@ -74,7 +74,7 @@ const tryParse = (text: string, source: string): string => {
   catch (e) { return (e as Error).message; }
 };
 tryParse("---\nsubject: nope\n---\n", "broken.card")
-=> broken.card: frontmatter is missing required `type` field
+=> broken.card: cannot determine card type — filename must match Foo.<type>.card
 ```
 
 ## Round-trip: serialize then parse returns the same fields
@@ -87,7 +87,7 @@ const fields = {
   content: "Hello, world.\n",
 };
 const text = serializeCardText({ schema: docSchema, fields });
-const parsed = parseCardText(text, { source: "rt.card", schemas });
+const parsed = parseCardText(text, { source: "rt.doc.card", schemas });
 JSON.stringify(parsed.fields)
 => {"type":"doc","drive-id":"drv-42","title":"Round-trip","content":"Hello, world.\n"}
 ```
@@ -102,8 +102,8 @@ function tryParse2(text: string, source: string): string {
 ```
 
 ```
-tryParse2("---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\n---\nunexpected body\n", "extra.card")
-=> extra.card: schema "email-thread" declares no body, but file has body content
+tryParse2("---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\n---\nunexpected body\n", "extra.email-thread.card")
+=> extra.email-thread.card: schema "email-thread" declares no body, but file has body content
 ```
 
 ## Loader dispatch routes new and legacy cards to the right path
@@ -128,7 +128,7 @@ A file whose `type:` matches a CardSchema dispatches to the frontmatter path.
 
 ```
 const text = "---\ntype: email-thread\nthread-id: t9\nsubject: hi\nparticipants:\n  - a@x\n---\n";
-const loaded = await loadCardFromText({ content: text, source: "thread.card", ctx });
+const loaded = await loadCardFromText({ content: text, source: "thread.email-thread.card", ctx });
 loaded.kind
 => frontmatter
 
@@ -143,7 +143,7 @@ A file whose frontmatter `type:` is unknown falls through to the XML path so leg
 
 ```
 const text = "---\ncontent-type: application/x-card+xml\n---\n<memo status=\"new\"/>";
-const loaded = await loadCardFromText({ content: text, source: "legacy.card", ctx });
+const loaded = await loadCardFromText({ content: text, source: "legacy.memo.card", ctx });
 loaded.kind
 => xml
 

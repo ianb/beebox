@@ -98,7 +98,6 @@ export function createSelectQuestionTemplate(
   params: CreateSelectQuestionTemplateParams
 ): string {
   const fields: Record<string, unknown> = {
-    type: "question",
     status: "pending",
     memo: params.memo,
     prompt: params.prompt,
@@ -116,7 +115,6 @@ interface CreateQuestionTemplateParams {
 
 export function createTextQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const fields: Record<string, unknown> = {
-    type: "question",
     status: "pending",
     memo: params.memo,
     prompt: params.prompt,
@@ -128,7 +126,6 @@ export function createTextQuestionTemplate(params: CreateQuestionTemplateParams)
 
 export function createConfirmQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const fields: Record<string, unknown> = {
-    type: "question",
     status: "pending",
     memo: params.memo,
     prompt: params.prompt,

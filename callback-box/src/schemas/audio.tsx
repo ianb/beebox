@@ -86,7 +86,6 @@ export function createAudioTemplate(options: {
   filename: string;
 }): string {
   const fields = {
-    type: "audio",
     status: "new",
     filename: {
       ref: `attach/${options.filename}`,

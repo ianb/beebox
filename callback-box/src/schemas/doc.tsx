@@ -68,7 +68,6 @@ export interface DocFields {
 
 export function createDocTemplate(options: { title: string; body?: string }): string {
   const fields: Record<string, unknown> = {
-    type: "doc",
     title: options.title,
   };
   const bodyText = options.body ?? "";

@@ -208,7 +208,6 @@ createScheduledScriptTemplate({
 })
 =>
 ---
-type: scheduled-script
 cron: 0 6 * * *
 not-before: 4h
 on-wakeup: true
@@ -228,7 +227,6 @@ createScheduledScriptTemplate({
 })
 =>
 ---
-type: scheduled-script
 at: 2026-03-01T09:00:00Z
 once: true
 runs: scripts/remind.sh
@@ -245,7 +243,6 @@ createScheduledScriptTemplate({
 })
 =>
 ---
-type: scheduled-script
 on-wakeup: true
 runs: cb wakeup --connector capture
 ---

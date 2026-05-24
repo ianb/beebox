@@ -80,7 +80,7 @@ const result = await lintCardsDispatch(
 result.totalErrors
 => 1
 
-result.results[0]!.errors[0]!.message.includes("frontmatter validation failed")
+result.results[0]!.errors[0]!.message.includes("invalid email-thread frontmatter")
 => true
 ```
 

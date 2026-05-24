@@ -105,7 +105,6 @@ export function createEmailMessageTemplate(options: {
   }>;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "email-message",
     "message-id": options.messageId,
     "thread-id": options.threadId,
     from: options.from,

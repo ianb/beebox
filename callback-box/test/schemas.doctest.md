@@ -70,7 +70,6 @@ YAML frontmatter.
 createMemoTemplate("Test content", "test-source")
 =>
 ---
-type: memo
 status: new
 created: «*»
 source: test-source
@@ -84,7 +83,6 @@ Source is optional:
 createMemoTemplate("Just content")
 =>
 ---
-type: memo
 status: new
 created: «*»
 ---
@@ -98,7 +96,6 @@ don't need XML-style escaping:
 createMemoTemplate("Test <content> & more")
 =>
 ---
-type: memo
 status: new
 created: «*»
 ---
@@ -120,7 +117,6 @@ createSelectQuestionTemplate({
 })
 =>
 ---
-type: question
 status: pending
 memo: Context here
 prompt: What do you want?
@@ -145,7 +141,6 @@ createSelectQuestionTemplate({
 })
 =>
 ---
-type: question
 status: pending
 memo: Context with <special> & chars
 prompt: What's "this"?
@@ -174,7 +169,6 @@ createIntakeJobTemplate({
 })
 =>
 ---
-type: intake-job
 status: pending
 created: «*»
 source: capture-connector
@@ -197,7 +191,6 @@ createIntakeJobTemplate({
 })
 =>
 ---
-type: intake-job
 status: pending
 created: «*»
 source: capture-connector
@@ -223,7 +216,6 @@ createCalendarReviewJobTemplate({
 })
 =>
 ---
-type: calendar-review-job
 status: pending
 created: «*»
 source: google-calendar

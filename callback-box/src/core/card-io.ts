@@ -100,11 +100,16 @@ export interface ParsedCard<TFields extends Record<string, unknown> = Record<str
 /**
  * Parse a `.card` file's raw text against a registered schema.
  *
- * Looks up the schema in `schemas` by the frontmatter's `type:` field.
+ * The card's type is taken from the filename (`Foo.<type>.card`), not from a
+ * `type:` field in the frontmatter — the filename is the canonical
+ * discriminator. If the YAML happens to carry a `type:` field, it must
+ * either match the filename type or be absent; mismatches are a lint
+ * error. Either way, the field is normalized into the parsed fields
+ * object (so consumers can still read `fields.type`).
  */
 export function parseCardText(
   content: string,
-  { source, schemas }: { source: string; schemas: Map<string, CardSchema> }
+  { source, schemas, type }: { source: string; schemas: Map<string, CardSchema>; type?: string }
 ): ParsedCard {
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) {
@@ -123,19 +128,34 @@ export function parseCardText(
   }
   const fm = frontmatter as Record<string, unknown>;
 
-  const type = fm["type"];
-  if (typeof type !== "string") {
-    throw new CardIOError(`${source}: frontmatter is missing required \`type\` field`);
+  // Resolve the type: caller-supplied wins, otherwise derive from the
+  // source filename (Foo.<type>.card), otherwise fall back to any
+  // `type:` field in the YAML for callers that haven't been updated yet.
+  const yamlType = typeof fm["type"] === "string" ? (fm["type"] as string) : undefined;
+  const resolved = type ?? typeFromFilename(source) ?? yamlType;
+  if (resolved === undefined) {
+    throw new CardIOError(
+      `${source}: cannot determine card type — filename must match Foo.<type>.card`
+    );
   }
-  const schema = schemas.get(type);
+  if (type !== undefined && yamlType !== undefined && yamlType !== type) {
+    throw new CardIOError(
+      `${source}: frontmatter type "${yamlType}" does not match filename type "${type}"`
+    );
+  }
+  const schema = schemas.get(resolved);
   if (schema === undefined) {
-    throw new CardIOError(`${source}: no schema registered for type "${type}"`);
+    throw new CardIOError(`${source}: no schema registered for type "${resolved}"`);
   }
 
-  const fmParse = schema.frontmatterSchema.safeParse(fm);
+  // cardworks bakes `type: z.literal(...)` into frontmatterSchema, so we
+  // inject the resolved type before validation. The on-disk YAML is no
+  // longer required to carry it.
+  const fmForValidation = { ...fm, type: resolved };
+  const fmParse = schema.frontmatterSchema.safeParse(fmForValidation);
   if (!fmParse.success) {
     throw new CardIOError(
-      `${source}: invalid ${type} frontmatter:\n${formatZodIssues(fmParse.error.issues)}`
+      `${source}: invalid ${resolved} frontmatter:\n${formatZodIssues(fmParse.error.issues)}`
     );
   }
   const fmFields = fmParse.data as Record<string, unknown>;
@@ -150,20 +170,20 @@ export function parseCardText(
       bodyValue = split.body;
       if (contentType !== CARD_XML_CONTENT_TYPE) {
         throw new CardIOError(
-          `${source}: schema "${type}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
+          `${source}: schema "${resolved}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
         );
       }
     }
     const bodyParse = schema.bodyField.schema.safeParse(bodyValue);
     if (!bodyParse.success) {
       throw new CardIOError(
-        `${source}: invalid ${type} body:\n${formatZodIssues(bodyParse.error.issues)}`
+        `${source}: invalid ${resolved} body:\n${formatZodIssues(bodyParse.error.issues)}`
       );
     }
     bodyValue = bodyParse.data;
   } else {
     if (split.body.trim().length > 0) {
-      throw new CardIOError(`${source}: schema "${type}" declares no body, but file has body content`);
+      throw new CardIOError(`${source}: schema "${resolved}" declares no body, but file has body content`);
     }
   }
 
@@ -192,7 +212,8 @@ export function serializeCardText(input: {
   fields: Record<string, unknown>;
 }): string {
   const { schema, fields } = input;
-  const frontmatter: Record<string, unknown> = { type: schema.type };
+  // No `type:` field emitted — the filename is the canonical discriminator.
+  const frontmatter: Record<string, unknown> = {};
   let body = "";
   for (const [name, value] of Object.entries(fields)) {
     if (name === "type") continue;
@@ -271,9 +292,9 @@ export function loadCardFromText(input: {
   const { content, source, ctx } = input;
   const split = splitCardContent(content);
   if (split.hasFrontmatter) {
-    const typeFromYaml = peekFrontmatterType(split.frontmatterText);
-    if (typeFromYaml !== undefined && ctx.cardSchemas.has(typeFromYaml)) {
-      const parsed = parseCardText(content, { source, schemas: ctx.cardSchemas });
+    const fileType = typeFromFilename(source);
+    if (fileType !== undefined && ctx.cardSchemas.has(fileType)) {
+      const parsed = parseCardText(content, { source, schemas: ctx.cardSchemas, type: fileType });
       return Promise.resolve<LoadedCard>({
         kind: "frontmatter",
         path: source,
@@ -287,22 +308,14 @@ export function loadCardFromText(input: {
 }
 
 /**
- * Cheap YAML-aware peek for just the `type:` field, without validating
- * the rest of the frontmatter. Returns undefined when the field is
- * missing or the YAML is malformed; the full parse downstream will
- * surface the real error in that case.
+ * Extract the card type from a filename matching `Foo.<type>.card`.
+ * Returns undefined when the source doesn't fit that pattern (e.g. test
+ * fixtures with non-card paths).
  */
-function peekFrontmatterType(frontmatterText: string): string | undefined {
-  try {
-    const parsed = parseYaml(frontmatterText) as unknown;
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return undefined;
-    }
-    const type = (parsed as Record<string, unknown>)["type"];
-    return typeof type === "string" ? type : undefined;
-  } catch {
-    return undefined;
-  }
+function typeFromFilename(source: string): string | undefined {
+  const base = source.split("/").pop() ?? source;
+  const match = base.match(/^.+\.([^.]+)\.card$/);
+  return match ? match[1] : undefined;
 }
 
 async function loadXmlCard(input: {

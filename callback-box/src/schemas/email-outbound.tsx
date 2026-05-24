@@ -131,7 +131,6 @@ export function createEmailOutboundTemplate(options: {
   inReplyToRef?: string;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "email-outbound",
     status: "draft",
     to: options.to,
   };

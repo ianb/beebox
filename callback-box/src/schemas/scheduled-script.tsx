@@ -358,7 +358,6 @@ export interface ScheduledScriptTemplateOptions {
  */
 export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOptions): string {
   const fields: Record<string, unknown> = {
-    type: "scheduled-script",
   };
   if (options.cron !== undefined) fields["cron"] = options.cron;
   if (options.at !== undefined) fields["at"] = options.at;

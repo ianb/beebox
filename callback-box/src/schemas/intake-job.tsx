@@ -66,7 +66,6 @@ export function createIntakeJobTemplate(options: {
   priority?: "normal" | "low";
 }): string {
   const fields: Record<string, unknown> = {
-    type: "intake-job",
     status: "pending",
     created: options.created ?? new Date().toISOString(),
     source: options.source,

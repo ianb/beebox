@@ -63,7 +63,6 @@ export function createQuestionFollowupJobTemplate(options: {
   created?: string;
 }): string {
   const fields: Record<string, unknown> = {
-    type: "question-followup-job",
     status: "pending",
     created: options.created ?? new Date().toISOString(),
     source: "question-answer",
