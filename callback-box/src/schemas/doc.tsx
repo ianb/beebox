@@ -39,10 +39,54 @@ typed.
 
 ## Body
 
-Plain markdown. Headings, lists, code blocks, links, etc. — anything
-markdown supports. References to other cards use the standard ref
-form (frontmatter \`{ref: "..."}\` or inline markdown links to card
-paths).
+The doc's body lives **inline in the .doc.card file itself**, after
+the closing \`---\` of the frontmatter. Plain markdown. Headings,
+lists, code blocks, links, etc. — anything markdown supports. Don't
+put the body in a separate \`.md\` file beside the card; the card *is*
+the document.
+
+A minimal doc card on disk:
+
+\`\`\`
+---
+title: Trip Report
+---
+# Trip Report
+
+We drove down on Friday...
+\`\`\`
+
+References to other cards use the standard ref form (frontmatter
+\`{ref: "..."}\` or inline markdown links to card paths).
+
+## Embedding images and other files
+
+Files the doc references — images, attachments, supporting media — go
+inside the doc's own **attach scope**: a sibling directory named
+\`<basename>.attach/\` (where \`<basename>\` is the card's filename
+without the \`.doc.card\` suffix). Refer to them from the body using
+the scoped form \`attach/<filename>\`.
+
+Layout for a doc with an embedded image:
+
+\`\`\`
+store/notes/Trip_Report.doc.card
+store/notes/Trip_Report.attach/photo.jpg
+\`\`\`
+
+And the doc's body:
+
+\`\`\`markdown
+# Trip Report
+
+![A view from the cabin](attach/photo.jpg)
+
+We drove down on Friday...
+\`\`\`
+
+The image lives inside \`Trip_Report.attach/\` (the card's scope), not
+at the top level or in a shared \`images/\` directory. Moving or
+renaming the card moves the whole scope atomically.
 
 ## When NOT to use a doc card
 
