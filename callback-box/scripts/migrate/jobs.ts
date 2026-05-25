@@ -9,15 +9,15 @@
  *   .chat-job.card / .chat.job.card
  *
  * Usage:
- *   npx tsx scripts/migrate-jobs.ts <boxRoot>           # dry-run
- *   npx tsx scripts/migrate-jobs.ts <boxRoot> --apply
+ *   npx tsx scripts/migrate/jobs.ts <boxRoot>           # dry-run
+ *   npx tsx scripts/migrate/jobs.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
-import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+import { WarningCollector, checkElement, type ElementSpec } from "./_warnings.js";
 
 const INTAKE_SPEC: ElementSpec = {
   attrs: ["status", "created", "source", "priority", "version"],

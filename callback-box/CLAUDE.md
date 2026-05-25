@@ -44,7 +44,7 @@ Body content as plain markdown.
 - `.claude/settings.json` — PostToolUse hook that runs `cb validate --hook` after Edit/Write/MultiEdit. On a card path with errors it exits 2 with the error on stderr so Claude Code surfaces it to the agent (warning, not blocking).
 - `.git/hooks/pre-commit` — runs `cb validate --staged`, blocks commits that include cards failing validation.
 
-See `src/core/install-validation-hooks.ts`. The hook commands embed the absolute path to the installing `bin/cb` so they don't depend on the user's PATH. See `docs/cards-as-markdown.md` for the format design and migration history; `scripts/migrate-*.ts` + `scripts/_migrate-warnings.ts` are the per-schema migrators with noisy-mode field-loss detection.
+See `src/core/install-validation-hooks.ts`. The hook commands embed the absolute path to the installing `bin/cb` so they don't depend on the user's PATH. See `docs/cards-as-markdown.md` for the format design and migration history; `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts` are the per-schema migrators with noisy-mode field-loss detection.
 
 ## Source Layout
 

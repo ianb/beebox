@@ -1,136 +1,159 @@
 # Box Migrations
 
-Runbook for replaying card-format migrations against a box. Background: as schemas convert from XML to YAML frontmatter (see `docs/cards-as-markdown.md`), each box has to be brought along. This doc covers how.
+How box data migrations work, how to apply them, and how to write new ones.
 
-## `cb migrate` is the normal entry point
+A migration is a one-shot transformation of card data on disk — schema renames, field strips, layout flips, refactors. The system tracks which migrations a box has had applied so future runs only do the missing work.
 
-Each box has a `config/.migrations.jsonl` manifest recording which migrations it has had applied. `cb migrate` reads the manifest and the canonical ordered list in `src/core/migrations.ts`, runs any pending migrations in order, and appends a manifest entry after each successful run.
+## `cb migrate` is the entry point
+
+Each box has `config/migrations.jsonl` — append-only JSONL, one `{name, applied-at}` per line — recording which migrations it's seen. `cb migrate` compares against the canonical ordered list in `src/core/migrations.ts` and runs anything missing in order, appending an entry after each success.
 
 ```bash
 cb migrate                      # status — show applied + pending
 cb migrate --apply              # run all pending in order
-cb migrate --init               # create empty manifest (fresh box)
-cb migrate --mark-all-applied   # seed manifest with every known migration (legacy box that was already fully migrated before this command existed)
+cb migrate --mark-all-applied   # seed the manifest as if every known migration ran
+                                # (legacy box that was already fully migrated before this command existed)
 ```
 
-A missing manifest is a hard error: the command refuses to act without the user explicitly opting into either "fresh box" or "legacy box". `cb init` writes an empty manifest for new boxes automatically.
+`cb init` writes a seeded manifest (all-applied) for new boxes automatically — new boxes don't need to run historical migrations. A missing manifest in an existing box is a hard error; the user must explicitly `--mark-all-applied` to declare "this box is already up to date."
 
-If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Re-running `cb migrate --apply` after fixing the underlying problem picks up where it left off.
+If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Fix the underlying problem and re-run; the loop picks up where it stopped.
 
-## When to add a new migration
+## Writing a new migration
 
-Append an entry to `MIGRATIONS` in `src/core/migrations.ts`. Never reorder, rename, or remove existing entries — the `name` is the manifest key, so reordering changes which migrations a box thinks it has applied. The script itself goes under `scripts/`, follows the existing pattern (`<boxRoot> [--apply]`), is idempotent, and emits warnings for unrecognized fields via `scripts/_migrate-warnings.ts`.
+1. **Write the script** at `scripts/migrate/<name>.ts`. New migrators should use the shared harness (`scripts/migrate/_harness.ts`), which handles arg parsing, the file walk, dry-run/apply, per-file error collection, and the final warning dump:
 
-## Manual runs
+   ```ts
+   #!/usr/bin/env tsx
+   import { runMigration } from "./_harness.js";
+   import { WarningCollector, checkElement, type ElementSpec } from "./_warnings.js";
 
-The per-schema scripts are still runnable standalone (`npx tsx scripts/migrate-X.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest isn't updated when scripts are run directly — that only happens via `cb migrate`.
+   const SPEC: ElementSpec = {
+     attrs: ["status", "version"],
+     children: { /* ... */ },
+   };
 
-## History: re-run all migrators in order
+   await runMigration({
+     description: "*.thing.card: XML → flat YAML.",
+     match: (name) => name.endsWith(".thing.card"),
+     convert: async (absPath, { warnings }) => {
+       // read file, parse, checkElement({ node, source: absPath, spec: SPEC, warnings }),
+       // write new content if changed — return "converted" or "already".
+     },
+   });
+   ```
 
-Before `cb migrate` existed, the conservative path was: **re-run every migrator in chronological order**. Each is idempotent (looks for the frontmatter `type:` marker and skips if present). Still works as a fallback, but `cb migrate` is now the supported way.
+   Existing migrators in this directory predate the harness and still carry their own scaffolding; mirror one (e.g. `scripts/migrate/image.ts`) only if you can't fit the harness's shape.
+
+2. **Be idempotent.** Detect the post-migration shape and skip cards already in it — second runs should report "already migrated N" rather than re-doing work or erroring. Two patterns we use:
+   - Filename-based: skip cards whose name already has the new extension.
+   - Content-based: skip cards whose frontmatter already has the target shape (e.g., a specific key present, or matching a regex marker).
+   `cb migrate` re-runs partially-applied migrations on retry, and admins occasionally run individual scripts manually for debugging — idempotency makes both safe.
+
+3. **Be noisy about data loss.** Every migrator must use the `scripts/migrate/_warnings.ts` helper to declare what attrs/children it knows how to map, and warn about anything outside that allow-list. The harness above already plumbs the `WarningCollector` through; what you write per-migration is just the spec + per-element check:
+
+   ```ts
+   const SPEC: ElementSpec = {
+     attrs: ["status", "version"],
+     children: {
+       filename: { attrs: ["ref", "captured", "source"] },
+       description: { attrs: [] },
+       // ...
+     },
+   };
+
+   // inside convert(), after parsing the card:
+   checkElement({ node, source: absPath, spec: SPEC, warnings });
+   ```
+
+   At the end of a run, anything outside the spec prints with file path + field path:
+
+   ```
+   3 warning(s) about unrecognized fields:
+     ledger.briefing.card: unknown child at <briefing>: <legal>
+     store/.../Amherdt_Handwritten_Letter.record.card: unknown attr at <record> > <person>: role="Amherdt Group"
+   ```
+
+   A warning means data the migrator silently drops. When you see one against real data, the response is normally **extend the migrator**: add the field to the spec, map it in the converter, extend the target schema in `src/schemas/`. Re-run from a clean baseline. Accepting silent loss is rarely the right call; the warning is a prompt to think about each unmapped field.
+
+4. **Register it.** Append a `{name, script}` entry to `MIGRATIONS` at the bottom of `src/core/migrations.ts`. **Never reorder, rename, or remove** existing entries — the `name` is the manifest key, so reordering changes which migrations a box thinks it has applied. New entries always go at the end.
+
+5. **Document it.** Update the migrator table in this file (below) and mention any non-obvious behavior (e.g., the script renames files, deletes orphans, mutates non-card files). Commit migrator + registry entry + doc update together.
+
+6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `cb validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
+
+Migrations are written for cards that already exist on disk; you almost never need to think about schema-level migrations (the schema files in `src/schemas/` evolve freely as long as old data still parses, or has a migrator to bring it forward).
 
 ## The migrators
 
-In the order they were authored — same order to run them:
+In the canonical order (same order they run via `cb migrate --apply`):
 
-| # | Script | Handles |
-|---|--------|---------|
-| 1 | `migrate-card-frontmatter.ts` | Phase 1 — wrap every `.card` in `---\ncontent-type: application/x-card+xml\n---` so the loader treats them uniformly |
-| 2 | `migrate-email-thread.ts` | `*.email-thread.card` |
-| 3 | `migrate-email-message.ts` | `*.email-message.card` |
-| 4 | `migrate-briefing.ts` | `*.briefing.card` |
-| 5 | `migrate-doc-sheet.ts` | `*.doc.card`, `*.sheet.card` |
-| 6 | `migrate-file.ts` | `*.file.card` |
-| 7 | `migrate-image.ts` | `*.image.card` |
-| 8 | `migrate-audio.ts` | `*.audio.card` |
-| 9 | `migrate-record-person.ts` | `*.record.card`, `*.person.card` |
-| 10 | `migrate-memo.ts` | `*.memo.card` |
-| 11 | `migrate-misc.ts` | `*.todo-list.card`, `*.telegram-message.card`, `*.feedback.card` |
-| 12 | `migrate-jobs.ts` | the four job schemas (intake, calendar-review, chat, question-followup) |
-| 13 | `migrate-personality.ts` | `*.personality.card` |
-| 14 | `migrate-scheduled-script.ts` | `*.scheduled-script.card` |
-| 15 | `migrate-question.ts` | `*.question.card` |
-| 16 | `migrate-chat-thread.ts` | `*.chat-thread.card` |
+All scripts live in `scripts/migrate/`.
 
-Phase 1 (#1) must run first; the per-schema migrators (#2–16) are mostly order-independent of each other but `#1` is a hard prerequisite. Also: `migrate-attachments.ts` is a separate, earlier structural migration (move flat attachments into `.attach/` directories) — not in this list because by the time the Phase-2 migrators run, every modern box should already be on the `.attach/` layout.
+| # | Name | Script | What it does |
+|---|------|--------|---|
+| 1 | `attachments`       | `attachments.ts`       | Structural: move flat sibling attachments into `<basename>.attach/` directories |
+| 2 | `card-frontmatter`  | `card-frontmatter.ts`  | Phase 1: wrap every `.card` in `---\ncontent-type: application/x-card+xml\n---` so the loader treats them uniformly |
+| 3 | `email-thread`      | `email-thread.ts`      | `*.email-thread.card`: XML → flat YAML frontmatter |
+| 4 | `email-message`     | `email-message.ts`     | `*.email-message.card`: XML → flat YAML |
+| 5 | `briefing`          | `briefing.ts`          | `*.briefing.card`: XML → YAML frontmatter + markdown body |
+| 6 | `doc-sheet`         | `doc-sheet.ts`         | `*.doc.card`, `*.sheet.card`: XML → flat YAML (note: `.doc.card` was the Google-Doc type at the time; renamed to `gdoc` later — see #18) |
+| 7 | `file`              | `file.ts`              | `*.file.card`: XML → flat YAML |
+| 8 | `image`             | `image.ts`             | `*.image.card`: XML → flat YAML |
+| 9 | `audio`             | `audio.ts`             | `*.audio.card`: XML → flat YAML |
+| 10 | `record-person`    | `record-person.ts`     | `*.record.card`, `*.person.card`: XML → YAML + markdown body |
+| 11 | `memo`             | `memo.ts`              | `*.memo.card`: XML → YAML + markdown body |
+| 12 | `misc`             | `misc.ts`              | `*.todo-list.card`, `*.telegram-message.card`, `*.feedback.card` |
+| 13 | `jobs`             | `jobs.ts`              | The four job schemas (intake, calendar-review, chat, question-followup) |
+| 14 | `personality`      | `personality.ts`       | `*.personality.card`: XML → YAML + markdown body |
+| 15 | `scheduled-script` | `scheduled-script.ts`  | `*.scheduled-script.card`: XML → flat YAML |
+| 16 | `question`         | `question.ts`          | `*.question.card`: XML → flat YAML |
+| 17 | `chat-thread`      | `chat-thread.ts`       | `*.chat-thread.card`: XML → YAML with discriminated entries[] |
+| 18 | `doc-to-gdoc`      | `doc-to-gdoc.ts`       | Rename Google-Doc `.doc.card` → `.gdoc.card` and flip the YAML `type:` so the `doc` type name can be reused for a generic in-box document type |
+| 19 | `strip-type-field` | `strip-type-field.ts`  | Remove the redundant `type:` field from every card's frontmatter — filename is the canonical type discriminator. Also renames `.X.job.card` → `.X-job.card` so the filename actually carries the canonical type for jobs |
 
-Each script takes a box root and runs in dry-run mode by default; pass `--apply` to commit changes to disk:
+## Manual runs (for debugging)
 
-```bash
-npx tsx scripts/migrate-image.ts /path/to/box           # dry-run
-npx tsx scripts/migrate-image.ts /path/to/box --apply   # write
-```
+The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `cb migrate`. If you do this and want it to count, append the entry yourself or run `cb migrate --apply` afterwards.
 
-## Noisy mode (field-loss detection)
+## Maintenance tools
 
-Every Phase-2 migrator declares an `ElementSpec` of known attrs/children per element type. Anything outside that allow-list accumulates in a warning list printed at the end of the run:
+- `scripts/clean-broken-refs.ts` — not a migration; a one-off data-hygiene tool. Deletes orphan image cards (whose `filename.ref` target is gone), prunes dead refs from capture-sessions / records / jobs, and rewrites `../../../people/Foo.person.card` style relative refs to absolute form when the target exists. Idempotent; safe to re-run.
 
-```
-3 warning(s) about unrecognized fields:
-  ledger.briefing.card: unknown child at <briefing>: <legal>
-  store/.../Amherdt_Handwritten_Letter.record.card: unknown attr at <record> > <person>: role="Amherdt Group"
-  config/main.personality.card: unknown attr at <personality> > <boxholder>: ref="store/people/Ian_Bicking.person.card"
-```
+## Production rollout history (box.example.com)
 
-The shared helper is `scripts/_migrate-warnings.ts`. A warning means the original XML had a field the migrator doesn't know how to map — silent data loss if the warning is ignored. Two responses:
+For reference. May 23–24, 2026.
 
-1. **Extend the migrator** (preferred for fields that look generic): add to the spec, map in the converter, extend the corresponding schema in `src/schemas/`. Re-run from a clean baseline.
-2. **Accept the loss** (only for one-off junk): commit anyway; the warning is your audit trail in scrollback. Beware: subsequent runs against new boxes will report the same warnings if the fields legitimately exist there too.
+1. Pushed migrators + `cb migrate` to GitHub; post-commit hook deploys to `/opt/callback/callback-box/`.
+2. Stopped `callback-serve` + `callback-scheduler` to avoid races.
+3. Per-box backup: pre-migration commit SHA + a compact tar (text-only) into `/home/callback/backups/pre-migration-<timestamp>/`. The card data is already in git; the tar is belt-and-suspenders for non-git state.
+4. For each box: seeded the manifest (sometimes partially for legacy boxes), ran `cb migrate --apply`, committed.
+5. Some boxes hit pre-commit validation blocks from pre-existing data drift (broken refs, malformed templates). Cleaned those up via `scripts/clean-broken-refs.ts` plus hand-fixes; see commit history.
+6. Restarted services.
 
-## Per-box workflow
+Residual data fixes that were one-offs (won't apply to other boxes):
 
-For a fresh box (live data, not a test):
+- `personal/config/main.personality.card` `<boxholder ref="...">` attr restored after the personality migrator dropped it. Migrator fixed to preserve.
+- `hearth/Test_Timer*.memo.card` had `<memo created="...">` attr instead of a `<created>` child. Hand-converted; the migrator was not extended (one-off shape).
+- `personal/store/callback-box/callback-box-interaction-primitives.memo.card` legacy `<card type="memo">` root. Hand-converted.
+- Ledger's eulogy `.md` moved into a proper `.attach/` scope; trash duplicate removed.
+- Several boxes had `Box.landmark.card` with `<label>` / `<symbol>` directly under `<landmark>` instead of inside `<navigation>`. Wrapped via perl one-liner.
+- Ledger had two `*.email-outbound.card` files still in XML (no migrator existed for that type). Hand-converted to YAML.
 
-```bash
-# 1. Confirm the working tree is clean (commit anything pending as a baseline).
-git -C $BOX status --short
+## See also
 
-# 2. Save the pre-migration commit SHA — your rollback anchor.
-git -C $BOX rev-parse HEAD > /tmp/$BOX-pre-migration.sha
+- `docs/cards-as-markdown.md` — design rationale for the YAML-frontmatter format these migrators target
+- `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
+- `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
+- `scripts/migrate/_warnings.ts` — the noisy-mode helper every migrator uses
+- `scripts/migrate/_harness.ts` — shared scaffold for new migrators
 
-# 3. Run the migrators in order (dry-run first if you want to preview).
-ORDER="card-frontmatter email-thread email-message briefing doc-sheet file image audio record-person memo misc jobs personality scheduled-script question chat-thread"
-for m in $ORDER; do
-  echo "=== $m ==="
-  npx tsx scripts/migrate-$m.ts $BOX --apply
-done
+## Rollback
 
-# 4. Validate.
-cd $BOX && cb validate
-
-# 5. Commit.
-git -C $BOX add -A && git -C $BOX commit -m "Phase 2 migration: schemas to YAML frontmatter"
-```
-
-Rollback if anything goes wrong:
+Each pending migration is committed by the user (`cb migrate` doesn't auto-commit). If a migration produced unwanted changes:
 
 ```bash
-git -C $BOX reset --hard $(cat /tmp/$BOX-pre-migration.sha)
+git -C $BOX reset --hard <pre-migration-sha>
+# also: remove the manifest entry for the migration you reverted
+sed -i '/"name":"<migration-name>"/d' $BOX/config/migrations.jsonl
 ```
-
-## Production rollout (box.example.com)
-
-What was actually done on May 23, 2026 against the live server boxes (`hearth`, `ledger`, `hearth`, `seminar`, `test1`):
-
-1. Pushed callback-box to GitHub; post-commit hook auto-deploys to `/opt/callback/callback-box/`, which puts the latest migrators on the server.
-2. `systemctl stop callback-serve callback-scheduler` to avoid races during box rewrites.
-3. Backup: per-box pre-migration SHAs and a compact tar (`*.card` text + `.callback-box/` runtime state + `.git`, binary attachments excluded) into `/home/callback/backups/pre-migration-<timestamp>/`. Ledger's `.git` history is the bulk of the backup size (~10G).
-4. Looped over `/home/callback/boxes/*/`, ran the 16 migrators in order as the `callback` user. Three boxes finished clean; two surfaced warnings/failures.
-5. Committed per box (one "Phase 2 migration" commit each).
-6. Repaired the surfaced issues — see "Residual issues handled" below.
-7. `systemctl start callback-serve callback-scheduler`.
-
-### Residual issues handled
-
-Three concrete data-loss surfaces came up. All resolved.
-
-- **`personal/config/main.personality.card`** — `<boxholder ref="...">` attr was dropped. Patched the live YAML in place, restored the ref, committed. Fixed the migrator (`scripts/migrate-personality.ts` spec + converter) and the `BoxholderEntry` schema in `src/schemas/personality.tsx` so future runs preserve it.
-- **`hearth/.../Test_Timer_2026-03-08T12-24.memo.card`** — used `<memo created="...">` attr instead of a `<created>` child. The strict migrator failed; the card was hand-converted to YAML preserving the timestamp. The migrator was *not* extended to accept this shape because no other card uses it.
-- **`personal/store/callback-box/callback-box-interaction-primitives.memo.card`** — legacy `<card type="memo"><content>...</content></card>` shape from an old export. Hand-converted to YAML with `created` set to the git-add timestamp. Not worth a general migrator path.
-
-## When you write a new migrator
-
-- Use the `_migrate-warnings.ts` helper. Declare a tight `ElementSpec` — being too permissive defeats the noisy-mode purpose.
-- Idempotency check: look for the frontmatter `type:` marker for your schema near the top and skip if present.
-- Dry-run default: only mutate on `--apply`.
-- Mention it in the table above and commit both the migrator and the table update together.

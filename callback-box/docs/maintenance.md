@@ -19,6 +19,8 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Supplemental lint | `npm run lint:oxlint` | Periodic | Console |
 | Circular deps | `npm run lint:circular` | After big refactors | Console |
 | Doc images | `npm run generate:doc-images` | After editing architecture diagrams or prompts | `docs/architecture/images/` |
+| Box data migrations | `cb migrate` (per box) | After adding a new migrator to `src/core/migrations.ts` | Box working tree |
+| Broken-ref cleanup | `npx tsx scripts/clean-broken-refs.ts <boxRoot>` | One-off; when `cb validate` shows ref errors that pre-date a migration | Box working tree |
 
 ## Tasks
 
@@ -45,6 +47,21 @@ Walks every `.md` file, extracts cross-references, and writes a graph of incomin
 **When to run:** after restructuring docs, splitting/merging files, or noticing the graph is stale. Output is byte-stable across consecutive runs.
 
 **Output:** `docs/doc-graph.md` (committed). Look at the "Issues" section first — orphans and broken references are usually accidental.
+
+### Box data migrations — `cb migrate`
+
+Per-box command. Applies any data migrations in `src/core/migrations.ts` that haven't been recorded in the box's `config/migrations.jsonl` yet. Run after pulling a callback-box update that adds a migrator; the per-box pre-commit hook will otherwise complain about stale shapes.
+
+**Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` helper, register it, document it; production rollout history; rollback).
+
+### Broken-ref cleanup — `scripts/clean-broken-refs.ts`
+
+Ad-hoc data-hygiene tool, not a migration. Deletes orphan image cards (whose `filename.ref` target is gone), prunes dead refs from capture-sessions / records / jobs, and rewrites relative person refs to absolute form. Idempotent; safe to re-run. Useful after migrating an older box where ref integrity drifted before validation existed.
+
+```bash
+npx tsx scripts/clean-broken-refs.ts <boxRoot>           # dry-run
+npx tsx scripts/clean-broken-refs.ts <boxRoot> --apply   # write
+```
 
 ### Dead-code sweep — `npm run lint:knip`
 

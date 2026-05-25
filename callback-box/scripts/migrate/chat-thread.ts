@@ -4,8 +4,8 @@
  * Phase 2: migrate `.chat-thread.card` files from XML to YAML frontmatter.
  *
  * Usage:
- *   npx tsx scripts/migrate-chat-thread.ts <boxRoot>           # dry-run
- *   npx tsx scripts/migrate-chat-thread.ts <boxRoot> --apply
+ *   npx tsx scripts/migrate/chat-thread.ts <boxRoot>           # dry-run
+ *   npx tsx scripts/migrate/chat-thread.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, writeFile } from "node:fs/promises";

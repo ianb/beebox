@@ -193,7 +193,7 @@ Each test that creates a card with an attachment now creates the `.attach/` dire
 
 ## Migration tooling
 
-A migrator script (`scripts/migrate-attachments.ts` or similar) walks an existing box and does **two coordinated passes**:
+A migrator script (`scripts/migrate/attachments.ts` or similar) walks an existing box and does **two coordinated passes**:
 
 1. **File move pass.** Move sibling files into `<basename>.attach/` directories.
 2. **Ref rewrite pass.** Walk every card and rewrite any ref that points at a path that was moved — including both refs to attached files within the same card (now `attach/<file>`) and cross-card refs that included the old absolute or relative path.

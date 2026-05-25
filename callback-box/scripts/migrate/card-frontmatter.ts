@@ -15,8 +15,8 @@
  * splits) without exposing any cards yet.
  *
  * Usage:
- *   npx tsx scripts/migrate-card-frontmatter.ts <boxRoot>             # dry-run
- *   npx tsx scripts/migrate-card-frontmatter.ts <boxRoot> --apply     # execute
+ *   npx tsx scripts/migrate/card-frontmatter.ts <boxRoot>             # dry-run
+ *   npx tsx scripts/migrate/card-frontmatter.ts <boxRoot> --apply     # execute
  */
 
 import * as fs from "node:fs/promises";

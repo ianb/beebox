@@ -6,15 +6,15 @@
  * pure metadata — no body content.
  *
  * Usage:
- *   npx tsx scripts/migrate-doc-sheet.ts <boxRoot>           # dry-run
- *   npx tsx scripts/migrate-doc-sheet.ts <boxRoot> --apply
+ *   npx tsx scripts/migrate/doc-sheet.ts <boxRoot>           # dry-run
+ *   npx tsx scripts/migrate/doc-sheet.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
-import { WarningCollector, checkElement, type ElementSpec } from "./_migrate-warnings.js";
+import { WarningCollector, checkElement, type ElementSpec } from "./_warnings.js";
 
 const DOC_SPEC: ElementSpec = {
   attrs: ["drive-id", "status", "version"],

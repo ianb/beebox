@@ -32,9 +32,9 @@
  * virtual prefix; cross-card refs use the full new path.
  *
  * Usage:
- *   npx tsx scripts/migrate-attachments.ts <boxRoot>             # dry-run
- *   npx tsx scripts/migrate-attachments.ts <boxRoot> --apply     # execute
- *   npx tsx scripts/migrate-attachments.ts <boxRoot> --apply --no-commit
+ *   npx tsx scripts/migrate/attachments.ts <boxRoot>             # dry-run
+ *   npx tsx scripts/migrate/attachments.ts <boxRoot> --apply     # execute
+ *   npx tsx scripts/migrate/attachments.ts <boxRoot> --apply --no-commit
  *
  * Requires a clean git tree (unless --apply is omitted). After --apply the
  * tree is left staged; run a git commit yourself or pass --commit.

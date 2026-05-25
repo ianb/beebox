@@ -1,7 +1,7 @@
 /**
  * `cb migrate` — apply pending data migrations to the box.
  *
- * Compares the box's `config/.migrations.jsonl` against the canonical
+ * Compares the box's `config/migrations.jsonl` against the canonical
  * `MIGRATIONS` list in `src/core/migrations.ts`. Runs any pending
  * migrations in order, appending a manifest entry after each success.
  *

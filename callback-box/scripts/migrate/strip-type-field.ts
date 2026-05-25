@@ -13,8 +13,8 @@
  * Idempotent. Safe on cards that already have no type field.
  *
  * Usage:
- *   npx tsx scripts/strip-type-field.ts <boxRoot>           # dry-run
- *   npx tsx scripts/strip-type-field.ts <boxRoot> --apply
+ *   npx tsx scripts/migrate/strip-type-field.ts <boxRoot>           # dry-run
+ *   npx tsx scripts/migrate/strip-type-field.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";

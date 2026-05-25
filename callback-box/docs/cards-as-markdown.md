@@ -6,7 +6,7 @@
 
 ## Implementation status
 
-**Phase 1 — frontmatter wrapper** (May 21–22): every `.card` file gained a YAML frontmatter block, initially with `content-type: application/x-card+xml` so legacy XML bodies kept parsing through cardworks. This is the substrate that lets per-schema cards flip to flat YAML without breaking the loader. See `scripts/migrate-card-frontmatter.ts`.
+**Phase 1 — frontmatter wrapper** (May 21–22): every `.card` file gained a YAML frontmatter block, initially with `content-type: application/x-card+xml` so legacy XML bodies kept parsing through cardworks. This is the substrate that lets per-schema cards flip to flat YAML without breaking the loader. See `scripts/migrate/card-frontmatter.ts`.
 
 **Phase 2 — per-schema flat-YAML migration** (May 22–23): each card type's body XML moved into the YAML frontmatter as typed fields. Body, where it exists, is plain markdown (no inline-attributed prose yet). Migrated schemas:
 
@@ -39,9 +39,9 @@ Each of these has cases where a YAML array of items would either lose inline-pro
 
 **Loader dispatch:** `src/core/card-io.ts` `loadCardFile()` returns a discriminated union of `FrontmatterLoadedCard | XmlLoadedCard`. Frontmatter dispatch uses `cardSchemas` (Map keyed by `type:` field); XML falls through to the legacy cardworks `parseCard`. This lets XML and frontmatter cards coexist during and after the migration.
 
-**Migration infrastructure:** `scripts/migrate-*.ts` per schema, plus `scripts/_migrate-warnings.ts` shared helper that declares the known attrs/children per element and surfaces anything outside that allow-list at the end of the run. Surfaced real data loss during the production migration (e.g. ledger's box-local `<legal>`/`<properties>`/`<finances>` children on briefing; `role`/`notes` attrs on `<person>` children in records; `<boxholder ref="...">` on personality). All known gaps fixed in the migrators and re-run cleanly.
+**Migration infrastructure:** `scripts/migrate/*.ts` per schema, plus `scripts/migrate/_warnings.ts` shared helper that declares the known attrs/children per element and surfaces anything outside that allow-list at the end of the run. Surfaced real data loss during the production migration (e.g. ledger's box-local `<legal>`/`<properties>`/`<finances>` children on briefing; `role`/`notes` attrs on `<person>` children in records; `<boxholder ref="...">` on personality). All known gaps fixed in the migrators and re-run cleanly.
 
-**Tracking which migrations have been applied per box** is a known gap (no manifest, no `cb migrate` command). See `docs/ideas.md` § "Migration tracking per box".
+**Tracking which migrations have been applied per box** is handled by `cb migrate` against the per-box append-only manifest `config/migrations.jsonl`, compared to the canonical `MIGRATIONS` array in `src/core/migrations.ts`. New migrators get appended there; new boxes seed the manifest as all-applied via `cb init`. Full author guide + runbook in `docs/migrations.md`.
 
 ---
 

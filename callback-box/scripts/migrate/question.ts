@@ -4,8 +4,8 @@
  * Phase 2: migrate `.question.card` files from XML to YAML frontmatter.
  *
  * Usage:
- *   npx tsx scripts/migrate-question.ts <boxRoot>           # dry-run
- *   npx tsx scripts/migrate-question.ts <boxRoot> --apply
+ *   npx tsx scripts/migrate/question.ts <boxRoot>           # dry-run
+ *   npx tsx scripts/migrate/question.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
