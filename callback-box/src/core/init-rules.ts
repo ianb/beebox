@@ -10,7 +10,7 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
-import { schemas, loadBoxSchemas } from "../schemas/registry.js";
+import { schemas, cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 
 export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
@@ -83,22 +83,30 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
 
   const generated: string[] = [];
 
-  // Load box-local schemas alongside built-in ones
+  // Load box-local schemas alongside built-in ones. Card rules cover
+  // both legacy XML schemas (ElementSchema with `tagName`) and phase-2
+  // frontmatter schemas (CardSchema with `type`); each gets a
+  // path-conditional rule keyed off its filename glob so the agent
+  // loads the right instructions when it reads or edits a matching
+  // `.<type>.card` file.
   const boxSchemas = await loadBoxSchemas(boxRoot);
-  const allSchemas = [...schemas, ...boxSchemas];
+  const cardRuleSources: Array<{ name: string; instructions: string | undefined }> = [
+    ...schemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
+    ...boxSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
+    ...cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
+  ];
 
-  // Schema-driven card rules
-  for (const schema of allSchemas) {
-    if (!schema.instructions) continue;
+  for (const { name, instructions } of cardRuleSources) {
+    if (instructions === undefined) continue;
 
-    const glob = `**/*.${schema.tagName}.card`;
-    const filename = `card-${schema.tagName}.md`;
+    const glob = `**/*.${name}.card`;
+    const filename = `card-${name}.md`;
     const content = `---
 paths:
   - "${glob}"
 ---
 
-${schema.instructions.trim()}
+${instructions.trim()}
 `;
 
     await writeFile(join(rulesDir, filename), content);

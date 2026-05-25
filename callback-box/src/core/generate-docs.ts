@@ -14,8 +14,7 @@ import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import type { ZodTypeAny } from "zod";
 import { parseCard } from "cardworks";
-import { schemas, loadBoxSchemas } from "../schemas/registry.js";
-import type { ElementSchema } from "cardworks";
+import { schemas, cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 import { getAllTemplates, getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
 import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
 import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../schemas/personality.js";
@@ -34,6 +33,7 @@ import {
   installBriefing,
   installSchedules,
 } from "./box.js";
+import { pruneStaleTemplateUpdates } from "./install-template-file.js";
 import { generateRules } from "./init-rules.js";
 import { installValidationHooks } from "./install-validation-hooks.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/lib/git.js";
@@ -296,6 +296,7 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installSchedules(boxRoot);
   await generateRules(boxRoot);
   await installValidationHooks(boxRoot);
+  await pruneStaleTemplateUpdates(boxRoot);
 
   await commitTemplateSyncChanges(boxRoot);
 }
@@ -395,12 +396,19 @@ export async function generateDocs(boxRoot: string, options: GenerateDocsOptions
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
       withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
-    ...allSchemas
-      .filter((s) => s.instructions)
+    // Per-schema generated docs cover both legacy XML schemas (ElementSchema
+    // with `tagName`) and phase-2 frontmatter schemas (CardSchema with
+    // `type`). Both expose an optional `instructions` field; only schemas
+    // that supply one get a doc written.
+    ...[
+      ...allSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
+      ...cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
+    ]
+      .filter((s): s is { name: string; instructions: string } => s.instructions !== undefined)
       .map((s) => {
-        const filename = `card-${s.tagName}.md`;
+        const filename = `card-${s.name}.md`;
         return writeFile(join(boxRoot, DOCS_DIR, filename),
-          withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.tagName, allSchemas), debug }));
+          withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.name, s.instructions), debug }));
       }),
   ]);
 
@@ -964,20 +972,14 @@ function generateCbCommands(): string {
 /**
  * Generate a detailed doc for a single card type.
  */
-function generateCardDoc(tagName: string, allSchemas: ElementSchema[] = schemas): string {
-  const schema = allSchemas.find((s) => s.tagName === tagName);
-  if (!schema) return `# ${tagName}\n\nNo schema found.\n`;
-
-  const templates = getTemplatesForCardType(tagName);
+function generateCardDoc(name: string, instructions: string): string {
+  const templates = getTemplatesForCardType(name);
   const lines: string[] = [
-    `# ${tagName} Card`,
+    `# ${name} Card`,
+    "",
+    instructions.trim(),
     "",
   ];
-
-  if (schema.instructions) {
-    lines.push(schema.instructions.trim());
-    lines.push("");
-  }
 
   if (templates.length > 0) {
     lines.push("## Templates");
@@ -989,7 +991,7 @@ function generateCardDoc(tagName: string, allSchemas: ElementSchema[] = schemas)
       lines.push(t.description);
       lines.push("");
       lines.push("```bash");
-      lines.push(`cb create <path>.${tagName}.card -t ${t.name}`);
+      lines.push(`cb create <path>.${name}.card -t ${t.name}`);
       lines.push("```");
       lines.push("");
 
