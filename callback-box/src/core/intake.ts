@@ -23,7 +23,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Dirent } from "node:fs";
-import { getBoxDir } from "../cli/lib/paths.js";
+import { getBoxDir, isCardFile } from "../cli/lib/paths.js";
 
 /**
  * Result of applying one intake step to one file.
@@ -131,6 +131,9 @@ async function routeArrivals(opts: { boxRoot: string }): Promise<string[]> {
       continue;
     }
     if (entry.name.startsWith(".")) continue;
+    // Only route card files. Non-card top-level files (CLAUDE.md, MAP.md,
+    // README, etc.) are agent-facing context for `box/inbox/` and stay put.
+    if (!isCardFile(entry.name)) continue;
     const src = path.join(inboxDir, entry.name);
     const dst = path.join(intakeDir, entry.name);
     try {

@@ -131,6 +131,33 @@ await box.read("box/inbox/staged/Already.memo.card")
 await box.cleanup();
 ```
 
+## Non-card top-level files stay put
+
+`box/inbox/CLAUDE.md`, `MAP.md`, README files, and similar agent-facing
+context don't get swept into intake. Only `*.card` files are routed.
+
+```
+const box = await makeTmpBox();
+await box.write("box/inbox/CLAUDE.md", "# Inbox context");
+await box.write("box/inbox/MAP.md", "# Inbox map");
+await box.write("box/inbox/Note.memo.card", "<memo/>");
+
+const result = await runIntake({ boxRoot: box.root });
+
+JSON.stringify({ routed: result.routed, staged: result.staged })
+=> {"routed":["Note.memo.card"],"staged":["Note.memo.card"]}
+
+await box.read("box/inbox/CLAUDE.md")
+=> # Inbox context
+
+await box.read("box/inbox/MAP.md")
+=> # Inbox map
+```
+
+```cleanup
+await box.cleanup();
+```
+
 ## Empty inbox is a no-op
 
 ```
