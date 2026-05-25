@@ -14,6 +14,7 @@ import { createInitialPersonalityTemplate } from "../schemas/personality.js";
 import { createBriefingTemplate } from "../schemas/briefing.js";
 import { createLandmarkTemplate } from "../schemas/landmark.js";
 import { MIGRATIONS } from "./migrations.js";
+import { installTemplateFile, type InstallResult } from "./install-template-file.js";
 
 const __dirname = import.meta.dirname;
 
@@ -69,7 +70,7 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
   // run `cb migrate --mark-all-applied` (or --init) to decide its starting
   // state. See `src/cli/commands/migrate.ts`.
   if (!isUpdate) {
-    const manifestPath = path.join(resolvedRoot, "config/.migrations.jsonl");
+    const manifestPath = path.join(resolvedRoot, "config/migrations.jsonl");
     await fs.mkdir(path.dirname(manifestPath), { recursive: true });
     try {
       await fs.access(manifestPath);
@@ -248,23 +249,17 @@ export async function getBoxMetadata(
 }
 
 /**
- * Subdirectory under `config/` that holds template-update notifications.
- * When `cb init` runs on a box whose copy of a procedure/guide/scheduled-script
- * differs from the bundled template, the latest template is written here
- * (mirroring the parent layout) so the user can diff and merge manually.
- *
- * Hidden via the leading underscore so it doesn't clutter the active config
- * listing, but tracked in git (unlike `.callback-box/`).
+ * Translate a single-template install result into the legacy `installed[]`
+ * string that the `cb init` UI prints. `fresh` and `overwritten` outcomes
+ * surface the canonical filename; `parked` surfaces the
+ * `_template-updates/...` path with an "(update available)" hint; other
+ * outcomes (`unchanged`, `skipped`) produce no entry.
  */
-const TEMPLATE_UPDATES_DIRNAME = "_template-updates";
-
-/**
- * Compute the path under `config/_template-updates/` that mirrors a file's
- * location under `config/`. e.g. `config/procedures/foo.procedure.card`
- * → `config/_template-updates/procedures/foo.procedure.card`.
- */
-function templateUpdatePath(boxRoot: string, relativeUnderConfig: string): string {
-  return path.join(boxRoot, "config", TEMPLATE_UPDATES_DIRNAME, relativeUnderConfig);
+function describeInstall(result: InstallResult, displayName: string): string | null {
+  if (result.outcome === "fresh") return displayName;
+  if (result.outcome === "overwritten") return `${displayName} (updated)`;
+  if (result.outcome === "parked") return `${result.writtenAt} (update available)`;
+  return null;
 }
 
 /**
@@ -278,11 +273,7 @@ function templateUpdatePath(boxRoot: string, relativeUnderConfig: string): strin
  * @returns List of installed/updated procedure names
  */
 export async function installProcedures(boxRoot: string): Promise<string[]> {
-  // Templates live alongside the compiled JS: ../../templates/procedures/
   const templatesDir = path.join(__dirname, "..", "..", "templates", "procedures");
-  const targetDir = path.join(boxRoot, BOX_DIRS.procedures);
-
-  await fs.mkdir(targetDir, { recursive: true });
 
   let templateFiles: string[];
   try {
@@ -290,42 +281,20 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
       f.endsWith(".procedure.card")
     );
   } catch {
-    // No templates directory — nothing to install
     return [];
   }
 
   const installed: string[] = [];
-
   for (const file of templateFiles) {
-    const templateContent = await fs.readFile(
-      path.join(templatesDir, file),
-      "utf-8"
-    );
-    const targetPath = path.join(targetDir, file);
-
-    let existingContent: string | null = null;
-    try {
-      existingContent = await fs.readFile(targetPath, "utf-8");
-    } catch {
-      // File doesn't exist yet
-    }
-
-    if (existingContent === null) {
-      // Fresh install
-      await fs.writeFile(targetPath, templateContent);
-      installed.push(file);
-    } else if (existingContent === templateContent) {
-      // Already up to date
-    } else {
-      // Box copy differs from template — park the new template in
-      // config/_template-updates/procedures/ for manual merge.
-      const updatePath = templateUpdatePath(boxRoot, path.join("procedures", file));
-      await fs.mkdir(path.dirname(updatePath), { recursive: true });
-      await fs.writeFile(updatePath, templateContent);
-      installed.push(`${TEMPLATE_UPDATES_DIRNAME}/procedures/${file} (update available)`);
-    }
+    const templateContent = await fs.readFile(path.join(templatesDir, file), "utf-8");
+    const result = await installTemplateFile({
+      boxRoot,
+      relPath: path.join(BOX_DIRS.procedures, file),
+      templateContent,
+    });
+    const entry = describeInstall(result, file);
+    if (entry !== null) installed.push(entry);
   }
-
   return installed;
 }
 
@@ -357,44 +326,19 @@ function normalizeGuideForComparison(content: string): string {
  * @returns List of installed/updated guide names
  */
 export async function installGuides(boxRoot: string): Promise<string[]> {
-  const configDir = path.join(boxRoot, "config");
-  await fs.mkdir(configDir, { recursive: true });
-
   const installed: string[] = [];
-
   for (const domain of GUIDE_DOMAINS) {
     const fileName = `${domain}.guide.card`;
-    const targetPath = path.join(configDir, fileName);
     const templateContent = createInitialGuideTemplate({ name: domain });
-
-    let existingContent: string | null = null;
-    try {
-      existingContent = await fs.readFile(targetPath, "utf-8");
-    } catch {
-      // File doesn't exist yet
-    }
-
-    if (existingContent === null) {
-      // Fresh install
-      await fs.writeFile(targetPath, templateContent);
-      installed.push(fileName);
-    } else if (
-      normalizeGuideForComparison(existingContent) ===
-      normalizeGuideForComparison(templateContent)
-    ) {
-      // Template content matches the box copy modulo timestamps. Leave
-      // the existing file alone — overwriting would just rewrite the
-      // timestamps and dirty the working tree on every install with no
-      // semantic change.
-    } else {
-      // User has modified the guide — park the new template for manual merge.
-      const updatePath = templateUpdatePath(boxRoot, `${domain}.guide.card`);
-      await fs.mkdir(path.dirname(updatePath), { recursive: true });
-      await fs.writeFile(updatePath, templateContent);
-      installed.push(`${TEMPLATE_UPDATES_DIRNAME}/${domain}.guide.card (update available)`);
-    }
+    const result = await installTemplateFile({
+      boxRoot,
+      relPath: path.join("config", fileName),
+      templateContent,
+      normalize: normalizeGuideForComparison,
+    });
+    const entry = describeInstall(result, fileName);
+    if (entry !== null) installed.push(entry);
   }
-
   return installed;
 }
 
@@ -407,19 +351,12 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
  * @returns Whether a new template was installed
  */
 export async function installPersonality(boxRoot: string): Promise<boolean> {
-  const configDir = path.join(boxRoot, "config");
-  await fs.mkdir(configDir, { recursive: true });
-
-  const targetPath = path.join(configDir, "main.personality.card");
-
-  try {
-    await fs.access(targetPath);
-    return false; // Already exists — don't overwrite
-  } catch {
-    // File doesn't exist — install template
-    await fs.writeFile(targetPath, createInitialPersonalityTemplate());
-    return true;
-  }
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "config/main.personality.card",
+    templateContent: createInitialPersonalityTemplate(),
+  });
+  return result.outcome === "fresh";
 }
 
 /**
@@ -439,12 +376,12 @@ export async function installRootLandmark(boxRoot: string): Promise<boolean> {
     return false;
   }
   if (entries.some((name) => name.endsWith(".landmark.card"))) return false;
-  const targetPath = path.join(boxRoot, "Box.landmark.card");
-  await fs.writeFile(
-    targetPath,
-    createLandmarkTemplate({ label: "Box", symbol: "📦" })
-  );
-  return true;
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "Box.landmark.card",
+    templateContent: createLandmarkTemplate({ label: "Box", symbol: "📦" }),
+  });
+  return result.outcome === "fresh";
 }
 
 /**
@@ -455,16 +392,12 @@ export async function installRootLandmark(boxRoot: string): Promise<boolean> {
  * @returns Whether a new template was installed
  */
 export async function installBriefing(boxRoot: string): Promise<boolean> {
-  const targetPath = path.join(boxRoot, "briefing.briefing.card");
-
-  try {
-    await fs.access(targetPath);
-    return false; // Already exists — don't overwrite
-  } catch {
-    // File doesn't exist — install template
-    await fs.writeFile(targetPath, createBriefingTemplate());
-    return true;
-  }
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "briefing.briefing.card",
+    templateContent: createBriefingTemplate(),
+  });
+  return result.outcome === "fresh";
 }
 
 // ============================================
@@ -528,14 +461,9 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
  * @returns List of installed/updated schedule names
  */
 export async function installSchedules(boxRoot: string): Promise<string[]> {
-  const schedulesDir = path.join(boxRoot, "config/schedules");
-  await fs.mkdir(schedulesDir, { recursive: true });
-
   const installed: string[] = [];
-
   for (const sched of DEFAULT_SCHEDULES) {
     const fileName = `${sched.name}.scheduled-script.card`;
-    const targetPath = path.join(schedulesDir, fileName);
     const templateContent = createScheduledScriptTemplate({
       ...(sched.cron && { cron: sched.cron }),
       ...(sched.notBefore && { notBefore: sched.notBefore }),
@@ -548,27 +476,14 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       description: sched.description,
       source: sched.source,
     });
-
-    let existingContent: string | null = null;
-    try {
-      existingContent = await fs.readFile(targetPath, "utf-8");
-    } catch {
-      // File doesn't exist yet
-    }
-
-    if (existingContent === null) {
-      await fs.writeFile(targetPath, templateContent);
-      installed.push(fileName);
-    } else if (existingContent === templateContent) {
-      // Already up to date
-    } else {
-      const updatePath = templateUpdatePath(boxRoot, path.join("schedules", fileName));
-      await fs.mkdir(path.dirname(updatePath), { recursive: true });
-      await fs.writeFile(updatePath, templateContent);
-      installed.push(`${TEMPLATE_UPDATES_DIRNAME}/schedules/${fileName} (update available)`);
-    }
+    const result = await installTemplateFile({
+      boxRoot,
+      relPath: path.join("config/schedules", fileName),
+      templateContent,
+    });
+    const entry = describeInstall(result, fileName);
+    if (entry !== null) installed.push(entry);
   }
-
   return installed;
 }
 

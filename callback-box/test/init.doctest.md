@@ -98,9 +98,11 @@ calendar.guide.card
 connectors
 intake.guide.card
 main.personality.card
+migrations.jsonl
 procedures
 schedules
 schemas
+template-versions.json
 transcription.json
 ```
 
