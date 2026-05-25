@@ -10,6 +10,13 @@
  *
  * Together: write-time warns, commit-time blocks. Idempotent — only
  * rewrites when content differs.
+ *
+ * Deliberately not routed through `installTemplateFile`: the settings
+ * file needs JSON merge semantics (preserve unrelated keys, dedupe a
+ * specific PostToolUse entry), and the pre-commit hook lives outside
+ * the tracked tree (under `.git/`) and uses a marker comment rather
+ * than a hash to distinguish ours-vs-user's. Neither fits the
+ * overwrite-or-park-the-whole-file shape that helper is built for.
  */
 
 import * as fs from "node:fs/promises";
@@ -142,35 +149,39 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
     changed.push(SETTINGS_PATH);
   }
 
-  // .git/hooks/pre-commit
-  const hookAbs = path.join(boxRoot, PRE_COMMIT_PATH);
-  let existing: string | null = null;
+  // .git/hooks/pre-commit — only when the box is actually a git repo.
+  // Writing into a non-repo would create a `.git/hooks/` from scratch
+  // that never fires (no git, no commits) and would silently shadow a
+  // future `git init`.
+  let isRepo = false;
   try {
-    existing = await fs.readFile(hookAbs, "utf-8");
+    isRepo = (await fs.stat(path.join(boxRoot, ".git"))).isDirectory();
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code !== "ENOENT") throw e;
   }
 
-  const isManaged = existing !== null && existing.includes(PRE_COMMIT_MARKER);
-  const foreignHook = existing !== null && !isManaged;
-  if (foreignHook) {
-    console.warn(
-      `[install-validation-hooks] ${PRE_COMMIT_PATH} exists and isn't ours — leaving it alone. Add the contents of cb's hook manually if you want card validation.`
-    );
-  } else if (existing !== hookBody) {
+  if (isRepo) {
+    const hookAbs = path.join(boxRoot, PRE_COMMIT_PATH);
+    let existing: string | null = null;
     try {
+      existing = await fs.readFile(hookAbs, "utf-8");
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "ENOENT") throw e;
+    }
+
+    const isManaged = existing !== null && existing.includes(PRE_COMMIT_MARKER);
+    const foreignHook = existing !== null && !isManaged;
+    if (foreignHook) {
+      console.warn(
+        `[install-validation-hooks] ${PRE_COMMIT_PATH} exists and isn't ours — leaving it alone. Add the contents of cb's hook manually if you want card validation.`
+      );
+    } else if (existing !== hookBody) {
       await fs.mkdir(path.dirname(hookAbs), { recursive: true });
       await fs.writeFile(hookAbs, hookBody);
       await fs.chmod(hookAbs, 0o755);
       changed.push(PRE_COMMIT_PATH);
-    } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") {
-        // No .git directory — not a repo, skip silently.
-      } else {
-        throw e;
-      }
     }
   }
 
