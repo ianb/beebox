@@ -1721,3 +1721,220 @@ tests:
       the call site, mirroring the npx pattern. If this starts failing because
       a second Python tool appears and the pins want to centralize, update the
       convention doc and this audit together — don't weaken the test.
+
+  # === Card Format and Schema Discovery ===
+  #
+  # After phase 2 (May 2026) cards moved from XML body to YAML frontmatter +
+  # markdown body for most types; filename became the canonical type
+  # discriminator (the `type:` field was stripped in migration #19). These
+  # audits pin what the agent should know about that current state, plus
+  # the cross-cutting attach-scope and schema-discovery facts.
+  #
+  # Status (2026-05-24, second pass): 8/10 pass after fixing the doc-gen
+  # bug (now regenerates phase-2 schema docs) + strengthening doc/memo
+  # schema `instructions` with worked attach-scope examples + cleaning up
+  # the flat-format `trash.capture-session` artifact in test1.
+  #
+  # Failures in the first pass that are now ✓:
+  # - attach-sibling-directory — passed once the memo schema instructions
+  #   explicitly named the `.attach/` scope and showed a layout example
+  #   (and once the stale flat-format trash data was removed from test1
+  #   so the agent's grep wouldn't surface it).
+  # - doc-with-image-attach-scope — passed once the prompt was rephrased
+  #   to demand actual file creation and `cards_contain` checks the
+  #   resulting `.doc.card` content for `attach/photo.jpg`.
+  # Added two new audits to widen coverage:
+  # - doc-body-inline-not-separate-file ✓ — pins body-in-card vs body-in-.md
+  # - doc-with-image-where-body ✓ — knowledge variant of the behavioral test
+  #
+  # Status (2026-05-24): 5/8 pass after initial-run calibration.
+  # - memo-yaml-format ✓ — agent gave perfect YAML example by greping a
+  #   real memo (the generated card-memo.md is stale; agent did better).
+  # - card-type-from-filename ✓ — correct answer; initial `response_not_contains`
+  #   was too strict (caught the explanation's own mention of `type:`), now removed.
+  # - find-schema-fields ✓ — correct procedure description; initial `should_read`
+  #   was wrong for a "how would you find out" question, now removed.
+  # - schema-instructions-load-when ✓
+  # - classify-thought-as-memo ✓
+  # - classify-person-fact ✓
+  # - attach-sibling-directory ✗ REAL GAP — agent thinks voice-memo audio is
+  #   a flat sibling with matching basename, not in `<basename>.attach/`.
+  #   Defensible: test1 actually has both layouts on disk (legacy flat + new
+  #   nested), and no agent-facing doc states the canonical convention.
+  #   Action: document the attach-scope convention for voice memos somewhere
+  #   the agent will load (memo schema instructions or docs/box-layout.md),
+  #   then re-run.
+  # - doc-with-image-attach-scope ✗ MIXED — `cards_contain` expected an
+  #   actual file to exist; agent only described the layout. Substantively
+  #   the agent identified the `.attach/` scope correctly but put the doc
+  #   body in a separate `Trip_Report.attach/Trip_Report.md` rather than in
+  #   the `.doc.card`'s own markdown body — that's wrong. Action: tighten
+  #   the prompt to demand actual file creation OR drop `cards_contain` and
+  #   add response checks for "body in the .doc.card itself, not a separate
+  #   .md file."
+  #
+  # Cross-cutting finding: generate-docs.ts iterates `schemas` (6 XML legacy
+  # schemas) but never `cardSchemas` (24 phase-2 YAML schemas), so
+  # `docs/generated/card-<type>.md` is stale for every phase-2 type. Bug,
+  # not test issue. Filed implicitly by these audits.
+
+  - id: memo-yaml-format
+    prompt: "Show me a tiny example of a memo card on disk — what does the file actually contain?"
+    expected_level: knows_about
+    watch_for: >
+      Shows YAML frontmatter (`---` … `---`) with fields like status / created /
+      source, then a plain markdown body. Does NOT use XML `<memo>` elements
+      or a `type:` field in frontmatter.
+    correct_contains: ["---"]
+    response_not_contains: ["<memo>", "<memo ", "type: memo"]
+    tags: [cards, format]
+    notes: >
+      `should_read` deliberately omitted — `docs/generated/card-memo.md` is
+      stale (still shows XML) because generate-docs.ts iterates `schemas`
+      but not `cardSchemas`, so phase-2 per-schema docs never regenerated.
+      An agent that greps for a real `*.memo.card` on disk is doing better
+      than following the doc.
+
+  - id: card-type-from-filename
+    prompt: "How does the system know what type a card is? Where does the type discriminator come from?"
+    expected_level: knows_directly
+    watch_for: >
+      Names the filename — specifically the `.type.card` extension — as the
+      canonical discriminator. A correct answer can legitimately mention
+      `type:` while explaining what NOT to look for, so this audit relies
+      on `watch_for` review rather than a substring blocklist.
+    correct_contains: ["filename"]
+    tags: [cards, format]
+
+  - id: attach-sibling-directory
+    prompt: "If a memo card has a voice recording attached, where on disk does the audio file live, and how does the card reference it?"
+    expected_level: knows_directly
+    watch_for: >
+      Names a sibling `<basename>.attach/` directory (e.g.
+      `Foo.memo.card` + `Foo.attach/recording.m4a`) and a scoped ref
+      starting with `attach/` (e.g. `attach/recording.m4a`), NOT an
+      absolute or relative-with-../ path.
+    correct_contains_any: [".attach/", "attach/"]
+    tags: [cards, attachments]
+    notes: >
+      Foundational; should not require a doc read. Failure mode: putting
+      the audio file in a top-level audio/ dir, or referencing it with a
+      relative path that doesn't go through the attach scope.
+
+  - id: doc-with-image-attach-scope
+    prompt: >
+      Actually create (using Write or cb create — don't just describe) a
+      doc card at `store/notes/Trip_Report.doc.card` titled "Trip Report"
+      whose markdown body embeds one image referenced as `attach/photo.jpg`.
+      Don't worry about a real image binary; create the .doc.card itself
+      and any directories it needs.
+    expected_level: knows_about
+    watch_for: >
+      Actually creates `store/notes/Trip_Report.doc.card` whose body
+      contains a markdown image reference like `![...](attach/photo.jpg)`.
+      The `.doc.card` body (not a separate `.md` inside `.attach/`) carries
+      the markdown; the image path uses the scoped `attach/` form. Bonus:
+      mkdir's `Trip_Report.attach/` even without a real binary.
+    cards_contain: ["attach/photo.jpg"]
+    max_turns: 15
+    tags: [cards, attachments, behavioral, doc]
+    notes: >
+      True behavioral test — `cards_contain` is the only assertion since
+      the produced file IS the artifact; response-prose checks would
+      penalize agents that briefly say "done." Pairs with the
+      knowledge-only `doc-with-image-where-body` audit which checks the
+      agent's response prose instead.
+
+  - id: find-schema-fields
+    prompt: "I want to know exactly what fields a `.bookmark.card` allows. How would you find out?"
+    expected_level: knows_about
+    watch_for: >
+      Names `docs/generated/card-bookmark.md` or `src/schemas/bookmark.ts`
+      (or a box-local `config/schemas/bookmark.ts`) as where to look.
+      Does NOT guess fields from memory or pattern-match off another
+      schema. `should_read` deliberately omitted — the prompt asks
+      "how would you find out", which the agent can correctly answer
+      by describing the procedure without actually opening the file.
+    correct_contains_any: ["docs/generated/", "src/schemas/", "config/schemas/"]
+    tags: [schemas, discovery]
+    notes: >
+      Tests whether the agent reaches for the per-schema generated doc
+      (the contract) or the source schema (the fallback), rather than
+      confabulating fields.
+
+  - id: schema-instructions-load-when
+    prompt: "A schema can include `instructions` prose. When does an agent actually see those instructions during normal work?"
+    expected_level: knows_about
+    watch_for: >
+      Explains that schema instructions are surfaced via the generated
+      `.claude/rules/card-<type>.md` and load when the agent reads or
+      edits a matching card file (path-conditional rule loading), not
+      universally at session start.
+    correct_contains_any: [".claude/rules", "card-"]
+    tags: [schemas, knowledge]
+    notes: >
+      If the agent thinks all schema instructions load at session start,
+      it'll over-trust unrelated card knowledge and won't open the right
+      rule when the time comes.
+
+  - id: classify-thought-as-memo
+    prompt: >
+      The user just dictated: "Quick thought — we should consider lowering the
+      cache TTL on the auth tokens, the long expiry is hurting on rotation."
+      Which card type would you reach for, and why not the others?
+    expected_level: knows_directly
+    watch_for: >
+      Picks `memo` (it's a brief thought / note). Justifies away `doc`
+      (no structured content), `feedback` (not about the system itself),
+      `record` (not about a person/thing/event), `todo` (no concrete
+      action).
+    correct_contains: ["memo"]
+    tags: [cards, classification, behavioral]
+
+  - id: doc-body-inline-not-separate-file
+    prompt: >
+      Where does the body content of a `.doc.card` live on disk? Show me
+      the layout of a simple doc card titled "Notes" with the body
+      "Some thoughts here."
+    expected_level: knows_about
+    watch_for: >
+      Body lives INLINE in the .doc.card file itself, after the closing
+      `---` of the frontmatter. NOT in a separate `.md` file beside the
+      card; NOT inside a `.attach/` directory. Single file: just
+      `Notes.doc.card`.
+    should_read: ["docs/generated/card-doc.md"]
+    response_not_contains: ["Notes.attach/Notes.md", ".attach/Notes.md"]
+    correct_contains: ["title: Notes"]
+    tags: [cards, doc, format, behavioral]
+    notes: >
+      Pairs with `doc-with-image-attach-scope`. Original failure mode:
+      agent put body in `Trip_Report.attach/Trip_Report.md` (pattern-matching
+      off the legacy gdoc shape). The doc schema's `instructions` was
+      strengthened with a worked layout example.
+
+  - id: doc-with-image-where-body
+    prompt: >
+      I want a doc card at `store/notes/Trip.doc.card` titled "Trip" with
+      a body that embeds an image. Show me every file you'd create and
+      its content. The image can be a placeholder.
+    expected_level: knows_about
+    watch_for: >
+      Two files: `store/notes/Trip.doc.card` (containing both the
+      frontmatter AND the markdown body with `![...](attach/<image>)`) and
+      `store/notes/Trip.attach/<image>` (the image file itself). The body
+      is INSIDE the .doc.card, NOT in a separate `Trip.attach/Trip.md`.
+    response_not_contains: ["Trip.attach/Trip.md", "attach/Trip.md"]
+    correct_contains: ["Trip.attach/", "attach/"]
+    tags: [cards, doc, attachments, format, behavioral]
+
+  - id: classify-person-fact
+    prompt: >
+      The user says: "Sarah from accounting prefers email over Slack — keep
+      that in mind when contacting her." Which card would you create or update?
+    expected_level: knows_directly
+    watch_for: >
+      Updates (or creates) a person card for Sarah — info that lives on
+      someone, not in an event log. NOT a memo, NOT a record, NOT a
+      feedback card.
+    correct_contains_any: [".person.card", "person card", "Person card"]
+    tags: [cards, classification, behavioral]
