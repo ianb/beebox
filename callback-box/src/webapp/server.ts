@@ -29,7 +29,8 @@ import { registerCaptureRoutes } from "./routes/capture.js";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
-import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
+import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest, verifyDiagBearerKey } from "./auth.js";
+import { readVersionInfo } from "./trpc/routers/health.js";
 import { loadBoxConfig } from "./box-config.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
 import { requireBoxRoot } from "../cli/lib/paths.js";
@@ -133,6 +134,22 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   // Root-level Google Services OAuth callback (single redirect URI for all boxes)
   await server.register(async (instance) => {
     await registerGoogleServicesCallback(instance, { boxes });
+  });
+
+  // Server-wide healthz — for uptime monitors, deploy verification, etc.
+  // Requires `Authorization: Bearer $CB_DIAG_API_KEY` (same key used for
+  // /api/debug-log and /api/trpc/health.check bypass). Returns minimal
+  // server-level state — boxes have their own richer health endpoint at
+  // /<box>/api/trpc/health.check that this does NOT roll up.
+  server.get("/healthz", async (request, reply) => {
+    if (!process.env.CB_DIAG_API_KEY) {
+      return reply.status(503).send({ status: "unconfigured", error: "CB_DIAG_API_KEY not set" });
+    }
+    if (!verifyDiagBearerKey(request)) {
+      return reply.status(401).send({ status: "unauthorized" });
+    }
+    const version = await readVersionInfo();
+    return { status: "ok", boxCount: boxes.length, version };
   });
 
   // Build info — written by deploy.sh, shows what's deployed
