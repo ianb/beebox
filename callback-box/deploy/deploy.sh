@@ -142,6 +142,36 @@ HISTEOF
 if [[ "$SKIP_RESTART" != true ]]; then
   echo "Restarting services..."
   ssh "root@$SERVER_IP" 'systemctl restart callback-serve callback-scheduler && echo "Services restarted"'
+
+  # Verify /healthz responds with 200 — proves the process came back up
+  # and is actually serving requests, not just that systemctl returned.
+  # Runs on the server so it uses localhost + the local CB_DIAG_API_KEY.
+  echo "Verifying /healthz..."
+  ssh "root@$SERVER_IP" bash -s <<'HEALTHCHECK'
+    set -e
+    KEY=$(grep -E '^CB_DIAG_API_KEY=' /home/callback/.env 2>/dev/null | cut -d= -f2- || true)
+    if [ -z "$KEY" ]; then
+      echo "  Skipping: CB_DIAG_API_KEY not set in /home/callback/.env"
+      exit 0
+    fi
+    # Poll for up to 30s. Service typically responds in <2s.
+    for i in $(seq 1 30); do
+      body=$(curl -s -o /tmp/healthz.out -w '%{http_code}' \
+        -H "Authorization: Bearer $KEY" \
+        http://localhost:3210/healthz 2>/dev/null || echo "000")
+      if [ "$body" = "200" ]; then
+        echo "  Healthz OK: $(cat /tmp/healthz.out)"
+        rm -f /tmp/healthz.out
+        exit 0
+      fi
+      sleep 1
+    done
+    echo "  Healthz FAILED after 30s (last status: $body)"
+    [ -f /tmp/healthz.out ] && cat /tmp/healthz.out
+    rm -f /tmp/healthz.out
+    exit 1
+HEALTHCHECK
 fi
 
 echo "Deploy complete."
+echo "Verify externally: curl -H \"Authorization: Bearer \$CB_DIAG_API_KEY\" https://box.example.com/healthz"
