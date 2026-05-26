@@ -65,6 +65,15 @@ case "$cmd" in
             killed_any=1
           fi
         done < <(jq -r '.vitePid // empty, .fastifyPid // empty' "$f")
+        # Per-worktree dashboard writes its PID into <socketDir>/dashboard.pid
+        sock_dir=$(jq -r '.socketDir // empty' "$f")
+        if [ -n "$sock_dir" ] && [ -f "$sock_dir/dashboard.pid" ]; then
+          dp=$(cat "$sock_dir/dashboard.pid" 2>/dev/null || true)
+          if [ -n "$dp" ] && kill -TERM "$dp" 2>/dev/null; then
+            echo "sent SIGTERM to dashboard pid $dp"
+            killed_any=1
+          fi
+        fi
       done
     fi
     if [ "$killed_any" = 1 ]; then
@@ -82,6 +91,11 @@ case "$cmd" in
           [ -n "$p" ] || continue
           kill -KILL "$p" 2>/dev/null || true
         done < <(jq -r '.vitePid // empty, .fastifyPid // empty' "$f")
+        sock_dir=$(jq -r '.socketDir // empty' "$f")
+        if [ -n "$sock_dir" ] && [ -f "$sock_dir/dashboard.pid" ]; then
+          dp=$(cat "$sock_dir/dashboard.pid" 2>/dev/null || true)
+          [ -n "$dp" ] && kill -KILL "$dp" 2>/dev/null || true
+        fi
       done
     fi
     rm -f "$ROUTER_PID_FILE"

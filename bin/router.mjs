@@ -42,7 +42,16 @@ const BOXES_ROOT = path.join(os.homedir(), "src", "box-worktrees");
 const STATE_DIR = path.join(os.homedir(), ".cache", "callback-mono");
 const LOG_DIR = path.join(STATE_DIR, "logs");
 const PID_DIR = path.join(STATE_DIR, "pids");
+const BROWSE_DIR = path.join(STATE_DIR, "browse");
 const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
+
+// Path to upstream agent-browser shim (resolves to the right native binary).
+const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
+
+function browseDirsFor(name) {
+  const base = path.join(BROWSE_DIR, name);
+  return { base, socketDir: path.join(base, "socket"), profileDir: path.join(base, "profile") };
+}
 
 // Idle window before a worktree's children are shut down (ms).
 const IDLE_TIMEOUT_MS = Number(process.env.ROUTER_IDLE_MS) || 5 * 60 * 1000;
@@ -157,6 +166,17 @@ async function sweepStaleChildren() {
       }
       // Don't wait long; we proceed even if the kill takes effect later.
     }
+    // Dashboard daemonizes itself and writes its own pidfile in socketDir.
+    if (typeof data.socketDir === "string") {
+      try {
+        const dashPidStr = await fs.readFile(path.join(data.socketDir, "dashboard.pid"), "utf8");
+        const dashPid = Number.parseInt(dashPidStr.trim(), 10);
+        if (Number.isFinite(dashPid) && pidAlive(dashPid)) {
+          log(`sweep: killing leftover dashboard pid ${dashPid} from ${file}`);
+          try { process.kill(dashPid, "SIGTERM"); } catch {}
+        }
+      } catch { /* no dashboard pidfile, fine */ }
+    }
     await fs.unlink(fullPath).catch(() => {});
   }
 }
@@ -208,7 +228,12 @@ async function startWorktree(name) {
   const logStream = createWriteStream(logFile, { flags: "a" });
   logStream.write(`\n=== router start ${new Date().toISOString()} ===\n`);
 
-  const [frontendPort, backendPort] = await Promise.all([getPort(), getPort()]);
+  const [frontendPort, backendPort, dashboardPort] = await Promise.all([getPort(), getPort(), getPort()]);
+  const { socketDir, profileDir } = browseDirsFor(name);
+  await Promise.all([
+    fs.mkdir(socketDir, { recursive: true }),
+    fs.mkdir(profileDir, { recursive: true }),
+  ]);
 
   const baseUrl = `/${name}/`;
   const childEnv = {
@@ -218,8 +243,14 @@ async function startWorktree(name) {
     VITE_BASE: baseUrl,
     PORT: String(backendPort), // Fastify reads PORT
   };
+  const browseEnv = {
+    ...process.env,
+    AGENT_BROWSER_SOCKET_DIR: socketDir,
+    AGENT_BROWSER_PROFILE: profileDir,
+    AGENT_BROWSER_IDLE_TIMEOUT_MS: String(IDLE_TIMEOUT_MS),
+  };
 
-  log(`[${name}] frontend=${frontendPort} backend=${backendPort} base=${baseUrl}`);
+  log(`[${name}] frontend=${frontendPort} backend=${backendPort} dashboard=${dashboardPort} base=${baseUrl}`);
 
   // Backend: node + tsx, single process.
   const fastify = execa(
@@ -258,6 +289,25 @@ async function startWorktree(name) {
   vite.stdout?.pipe(logStream, { end: false });
   vite.stderr?.pipe(logStream, { end: false });
 
+  // Start the per-worktree agent-browser dashboard. It daemonizes itself
+  // (returns once started) and writes its PID into <socketDir>/dashboard.pid.
+  // Non-fatal: if it fails, the worktree still serves; dashboardUrl is null.
+  // The dashboard daemonizes itself — its forked child inherits our stdio fds
+  // and keeps them open after the parent exits, so we must use stdio "ignore"
+  // (otherwise execa hangs forever waiting on those fds).
+  let dashboardStarted = false;
+  try {
+    await execa("node", [AGENT_BROWSER_BIN, "dashboard", "start", "--port", String(dashboardPort)], {
+      env: browseEnv,
+      stdio: "ignore",
+      timeout: 15000,
+    });
+    dashboardStarted = true;
+    log(`[${name}] dashboard ready on :${dashboardPort}`);
+  } catch (err) {
+    log(`[${name}] dashboard failed to start: ${err.message}`);
+  }
+
   // Record PIDs early so a crash mid-startup still leaves a sweep target.
   await writePidFile(name, {
     name,
@@ -265,6 +315,9 @@ async function startWorktree(name) {
     fastifyPid: fastify.pid,
     frontendPort,
     backendPort,
+    dashboardPort: dashboardStarted ? dashboardPort : null,
+    socketDir,
+    profileDir,
     routerPid: process.pid,
     startedAt: Date.now(),
   });
@@ -290,6 +343,11 @@ async function startWorktree(name) {
     fastify,
     frontendPort,
     backendPort,
+    dashboardPort: dashboardStarted ? dashboardPort : null,
+    dashboardUrl: dashboardStarted ? `http://localhost:${dashboardPort}/` : null,
+    socketDir,
+    profileDir,
+    browseEnv,
     startedAt: Date.now(),
     lastActivity: Date.now(),
     idleTimer: null,
@@ -321,6 +379,7 @@ function onChildExit(name) {
   // Kill the sibling if it's still alive.
   killGroup(entry.vite?.pid);
   killGroup(entry.fastify?.pid);
+  stopDashboard(entry).catch(() => {});
   removePidFile(name).catch(() => {});
   worktrees.delete(name);
 }
@@ -332,6 +391,7 @@ async function stopWorktree(name) {
   entry.state = "stopping";
   killGroup(entry.vite?.pid);
   killGroup(entry.fastify?.pid);
+  await stopDashboard(entry).catch(() => {});
   // Escalation: if still alive after KILL_GRACE_MS, SIGKILL.
   setTimeout(() => {
     killGroup(entry.vite?.pid, "SIGKILL");
@@ -339,6 +399,19 @@ async function stopWorktree(name) {
   }, KILL_GRACE_MS).unref();
   await removePidFile(name);
   worktrees.delete(name);
+}
+
+async function stopDashboard(entry) {
+  if (!entry.dashboardPort || !entry.browseEnv) return;
+  try {
+    await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
+      env: entry.browseEnv,
+      stdio: "ignore",
+      timeout: 5000,
+    });
+  } catch (err) {
+    log(`[${entry.name}] dashboard stop failed: ${err.message}`);
+  }
 }
 
 function killGroup(pid, sig = "SIGTERM") {
@@ -439,6 +512,9 @@ async function renderIndex() {
     const status = w.running
       ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
       : `<span class="badge cold">cold (will lazy-start on click)</span>`;
+    const dashLink = w.running && w.entry.dashboardUrl
+      ? `<a href="${escapeHtml(w.entry.dashboardUrl)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)}">dashboard ↗</a>`
+      : "";
     const stopForm = w.running
       ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
            <button type="submit" title="Tell the router to stop ${escapeHtml(w.name)} now">stop</button>
@@ -448,6 +524,7 @@ async function renderIndex() {
       <li>
         <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
         ${status}
+        ${dashLink}
         ${stopForm}
       </li>`;
   }).join("");
@@ -468,6 +545,8 @@ async function renderIndex() {
   .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
   .badge.running { background: #d8f0d8; color: #2a6b2a; }
   .badge.cold    { background: #ececec; color: #666; }
+  .dash { font-size: 0.8em; color: #2255aa; text-decoration: none; padding: 0.15em 0.5em; border: 1px solid #d0deef; border-radius: 4px; background: #f4f8ff; }
+  .dash:hover { background: #e6f0ff; text-decoration: underline; }
   .stopForm { margin-left: auto; }
   .stopForm button { font-size: 0.75em; padding: 0.15em 0.6em; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #666; cursor: pointer; }
   .stopForm button:hover { background: #fee; border-color: #faa; color: #a22; }
@@ -514,8 +593,12 @@ const server = http.createServer(async (req, res) => {
         state: entry.state,
         frontendPort: entry.frontendPort,
         backendPort: entry.backendPort,
+        dashboardPort: entry.dashboardPort,
+        dashboardUrl: entry.dashboardUrl,
         vitePid: entry.vite?.pid,
         fastifyPid: entry.fastify?.pid,
+        socketDir: entry.socketDir,
+        profileDir: entry.profileDir,
         startedAt: entry.startedAt,
         lastActivity: entry.lastActivity,
         idleMs: entry.lastActivity ? Date.now() - entry.lastActivity : null,

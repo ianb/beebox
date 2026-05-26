@@ -48,3 +48,11 @@ if [ -d "$BOX_DEST" ]; then
 else
   echo "[worktree-remove] no box at $BOX_DEST (already gone)"
 fi
+
+# Per-worktree agent-browser state (Chrome profile, daemon socket dir).
+# Can grow to hundreds of MB once the browser has been used.
+BROWSE_DIR="$HOME/.cache/callback-mono/browse/$NAME"
+if [ -d "$BROWSE_DIR" ]; then
+  echo "[worktree-remove] removing browse state $BROWSE_DIR"
+  rm -rf "$BROWSE_DIR"
+fi
