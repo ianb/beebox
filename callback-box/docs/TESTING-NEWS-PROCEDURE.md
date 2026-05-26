@@ -87,12 +87,14 @@ ls box/pool/news/  # Items not used (available for next brief)
 
 ## Step 5: View in Webapp
 
-Start the server:
+Either run the dev router from the monorepo root (preferred for normal dev):
 ```bash
-cb serve
+pnpm dev      # router, then open http://localhost:3210/main/news/
 ```
-
-Open http://localhost:3210/news to see the brief with the reading UI.
+…or start a single-box server directly:
+```bash
+cb serve      # then open http://localhost:3210/news/
+```
 
 ## Running All Phases
 
@@ -123,7 +125,7 @@ cb process-news --batch-size 10
 
 ## Step 6: Read and Provide Feedback
 
-Open the brief in the webapp (http://localhost:3210/news) and read it. As you read:
+Open the brief in the webapp (`http://localhost:3210/main/news/` under the dev router, or `http://localhost:3210/news/` under `cb serve`) and read it. As you read:
 
 1. **Thumbs up/down** on individual sections and expandos - click the thumb icons next to headings
 2. When done, click **"Done Reading"** at the bottom

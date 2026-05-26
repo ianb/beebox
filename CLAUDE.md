@@ -26,6 +26,8 @@ Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json`; route
 
 **Agents reporting URLs:** when an agent in a worktree wants to show you (or itself) a working URL, it's `http://localhost:3210/<its-worktree-name>/<box>/<path>`. First hit takes ~4s (cold start); subsequent are ~10ms.
 
+**HMR is direct, localhost-only.** Each Vite tells the browser to open its HMR WebSocket directly to Vite's internal port (not through the router). This works on localhost. If you ever expose the dev server over LAN/tunnel (showing someone else your dev environment), the HMR socket will fail — Vite's `server.hmr.clientHost` would also need configuring. Not a concern for normal solo dev.
+
 **Auto-deploy is `main`-only.** The root husky `post-commit` hook triggers `callback-box/deploy/deploy.sh` only when HEAD is on `main`. Worktrees on other branches commit safely without deploying; ship by merging to `main`.
 
 **Husky lives at the monorepo root.** A single `.husky/` directory at the monorepo top level holds all git hooks (pre-commit dispatches per-subproject; post-commit handles deploy + image-backup cleanup; post-checkout/post-merge/pre-push wrap git-lfs). Subprojects no longer have their own husky setup — they each `prepare: ":"` to opt out. Running `pnpm install` at the monorepo root is what wires up `core.hooksPath`.

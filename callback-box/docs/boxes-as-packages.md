@@ -385,7 +385,7 @@ What developers need locally:
 - One command brings up a usable environment.
 - Edits to `callback-box` source take effect on the next request — no rebuild, no reinstall, no `pnpm link` ceremony.
 - Edits to a box's views/schemas/tricks/connectors do the same.
-- Multiple boxes available concurrently (today's `Procfile.dev` runs `hearthside`, `test1`, `hearth-test`).
+- Multiple boxes available concurrently (the current dev router loads `hearthside`, `test1`, `hearth-test`, `studio` into the main worktree's Fastify).
 - No nginx, no systemd, no per-OS-user, no real OAuth.
 - Vite HMR for the frontend.
 
@@ -407,19 +407,17 @@ The boxes are physically still at `~/src/boxes/<box>/` (outside the callback mon
 
 ### 5.2 What runs
 
-`overmind start` brings up something like:
+The existing dev router (`bin/router.mjs`, Decision 24) already does the path-prefix routing piece. Under this hypothetical boxes-as-packages arrangement, the router's "spawn Vite + Fastify per worktree" logic would extend to "spawn a server per box":
 
 ```
-# Procfile.dev
-test1:           pnpm --filter test1 dev          # → :4011
-hearth-test:   pnpm --filter hearth-test dev  # → :4012
-hearthside:    pnpm --filter hearthside dev   # → :4013
+# pseudo-Procfile of what the router would orchestrate
+test1:           pnpm --filter test1 dev          # → some internal port
+hearth-test:   pnpm --filter hearth-test dev  # → some internal port
+hearthside:    pnpm --filter hearthside dev   # → some internal port
 id:              pnpm --filter callback-id dev    # → :4001 (dev stub)
-proxy:           pnpm --filter cb-dev-proxy dev   # → :3210, routes to the others
-vite:            cd callback-box/src/frontend && npx vite dev
 ```
 
-The proxy is a 50-line http-proxy (or just a Vite middleware) so that `localhost:3210/<box>/...` keeps working — same URL shape as production. Skip the proxy entirely if you don't care and hit `localhost:4011/test1/...` directly; that's fine for one-box debugging. Adding a new local box means one new Procfile line.
+The router already presents `localhost:3210/<segment>/<box>/...` — same URL shape as production. Today's router uses the first segment for *worktree* selection; the boxes-as-packages variant would either fold box selection into the same segment or add a second level. Either way the URL shape and lazy-start behaviour are inherited from the existing router.
 
 ### 5.3 Auth in dev
 
@@ -445,7 +443,7 @@ What you gain:
 
 ### 5.6 Escape hatch: legacy single-process mode
 
-`cb serve <box1> <box2> …` keeps working for at least one release window after the cutover, loading multiple boxes into one process the way today's `Procfile.dev` does. Useful for: cross-box demos, sandbox experiments where isolation isn't the point, low-resource machines. Won't catch isolation bugs, so it's an opt-in, not the default. Drop it if nobody uses it after a few months.
+`cb serve <box1> <box2> …` keeps working for at least one release window after the cutover, loading multiple boxes into one process the way the current dev router's "main" Fastify does. Useful for: cross-box demos, sandbox experiments where isolation isn't the point, low-resource machines. Won't catch isolation bugs, so it's an opt-in, not the default. Drop it if nobody uses it after a few months.
 
 ---
 

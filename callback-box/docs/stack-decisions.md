@@ -943,6 +943,7 @@ Partial. `src/dev/knowledge-audit.ts` and `src/dev/knowledge-audits.yaml` exist 
 ## Decision 20: Dev Runner — Overmind + node --watch
 
 **Decided:** 2026-03-02
+**Superseded:** 2026-05-26 by Decision 24 (custom dev router) when the monorepo migration made per-worktree dev servers a requirement.
 **Rigor:** Deep (researched zombie process issues, signal propagation, alternatives)
 **Choice:** Overmind (Procfile-based process manager) + `node --watch --import tsx`
 **Current state:** `cb serve --dev` spawns `tsx --watch`, separate Vite dev server
@@ -1097,6 +1098,76 @@ Both are modern fetch wrappers with retry support. ky is ~3KB gzipped (ofetch is
 | **xml2js** | Cardworks handles all XML card parsing. xml2js should not be used directly. |
 | **chokidar** | Decision 8 chose @parcel/watcher. Remove once file watching is migrated. |
 | **highlight.js** (direct usage) | Decision 22 moves highlighting into the remark pipeline via rehype-highlight. The package stays as a transitive dependency of rehype-highlight, but direct imports should be replaced. |
+
+---
+
+## Decision 24: Dev Runner — Custom Path-Routing Router
+
+**Decided:** 2026-05-26
+**Supersedes:** Decision 20 (Overmind + Procfile.dev)
+**Rigor:** Deep (researched lazy-start patterns, surveyed alternatives, weighed scope of build)
+**Choice:** A single Node daemon (`bin/router.mjs`) that listens on one port and lazy-spawns a Vite + Fastify pair per worktree on first HTTP request.
+
+### Why we replaced Overmind
+
+The monorepo migration introduced parallel git worktrees, each with its own
+copy of the source. Agents work in their own worktrees in parallel; each
+agent occasionally needs a dev server to test its work. That means
+**multiple dev-server pairs running simultaneously**, each on different
+ports, with the agent expected to report a working URL back to a human.
+
+Overmind doesn't model "one dev-server pair per worktree" — it's one
+Procfile per checkout. Running N overminds eats memory whether the
+worktree is actively in use or not. We also wanted a single well-known
+URL the agent can refer to (`localhost:3210/<worktree>/<box>/...`) rather
+than asking the user to remember which port maps to which worktree.
+
+### The router
+
+`bin/router.mjs` listens on `:3210`. It parses the first URL path segment
+as a worktree name, and:
+
+1. If that worktree's Vite + Fastify pair isn't running, it spawns them as
+   direct children (no tmux, no Procfile wrapper — the process tree is
+   `router → {vite, fastify}` per worktree).
+2. Proxies the HTTP request to Vite (configured with `base: '/<name>/'` so
+   the prefix is handled natively by Vite's router and Fastify still sees
+   the unprefixed routes after Vite's proxy rules `rewrite`).
+3. HMR bypasses the router entirely — Vite's `server.hmr.clientPort` is
+   set to its internal port so the browser opens the WebSocket directly.
+4. Tracks a per-worktree idle timer; 5 minutes of no traffic and the
+   pair is shut down (SIGTERM, escalating to SIGKILL after 2s).
+
+`bin/worktrees` is the CLI wrapper: `serve` (run the router), `status`
+(query `/__router/status`), `down <name>` (stop one worktree), `panic`
+(nuclear cleanup).
+
+### Orphan resistance
+
+Per-worktree PID files at `~/.cache/callback-mono/pids/<name>.json`. On
+startup the router sweeps that directory: any PID still alive from a
+previous router (crashed/SIGKILLed without cleanup) gets SIGTERMed and
+its file removed. Clean shutdown kills all children with the same
+SIGTERM → grace → SIGKILL pattern. The CLI's `panic` is a manual escape
+hatch when something's clearly stuck.
+
+### Why not just use what exists
+
+Researched (mid-2026): no off-the-shelf tool fits well on macOS for the
+specific shape "one shared dispatcher on a known port + per-worktree
+backends + lazy start + idle shutdown". Closest options were
+`systemd-socket-proxyd` (Linux only) and Sablier (container-only).
+Other process supervisors (`mprocs`, `process-compose`, `pm2`,
+`hivemind`) don't support request-triggered start. The custom router is
+~400 lines of Node and uses boring building blocks: `http-proxy`,
+`get-port`, `execa`.
+
+### Implementation notes
+
+**Done.** Lives at `bin/router.mjs` and `bin/worktrees`. See the root
+`CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
+runner (Decision 20) is gone — `Procfile.dev` deleted, `cb serve --dev`
+still works for the rare "just the backend" case.
 
 ---
 
