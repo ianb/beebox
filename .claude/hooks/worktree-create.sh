@@ -63,7 +63,12 @@ env_file="$worktree_path/callback-box/.env"
 } > "$env_file"
 echo "[worktree-create] wrote $env_file"
 
-# 4. pnpm install in callback-box.
+# 4. Build cardworks first, then pnpm install in callback-box.
+# (cardworks is a file: dep with node-linker=hoisted, so pnpm copies dist/
+# into callback-box/node_modules/cardworks/ at install time — it must exist.)
+echo "[worktree-create] building cardworks..."
+(cd "$worktree_path/cardworks" && pnpm install && pnpm build)
+
 echo "[worktree-create] running pnpm install in callback-box..."
 (cd "$worktree_path/callback-box" && pnpm install)
 
