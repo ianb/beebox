@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
+import { withBase } from "../api";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { TextareaField } from "../components/ui/fields";
@@ -135,7 +136,7 @@ export function SharePage() {
         },
       };
 
-      const response = await fetch(`/${boxSlug}/api/commands/execute`, {
+      const response = await fetch(withBase(`/${boxSlug}/api/commands/execute`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ command: "create", args }),

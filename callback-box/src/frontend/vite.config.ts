@@ -43,8 +43,15 @@ export default defineConfig({
     host: "127.0.0.1",
     hmr: hmrConfig,
     proxy: {
-      // Root-level API (box list).
+      // Root-level API (box list, admin, etc.). Must be listed before the
+      // per-box rule so /<base>/api/* doesn't get caught by /<base>/<box>/api/*.
       [`^${BASE_PREFIX}/api`]: {
+        target: backendTarget,
+        changeOrigin: true,
+        rewrite: stripBase,
+      },
+      // Root-level auth (e.g. /auth/me, /auth/login, /auth/logout).
+      [`^${BASE_PREFIX}/auth`]: {
         target: backendTarget,
         changeOrigin: true,
         rewrite: stripBase,

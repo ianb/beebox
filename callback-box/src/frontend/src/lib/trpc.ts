@@ -2,7 +2,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import { createTRPCClient, httpBatchLink, type TRPCLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
-import { getApiBase } from "../api.js";
+import { getApiBase, withBase } from "../api.js";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -29,7 +29,7 @@ export function buildTrpcLink(): TRPCLink<AppRouter> {
         const returnTo = encodeURIComponent(
           window.location.pathname + window.location.search,
         );
-        window.location.href = `/auth/login?returnTo=${returnTo}`;
+        window.location.href = withBase(`/auth/login?returnTo=${returnTo}`);
         return new Promise(() => {});
       }
       return response;

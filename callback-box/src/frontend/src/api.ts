@@ -10,6 +10,21 @@
  */
 
 /**
+ * Prefix an absolute path with the Vite base URL.
+ *
+ * Use this any time you have a hardcoded URL like "/api/something" or
+ * "/auth/login" that goes through Vite/the router. Without prefixing,
+ * the router sees the first segment as the worktree name and 404s.
+ *
+ * In prod (base="/") this is a no-op.
+ */
+export function withBase(p: string): string {
+  const prefix = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  if (!prefix) return p;
+  return p.startsWith("/") ? `${prefix}${p}` : `${prefix}/${p}`;
+}
+
+/**
  * Get the API base URL for the current box, derived from the URL's first
  * path segment after the Vite base path.
  *
@@ -144,7 +159,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
   if (response.status === 401) {
     const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = `/auth/login?returnTo=${returnTo}`;
+    window.location.href = withBase(`/auth/login?returnTo=${returnTo}`);
     // Never resolves — page is navigating away
     return new Promise(() => {});
   }

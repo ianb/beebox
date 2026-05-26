@@ -8,6 +8,7 @@
  */
 
 import { setup, assign, fromPromise, fromCallback } from "xstate";
+import { withBase } from "../api";
 
 interface ClaudeStatus {
   loggedIn?: boolean;
@@ -33,13 +34,13 @@ type ClaudeAuthEvent =
 // -- Actors --
 
 const fetchStatus = fromPromise(async () => {
-  const resp = await fetch("/api/admin/claude-status");
+  const resp = await fetch(withBase("/api/admin/claude-status"));
   if (!resp.ok) throw new Error(`Status check failed: ${resp.status}`);
   return (await resp.json()) as ClaudeStatus;
 });
 
 const startLogin = fromPromise(async () => {
-  const resp = await fetch("/api/admin/claude-login", { method: "POST" });
+  const resp = await fetch(withBase("/api/admin/claude-login"), { method: "POST" });
   if (!resp.ok) {
     const data = await resp.json().catch(() => ({ error: resp.statusText }));
     throw new Error(data.error || "Login failed");
@@ -52,13 +53,13 @@ const startLogin = fromPromise(async () => {
 });
 
 const doLogout = fromPromise(async () => {
-  const resp = await fetch("/api/admin/claude-logout", { method: "POST" });
+  const resp = await fetch(withBase("/api/admin/claude-logout"), { method: "POST" });
   const data = await resp.json();
   if (!data.success) {
     throw new Error(data.error || "Logout failed");
   }
   // Fetch fresh status after logout
-  const statusResp = await fetch("/api/admin/claude-status");
+  const statusResp = await fetch(withBase("/api/admin/claude-status"));
   if (!statusResp.ok) throw new Error(`Status check failed: ${statusResp.status}`);
   return (await statusResp.json()) as ClaudeStatus;
 });
@@ -66,7 +67,7 @@ const doLogout = fromPromise(async () => {
 const pollForLogin = fromCallback(({ sendBack }) => {
   const id = setInterval(async () => {
     try {
-      const resp = await fetch("/api/admin/claude-status");
+      const resp = await fetch(withBase("/api/admin/claude-status"));
       if (resp.ok) {
         const status = (await resp.json()) as ClaudeStatus;
         sendBack({ type: "POLL_RESULT", status });

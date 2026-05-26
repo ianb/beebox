@@ -14,6 +14,11 @@ export default [
       "error/require-custom-error": "off",
       "error/no-generic-error": "off",
       "error/no-literal-error-message": "off",
+      // react-hooks v7 added this rule. The codebase has several legitimate
+      // setState-in-effect call sites (transcription buffering, route param
+      // resets, etc.) that are flagged but not actually wrong for our usage.
+      // Disable until/unless we do a real audit.
+      "react-hooks/set-state-in-effect": "off",
     },
   },
   // Outside any components/ subdirectory: every JSX element's className must

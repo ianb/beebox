@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { withBase } from "../api";
 
 export interface CurrentUser {
   email: string;
@@ -16,7 +17,7 @@ export function useCurrentUser(): CurrentUser | null {
   const [user, setUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
-    fetch("/auth/me")
+    fetch(withBase("/auth/me"))
       .then((r) => {
         if (!r.ok) return null;
         return r.json();

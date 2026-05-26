@@ -15,6 +15,7 @@ import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
 import { Avatar } from "./ui/Avatar";
 import { href } from "../lib/routing";
 import { fetchBoxes } from "../lib/boxes";
+import { withBase } from "../api";
 
 /**
  * Profile avatar + dropdown menu (Settings, Admin, Logout).
@@ -57,7 +58,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       <MenuItem onClick={onToggleSourceView}>Source View</MenuItem>
       <MenuItem onClick={onToggleDebugLog}>Debug Log</MenuItem>
       <MenuItem onClick={() => window.location.reload()}>Reload</MenuItem>
-      {user ? <MenuItem href="/auth/logout">Sign out</MenuItem> : null}
+      {user ? <MenuItem href={withBase("/auth/logout")}>Sign out</MenuItem> : null}
     </Dropdown>
   );
 }
@@ -126,7 +127,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
     <select
       value={boxSlug}
       onChange={(e) => {
-        window.location.href = `/${e.target.value}/`;
+        window.location.href = withBase(`/${e.target.value}/`);
       }}
       className="font-bold bg-white/10 text-white border border-white/30 rounded px-2 py-1 text-sm"
     >
