@@ -10,18 +10,34 @@
  */
 
 /**
- * Prefix an absolute path with the Vite base URL.
+ * Pure helper exported for testability: combine a base URL prefix and a
+ * path. Kept separate from `withBase()` so the join logic can be unit-
+ * tested without import.meta.env runtime dependency.
+ *
+ *   joinBaseAndPath("/",      "/api/foo") === "/api/foo"
+ *   joinBaseAndPath("/main/", "/api/foo") === "/main/api/foo"
+ *   joinBaseAndPath("/main",  "/api/foo") === "/main/api/foo"
+ *   joinBaseAndPath("/main/", "api/foo")  === "/main/api/foo"
+ */
+export function joinBaseAndPath(base: string, p: string): string {
+  const prefix = base.replace(/\/$/, "");
+  if (!prefix) return p.startsWith("/") ? p : `/${p}`;
+  return p.startsWith("/") ? `${prefix}${p}` : `${prefix}/${p}`;
+}
+
+/**
+ * Prefix an absolute path with the Vite base URL (set via the `base` option
+ * in vite.config.ts, surfaced at runtime as `import.meta.env.BASE_URL`).
  *
  * Use this any time you have a hardcoded URL like "/api/something" or
  * "/auth/login" that goes through Vite/the router. Without prefixing,
  * the router sees the first segment as the worktree name and 404s.
  *
- * In prod (base="/") this is a no-op.
+ * In prod (base="/", the Vite default) this is a no-op — BASE_URL is "/"
+ * which the helper treats as empty prefix.
  */
 export function withBase(p: string): string {
-  const prefix = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-  if (!prefix) return p;
-  return p.startsWith("/") ? `${prefix}${p}` : `${prefix}/${p}`;
+  return joinBaseAndPath(import.meta.env.BASE_URL ?? "/", p);
 }
 
 /**

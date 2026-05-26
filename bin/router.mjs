@@ -439,10 +439,16 @@ async function renderIndex() {
     const status = w.running
       ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
       : `<span class="badge cold">cold (will lazy-start on click)</span>`;
+    const stopForm = w.running
+      ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
+           <button type="submit" title="Tell the router to stop ${escapeHtml(w.name)} now">stop</button>
+         </form>`
+      : "";
     return `
       <li>
         <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
         ${status}
+        ${stopForm}
       </li>`;
   }).join("");
 
@@ -462,7 +468,13 @@ async function renderIndex() {
   .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
   .badge.running { background: #d8f0d8; color: #2a6b2a; }
   .badge.cold    { background: #ececec; color: #666; }
-  footer { margin-top: 2em; font-size: 0.85em; color: #888; }
+  .stopForm { margin-left: auto; }
+  .stopForm button { font-size: 0.75em; padding: 0.15em 0.6em; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #666; cursor: pointer; }
+  .stopForm button:hover { background: #fee; border-color: #faa; color: #a22; }
+  .help { margin-top: 2em; padding: 1em; background: #f7f7f7; border-radius: 6px; font-size: 0.9em; }
+  .help h2 { margin: 0 0 0.4em; font-size: 1em; }
+  .help code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
+  footer { margin-top: 1em; font-size: 0.85em; color: #888; }
   footer a { color: #888; }
 </style>
 </head>
@@ -470,9 +482,21 @@ async function renderIndex() {
 <h1>callback-mono dev router</h1>
 <p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s.</p>
 <ul>${rows}</ul>
+
+<div class="help">
+  <h2>If something looks wedged</h2>
+  <p>
+    Run <code>bin/worktrees panic</code> from a terminal — this kills the
+    router plus every child it knows about, wipes <code>~/.cache/callback-mono</code>
+    state, and frees port ${ROUTER_PORT}. Then start fresh with <code>pnpm dev</code>.
+  </p>
+  <p>
+    Per-worktree logs are at <code>~/.cache/callback-mono/logs/&lt;name&gt;.log</code>.
+  </p>
+</div>
+
 <footer>
   <a href="/__router/status">status JSON</a>
-  · run <code>bin/worktrees panic</code> to clean up
 </footer>
 </body>
 </html>
@@ -512,7 +536,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Manual stop endpoint (used by WorktreeRemove hook and bin/worktrees down).
+  // Manual stop endpoint (used by WorktreeRemove hook, bin/worktrees down,
+  // and the "stop" buttons on the index page). Accepts GET or POST; on POST
+  // from a form submission, redirect back to the index instead of returning
+  // a plain-text response so the user lands on a useful page.
   if (url.startsWith("/__router/stop/")) {
     const name = url.slice("/__router/stop/".length).replace(/\/$/, "");
     if (!name) {
@@ -521,6 +548,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     await stopWorktree(name);
+    if (req.method === "POST") {
+      res.writeHead(303, { location: "/" });
+      res.end();
+      return;
+    }
     res.writeHead(200, { "content-type": "text/plain" });
     res.end(`stopped ${name}\n`);
     return;
