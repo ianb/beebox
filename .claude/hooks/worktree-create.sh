@@ -31,9 +31,27 @@ trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree
 exec 3>&1 1>&2
 
 input=$(cat)
-requested_path=$(printf '%s' "$input" | jq -r '.worktree_path')
-base_ref=$(printf '%s' "$input"       | jq -r '.base_ref // "main"')
-NAME=$(basename "$requested_path")
+# Log the raw input so we can adjust to whatever schema Claude Code actually
+# emits (the docs at code.claude.com don't perfectly match every version).
+mkdir -p "$HOME/.cache/callback-mono"
+printf '%s\n' "$input" > "$HOME/.cache/callback-mono/last-worktree-create-input.json"
+
+# Try common field-name variants; fall back to fail loudly rather than carry
+# on with "null".
+requested_path=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
+base_ref=$(printf '%s'       "$input" | jq -r '.base_ref // .baseRef // "main"')
+name_from_input=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
+
+if [ -n "$name_from_input" ]; then
+  NAME="$name_from_input"
+elif [ -n "$requested_path" ]; then
+  NAME=$(basename "$requested_path")
+else
+  echo "[worktree-create] FATAL: stdin lacks worktree_path/worktreePath/path/name. Raw input:" >&2
+  cat "$HOME/.cache/callback-mono/last-worktree-create-input.json" >&2
+  exit 1
+fi
+
 new_branch="worktree-$NAME"
 
 # Override the location: ignore Claude Code's requested path; put the worktree
