@@ -2,6 +2,14 @@
 # Claude Code WorktreeCreate hook.
 #
 # Replaces the default `git worktree add` with logic that also:
+#   - OVERRIDES the worktree location: Claude Code defaults to
+#     <repo>/.claude/worktrees/<name>/, but we put it at
+#     ~/src/callback-worktrees/<name>/ instead. Reason: callback-box and
+#     cardworks have file: deps on personal-vibe-check at file:../../personal-vibe-check.
+#     The relative path only resolves correctly when the worktree is a
+#     sibling of the monorepo root (same depth as main checkout). Putting
+#     the worktree under .claude/worktrees/ adds 2 extra path levels and
+#     breaks the dep resolution.
 #   - clones ~/src/boxes/test1 to ~/src/box-worktrees/test1-<name>/
 #     (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md)
 #   - writes <worktree>/callback-box/.env with hash-derived unique ports
@@ -19,10 +27,14 @@ set -euo pipefail
 exec 3>&1 1>&2
 
 input=$(cat)
-worktree_path=$(printf '%s' "$input" | jq -r '.worktree_path')
-base_ref=$(printf '%s' "$input"   | jq -r '.base_ref // "main"')
-NAME=$(basename "$worktree_path")
+requested_path=$(printf '%s' "$input" | jq -r '.worktree_path')
+base_ref=$(printf '%s' "$input"       | jq -r '.base_ref // "main"')
+NAME=$(basename "$requested_path")
 new_branch="worktree-$NAME"
+
+# Override the location: ignore Claude Code's requested path; put the worktree
+# as a sibling of the monorepo so file: deps to ../../personal-vibe-check resolve.
+worktree_path="$HOME/src/callback-worktrees/$NAME"
 
 BOX_SRC="$HOME/src/boxes/test1"
 BOX_DEST="$HOME/src/box-worktrees/test1-$NAME"

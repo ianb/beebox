@@ -42,7 +42,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "file:../personal-vibe-check",
     "@types/chokidar": "^1.7.5",
     "@types/node": "^22.0.0",
     "@types/xml2js": "^0.4.14",

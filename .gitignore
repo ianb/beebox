@@ -6,7 +6,9 @@ dist/
 .env
 .overmind.sock
 
-# Claude Code worktrees (created by `claude --worktree`)
+# Claude Code worktrees (the WorktreeCreate hook puts ours at
+# ~/src/callback-worktrees/ instead, but the default location would still
+# be created if the hook is somehow bypassed)
 .claude/worktrees/
 
 # Claude Code runtime / machine-local

@@ -39,8 +39,11 @@ if [[ "$SKIP_FRONTEND" != true ]]; then
   cd "$REPO_DIR/src/frontend" && npm run build --silent
 fi
 
-# Sync all three repos
-for repo in cardworks callback-box; do
+# Sync monorepo packages. personal-vibe-check is a file: dep of callback-box
+# and cardworks, so it must be present alongside them on the server. It used
+# to live outside the monorepo at ~/src/personal-vibe-check (special-cased
+# here); now it's a sibling inside the monorepo and gets synced like the rest.
+for repo in cardworks personal-vibe-check callback-box; do
   local_path="$MONO_DIR/$repo/"
   if [[ ! -d "$local_path" ]]; then
     echo "  $repo: not found at $local_path, skipping"
@@ -50,21 +53,11 @@ for repo in cardworks callback-box; do
   rsync "${RSYNC_OPTS[@]}" "$local_path" "root@$SERVER_IP:$INSTALL_DIR/$repo/"
 done
 
-# personal-vibe-check lives outside the monorepo but is a file: dep of
-# callback-box, so it must be present at /opt/personal-vibe-check on the
-# server. Its own prepare script (husky) runs during npm pack, so it needs
-# its own node_modules installed too.
-PVC_LOCAL="$MONO_DIR/../personal-vibe-check/"
-if [[ -d "$PVC_LOCAL" ]]; then
-  echo "Syncing personal-vibe-check..."
-  rsync "${RSYNC_OPTS[@]}" "$PVC_LOCAL" "root@$SERVER_IP:/opt/personal-vibe-check/"
-fi
-
 # Install deps if package-lock changed (compare hash)
 echo "Checking dependencies..."
 ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   set -e
-  cd /opt/personal-vibe-check
+  cd /opt/callback/personal-vibe-check
   if [[ ! -d node_modules ]] || ! npm ls --depth=0 &>/dev/null 2>&1; then
     echo "  Installing personal-vibe-check deps..."
     npm install --no-audit --no-fund --legacy-peer-deps
