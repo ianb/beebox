@@ -1,26 +1,17 @@
 #!/usr/bin/env bash
-# Thin wrapper around `agent-browser` that fills in this worktree's dev URL.
+# Thin wrapper around the upstream `agent-browser` Chromium CLI. Source in browse/.
 #
-# Only the URL argument to `open` is rewritten: a leading "/" becomes the
-# current worktree's router prefix.
-#
-#   bin/browse open /dashboard
-#     -> agent-browser open http://localhost:3210/<worktree>/<box>/dashboard
-#
-# Every other subcommand passes through unchanged (so `screenshot /tmp/x.png`,
-# `pdf /tmp/y.pdf`, etc. work normally).
-#
-# Worktree detection: a path containing "/callback-worktrees/<name>/" uses
-# <name>; the main checkout uses "main". Box defaults to test1, override
-# with $BROWSE_BOX. Router port via $ROUTER_PORT (default 3210).
+# Adds three things; everything else passes straight through to the binary:
+#   - `bin/browse open /path` rewrites to this worktree's router URL
+#   - `bin/browse screenshot [path]` adds a URL/title sidecar and indexed default path
+#   - Per-worktree env vars (AGENT_BROWSER_SOCKET_DIR / _PROFILE) so each worktree
+#     runs a fully isolated agent-browser daemon with its own Chrome profile
 
 set -euo pipefail
-
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="$REPO_DIR/node_modules/.bin/agent-browser"
 
-if [[ ! -x "$BIN" ]]; then
-  echo "browse: $BIN not found. Run 'pnpm install' at the monorepo root." >&2
+if [[ ! -x "$REPO_DIR/browse/node_modules/.bin/tsx" ]]; then
+  echo "browse: tsx not found in browse/node_modules. Run 'pnpm install' in browse/." >&2
   exit 1
 fi
 
@@ -31,15 +22,13 @@ else
   worktree="main"
 fi
 
-box="${BROWSE_BOX:-test1}"
-port="${ROUTER_PORT:-3210}"
-base="http://localhost:${port}/${worktree}/${box}"
+browse_base="${HOME}/.cache/callback-mono/browse/${worktree}"
+mkdir -p "${browse_base}/socket" "${browse_base}/profile"
 
-if [[ "${1:-}" == "open" && "${2:-}" == /* && "${2:-}" != //* ]]; then
-  shift
-  url="${base}$1"
-  shift
-  exec "$BIN" open "$url" "$@"
-fi
+export BROWSE_REPO_DIR="$REPO_DIR"
+export BROWSE_WORKTREE="$worktree"
+export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
+export AGENT_BROWSER_PROFILE="${browse_base}/profile"
+export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
 
-exec "$BIN" "$@"
+exec "$REPO_DIR/browse/node_modules/.bin/tsx" "$REPO_DIR/browse/src/cli.ts" "$@"
