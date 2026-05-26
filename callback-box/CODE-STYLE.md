@@ -7,11 +7,11 @@ General coding conventions for backend and frontend. UI palette and primitive re
 Run checks after writing code. The build tool (esbuild) does NOT do type checking or linting — it just strips types. A pre-commit hook runs both automatically.
 
 ```bash
-npm run typecheck    # TypeScript errors
-npm run lint         # ESLint errors
-npm run lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
-npm run lint:knip    # Dead code detector (unused files, exports, dependencies)
-npm run lint:circular  # Circular dependency detector (madge)
+pnpm typecheck    # TypeScript errors
+pnpm lint         # ESLint errors
+pnpm lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
+pnpm lint:knip    # Dead code detector (unused files, exports, dependencies)
+pnpm lint:circular  # Circular dependency detector (madge)
 ```
 
 - The tsconfig is strict — no implicit `any` allowed

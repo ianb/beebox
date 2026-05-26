@@ -6,9 +6,12 @@
 #   scripts/new-worktree.sh <name>
 #
 # Creates:
-#   ../callback-mono-<name>            new worktree on branch <name>
-#   ~/src/boxes/test1-<name>           git-cloned copy of test1
-#   ../callback-mono-<name>/callback-box/.env   ports + BOXES pointing at the clone
+#   ~/src/callback-worktrees/<name>/             new worktree on branch <name>
+#   ~/src/box-worktrees/test1-<name>/            git-cloned copy of test1
+#                                                (kept outside the monorepo so the
+#                                                 box doesn't inherit monorepo CLAUDE.md)
+#   ~/src/callback-worktrees/<name>/callback-box/.env
+#                                                ports + BOXES pointing at the clone
 #
 # Cleanup with scripts/remove-worktree.sh <name>.
 
@@ -16,9 +19,11 @@ set -euo pipefail
 
 NAME="${1:?usage: new-worktree.sh <name>}"
 MONO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-WORKTREE_PATH="$MONO_ROOT/../callback-mono-$NAME"
+WORKTREE_ROOT="$HOME/src/callback-worktrees"
+BOX_ROOT="$HOME/src/box-worktrees"
+WORKTREE_PATH="$WORKTREE_ROOT/$NAME"
 BOX_SRC="$HOME/src/boxes/test1"
-BOX_DEST="$HOME/src/boxes/test1-$NAME"
+BOX_DEST="$BOX_ROOT/test1-$NAME"
 
 if [ -e "$WORKTREE_PATH" ]; then
   echo "error: $WORKTREE_PATH already exists" >&2
@@ -32,6 +37,8 @@ if [ ! -d "$BOX_SRC" ]; then
   echo "error: source box $BOX_SRC not found" >&2
   exit 1
 fi
+
+mkdir -p "$WORKTREE_ROOT" "$BOX_ROOT"
 
 # Port offset: count existing worktrees (including main) and bump by 10.
 N=$(git -C "$MONO_ROOT" worktree list | wc -l | tr -d ' ')
@@ -62,7 +69,7 @@ Done.
 
 Next steps:
   cd $WORKTREE_PATH/callback-box
-  npm install
+  pnpm install
   overmind start
 
 To tear down: $MONO_ROOT/scripts/remove-worktree.sh $NAME

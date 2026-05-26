@@ -5,16 +5,16 @@
 #   scripts/remove-worktree.sh <name>
 #
 # Removes:
-#   ../callback-mono-<name>     worktree
-#   branch <name>               (force-deleted; warns if unmerged)
-#   ~/src/boxes/test1-<name>    cloned test box
+#   ~/src/callback-worktrees/<name>/     worktree
+#   branch <name>                        (force-deleted; warns if unmerged)
+#   ~/src/box-worktrees/test1-<name>/    cloned test box
 
 set -euo pipefail
 
 NAME="${1:?usage: remove-worktree.sh <name>}"
 MONO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-WORKTREE_PATH="$MONO_ROOT/../callback-mono-$NAME"
-BOX_DEST="$HOME/src/boxes/test1-$NAME"
+WORKTREE_PATH="$HOME/src/callback-worktrees/$NAME"
+BOX_DEST="$HOME/src/box-worktrees/test1-$NAME"
 
 if [ -d "$WORKTREE_PATH" ]; then
   echo "Removing worktree $WORKTREE_PATH..."

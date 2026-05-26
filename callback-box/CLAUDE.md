@@ -8,9 +8,9 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 **Dev server** — `overmind start` (uses `Procfile.dev`). Defaults: Vite on 3210, Fastify on 3211, the usual box list. A `.env` here overrides `FRONTEND_PORT`, `BACKEND_PORT`, `BOXES` — `scripts/new-worktree.sh` at the monorepo root generates one with offset ports per worktree. See `.env.example`. Access UI at `http://localhost:${FRONTEND_PORT}/<box>/`.
 
-**Testing** — `npm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
-- `npm run typecheck` — TypeScript (both backend and frontend)
-- `npm run lint` — ESLint
+**Testing** — `pnpm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
+- `pnpm typecheck` — TypeScript (both backend and frontend)
+- `pnpm lint` — ESLint
 - Tests are doctests (`.doctest.md`) in `test/`. See `.claude/rules/doctest.md` for syntax.
 - Three tiers: pure function doctests, route doctests (`makeTestServer()`), filesystem doctests (`makeTmpBox()`)
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
@@ -95,7 +95,7 @@ plugins/          Claude Code plugins (card-validator hook)
 
 - **Read before writing.** Don't guess file formats, XML structures, or API shapes. Read the schema, read the existing code, read the test patterns. This project has specific conventions that differ from defaults.
 - **Doctests are the primary test format.** They're markdown files with executable code blocks. Read `.claude/rules/doctest.md` before writing tests. Common mistakes: using JS object notation instead of JSON in expected output, forgetting `continue` blocks share scope.
-- **Two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `npm run typecheck`.
+- **Two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `pnpm typecheck`.
 - **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: SSE/streaming, file upload/download, OAuth redirects, webhooks. Older raw routes are tech debt — migrate when you touch the area.
 - **Frontend uses UI primitives and a semantic palette.** Read FRONTEND.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Commits go through plain `git commit`; the per-box `.git/hooks/pre-commit` (installed by `cb init`) runs `cb validate --staged` and blocks invalid card commits.
