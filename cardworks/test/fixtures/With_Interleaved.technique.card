@@ -1,0 +1,8 @@
+<technique version="1.0.0">
+  <purpose>Test technique</purpose>
+  <guidance>First guidance</guidance>
+  <prompts title="Test">
+    <prompt>A prompt</prompt>
+  </prompts>
+  <guidance match="special">Second guidance</guidance>
+</technique>

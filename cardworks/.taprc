@@ -1,0 +1,5 @@
+include:
+  - test/**/*.test.ts
+timeout: 30
+allow-incomplete-coverage: true
+allow-empty-coverage: true
