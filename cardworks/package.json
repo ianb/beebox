@@ -46,7 +46,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "file:../personal-vibe-check",
     "@types/node": "^22.12.0",
     "eslint": "^9.19.0",
     "husky": "^9.1.7",
