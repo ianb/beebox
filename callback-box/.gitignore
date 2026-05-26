@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.claude/session-*
+.thinking/
+.thinking/local/
+.tap/
+deploy-info.json
+src/dev/reports/
+# Architecture doc image generation artifacts
+*.bak.png
+*.mermaid.bak.png
+docs/architecture/images/*-prompt.json
+docs/prompts.md

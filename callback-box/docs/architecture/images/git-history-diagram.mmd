@@ -1,0 +1,15 @@
+graph LR
+    c1(((" "))) -->|"schedule photo arrives"| c2(((" ")))
+    c2 -->|"parse into calendar"| c3(((" ")))
+    c3 -->|"detect Tuesday conflict"| c4(((" ")))
+    c4 -->|"reassign ride to Diana"| c5(((" ")))
+    c5 -->|"post to group chat"| c6(((" ")))
+
+    note["every step is a commit"]
+
+    style c1 fill:#b8d4e3,stroke:#333
+    style c2 fill:#b8d4e3,stroke:#333
+    style c3 fill:#b8d4e3,stroke:#333
+    style c4 fill:#e3c8a0,stroke:#333
+    style c5 fill:#e3c8a0,stroke:#333
+    style c6 fill:#c8e0b8,stroke:#333

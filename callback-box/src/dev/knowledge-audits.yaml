@@ -1,0 +1,1940 @@
+tests:
+  # === Box Structure and Navigation ===
+
+  - id: box-structure-inbox
+    prompt: "Where would you look for unprocessed incoming items?"
+    expected_level: knows_directly
+    watch_for: "Names box/inbox/ directly without searching"
+    correct_contains: ["box/inbox"]
+    tags: [navigation]
+
+  - id: find-memo-cards
+    prompt: "If I wanted to find all memo cards in the system, how would you search?"
+    expected_level: knows_directly
+    watch_for: "Suggests *.memo.card glob pattern without searching"
+    correct_contains: [".memo.card"]
+    tags: [navigation, cards]
+
+  - id: card-after-processing
+    prompt: "What happens to a card after it's processed?"
+    expected_level: knows_directly
+    watch_for: "Mentions cb mv and store/archive/ without file reads"
+    correct_contains: ["archive"]
+    tags: [navigation, lifecycle]
+
+  # === How Items Enter the Box ===
+  #
+  # Status (2026-03-16): All 5 pass. Agent knows input mechanisms directly
+  # from the new "How Items Enter the Box" section in the agent guide.
+
+  - id: how-items-enter
+    prompt: "How do items get into the box? What are the different ways things arrive?"
+    expected_level: knows_directly
+    watch_for: "Names capture UI, connectors, cb create, and chat — not manual file placement"
+    correct_contains: ["capture", "connector"]
+    tags: [intake, navigation]
+    notes: >
+      The agent should know input mechanisms directly from the agent guide.
+      The failure mode is telling users to "put" files in directories.
+
+  - id: user-adds-item
+    prompt: "A user wants to add a voice memo about something they're looking at. How do they do it?"
+    expected_level: knows_directly
+    watch_for: "Describes the capture UI (web interface) — not telling the user to create files or put things in directories"
+    correct_contains: ["capture"]
+    tags: [intake]
+    notes: >
+      The agent should know that users interact through the web UI.
+      The failure mode is saying "create a file in box/inbox/" or
+      "put the voice memo in store/documents/".
+
+  - id: dont-tell-user-to-place-files
+    prompt: "I have some documents I want to add to the box. Where should I put them?"
+    expected_level: knows_directly
+    watch_for: "Describes using the capture UI or a connector — does NOT say 'put them in box/inbox/' or any store/ path"
+    tags: [intake]
+    notes: >
+      This is a trick question — the user says "where should I put them"
+      which tempts the agent to name a directory. The correct answer is
+      to describe the user-facing input mechanism (capture page, share
+      extension, chat). The agent should not describe internal directory
+      structure as if the user navigates it directly.
+
+  - id: inbox-vs-store
+    prompt: "What's the difference between box/inbox/ and store/archive/?"
+    expected_level: knows_directly
+    watch_for: "Inbox is for incoming/unprocessed items, archive is for processed/completed items"
+    correct_contains: ["inbox", "archive"]
+    tags: [intake, navigation]
+
+  - id: wakeup-intake-flow
+    prompt: "Walk me through what happens when new items arrive in the inbox during a wakeup cycle."
+    expected_level: knows_about
+    watch_for: >
+      Describes the legacy reactor path: connectors sync, items land in inbox,
+      intake jobs created in box/jobs/, reactor processes them. Bonus credit if
+      the agent acknowledges the parallel new pipeline (intake → triage → handle,
+      docs/triage-design.md) — but wakeup currently only drives the reactor path,
+      so naming that flow is the primary expectation.
+    correct_contains: ["job", "inbox"]
+    tags: [intake, lifecycle, legacy-flow]
+
+  # === Card Types and Schemas ===
+
+  - id: list-card-types
+    prompt: "What card types do you know about? List them all."
+    expected_level: knows_directly
+    watch_for: "Lists types from agent guide without filesystem search"
+    tags: [cards, schemas]
+
+  - id: memo-xml-structure
+    prompt: "Show me the XML structure of a memo card."
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-memo.md before answering"
+    should_read: ["docs/generated/card-memo.md"]
+    tags: [cards, schemas]
+
+  - id: create-question-card
+    prompt: "How would you create a new question card asking the user to pick a color?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-question.md, uses cb create, includes a directive"
+    should_read: ["docs/generated/card-question.md"]
+    correct_contains: ["cb create", "directive"]
+    tags: [cards, schemas, questions]
+
+  - id: question-directive
+    prompt: "I want to ask the user whether to include tech news in their brief. Create the question card."
+    expected_level: knows_about
+    watch_for: "Includes a <directive> element describing what to do with the answer"
+    should_read: ["docs/generated/card-question.md"]
+    correct_contains: ["<directive>"]
+    tags: [cards, questions]
+    notes: >
+      The directive is critical — without it, answering the question is a dead end.
+      The agent should describe the concrete action (e.g., update news guide) not
+      just restate the question.
+
+  - id: question-answer-creates-job
+    prompt: "What happens when a user answers a question?"
+    expected_level: knows_about
+    watch_for: "Mentions that a follow-up job is created from the directive"
+    correct_contains: ["job", "directive"]
+    tags: [questions, jobs]
+
+  - id: guide-vs-procedure
+    prompt: "What's the difference between a guide card and a procedure card?"
+    expected_level: knows_about
+    watch_for: "Reads both card type docs for accurate comparison"
+    tags: [cards]
+
+  - id: create-new-card-type
+    prompt: "How would you create a brand new card type for this box?"
+    expected_level: discoverable
+    watch_for: "Navigates to config/schemas/ and finds CLAUDE.md"
+    should_read: ["config/schemas/CLAUDE.md"]
+    tags: [schemas, extension]
+
+  # === CLI Commands ===
+
+  - id: list-cb-commands
+    prompt: "What cb commands are available to you? List the ones you'd use most."
+    expected_level: knows_directly
+    watch_for: "Lists commands from agent guide without running cb --help"
+    tags: [cli]
+
+  - id: move-card-syntax
+    prompt: "How do you move a card from inbox to archive?"
+    expected_level: knows_directly
+    watch_for: "Correct cb mv syntax with source and destination"
+    correct_contains: ["cb mv"]
+    tags: [cli]
+
+  - id: validate-card
+    prompt: "How do you validate a card after editing it?"
+    expected_level: knows_directly
+    watch_for: "Knows cb validate syntax; looking up docs is fine"
+    correct_contains: ["cb validate"]
+    tags: [cli]
+
+  - id: cb-session-exists
+    prompt: "I want to review the transcript of a past chat — what command gives me that?"
+    expected_level: knows_directly
+    watch_for: "Names cb session as the command for viewing Claude Code session transcripts"
+    correct_contains: ["cb session"]
+    tags: [cli]
+    notes: >
+      The agent should know cb session exists and is how to see past session
+      content. Failure modes: pointing to raw JSONL files in ~/.claude, web UI
+      navigation, or claiming no such command exists.
+
+  - id: cb-session-how-to-use
+    prompt: "How do I use cb session to catch up on just the conversation from the last day, without tool-call noise?"
+    expected_level: knows_about
+    watch_for: "Runs cb session --help (or reads the command source) to discover flags, then combines --since and --dialogue-only"
+    correct_contains_any: ["--since", "cb session --help"]
+    tags: [cli]
+    notes: >
+      The agent should reach for cb session --help (or read src/cli/commands/session.ts)
+      to discover --since and --dialogue-only rather than guessing flags.
+      A good answer lands on something like "cb session --since 1d --dialogue-only".
+
+  - id: cb-chat-self-note-exists
+    prompt: "You are running as a scheduled sub-agent (daily rumination, weekly research, etc.). After you've done your work and committed, how do you leave a short note in the live chat session so the boxholder sees what you did when they next revisit chat?"
+    expected_level: knows_directly
+    watch_for: "Names cb chat self-note as the mechanism — not a journal file, not a new card, not a commit message alone"
+    correct_contains: ["cb chat self-note"]
+    tags: [cli, chat]
+    notes: >
+      The agent should know cb chat self-note exists for precisely this
+      scheduled-agent handoff case. Failure modes: describing a journal file
+      in store/, creating a memo card in box/inbox/, relying on the commit
+      message alone (which doesn't surface in chat), or posting via the
+      regular chat endpoint (which would trigger a full conversational turn).
+
+  - id: cb-chat-self-note-env
+    prompt: "What environment variables does cb chat self-note require, and where do they come from?"
+    expected_level: knows_about
+    watch_for: "Names CB_BOX_NAME and CB_SERVER_URL; knows they're set by the scheduler/script-runner from config/box.json publicUrl, not hardcoded or defaulted"
+    correct_contains_any: ["CB_BOX_NAME", "CB_SERVER_URL"]
+    tags: [cli, chat]
+    notes: >
+      Self-note intentionally has no default server/box — the caller must
+      inherit them from the spawning harness. Scheduled scripts get them
+      automatically via buildScriptEnv in src/core/script-env.ts, which
+      reads publicUrl from config/box.json.
+
+  # === Image Analysis ===
+
+  - id: describe-images-command
+    prompt: "I have some new image cards with status='new'. How do I analyze them?"
+    expected_level: knows_about
+    watch_for: "Mentions cb describe-images command — either from the card doc or cb-commands doc"
+    should_read: ["docs/generated/card-image.md"]
+    correct_contains: ["cb describe-images"]
+    tags: [cli, images]
+    notes: >
+      The agent should discover cb describe-images from the image card docs.
+      The failure mode is manually viewing each image and editing the card XML
+      instead of using the command.
+
+  - id: describe-images-batch
+    prompt: "I have 5 image cards from the same capture session. Should I process them one at a time or together?"
+    expected_level: knows_about
+    watch_for: "Recommends batching — passing multiple paths to cb describe-images for better context"
+    should_read: ["docs/generated/card-image.md"]
+    correct_contains: ["batch"]
+    tags: [images]
+    notes: >
+      The image card doc and cb-commands doc both mention that multiple images
+      are sent as a batch for better context. The failure mode is suggesting
+      one-at-a-time processing.
+
+  - id: image-exif-date
+    prompt: "Where does the captured date come from on image cards?"
+    expected_level: knows_about
+    watch_for: "Mentions EXIF data — the captured attribute is updated from the image file's EXIF DateTimeOriginal"
+    should_read: ["docs/generated/card-image.md"]
+    correct_contains: ["EXIF"]
+    tags: [images]
+
+  # === Procedures ===
+
+  - id: list-procedures
+    prompt: "What procedures are configured in this box?"
+    expected_level: knows_directly
+    watch_for: "Names procedures from agent guide without listing directory"
+    tags: [procedures]
+
+  - id: create-procedure
+    prompt: "How would you create a new procedure that processes bookmark cards?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/procedures.md for authoring guide"
+    should_read: ["docs/generated/procedures.md"]
+    tags: [procedures, extension]
+    notes: >
+      Agent consistently guesses plausible procedure XML without reading docs.
+      The procedure format uses custom conventions (precheck/run/validate phases,
+      shell/agent/instruction primitives, CHECK_SKIP) but is close enough to
+      common XML patterns that the model guesses confidently. Open question:
+      would the guessed XML actually validate? A scenario test would answer
+      this better than a knowledge audit.
+
+  - id: procedure-vs-procedurerun
+    prompt: "Explain the relationship between a procedure card and a procedure-run card."
+    expected_level: knows_about
+    watch_for: "Reads both card type docs to explain definition-vs-execution"
+    tags: [procedures, cards]
+
+  - id: procedure-directive
+    prompt: "How do I pass a directive to a procedure when running it?"
+    expected_level: knows_about
+    watch_for: "Mentions --directive flag and how it appears in agent context"
+    correct_contains: ["--directive"]
+    should_read: ["docs/generated/procedures.md"]
+    tags: [procedures, cli]
+
+  - id: procedure-in-job
+    prompt: "Can a job card trigger a procedure? How does that work?"
+    expected_level: knows_directly
+    watch_for: "Describes <procedure ref='...'> in job cards and reactor trampolining"
+    correct_contains: ["procedure"]
+    tags: [procedures, jobs]
+    notes: >
+      Agent knows this directly from the agent guide and procedures doc
+      loaded in context. No need to require file reads.
+
+  # === Guides ===
+
+  - id: list-guides
+    prompt: "What guides exist in this box and what do they do?"
+    expected_level: knows_directly
+    watch_for: "Names guides from the Guides section of the agent guide without filesystem search"
+    tags: [guides]
+    notes: >
+      Updated from discoverable: agent guide now lists all guide cards with
+      their applies-to descriptions. Agent should know this directly.
+
+  - id: modify-news-triage
+    prompt: "If I wanted to change how news items are triaged, what would I modify?"
+    expected_level: knows_about
+    watch_for: "Knows about the news guide from agent guide, reads the compiled guide for details"
+    should_read: ["docs/generated/news-guide.md"]
+    tags: [guides]
+    notes: >
+      Updated from discoverable: agent guide now lists the news guide and its
+      compiled path. Agent should follow the pointer to read the compiled guide.
+
+  - id: cooking-guide-awareness
+    prompt: "I want to make pasta tonight. Can you help me cook?"
+    expected_level: knows_about
+    watch_for: "Reads the cooking guide before launching into recipe help"
+    should_read: ["docs/generated/cooking-guide.md"]
+    tags: [guides, cooking]
+    notes: >
+      The agent guide lists the cooking guide with applies-to text about cooking.
+      When cooking comes up in conversation, the agent should read the compiled
+      guide to learn the interaction pattern (step-by-step pacing, two-channel
+      output, ingredient gathering flow).
+
+  - id: cooking-recipe-lookup
+    prompt: "Do I have any recipes saved? What can I make?"
+    expected_level: knows_directly
+    watch_for: "Checks store/recipes/ for recipe cards — a straight file search, no guide needed"
+    tags: [cooking, recipes]
+    notes: >
+      This is a simple lookup task. The agent knows recipes live in store/recipes/
+      from the agent guide directory layout. Reading the cooking guide would be
+      over-doing it here.
+
+  - id: cooking-follow-recipe-pattern
+    prompt: "Walk me through making the carbonara recipe."
+    expected_level: knows_about
+    watch_for: "Reads cooking guide to learn the interaction pattern (plan, ingredients, step-by-step pacing) before searching for the recipe"
+    should_read: ["docs/generated/cooking-guide.md"]
+    tags: [guides, cooking, recipes]
+    notes: >
+      "Walk me through" is an interactive cooking session — exactly what the
+      cooking guide's Follow Recipe action covers. The guide instructs specific
+      pacing behavior (plan first, gather ingredients, step-by-step with two-channel
+      output) that differs from the default "dump everything" approach. The agent
+      should read the guide to know HOW to walk through the recipe, not just
+      find the recipe file.
+
+  # === Tricks ===
+
+  - id: what-are-tricks
+    prompt: "What are tricks and how would I create a new one?"
+    expected_level: knows_about
+    watch_for: "Reads tricks/scripts/CLAUDE.md for details"
+    should_read: ["tricks/scripts/CLAUDE.md"]
+    tags: [tricks, extension]
+
+  - id: trick-scripts-path
+    prompt: "Where do trick scripts live?"
+    expected_level: knows_directly
+    watch_for: "Correct path without searching"
+    correct_contains: ["tricks/scripts"]
+    tags: [tricks]
+
+  # === Connectors ===
+
+  - id: list-connectors
+    prompt: "What connectors are configured for this box?"
+    expected_level: discoverable
+    watch_for: "Explores config/connectors/ or reads docs/generated/connectors.md"
+    tags: [connectors]
+
+  - id: rss-to-inbox-flow
+    prompt: "How does data get from RSS feeds into the inbox?"
+    expected_level: discoverable
+    watch_for: "Traces actual flow (connector → wakeup → inbox) rather than hypothetical"
+    tags: [connectors]
+
+  - id: outbound-notifications
+    prompt: "How would outbound notifications work?"
+    expected_level: knows_about
+    watch_for: "Mentions cb finalize and finds notification connector"
+    correct_contains: ["finalize"]
+    tags: [connectors]
+
+  # === Scheduled Tasks ===
+
+  - id: how-schedules-work
+    prompt: "How do scheduled tasks work in this box?"
+    expected_level: knows_directly
+    watch_for: "Describes tick/scheduled mechanism from agent guide"
+    tags: [schedules]
+
+  - id: add-daily-task
+    prompt: "How would I add a daily task?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-scheduled-script.md for format"
+    should_read: ["docs/generated/card-scheduled-script.md"]
+    tags: [schedules, extension]
+
+  # === Extension ===
+
+  - id: track-reading-list
+    prompt: "I want to track books I'm reading with progress and ratings. How would you set that up?"
+    expected_level: discoverable
+    watch_for: "Discovers config/schemas/CLAUDE.md to create a custom card type rather than suggesting memos"
+    should_read: ["config/schemas/CLAUDE.md"]
+    tags: [schemas, extension]
+    notes: >
+      Agent correctly creates config/schemas/book.ts but may skip reading
+      CLAUDE.md — it has enough from the agent guide pointer + the existing
+      bookmark.ts example. This is "knows about" behavior working correctly;
+      the should_read check is too strict. Reading any file in config/schemas/
+      should count.
+
+  - id: create-task-card-type
+    prompt: "Can you create a new type of card for tracking project tasks?"
+    expected_level: discoverable
+    watch_for: "Says yes and navigates to schemas, not 'card types are built-in'"
+    should_read: ["config/schemas/CLAUDE.md"]
+    tags: [schemas, extension]
+
+  - id: add-new-capability
+    prompt: "How would you add a new capability to this box?"
+    expected_level: knows_directly
+    watch_for: "Lists extension mechanisms: procedures, tricks, guides, schedules; bonus if mentions schemas"
+    tags: [extension]
+
+  - id: card-types-and-add-new
+    prompt: "What card types do you know about? Can you add new ones?"
+    expected_level: knows_directly
+    watch_for: "Lists types (knows directly) AND addresses adding new ones (discoverable)"
+    tags: [cards, schemas, extension]
+
+  # === Chat Threads ===
+
+  - id: chat-thread-structure
+    prompt: "Show me the XML structure of a chat-thread card."
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-chat-thread.md before answering"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["<message", "<seen"]
+    tags: [cards, chat]
+
+  - id: chat-thread-new-messages
+    prompt: "I have a chat-thread card with some messages. How do I find which messages are new?"
+    expected_level: knows_about
+    watch_for: "Describes scanning backward for last <seen> or <message sender='agent'>"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["seen", "agent"]
+    tags: [chat, processing]
+
+  - id: chat-thread-respond-vs-acknowledge
+    prompt: "When processing a chat thread, how do I decide whether to respond or just acknowledge?"
+    expected_level: knows_about
+    watch_for: "Describes <message sender='agent'> for response and <seen /> for acknowledgment"
+    correct_contains: ["<seen"]
+    tags: [chat, processing]
+
+  - id: chat-thread-callback
+    prompt: "When processing a chat-thread card, how can I tell the system to re-invoke me later if no new messages arrive?"
+    expected_level: knows_about
+    watch_for: "Mentions callback-in attribute on <seen> element"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["callback-in"]
+    tags: [chat, processing]
+
+  - id: chat-thread-agent-message
+    prompt: "I want to send a message to a Telegram chat from a chat thread. How do I do that?"
+    expected_level: knows_about
+    watch_for: "Describes appending <message sender='agent'>text</message> without sent attribute"
+    correct_contains: ["sender=\"agent\""]
+    tags: [chat, processing]
+    notes: >
+      Critical that the agent knows NOT to fill in sent or id attributes.
+      The connector handles delivery. If the agent fills in sent, the message
+      won't actually be delivered.
+
+  - id: chat-thread-seen-note
+    prompt: "Can I leave a note for myself when acknowledging chat messages?"
+    expected_level: knows_about
+    watch_for: "Describes text content of <seen> as a note-to-self for future invocation"
+    correct_contains: ["<seen"]
+    tags: [chat, processing]
+
+  - id: chat-job-processing
+    prompt: "I have a chat job card. Walk me through how to process it."
+    expected_level: knows_about
+    watch_for: "Reads job, follows thread ref, finds new messages, responds or acknowledges, commits, finishes"
+    should_read: ["docs/generated/card-chat-job.md"]
+    correct_contains: ["thread", "cb finish"]
+    tags: [chat, jobs]
+
+  - id: chat-thread-invariant
+    prompt: "After I process a chat thread, what must be true about the last element?"
+    expected_level: knows_about
+    watch_for: "States that the last element must be <seen> or <message sender='agent'>"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["<seen", "agent"]
+    tags: [chat, processing]
+
+  - id: chat-thread-dont-modify
+    prompt: "Can I edit or remove existing messages in a chat thread?"
+    expected_level: knows_about
+    watch_for: "Says no — only append, never modify or remove existing elements"
+    tags: [chat, processing]
+
+  - id: chat-thread-participants
+    prompt: "How do I know who's in a chat thread?"
+    expected_level: knows_about
+    watch_for: "Mentions <participants> element with <person ref='people/...'> references"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["participants"]
+    tags: [chat, processing]
+
+  - id: chat-thread-guidelines
+    prompt: "Is there any per-chat configuration for how I should behave in a specific chat thread?"
+    expected_level: knows_about
+    watch_for: "Mentions looking for a chat.guide.card in the thread directory"
+    should_read: ["docs/generated/card-chat-thread.md"]
+    correct_contains: ["guide"]
+    tags: [chat, guides]
+
+  - id: chat-guide-compilation
+    prompt: "If I create a chat.guide.card in a chat thread directory, how does it get used?"
+    expected_level: knows_about
+    watch_for: "Mentions that the guide is compiled to markdown and loaded as a rule when accessing files in that directory"
+    correct_contains: ["guide", "rule"]
+    tags: [chat, guides]
+    notes: >
+      The agent should understand the pipeline: chat.guide.card is compiled
+      during init/wakeup into docs/generated/ and a .claude/rules/ file is
+      generated with paths: matching that chat directory. This means the
+      guide auto-loads when the agent touches any file in that chat's directory.
+      Removed should_read because the agent may answer from codebase knowledge.
+
+  - id: chat-thread-outbound-flow
+    prompt: "After I write a response in a chat thread, how does it actually get sent to Telegram?"
+    expected_level: discoverable
+    watch_for: "Describes the finalize/connector flow: unsent agent message found, sent via API, stamped"
+    correct_contains: ["finalize"]
+    tags: [chat, connectors]
+    notes: >
+      The agent shouldn't need to know the outbound mechanics to process
+      a chat job — just write the response and commit. But understanding
+      the flow helps debug issues. This is discoverable from connector docs.
+  # === Todo Lists ===
+
+  - id: todo-list-structure
+    prompt: "Show me the XML structure of a todo-list card."
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/card-todo-list.md before answering"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["<todo-list", "<item"]
+    tags: [cards, todos]
+
+  - id: todo-list-storage
+    prompt: "Where do todo lists live in the box?"
+    expected_level: knows_directly
+    watch_for: "Names store/todos/ directly from agent guide"
+    correct_contains: ["store/todos"]
+    tags: [todos, navigation]
+
+  - id: todo-list-lifecycle
+    prompt: "What happens to a todo list when all its items are done?"
+    expected_level: knows_about
+    watch_for: "Describes archiving to store/archive/done/ or store/archive/deferred/"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["archive"]
+    tags: [todos, lifecycle]
+
+  - id: todo-list-create
+    prompt: "Create a todo-list card for weekend errands with items: buy groceries, mow lawn, return library books."
+    expected_level: knows_about
+    watch_for: "Reads card docs, creates a .todo-list.card file in store/todos/ using cb create or direct write"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["todo-list", "store/todos"]
+    tags: [todos, cards]
+
+  - id: todo-list-nested-items
+    prompt: "Can todo items have sub-items? How does nesting work?"
+    expected_level: knows_about
+    watch_for: "Describes nested <item> elements within parent items"
+    should_read: ["docs/generated/card-todo-list.md"]
+    correct_contains: ["<item"]
+    tags: [todos, cards]
+
+  - id: todo-list-vs-job
+    prompt: "What's the difference between a todo list and a job card?"
+    expected_level: knows_about
+    watch_for: "Distinguishes human action items (todos) from agent work items (jobs)"
+    tags: [todos, jobs]
+    notes: >
+      This tests understanding that todos are for humans while jobs are
+      for agents. The agent should not confuse the two or suggest using
+      jobs for human tasks.
+
+  # === Recording Knowledge ===
+
+  - id: briefing-is-writable
+    prompt: "The box has a briefing card at briefing.briefing.card. Is this a file you can edit, or is it generated configuration?"
+    expected_level: knows_directly
+    watch_for: "Clearly states the briefing card can and should be updated with core context"
+    correct_contains: ["briefing"]
+    tags: [knowledge]
+
+  - id: incidental-person-where
+    prompt: "While processing a capture, you encounter a person named Dr. Martinez who is a doctor the boxholder saw once. Where do you record this?"
+    expected_level: knows_directly
+    watch_for: "Creates a contact record card — this is an individual item, not core context for the briefing"
+    correct_contains: ["record"]
+    tags: [knowledge, people]
+    notes: >
+      An incidental contact is just a record card. The agent should NOT add every
+      person to the briefing — only people central to the box's purpose.
+
+  - id: core-person-where
+    prompt: "The boxholder just told you: 'This whole box is for managing things for my mother, Helen. She's 82 and lives at 45 Pine Street.' The briefing card currently says nothing about Helen or the purpose of the box. Where should you record this?"
+    expected_level: knows_directly
+    watch_for: "Updates the briefing card — this is core context about what the box is for and who it's about. Should also create a person card."
+    correct_contains: ["briefing"]
+    tags: [knowledge, people]
+    notes: >
+      The boxholder is explicitly telling you the purpose of the box and a key
+      person. This is the most clear-cut case for the briefing card: purpose +
+      key-people. The agent should also mention creating people/Helen*.person.card.
+
+  - id: individual-item-where
+    prompt: "You processed a capture and found a vintage clock worth about $200 in the living room. Where does this go?"
+    expected_level: knows_directly
+    watch_for: "Creates a record card — this is a discrete item, not core context for the briefing"
+    correct_contains: ["record"]
+    tags: [knowledge, organization]
+    notes: >
+      This tests that the agent does NOT put individual items into the briefing.
+      A specific item belongs in a record card.
+
+  - id: processing-pattern-where
+    prompt: "You've noticed that voice memos from the boxholder always start with a location name. Where should you record this pattern?"
+    expected_level: knows_about
+    watch_for: "Records it somewhere persistent — the briefing card's agent-needs-to-know, an `<intake>` element on a relevant guide, or a similar durable location"
+    correct_contains_any: ["briefing", "guide"]
+    tags: [knowledge, processing]
+    notes: >
+      The briefing card (agent-needs-to-know) and per-domain guide cards
+      (e.g., a `config/*.guide.card`) are both acceptable destinations. The
+      pattern is a processing observation (guide territory) but also general
+      context (briefing territory). The test passes if either is mentioned.
+      The failure mode is not recording it at all, or putting it in memory.
+
+  - id: user-prefers-terse
+    prompt: "The user has told you they prefer short, bullet-point responses over long paragraphs. Where in the box should this preference be captured so all agents respect it?"
+    expected_level: knows_directly
+    watch_for: "Personality card — this is about how the agent communicates, not situation context"
+    correct_contains: ["personality"]
+    tags: [knowledge, personality]
+
+  - id: triage-rule-where
+    prompt: "The user says 'always archive insurance documents, don't ask me about them.' Where does this go?"
+    expected_level: knows_about
+    watch_for: >
+      Either a per-domain guide card (`config/*.guide.card`) for an existing
+      pipeline that already handles insurance, OR a landmark `<triage-destination><rules>`
+      at the archive directory the items should route to (the new
+      intake→triage→handle pipeline; see docs/triage-design.md). Both are
+      valid; the choice depends on which path actually routes insurance items
+      in this box.
+    correct_contains_any: ["landmark", "triage-destination", ".guide.card"]
+    tags: [knowledge, guides, triage-pipeline]
+    notes: >
+      `correct_contains_any` deliberately avoids bare "guide" — a correct
+      "landmark, not a guide card" answer would false-positive on that token.
+
+  - id: new-category-needed
+    prompt: "You keep finding vehicle-related records that don't fit the current archive categories. What do you do?"
+    expected_level: knows_about
+    watch_for: "Creates a new subdirectory or asks about it — could add a directory briefing to explain the new category"
+    correct_contains_any: ["briefing", "subdirectory", "directory", "vehicles", "question"]
+    tags: [knowledge, organization]
+    notes: >
+      Either creating a directory and documenting it (possibly with a directory
+      briefing), or asking the user first, are acceptable. The failure would be
+      just jamming items into an ill-fitting category without recognizing the problem.
+
+  - id: knowledge-triage-test
+    prompt: "You just learned three things: (1) the box is being used to settle the ledger of the boxholder's father, who recently passed away — everything in the box relates to his affairs, (2) there's a vintage guitar worth about $500 in the closet, (3) the boxholder prefers to be called by first name. Where in the box should each of these be stored so all agents can use them?"
+    expected_level: knows_directly
+    watch_for: "Ledger purpose → briefing card (purpose + key-people), guitar → record card, name preference → personality card"
+    correct_contains: ["briefing", "record", "personality"]
+    tags: [knowledge]
+    notes: >
+      This is the key integration test: can the agent correctly sort different
+      types of knowledge to different box files in a single decision?
+      The ledger purpose is core situation context (briefing card's purpose and
+      key-people fields), the guitar is an individual item, the name preference
+      is communication style.
+
+  # === Git History ===
+  #
+  # Status (2026-03-17): All 3 pass. Agents use git log as first action for
+  # history questions. bash_contains checks the actual command string (not
+  # the description). git-trailers answered from agent guide without running.
+
+  - id: git-history-first
+    prompt: "The process-captures procedure ran earlier today but I'm not sure what it did. Can you find out?"
+    expected_level: knows_directly
+    watch_for: "Runs git log as first action — not searching the filesystem for clues or reading procedure run cards"
+    bash_contains: ["git log"]
+    tags: [git]
+    notes: >
+      The agent should reach for git log as the primary way to understand
+      what happened. The failure mode is searching for files, reading
+      procedure run directories, or saying "I don't have access to logs."
+
+  - id: git-trailers
+    prompt: "How can I find all commits from the news brief phase?"
+    expected_level: knows_directly
+    watch_for: "Uses git log --grep with the Phase trailer"
+    correct_contains: ["Phase"]
+    tags: [git]
+
+  - id: git-recent-activity
+    prompt: "What's been happening in this box recently?"
+    expected_level: knows_directly
+    watch_for: "Runs git log to show recent activity — not just listing directory contents"
+    bash_contains: ["git log"]
+    tags: [git]
+    notes: >
+      The agent should use git log as a primary information source.
+      Supplementing with directory listings is fine, but git log should
+      come first.
+
+  # === Don't Drop Important Information ===
+  #
+  # These tests simulate real processing scenarios where unexpected important
+  # information shows up alongside the expected content. The agent should handle
+  # both — not just the thing it was "supposed to" process.
+  #
+  # Status (2026-03-16): All 5 pass with max_turns: 20. Previously failed at
+  # 10 turns — agent identified the right things but ran out of turns creating
+  # cards. The intake-unexpected-person test also needed the cb create array
+  # args fix (agent couldn't pass options to question template).
+
+  - id: intake-unexpected-legal
+    prompt: >
+      You are processing an intake job. The item is a voice memo transcript:
+
+      "OK so I'm in the living room, there's the big brown couch, looks like it's in
+      decent shape. The coffee table has a scratch on it. Oh and I forgot to mention,
+      Mom called and said the lawyer wants us to sign the power of attorney paperwork
+      by Friday. Anyway, back to the room — there's a floor lamp in the corner..."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Creates household records for furniture AND separately handles the legal/POA deadline — doesn't just bury it in a furniture record"
+    cards_contain: ["power of attorney", "couch"]
+    max_turns: 20
+    tags: [drop-test, intake]
+    notes: >
+      The POA deadline is buried in a furniture walkthrough. The agent should
+      create furniture records AND either create a todo for the legal deadline,
+      ask a question about it, or create a separate record. The failure mode is
+      ignoring the legal mention or burying it in the couch record's notes.
+
+  - id: intake-unexpected-person
+    prompt: >
+      You are processing an intake job. The item is a memo about checking Dad's
+      mail. The memo says:
+
+      "Picked up Dad's mail today. Electric bill from PowerCo, $142. Water bill,
+      $38. There was also a letter from someone named Elias Ward in
+      Portland — looks like it might be a relative we didn't know about? Put
+      it on the kitchen counter. Also a credit card offer, junk."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Creates records for the bills AND flags the Elias Ward letter separately — a possible unknown relative is notable"
+    cards_contain: ["Elias Ward", "PowerCo"]
+    max_turns: 20
+    tags: [drop-test, intake]
+    notes: >
+      The bills are routine. The unknown possible relative is unexpected and
+      potentially important. The agent should not just file it as another
+      piece of mail — it should flag it somehow (question, note, separate
+      record with context about why it's notable).
+
+  - id: intake-account-number-in-narrative
+    prompt: >
+      You are processing an intake job. The item is a voice memo:
+
+      "I was on the phone with Fidelity today trying to get access to Dad's
+      investment account. The account number is 7X2-441893. They said we need
+      a death certificate or power of attorney to make any changes. The woman
+      I spoke to was Janet, extension 4412. She was really helpful."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Captures the account number, the access requirements, AND Janet's contact info — all three are important, not just the narrative"
+    cards_contain: ["7X2-441893", "Janet", "4412"]
+    max_turns: 20
+    tags: [drop-test, intake]
+    notes: >
+      Three distinct pieces of information: (1) account details, (2) what's
+      needed to get access, (3) a helpful contact. The agent should preserve
+      all of them in card files, not just create a vague record about "called Fidelity."
+
+  - id: chat-unexpected-ledger-info
+    prompt: >
+      You are processing a chat job. The chat thread has a new message from
+      a family member:
+
+      "Hey, just wanted to let you know I found a safe deposit box key in
+      Dad's desk drawer. It's from First National Bank. I put it in the
+      blue folder in the filing cabinet. Also, what time are we meeting
+      Saturday?"
+
+      How do you handle this message?
+    expected_level: knows_directly
+    watch_for: "Answers the Saturday question AND creates a record or note about the safe deposit box key — doesn't just answer the question and move on"
+    correct_contains: ["safe deposit"]
+    max_turns: 20
+    tags: [drop-test, chat]
+    notes: >
+      The Saturday question is the direct ask. The safe deposit box key is
+      important ledger information dropped casually. The agent should handle
+      both — responding to the question AND recording the key discovery somehow
+      (record card, memo, or at minimum noting it in the thread). This test
+      uses correct_contains (response check) since the chat agent may not
+      create files in a hypothetical response.
+
+  - id: intake-emotional-context
+    prompt: >
+      You are processing an intake job. The item is a voice memo:
+
+      "Going through the garage today. Found Dad's old workbench, still has
+      all his tools laid out the way he left them. His favorite hammer is
+      the one with the worn wooden handle — he used that thing for 40 years.
+      There's also a table saw, looks like a DeWalt, probably from the 90s.
+      And a bunch of hand tools in the red toolbox."
+
+      Process this item according to the intake guide.
+    expected_level: knows_directly
+    watch_for: "Creates inventory records for the tools AND preserves the sentimental context about the hammer — doesn't strip the emotional significance"
+    cards_contain: ["hammer", "40 years", "DeWalt"]
+    max_turns: 20
+    tags: [drop-test, intake]
+    notes: >
+      The ledger CLAUDE.md says to preserve notes and context about sentimental
+      significance. The hammer's story matters even though it's not "actionable."
+      The failure mode is creating a dry inventory record that loses the personal
+      meaning.
+
+  # === Views in Chat ===
+  #
+  # These are chat-only features — the zoom/companion view system is only
+  # available in the chat context (system prompt in chat-session.ts).
+  # Non-chat agents (wakeup, jobs) should NOT know about these.
+
+  - id: view-zoom-companion
+    prompt: "I want to show the user a view that stays visible alongside the chat while they keep talking. How do I do that?"
+    expected_level: knows_directly
+    watch_for: "Mentions the zoom parameter on a view link without searching"
+    correct_contains: ["zoom"]
+    correct_contains_any: ["companion", "alongside", "panel"]
+    tags: [chat, views]
+    notes: >
+      The &zoom parameter on view links is documented in the chat system prompt.
+      Chat-only — non-chat agents won't have this in their prompt and should
+      not know about it.
+
+  - id: view-zoom-user-context
+    prompt: "If I open a companion view for the user, how will I know they're looking at it when they send their next message?"
+    expected_level: knows_directly
+    watch_for: "Mentions zoomed-view attribute on typed/speech tags"
+    correct_contains: ["zoomed-view"]
+    tags: [chat, views]
+    notes: >
+      When a companion view is open, user messages include a zoomed-view attribute.
+      Chat-only — this attribute is only added by the chat frontend.
+
+  # === Chat Voice ===
+  #
+  # Chat-only TTS features. The chat system prompt mentions <speech> tags and
+  # nested <instructions> directly, but per-message voice overrides and the
+  # hard-override mechanism live in docs/chat-voice.md. These tests verify
+  # the agent knows what's possible and can navigate to the details.
+
+  - id: chat-voice-per-message-override
+    prompt: "The user asks you to speak the next sentence in a different voice — something deeper and more dramatic — for emphasis. Is that possible, and how?"
+    expected_level: knows_about
+    watch_for: "Knows it's possible. Reads docs/chat-voice.md (or the card-personality rule for the voice list). Answers with a per-message voice attribute on <speech>, e.g. <speech voice=\"onyx\">."
+    correct_contains: ["voice="]
+    should_read: ["docs/generated/chat-voice.md"]
+    tags: [chat, voice]
+    notes: >
+      The chat system prompt points to docs/chat-voice.md for overrides.
+      The agent should navigate from "is this possible?" to the per-message
+      voice="..." attribute. Failure modes: "I can only use my default voice,"
+      fabricating a non-existent mechanism, or editing the personality card
+      (which changes the default for all messages, not this one).
+
+  - id: chat-voice-hard-override
+    prompt: "You're replying in chat, and one sentence in your response needs to be spoken with a completely different delivery than your usual warm, unhurried style — sharp, urgent, clipped, for an emergency. You know you can add delivery instructions to a <speech> tag, but those normally combine with the personality card's base speaking instructions, and the warm style would bleed through. How do you fully replace the base speaking instructions for just that one <speech> segment?"
+    expected_level: knows_about
+    watch_for: "Reads docs/generated/chat-voice.md. Uses override-instructions=\"1\" along with nested <instructions>. Recognizes the distinction between appending (default) and replacing."
+    correct_contains: ["override-instructions"]
+    should_read: ["docs/generated/chat-voice.md"]
+    tags: [chat, voice]
+    notes: >
+      This tests the hard-override distinction vs. simple additive instructions.
+      The default behavior of nested <instructions> is to append to the base
+      speaking instructions — not replace them. The agent must know to use
+      override-instructions="1" when the base style actively conflicts.
+      Failure: using just <instructions> (which adds and would leave a
+      warm-and-urgent mashup), or inventing a different attribute.
+
+  # === Chat Structured-Output Tags (chat-app, ack, callout) ===
+  #
+  # Verify the chat-mode agent has direct knowledge of the structured
+  # output tags from CHAT_SYSTEM_PROMPT — no doc-reading needed for the
+  # basics. All tests in this section run with `chat_mode: true` so the
+  # audit harness loads the chat system prompt the same way a real chat
+  # session would.
+  #
+  # Status (2026-05-13): All 8 pass. Agent has clean direct knowledge of
+  # all three tags — names the snapshot purpose, emits the right mutation
+  # form, lists the closed kind set without inventing extras, and picks
+  # bare <ack> over prose for the obvious-action case.
+
+  - id: chat-app-snapshot-purpose
+    prompt: "I'm in a chat session, and each of my messages starts with a <chat-app .../> tag. What is it and what should you do with it?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Identifies it as a per-turn snapshot carrying chat feature flags and current time. Says the agent should treat it as context, not act on it directly."
+    correct_contains_any: ["snapshot", "feature flags", "state"]
+    tags: [chat, structured-output, chat-app]
+
+  - id: chat-app-mutation
+    prompt: "The user just said 'switch into narration mode for the rest of this chat.' How do you actually flip that on in your response?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Emits a <chat-app narration=\"on\"/> tag in the response (not just promises to switch in prose)."
+    correct_contains: ["<chat-app", "narration"]
+    tags: [chat, structured-output, chat-app]
+
+  - id: chat-app-features-list
+    prompt: "What chat-app features can you set, and what do they do?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Names both narration and prose. Identifies narration as a turn-expectation shift and prose as a UI visibility toggle for untagged response prose."
+    correct_contains: ["narration", "prose"]
+    tags: [chat, structured-output, chat-app]
+
+  - id: ack-purpose
+    prompt: "When should you use an <ack> tag instead of just describing what you did in prose?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Explains <ack> is for discrete actions you actually took (file edits, todos, etc.), rendered as compact icon chips. Notes it should NOT be emitted just to say 'I heard you' — only when actual work happened."
+    correct_contains_any: ["discrete", "action", "chip", "icon"]
+    tags: [chat, structured-output, ack]
+
+  - id: ack-kinds
+    prompt: "What kind values can <ack kind=\"...\"> use? List them."
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Lists the closed kind set: created, appended, edited, todo-added, todo-completed, no-response. Doesn't invent extras like 'noted' or 'scheduled'."
+    correct_contains: ["created", "appended", "edited", "todo-added", "todo-completed", "no-response"]
+    tags: [chat, structured-output, ack]
+
+  - id: narration-self-correction-cleanup
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-15T10:00:00Z"/>
+      <speech>Add to my todos: call Maria on Thursday. No, sorry, Friday. <send-message phrase="send message" /></speech>
+    expected_level: knows_about
+    chat_mode: true
+    watch_for: "Recognizes the self-correction (Thursday → Friday) and records only the corrected day. The todo content should mention Friday, not Thursday."
+    cards_contain: ["Friday"]
+    should_not_read: []
+    tags: [chat, narration, recording]
+    notes: >
+      Tests the self-correction cleanup rule from the narration-mode doc.
+      Failure mode: writing "call Maria on Thursday, no sorry Friday" or
+      bothering the user with both versions.
+    max_turns: 15
+
+  - id: ack-no-response
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-14T10:00:00Z"/>
+      <speech>Just thinking out loud here. The cat is being weird again. She keeps knocking things off the counter. Probably nothing to do about it.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Recognizes this is a pure-musing dump that warrants no action and no callout. Emits <ack kind=\"no-response\"/> (or just stays completely silent — both are acceptable). Does NOT write 'No response requested' or similar as prose."
+    correct_contains_any: ["no-response", "<ack"]
+    should_not_read: []
+    tags: [chat, narration, ack]
+    notes: >
+      The no-response ack is the structured way to say "I heard you, nothing
+      to do." Failure: writing "No response needed." or "Understood." as prose.
+
+  - id: ack-conservative-text
+    prompt: "I said 'add a note about cardamom to my bread recipe.' You went and did it. How do you confirm — with prose, an <ack>, or a <callout>? If you use <ack>, does it need inner text?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Picks <ack> with kind=\"appended\". Either omits inner text or notes that inner text isn't needed because the action is obvious from the user's request."
+    correct_contains: ["appended"]
+    tags: [chat, structured-output, ack]
+    notes: >
+      Tests the conservative-inner-text rule. The action (appending a cardamom
+      note to a specific recipe) is exactly what the user asked for, so the
+      agent should emit a bare <ack kind="appended" ref="..."/> — no text.
+      Failure: writes "I added the note about cardamom" inside the ack (the
+      thing the prompt explicitly says to avoid).
+
+  - id: callout-purpose-and-context
+    prompt: "When should you wrap content in a <callout> tag, and what does the context attribute do?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Identifies callouts as durable content the user must read (answers, alerts, observations). Explains context as a short label answering 'why are you telling me this' so the callout still makes sense when surfaced detached."
+    correct_contains: ["context"]
+    correct_contains_any: ["stand alone", "standalone", "self-contained", "detached"]
+    tags: [chat, structured-output, callout]
+
+  - id: callout-for-a-question
+    prompt: "The user asked me, in chat: 'what's the weather Saturday?' You looked it up — sunny, high of 72. Show me your reply exactly as you'd emit it."
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Wraps the answer in <callout context=\"...\">...</callout> with the question (or a paraphrase) as the context value. Body stands alone — no 'as you said' or 'that thing you asked about'."
+    correct_contains: ["<callout", "context", "Saturday"]
+    tags: [chat, structured-output, callout]
+
+  - id: callout-speech-relationship
+    prompt: "Can <callout> and <speech> be nested inside each other? If I want the same content both shown visually and spoken aloud, how should you write it?"
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "States they're siblings, never nested. To show and speak the same content, emit both tags with the same body."
+    correct_contains_any: ["sibling", "separate", "not nest"]
+    tags: [chat, structured-output, callout]
+
+  # === Narration Mode Behavior ===
+  #
+  # When `<chat-app narration="on"/>` is in the snapshot, the system prompt
+  # gets a narration overlay. These audits verify the agent shifts its
+  # turn-expectations accordingly: receive content, stay quiet, prefer
+  # structured-output tags over conversational prose.
+  #
+  # Status (2026-05-13): Both pass after the narration overlay was
+  # sharpened with concrete don't-do examples ("don't reply to musings",
+  # "<callout>, not <speech>"). The agent correctly ignores rhetorical
+  # asides ("maybe pasta?") and routes real questions through <callout>.
+  # The chat-app-features-list audit (in the section above) also passes
+  # cleanly — agent names both narration and prose with effects.
+
+  - id: narration-defaults-silent
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-13T10:00:00Z"/>
+      <speech>I need to remember to call mom on Saturday. Also I'm thinking about the bread recipe — I want to try adding cardamom next time. And, you know what, the kitchen counter is a mess.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Does not write conversational prose summarizing what the user said. Either silent or emits <ack> indications for any actions taken. No <callout> because the user didn't ask a question."
+    should_not_read: []
+    tags: [chat, narration]
+    notes: >
+      The narration overlay rule: receive content, no chatty replies, no
+      summaries, no "got it." The agent should either be silent or emit
+      structured-output indications for actions. Failure: writes a prose
+      response like "I'll remember to call mom and try cardamom next time."
+
+  - id: narration-no-voice-out-by-default
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-15T10:00:00Z"/>
+      <speech>Quick question — what's two plus two?</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Does NOT emit <speech>. The general 'voice-in implies voice-out' rule is overridden in narration mode. Whether the answer comes back as a <callout> or just a silent ack is fine; the failure mode is using speech."
+    response_not_contains: ["<speech"]
+    tags: [chat, narration]
+    notes: >
+      Tests the override of the global voice-in-voice-out rule. In narration
+      mode the agent should default to silent even when the user spoke. A
+      <callout> answer is fine; <speech> alongside it is the failure mode.
+
+  - id: narration-callout-on-real-question
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-13T10:00:00Z"/>
+      <speech>So I was thinking about dinner tonight, and I'm not sure what to make. Maybe pasta? Anyway, what's the weather Saturday? I'm trying to figure out if I should plan outdoor stuff.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: "Recognizes the embedded question ('what's the weather Saturday'). Emits a <callout context=\"...\"> answering it (or noting it doesn't know). Doesn't reply to the dinner musing — that's narration, not a question."
+    correct_contains: ["<callout"]
+    tags: [chat, narration, callout]
+    notes: >
+      Tests the agent's judgment about which parts of a stream-of-thought
+      dump merit a real response. Only the explicit question deserves a
+      callout. Failure: replying to the dinner musing with a pasta suggestion,
+      or skipping the weather question entirely.
+
+  # === Calendar ===
+  #
+  # Status (2026-03-29): All 3 pass. Agent knows from agent guide that calendar
+  # sync is bidirectional — creates .ics files, describes editing, explains push.
+  # Before fix: agent thought calendar was read-only (0/3 pass).
+
+  - id: calendar-create-event
+    prompt: "I need to add a dentist appointment next Tuesday at 2pm to my calendar. Can you do that?"
+    expected_level: knows_about
+    watch_for: "Says yes and creates an .ics file in store/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
+    correct_contains: ["sync"]
+    max_turns: 15
+    tags: [calendar]
+    notes: >
+      The agent should know that calendar sync is bidirectional and that creating
+      a new .ics file in store/calendar/ will push it to Google Calendar on next
+      sync. The failure mode is saying "I can only read calendar events" or
+      suggesting the user create the event in Google Calendar directly.
+      The agent may actually create the file (good!) — the important thing is
+      it knows it CAN create events and mentions the sync behavior.
+
+  - id: calendar-edit-event
+    prompt: "How would I change the time of a calendar event? Say I have a dentist appointment and need to move it to 3pm."
+    expected_level: knows_about
+    watch_for: "Describes editing the .ics file in store/calendar/ — does NOT say calendar events can't be modified"
+    correct_contains: [".ics"]
+    tags: [calendar]
+    notes: >
+      This is a "how would you" question so the agent doesn't need to find
+      an actual event. It should describe the process: find the .ics file in
+      store/calendar/, edit the DTSTART/DTEND, and it'll sync on next cycle.
+      The failure mode is saying calendar events can't be modified locally.
+
+  - id: calendar-bidirectional
+    prompt: "If I create or edit a calendar event locally, will it sync to Google Calendar?"
+    expected_level: knows_directly
+    watch_for: "Says yes — sync is bidirectional, local changes push to Google on next sync"
+    correct_contains: ["two-way"]
+    tags: [calendar]
+    notes: >
+      Tests whether the agent understands the sync is two-way. The agent should
+      explain: new untracked .ics files get pushed, X-CB-DELETE marks events for
+      deletion, and edited tracked files get pushed back.
+
+  # === Google Drive / Spreadsheets ===
+
+  - id: drive-find-spreadsheet
+    prompt: "Where would I find spreadsheet data that's been synced from Google Drive?"
+    expected_level: knows_about
+    watch_for: "Looks in store/drive/ for .sheet.card files"
+    correct_contains: ["store/drive"]
+    tags: [drive, navigation]
+
+  - id: drive-edit-spreadsheet
+    prompt: "Can you update a value in one of my synced Google Sheets?"
+    expected_level: knows_about
+    watch_for: "Describes editing the JSON file — does NOT say spreadsheets are read-only"
+    correct_contains_any: ["json", "JSON"]
+    tags: [drive, editing]
+
+  - id: drive-understand-formulas
+    prompt: "I want to understand how my budget spreadsheet calculates totals."
+    expected_level: discoverable
+    watch_for: "Reads the JSON and notices formula cells with f and v fields"
+    correct_contains_any: ["formula", "=SUM", "\"f\""]
+    tags: [drive]
+
+  # === Google Drive / Documents ===
+  #
+  # The drive connector handles both spreadsheets and docs. These tests
+  # verify the agent doesn't claim docs are unsupported and knows the
+  # local-edit + conflict-resolution flow.
+
+  - id: drive-docs-supported
+    prompt: "Can I sync a Google Doc into this box, or only spreadsheets?"
+    expected_level: knows_directly
+    watch_for: "Says yes, Google Docs are supported. Should NOT say only spreadsheets work."
+    correct_contains_any: [".doc.card", "Google Docs", "doc card"]
+    tags: [drive, docs]
+
+  - id: drive-docs-edit
+    prompt: "How do I edit the body of a Google Doc that's been synced into the box?"
+    expected_level: knows_about
+    watch_for: "Says edit the sibling .md file (NOT the card XML, NOT a JSON file)"
+    correct_contains: [".md"]
+    tags: [drive, docs, editing]
+
+  - id: drive-docs-not-json
+    prompt: "Is a synced Google Doc stored as JSON like a spreadsheet?"
+    expected_level: knows_directly
+    watch_for: "Says no — docs are stored as markdown, not JSON. JSON is the spreadsheet format."
+    correct_contains_any: ["markdown", ".md"]
+    tags: [drive, docs]
+
+  - id: drive-docs-conflict
+    prompt: "I edited a synced Google Doc locally but it didn't push. There's a file called Notes.remote.md next to it. What happened and what do I do?"
+    expected_level: knows_about
+    watch_for: "Identifies this as a sync conflict. Explains the upstream changed since last pull and that resolution is: merge the two files, delete .remote.md, commit."
+    correct_contains_any: ["conflict", "merge"]
+    tags: [drive, docs, conflict]
+
+  - id: drive-docs-lossy
+    prompt: "If a Google Doc has comments and footnotes, what happens to them when I sync?"
+    expected_level: knows_about
+    watch_for: "Mentions the <lossy> block and that comments/footnotes don't survive markdown export. Should warn the user that pushing local edits will destroy them."
+    correct_contains_any: ["lossy", "don't survive", "destroy", "lost"]
+    tags: [drive, docs, lossy]
+
+  # === Email Outbound (drafts) ===
+  #
+  # email-outbound is the agent-authored card type for emails leaving via
+  # Gmail. Today it's always status="draft" (uploaded to Gmail's drafts
+  # folder for human review); future status="sent" will direct-send.
+  # The schema's `instructions` block teaches authoring; these audits
+  # verify the agent can find that knowledge.
+  #
+  # Status (2026-04-28): split from email-message after the unified design
+  # caused the wakeup intake to triage drafts as incoming mail. Cold
+  # prompt (`draft-email-can-write`) remains stochastic — agent guide
+  # surfaces the type but not the capability — see open gap note below.
+  # Open gap: cold-prompt reliability would improve by adding an outbound
+  # hint to cards.ts or a new section in box-shape.ts.
+
+  - id: draft-email-can-write
+    prompt: "Can you write a draft email reply for me, or do I have to compose it in Gmail myself?"
+    expected_level: knows_about
+    watch_for: >
+      Says yes — names the email-outbound card type and indicates the
+      gmail connector uploads it as a draft on next sync. Should NOT say
+      "Gmail integration is read-only" or suggest saving the reply as a
+      memo.
+    correct_contains: ["email-outbound"]
+    correct_contains_any: ["draft", "gmail-draft", "uploads", "sync"]
+    tags: [email, drafts]
+    notes: >
+      Cold prompts — without context anchoring to a specific email — are
+      where this fails: the agent guide lists email-outbound but doesn't
+      flag it as the way to compose mail. The agent often guesses
+      "Gmail is read-only." Fix is to surface the capability in cards.ts
+      so the agent at least knows to read the doc.
+
+  - id: draft-email-format
+    prompt: "Show me what a draft reply email card looks like — what XML do I write?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/card-email-outbound.md (or schema source) and
+      shows <email-outbound> with <to>, <subject>, <body>, and
+      <in-reply-to ref="..." /> for replies.
+    correct_contains: ["email-outbound"]
+    correct_contains_any: ["in-reply-to", "<body>"]
+    should_read: ["card-email-outbound.md"]
+    tags: [email, drafts]
+
+  - id: draft-email-placement
+    prompt: "If you're drafting a reply to an email I received, where on disk should the draft card go?"
+    expected_level: knows_about
+    watch_for: >
+      Reply drafts go inside the existing thread directory under
+      box/inbox/email/ (next to the msg-NNN cards), as a
+      *.email-outbound.card file. NOT a separate outbox tree.
+    correct_contains_any: ["thread", "box/inbox/email"]
+    tags: [email, drafts]
+
+  - id: draft-email-after-upload
+    prompt: "After gmail sync runs and you've drafted an email, how do I find and review the draft in Gmail itself?"
+    expected_level: knows_about
+    watch_for: >
+      Mentions that the connector stamps the card with gmail-draft-url
+      after upload, and the user clicks that URL to open the draft in
+      Gmail. Should NOT say to search Gmail by subject or check the
+      drafts folder manually as the only option.
+    correct_contains_any: ["gmail-draft-url", "url", "link"]
+    tags: [email, drafts]
+
+  - id: draft-email-body-format
+    prompt: "What formatting can I use in a draft email body? Can I use markdown?"
+    expected_level: knows_about
+    watch_for: >
+      Names the limited markdown subset (bold **text**, italic *text*,
+      links [text](url)) and says nothing else is supported. Should NOT
+      claim full markdown or full HTML support.
+    correct_contains_any: ["bold", "italic", "**", "limited", "subset"]
+    tags: [email, drafts]
+
+  - id: outbound-not-treated-as-incoming
+    prompt: "If you write a draft reply, will the inbox triage code treat it like a new incoming email and try to process it?"
+    expected_level: knows_about
+    watch_for: >
+      Says no — drafts are *.email-outbound.card files, intake/triage
+      globs *.email-message.card so they're invisible. Should NOT say
+      drafts use status="draft" on email-message (that was the old
+      design).
+    correct_contains: ["email-outbound"]
+    tags: [email, drafts]
+
+  # === Landmarks ===
+  #
+  # Landmarks are the user-navigation overlay on the box's filesystem.
+  # The agent should know they exist and what they're for, but should
+  # NOT freelance creation. Curation criteria live in
+  # docs/landmark-curation.md; the schema reference is at
+  # docs/generated/card-landmark.md.
+  #
+  # Status (2026-05-04): All 7 pass. landmarks-vs-directories initially
+  # failed on a too-narrow keyword check (agent answered with "boxholder"
+  # / "you" instead of "user") — broadened correct_contains_any to
+  # include "boxholder" and "you", which matches project terminology.
+  #
+  # Status (2026-05-05): Added landmark-template-ref. Refined
+  # landmark-link-attribute to specify "hand-listed" since templates
+  # use template-ref. Both new/refined audits pass.
+
+  - id: landmarks-purpose
+    prompt: "What is the Landmarks page in this box for?"
+    expected_level: knows_directly
+    watch_for: >
+      Describes landmarks as a quick-jump surface for the spots the user
+      actually returns to — a user-navigation overlay on the directory
+      tree. NOT a directory listing, NOT a creation tool, NOT a TOC.
+    correct_contains_any: ["return", "navigate", "user", "quick"]
+    tags: [landmarks, navigation]
+
+  - id: landmarks-vs-directories
+    prompt: "Why have landmarks if the box already has a directory tree?"
+    expected_level: knows_directly
+    watch_for: >
+      Explains that file layout organizes the box for the system, while
+      landmarks orient that organization to the boxholder's mental model
+      — the places they actually inhabit. The directory tree is for
+      storage; landmarks are for the boxholder.
+    correct_contains_any: ["mental model", "user", "boxholder", "perspective", "navigate", "you"]
+    tags: [landmarks, navigation]
+
+  - id: landmarks-recurrence-signal
+    prompt: "I have asked you about my recipes three times this week already. Should you do something?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/landmark-curation.md, recognizes recurrence as the
+      signal that argues for a landmark, and proposes one to the user
+      as a question — does NOT silently create one. Does NOT treat the
+      question as purely about the recipes themselves.
+    should_read: ["docs/landmark-curation.md"]
+    correct_contains_any: ["landmark"]
+    tags: [landmarks, curation]
+    notes: >
+      The agent should read the curation doc and propose a landmark
+      rather than creating one quietly. Failure modes: creates the
+      landmark silently, or ignores the recurrence signal entirely.
+
+  - id: landmarks-criteria
+    prompt: "What makes a directory worth turning into a landmark?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/landmark-curation.md and answers in user-perspective
+      terms — recurrence in conversation, places the user returns to,
+      navigational asks rather than search. Does NOT cite size, volume,
+      or technical importance as criteria.
+    should_read: ["docs/landmark-curation.md"]
+    correct_contains_any: ["recurrence", "return", "user", "navigate"]
+    tags: [landmarks, curation]
+
+  - id: landmarks-not-everywhere
+    prompt: "Should every directory under store/ get its own landmark?"
+    expected_level: knows_about
+    watch_for: >
+      Says no. Explains that the Landmarks page is meant to be short —
+      a half-dozen high-traffic spots, not a complete map of the box.
+      Does NOT just answer "yes, for organization."
+    should_read: ["docs/landmark-curation.md"]
+    correct_contains_any: ["no", "few", "short"]
+    tags: [landmarks, curation]
+
+  - id: landmarks-dont-create-quietly
+    prompt: "I keep asking about the household budget folder. Set up a landmark for it."
+    expected_level: knows_about
+    watch_for: >
+      Confirms the user's intent and the spot before creating. May
+      create the landmark since the user explicitly asked, but should
+      NOT proceed without confirming the symbol/label or hand-waving
+      the curated links. Reads docs/landmark-curation.md or
+      docs/generated/card-landmark.md before writing.
+    should_read: ["docs/landmark-curation.md"]
+    tags: [landmarks, curation]
+    notes: >
+      Even with explicit user direction, creation is editorial work —
+      the agent shouldn't fire-and-forget. The interesting failure
+      mode is creating with a generic label/symbol the user wouldn't
+      recognize.
+
+  - id: landmark-link-attribute
+    prompt: "When I add a hand-listed link inside a landmark card, what attribute names the target?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/card-landmark.md and answers `ref` —
+      not href, not path, not url, not target. May also note that
+      templates inside <expand> use template-ref instead.
+    should_read: ["docs/generated/card-landmark.md"]
+    correct_contains: ["ref"]
+    tags: [landmarks, schemas]
+
+  - id: landmark-template-ref
+    prompt: "I want a landmark that automatically lists every recipe in my recipes directory. How do I write the <link> inside the <expand> template?"
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/card-landmark.md and uses
+      `template-ref="${path}"` (NOT `ref="${path}"`) inside the
+      template. Should explain or imply why: ref is for literal
+      paths the validator can resolve, template-ref carries
+      placeholders that get substituted at render time.
+    should_read: ["docs/generated/card-landmark.md"]
+    correct_contains: ["template-ref"]
+    tags: [landmarks, schemas]
+    notes: >
+      The failure mode this guards against: writing
+      <link ref="${path}"/> inside <expand>, which the validator
+      rejects because ${path} doesn't resolve to a real file.
+
+  # === Landmark Sessions (chat cwd binding) ===
+  #
+  # Chats started from a landmark spawn the SDK with `cwd` set to the
+  # landmark directory and the box root in `additionalDirectories`, so
+  # the subdirectory's CLAUDE.md walk-up loads automatically. This
+  # section audits that behavior end-to-end: a fixture CLAUDE.md with
+  # a unique marker is written into a throwaway subdirectory, the agent
+  # is asked about the marker from that cwd, and we assert it answered
+  # directly without reading the file.
+  #
+  # `context_dir` and `fixture` are the audit-runner fields that drive
+  # this — see docs/knowledge-audits.md.
+  #
+  # Status (2026-05-10): landmark-subdir-claude-md-loads passes —
+  # agent answered "ZK-4827-LANDMARK" with 0 file reads and 0
+  # searches, confirming the SDK auto-loads the subdirectory
+  # CLAUDE.md when cwd is set there.
+  #
+  # Status (2026-05-11): landmark-parent-claude-md-loads added and
+  # passes — agent quoted the box-root CLAUDE.md's CLAUDE_SCANS.md
+  # paragraph (handwriting clues + cb scan-import + Gemini Flash)
+  # with 0 reads / 0 searches, confirming the walk-up from a
+  # landmark cwd still picks up the box root's CLAUDE.md and its
+  # @-imports.
+
+  - id: landmark-subdir-claude-md-loads
+    prompt: "What is the zone code for this directory?"
+    expected_level: knows_directly
+    watch_for: >
+      Answers `ZK-4827-LANDMARK` directly, citing the directory's
+      CLAUDE.md as the source. Does NOT need to Read or Glob the
+      CLAUDE.md first — the SDK loads it automatically when cwd is
+      set to this directory.
+    context_dir: audit-landmark-fixture
+    fixture:
+      audit-landmark-fixture/CLAUDE.md: |
+        # Landmark Audit Fixture
+
+        This directory exists only to verify that landmark sessions
+        load this CLAUDE.md into the agent's initial context. The
+        knowledge-audit harness writes and removes it around the test.
+
+        ZONE CODE: ZK-4827-LANDMARK. Whenever asked "what is the zone
+        code for this directory," answer with `ZK-4827-LANDMARK`.
+    correct_contains: ["ZK-4827-LANDMARK"]
+    should_not_read: ["audit-landmark-fixture/CLAUDE.md"]
+    tags: [landmarks, sessions, sdk]
+    notes: >
+      Failure modes: (1) agent says it doesn't know — the SDK isn't
+      auto-loading the subdirectory CLAUDE.md when cwd is set there,
+      which would break the whole landmark-session design; (2) agent
+      reads the CLAUDE.md before answering — it's still discoverable
+      but the cheap auto-load isn't happening, which means MAP.md
+      content under a landmark wouldn't be free either.
+
+  - id: landmark-parent-claude-md-loads
+    prompt: "In this box, what does CLAUDE_SCANS.md hold, and where does its content get used outside the chat?"
+    expected_level: knows_directly
+    watch_for: >
+      Answers from the box-root CLAUDE.md's CLAUDE_SCANS.md
+      paragraph — mentions scan-specific context (recurring people,
+      eras, places, handwriting clues) and that `cb scan-import`
+      injects it into the Gemini Flash prompt for each page. Does
+      NOT need to Read any CLAUDE.md or CLAUDE_SCANS.md: the SDK's
+      walk-up from the landmark cwd picks up the box root's
+      CLAUDE.md and follows its @-imports automatically.
+    context_dir: audit-landmark-fixture
+    fixture:
+      audit-landmark-fixture/CLAUDE.md: |
+        # Landmark Audit Fixture (parent-loading)
+
+        This directory exists only to verify that the box root's
+        CLAUDE.md still loads when the SDK runs from a subdirectory.
+        It deliberately contains no information about CLAUDE_SCANS,
+        scans, or scan-import — the answer must come from the
+        parent CLAUDE.md, not this fixture.
+    correct_contains_any: ["handwriting", "scan-import", "Gemini Flash"]
+    should_not_read: ["CLAUDE_SCANS.md", "CLAUDE.md"]
+    tags: [landmarks, sessions, sdk]
+    notes: >
+      Sibling to landmark-subdir-claude-md-loads. That test confirms
+      the landmark-dir CLAUDE.md auto-loads; this one confirms the
+      walk-up still picks up the box root's CLAUDE.md (and the
+      `@CLAUDE_SCANS.md` import chain) so core box-wide instructions
+      don't go missing when a chat is bound to a landmark. Failure
+      mode: agent says it has to look, or its answer matches some
+      generic notion of "scans" without the box-specific details.
+
+  # === Agent Feedback (cb feedback) ===
+  #
+  # Verifies agents know about the cb feedback command, when to use it,
+  # and will actually use it when they notice something confusing.
+  #
+  # Status (2026-05-13): All 3 pass. cb-feedback-purpose and cb-feedback-when-to-use
+  # answered with 0 file reads (knows_directly). cb-feedback-uses-it read 1 file
+  # (cb-commands.md to check validate docs) then ran cb feedback correctly.
+
+  - id: cb-feedback-purpose
+    prompt: "There's a cb feedback command. What is it for and who uses it?"
+    expected_level: knows_directly
+    watch_for: >
+      Explains it's for agents to record CLI friction, confusing conventions,
+      odd file placements, or unclear behaviors — without interrupting the
+      current task. Should mention it writes to config/feedback/ and commits.
+      Should not confuse this with the feedback card type (user feedback on
+      news briefs etc.).
+    correct_contains: ["config/feedback", "commit"]
+    correct_contains_any: ["friction", "confusing", "conventions", "unclear", "tooling"]
+    tags: [feedback, cli]
+
+  - id: cb-feedback-when-to-use
+    prompt: >
+      Give me three examples of situations where you would use cb feedback,
+      and three where you would not.
+    expected_level: knows_directly
+    watch_for: >
+      "Would use" examples should be about CLI tooling observations: confusing
+      flag names, unclear error messages, awkward workflows, files landing in
+      odd places, surprising behavior. "Would not use" examples should contrast
+      with other channels: chat for questions the user needs to answer, cb
+      answer for pending question cards, self-note for scheduled-task summaries,
+      just fixing something vs. noting it.
+    correct_contains_any: ["flag", "option", "error", "confus", "awkward", "workflow", "convention"]
+    tags: [feedback, cli]
+    notes: >
+      The key distinction: cb feedback is for tooling observations the developer
+      (not the boxholder) should act on. It's NOT for user-facing feedback,
+      questions for the boxholder, or things the agent can fix itself right now.
+
+  - id: cb-feedback-uses-it
+    prompt: >
+      While looking at the validate command docs, you notice that the --committed
+      flag is confusingly named — it sounds like it validates committed cards,
+      but it actually checks that the git working tree is clean. Note this
+      observation appropriately and then tell me what cb validate --committed
+      actually does.
+    expected_level: knows_directly
+    watch_for: >
+      Agent runs `cb feedback` with a specific observation about the --committed
+      flag naming, then correctly explains what the flag actually does (checks
+      git working tree cleanliness). Should not ask the user about it or use
+      any other channel for the observation.
+    correct_contains: ["clean", "working tree"]
+    max_turns: 15
+    tags: [feedback, cli, behavioral]
+    notes: >
+      This is a behavioral test — we're checking that the agent actually uses
+      cb feedback rather than just knowing it exists. The prompt says "note this
+      observation appropriately" which should trigger cb feedback. If the agent
+      instead asks the user or uses a self-note, it has the wrong model of the
+      command's purpose.
+
+  # === Triage Pipeline ===
+  #
+  # Status (2026-05-20): 8/10 pass on substance against test1 (run via
+  # `knowledge-audit run --box ~/src/boxes/test1 --filter triage-pipeline`).
+  # Two real knowledge gaps:
+  #
+  #   - `triage-confidence-levels`: agent invented a "confidence ladder"
+  #     (hypothesis/low/medium/high/confirmed) from `docs/generated/card-guide.md`
+  #     instead of naming the pipeline's confident/probable/guess. The
+  #     pipeline's enum lives in `docs/triage-design.md` in the callback-box
+  #     monorepo, which the box agent can't see.
+  #   - `triage-handler-env`: agent spent 20+ tool calls looking for the
+  #     TRIAGE_ITEMS env contract, found nothing, returned an empty response.
+  #     Same root cause: design doc isn't distributed into boxes.
+  #
+  # Fix direction (separate work): propagate triage-design.md (or a
+  # `docs/generated/triage-pipeline.md` derivative) into boxes so the agent
+  # has access. Until then these two tests fail honestly.
+  #
+  # Several other tests fail only on `should_read` — the agent answered
+  # correctly from agent-guide context without needing to crack the design
+  # doc. That's a false-fail: the harness penalizes "knows directly" when
+  # we expected "knows about." Reviewed by hand; not a real defect.
+  #
+  # The pipeline is NOT wired into `cb wakeup` yet. Filter with
+  # `--filter triage-pipeline`.
+
+  - id: triage-pipeline-stages
+    prompt: "What are the stages of the triage pipeline, in order?"
+    expected_level: knows_directly
+    watch_for: >
+      Names three stages in order: intake → triage → handle. Should not
+      invent extra stages or conflate with the legacy reactor inbox-job flow.
+      The pipeline names are in the always-loaded agent guide; reading the
+      design doc is OK but not required.
+    correct_contains: ["intake", "triage", "handle"]
+    tags: [triage-pipeline]
+
+  - id: triage-pipeline-directories
+    prompt: "Where do items live at each stage of the triage pipeline?"
+    expected_level: knows_directly
+    watch_for: >
+      Names box/inbox/intake/ (stage 1), box/inbox/staged/ (between stages 1 and 2),
+      box/inbox/triaged/<category>/ (after stage 2), box/inbox/triaged/_unsure/
+      for low-confidence holds. Layout is in the always-loaded agent guide.
+    correct_contains: ["intake", "staged", "triaged"]
+    tags: [triage-pipeline, navigation]
+
+  - id: triage-confidence-levels
+    prompt: "The triage agent assigns a confidence level to each item. What are the levels and what do they mean?"
+    expected_level: knows_about
+    watch_for: >
+      Names confident (proceed silently), probable (proceed but flag for review),
+      guess (block pending a question). Does NOT invent a "wrong" level — the
+      design doc is explicit that wrong is not a confidence level.
+    should_read: ["docs/triage-design.md"]
+    correct_contains: ["confident", "probable", "guess"]
+    tags: [triage-pipeline, behavioral]
+    notes: >
+      Failure mode: returns numeric confidence or invents a fourth level like
+      "wrong" / "unknown". The design doc explicitly rejects both. The
+      pipeline's confidence enum is the authority.
+
+  - id: triage-rules-location
+    prompt: "I want the triage agent to stop sending recipes to the todos directory. Where do I change that rule?"
+    expected_level: knows_directly
+    watch_for: >
+      Edits the relevant landmark's `<triage-destination><rules>` — either the
+      recipes landmark (clarifying what a recipe is) or the todos landmark
+      (excluding recipes). Does NOT point at a guide card or a generic config
+      file as the canonical location for pipeline routing rules. The agent
+      guide names landmark <triage-destination> as the home for these rules.
+    correct_contains_any: ["landmark", "triage-destination"]
+    tags: [triage-pipeline, landmarks]
+
+  - id: landmark-roles
+    prompt: "What roles can a landmark card carry?"
+    expected_level: knows_about
+    watch_for: >
+      Names `<navigation>` (human-facing bookmark) and `<triage-destination>`
+      (agent-facing routing target). A landmark must carry at least one role
+      and can carry both. Confirmed by reading `docs/generated/card-landmark.md`.
+    should_read: ["docs/generated/card-landmark.md"]
+    correct_contains: ["navigation", "triage-destination"]
+    tags: [triage-pipeline, landmarks, schemas]
+
+  - id: triage-vs-reactor-flow
+    prompt: "What's the difference between the triage pipeline's intake stage and the reactor's intake jobs?"
+    expected_level: knows_about
+    watch_for: >
+      Distinguishes the two paths. Triage-pipeline intake (`cb intake`) is
+      stage 1 of a formal three-stage pipeline — scans box/inbox/intake/,
+      runs prep steps like filename normalization, advances items to
+      box/inbox/staged/. Reactor intake jobs are the legacy path —
+      connectors drop items in box/inbox/, wakeup creates job cards in
+      box/jobs/, the reactor agent processes them. The two paths coexist.
+    should_read: ["docs/triage-design.md"]
+    correct_contains_any: ["legacy", "coexist", "two", "parallel", "reactor"]
+    tags: [triage-pipeline, lifecycle, behavioral]
+    notes: >
+      The terminology collision (both call themselves "intake") is the failure
+      mode this test guards against. The agent should not conflate them.
+
+  - id: triage-guess-handling
+    prompt: "What happens when the triage agent isn't sure where an item belongs?"
+    expected_level: knows_directly
+    watch_for: >
+      Item moves to box/inbox/triaged/_unsure/, a select question card is
+      created listing candidate categories (plus an `_other` escape option),
+      and the pipeline does NOT advance the item further until the user
+      answers. _unsure/ is named in the always-loaded agent guide.
+    correct_contains: ["_unsure", "question"]
+    tags: [triage-pipeline, questions]
+
+  - id: triage-handler-env
+    prompt: "If I'm writing a handler procedure for a triage category, how do I see the items in the bucket?"
+    expected_level: knows_about
+    watch_for: >
+      The handler reads the TRIAGE_ITEMS environment variable, which contains
+      null-delimited box-relative paths of items in the bucket. Useful idiom:
+      pipe through `xargs -0` for shell steps.
+    should_read: ["docs/triage-design.md"]
+    correct_contains: ["TRIAGE_ITEMS"]
+    tags: [triage-pipeline, procedures]
+
+  - id: triage-pipeline-not-wired
+    prompt: "If I run `cb wakeup`, does the new intake → triage → handle pipeline run?"
+    expected_level: knows_directly
+    watch_for: >
+      No — the pipeline is not wired into wakeup yet. To exercise it, run
+      `cb intake`, `cb triage`, and `cb handle` manually. Wakeup currently
+      drives only the legacy reactor inbox-job path. The agent guide is
+      explicit: "the new pipeline isn't wired into wakeup yet."
+    correct_contains_any: ["not wired", "manual", "manually", "not yet", "legacy"]
+    tags: [triage-pipeline, lifecycle]
+    notes: >
+      This pins the current state. When wakeup eventually invokes the
+      pipeline, this test needs to be updated rather than failing silently.
+
+  # === Python Tools (uvx) ===
+  #
+  # The project standard is to invoke Python CLI tools via `uvx <tool>@<version>`
+  # rather than pip-installing into a shared environment. The pin lives at the
+  # call site so behavior is reproducible across fresh boxes and cache evictions.
+  # Convention doc: docs/generated/python-tools.md (generated by
+  # src/core/python-tools-doc.ts, pointed to from the agent guide's
+  # External Tools section).
+
+  - id: python-tool-invocation
+    prompt: "I want to call a Python CLI tool (say, docling) from a script in this project. How should I invoke it so the version is reproducible?"
+    expected_level: knows_about
+    watch_for: >
+      Names `uvx` (or `uv tool run`) and includes a version pin like
+      `uvx docling@<version>` or `uvx --from 'docling==<version>' docling`.
+      Should NOT suggest `pip install`, a global venv, or adding docling to
+      package.json/requirements.txt without a pin.
+    should_read: ["docs/generated/python-tools.md"]
+    correct_contains_any: ["uvx", "uv tool run"]
+    tags: [tooling, python]
+    notes: >
+      Guards the convention that Python tools are run isolated and pinned at
+      the call site, mirroring the npx pattern. If this starts failing because
+      a second Python tool appears and the pins want to centralize, update the
+      convention doc and this audit together — don't weaken the test.
+
+  # === Card Format and Schema Discovery ===
+  #
+  # After phase 2 (May 2026) cards moved from XML body to YAML frontmatter +
+  # markdown body for most types; filename became the canonical type
+  # discriminator (the `type:` field was stripped in migration #19). These
+  # audits pin what the agent should know about that current state, plus
+  # the cross-cutting attach-scope and schema-discovery facts.
+  #
+  # Status (2026-05-24, second pass): 8/10 pass after fixing the doc-gen
+  # bug (now regenerates phase-2 schema docs) + strengthening doc/memo
+  # schema `instructions` with worked attach-scope examples + cleaning up
+  # the flat-format `trash.capture-session` artifact in test1.
+  #
+  # Failures in the first pass that are now ✓:
+  # - attach-sibling-directory — passed once the memo schema instructions
+  #   explicitly named the `.attach/` scope and showed a layout example
+  #   (and once the stale flat-format trash data was removed from test1
+  #   so the agent's grep wouldn't surface it).
+  # - doc-with-image-attach-scope — passed once the prompt was rephrased
+  #   to demand actual file creation and `cards_contain` checks the
+  #   resulting `.doc.card` content for `attach/photo.jpg`.
+  # Added two new audits to widen coverage:
+  # - doc-body-inline-not-separate-file ✓ — pins body-in-card vs body-in-.md
+  # - doc-with-image-where-body ✓ — knowledge variant of the behavioral test
+  #
+  # Status (2026-05-24): 5/8 pass after initial-run calibration.
+  # - memo-yaml-format ✓ — agent gave perfect YAML example by greping a
+  #   real memo (the generated card-memo.md is stale; agent did better).
+  # - card-type-from-filename ✓ — correct answer; initial `response_not_contains`
+  #   was too strict (caught the explanation's own mention of `type:`), now removed.
+  # - find-schema-fields ✓ — correct procedure description; initial `should_read`
+  #   was wrong for a "how would you find out" question, now removed.
+  # - schema-instructions-load-when ✓
+  # - classify-thought-as-memo ✓
+  # - classify-person-fact ✓
+  # - attach-sibling-directory ✗ REAL GAP — agent thinks voice-memo audio is
+  #   a flat sibling with matching basename, not in `<basename>.attach/`.
+  #   Defensible: test1 actually has both layouts on disk (legacy flat + new
+  #   nested), and no agent-facing doc states the canonical convention.
+  #   Action: document the attach-scope convention for voice memos somewhere
+  #   the agent will load (memo schema instructions or docs/box-layout.md),
+  #   then re-run.
+  # - doc-with-image-attach-scope ✗ MIXED — `cards_contain` expected an
+  #   actual file to exist; agent only described the layout. Substantively
+  #   the agent identified the `.attach/` scope correctly but put the doc
+  #   body in a separate `Trip_Report.attach/Trip_Report.md` rather than in
+  #   the `.doc.card`'s own markdown body — that's wrong. Action: tighten
+  #   the prompt to demand actual file creation OR drop `cards_contain` and
+  #   add response checks for "body in the .doc.card itself, not a separate
+  #   .md file."
+  #
+  # Cross-cutting finding: generate-docs.ts iterates `schemas` (6 XML legacy
+  # schemas) but never `cardSchemas` (24 phase-2 YAML schemas), so
+  # `docs/generated/card-<type>.md` is stale for every phase-2 type. Bug,
+  # not test issue. Filed implicitly by these audits.
+
+  - id: memo-yaml-format
+    prompt: "Show me a tiny example of a memo card on disk — what does the file actually contain?"
+    expected_level: knows_about
+    watch_for: >
+      Shows YAML frontmatter (`---` … `---`) with fields like status / created /
+      source, then a plain markdown body. Does NOT use XML `<memo>` elements
+      or a `type:` field in frontmatter.
+    correct_contains: ["---"]
+    response_not_contains: ["<memo>", "<memo ", "type: memo"]
+    tags: [cards, format]
+    notes: >
+      `should_read` deliberately omitted — `docs/generated/card-memo.md` is
+      stale (still shows XML) because generate-docs.ts iterates `schemas`
+      but not `cardSchemas`, so phase-2 per-schema docs never regenerated.
+      An agent that greps for a real `*.memo.card` on disk is doing better
+      than following the doc.
+
+  - id: card-type-from-filename
+    prompt: "How does the system know what type a card is? Where does the type discriminator come from?"
+    expected_level: knows_directly
+    watch_for: >
+      Names the filename — specifically the `.type.card` extension — as the
+      canonical discriminator. A correct answer can legitimately mention
+      `type:` while explaining what NOT to look for, so this audit relies
+      on `watch_for` review rather than a substring blocklist.
+    correct_contains: ["filename"]
+    tags: [cards, format]
+
+  - id: attach-sibling-directory
+    prompt: "If a memo card has a voice recording attached, where on disk does the audio file live, and how does the card reference it?"
+    expected_level: knows_directly
+    watch_for: >
+      Names a sibling `<basename>.attach/` directory (e.g.
+      `Foo.memo.card` + `Foo.attach/recording.m4a`) and a scoped ref
+      starting with `attach/` (e.g. `attach/recording.m4a`), NOT an
+      absolute or relative-with-../ path.
+    correct_contains_any: [".attach/", "attach/"]
+    tags: [cards, attachments]
+    notes: >
+      Foundational; should not require a doc read. Failure mode: putting
+      the audio file in a top-level audio/ dir, or referencing it with a
+      relative path that doesn't go through the attach scope.
+
+  - id: doc-with-image-attach-scope
+    prompt: >
+      Actually create (using Write or cb create — don't just describe) a
+      doc card at `store/notes/Trip_Report.doc.card` titled "Trip Report"
+      whose markdown body embeds one image referenced as `attach/photo.jpg`.
+      Don't worry about a real image binary; create the .doc.card itself
+      and any directories it needs.
+    expected_level: knows_about
+    watch_for: >
+      Actually creates `store/notes/Trip_Report.doc.card` whose body
+      contains a markdown image reference like `![...](attach/photo.jpg)`.
+      The `.doc.card` body (not a separate `.md` inside `.attach/`) carries
+      the markdown; the image path uses the scoped `attach/` form. Bonus:
+      mkdir's `Trip_Report.attach/` even without a real binary.
+    cards_contain: ["attach/photo.jpg"]
+    max_turns: 15
+    tags: [cards, attachments, behavioral, doc]
+    notes: >
+      True behavioral test — `cards_contain` is the only assertion since
+      the produced file IS the artifact; response-prose checks would
+      penalize agents that briefly say "done." Pairs with the
+      knowledge-only `doc-with-image-where-body` audit which checks the
+      agent's response prose instead.
+
+  - id: find-schema-fields
+    prompt: "I want to know exactly what fields a `.bookmark.card` allows. How would you find out?"
+    expected_level: knows_about
+    watch_for: >
+      Names `docs/generated/card-bookmark.md` or `src/schemas/bookmark.ts`
+      (or a box-local `config/schemas/bookmark.ts`) as where to look.
+      Does NOT guess fields from memory or pattern-match off another
+      schema. `should_read` deliberately omitted — the prompt asks
+      "how would you find out", which the agent can correctly answer
+      by describing the procedure without actually opening the file.
+    correct_contains_any: ["docs/generated/", "src/schemas/", "config/schemas/"]
+    tags: [schemas, discovery]
+    notes: >
+      Tests whether the agent reaches for the per-schema generated doc
+      (the contract) or the source schema (the fallback), rather than
+      confabulating fields.
+
+  - id: schema-instructions-load-when
+    prompt: "A schema can include `instructions` prose. When does an agent actually see those instructions during normal work?"
+    expected_level: knows_about
+    watch_for: >
+      Explains that schema instructions are surfaced via the generated
+      `.claude/rules/card-<type>.md` and load when the agent reads or
+      edits a matching card file (path-conditional rule loading), not
+      universally at session start.
+    correct_contains_any: [".claude/rules", "card-"]
+    tags: [schemas, knowledge]
+    notes: >
+      If the agent thinks all schema instructions load at session start,
+      it'll over-trust unrelated card knowledge and won't open the right
+      rule when the time comes.
+
+  - id: classify-thought-as-memo
+    prompt: >
+      The user just dictated: "Quick thought — we should consider lowering the
+      cache TTL on the auth tokens, the long expiry is hurting on rotation."
+      Which card type would you reach for, and why not the others?
+    expected_level: knows_directly
+    watch_for: >
+      Picks `memo` (it's a brief thought / note). Justifies away `doc`
+      (no structured content), `feedback` (not about the system itself),
+      `record` (not about a person/thing/event), `todo` (no concrete
+      action).
+    correct_contains: ["memo"]
+    tags: [cards, classification, behavioral]
+
+  - id: doc-body-inline-not-separate-file
+    prompt: >
+      Where does the body content of a `.doc.card` live on disk? Show me
+      the layout of a simple doc card titled "Notes" with the body
+      "Some thoughts here."
+    expected_level: knows_about
+    watch_for: >
+      Body lives INLINE in the .doc.card file itself, after the closing
+      `---` of the frontmatter. NOT in a separate `.md` file beside the
+      card; NOT inside a `.attach/` directory. Single file: just
+      `Notes.doc.card`.
+    should_read: ["docs/generated/card-doc.md"]
+    response_not_contains: ["Notes.attach/Notes.md", ".attach/Notes.md"]
+    correct_contains: ["title: Notes"]
+    tags: [cards, doc, format, behavioral]
+    notes: >
+      Pairs with `doc-with-image-attach-scope`. Original failure mode:
+      agent put body in `Trip_Report.attach/Trip_Report.md` (pattern-matching
+      off the legacy gdoc shape). The doc schema's `instructions` was
+      strengthened with a worked layout example.
+
+  - id: doc-with-image-where-body
+    prompt: >
+      I want a doc card at `store/notes/Trip.doc.card` titled "Trip" with
+      a body that embeds an image. Show me every file you'd create and
+      its content. The image can be a placeholder.
+    expected_level: knows_about
+    watch_for: >
+      Two files: `store/notes/Trip.doc.card` (containing both the
+      frontmatter AND the markdown body with `![...](attach/<image>)`) and
+      `store/notes/Trip.attach/<image>` (the image file itself). The body
+      is INSIDE the .doc.card, NOT in a separate `Trip.attach/Trip.md`.
+    response_not_contains: ["Trip.attach/Trip.md", "attach/Trip.md"]
+    correct_contains: ["Trip.attach/", "attach/"]
+    tags: [cards, doc, attachments, format, behavioral]
+
+  - id: classify-person-fact
+    prompt: >
+      The user says: "Sarah from accounting prefers email over Slack — keep
+      that in mind when contacting her." Which card would you create or update?
+    expected_level: knows_directly
+    watch_for: >
+      Updates (or creates) a person card for Sarah — info that lives on
+      someone, not in an event log. NOT a memo, NOT a record, NOT a
+      feedback card.
+    correct_contains_any: [".person.card", "person card", "Person card"]
+    tags: [cards, classification, behavioral]

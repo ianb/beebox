@@ -1,0 +1,20 @@
+graph LR
+    subgraph audio["Tio_Raul_Birthday.audio.card"]
+        a1["status: transcribed"]
+        a2["filename: .webm"]
+        a3["transcript: (text)"]
+    end
+
+    webm["🎵 Tio_Raul_Birthday.webm"]
+    timing[".timing.json"]
+
+    audio -. "ATTACHMENT" .-> webm
+    audio -. "SIDECAR" .-> timing
+
+    subgraph story["Raul_Stories.story.card"]
+        s1["sources: (references)"]
+    end
+
+    story -. "REFERENCES" .-> audio
+
+    schema["{ SCHEMA: validates before commit }"]

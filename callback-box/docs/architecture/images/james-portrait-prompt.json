@@ -1,0 +1,8 @@
+{
+  "prompt": "A tall, lean man standing in a driveway next to a garage. Sandy brown hair, thinning, kept short. Wire-frame glasses. Faded gray t-shirt, olive cargo pants with a tape measure clipped to the pocket, scuffed sneakers. His face is drawn with just a few crayon marks — two dots for eyes, a short line for a mouth. No detailed facial features. The whole figure should look like it was colored in with wax crayons by a careful adult. Overcast morning, a bungalow garage behind him.",
+  "style": "Primitive colored pencil drawing on rough cream paper. Heavy wax crayon texture\nwith visible tooth marks from the paper. The style is raw and handmade, like\noutsider art or a child's careful drawing — not polished, not cute, not digital-looking.\nThink Henry Darger or Bill Traylor, not Pixar or Headspace.\n\nFlat perspective with no attempt at 3D depth. Figures are slightly stiff and\nfrontal. Colors are laid down in rough, overlapping strokes with visible gaps\nwhere the paper shows through. Edges are wobbly, not clean.\n\nFaces are simple: dots or short lines for eyes, a single stroke for nose and\nmouth. No smooth skin rendering, no expressive cartoon eyes, no blush or shading\non cheeks. The face should look drawn, not rendered.\n\nThe background fades to bare paper at the edges rather than filling the frame.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-11T15:37:52.626Z",
+  "promptHash": "fc6476b9544044a8",
+  "references": []
+}

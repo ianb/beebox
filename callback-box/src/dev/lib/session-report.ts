@@ -1,0 +1,271 @@
+/**
+ * Session report generator — produces a critique-friendly markdown report
+ * from a Claude Code session log.
+ *
+ * Unlike `cb session` which skips tool results, this includes Bash command
+ * output so a critique agent can evaluate whether CLI output was helpful.
+ */
+
+import * as fs from "node:fs";
+import * as readline from "node:readline";
+
+interface RawBlock {
+  type: string;
+  text?: string;
+  thinking?: string;
+  name?: string;
+  id?: string;
+  input?: Record<string, unknown>;
+  tool_use_id?: string;
+  content?: unknown;
+}
+
+interface ToolCall {
+  toolName: string;
+  toolId: string;
+  input: Record<string, unknown>;
+  description: string;
+  output: string | null;
+}
+
+interface ReportEntry {
+  role: "user" | "assistant";
+  text: string | null;
+  toolCalls: ToolCall[];
+}
+
+/**
+ * Parse a session log into report entries, pairing tool_use with tool_result.
+ */
+async function parseForReport(logPath: string): Promise<ReportEntry[]> {
+  const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+  // Collect all raw entries in order
+  const rawEntries: Array<{ type: string; content: unknown[] }> = [];
+
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    let raw: Record<string, unknown>;
+    try {
+      raw = JSON.parse(line);
+    } catch (_e) {
+      continue;
+    }
+    if (raw.type !== "user" && raw.type !== "assistant") continue;
+    const message = raw.message as Record<string, unknown> | undefined;
+    if (!message) continue;
+
+    const content = message.content;
+    const blocks: unknown[] = typeof content === "string"
+      ? [{ type: "text", text: content }]
+      : Array.isArray(content) ? content : [];
+
+    rawEntries.push({ type: raw.type as string, content: blocks });
+  }
+
+  // Build a map of tool_use_id → tool_result content from user entries
+  const resultMap = new Map<string, string>();
+  for (const entry of rawEntries) {
+    if (entry.type !== "user") continue;
+    for (const block of entry.content) {
+      const b = block as RawBlock;
+      if (b.type === "tool_result" && b.tool_use_id) {
+        resultMap.set(b.tool_use_id, extractResultText(b.content));
+      }
+    }
+  }
+
+  // Build report entries from assistant + user text turns
+  const report: ReportEntry[] = [];
+
+  for (const entry of rawEntries) {
+    const blocks = entry.content as RawBlock[];
+
+    if (entry.type === "user") {
+      // Only include user entries with real text (not just tool_result plumbing)
+      const textBlocks = blocks.filter((b) => b.type === "text" && b.text && b.text.trim());
+      if (textBlocks.length === 0) continue;
+      const text = textBlocks.map((b) => b.text || "").join("\n").trim();
+      report.push({ role: "user", text, toolCalls: [] });
+      continue;
+    }
+
+    // Assistant entry
+    const textParts: string[] = [];
+    const toolCalls: ToolCall[] = [];
+
+    for (const block of blocks) {
+      if (block.type === "text" && block.text && block.text.trim()) {
+        textParts.push(block.text.trim());
+      }
+      if (block.type === "tool_use" && block.name && block.id) {
+        const input = (block.input || {}) as Record<string, unknown>;
+        const output = resultMap.get(block.id) || null;
+        toolCalls.push({
+          toolName: block.name,
+          toolId: block.id,
+          input,
+          description: describeToolCall(block.name, input),
+          output,
+        });
+      }
+    }
+
+    const text = textParts.length > 0 ? textParts.join("\n\n") : null;
+    if (text || toolCalls.length > 0) {
+      report.push({ role: "assistant", text, toolCalls });
+    }
+  }
+
+  return report;
+}
+
+function extractResultText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((c: unknown) => {
+        if (typeof c === "string") return c;
+        const obj = c as Record<string, unknown>;
+        if (obj.type === "text" && typeof obj.text === "string") return obj.text;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  return "";
+}
+
+function describeToolCall(name: string, input: Record<string, unknown>): string {
+  switch (name) {
+    case "Read":
+      return `Read ${input.file_path || ""}`;
+    case "Write":
+      return `Write ${input.file_path || ""} (${String(input.content || "").length} chars)`;
+    case "Edit":
+      return `Edit ${input.file_path || ""}`;
+    case "Bash":
+      return String(input.command || input.description || "");
+    case "Glob":
+      return `Glob ${input.pattern || ""}`;
+    case "Grep":
+      return `Grep "${input.pattern || ""}" in ${input.path || "."}`;
+    case "TodoWrite":
+      return "TodoWrite";
+    case "Task":
+      return `Task: ${String(input.description || "").substring(0, 120)}`;
+    default:
+      return `${name}: ${JSON.stringify(input).substring(0, 150)}`;
+  }
+}
+
+/**
+ * Render a report entry to markdown lines.
+ * For Bash calls, includes full command and output.
+ * For other tools, shows a one-liner summary.
+ */
+function renderEntry(entry: ReportEntry): string {
+  const lines: string[] = [];
+
+  if (entry.role === "user") {
+    lines.push("## User");
+    lines.push("");
+    if (entry.text) lines.push(entry.text);
+    lines.push("");
+    return lines.join("\n");
+  }
+
+  // Assistant
+  lines.push("## Assistant");
+  lines.push("");
+
+  if (entry.text) {
+    lines.push(entry.text);
+    lines.push("");
+  }
+
+  for (const call of entry.toolCalls) {
+    if (call.toolName === "Bash") {
+      // Full detail for Bash — this is the main thing we're critiquing
+      const command = String(call.input.command || "");
+      lines.push("### Bash");
+      lines.push("```");
+      lines.push(`$ ${command}`);
+      lines.push("```");
+      if (call.output) {
+        const trimmed = trimOutput(call.output, 3000);
+        lines.push("Output:");
+        lines.push("```");
+        lines.push(trimmed);
+        lines.push("```");
+      }
+      lines.push("");
+    } else if (call.toolName === "Read") {
+      lines.push(`- Read \`${call.input.file_path || ""}\``);
+    } else if (call.toolName === "Write") {
+      lines.push(`- Write \`${call.input.file_path || ""}\` (${String(call.input.content || "").length} chars)`);
+    } else if (call.toolName === "Edit") {
+      lines.push(`- Edit \`${call.input.file_path || ""}\``);
+    } else if (call.toolName === "Glob" || call.toolName === "Grep") {
+      lines.push(`- ${call.description}`);
+      if (call.output) {
+        const summary = call.output.split("\n").slice(0, 5).join("\n");
+        if (summary.trim()) {
+          lines.push(`  \`\`\`\n  ${summary}\n  \`\`\``);
+        }
+      }
+    } else if (call.toolName === "TodoWrite") {
+      // Skip — not interesting for critique
+    } else {
+      lines.push(`- ${call.description}`);
+    }
+  }
+
+  lines.push("");
+  return lines.join("\n");
+}
+
+function trimOutput(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const half = Math.floor(maxChars / 2);
+  const omitted = text.length - maxChars;
+  return text.substring(0, half) + `\n\n... (${omitted} chars omitted) ...\n\n` + text.substring(text.length - half);
+}
+
+export interface GenerateReportOptions {
+  logPath: string;
+}
+
+/**
+ * Generate a critique-friendly markdown report from a session log.
+ */
+export async function generateSessionReport(options: GenerateReportOptions): Promise<string> {
+  const entries = await parseForReport(options.logPath);
+
+  if (entries.length === 0) {
+    return "# Session Report\n\n(empty session)\n";
+  }
+
+  const lines: string[] = [];
+  lines.push("# Session Report");
+  lines.push("");
+
+  // Quick stats
+  const userTurns = entries.filter((e) => e.role === "user").length;
+  const assistantTurns = entries.filter((e) => e.role === "assistant").length;
+  const bashCalls = entries.flatMap((e) => e.toolCalls).filter((c) => c.toolName === "Bash").length;
+  const readCalls = entries.flatMap((e) => e.toolCalls).filter((c) => c.toolName === "Read").length;
+
+  lines.push(`**Turns:** ${userTurns} user, ${assistantTurns} assistant`);
+  lines.push(`**Tool calls:** ${bashCalls} Bash, ${readCalls} Read, ${entries.flatMap((e) => e.toolCalls).length} total`);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  for (const entry of entries) {
+    lines.push(renderEntry(entry));
+  }
+
+  return lines.join("\n");
+}

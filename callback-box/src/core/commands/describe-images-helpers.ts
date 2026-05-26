@@ -1,0 +1,319 @@
+/**
+ * Helpers for the describe-images command.
+ *
+ * EXIF extraction, MIME type mapping, image file utilities, and Gemini API calls.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { GoogleGenAI } from "@google/genai";
+import { parseCardName } from "../../cli/lib/paths.js";
+
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
+export function isImageFile(filePath: string): boolean {
+  const ext = path.extname(filePath).toLowerCase();
+  return IMAGE_EXTENSIONS.includes(ext);
+}
+
+export function isImageCard(filePath: string): boolean {
+  return filePath.endsWith(".image.card");
+}
+
+export function getMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  const mimes: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+  };
+  return mimes[ext] || "image/jpeg";
+}
+
+/**
+ * Find the image file attached to an image card.
+ * Image files share the card's basename (e.g., photo-001.jpg for photo-001.image.card).
+ */
+export async function findAttachedImage(cardPath: string): Promise<string | null> {
+  const dir = path.dirname(cardPath);
+  const parsed = parseCardName(path.basename(cardPath));
+  if (!parsed) return null;
+
+  const baseName = parsed.name;
+  const entries = await fs.readdir(dir);
+  for (const entry of entries) {
+    if (entry.startsWith(baseName) && isImageFile(entry)) {
+      return path.join(dir, entry);
+    }
+  }
+  return null;
+}
+
+export interface ExifData {
+  date?: string;
+  camera?: string;
+  gps?: string;
+  width?: string;
+  height?: string;
+}
+
+export async function extractExif(imagePath: string): Promise<ExifData | null> {
+  try {
+    const exifr = await import("exifr");
+    const data = await exifr.default.parse(imagePath, {
+      pick: [
+        "DateTimeOriginal", "CreateDate", "ModifyDate",
+        "Make", "Model",
+        "GPSLatitude", "GPSLongitude",
+        "ImageWidth", "ImageHeight", "ExifImageWidth", "ExifImageHeight",
+      ],
+    });
+    if (!data) return null;
+
+    const result: ExifData = {};
+
+    const dateField = data.DateTimeOriginal || data.CreateDate || data.ModifyDate;
+    if (dateField instanceof Date) {
+      result.date = dateField.toISOString();
+    }
+
+    const make = data.Make ? String(data.Make).trim() : null;
+    const model = data.Model ? String(data.Model).trim() : null;
+    if (make && model) {
+      // Avoid "Apple Apple iPhone" — model often includes make
+      result.camera = model.startsWith(make) ? model : `${make} ${model}`;
+    } else if (model) {
+      result.camera = model;
+    }
+
+    if (data.GPSLatitude != null && data.GPSLongitude != null) {
+      const lat = Number(data.GPSLatitude).toFixed(6);
+      const lon = Number(data.GPSLongitude).toFixed(6);
+      result.gps = `${lat},${lon}`;
+    }
+
+    const w = data.ExifImageWidth || data.ImageWidth;
+    const h = data.ExifImageHeight || data.ImageHeight;
+    if (w && h) {
+      result.width = String(w);
+      result.height = String(h);
+    }
+
+    if (Object.keys(result).length === 0) return null;
+    return result;
+  } catch (_err) {
+    return null;
+  }
+}
+
+/**
+ * Thrown when Gemini returns no text in the response. Captures finishReason,
+ * promptFeedback, and token usage so the caller can tell whether the cause was
+ * MAX_TOKENS (often: thinking budget exhausted by a too-large image batch),
+ * SAFETY blocking, or something else. The message embeds these fields so it
+ * surfaces in procedure run logs without extra plumbing.
+ */
+export class GeminiEmptyResponseError extends Error {
+  finishReason: string | undefined;
+  finishMessage: string | undefined;
+  blockReason: string | undefined;
+  blockReasonMessage: string | undefined;
+  promptTokens: number | undefined;
+  candidatesTokens: number | undefined;
+  thoughtsTokens: number | undefined;
+  totalTokens: number | undefined;
+  imageCount: number;
+
+  constructor({
+    finishReason,
+    finishMessage,
+    blockReason,
+    blockReasonMessage,
+    promptTokens,
+    candidatesTokens,
+    thoughtsTokens,
+    totalTokens,
+    imageCount,
+  }: {
+    finishReason: string | undefined;
+    finishMessage: string | undefined;
+    blockReason: string | undefined;
+    blockReasonMessage: string | undefined;
+    promptTokens: number | undefined;
+    candidatesTokens: number | undefined;
+    thoughtsTokens: number | undefined;
+    totalTokens: number | undefined;
+    imageCount: number;
+  }) {
+    const parts: string[] = ["Empty response from Gemini"];
+    parts.push(`images=${imageCount}`);
+    if (finishReason) parts.push(`finishReason=${finishReason}`);
+    if (finishMessage) parts.push(`finishMessage=${JSON.stringify(finishMessage)}`);
+    if (blockReason) parts.push(`blockReason=${blockReason}`);
+    if (blockReasonMessage) parts.push(`blockReasonMessage=${JSON.stringify(blockReasonMessage)}`);
+    if (promptTokens != null) parts.push(`promptTokens=${promptTokens}`);
+    if (candidatesTokens != null) parts.push(`candidatesTokens=${candidatesTokens}`);
+    if (thoughtsTokens != null) parts.push(`thoughtsTokens=${thoughtsTokens}`);
+    if (totalTokens != null) parts.push(`totalTokens=${totalTokens}`);
+    super(parts.join(" "));
+    this.name = "GeminiEmptyResponseError";
+    this.finishReason = finishReason;
+    this.finishMessage = finishMessage;
+    this.blockReason = blockReason;
+    this.blockReasonMessage = blockReasonMessage;
+    this.promptTokens = promptTokens;
+    this.candidatesTokens = candidatesTokens;
+    this.thoughtsTokens = thoughtsTokens;
+    this.totalTokens = totalTokens;
+    this.imageCount = imageCount;
+  }
+}
+
+/**
+ * Structured output schema for Gemini's response.
+ */
+export interface ImageAnalysis {
+  index: number;
+  description: string;
+  title: string;
+  has_text: boolean;
+  text_blocks: Array<{
+    source: string;
+    text: string;
+  }>;
+  invalid: boolean;
+  subject_bbox: number[] | null;
+  rotation: number;
+  is_document: boolean;
+  document_kind: string | null;
+  document_from: string | null;
+  document_dates: Array<{
+    label: string;
+    value: string;
+  }>;
+}
+
+/**
+ * Call Gemini 2.5 Flash to analyze a batch of images.
+ * Returns structured analysis for each image.
+ */
+export async function analyzeImagesWithGemini(
+  apiKey: string,
+  { imagePaths, thinkingBudget }: { imagePaths: string[]; thinkingBudget?: number }
+): Promise<{ analyses: ImageAnalysis[]; usage: { prompt: number; output: number; thinking: number } | null }> {
+  const ai = new GoogleGenAI({ apiKey });
+
+  const imageParts = [];
+  for (const imgPath of imagePaths) {
+    const imgData = await fs.readFile(imgPath);
+    imageParts.push({
+      inlineData: {
+        mimeType: getMimeType(imgPath),
+        data: imgData.toString("base64"),
+      },
+    });
+  }
+
+  const prompt = `You are analyzing ${imagePaths.length} image(s) that were captured together in a session. They may be related to each other.
+
+For each image (indexed 0 to ${imagePaths.length - 1}), provide:
+
+1. description: one sentence describing what's in the image.
+
+2. title: a short filename-friendly title (2-4 words, underscores, retain capitals, e.g., "Utility_Bill" or "Piano_Business_Card").
+
+3. has_text: true if the image contains readable text that is part of the subject (document, whiteboard, business card, sign, label, engraving). Ignore incidental background text — brand names on equipment, text in the scenery, etc. Must be true whenever is_document is true.
+
+4. text_blocks: if has_text, extract the unique information the text is meant to convey, organized by source (what the text is physically on). Use Markdown. Use Markdown tables for tabular data. The original image is preserved, so you do NOT need to transcribe everything — focus on the data. KEEP: amounts, totals, line items, dates, names, addresses, account numbers, reference numbers, phone numbers, tables of figures, handwritten notes, specific values and labels that identify what the data means. DROP: legal/privacy/compliance footers, marketing copy, return addresses, page numbers, repeated column headers across pages, "see reverse for…" / "terms and conditions apply" / generic disclosures, slogans, decorative boilerplate. When in doubt about boilerplate, drop it. Empty array if no text.
+
+5. invalid: true if this image is useless — accidental capture, too blurry to read, covered lens, etc.
+
+6. subject_bbox: bounding box of the main subject as [y1, x1, y2, x2] on a 0-1000 scale (a document on a surface, a coin on a table, a specific object being photographed — whatever the photo is "of"). null if the subject fills the frame or there's no clear focal subject.
+
+7. rotation: degrees clockwise the image needs to view correctly — 0 (upright), 90 (rotated 90° clockwise, needs counter-clockwise rotation to fix), 180 (upside down), or 270. Judge by text direction, face orientation, or natural object orientation. Use 0 if uncertain.
+
+8. is_document: true if this is a photograph of a document — a piece of paper, a form, a letter, a bill or statement, a receipt, a contract, a certificate, a prescription, a report, a screen showing a document, etc. False for whiteboards, business cards, coins, signs, objects, scenes, people — even if they contain text.
+
+9. If is_document is true, also fill:
+   - document_kind: a short lowercase category, 2-5 words, describing what kind of document this is (e.g., "utility bill", "medical lab results", "pay stub", "insurance explanation of benefits", "handwritten note", "tax form w-2", "appointment reminder", "prescription label", "bank statement"). Be specific about the kind, but do not include the issuer's name.
+   - document_from: the issuer or sender — the organization or person the document is from (e.g., "Con Edison", "Dr. Jane Smith", "IRS"). null if unclear.
+   - document_dates: every date that appears on the document, each with a label describing what the date represents. Examples: {"label": "due", "value": "4/30/26"}, {"label": "billing period end", "value": "March 31, 2026"}, {"label": "statement", "value": "2026-04-01"}, {"label": "appointment", "value": "Fri May 8"}. Use the date string AS IT APPEARS on the document — do not reformat. Empty array if there are no dates.
+
+   If is_document is false: document_kind null, document_from null, document_dates [].`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }],
+    config: {
+      // Cap thinking tokens. Default (auto) burned ~11k thinking tokens on
+      // 8-image batches of financial documents and tripped Gemini's RECITATION
+      // filter, returning empty responses. Successful smaller batches use
+      // ~400. 2048 leaves plenty of headroom for "what is this" reasoning
+      // without giving the model room to internally reproduce document text.
+      thinkingConfig: { thinkingBudget: thinkingBudget ?? 2048 },
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            index: { type: "INTEGER" },
+            description: { type: "STRING" },
+            title: { type: "STRING" },
+            has_text: { type: "BOOLEAN" },
+            text_blocks: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: { source: { type: "STRING" }, text: { type: "STRING" } },
+                required: ["source", "text"],
+              },
+            },
+            invalid: { type: "BOOLEAN" },
+            subject_bbox: { type: "ARRAY", items: { type: "INTEGER" }, nullable: true },
+            rotation: { type: "INTEGER" },
+            is_document: { type: "BOOLEAN" },
+            document_kind: { type: "STRING", nullable: true },
+            document_from: { type: "STRING", nullable: true },
+            document_dates: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: { label: { type: "STRING" }, value: { type: "STRING" } },
+                required: ["label", "value"],
+              },
+            },
+          },
+          required: ["index", "description", "title", "has_text", "text_blocks", "invalid", "subject_bbox", "rotation", "is_document", "document_kind", "document_from", "document_dates"],
+        },
+      },
+    },
+  });
+
+  const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+  const usageMeta = response.usageMetadata;
+  if (!text) {
+    throw new GeminiEmptyResponseError({
+      finishReason: response.candidates?.[0]?.finishReason,
+      finishMessage: response.candidates?.[0]?.finishMessage,
+      blockReason: response.promptFeedback?.blockReason,
+      blockReasonMessage: response.promptFeedback?.blockReasonMessage,
+      promptTokens: usageMeta?.promptTokenCount,
+      candidatesTokens: usageMeta?.candidatesTokenCount,
+      thoughtsTokens: usageMeta?.thoughtsTokenCount,
+      totalTokens: usageMeta?.totalTokenCount,
+      imageCount: imagePaths.length,
+    });
+  }
+
+  const analyses: ImageAnalysis[] = JSON.parse(text);
+  const usage = usageMeta ? {
+    prompt: usageMeta.promptTokenCount || 0,
+    output: usageMeta.candidatesTokenCount || 0,
+    thinking: usageMeta.thoughtsTokenCount || 0,
+  } : null;
+
+  return { analyses, usage };
+}

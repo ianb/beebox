@@ -1,0 +1,129 @@
+/**
+ * In-process SDK hook callbacks.
+ *
+ * Replaces the file-based `plugins/card-validator/` plugin: same matchers
+ * and behavior, but runs inside the callback-box server process so we get
+ * structured logging and don't pay shell-startup overhead per tool call.
+ */
+
+import type {
+  HookCallbackMatcher,
+  HookJSONOutput,
+  PostToolUseHookInput,
+} from "@anthropic-ai/claude-agent-sdk";
+import { formatLintResults, type ElementSchema } from "cardworks";
+import { lint as markdownlint } from "markdownlint/promise";
+import { noViewLabelLinks, noBrokenInternalLinks } from "./markdown-lint-rules.js";
+import { createLoader } from "../cli/lib/loader.js";
+import { lintCardsDispatch } from "./card-lint.js";
+import { createCardSchemaMap, createSchemaRegistry } from "../schemas/registry.js";
+import type { LoadCardContext } from "./card-io.js";
+
+const MARKDOWN_CONFIG = { default: false, MD009: true, MD037: true, MD038: true, MD047: true };
+const CUSTOM_RULES = [noViewLabelLinks, noBrokenInternalLinks];
+
+/** Best-effort extraction of `file_path` from a Write/Edit tool input. */
+function extractFilePath(toolInput: unknown): string | null {
+  if (toolInput === null || typeof toolInput !== "object") return null;
+  const fp = (toolInput as { file_path?: unknown }).file_path;
+  return typeof fp === "string" ? fp : null;
+}
+
+/**
+ * PostToolUse hook for Write/Edit:
+ *   - Reject `tricks/scripts/<name>.ts` placed directly in the dir
+ *     (must be in a subdirectory: `tricks/scripts/<name>/index.ts`).
+ *   - Validate `.card` files via cardworks lint and surface any issues
+ *     as additionalContext so the model sees the warning.
+ *   - Validate `.md` files via markdownlint and custom link rules.
+ *
+ * All checks just inject context — they don't block the tool from
+ * succeeding (matches the prior shell-hook semantics, which exited 0
+ * even on validation failures).
+ */
+export function cardValidatorHook(): HookCallbackMatcher {
+  return {
+    matcher: "Write|Edit",
+    hooks: [
+      async (input): Promise<HookJSONOutput> => {
+        if (input.hook_event_name !== "PostToolUse") return {};
+        const post = input as PostToolUseHookInput;
+        const filePath = extractFilePath(post.tool_input);
+        if (filePath === null) return {};
+
+        // Tricks dir layout enforcement.
+        if (/tricks\/scripts\/[^/]+\.ts$/.test(filePath)) {
+          return {
+            hookSpecificOutput: {
+              hookEventName: "PostToolUse",
+              additionalContext:
+                "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/",
+            },
+          };
+        }
+
+        if (filePath.endsWith(".card")) {
+          const additional = await runCardLint(post.cwd, filePath);
+          if (additional === null) return {};
+          return {
+            hookSpecificOutput: {
+              hookEventName: "PostToolUse",
+              additionalContext: additional,
+            },
+          };
+        }
+
+        const basename = filePath.split("/").pop() ?? "";
+        if (filePath.endsWith(".md") && basename !== "CLAUDE.md" && !filePath.includes("/.claude/")) {
+          const additional = await runMarkdownLint(filePath);
+          if (additional === null) return {};
+          return {
+            hookSpecificOutput: {
+              hookEventName: "PostToolUse",
+              additionalContext: additional,
+            },
+          };
+        }
+
+        return {};
+      },
+    ],
+  };
+}
+
+async function runMarkdownLint(filePath: string): Promise<string | null> {
+  try {
+    const results = await markdownlint({ files: [filePath], config: MARKDOWN_CONFIG, customRules: CUSTOM_RULES });
+    const errors = results[filePath] ?? [];
+    if (errors.length === 0) return null;
+    const lines = errors.map(
+      (e) => `  ${filePath}:${e.lineNumber} [${e.ruleNames[0]}] ${e.ruleDescription}${e.errorDetail ? ` (${e.errorDetail})` : ""}`
+    );
+    return `Markdown lint warning for ${filePath}:\n${lines.join("\n")}`;
+  } catch (e) {
+    return `Markdown lint could not run for ${filePath}: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
+async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
+  const registry = await createSchemaRegistry(boxRoot);
+  const elementSchemas = new Map<string, ElementSchema>();
+  for (const tag of registry.tagNames()) {
+    const s = registry.get(tag);
+    if (s) elementSchemas.set(tag, s as ElementSchema);
+  }
+  return { cardSchemas: createCardSchemaMap(), elementSchemas };
+}
+
+async function runCardLint(cwd: string, filePath: string): Promise<string | null> {
+  try {
+    const loader = await createLoader(cwd);
+    const ctx = await buildLoadContext(cwd);
+    const summary = await lintCardsDispatch([filePath], { loader, ctx });
+    if (summary.totalErrors === 0 && summary.totalWarnings === 0) return null;
+    const formatted = formatLintResults(summary, { colors: false });
+    return `Card validation warning for ${filePath}:\n${formatted}`;
+  } catch (e) {
+    return `Card validation could not run for ${filePath}: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}

@@ -1,0 +1,11 @@
+plugin:
+  - "!@tapjs/typescript"
+node-arg:
+  - --import=tsx
+  - --import=agent-doctest/tap
+  - --import=agent-doctest/loader
+include:
+  - test/**/*.test.ts
+  - test/**/*.doctest.md
+exclude:
+  - test/manual/**

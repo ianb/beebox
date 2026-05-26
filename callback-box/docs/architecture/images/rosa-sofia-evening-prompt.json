@@ -1,0 +1,11 @@
+{
+  "prompt": "Rosa and Sofia at the kitchen table in the evening. Rosa is telling a story, hands moving expressively, a cup of tea in front of her. Sofia is across from her with her journal open, writing while listening. On the table between them is a phone showing a voice message from Rosa's sister. The light is warm and low. Rosa looks animated but a little tired around the eyes — it's evening. Sofia's handwriting is visible in the journal, a mix of English words and Spanish phrases. There's a plate of conchas between them.",
+  "style": "Primitive colored pencil drawing on rough cream paper. Heavy wax crayon texture\nwith visible tooth marks from the paper. The style is raw and handmade, like\noutsider art or a child's careful drawing — not polished, not cute, not digital-looking.\nThink Henry Darger or Bill Traylor, not Pixar or Headspace.\n\nFlat perspective with no attempt at 3D depth. Figures are slightly stiff and\nfrontal. Colors are laid down in rough, overlapping strokes with visible gaps\nwhere the paper shows through. Edges are wobbly, not clean.\n\nFaces are simple: dots or short lines for eyes, a single stroke for nose and\nmouth. No smooth skin rendering, no expressive cartoon eyes, no blush or shading\non cheeks. The face should look drawn, not rendered.\n\nThe background fades to bare paper at the edges rather than filling the frame.",
+  "model": "gemini-2.5-flash-image",
+  "generatedAt": "2026-03-11T15:40:22.415Z",
+  "promptHash": "6211e58f1ed38070",
+  "references": [
+    "images/rosa-portrait.png",
+    "images/sofia-portrait.png"
+  ]
+}

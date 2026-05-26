@@ -1,0 +1,201 @@
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { cn } from "../../lib/cn";
+
+interface DropdownContextValue {
+  close: () => void;
+}
+
+const DropdownContext = createContext<DropdownContextValue | null>(null);
+
+export type DropdownAlign = "left" | "right";
+export type DropdownVertical = "below" | "above";
+
+export interface DropdownTriggerProps {
+  open: boolean;
+  toggle: () => void;
+  /** Props to spread on your trigger element for correct ARIA. */
+  ariaProps: { "aria-haspopup": "menu"; "aria-expanded": boolean };
+}
+
+export interface DropdownProps {
+  /**
+   * Render prop that produces the trigger. Wire `toggle` into your
+   * element's `onClick` and spread `ariaProps` for accessibility.
+   */
+  trigger: (props: DropdownTriggerProps) => ReactNode;
+  children: ReactNode;
+  /** Menu edge aligned to the trigger. Default `"right"`. */
+  align?: DropdownAlign;
+  /** Whether the menu opens below or above the trigger. Default `"below"`. */
+  vertical?: DropdownVertical;
+  /** Tailwind width class for the menu. Default `"w-48"`. */
+  width?: string;
+  /** Outer-layout classes for the relative-positioned wrapper (margin, padding, flex item, sizing, position). */
+  className?: string;
+  /** Called whenever the menu transitions from open to closed. Use to reset
+   *  per-open ephemeral state (e.g. submenu page). */
+  onClose?: () => void;
+}
+
+export function Dropdown({ trigger, children, align = "right", vertical = "below", width = "w-48", className, onClose }: DropdownProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+  // Fire onClose on the open→closed transition.
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      const cb = onCloseRef.current;
+      if (cb) cb();
+    }
+    prevOpenRef.current = open;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(e: MouseEvent) {
+      if (rootRef.current !== null && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const alignClass = align === "right" ? "right-0" : "left-0";
+  const verticalClass = vertical === "above" ? "bottom-full mb-1" : "top-full mt-1";
+  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: () => setOpen(false) }), []);
+  const triggerProps: DropdownTriggerProps = {
+    open,
+    toggle: () => setOpen((o) => !o),
+    ariaProps: { "aria-haspopup": "menu", "aria-expanded": open },
+  };
+
+  return (
+    <div className={cn("relative", className)} ref={rootRef}>
+      {trigger(triggerProps)}
+      {open ? (
+        <div
+          role="menu"
+          className={cn("absolute bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm", verticalClass, alignClass, width)}
+        >
+          <DropdownContext.Provider value={ctxValue}>
+            {children}
+          </DropdownContext.Provider>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------- MenuItem ----------
+
+interface MenuItemBase {
+  children: ReactNode;
+  icon?: ReactNode;
+  disabled?: boolean;
+  /** Styles as a destructive row. */
+  danger?: boolean;
+  /** Highlights the row as the current selection. */
+  active?: boolean;
+  /**
+   * Don't close the dropdown on click. Use for items that open a nested
+   * panel inside the same menu (e.g. submenu swap pattern).
+   */
+  keepOpen?: boolean;
+}
+
+export type MenuItemProps = MenuItemBase & (
+  | { onClick: () => void | Promise<void>; to?: never; href?: never }
+  | { to: string; onClick?: never; href?: never }
+  | { href: string; onClick?: never; to?: never }
+);
+
+interface RowClassOpts {
+  active: boolean;
+  danger: boolean;
+  disabled: boolean;
+}
+
+function rowClass({ active, danger, disabled }: RowClassOpts): string {
+  if (disabled) {
+    return "block w-full text-left px-3 py-2 text-warm-400 cursor-not-allowed";
+  }
+  if (active) {
+    return "block w-full text-left px-3 py-2 bg-warm-100 text-warm-900 font-medium";
+  }
+  const color = danger ? "text-danger hover:bg-danger/10" : "text-warm-700 hover:bg-warm-50";
+  return `block w-full text-left px-3 py-2 transition-colors ${color}`;
+}
+
+function MenuItemContent({ icon, children }: { icon: ReactNode | undefined; children: ReactNode }) {
+  if (icon === undefined) return children;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span aria-hidden="true">{icon}</span>
+      <span>{children}</span>
+    </span>
+  );
+}
+
+function noop() {}
+
+export function MenuItem(props: MenuItemProps) {
+  const ctx = useContext(DropdownContext);
+  const close = ctx !== null ? ctx.close : noop;
+  const { children, icon, disabled = false, danger = false, active = false, keepOpen = false } = props;
+  const className = rowClass({ active, danger, disabled });
+  const content = <MenuItemContent icon={icon}>{children}</MenuItemContent>;
+
+  if ("to" in props && props.to !== undefined) {
+    if (disabled) {
+      return <span role="menuitem" aria-disabled="true" className={className}>{content}</span>;
+    }
+    return (
+      <Link role="menuitem" to={props.to} onClick={close} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  if ("href" in props && props.href !== undefined) {
+    if (disabled) {
+      return <span role="menuitem" aria-disabled="true" className={className}>{content}</span>;
+    }
+    return (
+      <a role="menuitem" href={props.href} onClick={close} className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  const onClick = "onClick" in props ? props.onClick : undefined;
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      onClick={async () => {
+        if (disabled || onClick === undefined) return;
+        if (!keepOpen) close();
+        await onClick();
+      }}
+      className={className}
+    >
+      {content}
+    </button>
+  );
+}
+
+export function MenuDivider() {
+  return <div className="border-t border-warm-100 my-1" role="separator" />;
+}
