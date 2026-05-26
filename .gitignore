@@ -6,6 +6,9 @@ dist/
 .env
 .overmind.sock
 
+# Claude Code worktrees (created by `claude --worktree`)
+.claude/worktrees/
+
 # Claude Code runtime / machine-local
 .claude/scheduled_tasks.lock
 .claude/session-*.json

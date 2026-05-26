@@ -6,7 +6,7 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 ## Development
 
-**Dev server** — `overmind start` (uses `Procfile.dev`). Defaults: Vite on 3210, Fastify on 3211, the usual box list. A `.env` here overrides `FRONTEND_PORT`, `BACKEND_PORT`, `BOXES` — `scripts/new-worktree.sh` at the monorepo root generates one with offset ports per worktree. See `.env.example`. Access UI at `http://localhost:${FRONTEND_PORT}/<box>/`.
+**Dev server** — `overmind start` (uses `Procfile.dev`). Defaults: Vite on 3210, Fastify on 3211, the usual box list. A `.env` here overrides `FRONTEND_PORT`, `BACKEND_PORT`, `BOXES` — `claude --worktree <name>` at the monorepo root auto-generates one (via the `WorktreeCreate` hook) with hash-derived unique ports. See `.env.example`. Access UI at `http://localhost:${FRONTEND_PORT}/<box>/`.
 
 **Testing** — `pnpm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
 - `pnpm typecheck` — TypeScript (both backend and frontend)
