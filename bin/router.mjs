@@ -405,6 +405,80 @@ function parseWorktreeName(reqPath) {
   return m ? m[1] : null;
 }
 
+// Discover every worktree that *could* be served, whether currently running
+// or not. Main is always present; worktrees come from ~/src/callback-worktrees/.
+async function discoverWorktrees() {
+  const all = new Map(); // name → { name, running, entry? }
+  all.set("main", { name: "main", running: false });
+  try {
+    const entries = await fs.readdir(WORKTREES_ROOT, { withFileTypes: true });
+    for (const e of entries) {
+      if (e.isDirectory()) all.set(e.name, { name: e.name, running: false });
+    }
+  } catch {
+    // No worktrees dir yet — fine.
+  }
+  for (const [name, entry] of worktrees) {
+    const existing = all.get(name) ?? { name };
+    all.set(name, { ...existing, running: entry.state === "ready", entry });
+  }
+  return Array.from(all.values()).sort((a, b) =>
+    a.name === "main" ? -1 : b.name === "main" ? 1 : a.name.localeCompare(b.name),
+  );
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+async function renderIndex() {
+  const list = await discoverWorktrees();
+  const rows = list.map((w) => {
+    const status = w.running
+      ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
+      : `<span class="badge cold">cold (will lazy-start on click)</span>`;
+    return `
+      <li>
+        <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
+        ${status}
+      </li>`;
+  }).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>callback-mono dev router</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2em auto; padding: 0 1em; color: #222; }
+  h1 { font-size: 1.2em; margin-bottom: 0.2em; }
+  p.sub { color: #666; margin-top: 0; }
+  ul { list-style: none; padding: 0; }
+  li { display: flex; align-items: center; gap: 0.6em; padding: 0.5em 0; border-bottom: 1px solid #eee; }
+  a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; min-width: 12em; }
+  a.name:hover { text-decoration: underline; }
+  .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
+  .badge.running { background: #d8f0d8; color: #2a6b2a; }
+  .badge.cold    { background: #ececec; color: #666; }
+  footer { margin-top: 2em; font-size: 0.85em; color: #888; }
+  footer a { color: #888; }
+</style>
+</head>
+<body>
+<h1>callback-mono dev router</h1>
+<p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s.</p>
+<ul>${rows}</ul>
+<footer>
+  <a href="/__router/status">status JSON</a>
+  · run <code>bin/worktrees panic</code> to clean up
+</footer>
+</body>
+</html>
+`;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = req.url || "/";
 
@@ -453,20 +527,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url === "/" || url === "") {
-    const lines = ["callback-mono dev router", ""];
-    lines.push("Active worktrees:");
-    if (worktrees.size === 0) lines.push("  (none — they start lazily)");
-    for (const [name, entry] of worktrees) {
-      lines.push(`  /${name}/   ${entry.state}   started ${new Date(entry.startedAt).toISOString()}`);
-    }
-    lines.push("");
-    lines.push("Available URL shapes:");
-    lines.push("  /main/<box>/...   the main checkout");
-    lines.push("  /<name>/<box>/... a git worktree (lazy-started on first request)");
-    lines.push("");
-    lines.push("Status JSON: /__router/status");
-    res.writeHead(200, { "content-type": "text/plain" });
-    res.end(lines.join("\n"));
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(await renderIndex());
     return;
   }
 
