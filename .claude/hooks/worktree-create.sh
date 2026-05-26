@@ -75,6 +75,22 @@ if [ ! -d "$BOX_DEST" ]; then
   if [ -d "$BOX_SRC" ]; then
     echo "[worktree-create] cloning $BOX_SRC -> $BOX_DEST"
     git clone --quiet "$BOX_SRC" "$BOX_DEST"
+    # Carry over gitignored connector secrets (deepgram, gmail, google,
+    # dropbox, etc.). The source box gitignores config/connectors/*.secret.*
+    # so git clone leaves them behind, breaking transcription and external
+    # syncs in the worktree until the user manually copies them.
+    if [ -d "$BOX_SRC/config/connectors" ]; then
+      mkdir -p "$BOX_DEST/config/connectors"
+      copied=0
+      for f in "$BOX_SRC"/config/connectors/*.secret.*; do
+        [ -e "$f" ] || continue
+        cp "$f" "$BOX_DEST/config/connectors/"
+        copied=$((copied + 1))
+      done
+      if [ "$copied" -gt 0 ]; then
+        echo "[worktree-create] copied $copied connector secret(s) from source box"
+      fi
+    fi
   else
     echo "[worktree-create] warning: $BOX_SRC not found; router will fall back to defaults"
   fi
