@@ -24,7 +24,11 @@ if ! command -v node &>/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d v)" -lt 
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
   apt-get install -y -qq nodejs
 fi
-echo "Node.js $(node -v), npm $(npm -v)"
+echo "Node.js $(node -v)"
+
+# Enable corepack so pnpm is available (ships with Node 22, no install needed).
+corepack enable pnpm
+echo "pnpm $(pnpm -v)"
 
 # ── Git config (root, for cloning repos) ─────────────────────────────
 git config --global user.email "callback-box@box.example.com"
@@ -62,17 +66,17 @@ done
 # ── Install and build in dependency order ───────────────────────────
 echo "Building cardworks..."
 cd "$INSTALL_DIR/cardworks"
-npm install --no-audit --no-fund
-npm run build
+pnpm install
+pnpm build
 
 echo "Installing callback-box..."
 cd "$INSTALL_DIR/callback-box"
-npm install --no-audit --no-fund
+pnpm install
 
 echo "Building frontend..."
 cd "$INSTALL_DIR/callback-box/src/frontend"
-npm install --no-audit --no-fund
-npm run build
+pnpm install
+pnpm build
 
 # ── Symlink cb CLI ──────────────────────────────────────────────────
 echo "Symlinking cb CLI..."

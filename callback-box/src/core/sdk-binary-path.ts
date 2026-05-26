@@ -12,12 +12,12 @@
  *
  * See https://github.com/anthropics/claude-agent-sdk-typescript/issues/296.
  *
- * Future: the SDK's bundled binary is frozen at npm-install time; if we
+ * Future: the SDK's bundled binary is frozen at install time; if we
  * want fresher Claude Code versions on long-running servers we need a
- * separate update process (re-run `npm install @anthropic-ai/claude-agent-sdk@latest`
+ * separate update process (re-run `pnpm update @anthropic-ai/claude-agent-sdk`
  * on a schedule, or add deploy-time pinning policy). The system installer
  * at `~/.local/bin/claude` is *not* what the SDK uses — by Anthropic's
- * design it ignores `$PATH` and looks only at its npm sub-packages.
+ * design it ignores `$PATH` and looks only at its sub-packages.
  */
 
 import { createRequire } from "node:module";

@@ -3,10 +3,10 @@
  * Knowledge Audit CLI — run audits to verify agent knowledge, list them,
  * or evaluate results.
  *
- * Usage (via npm script):
- *   npm run knowledge-audit -- run [--box <path>] [--filter <tag-or-id>]
- *   npm run knowledge-audit -- list [--tests <path>]
- *   npm run knowledge-audit -- eval <report-path>
+ * Usage (via pnpm script):
+ *   pnpm knowledge-audit run [--box <path>] [--filter <tag-or-id>]
+ *   pnpm knowledge-audit list [--tests <path>]
+ *   pnpm knowledge-audit eval <report-path>
  */
 
 import { Command } from "commander";

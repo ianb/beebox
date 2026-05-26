@@ -9,4 +9,4 @@ Stand-alone CLI tools that aren't part of the running app. Each is run manually 
 | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.md` |
 | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 
-To add a new script here: register it as an `npm run` entry in `package.json` so knip recognizes it as an entry point, and document it in the table above.
+To add a new script here: register it as a `scripts` entry in `package.json` (invoke via `pnpm <name>`) so knip recognizes it as an entry point, and document it in the table above.

@@ -11,12 +11,12 @@
  * appearances — names in the tag are matched to character portraits.
  *
  * Usage:
- *   npm run generate:doc-images                    # generate missing character images
- *   npm run generate:doc-images -- --type=all      # generate all image types
- *   npm run generate:doc-images -- --type=scene    # generate scene images only
- *   npm run generate:doc-images -- --force         # regenerate all
- *   npm run generate:doc-images -- --file=diana    # only images matching "diana"
- *   npm run generate:doc-images -- --dry-run       # show what would be generated
+ *   pnpm generate:doc-images                    # generate missing character images
+ *   pnpm generate:doc-images --type=all         # generate all image types
+ *   pnpm generate:doc-images --type=scene       # generate scene images only
+ *   pnpm generate:doc-images --force            # regenerate all
+ *   pnpm generate:doc-images --file=diana       # only images matching "diana"
+ *   pnpm generate:doc-images --dry-run          # show what would be generated
  */
 
 import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises";
@@ -286,7 +286,7 @@ async function renderMermaid(mmdPath: string): Promise<Buffer | null> {
   } catch (e) {
     const err = e as Error;
     if ("code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
-      console.error("    warning: mmdc not found. Install with: npm install -g @mermaid-js/mermaid-cli");
+      console.error("    warning: mmdc not found. Install with: pnpm add -g @mermaid-js/mermaid-cli");
     } else {
       console.error(`    warning: mermaid render failed: ${err.message}`);
     }

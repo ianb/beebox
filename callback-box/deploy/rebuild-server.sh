@@ -15,17 +15,17 @@ done
 
 echo "=== Rebuilding cardworks ==="
 cd "$INSTALL_DIR/cardworks"
-npm install --no-audit --no-fund
-npm run build
+pnpm install
+pnpm build
 
 echo "=== Rebuilding callback-box ==="
 cd "$INSTALL_DIR/callback-box"
-npm install --no-audit --no-fund
+pnpm install
 
 echo "=== Rebuilding frontend ==="
 cd "$INSTALL_DIR/callback-box/src/frontend"
-npm install --no-audit --no-fund
-npm run build
+pnpm install
+pnpm build
 
 echo "=== Restarting services ==="
 systemctl restart callback-serve callback-scheduler

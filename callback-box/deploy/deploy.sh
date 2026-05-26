@@ -36,7 +36,7 @@ RSYNC_OPTS=(-az --delete
 # Build frontend locally (fast — already has node_modules)
 if [[ "$SKIP_FRONTEND" != true ]]; then
   echo "Building frontend..."
-  cd "$REPO_DIR/src/frontend" && npm run build --silent
+  cd "$REPO_DIR/src/frontend" && pnpm build --silent
 fi
 
 # Sync monorepo packages. personal-vibe-check is a file: dep of callback-box
@@ -66,14 +66,14 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     rm -rf /opt/personal-vibe-check
   fi
   cd /opt/callback/personal-vibe-check
-  if [[ ! -d node_modules ]] || ! npm ls --depth=0 &>/dev/null 2>&1; then
+  if [[ ! -d node_modules ]] || ! pnpm ls --depth 0 &>/dev/null 2>&1; then
     echo "  Installing personal-vibe-check deps..."
-    npm install --no-audit --no-fund --legacy-peer-deps
+    pnpm install
   fi
   cd /opt/callback/callback-box
-  if [[ ! -d node_modules ]] || ! npm ls --depth=0 &>/dev/null 2>&1; then
+  if [[ ! -d node_modules ]] || ! pnpm ls --depth 0 &>/dev/null 2>&1; then
     echo "  Installing callback-box deps..."
-    npm install --no-audit --no-fund
+    pnpm install
   fi
 REMOTE
 

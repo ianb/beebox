@@ -48,7 +48,7 @@ Files in scope:
 7. **Restored `src/dev/doc-graph.ts`** (deleted accidentally in commit
    `85d846e` on 2026-04-18, "Delete dead code; quiet knip false positives";
    only the compiled `dist/dev/doc-graph.js` survived). Added
-   `npm run doc-graph` script to package.json so knip recognizes it as an
+   `doc-graph` script to package.json (invoked via `pnpm doc-graph`) so knip recognizes it as an
    entry point alongside the other `src/dev/` CLI scripts. Knip now only
    flags activities files (slated for removal anyway).
 8. **Fixed self-reference bug in `doc-graph.ts`**. The script previously

@@ -1,14 +1,14 @@
 # Manual tests
 
-Tests in this directory are **excluded from `npm test`**. They run real
+Tests in this directory are **excluded from `pnpm test`**. They run real
 processes (the Claude SDK, network calls, etc.) that are too slow or
 expensive to run in CI / pre-commit.
 
 ## Running
 
 ```bash
-npm run test:manual                                  # run all
-npm run test:manual -- test/manual/chat-queue-real.doctest.md   # one file
+pnpm test:manual                                  # run all
+pnpm test:manual -- test/manual/chat-queue-real.doctest.md   # one file
 ```
 
 Each manual test should:

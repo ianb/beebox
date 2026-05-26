@@ -11,7 +11,7 @@ message is queued" forever, second turn never completes) suggest
 something differs in the real path.
 
 Manual: spawns the `claude` SDK process, costs API calls, takes
-~10–30 s. Run with `npm run test:manual`.
+~10–30 s. Run with `pnpm test:manual`.
 
 ```ts setup
 import { ChatSession } from "../../src/core/chat-session.js";

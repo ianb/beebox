@@ -13,7 +13,7 @@ Key files:
 The post-commit hook backgrounds `deploy.sh` and writes its output to `deploy/.last-deploy.log`. To wait for it to finish, poll the log tail — do NOT use a long leading `sleep` (the harness blocks it):
 
 ```bash
-until tail -3 deploy/.last-deploy.log | grep -qE "Deploy complete|Deploy failed|npm error code"; do sleep 5; done
+until tail -3 deploy/.last-deploy.log | grep -qE "Deploy complete|Deploy failed|ERR_PNPM|ELIFECYCLE"; do sleep 5; done
 tail -15 deploy/.last-deploy.log
 ```
 

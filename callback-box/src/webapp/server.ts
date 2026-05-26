@@ -346,7 +346,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
 </head>
 <body>
   <h1>Callback Box</h1>
-  <p>The frontend is not built yet. Run <code>npm run build:frontend</code> to build it.</p>
+  <p>The frontend is not built yet. Run <code>pnpm build:frontend</code> to build it.</p>
   <h2>Boxes</h2>
   <ul>
     ${boxes.map((b) => `<li><a href="/${b.slug}/">${b.slug}</a> — ${b.boxRoot}</li>`).join("\n    ")}

@@ -656,10 +656,10 @@ The \`export const description\` line is parsed (not executed) by \`cb trick\` f
 
 ## Dependencies
 
-Install npm packages into the tricks directory:
+Install packages into the tricks directory:
 
 \`\`\`bash
-cd tricks && npm install <package>
+cd tricks && pnpm add <package>
 \`\`\`
 
 These are available to all tricks via normal imports.
