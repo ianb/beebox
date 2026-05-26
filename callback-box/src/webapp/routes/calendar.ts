@@ -16,7 +16,11 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "../../connectors/calendar-config.js";
-import type { GoogleCalendarService } from "../../services/google-calendar.js";
+import {
+  createGoogleCalendarService,
+  type GoogleCalendarService,
+} from "../../services/google-calendar.js";
+import { createGoogleAuthService } from "../../services/google-auth.js";
 
 interface CalendarRoutesOptions {
   server: FastifyInstance;
@@ -41,18 +45,17 @@ export async function registerCalendarRoutes(
       }
     }
 
-    let available;
-    if (calendar) {
-      available = await calendar.listCalendars();
-    } else {
+    let svc = calendar;
+    if (!svc) {
       const auth = await getGoogleAuth(boxRoot);
       if (!auth) {
         return reply
           .status(503)
           .send({ error: "Google auth not configured. Run: cb google-auth" });
       }
-      available = await fetchAvailableCalendars(auth);
+      svc = createGoogleCalendarService(createGoogleAuthService(auth));
     }
+    const available = await fetchAvailableCalendars(svc);
 
     const config = await loadCalendarConfig(boxRoot);
     const syncList = config.calendars || ["primary"];

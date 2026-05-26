@@ -473,17 +473,6 @@ Hypothesis: the spawned `claude --print` process isn't closing stdout/exiting af
 
 `SCRIPT_TIMEOUT = 10m` is monotonic time, which means it pauses during macOS sleep. That's good — a script that was about to finish doesn't get killed just because the laptop closed. But `wren-weekly-research` has `--max-turns 30` (web research) and bumps right against 10 min of real CPU time. Either bump the per-script timeout (configurable in the card?) or add a `<timeout>` attribute on `<scheduled-script>`.
 
-## Service-inject the google-calendar connector
-
-`src/connectors/google-calendar.ts` uses `getGoogleAuth()` + direct REST calls and `ical.js` inline, with no service abstraction. That means there's no doctest-friendly way to exercise its ics-generation path (`generateVtimezone`, `setDateTimeWithTz`, `eventToIcs`). The library-type gap was already noted in `src/connectors/CLAUDE.md` under "Not yet service-injected".
-
-Recent evidence this matters: a latent bug where `ICAL.Time.fromDateTimeString()` was being passed iCal basic-format strings (`YYYYMMDDTHHMMSS`) instead of ISO 8601 extended-format (`YYYY-MM-DDTHH:MM:SS`) broke calendar sync for every box with a Google Calendar connected. No test caught it; it was only noticed when a real wakeup run surfaced the error. A doctest that seeds a fake calendar with one timezone-bearing event and asserts the ics output contains a valid `VTIMEZONE` + `DTSTART` would have caught this immediately.
-
-Work needed:
-1. Define a `GoogleCalendarService` interface in `src/services/google-calendar.ts` (partially exists — there's already `createFakeGoogleCalendar`).
-2. Refactor `google-calendar.ts` to accept an optional service parameter in its factory, matching the telegram connector pattern.
-3. Add `test/connector-google-calendar.doctest.md` exercising the ics round-trip: seed fake calendar → run sync → assert output `.ics` files are parseable by `ICAL.parse()` and contain the expected components.
-
 ## Switch deploy from rsync to git push
 
 `deploy/deploy.sh` rsyncs the local working tree to `/opt/callback/`, excluding `.git`. Side effects:

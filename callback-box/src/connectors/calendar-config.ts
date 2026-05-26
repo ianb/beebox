@@ -7,8 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import ky from "ky";
-import type { OAuth2Client } from "google-auth-library";
+import type { GoogleCalendarService } from "../services/google-calendar.js";
 
 export interface CalendarConfig {
   calendars?: string[];
@@ -27,18 +26,6 @@ export interface AvailableCalendar {
   primary?: boolean;
   accessRole: string;
   backgroundColor?: string;
-}
-
-interface CalendarListResponse {
-  items?: Array<{
-    id: string;
-    summary: string;
-    description?: string;
-    primary?: boolean;
-    accessRole: string;
-    backgroundColor?: string;
-  }>;
-  nextPageToken?: string;
 }
 
 function configPath(boxRoot: string): string {
@@ -66,47 +53,27 @@ export async function saveCalendarConfig(
 }
 
 /**
- * Fetch all calendars the user has access to from the Google Calendar API.
+ * Fetch all calendars the user has access to via the calendar service.
+ * Normalizes the list (only-true `primary` flag) and sorts primary-first,
+ * then alphabetically by summary.
  */
 export async function fetchAvailableCalendars(
-  auth: OAuth2Client
+  calendar: GoogleCalendarService,
 ): Promise<AvailableCalendar[]> {
+  const items = await calendar.listCalendars();
   const calendars: AvailableCalendar[] = [];
-  let pageToken: string | undefined;
+  for (const item of items) {
+    const cal: AvailableCalendar = {
+      id: item.id,
+      summary: item.summary,
+      accessRole: item.accessRole,
+    };
+    if (item.description) cal.description = item.description;
+    if (item.primary) cal.primary = true;
+    if (item.backgroundColor) cal.backgroundColor = item.backgroundColor;
+    calendars.push(cal);
+  }
 
-  do {
-    const searchParams: Record<string, string> = {};
-    if (pageToken) {
-      searchParams["pageToken"] = pageToken;
-    }
-
-    const accessToken = (await auth.getAccessToken()).token;
-    const data = await ky
-      .get("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
-        searchParams,
-        headers: { Authorization: `Bearer ${accessToken}` },
-        retry: 2,
-      })
-      .json<CalendarListResponse>();
-
-    if (data.items) {
-      for (const item of data.items) {
-        const cal: AvailableCalendar = {
-          id: item.id,
-          summary: item.summary,
-          accessRole: item.accessRole,
-        };
-        if (item.description) cal.description = item.description;
-        if (item.primary) cal.primary = true;
-        if (item.backgroundColor) cal.backgroundColor = item.backgroundColor;
-        calendars.push(cal);
-      }
-    }
-
-    pageToken = data.nextPageToken;
-  } while (pageToken);
-
-  // Sort: primary first, then by summary
   calendars.sort((a, b) => {
     if (a.primary && !b.primary) return -1;
     if (!a.primary && b.primary) return 1;

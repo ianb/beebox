@@ -58,6 +58,7 @@ export interface GoogleCalendarService {
     pageToken?: string;
   }): Promise<EventsListResult>;
   insertEvent(calendarId: string, event: Partial<CalendarEvent>): Promise<CalendarEvent>;
+  patchEvent(calendarId: string, opts: { eventId: string; event: Partial<CalendarEvent> }): Promise<CalendarEvent>;
   deleteEvent(calendarId: string, eventId: string): Promise<void>;
 }
 
@@ -117,6 +118,15 @@ export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCale
         .json<CalendarEvent>();
     },
 
+    async patchEvent(calendarId, { eventId, event }) {
+      return api
+        .patch(
+          `calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+          { json: event },
+        )
+        .json<CalendarEvent>();
+    },
+
     async deleteEvent(calendarId, eventId) {
       try {
         await api.delete(
@@ -141,6 +151,7 @@ export interface FakeGoogleCalendarOptions {
 export interface FakeGoogleCalendarService extends GoogleCalendarService {
   calendars: CalendarListEntry[];
   events: CalendarEvent[];
+  describe(): string;
 }
 
 export function createFakeGoogleCalendar(
@@ -170,8 +181,32 @@ export function createFakeGoogleCalendar(
       return full;
     },
 
+    async patchEvent(_calendarId, { eventId, event }) {
+      const idx = fake.events.findIndex((e) => e.id === eventId);
+      if (idx === -1) {
+        throw new Error(`patchEvent: no event with id ${eventId}`);
+      }
+      const merged: CalendarEvent = { ...fake.events[idx]!, ...event } as CalendarEvent;
+      fake.events[idx] = merged;
+      return merged;
+    },
+
     async deleteEvent(_calendarId, eventId) {
       fake.events = fake.events.filter((e) => e.id !== eventId);
+    },
+
+    describe() {
+      const lines: string[] = [];
+      lines.push(`calendars (${fake.calendars.length}):`);
+      for (const c of fake.calendars) {
+        lines.push(`  - ${c.id}: ${c.summary}${c.primary ? " [primary]" : ""}`);
+      }
+      lines.push(`events (${fake.events.length}):`);
+      for (const e of fake.events) {
+        const when = e.start?.dateTime || e.start?.date || "(no date)";
+        lines.push(`  - ${e.id} [${e.status}] ${e.summary || "(no title)"} @ ${when}`);
+      }
+      return lines.join("\n");
     },
   };
 

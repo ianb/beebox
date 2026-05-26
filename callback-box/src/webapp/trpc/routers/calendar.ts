@@ -10,6 +10,8 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "../../../connectors/calendar-config.js";
+import { createGoogleCalendarService } from "../../../services/google-calendar.js";
+import { createGoogleAuthService } from "../../../services/google-auth.js";
 
 export const calendarRouter = router({
   available: publicProcedure.query(async ({ ctx }) => {
@@ -24,10 +26,8 @@ export const calendarRouter = router({
       }
     }
 
-    let available;
-    if (ctx.services.calendar) {
-      available = await ctx.services.calendar.listCalendars();
-    } else {
+    let svc = ctx.services.calendar;
+    if (!svc) {
       const auth = await getGoogleAuth(ctx.boxRoot);
       if (!auth) {
         throw new TRPCError({
@@ -35,8 +35,9 @@ export const calendarRouter = router({
           message: "Google auth not configured. Run: cb google-auth",
         });
       }
-      available = await fetchAvailableCalendars(auth);
+      svc = createGoogleCalendarService(createGoogleAuthService(auth));
     }
+    const available = await fetchAvailableCalendars(svc);
 
     const config = await loadCalendarConfig(ctx.boxRoot);
     const syncList = config.calendars || ["primary"];

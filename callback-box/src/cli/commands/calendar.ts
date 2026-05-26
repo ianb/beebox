@@ -21,6 +21,8 @@ import {
   saveCalendarConfig,
   fetchAvailableCalendars,
 } from "../../connectors/calendar-config.js";
+import { createGoogleCalendarService } from "../../services/google-calendar.js";
+import { createGoogleAuthService } from "../../services/google-auth.js";
 import {
   loadAllEvents,
   filterByDateRange,
@@ -92,7 +94,8 @@ calendarCommand
     const syncList = config.calendars || ["primary"];
     const syncing = new Set(syncList);
 
-    const available = await fetchAvailableCalendars(auth);
+    const svc = createGoogleCalendarService(createGoogleAuthService(auth));
+    const available = await fetchAvailableCalendars(svc);
 
     // "primary" is an alias for the user's main calendar
     const primaryId = available.find((c) => c.primary)?.id;

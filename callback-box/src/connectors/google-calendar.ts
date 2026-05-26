@@ -17,16 +17,21 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import ky, { type HTTPError } from "ky";
+import { HTTPError } from "ky";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
-import type { OAuth2Client } from "google-auth-library";
 import {
   registerConnector,
   type Connector,
   type SyncResult,
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
+import { createGoogleAuthService } from "../services/google-auth.js";
+import {
+  createGoogleCalendarService,
+  type GoogleCalendarService,
+  type CalendarEvent,
+} from "../services/google-calendar.js";
 import { isGoogleServiceAllowed } from "../webapp/box-config.js";
 import {
   loadCalendarConfig,
@@ -71,34 +76,7 @@ function contentHash(content: string): string {
   return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
 
-interface GoogleCalendarEvent {
-  id: string;
-  status: string;
-  summary?: string;
-  description?: string;
-  location?: string;
-  start?: { dateTime?: string; date?: string; timeZone?: string };
-  end?: { dateTime?: string; date?: string; timeZone?: string };
-  created?: string;
-  updated?: string;
-  recurrence?: string[];
-  recurringEventId?: string;
-  organizer?: { email?: string; displayName?: string };
-  attendees?: Array<{
-    email?: string;
-    displayName?: string;
-    responseStatus?: string;
-  }>;
-  iCalUID?: string;
-  /** "opaque" = busy (default), "transparent" = free */
-  transparency?: string;
-}
-
-interface GoogleCalendarListResponse {
-  items?: GoogleCalendarEvent[];
-  nextPageToken?: string;
-  nextSyncToken?: string;
-}
+type GoogleCalendarEvent = CalendarEvent;
 
 /**
  * Parse local time parts from an ISO dateTime string (e.g., "2026-03-29T14:00:00-05:00").
@@ -662,9 +640,18 @@ class GoogleCalendarConnector implements Connector {
   triggeredBy?: string;
 
   private boxRoot: string;
+  private injectedService?: GoogleCalendarService | undefined;
 
-  constructor(boxRoot: string) {
+  constructor(boxRoot: string, service?: GoogleCalendarService) {
     this.boxRoot = boxRoot;
+    this.injectedService = service;
+  }
+
+  private async getCalendar(): Promise<GoogleCalendarService | null> {
+    if (this.injectedService) return this.injectedService;
+    const auth = await getGoogleAuth(this.boxRoot);
+    if (!auth) return null;
+    return createGoogleCalendarService(createGoogleAuthService(auth));
   }
 
   private statePath(): string {
@@ -713,13 +700,16 @@ class GoogleCalendarConnector implements Connector {
   }
 
   async sync(): Promise<SyncResult> {
-    const allowed = await isGoogleServiceAllowed(this.boxRoot, "calendar");
-    if (!allowed) {
-      return { success: true, created: [], updated: [] };
+    // Skip policy check when a fake service is injected (tests).
+    if (!this.injectedService) {
+      const allowed = await isGoogleServiceAllowed(this.boxRoot, "calendar");
+      if (!allowed) {
+        return { success: true, created: [], updated: [] };
+      }
     }
 
-    const auth = await getGoogleAuth(this.boxRoot);
-    if (!auth) {
+    const calendar = await this.getCalendar();
+    if (!calendar) {
       return { success: true, created: [], updated: [] };
     }
 
@@ -730,7 +720,7 @@ class GoogleCalendarConnector implements Connector {
     const syncDaysForward = config.syncDaysForward ?? 90;
 
     // Fetch calendar metadata and cache names/roles
-    const available = await fetchAvailableCalendars(auth);
+    const available = await fetchAvailableCalendars(calendar);
     const calendarNames: Record<string, string> = {};
     const calendarRoles: Record<string, string> = {};
     for (const cal of available) {
@@ -772,7 +762,7 @@ class GoogleCalendarConnector implements Connector {
 
       try {
         const result = await this.syncCalendar({
-          auth, calendarId, syncToken: existingSyncToken,
+          calendar, calendarId, syncToken: existingSyncToken,
           syncDaysBack, syncDaysForward, state, icsOpts, calDir,
           windowStart, windowEnd,
         });
@@ -781,8 +771,9 @@ class GoogleCalendarConnector implements Connector {
         deleted.push(...result.deleted);
         allNotes.push(...result.notes);
       } catch (err) {
+        const status = err instanceof HTTPError ? err.response?.status : undefined;
         const message = (err as Error).message;
-        if (message.includes("410")) {
+        if (status === 410 || message.includes("410")) {
           console.log(
             `  Sync token expired for ${calendarId}, doing full sync...`
           );
@@ -790,7 +781,7 @@ class GoogleCalendarConnector implements Connector {
           delete state.syncTokens[calendarId];
           await this.saveState(state);
           const result = await this.syncCalendar({
-            auth, calendarId, syncToken: undefined,
+            calendar, calendarId, syncToken: undefined,
             syncDaysBack, syncDaysForward, state, icsOpts, calDir,
             windowStart, windowEnd,
           });
@@ -811,14 +802,14 @@ class GoogleCalendarConnector implements Connector {
     }
 
     // Process locally-marked deletes (X-CB-DELETE property)
-    const deleteResult = await this.processLocalDeletes({ auth, state, calDir });
+    const deleteResult = await this.processLocalDeletes({ calendar, state, calDir });
     deleted.push(...deleteResult.deleted);
     allNotes.push(...deleteResult.notes);
 
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
     const orphanResult = await this.pushAndCleanOrphans(
-      { auth, state, calDir, defaultCalendarId },
+      { calendar, state, calDir, defaultCalendarId },
     );
     const pushed = orphanResult.pushed;
     deleted.push(...orphanResult.deleted);
@@ -927,7 +918,7 @@ class GoogleCalendarConnector implements Connector {
   }
 
   private async syncCalendar(opts: {
-    auth: OAuth2Client;
+    calendar: GoogleCalendarService;
     calendarId: string;
     syncToken: string | undefined;
     syncDaysBack: number;
@@ -938,7 +929,7 @@ class GoogleCalendarConnector implements Connector {
     windowStart: Date;
     windowEnd: Date;
   }): Promise<{ created: string[]; updated: string[]; deleted: string[]; notes: SyncNote[] }> {
-    const { auth, calendarId, syncToken, syncDaysBack, syncDaysForward,
+    const { calendar, calendarId, syncToken, syncDaysBack, syncDaysForward,
             state, icsOpts, calDir, windowStart, windowEnd } = opts;
     const created: string[] = [];
     const updated: string[] = [];
@@ -946,7 +937,7 @@ class GoogleCalendarConnector implements Connector {
     const notes: SyncNote[] = [];
 
     const events = await this.fetchEvents({
-      auth, calendarId, syncToken, syncDaysBack, syncDaysForward, state,
+      calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state,
     });
 
     for (const event of events) {
@@ -1026,7 +1017,7 @@ class GoogleCalendarConnector implements Connector {
           if (localEvent) {
             const entryCalId = typeof existingEntry === "string" ? icsOpts.calendarId : existingEntry.calendarId;
             delete localEvent._calendarId;
-            const patchResult = await this.patchEvent(auth, {
+            const patchResult = await this.patchEvent(calendar, {
               calendarId: entryCalId,
               googleEventId: event.id,
               event: localEvent,
@@ -1107,9 +1098,9 @@ class GoogleCalendarConnector implements Connector {
    * then track them. Returns { pushed, deleted, notes } arrays.
    */
   private async pushAndCleanOrphans(
-    opts: { auth: OAuth2Client; state: CalendarState; calDir: string; defaultCalendarId: string },
+    opts: { calendar: GoogleCalendarService; state: CalendarState; calDir: string; defaultCalendarId: string },
   ): Promise<{ pushed: string[]; deleted: string[]; notes: SyncNote[] }> {
-    const { auth, state, calDir, defaultCalendarId } = opts;
+    const { calendar, state, calDir, defaultCalendarId } = opts;
     const pushed: string[] = [];
     const deleted: string[] = [];
     const notes: SyncNote[] = [];
@@ -1158,7 +1149,7 @@ class GoogleCalendarConnector implements Connector {
         // Remove our internal field before sending to API
         delete apiEvent._calendarId;
 
-        const result = await this.insertEvent(auth, { calendarId, event: apiEvent });
+        const result = await this.insertEvent(calendar, { calendarId, event: apiEvent });
         if (result) {
           // Track the file with its new Google event ID
           state.eventFiles[result.id] = { filename: file, calendarId };
@@ -1196,9 +1187,9 @@ class GoogleCalendarConnector implements Connector {
    * Safety cap: at most 3 deletes per sync. Skips read-only calendars.
    */
   private async processLocalDeletes(
-    opts: { auth: OAuth2Client; state: CalendarState; calDir: string },
+    opts: { calendar: GoogleCalendarService; state: CalendarState; calDir: string },
   ): Promise<{ deleted: string[]; notes: SyncNote[] }> {
-    const { auth, state, calDir } = opts;
+    const { calendar, state, calDir } = opts;
     const deleted: string[] = [];
     const notes: SyncNote[] = [];
     const MAX_DELETES = 3;
@@ -1247,7 +1238,7 @@ class GoogleCalendarConnector implements Connector {
       } catch {
         // File already gone
       }
-      const success = await this.deleteEvent(auth, { calendarId, googleEventId });
+      const success = await this.deleteEvent(calendar, { calendarId, googleEventId });
       if (success) {
         await fs.unlink(filePath);
         delete state.eventFiles[googleEventId];
@@ -1264,30 +1255,19 @@ class GoogleCalendarConnector implements Connector {
     return { deleted, notes };
   }
 
-  /**
-   * Delete an event from Google Calendar via the REST API.
-   */
+  /** Delete an event via the calendar service. Returns false on HTTP errors. */
   private async deleteEvent(
-    auth: OAuth2Client,
+    calendar: GoogleCalendarService,
     opts: { calendarId: string; googleEventId: string },
   ): Promise<boolean> {
     const { calendarId, googleEventId } = opts;
-    const accessToken = (await auth.getAccessToken()).token;
-
     try {
-      await ky.delete(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          retry: 2,
-        },
-      );
+      await calendar.deleteEvent(calendarId, googleEventId);
       return true;
     } catch (err) {
-      const status = (err as HTTPError).response?.status;
-      if (status === 410) return true; // Already gone
-      if (status) {
-        const text = await (err as HTTPError).response.text();
+      if (err instanceof HTTPError) {
+        const status = err.response?.status;
+        const text = await err.response.text();
         console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
         return false;
       }
@@ -1295,32 +1275,18 @@ class GoogleCalendarConnector implements Connector {
     }
   }
 
-  /**
-   * Insert an event into Google Calendar via the REST API.
-   * Returns the created event or null on failure.
-   */
+  /** Insert an event via the calendar service. Returns null on HTTP errors. */
   private async insertEvent(
-    auth: OAuth2Client,
+    calendar: GoogleCalendarService,
     opts: { calendarId: string; event: GoogleCalendarEvent },
   ): Promise<GoogleCalendarEvent | null> {
     const { calendarId, event } = opts;
-    const accessToken = (await auth.getAccessToken()).token;
-
     try {
-      return await ky
-        .post(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-          {
-            json: event,
-            headers: { Authorization: `Bearer ${accessToken}` },
-            retry: 2,
-          },
-        )
-        .json<GoogleCalendarEvent>();
+      return await calendar.insertEvent(calendarId, event);
     } catch (err) {
-      const status = (err as HTTPError).response?.status;
-      if (status) {
-        const text = await (err as HTTPError).response.text();
+      if (err instanceof HTTPError) {
+        const status = err.response?.status;
+        const text = await err.response.text();
         console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
         return null;
       }
@@ -1328,32 +1294,18 @@ class GoogleCalendarConnector implements Connector {
     }
   }
 
-  /**
-   * Update an existing event in Google Calendar via the REST API (PATCH).
-   * Returns the updated event or null on failure.
-   */
+  /** Patch an event via the calendar service. Returns null on HTTP errors. */
   private async patchEvent(
-    auth: OAuth2Client,
+    calendar: GoogleCalendarService,
     opts: { calendarId: string; googleEventId: string; event: GoogleCalendarEvent },
   ): Promise<GoogleCalendarEvent | null> {
     const { calendarId, googleEventId, event } = opts;
-    const accessToken = (await auth.getAccessToken()).token;
-
     try {
-      return await ky
-        .patch(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}`,
-          {
-            json: event,
-            headers: { Authorization: `Bearer ${accessToken}` },
-            retry: 2,
-          },
-        )
-        .json<GoogleCalendarEvent>();
+      return await calendar.patchEvent(calendarId, { eventId: googleEventId, event });
     } catch (err) {
-      const status = (err as HTTPError).response?.status;
-      if (status) {
-        const text = await (err as HTTPError).response.text();
+      if (err instanceof HTTPError) {
+        const status = err.response?.status;
+        const text = await err.response.text();
         console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
         return null;
       }
@@ -1362,53 +1314,32 @@ class GoogleCalendarConnector implements Connector {
   }
 
   private async fetchEvents(
-    opts: { auth: OAuth2Client; calendarId: string; syncToken: string | undefined; syncDaysBack: number; syncDaysForward: number; state: CalendarState },
+    opts: { calendar: GoogleCalendarService; calendarId: string; syncToken: string | undefined; syncDaysBack: number; syncDaysForward: number; state: CalendarState },
   ): Promise<GoogleCalendarEvent[]> {
-    const { auth, calendarId, syncToken, syncDaysBack, syncDaysForward, state } = opts;
+    const { calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state } = opts;
     const allEvents: GoogleCalendarEvent[] = [];
     let pageToken: string | undefined;
 
+    // Compute time window for full sync (ignored when syncToken is set)
+    const now = new Date();
+    const timeMin = new Date(now);
+    timeMin.setDate(timeMin.getDate() - syncDaysBack);
+    const timeMax = new Date(now);
+    timeMax.setDate(timeMax.getDate() + syncDaysForward);
+
     do {
-      const searchParams: Record<string, string> = {
-        singleEvents: "false",
-        maxResults: "2500",
-      };
-
+      const listOpts: { syncToken?: string; timeMin?: string; timeMax?: string; pageToken?: string } = {};
       if (syncToken) {
-        searchParams["syncToken"] = syncToken;
+        listOpts.syncToken = syncToken;
       } else {
-        // Full sync: use time window to limit results
-        const now = new Date();
-        const timeMin = new Date(now);
-        timeMin.setDate(timeMin.getDate() - syncDaysBack);
-        const timeMax = new Date(now);
-        timeMax.setDate(timeMax.getDate() + syncDaysForward);
-        searchParams["timeMin"] = timeMin.toISOString();
-        searchParams["timeMax"] = timeMax.toISOString();
+        listOpts.timeMin = timeMin.toISOString();
+        listOpts.timeMax = timeMax.toISOString();
       }
+      if (pageToken) listOpts.pageToken = pageToken;
 
-      if (pageToken) {
-        searchParams["pageToken"] = pageToken;
-      }
-
-      const accessToken = (await auth.getAccessToken()).token;
-      const data = await ky
-        .get(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-          {
-            searchParams,
-            headers: { Authorization: `Bearer ${accessToken}` },
-            retry: 2,
-          },
-        )
-        .json<GoogleCalendarListResponse>();
-
-      if (data.items) {
-        allEvents.push(...data.items);
-      }
-
+      const data = await calendar.listEvents(calendarId, listOpts);
+      if (data.items) allEvents.push(...data.items);
       pageToken = data.nextPageToken;
-
       if (data.nextSyncToken) {
         state.syncTokens[calendarId] = data.nextSyncToken;
       }
@@ -1419,8 +1350,11 @@ class GoogleCalendarConnector implements Connector {
 
 }
 
-export function createGoogleCalendarConnector(boxRoot: string): Connector {
-  const connector = new GoogleCalendarConnector(boxRoot);
+export function createGoogleCalendarConnector(
+  boxRoot: string,
+  calendar?: GoogleCalendarService,
+): Connector {
+  const connector = new GoogleCalendarConnector(boxRoot, calendar);
   registerConnector(connector);
   return connector;
 }
