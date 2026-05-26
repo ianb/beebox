@@ -84,10 +84,13 @@ result.results[0]!.errors[0]!.message.includes("invalid email-thread frontmatter
 => true
 ```
 
-## Broken refs in frontmatter cards are reported
+## Broken refs in frontmatter cards are reported as warnings
 
 Each entry in a ref-declared field is resolved against the loader; missing
-targets surface as lint errors carrying the field path.
+targets surface as lint warnings (not errors) carrying the field path. Broken
+refs are warnings because they commonly arise from legitimate operations
+(referents being moved, archived, trashed, or hand-deleted), and treating
+each as a hard error would block commits on any box with accumulated drift.
 
 ```
 const box = await makeTmpBox();
@@ -101,9 +104,12 @@ const result = await lintCardsDispatch(
   { loader, ctx },
 );
 result.totalErrors
+=> 0
+
+result.totalWarnings
 => 1
 
-result.results[0]!.errors[0]!.message
+result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
 ```
 

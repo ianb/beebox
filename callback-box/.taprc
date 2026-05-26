@@ -9,3 +9,7 @@ include:
   - test/**/*.doctest.md
 exclude:
   - test/manual/**
+# Default 30s per-file is too tight for reactor-integration.doctest.md, which
+# exercises 10 full reactor cycles (~25s in isolation, longer under parallel
+# load). Bumping to 60s gives headroom without masking real hangs.
+timeout: 60

@@ -33,6 +33,11 @@ export interface TmpBox {
 export async function makeTmpBox(opts?: { git?: boolean }): Promise<TmpBox> {
   const root = await mkdtemp(join(tmpdir(), "cb-doctest-"));
 
+  // Box marker — code paths that walk up looking for a box (cb CLI, validation
+  // hooks, generateDocs) require this. Cheap to always create; tests that
+  // don't care simply ignore it.
+  await writeFile(join(root, ".cb-box"), "");
+
   if (opts?.git) {
     execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
       cwd: root,
