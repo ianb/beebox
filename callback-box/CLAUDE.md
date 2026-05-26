@@ -6,7 +6,12 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 ## Development
 
-**Dev server** — `overmind start` (uses `Procfile.dev`). Defaults: Vite on 3210, Fastify on 3211, the usual box list. A `.env` here overrides `FRONTEND_PORT`, `BACKEND_PORT`, `BOXES` — `claude --worktree <name>` at the monorepo root auto-generates one (via the `WorktreeCreate` hook) with hash-derived unique ports. See `.env.example`. Access UI at `http://localhost:${FRONTEND_PORT}/<box>/`.
+**Dev server** — run the monorepo dev router from the repo root: `bin/worktrees serve` (or `pnpm dev`). The router lazy-starts Vite + Fastify per worktree on first HTTP request, and idle-shuts-them-down after 5 minutes. URLs:
+
+- `http://localhost:3210/main/<box>/...` — the main checkout
+- `http://localhost:3210/<name>/<box>/...` — any git worktree
+
+Overmind and Procfile.dev are gone. The router (`bin/router.mjs`) spawns the same two processes (Vite, Fastify) directly as its children — flat tree, predictable signal handling, no tmux. See the monorepo CLAUDE.md for the lifecycle commands (`worktrees status`, `down`, `panic`).
 
 **Testing** — `pnpm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
 - `pnpm typecheck` — TypeScript (both backend and frontend)

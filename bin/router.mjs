@@ -14,6 +14,14 @@
 // Vite is configured with `base: '/<name>/'` so it serves its own assets at
 // the prefixed paths. HMR connects directly to Vite's internal port,
 // bypassing this router entirely.
+//
+// Orphan resistance:
+//   - Each spawned child is recorded in ~/.cache/callback-mono/pids/<name>.json
+//   - On router startup, that directory is swept: any PID still alive is
+//     killed (it's from a previous router that crashed); any dead PID's
+//     file is removed.
+//   - On clean SIGTERM/SIGINT, every active worktree is killed before exit.
+//   - On idle (5 min default), individual worktrees self-shutdown.
 
 import http from "node:http";
 import net from "node:net";
@@ -31,7 +39,16 @@ const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
 const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
 const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
 const BOXES_ROOT = path.join(os.homedir(), "src", "box-worktrees");
-const LOG_DIR = path.join(os.homedir(), ".cache", "callback-mono", "logs");
+const STATE_DIR = path.join(os.homedir(), ".cache", "callback-mono");
+const LOG_DIR = path.join(STATE_DIR, "logs");
+const PID_DIR = path.join(STATE_DIR, "pids");
+const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
+
+// Idle window before a worktree's children are shut down (ms).
+const IDLE_TIMEOUT_MS = Number(process.env.ROUTER_IDLE_MS) || 5 * 60 * 1000;
+
+// How long after SIGTERM before we escalate to SIGKILL.
+const KILL_GRACE_MS = 2000;
 
 // Main checkout's default box list (formerly hardcoded in Procfile.dev).
 const MAIN_BOX_DEFAULTS = [
@@ -43,8 +60,6 @@ const MAIN_BOX_DEFAULTS = [
 
 // --- Worktree resolution -----------------------------------------------
 
-// Resolve a worktree name to its on-disk layout. Returns null if the worktree
-// doesn't exist.
 async function resolveWorktree(name) {
   if (name === "main") {
     return {
@@ -52,8 +67,9 @@ async function resolveWorktree(name) {
       root: REPO_ROOT,
       backendCwd: path.join(REPO_ROOT, "callback-box"),
       frontendCwd: path.join(REPO_ROOT, "callback-box", "src", "frontend"),
-      boxes: await readBoxes(path.join(REPO_ROOT, "callback-box", ".env"))
-        ?? MAIN_BOX_DEFAULTS,
+      boxes:
+        (await readBoxes(path.join(REPO_ROOT, "callback-box", ".env"))) ??
+        MAIN_BOX_DEFAULTS,
     };
   }
   const root = path.join(WORKTREES_ROOT, name);
@@ -84,16 +100,75 @@ async function readBoxes(envPath) {
   }
 }
 
+// --- PID file management ----------------------------------------------
+
+async function writePidFile(name, data) {
+  await fs.mkdir(PID_DIR, { recursive: true });
+  await fs.writeFile(
+    path.join(PID_DIR, `${name}.json`),
+    JSON.stringify(data, null, 2),
+  );
+}
+
+async function removePidFile(name) {
+  try {
+    await fs.unlink(path.join(PID_DIR, `${name}.json`));
+  } catch {
+    // Already gone — fine.
+  }
+}
+
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code === "EPERM"; // exists but not ours; still treat as alive
+  }
+}
+
+// Read PID files left behind by any previous router and kill any processes
+// that are still alive. Runs once on router startup. Idempotent.
+async function sweepStaleChildren() {
+  let files;
+  try {
+    files = await fs.readdir(PID_DIR);
+  } catch {
+    return;
+  }
+  for (const file of files) {
+    if (!file.endsWith(".json")) continue;
+    const fullPath = path.join(PID_DIR, file);
+    let data;
+    try {
+      data = JSON.parse(await fs.readFile(fullPath, "utf8"));
+    } catch {
+      await fs.unlink(fullPath).catch(() => {});
+      continue;
+    }
+    for (const pid of [data.vitePid, data.fastifyPid]) {
+      if (typeof pid !== "number") continue;
+      if (!pidAlive(pid)) continue;
+      log(`sweep: killing leftover pid ${pid} from ${file}`);
+      try {
+        process.kill(-pid, "SIGTERM");
+      } catch {
+        try { process.kill(pid, "SIGTERM"); } catch {}
+      }
+      // Don't wait long; we proceed even if the kill takes effect later.
+    }
+    await fs.unlink(fullPath).catch(() => {});
+  }
+}
+
 // --- Process supervision ----------------------------------------------
 
-// Per-worktree state. Each entry transitions:
-//   undefined → starting (startPromise) → ready → dead
-const worktrees = new Map();
+const worktrees = new Map(); // name → entry
 
 async function ensureRunning(name) {
   let entry = worktrees.get(name);
   if (entry?.state === "ready") {
-    entry.lastActivity = Date.now();
+    touch(entry);
     return entry;
   }
   if (entry?.startPromise) return entry.startPromise;
@@ -105,6 +180,18 @@ async function ensureRunning(name) {
   worktrees.set(name, { state: "starting", startPromise, name });
   const ready = await startPromise;
   return ready;
+}
+
+function touch(entry) {
+  entry.lastActivity = Date.now();
+  if (entry.idleTimer) clearTimeout(entry.idleTimer);
+  entry.idleTimer = setTimeout(() => {
+    log(`[${entry.name}] idle for ${IDLE_TIMEOUT_MS}ms, shutting down`);
+    stopWorktree(entry.name).catch((err) =>
+      log(`[${entry.name}] idle shutdown error: ${err.message}`),
+    );
+  }, IDLE_TIMEOUT_MS);
+  entry.idleTimer.unref(); // don't keep the event loop alive
 }
 
 async function startWorktree(name) {
@@ -126,20 +213,15 @@ async function startWorktree(name) {
   const baseUrl = `/${name}/`;
   const childEnv = {
     ...process.env,
-    // Vite reads FRONTEND_PORT/BACKEND_PORT via its config.
     FRONTEND_PORT: String(frontendPort),
     BACKEND_PORT: String(backendPort),
     VITE_BASE: baseUrl,
-    // Fastify reads PORT directly. Same value as BACKEND_PORT but the env
-    // name the backend actually consults.
-    PORT: String(backendPort),
+    PORT: String(backendPort), // Fastify reads PORT
   };
 
   log(`[${name}] frontend=${frontendPort} backend=${backendPort} base=${baseUrl}`);
 
-  // Spawn backend (fastify via tsx).
-  // Detached so we have explicit control over lifecycle (no inheritance from
-  // router's controlling terminal signals).
+  // Backend: node + tsx, single process.
   const fastify = execa(
     "node",
     [
@@ -160,10 +242,7 @@ async function startWorktree(name) {
   fastify.stdout?.pipe(logStream, { end: false });
   fastify.stderr?.pipe(logStream, { end: false });
 
-  // Spawn vite directly (no `pnpm exec` wrapper) to keep the process tree
-  // flat. The frontend's `pnpm install` (run by the WorktreeCreate hook for
-  // worktrees, or by the user for main) makes ./node_modules/.bin/vite
-  // available.
+  // Vite: direct binary, no pnpm wrapper.
   const viteBin = path.join(wt.frontendCwd, "node_modules", ".bin", "vite");
   const vite = execa(
     viteBin,
@@ -179,11 +258,30 @@ async function startWorktree(name) {
   vite.stdout?.pipe(logStream, { end: false });
   vite.stderr?.pipe(logStream, { end: false });
 
+  // Record PIDs early so a crash mid-startup still leaves a sweep target.
+  await writePidFile(name, {
+    name,
+    vitePid: vite.pid,
+    fastifyPid: fastify.pid,
+    frontendPort,
+    backendPort,
+    routerPid: process.pid,
+    startedAt: Date.now(),
+  });
+
   // Wait for both to listen.
-  await Promise.all([
-    waitForPort(frontendPort, 30000, `vite/${name}`),
-    waitForPort(backendPort, 30000, `fastify/${name}`),
-  ]);
+  try {
+    await Promise.all([
+      waitForPort(frontendPort, 30000, `vite/${name}`),
+      waitForPort(backendPort, 30000, `fastify/${name}`),
+    ]);
+  } catch (err) {
+    // Startup failed; kill anything we managed to spawn and clean up.
+    killGroup(vite.pid);
+    killGroup(fastify.pid);
+    await removePidFile(name);
+    throw err;
+  }
 
   const entry = {
     state: "ready",
@@ -194,54 +292,69 @@ async function startWorktree(name) {
     backendPort,
     startedAt: Date.now(),
     lastActivity: Date.now(),
+    idleTimer: null,
     logFile,
   };
   worktrees.set(name, entry);
+  touch(entry); // start the idle timer
   log(`[${name}] ready`);
 
   vite.on("exit", (code, signal) => {
     log(`[${name}] vite exited code=${code} signal=${signal}`);
-    markDead(name);
+    onChildExit(name);
   });
   fastify.on("exit", (code, signal) => {
     log(`[${name}] fastify exited code=${code} signal=${signal}`);
-    markDead(name);
+    onChildExit(name);
   });
-  vite.catch(() => {}); // suppress unhandled rejection on kill
+  vite.catch(() => {});
   fastify.catch(() => {});
 
   return entry;
 }
 
-function markDead(name) {
+function onChildExit(name) {
   const entry = worktrees.get(name);
-  if (entry && entry.state === "ready") {
-    entry.state = "dead";
-    // Make sure both children are killed (one exiting often means the other
-    // should follow).
-    killEntry(entry);
-  }
+  if (!entry || entry.state !== "ready") return;
+  entry.state = "dead";
+  if (entry.idleTimer) clearTimeout(entry.idleTimer);
+  // Kill the sibling if it's still alive.
+  killGroup(entry.vite?.pid);
+  killGroup(entry.fastify?.pid);
+  removePidFile(name).catch(() => {});
+  worktrees.delete(name);
 }
 
-function killEntry(entry) {
-  for (const child of [entry.vite, entry.fastify]) {
-    if (!child || child.killed) continue;
+async function stopWorktree(name) {
+  const entry = worktrees.get(name);
+  if (!entry) return;
+  if (entry.idleTimer) clearTimeout(entry.idleTimer);
+  entry.state = "stopping";
+  killGroup(entry.vite?.pid);
+  killGroup(entry.fastify?.pid);
+  // Escalation: if still alive after KILL_GRACE_MS, SIGKILL.
+  setTimeout(() => {
+    killGroup(entry.vite?.pid, "SIGKILL");
+    killGroup(entry.fastify?.pid, "SIGKILL");
+  }, KILL_GRACE_MS).unref();
+  await removePidFile(name);
+  worktrees.delete(name);
+}
+
+function killGroup(pid, sig = "SIGTERM") {
+  if (!pid) return;
+  try {
+    process.kill(-pid, sig); // group
+  } catch {
     try {
-      // Kill the whole process group of the detached child.
-      process.kill(-child.pid, "SIGTERM");
+      process.kill(pid, sig); // single
     } catch {
-      try {
-        child.kill("SIGTERM");
-      } catch {}
+      /* gone */
     }
   }
 }
 
 async function waitForPort(port, timeoutMs, label) {
-  // TCP-level liveness check: try to connect. If the socket opens, the
-  // port is listening — we don't care what protocol it speaks. Try both
-  // IPv4 and IPv6 since Vite binds `::1` by default on macOS and Fastify
-  // typically binds 127.0.0.1.
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     for (const host of ["127.0.0.1", "::1"]) {
@@ -261,7 +374,9 @@ async function waitForPort(port, timeoutMs, label) {
     }
     await sleep(150);
   }
-  throw new Error(`${label} did not start listening on :${port} within ${timeoutMs}ms`);
+  throw new Error(
+    `${label} did not start listening on :${port} within ${timeoutMs}ms`,
+  );
 }
 
 function sleep(ms) {
@@ -273,23 +388,19 @@ function sleep(ms) {
 const proxy = httpProxy.createProxyServer({
   ws: false, // HMR connects directly; we don't proxy WS
   changeOrigin: true,
-  // Don't auto-add the X-Forwarded-* headers; vite is permissive without them.
 });
 
 proxy.on("error", (err, req, res) => {
-  // Errors are surfaced by the per-request handler below; this is a safety
-  // net for cases where the request didn't pass through ensureRunning.
   log(`proxy error: ${err.message}`);
   if (res && !res.headersSent) {
     res.writeHead(502, { "content-type": "text/plain" });
     res.end(`Bad gateway: ${err.message}\n`);
   } else if (res) {
-    res.end();
+    try { res.end(); } catch {}
   }
 });
 
 function parseWorktreeName(reqPath) {
-  // /<name>/<rest> → name. Empty / or no name → null.
   const m = reqPath.match(/^\/([^/?#]+)(?:[/?#]|$)/);
   return m ? m[1] : null;
 }
@@ -297,7 +408,6 @@ function parseWorktreeName(reqPath) {
 const server = http.createServer(async (req, res) => {
   const url = req.url || "/";
 
-  // Internal status endpoint.
   if (url === "/__router/status" || url === "/__router/status/") {
     res.writeHead(200, { "content-type": "application/json" });
     const state = {};
@@ -306,28 +416,57 @@ const server = http.createServer(async (req, res) => {
         state: entry.state,
         frontendPort: entry.frontendPort,
         backendPort: entry.backendPort,
+        vitePid: entry.vite?.pid,
+        fastifyPid: entry.fastify?.pid,
         startedAt: entry.startedAt,
         lastActivity: entry.lastActivity,
+        idleMs: entry.lastActivity ? Date.now() - entry.lastActivity : null,
       };
     }
-    res.end(JSON.stringify({ port: ROUTER_PORT, worktrees: state }, null, 2));
+    res.end(
+      JSON.stringify(
+        {
+          routerPort: ROUTER_PORT,
+          routerPid: process.pid,
+          idleTimeoutMs: IDLE_TIMEOUT_MS,
+          worktrees: state,
+        },
+        null,
+        2,
+      ),
+    );
     return;
   }
 
-  // Root: list of worktrees.
-  if (url === "/" || url === "") {
+  // Manual stop endpoint (used by WorktreeRemove hook and bin/worktrees down).
+  if (url.startsWith("/__router/stop/")) {
+    const name = url.slice("/__router/stop/".length).replace(/\/$/, "");
+    if (!name) {
+      res.writeHead(400);
+      res.end("missing worktree name");
+      return;
+    }
+    await stopWorktree(name);
     res.writeHead(200, { "content-type": "text/plain" });
-    res.end(
-      [
-        "callback-mono dev router",
-        "",
-        "Pick a worktree:",
-        "  /main/<box>/...   the main checkout",
-        "  /<name>/<box>/... a git worktree (lazy-started on first request)",
-        "",
-        "Status: /__router/status",
-      ].join("\n"),
-    );
+    res.end(`stopped ${name}\n`);
+    return;
+  }
+
+  if (url === "/" || url === "") {
+    const lines = ["callback-mono dev router", ""];
+    lines.push("Active worktrees:");
+    if (worktrees.size === 0) lines.push("  (none — they start lazily)");
+    for (const [name, entry] of worktrees) {
+      lines.push(`  /${name}/   ${entry.state}   started ${new Date(entry.startedAt).toISOString()}`);
+    }
+    lines.push("");
+    lines.push("Available URL shapes:");
+    lines.push("  /main/<box>/...   the main checkout");
+    lines.push("  /<name>/<box>/... a git worktree (lazy-started on first request)");
+    lines.push("");
+    lines.push("Status JSON: /__router/status");
+    res.writeHead(200, { "content-type": "text/plain" });
+    res.end(lines.join("\n"));
     return;
   }
 
@@ -347,7 +486,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Proxy with retry on ECONNREFUSED (vite restart tolerance).
   await proxyWithRetry(req, res, entry, 5);
 });
 
@@ -377,6 +515,27 @@ async function proxyWithRetry(req, res, entry, retriesLeft) {
   });
 }
 
+// --- Router PID file ---------------------------------------------------
+
+async function acquireRouterPidFile() {
+  await fs.mkdir(STATE_DIR, { recursive: true });
+  try {
+    const existing = await fs.readFile(ROUTER_PID_FILE, "utf8");
+    const pid = Number(existing.trim());
+    if (pid && pidAlive(pid)) {
+      throw new Error(
+        `Another router is already running (pid ${pid}). Run \`bin/worktrees panic\` to clear.`,
+      );
+    }
+  } catch (e) {
+    if (e.code !== "ENOENT") {
+      if (e.message.startsWith("Another router")) throw e;
+      // Otherwise the file is malformed; overwrite it.
+    }
+  }
+  await fs.writeFile(ROUTER_PID_FILE, String(process.pid));
+}
+
 // --- Shutdown ----------------------------------------------------------
 
 let shuttingDown = false;
@@ -385,13 +544,25 @@ async function shutdown(reason) {
   shuttingDown = true;
   log(`shutting down: ${reason}`);
   for (const entry of worktrees.values()) {
-    if (entry.vite || entry.fastify) killEntry(entry);
+    if (entry.idleTimer) clearTimeout(entry.idleTimer);
+    killGroup(entry.vite?.pid);
+    killGroup(entry.fastify?.pid);
   }
-  // Give children a moment to die.
+  // Escalate any survivors after the grace window.
+  setTimeout(() => {
+    for (const entry of worktrees.values()) {
+      killGroup(entry.vite?.pid, "SIGKILL");
+      killGroup(entry.fastify?.pid, "SIGKILL");
+    }
+  }, KILL_GRACE_MS).unref();
   await sleep(500);
+  // Remove PID files for cleanly-stopped worktrees.
+  for (const name of worktrees.keys()) {
+    await removePidFile(name);
+  }
+  await fs.unlink(ROUTER_PID_FILE).catch(() => {});
   server.close(() => process.exit(0));
-  // Force-exit if close hangs.
-  setTimeout(() => process.exit(0), 2000).unref();
+  setTimeout(() => process.exit(0), KILL_GRACE_MS + 500).unref();
 }
 
 process.on("SIGINT", () => shutdown("SIGINT"));
@@ -405,7 +576,17 @@ function log(msg) {
   console.log(`[router ${new Date().toISOString()}] ${msg}`);
 }
 
-server.listen(ROUTER_PORT, () => {
-  log(`listening on http://localhost:${ROUTER_PORT}`);
-  log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout`);
+// --- Boot --------------------------------------------------------------
+
+(async () => {
+  await acquireRouterPidFile();
+  await sweepStaleChildren();
+  server.listen(ROUTER_PORT, () => {
+    log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
+    log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout`);
+    log(`idle timeout: ${IDLE_TIMEOUT_MS}ms`);
+  });
+})().catch((err) => {
+  console.error(err.message);
+  process.exit(1);
 });

@@ -1,53 +1,107 @@
 #!/usr/bin/env bash
-# List git worktrees of this monorepo along with their ports, box, and
-# whether overmind/dev-server is currently running.
+# CLI for the callback-mono dev router and worktrees.
 #
-# Usage:  bin/worktrees [-v]
-#   (no args)  one row per worktree
-#   -v / --verbose  include extra context (process IDs binding the ports)
+# Commands:
+#   serve              Run the router in the foreground.
+#   status, list       Show what the router is currently running.
+#   down <name>        Tell the router to stop a worktree's processes.
+#   panic              Kill the router + any known children, wipe state.
+#                      Use when you suspect orphans.
+#   help               This text.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-VERBOSE=0
-case "${1:-}" in
-  -v|--verbose) VERBOSE=1 ;;
+STATE_DIR="$HOME/.cache/callback-mono"
+ROUTER_PID_FILE="$STATE_DIR/router.pid"
+PID_DIR="$STATE_DIR/pids"
+ROUTER_PORT="${ROUTER_PORT:-3210}"
+
+cmd="${1:-status}"
+shift || true
+
+case "$cmd" in
+  serve)
+    exec node "$REPO_DIR/bin/router.mjs" "$@"
+    ;;
+
+  status | list)
+    if ! [ -f "$ROUTER_PID_FILE" ] || ! kill -0 "$(cat "$ROUTER_PID_FILE" 2>/dev/null)" 2>/dev/null; then
+      echo "router not running"
+      if [ -d "$PID_DIR" ] && [ -n "$(ls -A "$PID_DIR" 2>/dev/null)" ]; then
+        echo "(stale PID files present in $PID_DIR — run \`bin/worktrees panic\` to clean)"
+      fi
+      exit 0
+    fi
+    curl -fsS "http://127.0.0.1:$ROUTER_PORT/__router/status" | jq .
+    ;;
+
+  down)
+    name="${1:?usage: worktrees down <name>}"
+    if ! [ -f "$ROUTER_PID_FILE" ]; then
+      echo "router not running"
+      exit 0
+    fi
+    curl -fsS "http://127.0.0.1:$ROUTER_PORT/__router/stop/$name"
+    ;;
+
+  panic)
+    # Nuclear cleanup. SIGTERM, then SIGKILL after a grace window.
+    killed_any=0
+    if [ -f "$ROUTER_PID_FILE" ]; then
+      pid=$(cat "$ROUTER_PID_FILE")
+      if kill -TERM "$pid" 2>/dev/null; then
+        echo "sent SIGTERM to router pid $pid"
+        killed_any=1
+      fi
+    fi
+    if [ -d "$PID_DIR" ]; then
+      for f in "$PID_DIR"/*.json; do
+        [ -f "$f" ] || continue
+        while IFS= read -r p; do
+          [ -n "$p" ] || continue
+          if kill -TERM "$p" 2>/dev/null; then
+            echo "sent SIGTERM to child pid $p"
+            killed_any=1
+          fi
+        done < <(jq -r '.vitePid // empty, .fastifyPid // empty' "$f")
+      done
+    fi
+    if [ "$killed_any" = 1 ]; then
+      sleep 1
+    fi
+    # Escalate to SIGKILL.
+    if [ -f "$ROUTER_PID_FILE" ]; then
+      pid=$(cat "$ROUTER_PID_FILE" 2>/dev/null || true)
+      [ -n "$pid" ] && kill -KILL "$pid" 2>/dev/null || true
+    fi
+    if [ -d "$PID_DIR" ]; then
+      for f in "$PID_DIR"/*.json; do
+        [ -f "$f" ] || continue
+        while IFS= read -r p; do
+          [ -n "$p" ] || continue
+          kill -KILL "$p" 2>/dev/null || true
+        done < <(jq -r '.vitePid // empty, .fastifyPid // empty' "$f")
+      done
+    fi
+    rm -f "$ROUTER_PID_FILE"
+    rm -rf "$PID_DIR"
+    # Also catch anything bound to our router port (defensive).
+    if pids=$(lsof -tiTCP:"$ROUTER_PORT" -sTCP:LISTEN 2>/dev/null); then
+      for p in $pids; do
+        kill -KILL "$p" 2>/dev/null && echo "killed leftover on :$ROUTER_PORT (pid $p)" || true
+      done
+    fi
+    echo "router stopped, state cleaned"
+    ;;
+
+  help | -h | --help)
+    awk 'NR==1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "$0"
+    ;;
+
+  *)
+    echo "unknown command: $cmd" >&2
+    echo "run \`bin/worktrees help\` for usage" >&2
+    exit 1
+    ;;
 esac
-
-# Format: name | path | branch | frontend | backend | box | dev?
-printf '%-16s  %-44s  %-22s  %5s  %5s  %-36s  %s\n' \
-  NAME PATH BRANCH F-PORT B-PORT BOX DEV
-
-while IFS= read -r line; do
-  case "$line" in
-    "worktree "*)  wt_path="${line#worktree }" ;;
-    "branch "*)    wt_branch="${line#branch refs/heads/}" ;;
-    "")
-      [ -z "${wt_path:-}" ] && continue
-      name=$(basename "$wt_path")
-      env_file="$wt_path/callback-box/.env"
-      fport=""; bport=""; box=""
-      if [ -f "$env_file" ]; then
-        fport=$(grep -E '^FRONTEND_PORT=' "$env_file" | cut -d= -f2 | tr -d ' \r' || true)
-        bport=$(grep -E '^BACKEND_PORT='  "$env_file" | cut -d= -f2 | tr -d ' \r' || true)
-        box=$(grep -E '^BOXES='           "$env_file" | cut -d= -f2- | tr -d ' \r' | awk '{print $1}' || true)
-        # Show just the box dir's basename to keep the row narrow.
-        [ -n "$box" ] && box=$(basename "$box")
-      fi
-
-      dev="-"
-      if [ -n "$fport" ] && lsof -nP -iTCP:"$fport" -sTCP:LISTEN >/dev/null 2>&1; then
-        dev="running"
-        if [ "$VERBOSE" = 1 ]; then
-          pid=$(lsof -nP -tiTCP:"$fport" -sTCP:LISTEN | head -1)
-          dev="running (pid $pid)"
-        fi
-      fi
-
-      printf '%-16s  %-44s  %-22s  %5s  %5s  %-36s  %s\n' \
-        "${name:--}" "${wt_path:--}" "${wt_branch:--}" "${fport:--}" "${bport:--}" "${box:--}" "$dev"
-
-      wt_path=""; wt_branch=""
-      ;;
-  esac
-done < <(git -C "$REPO_DIR" worktree list --porcelain; echo "")

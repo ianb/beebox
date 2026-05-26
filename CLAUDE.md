@@ -9,7 +9,22 @@ Four projects live in one git repository (previously three independent repos, me
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box.
 
-**Worktrees** — `claude --worktree <name>` (or `-w`) creates a Claude Code worktree at `.claude/worktrees/<name>/` on branch `worktree-<name>` and starts a session in it. The `WorktreeCreate` hook in `.claude/hooks/worktree-create.sh` handles the setup: git-clones `~/src/boxes/test1` to `~/src/box-worktrees/test1-<name>/` (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md), writes a `callback-box/.env` with hash-derived unique ports (deterministic per name; main holds 3210/3211, worktrees use 3220+10*hash%100), and runs `pnpm install`. On session exit with no changes the worktree is auto-removed; the `WorktreeRemove` hook then deletes the cloned box. With uncommitted changes, Claude Code prompts you to keep or remove.
+**Worktrees** — `claude --worktree <name>` creates a Claude Code worktree at `~/src/callback-worktrees/<name>/` on branch `worktree-<name>` and starts a session in it. The `WorktreeCreate` hook handles setup: git-clones `~/src/boxes/test1` to `~/src/box-worktrees/test1-<name>/` (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md), runs `pnpm install` at every level, builds cardworks. On session exit with no changes the worktree is auto-removed and the `WorktreeRemove` hook deletes the cloned box + tells the router to stop the worktree's dev server. With uncommitted changes, Claude Code prompts you to keep or remove.
+
+**Dev server — single router, lazy per-worktree.** Run `pnpm dev` at the monorepo root (or `bin/worktrees serve`). The router listens on port 3210 and routes by URL path prefix:
+
+- `http://localhost:3210/main/<box>/...` — the main checkout
+- `http://localhost:3210/<name>/<box>/...` — any worktree (lazy-started on first request, idle-shutdown after 5 min)
+
+Each worktree gets its own Vite + Fastify pair, spawned as direct children of the router (no Overmind, no tmux — flat process tree). The router source is `bin/router.mjs`. URL-prefixed serving uses Vite's `base` option; HMR connects directly to Vite's internal port (bypasses the router). Lifecycle commands:
+
+- `bin/worktrees status` — JSON of running worktrees, PIDs, ports, idle ms
+- `bin/worktrees down <name>` — stop one worktree's processes now
+- `bin/worktrees panic` — kill router + all known children + wipe state (use if you suspect orphans)
+
+Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json`; router sweeps and kills survivors on startup; clean SIGTERM/SIGINT kills children with SIGKILL fallback after 2 seconds.
+
+**Agents reporting URLs:** when an agent in a worktree wants to show you (or itself) a working URL, it's `http://localhost:3210/<its-worktree-name>/<box>/<path>`. First hit takes ~4s (cold start); subsequent are ~10ms.
 
 **Auto-deploy is `main`-only.** The root husky `post-commit` hook triggers `callback-box/deploy/deploy.sh` only when HEAD is on `main`. Worktrees on other branches commit safely without deploying; ship by merging to `main`.
 

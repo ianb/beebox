@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "prepare": "husky",
-    "dev": "node bin/router.mjs"
+    "dev": "bin/worktrees serve"
   },
   "dependencies": {
     "execa": "^9.6.1",

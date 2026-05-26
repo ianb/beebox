@@ -32,7 +32,15 @@ else
 fi
 
 BOX_DEST="$HOME/src/box-worktrees/test1-$NAME"
+ROUTER_PORT="${ROUTER_PORT:-3210}"
 echo "[worktree-remove] name=$NAME"
+
+# Tell the dev router to stop this worktree's processes immediately (rather
+# than waiting for its idle timeout). Best-effort — if the router isn't
+# running, the call just fails and we move on.
+if curl -fsS -m 5 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$NAME" >/dev/null 2>&1; then
+  echo "[worktree-remove] told router to stop $NAME"
+fi
 
 if [ -d "$BOX_DEST" ]; then
   echo "[worktree-remove] removing box $BOX_DEST"
