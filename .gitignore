@@ -2,6 +2,10 @@ node_modules/
 dist/
 *.log
 
+# Per-worktree dev config
+.env
+.overmind.sock
+
 # Claude Code runtime / machine-local
 .claude/scheduled_tasks.lock
 .claude/session-*.json

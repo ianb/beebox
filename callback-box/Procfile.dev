@@ -1,2 +1,2 @@
-backend: PORT=3211 node --watch --import ./tsx-preload.mjs --import tsx ./src/webapp/server.ts ~/src/boxes/hearthside ~/src/boxes/test1 ~/src/boxes/hearth-test ~/src/boxes/studio
-frontend: cd src/frontend && npx vite dev
+backend: PORT=${BACKEND_PORT:-3211} node --watch --import ./tsx-preload.mjs --import tsx ./src/webapp/server.ts ${BOXES:-~/src/boxes/hearthside ~/src/boxes/test1 ~/src/boxes/hearth-test ~/src/boxes/studio}
+frontend: cd src/frontend && BACKEND_PORT=${BACKEND_PORT:-3211} npx vite dev --port ${FRONTEND_PORT:-3210}

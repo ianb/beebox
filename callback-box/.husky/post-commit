@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# Auto-deploy to server after each commit.
-# Runs in background so it doesn't block the commit.
+# Auto-deploy to server after each commit — ONLY from the `main` branch.
+# Worktrees on other branches skip the deploy.
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "[post-commit] Deploying to server..."
-"$REPO_DIR/deploy/deploy.sh" &>"$REPO_DIR/deploy/.last-deploy.log" &
-disown
-echo "[post-commit] Deploy started in background (log: deploy/.last-deploy.log)"
+BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+if [ "$BRANCH" = "main" ]; then
+  echo "[post-commit] Deploying to server (branch: main)..."
+  "$REPO_DIR/deploy/deploy.sh" &>"$REPO_DIR/deploy/.last-deploy.log" &
+  disown
+  echo "[post-commit] Deploy started in background (log: deploy/.last-deploy.log)"
+else
+  echo "[post-commit] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
+fi
 
 # Clean up .bak.png files for images that were just committed
 committed_images=$(git diff-tree --no-commit-id --name-only -r HEAD -- 'docs/architecture/images/*.png' | grep -v '\.bak\.png$' || true)

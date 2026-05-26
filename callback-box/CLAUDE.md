@@ -6,7 +6,7 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 ## Development
 
-**Dev server** — `overmind start` (uses `Procfile.dev`). Vite on port 3210 (main), Fastify on 3211. Access UI at `http://localhost:3210/test1/`.
+**Dev server** — `overmind start` (uses `Procfile.dev`). Defaults: Vite on 3210, Fastify on 3211, the usual box list. A `.env` here overrides `FRONTEND_PORT`, `BACKEND_PORT`, `BOXES` — `scripts/new-worktree.sh` at the monorepo root generates one with offset ports per worktree. See `.env.example`. Access UI at `http://localhost:${FRONTEND_PORT}/<box>/`.
 
 **Testing** — `npm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
 - `npm run typecheck` — TypeScript (both backend and frontend)
@@ -16,7 +16,7 @@ This is not an app — it's a system that Claude Code operates. The human teache
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
 - Run tests before committing. If tests fail, fix them. If a test failure is clearly pre-existing and unrelated to your changes, note it but don't ignore your own failures.
 
-**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server). Server runs as `callback` user at `/opt/callback/`. The server runs `tsx` directly (not compiled `dist/`).
+**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. The server runs `tsx` directly (not compiled `dist/`).
 
 ## Cards
 
