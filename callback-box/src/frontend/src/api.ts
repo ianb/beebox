@@ -10,28 +10,38 @@
  */
 
 /**
- * Get the API base URL for the current box, derived from the URL's first path segment.
- * e.g., /test1/chat → /test1/api
+ * Get the API base URL for the current box, derived from the URL's first
+ * path segment after the Vite base path.
+ *
+ * In dev under the monorepo router the URL shape is
+ *   /<worktree>/<box>/... → API base is /<worktree>/<box>/api
+ * Vite's `base` is set to `/<worktree>/` at build/dev time and exposed via
+ * import.meta.env.BASE_URL, so we strip it before parsing the box.
+ *
+ * In prod (and dev without a base) the URL shape is just /<box>/...
  */
 export function getApiBase(): string {
-  const firstSegment = window.location.pathname.split("/")[1] || "";
-  if (!firstSegment) return "/api";
-  return `/${firstSegment}/api`;
+  const base = import.meta.env.BASE_URL ?? "/"; // e.g. "/main/" or "/"
+  const pathname = window.location.pathname;
+  // Strip the base prefix if present.
+  const stripped = pathname.startsWith(base)
+    ? pathname.slice(base.length - (base.endsWith("/") ? 1 : 0))
+    : pathname;
+  const firstSegment = stripped.split("/")[1] || "";
+  const prefix = base.replace(/\/$/, "");
+  if (!firstSegment) return `${prefix}/api`;
+  return `${prefix}/${firstSegment}/api`;
 }
 
 /**
  * Get the base URL for EventSource (SSE) connections.
- * In dev mode (Vite dev server on port 3210), connects directly to the
- * Fastify backend (port 3211) to bypass Vite's proxy which unreliably
- * handles long-lived SSE connections.
- * In production, uses the same origin as the page.
+ *
+ * Used to direct-connect to the backend port (bypassing Vite's proxy for
+ * long-lived SSE). Under the monorepo router that backdoor doesn't apply —
+ * the router proxies SSE just fine, and the backend port is dynamic anyway.
+ * So we just use the same origin as the page in all cases now.
  */
 export function getEventSourceBase(): string {
-  // Runtime check: Vite dev server runs on port 3210
-  if (window.location.port === "3210") {
-    const firstSegment = window.location.pathname.split("/")[1] || "";
-    return `http://${window.location.hostname}:3211/${firstSegment}/api`;
-  }
   return getApiBase();
 }
 

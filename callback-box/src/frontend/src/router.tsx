@@ -195,9 +195,16 @@ const routeTree = rootRoute.addChildren([
 // --- Router factory ---
 
 export function createAppRouter(opts?: { history?: Parameters<typeof createRouter>[0]["history"] }) {
+  // When this app is served under a path prefix (e.g. /main/ when behind the
+  // monorepo dev router), Vite sets import.meta.env.BASE_URL accordingly and
+  // we tell TanStack Router about it so it doesn't parse the prefix as the
+  // first route segment. Trailing slash is stripped per TanStack's convention.
+  const rawBase = import.meta.env.BASE_URL ?? "/";
+  const basepath = rawBase.replace(/\/$/, "") || undefined;
   return createRouter({
     routeTree,
     defaultPreload: false,
+    basepath,
     ...opts,
   });
 }

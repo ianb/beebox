@@ -477,6 +477,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Redirect /<name> → /<name>/ so Vite's base-prefixed routing has the
+  // trailing slash it expects. Otherwise the page loads but most asset URLs
+  // resolve relative to "/" instead of "/<name>/", breaking everything.
+  if (url === `/${name}`) {
+    res.writeHead(301, { location: `/${name}/` });
+    res.end();
+    return;
+  }
+
   let entry;
   try {
     entry = await ensureRunning(name);
