@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+
+# Claude Code runtime / machine-local
+.claude/scheduled_tasks.lock
+.claude/session-*.json
+.claude/settings.local.json
+.claude/projects/
+
+# OS
+.DS_Store

@@ -79,7 +79,7 @@ plugins/          Claude Code plugins (card-validator hook)
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box. Box layout: `box/inbox/`, `box/jobs/`, `box/commands/`, `box/questions/`, `store/archive/`, `config/`.
 
-**cardworks** (`~/src/cardworks`) — XML card library. Parsing, serialization, validation, JSX. Edit as needed — it's part of this ecosystem.
+**cardworks** (`../cardworks`, sibling in the monorepo) — XML card library. Parsing, serialization, validation, JSX. Edit as needed — it's part of this ecosystem.
 
 ## Key Concepts
 
