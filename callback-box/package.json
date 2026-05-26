@@ -30,8 +30,7 @@
     "test:watch": "tap --watch",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts,tsx src/",
-    "prepare": ":"
+    "lint:circular": "madge --circular --extensions ts,tsx src/"
   },
   "keywords": [
     "claude",

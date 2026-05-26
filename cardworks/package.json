@@ -27,8 +27,7 @@
     "lint:fix": "eslint src --fix",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts src/",
-    "prepare": ":"
+    "lint:circular": "madge --circular --extensions ts src/"
   },
   "files": [
     "dist"
