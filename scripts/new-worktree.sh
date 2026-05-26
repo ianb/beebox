@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Create a parallel worktree with its own cloned test box and an .env that
-# picks unique ports.
+# picks unique ports, then run pnpm install in callback-box.
 #
 # Usage:
 #   scripts/new-worktree.sh <name>
@@ -12,6 +12,10 @@
 #                                                 box doesn't inherit monorepo CLAUDE.md)
 #   ~/src/callback-worktrees/<name>/callback-box/.env
 #                                                ports + BOXES pointing at the clone
+#
+# Port allocation: scans .env files of existing worktrees and picks the lowest
+# unused multiple-of-10 offset (main=3210/3211, then 3220/3221, 3230/3231, ...).
+# Safe across worktree create/remove cycles.
 #
 # Cleanup with scripts/remove-worktree.sh <name>.
 
@@ -40,10 +44,29 @@ fi
 
 mkdir -p "$WORKTREE_ROOT" "$BOX_ROOT"
 
-# Port offset: count existing worktrees (including main) and bump by 10.
-N=$(git -C "$MONO_ROOT" worktree list | wc -l | tr -d ' ')
-FRONTEND_PORT=$((3210 + N * 10))
-BACKEND_PORT=$((3211 + N * 10))
+# Find first unused FRONTEND_PORT offset. Scan every worktree's .env, collect
+# used FRONTEND_PORTs, then pick the lowest 3220+10k that isn't taken. Main
+# (no .env) implicitly uses 3210.
+used_ports=" 3210 "  # main worktree
+while IFS= read -r line; do
+  # `git worktree list --porcelain` emits "worktree <path>" lines
+  case "$line" in
+    "worktree "*)
+      wt_path="${line#worktree }"
+      env_file="$wt_path/callback-box/.env"
+      if [ -f "$env_file" ]; then
+        port=$(grep -E '^FRONTEND_PORT=' "$env_file" | head -1 | cut -d= -f2 | tr -d ' \r')
+        [ -n "$port" ] && used_ports+="$port "
+      fi
+      ;;
+  esac
+done < <(git -C "$MONO_ROOT" worktree list --porcelain)
+
+FRONTEND_PORT=3220
+while [[ "$used_ports" == *" $FRONTEND_PORT "* ]]; do
+  FRONTEND_PORT=$((FRONTEND_PORT + 10))
+done
+BACKEND_PORT=$((FRONTEND_PORT + 1))
 
 echo "Creating worktree at $WORKTREE_PATH (branch: $NAME)..."
 git -C "$MONO_ROOT" worktree add -b "$NAME" "$WORKTREE_PATH"
@@ -58,6 +81,9 @@ BACKEND_PORT=$BACKEND_PORT
 BOXES=$BOX_DEST
 EOF
 
+echo "Running pnpm install in callback-box..."
+(cd "$WORKTREE_PATH/callback-box" && pnpm install)
+
 cat <<EOF
 
 Done.
@@ -67,10 +93,8 @@ Done.
   frontend:    http://localhost:$FRONTEND_PORT/
   backend:     http://localhost:$BACKEND_PORT/
 
-Next steps:
-  cd $WORKTREE_PATH/callback-box
-  pnpm install
-  overmind start
+Start the dev servers:
+  cd $WORKTREE_PATH/callback-box && overmind start
 
 To tear down: $MONO_ROOT/scripts/remove-worktree.sh $NAME
 EOF
