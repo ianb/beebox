@@ -35,7 +35,7 @@
     "xstate": "^5.28.0"
   },
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../../../../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "file:../../../personal-vibe-check",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
