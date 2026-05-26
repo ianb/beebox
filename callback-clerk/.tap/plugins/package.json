@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@tapjs/core": "file:///Users/ianbicking/src/callback-clerk/node_modules/@tapjs/core"
+  }
+}
