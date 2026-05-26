@@ -1,0 +1,4 @@
+{
+  "project": ["src/**/*.{ts,tsx}"],
+  "exclude": ["enumMembers", "duplicates", "types"]
+}

@@ -1,0 +1,101 @@
+diff --git a/node_modules/eslint-config-agent/configs/storybook.js b/node_modules/eslint-config-agent/configs/storybook.js
+index aa599fd..15f169f 100644
+--- a/node_modules/eslint-config-agent/configs/storybook.js
++++ b/node_modules/eslint-config-agent/configs/storybook.js
+@@ -8,7 +8,7 @@
+ import globals from 'globals'
+ import { plugins } from '../plugins/index.js'
+ 
+-export const storybookConfig = [
++export const storybookConfig = plugins.storybook ? [
+   {
+     files: ['**/*.stories.{js,jsx,ts,tsx}'],
+     languageOptions: {
+@@ -25,4 +25,4 @@ export const storybookConfig = [
+       ...plugins.storybook.configs.recommended.rules,
+     },
+   },
+-]
++] : []
+diff --git a/node_modules/eslint-config-agent/index.js b/node_modules/eslint-config-agent/index.js
+index 05e8552..90d2860 100644
+--- a/node_modules/eslint-config-agent/index.js
++++ b/node_modules/eslint-config-agent/index.js
+@@ -104,21 +104,17 @@ const config = defineConfig([
+   {
+     plugins,
+   },
+-  // Use recommended-latest if available (v5+), otherwise create flat config equivalent of legacy recommended
+-  ...(reactHooks.configs['recommended-latest']
+-    ? [reactHooks.configs['recommended-latest']]
+-    : [
+-        {
+-          name: 'react-hooks/recommended-flat',
+-          plugins: {
+-            'react-hooks': reactHooks,
+-          },
+-          rules: {
+-            'react-hooks/rules-of-hooks': 'error',
+-            'react-hooks/exhaustive-deps': 'warn',
+-          },
+-        },
+-      ]),
++  // Register react-hooks plugin in flat config format
++  {
++    name: 'react-hooks/recommended-flat',
++    plugins: {
++      'react-hooks': reactHooks,
++    },
++    rules: {
++      'react-hooks/rules-of-hooks': 'error',
++      'react-hooks/exhaustive-deps': 'warn',
++    },
++  },
+   js.configs.recommended,
+   ...tseslint.configs.recommended,
+ 
+diff --git a/node_modules/eslint-config-agent/plugins/index.js b/node_modules/eslint-config-agent/plugins/index.js
+index 0a4f379..4d82869 100644
+--- a/node_modules/eslint-config-agent/plugins/index.js
++++ b/node_modules/eslint-config-agent/plugins/index.js
+@@ -12,7 +12,7 @@ import nPlugin from 'eslint-plugin-n'
+ import classExportPlugin from 'eslint-plugin-class-export'
+ import singleExportPlugin from 'eslint-plugin-single-export'
+ import requiredExportsPlugin from 'eslint-plugin-required-exports'
+-import storybookPlugin from 'eslint-plugin-storybook'
++// import storybookPlugin from 'eslint-plugin-storybook'
+ import errorPlugin from 'eslint-plugin-error'
+ import defaultPlugin from 'eslint-plugin-default'
+ import noOptionalChainingPlugin from 'eslint-plugin-no-optional-chaining'
+@@ -20,7 +20,7 @@ import dddPlugin from 'eslint-plugin-ddd'
+ import allRules from '../rules/index.js'
+ import { noDefaultClassExportRule } from '../rules/no-default-class-export/index.js'
+ 
+-// Conditionally import preact plugin if available
++// Conditionally import optional plugins if available
+ let preactPlugin = null
+ try {
+   preactPlugin = (await import('eslint-plugin-preact')).default
+@@ -28,6 +28,13 @@ try {
+   // eslint-plugin-preact is not available
+ }
+ 
++let storybookPlugin = null
++try {
++  storybookPlugin = (await import('eslint-plugin-storybook')).default
++} catch {
++  // eslint-plugin-storybook is not available
++}
++
+ // Centralized plugin configuration
+ export const plugins = {
+   react: reactPlugin,
+@@ -37,7 +44,7 @@ export const plugins = {
+   'class-export': classExportPlugin,
+   'single-export': singleExportPlugin,
+   'required-exports': requiredExportsPlugin,
+-  storybook: storybookPlugin,
++  ...(storybookPlugin && { storybook: storybookPlugin }),
+   error: errorPlugin,
+   default: defaultPlugin,
+   'no-optional-chaining': noOptionalChainingPlugin,
