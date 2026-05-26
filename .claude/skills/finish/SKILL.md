@@ -104,8 +104,10 @@ git -C "$MONO" merge "$BRANCH"
 ```
 
 This should be a fast-forward merge (since you merged main into the
-worktree in step 3). If git complains about non-fast-forward or
-conflicts here, something's off — stop and ask.
+worktree in step 3). The monorepo `post-merge` hook will trigger the
+deploy regardless of whether the merge is fast-forward or not. If git
+complains about conflicts, something's off (step 3 should have
+surfaced them) — stop and ask.
 
 ### 6. Confirm and report
 

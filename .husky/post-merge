@@ -1,3 +1,25 @@
-#!/usr/bin/env sh
-command -v git-lfs >/dev/null 2>&1 || exit 0
-git lfs post-merge "$@"
+#!/usr/bin/env bash
+# Monorepo post-merge hook.
+#
+# Auto-deploys to prod when a merge updates main — fast-forward OR
+# merge-commit. post-commit alone misses fast-forwards (they move HEAD
+# without creating a commit object, so post-commit never fires). Both
+# hooks coordinate via the merge-commit check: post-commit skips merge
+# commits, post-merge handles them, so non-FF merges don't double-deploy.
+
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+if [ "$BRANCH" = "main" ]; then
+  echo "[post-merge] Deploying to server (branch: main)..."
+  "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
+  disown
+  echo "[post-merge] Deploy started in background (log: callback-box/deploy/.last-deploy.log)"
+else
+  echo "[post-merge] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
+fi
+
+# Let git-lfs do its post-merge work.
+command -v git-lfs >/dev/null 2>&1 && git lfs post-merge "$@" || true

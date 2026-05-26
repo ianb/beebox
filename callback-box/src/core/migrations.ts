@@ -41,6 +41,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "chat-thread",       script: "scripts/migrate/chat-thread.ts" },
   { name: "doc-to-gdoc",       script: "scripts/migrate/doc-to-gdoc.ts" },
   { name: "strip-type-field",  script: "scripts/migrate/strip-type-field.ts" },
+  { name: "repair-refs",       script: "scripts/migrate/repair-refs.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";
