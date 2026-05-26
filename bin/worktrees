@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# List git worktrees of this monorepo along with their ports, box, and
+# whether overmind/dev-server is currently running.
+#
+# Usage:  bin/worktrees [-v]
+#   (no args)  one row per worktree
+#   -v / --verbose  include extra context (process IDs binding the ports)
+
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+VERBOSE=0
+case "${1:-}" in
+  -v|--verbose) VERBOSE=1 ;;
+esac
+
+# Format: name | path | branch | frontend | backend | box | dev?
+printf '%-16s  %-44s  %-22s  %5s  %5s  %-36s  %s\n' \
+  NAME PATH BRANCH F-PORT B-PORT BOX DEV
+
+while IFS= read -r line; do
+  case "$line" in
+    "worktree "*)  wt_path="${line#worktree }" ;;
+    "branch "*)    wt_branch="${line#branch refs/heads/}" ;;
+    "")
+      [ -z "${wt_path:-}" ] && continue
+      name=$(basename "$wt_path")
+      env_file="$wt_path/callback-box/.env"
+      fport=""; bport=""; box=""
+      if [ -f "$env_file" ]; then
+        fport=$(grep -E '^FRONTEND_PORT=' "$env_file" | cut -d= -f2 | tr -d ' \r' || true)
+        bport=$(grep -E '^BACKEND_PORT='  "$env_file" | cut -d= -f2 | tr -d ' \r' || true)
+        box=$(grep -E '^BOXES='           "$env_file" | cut -d= -f2- | tr -d ' \r' | awk '{print $1}' || true)
+        # Show just the box dir's basename to keep the row narrow.
+        [ -n "$box" ] && box=$(basename "$box")
+      fi
+
+      dev="-"
+      if [ -n "$fport" ] && lsof -nP -iTCP:"$fport" -sTCP:LISTEN >/dev/null 2>&1; then
+        dev="running"
+        if [ "$VERBOSE" = 1 ]; then
+          pid=$(lsof -nP -tiTCP:"$fport" -sTCP:LISTEN | head -1)
+          dev="running (pid $pid)"
+        fi
+      fi
+
+      printf '%-16s  %-44s  %-22s  %5s  %5s  %-36s  %s\n' \
+        "${name:--}" "${wt_path:--}" "${wt_branch:--}" "${fport:--}" "${bport:--}" "${box:--}" "$dev"
+
+      wt_path=""; wt_branch=""
+      ;;
+  esac
+done < <(git -C "$REPO_DIR" worktree list --porcelain; echo "")
