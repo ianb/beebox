@@ -1,0 +1,12 @@
+{
+  "name": "callback-mono",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo root. Holds shared dev infrastructure (husky hooks). Individual packages live in callback-box/, cardworks/, personal-vibe-check/, agent-doctest/, callback-clerk/.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

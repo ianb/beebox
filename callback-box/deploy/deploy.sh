@@ -57,6 +57,14 @@ done
 echo "Checking dependencies..."
 ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   set -e
+  # One-time migration: personal-vibe-check moved from /opt/personal-vibe-check
+  # (when it was an external sibling repo) to /opt/callback/personal-vibe-check
+  # (now a monorepo sibling). Once the new path is populated and the deploy is
+  # confirmed working, the old dir is dead weight. Remove it idempotently.
+  if [[ -d /opt/callback/personal-vibe-check && -d /opt/personal-vibe-check ]]; then
+    echo "  Removing stale /opt/personal-vibe-check (superseded by /opt/callback/personal-vibe-check)..."
+    rm -rf /opt/personal-vibe-check
+  fi
   cd /opt/callback/personal-vibe-check
   if [[ ! -d node_modules ]] || ! npm ls --depth=0 &>/dev/null 2>&1; then
     echo "  Installing personal-vibe-check deps..."

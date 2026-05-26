@@ -12,7 +12,7 @@
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
-    "prepare": "husky"
+    "prepare": ":"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",

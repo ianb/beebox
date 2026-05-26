@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Monorepo pre-commit dispatcher.
+#
+# Each subproject used to have its own .husky/pre-commit (lint-staged +
+# typecheck). After the monorepo migration each subproject lost its own
+# .git, so those individual husky setups silently stopped working. This
+# dispatcher restores the same checks, scoped to whichever subprojects
+# have staged changes.
+#
+# Lives at the monorepo root because core.hooksPath in .git/config (set
+# to .husky/_/ by `pnpm install` in the root) is shared across all
+# worktrees via git's common dir.
+
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMR)"
+
+run_in() {
+  local dir="$1"; shift
+  echo "[pre-commit] $dir: $*"
+  (cd "$REPO_DIR/$dir" && "$@")
+}
+
+if echo "$staged" | grep -q '^callback-box/'; then
+  run_in callback-box pnpm exec lint-staged
+  run_in callback-box pnpm typecheck
+fi
+
+if echo "$staged" | grep -q '^cardworks/'; then
+  run_in cardworks pnpm exec lint-staged
+  run_in cardworks pnpm typecheck
+fi

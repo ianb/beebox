@@ -64,6 +64,6 @@
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
     "test": "node --test rules/test/*.test.mjs",
-    "prepare": "husky"
+    "prepare": ":"
   }
 }

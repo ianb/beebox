@@ -31,7 +31,7 @@
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
-    "prepare": "husky"
+    "prepare": ":"
   },
   "keywords": [
     "claude",
@@ -119,6 +119,14 @@
       "esbuild",
       "protobufjs",
       "unrs-resolver"
-    ]
+    ],
+    "ignoredBuiltDependencies": [
+      "@ianbicking/personal-vibe-check"
+    ],
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "eslint-plugin-react-hooks": "7"
+      }
+    }
   }
 }

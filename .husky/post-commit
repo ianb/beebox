@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Monorepo post-commit hook.
+#
+# 1. Auto-deploy to prod server — ONLY from main. Worktrees on other
+#    branches skip the deploy (they commit safely without shipping).
+# 2. Clean up architecture-doc PNG backup files for images that were
+#    just committed (callback-box-specific, kept here so a single root
+#    post-commit handles everything).
+#
+# Lives at the monorepo root for the same reason as pre-commit (one
+# husky setup at root, hooks fire from any worktree via shared
+# core.hooksPath).
+
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+# 1. Auto-deploy (callback-box ships to prod) — only from main.
+if [ "$BRANCH" = "main" ]; then
+  echo "[post-commit] Deploying to server (branch: main)..."
+  "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
+  disown
+  echo "[post-commit] Deploy started in background (log: callback-box/deploy/.last-deploy.log)"
+else
+  echo "[post-commit] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
+fi
+
+# 2. Clean up .bak.png files for architecture-doc images that were just committed.
+committed_images=$(git -C "$REPO_DIR" diff-tree --no-commit-id --name-only -r HEAD -- 'callback-box/docs/architecture/images/*.png' | grep -v '\.bak\.png$' || true)
+if [ -n "$committed_images" ]; then
+  for img in $committed_images; do
+    base="${img%.png}"
+    for bak in "$REPO_DIR"/"${base}".*.bak.png; do
+      [ -f "$bak" ] && rm "$bak" && echo "[post-commit] Cleaned up $(basename "$bak")"
+    done
+    mermaid_bak="$REPO_DIR/${base}.mermaid.bak.png"
+    [ -f "$mermaid_bak" ] && rm "$mermaid_bak" && echo "[post-commit] Cleaned up $(basename "$mermaid_bak")"
+  done
+fi
+
+# 3. Let git-lfs do its post-commit work (cleans up pointer-tracking state).
+command -v git-lfs >/dev/null 2>&1 && git lfs post-commit "$@" || true

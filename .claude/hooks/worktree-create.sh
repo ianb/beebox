@@ -23,6 +23,10 @@
 
 set -euo pipefail
 
+# Loud failure: surface line + exit code on any error so a half-created
+# worktree doesn't get handed back to Claude Code as if it succeeded.
+trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree may be partially set up at $worktree_path." >&2; exit $rc' ERR
+
 # All logs go to stderr; only the final path goes to stdout.
 exec 3>&1 1>&2
 
@@ -78,11 +82,19 @@ echo "[worktree-create] wrote $env_file"
 # 4. Build cardworks first, then pnpm install in callback-box.
 # (cardworks is a file: dep with node-linker=hoisted, so pnpm copies dist/
 # into callback-box/node_modules/cardworks/ at install time — it must exist.)
+# Also install root husky so .husky/_/ exists in the worktree (otherwise
+# core.hooksPath points to a missing dir and git hooks don't fire).
+echo "[worktree-create] installing root husky..."
+(cd "$worktree_path" && pnpm install)
+
 echo "[worktree-create] building cardworks..."
 (cd "$worktree_path/cardworks" && pnpm install && pnpm build)
 
 echo "[worktree-create] running pnpm install in callback-box..."
 (cd "$worktree_path/callback-box" && pnpm install)
+
+echo "[worktree-create] running pnpm install in callback-box/src/frontend..."
+(cd "$worktree_path/callback-box/src/frontend" && pnpm install)
 
 echo "[worktree-create] done. frontend=http://localhost:$FRONTEND_PORT/ backend=http://localhost:$BACKEND_PORT"
 
