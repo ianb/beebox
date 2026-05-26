@@ -1,0 +1,8 @@
+test/fixtures/**/*.jpg !text !filter !merge !diff
+test/fixtures/**/*.webm !text !filter !merge !diff
+test/fixtures/**/*.m4a !text !filter !merge !diff
+test/fixtures/**/*.png !text !filter !merge !diff
+callback-box/test/fixtures/**/*.jpg !text !filter !merge !diff
+callback-box/test/fixtures/**/*.webm !text !filter !merge !diff
+callback-box/test/fixtures/**/*.m4a !text !filter !merge !diff
+callback-box/test/fixtures/**/*.png !text !filter !merge !diff
