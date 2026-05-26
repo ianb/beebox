@@ -5,8 +5,8 @@
  * frontmatter-with-XML-body to flat frontmatter + markdown body.
  *
  * Usage:
- *   npx tsx scripts/migrate/memo.ts <boxRoot>           # dry-run
- *   npx tsx scripts/migrate/memo.ts <boxRoot> --apply
+ *   pnpm exec tsx scripts/migrate/memo.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx scripts/migrate/memo.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, writeFile } from "node:fs/promises";

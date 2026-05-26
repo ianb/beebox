@@ -6,7 +6,7 @@
  * and generates a report highlighting issues (orphans, broken links, ambiguous
  * descriptions) and a full inventory.
  *
- * Usage: npx tsx src/dev/doc-graph.ts > docs/doc-graph.md
+ * Usage: pnpm exec tsx src/dev/doc-graph.ts > docs/doc-graph.md
  */
 
 import * as fs from "node:fs";

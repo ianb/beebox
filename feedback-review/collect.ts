@@ -1,13 +1,13 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env -S pnpm dlx tsx
 /**
  * Collect agent feedback from all boxes (local and remote server).
  *
  * Usage:
- *   npx tsx collect.ts                    # list all unresolved feedback
- *   npx tsx collect.ts --resolve <file>   # mark one file resolved (moves to resolved/)
- *   npx tsx collect.ts --resolve-all      # mark all collected feedback resolved
- *   npx tsx collect.ts --boxes ~/src/boxes # scan a different local directory
- *   npx tsx collect.ts --no-remote        # skip remote server
+ *   pnpm dlx tsx collect.ts                    # list all unresolved feedback
+ *   pnpm dlx tsx collect.ts --resolve <file>   # mark one file resolved (moves to resolved/)
+ *   pnpm dlx tsx collect.ts --resolve-all      # mark all collected feedback resolved
+ *   pnpm dlx tsx collect.ts --boxes ~/src/boxes # scan a different local directory
+ *   pnpm dlx tsx collect.ts --no-remote        # skip remote server
  */
 
 import * as fs from "node:fs";

@@ -24,8 +24,8 @@
  * Idempotent. Default dry-run; pass `--apply` to mutate.
  *
  * Usage:
- *   npx tsx scripts/migrate/repair-refs.ts <boxRoot>           # dry-run
- *   npx tsx scripts/migrate/repair-refs.ts <boxRoot> --apply
+ *   pnpm exec tsx scripts/migrate/repair-refs.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx scripts/migrate/repair-refs.ts <boxRoot> --apply
  */
 
 import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";

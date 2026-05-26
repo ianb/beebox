@@ -28,8 +28,8 @@
  * Anything outside these categories is reported but not touched.
  *
  * Usage:
- *   npx tsx scripts/clean-broken-refs.ts <boxRoot>           # dry-run
- *   npx tsx scripts/clean-broken-refs.ts <boxRoot> --apply
+ *   pnpm exec tsx scripts/clean-broken-refs.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx scripts/clean-broken-refs.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, stat, unlink, writeFile } from "node:fs/promises";

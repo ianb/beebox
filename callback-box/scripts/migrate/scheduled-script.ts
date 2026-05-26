@@ -5,8 +5,8 @@
  * frontmatter-with-XML-body to flat YAML frontmatter.
  *
  * Usage:
- *   npx tsx scripts/migrate/scheduled-script.ts <boxRoot>           # dry-run
- *   npx tsx scripts/migrate/scheduled-script.ts <boxRoot> --apply
+ *   pnpm exec tsx scripts/migrate/scheduled-script.ts <boxRoot>           # dry-run
+ *   pnpm exec tsx scripts/migrate/scheduled-script.ts <boxRoot> --apply
  */
 
 import { readFile, readdir, writeFile } from "node:fs/promises";

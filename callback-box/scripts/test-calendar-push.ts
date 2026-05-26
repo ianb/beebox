@@ -1,7 +1,7 @@
 /**
  * Quick test script: push a local .ics change back to Google Calendar.
  *
- * Usage: npx tsx scripts/test-calendar-push.ts <boxRoot> <icsFilename>
+ * Usage: pnpm exec tsx scripts/test-calendar-push.ts <boxRoot> <icsFilename>
  *
  * Reads the .ics file, finds the Google event ID from state,
  * and PATCHes the event via the Calendar API.
@@ -27,7 +27,7 @@ async function main() {
   const icsFilename = process.argv[3];
 
   if (!boxRoot || !icsFilename) {
-    console.error("Usage: npx tsx scripts/test-calendar-push.ts <boxRoot> <icsFilename>");
+    console.error("Usage: pnpm exec tsx scripts/test-calendar-push.ts <boxRoot> <icsFilename>");
     process.exit(1);
   }
 
