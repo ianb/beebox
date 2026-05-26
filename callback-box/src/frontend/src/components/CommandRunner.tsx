@@ -130,7 +130,7 @@ export function CommandRunner({
       runCommand();
     }
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const stateColors = {
     idle: "bg-warm-100 border-warm-400",
