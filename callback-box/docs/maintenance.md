@@ -12,13 +12,13 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 | Task | Command | Cadence | Output |
 |------|---------|---------|--------|
-| Knowledge audits | `npm run knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
-| Prompt report | `npm run prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
-| Doc graph | `npm run doc-graph` | After restructuring docs | `docs/doc-graph.md` |
-| Dead-code sweep | `npm run lint:knip` | Before releases; when code feels accumulated | Console |
-| Supplemental lint | `npm run lint:oxlint` | Periodic | Console |
-| Circular deps | `npm run lint:circular` | After big refactors | Console |
-| Doc images | `npm run generate:doc-images` | After editing architecture diagrams or prompts | `docs/architecture/images/` |
+| Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
+| Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
+| Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
+| Dead-code sweep | `pnpm lint:knip` | Before releases; when code feels accumulated | Console |
+| Supplemental lint | `pnpm lint:oxlint` | Periodic | Console |
+| Circular deps | `pnpm lint:circular` | After big refactors | Console |
+| Doc images | `pnpm generate:doc-images` | After editing architecture diagrams or prompts | `docs/architecture/images/` |
 | Box data migrations | `cb migrate` (per box) | After adding a new migrator to `src/core/migrations.ts` | Box working tree |
 | Broken-ref cleanup | `npx tsx scripts/clean-broken-refs.ts <boxRoot>` | One-off; when `cb validate` shows ref errors that pre-date a migration | Box working tree |
 

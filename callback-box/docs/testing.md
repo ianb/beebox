@@ -20,7 +20,7 @@ What tests are NOT for: validating types (the type system does that), achieving 
 
 **Location:** `test/*.doctest.md`
 **Runner:** TAP with a custom Node.js loader (`src/test-lib/doctest-hooks.mjs`)
-**Run:** `npm test` (runs alongside traditional tests)
+**Run:** `pnpm test` (runs alongside traditional tests)
 
 Doctest files are executable markdown documents. The prose explains behavior; fenced code blocks contain examples that are run as tests. A Node.js loader hook transforms them into TAP tests at runtime.
 
@@ -206,7 +206,7 @@ await box.cleanup();
 
 **Location:** `test/*.test.ts`
 **Runner:** [tap](https://node-tap.org/) v21 with tsx
-**Run:** `npm test`
+**Run:** `pnpm test`
 
 Reserved for things that would be circular as doctests: testing the test infrastructure itself.
 
@@ -370,7 +370,7 @@ git branch | grep 'test/' | xargs git branch -D
 ## 3. Knowledge Audits
 
 **Location:** Tests in `src/dev/knowledge-audits.yaml`, runner in `src/dev/knowledge-audit.ts`, reports in `src/dev/reports/`
-**Run:** `npm run knowledge-audit -- run [--filter <id-or-tag>]`
+**Run:** `pnpm knowledge-audit run [--filter <id-or-tag>]`
 
 Knowledge audits test what the agent _knows_ rather than what the system _does_. They run prompts against a Claude agent in a box and check whether the agent answered from loaded context (knows directly), followed a doc reference (knows about), or had to search (discoverable).
 
@@ -525,9 +525,9 @@ Review recent agentic sessions (triage, news processing, chat handling) for tool
 These catch issues the pre-commit hook doesn't:
 
 ```bash
-npm run lint:oxlint    # Ambiguous constructors, useless spreads, identical branches
-npm run lint:knip      # Unused files, exports, dependencies
-npm run lint:circular  # Value-import circular dependencies (type-only cycles are OK)
+pnpm lint:oxlint    # Ambiguous constructors, useless spreads, identical branches
+pnpm lint:knip      # Unused files, exports, dependencies
+pnpm lint:circular  # Value-import circular dependencies (type-only cycles are OK)
 ```
 
 ## Future Directions

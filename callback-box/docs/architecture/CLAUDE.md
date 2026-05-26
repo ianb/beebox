@@ -34,8 +34,8 @@ Each image has a `-prompt.json` sidecar file that caches the prompt hash. If the
 
 **To generate/regenerate images:**
 ```bash
-npm run generate:doc-images           # all images in architecture docs
-npm run generate:doc-images -- --file diana  # just Diana's portrait
+pnpm generate:doc-images           # all images in architecture docs
+pnpm generate:doc-images --file diana  # just Diana's portrait
 ```
 
 Requires `SKE_GEMINI_API_KEY` env var. Uses `gemini-2.5-flash-image` model via `@google/genai` SDK.
