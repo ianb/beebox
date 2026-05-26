@@ -59,6 +59,10 @@
     "typescript-eslint": "^8.22.0"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "unrs-resolver"
+    ],
     "ignoredBuiltDependencies": [
       "@ianbicking/personal-vibe-check"
     ],
@@ -76,8 +80,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "unrs-resolver"]
   }
 }
