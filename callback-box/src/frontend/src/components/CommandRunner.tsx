@@ -124,7 +124,7 @@ export function CommandRunner({
   // Auto-run on mount if requested. Mount-only by design — the initial
   // setState burst (transition to "running", clear outputs) is the
   // whole point of the autoRun trigger.
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (autoRun) {
       runCommand();
