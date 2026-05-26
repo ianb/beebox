@@ -56,9 +56,18 @@ BOX_DEST="$HOME/src/box-worktrees/test1-$NAME"
 
 echo "[worktree-create] name=$NAME base=$base_ref path=$worktree_path"
 
-# 1. Create the worktree.
+# 1. Create (or re-attach to) the worktree.
 mkdir -p "$(dirname "$worktree_path")"
-git worktree add -b "$new_branch" "$worktree_path" "$base_ref"
+if git worktree list --porcelain | grep -qxF "worktree $worktree_path"; then
+  echo "[worktree-create] worktree already registered at $worktree_path — resume, skipping setup"
+  printf '%s\n' "$worktree_path" >&3
+  exit 0
+elif git show-ref --verify --quiet "refs/heads/$new_branch"; then
+  echo "[worktree-create] branch $new_branch already exists — attaching without -b"
+  git worktree add "$worktree_path" "$new_branch"
+else
+  git worktree add -b "$new_branch" "$worktree_path" "$base_ref"
+fi
 
 # 2. Clone the test box if it doesn't already exist (idempotent).
 mkdir -p "$(dirname "$BOX_DEST")"
@@ -91,13 +100,14 @@ echo "[worktree-create] running pnpm install in callback-box/src/frontend..."
 
 # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
 # own cb on PATH. Per-worktree because each worktree has its own absolute
-# callback-box/bin path. settings.local.json is gitignored.
+# callback-box/bin path. Claude Code's env block doesn't substitute ${PATH},
+# so we have to expand it at write time. settings.local.json is gitignored.
 echo "[worktree-create] writing .claude/settings.local.json with PATH override..."
 mkdir -p "$worktree_path/.claude"
 cat > "$worktree_path/.claude/settings.local.json" <<EOF
 {
   "env": {
-    "PATH": "$worktree_path/callback-box/bin:\${PATH}"
+    "PATH": "$worktree_path/callback-box/bin:$PATH"
   }
 }
 EOF
