@@ -679,6 +679,38 @@ function log(msg) {
   console.log(`[router ${new Date().toISOString()}] ${msg}`);
 }
 
+// --- Terminal tab title -----------------------------------------------
+
+// Emit an OSC-0 escape sequence so Terminal.app (and most other terminals)
+// shows something useful in the tab/window title. Updated on worktree
+// state changes so you can glance at the tab and tell what's busy. Only
+// emit if stdout is a TTY — otherwise we'd litter pipe/log output with
+// escape codes.
+function setTabTitle(title) {
+  if (!process.stdout.isTTY) return;
+  process.stdout.write(`\x1b]0;${title}\x07`);
+}
+
+function updateTabTitle() {
+  const running = [...worktrees.values()].filter((e) => e.state === "ready");
+  let title = `⚡ cb router :${ROUTER_PORT}`;
+  if (running.length === 1) {
+    title += ` · ${running[0].name}`;
+  } else if (running.length > 1) {
+    title += ` · ${running.length} worktrees`;
+  }
+  setTabTitle(title);
+}
+
+// Hook into the worktree state transitions we already have, so the title
+// stays current.
+const _origTouch = touch;
+touch = (entry) => { _origTouch(entry); updateTabTitle(); };
+const _origStop = stopWorktree;
+stopWorktree = async (name) => { const r = await _origStop(name); updateTabTitle(); return r; };
+const _origOnExit = onChildExit;
+onChildExit = (name) => { _origOnExit(name); updateTabTitle(); };
+
 // --- Boot --------------------------------------------------------------
 
 (async () => {
@@ -688,6 +720,7 @@ function log(msg) {
     log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
     log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout`);
     log(`idle timeout: ${IDLE_TIMEOUT_MS}ms`);
+    updateTabTitle();
   });
 })().catch((err) => {
   console.error(err.message);
