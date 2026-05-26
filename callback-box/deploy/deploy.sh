@@ -36,7 +36,7 @@ RSYNC_OPTS=(-az --delete
 # Build frontend locally (fast — already has node_modules)
 if [[ "$SKIP_FRONTEND" != true ]]; then
   echo "Building frontend..."
-  cd "$REPO_DIR/src/frontend" && pnpm build --silent
+  cd "$REPO_DIR/src/frontend" && pnpm --silent build
 fi
 
 # Sync monorepo packages. personal-vibe-check is a file: dep of callback-box
@@ -57,6 +57,12 @@ done
 echo "Checking dependencies..."
 ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   set -e
+  # Bootstrap pnpm on demand. corepack ships with Node 22; this is idempotent
+  # and a no-op if pnpm is already on PATH.
+  if ! command -v pnpm >/dev/null 2>&1; then
+    echo "  Bootstrapping pnpm via corepack..."
+    corepack enable pnpm
+  fi
   # One-time migration: personal-vibe-check moved from /opt/personal-vibe-check
   # (when it was an external sibling repo) to /opt/callback/personal-vibe-check
   # (now a monorepo sibling). Once the new path is populated and the deploy is
