@@ -17,11 +17,18 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
 # 1. Auto-deploy (callback-box ships to prod) — only from main.
+# Skip merge commits: post-merge handles all merges (including fast-forwards
+# which don't fire post-commit at all). Letting post-commit also deploy on
+# merge commits would double-fire for non-FF merges.
 if [ "$BRANCH" = "main" ]; then
-  echo "[post-commit] Deploying to server (branch: main)..."
-  "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
-  disown
-  echo "[post-commit] Deploy started in background (log: callback-box/deploy/.last-deploy.log)"
+  if git -C "$REPO_DIR" rev-parse --verify --quiet HEAD^2 >/dev/null; then
+    echo "[post-commit] Skip deploy: merge commit (post-merge handles it)"
+  else
+    echo "[post-commit] Deploying to server (branch: main)..."
+    "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
+    disown
+    echo "[post-commit] Deploy started in background (log: callback-box/deploy/.last-deploy.log)"
+  fi
 else
   echo "[post-commit] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
 fi
