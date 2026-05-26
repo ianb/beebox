@@ -89,23 +89,35 @@ function postToolUseCommand(cbBin: string): string {
   return `${JSON.stringify(cbBin)} validate --hook`;
 }
 
+// True if the command looks like a previously-installed cb validation hook
+// (regardless of which cb path it points at, including the legacy
+// `validate "$f"` form). We want to replace these so a monorepo migration
+// or a switch to a different worktree's cb cleanly updates the embedded
+// absolute path instead of appending a parallel hook that still runs the
+// old cb.
+function isManagedValidationHook(command: string): boolean {
+  return (
+    /\bvalidate\s+--hook\b/.test(command) ||
+    command.includes('validate "$f"')
+  );
+}
+
 function ensurePostToolUseEntry(settings: SettingsShape, command: string): boolean {
   const hooks = settings.hooks ?? (settings.hooks = {});
   const entries = hooks.PostToolUse ?? (hooks.PostToolUse = []);
 
-  // If we already wrote a hook that targets `validate "$f"`, replace its
-  // command in case the cb path changed.
+  let changed = false;
   for (const entry of entries) {
     if (entry.matcher !== POST_TOOL_USE_MATCHER) continue;
-    for (const h of entry.hooks ?? []) {
-      if (h.command === command) return false;
-      if (h.command.includes("validate \"$f\"")) {
-        h.command = command;
-        return true;
-      }
+    const original = entry.hooks ?? [];
+    // Strip any existing managed validation hooks; we'll add the current one back.
+    const filtered = original.filter((h) => !isManagedValidationHook(h.command));
+    if (filtered.length !== original.length) changed = true;
+    entry.hooks = [...filtered, { type: "command", command }];
+    if (filtered.length !== original.length || !original.some((h) => h.command === command)) {
+      changed = true;
     }
-    entry.hooks = [...(entry.hooks ?? []), { type: "command", command }];
-    return true;
+    return changed;
   }
 
   entries.push({

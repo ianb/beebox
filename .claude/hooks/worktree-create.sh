@@ -89,6 +89,29 @@ echo "[worktree-create] running pnpm install in callback-box..."
 echo "[worktree-create] running pnpm install in callback-box/src/frontend..."
 (cd "$worktree_path/callback-box/src/frontend" && pnpm install)
 
+# 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
+# own cb on PATH. Per-worktree because each worktree has its own absolute
+# callback-box/bin path. settings.local.json is gitignored.
+echo "[worktree-create] writing .claude/settings.local.json with PATH override..."
+mkdir -p "$worktree_path/.claude"
+cat > "$worktree_path/.claude/settings.local.json" <<EOF
+{
+  "env": {
+    "PATH": "$worktree_path/callback-box/bin:\${PATH}"
+  }
+}
+EOF
+
+# 5. Refresh box hooks: the cloned box's .git/hooks/pre-commit and
+# .claude/settings.json have the source box's cb path baked in (often the
+# pre-migration ~/src/callback path). Re-run cb init against the cloned
+# box from the WORKTREE's cb so its hooks point at the worktree's cb.
+# Idempotent (cb init is "initialize or update").
+if [ -d "$BOX_DEST" ]; then
+  echo "[worktree-create] refreshing box hooks (worktree's cb -> $BOX_DEST)..."
+  "$worktree_path/callback-box/bin/cb" init "$BOX_DEST" >/dev/null
+fi
+
 echo "[worktree-create] done. open http://localhost:3210/$NAME/ when the router is running"
 
 # Required: print the worktree path on stdout so Claude Code uses it.

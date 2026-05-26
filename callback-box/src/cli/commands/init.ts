@@ -13,6 +13,7 @@ import { initBox, installProcedures, installGuides, installSchedules, installPer
 import { stageAll, commit } from "../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
+import { installValidationHooks } from "../../core/install-validation-hooks.js";
 
 export const initCommand = new Command("init")
   .description("Initialize or update a callback box")
@@ -114,6 +115,14 @@ export const initCommand = new Command("init")
       if (options.docidDebug !== undefined) {
         await setDocIdDebug(resolve(targetPath), options.docidDebug);
       }
+
+      // Install/refresh validation hooks (.git/hooks/pre-commit and
+      // .claude/settings.json PostToolUse entry) so the cb path embedded in
+      // them matches THIS cb. generateDocs() also calls this, but it short-
+      // circuits when its doc-gen cache says nothing changed — so re-running
+      // `cb init` after switching cb sources (monorepo migration, new
+      // worktree, etc.) wouldn't refresh the hooks via that path alone.
+      await installValidationHooks(resolve(targetPath));
 
       // Generate agent documentation (picks up docid-debug from marker file)
       await generateDocs(resolve(targetPath));
