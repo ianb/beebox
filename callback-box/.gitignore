@@ -8,6 +8,8 @@ dist/
 .thinking/local/
 .tap/
 deploy-info.json
+scripts/*.wav
+scripts/.voxtral-sample.wav
 src/dev/reports/
 # Architecture doc image generation artifacts
 *.bak.png
