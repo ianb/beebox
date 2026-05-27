@@ -478,7 +478,12 @@ function sleep(ms) {
 // --- HTTP proxy --------------------------------------------------------
 
 const proxy = httpProxy.createProxyServer({
-  ws: false, // HMR connects directly; we don't proxy WS
+  // HMR connects directly to Vite's port, so we don't NEED to proxy it. But
+  // the app's own WS endpoints (e.g. /<wt>/<box>/api/chat/transcribe-ws for
+  // Voxtral realtime) come through here and *do* need WS proxying — without
+  // it, Node's http server closes the upgrade with code 1006 and Voxtral
+  // never reaches Mistral. ws: true; explicit `upgrade` handler below.
+  ws: true,
   changeOrigin: true,
 });
 
@@ -721,6 +726,33 @@ const server = http.createServer(async (req, res) => {
   }
 
   await proxyWithRetry(req, res, entry, 5);
+});
+
+// WebSocket upgrade requests bypass the regular request handler. Node emits
+// them on 'upgrade' instead. Route the same way as HTTP — name → worktree →
+// proxy to its Vite, which has its own ws:true proxy rule forwarding to Fastify.
+server.on("upgrade", async (req, socket, head) => {
+  const reqUrl = req.url || "/";
+  const name = parseWorktreeName(reqUrl);
+  if (!name) {
+    socket.destroy();
+    return;
+  }
+  let entry;
+  try {
+    entry = await ensureRunning(name);
+  } catch (err) {
+    log(`[${name}] upgrade failed: ${err.message}`);
+    socket.destroy();
+    return;
+  }
+  const target = `http://127.0.0.1:${entry.frontendPort}`;
+  proxy.ws(req, socket, head, { target }, (err) => {
+    if (err) {
+      log(`[${entry.name}] ws proxy error: ${err.message}`);
+      try { socket.destroy(); } catch {}
+    }
+  });
 });
 
 async function proxyWithRetry(req, res, entry, retriesLeft) {
