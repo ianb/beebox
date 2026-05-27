@@ -1668,10 +1668,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
   // Load voice config from personality on mount
   useEffect(() => {
+    const tts = getTTSClient();
     fetch(`${getApiBase()}/chat/voice-config`)
       .then((r) => r.json() as Promise<CompiledSpeakingVoice>)
       .then((config) => {
-        const tts = getTTSClient();
         if (config.model && isTTSVoice(config.model)) {
           tts.setVoiceConfig({ voice: config.model });
         }
@@ -1679,7 +1679,12 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           tts.setVoiceConfig({ baseInstructions: config.instructions.join(" ") });
         }
       })
-      .catch(() => {});
+      .catch((e) => {
+        console.warn("[chat] voice-config fetch failed; using defaults", e);
+      })
+      .finally(() => {
+        tts.markConfigLoaded();
+      });
   }, []);
 
   // Number of speech segments already dispatched to playback from the
