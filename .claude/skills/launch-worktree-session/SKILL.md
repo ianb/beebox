@@ -58,13 +58,20 @@ Adjust the wording to fit the conversation, but the spirit is constant:
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
    Ask the human if a good name isn't obvious from the discussion.
 
-3. **Draft the briefing.** Show it to the human first if it's substantial
-   (more than ~5 lines) — they may want to add nuance you missed, or trim
-   things you over-committed to. For very short ones (a sentence or two of
-   context), it's fine to inline-launch.
+3. **Draft the briefing and launch it.** Write the briefing directly and
+   invoke the command — don't pre-review the briefing with the human in
+   the current session. The whole point of the launched session is that
+   *it* is where discussion, clarification, and approval happen. Pre-
+   reviewing here just duplicates that work in the wrong place. Trust the
+   briefing to be good enough; it explicitly invites the new agent to push
+   back, ask questions, and propose its own approach before acting.
 
-4. **Launch.** Use the heredoc form to keep the briefing readable and
-   immune to quoting issues:
+   Only show the briefing first if the human asked you to, or if you have
+   a specific uncertainty about scope that can't be resolved in the
+   launched session (rare).
+
+   Use the heredoc form to keep the briefing readable and immune to
+   quoting issues:
 
    ```bash
    launch-worktree-session <worktree-name> - <<'EOF'
@@ -76,7 +83,7 @@ Adjust the wording to fit the conversation, but the spirit is constant:
    briefing. Use `<<EOF` (unquoted) only if you intentionally want to
    interpolate variables.
 
-5. **Tell the human what happened.** One line: worktree name, where it
+4. **Tell the human what happened.** One line: worktree name, where it
    opened (new tab in Terminal.app), and that they can now switch over.
 
 ## Script details
