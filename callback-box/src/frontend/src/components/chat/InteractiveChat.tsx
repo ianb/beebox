@@ -1266,7 +1266,7 @@ function VirtualizedMessageList({
               </div>
             );
           } else if (group.type === "user") {
-            body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={item.acks} /></div>;
+            body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={item.acks} onZoomView={onZoomView} /></div>;
           } else {
             body = (
               <div className="py-0.5">
