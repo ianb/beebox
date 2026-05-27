@@ -512,9 +512,9 @@ async function renderIndex() {
     const status = w.running
       ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
       : `<span class="badge cold">cold (will lazy-start on click)</span>`;
-    const dashLink = w.running && w.entry.dashboardUrl
-      ? `<a href="${escapeHtml(w.entry.dashboardUrl)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)}">dashboard ↗</a>`
-      : "";
+    // Always link to the redirector — for cold worktrees it'll lazy-start
+    // and then 302 to the actual dashboard URL.
+    const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">dashboard ↗</a>`;
     const stopForm = w.running
       ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
            <button type="submit" title="Tell the router to stop ${escapeHtml(w.name)} now">stop</button>
@@ -638,6 +638,35 @@ const server = http.createServer(async (req, res) => {
     }
     res.writeHead(200, { "content-type": "text/plain" });
     res.end(`stopped ${name}\n`);
+    return;
+  }
+
+  // Dashboard redirector: lazy-starts the worktree (which also brings up its
+  // dashboard), then 302s the browser to the dashboard's own port. Lets the
+  // home page link to dashboards for cold worktrees too — the user clicks,
+  // waits a few seconds, lands on the dashboard.
+  if (url.startsWith("/__router/dashboard/")) {
+    const name = url.slice("/__router/dashboard/".length).replace(/\/$/, "");
+    if (!name) {
+      res.writeHead(400);
+      res.end("missing worktree name");
+      return;
+    }
+    let entry;
+    try {
+      entry = await ensureRunning(name);
+    } catch (err) {
+      res.writeHead(err.statusCode ?? 502, { "content-type": "text/plain" });
+      res.end(`Failed to start worktree ${name}: ${err.message}\n`);
+      return;
+    }
+    if (!entry.dashboardUrl) {
+      res.writeHead(502, { "content-type": "text/plain" });
+      res.end(`Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/callback-mono/logs/${name}.log\n`);
+      return;
+    }
+    res.writeHead(302, { location: entry.dashboardUrl });
+    res.end();
     return;
   }
 
