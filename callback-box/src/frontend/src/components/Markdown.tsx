@@ -21,7 +21,7 @@ import rehypeRaw from "rehype-raw";
 import type { Components } from "react-markdown";
 import { remarkComments, isCommentCode } from "../lib/remark-comments";
 import { rehypeStripRef } from "../lib/rehype-strip-ref";
-import { href as routeHref } from "../lib/routing";
+import { withBase } from "../api";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
@@ -50,7 +50,7 @@ const pluginsWithComments = [remarkGfm, remarkComments];
 const rehypePlugins = [rehypeRaw, rehypeStripRef];
 
 function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
-  return routeHref(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
+  return withBase(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
 }
 
 interface LinkContext {

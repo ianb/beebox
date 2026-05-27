@@ -9,6 +9,7 @@
 
 import { Link, useNavigate } from "@tanstack/react-router";
 import { href } from "../../../lib/routing";
+import { apiFileUrl } from "../../../lib/view-url";
 import { trpc } from "../../../lib/trpc";
 import { Card } from "../../../components/ui/Card";
 import { Stack } from "../../../components/ui/Stack";
@@ -111,7 +112,7 @@ function LandmarkSymbol({ landmark, boxSlug }: { landmark: Landmark; boxSlug: st
   if (landmark.symbolSrc) {
     return (
       <img
-        src={`/${boxSlug}/api/files/${landmark.symbolSrc}`}
+        src={apiFileUrl(boxSlug, landmark.symbolSrc)}
         alt=""
         className="w-14 h-14 rounded-full object-cover flex-shrink-0"
       />

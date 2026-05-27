@@ -4,11 +4,10 @@
  * chrome) so it lives in components/ rather than in the page.
  */
 
-import { href } from "../../lib/routing";
 import { cbSource } from "../../lib/source-tag";
 import { StatusBadge } from "../ui/StatusBadge";
 import type { RouterOutput } from "../../lib/trpc";
-import { getApiBase } from "../../api";
+import { getApiBase, withBase } from "../../api";
 
 type BrowseData = RouterOutput["status"]["browse"];
 
@@ -77,7 +76,7 @@ export function BrowseSidebarList({
           key={card.relativePath}
           onClick={() => {
             onSelectFile(card.relativePath);
-            window.history.replaceState(null, "", href(`/${boxSlug}/browse/${card.relativePath}`));
+            window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${card.relativePath}`));
           }}
           {...cbSource("card", card.relativePath)}
           className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
@@ -103,7 +102,7 @@ export function BrowseSidebarList({
           key={file.relativePath}
           onClick={() => {
             onSelectFile(file.relativePath);
-            window.history.replaceState(null, "", href(`/${boxSlug}/browse/${file.relativePath}`));
+            window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${file.relativePath}`));
           }}
           onContextMenu={(event) => onFileContextMenu(event, file.relativePath)}
           {...(imageDataAttrs(file.relativePath, file.name) ?? {})}

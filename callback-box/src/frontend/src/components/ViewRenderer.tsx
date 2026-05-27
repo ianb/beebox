@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { getApiBase, getEventSourceBase } from "../api";
+import { getApiBase, getEventSourceBase, withBase } from "../api";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";
@@ -98,6 +98,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
   }, [apiBase, slug]);
 
   const paramsString = JSON.stringify(viewParams);
+  const fullPageQs = new URLSearchParams(viewParams).toString();
   const loadCards = useCallback(async () => {
     try {
       const qs = new URLSearchParams(viewParams).toString();
@@ -192,12 +193,11 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
       {mode === "chat" && Boolean(boxSlug) && (
         <div className="mt-2 text-right">
           <a
-            href={`/${boxSlug}/views/${slug}${paramsString !== "{}" ? "?" + new URLSearchParams(viewParams).toString() : ""}`}
+            href={withBase(`/${boxSlug}/views/${slug}${fullPageQs ? "?" + fullPageQs : ""}`)}
             className="text-sm text-blue-600 hover:text-blue-800"
             onClick={(e) => {
               e.preventDefault();
-              const qs = new URLSearchParams(viewParams).toString();
-              navigate({ to: `/${boxSlug}/views/${slug}${qs ? "?" + qs : ""}` });
+              navigate({ to: `/${boxSlug}/views/${slug}${fullPageQs ? "?" + fullPageQs : ""}` });
             }}
           >
             Open full page &rarr;

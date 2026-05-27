@@ -167,9 +167,22 @@ export function resolveImageSrc(
   const path = apiFilesPrefix
     ? src.slice(apiFilesPrefix.length).replace(/^\/+/, "")
     : resolveRelativePath(basePath, src);
-  const slug = boxSlug ?? "";
+  return apiFileUrl(boxSlug ?? "", path);
+}
+
+/**
+ * Build a URL for an in-box file served by the backend's `/api/files/<path>`
+ * route, prefixed with Vite's BASE_URL so it works under the dev router's
+ * `/<worktree>/` path prefix and in prod (where BASE_URL is `/`).
+ *
+ * Use this any time you have a box-relative file path (e.g. a landmark
+ * symbol, an attached image) and need to render it as an `<img src>` or hand
+ * it to the browser as a fetchable URL. Building the path by hand (e.g.
+ * `/${boxSlug}/api/files/${path}`) skips the base prefix and 404s the router.
+ */
+export function apiFileUrl(boxSlug: string, path: string): string {
   const base = viteBase().replace(/\/$/, "");
-  return `${base}/${slug}/api/files/${path}`;
+  return `${base}/${boxSlug}/api/files/${path}`;
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't

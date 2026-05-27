@@ -14,7 +14,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } fro
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, getChatFeatures, setChatFeature, postAudioForHqTranscription, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
+import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, getChatFeatures, setChatFeature, postAudioForHqTranscription, withBase, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
@@ -1312,7 +1312,7 @@ function ChatContextLink({ dir, boxSlug }: { dir: string | null; boxSlug: string
   if (!dir) return null;
   return (
     <a
-      href={`/${boxSlug}/browse/${dir}`}
+      href={withBase(`/${boxSlug}/browse/${dir}`)}
       className="ml-3 text-xs text-white/80 hover:text-white truncate"
       title={`Context: ${dir}/`}
     >
