@@ -34,6 +34,18 @@ function XmlRenderer({ data }: RendererProps) {
   );
 }
 
+/** Raw source view for frontmatter cards — no XML highlighting. */
+function SourceRenderer({ data }: RendererProps) {
+  if (!data.xml) {
+    return <Text as="div" tone="subtle" className="p-4">No content</Text>;
+  }
+  return (
+    <div className="p-4">
+      <Pre boxed>{data.xml}</Pre>
+    </div>
+  );
+}
+
 /** Structured card tree view */
 function TreeRenderer({ data, onNavigate }: RendererProps) {
   if (!data.element) {
@@ -44,8 +56,13 @@ function TreeRenderer({ data, onNavigate }: RendererProps) {
 
 // Register built-in renderers
 registerFileRenderer(
-  (path) => path.endsWith(".card"),
+  (path, data) => path.endsWith(".card") && data.kind !== "frontmatter",
   { name: "XML", Component: XmlRenderer, priority: 10 },
+);
+
+registerFileRenderer(
+  (_path, data) => data.kind === "frontmatter",
+  { name: "Source", Component: SourceRenderer, priority: 10 },
 );
 
 registerFileRenderer(

@@ -11,12 +11,18 @@ import type { NavigateHint, ViewTarget } from "../lib/view-url";
 /** Data for rendering a file */
 export interface FileData {
   path: string;
+  /** "frontmatter" for Phase 2 YAML+markdown cards, "xml" for legacy XML cards. */
+  kind?: "frontmatter" | "xml";
   tagName?: string;
   attrs?: Record<string, string>;
   element?: ElementNode;
   xml?: string;
   version?: string;
   status?: string;
+  /** Frontmatter fields for `kind === "frontmatter"` cards (body field excluded). */
+  frontmatter?: Record<string, unknown>;
+  /** Markdown body for `kind === "frontmatter"` cards. */
+  body?: string;
   /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
   content?: string;
 }

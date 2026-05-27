@@ -4,7 +4,10 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { createLoader } from "../../../cli/lib/loader.js";
-import { parseCard, type ElementNode } from "cardworks";
+import { parseCard, splitCardContent, type CardSchema, type ElementNode } from "cardworks";
+import { parseCardText } from "../../../core/card-io.js";
+import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { parse as parseYaml } from "yaml";
 
 /**
  * JSON-safe element node for the frontend.
@@ -76,6 +79,83 @@ function parseXmlFragment(xml: string): ElementNode | null {
   } as ElementNode;
 }
 
+function typeFromFilename(source: string): string | undefined {
+  const base = source.split("/").pop();
+  if (base === undefined) return undefined;
+  const match = base.match(/^.+\.([^.]+)\.card$/);
+  return match ? match[1] : undefined;
+}
+
+export interface FrontmatterCardResponse {
+  path: string;
+  kind: "frontmatter";
+  tagName: string;
+  status: string | undefined;
+  version: string | undefined;
+  xml: string;
+  element: JsonElement | undefined;
+  frontmatter: Record<string, unknown> | undefined;
+  body: string | undefined;
+  validationError: string | undefined;
+}
+
+function loadFrontmatterCard(input: {
+  raw: string;
+  source: string;
+  type: string;
+  cardSchemas: Map<string, CardSchema>;
+}): FrontmatterCardResponse {
+  const { raw, source, type, cardSchemas } = input;
+  let frontmatter: Record<string, unknown> | undefined;
+  let body: string | undefined;
+  let validationError: string | undefined;
+  let status: string | undefined;
+
+  try {
+    const parsed = parseCardText(raw, { source, schemas: cardSchemas, type });
+    const fields = { ...parsed.fields };
+    if (parsed.schema.bodyFieldName !== null) {
+      const bodyValue = fields[parsed.schema.bodyFieldName];
+      body = typeof bodyValue === "string" ? bodyValue : parsed.rawBody;
+      delete fields[parsed.schema.bodyFieldName];
+    } else {
+      body = parsed.rawBody;
+    }
+    delete fields["type"];
+    frontmatter = fields;
+    const statusField = fields["status"];
+    if (typeof statusField === "string") status = statusField;
+  } catch (e) {
+    validationError = (e as Error).message;
+    // Still surface what we can — split the file and parse YAML loosely.
+    const split = splitCardContent(raw);
+    body = split.body;
+    try {
+      const fm = parseYaml(split.frontmatterText);
+      if (fm !== null && typeof fm === "object" && !Array.isArray(fm)) {
+        frontmatter = fm as Record<string, unknown>;
+        const statusField = (fm as Record<string, unknown>)["status"];
+        if (typeof statusField === "string") status = statusField;
+      }
+    } catch (_e) {
+      // YAML itself is malformed — leave frontmatter undefined.
+    }
+  }
+
+  return {
+    path: source,
+    kind: "frontmatter",
+    tagName: type,
+    status,
+    version: undefined,
+    xml: raw,
+    element: undefined,
+    frontmatter,
+    body,
+    validationError,
+  };
+}
+
 const patchOpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("set-attr"), path: z.string().optional(), attr: z.string(), value: z.string() }),
   z.object({ op: z.literal("remove-attr"), path: z.string().optional(), attr: z.string() }),
@@ -89,6 +169,27 @@ export const cardRouter = router({
     .input(z.object({ path: z.string().min(1) }))
     .query(async ({ input, ctx }) => {
       const fullPath = path.join(ctx.boxRoot, input.path);
+
+      // Dispatch on file shape: frontmatter cards parse via parseCardText;
+      // legacy XML cards fall through to the cardworks loader.
+      let raw: string | null = null;
+      try {
+        raw = await fs.readFile(fullPath, "utf-8");
+      } catch (e) {
+        const msg = (e as Error).message;
+        if (msg.includes("ENOENT") || msg.includes("no such file")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${input.path}` });
+        }
+        throw new TRPCError({ code: "BAD_REQUEST", message: msg });
+      }
+
+      const split = splitCardContent(raw);
+      const fileType = typeFromFilename(input.path);
+      const cardSchemas = createCardSchemaMap();
+      if (split.hasFrontmatter && fileType !== undefined && cardSchemas.has(fileType)) {
+        return loadFrontmatterCard({ raw, source: input.path, type: fileType, cardSchemas });
+      }
+
       const loader = await createLoader(ctx.boxRoot);
 
       try {
@@ -98,11 +199,14 @@ export const cardRouter = router({
 
         return {
           path: input.path,
+          kind: "xml" as const,
           tagName: card.element.tagName,
           status: card.element.attrs["status"] as string | undefined,
           version: card.version,
           xml,
           element,
+          frontmatter: undefined as Record<string, unknown> | undefined,
+          body: undefined as string | undefined,
           validationError: undefined as string | undefined,
         };
       } catch (error) {
@@ -139,11 +243,14 @@ export const cardRouter = router({
 
         return {
           path: input.path,
+          kind: "xml" as const,
           tagName,
           status: undefined as string | undefined,
           version: undefined as string | undefined,
           xml: rawXml,
           element,
+          frontmatter: undefined as Record<string, unknown> | undefined,
+          body: undefined as string | undefined,
           validationError: msg,
         };
       }

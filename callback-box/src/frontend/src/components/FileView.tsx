@@ -115,12 +115,15 @@ function useFileData(path: string): LoadResult {
       return {
         data: {
           path: card.path,
+          kind: card.kind,
           tagName: card.tagName,
           attrs: card.element ? card.element.attrs : undefined,
           element: card.element,
           xml: card.xml,
           version: card.version,
           status: card.status,
+          frontmatter: card.frontmatter,
+          body: card.body,
         },
         loading: false,
         error: null,
