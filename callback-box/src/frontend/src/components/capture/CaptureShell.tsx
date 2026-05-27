@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 export function CaptureShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col h-full bg-black relative text-white">
+      <h1 className="sr-only">Capture</h1>
       {children}
     </div>
   );

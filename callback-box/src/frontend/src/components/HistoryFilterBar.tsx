@@ -57,7 +57,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
   };
 
   return (
-    <div className="px-3 py-2 border-b border-warm-200 bg-warm-50/60">
+    <section aria-label="History filters" className="px-3 py-2 border-b border-warm-200 bg-warm-50/60">
       <div className="flex flex-wrap items-center gap-2">
         <MultiSelectPopover
           label="Connector"
@@ -106,7 +106,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
           </Badge>
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }
 
@@ -156,7 +156,7 @@ function MultiSelectPopover({ label, options, selected, onToggle }: MultiSelectP
         aria-expanded={open}
       >
         {summary}
-        <span className="ml-1 text-warm-400">▾</span>
+        <span className="ml-1 text-warm-400" aria-hidden="true">▾</span>
       </FilterChipButton>
       {open ? (
         <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 w-60 max-h-72 overflow-auto">

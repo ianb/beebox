@@ -58,9 +58,10 @@ export function BrowseSidebarList({
           onClick={() =>
             onNavigate(dirPath ? `${dirPath}/${dir.name}` : dir.name)
           }
+          aria-label={dir.fileCount > 0 ? `${dir.name} directory, ${dir.fileCount} item${dir.fileCount === 1 ? "" : "s"}` : `${dir.name} directory`}
           className="w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200"
         >
-          <span className="text-primary flex-shrink-0">
+          <span className="text-primary flex-shrink-0" aria-hidden="true">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
             </svg>
@@ -80,6 +81,7 @@ export function BrowseSidebarList({
             window.history.replaceState(null, "", href(`/${boxSlug}/browse/${card.relativePath}`));
           }}
           {...cbSource("card", card.relativePath)}
+          aria-label={card.name === card.type ? `${card.name} card${card.status ? `, ${card.status}` : ""}` : `${card.name}, ${card.type} card${card.status ? `, ${card.status}` : ""}`}
           className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
             selectedFilePath === card.relativePath ? "bg-info-50" : ""
           }`}

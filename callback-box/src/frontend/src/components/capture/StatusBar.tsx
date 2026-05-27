@@ -86,13 +86,15 @@ export function StatusBar(props: StatusBarProps) {
             )}
           </div>
         ) : null}
-        <button onClick={props.onPickFile} className="text-gray-400 hover:text-white p-1" title="Upload file">&#128206;</button>
-        <button onClick={props.onPickGallery} className="text-gray-400 hover:text-white p-1" title="Add from gallery">&#128247;</button>
+        <button onClick={props.onPickFile} className="text-gray-400 hover:text-white p-1" title="Upload file" aria-label="Upload file"><span aria-hidden="true">&#128206;</span></button>
+        <button onClick={props.onPickGallery} className="text-gray-400 hover:text-white p-1" title="Add from gallery" aria-label="Add from gallery"><span aria-hidden="true">&#128247;</span></button>
         <button
           onClick={props.onToggleSettings}
           className={`p-1 text-lg ${props.showSettings ? "text-white" : "text-gray-400 hover:text-white"}`}
           title="Device settings"
-        >&#9881;</button>
+          aria-label="Device settings"
+          aria-expanded={props.showSettings}
+        ><span aria-hidden="true">&#9881;</span></button>
       </div>
     </div>
   );
