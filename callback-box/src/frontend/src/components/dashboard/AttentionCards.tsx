@@ -26,7 +26,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <section aria-label="Needs attention" className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Questions */}
       {pendingQuestions.length > 0 && (
         <Card shadow border="none">
@@ -76,6 +76,6 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
           </p>
         </Card>
       )}
-    </div>
+    </section>
   );
 }

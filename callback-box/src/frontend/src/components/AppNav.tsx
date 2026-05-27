@@ -140,7 +140,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   );
 
   return (
-    <nav className="bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
+    <nav aria-label="Primary" className="bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
       {/* Mobile: compact bar with hamburger + dropdown */}
       <div className="sm:hidden" ref={menuRef}>
         <div className="flex items-center justify-between px-3 py-2">
@@ -237,6 +237,7 @@ function ErrorBadge({ onToggleDebugLog }: { onToggleDebugLog: () => void }) {
       onClick={() => { clearErrorCount(); onToggleDebugLog(); }}
       className="flex items-center gap-1 text-xs bg-danger/80 text-white px-1.5 py-0.5 rounded-full hover:bg-danger-dark transition-colors"
       title={`${errorCount} error${errorCount !== 1 ? "s" : ""}`}
+      aria-label={`Open debug log (${errorCount} error${errorCount !== 1 ? "s" : ""})`}
     >
       <span className="w-1.5 h-1.5 rounded-full bg-white" />
       {errorCount}

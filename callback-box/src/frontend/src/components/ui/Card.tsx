@@ -22,6 +22,10 @@ export interface CardProps {
   muted?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
+  /** Render as a different element. Use `"section"` (with `aria-label`) for landmark grouping. Default `"div"`. */
+  as?: "div" | "section" | "article";
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }
 
 const PADDING_CLASSES: Record<CardPadding, string> = {
@@ -59,6 +63,9 @@ export function Card({
   shadow = false,
   muted = false,
   className,
+  as: Tag = "div",
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: CardProps) {
   const classes = cn(
     PADDING_CLASSES[padding],
@@ -69,5 +76,5 @@ export function Card({
     muted ? "opacity-60" : "",
     className,
   );
-  return <div className={classes}>{children}</div>;
+  return <Tag className={classes} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy}>{children}</Tag>;
 }

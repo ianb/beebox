@@ -21,6 +21,29 @@ if (typeof document !== "undefined" && document.body) {
   document.body.dataset.cbLoading = "true";
 }
 
+// React assigns `onclick = noop` to its root container on first append
+// (trapClickOnNonInteractiveElement in react-dom) as an old iOS Safari
+// click-delegation workaround. That property leaks into the Chrome AX
+// tree as `clickable [onclick]` on the topmost generic, breaks
+// screen-reader landmark navigation, and confuses headless snapshot
+// tools. Our actual click targets are native <button>/<a>, so the trap
+// isn't needed. Cleared in an effect (not at module load) because React
+// sets it during its first commit, after microtasks run.
+function ClearRootClickTrap() {
+  useEffect(() => {
+    const root = document.getElementById("root");
+    if (!root) return;
+    root.onclick = null;
+    // React may run trapClickOnNonInteractiveElement during a later commit
+    // wave; re-clear once more on the next frame to catch that case.
+    const id = requestAnimationFrame(() => {
+      root.onclick = null;
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+  return null;
+}
+
 function QueryActivityIndicator() {
   const isFetching = useIsFetching();
   const isMutating = useIsMutating();
@@ -46,6 +69,7 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
   return (
     <trpc.Provider client={trpcReactClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
+        <ClearRootClickTrap />
         <QueryActivityIndicator />
         {children}
       </QueryClientProvider>

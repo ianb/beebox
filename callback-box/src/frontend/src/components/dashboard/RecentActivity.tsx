@@ -120,7 +120,7 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
   const display = items.slice(0, 15);
 
   return (
-    <Card shadow border="none">
+    <Card as="section" aria-label="Recent activity" shadow border="none">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-warm-700">Recent Activity</h3>
         <Link to={href(`/${boxSlug}/history`)} className="text-xs text-primary hover:text-primary-dark">

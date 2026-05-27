@@ -18,10 +18,11 @@ export function HealthWarnings({ health }: HealthWarningsProps) {
   const failures = health.checks.filter((c) => !c.ok);
   if (failures.length === 0) return null;
 
+  const heading = health.status === "unhealthy" ? "Box health issues" : "Box warnings";
   return (
-    <div className="rounded-lg border border-warning-light bg-warning-50 p-3 space-y-1">
+    <section aria-label={heading} className="rounded-lg border border-warning-light bg-warning-50 p-3 space-y-1">
       <div className="text-sm font-medium text-warning-dark">
-        {health.status === "unhealthy" ? "Box health issues" : "Box warnings"}
+        {heading}
       </div>
       {failures.map((check) => (
         <div
@@ -31,6 +32,6 @@ export function HealthWarnings({ health }: HealthWarningsProps) {
           {check.severity === "error" ? "\u2718" : "\u26A0"} {check.message}
         </div>
       ))}
-    </div>
+    </section>
   );
 }

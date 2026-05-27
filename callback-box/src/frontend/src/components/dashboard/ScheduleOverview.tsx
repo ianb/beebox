@@ -236,7 +236,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
   if (loading) {
     return (
-      <Card shadow border="none">
+      <Card as="section" aria-label="Schedules" shadow border="none">
         <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
         <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
       </Card>
@@ -245,7 +245,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
   if (error) {
     return (
-      <Card shadow border="none">
+      <Card as="section" aria-label="Schedules" shadow border="none">
         <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
         <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       </Card>
@@ -254,7 +254,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
   if (schedules.length === 0) {
     return (
-      <Card shadow border="none">
+      <Card as="section" aria-label="Schedules" shadow border="none">
         <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
         <p className="text-sm text-warm-500">No scheduled scripts in config/schedules/</p>
       </Card>
@@ -266,7 +266,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
   ).length;
 
   return (
-    <Card shadow border="none">
+    <Card as="section" aria-label="Schedules" shadow border="none">
       <h3 className="text-sm font-semibold text-warm-700 mb-3">Schedules</h3>
 
       <ScheduleTable schedules={schedules} />

@@ -38,9 +38,9 @@ export function AppLayout() {
         onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
         onToggleSourceView={handleToggleSourceView}
       />
-      <div className="flex-1 min-h-0">
+      <main className="flex-1 min-h-0">
         <Outlet />
-      </div>
+      </main>
       {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
       <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
     </Column>
