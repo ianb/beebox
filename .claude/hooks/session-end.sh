@@ -22,17 +22,38 @@ mkdir -p "$HOME/.cache/callback-mono"
 printf '%s\n' "$input" > "$HOME/.cache/callback-mono/last-session-end-input.json"
 
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
-if [ -z "$cwd" ] || [ ! -d "$cwd" ]; then
+
+# Determine the worktree directory. cwd is the obvious signal, but Claude
+# Code reports the session's *final* cwd — an agent that cd'd to the main
+# checkout (e.g. to run a cross-tree git command) before exiting would
+# defeat a cwd-only check and leak the worktree. transcript_path is the
+# durable signal: it encodes the directory the session was launched in,
+# embedded as `-Users-ianbicking-src-callback-worktrees-<name>` in
+# `~/.claude/projects/<encoded-path>/<uuid>.jsonl`.
+worktree_path=""
+case "$cwd" in
+  "$HOME/src/callback-worktrees/"*) worktree_path="$cwd" ;;
+esac
+
+if [ -z "$worktree_path" ]; then
+  tpath=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
+  case "$tpath" in
+    *"-src-callback-worktrees-"*)
+      name=$(printf '%s' "$tpath" | sed -E 's|.*-src-callback-worktrees-([^/]+)/.*|\1|')
+      candidate="$HOME/src/callback-worktrees/$name"
+      if [ -d "$candidate" ]; then
+        echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
+        worktree_path="$candidate"
+      fi
+      ;;
+  esac
+fi
+
+if [ -z "$worktree_path" ] || [ ! -d "$worktree_path" ]; then
   exit 0
 fi
 
-# Only act inside a callback-mono worktree, not the main checkout itself.
-case "$cwd" in
-  "$HOME/src/callback-worktrees/"*) ;;
-  *) exit 0 ;;
-esac
-
-cd "$cwd" || exit 0
+cd "$worktree_path" || exit 0
 
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ -z "$branch" ] || [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then
