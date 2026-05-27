@@ -1,6 +1,6 @@
 ---
 name: browse
-description: Drive a Chromium browser from this monorepo's dev server. Use when probing the running app — navigating pages, snapshotting a11y tree, clicking, filling forms, taking screenshots, checking responsive behavior. Worktree-aware: `bin/browse open /path` rewrites to the right router URL. Screenshots include a JSON sidecar with URL/title/timestamp so they're self-describing.
+description: Drive a Chromium browser. Use for any browser task — navigating pages, snapshotting a11y tree, clicking, filling forms, taking screenshots, checking responsive behavior, on the local dev app or any other site. Independent of the dev router: `snapshot`, `click`, `eval`, etc. drive Chrome directly and don't care whether the router is up. As a convenience, `bin/browse open /path` rewrites leading-slash paths to this worktree's router URL — but only that one rewrite touches the router, everything else is just Chromium. Screenshots include a JSON sidecar with URL/title/timestamp so they're self-describing.
 allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*)
 ---
 
@@ -15,6 +15,12 @@ allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*)
 - **Indexed default path** — `bin/browse screenshot` with no path saves to `.claude/screenshots/NNNN-<slug>.png` in the worktree (gitignored).
 
 Everything else passes straight through to the upstream binary. Source: `browse/` at the monorepo root. Never invoke `agent-browser` or `npx agent-browser` directly — use `bin/browse`.
+
+## Does it need the dev router?
+
+Almost never. `bin/browse` drives whatever Chrome instance the daemon owns; it doesn't care about the dev router's state. `snapshot`, `eval`, `click`, `fill`, `screenshot`, `get`, `wait`, viewport, tabs — all work whether the router is up, down, or never existed. The only thing that touches the router is the actual HTTP fetch when you navigate to a `localhost:3210` URL (`open /path`, `reload`) — and that fails the same way any other unreachable URL would.
+
+If you find yourself thinking "I need to start `pnpm dev` to use `bin/browse`," you don't — unless your next step is a fresh navigation to the local dev app.
 
 ## The core loop
 
