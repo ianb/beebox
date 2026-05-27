@@ -4,6 +4,10 @@
 
 ```ts setup
 import { parseTags } from "../src/frontend/src/lib/parseTags.js";
+
+// Some assertions feed malformed/mismatched closing tags to exercise the
+// permissive recovery path. Silence the warning so it doesn't pollute output.
+console.warn = () => {};
 ```
 
 ## Simple tags

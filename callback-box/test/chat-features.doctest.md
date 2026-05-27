@@ -20,6 +20,11 @@ import {
   parseChatAppDeltas,
   resolveFeatures,
 } from "../src/core/chat-features.js";
+
+// Several assertions deliberately pass bogus inputs to exercise the warn-and-
+// skip path. The console.warn fires are documented behavior; silence them
+// here so they don't pollute test output.
+console.warn = () => {};
 ```
 
 ## Registry lookups

@@ -621,7 +621,7 @@ export async function registerApiRoutes(
           lines.push(`${ts} [${level}] ${message}\n`);
         }
         while (clientLogs.length > MAX_CLIENT_LOGS) clientLogs.shift();
-        appendToLogFile(lines);
+        await appendToLogFile(lines);
       }
       return { ok: true };
     }
