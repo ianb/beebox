@@ -37,6 +37,11 @@ import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
+import {
+  VOICE_MODELS,
+  CompiledSpeakingVoiceSchema,
+  type CompiledSpeakingVoice,
+} from "../../schemas/personality.js";
 import { getSessionUser, type SessionUser } from "../auth.js";
 import {
   getSessionMetadata,
@@ -716,12 +721,18 @@ export async function registerChatRoutes(
   );
 
   // GET /api/chat/voice-config - Return speaking voice config from personality
-  server.get("/api/chat/voice-config", async (_request, _reply) => {
+  server.get("/api/chat/voice-config", async (_request, _reply): Promise<CompiledSpeakingVoice> => {
     try {
       const voicePath = path.join(boxRoot, "docs/generated/speaking-voice.json");
       const content = await fs.readFile(voicePath, "utf-8");
-      return JSON.parse(content);
-    } catch {
+      const parsed = CompiledSpeakingVoiceSchema.safeParse(JSON.parse(content));
+      if (parsed.success) {
+        return { model: parsed.data.model, instructions: parsed.data.instructions };
+      }
+      console.warn("[chat] speaking-voice.json failed validation:", parsed.error.message);
+      return { model: undefined, instructions: [] };
+    } catch (e) {
+      console.warn("[chat] failed to read speaking-voice.json:", e);
       return { model: undefined, instructions: [] };
     }
   });
@@ -733,16 +744,11 @@ export async function registerChatRoutes(
   });
 
   // POST /api/chat/tts - Proxy TTS requests to OpenAI
-  const VALID_TTS_VOICES = [
-    "alloy", "ash", "ballad", "cedar", "coral", "echo",
-    "fable", "marin", "onyx", "nova", "sage", "shimmer", "verse",
-  ];
-
   server.post<{ Body: { text: string; instructions?: string; voice?: string } }>(
     "/api/chat/tts",
     async (request, reply) => {
       const { text, instructions, voice } = request.body;
-      const resolvedVoice = voice && VALID_TTS_VOICES.includes(voice) ? voice : "marin";
+      const resolvedVoice = voice && (VOICE_MODELS as readonly string[]).includes(voice) ? voice : "marin";
 
       if (openaiAudio) {
         const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };
