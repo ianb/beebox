@@ -241,12 +241,19 @@ async function startWorktree(name) {
   ]);
 
   const baseUrl = `/${name}/`;
+  // --disable-warning=DEP0040 silences the punycode deprecation that
+  // transitive deps (ajv@6, node-fetch 2) trigger on every node start.
+  // Append rather than replace so any user-set NODE_OPTIONS still applies.
+  const nodeOptions = [process.env.NODE_OPTIONS, "--disable-warning=DEP0040"]
+    .filter(Boolean)
+    .join(" ");
   const childEnv = {
     ...process.env,
     FRONTEND_PORT: String(frontendPort),
     BACKEND_PORT: String(backendPort),
     VITE_BASE: baseUrl,
     PORT: String(backendPort), // Fastify reads PORT
+    NODE_OPTIONS: nodeOptions,
   };
   const browseEnv = {
     ...process.env,
