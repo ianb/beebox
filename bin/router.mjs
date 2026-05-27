@@ -69,6 +69,7 @@ const MAIN_BOX_DEFAULTS = [
   path.join(os.homedir(), "src", "boxes", "test1"),
   path.join(os.homedir(), "src", "boxes", "hearth-test"),
   path.join(os.homedir(), "src", "boxes", "studio"),
+  path.join(os.homedir(), "src", "boxes", "meta-cb"),
 ];
 
 // --- Worktree resolution -----------------------------------------------
