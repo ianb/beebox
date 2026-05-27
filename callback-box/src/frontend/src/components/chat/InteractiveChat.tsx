@@ -1426,10 +1426,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     ]);
     setSelectedModel(model);
     if (sessionId) {
-      console.warn(`[chatfsm] set-model request sessionId=${sessionId} model=${model ?? "<default>"}`);
+      console.debug(`[chatfsm] set-model request sessionId=${sessionId} model=${model ?? "<default>"}`);
       setChatModel({ sessionId, model })
         .then((res) => {
-          console.warn(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
+          console.debug(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
           // Re-sync UI to whatever the server actually persisted, in case a
           // race / bug means the request landed differently than expected.
           setSelectedModel(res.model);
@@ -1439,7 +1439,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           console.warn(`[chatfsm] set-model error: ${msg}`);
         });
     } else {
-      console.warn("[chatfsm] set-model skipped — sessionId is null");
+      console.debug("[chatfsm] set-model skipped — sessionId is null");
     }
   }, [selectedModel, groups.length, sessionId]);
   const [panel, setPanel] = useState<{ tabs: PanelTab[]; activePath: string | null }>({ tabs: [], activePath: null });
@@ -1579,7 +1579,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   // this view's session only.
   useSSE(`${getEventSourceBase()}/events`, {
     onConnect: useCallback(() => {
-      console.warn("[chatfsm] sse-connect");
+      console.debug("[chatfsm] sse-connect");
       // Re-sync after a (re)connect: any chat-complete / chat-history events
       // we missed while disconnected won't replay if the gap exceeded the
       // event-bus retention. REFRESH is a global handler that's ignored in
@@ -1587,7 +1587,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       send({ type: "REFRESH" });
     }, [send]),
     onDisconnect: useCallback(() => {
-      console.warn("[chatfsm] sse-disconnect");
+      console.debug("[chatfsm] sse-disconnect");
     }, []),
     onEvent: useCallback((event: SSEEvent) => {
       if (event.event === "schedule-fired") {
@@ -1603,13 +1603,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       } else if (event.event === "chat-history") {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
         if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
-        console.warn(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
+        console.debug(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
       } else if (event.event === "chat-complete") {
         const data = event.data as { sessionId: string | null };
         if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
-        console.warn("[chatfsm] sse-chat-complete");
+        console.debug("[chatfsm] sse-chat-complete");
         // Agent turn completed — refresh history to pick up the response.
         send({ type: "REFRESH" });
       } else if (event.event === "chat-user-message") {

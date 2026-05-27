@@ -69,12 +69,12 @@ export function useWakeLock(): WakeLockApi {
     }
     try {
       wakeLock.current = await navigator.wakeLock.request("screen");
-      console.info("[wakelock] acquired");
+      console.debug("[wakelock] acquired");
       // The browser may release the lock asynchronously (e.g. on tab hide).
       // Logging the event helps diagnose drops; the visibility handler
       // below re-acquires when the tab becomes visible again.
       wakeLock.current.addEventListener("release", () => {
-        console.info("[wakelock] released by browser");
+        console.debug("[wakelock] released by browser");
       });
       return true;
     } catch (e) {
@@ -89,7 +89,7 @@ export function useWakeLock(): WakeLockApi {
     wakeLock.current = null;
     try {
       await sentinel.release();
-      console.info("[wakelock] released by app");
+      console.debug("[wakelock] released by app");
       return true;
     } catch (e) {
       console.warn(`[wakelock] release failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -105,7 +105,7 @@ export function useWakeLock(): WakeLockApi {
       if (document.visibilityState !== "visible") return;
       if (wakeLock.current === null) return;
       if (!wakeLock.current.released) return;
-      console.info("[wakelock] re-acquiring after visibility change");
+      console.debug("[wakelock] re-acquiring after visibility change");
       void requestWakeLock();
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
