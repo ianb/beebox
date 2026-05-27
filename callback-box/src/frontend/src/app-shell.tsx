@@ -6,15 +6,21 @@
  * classes sit next to the logic. This file is routing glue.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
 import { BrowsePage } from "./pages/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { AppNav } from "./components/AppNav";
 import { Column } from "./components/ui/Column";
+import { Stack } from "./components/ui/Stack";
+import { Text } from "./components/ui/Text";
+import { BoxActionsTile } from "./components/BoxSelectionTiles";
+import { fetchBoxes } from "./lib/boxes";
 
 import { href } from "./lib/routing";
+
+interface KnownBox { slug: string; name: string; }
 
 // Re-exported for the route tree
 export { BoxRedirect, ShareRedirect } from "./pages/BoxSelection";
@@ -28,9 +34,23 @@ enableDebugLogCapture();
 export function AppLayout() {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const sourceView = useSourceView();
+  const { boxSlug } = useParams({ strict: false });
 
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;
+
+  // Validate that the box in the URL actually exists. An unknown slug
+  // (typical after copying a URL across worktrees) used to fall through
+  // to the page components and crash on a missing API response.
+  const [boxesState, setBoxesState] = useState<{ boxes: KnownBox[]; loaded: boolean }>({
+    boxes: [],
+    loaded: false,
+  });
+  useEffect(() => {
+    fetchBoxes().then((r) => setBoxesState({ boxes: r.boxes, loaded: true }));
+  }, []);
+  const boxExists =
+    !boxesState.loaded || boxesState.boxes.some((b) => b.slug === boxSlug);
 
   return (
     <Column className="h-screen h-[100dvh]">
@@ -39,11 +59,53 @@ export function AppLayout() {
         onToggleSourceView={handleToggleSourceView}
       />
       <div className="flex-1 min-h-0">
-        <Outlet />
+        {boxExists ? (
+          <Outlet />
+        ) : (
+          <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />
+        )}
       </div>
       {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
       <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
     </Column>
+  );
+}
+
+function BoxNotFound({ slug, boxes }: { slug: string; boxes: KnownBox[] }) {
+  // Only the dev router serves under a non-root base; in that case the URL's
+  // first segment is the worktree name. The default WorktreeCreate setup only
+  // clones `test1` into a worktree (as `test1-<name>`), so URLs copied from
+  // /main/ that reference other boxes won't resolve here.
+  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  const isWorktreeUrl = base !== "";
+
+  return (
+    <Stack gap="md" className="max-w-md mx-auto mt-12 p-4">
+      <Text as="h1" size="2xl" weight="bold" tone="emphasis">
+        Box not found
+      </Text>
+      <Text as="p" tone="subtle">
+        No box matches <code>{slug}</code> on this server.
+      </Text>
+      {isWorktreeUrl ? (
+        <Text as="p" tone="subtle" size="sm">
+          You&rsquo;re on a dev worktree (<code>{base}</code>). Worktrees only
+          include the <code>test1</code> box by default, exposed as{" "}
+          <code>test1-{base.replace(/^\//, "")}</code>. Other boxes from{" "}
+          <code>/main/</code> aren&rsquo;t cloned into worktrees.
+        </Text>
+      ) : null}
+      {boxes.length > 0 ? (
+        <>
+          <Text as="p" weight="medium">Available boxes:</Text>
+          <Stack gap="sm">
+            {boxes.map((b) => (
+              <BoxActionsTile key={b.slug} box={b} />
+            ))}
+          </Stack>
+        </>
+      ) : null}
+    </Stack>
   );
 }
 
