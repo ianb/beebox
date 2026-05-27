@@ -1,24 +1,54 @@
-import { AgentBrowserError, runPassthrough } from "agent-browser-typed";
+import { AgentBrowserError, run, runPassthrough } from "agent-browser-typed";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { BrowseConfigError, detectWorktreeContext, rewriteOpenUrl } from "./worktree.js";
 
+// JS expression evaluated in the page. The callback-box frontend exposes
+// `<body data-cb-loading="true|false">` driven by React Query's
+// useIsFetching/useIsMutating, so "false" means all in-flight queries
+// (and any mutations) have settled. See callback-box trpc-provider.tsx.
+const READY_FN = "document.body.dataset.cbLoading === 'false'";
+
+// Commands that operate on the current page and benefit from waiting for
+// query activity to settle first. `open` waits AFTER navigating; `snapshot`
+// and `screenshot` wait BEFORE reading so they capture the settled state.
+const WAIT_AFTER = new Set(["open"]);
+const WAIT_BEFORE = new Set(["snapshot", "screenshot"]);
+
+async function waitForReady(): Promise<void> {
+  try {
+    await run(["wait", "--fn", READY_FN]);
+  } catch (e) {
+    const msg = e instanceof AgentBrowserError ? e.message : String(e);
+    process.stderr.write(`browse: page-ready wait timed out (${msg.trim().split("\n")[0]}); proceeding anyway\n`);
+  }
+}
+
 async function main(): Promise<number> {
-  const args = process.argv.slice(2);
+  let args = process.argv.slice(2);
+  const noWaitIdx = args.indexOf("--no-wait");
+  const skipWait = noWaitIdx !== -1;
+  if (skipWait) args = [...args.slice(0, noWaitIdx), ...args.slice(noWaitIdx + 1)];
+
   if (args.length === 0) {
     return runPassthrough([]);
   }
   const ctx = detectWorktreeContext();
-  const sub = args[0];
+  const sub = args[0] === undefined ? "" : args[0];
+
+  if (!skipWait && WAIT_BEFORE.has(sub)) {
+    await waitForReady();
+  }
 
   if (sub === "open") {
     const rest = args.slice(1);
     const target = rest[0];
-    if (target !== undefined) {
-      const rewritten = rewriteOpenUrl(target, ctx);
-      return runPassthrough(["open", rewritten, ...rest.slice(1)]);
-    }
-    return runPassthrough(["open"]);
+    const passArgs = target !== undefined
+      ? ["open", rewriteOpenUrl(target, ctx), ...rest.slice(1)]
+      : ["open"];
+    const code = await runPassthrough(passArgs);
+    if (code === 0 && !skipWait && WAIT_AFTER.has(sub)) await waitForReady();
+    return code;
   }
 
   if (sub === "screenshot") {
