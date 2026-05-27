@@ -37,6 +37,11 @@ import httpProxy from "http-proxy";
 
 const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
 const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+// Where /main/ is served from. Defaults to the canonical checkout so that a
+// router started from a worktree (e.g. while iterating on router.mjs itself)
+// still serves real-main at /main/, not the worktree's stale snapshot of main.
+// Override with CALLBACK_MAIN_ROOT for non-standard layouts.
+const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-mono");
 const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
 const BOXES_ROOT = path.join(os.homedir(), "src", "box-worktrees");
 const STATE_DIR = path.join(os.homedir(), ".cache", "callback-mono");
@@ -73,11 +78,11 @@ async function resolveWorktree(name) {
   if (name === "main") {
     return {
       name: "main",
-      root: REPO_ROOT,
-      backendCwd: path.join(REPO_ROOT, "callback-box"),
-      frontendCwd: path.join(REPO_ROOT, "callback-box", "src", "frontend"),
+      root: MAIN_ROOT,
+      backendCwd: path.join(MAIN_ROOT, "callback-box"),
+      frontendCwd: path.join(MAIN_ROOT, "callback-box", "src", "frontend"),
       boxes:
-        (await readBoxes(path.join(REPO_ROOT, "callback-box", ".env"))) ??
+        (await readBoxes(path.join(MAIN_ROOT, "callback-box", ".env"))) ??
         MAIN_BOX_DEFAULTS,
     };
   }
@@ -830,7 +835,7 @@ onChildExit = (name) => { _origOnExit(name); updateTabTitle(); };
   await sweepStaleChildren();
   server.listen(ROUTER_PORT, () => {
     log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
-    log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout`);
+    log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout (root: ${MAIN_ROOT})`);
     log(`idle timeout: ${IDLE_TIMEOUT_MS}ms`);
     updateTabTitle();
   });
