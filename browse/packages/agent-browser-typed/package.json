@@ -10,5 +10,10 @@
   },
   "dependencies": {
     "agent-browser": "^0.27.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "agent-browser"
+    ]
   }
 }

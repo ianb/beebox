@@ -28,6 +28,11 @@
     ],
     "ignoredBuiltDependencies": [
       "@ianbicking/personal-vibe-check"
-    ]
+    ],
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "eslint-plugin-react-hooks": "7"
+      }
+    }
   }
 }

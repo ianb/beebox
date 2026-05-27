@@ -146,9 +146,10 @@ export function classifyMarkdownHref(
  *  - `images/foo.png`, `../sibling/foo.png` — document-relative, resolved
  *    against `basePath`
  *
- * Output is always `/<boxSlug>/api/files/<resolved>` for in-box paths, so the
- * rendered `<img>` works whether the markdown is shown in chat, browse, or any
- * deeper URL.
+ * Output is always `<base>/<boxSlug>/api/files/<resolved>` for in-box paths,
+ * where `<base>` is the Vite base URL (e.g. `/main` under the dev router, ``
+ * in prod). This makes the rendered `<img>` work whether the markdown is
+ * shown in chat, browse, or any deeper URL.
  */
 export function resolveImageSrc(
   src: string,
@@ -167,5 +168,16 @@ export function resolveImageSrc(
     ? src.slice(apiFilesPrefix.length).replace(/^\/+/, "")
     : resolveRelativePath(basePath, src);
   const slug = boxSlug ?? "";
-  return `/${slug}/api/files/${path}`;
+  const base = viteBase().replace(/\/$/, "");
+  return `${base}/${slug}/api/files/${path}`;
+}
+
+// Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't
+// crash in plain-Node test runners where `import.meta.env` is undefined.
+function viteBase(): string {
+  try {
+    return (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
+  } catch {
+    return "/";
+  }
 }

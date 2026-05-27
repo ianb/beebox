@@ -55,5 +55,18 @@
     "src/**/*.{ts,tsx}": [
       "eslint"
     ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "@ianbicking/personal-vibe-check"
+    ],
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "eslint-plugin-react-hooks": "7"
+      }
+    }
   }
 }

@@ -114,6 +114,9 @@ echo "[worktree-create] running pnpm install in callback-box..."
 echo "[worktree-create] running pnpm install in callback-box/src/frontend..."
 (cd "$worktree_path/callback-box/src/frontend" && pnpm install)
 
+echo "[worktree-create] running pnpm install in browse..."
+(cd "$worktree_path/browse" && pnpm install)
+
 # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
 # own cb on PATH. Per-worktree because each worktree has its own absolute
 # callback-box/bin path. Claude Code's env block doesn't substitute ${PATH},
