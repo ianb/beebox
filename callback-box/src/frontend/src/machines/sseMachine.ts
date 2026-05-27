@@ -67,11 +67,9 @@ const sseActor = fromCallback<
     url = `${url}${sep}lastEventId=${input.lastEventId}`;
   }
 
-  console.log("[sse] Connecting to", url);
   const eventSource = new EventSource(url, { withCredentials: true });
 
   eventSource.onopen = () => {
-    console.log("[sse] Connected");
     sendBack({ type: "CONNECTED" });
   };
 
