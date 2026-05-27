@@ -105,10 +105,10 @@ allContent.includes("snap.capture-session.card")
 => true
 ```
 
-### Skips excluded subdirectories (feedback, editions)
+### Skips excluded subdirectories (feedback)
 
-Items in `box/inbox/feedback/` and `box/inbox/editions/` have their
-own pipelines and are not picked up for intake:
+Items in `box/inbox/feedback/` have their own pipeline and are not
+picked up for intake:
 
 ```
 const box = await makeTmpBox({ git: true });
@@ -116,7 +116,6 @@ await initBox(box.root);
 box.commitAll("init box");
 
 await box.seed("box/inbox/feedback/fb1.feedback.card", "<feedback>Good</feedback>");
-await box.seed("box/inbox/editions/ed1.edition.card", "<edition>V1</edition>");
 // One real inbox item
 await box.seed("box/inbox/real.memo.card", "<memo>Real item</memo>");
 box.commitAll("add items");

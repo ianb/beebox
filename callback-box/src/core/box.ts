@@ -320,8 +320,7 @@ function normalizeGuideForComparison(content: string): string {
  * overwrites it with the latest template. If the user has modified the guide,
  * parks the new template under `config/_template-updates/` for manual merging.
  *
- * Skips any domain where a guide already exists from migration (e.g., news
- * guide migrated from the legacy news-guide format).
+ * Skips any domain where a guide already exists.
  *
  * @returns List of installed/updated guide names
  */

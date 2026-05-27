@@ -238,7 +238,7 @@ registerTemplate({
   cardTypes: ["guide"],
   defaultForTypes: ["guide"],
   argsSchema: z.object({
-    name: z.string().describe("Domain name (news, intake, calendar, or custom)"),
+    name: z.string().describe("Domain name (intake, calendar, drive, chat, or custom)"),
   }),
   generate: (args) => createInitialGuideTemplate({ name: args.name }),
 });

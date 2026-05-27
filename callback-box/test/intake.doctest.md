@@ -96,12 +96,12 @@ await box.cleanup();
 ## Reserved subdirs are skipped
 
 Items already sitting in `intake/`, `staged/`, or `triaged/` aren't
-re-routed, and items in legacy buckets like `news/` are left alone too.
+re-routed, and items in unrecognized subdirectories are left alone too.
 
 ```
 const box = await makeTmpBox();
 await box.write("box/inbox/Fresh.memo.card", "<memo/>");
-await box.write("box/inbox/news/News.news-item.card", "<news-item/>");
+await box.write("box/inbox/oldbucket/Legacy.memo.card", "<memo/>");
 await box.write("box/inbox/staged/Already.memo.card", "<memo/>");
 
 const result = await runIntake({ boxRoot: box.root });
@@ -120,8 +120,8 @@ JSON.stringify({
   ]
 }
 
-await box.read("box/inbox/news/News.news-item.card")
-=> <news-item/>
+await box.read("box/inbox/oldbucket/Legacy.memo.card")
+=> <memo/>
 
 await box.read("box/inbox/staged/Already.memo.card")
 => <memo/>

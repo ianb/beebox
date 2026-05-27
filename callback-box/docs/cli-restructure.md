@@ -6,7 +6,7 @@ Drafted: 2026-05-01.
 
 ## Why
 
-Audit found 40+ registered top-level commands with inconsistent grouping: noun-only (`cb activity`, `cb drive`), verb-only (`cb finish`, `cb finalize`), hyphenated noun-verbs (`cb fetch-news`, `cb describe-images`), and confusable pairs (`cb finish` vs `cb finalize`). A few commands are dead. The agent's daily surface is hard to discover and the dev/admin surface is mixed in with it.
+Audit found 40+ registered top-level commands with inconsistent grouping: noun-only (`cb activity`, `cb drive`), verb-only (`cb finish`, `cb finalize`), hyphenated noun-verbs (`cb assemble-timeline`, `cb describe-images`), and confusable pairs (`cb finish` vs `cb finalize`). A few commands are dead. The agent's daily surface is hard to discover and the dev/admin surface is mixed in with it.
 
 The goal is a CLI where:
 - Frequently-used agent commands stay top-level and short.
@@ -100,7 +100,7 @@ If `cb image describe` / `cb audio transcribe` ever feels right, revisit. With o
 
 Already exists (`cb procedure run`, `cb procedure list`). Keep as is.
 
-The flat news/feedback procedure-internal commands (`cb fetch-news`, `cb fetch-all-news`, `cb process-news`, `cb process-feedback`, `cb triage-feedback`) stay flat — they're called from procedure cards, not directly by humans.
+Procedure-internal commands that are invoked from procedure cards (rather than directly by humans) stay flat — promoting them into the group adds typing for no readability win.
 
 ## `cb chat` group
 
@@ -129,7 +129,7 @@ Already exists (`cb chat self-note`). Keep as is.
 ## Open questions / not-yet-decided
 
 - Should `cb describe-images` and `cb transcribe-captures` get a `cb image` / `cb audio` home eventually? Defer until a third command lands in either category.
-- Should `cb fetch-news` etc. become `cb procedure run news --step fetch`? Probably not — current shape is fine for procedure-internal helpers.
+- Should procedure-internal helpers ever fold into `cb procedure run <name> --step <id>`? Probably not — current shape is fine for the ones that exist.
 - Should `cb connector sync` replace some uses of `cb wakeup --connector X`? Both exist for now; `--connector` filter on wakeup might be retired later.
 
 ## Migration plan

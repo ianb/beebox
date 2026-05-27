@@ -114,7 +114,6 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
     { to: `${base}/chat`, label: "Recent", match: (p: string) => p === `${base}/chat` || p.startsWith(`${base}/chat?`) || p.startsWith(`${base}/chat/`) },
     { to: `${base}/chats`, label: "Chats", match: (p: string) => p.startsWith(`${base}/chats`), badge: freshCount },
     { to: `${base}/questions`, label: "Questions", match: (p: string) => p.startsWith(`${base}/questions`) },
-    { to: `${base}/news`, label: "News", match: (p: string) => p.startsWith(`${base}/news`) },
     { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
     { to: `${base}/landmarks`, label: "Landmarks", match: (p: string) => p.startsWith(`${base}/landmarks`) },
     { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },

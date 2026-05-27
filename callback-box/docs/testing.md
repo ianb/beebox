@@ -84,7 +84,7 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 | File | Tests |
 |------|-------|
 | `test/box.doctest.md` | `initBox()`, directory structure, `isValidBox()`, `findBoxRoot()`, metadata |
-| `test/schemas.doctest.md` | Schema registry, card templates (memo, question, news-job, intake-job, calendar-review-job) |
+| `test/schemas.doctest.md` | Schema registry, card templates (memo, question, intake-job, calendar-review-job) |
 | `test/intake-utils.doctest.md` | `createOrAppendIntakeJob()` — create, append, multi-source |
 | `test/calendar-utils.doctest.md` | ICS parsing, event formatting, timespan parsing, date filtering |
 | `test/chat-response-extraction.doctest.md` | `<chat-response>` streaming extraction, chunking, multiline |
@@ -97,8 +97,7 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 | `test/paths.doctest.md` | Card name parsing |
 | `test/routes-scheduler.doctest.md` | Scheduler log and schedules listing API |
 | `test/routes-admin.doctest.md` | Box config admin API |
-| `test/routes-api.doctest.md` | Core data API (status, inbox, cards, browse, news, debug-log, activity) |
-| `test/routes-briefs.doctest.md` | News brief reading workflow API |
+| `test/routes-api.doctest.md` | Core data API (status, inbox, cards, browse, debug-log, activity) |
 | `test/routes-commands.doctest.md` | Command listing, details, sync execution, error cases |
 | `test/routes-history.doctest.md` | Git commit log, diffs, session log |
 | `test/routes-actions.doctest.md` | Answer question, create card, validation |
@@ -229,8 +228,8 @@ Scenario tests are end-to-end integration tests that run the full system (CLI co
 ### Scenario Definition (`scenario.yaml`)
 
 ```yaml
-name: news-basic
-description: Basic RSS sync and news processing
+name: intake-basic
+description: Basic intake-job creation and processing
 
 steps:
   - name: sync
@@ -239,14 +238,14 @@ steps:
     checkpoint: after-sync            # git tag for --from resumption
     validate:
       - committed: true               # working tree must be clean
-      - script: "ls box/inbox/news/*.news-item.card | wc -l | grep -q 2"
-      - prompt: "Check that news items were created in the inbox"
+      - script: "ls box/jobs/*.intake.job.card | wc -l | grep -q 2"
+      - prompt: "Check that intake jobs were created for the seeded inbox items"
 
   - name: process
     run: cb reactor
     validate:
       - committed: true
-      - script: "ls box/output/briefs/*.news-brief.card 2>/dev/null | wc -l | grep -qv '^0$'"
+      - script: "ls box/jobs/*.intake.job.card 2>/dev/null | wc -l | grep -q '^0$'"
 ```
 
 ### Stubs (`stubs.yaml`)
@@ -290,9 +289,6 @@ Dry run: `cb scenario run <name> --dry-run`
 | Scenario | What it tests |
 |----------|--------------|
 | `intake-basic` | Wakeup creates intake jobs for unjobbed inbox items; reactor processes them |
-| `news-basic` | RSS sync → news items + news-job → reactor produces news-brief |
-| `news-guide-revision` | Feedback triage → guide-revision job → reactor updates news guide |
-| `news-timed` | Time-gated stubs: empty feed initially, articles appear after simulated time passes |
 | `tick-basic` | Scheduled script listing, dry-run, execution, skip-if-recently-run |
 | `tick-chain` | `create-after-success` chaining between scheduled scripts across ticks |
 
@@ -341,7 +337,7 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
 
 **Design principles for scenarios:**
 
-- **Each scenario tests one pipeline or behavior.** Don't combine unrelated features. `intake-basic` tests intake jobs only; `news-basic` tests news processing only.
+- **Each scenario tests one pipeline or behavior.** Don't combine unrelated features. `intake-basic` tests intake jobs only; `tick-basic` tests scheduled-script behavior only.
 - **Seed the minimal data needed.** The `intake-basic` box has just 2 memos in inbox — enough to verify the behavior, not so much that agent processing is slow or unpredictable.
 - **Use `--skip-*` flags** on `cb wakeup` to isolate phases when you don't need the full wakeup cycle.
 - **Use checkpoints** on steps that are expensive (agent runs). This lets you re-run later steps without re-running expensive earlier ones: `cb scenario run my-scenario --from after-wakeup`.
@@ -514,7 +510,7 @@ Not automated — run these occasionally and fix what they find.
 
 ### Session critiques
 
-Review recent agentic sessions (triage, news processing, chat handling) for tool quality issues. Pick sessions that seemed slow or where the agent used workarounds. Run `@session-critique <id>` and act on findings. See § Session Critiques above.
+Review recent agentic sessions (intake triage, capture processing, chat handling) for tool quality issues. Pick sessions that seemed slow or where the agent used workarounds. Run `@session-critique <id>` and act on findings. See § Session Critiques above.
 
 ### Documentation graph
 

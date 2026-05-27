@@ -190,7 +190,7 @@ export const historyStates = {
   loading: { commits: [], selectedHash: null, loading: true, hasMore: true },
   fewCommits: {
     commits: [
-      { hash: "abc123", date: "2026-03-01", subject: "Fix news brief parsing" },
+      { hash: "abc123", date: "2026-03-01", subject: "Fix capture timeline assembly" },
       { hash: "def456", date: "2026-02-28", subject: "Add calendar sync" },
     ],
     selectedHash: "abc123",

@@ -1,18 +1,17 @@
 # Card View Plugin System
 
-Design for a generic card rendering system in `cb serve`, replacing the current one-off news brief pages with a pluggable architecture.
+Design for a generic card rendering system in `cb serve` — a pluggable architecture where any card type can register a custom renderer alongside the built-in tree/XML views.
 
 ## Goals
 
 1. Any file can have multiple renderers; the system selects the best default and lets the user toggle between them
 2. Directory browsing groups cards by type, showing each group with its type-specific list renderer
 3. A generic validated-patch endpoint handles card mutations without per-type API routes
-4. The news brief view migrates into this system rather than living as a special case
+4. Card types with custom reading or interaction flows (briefings, capture sessions, recipes) land as plugins instead of bespoke routes
 
 ## Current State
 
 - `CardView` renders all cards with either a tree view (`CardTreeView`) or raw XML
-- News briefs have a completely separate path: dedicated `/news/*` route, custom API endpoints (`/api/briefs`, `/api/brief/:path`, `/api/brief/mark-read`, `/api/brief/feedback`, `/api/brief/complete-reading`), and a custom `NewsBriefView` component
 - No directory browsing exists — the dashboard shows hardcoded sections (inbox, questions, commands)
 - No generic card mutation endpoint — each mutation is a bespoke route
 
@@ -35,15 +34,15 @@ Every file has a stack of applicable renderers, from most generic to most specif
 | tagName | Renderer | Description |
 |---|---|---|
 | `recipe` | Recipe View | Formatted recipe with scaling controls |
-| `news-brief` | Brief View | Interactive reading experience with feedback |
+| `capture-session` | Timeline View | Interactive timeline with clip transcripts and images |
 | `bookmark` | _(none — tree view is sufficient)_ | |
 
 The renderer stack for a file is assembled by checking what applies:
 
 ```
-Pasta_Norma.recipe.card → [Recipe View, Card Tree, XML, Source]
-today.news-brief.card   → [Brief View, Card Tree, XML, Source]
-notes.memo.card         → [Card Tree, XML, Source]
+Pasta_Norma.recipe.card        → [Recipe View, Card Tree, XML, Source]
+2026-05-22_kitchen.capture-session.card → [Timeline View, Card Tree, XML, Source]
+notes.memo.card                → [Card Tree, XML, Source]
 README.md               → [Source]
 recording.webm          → [Audio Player, Source]
 ```
@@ -161,8 +160,8 @@ registerCardRenderer("recipe",
   { name: "Recipe", Component: RecipeDetailView, priority: 100 },
 );
 
-registerCardRenderer("news-brief",
-  { name: "Brief", Component: NewsBriefDetailView, priority: 100 },
+registerCardRenderer("capture-session",
+  { name: "Timeline", Component: CaptureTimelineView, priority: 100 },
 );
 ```
 
@@ -221,7 +220,7 @@ Separate from renderers. A list plugin controls how a group of cards appears in 
 // src/frontend/src/card-views/index.ts
 
 export interface CardListPlugin {
-  /** Label for the accordion section (e.g., "Recipes", "News Briefs") */
+  /** Label for the accordion section (e.g., "Recipes", "Capture Sessions") */
   label: string;
   /** Prepare items for display: sort, filter, truncate, group — whatever is appropriate */
   prepareList: (cards: CardInfo[]) => CardInfo[];
@@ -256,19 +255,19 @@ export const recipeListPlugin: CardListPlugin = {
   ListItem: RecipeListItem,
 };
 
-// News brief list plugin
-export const newsBriefListPlugin: CardListPlugin = {
-  label: "News Briefs",
+// Capture session list plugin
+export const captureSessionListPlugin: CardListPlugin = {
+  label: "Capture Sessions",
   prepareList: (cards) => {
-    // Newest first, unread before read
+    // Newest first, unarchived before archived
     return [...cards].sort((a, b) => {
-      const aRead = !!a.attrs["read-at"];
-      const bRead = !!b.attrs["read-at"];
-      if (aRead !== bRead) return aRead ? 1 : -1;
+      const aArchived = !!a.attrs["archived-at"];
+      const bArchived = !!b.attrs["archived-at"];
+      if (aArchived !== bArchived) return aArchived ? 1 : -1;
       return (b.summary.date ?? "").localeCompare(a.summary.date ?? "");
     });
   },
-  ListItem: NewsBriefListItem,
+  ListItem: CaptureSessionListItem,
 };
 ```
 
@@ -292,7 +291,7 @@ A new route `/browse/*` that lists cards in any directory:
 
 ```
 /browse/store/recipes/
-/browse/box/output/briefs/
+/browse/store/captures/
 /browse/box/inbox/
 ```
 
@@ -411,7 +410,7 @@ Returns:
 }
 ```
 
-The `summary` field extracts immediate child element text for listing display without sending the full tree. For a recipe: `{ title: "Pasta alla Norma", yield: "4 servings" }`. For a news brief: `{ title: "...", date: "...", read-at: "..." }`.
+The `summary` field extracts immediate child element text for listing display without sending the full tree. For a recipe: `{ title: "Pasta alla Norma", yield: "4 servings" }`. For a capture session: `{ title: "...", date: "...", "clip-count": "3" }`.
 
 Implementation:
 
@@ -786,78 +785,9 @@ function scaleYield(base: number, scale: number): string {
 }
 ```
 
-### News Brief Plugin (migration sketch)
+### Capture Session Plugin (sketch)
 
-```tsx
-// src/frontend/src/renderers/news-brief.tsx
-
-// --- List plugin ---
-
-export const newsBriefListPlugin: CardListPlugin = {
-  label: "News Briefs",
-  prepareList: (cards) => {
-    // Unread first, then newest first within each group
-    return [...cards].sort((a, b) => {
-      const aRead = !!a.attrs["read-at"];
-      const bRead = !!b.attrs["read-at"];
-      if (aRead !== bRead) return aRead ? 1 : -1;
-      return (b.summary.date ?? "").localeCompare(a.summary.date ?? "");
-    });
-  },
-  ListItem: NewsBriefListItem,
-};
-
-function NewsBriefListItem({ card, onNavigate, onPatch }: CardListItemProps) {
-  const isRead = !!card.attrs?.["read-at"];
-  return (
-    <div
-      className={`card cursor-pointer ${isRead ? "opacity-60" : ""}`}
-      onClick={() => onNavigate(`/view/${card.path}`)}
-    >
-      <div className="flex justify-between items-center">
-        <h3 className={`font-medium ${isRead ? "text-gray-500" : ""}`}>
-          {card.summary?.title ?? card.path}
-        </h3>
-        <div className="flex gap-2">
-          {card.summary?.date && (
-            <span className="text-sm text-gray-400">{card.summary.date}</span>
-          )}
-          {isRead && <span className="status-badge bg-gray-100 text-gray-500">Read</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Detail renderer ---
-
-function NewsBriefDetailView({ data, onPatch, onNavigate }: RendererProps) {
-  // Parse into the existing NewsBriefData structure
-  const briefData = parseNewsBrief(data.element!);
-
-  // The existing NewsBriefView component handles all the rendering,
-  // but its callbacks need to be rewired to use onPatch instead of
-  // bespoke API endpoints.
-  return (
-    <NewsBriefView
-      brief={briefData}
-      onCompleteReading={async (readingData) => {
-        await onPatch?.([
-          { op: "set-attr", attr: "read-at", value: new Date().toISOString() },
-          { op: "set-attr", attr: "read-reason", value: "user" },
-          { op: "set-attr", attr: "overall-rating", value: readingData.overallRating },
-          // ... map reactions and item feedback to patch ops
-        ]);
-        // Card move is separate — see Card Move Endpoint below
-      }}
-      onSourceClick={(sourcePath) => onNavigate(sourcePath)}
-      // ... other callbacks similarly adapted
-    />
-  );
-}
-```
-
-The news brief migration is the biggest test of the system. If the generic patch endpoint can handle the `complete-reading` flow (which sets attrs on nested elements, moves the card, and commits), then it validates the architecture. The card move needs a separate `POST /api/card/*/move` endpoint since that's not a patch — it's a lifecycle transition.
+Capture sessions are the prototypical "complex card with reading flow + lifecycle transitions" case: a structured timeline of clips and images, mutations as the agent processes them (transcriptions, descriptions), and a terminal archive step that moves the card. A plugin renderer would expose the timeline interactively, route mutations through the generic patch endpoint, and use a separate move endpoint for the archive transition. Whether that interactive surface is worth building over the default Card Tree view is a follow-up question — the architecture supports it either way.
 
 ### Bookmark Plugin (simple example)
 
@@ -911,8 +841,6 @@ box/
   inbox/ (3)
   questions/ (1)
   commands/ (0)
-  output/
-    briefs/ (5)
 store/
   recipes/ (12)
     italian/ (4)
@@ -920,15 +848,15 @@ store/
   archive/ (47)
 ```
 
-Clicking a directory shows the directory browser. Clicking a card navigates to the detail view. This naturally replaces the current `/news/*` route — it's just `/browse/box/output/briefs/`.
+Clicking a directory shows the directory browser. Clicking a card navigates to the detail view. Card-type-specific pages (when they're added) become custom renderers within `/browse/<path>` rather than separate routes.
 
 ## Card Move Endpoint
 
 Separate from patch, since moving a card is a lifecycle action (changes directory, updates references, commits):
 
 ```
-POST /api/card/box/output/briefs/today.news-brief.card/move
-{ "destination": "store/archive/briefs/today.news-brief.card", "commit": true }
+POST /api/card/box/inbox/capture-2026-05-22.capture-session.card/move
+{ "destination": "store/archive/captures/2026-05-22.capture-session.card", "commit": true }
 ```
 
 This wraps the existing `cb mv` logic (loader.move + reference updates + git commit).
@@ -941,7 +869,7 @@ This wraps the existing `cb mv` logic (loader.move + reference updates + git com
 4. **Directory listing endpoint** — `GET /api/cards?dir=...`. Returns card summaries.
 5. **List plugin registry + Directory browser** — The accordion-style grouped listing with `prepareList` and plugin list items.
 6. **Sidebar navigation** — Replace hardcoded dashboard sections with directory tree.
-7. **News brief migration** — Move NewsBriefView into the plugin system. Biggest test: mutations, card moves, feedback creation.
-8. **Card move endpoint** — Needed for news brief's "mark as read and archive" flow.
+7. **Card move endpoint** — Lifecycle transitions (e.g. archive a processed capture session, file a triaged item) that aren't expressible as patches.
+8. **First non-trivial plugin renderer** — Pick a card type with structured internal content (capture-session, briefing) and build its custom view as a plugin. Validates that the registry, patch endpoint, and move endpoint compose correctly.
 
-Steps 1-2 can land immediately with no backend changes. Steps 3-4 are backend additions. Steps 5-6 restructure the app navigation. Steps 7-8 are the migration that proves the system works.
+Steps 1-2 can land immediately with no backend changes. Steps 3-4 are backend additions. Steps 5-6 restructure the app navigation. Steps 7-8 prove the system works end-to-end.

@@ -23,7 +23,6 @@ Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, error?
 | Connector | File | Card types | Direction | Service-injected |
 |-----------|------|-----------|-----------|-----------------|
 | Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes |
-| RSS | `rss.ts` | `news-item` | Pull only | No (HTTP stubs) |
 | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Not yet wired |
 | Gmail | `gmail.ts` | `email-thread` | Pull only | Not yet wired |
 | Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes |

@@ -797,18 +797,6 @@ Signal serves as the primary DM and notification channel. It handles both incomi
 - Audio staging via file drop or dedicated capture app
 - Transcript quality varies; keep original audio for clarification
 
-#### RSS Connector
-
-**Pull:**
-- Scheduled feed fetching (configured feeds)
-- Create news/article cards in `/box/inbox/`
-- Deduplication based on article IDs
-
-**Implementation notes:**
-- Standard RSS/Atom parsing
-- Scheduled pulls (e.g., every few hours)
-- Feed list in connector config
-
 ### MVP Infrastructure
 
 #### Web App (Frontend + Runner)

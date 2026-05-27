@@ -13,11 +13,11 @@ A **procedure run** is created when the procedure executes. It contains a run ca
 ```
 config/
   procedures/
-    process-news.procedure.card
+    process-captures.procedure.card
 
 procedure/
   runs/
-    process-news_2026-02-06T200000/
+    process-captures_2026-02-06T200000/
       run.procedure-run.card
 ```
 
@@ -35,16 +35,16 @@ Every step has three optional phases: **precheck**, **run**, **validate**. All u
 ## Step Structure
 
 ```xml
-<step id="triage">
-<description>Review inbox items and trash uninteresting ones</description>
+<step id="transcribe">
+<description>Transcribe any audio clips that haven't been processed yet</description>
 
 <precheck>
 <shell>
-count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
+count=$(ls box/inbox/capture-*/*.audio.card 2>/dev/null | wc -l)
 if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
-echo "Found $count items to triage"
+echo "Found $count audio clip(s) to transcribe"
 </shell>
-<why>Nothing to do if inbox is empty</why>
+<why>Nothing to do if no fresh captures are pending</why>
 </precheck>
 
 <run>
@@ -55,11 +55,11 @@ Your agent prompt here...
 
 <validate severity="review">
 <shell>
-count=$(ls box/inbox/news/*.news-item.card 2>/dev/null | wc -l)
-echo "Inbox: $count items"
+remaining=$(grep -l 'status="new"' box/inbox/capture-*/*.audio.card 2>/dev/null | wc -l)
+echo "Untranscribed clips remaining: $remaining"
 </shell>
 <instruction>
-Every item should have an explicit keep or trash decision.
+Every audio clip should have either a transcription block or an explicit transcription-error.
 </instruction>
 </validate>
 </step>
@@ -118,15 +118,15 @@ cb procedure list             # List available definitions
 A complete run produces:
 
 ```
-abc123f Complete procedure: process-news
-abc123e [procedure] Complete step: brief
-abc123d Brief: The Specification Problem           ← agent commit
-abc123c [procedure] Complete step: analyze
-abc123b Analyze 5 items                            ← agent commit
-abc123a [procedure] Complete step: fetch
-abc1239 [procedure] Complete step: triage
-abc1238 Triage: 5/12 items kept                    ← agent commit
-abc1237 Start procedure: process-news
+abc123f Complete procedure: process-captures
+abc123e [procedure] Complete step: archive
+abc123d Archive session 2026-05-22_kitchen         ← agent commit
+abc123c [procedure] Complete step: assemble
+abc123b Assemble timeline for 3 clips              ← agent commit
+abc123a [procedure] Complete step: describe-images
+abc1239 [procedure] Complete step: transcribe
+abc1238 Transcribe 3/3 audio clips                 ← agent commit
+abc1237 Start procedure: process-captures
 ```
 
 Rewinding to any commit gives a valid, consistent state.

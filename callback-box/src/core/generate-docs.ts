@@ -747,7 +747,7 @@ function generateCbCommands(): string {
     "",
     "# Create a yes/no question",
     "cb create box/questions/confirm.question.card -t question-confirm \\",
-    '  memo="The news brief is ready" prompt="Should I publish it?"',
+    '  memo="The capture session is ready to archive" prompt="Archive it?"',
     "",
     "# Create a scheduled script",
     'cb create config/schedules/check.scheduled-script.card runs="cb wakeup" cron="0 6 * * *"',
@@ -1044,11 +1044,11 @@ Procedures are multi-step processes defined as XML cards. The procedure engine r
 ## Running Procedures
 
 \`\`\`bash
-cb procedure run process-news                       # Run by name
+cb procedure run process-captures                   # Run by name
 cb procedure run config/procedures/my.procedure.card  # Run by path
-cb procedure run process-news --step triage         # Run one step only
-cb procedure run process-news --dry-run             # Preview steps
-cb procedure run process-news --directive "focus on AI stories"  # Pass directive
+cb procedure run process-captures --step transcribe # Run one step only
+cb procedure run process-captures --dry-run         # Preview steps
+cb procedure run process-captures --directive "skip the music clips"  # Pass directive
 cb procedure list                                   # List available procedures
 cb procedure status                                 # Show latest run status
 \`\`\`
@@ -1060,7 +1060,7 @@ Procedure definitions live in \`config/procedures/\`. Each run creates a trackin
 A **directive** is an opaque runtime string passed when invoking a procedure. It appears as \`<directive>...</directive>\` in every agent's system prompt within the procedure, allowing callers to customize behavior without modifying the procedure card.
 
 \`\`\`bash
-cb procedure run process-news --directive "Only include stories about AI safety"
+cb procedure run process-captures --directive "Only process today's session"
 \`\`\`
 
 The directive is also recorded as an attribute on the \`<procedure-run>\` element for auditability. Step prompts can reference "the Directive" to act on it.
@@ -1071,8 +1071,8 @@ Job cards can trigger a procedure directly using the \`<procedure>\` element:
 
 \`\`\`xml
 <some-job-type>
-<procedure ref="process-news">
-<directive>Focus on technology stories</directive>
+<procedure ref="process-captures">
+<directive>Focus on the meeting recordings</directive>
 </procedure>
 </some-job-type>
 \`\`\`
@@ -1215,7 +1215,7 @@ To check for updates:
 \`\`\`bash
 ls config/_template-updates/procedures/
 # If any exist, compare with the main version and merge changes
-diff config/procedures/process-news.procedure.card config/_template-updates/procedures/process-news.procedure.card
+diff config/procedures/process-captures.procedure.card config/_template-updates/procedures/process-captures.procedure.card
 \`\`\`
 
 After merging, delete the file under \`config/_template-updates/procedures/\`. The next \`cb init\` will see your merged version as the current copy.
@@ -1225,15 +1225,15 @@ After merging, delete the file under \`config/_template-updates/procedures/\`. T
 A complete procedure run produces commits like:
 
 \`\`\`
-abc123f Complete procedure: process-news
-abc123e [procedure] Complete step: brief
-abc123d Brief: The Specification Problem           ← agent commit
-abc123c [procedure] Complete step: analyze
-abc123b Analyze 5 items                            ← agent commit
-abc123a [procedure] Complete step: fetch
-abc1239 [procedure] Complete step: triage
-abc1238 Triage: 5/12 items kept                    ← agent commit
-abc1237 Start procedure: process-news
+abc123f Complete procedure: process-captures
+abc123e [procedure] Complete step: archive
+abc123d Archive session 2026-05-22_kitchen           ← agent commit
+abc123c [procedure] Complete step: assemble
+abc123b Assemble timeline for 3 clips                ← agent commit
+abc123a [procedure] Complete step: describe-images
+abc1239 [procedure] Complete step: transcribe
+abc1238 Transcribe 3/3 audio clips                   ← agent commit
+abc1237 Start procedure: process-captures
 \`\`\`
 
 Each commit represents a clean, consistent state. You can \`git reset --hard\` to any commit to get a valid snapshot.

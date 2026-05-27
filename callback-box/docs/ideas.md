@@ -348,6 +348,19 @@ Design notes:
 - **Promotion to fact.** When a hunch is confirmed it should become a normal note on the relevant person/topic card, not a permanent resident of the hunches file.
 - **Connection to user-model dimensions** (see [[user-model-dimensions]] entry above) — hunches along the same axes the agent watches for are the raw material; over time, repeated hunches in the same direction become facts.
 
+## Apply guide cards to inbox triage
+
+Guide cards (`config/*.guide.card`) capture the boxholder's preferences as triage rules, named actions, default actions, and accumulated feedback. Today the compiled guide is read by job-processing agents (a `paths:` rule loads it when a matching job runs). But there's no live mechanism for the guide's *triage rules* to actually drive inbox routing — the agent decides per-item, and the guide only nudges in retrospect.
+
+The shape we want is guide-as-policy, applied at intake, refined by feedback: the guide's triage rules score or route new items as they land, the boxholder sees what happened, and a "wrong bucket" signal feeds back into guide revisions.
+
+Open questions:
+
+- **Where does triage run?** During `cb wakeup` per-item as new things land? As a separate `cb intake` step? Inside the reactor on intake-jobs? The answer affects how aggressively rules get applied (a wakeup-time rule that auto-trashes feels different from a reactor decision that asks first).
+- **One guide or per-stream?** A single `intake.guide.card` is simpler but blurs domains; per-stream guides (recipes vs bookmarks vs voice memos) match how feedback naturally clusters but multiplies setup.
+- **Feedback surface.** Where does the boxholder say "this routing was wrong"? Probably a lightweight "wrong bucket" gesture on archived items + periodic guide-revision passes that read accumulated signals and rewrite the guide.
+- **Relation to landmarks/triage-design.** `docs/triage-design.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
+
 ## Capitalize glossary terms as Proper Nouns?
 
 Open question: should the project's coined/narrowed terms (Card, Box, Asset, Attachment, Wakeup Cycle, Procedure, ...) be written with initial caps in prose to mark them as Proper Nouns of the system? Pros: visually distinguishes "an asset" (project term, manifest-tracked file) from "an asset" (English). Lets readers spot terms-of-art at a glance, the way "Linux" or "Python" do. Cons: feels precious in casual writing; risks inconsistency between code identifiers (lowercase) and prose (capitalized); easy to drift. Decide before the glossary fill-out pass below so the whole sweep lands in one style.
@@ -588,10 +601,6 @@ Agent writes `.callback-box/agent-failure.json` with `{ reason, phase, sessionId
 
 The chat frontend's system prompt should instruct the assistant to use jobs to start tasks rather than executing them synchronously. Also provide it with docs and CLI query tools to check: what's currently running, what's scheduled to run, when something last ran.
 
-### News brief output length
-
-The news brief generation pipeline produces overly long output. The brief should be shorter and more concise — a quick digest, not an exhaustive report. The analyze and brief prompts (`process-news.ts`) are both very large and could use a review for conciseness.
-
 ### Automatic transcript handling in schema instructions
 
 Several card type instructions (memo, audio, capture-session) include details about transcription handling (checking for `<transcription>`, skipping untranscribed audio, etc.). This should ideally be handled automatically by the processing pipeline rather than requiring agents to understand transcription state. The schema instructions should focus on describing the card's content and structure, not transcription machinery.
@@ -801,7 +810,7 @@ The cheap-model choice keeps latency in the keyboard-shortcut tier and cost negl
 
 ## "Today" view as a recurring procedure
 
-Rather than build a hardcoded "today" page like Obsidian's daily notes, make it a procedure that emits a `daily-digest` card each morning. Aggregates whatever the boxholder configures: today's calendar, recently arrived inbox, jobs run overnight, the latest news brief, fresh commits. Renders as a regular card with the box's existing view machinery — no special UI path.
+Rather than build a hardcoded "today" page like Obsidian's daily notes, make it a procedure that emits a `daily-digest` card each morning. Aggregates whatever the boxholder configures: today's calendar, recently arrived inbox, jobs run overnight, the latest capture-session summary, fresh commits. Renders as a regular card with the box's existing view machinery — no special UI path.
 
 Optional / opt-in during initial box setup, edited like any other procedure. Fits the agentic-composition model: today-view isn't a feature, it's a pattern. Different boxes want different aggregations (a hearth box vs. a research box vs. a family box) and the procedure form lets them differ without core changes.
 

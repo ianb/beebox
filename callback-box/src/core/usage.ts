@@ -23,7 +23,7 @@ Tables:
 
   usage — one row per (session_id, date, model)
     session_id   TEXT     -- Claude Code session UUID
-    task         TEXT     -- agent name (e.g. "reactor-batch", "news-triage")
+    task         TEXT     -- agent name (e.g. "reactor-batch", "intake-triage")
     date         TEXT     -- YYYY-MM-DD (from message timestamps, handles midnight crossings)
     model        TEXT     -- model ID (e.g. "claude-opus-4-6")
     input_tokens        INTEGER

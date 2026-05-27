@@ -245,8 +245,7 @@ These exist in some form. The new system has to either replace them or coexist:
 - **Capture session sort** — voice-in → card type. Likely subsumed by intake + triage.
 - **Inbox processor** — wakeup agent routes unknown items. Subsumed by triage.
 - **Calendar review** — event triage (action needed / FYI / ignore). Partly aligned; the categories map to triage destinations.
-- **Feedback intake** — `inbox/feedback/` integration into briefs and guides. Probably fits.
-- **News triage** — *not the same kind of triage.* News triage (`process-news --triage-only`) is a keep/discard filter on a homogenous stream; this design is about assigning a type and routing to a handler. Shared name, different operation. The news pipeline stays as it is.
+- **Feedback intake** — `inbox/feedback/` integration into briefings and guides. Probably fits.
 
 ## Open questions
 

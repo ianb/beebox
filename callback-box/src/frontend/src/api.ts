@@ -87,7 +87,7 @@ export interface CardInfo {
   status?: string;
   prompt?: string;
   options?: string[];
-  /** Subdirectory within the parent dir (e.g., "news" for inbox/news/) */
+  /** Subdirectory within the parent dir (e.g., "email" for inbox/email/) */
   subdir?: string;
 }
 

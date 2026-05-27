@@ -1,7 +1,7 @@
 /**
  * Standard "navigate to a view URL" handler for {@link Markdown} / {@link FileView}.
  *
- * Context-less call sites (news brief, commit detail, card tree, etc.) want
+ * Context-less call sites (commit detail, card tree, etc.) want
  * the default behavior: push `/<box>/views/<path>?view=X&zoom` onto the
  * history. Surfaces that need different semantics (swap a sidebar pane,
  * keep the browse layout) should build their own handler instead of using

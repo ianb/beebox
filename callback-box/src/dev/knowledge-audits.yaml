@@ -103,7 +103,7 @@ tests:
     tags: [cards, schemas, questions]
 
   - id: question-directive
-    prompt: "I want to ask the user whether to include tech news in their brief. Create the question card."
+    prompt: "I want to ask the user whether to archive a recipe under store/recipes or store/archive. Create the question card."
     expected_level: knows_about
     watch_for: "Includes a <directive> element describing what to do with the answer"
     should_read: ["docs/generated/card-question.md"]
@@ -111,7 +111,7 @@ tests:
     tags: [cards, questions]
     notes: >
       The directive is critical — without it, answering the question is a dead end.
-      The agent should describe the concrete action (e.g., update news guide) not
+      The agent should describe the concrete action (e.g., move the recipe) not
       just restate the question.
 
   - id: question-answer-creates-job
@@ -294,14 +294,14 @@ tests:
       Updated from discoverable: agent guide now lists all guide cards with
       their applies-to descriptions. Agent should know this directly.
 
-  - id: modify-news-triage
-    prompt: "If I wanted to change how news items are triaged, what would I modify?"
+  - id: modify-intake-triage
+    prompt: "If I wanted to change how inbox items are triaged, what would I modify?"
     expected_level: knows_about
-    watch_for: "Knows about the news guide from agent guide, reads the compiled guide for details"
-    should_read: ["docs/generated/news-guide.md"]
+    watch_for: "Knows about the intake guide from agent guide, reads the compiled guide for details"
+    should_read: ["docs/generated/intake-guide.md"]
     tags: [guides]
     notes: >
-      Updated from discoverable: agent guide now lists the news guide and its
+      Updated from discoverable: agent guide now lists the intake guide and its
       compiled path. Agent should follow the pointer to read the compiled guide.
 
   - id: cooking-guide-awareness
@@ -707,7 +707,7 @@ tests:
       procedure run directories, or saying "I don't have access to logs."
 
   - id: git-trailers
-    prompt: "How can I find all commits from the news brief phase?"
+    prompt: "How can I find all commits from the capture-assembly phase?"
     expected_level: knows_directly
     watch_for: "Uses git log --grep with the Phase trailer"
     correct_contains: ["Phase"]
@@ -1510,7 +1510,7 @@ tests:
       odd file placements, or unclear behaviors — without interrupting the
       current task. Should mention it writes to config/feedback/ and commits.
       Should not confuse this with the feedback card type (user feedback on
-      news briefs etc.).
+      briefings, captures, etc.).
     correct_contains: ["config/feedback", "commit"]
     correct_contains_any: ["friction", "confusing", "conventions", "unclear", "tooling"]
     tags: [feedback, cli]

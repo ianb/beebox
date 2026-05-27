@@ -10,7 +10,7 @@
 # Render a page with live data from the box
 cb render ~/src/boxes/test1 /
 cb render ~/src/boxes/test1 /chat
-cb render ~/src/boxes/test1 /news
+cb render ~/src/boxes/test1 /questions
 
 # Extract specific elements
 cb render ~/src/boxes/test1 / --selector="h3"
@@ -85,7 +85,7 @@ Use CSS selectors to focus on the part that matters:
 cb render ~/src/boxes/test1 / --selector="h3" 2>/dev/null
 
 # Check nav highlighting for a specific page
-cb render ~/src/boxes/test1 /news --selector="nav a" 2>/dev/null
+cb render ~/src/boxes/test1 /questions --selector="nav a" 2>/dev/null
 
 # Check what's in the chat input area
 cb render ~/src/boxes/test1 /chat --scenario streaming --selector="textarea" 2>/dev/null
@@ -109,7 +109,7 @@ After editing a component, render the affected pages to catch SSR issues:
 
 ```bash
 # Quick smoke test: all pages render without errors
-for route in / /chat /news /questions /history /browse /settings; do
+for route in / /chat /questions /history /browse /settings; do
   echo -n "$route: "
   cb render ~/src/boxes/test1 $route 2>/dev/null | wc -c
 done
@@ -133,8 +133,6 @@ Check that real box data renders correctly by targeting data-driven sections:
 # See what schedules look like
 cb render ~/src/boxes/test1 / --selector=".schedule, [class*=schedule]" 2>/dev/null
 
-# Check news brief rendering
-cb render ~/src/boxes/test1 /news --selector="article, .brief, [class*=brief]" 2>/dev/null
 ```
 
 ## Architecture
@@ -175,4 +173,4 @@ Edit `machineRegistry` in `state-registry.ts`:
 - **`xstate/graph` OOM**: `getShortestPaths()` causes heap exhaustion on complex machines (chatMachine). The registry uses static state lists instead.
 - **Stderr noise**: `[ChatSession:init]` and `useLayoutEffect` warnings go to stderr. Use `2>/dev/null`.
 - **CSS classes are Tailwind**: No semantic class names like `.chat-messages`. Use structural selectors (`h3`, `nav a`, `textarea`) or Tailwind patterns (`[class*=pattern]`).
-- **Route normalization**: Routes match by first path segment only (`/news/some-brief` → `/news`). Sub-routes use the same scenarios as the parent.
+- **Route normalization**: Routes match by first path segment only (`/chat/some-session` → `/chat`). Sub-routes use the same scenarios as the parent.

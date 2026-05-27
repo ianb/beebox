@@ -60,7 +60,6 @@ This document captures the case for, the case against, the open design problems,
 ```
 Voice_Memo.memo.card
 Recipe_Norma.recipe.card
-2026-02-01_AI_Winter.news-brief.card
 photo-001.image.card
 scan-XXXX.capture-session.card
 ```
@@ -272,7 +271,7 @@ The fix is a convention: "primary prose goes in the body; everything else, inclu
 
 cardworks `element()` was designed around the patterns we use: arrays of unioned child elements with loose order, attribute typing with Zod, ref validation. JSON Schema can express all of this, but `oneOf` arrays of object schemas with discriminator properties are verbose and awkward to author by hand. We'd want to keep authoring schemas in Zod and emit JSON Schema as a build artifact — and as a downstream concern, **review the emitted JSON Schema for agent legibility**, because Zod-derived JSON Schemas can sometimes be ugly enough to undermine the "agents read JSON Schema as docs" benefit. See the schema-authoring section.
 
-Some of this verbosity is absorbed by the Markdoc body tags: the schemas that today have `z.array(z.union([…]))` for child elements often translate to "this card allows these body tag types" rather than a complex JSON Schema array shape. Where the unioned-children pattern survives into frontmatter (e.g. `news-brief.curation.children`), it'll need restructuring during the migration rather than mechanical translation.
+Some of this verbosity is absorbed by the Markdoc body tags: the schemas that today have `z.array(z.union([…]))` for child elements often translate to "this card allows these body tag types" rather than a complex JSON Schema array shape. Where the unioned-children pattern survives into frontmatter, it'll need restructuring during the migration rather than mechanical translation.
 
 ### 3. Migration is large and easy to half-finish
 
@@ -430,7 +429,7 @@ Ran the explanation-length test by rewriting the "Cards" section of `CLAUDE.md` 
 
 Cards are the core data format — XML files validated by Zod schemas via cardworks. Each card type has a root XML element matching its type name; schemas live in `src/schemas/` and use cardworks' `element()` helper with Zod validators. `src/schemas/registry.ts` lists the built-in set; boxes can add local schemas under `config/schemas/`.
 
-**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `Weekly_Digest.news-brief.card`). Attachments share the basename: `Voice_Memo.memo.card` + `Voice_Memo.m4a`.
+**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `2026-05-22_kitchen.capture-session.card`). Attachments share the basename: `Voice_Memo.memo.card` + `Voice_Memo.m4a`.
 
 **Formatting**: Card XML is flat — no indentation at any nesting level. One long line per paragraph in text content, not soft-wrapped at 80 columns. Keeps diffs clean.
 
@@ -448,7 +447,7 @@ Cards are the core data format — XML files validated by Zod schemas via cardwo
 
 Cards are the core data format — XML files validated by Zod schemas via cardworks. Each card type has a root XML element matching its type name; schemas live in `src/schemas/` and use cardworks' `element()` helper with Zod validators. `src/schemas/registry.ts` lists the built-in set; boxes can add local schemas under `config/schemas/`.
 
-**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `Weekly_Digest.news-brief.card`). Attachments live in a sibling `Name.attach/` directory: `Voice_Memo.memo.card` + `Voice_Memo.attach/voice-memo.webm`. No two cards in the same directory may share a basename.
+**Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`, `2026-05-22_kitchen.capture-session.card`). Attachments live in a sibling `Name.attach/` directory: `Voice_Memo.memo.card` + `Voice_Memo.attach/voice-memo.webm`. No two cards in the same directory may share a basename.
 
 **Formatting**: Card XML is flat — no indentation at any nesting level. One long line per paragraph in text content, not soft-wrapped at 80 columns. Keeps diffs clean.
 
@@ -556,10 +555,6 @@ Skim the table; the awkward cases drive everything.
 |---|---|---|---|---|---|
 | `memo` | ✅ `<content>` is obvious. ⚠️ Voice memos have `<transcription>` too — second prose block needs a frontmatter `\|`-block or a `## Transcription` section convention. | ✅ Flat, simple. | ⚠️ Voice memos have a sibling audio file. `.attach/` helps a little, but the audio is the only attached file ever — overkill. | ⚠️ If transcription stays in frontmatter, one `\|`-block per voice memo. | ✅ `<context url=…>` is URL not card-ref; trivial. |
 | `question` | ⚠️ Three prose blocks: `<prompt>` (the question), `<memo>` (context), `<directive>` (follow-up). None is clearly "the body." Likely all in frontmatter. | ✅ Discriminated `<input type=…>` works as oneOf. | ✅ None. | ✅ All short. | ✅ `<context ref=…>` works fine. |
-| `news-item` | ⚠️ Two candidates: `<content>` (full fetched article, sometimes huge) is body; `<summary>` (RSS description) goes to frontmatter. Decent split. | ⚠️ Doable; `<analysis>` block has 7+ optional fields and topics/questions arrays. | ✅ None. | ✅ Article goes in body where it belongs. | ✅ Links are URLs, not card refs. |
-| `news-summary` | ✅ `<content format="markdown">` IS the body. Cleanest case. | ✅ Trivial. | ✅ None. | ✅ Sources list is short objects. | ✅ Source paths as objects/strings. |
-| `news-brief` | ❌ This is the hardest case. `<content>` has markdown that **interleaves** with structural elements: `<section>`, `<expando>`, `<query>`, `<excerpt>`, `<user-comment>`. The body isn't plain markdown — it's structured-markup-with-prose. Three options, all bad: (a) keep MDX-style component tags inline (custom parser), (b) flatten everything into frontmatter (loses narrative flow), (c) use HTML in markdown (back to XML-in-disguise). | ❌ Same problem in JSON Schema form. The inline mixed-content can be modeled as an array of typed nodes, but it's not "data" anymore — it's a tree of prose chunks and components. | ✅ None. | ⚠️ Curation block has structured prose (rationale, hypotheses) — fits but adds weight. | ✅ Source paths fine. |
-| `news-guide` *(deprecated)* | ❌ No prose body. All structured: interests, disinterests, preferences, context-notes, experiments, reactions. | ⚠️ Doable but verbose — many lists of objects with confidence/source/ref fields. | ✅ None. | ⚠️ Experiment hypothesis/approach/conclusion are paragraphs; OK as `\|`-blocks. | ✅ Many `ref` attrs everywhere — needs strict convention. |
 | `feedback` | ⚠️ `<response>` or `<comment>` is the prose; voice feedback adds `<transcription>`. Same multi-prose pattern as memo. | ✅ Discriminated text/voice union. | ⚠️ Voice feedback has audio. `.attach/` helps. | ⚠️ Transcription as `\|`-block. | ✅ `<target ref="path#fragment">` is well-defined. |
 | `procedure` | ❌ No prose body. Steps with phases (precheck/run/validate), each containing shell/agent/instruction/why. Deeply nested structured config. | ⚠️ Doable; nested phase children as discriminated union. | ✅ None. | ⚠️ Shell commands and agent prompts are multi-line strings. `\|`-blocks throughout. | ✅ None. |
 | `procedure-run` | ❌ No prose body. Execution log: steps with status, stdout, session-id, git-ref, review. | ✅ Clean. | ⚠️ `<stdout>` can be huge. Strong argument for moving stdout into `run.attach/step-N.stdout.txt` files instead of inline strings — same problem the XML form has, format change is an opportunity to fix it. | ❌ Without stdout-as-file, frontmatter would balloon. | ✅ None. |
@@ -572,12 +567,10 @@ Skim the table; the awkward cases drive everything.
 | `email-thread` | ❌ No prose body. Pure metadata + message refs. | ✅ Clean — flat metadata with arrays. | ⚠️ Container card, like capture-session. The thread directory contains message cards and `attachments/`. Same choice as capture-session. | ✅ Small. | ✅ Message refs. |
 | `email-message` | ✅ Snippet only; the actual body **is already** in a sibling `.txt` file (security boundary). The card is metadata-only by design. | ✅ Clean. | ✅ **Strong fit for `.attach/`** — the body `.txt` and binary attachments naturally belong inside. Already half-there with the sibling-`.txt` convention. | ✅ Snippet is short. | ✅ body-file path, attachment refs. |
 | `email-outbound` | ✅ `<body>` IS the body. **Cleanest fit.** Markdown subset already enforced. | ✅ Clean. | ✅ None today (future attachments would fit `.attach/`). | ✅ Body in body. | ✅ in-reply-to ref. |
-| `news-job` | ⚠️ `<description>` is one short sentence — body is trivial or empty. Mostly a list of item refs. | ✅ Clean. | ✅ None. | ✅ Tiny. | ✅ Item refs as list. |
-| `intake-job` | Same as `news-job`. | ✅ | ✅ | ✅ | ✅ |
+| `intake-job` | ⚠️ `<description>` is one short sentence — body is trivial or empty. Mostly a list of item refs. | ✅ Clean. | ✅ None. | ✅ Tiny. | ✅ Item refs as list. |
 | `calendar-review-job` | ⚠️ `<description>` is short. `<change>` items can carry embedded `<ics>` content (multi-line iCal). | ✅ Clean. | ⚠️ Embedded ICS content could move to attached `.ics` files (`change-N.ics`) instead of inline. | ⚠️ Inline ICS is a `\|`-block; not great. | ✅ Change refs. |
-| `guide-revision-job` | Same as `news-job`. | ✅ | ✅ | ✅ | ✅ |
-| `chat-job` | Same as `news-job`. | ✅ | ✅ | ✅ | ✅ |
-| `question-followup-job` | Same as `news-job`. The directive and answer are short. | ✅ | ✅ | ✅ | ✅ |
+| `chat-job` | Same as `intake-job`. | ✅ | ✅ | ✅ | ✅ |
+| `question-followup-job` | Same as `intake-job`. The directive and answer are short. | ✅ | ✅ | ✅ | ✅ |
 | `guide` | ❌ No prose body. Triage rules, named actions (with when/instructions), experiments, reactions, context-notes. Everything is structured. | ⚠️ Verbose but mechanical. | ✅ None. | ⚠️ Action `<instructions>` and rule text are paragraph-ish. `\|`-blocks. | ✅ Many refs. |
 | `scheduled-script` | ❌ No prose body. Pure config: cron/at/rrule, runs, requires. | ✅ Clean. | ✅ None. | ⚠️ `<runs>` shell command can be multi-line. `\|`-block. | ✅ source ref, connector names. |
 | `telegram-message` | ✅ `<text>` IS the message. Clean fit. | ✅ Clean. | ✅ None. | ✅ Message text in body. | ✅ None. |
@@ -594,12 +587,12 @@ Skim the table; the awkward cases drive everything.
 
 Counting verdicts on the body question (most consequential):
 
-- **✅ Clean fit (5)**: `news-summary`, `email-outbound`, `email-message`, `telegram-message`, `person`. Plus `doc` (which doesn't need a body — already split).
-- **⚠️ Workable with conventions (15)**: `memo`, `question`, `news-item`, `feedback`, `image`, `audio`, `file`, `record`, `recipe`, `news-job`, `intake-job`, `calendar-review-job`, `guide-revision-job`, `chat-job`, `question-followup-job`, `briefing`, `personality`. Most need a "primary prose in body, secondary prose in frontmatter `\|`-blocks" rule.
-- **❌ Genuinely fights the format (8)**: `news-brief`, `news-guide`, `procedure`, `procedure-run`, `capture-session`, `guide`, `chat-thread`, `landmark`, `todo-list`, `sheet`, `scheduled-script`. Subdivides further:
-  - **No prose body, all structure** (`guide`, `news-guide`, `procedure`, `procedure-run`, `landmark`, `sheet`, `scheduled-script`, `todo-list`): the markdown body literally has no purpose. Frontmatter-only is fine but raises the question "why is this a `.md` file at all?"
-  - **Mixed-content narrative** (`news-brief`): markdown body interleaved with structured elements that aren't naturally collapsible to frontmatter. The hardest single case.
-  - **Append-only timeline** (`chat-thread`, `capture-session.transcript`): YAML arrays of long-string events produce worse diffs and worse parse cost than today's XML. Genuine regression.
+- **✅ Clean fit (4)**: `email-outbound`, `email-message`, `telegram-message`, `person`. Plus `doc` (which doesn't need a body — already split).
+- **⚠️ Workable with conventions (11)**: `memo`, `question`, `feedback`, `image`, `audio`, `file`, `record`, `recipe`, `intake-job`, `calendar-review-job`, `chat-job`, `question-followup-job`, `briefing`, `personality`. Most need a "primary prose in body, secondary prose in frontmatter `\|`-blocks" rule.
+- **❌ Genuinely fights the format**: `procedure`, `procedure-run`, `capture-session`, `guide`, `chat-thread`, `landmark`, `todo-list`, `sheet`, `scheduled-script`. Subdivides further:
+  - **No prose body, all structure** (`guide`, `procedure`, `procedure-run`, `landmark`, `sheet`, `scheduled-script`, `todo-list`): the markdown body literally has no purpose. Frontmatter-only is fine but raises the question "why is this a `.md` file at all?"
+  - **Mixed-content narrative** (`capture-session.transcript`): markdown body interleaved with structured elements (text/silence/image markers) that aren't naturally collapsible to frontmatter. The hardest case.
+  - **Append-only timeline** (`chat-thread`): YAML arrays of long-string events produce worse diffs and worse parse cost than today's XML. Genuine regression.
 
 ### What this tells us
 
@@ -607,9 +600,9 @@ Counting verdicts on the body question (most consequential):
 
 2. **The body/frontmatter rule is workable but not free.** Three-quarters of schemas need a rule like "primary prose in body, secondary prose in `\|`-blocks, structural data in frontmatter." That rule is teachable but it's a new layer that today's "everything in XML" doesn't have.
 
-3. **A handful of schemas are actively worse in YAML/markdown.** `chat-thread` and `procedure-run.stdout` would balloon frontmatter unless we move them to attached files. `news-brief`'s inline structure either becomes MDX-style components or gets flattened into a worse representation. These cases alone don't kill the proposal but they're the ones to design against.
+3. **A handful of schemas are actively worse in YAML/markdown.** `chat-thread` and `procedure-run.stdout` would balloon frontmatter unless we move them to attached files. `capture-session.transcript`'s inline structure either becomes MDX-style components or gets flattened into a worse representation. These cases alone don't kill the proposal but they're the ones to design against.
 
-4. **About a third of schemas would have empty bodies.** `guide`, `procedure`, `landmark`, `sheet`, `scheduled-script`, `todo-list`, all the `*-job` cards. For those, "card as markdown" means "frontmatter-only file." That's coherent — but it's a different value proposition than "use markdown for prose content." If the goal is agent legibility, an empty body adds nothing; if the goal is uniformity of file extension, it's fine.
+4. **About a third of schemas would have empty bodies.** `guide`, `procedure`, `landmark`, `sheet`, `scheduled-script`, `todo-list`, the `*-job` cards. For those, "card as markdown" means "frontmatter-only file." That's coherent — but it's a different value proposition than "use markdown for prose content." If the goal is agent legibility, an empty body adds nothing; if the goal is uniformity of file extension, it's fine.
 
 5. **Refs are uniformly easy to translate.** Every existing ref pattern fits into either `{ ref: "path" }` objects in frontmatter or path strings in known fields. Convention to settle, not a hard problem. The `landmark` `ref` vs `template-ref` distinction needs deliberate schema design but isn't blocked.
 
@@ -621,11 +614,11 @@ This was the recommendation before considering structured-body markup options. S
 
 1. **Definitely do the `.attach/` change** for the six clear-win schemas (`image`, `audio`, `file`, `email-message`, `sheet`, `doc`) and the two container-cards (`capture-session`, `email-thread`). That's a concrete, separable improvement that captures the strongest claim ("ownership is mechanical") and doesn't depend on changing the body format.
 
-2. **Pilot the body format on the five cleanly-fitting schemas** (`memo`, `news-summary`, `email-outbound`, `telegram-message`, `person`) before committing to the full migration.
+2. **Pilot the body format on the cleanly-fitting schemas** (`memo`, `email-outbound`, `telegram-message`, `person`) before committing to the full migration.
 
 3. **Keep `chat-thread` in a different format** (likely JSONL) regardless.
 
-4. **Don't do `news-brief`, `procedure`, or `guide` in the new format** until everything else is proven.
+4. **Don't do `procedure`, `guide`, or the mixed-content body schemas in the new format** until everything else is proven.
 
 ## Format choice for structured-prose bodies
 
@@ -732,91 +725,66 @@ For the foreseeable use cases — error messages, source editor navigation, clic
 
 For each problem schema, the current XML form, the proposed MD form, where the friction is, and the best mitigation. The point of this section is to make the cost of the conventions concrete — if the examples look bad, the proposal is bad.
 
-### news-brief — inline mixed content
+### Inline mixed content (the canonical hard case)
 
-**The problem.** The `<content>` element holds markdown that is **interleaved with structural elements**: `<section>`, `<expando>`, `<query>`, `<excerpt>`, `<user-comment>`. Each has IDs and attributes. They can be nested. They appear in narrative order. Rendering relies on that order.
+**The problem.** Some card bodies hold markdown that is **interleaved with structural elements** — IDs, attributes, possibly nested, narrative order significant for rendering. The canonical case today is `capture-session.transcript`, with `<text>`/`<silence>`/`<image>` markers interleaved in voice-memo prose.
 
-Current XML (abridged):
+Concrete example:
 
 ```xml
-<news-brief>
-<curation guide-version="2026-02-01T10:00:00Z">
-<interest application="featured">AI safety</interest>
-<hypothesis id="h1">Technical depth will resonate</hypothesis>
-<rationale>Focusing on security themes that connect multiple stories</rationale>
-</curation>
-<title>The AI Winter That Wasn't</title>
-<date>2024-02-01</date>
-<byline>Recent developments suggest the opposite of a slowdown</byline>
-<content format="markdown">
-The past week has been remarkable for AI developments...
-
-<section id="s1" heading="The Big Three" link="https://example.com" via="HN">
-First, OpenAI announced...
-
-<expando title="Technical deep-dive" id="exp1">
-The implementation uses a novel approach...
-</expando>
-
-<excerpt source="Article Title" link="https://example.com">
-"The protection routine performed I/O operations..."
-</excerpt>
-</section>
-
-<query id="q1" prompt="Which interests you most?">
-Your answer will help focus future coverage.
-</query>
-</content>
+<capture-session id="kitchen-2026-05-22" started-at="2026-05-22T09:14:00Z">
+<title>Kitchen brainstorm</title>
+<participants>
+<person ref="people/Self" />
+</participants>
+<transcript>
+<text speaker="self" start="0.0" end="6.4">
+Okay, so for the kitchen reno, I think we want to start with the cabinets...
+</text>
+<silence start="6.4" end="8.1" />
+<image ref="photo-001.image.card" caption="Pinterest reference — shaker doors" />
+<text speaker="self" start="8.1" end="14.2">
+...something like this. White uppers, dark base. Then we figure out the counter.
+</text>
+<image ref="photo-002.image.card" caption="Counter sample swatches" />
+<text speaker="self" start="14.2" end="22.0">
+The contractor said quartz is easier to maintain than soapstone, but I really like
+how the soapstone ages.
+</text>
+</transcript>
 <sources>
-<source path="store/archive/news/Article.news-item.card" usage="primary">Article Title</source>
+<source path="store/archive/refs/contractor-quote.file.card" usage="primary">Contractor quote PDF</source>
 </sources>
-</news-brief>
+</capture-session>
 ```
 
 #### Option A — MDX-style components in body
 
 ```markdown
 ---
-title: The AI Winter That Wasn't
-date: 2024-02-01
-byline: Recent developments suggest the opposite of a slowdown
-curation:
-  guide-version: 2026-02-01T10:00:00Z
-  interests:
-    - { topic: AI safety, application: featured }
-  hypotheses:
-    - { id: h1, text: Technical depth will resonate }
-  rationale: |
-    Focusing on security themes that connect multiple stories
+title: Kitchen brainstorm
+started-at: 2026-05-22T09:14:00Z
+participants:
+  - { ref: people/Self }
 sources:
-  - { ref: store/archive/news/Article.news-item.card, usage: primary, title: "Article Title" }
+  - { ref: store/archive/refs/contractor-quote.file.card, usage: primary, title: "Contractor quote PDF" }
 ---
 
-The past week has been remarkable for AI developments...
+<text speaker="self" start="0.0" end="6.4">
 
-<section id="s1" heading="The Big Three" link="https://example.com" via="HN">
+Okay, so for the kitchen reno, I think we want to start with the cabinets...
 
-First, OpenAI announced...
+</text>
 
-<expando title="Technical deep-dive" id="exp1">
+<silence start="6.4" end="8.1" />
 
-The implementation uses a novel approach...
+<image ref="photo-001.image.card" caption="Pinterest reference — shaker doors" />
 
-</expando>
+<text speaker="self" start="8.1" end="14.2">
 
-<excerpt source="Article Title" link="https://example.com">
+...something like this. White uppers, dark base. Then we figure out the counter.
 
-"The protection routine performed I/O operations..."
-
-</excerpt>
-
-</section>
-
-<query id="q1" prompt="Which interests you most?">
-
-Your answer will help focus future coverage.
-
-</query>
+</text>
 ```
 
 This is essentially MDX. We commit to a markdown-with-custom-elements parser. CommonMark with embedded HTML almost works (HTML blocks need blank lines around them and don't get markdown-rendered inside by default). MDX does what we need but it's a bigger dependency.
@@ -827,56 +795,34 @@ This is essentially MDX. We commit to a markdown-with-custom-elements parser. Co
 
 ```markdown
 ---
-title: The AI Winter That Wasn't
-date: 2024-02-01
-byline: Recent developments suggest the opposite of a slowdown
-sections:
-  - id: s1
-    heading: The Big Three
-    link: https://example.com
-    via: HN
-    text: |
-      First, OpenAI announced...
-    expandos:
-      - id: exp1
-        title: Technical deep-dive
-        text: |
-          The implementation uses a novel approach...
-    excerpts:
-      - source: Article Title
-        link: https://example.com
-        text: |
-          "The protection routine performed..."
-queries:
-  - id: q1
-    prompt: Which interests you most?
-    text: |
-      Your answer will help focus future coverage.
+title: Kitchen brainstorm
+started-at: 2026-05-22T09:14:00Z
+text-segments:
+  - { speaker: self, start: 0.0, end: 6.4, text: "Okay, so for the kitchen reno..." }
+  - { speaker: self, start: 8.1, end: 14.2, text: "...something like this. White uppers, dark base..." }
+silences:
+  - { start: 6.4, end: 8.1 }
+image-markers:
+  - { after: 6.4, ref: photo-001.image.card, caption: "Pinterest reference — shaker doors" }
+  - { after: 14.2, ref: photo-002.image.card, caption: "Counter sample swatches" }
 ---
-
-The past week has been remarkable for AI developments...
 ```
 
-**Cost:** loses narrative ordering. If a section contains text-then-expando-then-more-text-then-another-expando, you can't represent that without either (a) splitting the section text into pre/post pieces with an "interleave" rule, or (b) typed-array-of-parts (Option C). Renderer reconstructs ordering from frontmatter slot semantics.
+**Cost:** loses narrative ordering as primary representation. Reconstruction relies on time-based interleaving — workable for a strictly time-keyed transcript but breaks down for any structured-narrative card where ordering isn't a sortable scalar.
 
 #### Option C — Typed AST in frontmatter, body unused
 
 ```yaml
-content:
-  - { type: text, text: "The past week has been remarkable..." }
-  - type: section
-    id: s1
-    heading: The Big Three
-    parts:
-      - { type: text, text: "First, OpenAI announced..." }
-      - { type: expando, id: exp1, title: Technical deep-dive, text: "The implementation uses..." }
-      - { type: excerpt, source: Article Title, link: https://example.com, text: "..." }
-  - { type: query, id: q1, prompt: "Which interests you most?", text: "..." }
+transcript:
+  - { type: text, speaker: self, start: 0.0, end: 6.4, text: "Okay, so for the kitchen reno..." }
+  - { type: silence, start: 6.4, end: 8.1 }
+  - { type: image, ref: photo-001.image.card, caption: "Pinterest reference" }
+  - { type: text, speaker: self, start: 8.1, end: 14.2, text: "...something like this..." }
 ```
 
 This is JSON-in-YAML. The `.md` extension is misleading — the body is dead weight. It's the most rigorous option but the worst on "agents handle MD better than XML" (it's worse than XML for agent legibility).
 
-**Verdict on these three options.** Option A (MDX) is the only one that preserves narrative ordering, but commits us to a JS-evaluating parser we don't want. Options B and C destroy ordering or kill the body's purpose. **Without a fourth option, news-brief stays XML.**
+**Verdict on these three options.** Option A (MDX) is the only one that preserves narrative ordering, but commits us to a JS-evaluating parser we don't want. Options B and C destroy ordering or kill the body's purpose. **Without a fourth option, mixed-content cards stay XML.**
 
 #### Option D — Markdoc
 
@@ -884,53 +830,36 @@ Markdoc handles this case cleanly:
 
 ```markdown
 ---
-title: The AI Winter That Wasn't
-date: 2024-02-01
-byline: Recent developments suggest the opposite of a slowdown
-curation:
-  guide-version: 2026-02-01T10:00:00Z
-  interests:
-    - { topic: AI safety, application: featured }
-  hypotheses:
-    - { id: h1, text: Technical depth will resonate }
-  rationale: Focusing on security themes that connect multiple stories
+title: Kitchen brainstorm
+started-at: 2026-05-22T09:14:00Z
+participants:
+  - { ref: people/Self }
 sources:
-  - { ref: store/archive/news/Article.news-item.card, usage: primary, title: "Article Title" }
+  - { ref: store/archive/refs/contractor-quote.file.card, usage: primary, title: "Contractor quote PDF" }
 ---
 
-The past week has been remarkable for AI developments...
+{% text speaker="self" start="0.0" end="6.4" %}
+Okay, so for the kitchen reno, I think we want to start with the cabinets...
+{% /text %}
 
-{% section id="s1" heading="The Big Three" link="https://example.com" via="HN" %}
+{% silence start="6.4" end="8.1" /%}
 
-First, OpenAI announced a major shift. The author argues we should reframe 
-the problem entirely.
+{% image ref="photo-001.image.card" caption="Pinterest reference — shaker doors" /%}
 
-{% expando id="exp1" title="Technical deep-dive" %}
-The implementation uses a novel approach where memory bandwidth is the 
-binding constraint rather than compute throughput...
-{% /expando %}
-
-{% excerpt source="Article Title" link="https://example.com" %}
-"The protection routine performed I/O operations with the dongle but 
-always returned the same hardcoded constant."
-{% /excerpt %}
-
-{% /section %}
-
-{% query id="q1" prompt="Which interests you most?" %}
-Your answer will help focus future coverage.
-{% /query %}
+{% text speaker="self" start="8.1" end="14.2" %}
+...something like this. White uppers, dark base. Then we figure out the counter.
+{% /text %}
 ```
 
-Inline excerpts work too, mid-paragraph:
+Inline markers work too, mid-paragraph:
 
 ```markdown
-The author argues we should reframe the problem. {% excerpt source="Article" link="https://x.com" %}"the protection routine performed I/O operations"{% /excerpt %} which contradicts the earlier claim.
+The contractor suggested {% image ref="photo-002.image.card" caption="counter swatches" /%} quartz over soapstone for maintenance.
 ```
 
-Markdown renders inside tags by default. Schema validates `<section>` requires `heading`, `<expando>` requires `title`, `<query>` requires `prompt`, `<source>` paths resolve, etc. Line numbers attach to validation errors. Narrative order is preserved verbatim.
+Markdown renders inside tags by default. Schema validates `<text>` requires `speaker`/`start`/`end`, `<image>` requires `ref`, etc. Line numbers attach to validation errors. Narrative order is preserved verbatim.
 
-**Markdoc verdict for news-brief.** This is the strongest single argument for adopting Markdoc system-wide. The card stops being a special case — it becomes a structured narrative just like every other Markdoc-using card.
+**Markdoc verdict for inline mixed content.** This is the strongest single argument for adopting Markdoc system-wide. Mixed-content cards stop being a special case — they become structured narratives just like every other Markdoc-using card.
 
 ### chat-thread — append-only timeline
 
@@ -1049,17 +978,17 @@ Better than YAML for diffs (each message is line-bounded and an append doesn't r
 
 ### procedure-run — unbounded stdout
 
-**The problem.** `<stdout>` text inside a step's `<run>` phase is unbounded. A single `cb fetch-all-news` run can produce thousands of lines. Today this lives inline in the XML, which is already a wart — agents reading the run card load the whole stdout into context whether they need it or not.
+**The problem.** `<stdout>` text inside a step's `<run>` phase is unbounded. A single capture-processing run can produce thousands of lines of transcription and image-description output. Today this lives inline in the XML, which is already a wart — agents reading the run card load the whole stdout into context whether they need it or not.
 
 Current XML (single step shown):
 
 ```xml
-<procedure-run procedure="news-sync" status="completed" started-at="..." completed-at="...">
-<step id="check-feeds" status="completed" started-at="..." completed-at="...">
+<procedure-run procedure="process-captures" status="completed" started-at="..." completed-at="...">
+<step id="transcribe" status="completed" started-at="..." completed-at="...">
 <run>
-<stdout>Fetched 47 items from 12 feeds.
-Created 5 new news-job cards.
-Skipped 42 already-known items.
+<stdout>Transcribed 5 clips across 2 capture sessions.
+Created 5 transcription blocks.
+Skipped 0 already-transcribed clips.
 [... potentially 1000s of lines ...]
 </stdout>
 <git-ref>abc123</git-ref>
@@ -1071,33 +1000,33 @@ Skipped 42 already-known items.
 #### Best path — move stdout to attached files
 
 ```
-procedure/runs/news-sync_20260221T0800/
+procedure/runs/process-captures_20260221T0800/
   run.procedure-run.card
   run.attach/
-    check-feeds.run.stdout.txt
-    fetch-articles.run.stdout.txt
+    transcribe.run.stdout.txt
+    describe-images.run.stdout.txt
 ```
 
 `run.procedure-run.card`:
 
 ```markdown
 ---
-procedure: news-sync
+procedure: process-captures
 status: completed
 started-at: 2026-02-21T08:00:00Z
 completed-at: 2026-02-21T08:03:00Z
 steps:
-  - id: check-feeds
+  - id: transcribe
     status: completed
     started-at: 2026-02-21T08:00:01Z
     completed-at: 2026-02-21T08:00:30Z
     run:
-      stdout-file: check-feeds.run.stdout.txt
+      stdout-file: transcribe.run.stdout.txt
       git-ref: abc123
-  - id: fetch-articles
+  - id: describe-images
     status: completed
     run:
-      stdout-file: fetch-articles.run.stdout.txt
+      stdout-file: describe-images.run.stdout.txt
       git-ref: def456
 ---
 ```
@@ -1421,28 +1350,26 @@ The body, which would otherwise be empty, now holds the structured links natural
 ```markdown
 ---
 version: 1.0.0
-job-types: news-job
-applies-to: Use when processing news items from RSS feeds
+job-types: intake-job
+applies-to: Use when triaging new inbox items (memos, bookmarks, captures)
 triage:
   rules: []
-  default-action: { action: Write Brief, text: "When no specific rule applies, include if technical and substantive" }
+  default-action: { action: Ask User, text: "When unsure about an item, ask the user what to do with it" }
 actions:
-  - name: Write Brief
-    when: After processing news items, when there are enough worth covering
+  - name: Archive
+    when: Item is useful reference material
     instructions: |
-      Group by theme. Use direct headlines. Include expandos for depth.
-  - name: Skip
-    when: Item doesn't match interests
-    instructions: Trash the item with cb rm
+      Move to store/archive/ with appropriate subdirectory.
+  - name: Trash
+    when: Item is not useful or relevant
+    instructions: Use cb rm to soft-delete
 experiments:
   - id: exp-initial
     status: active
     created-at: 2026-02-01T00:00:00Z
-    hypothesis: Initial triage rules need calibration through reader feedback
-    approach: Present diverse content, note what gets engagement vs gets skipped
-reactions:
-  - { id: too-long, sentiment: negative, text: This felt too long }
-  - { id: want-more, sentiment: positive, text: I want more on this topic }
+    hypothesis: Initial triage rules need calibration through user feedback
+    approach: Triage conservatively, ask when unsure, learn from answers
+reactions: []
 context-notes: []
 ---
 ```
@@ -1458,13 +1385,13 @@ Body: empty. Just `---` frontmatter and a newline.
 
 <!-- Compiled view (auto-generated from frontmatter — do not edit) -->
 
-# News Guide
+# Intake Guide
 
-Use when processing news items from RSS feeds.
+Use when triaging new inbox items.
 
 ## Actions
-### Write Brief
-**When:** After processing news items...
+### Archive
+**When:** Item is useful reference material...
 ```
 
 Looks nice. But:
@@ -1488,42 +1415,41 @@ Markdoc changes the empty-body picture for several of these cards. Instead of fr
 ```markdown
 ---
 version: 1.0.0
-job-types: news-job
+job-types: intake-job
 ---
 
-Use when processing news items from RSS feeds.
+Use when triaging new inbox items.
 
 ## Triage
 
-{% rule confidence="low" source="default" action="Convert to Recipe" %}
+{% rule confidence="high" source="user-stated" action="Convert to Recipe" %}
 Recipes and cooking content
 {% /rule %}
 
-{% rule confidence="medium" source="feedback" action="Skip" ref="briefs/2026-01-15.news-brief.card" %}
-Cryptocurrency price news — explicitly disinterested per user feedback
+{% rule confidence="medium" source="feedback" action="Archive" ref="store/archive/refs/2026-01-15-tax-docs.memo.card" %}
+Tax documents — keep, file under store/archive/finance
 {% /rule %}
 
-By default, {% default-action action="Write Brief" /%} — include if it 
-seems technical and substantive.
+By default, {% default-action action="Ask User" /%} — when in doubt, surface 
+the item as a question rather than guessing.
 
 ## Actions
 
-{% action name="Write Brief" %}
-After processing news items, when there are enough worth covering: group by 
-theme, use direct headlines, include expandos for depth. Reference the guide 
-for tone and style preferences.
+{% action name="Archive" %}
+When an item is useful reference material: move to `store/archive/` under 
+the appropriate subdirectory, preserving the original basename.
 {% /action %}
 
-{% action name="Skip" %}
-When an item doesn't match interests or is low quality: trash with `cb rm`.
+{% action name="Trash" %}
+When an item isn't useful or relevant: soft-delete with `cb rm`.
 {% /action %}
 
 ## Experiments
 
 {% experiment id="exp-initial" status="active" created-at="2026-02-01T00:00:00Z" %}
-**Hypothesis:** Initial triage rules need calibration through reader feedback.
+**Hypothesis:** Initial triage rules need calibration through user feedback.
 
-**Approach:** Present diverse content, note what gets engagement vs gets skipped.
+**Approach:** Triage conservatively, ask when unsure, learn from answers.
 {% /experiment %}
 ```
 
@@ -1584,7 +1510,7 @@ The opening paragraph (today's compiled `<description>`) is the natural lead. Co
 
 **Cards that benefit from the Markdoc reframe:**
 
-- `guide` / `news-guide` — collapses source/compiled split (above).
+- `guide` — collapses source/compiled split (above).
 - `personality` — same.
 - `landmark` — body holds the link/expand structure naturally.
 - `procedure` — phases and steps could be Markdoc tags with prose `<why>` content rendered as commentary. Worth doing.
@@ -1592,7 +1518,7 @@ The opening paragraph (today's compiled `<description>`) is the natural lead. Co
 
 **Cards that don't benefit much from Markdoc:**
 
-- All the `*-job` cards (`news-job`, `intake-job`, etc.) — the body would be one short description sentence and a list of refs. Either stays frontmatter-only or has a `{% description %}` tag and a list of `{% item ref="..." /%}` tags. Marginal improvement.
+- All the `*-job` cards (`intake-job`, `chat-job`, etc.) — the body would be one short description sentence and a list of refs. Either stays frontmatter-only or has a `{% description %}` tag and a list of `{% item ref="..." /%}` tags. Marginal improvement.
 - `scheduled-script` — pure config, no prose.
 - `procedure-run` — pure execution log, no prose.
 - `sheet`, `doc` — already correctly modeled (metadata + sibling content file).
@@ -1645,7 +1571,7 @@ User points at the couch and describes its condition.
 
 The structured data is still present and validated. But it's read as natural sentences. The agent (or human) reading the card gets the description AND the structured facts in source order, no jumping between fields.
 
-This is the strongest single example of why Markdoc's inline tags matter for our schemas — several cards (`record`, `memo`, `briefing`, `personality`'s relationship notes, `news-brief`'s inline excerpts) have the same "structured fact embedded in prose" pattern that XML forced into separate child elements.
+This is the strongest single example of why Markdoc's inline tags matter for our schemas — several cards (`record`, `memo`, `briefing`, `personality`'s relationship notes) have the same "structured fact embedded in prose" pattern that XML forced into separate child elements.
 
 ### Recipe and todo-list — workable but verbose
 
@@ -1709,7 +1635,7 @@ Most todo-lists won't go past depth 2. Fine.
 
 The audit's awkward cases mostly resolve when we pick Markdoc as the body-content format rather than plain markdown. The picture changes substantially:
 
-1. **`news-brief` stops being a hard line.** Markdoc's tags-with-markdown-inside handles inline mixed content natively. The card becomes ordinary instead of needing its own special format.
+1. **Mixed-content cards stop being a hard line.** Markdoc's tags-with-markdown-inside handles interleaved structure (capture-session transcripts, future narrative-with-components schemas) natively. Such cards become ordinary instead of needing their own special format.
 
 2. **Multi-prose schemas (image, audio, feedback, memo-voice) get a clean home.** Secondary prose blocks become Markdoc body tags or paragraph annotations rather than frontmatter `|`-blocks. The body shows what's in the card in source order, all schema-validated.
 
@@ -1737,10 +1663,9 @@ This phase also unlocks **moving stdout out of `procedure-run`** into attached t
 
 ### Phase 2 — Markdoc pilot on cleanly-fitting schemas
 
-Convert the five clean-fit schemas to Markdoc + YAML frontmatter:
+Convert the clean-fit schemas to Markdoc + YAML frontmatter:
 
 - `memo` — text in body; voice transcription as `{% transcription %}` tag in body
-- `news-summary` — content in body
 - `email-outbound` — body in body
 - `telegram-message` — text in body
 - `person` — notes in body
@@ -1756,10 +1681,10 @@ These have unambiguous body content and are low-risk to migrate. Also do `record
 Convert the cards where Markdoc's tags-and-annotations-in-body shape unlocks real improvement:
 
 - `image`, `audio`, `feedback` — multi-prose blocks as body tags
-- `news-brief` — sections, expandos, queries, excerpts as native body structure
+- `capture-session` — transcript as interleaved text/silence/image body tags
 - `briefing` — purpose in body; key-people as structured tags; corrections as tags
 - `landmark` — links and expand structure in body
-- `guide`, `news-guide`, `personality` — collapse source/compiled split
+- `guide`, `personality` — collapse source/compiled split
 
 This is where Markdoc earns its keep. Don't start until phase 2 has demonstrated that the tooling and agent UX are working.
 
@@ -1828,7 +1753,7 @@ The new format has to keep that discoverability and rewriteability or we lose ma
 Two distinct concepts that today's `ref="..."` muddles when used loosely:
 
 - **Refs** point **inside the box** — to another card, or to a file in this card's `.attach/` scope. They must resolve. They're rewritten when files move. Examples: `<context ref="related.memo.card">`, `<message-ref ref="msg-001.email-message.card">`, `<filename ref="photo.jpg">`.
-- **Hrefs** point **outside the box** — http/https URLs. Not validated for resolution by default (optional network probe). Not rewritten by file moves. Examples: `<context url="https://news.ycombinator.com/...">`, `<link>https://example.com/article</link>`.
+- **Hrefs** point **outside the box** — http/https URLs. Not validated for resolution by default (optional network probe). Not rewritten by file moves. Examples: `<context url="https://example.com/...">`, `<link>https://example.com/article</link>`.
 
 (Today's schemas use `url=`, `link>`, and `href` interchangeably for the external case. The new format can pick one — `href` reads as "the HTML thing for external links," which is exactly the meaning we want.)
 
@@ -1851,8 +1776,8 @@ Frontmatter:
 
 ```yaml
 context:
-  ref: news/HN_thread.news-item.card      # card ref (field name = "ref")
-  url: https://news.ycombinator.com/... # URL (field name = "url")
+  ref: threads/HN_thread.record.card      # card ref (field name = "ref")
+  url: https://example.com/... # URL (field name = "url")
 audio-ref: audio.m4a                     # card ref? attachment path? Ambiguous.
 ```
 
@@ -1890,8 +1815,8 @@ Use YAML's tag syntax to mark refs explicitly:
 
 ```yaml
 context:
-  ref: !card-ref news/HN_thread.news-item.card
-  url: !url https://news.ycombinator.com/...
+  ref: !card-ref threads/HN_thread.record.card
+  url: !url https://example.com/...
 audio: !attachment audio.m4a
 ```
 
@@ -1905,12 +1830,12 @@ Refs are always represented as objects with a `ref` key. The detection rule is "
 
 ```yaml
 context:
-  ref: news/HN_thread.news-item.card
+  ref: threads/HN_thread.record.card
 participants:
   - { ref: people/Alice.person.card }
   - { ref: people/Bob.person.card }
 sources:
-  - ref: store/archive/news/Article.news-item.card
+  - ref: store/archive/articles/Article.record.card
     usage: primary
     title: "Article Title"
 ```
@@ -1926,7 +1851,7 @@ Refs live where their content lives:
 - **Contextual refs** (the common case) → **Markdoc tag with the reason in body or in an attribute**. Body works for paragraph-length explanations and for inline display text; an attribute works for one-liners and self-closing inline tags. Schema's `Ref` attribute type validates resolution; schema can require *either* body content or a known reason-carrying attribute (`reason`, `note`, `usage`, etc.) to be present.
   ```markdown
   Block form (body):
-  {% source ref="store/archive/news/Article.news-item.card" %}
+  {% source ref="store/archive/articles/Article.record.card" %}
   Used this for the framing of the third paragraph.
   {% /source %}
 
@@ -1952,7 +1877,7 @@ Refs live where their content lives:
 - **Hrefs** (external URLs) → **bare strings in schema-declared fields**. Schema says `{ type: "string", format: "uri" }`.
   ```yaml
   context:
-    href: https://news.ycombinator.com/item?id=46922049
+    href: https://example.com/item?id=46922049
   ```
 
 This gives:
@@ -1961,7 +1886,7 @@ This gives:
 - **Validation distinguishes the cases.** Body refs go through the Markdoc `Ref` attribute type. Frontmatter refs go through the YAML walker. Both produce errors with line numbers. Attachment paths and hrefs validate via JSON Schema `format`.
 - **Refs and hrefs can sit side by side** in the same field without colliding:
   ```markdown
-  {% context ref="news/HN_thread.news-item.card" href="https://news.ycombinator.com/item?id=46922049" %}
+  {% context ref="threads/HN_thread.record.card" href="https://example.com/item?id=46922049" %}
   Linked from the Hacker News discussion.
   {% /context %}
   ```
@@ -1982,7 +1907,7 @@ source: dropbox
 
 I'd like to share this with {% person ref="people/Priya.person.card" %}who's working on similar consistency problems{% /person %}.
 
-{% context href="https://news.ycombinator.com/item?id=46922049" %}
+{% context href="https://example.com/item?id=46922049" %}
 Linked from the HN thread on distributed systems consensus.
 {% /context %}
 ```
@@ -2061,47 +1986,6 @@ Notes:
 - `images`, `audio-clips`, `files` are arrays of card-ref objects. Even with no extra metadata, the wrap is uniform.
 - Inline `{% image-ref %}` in the body uses the same path. Cross-validated: every body image-ref must also appear in frontmatter `images` (or vice-versa, depending on which we make canonical).
 
-#### news-brief
-
-```markdown
----
-title: The AI Winter That Wasn't
-date: 2024-02-01
-curation:
-  guide-version: 2026-02-01T10:00:00Z
-  interests:
-    - { topic: "AI safety", application: featured }
-  hypotheses:
-    - { id: h1, text: "Technical depth will resonate" }
----
-
-The past week has been remarkable...
-
-{% section id="s1" heading="The Big Three" href="https://example.com" via="HN" %}
-
-First, OpenAI announced a major shift, citing 
-{% excerpt ref="store/archive/news/Article.news-item.card" href="https://example.com" %}
-"the protection routine performed I/O operations"
-{% /excerpt %}.
-
-{% /section %}
-
-{% sources %}
-{% source ref="store/archive/news/Article.news-item.card" usage="primary" %}
-Primary source for the framing in section 1 — author's argument about hardware-software co-design.
-{% /source %}
-{% source ref="store/archive/news/Other.news-item.card" usage="supporting" %}
-Cited in the expando about benchmark methodology.
-{% /source %}
-{% /sources %}
-```
-
-Notes:
-- Sources moved from frontmatter to body. Each `{% source %}` carries the explanation of how the source was used — that context lived in the schema as a `usage` attribute today, but the body text is much richer.
-- Section's `href` is the external URL.
-- Excerpt has both a `ref` (the news-item card it came from) and an `href` (the original article URL). Refs and hrefs coexist on the same tag.
-- `curation` stays in frontmatter — it's structured editorial metadata, not contextual refs.
-
 #### feedback (with path-fragment ref)
 
 ```markdown
@@ -2111,7 +1995,7 @@ source: voice
 timestamp: 2026-02-01T18:48:52Z
 ---
 
-{% target ref="box/output/briefs/2026-02-01_news.news-brief.card#q1" %}
+{% target ref="store/briefings/2026-02-01.briefing.card#q1" %}
 Responding to the query about which sections were most helpful.
 {% /target %}
 
@@ -2122,7 +2006,7 @@ This section was really helpful, especially the part about hardware constraints.
 
 Notes:
 - `target` moves to body as a contextual ref — its body text is the brief explanation of what's being responded to, which today is implicit (you have to read the target).
-- `target ref` includes `#fragment`. The `Ref` validator parses two stages: (a) does `box/output/briefs/2026-02-01_news.news-brief.card` exist? (b) does that card contain an element with `id="q1"`? Both stages produce line-located errors on failure.
+- `target ref` includes `#fragment`. The `Ref` validator parses two stages: (a) does `store/briefings/2026-02-01.briefing.card` exist? (b) does that card contain an element with `id="q1"`? Both stages produce line-located errors on failure.
 
 #### email-outbound
 
@@ -2165,7 +2049,7 @@ Notes:
 
 A consistent path-resolution convention across all three categories:
 
-- **Leading `/`** — absolute from box root. Example: `ref: /store/archive/news/foo.news-item.card`.
+- **Leading `/`** — absolute from box root. Example: `ref: /store/archive/articles/Foo.record.card`.
 - **No leading `/`** — relative to the card's directory. Example: `ref: msg-001.email-message.card` in a thread folder. Example: in a capture-session, `images: [{ ref: photo-001.image.card }]`.
 - **Attachment paths** — relative to the card's `{basename}.attach/` directory. Schema-declared via `format: attachment-path`. Example: `audio: voice-memo-001.webm` resolves to `Voice_Memo.attach/voice-memo-001.webm`.
 
@@ -2186,7 +2070,7 @@ Errors include line numbers from either YAML's parser (for frontmatter errors) o
 box/inbox/foo.memo.card:14: Ref does not resolve: people/Priya.person.card
 box/inbox/scan-XXXX/scan-XXXX.capture-session.card:7: Inline image-ref "photo-099.image.card" not in frontmatter `images` list
 store/recipes/Norma.recipe.card:23: Attachment path "norma.jpg" not found at Norma.attach/norma.jpg
-box/output/briefs/2026-02-01_news.news-brief.card:42: Source ref has neither body content nor a `note`/`reason`/`usage` attribute (contextual refs need to explain why they're there)
+store/briefings/2026-02-01.briefing.card:42: Source ref has neither body content nor a `note`/`reason`/`usage` attribute (contextual refs need to explain why they're there)
 ```
 
 That last error is enforced as a schema rule on contextual ref tags: empty body AND missing all known reason-carrying attributes is a warning or error, configurable per tag. This codifies the "refs almost always have a reason" principle — if you can't write a sentence about why this ref is here, the ref probably doesn't belong.
@@ -2287,7 +2171,6 @@ src/schemas/
     memo.ts                # frontmatter Zod + bodyTags list + optional validator
     image.ts
     capture-session.ts
-    news-brief.ts
     landmark.ts
     person.ts
     ...

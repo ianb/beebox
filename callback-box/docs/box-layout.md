@@ -94,7 +94,7 @@ Mostly hand-edited by humans, but `cb init` installs templates.
 | `config/schemas/` | Box-local card-type definitions (Zod + cardworks). Has its own CLAUDE.md. |
 | `config/procedures/` | Procedure cards (`*.procedure.card`). `cb init` installs default templates. |
 | `config/schedules/` | Scheduled-script cards (`*.scheduled-script.card`). Disabled by default after `cb init`. |
-| `config/*.guide.card` | Guide cards (intake, news, calendar) — agent-facing handling rules. |
+| `config/*.guide.card` | Guide cards (intake, calendar, chat) — agent-facing handling rules. |
 | `config/main.personality.card` | Personality card — voice and behavior tuning for the box's agent. |
 | `config/transcription.json` | Voice-memo transcription settings. |
 

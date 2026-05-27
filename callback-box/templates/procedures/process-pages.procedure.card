@@ -83,7 +83,7 @@
         **If it's a pages-todo item with clear action:**
         Route based on what the action should be:
         - Reading material → box/pool/reading/
-        - News-like content → box/inbox/news/ (will be picked up by process-news)
+        - Reference material → store/catalogs/&lt;category&gt;/
 
         **If you're unsure what to do:**
         Create a question card asking the user. This is ENCOURAGED — don't guess:
