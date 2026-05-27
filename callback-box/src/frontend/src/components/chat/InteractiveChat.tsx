@@ -622,7 +622,7 @@ function ChatInputArea({
   const circleBtn = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
   return (
-    <div className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
+    <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="flex items-center gap-2">
         {/* Add menu: camera (coming soon), attach file. Capture lives here in the future. */}
         <Dropdown
@@ -798,7 +798,7 @@ function ChatInputArea({
           )}
         </button>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -2296,8 +2296,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       ) : null}
     <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
       {/* Header with debug controls */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
-        <h2 className="text-sm font-semibold text-white tracking-wide">Chat</h2>
+      <header className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
+        <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
         <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
         <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={handleToggleNarration} />
         <div className="flex-1" />
@@ -2327,7 +2327,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           narrationEnabled={narrationEnabled}
           onToggleNarration={handleToggleNarration}
         />
-      </div>
+      </header>
       {/* Messages area — virtualized */}
       <VirtualizedMessageList
         messages={messages}

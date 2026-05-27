@@ -153,10 +153,20 @@ function CommitRow({
   const triggeredBy = trailerString(commit.trailers?.["Triggered-By"]);
   const duration = prevCommitDate ? formatDuration(prevCommitDate, commit.date) : null;
 
+  const ariaLabel = [
+    `Commit ${commit.hash.substring(0, 7)}`,
+    commit.subject,
+    relativeTime(commit.date),
+    phase ? `phase ${phase}` : null,
+    triggeredBy ? `triggered by ${triggeredBy}` : null,
+  ].filter((v): v is string => v !== null).join(", ");
+
   return (
     <button
       onClick={onSelect}
       {...cbSource("commit", commit.hash)}
+      aria-label={ariaLabel}
+      aria-current={isSelected ? "true" : undefined}
       className={`w-full text-left px-3 py-2 hover:bg-warm-50 transition-colors ${
         isSelected ? "bg-info-50 border-r-2 border-primary" : ""
       }`}

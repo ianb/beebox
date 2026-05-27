@@ -207,7 +207,7 @@ function PageHeader({
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-bold text-warm-900 truncate" title={data.path}>{data.path}</h2>
+          <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>{data.path}</h1>
           <div className="flex items-center gap-2 mt-1">
             {data.tagName ? <span className="text-sm text-warm-600">Type: {data.tagName}</span> : null}
             {data.status ? <StatusBadge status={data.status} /> : null}

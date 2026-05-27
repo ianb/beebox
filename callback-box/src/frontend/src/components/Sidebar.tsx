@@ -61,7 +61,7 @@ export function Sidebar({
         <>
           <div className="px-3 py-2 border-b bg-warm-50 flex-shrink-0 flex items-center justify-between">
             <div className="min-w-0">
-              <h2 className="text-sm font-medium text-warm-700 truncate">{title}</h2>
+              <h1 className="text-sm font-medium text-warm-700 truncate">{title}</h1>
               {subtitle ? <div className="text-xs text-warm-500 truncate">{subtitle}</div> : null}
             </div>
             <button
