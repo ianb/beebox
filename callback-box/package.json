@@ -120,6 +120,9 @@
     "ignoredBuiltDependencies": [
       "@ianbicking/personal-vibe-check"
     ],
+    "overrides": {
+      "whatwg-url": "^14"
+    },
     "peerDependencyRules": {
       "allowedVersions": {
         "eslint-plugin-react-hooks": "7"

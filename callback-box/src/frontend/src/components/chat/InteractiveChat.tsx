@@ -22,7 +22,8 @@ import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { detectKeyword } from "../../lib/speech-keywords";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
-import { parseAllSpeechTags, VALID_VOICES, type SpeechSegment } from "../../lib/speech-parsing";
+import { parseAllSpeechTags, isTTSVoice, type SpeechSegment } from "../../lib/speech-parsing";
+import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import { getTTSClient } from "../../lib/tts-client";
 import { unlockAudioContext } from "../../lib/audio-context";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
@@ -1668,13 +1669,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   // Load voice config from personality on mount
   useEffect(() => {
     fetch(`${getApiBase()}/chat/voice-config`)
-      .then((r) => r.json())
-      .then((config: { model?: string; instructions?: string[] }) => {
+      .then((r) => r.json() as Promise<CompiledSpeakingVoice>)
+      .then((config) => {
         const tts = getTTSClient();
-        if (config.model && (VALID_VOICES as readonly string[]).includes(config.model as typeof VALID_VOICES[number])) {
-          tts.setVoiceConfig({ voice: config.model as typeof VALID_VOICES[number] });
+        if (config.model && isTTSVoice(config.model)) {
+          tts.setVoiceConfig({ voice: config.model });
         }
-        if (config.instructions?.length) {
+        if (config.instructions && config.instructions.length > 0) {
           tts.setVoiceConfig({ baseInstructions: config.instructions.join(" ") });
         }
       })

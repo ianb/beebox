@@ -37,9 +37,20 @@ const BoxholderEntry = z.object({
   relationships: z.array(RelationshipEntry).optional(),
 });
 
+export const VOICE_MODELS = [
+  "alloy", "ash", "ballad", "cedar", "coral", "echo",
+  "fable", "marin", "onyx", "nova", "sage", "shimmer", "verse",
+] as const;
+export type VoiceModel = typeof VOICE_MODELS[number];
+
 const SpeakingVoiceEntry = z.object({
-  model: z.string().optional(),
+  model: z.enum(VOICE_MODELS).optional(),
   instructions: z.array(z.string()).optional(),
+});
+
+export const CompiledSpeakingVoiceSchema = z.object({
+  model: z.enum(VOICE_MODELS).optional(),
+  instructions: z.array(z.string()),
 });
 
 const ToneInstruction = z.object({
@@ -190,7 +201,7 @@ export interface PersonalityFields {
     }>;
   };
   "speaking-voice"?: {
-    model?: string;
+    model?: VoiceModel;
     instructions?: string[];
   };
   tone?: Array<{
@@ -326,7 +337,7 @@ export function compilePersonality(fields: PersonalityFields): string {
 }
 
 export interface CompiledSpeakingVoice {
-  model: string | undefined;
+  model: VoiceModel | undefined;
   instructions: string[];
 }
 

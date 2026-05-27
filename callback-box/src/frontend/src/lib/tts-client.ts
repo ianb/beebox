@@ -6,7 +6,7 @@
 
 import { getApiBase } from "../api";
 import { playAudioBlob } from "./audio-context";
-import { VALID_VOICES, type TTSVoice } from "./speech-parsing";
+import { isTTSVoice, type TTSVoice } from "./speech-parsing";
 
 const DEFAULT_VOICE: TTSVoice = "marin";
 const DEFAULT_INSTRUCTIONS = "Fast and concise, but with a friendly lilting tone.";
@@ -54,7 +54,7 @@ class TTSClient {
   }
 
   private resolveVoice(perSpeechVoice?: TTSVoice): string {
-    if (perSpeechVoice && (VALID_VOICES as readonly string[]).includes(perSpeechVoice)) {
+    if (perSpeechVoice && isTTSVoice(perSpeechVoice)) {
       return perSpeechVoice;
     }
     return this.voiceConfig.voice;

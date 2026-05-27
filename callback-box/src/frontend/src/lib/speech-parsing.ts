@@ -4,12 +4,14 @@
  */
 
 import { parseTags } from "./parseTags";
+import { VOICE_MODELS, type VoiceModel } from "../../../schemas/personality";
 
-export const VALID_VOICES = [
-  "alloy", "ash", "ballad", "cedar", "coral", "echo",
-  "fable", "marin", "onyx", "nova", "sage", "shimmer", "verse",
-] as const;
-export type TTSVoice = typeof VALID_VOICES[number];
+export const VALID_VOICES = VOICE_MODELS;
+export type TTSVoice = VoiceModel;
+
+export function isTTSVoice(v: string): v is TTSVoice {
+  return (VALID_VOICES as readonly string[]).includes(v);
+}
 
 export interface SpeechSegment {
   text: string;
@@ -81,8 +83,8 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
     let voice: TTSVoice | undefined;
     if (tag.attrs.voice) {
       const v = tag.attrs.voice.toLowerCase();
-      if ((VALID_VOICES as readonly string[]).includes(v)) {
-        voice = v as TTSVoice;
+      if (isTTSVoice(v)) {
+        voice = v;
       } else {
         console.warn(`[Speech] Unknown voice "${tag.attrs.voice}", using default`);
       }
