@@ -307,6 +307,19 @@ async function startWorktree(name) {
   // The dashboard daemonizes itself — its forked child inherits our stdio fds
   // and keeps them open after the parent exits, so we must use stdio "ignore"
   // (otherwise execa hangs forever waiting on those fds).
+  //
+  // First, kill any orphaned dashboard daemon for this socket dir. Without
+  // this, `dashboard start --port N` no-ops when it finds an existing
+  // daemon for the same socket dir, exits 0, and we cache N — but the
+  // surviving daemon is on its old port. This happens to `main`
+  // specifically because main's daemon survives `bin/worktrees panic` if
+  // dashboard.pid is stale (sweep only kills the live pid recorded there).
+  await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
+    env: browseEnv,
+    stdio: "ignore",
+    timeout: 5000,
+  }).catch(() => { /* nothing to stop, fine */ });
+
   let dashboardStarted = false;
   try {
     await execa("node", [AGENT_BROWSER_BIN, "dashboard", "start", "--port", String(dashboardPort)], {
