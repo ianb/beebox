@@ -15,6 +15,8 @@
  *     this on iOS; use the HTMLAudioElement approach here.
  */
 
+import { withBase } from "../api";
+
 let sharedAudio: HTMLAudioElement | null = null;
 
 export function isIOS(): boolean {
@@ -36,7 +38,7 @@ export function shouldPrefetchSpeech(): boolean {
  */
 export function unlockAudioContext(): void {
   if (sharedAudio) return;
-  const audio = new Audio("/earcons/silence.mp3");
+  const audio = new Audio(withBase("/earcons/silence.mp3"));
   audio.preload = "auto";
   audio.play().catch((e) => {
     console.warn("[audio] Failed to unlock audio:", e);

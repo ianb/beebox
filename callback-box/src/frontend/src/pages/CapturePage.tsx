@@ -13,7 +13,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChunkedRecorder } from "../lib/recorder";
 import { CameraCapture } from "../lib/camera";
-import { getApiBase } from "../api";
+import { getApiBase, withBase } from "../api";
 import { sanitizeFilename } from "../../../lib/filename";
 import { CaptureShell } from "../components/capture/CaptureShell";
 import { StatusBar } from "../components/capture/StatusBar";
@@ -240,7 +240,7 @@ export function CapturePage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [recording]);
 
-  const shutterAudio = useRef(new Audio("/earcons/shutter.mp3"));
+  const shutterAudio = useRef(new Audio(withBase("/earcons/shutter.mp3")));
 
   const triggerFlash = useCallback(() => {
     setFlashing(true);
