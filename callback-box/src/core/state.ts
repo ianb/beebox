@@ -21,7 +21,7 @@ export interface CardInfo {
   type: string;
   tagName: string;
   status?: string | undefined;
-  /** Subdirectory within the parent dir (e.g., "news" for inbox/news/) */
+  /** Subdirectory within the parent dir (e.g., "email" for inbox/email/) */
   subdir?: string | undefined;
 }
 

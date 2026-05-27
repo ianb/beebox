@@ -3,21 +3,18 @@
  *
  * Full wakeup flow:
  * 1. Run preprocessors on inbox items (transcription, etc.)
- * 2. Triage feedback (lightweight agent classifies and integrates feedback cards)
- * 3. Run housekeeping (expire old briefs)
- * 4. Run on-wakeup scheduled scripts
- * 5. Run connectors (pull external data, create jobs) — fallback for uncovered connectors
- * 6. Create intake jobs for unjobbed inbox items (UI memos, etc.)
- * 7. Create guide-revision jobs if needed (archived briefs with unprocessed feedback)
- * 8. Process pending jobs via reactor (one cycle, skip low-priority)
- * 9. Push committed changes to the box's git remote (non-fatal if it fails)
+ * 2. Run housekeeping (sweep stale tmp uploads, refill root landmark)
+ * 3. Run on-wakeup scheduled scripts
+ * 4. Run connectors (pull external data, create jobs)
+ *    4a. Clean up stale jobs whose refs all point at deleted files
+ *    4b. Create intake jobs for unjobbed inbox items (UI memos, etc.)
+ * 5. Process pending jobs via reactor (one cycle, skip low-priority)
+ * 6. Push committed changes to the box's git remote (non-fatal if it fails)
  *
- * Under `--connector X`, the wakeup is scoped: step 5 runs only that
- * connector, step 6 scans only its `inboxPaths` and tags new intake
- * jobs `source="X"`, and step 8 passes `sourceFilter: "X"` to the
+ * Under `--connector X`, the wakeup is scoped: step 4 runs only that
+ * connector, step 4b scans only its `inboxPaths` and tags new intake
+ * jobs `source="X"`, and step 5 passes `sourceFilter: "X"` to the
  * reactor so it processes just the jobs that this run produced.
- * Cross-cutting jobs (guide-revision, etc.) are left for a later
- * unscoped wakeup that matches them.
  */
 
 import * as fs from "node:fs/promises";
@@ -44,10 +41,9 @@ export const wakeupCommand = new Command("wakeup")
   .description("Sync data with connectors")
   .option("-c, --connector <name>", "Only run specific connector")
   .option("--skip-preprocess", "Skip preprocessing step")
-  .option("--skip-triage", "Skip feedback triage step")
   .option("--skip-housekeeping", "Skip housekeeping step")
   .option("--skip-push", "Skip pushing to git remote at the end of the cycle")
-  .action(async (options: { connector?: string; skipPreprocess?: boolean; skipTriage?: boolean; skipHousekeeping?: boolean; skipPush?: boolean }) => {
+  .action(async (options: { connector?: string; skipPreprocess?: boolean; skipHousekeeping?: boolean; skipPush?: boolean }) => {
     const boxRoot = await requireBoxRoot();
 
     // Health check: warn about uncommitted changes
@@ -87,7 +83,7 @@ export const wakeupCommand = new Command("wakeup")
       console.log("");
     }
 
-    // Step 4: On-wakeup scheduled scripts
+    // Step 3: On-wakeup scheduled scripts
     if (!options.connector) {
       console.log("[Running on-wakeup scripts]");
       const now = getBoxTime(boxRoot);
@@ -100,7 +96,7 @@ export const wakeupCommand = new Command("wakeup")
       console.log("");
     }
 
-    // Step 5: Connectors
+    // Step 4: Connectors
     console.log("[Running connectors]");
 
     // Initialize connectors
@@ -112,7 +108,7 @@ export const wakeupCommand = new Command("wakeup")
     const connectors = getAllConnectors();
 
     // Resolve the active connector (set when --connector is passed). We
-    // hold onto it so step 5b can scope its inbox scan and step 7 can
+    // hold onto it so step 4b can scope its inbox scan and step 5 can
     // pass `sourceFilter` to the reactor.
     let activeConnector: Connector | undefined;
 
@@ -198,7 +194,7 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 5a: Clean up stale jobs with all dead references
+    // Step 4a: Clean up stale jobs with all dead references
     console.log("[Checking for stale jobs]");
     const staleCount = await cleanupStaleJobs(boxRoot);
     if (staleCount > 0) {
@@ -208,7 +204,7 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 5b: Create intake jobs for unjobbed inbox items
+    // Step 4b: Create intake jobs for unjobbed inbox items
     console.log("[Checking for unjobbed inbox items]");
     const intakeJobs = await createIntakeJobsForUnjobbed(
       boxRoot,
@@ -221,9 +217,9 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 6: Process pending jobs. Under --connector X, the source
+    // Step 5: Process pending jobs. Under --connector X, the source
     // filter restricts processing to jobs tagged source="X" so a
-    // gmail-scoped tick doesn't drain RSS or feedback work.
+    // gmail-scoped tick doesn't drain other connectors' work.
     console.log("[Processing pending jobs]");
     const reactorOptions: Parameters<typeof runReactor>[0] = {
       boxRoot,
@@ -243,7 +239,7 @@ export const wakeupCommand = new Command("wakeup")
     }
     console.log("");
 
-    // Step 8: Push committed changes to the box's git remote.
+    // Step 6: Push committed changes to the box's git remote.
     // Non-fatal: push errors (network, auth, upstream race) are logged
     // but don't fail the wakeup.
     if (!options.skipPush) {
@@ -422,7 +418,7 @@ export async function createIntakeJobsForUnjobbed(
   const { connector } = options;
 
   // Subdirectories with their own pipelines — skip these on a full scan.
-  const EXCLUDED_SUBDIRS = ["news", "feedback", "editions"];
+  const EXCLUDED_SUBDIRS = ["feedback"];
 
   // Collect all refs from existing pending job cards
   const jobsDir = path.join(boxRoot, "box/jobs");

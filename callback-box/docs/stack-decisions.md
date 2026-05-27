@@ -231,7 +231,7 @@ This works but is the one area where the machine boundaries leak — each machin
 | Router | Procedures | Notes |
 |--------|-----------|-------|
 | `history` | list, diff, sessionLog | Cursor-based pagination with `useInfiniteQuery` |
-| `status` | status, inbox, questions, context, activity, newsStatus, browse | Bulk of the dashboard data |
+| `status` | status, inbox, questions, context, activity, browse | Bulk of the dashboard data |
 | `card` | get, patch | Patch uses Zod discriminated union for ops |
 | `scheduler` | log, schedules | Explicit return interfaces needed (see lessons) |
 | `calendar` | available, config, updateConfig | Uses `ctx.services.calendar` |
@@ -474,7 +474,7 @@ The architecture is build-your-own with proven components:
 
 **Ephemeral index model.** The SQLite database is a derived artifact, never a source of truth. Schema change = drop the database and rebuild from files. This eliminates the migration pain entirely — no ALTER TABLE, no version tracking, no data transforms. Files in Git are the source of truth; the index is a disposable cache.
 
-**Central files table + domain tables joined by file path.** A `files` table tracks source file metadata (path, mtime, content hash). Each domain table (e.g., `inbox_cards`, `news_items`, `card_references`) has a foreign key back to the files table. When a file changes: delete all rows referencing that file across all domain tables, re-parse, re-insert. This makes the delete-on-change behavior clean and universal regardless of how many tables a single file populates.
+**Central files table + domain tables joined by file path.** A `files` table tracks source file metadata (path, mtime, content hash). Each domain table (e.g., `inbox_cards`, `capture_records`, `card_references`) has a foreign key back to the files table. When a file changes: delete all rows referencing that file across all domain tables, re-parse, re-insert. This makes the delete-on-change behavior clean and universal regardless of how many tables a single file populates.
 
 **Transform functions per table.** Each table is defined by: a glob pattern (which files to watch), a CREATE TABLE statement (self-documenting SQL), and a transform function `(path, content) => Record[]` that parses a file and returns zero or more rows. Returning an empty array means "this file doesn't produce records for this table" — a natural way to skip files that don't match. One file can feed multiple tables through separate transform registrations.
 

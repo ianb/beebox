@@ -11,7 +11,7 @@ import { stageFiles, commit } from "../cli/lib/git.js";
 
 export interface FinishJobParams {
   boxRoot: string;
-  /** Job card path relative to boxRoot (e.g., "box/jobs/foo.news.job.card") */
+  /** Job card path relative to boxRoot (e.g., "box/jobs/foo.intake.job.card") */
   jobRelPath: string;
 }
 
@@ -29,9 +29,9 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
       description = descMatch[1]!.trim();
     }
     const parts = path.basename(jobRelPath).split(".");
-    // parts: ["foo", "news", "job", "card"]
+    // parts: ["foo", "intake", "job", "card"]
     if (parts.length >= 4) {
-      jobType = parts[parts.length - 3]!; // "news"
+      jobType = parts[parts.length - 3]!; // "intake"
     }
   } catch {
     // File might already be gone, that's ok

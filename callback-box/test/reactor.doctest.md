@@ -106,7 +106,7 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
 await box.write("box/jobs/msg1.chat.job.card", `<chat-job source="telegram"><description>Chat</description></chat-job>`);
-await box.write("box/jobs/digest.news.job.card", `<news-job source="rss"><description>News</description></news-job>`);
+await box.write("box/jobs/sweep.intake.job.card", `<intake-job source="gmail"><description>Intake</description></intake-job>`);
 
 const chatOnly = await findJobCards(jobsDir, { typeFilter: "chat" });
 chatOnly.length
@@ -128,16 +128,16 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
 await box.write("box/jobs/email.intake.job.card", `<intake-job source="gmail"><description>Email triage</description></intake-job>`);
-await box.write("box/jobs/news.news.job.card", `<news-job source="rss"><description>News</description></news-job>`);
-await box.write("box/jobs/feedback.guide-revision.job.card", `<guide-revision-job source="feedback-sync"><description>Revise</description></guide-revision-job>`);
+await box.write("box/jobs/chat.chat.job.card", `<chat-job source="telegram"><description>Chat</description></chat-job>`);
+await box.write("box/jobs/cal.calendar-review.job.card", `<calendar-review-job source="google-calendar"><description>Calendar review</description></calendar-review-job>`);
 
 const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
 => ["email.intake.job.card"]
 
-const rssOnly = await findJobCards(jobsDir, { sourceFilter: "rss" });
-JSON.stringify(rssOnly.map((c) => c.file))
-=> ["news.news.job.card"]
+const telegramOnly = await findJobCards(jobsDir, { sourceFilter: "telegram" });
+JSON.stringify(telegramOnly.map((c) => c.file))
+=> ["chat.chat.job.card"]
 
 // Cross-cutting jobs (different source) stay put for a future run that does match them
 const noFilter = await findJobCards(jobsDir);

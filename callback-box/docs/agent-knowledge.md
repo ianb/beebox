@@ -30,7 +30,7 @@ The same information can sit at different levels depending on what the agent is 
 
 - `.claude/rules/card-memo.md` is **knows directly** when the agent reads or edits a `*.memo.card` file (the `paths:` glob triggers loading). When working on other card types, memo-specific knowledge is **discoverable** at best.
 
-- A guide card's compiled rules (e.g., `docs/generated/news-guide.md`) are **knows directly** when processing a news job (the job-specific rule file references them). Outside that context, the same information is **knows about** (referenced in the agent guide's card type list) or **discoverable** (via directory listing).
+- A guide card's compiled rules (e.g., `docs/generated/intake-guide.md`) are **knows directly** when processing an intake job (the job-specific rule file references them). Outside that context, the same information is **knows about** (referenced in the agent guide's card type list) or **discoverable** (via directory listing).
 
 This means testing should consider: what was the agent *doing* when it answered? A question about memo card structure might be "knows directly" mid-procedure but "knows about" in a cold prompt.
 
@@ -176,9 +176,9 @@ cb prompt "What guides exist in this box and what do they do?"
 - Watch for: does it list `config/` and find guide cards, or just describe guides conceptually?
 
 ```
-cb prompt "If I wanted to change how news items are triaged, what would I modify?"
+cb prompt "If I wanted to change how inbox items are triaged, what would I modify?"
 ```
-- **Expected level: Discoverable** — needs to find the news guide card in `config/` and understand guide→rules compilation
+- **Expected level: Discoverable** — needs to find the intake guide card in `config/` and understand guide→rules compilation
 - Watch for: does it identify the right guide card, or suggest editing rules directly?
 
 ## 6. Tricks (Box-Local Scripts)
@@ -239,7 +239,7 @@ cb prompt "How would I add a daily task?"
 ### Things the agent CAN do today (in-box):
 - **Create new card types/schemas** — write `.ts` files in `config/schemas/` using `element()` + Zod (see `config/schemas/CLAUDE.md`)
 - **Create new procedures** — write XML to `config/procedures/`
-- **Modify guides** — edit `config/*.guide.card` to change per-domain processing rules (news selection, feedback handling, calendar review)
+- **Modify guides** — edit `config/*.guide.card` to change per-domain processing rules (intake triage, feedback handling, calendar review)
 - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-cutting intake → triage → handle pipeline; see `docs/triage-design.md`)
 - **Add tricks** — create scripts in `tricks/scripts/`
 - **Add scheduled tasks** — create `config/scheduled/*.scheduled-script.card`
@@ -354,10 +354,10 @@ These areas were identified as important but don't have test prompts yet. To be 
 ### Guide Awareness
 Does the agent understand the guide→compile→rules pipeline? Can it trace how preferences flow into behavior?
 
-- "I'm really interested in climate news — how would that change what gets triaged in?"
-  - Expected: agent finds the news guide card, understands triage rules are where topic preferences live
-- "If I wanted to change how the agent writes briefs, what would I modify?"
-  - Expected: identifies the news guide card's brief-writing instructions, knows about compilation
+- "I always want recipes to be archived under store/recipes — how would I make that the default?"
+  - Expected: agent finds the intake guide card, understands triage rules are where routing preferences live
+- "If I wanted to change how the agent handles calendar changes, what would I modify?"
+  - Expected: identifies the calendar guide card's action instructions, knows about compilation
 - "How do guide cards turn into agent behavior?"
   - Expected: describes the guide → `cb init` → `docs/generated/` → rules pipeline
 
@@ -367,13 +367,13 @@ Does the agent know what connectors exist, how data flows in and out?
 - "How would I get notified when something important arrives?"
   - Expected: finds outgoing connectors, knows about `cb finalize`
 - "What are all the ways data enters this box?"
-  - Expected: traces RSS feeds, dropbox relay, manual inbox — from connector configs
+  - Expected: traces Gmail, Telegram, dropbox relay, manual inbox — from connector configs
 
 ### Routing Domain-Specific Inputs
-Per-domain pipelines (news, feedback, etc.) get something that needs routing. Can the agent figure out the right destination — including escalating to a guide-rule update when the input is a meta-preference, not a single item?
+Per-domain pipelines (intake, feedback, etc.) get something that needs routing. Can the agent figure out the right destination — including escalating to a guide-rule update when the input is a meta-preference, not a single item?
 
-- "Here's a card from the inbox that says 'I want to follow more stories about renewable energy.' What do you do with it?"
-  - Expected: recognizes this as a preference that should update the news guide's triage rules, not just archive it
+- "Here's a card from the inbox that says 'I want recipes to always get archived under store/recipes/.' What do you do with it?"
+  - Expected: recognizes this as a preference that should update the intake guide's triage rules, not just archive it
 - "Someone dropped a bookmark URL into the inbox. What happens to it?"
   - Expected: understands bookmark processing procedure or manual flow
 
@@ -384,8 +384,8 @@ Can the agent use git history, inbox state, recent archives to answer questions 
   - Expected: checks git log or archive directory, gives a real answer
 - "Has anything new arrived today?"
   - Expected: checks inbox, gives current state
-- "When was the last news brief generated?"
-  - Expected: checks output directory or git log
+- "When was the last capture session processed?"
+  - Expected: checks store/archive or git log
 
 ### Personality & Identity
 Does the agent know who it is and who it works for?

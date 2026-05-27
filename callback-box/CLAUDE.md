@@ -62,7 +62,7 @@ src/webapp/       Fastify server, API routes, SSE
   trpc/           tRPC router and sub-routers
 src/frontend/     React UI (Vite, separate tsconfig)
   src/pages/          Routed top-level pages (ChatPage, DashboardPage, AdminPage, ...) — subject to restrict-component-classes; can only use outer-layout classes
-                      Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/news/NewsPage.tsx` + `pages/news/PrintBriefView.tsx` + `pages/news/components/brief/...`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
+                      Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/landmarks/LandmarksPage.tsx` + `pages/landmarks/components/...`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
   src/components/     Reusable feature components (Sidebar, CommitTimeline, FileView, dashboard/, ...) — shared across pages
   src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see FRONTEND.md
   src/renderers/      File-type renderers (markdown, image, sheet, recipe, directory, ...)

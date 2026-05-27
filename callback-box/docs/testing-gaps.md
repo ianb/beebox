@@ -20,7 +20,7 @@ Current status as of 2026-03-03: **931 tests across 53 files**. Route coverage: 
 
 **Service fakes:** Telegram, Claude CLI, Google Calendar, OpenAI Audio, IMAP, Feed Fetcher, Article Fetcher, call-log — all with domain-specific fakes + `withCallLog()` wrapper
 
-**Agent testing:** `Agent` interface with `createAgent`/`createFakeAgent`, used by triage-feedback, process-feedback, process-news, reactor, procedure engine
+**Agent testing:** `Agent` interface with `createAgent`/`createFakeAgent`, used by the reactor and the procedure engine
 
 ### Traditional tests (2 files)
 
@@ -49,7 +49,7 @@ Current status as of 2026-03-03: **931 tests across 53 files**. Route coverage: 
 
 ### Wakeup orchestration
 
-`runPreprocessors()` needs OpenAI service injection for transcription. The orchestration itself is linear (phases A-H) — low value as a unit test. Individual phases (intake-jobs, guide-revision, triage-feedback) are tested.
+`runPreprocessors()` needs OpenAI service injection for transcription. The orchestration itself is linear — low value as a unit test. Individual phases (intake-jobs, housekeeping, on-wakeup scripts) are tested.
 
 ### Not worth testing
 

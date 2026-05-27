@@ -1,7 +1,6 @@
 /**
  * Box-level wakeup mutex. Prevents concurrent wakeup-style processes
- * (process-feedback, process-news, triage-feedback) from running on
- * the same box at the same time.
+ * from running on the same box at the same time.
  *
  * Backed by the file-lock primitive in src/lib/file-lock.ts.
  */

@@ -93,7 +93,6 @@ Connectors create cards with attachments. Each needs to put the file in `<basena
 - `src/connectors/capture.ts` (or wherever capture sessions land) — write `<photo-id>.image.attach/<photo-id>.jpg` instead of sibling `.jpg`
 - `src/connectors/gmail.ts` — write `<msg-id>.email-message.attach/<msg-id>.body.txt` + `attach/attachments/...`
 - `src/connectors/google-drive.ts` — already uses a subdirectory pattern for Sheets; rename `Budget/` → `Budget.attach/` (small change). For Docs, the sibling `.md` moves into `Foo.attach/<basename>.md`.
-- `src/connectors/rss.ts` — news items don't have attachments today; no change.
 - `src/connectors/google-calendar.ts` — `.ics` files; check if they're sibling to a card or standalone.
 - `src/connectors/telegram.ts` — outbound messages; no attachments today.
 
@@ -106,7 +105,6 @@ The webapp serves attached files for the frontend (image renderer, audio player,
 Files to audit:
 - `src/webapp/routes/*.ts` — anything serving a file by basename
 - `src/webapp/routes/files.ts` (if it exists) or equivalent
-- `src/webapp/routes/briefs.ts` — image references for newsletter rendering
 - `src/webapp/routes/chat-uploads.ts` — chat attachment serving
 
 ### Callback-box: frontend renderers

@@ -55,7 +55,7 @@ Frontmatter:
 - \`type-of-feedback:\` — \`query-response\`, \`comment\`, or \`brief\`.
 - \`target:\` — \`{ref}\` pointing at the target element. The ref uses
   the cardworks \`path#fragment\` form, e.g.
-  \`box/output/editions/2026-02-01_news.news-edition.card#q1\`.
+  \`store/briefings/2026-02-01.briefing.card#q1\`.
 - \`source:\` — \`text\` or \`voice\`.
 - \`timestamp:\` — when the feedback was submitted.
 - \`transcription:\` — populated by the transcribe pre-action for

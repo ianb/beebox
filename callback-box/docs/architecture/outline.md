@@ -66,7 +66,7 @@ This section needs multiple small vignettes, going back and forth between storie
 **Architecture — the wakeup cycle:**
 - The cycle: sync connectors → process inbox → execute commands → archive
 - It runs on a schedule, not just in response to user actions — the box does things on its own
-- Connectors are how the outside world gets in: forwarded email, Telegram, calendar sync, RSS (though you'd never see it as RSS — it just shows up as news or updates), etc.
+- Connectors are how the outside world gets in: forwarded email, Telegram, calendar sync, browser-extension captures, etc.
 - Each connector syncs its source into the box's filesystem as cards
 
 **Architecture — agents:**
