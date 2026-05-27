@@ -5,6 +5,7 @@
  */
 
 import { useParams } from "@tanstack/react-router";
+import { withBase } from "../../api";
 
 function ShortcutUrlDisplay({ url }: { url: string }) {
   return (
@@ -75,8 +76,8 @@ function GeneralOption({ shareUrl }: { shareUrl: string }) {
 export function ShareShortcutSection() {
   const { boxSlug } = useParams({ strict: false });
   const origin = window.location.origin;
-  const boxShareUrl = `${origin}/${boxSlug}/share`;
-  const generalShareUrl = `${origin}/share`;
+  const boxShareUrl = `${origin}${withBase(`/${boxSlug}/share`)}`;
+  const generalShareUrl = `${origin}${withBase("/share")}`;
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mt-6">
