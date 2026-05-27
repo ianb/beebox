@@ -16,7 +16,13 @@ echo "=== Callback Box Server Setup ==="
 echo "Installing system packages..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc
+apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick
+
+# Ubuntu 24.04 ships ImageMagick 6 (`convert`); homebrew + IM7 use `magick`.
+# Symlink so scripts written for `magick` work on prod without branching.
+if ! command -v magick >/dev/null 2>&1 && command -v convert >/dev/null 2>&1; then
+  ln -sf "$(command -v convert)" /usr/local/bin/magick
+fi
 
 # ── Node.js via NodeSource ──────────────────────────────────────────
 echo "Installing Node.js $NODE_MAJOR..."
