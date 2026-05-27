@@ -104,6 +104,7 @@ export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
               <button
                 onClick={() => handleRemove(email)}
                 disabled={saving}
+                aria-label={`Remove ${email}`}
                 className="text-warm-500 hover:text-danger-dark text-xs px-2"
               >
                 remove

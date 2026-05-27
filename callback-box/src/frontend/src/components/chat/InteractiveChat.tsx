@@ -622,7 +622,7 @@ function ChatInputArea({
   const circleBtn = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
   return (
-    <div className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
+    <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="flex items-center gap-2">
         {/* Add menu: camera (coming soon), attach file. Capture lives here in the future. */}
         <Dropdown
@@ -798,7 +798,7 @@ function ChatInputArea({
           )}
         </button>
       </div>
-    </div>
+    </section>
   );
 }
 

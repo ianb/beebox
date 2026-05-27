@@ -44,7 +44,10 @@ export function ClaudeCodeSection() {
         <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
           <span className="font-medium text-success-dark">Authenticated</span>
           {status.email ? (
-            <span className="text-success-dark ml-2">as {status.email}</span>
+            <>
+              {" "}
+              <span className="text-success-dark ml-2">as {status.email}</span>
+            </>
           ) : null}
         </div>
       ) : (
