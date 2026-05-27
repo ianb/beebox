@@ -48,6 +48,17 @@ like:
 Adjust the wording to fit the conversation, but the spirit is constant:
 *understanding first, plan second, work third.*
 
+## How the briefing reaches the new session
+
+`launch-worktree-session` automatically wraps the briefing in
+`<agent-continuation>...</agent-continuation>` with a short preamble
+explaining that the message is a handoff from a sibling agent (not
+direct human input). You don't need to add that framing yourself in the
+briefing text — write the briefing as if you were narrating what you and
+the human discussed, and the wrapper handles the meta-context. Don't
+duplicate the wrapper or the "this is a handoff" language inside the
+briefing.
+
 ## Flow
 
 1. **Confirm scope with the human.** Mirror back the idea in one or two
