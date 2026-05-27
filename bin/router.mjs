@@ -24,7 +24,6 @@
 //   - On idle (5 min default), individual worktrees self-shutdown.
 
 import http from "node:http";
-import net from "node:net";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs/promises";
@@ -322,11 +321,17 @@ async function startWorktree(name) {
     startedAt: Date.now(),
   });
 
-  // Wait for both to listen.
+  // Wait for both to serve HTTP — not just accept TCP. A bare port-listening
+  // check fires too early: the upstream can accept the connection while its
+  // request pipeline is still wiring up, and the router then forwards live
+  // client requests into a half-booted backend. The frontend probe hits the
+  // worktree's base URL on Vite; the backend probe hits `/healthz` on
+  // Fastify (status doesn't matter — auth-required 401 or unconfigured 503
+  // both prove routes are registered).
   try {
     await Promise.all([
-      waitForPort(frontendPort, 30000, `vite/${name}`),
-      waitForPort(backendPort, 30000, `fastify/${name}`),
+      waitForHttp(frontendPort, baseUrl, 30000, `vite/${name}`),
+      waitForHttp(backendPort, "/healthz", 30000, `fastify/${name}`),
     ]);
   } catch (err) {
     // Startup failed; kill anything we managed to spawn and clean up.
@@ -427,28 +432,36 @@ function killGroup(pid, sig = "SIGTERM") {
   }
 }
 
-async function waitForPort(port, timeoutMs, label) {
+// HTTP-level readiness probe. TCP listening is not enough — a process can
+// accept connections before its request handlers are wired up, which causes
+// the dev router to forward client requests into a half-booted backend and
+// surface them as opaque "Failed to load" / superjson-transform errors in
+// the UI. We poll an HTTP GET until the upstream returns *any* HTTP
+// response (status code is irrelevant — 404/401/503 all prove the server
+// is parsing requests). ECONNREFUSED / dropped sockets keep retrying.
+async function waitForHttp(port, path, timeoutMs, label) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    for (const host of ["127.0.0.1", "::1"]) {
-      const ok = await new Promise((resolve) => {
-        const sock = net.connect({ host, port });
-        sock.once("connect", () => {
-          sock.end();
+    const ok = await new Promise((resolve) => {
+      const req = http.request(
+        { host: "127.0.0.1", port, path, method: "GET", timeout: 1000 },
+        (res) => {
+          res.resume();
           resolve(true);
-        });
-        sock.once("error", () => resolve(false));
-        sock.setTimeout(500, () => {
-          sock.destroy();
-          resolve(false);
-        });
+        },
+      );
+      req.on("error", () => resolve(false));
+      req.on("timeout", () => {
+        req.destroy();
+        resolve(false);
       });
-      if (ok) return;
-    }
+      req.end();
+    });
+    if (ok) return;
     await sleep(150);
   }
   throw new Error(
-    `${label} did not start listening on :${port} within ${timeoutMs}ms`,
+    `${label} did not respond to HTTP GET ${path} within ${timeoutMs}ms`,
   );
 }
 
