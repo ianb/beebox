@@ -21,10 +21,10 @@ import {
 import { buildOptimisticContent, reconcilePending } from "./chat-shared";
 
 /**
- * Forwarded to the server via the console-warn debug-log pipe so wedge
- * diagnostics survive across reloads. Kept terse and structured: a grep
- * for `[chatfsm]` in `.callback-box/client-debug.log` should reconstruct
- * the state timeline without needing the browser.
+ * Logged at console.debug so it's silent by default in Chrome (visible
+ * only with the Verbose filter on). Not forwarded to the server debug
+ * log. Kept terse and structured for local grepping when investigating
+ * a chat-machine wedge.
  */
 function logFsm(event: string, detail?: Record<string, unknown>): void {
   const parts = [`[chatfsm] ${event}`];
@@ -33,7 +33,7 @@ function logFsm(event: string, detail?: Record<string, unknown>): void {
       parts.push(`${k}=${typeof v === "string" ? v : JSON.stringify(v)}`);
     }
   }
-  console.warn(parts.join(" "));
+  console.debug(parts.join(" "));
 }
 
 // -- Events --
