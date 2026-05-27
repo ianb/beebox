@@ -45,6 +45,26 @@ class TTSClient {
     voice: DEFAULT_VOICE,
     baseInstructions: DEFAULT_INSTRUCTIONS,
   };
+  // Resolved once the personality's voice config has loaded (or failed to
+  // load). fetchAudio/prefetch await this so the first utterance after
+  // page load can't slip out with the default voice. Callers must invoke
+  // markConfigLoaded() exactly once, regardless of fetch success.
+  private configReady: Promise<void>;
+  private markConfigReady!: () => void;
+
+  constructor() {
+    this.configReady = new Promise((resolve) => {
+      this.markConfigReady = resolve;
+    });
+  }
+
+  /**
+   * Signal that voice-config loading is finished (either applied or
+   * fallback). Safe to call multiple times — subsequent calls are no-ops.
+   */
+  markConfigLoaded(): void {
+    this.markConfigReady();
+  }
 
   private buildInstructions(custom?: string, overrideBase?: boolean): string {
     if (overrideBase && custom) return custom;
@@ -169,6 +189,10 @@ class TTSClient {
     text: string,
     { options, signal }: { options?: SpeechOptions; signal: AbortSignal },
   ): Promise<ArrayBuffer> {
+    // Wait for personality voice config to load before reading
+    // voiceConfig — otherwise the first utterance after page load uses
+    // the hard-coded default.
+    await this.configReady;
     const instructions = this.buildInstructions(
       options?.instructions,
       options?.overrideInstructions,
