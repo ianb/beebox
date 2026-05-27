@@ -80,8 +80,8 @@ if curl -fsS -m 5 "http://127.0.0.1:3210/__router/stop/$name" >/dev/null 2>&1; t
   echo "[session-end]   told router to stop $name"
 fi
 
-# Remove the cloned box (test1-$name).
-BOX_DEST="$HOME/src/box-worktrees/test1-$name"
+# Remove the cloned box tree ($name/, which contains test1/).
+BOX_DEST="$HOME/src/box-worktrees/$name"
 if [ -d "$BOX_DEST" ]; then
   rm -rf "$BOX_DEST"
   echo "[session-end]   removed $BOX_DEST"

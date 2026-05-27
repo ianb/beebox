@@ -6,7 +6,7 @@
 // URL prefix. URLs look like:
 //
 //   http://localhost:3210/main/test1/dashboard         → main checkout
-//   http://localhost:3210/foo/test1-foo/inbox/...      → worktree "foo"
+//   http://localhost:3210/foo/test1/inbox/...          → worktree "foo"
 //
 // One child per process per worktree, owned directly by the router (no tmux,
 // no overmind). Process tree is router → {vite, fastify} per worktree.
@@ -99,7 +99,7 @@ async function resolveWorktree(name) {
     root,
     backendCwd: path.join(root, "callback-box"),
     frontendCwd: path.join(root, "callback-box", "src", "frontend"),
-    boxes: boxes ?? [path.join(BOXES_ROOT, `test1-${name}`)],
+    boxes: boxes ?? [path.join(BOXES_ROOT, name, "test1")],
   };
 }
 
