@@ -15,7 +15,7 @@
     "lint": "eslint src/"
   },
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "file:../personal-vibe-check",
     "@tapjs/core": "^4.0.0",
     "@types/node": "^22.0.0",
     "esbuild": "^0.20.0",

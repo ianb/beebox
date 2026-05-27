@@ -69,7 +69,9 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     boxRoot: tmpDir,
     cleanup: async () => {
       await server.close();
-      await rm(tmpDir, { recursive: true, force: true });
+      // maxRetries handles benign ENOTEMPTY races on macOS when background
+      // writes (chat-history backfill, scheduler tick) finish just as we walk.
+      await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     },
   };
 }

@@ -17,20 +17,8 @@
  *   });
  */
 
-import { createRequire } from "node:module";
-import { pathToFileURL } from "node:url";
+import { TestBase } from "@tapjs/core";
 import { inspect, type CheckOptions, type CheckResult, type Extractions } from "./check.js";
-
-// Resolve @tapjs/core via CJS resolution from CWD (gives us the file path),
-// then import it as ESM. This ensures we patch the same TestBase instance
-// that tap uses, even when agent-doctest has its own node_modules.
-const cwdRequire = createRequire(process.cwd() + "/");
-const corePath = cwdRequire.resolve("@tapjs/core");
-// Convert CJS path to ESM path (commonjs → esm)
-const esmPath = corePath.replace("/dist/commonjs/", "/dist/esm/");
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-const core: typeof import("@tapjs/core") = await import(pathToFileURL(esmPath).href);
-const { TestBase } = core;
 
 declare module "@tapjs/core" {
   interface TestBase {
@@ -49,7 +37,7 @@ function report(t: InstanceType<typeof TestBase>, result: CheckResult): Extracti
   (t as { currentAssert: unknown }).currentAssert = (t as { check: unknown }).check;
 
   if (result.pass) {
-    t.pass(result.message || "check passed");
+    t.pass(result.message || "");
     return result.extractions;
   }
 
@@ -101,7 +89,7 @@ TestBase.prototype.checkThrows = function tapCheckThrows(
   const result = inspect(label, expected) as CheckResult;
 
   if (result.pass) {
-    this.pass("check passed");
+    this.pass("");
     return result.extractions;
   }
 

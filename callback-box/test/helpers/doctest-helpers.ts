@@ -91,7 +91,7 @@ export async function makeTmpBox(opts?: { git?: boolean }): Promise<TmpBox> {
       });
     },
     async cleanup() {
-      await rm(root, { recursive: true, force: true });
+      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     },
   };
 

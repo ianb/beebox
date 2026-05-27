@@ -16,3 +16,4 @@ exclude:
 # exercises 10 full reactor cycles (~25s in isolation, longer under parallel
 # load). Bumping to 60s gives headroom without masking real hangs.
 timeout: 60
+reporter: min
