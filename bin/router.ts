@@ -637,6 +637,13 @@ async function renderIndex(): Promise<string> {
   <p>
     Per-worktree logs are at <code>~/.cache/callback-mono/logs/&lt;name&gt;.log</code>.
   </p>
+  <h2>If the list is too long</h2>
+  <p>
+    Run <code>bin/worktrees sweep</code> to remove worktrees that are fully
+    merged into main, clean, and have no active <code>claude</code> session —
+    plus any orphan browse/log/pid state left behind by past cleanups.
+    Add <code>--dry-run</code> to preview.
+  </p>
 </div>
 
 <footer>
