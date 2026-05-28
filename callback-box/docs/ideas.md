@@ -917,3 +917,57 @@ Three directions to consider, not mutually exclusive:
 - **Replace the rewriting with a `BASE_PATH.txt` file** that holds the current worktree's URL prefix (e.g. `http://localhost:3210/deeper-paths-fix/test1-deeper-paths-fix`), rewritten by the `WorktreeCreate` hook, and pulled into CLAUDE.md via an `@BASE_PATH.txt` include. Agents construct URLs directly using that prefix; no wrapper needed; `agent-browser` goes on PATH (`pnpm exec` symlink or `~/bin` shim). Simple, makes the rewriting visible rather than magical.
 - **Keep the wrapper but make it invisible** — symlink `bin/browse` into a PATH dir during install, or document an alias. Preserves the path-rewriting feature and removes the `cd` annoyance.
 - **Small patches if we keep it:** print a one-line "ok" on `reload` and `network requests --clear` (silent success forced an agent into a `sleep`-and-pray pattern); investigate why `reload` didn't bust the `manifest.webmanifest` cache after a file edit (a `reload --hard` option, or always sending `Cache-Control: no-cache` on reload, would close that gap).
+
+## "Before you build this" — embedding-indexed reuse search
+
+The repeated failure mode: agent is asked for X, agent writes X from scratch, X already existed under a slightly different name in `src/components/ui/` or `src/lib/` or `cardworks/`. The agent doesn't know what to grep for because the existing thing's name doesn't match the task vocabulary. Result: parallel implementations, drift, the codebase gets harder to navigate over time precisely *because* it has more in it.
+
+Idea: an index of available units — UI components, hooks, helpers, schemas, cardworks elements, services — keyed by an embedding of their *purpose* (from JSDoc, the type signature, neighboring usage). The agent, before building anything non-trivial, queries the index with a natural-language description of what it's about to write. The index returns the top few candidates with one-line summaries and file paths. If something fits, the agent reuses; if nothing fits, it proceeds and the index re-embeds the new thing.
+
+Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new component / helper / schema, run `cb reuse-search 'description'` and consider the candidates") plus a pre-commit nudge when a new file in `src/components/ui/` or `src/lib/` doesn't appear in the index yet.
+
+Open questions: where embeddings live (local Faiss index in `.callback-cache/`? a small server?); how to keep the index from going stale (rebuild on file change vs. on demand); whether the search is a CLI or a tRPC procedure the agent calls; how to surface *what was missed* — false negatives are the painful kind ("the helper existed but the search didn't return it").
+
+## Check out spec-kit
+
+[GitHub: github/spec-kit](https://github.com/github/spec-kit) — a spec-driven-development toolkit from GitHub for building software with AI agents from formal specifications. Worth a read for: how they structure the spec → plan → tasks → implementation pipeline, what they expose to the agent at each phase, whether their patterns map onto how procedures/commands work here.
+
+Probably most relevant for callback-box's procedure engine (the multi-step XML workflows in `config/procedures/`) and for how `cb` commands could be authored — both are spec-then-execute shapes. Not a "port this," more a "see what they got right and steal the bits that fit."
+
+## Doc usage mining — what agents actually open
+
+Claude Code session transcripts live as JSONL at `~/.claude/projects/<encoded-cwd>/*.jsonl`, and every `Read` tool_use carries the file path plus offset/limit. That's free data — no instrumentation needed — describing how the agent actually uses the doc corpus, which is rarely the same as how we *think* it does.
+
+Cross-joined against the doc-graph in `src/dev/doc-graph-html.ts`, the usage data sharpens the picture:
+
+- **High-read + always-loaded** → over-served. The doc is already in context, so re-reads mean the agent either didn't trust the context or couldn't absorb the doc at length. Candidate for trim.
+- **High-read + partial-only (offset/limit always set)** → chapter-grazing. The agent only wants section X. Candidate for split — each section becomes its own file, no agent loads the irrelevant 80%.
+- **High-read + outer-ring** → mis-classified by the rings. Should be promoted closer to always-loaded, or linked from a nearby `CLAUDE.md` so the agent stops having to discover it.
+- **Zero-read + linked prominently** → the link is misleading or the doc is dead weight. Candidate for delete or rewrite.
+- **Read-then-edited vs. read-then-ignored** → distinguishes reference docs from working surfaces — useful when deciding what to maintain vs. what to freeze.
+
+Open questions:
+- **Noise filtering.** Subagent reads, hook reads, `/clear`'d sessions, exploratory greps — all distort the picture. Weight by session not raw count; filter by tool_use_id provenance; probably ignore sessions under some token threshold.
+- **Shape.** Mirror the doc-graph split: a dry `pnpm doc-usage` markdown report for the numbers, plus a fourth section in `doc-graph.html` ("What agents actually open") that overlays the rings/pillars with usage hot-spots.
+- **Retention.** Transcripts are local-only and the user can clear them. Aggregate into a small persistent table so the historical signal survives clearing.
+
+## Retrospective session scan — surfacing CLAUDE.md and tool improvements
+
+Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user had to correct, what Claude had to ask, what kept going wrong*. The current setup is reactive — `CLAUDE.md` says "when you get corrected, update CLAUDE.md," but that depends on the agent noticing in the moment and on the user remembering to push back. A weekly retrospective sweep would catch the patterns that slip through.
+
+Signal sources in JSONL:
+
+- **User corrections** — "no", "don't", "actually", "wrong", "stop". Many are one-off conversational noise; the same correction appearing across three sessions is a real gap.
+- **Repeated tool errors** — same `bash` command fails the same way across sessions → either a missing convention to document or a broken tool to fix (not document around).
+- **Clarifying questions Claude asks** — when the agent has to ask "which X?" repeatedly, the answer belongs in a doc. Strong signal because the agent itself is reporting the gap.
+- **Long read-cascades for simple questions** — Claude reads 7 files to answer "where does X live?" → missing index entry.
+- **Mid-task pivots / apologies** — "ah, it's actually structured differently" → the structure was non-obvious, deserves a one-liner.
+
+Existing overlap: the `fewer-permission-prompts` skill already does the permissions slice (mines repeated Bash/MCP calls and proposes allowlist entries). This would be the docs-and-conventions slice.
+
+The hard part is signal-to-noise. Regex on "no" is useless. Better approach: per session, feed the last ~30 turns to a small classifier prompt — "did the user correct or teach Claude something not in CLAUDE.md? Return a list, or 'nothing'." Cheap, high-signal, and the candidate list goes into a weekly digest the boxholder skims. Not an auto-applier — humans review and accept, like dependabot PRs for documentation. The Claude Code auto-memory system does something analogous for personal preferences across all projects; this'd be the project-scoped equivalent writing to `CLAUDE.md` / `.claude/rules/`.
+
+Open questions:
+- **Cost vs. value.** Per-session LLM cost vs. how often the digest actually contains something actionable. Mitigated by running only on sessions over some length and only on new sessions since last run.
+- **Where the digest goes.** A markdown file the user reviews? An auto-opened PR with proposed edits? A new card type in the boxholder's own box ("agent learnings")?
+- **Coupling with doc-usage data.** A retrospective that says "Claude kept reading docs/X.md without finding the answer" is more actionable than either signal alone — the two miners probably want to share a session-walker.

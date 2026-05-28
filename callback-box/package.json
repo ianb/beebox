@@ -25,6 +25,7 @@
     "prompt-report": "tsx src/dev/prompt-report.ts",
     "generate:doc-images": "tsx src/dev/generate-doc-images.ts",
     "doc-graph": "tsx src/dev/doc-graph.ts > docs/doc-graph.md",
+    "doc-graph-html": "tsx src/dev/doc-graph-html.ts",
     "test:watch": "tap --watch",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",

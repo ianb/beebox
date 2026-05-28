@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Documenting callback-box for Claude</title>
+<style>
+  :root {
+    --bg: #f5efe2;
+    --paper: #fbf6e9;
+    --paper-2: #ede4cc;
+    --ink: #2a241d;
+    --ink-soft: #5a4e3e;
+    --muted: #8a7d68;
+    --rule: #d8cdb1;
+    --accent: #b35a1f;
+    --link: #8c3d12;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse at top, #fff8e7 0%, var(--bg) 60%) no-repeat,
+      var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; text-decoration-style: wavy; text-underline-offset: 3px; }
+  code, .mono { font: 13px/1.5 "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace; }
+  .muted { color: var(--muted); }
+
+  .page { max-width: 1150px; margin: 0 auto; padding: 56px 32px 80px; }
+
+  /* ---- Hero ---- */
+  header.hero { padding-bottom: 36px; border-bottom: 1px dashed var(--rule); margin-bottom: 56px; }
+  .hero .eyebrow {
+    font: 11px/1 "Iowan Old Style", Georgia, serif;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 44px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    font-style: italic;
+  }
+  .hero .tagline {
+    font-size: 19px;
+    color: var(--ink-soft);
+    margin: 0 0 28px;
+    max-width: 720px;
+    line-height: 1.55;
+  }
+  .hero .stats { display: flex; gap: 40px; flex-wrap: wrap; margin-top: 28px; }
+  .stat { font: 12px/1 "Iowan Old Style", Georgia, serif; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .stat strong {
+    display: block;
+    font-size: 32px;
+    color: var(--ink);
+    font-weight: 600;
+    font-style: italic;
+    margin-bottom: 4px;
+    text-transform: none;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---- Sections ---- */
+  h2.section {
+    font-size: 30px;
+    font-weight: 600;
+    font-style: italic;
+    letter-spacing: -0.01em;
+    margin: 72px 0 4px;
+  }
+  .section-eyebrow {
+    font: 11px/1 "Iowan Old Style", Georgia, serif;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .section-lede {
+    color: var(--ink-soft);
+    margin: 0 0 32px;
+    max-width: 740px;
+    font-size: 17px;
+  }
+
+  /* ---- Rings ---- */
+  .ring {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 28px;
+    padding: 22px 28px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .ring::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 6px;
+    background: var(--c, var(--accent));
+    border-radius: 4px 0 0 4px;
+  }
+  .ring-0 { --c: #b35a1f; background: linear-gradient(90deg, #fef1d8 0%, var(--paper) 80%); }
+  .ring-1 { --c: #d97706; background: linear-gradient(90deg, #fdf3e0 0%, var(--paper) 80%); }
+  .ring-2 { --c: #b08c4a; }
+  .ring-3 { --c: #8a7d68; }
+  .ring-4 { --c: #b3a487; opacity: 0.92; }
+
+  .ring-num {
+    display: inline-block;
+    font: 10px/1 "Iowan Old Style", Georgia, serif;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .ring-label h3 { margin: 0 0 6px; font-size: 19px; font-weight: 600; font-style: italic; }
+  .ring-flavour { margin: 0 0 6px; color: var(--ink); font-size: 14px; }
+  .ring-trigger { margin: 0 0 10px; color: var(--muted); font-size: 13px; font-style: italic; }
+  .ring-count {
+    display: inline-block; padding: 3px 10px;
+    background: var(--paper-2); border-radius: 12px;
+    font: 11px/1 "JetBrains Mono", monospace; color: var(--ink-soft);
+  }
+
+  .ring-chips { display: flex; flex-wrap: wrap; gap: 6px 7px; align-content: flex-start; }
+  .chip {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font: 12px/1.2 "JetBrains Mono", "SF Mono", monospace;
+    background: var(--paper-2);
+    color: var(--ink);
+    border-left: 3px solid var(--c);
+    transition: transform 0.1s ease;
+  }
+  .chip:hover { text-decoration: none; transform: translateY(-1px); background: #e6dcc0; }
+  .empty { color: var(--muted); font-size: 14px; font-style: italic; }
+
+  /* ---- Pillars ---- */
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+  .pillar {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .pillar-header {
+    padding: 24px 24px 20px;
+    color: #fff8e7;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--c);
+    border-bottom: 3px solid var(--c);
+    min-height: 130px;
+  }
+  .pillar-header h3 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 600;
+    font-style: italic;
+    letter-spacing: -0.01em;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .pillar-blurb { margin: 0; font-size: 14px; line-height: 1.5; color: rgba(255,253,240,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+  .pillar-body { padding: 18px 22px 22px; flex: 1; display: flex; flex-direction: column; }
+  .pillar-vibe {
+    margin: 0 0 18px;
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.5;
+    padding-left: 14px;
+    border-left: 2px solid var(--c);
+  }
+  .pillar-entry {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--paper-2);
+    border-radius: 4px;
+    border-left: 4px solid var(--c);
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .pillar-entry:hover { background: #e6dcc0; text-decoration: none; }
+  .entry-arrow { color: var(--c); font-weight: 700; font-size: 18px; }
+  .entry-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .entry-path { font: 13px/1.2 "JetBrains Mono", monospace; word-break: break-word; }
+  .entry-title { font-size: 12px; color: var(--muted); }
+  .entry-note {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 0 4px;
+  }
+  .pillar-entry.missing { color: #b91c1c; background: #fef2f2; border-color: #b91c1c; }
+
+  .pillar-support { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .pillar-support li {
+    padding: 8px 10px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.02);
+  }
+  .pillar-support li.missing { color: #b91c1c; }
+  .pillar-support .path { font: 12px/1.3 "JetBrains Mono", monospace; }
+  .pillar-support .meta { font-size: 11px; color: var(--muted); margin-left: 8px; }
+  .pillar-support .curator-note {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+    line-height: 1.45;
+  }
+  .pillar-code { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 12px; border-top: 1px dashed var(--rule); }
+  .code-tag {
+    padding: 3px 9px;
+    background: var(--paper-2);
+    color: var(--ink-soft);
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  /* ---- Curator section ---- */
+  .curator { margin-top: 48px; }
+  .curator-section {
+    margin-bottom: 40px;
+    padding: 24px 28px;
+    background: var(--paper);
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+  }
+  .curator-section h3 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .curator-blurb {
+    margin: 0 0 20px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    font-style: italic;
+    max-width: 720px;
+  }
+  .curator-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px 24px; }
+  .curator-list li {
+    padding: 10px 0;
+    border-top: 1px dotted var(--rule);
+  }
+  .curator-list li.missing { color: #b91c1c; }
+  .curator-list .path { font: 12px/1.3 "JetBrains Mono", monospace; }
+  .curator-list .meta { font-size: 11px; color: var(--muted); margin-left: 6px; }
+  .curator-list .curator-note { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); line-height: 1.5; font-style: italic; }
+
+  /* ---- Health ---- */
+  .health {
+    margin-top: 56px; padding: 16px 22px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+  .health summary { cursor: pointer; color: var(--ink-soft); font-size: 13px; font-style: italic; }
+  .health summary:hover { color: var(--ink); }
+  .health-body { margin-top: 12px; }
+  .health-body ul { padding-left: 20px; font-size: 13px; color: var(--muted); }
+  .health-body code { color: var(--ink); }
+
+  footer.colophon {
+    margin-top: 56px; padding-top: 24px;
+    border-top: 1px dashed var(--rule);
+    color: var(--muted); font-size: 12px; font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow">A field guide</div>
+    <h1>Documenting callback-box, for the agent that lives in it</h1>
+    <p class="tagline">
+      This codebase is built so that an AI agent can read its way into competence. The
+      documentation isn't a pile — it's a layered context delivery system <em>and</em> a
+      curriculum of topics. What follows is an inventory of the shape it makes.
+    </p>
+    <div class="stats">
+      <div class="stat"><strong>75</strong>markdown documents</div>
+      <div class="stat"><strong>20,034</strong>lines of prose</div>
+      <div class="stat"><strong>172</strong>cross-references</div>
+      <div class="stat"><strong>8</strong>auto-loaded guides</div>
+      <div class="stat"><strong>8</strong>topic pillars</div>
+      <div class="stat"><strong>34</strong>curator's picks</div>
+    </div>
+  </header>
+
+  <div class="section-eyebrow">I &nbsp;·&nbsp; Onboarding the agent</div>
+  <h2 class="section">Concentric rings of context</h2>
+  <p class="section-lede">
+    When Claude starts a session, the root <code>CLAUDE.md</code> is already in its context window —
+    before you say a word. As it reads files, more <code>CLAUDE.md</code>'s pull in automatically; as it
+    follows links, deeper material loads on demand. The layering keeps the working set small while
+    putting any needed knowledge within a hop or two.
+  </p>
+  
+      <section class="ring ring-0">
+        <div class="ring-label">
+          <span class="ring-num">Layer 0</span>
+          <h3>Always in the room</h3>
+          <p class="ring-flavour">Loaded with every session, before the first turn.</p>
+          <p class="ring-trigger">Root CLAUDE.md and anything it @-includes.</p>
+          <span class="ring-count">2 docs</span>
+        </div>
+        <div class="ring-chips"><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/CLAUDE.md" style="--c:#a3a394" title="CLAUDE.md — &quot;Callback Box&quot; (147 lines)">CLAUDE.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/CODE-STYLE.md" style="--c:#a3a394" title="CODE-STYLE.md — &quot;Code Style&quot; (60 lines)">CODE-STYLE.md</a></div>
+      </section>
+    
+      <section class="ring ring-1">
+        <div class="ring-label">
+          <span class="ring-num">Layer 1</span>
+          <h3>On the way in</h3>
+          <p class="ring-flavour">Auto-loads when Claude opens a file in that directory.</p>
+          <p class="ring-trigger">Nested CLAUDE.md files act as per-area guides.</p>
+          <span class="ring-count">6 docs</span>
+        </div>
+        <div class="ring-chips"><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/deploy/CLAUDE.md" style="--c:#475569" title="deploy/CLAUDE.md — &quot;Deploy&quot; (26 lines) · Deploy &amp; Ops">deploy/CLAUDE.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/CLAUDE.md" style="--c:#a3a394" title="docs/architecture/CLAUDE.md — &quot;Architecture Docs&quot; (55 lines)">docs/architecture/CLAUDE.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/src/connectors/CLAUDE.md" style="--c:#0e7490" title="src/connectors/CLAUDE.md — &quot;Connectors&quot; (23 lines) · Connectors">src/connectors/CLAUDE.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/src/core/reactor/CLAUDE.md" style="--c:#6d28d9" title="src/core/reactor/CLAUDE.md — &quot;Reactor&quot; (24 lines) · Wakeup &amp; Reactor">src/core/reactor/CLAUDE.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/src/dev/CLAUDE.md" style="--c:#a3a394" title="src/dev/CLAUDE.md — &quot;Dev Scripts&quot; (14 lines)">src/dev/CLAUDE.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/src/services/CLAUDE.md" style="--c:#a3a394" title="src/services/CLAUDE.md — &quot;Services&quot; (126 lines)">src/services/CLAUDE.md</a></div>
+      </section>
+    
+      <section class="ring ring-2">
+        <div class="ring-label">
+          <span class="ring-num">Layer 2</span>
+          <h3>One link away</h3>
+          <p class="ring-flavour">Reached by following a link from the loaded layers.</p>
+          <p class="ring-trigger">Mentioned in CLAUDE.md, FRONTEND.md, CODE-STYLE.md — Claude opens them on demand.</p>
+          <span class="ring-count">31 docs</span>
+        </div>
+        <div class="ring-chips"><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/deploy/README.md" style="--c:#475569" title="deploy/README.md — &quot;Deploy&quot; (191 lines) · Deploy &amp; Ops">deploy/README.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/adding-a-box.md" style="--c:#a16207" title="docs/adding-a-box.md — &quot;Adding a New Box&quot; (149 lines) · Boxes">docs/adding-a-box.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/adding-api-endpoints.md" style="--c:#a3a394" title="docs/adding-api-endpoints.md — &quot;Adding API Endpoints&quot; (247 lines)">docs/adding-api-endpoints.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/adding-schemas.md" style="--c:#c2410c" title="docs/adding-schemas.md — &quot;Adding a New Card Schema&quot; (192 lines) · Cards">docs/adding-schemas.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/family.md" style="--c:#a3a394" title="docs/architecture/family.md — &quot;The Lund-Vega Family&quot; (95 lines)">docs/architecture/family.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/outline.md" style="--c:#a3a394" title="docs/architecture/outline.md — &quot;Architecture Docs Outline&quot; (214 lines)">docs/architecture/outline.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/spirit.md" style="--c:#a3a394" title="docs/architecture/spirit.md — &quot;The Spirit of the Thing&quot; (112 lines)">docs/architecture/spirit.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/writing-style.md" style="--c:#a3a394" title="docs/architecture/writing-style.md — &quot;Writing Style Guide&quot; (95 lines)">docs/architecture/writing-style.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/box-layout.md" style="--c:#a16207" title="docs/box-layout.md — &quot;Box Layout&quot; (148 lines) · Boxes">docs/box-layout.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/calendar.md" style="--c:#0e7490" title="docs/calendar.md — &quot;Calendar Integration&quot; (89 lines) · Connectors">docs/calendar.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/cards-as-markdown.md" style="--c:#c2410c" title="docs/cards-as-markdown.md — &quot;RFC: Cards as Markdown + YAML Frontmatter&quot; (2553 lines) · Cards">docs/cards-as-markdown.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/client-debug-log.md" style="--c:#15803d" title="docs/client-debug-log.md — &quot;Client Debug Log&quot; (68 lines) · Frontend">docs/client-debug-log.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/connectors.md" style="--c:#0e7490" title="docs/connectors.md — &quot;Connectors&quot; (86 lines) · Connectors">docs/connectors.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/DESIGN.md" style="--c:#a3a394" title="docs/DESIGN.md — &quot;Callback Box: comprehensive design notes&quot; (531 lines)">docs/DESIGN.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/doc-graph.md" style="--c:#a3a394" title="docs/doc-graph.md — &quot;Documentation Graph Report&quot; (944 lines)">docs/doc-graph.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/EXAMPLE_FILES.md" style="--c:#c2410c" title="docs/EXAMPLE_FILES.md — &quot;Callback Box: Example Files&quot; (820 lines) · Cards">docs/EXAMPLE_FILES.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/glossary.md" style="--c:#a3a394" title="docs/glossary.md — &quot;Glossary&quot; (53 lines)">docs/glossary.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/ideas.md" style="--c:#a3a394" title="docs/ideas.md — &quot;Ideas &amp; Planned Features&quot; (936 lines)">docs/ideas.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/IMPLEMENTATION.md" style="--c:#a3a394" title="docs/IMPLEMENTATION.md — &quot;Callback Box: Implementation Guide&quot; (1018 lines)">docs/IMPLEMENTATION.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/knowledge-audits.md" style="--c:#1d4ed8" title="docs/knowledge-audits.md — &quot;Knowledge Audits&quot; (65 lines) · Testing">docs/knowledge-audits.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/landmarks.md" style="--c:#15803d" title="docs/landmarks.md — &quot;Landmarks&quot; (164 lines) · Frontend">docs/landmarks.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/maintenance.md" style="--c:#1d4ed8" title="docs/maintenance.md — &quot;Code Maintenance&quot; (97 lines) · Testing">docs/maintenance.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/migrations.md" style="--c:#c2410c" title="docs/migrations.md — &quot;Box Migrations&quot; (160 lines) · Cards">docs/migrations.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/pdf-intake-design.md" style="--c:#a3a394" title="docs/pdf-intake-design.md — &quot;PDF Intake&quot; (166 lines)">docs/pdf-intake-design.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/procedure-implementation.md" style="--c:#a21caf" title="docs/procedure-implementation.md — &quot;Procedures&quot; (133 lines) · Procedures">docs/procedure-implementation.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/server-operations.md" style="--c:#475569" title="docs/server-operations.md — &quot;Server Operations&quot; (148 lines) · Deploy &amp; Ops">docs/server-operations.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/source-editor.md" style="--c:#15803d" title="docs/source-editor.md — &quot;Source Editor Plan&quot; (138 lines) · Frontend">docs/source-editor.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/ssr-render-testing.md" style="--c:#15803d" title="docs/ssr-render-testing.md — &quot;SSR Render Testing (`cb render`)&quot; (177 lines) · Frontend">docs/ssr-render-testing.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/testing.md" style="--c:#1d4ed8" title="docs/testing.md — &quot;Testing&quot; (537 lines) · Testing">docs/testing.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/FRONTEND.md" style="--c:#15803d" title="FRONTEND.md — &quot;Frontend Conventions&quot; (108 lines) · Frontend">FRONTEND.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/src/core/reactor/DESIGN.md" style="--c:#a3a394" title="src/core/reactor/DESIGN.md — &quot;Reactor Design&quot; (122 lines)">src/core/reactor/DESIGN.md</a></div>
+      </section>
+    
+      <section class="ring ring-3">
+        <div class="ring-label">
+          <span class="ring-num">Layer 3</span>
+          <h3>Two links away</h3>
+          <p class="ring-flavour">Reachable in two hops — the docs the docs lead to.</p>
+          <p class="ring-trigger">Background reading the agent finds while pulling on a thread.</p>
+          <span class="ring-count">9 docs</span>
+        </div>
+        <div class="ring-chips"><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/agent-knowledge.md" style="--c:#a3a394" title="docs/agent-knowledge.md — &quot;Agent Knowledge Audit: What It Should Know and How to Verify&quot; (493 lines)">docs/agent-knowledge.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/attach-manifests.md" style="--c:#a3a394" title="docs/attach-manifests.md — &quot;Attach Manifests&quot; (255 lines)">docs/attach-manifests.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/data-source-tagging.md" style="--c:#a3a394" title="docs/data-source-tagging.md — &quot;Data Source Tagging Convention&quot; (89 lines)">docs/data-source-tagging.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/health-checks.md" style="--c:#a3a394" title="docs/health-checks.md — &quot;Health Checks&quot; (60 lines)">docs/health-checks.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/narration-mode-design.md" style="--c:#a3a394" title="docs/narration-mode-design.md — &quot;Narration Mode — Design&quot; (465 lines)">docs/narration-mode-design.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/prompt-audits.md" style="--c:#a3a394" title="docs/prompt-audits.md — &quot;Prompt Audits&quot; (203 lines)">docs/prompt-audits.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/testing-gaps.md" style="--c:#a3a394" title="docs/testing-gaps.md — &quot;Testing Gaps — Working Document&quot; (95 lines)">docs/testing-gaps.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/triage-design.md" style="--c:#a3a394" title="docs/triage-design.md — &quot;Triage — Design&quot; (262 lines)">docs/triage-design.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/README.md" style="--c:#a3a394" title="README.md — &quot;callback-box&quot; (2 lines)">README.md</a></div>
+      </section>
+    
+      <section class="ring ring-4">
+        <div class="ring-label">
+          <span class="ring-num">Layer 4</span>
+          <h3>Out in the field</h3>
+          <p class="ring-flavour">Not linked from the loaded layers — found by traversal, search, or tool output.</p>
+          <p class="ring-trigger">Working notes, archaeology, speculative designs. See the Curator&#39;s stroll below.</p>
+          <span class="ring-count">27 docs</span>
+        </div>
+        <div class="ring-chips"><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/CLAUDE-MD-REVIEW.md" style="--c:#a3a394" title="CLAUDE-MD-REVIEW.md — &quot;CLAUDE.md Review — 2026-04-28&quot; (448 lines)">CLAUDE-MD-REVIEW.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/activities-design.md" style="--c:#a3a394" title="docs/activities-design.md — &quot;Activities — Design Proposal&quot; (311 lines)">docs/activities-design.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/activities-retrospective.md" style="--c:#a3a394" title="docs/activities-retrospective.md — &quot;Activities — Retrospective&quot; (44 lines)">docs/activities-retrospective.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/01-what-is-this.md" style="--c:#a3a394" title="docs/architecture/01-what-is-this.md — &quot;What Is This Thing?&quot; (66 lines)">docs/architecture/01-what-is-this.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/02-cards-and-memory.md" style="--c:#a3a394" title="docs/architecture/02-cards-and-memory.md — &quot;Cards and Memory&quot; (99 lines)">docs/architecture/02-cards-and-memory.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/attach-implementation.md" style="--c:#a3a394" title="docs/attach-implementation.md — &quot;Implementation spec: `.attach/` directories&quot; (344 lines)">docs/attach-implementation.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/box-user-account-spec.md" style="--c:#a3a394" title="docs/box-user-account-spec.md — &quot;Spec: Box as Linux User Account&quot; (402 lines)">docs/box-user-account-spec.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/boxes-as-packages.md" style="--c:#a3a394" title="docs/boxes-as-packages.md — &quot;Design Exploration: Boxes as Code Repositories&quot; (701 lines)">docs/boxes-as-packages.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/capture-pipeline-redesign.md" style="--c:#a3a394" title="docs/capture-pipeline-redesign.md — &quot;Capture Pipeline Redesign&quot; (128 lines)">docs/capture-pipeline-redesign.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/chat-schedules.md" style="--c:#6d28d9" title="docs/chat-schedules.md — &quot;Chat Schedules&quot; (94 lines) · Wakeup &amp; Reactor">docs/chat-schedules.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/cli-restructure.md" style="--c:#a3a394" title="docs/cli-restructure.md — &quot;`cb` CLI Restructure — Plan&quot; (163 lines)">docs/cli-restructure.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/design-card-views.md" style="--c:#a3a394" title="docs/design-card-views.md — &quot;Card View Plugin System&quot; (876 lines)">docs/design-card-views.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/design-vision.md" style="--c:#a3a394" title="docs/design-vision.md — &quot;Callback Box: Design Vision and Architecture&quot; (68 lines)">docs/design-vision.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/event-bus-design.md" style="--c:#a3a394" title="docs/event-bus-design.md — &quot;Event Bus Design&quot; (142 lines)">docs/event-bus-design.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/gmail-setup.md" style="--c:#0e7490" title="docs/gmail-setup.md — &quot;Gmail Connector Setup&quot; (85 lines) · Connectors">docs/gmail-setup.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/google-drive.md" style="--c:#0e7490" title="docs/google-drive.md — &quot;Google Drive Integration&quot; (140 lines) · Connectors">docs/google-drive.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/google-setup.md" style="--c:#a3a394" title="docs/google-setup.md — &quot;Google Cloud Console Setup&quot; (136 lines)">docs/google-setup.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/landmark-curation.md" style="--c:#a3a394" title="docs/landmark-curation.md — &quot;Landmark Curation&quot; (48 lines)">docs/landmark-curation.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/photo-storage-investigation.md" style="--c:#a3a394" title="docs/photo-storage-investigation.md — &quot;Photo storage investigation: the ledger box is 20G&quot; (187 lines)">docs/photo-storage-investigation.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/prompt-logging.md" style="--c:#a3a394" title="docs/prompt-logging.md — &quot;Prompt Logging for Agent Invocations&quot; (212 lines)">docs/prompt-logging.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/scheduler.md" style="--c:#6d28d9" title="docs/scheduler.md — &quot;Scheduler&quot; (93 lines) · Wakeup &amp; Reactor">docs/scheduler.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/stack-decisions.md" style="--c:#a3a394" title="docs/stack-decisions.md — &quot;Stack Decisions&quot; (1186 lines)">docs/stack-decisions.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/state-management-comparison.md" style="--c:#a3a394" title="docs/state-management-comparison.md — &quot;State Management Comparison: Zustand vs MobX-State-Tree vs Valtio vs XState&quot; (831 lines)">docs/state-management-comparison.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/telegram-setup.md" style="--c:#0e7490" title="docs/telegram-setup.md — &quot;Telegram Connector Setup&quot; (136 lines) · Connectors">docs/telegram-setup.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/todo-security.md" style="--c:#a3a394" title="docs/todo-security.md — &quot;Security TODOs&quot; (25 lines)">docs/todo-security.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/test/manual/README.md" style="--c:#a3a394" title="test/manual/README.md — &quot;Manual tests&quot; (21 lines)">test/manual/README.md</a><a class="chip" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/THINKING_CLAUDE.md" style="--c:#a3a394" title="THINKING_CLAUDE.md — &quot;Thinking Machine Mode&quot; (93 lines)">THINKING_CLAUDE.md</a></div>
+      </section>
+    
+
+  <div class="section-eyebrow" style="margin-top:72px">II &nbsp;·&nbsp; The substance</div>
+  <h2 class="section" style="margin-top:4px">Eight pillars the project rests on</h2>
+  <p class="section-lede">
+    These are the conversations the codebase wants to have with the agent reading it. Each pillar
+    points at a canonical entry doc (where to start), the supporting material (when you need more),
+    and the code dirs it governs. The chip colors in the rings above match these pillars — so you
+    can see at a glance where each pillar's docs sit in the context layering.
+  </p>
+  <div class="pillars">
+      <article class="pillar" style="--c:#c2410c">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/cards.png');">
+          <h3>Cards</h3>
+          <p class="pillar-blurb">The core data format. YAML-frontmatter markdown with typed schemas — that&#39;s it.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">Cards are the atoms. Everything else is just a way of moving them, reading them, or judging them. The simplicity is load-bearing.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/cards-as-markdown.md" style="--c:#c2410c">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">docs/cards-as-markdown.md</span>
+            <span class="entry-title">"RFC: Cards as Markdown + YAML Frontmatter" · 2553 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">The deep design RFC. 2,553 lines. The first ~200 are the spine; skim the rest unless you&#39;re migrating.</p>
+          <ul class="pillar-support"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/adding-schemas.md">docs/adding-schemas.md</a>
+          <span class="meta">192 lines</span>
+          <span class="curator-note">Read this before writing a new card type. Saves an embarrassing amount of time.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/EXAMPLE_FILES.md">docs/EXAMPLE_FILES.md</a>
+          <span class="meta">820 lines</span>
+          <span class="curator-note">A browseable cookbook of every card shape in the system.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/migrations.md">docs/migrations.md</a>
+          <span class="meta">160 lines</span>
+          <span class="curator-note">What to run when the card format changes under a live box.</span>
+        </li></ul>
+          <div class="pillar-code"><code class="code-tag">src/schemas/</code><code class="code-tag">src/core/card-io.ts</code></div>
+        </div>
+      </article>
+    
+      <article class="pillar" style="--c:#0e7490">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/connectors.png');">
+          <h3>Connectors</h3>
+          <p class="pillar-blurb">The world dripping in. Sync external services into the box filesystem as cards.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">Each connector&#39;s job is small: pull stuff, turn it into cards, leave them in the inbox. Boring on purpose.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/connectors.md" style="--c:#0e7490">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">docs/connectors.md</span>
+            <span class="entry-title">"Connectors" · 86 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">The pattern. Read this first; the per-service docs are variations.</p>
+          <ul class="pillar-support"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/src/connectors/CLAUDE.md">src/connectors/CLAUDE.md</a>
+          <span class="meta">23 lines</span>
+          <span class="curator-note">Per-directory rules. Auto-loads when Claude reads connector code.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/gmail-setup.md">docs/gmail-setup.md</a>
+          <span class="meta">85 lines</span>
+          <span class="curator-note">OAuth dance for Gmail. Notable for &#39;just one more callback&#39; energy.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/telegram-setup.md">docs/telegram-setup.md</a>
+          <span class="meta">136 lines</span>
+          <span class="curator-note">Telegram bot setup. Calmest of the connectors.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/google-drive.md">docs/google-drive.md</a>
+          <span class="meta">140 lines</span>
+          <span class="curator-note">Drive watch-and-pull. Underused so far.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/calendar.md">docs/calendar.md</a>
+          <span class="meta">89 lines</span>
+          <span class="curator-note">The newest one. Still ironing out edges.</span>
+        </li></ul>
+          <div class="pillar-code"><code class="code-tag">src/connectors/</code></div>
+        </div>
+      </article>
+    
+      <article class="pillar" style="--c:#6d28d9">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/reactor.png');">
+          <h3>Wakeup &amp; Reactor</h3>
+          <p class="pillar-blurb">The cycle that drives everything: sync → process → execute → schedule → sleep.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">A polling loop dressed up in agent clothes. The whole system has a heartbeat, and this is it.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/src/core/reactor/CLAUDE.md" style="--c:#6d28d9">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">src/core/reactor/CLAUDE.md</span>
+            <span class="entry-title">"Reactor" · 24 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">Per-directory guide — lives next to the code it documents. Auto-loads.</p>
+          <ul class="pillar-support"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/scheduler.md">docs/scheduler.md</a>
+          <span class="meta">93 lines</span>
+          <span class="curator-note">How the next wakeup gets set. Cron, except it&#39;s a CLI.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/chat-schedules.md">docs/chat-schedules.md</a>
+          <span class="meta">94 lines</span>
+          <span class="curator-note">When the agent should proactively message you.</span>
+        </li></ul>
+          <div class="pillar-code"><code class="code-tag">src/core/reactor/</code><code class="code-tag">src/core/</code></div>
+        </div>
+      </article>
+    
+      <article class="pillar" style="--c:#a21caf">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/procedures.png');">
+          <h3>Procedures</h3>
+          <p class="pillar-blurb">Multi-step workflows the agent follows, with state captured in run files.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">The least settled part of the system. The engine works; the design isn&#39;t done.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/procedure-implementation.md" style="--c:#a21caf">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">docs/procedure-implementation.md</span>
+            <span class="entry-title">"Procedures" · 133 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">Engine internals. Short — it&#39;s a small piece.</p>
+          
+          <div class="pillar-code"><code class="code-tag">src/core/procedure-engine.ts</code></div>
+        </div>
+      </article>
+    
+      <article class="pillar" style="--c:#15803d">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/frontend.png');">
+          <h3>Frontend</h3>
+          <p class="pillar-blurb">React UI on a small palette of primitives with strict rules about escape hatches.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">The constraint is the feature: any agent that touches UI can only break it in narrow, recoverable ways.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/FRONTEND.md" style="--c:#15803d">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">FRONTEND.md</span>
+            <span class="entry-title">"Frontend Conventions" · 108 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">Palette, primitives, the &#39;no className except outer layout&#39; rule. Required reading before touching pages.</p>
+          <ul class="pillar-support"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/landmarks.md">docs/landmarks.md</a>
+          <span class="meta">164 lines</span>
+          <span class="curator-note">How the URL bar becomes a navigation surface for the agent.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/source-editor.md">docs/source-editor.md</a>
+          <span class="meta">138 lines</span>
+          <span class="curator-note">Aspirational. Not built yet. Read for direction, not state-of-the-world.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/ssr-render-testing.md">docs/ssr-render-testing.md</a>
+          <span class="meta">177 lines</span>
+          <span class="curator-note">Hack to preview pages from the CLI without a browser.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/client-debug-log.md">docs/client-debug-log.md</a>
+          <span class="meta">68 lines</span>
+          <span class="curator-note">When your frontend bug evaporates the moment devtools opens — catch it here.</span>
+        </li></ul>
+          <div class="pillar-code"><code class="code-tag">src/frontend/</code><code class="code-tag">src/webapp/</code></div>
+        </div>
+      </article>
+    
+      <article class="pillar" style="--c:#1d4ed8">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/testing.png');">
+          <h3>Testing</h3>
+          <p class="pillar-blurb">Doctests as the primary test format, plus periodic agent knowledge audits.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">Docs ARE the tests. If a doc goes stale, its tests start failing. Painful when it works.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/testing.md" style="--c:#1d4ed8">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">docs/testing.md</span>
+            <span class="entry-title">"Testing" · 537 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">Philosophy. 537 lines on why doctests, then how.</p>
+          <ul class="pillar-support"><li class="missing"><span class="path">.claude/rules/doctest.md</span> <span class="muted">(not found)</span></li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/knowledge-audits.md">docs/knowledge-audits.md</a>
+          <span class="meta">65 lines</span>
+          <span class="curator-note">Periodic &#39;does the agent still know what we think it knows?&#39; tests.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/maintenance.md">docs/maintenance.md</a>
+          <span class="meta">97 lines</span>
+          <span class="curator-note">The meta-tools: doc-graph, prompt-report — including the thing rendering this page.</span>
+        </li></ul>
+          <div class="pillar-code"><code class="code-tag">test/</code><code class="code-tag">src/test-lib/</code></div>
+        </div>
+      </article>
+    
+      <article class="pillar" style="--c:#a16207">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/boxes.png');">
+          <h3>Boxes</h3>
+          <p class="pillar-blurb">The per-user filesystems the system actually operates on.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">Boxes live outside this repo on purpose — so the agent doesn&#39;t accidentally inherit dev-time context when it&#39;s working on someone&#39;s life.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/box-layout.md" style="--c:#a16207">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">docs/box-layout.md</span>
+            <span class="entry-title">"Box Layout" · 148 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">What a box&#39;s filesystem actually looks like, top to bottom.</p>
+          <ul class="pillar-support"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/adding-a-box.md">docs/adding-a-box.md</a>
+          <span class="meta">149 lines</span>
+          <span class="curator-note">Procedure for spinning up a new one.</span>
+        </li></ul>
+          <div class="pillar-code"><code class="code-tag">~/src/boxes/</code></div>
+        </div>
+      </article>
+    
+      <article class="pillar" style="--c:#475569">
+        <header class="pillar-header" style="background-image: linear-gradient(180deg, rgba(20,16,10,0.45) 0%, rgba(20,16,10,0.85) 100%), url('doc-graph-images/deploy.png');">
+          <h3>Deploy &amp; Ops</h3>
+          <p class="pillar-blurb">Auto-deploy on commit to main; rsync to a small VPS; server runs tsx directly.</p>
+        </header>
+        <div class="pillar-body">
+          <p class="pillar-vibe">Two scripts and a post-commit hook. If it ever needed Docker, something would have gone wrong.</p>
+          <a class="pillar-entry" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/deploy/README.md" style="--c:#475569">
+          <span class="entry-arrow">→</span>
+          <div class="entry-text">
+            <span class="entry-path">deploy/README.md</span>
+            <span class="entry-title">"Deploy" · 191 lines</span>
+          </div>
+        </a>
+        <p class="entry-note">Two scripts. That&#39;s the whole story.</p>
+          <ul class="pillar-support"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/deploy/CLAUDE.md">deploy/CLAUDE.md</a>
+          <span class="meta">26 lines</span>
+          <span class="curator-note">Per-dir guide. Tiny.</span>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/server-operations.md">docs/server-operations.md</a>
+          <span class="meta">148 lines</span>
+          <span class="curator-note">What to do when the prod box is wedged.</span>
+        </li></ul>
+          <div class="pillar-code"><code class="code-tag">deploy/</code></div>
+        </div>
+      </article>
+    </div>
+
+  <div class="section-eyebrow" style="margin-top:72px">III &nbsp;·&nbsp; A stroll through the stacks</div>
+  <h2 class="section" style="margin-top:4px">The curator's notes</h2>
+  <p class="section-lede">
+    Not every doc fits in a pillar, and that's fine — some are letters to a future Ian, some are designs
+    for things that may never exist, some are post-mortems for things that did. This is where they live,
+    grouped so they feel intentional.
+  </p>
+  <div class="curator">
+      <section class="curator-section">
+        <h3>Long views</h3>
+        <p class="curator-blurb">Ian thinking out loud, mostly for himself. None of these are required reading — but they&#39;re where the project&#39;s voice actually lives.</p>
+        <ul class="curator-list"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/CLAUDE.md">docs/architecture/CLAUDE.md</a>
+          <span class="meta">55 lines</span>
+          <p class="curator-note">Index for the longform architecture series. Sets the tone.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/01-what-is-this.md">docs/architecture/01-what-is-this.md</a>
+          <span class="meta">66 lines</span>
+          <p class="curator-note">The &#39;so what IS this thing&#39; question, answered patiently.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/02-cards-and-memory.md">docs/architecture/02-cards-and-memory.md</a>
+          <span class="meta">99 lines</span>
+          <p class="curator-note">Companion piece — the &#39;what&#39;s a card, really&#39; explainer.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/spirit.md">docs/architecture/spirit.md</a>
+          <span class="meta">112 lines</span>
+          <p class="curator-note">Mood piece. The vibes of the system, on paper.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/family.md">docs/architecture/family.md</a>
+          <span class="meta">95 lines</span>
+          <p class="curator-note">A fictional family used as the running example throughout the design docs.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/architecture/writing-style.md">docs/architecture/writing-style.md</a>
+          <span class="meta">95 lines</span>
+          <p class="curator-note">Style guide for these very docs. Yes, meta.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/DESIGN.md">docs/DESIGN.md</a>
+          <span class="meta">531 lines</span>
+          <p class="curator-note">The early grand design. Outdated in places; valuable for the original framing.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/IMPLEMENTATION.md">docs/IMPLEMENTATION.md</a>
+          <span class="meta">1018 lines</span>
+          <p class="curator-note">Companion to DESIGN.md — how the grand design was meant to land.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/design-vision.md">docs/design-vision.md</a>
+          <span class="meta">68 lines</span>
+          <p class="curator-note">Shorter vision statement, written later. The voice is more settled.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/glossary.md">docs/glossary.md</a>
+          <span class="meta">53 lines</span>
+          <p class="curator-note">Terms used across the project. Shows how the vocabulary stabilized.</p>
+        </li></ul>
+      </section>
+    
+      <section class="curator-section">
+        <h3>Speculative</h3>
+        <p class="curator-blurb">Designs for things that don&#39;t exist yet — or might never. Useful for finding out where Ian&#39;s head was at when he wrote them.</p>
+        <ul class="curator-list"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/design-card-views.md">docs/design-card-views.md</a>
+          <span class="meta">876 lines</span>
+          <p class="curator-note">876 lines of plugin system that may or may not get built.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/event-bus-design.md">docs/event-bus-design.md</a>
+          <span class="meta">142 lines</span>
+          <p class="curator-note">An event bus, designed, awaiting motivation to exist.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/boxes-as-packages.md">docs/boxes-as-packages.md</a>
+          <span class="meta">701 lines</span>
+          <p class="curator-note">What if every box were an npm package? Thought experiment.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/box-user-account-spec.md">docs/box-user-account-spec.md</a>
+          <span class="meta">402 lines</span>
+          <p class="curator-note">What if every box were a Linux user? Also thought experiment.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/narration-mode-design.md">docs/narration-mode-design.md</a>
+          <span class="meta">465 lines</span>
+          <p class="curator-note">Speculative voice/narration mode for the agent.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/triage-design.md">docs/triage-design.md</a>
+          <span class="meta">262 lines</span>
+          <p class="curator-note">How a triage subsystem could work, if built.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/pdf-intake-design.md">docs/pdf-intake-design.md</a>
+          <span class="meta">166 lines</span>
+          <p class="curator-note">PDF processing path. Partly implemented.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/capture-pipeline-redesign.md">docs/capture-pipeline-redesign.md</a>
+          <span class="meta">128 lines</span>
+          <p class="curator-note">Plan for redoing the capture pipeline. Awaiting trigger.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/activities-design.md">docs/activities-design.md</a>
+          <span class="meta">311 lines</span>
+          <p class="curator-note">Designed a thing called Activities…</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/activities-retrospective.md">docs/activities-retrospective.md</a>
+          <span class="meta">44 lines</span>
+          <p class="curator-note">…then took it apart. Both docs left as the trail.</p>
+        </li></ul>
+      </section>
+    
+      <section class="curator-section">
+        <h3>Archaeology</h3>
+        <p class="curator-blurb">Decisions made, considered, or undone. Worth a glance when you find yourself reopening the same question.</p>
+        <ul class="curator-list"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/stack-decisions.md">docs/stack-decisions.md</a>
+          <span class="meta">1186 lines</span>
+          <p class="curator-note">1,186 lines of &#39;why X and not Y&#39;. Archived so the question doesn&#39;t recur.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/state-management-comparison.md">docs/state-management-comparison.md</a>
+          <span class="meta">831 lines</span>
+          <p class="curator-note">Survey for a decision that turned out not to need making.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/photo-storage-investigation.md">docs/photo-storage-investigation.md</a>
+          <span class="meta">187 lines</span>
+          <p class="curator-note">Forensic note from when a box got fat. Disk math, recovery options.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/cli-restructure.md">docs/cli-restructure.md</a>
+          <span class="meta">163 lines</span>
+          <p class="curator-note">Plan that&#39;s mostly executed; the doc lingers as a record.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/CLAUDE-MD-REVIEW.md">CLAUDE-MD-REVIEW.md</a>
+          <span class="meta">448 lines</span>
+          <p class="curator-note">One-pass audit of all the CLAUDE.md files. Working document — marked for deletion.</p>
+        </li></ul>
+      </section>
+    
+      <section class="curator-section">
+        <h3>Notes to self</h3>
+        <p class="curator-blurb">Loose ends, late-night thoughts, things that are someone&#39;s problem (Ian&#39;s) and not yet anyone else&#39;s.</p>
+        <ul class="curator-list"><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/todo-security.md">docs/todo-security.md</a>
+          <span class="meta">25 lines</span>
+          <p class="curator-note">Things that scare him at 2am. Still a TODO.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/health-checks.md">docs/health-checks.md</a>
+          <span class="meta">60 lines</span>
+          <p class="curator-note">When something&#39;s on fire, this is what to grep.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/landmark-curation.md">docs/landmark-curation.md</a>
+          <span class="meta">48 lines</span>
+          <p class="curator-note">Which landmarks to surface to the agent. Hand-tuned.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/agent-knowledge.md">docs/agent-knowledge.md</a>
+          <span class="meta">493 lines</span>
+          <p class="curator-note">What the agent is expected to know, vs. what it knows. The accountability ledger.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/prompt-audits.md">docs/prompt-audits.md</a>
+          <span class="meta">203 lines</span>
+          <p class="curator-note">Catching stock-LLM phrases that crept into prompts.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/prompt-logging.md">docs/prompt-logging.md</a>
+          <span class="meta">212 lines</span>
+          <p class="curator-note">Log every agent invocation — what was sent, what came back.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/THINKING_CLAUDE.md">THINKING_CLAUDE.md</a>
+          <span class="meta">93 lines</span>
+          <p class="curator-note">Experimental thinking mode for Claude itself. Might get deleted.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/ideas.md">docs/ideas.md</a>
+          <span class="meta">936 lines</span>
+          <p class="curator-note">936-line idea graveyard. The good ones bubble up to actual docs eventually.</p>
+        </li><li>
+          <a class="path" href="vscode://file/Users/ianbicking/src/callback-mono/callback-box/docs/testing-gaps.md">docs/testing-gaps.md</a>
+          <span class="meta">95 lines</span>
+          <p class="curator-note">Areas where coverage is admittedly thin. Honesty in writing.</p>
+        </li></ul>
+      </section>
+    </div>
+
+  
+    <details class="health">
+      <summary>Vital signs: 75 docs · 16 unreferenced · 4 broken links</summary>
+      <div class="health-body">
+        <p class="muted">Unreferenced doesn't mean unloved — landing pages, indexes, and working notes all live here on purpose. The full audit (every reference in context) lives in <code>docs/doc-graph.md</code>.</p>
+        <ul><li><code>CLAUDE-MD-REVIEW.md:282</code> → <code>CONVENTIONS.md</code></li><li><code>docs/agent-knowledge.md:329</code> → <code>view:store/path/to/file.md</code></li><li><code>docs/knowledge-audits.md:50</code> → <code>MAP.md</code></li><li><code>docs/prompt-audits.md:47</code> → <code>tone-design.md</code></li></ul>
+      </div>
+    </details>
+  
+
+  <footer class="colophon">
+    Rendered 2026-05-28 00:19:12 UTC by
+    <code>src/dev/doc-graph-html.ts</code> from a live scan of <code>callback-box/</code>.
+    The pillar narration and curator's notes are hand-edited at the top of that file.
+    Vibe images by Gemini Flash Image, prompted for textures only.
+    For the dry audit (every reference in context, full inventory), see <a href="doc-graph.md">doc-graph.md</a>.
+  </footer>
+</div>
+</body>
+</html>
