@@ -1,7 +1,7 @@
-# Attach Manifest Helpers
+# Asset Manifest Helpers
 
 Per-`.attach/` manifest format, hashing, and load/save. See
-`docs/attach-manifests.md` for the design.
+`docs/asset-manifests.md` for the design.
 
 ```ts setup
 import {
@@ -14,7 +14,7 @@ import {
   sha256File,
   manifestPath,
   MANIFEST_FILENAME,
-} from "../src/core/attach-manifest.js";
+} from "../src/core/asset-manifest.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { stat } from "node:fs/promises";
 

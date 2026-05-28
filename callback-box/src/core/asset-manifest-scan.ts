@@ -5,22 +5,22 @@
  *   - `cb attachments migrate` (claim every binary into a manifest)
  *   - `cb attachments verify` (read-only check)
  *
- * See docs/attach-manifests.md for the algorithm.
+ * See docs/asset-manifests.md for the algorithm.
  */
 
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import {
-  type AttachManifest,
-  type AttachManifestEntry,
+  type AssetManifest,
+  type AssetManifestEntry,
   MANIFEST_FILENAME,
   computeEntry,
   entryMatchesStat,
   loadManifest,
   saveManifest,
   sha256File,
-} from "./attach-manifest.js";
+} from "./asset-manifest.js";
 
 /** A directory whose name ends in `.attach`. */
 export interface AttachScope {
@@ -163,7 +163,7 @@ export async function scanAttachScope(
 
   // Load manifest. Malformed-manifest is an error but we can't proceed for this
   // scope, so return early.
-  let manifest: AttachManifest;
+  let manifest: AssetManifest;
   try {
     manifest = await loadManifest(scope.absPath);
   } catch (e) {
@@ -211,7 +211,7 @@ export async function scanAttachScope(
 
   // Hash newFiles (for claim or rename) and changedFiles (to compare against
   // stored hash). Build a hash lookup so we can detect renames.
-  const hashCache = new Map<string, AttachManifestEntry>();  // name → fresh entry
+  const hashCache = new Map<string, AssetManifestEntry>();  // name → fresh entry
   for (const name of [...newFiles, ...changedFiles]) {
     const absPath = path.join(scope.absPath, name);
     hashCache.set(name, await computeEntry(absPath));
