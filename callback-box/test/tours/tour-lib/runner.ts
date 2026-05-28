@@ -76,8 +76,9 @@ async function runPass(input: PassInput): Promise<PassResult> {
   const { tour, viewport, artifactsDir, baseUrl } = input;
   const session = new BrowseSession(`tour-${tour.name}-${viewport.name}`);
   // about:blank gives Chrome a tab to apply the viewport to before the
-  // tour navigates anywhere real.
-  await session.open("about:blank");
+  // tour navigates anywhere real. We skip the page-ready wait here —
+  // about:blank has no JS, so the readiness signal can never settle.
+  await session.open("about:blank", { noWait: true });
   await session.setViewport(viewport.width, viewport.height);
 
   const findings: Finding[] = [];

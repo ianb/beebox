@@ -69,8 +69,9 @@ export class BrowseSession {
     });
   }
 
-  async open(url: string): Promise<void> {
-    await this.run(["open", url]);
+  async open(url: string, opts?: { noWait?: boolean }): Promise<void> {
+    const args = opts?.noWait === true ? ["--no-wait", "open", url] : ["open", url];
+    await this.run(args);
   }
 
   async snapshot(opts?: { interactiveOnly?: boolean }): Promise<string> {
