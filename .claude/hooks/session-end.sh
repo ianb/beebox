@@ -101,4 +101,14 @@ if git branch -D "$branch" >/dev/null 2>&1; then
   echo "[session-end]   deleted branch $branch"
 fi
 
+# Cache state: browse profile + socket dir, router log, pid file.
+# These don't show up in any UI, but they accumulate, and if the session
+# ended cleanly there's no reason to leave them behind.
+BROWSE_DIR="$HOME/.cache/callback-mono/browse/$name"
+LOG_FILE="$HOME/.cache/callback-mono/logs/$name.log"
+PID_FILE="$HOME/.cache/callback-mono/pids/$name.json"
+[ -d "$BROWSE_DIR" ] && rm -rf "$BROWSE_DIR" && echo "[session-end]   removed $BROWSE_DIR"
+[ -f "$LOG_FILE" ]   && rm -f  "$LOG_FILE"   && echo "[session-end]   removed $LOG_FILE"
+[ -f "$PID_FILE" ]   && rm -f  "$PID_FILE"   && echo "[session-end]   removed $PID_FILE"
+
 echo "[session-end] done"
