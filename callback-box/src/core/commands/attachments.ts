@@ -1,17 +1,19 @@
 /**
- * cb attachments — manifest-aware operations on binary attachments.
+ * cb attachments — manifest-aware operations on assets (the binary
+ * subset of attachments). The command operates on the whole `.attach/`
+ * scope (hence the name), but its job is the asset subset.
  *
  * Subcommands:
  *   - verify   : scan all .attach/ scopes, report errors, no writes
- *   - migrate  : claim every binary into its manifest (idempotent first run)
- *   - overwrite: replace contents of a tracked attachment from stdin
- *   - add      : explicitly claim an untracked binary (rare; the hook
+ *   - migrate  : claim every asset into its manifest (idempotent first run)
+ *   - overwrite: replace contents of a tracked asset from stdin
+ *   - add      : explicitly claim an untracked asset (rare; the hook
  *                normally auto-claims)
  *
  * Destructive ops (overwrite, rm, mv) re-implement the chmod 444 →
  * +w → atomic-rename → 444 dance so the manifest stays in sync.
  *
- * See docs/attach-manifests.md.
+ * See docs/asset-manifests.md.
  */
 
 import * as fs from "node:fs/promises";
@@ -24,12 +26,12 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import {
-  type AttachManifest,
+  type AssetManifest,
   computeEntry,
   loadManifest,
   saveManifest,
-} from "../attach-manifest.js";
-import { scanBoxAttachments } from "../attach-manifest-scan.js";
+} from "../asset-manifest.js";
+import { scanBoxAttachments } from "../asset-manifest-scan.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -58,8 +60,8 @@ async function executeAttachments(
     case "add":
       if (!pathArg) return { success: false, error: "add requires a path" };
       return runAdd(ctx, { relPath: pathArg, apply: apply !== false });
-    case "untrack-binaries":
-      return runUntrackBinaries(ctx);
+    case "untrack-assets":
+      return runUntrackAssets(ctx);
     case "init-gitignore":
       return runInitGitignore(ctx);
     default:
@@ -68,16 +70,17 @@ async function executeAttachments(
 }
 
 /**
- * Marker that scopes the auto-appended attach-binary block in `.gitignore`.
+ * Marker that scopes the auto-appended asset block in `.gitignore`.
  * Lets us detect "already present" idempotently and (in the future) update
  * the block if we change the extension list.
  */
-const GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attachments init-gitignore)";
+const GITIGNORE_BLOCK_MARKER = "# cb-assets (managed by cb attachments init-gitignore)";
+/** Older marker the box may have if it was initialized before the rename. */
+const LEGACY_GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attachments init-gitignore)";
 
 const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
-# Binary attachments inside .attach/ scopes are tracked via per-dir
-# manifest.json (size + sha256), not committed directly. See
-# docs/attach-manifests.md.
+# Assets inside .attach/ scopes are tracked via per-dir manifest.json
+# (size + sha256), not committed directly. See docs/asset-manifests.md.
 **/*.attach/**/*.jpg
 **/*.attach/**/*.jpeg
 **/*.attach/**/*.png
@@ -110,14 +113,17 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
     const err = e as NodeJS.ErrnoException;
     if (err.code !== "ENOENT") throw e;
   }
-  if (existing.includes(GITIGNORE_BLOCK_MARKER)) {
+  if (
+    existing.includes(GITIGNORE_BLOCK_MARKER) ||
+    existing.includes(LEGACY_GITIGNORE_BLOCK_MARKER)
+  ) {
     ctx.writeLine("Already present in .gitignore — no change.");
     return { success: true, data: { changed: false } };
   }
   const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
   const updated = existing + sep + GITIGNORE_BLOCK;
   await fs.writeFile(gitignorePath, updated);
-  ctx.writeLine(`Appended attach-binary block to ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
+  ctx.writeLine(`Appended asset block to ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
   return { success: true, data: { changed: true } };
 }
 
@@ -134,7 +140,7 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
  * untrack — running this before `cb attachments migrate` would lose the
  * inventory.
  */
-async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
+async function runUntrackAssets(ctx: CommandContext): Promise<CommandResult> {
   // List tracked files that the current .gitignore would ignore. `git
   // ls-files -i --exclude-standard -c` does exactly that: tracked-but-now-
   // ignored.
@@ -158,10 +164,10 @@ async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
   }
 
   // Safety check: every file we're about to untrack must be either covered
-  // by an attach manifest (so we can verify integrity later) or be a non-
+  // by an asset manifest (so we can verify integrity later) or be a non-
   // attach file (in which case the user is doing something we don't know
   // about — refuse). Files outside .attach/ scopes aren't our concern; we
-  // only handle attachment binaries here.
+  // only handle assets here.
   const inAttach: string[] = [];
   const outsideAttach: string[] = [];
   for (const relPath of trackedIgnored) {
@@ -174,7 +180,7 @@ async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
     if (outsideAttach.length > 5) ctx.writeLine(`  ...and ${outsideAttach.length - 5} more`);
   }
   if (inAttach.length === 0) {
-    ctx.writeLine("No tracked attachment binaries to untrack.");
+    ctx.writeLine("No tracked assets to untrack.");
     return { success: true, data: { untracked: 0 } };
   }
 
@@ -182,7 +188,7 @@ async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
   // A binary at `msg-001.attach/attachments/foo.png` belongs to
   // `msg-001.attach/manifest.json` under key `attachments/foo.png`.
   const uncovered: string[] = [];
-  const manifestCache = new Map<string, AttachManifest>();
+  const manifestCache = new Map<string, AssetManifest>();
   for (const relPath of inAttach) {
     const scope = enclosingAttachScope(relPath);
     if (!scope) {
@@ -206,7 +212,7 @@ async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
     if (uncovered.length > 5) ctx.writeLine(`  ...and ${uncovered.length - 5} more`);
     return {
       success: false,
-      error: `${uncovered.length} attachment(s) not in manifest`,
+      error: `${uncovered.length} asset(s) not in manifest`,
     };
   }
 
@@ -219,7 +225,7 @@ async function runUntrackBinaries(ctx: CommandContext): Promise<CommandResult> {
       maxBuffer: 64 * 1024 * 1024,
     });
   }
-  ctx.writeLine(`Untracked ${inAttach.length} attachment binary file(s) from the git index.`);
+  ctx.writeLine(`Untracked ${inAttach.length} asset(s) from the git index.`);
   ctx.writeLine("Working-tree files are preserved. Manifests cover them. Commit to finalize.");
   return { success: true, data: { untracked: inAttach.length } };
 }
@@ -248,7 +254,7 @@ async function runVerify(ctx: CommandContext): Promise<CommandResult> {
   for (const err of result.errors) ctx.writeLine(`  ${err.message}`);
   return {
     success: false,
-    error: `${result.errors.length} attachment error(s)`,
+    error: `${result.errors.length} asset error(s)`,
     data: { scopes: result.scopes.length, errors: result.errors.length },
   };
 }
@@ -286,7 +292,7 @@ async function runMigrate(ctx: CommandContext): Promise<CommandResult> {
     for (const err of result.errors) ctx.writeLine(`  ${err.message}`);
     return {
       success: false,
-      error: `${result.errors.length} attachment error(s)`,
+      error: `${result.errors.length} asset error(s)`,
       data: { scopes: result.scopes.length, claimed: totalClaimed, errors: result.errors.length },
     };
   }
@@ -297,8 +303,8 @@ async function runMigrate(ctx: CommandContext): Promise<CommandResult> {
 }
 
 /**
- * Overwrite a tracked attachment from stdin. The path must already be
- * manifested; new attachments go through `add`.
+ * Overwrite a tracked asset from stdin. The path must already be
+ * manifested; new assets go through `add`.
  */
 async function runOverwrite(ctx: CommandContext, relPath: string): Promise<CommandResult> {
   const absPath = path.resolve(ctx.boxRoot, relPath);
@@ -319,7 +325,7 @@ async function runOverwrite(ctx: CommandContext, relPath: string): Promise<Comma
     return { success: false, error: "stdin was empty (use 'cb attachments overwrite path - < file' or pipe content)" };
   }
 
-  await writeAttachment({ absPath, content: stdin });
+  await writeAsset({ absPath, content: stdin });
   manifest.files[fileName] = await computeEntry(absPath);
   await saveManifest(attachDir, manifest);
 
@@ -348,7 +354,7 @@ async function runAdd(
     return { success: false, error: `${relPath} does not exist` };
   }
 
-  const manifest: AttachManifest = await loadManifest(attachDir);
+  const manifest: AssetManifest = await loadManifest(attachDir);
   const entry = await computeEntry(absPath);
   const existing = manifest.files[fileName];
   if (existing && existing.sha256 === entry.sha256) {
@@ -366,7 +372,7 @@ async function runAdd(
 }
 
 /** Atomic write + chmod 444. Used by overwrite. */
-async function writeAttachment({ absPath, content }: { absPath: string; content: Buffer }): Promise<void> {
+async function writeAsset({ absPath, content }: { absPath: string; content: Buffer }): Promise<void> {
   // Best-effort chmod +w so we can overwrite a previously-locked file. Ignore
   // errors (file may not exist or filesystem may not support chmod).
   try { await fs.chmod(absPath, 0o644); } catch (_e) { /* ignore */ }
@@ -404,7 +410,7 @@ async function readStdin(): Promise<Buffer> {
 
 registerCommand({
   name: "attachments",
-  description: "Manifest-aware operations on binary attachments (verify, migrate, overwrite, add)",
+  description: "Manifest-aware operations on assets (verify, migrate, overwrite, add)",
   args: [
     {
       name: "subcommand",

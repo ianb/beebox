@@ -1,4 +1,4 @@
-# Attach Manifest Scan
+# Asset Manifest Scan
 
 The directory walk that reconciles every `.attach/` manifest against
 on-disk reality. Drives the pre-commit hook, migration, and verify.
@@ -8,8 +8,8 @@ import {
   findAttachScopes,
   scanAttachScope,
   scanBoxAttachments,
-} from "../src/core/attach-manifest-scan.js";
-import { loadManifest } from "../src/core/attach-manifest.js";
+} from "../src/core/asset-manifest-scan.js";
+import { loadManifest } from "../src/core/asset-manifest.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { utimes } from "node:fs/promises";
 

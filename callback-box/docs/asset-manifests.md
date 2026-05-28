@@ -1,30 +1,37 @@
-# Attach Manifests
+# Asset Manifests
 
 **Status: Design. Not yet implemented.**
 
-How binary attachments (photos, scanned PDFs, audio) stay tracked by git
-without their bytes living in git history.
+How assets (the binary subset of attachments — photos, scanned PDFs,
+audio) stay tracked by git without their bytes living in git history.
+
+**Terminology.** Inside a `.attach/` scope, an *attachment* is any file
+(committed sidecars, notes, etc.); an *asset* is the subset whose bytes
+live on disk only and are tracked via this manifest. The `.attach/`
+directory and the `<filename ref="attach/...">` virtual prefix are about
+the directory metaphor, not the file noun, so they keep the "attach"
+name. So does the `cb attachments` CLI command, which operates on the
+whole `.attach/` scope even though its job is the asset subset.
 
 ## Problem
 
-Cards reference binary attachments via `<filename ref="attach/foo.jpg">`
-into the card's attach scope. Committing those binaries directly is making
-the repo grow uncomfortably fast — a single photo batch is hundreds of MB,
-and git history never shrinks. We need the binaries to live on disk but
-not in the git object database, while still being something the system
-treats as first-class data (not "stuff that happens to be in the
-directory").
+Cards reference assets via `<filename ref="attach/foo.jpg">` into the
+card's attach scope. Committing those bytes directly is making the repo
+grow uncomfortably fast — a single photo batch is hundreds of MB, and
+git history never shrinks. We need the bytes to live on disk but not in
+the git object database, while still being something the system treats
+as first-class data (not "stuff that happens to be in the directory").
 
 Rejected alternatives:
 
-- **Plain `.gitignore`** — works, but the binaries become invisible to
+- **Plain `.gitignore`** — works, but the assets become invisible to
   git. No audit trail, no detection of in-place modification, no clear
-  story for "is this attachment still here?" Feels too casual for data
+  story for "is this asset still here?" Feels too casual for data
   that matters.
 - **Git LFS** — the standard solution. Heavy: needs an LFS server, every
   clone has to configure the filter driver or `git checkout` overwrites
-  binaries with pointer text. More moving parts than warranted.
-- **Per-binary sidecar `<file>.sha`** — works, doubles the file count in
+  assets with pointer text. More moving parts than warranted.
+- **Per-asset sidecar `<file>.sha`** — works, doubles the file count in
   attach scopes. Not chosen but a fine fallback if per-dir manifests
   become awkward.
 - **Git notes / custom refs** — bad UX, not fetched/pushed by default.
@@ -32,8 +39,8 @@ Rejected alternatives:
 ## Approach
 
 **Manifest in git, blobs out of git.** Each `.attach/` directory contains
-a `manifest.json` that records every binary in it. The manifest commits;
-the binaries are gitignored. A pre-commit hook keeps the manifest
+a `manifest.json` that records every asset in it. The manifest commits;
+the assets are gitignored. A pre-commit hook keeps the manifest
 synchronized with the directory contents.
 
 The system splits operations into two classes:
@@ -47,7 +54,7 @@ The system splits operations into two classes:
 
 ## Manifest shape
 
-One `manifest.json` per `.attach/` directory, listing direct binary
+One `manifest.json` per `.attach/` directory, listing direct asset
 children only (nested attach scopes have their own manifests).
 
 ```json
@@ -75,7 +82,7 @@ hash will catch them on the next rehash event.
 
 ### `cb overwrite <path>` (reads stdin or `-`)
 
-Replace the contents of an existing tracked attachment. Sequence:
+Replace the contents of an existing tracked asset. Sequence:
 
 1. Verify `<path>` lives in an attach scope and has a manifest entry.
    Refuse if not (use the auto-claim path for new files).
@@ -88,7 +95,7 @@ Replace the contents of an existing tracked attachment. Sequence:
 
 ### `cb mv <old> <new>`
 
-Rename or move an attachment. Updates the source manifest (entry
+Rename or move an asset. Updates the source manifest (entry
 removed) and destination manifest (entry added with same hash). Cross-
 attach-scope moves are supported; the hash is unchanged so the entry
 "relocates" rather than re-computing.
@@ -99,8 +106,8 @@ falls through to existing `cb mv` behavior.
 ### `cb rm <path>`
 
 `chmod +w`, unlink, drop manifest entry. Extends the existing `cb rm`;
-attach-scope targets get the manifest-aware path, others get the
-existing behavior.
+asset targets get the manifest-aware path, others get the existing
+behavior.
 
 ## Pre-commit hook
 
@@ -167,9 +174,9 @@ Per-box `.gitignore` rule:
 ```
 
 Scoped to `**/*.attach/**` only. Binaries outside attach scopes commit
-normally; the user gets an advisory on commit if they stage a >1MB
-binary outside an attach scope ("consider moving it into an attach
-scope or `git rm`-ing it").
+normally (they aren't assets — they're just files); the user gets an
+advisory on commit if they stage a >1MB binary outside an attach scope
+("consider moving it into an attach scope or `git rm`-ing it").
 
 ## Failure cases
 
@@ -187,9 +194,9 @@ scope or `git rm`-ing it").
 
 ## Migration runbook (existing boxes)
 
-Goal: stop committing new attachment binaries while keeping every existing
-binary on disk and recoverable. Pre-existing history retains the blobs; we
-accept that.
+Goal: stop committing new asset bytes while keeping every existing
+asset on disk and recoverable. Pre-existing history retains the blobs;
+we accept that.
 
 Do this per box, in the box's working tree:
 
@@ -197,26 +204,26 @@ Do this per box, in the box's working tree:
 # 1. Sanity check: working tree is clean.
 git status
 
-# 2. Write a manifest.json for every binary already committed.
+# 2. Write a manifest.json for every asset already committed.
 #    No content changes; just inventory.
 cb attachments migrate
 
-# 3. Commit the manifests. Binaries are still tracked at this point.
+# 3. Commit the manifests. Assets are still tracked at this point.
 git add -A
-git commit -m "Migrate: add attach manifests"
+git commit -m "Migrate: add asset manifests"
 
-# 4. Add the attach-binary patterns to the box's .gitignore. Idempotent
+# 4. Add the asset patterns to the box's .gitignore. Idempotent
 #    (detected via a marker line), so re-running is safe.
 cb attachments init-gitignore
 
-# 5. Untrack the binaries that the new .gitignore would now ignore.
+# 5. Untrack the assets that the new .gitignore would now ignore.
 #    Working-tree files are preserved; the git index drops them.
-#    Refuses to run if any of those binaries are not covered by a manifest.
-cb attachments untrack-binaries
+#    Refuses to run if any asset is not covered by a manifest.
+cb attachments untrack-assets
 
-# 6. Commit the untracking. Future commits no longer include the binaries.
+# 6. Commit the untracking. Future commits no longer include the assets.
 git add .gitignore
-git commit -m "Untrack attach binaries"
+git commit -m "Untrack assets"
 
 # 7. Verify.
 cb attachments verify
@@ -224,12 +231,12 @@ cb attachments verify
 
 After this, `du -sh .git` doesn't shrink (history still carries the
 blobs), but `git status` and `git log --stat` no longer surface
-binaries, and new commits stay small. To actually reclaim history-side
+assets, and new commits stay small. To actually reclaim history-side
 space, run `git filter-repo` later — separate, riskier operation.
 
 ## Out of scope (for v1)
 
-- **Backup / remote storage.** No R2, no rsync. Binaries live on the
+- **Backup / remote storage.** No R2, no rsync. Assets live on the
   server's local disk only. Backup is a separate problem — the manifest
   is the inventory that makes a future `cb attachments push <target>`
   trivial.
@@ -245,7 +252,7 @@ space, run `git filter-repo` later — separate, riskier operation.
   scope are both `**/*.attach/**`. If agents start putting big binaries
   outside attach scopes routinely (despite the advisory), revisit.
   Noted in `docs/ideas.md`.
-- **Manifest format.** JSON per-dir was chosen over per-binary sidecar
+- **Manifest format.** JSON per-dir was chosen over per-asset sidecar
   and over a session-level recursive manifest. Worth revisiting if
   per-dir produces noisy diffs in practice.
 - **`--no-verify` blast radius.** A determined commit with `--no-verify`

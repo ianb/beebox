@@ -42,6 +42,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "doc-to-gdoc",       script: "scripts/migrate/doc-to-gdoc.ts" },
   { name: "strip-type-field",  script: "scripts/migrate/strip-type-field.ts" },
   { name: "repair-refs",       script: "scripts/migrate/repair-refs.ts" },
+  { name: "asset-marker",      script: "scripts/migrate/asset-marker.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

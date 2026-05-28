@@ -384,27 +384,9 @@ Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/
 
 Worth treating as a single pass — partial glossaries are worse than none because readers stop trusting them as comprehensive.
 
-## Introduce "asset" as the term for manifest-tracked attachments
+## Review asset-manifest scope
 
-Vocabulary distinction worth landing in docs:
-
-- **attachment** — any file inside a `.attach/` scope, regardless of storage. A `.md` sidecar, a `.txt` notes file, etc. are attachments and commit to git normally.
-- **asset** — the subset of attachments whose bytes live on disk only, tracked via the manifest (currently jpg/png/pdf/mp3/mp4/gz/... — the gitignored extensions). Assets are *also* attachments.
-
-Today the codebase and docs blur these — "attach binaries," "binary attachments," and "attachments" all refer to the manifest-tracked subset in different places. Audit and tighten:
-
-- `docs/attach-manifests.md` — rename the doc concept to "asset manifest"; reserve "attachment" for the broader directory-membership sense
-- Gitignore marker line (`# cb-attach-binaries ...`) — update to `# cb-assets ...`; migration should rewrite existing markers
-- Source identifiers (`AttachManifest`, `attach-manifest.ts`, scan helpers, etc.) — rename to `AssetManifest` / `asset-manifest.ts`
-- Pre-commit hook output strings — use "asset" where the noun appears
-- `cb attachments` command — **keep the name**; the command operates on the whole attach scope (verify, migrate, init-gitignore, untrack-binaries), even though its job is to manage the asset subset. The CLI surface stays stable.
-- `.attach/` directory name and `<filename ref="attach/...">` virtual prefix — both stay; they're about the directory metaphor, not the file noun.
-
-Worth doing as a single sweep so the vocabulary lands consistently.
-
-## Review attach-manifest scope
-
-The attach-manifest hook (`docs/attach-manifests.md`) scopes its discipline to `**/*.attach/**` only. Binaries outside attach scopes commit normally, with a soft "this is big, consider moving it" advisory. Revisit once we have real usage: if agents routinely drop binaries outside attach scopes anyway (logs, screenshots, scratch files), either tighten enforcement (gitignore more aggressively, hard-block large binaries anywhere), or accept the looser model and beef up the advisory. Also worth revisiting: per-dir JSON manifest vs per-binary sidecar — if per-dir produces noisy diffs in practice, the sidecar form is a drop-in replacement.
+The asset-manifest hook (`docs/asset-manifests.md`) scopes its discipline to `**/*.attach/**` only. Binaries outside attach scopes commit normally, with a soft "this is big, consider moving it" advisory. Revisit once we have real usage: if agents routinely drop binaries outside attach scopes anyway (logs, screenshots, scratch files), either tighten enforcement (gitignore more aggressively, hard-block large binaries anywhere), or accept the looser model and beef up the advisory. Also worth revisiting: per-dir JSON manifest vs per-asset sidecar — if per-dir produces noisy diffs in practice, the sidecar form is a drop-in replacement.
 
 ## Catch stale image-refs after card renames
 

@@ -1,10 +1,11 @@
 /**
- * cb attachments — manifest-aware operations on binary attachments.
+ * cb attachments — manifest-aware operations on assets (the binary
+ * subset of attachments).
  *
  * Subcommands:
  *   cb attachments verify         # read-only scan, exit non-zero on errors
- *   cb attachments migrate        # write manifests for everything in .attach/
- *   cb attachments overwrite PATH # replace tracked file contents from stdin
+ *   cb attachments migrate        # write manifests for every asset in .attach/
+ *   cb attachments overwrite PATH # replace tracked asset contents from stdin
  *   cb attachments add PATH       # explicitly claim a file (rarely needed;
  *                                   the pre-commit hook auto-claims)
  */
@@ -14,7 +15,7 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
 export const attachmentsCommand = new Command("attachments")
-  .description("Manifest-aware operations on binary attachments");
+  .description("Manifest-aware operations on assets");
 
 attachmentsCommand
   .command("verify")
@@ -23,12 +24,12 @@ attachmentsCommand
 
 attachmentsCommand
   .command("migrate")
-  .description("Write manifests for every binary in .attach/. Idempotent.")
+  .description("Write manifests for every asset in .attach/. Idempotent.")
   .action(async () => dispatch("migrate"));
 
 attachmentsCommand
   .command("overwrite <path>")
-  .description("Replace the contents of a tracked attachment. Reads from stdin.")
+  .description("Replace the contents of a tracked asset. Reads from stdin.")
   .action(async (relPath: string) => dispatch("overwrite", relPath));
 
 attachmentsCommand
@@ -37,13 +38,13 @@ attachmentsCommand
   .action(async (relPath: string) => dispatch("add", relPath));
 
 attachmentsCommand
-  .command("untrack-binaries")
-  .description("Migration step: git rm --cached every attachment binary covered by a manifest. Idempotent.")
-  .action(async () => dispatch("untrack-binaries"));
+  .command("untrack-assets")
+  .description("Migration step: git rm --cached every asset covered by a manifest. Idempotent.")
+  .action(async () => dispatch("untrack-assets"));
 
 attachmentsCommand
   .command("init-gitignore")
-  .description("Append the attach-binary gitignore patterns to the box's .gitignore. Idempotent.")
+  .description("Append the asset gitignore patterns to the box's .gitignore. Idempotent.")
   .action(async () => dispatch("init-gitignore"));
 
 async function dispatch(subcommand: string, relPath?: string): Promise<void> {
