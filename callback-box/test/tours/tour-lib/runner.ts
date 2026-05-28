@@ -151,7 +151,18 @@ function mergeCheckpoints(passes: readonly PassResult[]): CheckpointRecord[] {
 }
 
 async function clickIn(session: BrowseSession, locator: ClickLocator): Promise<void> {
-  const ref = await session.findRef(locator.role, locator.name);
+  let ref = await session.findRef(locator.role, locator.name);
+  if (ref === null) {
+    // Common case: at mobile viewport, nav links live behind a hamburger
+    // button labelled "Menu". Try opening that and retry. On desktop the
+    // button is display:none, so it won't appear in the AX tree and this
+    // path quietly falls through.
+    const menuRef = await session.findRef("button", "Menu");
+    if (menuRef !== null) {
+      await session.clickRef(menuRef);
+      ref = await session.findRef(locator.role, locator.name);
+    }
+  }
   if (ref === null) {
     throw new Error(`Could not resolve ${locator.role} "${locator.name}"`);
   }
