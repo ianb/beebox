@@ -953,3 +953,23 @@ Open questions:
 - **Cost vs. value.** Per-session LLM cost vs. how often the digest actually contains something actionable. Mitigated by running only on sessions over some length and only on new sessions since last run.
 - **Where the digest goes.** A markdown file the user reviews? An auto-opened PR with proposed edits? A new card type in the boxholder's own box ("agent learnings")?
 - **Coupling with doc-usage data.** A retrospective that says "Claude kept reading docs/X.md without finding the answer" is more actionable than either signal alone — the two miners probably want to share a session-walker.
+
+## Hume.ai for prosody — experiment + annotate
+
+[Hume.ai](https://hume.ai) offers prosody/expression models that go beyond
+words — pitch, pacing, emphasis, emotional contour. Two directions worth
+prototyping:
+
+- **Listen** — run incoming voice memos through a prosody pass alongside the
+  existing transcription. Annotate the resulting transcript card with the
+  prosody signal (excited / tentative / rushed / reading-aloud) so downstream
+  agents have non-textual context to work with. E.g. "user sounds frustrated"
+  could shift how the agent triages the request.
+- **Speak** — use Hume's TTS for outbound speech where prosody markup matters
+  (briefings, longer narration). Compare against OpenAI TTS on naturalness for
+  the kinds of content this system actually produces.
+
+Cheap to try because it's a connector + a couple of card-field additions; no
+deep architectural changes. Worth doing as a focused experiment to see whether
+the prosody annotations actually steer agent behavior in useful ways, or just
+add noise.
