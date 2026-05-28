@@ -68,23 +68,33 @@ export async function transcribeAudioVoxtral(
     )
   );
 
-  // Add timestamp_granularities if word timestamps requested
-  if (options?.wordTimestamps) {
+  // timestamp_granularities — `word` for per-word timing, `segment` for
+  // diarization (Mistral requires segment granularity when diarize=true;
+  // without it the API returns 422). Word timestamps and diarization are
+  // mutually exclusive here; word wins if both are requested.
+  const granularity = options?.wordTimestamps
+    ? "word"
+    : diarization
+      ? "segment"
+      : null;
+  if (granularity) {
     formParts.push(
       Buffer.from(
         `--${boundary}\r\n` +
           'Content-Disposition: form-data; name="timestamp_granularities"\r\n\r\n' +
-          "word\r\n"
+          `${granularity}\r\n`
       )
     );
   }
 
-  // Add diarization flag — Voxtral returns speaker_id per segment when on.
-  if (diarization) {
+  // Diarization flag. Mistral's parameter is `diarize` (not `diarization`)
+  // — sending the wrong name is silently ignored and you get an
+  // unlabeled transcript back.
+  if (diarization && !options?.wordTimestamps) {
     formParts.push(
       Buffer.from(
         `--${boundary}\r\n` +
-          'Content-Disposition: form-data; name="diarization"\r\n\r\n' +
+          'Content-Disposition: form-data; name="diarize"\r\n\r\n' +
           "true\r\n"
       )
     );
@@ -130,6 +140,28 @@ export async function transcribeAudioVoxtral(
         }>;
         usage?: { prompt_audio_seconds?: number; total_seconds?: number };
       }>();
+
+    if (diarization) {
+      const segCount = result.segments?.length ?? 0;
+      const labeled = result.segments?.filter(
+        (s) => typeof s.speaker_id === "string" && s.speaker_id.length > 0,
+      ).length ?? 0;
+      const speakers = new Set(
+        (result.segments ?? [])
+          .map((s) => s.speaker_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
+      );
+      console.log(
+        `[voxtral-diarized] segments=${segCount} labeled=${labeled} ` +
+          `unique-speakers=${speakers.size} ids=${JSON.stringify([...speakers])}`,
+      );
+      if (segCount > 0 && labeled === 0) {
+        console.log(
+          "[voxtral-diarized] no speaker_id on any segment; first segment keys: " +
+            JSON.stringify(Object.keys(result.segments?.[0] ?? {})),
+        );
+      }
+    }
 
     // Voxtral returns duration via usage.prompt_audio_seconds or segments
     const lastSegment = result.segments?.[result.segments.length - 1];

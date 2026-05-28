@@ -57,3 +57,10 @@ if [ -d "$BROWSE_DIR" ]; then
   echo "[worktree-remove] removing browse state $BROWSE_DIR"
   rm -rf "$BROWSE_DIR"
 fi
+
+# Router log + PID file. These survive `bin/worktrees panic` and similar
+# cleanups since neither targets cache state directly.
+LOG_FILE="$HOME/.cache/callback-mono/logs/$NAME.log"
+PID_FILE="$HOME/.cache/callback-mono/pids/$NAME.json"
+[ -f "$LOG_FILE" ] && rm -f "$LOG_FILE" && echo "[worktree-remove] removed $LOG_FILE"
+[ -f "$PID_FILE" ] && rm -f "$PID_FILE" && echo "[worktree-remove] removed $PID_FILE"
