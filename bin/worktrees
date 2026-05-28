@@ -22,7 +22,7 @@ shift || true
 
 case "$cmd" in
   serve)
-    exec node "$REPO_DIR/bin/router.mjs" "$@"
+    exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/bin/router.ts" "$@"
     ;;
 
   status | list)
