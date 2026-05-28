@@ -295,9 +295,9 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
 const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Default (Opus)", model: null },
   { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
-  { label: "Opus 4.7", model: "claude-opus-4-7" },
+  { label: "Opus 4.8", model: "claude-opus-4-8" },
   { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
-  { label: "Opus 4.7 (1M context)", model: "claude-opus-4-7[1m]" },
+  { label: "Opus 4.8 (1M context)", model: "claude-opus-4-8[1m]" },
 ];
 
 type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper" | "openai-realtime";
