@@ -24,6 +24,7 @@ export type Severity = "fail" | "warn" | "info";
 export interface Finding {
   severity: Severity;
   checkpoint: string;
+  viewport: Viewport;
   message: string;
 }
 

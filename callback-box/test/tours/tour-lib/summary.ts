@@ -57,7 +57,7 @@ function renderSummary(input: SummaryInput): string {
     out.push("");
     for (const f of findings) {
       const marker = f.severity === "fail" ? "❌" : f.severity === "warn" ? "⚠️" : "ℹ️";
-      out.push(`- ${marker} **${f.checkpoint}** — ${f.message}`);
+      out.push(`- ${marker} **${f.checkpoint}** [${f.viewport}] — ${f.message}`);
     }
     out.push("");
   }

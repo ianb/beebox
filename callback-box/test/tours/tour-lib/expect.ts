@@ -6,16 +6,17 @@
  */
 
 import type { BrowseSession } from "./browse.js";
-import type { ExpectAPI, Finding, Severity } from "./types.js";
+import type { ExpectAPI, Finding, Severity, Viewport } from "./types.js";
 
 interface ExpectContext {
   session: BrowseSession;
+  viewport: Viewport;
   checkpointName: () => string;
   pushFinding: (f: Finding) => void;
 }
 
 function record(ctx: ExpectContext, { severity, message }: { severity: Severity; message: string }): void {
-  ctx.pushFinding({ severity, checkpoint: ctx.checkpointName(), message });
+  ctx.pushFinding({ severity, checkpoint: ctx.checkpointName(), viewport: ctx.viewport, message });
 }
 
 function escapeForRegex(s: string): string {
