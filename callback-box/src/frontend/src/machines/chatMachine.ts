@@ -171,6 +171,49 @@ function handleSystemInit(
   ctx.sendBack({ type: "SESSION_ASSIGNED", sessionId: assigned });
 }
 
+/**
+ * Dev-only stream stub. When a user message begins with `/fakestream`, the
+ * machine plays a timed script of STREAM_TEXT events instead of hitting the
+ * backend. Used to reproduce streaming-UI bugs (scroll, layout) deterministically.
+ *
+ * Syntax: `/fakestream [chunks] [intervalMs] [chunkLen]`
+ *   chunks     — total STREAM_TEXT events to emit (default 200)
+ *   intervalMs — delay between events (default 40)
+ *   chunkLen   — approx chars per chunk (default 25)
+ */
+function runFakeStream(
+  message: string,
+  { sendBack, terminal }: {
+    sendBack: (event: ChatEvent) => void;
+    terminal: (event: ChatEvent) => void;
+  },
+): () => void {
+  const parts = message.trim().split(/\s+/);
+  const chunks = Number.parseInt(parts[1], 10) || 200;
+  const intervalMs = Number.parseInt(parts[2], 10) || 40;
+  const chunkLen = Number.parseInt(parts[3], 10) || 25;
+
+  const para = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ";
+  let body = "# Fakestream\n\n";
+  for (let i = 0; i < 12; i++) body += para + "\n\n";
+
+  let pos = 0;
+  let emitted = 0;
+  const handle = window.setInterval(() => {
+    if (emitted >= chunks) {
+      window.clearInterval(handle);
+      terminal({ type: "STREAM_RESULT" });
+      return;
+    }
+    const next = body.slice(pos, pos + chunkLen);
+    pos = (pos + chunkLen) % body.length;
+    sendBack({ type: "STREAM_TEXT", text: next });
+    emitted++;
+  }, intervalMs);
+
+  return () => window.clearInterval(handle);
+}
+
 const streamActor = fromCallback(
   ({
     sendBack,
@@ -201,6 +244,11 @@ const streamActor = fromCallback(
       msgLen: input.message.length,
       images: input.images ? input.images.length : 0,
     });
+
+    const unwrapped = input.message.replace(/^<typed[^>]*>/, "").replace(/<\/typed>$/, "");
+    if (unwrapped.startsWith("/fakestream")) {
+      return runFakeStream(unwrapped, { sendBack, terminal });
+    }
 
     sendChatMessage({
       session: input.sessionInput,

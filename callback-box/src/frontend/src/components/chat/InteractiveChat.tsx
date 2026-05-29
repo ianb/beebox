@@ -1005,6 +1005,11 @@ function dataItemKey(d: DataItem): string {
 
 const VIRTUOSO_INITIAL_FIRST_INDEX = 1_000_000_000;
 
+// Distance from the bottom (px) within which streaming chunks still
+// auto-follow. Sized to cover the height of a few text deltas — a real
+// scroll-up by the user clears the threshold easily.
+const AUTO_FOLLOW_THRESHOLD = 200;
+
 // Virtuoso requires Header/Footer components to be stable references; if a
 // new component identity is passed each render they remount. We keep them
 // module-level and pass dynamic data via the `context` prop instead.
@@ -1058,6 +1063,7 @@ function VirtualizedMessageList({
 }) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const atBottomRef = useRef(true);
+  const scrollerRef = useRef<HTMLElement | Window | null>(null);
   // Whether we've performed the on-mount scroll-to-bottom yet. Initial
   // load of an existing chat should land at the latest message, not the
   // top — `initialTopMostItemIndex` alone isn't reliable here because data
@@ -1142,17 +1148,30 @@ function VirtualizedMessageList({
     atBottomRef.current = b;
   }, []);
 
+  const handleScrollerRef = useCallback((el: HTMLElement | Window | null) => {
+    scrollerRef.current = el;
+  }, []);
+
   // During streaming, the tail item's height grows without changing data
-  // length — followOutput won't fire — so re-pin to bottom imperatively
-  // while the user is at the bottom.
+  // length — followOutput won't fire — so re-pin to bottom imperatively.
+  // We can't gate on `atBottomRef` here: each chunk grows scrollHeight
+  // before this effect runs, transiently flipping atBottom to false, so
+  // the gate skips the scroll and we fall progressively further behind.
+  // Read the live DOM position instead — if we were near the bottom when
+  // the chunk arrived, follow it; if the user has scrolled up by more
+  // than a chunk's worth, leave them alone.
   useEffect(() => {
-    if (streamingShown && atBottomRef.current) {
-      virtuosoRef.current?.scrollToIndex({
-        index: "LAST",
-        align: "end",
-        behavior: "auto",
-      });
-    }
+    if (!streamingShown) return;
+    const el = scrollerRef.current;
+    if (!el || el === window) return;
+    const target = el as HTMLElement;
+    const fromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (fromBottom > AUTO_FOLLOW_THRESHOLD) return;
+    virtuosoRef.current?.scrollToIndex({
+      index: "LAST",
+      align: "end",
+      behavior: "auto",
+    });
   }, [streamText, streamTools.length, streamingShown]);
 
   // Scroll to bottom when user sends a message (even if scrolled up).
@@ -1205,6 +1224,7 @@ function VirtualizedMessageList({
       <div data-image-list hidden>{chatImagesJson}</div>
       <Virtuoso<DataItem, ChatListContext>
         ref={virtuosoRef}
+        scrollerRef={handleScrollerRef}
         className="flex-1"
         data={data}
         firstItemIndex={firstItemIndex}
