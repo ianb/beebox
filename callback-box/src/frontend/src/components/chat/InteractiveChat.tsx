@@ -10,7 +10,7 @@
  * a session switch (or new-chat reset) cleanly remounts the machine.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, type ReactNode, type CSSProperties } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
@@ -1005,6 +1005,11 @@ function dataItemKey(d: DataItem): string {
 
 const VIRTUOSO_INITIAL_FIRST_INDEX = 1_000_000_000;
 
+// Distance from the bottom (px) within which streaming chunks still
+// auto-follow. Sized to cover the height of a few text deltas — a real
+// scroll-up by the user clears the threshold easily.
+const AUTO_FOLLOW_THRESHOLD = 200;
+
 // Virtuoso requires Header/Footer components to be stable references; if a
 // new component identity is passed each render they remount. We keep them
 // module-level and pass dynamic data via the `context` prop instead.
@@ -1030,6 +1035,20 @@ function LoadOlderHeader({ context }: { context?: ChatListContext }) {
     </div>
   );
 }
+
+// Virtuoso's scroller fills the full width of the chat column so wheel/touch
+// events anywhere across it (including the left/right gutters) scroll the
+// messages. The visible content is kept centered at the same max-width as the
+// header and composer by constraining the inner list, not the scroller.
+const CenteredList = forwardRef<HTMLDivElement, { children?: ReactNode; style?: CSSProperties }>(
+  function CenteredList({ children, style }, ref) {
+    return (
+      <div ref={ref} style={style} className="mx-auto w-full max-w-5xl">
+        {children}
+      </div>
+    );
+  },
+);
 
 function VirtualizedMessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
@@ -1058,6 +1077,7 @@ function VirtualizedMessageList({
 }) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const atBottomRef = useRef(true);
+  const scrollerRef = useRef<HTMLElement | Window | null>(null);
   // Whether we've performed the on-mount scroll-to-bottom yet. Initial
   // load of an existing chat should land at the latest message, not the
   // top — `initialTopMostItemIndex` alone isn't reliable here because data
@@ -1142,17 +1162,30 @@ function VirtualizedMessageList({
     atBottomRef.current = b;
   }, []);
 
+  const handleScrollerRef = useCallback((el: HTMLElement | Window | null) => {
+    scrollerRef.current = el;
+  }, []);
+
   // During streaming, the tail item's height grows without changing data
-  // length — followOutput won't fire — so re-pin to bottom imperatively
-  // while the user is at the bottom.
+  // length — followOutput won't fire — so re-pin to bottom imperatively.
+  // We can't gate on `atBottomRef` here: each chunk grows scrollHeight
+  // before this effect runs, transiently flipping atBottom to false, so
+  // the gate skips the scroll and we fall progressively further behind.
+  // Read the live DOM position instead — if we were near the bottom when
+  // the chunk arrived, follow it; if the user has scrolled up by more
+  // than a chunk's worth, leave them alone.
   useEffect(() => {
-    if (streamingShown && atBottomRef.current) {
-      virtuosoRef.current?.scrollToIndex({
-        index: "LAST",
-        align: "end",
-        behavior: "auto",
-      });
-    }
+    if (!streamingShown) return;
+    const el = scrollerRef.current;
+    if (!el || el === window) return;
+    const target = el as HTMLElement;
+    const fromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (fromBottom > AUTO_FOLLOW_THRESHOLD) return;
+    virtuosoRef.current?.scrollToIndex({
+      index: "LAST",
+      align: "end",
+      behavior: "auto",
+    });
   }, [streamText, streamTools.length, streamingShown]);
 
   // Scroll to bottom when user sends a message (even if scrolled up).
@@ -1201,10 +1234,11 @@ function VirtualizedMessageList({
   const lastAssistantGroupIndex = groups.findLastIndex((g) => g.type === "assistant");
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col overflow-x-hidden">
+    <div className="flex-1 w-full min-w-0 flex flex-col overflow-x-hidden">
       <div data-image-list hidden>{chatImagesJson}</div>
       <Virtuoso<DataItem, ChatListContext>
         ref={virtuosoRef}
+        scrollerRef={handleScrollerRef}
         className="flex-1"
         data={data}
         firstItemIndex={firstItemIndex}
@@ -1214,7 +1248,7 @@ function VirtualizedMessageList({
         atBottomThreshold={80}
         computeItemKey={(_, item) => dataItemKey(item)}
         context={headerContext}
-        components={{ Header: LoadOlderHeader }}
+        components={{ Header: LoadOlderHeader, List: CenteredList }}
         itemContent={(_, item) => {
           if (item.kind === "marker") {
             return (
@@ -2301,9 +2335,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           })}
         />
       ) : null}
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
-      {/* Header with debug controls */}
-      <header className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full">
+      {/* Header with debug controls — centered at the same max-width as the
+          message list and composer below. */}
+      <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
         <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
         <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={handleToggleNarration} />
@@ -2358,6 +2393,9 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         pendingHqDraft={pendingHqDraft}
       />
 
+      {/* Everything below the scroll pane (status banners + composer) is
+          centered at the same max-width as the header and messages. */}
+      <div className="flex flex-col w-full max-w-5xl mx-auto min-w-0">
       {/* Error display */}
       {error || transcription.error ? (
         <div className="px-4 py-2 bg-danger-50 border-t border-danger-light text-danger-dark text-sm">
@@ -2503,6 +2541,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           />
         </div>
       ) : null}
+      </div>
     </div>
     </div>
     {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}

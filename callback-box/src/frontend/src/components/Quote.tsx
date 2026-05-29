@@ -18,14 +18,11 @@
  */
 
 import type { ReactNode } from "react";
+import { isPersonRef, speakerDisplay } from "../lib/quote-extract";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
-export interface QuoteLinkContext {
+interface QuoteLinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}
-
-function isPersonRef(from: string): boolean {
-  return from.startsWith("people/");
 }
 
 function Attribution({
@@ -36,7 +33,7 @@ function Attribution({
   linkCtx: QuoteLinkContext;
 }): ReactNode {
   if (isPersonRef(from)) {
-    const displayName = from.slice("people/".length).replace(/[_-]+/g, " ");
+    const displayName = speakerDisplay(from);
     return (
       <button
         type="button"

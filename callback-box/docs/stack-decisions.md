@@ -15,7 +15,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | `@anthropic-ai/claude-agent-sdk` drives agent invocation: typed message stream, session resume, in-process hooks, structured output. MCP tools + file checkpointing not yet used. |
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | Doctest system built (runner: `tap`). DI pattern established. |
-| 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced react-markdown/remark in 2026-05). See `docs/cards-as-markdown.md`. |
+| 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced react-markdown/remark in 2026-05) for custom tags like `{% quote %}`. See `docs/cards-as-markdown.md`. |
 | 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, sanitize-filename, ky. proper-lockfile reverted 2026-04 → `src/lib/file-lock.ts`. date-fns still TODO. html-entities now orphaned (rss connector removed). |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated (`src/frontend/src/machines/`), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
 | 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Superseded by Decision 24. `cb serve --dev` still works for backend-only. |
@@ -829,13 +829,19 @@ Position tracking is needed for:
 
 ### What we use it for
 
-- **Rendering markdown content** in the frontend (card bodies, documentation, chat messages) — via `react-markdown` + `remark-gfm`
-- **Extracting code blocks** for the literate testing system (Decision 14) — custom doctest loader
-- **Source position mapping** for tracing rendered output back to source files
+- **Rendering markdown content** in the frontend (card bodies, documentation, chat messages) — originally via `react-markdown` + `remark-gfm`; **migrated to `@markdoc/markdoc` in 2026-05** to support custom tags (see below).
+- **Extracting code blocks** for the literate testing system (Decision 14) — custom doctest loader (still on the remark/unified AST).
+- **Source position mapping** for tracing rendered output back to source files.
 
 ### Implementation notes
 
-Done, via Markdoc (not remark). Frontend rendering goes through `src/frontend/src/components/Markdown.tsx` + `src/frontend/src/lib/markdoc-config.ts`. `react-markdown` / `remark-gfm` have been removed from the frontend package.json. The doctest code-block extraction is a separate concern (it parses fenced blocks out of `.doctest.md` files directly) and was unaffected by the rendering switch. KaTeX/math support is not currently wired into the Markdoc pipeline — revisit if math rendering is needed.
+**Frontend rendering — migrated to Markdoc (2026-05).** The frontend now renders markdown through `@markdoc/markdoc`. The driver is the shared `<Markdown>` component at `src/frontend/src/components/Markdown.tsx`; the Markdoc config and the custom `{% quote %}` tag live in `src/frontend/src/lib/markdoc-config.ts`; node overrides (link, image, paragraph, document → React components) and the Quote tag implementation (`src/frontend/src/components/Quote.tsx`) hang off that pipeline. All ~8 consumer sites (`MarkdownCardView`, `RecipeView`, `ChatMessages`, `CommitDetail`, `CardTreeView`, `CalloutBlock`, `renderers/markdown.tsx`, `renderers/image.tsx`) still go through `<Markdown>` — the swap was transparent to them. `react-markdown`, `remark-gfm`, `rehype-raw`, and the custom `remark-comments` / `rehype-strip-ref` plugins are gone from `package.json` and from `src/`.
+
+Why the switch: Markdoc's tag syntax (`{% quote from="people/dana" %}…{% /quote %}`) gives us first-class custom content types with attributes, validated at parse time, without bolting on rehype plugins to invent syntax inside HTML comments. See `docs/cards-as-markdown.md` for the fuller rationale (cards moved to the same Markdoc tag system).
+
+**Doctest loader.** A separate concern, unaffected by the render swap. It extracts fenced code blocks from `.doctest.md` files with plain regex (`agent-doctest/src/doctest-hooks.mjs`), not an AST — so the remark/unified-based source-position story this decision originally imagined never actually got built, and remark/unified is no longer a dependency anywhere in the repo.
+
+KaTeX/math support is not currently wired into the Markdoc pipeline — revisit if math rendering is needed.
 
 ---
 
