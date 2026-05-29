@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Rewrite git history to drop binary attachment blobs that are currently
-# gitignored (via the **/*.attach/** patterns added by the manifest migration).
+# Rewrite git history to drop asset blobs that are currently gitignored
+# (via the **/*.attach/** patterns added by the manifest migration).
 #
 # DESTRUCTIVE. Rewrites every commit's tree. Use only after:
-#   1. `cb attachments migrate` has written manifests for every binary
-#   2. `cb attachments untrack-binaries` has dropped the binaries from the index
+#   1. `cb attachments migrate` has written manifests for every asset
+#   2. `cb attachments untrack-assets` has dropped the assets from the index
 #   3. The .gitignore patterns are in place and committed
 #   4. The current commit + working tree is clean
 #

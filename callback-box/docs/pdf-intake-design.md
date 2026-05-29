@@ -64,7 +64,7 @@ Tax_Return_2025.attach/
   manifest.json                # tracks all of the above (in git)
 ```
 
-All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and the rendered markdown inside `<text>` are what land in commits. See [docs/attach-manifests.md](attach-manifests.md).
+All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and the rendered markdown inside `<text>` are what land in commits. See [docs/asset-manifests.md](asset-manifests.md).
 
 Why AVIF? Smaller than PNG at similar quality, well-supported by browsers, indexable by image models. If docling only emits PNG, the intake pipeline re-encodes after extraction. JPEG is acceptable as a fallback if AVIF tooling is missing on a deployment target.
 

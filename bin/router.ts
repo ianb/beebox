@@ -28,16 +28,27 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs/promises";
 import { createWriteStream } from "node:fs";
-import { execa } from "execa";
+import type { Socket } from "node:net";
+import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy";
+
+type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
+
+interface ErrnoError extends Error {
+  code?: string;
+}
+
+interface StatusError extends Error {
+  statusCode?: number;
+}
 
 // --- Configuration -----------------------------------------------------
 
 const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
 const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
 // Where /main/ is served from. Defaults to the canonical checkout so that a
-// router started from a worktree (e.g. while iterating on router.mjs itself)
+// router started from a worktree (e.g. while iterating on router.ts itself)
 // still serves real-main at /main/, not the worktree's stale snapshot of main.
 // Override with CALLBACK_MAIN_ROOT for non-standard layouts.
 const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-mono");
@@ -49,21 +60,16 @@ const PID_DIR = path.join(STATE_DIR, "pids");
 const BROWSE_DIR = path.join(STATE_DIR, "browse");
 const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 
-// Path to upstream agent-browser shim (resolves to the right native binary).
 const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
 
-function browseDirsFor(name) {
+function browseDirsFor(name: string): { base: string; socketDir: string; profileDir: string } {
   const base = path.join(BROWSE_DIR, name);
   return { base, socketDir: path.join(base, "socket"), profileDir: path.join(base, "profile") };
 }
 
-// Idle window before a worktree's children are shut down (ms).
 const IDLE_TIMEOUT_MS = Number(process.env.ROUTER_IDLE_MS) || 5 * 60 * 1000;
-
-// How long after SIGTERM before we escalate to SIGKILL.
 const KILL_GRACE_MS = 2000;
 
-// Main checkout's default box list (formerly hardcoded in Procfile.dev).
 const MAIN_BOX_DEFAULTS = [
   path.join(os.homedir(), "src", "boxes", "hearthside"),
   path.join(os.homedir(), "src", "boxes", "test1"),
@@ -74,7 +80,15 @@ const MAIN_BOX_DEFAULTS = [
 
 // --- Worktree resolution -----------------------------------------------
 
-async function resolveWorktree(name) {
+interface ResolvedWorktree {
+  name: string;
+  root: string;
+  backendCwd: string;
+  frontendCwd: string;
+  boxes: string[];
+}
+
+async function resolveWorktree(name: string): Promise<ResolvedWorktree | null> {
   if (name === "main") {
     return {
       name: "main",
@@ -103,7 +117,7 @@ async function resolveWorktree(name) {
   };
 }
 
-async function readBoxes(envPath) {
+async function readBoxes(envPath: string): Promise<string[] | null> {
   try {
     const text = await fs.readFile(envPath, "utf8");
     const line = text.split("\n").find((l) => l.startsWith("BOXES="));
@@ -116,7 +130,20 @@ async function readBoxes(envPath) {
 
 // --- PID file management ----------------------------------------------
 
-async function writePidFile(name, data) {
+interface PidRecord {
+  name: string;
+  vitePid: number | undefined;
+  fastifyPid: number | undefined;
+  frontendPort: number;
+  backendPort: number;
+  dashboardPort: number | null;
+  socketDir: string;
+  profileDir: string;
+  routerPid: number;
+  startedAt: number;
+}
+
+async function writePidFile(name: string, data: PidRecord): Promise<void> {
   await fs.mkdir(PID_DIR, { recursive: true });
   await fs.writeFile(
     path.join(PID_DIR, `${name}.json`),
@@ -124,7 +151,7 @@ async function writePidFile(name, data) {
   );
 }
 
-async function removePidFile(name) {
+async function removePidFile(name: string): Promise<void> {
   try {
     await fs.unlink(path.join(PID_DIR, `${name}.json`));
   } catch {
@@ -132,19 +159,17 @@ async function removePidFile(name) {
   }
 }
 
-function pidAlive(pid) {
+function pidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
   } catch (e) {
-    return e.code === "EPERM"; // exists but not ours; still treat as alive
+    return (e as ErrnoError).code === "EPERM";
   }
 }
 
-// Read PID files left behind by any previous router and kill any processes
-// that are still alive. Runs once on router startup. Idempotent.
-async function sweepStaleChildren() {
-  let files;
+async function sweepStaleChildren(): Promise<void> {
+  let files: string[];
   try {
     files = await fs.readdir(PID_DIR);
   } catch {
@@ -153,7 +178,7 @@ async function sweepStaleChildren() {
   for (const file of files) {
     if (!file.endsWith(".json")) continue;
     const fullPath = path.join(PID_DIR, file);
-    let data;
+    let data: Partial<PidRecord>;
     try {
       data = JSON.parse(await fs.readFile(fullPath, "utf8"));
     } catch {
@@ -167,18 +192,16 @@ async function sweepStaleChildren() {
       try {
         process.kill(-pid, "SIGTERM");
       } catch {
-        try { process.kill(pid, "SIGTERM"); } catch {}
+        try { process.kill(pid, "SIGTERM"); } catch { /* gone */ }
       }
-      // Don't wait long; we proceed even if the kill takes effect later.
     }
-    // Dashboard daemonizes itself and writes its own pidfile in socketDir.
     if (typeof data.socketDir === "string") {
       try {
         const dashPidStr = await fs.readFile(path.join(data.socketDir, "dashboard.pid"), "utf8");
         const dashPid = Number.parseInt(dashPidStr.trim(), 10);
         if (Number.isFinite(dashPid) && pidAlive(dashPid)) {
           log(`sweep: killing leftover dashboard pid ${dashPid} from ${file}`);
-          try { process.kill(dashPid, "SIGTERM"); } catch {}
+          try { process.kill(dashPid, "SIGTERM"); } catch { /* gone */ }
         }
       } catch { /* no dashboard pidfile, fine */ }
     }
@@ -188,41 +211,69 @@ async function sweepStaleChildren() {
 
 // --- Process supervision ----------------------------------------------
 
-const worktrees = new Map(); // name → entry
+type EntryState = "starting" | "ready" | "stopping" | "dead";
 
-async function ensureRunning(name) {
-  let entry = worktrees.get(name);
-  if (entry?.state === "ready") {
-    touch(entry);
-    return entry;
+interface WorktreeEntry {
+  state: EntryState;
+  name: string;
+  startPromise?: Promise<WorktreeEntry>;
+  vite?: ChildProc;
+  fastify?: ChildProc;
+  frontendPort?: number;
+  backendPort?: number;
+  dashboardPort: number | null;
+  dashboardUrl: string | null;
+  socketDir?: string;
+  profileDir?: string;
+  browseEnv?: NodeJS.ProcessEnv;
+  startedAt?: number;
+  lastActivity?: number;
+  idleTimer: NodeJS.Timeout | null;
+  logFile?: string;
+}
+
+const worktrees = new Map<string, WorktreeEntry>();
+
+async function ensureRunning(name: string): Promise<WorktreeEntry> {
+  const existing = worktrees.get(name);
+  if (existing?.state === "ready") {
+    touch(existing);
+    return existing;
   }
-  if (entry?.startPromise) return entry.startPromise;
+  if (existing?.startPromise) return existing.startPromise;
 
   const startPromise = startWorktree(name).catch((err) => {
     worktrees.delete(name);
     throw err;
   });
-  worktrees.set(name, { state: "starting", startPromise, name });
+  worktrees.set(name, {
+    state: "starting",
+    startPromise,
+    name,
+    dashboardPort: null,
+    dashboardUrl: null,
+    idleTimer: null,
+  });
   const ready = await startPromise;
   return ready;
 }
 
-function touch(entry) {
+let touch = (entry: WorktreeEntry): void => {
   entry.lastActivity = Date.now();
   if (entry.idleTimer) clearTimeout(entry.idleTimer);
   entry.idleTimer = setTimeout(() => {
     log(`[${entry.name}] idle for ${IDLE_TIMEOUT_MS}ms, shutting down`);
-    stopWorktree(entry.name).catch((err) =>
+    stopWorktree(entry.name).catch((err: Error) =>
       log(`[${entry.name}] idle shutdown error: ${err.message}`),
     );
   }, IDLE_TIMEOUT_MS);
-  entry.idleTimer.unref(); // don't keep the event loop alive
-}
+  entry.idleTimer.unref();
+};
 
-async function startWorktree(name) {
+async function startWorktree(name: string): Promise<WorktreeEntry> {
   const wt = await resolveWorktree(name);
   if (!wt) {
-    const err = new Error(`Worktree ${JSON.stringify(name)} not found`);
+    const err: StatusError = new Error(`Worktree ${JSON.stringify(name)} not found`);
     err.statusCode = 404;
     throw err;
   }
@@ -243,19 +294,18 @@ async function startWorktree(name) {
   const baseUrl = `/${name}/`;
   // --disable-warning=DEP0040 silences the punycode deprecation that
   // transitive deps (ajv@6, node-fetch 2) trigger on every node start.
-  // Append rather than replace so any user-set NODE_OPTIONS still applies.
   const nodeOptions = [process.env.NODE_OPTIONS, "--disable-warning=DEP0040"]
     .filter(Boolean)
     .join(" ");
-  const childEnv = {
+  const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
     FRONTEND_PORT: String(frontendPort),
     BACKEND_PORT: String(backendPort),
     VITE_BASE: baseUrl,
-    PORT: String(backendPort), // Fastify reads PORT
+    PORT: String(backendPort),
     NODE_OPTIONS: nodeOptions,
   };
-  const browseEnv = {
+  const browseEnv: NodeJS.ProcessEnv = {
     ...process.env,
     AGENT_BROWSER_SOCKET_DIR: socketDir,
     AGENT_BROWSER_PROFILE: profileDir,
@@ -264,7 +314,6 @@ async function startWorktree(name) {
 
   log(`[${name}] frontend=${frontendPort} backend=${backendPort} dashboard=${dashboardPort} base=${baseUrl}`);
 
-  // Backend: node + tsx, single process.
   const fastify = execa(
     "node",
     [
@@ -281,11 +330,10 @@ async function startWorktree(name) {
       detached: true,
       cleanup: true,
     },
-  );
+  ) as ChildProc;
   fastify.stdout?.pipe(logStream, { end: false });
   fastify.stderr?.pipe(logStream, { end: false });
 
-  // Vite: direct binary, no pnpm wrapper.
   const viteBin = path.join(wt.frontendCwd, "node_modules", ".bin", "vite");
   const vite = execa(
     viteBin,
@@ -297,16 +345,17 @@ async function startWorktree(name) {
       detached: true,
       cleanup: true,
     },
-  );
+  ) as ChildProc;
   vite.stdout?.pipe(logStream, { end: false });
   vite.stderr?.pipe(logStream, { end: false });
 
-  // Start the per-worktree agent-browser dashboard. It daemonizes itself
-  // (returns once started) and writes its PID into <socketDir>/dashboard.pid.
-  // Non-fatal: if it fails, the worktree still serves; dashboardUrl is null.
-  // The dashboard daemonizes itself — its forked child inherits our stdio fds
-  // and keeps them open after the parent exits, so we must use stdio "ignore"
-  // (otherwise execa hangs forever waiting on those fds).
+  // Kill any orphaned dashboard daemon for this socket dir before starting a new one.
+  await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
+    env: browseEnv,
+    stdio: "ignore",
+    timeout: 5000,
+  }).catch(() => { /* nothing to stop, fine */ });
+
   let dashboardStarted = false;
   try {
     await execa("node", [AGENT_BROWSER_BIN, "dashboard", "start", "--port", String(dashboardPort)], {
@@ -317,10 +366,9 @@ async function startWorktree(name) {
     dashboardStarted = true;
     log(`[${name}] dashboard ready on :${dashboardPort}`);
   } catch (err) {
-    log(`[${name}] dashboard failed to start: ${err.message}`);
+    log(`[${name}] dashboard failed to start: ${(err as Error).message}`);
   }
 
-  // Record PIDs early so a crash mid-startup still leaves a sweep target.
   await writePidFile(name, {
     name,
     vitePid: vite.pid,
@@ -334,27 +382,20 @@ async function startWorktree(name) {
     startedAt: Date.now(),
   });
 
-  // Wait for both to serve HTTP — not just accept TCP. A bare port-listening
-  // check fires too early: the upstream can accept the connection while its
-  // request pipeline is still wiring up, and the router then forwards live
-  // client requests into a half-booted backend. The frontend probe hits the
-  // worktree's base URL on Vite; the backend probe hits `/healthz` on
-  // Fastify (status doesn't matter — auth-required 401 or unconfigured 503
-  // both prove routes are registered).
+  // Wait for both to serve HTTP — not just accept TCP.
   try {
     await Promise.all([
       waitForHttp(frontendPort, baseUrl, 30000, `vite/${name}`),
       waitForHttp(backendPort, "/healthz", 30000, `fastify/${name}`),
     ]);
   } catch (err) {
-    // Startup failed; kill anything we managed to spawn and clean up.
     killGroup(vite.pid);
     killGroup(fastify.pid);
     await removePidFile(name);
     throw err;
   }
 
-  const entry = {
+  const entry: WorktreeEntry = {
     state: "ready",
     name,
     vite,
@@ -372,7 +413,7 @@ async function startWorktree(name) {
     logFile,
   };
   worktrees.set(name, entry);
-  touch(entry); // start the idle timer
+  touch(entry);
   log(`[${name}] ready`);
 
   vite.on("exit", (code, signal) => {
@@ -389,20 +430,19 @@ async function startWorktree(name) {
   return entry;
 }
 
-function onChildExit(name) {
+let onChildExit = (name: string): void => {
   const entry = worktrees.get(name);
   if (!entry || entry.state !== "ready") return;
   entry.state = "dead";
   if (entry.idleTimer) clearTimeout(entry.idleTimer);
-  // Kill the sibling if it's still alive.
   killGroup(entry.vite?.pid);
   killGroup(entry.fastify?.pid);
   stopDashboard(entry).catch(() => {});
   removePidFile(name).catch(() => {});
   worktrees.delete(name);
-}
+};
 
-async function stopWorktree(name) {
+let stopWorktree = async (name: string): Promise<void> => {
   const entry = worktrees.get(name);
   if (!entry) return;
   if (entry.idleTimer) clearTimeout(entry.idleTimer);
@@ -410,16 +450,15 @@ async function stopWorktree(name) {
   killGroup(entry.vite?.pid);
   killGroup(entry.fastify?.pid);
   await stopDashboard(entry).catch(() => {});
-  // Escalation: if still alive after KILL_GRACE_MS, SIGKILL.
   setTimeout(() => {
     killGroup(entry.vite?.pid, "SIGKILL");
     killGroup(entry.fastify?.pid, "SIGKILL");
   }, KILL_GRACE_MS).unref();
   await removePidFile(name);
   worktrees.delete(name);
-}
+};
 
-async function stopDashboard(entry) {
+async function stopDashboard(entry: WorktreeEntry): Promise<void> {
   if (!entry.dashboardPort || !entry.browseEnv) return;
   try {
     await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
@@ -428,17 +467,17 @@ async function stopDashboard(entry) {
       timeout: 5000,
     });
   } catch (err) {
-    log(`[${entry.name}] dashboard stop failed: ${err.message}`);
+    log(`[${entry.name}] dashboard stop failed: ${(err as Error).message}`);
   }
 }
 
-function killGroup(pid, sig = "SIGTERM") {
+function killGroup(pid: number | undefined, sig: NodeJS.Signals = "SIGTERM"): void {
   if (!pid) return;
   try {
-    process.kill(-pid, sig); // group
+    process.kill(-pid, sig);
   } catch {
     try {
-      process.kill(pid, sig); // single
+      process.kill(pid, sig);
     } catch {
       /* gone */
     }
@@ -446,18 +485,13 @@ function killGroup(pid, sig = "SIGTERM") {
 }
 
 // HTTP-level readiness probe. TCP listening is not enough — a process can
-// accept connections before its request handlers are wired up, which causes
-// the dev router to forward client requests into a half-booted backend and
-// surface them as opaque "Failed to load" / superjson-transform errors in
-// the UI. We poll an HTTP GET until the upstream returns *any* HTTP
-// response (status code is irrelevant — 404/401/503 all prove the server
-// is parsing requests). ECONNREFUSED / dropped sockets keep retrying.
-async function waitForHttp(port, path, timeoutMs, label) {
+// accept connections before its request handlers are wired up.
+async function waitForHttp(port: number, reqPath: string, timeoutMs: number, label: string): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const ok = await new Promise((resolve) => {
+    const ok = await new Promise<boolean>((resolve) => {
       const req = http.request(
-        { host: "127.0.0.1", port, path, method: "GET", timeout: 1000 },
+        { host: "127.0.0.1", port, path: reqPath, method: "GET", timeout: 1000 },
         (res) => {
           res.resume();
           resolve(true);
@@ -474,45 +508,45 @@ async function waitForHttp(port, path, timeoutMs, label) {
     await sleep(150);
   }
   throw new Error(
-    `${label} did not respond to HTTP GET ${path} within ${timeoutMs}ms`,
+    `${label} did not respond to HTTP GET ${reqPath} within ${timeoutMs}ms`,
   );
 }
 
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
 // --- HTTP proxy --------------------------------------------------------
 
 const proxy = httpProxy.createProxyServer({
-  // HMR connects directly to Vite's port, so we don't NEED to proxy it. But
-  // the app's own WS endpoints (e.g. /<wt>/<box>/api/chat/transcribe-ws for
-  // Voxtral realtime) come through here and *do* need WS proxying — without
-  // it, Node's http server closes the upgrade with code 1006 and Voxtral
-  // never reaches Mistral. ws: true; explicit `upgrade` handler below.
   ws: true,
   changeOrigin: true,
 });
 
-proxy.on("error", (err, req, res) => {
+proxy.on("error", (err: Error, _req, res) => {
   log(`proxy error: ${err.message}`);
-  if (res && !res.headersSent) {
-    res.writeHead(502, { "content-type": "text/plain" });
-    res.end(`Bad gateway: ${err.message}\n`);
+  if (res && "writeHead" in res && !(res as http.ServerResponse).headersSent) {
+    const r = res as http.ServerResponse;
+    r.writeHead(502, { "content-type": "text/plain" });
+    r.end(`Bad gateway: ${err.message}\n`);
   } else if (res) {
-    try { res.end(); } catch {}
+    try { (res as http.ServerResponse | Socket).end(); } catch { /* gone */ }
   }
 });
 
-function parseWorktreeName(reqPath) {
+function parseWorktreeName(reqPath: string): string | null {
   const m = reqPath.match(/^\/([^/?#]+)(?:[/?#]|$)/);
-  return m ? m[1] : null;
+  return m ? m[1]! : null;
 }
 
-// Discover every worktree that *could* be served, whether currently running
-// or not. Main is always present; worktrees come from ~/src/callback-worktrees/.
-async function discoverWorktrees() {
-  const all = new Map(); // name → { name, running, entry? }
+interface DiscoveredWorktree {
+  name: string;
+  running: boolean;
+  entry?: WorktreeEntry;
+}
+
+async function discoverWorktrees(): Promise<DiscoveredWorktree[]> {
+  const all = new Map<string, DiscoveredWorktree>();
   all.set("main", { name: "main", running: false });
   try {
     const entries = await fs.readdir(WORKTREES_ROOT, { withFileTypes: true });
@@ -523,7 +557,7 @@ async function discoverWorktrees() {
     // No worktrees dir yet — fine.
   }
   for (const [name, entry] of worktrees) {
-    const existing = all.get(name) ?? { name };
+    const existing = all.get(name) ?? { name, running: false };
     all.set(name, { ...existing, running: entry.state === "ready", entry });
   }
   return Array.from(all.values()).sort((a, b) =>
@@ -531,20 +565,19 @@ async function discoverWorktrees() {
   );
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({
+function escapeHtml(s: string): string {
+  const replacements: Record<string, string> = {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]));
+  };
+  return String(s).replace(/[&<>"']/g, (c) => replacements[c] ?? c);
 }
 
-async function renderIndex() {
+async function renderIndex(): Promise<string> {
   const list = await discoverWorktrees();
   const rows = list.map((w) => {
-    const status = w.running
+    const status = w.running && w.entry?.lastActivity
       ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
       : `<span class="badge cold">cold (will lazy-start on click)</span>`;
-    // Always link to the redirector — for cold worktrees it'll lazy-start
-    // and then 302 to the actual dashboard URL.
     const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">dashboard ↗</a>`;
     const stopForm = w.running
       ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
@@ -565,6 +598,7 @@ async function renderIndex() {
 <head>
 <meta charset="utf-8">
 <title>callback-mono dev router</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <style>
   body { font: 14px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2em auto; padding: 0 1em; color: #222; }
   h1 { font-size: 1.2em; margin-bottom: 0.2em; }
@@ -603,6 +637,13 @@ async function renderIndex() {
   <p>
     Per-worktree logs are at <code>~/.cache/callback-mono/logs/&lt;name&gt;.log</code>.
   </p>
+  <h2>If the list is too long</h2>
+  <p>
+    Run <code>bin/worktrees sweep</code> to remove worktrees that are fully
+    merged into main, clean, and have no active <code>claude</code> session —
+    plus any orphan browse/log/pid state left behind by past cleanups.
+    Add <code>--dry-run</code> to preview.
+  </p>
 </div>
 
 <footer>
@@ -618,7 +659,7 @@ const server = http.createServer(async (req, res) => {
 
   if (url === "/__router/status" || url === "/__router/status/") {
     res.writeHead(200, { "content-type": "application/json" });
-    const state = {};
+    const state: Record<string, unknown> = {};
     for (const [name, entry] of worktrees) {
       state[name] = {
         state: entry.state,
@@ -650,10 +691,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Manual stop endpoint (used by WorktreeRemove hook, bin/worktrees down,
-  // and the "stop" buttons on the index page). Accepts GET or POST; on POST
-  // from a form submission, redirect back to the index instead of returning
-  // a plain-text response so the user lands on a useful page.
   if (url.startsWith("/__router/stop/")) {
     const name = url.slice("/__router/stop/".length).replace(/\/$/, "");
     if (!name) {
@@ -672,10 +709,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Dashboard redirector: lazy-starts the worktree (which also brings up its
-  // dashboard), then 302s the browser to the dashboard's own port. Lets the
-  // home page link to dashboards for cold worktrees too — the user clicks,
-  // waits a few seconds, lands on the dashboard.
   if (url.startsWith("/__router/dashboard/")) {
     const name = url.slice("/__router/dashboard/".length).replace(/\/$/, "");
     if (!name) {
@@ -683,12 +716,13 @@ const server = http.createServer(async (req, res) => {
       res.end("missing worktree name");
       return;
     }
-    let entry;
+    let entry: WorktreeEntry;
     try {
       entry = await ensureRunning(name);
     } catch (err) {
-      res.writeHead(err.statusCode ?? 502, { "content-type": "text/plain" });
-      res.end(`Failed to start worktree ${name}: ${err.message}\n`);
+      const status = (err as StatusError).statusCode ?? 502;
+      res.writeHead(status, { "content-type": "text/plain" });
+      res.end(`Failed to start worktree ${name}: ${(err as Error).message}\n`);
       return;
     }
     if (!entry.dashboardUrl) {
@@ -707,6 +741,21 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url === "/favicon.png" || url === "/favicon.ico") {
+    try {
+      const buf = await fs.readFile(path.join(REPO_ROOT, "bin", "assets", "favicon.png"));
+      res.writeHead(200, {
+        "content-type": "image/png",
+        "cache-control": "public, max-age=86400",
+      });
+      res.end(buf);
+    } catch (err) {
+      res.writeHead(404, { "content-type": "text/plain" });
+      res.end(`favicon not found: ${(err as Error).message}\n`);
+    }
+    return;
+  }
+
   const name = parseWorktreeName(url);
   if (!name) {
     res.writeHead(404, { "content-type": "text/plain" });
@@ -714,30 +763,25 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Redirect /<name> → /<name>/ so Vite's base-prefixed routing has the
-  // trailing slash it expects. Otherwise the page loads but most asset URLs
-  // resolve relative to "/" instead of "/<name>/", breaking everything.
   if (url === `/${name}`) {
     res.writeHead(301, { location: `/${name}/` });
     res.end();
     return;
   }
 
-  let entry;
+  let entry: WorktreeEntry;
   try {
     entry = await ensureRunning(name);
   } catch (err) {
-    res.writeHead(err.statusCode ?? 502, { "content-type": "text/plain" });
-    res.end(`Failed to start worktree ${name}: ${err.message}\n`);
+    const status = (err as StatusError).statusCode ?? 502;
+    res.writeHead(status, { "content-type": "text/plain" });
+    res.end(`Failed to start worktree ${name}: ${(err as Error).message}\n`);
     return;
   }
 
   await proxyWithRetry(req, res, entry, 5);
 });
 
-// WebSocket upgrade requests bypass the regular request handler. Node emits
-// them on 'upgrade' instead. Route the same way as HTTP — name → worktree →
-// proxy to its Vite, which has its own ws:true proxy rule forwarding to Fastify.
 server.on("upgrade", async (req, socket, head) => {
   const reqUrl = req.url || "/";
   const name = parseWorktreeName(reqUrl);
@@ -745,27 +789,32 @@ server.on("upgrade", async (req, socket, head) => {
     socket.destroy();
     return;
   }
-  let entry;
+  let entry: WorktreeEntry;
   try {
     entry = await ensureRunning(name);
   } catch (err) {
-    log(`[${name}] upgrade failed: ${err.message}`);
+    log(`[${name}] upgrade failed: ${(err as Error).message}`);
     socket.destroy();
     return;
   }
   const target = `http://127.0.0.1:${entry.frontendPort}`;
-  proxy.ws(req, socket, head, { target }, (err) => {
+  proxy.ws(req, socket, head, { target }, (err: Error | undefined) => {
     if (err) {
       log(`[${entry.name}] ws proxy error: ${err.message}`);
-      try { socket.destroy(); } catch {}
+      try { socket.destroy(); } catch { /* already gone */ }
     }
   });
 });
 
-async function proxyWithRetry(req, res, entry, retriesLeft) {
+async function proxyWithRetry(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  entry: WorktreeEntry,
+  retriesLeft: number,
+): Promise<void> {
   return new Promise((resolve) => {
     const target = `http://127.0.0.1:${entry.frontendPort}`;
-    proxy.web(req, res, { target }, (err) => {
+    proxy.web(req, res, { target }, (err: Error & { code?: string } | undefined) => {
       if (!err) {
         resolve();
         return;
@@ -781,7 +830,7 @@ async function proxyWithRetry(req, res, entry, retriesLeft) {
         res.writeHead(502, { "content-type": "text/plain" });
         res.end(`Upstream unavailable: ${err.message}\n`);
       } else {
-        try { res.end(); } catch {}
+        try { res.end(); } catch { /* already ended */ }
       }
       resolve();
     });
@@ -790,7 +839,7 @@ async function proxyWithRetry(req, res, entry, retriesLeft) {
 
 // --- Router PID file ---------------------------------------------------
 
-async function acquireRouterPidFile() {
+async function acquireRouterPidFile(): Promise<void> {
   await fs.mkdir(STATE_DIR, { recursive: true });
   try {
     const existing = await fs.readFile(ROUTER_PID_FILE, "utf8");
@@ -801,8 +850,9 @@ async function acquireRouterPidFile() {
       );
     }
   } catch (e) {
-    if (e.code !== "ENOENT") {
-      if (e.message.startsWith("Another router")) throw e;
+    const err = e as ErrnoError;
+    if (err.code !== "ENOENT") {
+      if (err.message.startsWith("Another router")) throw err;
       // Otherwise the file is malformed; overwrite it.
     }
   }
@@ -812,7 +862,7 @@ async function acquireRouterPidFile() {
 // --- Shutdown ----------------------------------------------------------
 
 let shuttingDown = false;
-async function shutdown(reason) {
+async function shutdown(reason: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   log(`shutting down: ${reason}`);
@@ -821,7 +871,6 @@ async function shutdown(reason) {
     killGroup(entry.vite?.pid);
     killGroup(entry.fastify?.pid);
   }
-  // Escalate any survivors after the grace window.
   setTimeout(() => {
     for (const entry of worktrees.values()) {
       killGroup(entry.vite?.pid, "SIGKILL");
@@ -829,7 +878,6 @@ async function shutdown(reason) {
     }
   }, KILL_GRACE_MS).unref();
   await sleep(500);
-  // Remove PID files for cleanly-stopped worktrees.
   for (const name of worktrees.keys()) {
     await removePidFile(name);
   }
@@ -838,48 +886,42 @@ async function shutdown(reason) {
   setTimeout(() => process.exit(0), KILL_GRACE_MS + 500).unref();
 }
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => { shutdown("SIGINT"); });
+process.on("SIGTERM", () => { shutdown("SIGTERM"); });
 process.on("uncaughtException", (err) => {
   console.error("uncaughtException:", err);
   shutdown("uncaughtException");
 });
 
-function log(msg) {
+function log(msg: string): void {
   console.log(`[router ${new Date().toISOString()}] ${msg}`);
 }
 
 // --- Terminal tab title -----------------------------------------------
 
-// Emit an OSC-0 escape sequence so Terminal.app (and most other terminals)
-// shows something useful in the tab/window title. Updated on worktree
-// state changes so you can glance at the tab and tell what's busy. Only
-// emit if stdout is a TTY — otherwise we'd litter pipe/log output with
-// escape codes.
-function setTabTitle(title) {
+function setTabTitle(title: string): void {
   if (!process.stdout.isTTY) return;
   process.stdout.write(`\x1b]0;${title}\x07`);
 }
 
-function updateTabTitle() {
+function updateTabTitle(): void {
   const running = [...worktrees.values()].filter((e) => e.state === "ready");
   let title = `⚡ cb router :${ROUTER_PORT}`;
   if (running.length === 1) {
-    title += ` · ${running[0].name}`;
+    title += ` · ${running[0]!.name}`;
   } else if (running.length > 1) {
     title += ` · ${running.length} worktrees`;
   }
   setTabTitle(title);
 }
 
-// Hook into the worktree state transitions we already have, so the title
-// stays current.
+// Hook the state-transition helpers to keep the tab title fresh.
 const _origTouch = touch;
-touch = (entry) => { _origTouch(entry); updateTabTitle(); };
+touch = (entry: WorktreeEntry) => { _origTouch(entry); updateTabTitle(); };
 const _origStop = stopWorktree;
-stopWorktree = async (name) => { const r = await _origStop(name); updateTabTitle(); return r; };
+stopWorktree = async (name: string) => { await _origStop(name); updateTabTitle(); };
 const _origOnExit = onChildExit;
-onChildExit = (name) => { _origOnExit(name); updateTabTitle(); };
+onChildExit = (name: string) => { _origOnExit(name); updateTabTitle(); };
 
 // --- Boot --------------------------------------------------------------
 
@@ -892,7 +934,7 @@ onChildExit = (name) => { _origOnExit(name); updateTabTitle(); };
     log(`idle timeout: ${IDLE_TIMEOUT_MS}ms`);
     updateTabTitle();
   });
-})().catch((err) => {
+})().catch((err: Error) => {
   console.error(err.message);
   process.exit(1);
 });
