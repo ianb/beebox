@@ -31,10 +31,10 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
       {pendingQuestions.length > 0 && (
         <Card shadow border="none">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-warm-700">
+            <h2 className="text-sm font-semibold text-warm-700">
               Questions
               <StatusBadge status="pending" className="ml-2">{pendingQuestions.length}</StatusBadge>
-            </h3>
+            </h2>
           </div>
           <ul className="space-y-1">
             {pendingQuestions.slice(0, 5).map((q) => (
@@ -60,10 +60,10 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
       {inboxCount > 0 && (
         <Card shadow border="none">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-warm-700">
+            <h2 className="text-sm font-semibold text-warm-700">
               Inbox
               <StatusBadge status="new" className="ml-2">{inboxCount}</StatusBadge>
-            </h3>
+            </h2>
             <Link
               to={href(`/${boxSlug}/browse/box/inbox`)}
               className="text-xs text-primary hover:text-primary-dark"

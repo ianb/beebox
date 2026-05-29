@@ -564,7 +564,7 @@ export function CommitDetail({
   return (
     <div className="h-full flex flex-col bg-white" {...cbSource("commit", commit.hash)}>
       {onBack ? <MobileBackButton label="Back to commits" onClick={onBack} /> : null}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" tabIndex={0} aria-label="Commit details">
       {/* Commit info */}
       <CommitTab
         commit={commit}

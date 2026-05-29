@@ -18,6 +18,7 @@ import { BrowseContextMenu } from "../components/browse/BrowseContextMenu";
 import { Row } from "../components/ui/Row";
 import { Column } from "../components/ui/Column";
 import { Text } from "../components/ui/Text";
+import { VisuallyHidden } from "../components/ui/VisuallyHidden";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 /**
@@ -185,6 +186,7 @@ export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
 
   return (
     <Row gap="none" align="stretch" className="h-full">
+      <VisuallyHidden as="h1">Browse</VisuallyHidden>
       <Sidebar title="Browse" subtitle={dirPath || "/"} detailSelected={hasDetail}>
         <Column>
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={onNavigate} />
