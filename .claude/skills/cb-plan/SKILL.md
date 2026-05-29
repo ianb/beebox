@@ -25,23 +25,34 @@ implementation starts, shipped end-to-end when implementation finishes.
 There is no "ship slice 1, see how it goes, then design slice 2." The
 plan completes; then it ships.
 
+Plans can be big. Long, multi-track, multi-week plans are fine and
+often the right shape — they let a coherent change land coherently
+instead of dribbling out as half-decisions over months. Execute big
+plans serially in sensible order; don't compress them.
+
+**Where the work happens.** Big plans run on a git worktree, not on
+main. (You're probably already in one if you're planning — the
+worktree's working directory is where the design doc lives.) Commit
+freely within the worktree as you go — that's the normal commit
+discipline. **Do not merge the worktree branch into main unless the
+boxholder explicitly asks for it.** "Plan completes, then ships" means
+the ship step is a separate signal from the user, not something the
+agent triggers on its own.
+
 This shapes how the template works:
 
 - **Implementation chunks ≠ shipping milestones.** Inside a plan it's
   good to identify cohesive pieces of work that can be committed
   independently. Those are *commit boundaries*, not ship boundaries.
-- **"Dogfooding the small piece" is not a plan mode.** If a piece feels
-  small enough to ship and observe before doing the rest, **it's its
-  own plan** — split it out. Don't smuggle a partial-ship under the
-  banner of "the first slice."
-- **Subplans** are the right tool when a question inside a plan is too
-  big to settle inline. Spin a separate plan for the sub-question
-  (`<topic>.subplan.md` or a sibling file); the parent plan links to
-  it as a dependency. The parent waits on the subplan; both still ship
-  as a coherent whole.
-
-The unit of "small, complete, dogfoodable" is the plan itself. Plans
-should be sized so they CAN complete. If yours can't, split.
+- **Sensible order matters.** Within a plan, sequence chunks so
+  dependencies land before dependents. A chunk that can't be exercised
+  until the next chunk lands is fine — the plan completes before any
+  of it ships.
+- **Subplans** are the right tool when a question inside a plan is big
+  enough to need its own design step. Spin a separate plan for the
+  sub-question (`<topic>.subplan.md` or a sibling file); the parent
+  plan links to it as a dependency. The parent waits on the subplan;
+  both ship together when the parent completes.
 
 ## When to invoke
 
@@ -149,18 +160,21 @@ For each track:
   work toward this track. This is *not* a ship boundary — the plan as
   a whole ships when all chunks complete. The chunk should have **no
   open questions inside it** — open questions at the first-chunk level
-  mean you're not done designing yet. If the chunk feels independently
-  shippable, that's a sign it might want to be its own plan instead.
+  mean you're not done designing yet.
 
-### Subplans (if needed)
+### Subplans (when a sub-question needs its own design step)
 
-If a question inside a track is too big to settle in this plan, write
-a subplan for it. A subplan is its own complete plan, structured the
-same way; this plan links to it as a dependency.
+A subplan is the right tool when a question inside the plan needs its
+own design — not because the parent is too big, but because the
+sub-question has its own decisions to settle (research, vocabulary,
+shape) that don't belong inline. The subplan is its own complete plan,
+structured the same way; the parent plan links to it as a dependency
+and both ship together when the parent completes.
 
-The signal you need a subplan: a section grows so much that the parent
-plan becomes hard to read, or a question requires its own research
-phase before the parent's direction can be set.
+Common cases: a research-and-decide phase before the parent's direction
+can be set; a vocabulary or schema question that needs its own
+decision-table; a piece of infrastructure that's prerequisite for the
+parent but conceptually separate.
 
 ### Failure modes (the load-bearing section)
 
@@ -390,10 +404,10 @@ the skill's own use.)
   surrounding conversation.
 - **Skipping Failure Modes because "the design is obvious."** The
   obvious design has obvious failure modes; surface them anyway.
-- **Smuggling a partial ship under "first chunk."** A "first chunk"
-  that's secretly a shipping milestone defeats the no-partial-ship
-  principle. If the chunk shipping by itself would be coherent and the
-  rest could be picked up later or not, that chunk is its own plan.
+- **Shipping a chunk and stopping.** Committing chunks during
+  implementation is fine; merging a partial plan to main because "the
+  first part feels done" defeats the no-partial-ship principle. The
+  plan completes before any of it ships.
 - **Skipping the Knowledge audits section because no tests are
   written yet.** The section asks "*should* audits land," not "*do*
   they exist." A new agent-facing concept without a single audit is a
