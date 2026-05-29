@@ -10,7 +10,7 @@
  * a session switch (or new-chat reset) cleanly remounts the machine.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, type ReactNode, type CSSProperties } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
@@ -1041,6 +1041,20 @@ function LoadOlderHeader({ context }: { context?: ChatListContext }) {
   );
 }
 
+// Virtuoso's scroller fills the full width of the chat column so wheel/touch
+// events anywhere across it (including the left/right gutters) scroll the
+// messages. The visible content is kept centered at the same max-width as the
+// header and composer by constraining the inner list, not the scroller.
+const CenteredList = forwardRef<HTMLDivElement, { children?: ReactNode; style?: CSSProperties }>(
+  function CenteredList({ children, style }, ref) {
+    return (
+      <div ref={ref} style={style} className="mx-auto w-full max-w-5xl">
+        {children}
+      </div>
+    );
+  },
+);
+
 function VirtualizedMessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
@@ -1225,7 +1239,7 @@ function VirtualizedMessageList({
   const lastAssistantGroupIndex = groups.findLastIndex((g) => g.type === "assistant");
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col overflow-x-hidden">
+    <div className="flex-1 w-full min-w-0 flex flex-col overflow-x-hidden">
       <div data-image-list hidden>{chatImagesJson}</div>
       <Virtuoso<DataItem, ChatListContext>
         ref={virtuosoRef}
@@ -1239,7 +1253,7 @@ function VirtualizedMessageList({
         atBottomThreshold={80}
         computeItemKey={(_, item) => dataItemKey(item)}
         context={headerContext}
-        components={{ Header: LoadOlderHeader }}
+        components={{ Header: LoadOlderHeader, List: CenteredList }}
         itemContent={(_, item) => {
           if (item.kind === "marker") {
             return (
@@ -2327,9 +2341,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           })}
         />
       ) : null}
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
-      {/* Header with debug controls */}
-      <header className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full">
+      {/* Header with debug controls — centered at the same max-width as the
+          message list and composer below. */}
+      <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
         <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
         <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={handleToggleNarration} />
@@ -2384,6 +2399,9 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         pendingHqDraft={pendingHqDraft}
       />
 
+      {/* Everything below the scroll pane (status banners + composer) is
+          centered at the same max-width as the header and messages. */}
+      <div className="flex flex-col w-full max-w-5xl mx-auto min-w-0">
       {/* Error display */}
       {error || transcription.error ? (
         <div className="px-4 py-2 bg-danger-50 border-t border-danger-light text-danger-dark text-sm">
@@ -2529,6 +2547,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           />
         </div>
       ) : null}
+      </div>
     </div>
     </div>
     {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}

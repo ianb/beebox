@@ -14,7 +14,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | All tRPC input schemas use Zod. No manual validation in new API code. |
 | 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | 931 tests, 53 files. Doctest system built. DI pattern established. |
-| 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | In use via react-markdown + remark-gfm. |
+| 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | Frontend rendering migrated to `@markdoc/markdoc` (2026-05) for custom tags like `{% quote %}`. remark/unified still powers the doctest loader's code-block extraction. |
 | 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, date-fns, html-entities, sanitize-filename, ky. proper-lockfile reverted in 2026-04 — replaced by `src/lib/file-lock.ts` after sleep / SIGKILL failure modes. |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated. 5 machine files (~1050 lines), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
 | 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Procfile.dev + standalone server.ts entry point. `cb serve --dev` uses node --watch directly. |
@@ -833,13 +833,19 @@ Position tracking is needed for:
 
 ### What we use it for
 
-- **Rendering markdown content** in the frontend (card bodies, documentation, chat messages) — via `react-markdown` + `remark-gfm`
-- **Extracting code blocks** for the literate testing system (Decision 14) — custom doctest loader
-- **Source position mapping** for tracing rendered output back to source files
+- **Rendering markdown content** in the frontend (card bodies, documentation, chat messages) — originally via `react-markdown` + `remark-gfm`; **migrated to `@markdoc/markdoc` in 2026-05** to support custom tags (see below).
+- **Extracting code blocks** for the literate testing system (Decision 14) — custom doctest loader (still on the remark/unified AST).
+- **Source position mapping** for tracing rendered output back to source files.
 
 ### Implementation notes
 
-Done. `react-markdown` and `remark-gfm` are in the frontend package.json and used in ~8 components. The doctest loader uses the AST for code block extraction. KaTeX integration is available but may not be actively used yet.
+**Doctest loader.** Still on remark/unified — uses the mdast AST for code block extraction with source positions. Unchanged.
+
+**Frontend rendering — migrated to Markdoc (2026-05).** The frontend now renders markdown through `@markdoc/markdoc`. The driver is the shared `<Markdown>` component at `src/frontend/src/components/Markdown.tsx`; the Markdoc config and the custom `{% quote %}` tag live in `src/frontend/src/lib/markdoc-config.ts`; node overrides (link, image, paragraph, document → React components) and the Quote tag implementation (`src/frontend/src/components/Quote.tsx`) hang off that pipeline. All ~8 consumer sites (`MarkdownCardView`, `RecipeView`, `ChatMessages`, `CommitDetail`, `CardTreeView`, `CalloutBlock`, `renderers/markdown.tsx`, `renderers/image.tsx`) still go through `<Markdown>` — the swap was transparent to them. `react-markdown`, `remark-gfm`, `rehype-raw`, and the custom `remark-comments` / `rehype-strip-ref` plugins are gone from `package.json` and from `src/`.
+
+Why the switch: Markdoc's tag syntax (`{% quote from="people/dana" %}…{% /quote %}`) gives us first-class custom content types with attributes, validated at parse time, without bolting on rehype plugins to invent syntax inside HTML comments. Source position tracking and the doctest loader were never frontend concerns, so losing them on the render path costs nothing.
+
+KaTeX integration is available but may not be actively used yet.
 
 ---
 
