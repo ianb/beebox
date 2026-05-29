@@ -7,7 +7,7 @@
 
 /* eslint-disable security/detect-non-literal-fs-filename */
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 
@@ -77,7 +77,6 @@ export async function makeTmpBox(opts?: { git?: boolean }): Promise<TmpBox> {
     },
     async write(relativePath: string, content: string) {
       const fullPath = join(root, relativePath);
-      const { dirname } = await import("node:path");
       await mkdir(dirname(fullPath), { recursive: true });
       await writeFile(fullPath, content);
     },

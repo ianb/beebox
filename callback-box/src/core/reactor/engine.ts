@@ -25,7 +25,7 @@ import {
   LockHeldError,
 } from "../../lib/file-lock.js";
 import { createAgent as realCreateAgent } from "../agent.js";
-import { generateDocs } from "../generate-docs.js";
+import { generateDocs as realGenerateDocs } from "../generate-docs.js";
 import { fmt } from "../../cli/lib/format.js";
 import {
   loadChatSessions,
@@ -36,7 +36,7 @@ import { findJobCards } from "./job-discovery.js";
 import { detectProcedureInJob, processProcedureJobs } from "./procedure-trampoline.js";
 import { processBatchJobs } from "./batch-jobs.js";
 import { processChatJobs } from "./chat-jobs.js";
-import { runSync, runFinalize } from "./subprocess.js";
+import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
 import type { JobWithContent, ProcessJobsOptions } from "./types.js";
 
 export interface ReactorOptions {
@@ -64,6 +64,22 @@ export interface ReactorOptions {
   onLog?: ((text: string) => void) | undefined;
   /** Agent factory — override for testing. Defaults to the real createAgent(). */
   createAgent?: typeof realCreateAgent | undefined;
+  /**
+   * Sync subprocess (`cb wakeup`) — override for testing. Defaults to the
+   * real spawn. Tests pass a no-op fake to avoid spawning the CLI.
+   */
+  runSync?: typeof realRunSync | undefined;
+  /**
+   * Finalize subprocess (`cb finalize`) — override for testing. Defaults to
+   * the real spawn. Tests pass a no-op fake to avoid spawning the CLI.
+   */
+  runFinalize?: typeof realRunFinalize | undefined;
+  /**
+   * Agent-doc refresh — override for testing. Defaults to the real
+   * generateDocs(), which is ~1s cold on a fresh box. Tests that don't
+   * assert on generated docs pass a no-op fake.
+   */
+  generateDocs?: typeof realGenerateDocs | undefined;
 }
 
 export interface ReactorResult {
@@ -92,6 +108,9 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     resetSessions: shouldResetSessions = false,
     onLog,
     createAgent: agentFactory = realCreateAgent,
+    runSync = realRunSync,
+    runFinalize = realRunFinalize,
+    generateDocs = realGenerateDocs,
   } = options;
 
   // Acquire lock — prevent concurrent reactor runs
