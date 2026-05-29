@@ -12,6 +12,9 @@ for responses where segments is empty.
 import {
   joinSegmentTexts,
   repairMissingSentenceSpaces,
+  findLastSpeakerLetter,
+  nextSpeakerLetter,
+  relabelDiarizedSpeakers,
 } from "../src/core/transcription-voxtral.js";
 ```
 
@@ -79,4 +82,49 @@ repairMissingSentenceSpaces("The price is $9.99")
 ```
 repairMissingSentenceSpaces("One sentence. Another sentence.")
 => One sentence. Another sentence.
+```
+
+## Per-recording speaker letter
+
+Diarized recordings get a session-letter so the agent can tell that
+identical speaker numbers from different recordings are different
+people. `findLastSpeakerLetter` scans prior session text;
+`nextSpeakerLetter` advances; `relabelDiarizedSpeakers` rewrites the
+raw `Speaker N` prefix to `Speaker (N+1)<letter>`.
+
+```
+findLastSpeakerLetter("")
+=> null
+
+findLastSpeakerLetter("no labels here")
+=> null
+
+findLastSpeakerLetter("earlier: Speaker 1A: hi\nlater: Speaker 2C: bye")
+=> C
+
+findLastSpeakerLetter("Speaker 10F: ok")
+=> F
+```
+
+```
+nextSpeakerLetter(null)
+=> A
+
+nextSpeakerLetter("A")
+=> B
+
+nextSpeakerLetter("Y")
+=> Z
+
+nextSpeakerLetter("Z")
+=> A
+```
+
+```
+relabelDiarizedSpeakers("Speaker 0: hi\nSpeaker 1: bye", "B")
+=> Speaker 1B: hi
+Speaker 2B: bye
+
+relabelDiarizedSpeakers("Speaker 0: solo", "A")
+=> Speaker 1A: solo
 ```

@@ -329,10 +329,17 @@ export async function setChatFeature(params: { sessionId: string; feature: strin
  * mode. Returns the transcribed text, or null on failure — the caller falls
  * back to the realtime transcript in that case.
  */
-export async function postAudioForHqTranscription(blob: Blob): Promise<string | null> {
+export interface HqTranscriptionResult {
+  text: string;
+  /** True when the recording was diarized and speaker labels were applied. */
+  diarized: boolean;
+}
+
+export async function postAudioForHqTranscription(blob: Blob, params: { sessionId: string | null }): Promise<HqTranscriptionResult | null> {
   const form = new FormData();
   const ext = blob.type.includes("wav") ? "wav" : "webm";
   form.append("file", blob, `segment.${ext}`);
+  if (params.sessionId !== null) form.append("session", params.sessionId);
   try {
     const res = await fetch(`${getApiBase()}/chat/transcribe-audio`, {
       method: "POST",
@@ -347,7 +354,8 @@ export async function postAudioForHqTranscription(blob: Blob): Promise<string | 
       console.warn(`[hq-transcribe] response missing text field: ${JSON.stringify(body)}`);
       return null;
     }
-    return body.text;
+    const diarized = "diarized" in body && body.diarized === true;
+    return { text: body.text, diarized };
   } catch (e) {
     console.warn(`[hq-transcribe] request failed: ${e instanceof Error ? e.message : String(e)}`);
     return null;

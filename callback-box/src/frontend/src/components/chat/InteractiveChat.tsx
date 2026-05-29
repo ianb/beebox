@@ -2126,18 +2126,19 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       // Narration mode swaps in a high-quality transcription before sending
       // to the agent — the realtime text is good enough for the live UI
       // but accuracy matters more for the persistent record.
-      const submit = (finalText: string) => {
-        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
+      const submit = (finalText: string, opts: { diarized?: boolean } = {}) => {
+        const diarizedAttr = opts.diarized === true ? " diarized=\"1\"" : "";
+        doSend(`<speech${diarizedAttr} local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
       };
       if (narrationEnabledRef.current && audioBlob) {
         setHqInFlight(true);
         setPendingHqDraft(text);
-        void postAudioForHqTranscription(audioBlob)
-          .then((hqText) => {
+        void postAudioForHqTranscription(audioBlob, { sessionId })
+          .then((hqResult) => {
             // Clear the pending bubble before submit so it doesn't overlap
             // with the real user message about to land in the chat history.
             setPendingHqDraft(null);
-            if (hqText === null) {
+            if (hqResult === null) {
               console.warn("[hq-transcribe] returned null — falling back to realtime");
               submit(text);
               return;
@@ -2145,8 +2146,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
             // Re-run keyword detection on the HQ text so the agent sees the
             // send-message (or other) keyword as a pill, not plain words.
             // If HQ misheard the keyword entirely, just submit the raw text.
-            const keyword = detectKeyword(hqText);
-            submit(keyword ? keyword.processedTranscript : hqText);
+            const keyword = detectKeyword(hqResult.text);
+            submit(keyword ? keyword.processedTranscript : hqResult.text, { diarized: hqResult.diarized });
           })
           .finally(() => { setHqInFlight(false); });
       } else {

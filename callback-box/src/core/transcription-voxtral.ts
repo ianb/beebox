@@ -208,6 +208,7 @@ export async function transcribeAudioVoxtral(
       text,
       duration,
       language,
+      diarized: labeledText !== null,
     };
   } catch (error) {
     if (isTranscriptionError(error)) {
@@ -301,6 +302,40 @@ function buildDiarizedText(
   }
   flush();
   return lines.join("\n");
+}
+
+/**
+ * Find the most recent speaker-letter used in prior text (e.g. a chat
+ * session log). Scans for `Speaker N<L>` where L is A-Z and returns the
+ * last L found, or null if none. Used to advance the per-recording
+ * letter so the agent can tell that speakers in one recording aren't
+ * the same people as the same numbers in a different recording.
+ */
+export function findLastSpeakerLetter(text: string): string | null {
+  const re = /\bSpeaker \d+([A-Z])\b/g;
+  let last: string | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) last = m[1] ?? last;
+  return last;
+}
+
+/**
+ * Next letter A-Z, wrapping Z→A. Null input → "A".
+ */
+export function nextSpeakerLetter(prev: string | null): string {
+  if (prev === null || prev === "Z") return "A";
+  const code = prev.codePointAt(0);
+  if (code === undefined) return "A";
+  return String.fromCodePoint(code + 1);
+}
+
+/**
+ * Rewrite raw Voxtral speaker labels ("Speaker 0", "Speaker 1", …) into
+ * session-tagged 1-indexed labels ("Speaker 1A", "Speaker 2A", …) so the
+ * agent sees a fresh identifier per recording.
+ */
+export function relabelDiarizedSpeakers(text: string, letter: string): string {
+  return text.replace(/\bSpeaker (\d+)\b/g, (_, n) => `Speaker ${Number(n) + 1}${letter}`);
 }
 
 function formatSpeakerLabel(speakerId: string): string {
