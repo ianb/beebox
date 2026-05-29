@@ -33,7 +33,7 @@ export function gitHistorySection(): string[] {
     "| `Job-Type: <type>` | Card type of the job that was finished |",
     "| `Fallback: true` | Agent didn't commit; system made a fallback commit |",
     "| `Commit-Source: procedure-fallback` | Procedure engine's fallback commit |",
-    "| `Created-By: <connector>` | Connector that created the content (e.g., rss, gmail) |",
+    "| `Created-By: <connector>` | Connector that created the content (e.g., gmail, telegram) |",
     "",
     "Useful queries:",
     "- `git log --oneline -20` — recent activity overview",

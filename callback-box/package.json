@@ -85,7 +85,6 @@
     "glob": "^13.0.0",
     "google-auth-library": "^10.5.0",
     "grammy": "^1.40.1",
-    "html-entities": "^2.6.0",
     "ical.js": "^2.2.1",
     "ky": "^1.14.3",
     "markdownlint": "^0.40.0",

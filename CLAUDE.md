@@ -16,7 +16,7 @@ Four projects live in one git repository (previously three independent repos, me
 - `http://localhost:3210/main/<box>/...` — the main checkout
 - `http://localhost:3210/<name>/<box>/...` — any worktree (lazy-started on first request, idle-shutdown after 5 min)
 
-Each worktree gets its own Vite + Fastify pair, spawned as direct children of the router (no Overmind, no tmux — flat process tree). The router source is `bin/router.mjs`. URL-prefixed serving uses Vite's `base` option; HMR connects directly to Vite's internal port (bypasses the router). Lifecycle commands:
+Each worktree gets its own Vite + Fastify pair, spawned as direct children of the router (no Overmind, no tmux — flat process tree). The router source is `bin/router.ts`. URL-prefixed serving uses Vite's `base` option; HMR connects directly to Vite's internal port (bypasses the router). Lifecycle commands:
 
 - `bin/worktrees status` — JSON of running worktrees, PIDs, ports, idle ms
 - `bin/worktrees down <name>` — stop one worktree's processes now

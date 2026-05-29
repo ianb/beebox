@@ -6,8 +6,8 @@
  * are appended to it rather than creating a new job.
  *
  * The `source` value here doubles as the reactor's source filter key —
- * use the connector's canonical name (e.g. "gmail", "rss"), not a
- * decorated form like "rss-connector", or `cb wakeup --connector X`
+ * use the connector's canonical name (e.g. "gmail", "telegram"), not a
+ * decorated form like "gmail-connector", or `cb wakeup --connector X`
  * won't pick up the job it just created.
  */
 

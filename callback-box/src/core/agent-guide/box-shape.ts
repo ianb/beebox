@@ -47,7 +47,7 @@ export function howItemsEnterSection(): string[] {
     "You do NOT manually place items in directories. Items arrive through these mechanisms:",
     "",
     "- **Capture UI** — the user records voice memos, takes photos, or types text in the web interface. These are saved to `box/inbox/` automatically and processed via the `process-captures` procedure.",
-    "- **Connectors** — external services (RSS, Gmail, Telegram, Raindrop) sync during `cb wakeup`. Connectors create cards in `box/inbox/` and job cards in `box/jobs/` for processing.",
+    "- **Connectors** — external services (Gmail, Telegram, Google Calendar, Google Drive) sync during `cb wakeup`. Connectors create cards in `box/inbox/` and job cards in `box/jobs/` for processing.",
     "- **`cb create`** — the CLI command creates cards from templates. Use this when YOU need to create a card (e.g., a question, todo, or record). Example: `cb create box/questions/Color.question.card -t question`",
     "- **Chat** — users send messages through the chat UI, which creates/updates chat-thread cards.",
     "",
