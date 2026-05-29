@@ -960,14 +960,19 @@ function PendingHqMessage({ text }: { text: string }) {
  */
 function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   const visible = chunkOnParagraphs(text);
+  if (!visible) return null;
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
-      {visible ? (
-        <MarkdownContent text={visible} onZoomView={onZoomView} />
-      ) : null}
-      <div className="flex justify-center mt-6">
-        <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
-      </div>
+      <MarkdownContent text={visible} onZoomView={onZoomView} />
+    </div>
+  );
+}
+
+/** The streaming progress throbber, shown below the live text + tools. */
+function StreamingThrobber() {
+  return (
+    <div className="flex justify-center my-6">
+      <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
     </div>
   );
 }
@@ -1255,6 +1260,7 @@ function VirtualizedMessageList({
                       <ToolList blocks={streamTools} />
                     </div>
                   ) : null}
+                  <StreamingThrobber />
                 </div>
               </MessageErrorBoundary>
             );
