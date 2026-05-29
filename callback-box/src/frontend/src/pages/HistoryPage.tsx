@@ -19,7 +19,6 @@ import {
   type HistoryFilterState,
 } from "../components/HistoryFilterBar";
 import { Row } from "../components/ui/Row";
-import { VisuallyHidden } from "../components/ui/VisuallyHidden";
 import { Column } from "../components/ui/Column";
 import { Text } from "../components/ui/Text";
 
@@ -170,7 +169,6 @@ export function HistoryPage() {
 
   return (
     <Row gap="none" align="stretch" className="h-full">
-      <VisuallyHidden as="h1">Commits</VisuallyHidden>
       <Sidebar title="Commits" subtitle={`${commits.length} loaded`} detailSelected={hasDetail}>
         <HistoryFilterBar
           filter={filter}

@@ -381,7 +381,7 @@ function CommitTab({
           ))}
         </div>
       ) : null}
-      <h2 className="font-medium text-warm-900">{commit.subject}</h2>
+      <h1 className="font-medium text-warm-900">{commit.subject}</h1>
       {bodyText ? <div className="mt-2 prose prose-sm max-w-none text-warm-700">
           <Markdown onNavigate={handleNavigate}>{bodyText}</Markdown>
         </div> : null}
