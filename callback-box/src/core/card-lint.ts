@@ -8,10 +8,10 @@
  * merged into a single LintSummary so callers (e.g. cb validate) can
  * format them uniformly.
  *
- * Ref-checking for frontmatter cards is not implemented yet — schema
- * fields can carry refs but the field-walker isn't taught about them.
- * Until that lands, broken refs in migrated cards will surface only
- * at use sites, not at validate time.
+ * Ref-checking walks two sides: cardworks' `extractRefs` over parsed
+ * frontmatter fields, and `extractBodyRefs` over the Markdoc body. Both
+ * yield `{path, ref}` entries with the same shape; both are surfaced as
+ * warnings (not errors) so legitimate moves don't block commits.
  */
 
 import { readFile } from "node:fs/promises";
@@ -25,6 +25,7 @@ import {
   type ICardLoader,
 } from "cardworks";
 import { parseCardText, type LoadCardContext } from "./card-io.js";
+import { extractBodyRefs } from "./body-refs.js";
 
 export interface LintDispatchOptions {
   loader: ICardLoader;
@@ -101,9 +102,11 @@ async function lintFrontmatterCard(input: {
   // with accumulated data drift. Schema validation failures (which come
   // out of parseCardText as a thrown CardIOError → errorResult above)
   // remain errors and do block.
-  const refs = extractRefs(parsed.fields);
+  const frontmatterRefs = extractRefs(parsed.fields);
+  const bodyField = parsed.fields["body"];
+  const bodyRefs = typeof bodyField === "string" ? extractBodyRefs(bodyField) : [];
   const warnings: LintIssue[] = [];
-  for (const { path: refPath, ref } of refs) {
+  for (const { path: refPath, ref } of [...frontmatterRefs, ...bodyRefs]) {
     try {
       const resolved = await options.loader.resolveRef(ref, path);
       if (!resolved.exists) {

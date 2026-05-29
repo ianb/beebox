@@ -206,14 +206,27 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
     }
   }
 
-  // Rewrite refs that pointed into the old attach scope (from cards outside
-  // the moved subtree). cardworks already handled refs to cards; here we
-  // catch refs to non-card files like `<source ref="/box/.../photo.jpg">`.
-  // Crude but reliable: substring replace of the old attach-rel path in
-  // every other card's content.
+  // Rewrite refs across other cards via substring replace. Two flavors,
+  // both fall through the same loop:
+  //  - Attach-scope refs (`<source ref="/box/.../photo.jpg">`) — cardworks
+  //    only rewrites refs to the moved card itself, not refs into the
+  //    card's attach directory.
+  //  - Body Markdoc tag refs (`{% source ref="store/old/Card.doc.card" %}`)
+  //    — cardworks' built-in card-ref rewrite walks parsed frontmatter
+  //    fields only, so refs sitting inside a body Markdoc tag fall
+  //    through. The same substring pass picks them up, plus any plain-
+  //    prose occurrences of the old path (those should follow the move
+  //    too; if they appear in a code fence the rewrite is harmless).
   const extraStaged: string[] = [];
   const extraUpdated: Array<{ path: string; refsUpdated: number }> = [];
+  const rewrites: Array<{ from: string; to: string; label: string }> = [];
   if (oldAttachRel !== newAttachRel) {
+    rewrites.push({ from: oldAttachRel, to: newAttachRel, label: "attach-scope refs" });
+  }
+  if (relSourcePath !== relDestPath) {
+    rewrites.push({ from: relSourcePath, to: relDestPath, label: "card-path refs" });
+  }
+  if (rewrites.length > 0) {
     const allCards = await loader.listCards();
     for (const cardPath of allCards) {
       // Skip cards inside the new attach scope (just moved there) and the
@@ -221,16 +234,23 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
       if (cardPath === destPath) continue;
       if (cardPath.startsWith(newAttachAbsDir + "/")) continue;
       try {
-        const content = await fs.readFile(cardPath, "utf-8");
-        if (!content.includes(oldAttachRel)) continue;
-        const updated = content.replaceAll(oldAttachRel, newAttachRel);
-        if (updated === content) continue;
+        const original = await fs.readFile(cardPath, "utf-8");
+        let updated = original;
+        let totalRefsUpdated = 0;
+        const labels: string[] = [];
+        for (const rewrite of rewrites) {
+          if (!updated.includes(rewrite.from)) continue;
+          const occurrences = updated.split(rewrite.from).length - 1;
+          updated = updated.replaceAll(rewrite.from, rewrite.to);
+          totalRefsUpdated += occurrences;
+          labels.push(`${rewrite.label} (${occurrences})`);
+        }
+        if (updated === original) continue;
         await fs.writeFile(cardPath, updated);
-        const refsUpdated = content.split(oldAttachRel).length - 1;
         const relPath = path.relative(ctx.boxRoot, cardPath);
-        extraUpdated.push({ path: relPath, refsUpdated });
+        extraUpdated.push({ path: relPath, refsUpdated: totalRefsUpdated });
         extraStaged.push(relPath);
-        ctx.writeLine(`  Updated attach-scope refs in ${relPath} (${refsUpdated})`);
+        ctx.writeLine(`  Updated ${labels.join(" + ")} in ${relPath}`);
       } catch {
         // Skip cards that can't be read
       }

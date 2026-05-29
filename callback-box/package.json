@@ -63,6 +63,7 @@
     "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.2.0",
     "@google/genai": "^1.44.0",
+    "@markdoc/markdoc": "^0.5.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@parcel/markdown-ansi": "^2.16.3",
     "@trpc/server": "^11.11.0",
