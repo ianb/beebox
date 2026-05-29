@@ -295,9 +295,9 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
 const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Default (Opus)", model: null },
   { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
-  { label: "Opus 4.7", model: "claude-opus-4-7" },
+  { label: "Opus 4.8", model: "claude-opus-4-8" },
   { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
-  { label: "Opus 4.7 (1M context)", model: "claude-opus-4-7[1m]" },
+  { label: "Opus 4.8 (1M context)", model: "claude-opus-4-8[1m]" },
 ];
 
 type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper" | "openai-realtime";
@@ -2126,18 +2126,19 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       // Narration mode swaps in a high-quality transcription before sending
       // to the agent — the realtime text is good enough for the live UI
       // but accuracy matters more for the persistent record.
-      const submit = (finalText: string) => {
-        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
+      const submit = (finalText: string, opts: { diarized?: boolean } = {}) => {
+        const diarizedAttr = opts.diarized === true ? " diarized=\"1\"" : "";
+        doSend(`<speech${diarizedAttr} local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
       };
       if (narrationEnabledRef.current && audioBlob) {
         setHqInFlight(true);
         setPendingHqDraft(text);
-        void postAudioForHqTranscription(audioBlob)
-          .then((hqText) => {
+        void postAudioForHqTranscription(audioBlob, { sessionId })
+          .then((hqResult) => {
             // Clear the pending bubble before submit so it doesn't overlap
             // with the real user message about to land in the chat history.
             setPendingHqDraft(null);
-            if (hqText === null) {
+            if (hqResult === null) {
               console.warn("[hq-transcribe] returned null — falling back to realtime");
               submit(text);
               return;
@@ -2145,8 +2146,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
             // Re-run keyword detection on the HQ text so the agent sees the
             // send-message (or other) keyword as a pill, not plain words.
             // If HQ misheard the keyword entirely, just submit the raw text.
-            const keyword = detectKeyword(hqText);
-            submit(keyword ? keyword.processedTranscript : hqText);
+            const keyword = detectKeyword(hqResult.text);
+            submit(keyword ? keyword.processedTranscript : hqResult.text, { diarized: hqResult.diarized });
           })
           .finally(() => { setHqInFlight(false); });
       } else {

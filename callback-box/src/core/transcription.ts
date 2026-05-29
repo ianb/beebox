@@ -33,6 +33,12 @@ export interface TranscriptionResult {
   text: string;
   duration: number;
   language: string;
+  /**
+   * True when the service ran diarization AND returned speaker-labeled
+   * segments. False/absent for non-diarized passes or when diarization
+   * was requested but produced no usable speaker ids (e.g. mono speaker).
+   */
+  diarized?: boolean;
 }
 
 export interface WordTimestamp {

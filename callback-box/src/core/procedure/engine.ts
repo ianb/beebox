@@ -24,8 +24,8 @@ import type { CommandContext, CommandResult } from "../command-runner.js";
 /** Maps friendly model names to full model IDs */
 const MODEL_MAP: Record<string, string> = {
   haiku: "claude-haiku-4-5-20251001",
-  sonnet: "claude-sonnet-4-5-20250929",
-  opus: "claude-opus-4-6",
+  sonnet: "claude-sonnet-4-6",
+  opus: "claude-opus-4-8",
 };
 
 /** Agent factory type — matches createAgent() signature */

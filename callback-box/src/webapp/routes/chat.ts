@@ -33,6 +33,11 @@ import {
 import { resolveFeatures } from "../../core/chat-features.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { transcribeAudioHq } from "../../core/transcription.js";
+import {
+  findLastSpeakerLetter,
+  nextSpeakerLetter,
+  relabelDiarizedSpeakers,
+} from "../../core/transcription-voxtral.js";
 import { WebSocket as WsWebSocket } from "ws";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import type { EventBus } from "../../core/event-bus.js";
@@ -234,6 +239,33 @@ export async function registerChatRoutes(
       /^(<(?:typed|speech)\b)([^>]*>)/,
       `$1 user="${user.name.replace(/"/g, "&quot;")}" user-email="${user.email.replace(/"/g, "&quot;")}"$2`
     );
+  }
+
+  /**
+   * Read the tail of a session's JSONL log as raw text. Used to scan for
+   * the most recent speaker-letter tag in a diarized transcription
+   * relabel. Cap at 128KB — `Speaker N<L>` patterns are dense in any
+   * recent diarized message, so we don't need full history. Returns ""
+   * when the log doesn't exist yet or any read step fails.
+   */
+  const LOG_TAIL_BYTES = 128 * 1024;
+  async function readSessionLogTail(sessionId: string): Promise<string> {
+    try {
+      const logPath = await resolveSessionLogPath(boxRoot, sessionId);
+      const handle = await fs.open(logPath, "r");
+      try {
+        const stat = await handle.stat();
+        const start = Math.max(0, stat.size - LOG_TAIL_BYTES);
+        const length = stat.size - start;
+        const buf = Buffer.alloc(length);
+        await handle.read(buf, 0, length, start);
+        return buf.toString("utf8");
+      } finally {
+        await handle.close();
+      }
+    } catch {
+      return "";
+    }
   }
 
   // Track recently processed message IDs to prevent duplicate sends on retry.
@@ -691,13 +723,31 @@ export async function registerChatRoutes(
     if (!data) return reply.status(400).send({ error: "No audio uploaded" });
     const buffer = await data.toBuffer();
     const filename = data.filename || "segment.webm";
+    // Session id arrives as a multipart text field alongside the audio.
+    // Optional — without it we can't look up prior speaker letters, so
+    // diarized output starts at "A".
+    const sessionField = data.fields["session"];
+    const sessionId = sessionField && "value" in sessionField && typeof sessionField.value === "string"
+      ? sessionField.value
+      : null;
     try {
       const result = await transcribeAudioHq({
         audioBuffer: buffer,
         filename,
         boxRoot,
       });
-      return { text: result.text };
+      if (result.diarized !== true) {
+        return { text: result.text, diarized: false };
+      }
+      // Diarized: tag this recording's speakers with a per-session letter
+      // so the agent can tell "Speaker 1A" (recording 1) and "Speaker 1B"
+      // (recording 2) are different people. Letter advances on every
+      // diarized call by scanning prior log content for the highest
+      // letter used so far.
+      const priorText = sessionId !== null ? await readSessionLogTail(sessionId) : "";
+      const letter = nextSpeakerLetter(findLastSpeakerLetter(priorText));
+      const relabeled = relabelDiarizedSpeakers(result.text, letter);
+      return { text: relabeled, diarized: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[transcribe-audio] HQ transcription failed:", msg);
