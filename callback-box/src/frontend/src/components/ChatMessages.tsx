@@ -4,12 +4,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "@tanstack/react-router";
-import { Markdown } from "./Markdown";
+import { Markdown, type MarkdownComponentOverrides } from "./Markdown";
 import { Image } from "./ui/Image";
 import { Pre } from "./ui/Pre";
 import { FileView } from "./FileView";
 import type { LightboxImage } from "./ImageLightbox";
-import type { Components } from "react-markdown";
 import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
@@ -539,66 +538,14 @@ function isImagePath(path: string): boolean {
 }
 
 /**
- * Minimal hast node shape (from react-markdown's `node` prop) used for
- * paragraph inspection. Hast elements have `tagName` + `properties`; text
- * nodes have `value`.
- */
-interface HastChild {
-  type: string;
-  tagName?: string;
-  value?: string;
-  properties?: { href?: unknown; src?: unknown; alt?: unknown };
-  children?: HastChild[];
-}
-
-function hastText(node: HastChild): string {
-  if (node.type === "text") return node.value || "";
-  if (!node.children) return "";
-  return node.children.map(hastText).join("");
-}
-
-/**
- * Scan a paragraph's hast node for view: links that point at image files,
- * and return their resolved src+alt. Returns null if any non-image,
- * non-whitespace child is present — so we only take over when the paragraph
- * is exclusively view-image links.
- *
- * This is needed because react-markdown's custom `a` component wraps link
- * nodes in our handler function, so extractImages (which reads rendered
- * React children) can't see the underlying <img> our handler emits. We
- * inspect the source AST instead.
- */
-function extractViewImagesFromNode(node: HastChild | undefined): Array<{ src: string; alt: string }> | null {
-  if (!node || !node.children) return null;
-  const images: Array<{ src: string; alt: string }> = [];
-  for (const child of node.children) {
-    if (child.type === "text" && (child.value || "").trim() === "") continue;
-    if (
-      child.type === "element" &&
-      child.tagName === "a" &&
-      typeof child.properties?.href === "string" &&
-      child.properties.href.startsWith("view:")
-    ) {
-      const target = parseViewUrl(child.properties.href);
-      if (isImagePath(target.path)) {
-        images.push({
-          src: `${getApiBase()}/files/${target.path}`,
-          alt: hastText(child),
-        });
-        continue;
-      }
-    }
-    return null;
-  }
-  return images.length > 0 ? images : null;
-}
-
-/**
  * Paragraph override that detects image-only paragraphs and renders them
- * as centered thumbnails (single) or a grid (multiple).
+ * as centered thumbnails (single) or a grid (multiple). The image-only
+ * case covers both markdown image syntax (`![](…)`) and `view:` links to
+ * image files, because the shared `Link` component for those renders a
+ * `ChatInlineImage` — so they show up as rendered children we can detect.
  */
-function ChatParagraph({ children, node, ...props }: React.HTMLAttributes<HTMLParagraphElement> & { node?: unknown }) {
-  const images = extractImages(children) ?? extractViewImagesFromNode(node as HastChild | undefined);
+function ChatParagraph({ children }: { children?: React.ReactNode }) {
+  const images = extractImages(children);
 
   if (images) {
     if (images.length === 1) {
@@ -617,7 +564,7 @@ function ChatParagraph({ children, node, ...props }: React.HTMLAttributes<HTMLPa
     );
   }
 
-  return <p {...props}>{children}</p>;
+  return <p>{children}</p>;
 }
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
@@ -625,53 +572,53 @@ export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 function makeChatMarkdownComponents(
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
   { boxSlug, onZoomView }: { boxSlug: string | undefined; onZoomView?: OnZoomView },
-): Partial<Components> {
-  return {
-    p: ChatParagraph,
-    img({ src, alt }) {
-      const resolved = src ? resolveImageSrc(src, { boxSlug, basePath: undefined }) : "";
-      return <ChatInlineImage src={resolved} alt={alt || ""} />;
-    },
-    a({ href, children, node: _node, ...props }) {
-      if (href && href.startsWith("view:")) {
-        const target = parseViewUrl(href);
-        // Image view: links render inline as an image with the same sizing
-        // and lightbox behavior as markdown images.
-        if (isImagePath(target.path)) {
-          const alt = typeof children === "string" ? children : target.path;
-          return <ChatInlineImage src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
-        }
-        if (target.zoom && onZoomView) {
-          const label = typeof children === "string" ? children : target.path;
-          return (
-            <button
-              onClick={() => onZoomView({ target: { ...target, zoom: false }, label })}
-              className="text-primary hover:text-primary/80 underline cursor-pointer"
-            >
-              {children}
-            </button>
-          );
-        }
-        return (
-          <FileView
-            path={target.path}
-            mode="chat"
-            rendererName={target.viewer}
-            onNavigate={onNavigate}
-          />
-        );
+): MarkdownComponentOverrides {
+  function ChatImg({ src, alt }: { src?: string; alt?: string }) {
+    const resolved = src ? resolveImageSrc(src, { boxSlug, basePath: undefined }) : "";
+    return <ChatInlineImage src={resolved} alt={alt || ""} />;
+  }
+  function ChatLink({ href, children }: { href?: string; children?: React.ReactNode }) {
+    if (href && href.startsWith("view:")) {
+      const target = parseViewUrl(href);
+      if (isImagePath(target.path)) {
+        const alt = typeof children === "string" ? children : target.path;
+        return <ChatInlineImage src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
       }
-      const isExternal = typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
-      if (isExternal) {
+      if (target.zoom && onZoomView) {
+        const label = typeof children === "string" ? children : target.path;
         return (
-          <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+          <button
+            onClick={() => onZoomView({ target: { ...target, zoom: false }, label })}
+            className="text-primary hover:text-primary/80 underline cursor-pointer"
+          >
             {children}
-            <ExternalLinkIndicator />
-          </a>
+          </button>
         );
       }
-      return <a href={href} {...props}>{children}</a>;
-    },
+      return (
+        <FileView
+          path={target.path}
+          mode="chat"
+          rendererName={target.viewer}
+          onNavigate={onNavigate}
+        />
+      );
+    }
+    const isExternal = typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
+    if (isExternal) {
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {children}
+          <ExternalLinkIndicator />
+        </a>
+      );
+    }
+    return <a href={href}>{children}</a>;
+  }
+  return {
+    Para: ChatParagraph as React.ComponentType<Record<string, unknown>>,
+    Img: ChatImg as React.ComponentType<Record<string, unknown>>,
+    Link: ChatLink as React.ComponentType<Record<string, unknown>>,
   };
 }
 

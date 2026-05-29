@@ -1,27 +1,32 @@
 /**
- * Shared Markdown renderer with comment visibility.
+ * Shared Markdown renderer, backed by Markdoc.
  *
- * Wraps react-markdown with remark-gfm and the comment-visibility plugin,
- * so HTML comments render as visible styled text instead of being stripped.
+ * Markdoc replaces the previous react-markdown + remark/rehype stack. The
+ * pipeline is:
+ *   parse  → Markdoc.parse(source)
+ *   transform → Markdoc.transform(ast, markdocConfig + per-call link/image
+ *               renderable overrides)
+ *   render  → Markdoc.renderers.react(tree, React, { components })
  *
- * Links:
- *  - `view:…` URLs and relative paths are intercepted and handed to the
- *    required `onNavigate` callback so each context (browse page, companion
- *    pane, zoomable view, …) can decide what "open this file" means.
- *  - http(s) links render as normal external links in a new tab.
- *  - Callers that need fully custom link handling (e.g. chat's inline image
- *    rendering) can still override via `components.a`.
+ * What lands in the renderable tree:
+ *  - Built-in node renders are configured so links become `Link`, images
+ *    become `Img`, paragraphs become `Para`, and the document root becomes
+ *    a fragment. The corresponding React components are built fresh per
+ *    render with `view:` / relative-path / lightbox routing baked in.
+ *  - The `{% quote %}` tag becomes `QuoteInline` or `QuoteBlock` (see
+ *    `markdoc-config.ts` and `Quote.tsx`).
+ *
+ * Callers can pass `components` to override or extend the map. The most
+ * common case is chat, which replaces `Link`, `Img`, and `Para` to render
+ * file previews, sized inline images, and lone-image grid layouts.
  */
 
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
+import * as React from "react";
 import { useParams } from "@tanstack/react-router";
-import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import type { Components } from "react-markdown";
-import { remarkComments, isCommentCode } from "../lib/remark-comments";
-import { rehypeStripRef } from "../lib/rehype-strip-ref";
-import { withBase } from "../api";
+import { parse, transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
+import { markdocConfig } from "../lib/markdoc-config";
+import { makeQuoteComponents } from "./Quote";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
@@ -32,26 +37,8 @@ import {
   type NavigateHint,
   type ViewTarget,
 } from "../lib/view-url";
+import { withBase } from "../api";
 import type { ReactNode } from "react";
-
-/**
- * URL transform that preserves view: URLs (used for embedding views in chat)
- * while delegating everything else to react-markdown's default sanitization.
- */
-function viewUrlTransform(url: string): string {
-  if (url.startsWith("view:")) {
-    return url;
-  }
-  return defaultUrlTransform(url);
-}
-
-const defaultPlugins = [remarkGfm];
-const pluginsWithComments = [remarkGfm, remarkComments];
-const rehypePlugins = [rehypeRaw, rehypeStripRef];
-
-function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
-  return withBase(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
-}
 
 interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -59,10 +46,13 @@ interface LinkContext {
   boxSlug: string | undefined;
 }
 
-/** Flatten React link children to a plain string for use as a tab label. */
+function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
+  return withBase(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
+}
+
 function flattenText(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
-  if (node == null || typeof node === "boolean") return "";
+  if (node === null || node === undefined || typeof node === "boolean") return "";
   if (Array.isArray(node)) return node.map(flattenText).join("");
   if (typeof node === "object") {
     const maybe = node as { props?: { children?: ReactNode } };
@@ -72,190 +62,210 @@ function flattenText(node: ReactNode): string {
 }
 
 /**
- * True when a paragraph's hast children are exactly one image (ignoring
- * whitespace-only text nodes). Markdown wraps standalone images in a `<p>`,
- * but our img handler renders block-level content (figure / div / placeholder)
- * which is invalid inside a paragraph and breaks layout. Detect that case so
- * the `p` handler can render the children without the `<p>` wrapper.
+ * Render a markdown link. View URLs and relative paths are intercepted
+ * and handed to the caller's `onNavigate`; everything else opens as a
+ * normal external link in a new tab. Empty/non-string hrefs render as
+ * a plain anchor (defensive against malformed input).
  */
-function isLoneImageParagraph(node: unknown): boolean {
-  if (node === null || typeof node !== "object") return false;
-  const children = (node as { children?: unknown[] }).children;
-  if (!Array.isArray(children)) return false;
+function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?: string; children?: ReactNode }> {
+  return function Link({ href, title, children }) {
+    if (typeof href !== "string" || href === "") {
+      return <a title={title}>{children}</a>;
+    }
+    const classified = classifyMarkdownHref(href);
+    if (classified.kind === "view") {
+      const target = parseViewUrl(classified.raw);
+      const resolved = viewHref(ctx.boxSlug, target);
+      return (
+        <a
+          href={resolved}
+          title={title}
+          onClick={(e) => {
+            if (e.defaultPrevented) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            e.preventDefault();
+            const label = flattenText(children).trim();
+            ctx.onNavigate(target, label ? { label } : undefined);
+          }}
+        >
+          {children}
+        </a>
+      );
+    }
+    if (classified.kind === "relative") {
+      const resolved = resolveRelativePath(ctx.basePath, classified.path);
+      const target: ViewTarget = { path: resolved, viewer: null, params: {}, zoom: false };
+      const resolvedHref = viewHref(ctx.boxSlug, target);
+      return (
+        <a
+          href={resolvedHref}
+          title={title}
+          onClick={(e) => {
+            if (e.defaultPrevented) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            e.preventDefault();
+            const label = flattenText(children).trim();
+            ctx.onNavigate(target, label ? { label } : undefined);
+          }}
+        >
+          {children}
+        </a>
+      );
+    }
+    const isExternal = href.startsWith("http://") || href.startsWith("https://");
+    if (isExternal) {
+      return (
+        <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      );
+    }
+    return <a href={href} title={title}>{children}</a>;
+  };
+}
+
+function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
+  return function Img({ src, alt, title }) {
+    const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
+    return (
+      <Image
+        src={resolved}
+        alt={alt ?? ""}
+        size="chat"
+        lightbox
+        className="block mx-auto my-2"
+        {...(title !== undefined ? { title } : {})}
+      />
+    );
+  };
+}
+
+/**
+ * Default paragraph. A paragraph that contains only a single image gets
+ * its `<p>` wrapper dropped — our `Img` component renders block-level
+ * content (figure / lightbox), which is invalid inside a `<p>` and breaks
+ * layout. Detect that case and unwrap.
+ */
+function isLoneImageReactChildren(children: ReactNode): boolean {
+  const arr = React.Children.toArray(children);
   let imgCount = 0;
-  for (const child of children) {
-    if (child === null || typeof child !== "object") return false;
-    const c = child as { type?: string; tagName?: string; value?: string };
-    if (c.type === "text" && typeof c.value === "string" && c.value.trim() === "") continue;
-    if (c.type === "element" && c.tagName === "img") {
-      imgCount++;
-      continue;
+  for (const child of arr) {
+    if (typeof child === "string" && child.trim() === "") continue;
+    if (typeof child === "object" && child !== null && "type" in child) {
+      const el = child as React.ReactElement;
+      const t = el.type as { displayName?: string; name?: string };
+      const name = t.displayName ?? t.name ?? "";
+      if (name === "Img" || name === "Image") {
+        imgCount++;
+        continue;
+      }
     }
     return false;
   }
   return imgCount === 1;
 }
 
-function makeDefaultComponents(ctx: LinkContext): Partial<Components> {
-  const { onNavigate, basePath, boxSlug } = ctx;
-  return {
-    p({ children, node }) {
-      if (isLoneImageParagraph(node)) {
-        return children;
-      }
-      return <p>{children}</p>;
-    },
-    img({ src, alt, node: _node }) {
-      const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug, basePath }) : "";
-      return (
-        <Image
-          src={resolved}
-          alt={alt ?? ""}
-          size="chat"
-          lightbox
-          className="block mx-auto my-2"
-        />
-      );
-    },
-    a({ children, href: linkHref, node: _node, ...props }) {
-      if (typeof linkHref !== "string") {
-        return <a {...props}>{children}</a>;
-      }
-      const classified = classifyMarkdownHref(linkHref);
-      if (classified.kind === "view") {
-        const target = parseViewUrl(classified.raw);
-        const resolvedHref = viewHref(boxSlug, target);
-        return (
-          <a
-            href={resolvedHref}
-            onClick={(e) => {
-              if (e.defaultPrevented) return;
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-              e.preventDefault();
-              const label = flattenText(children).trim();
-              onNavigate(target, label ? { label } : undefined);
-            }}
-            {...props}
-          >
-            {children}
-          </a>
-        );
-      }
-      if (classified.kind === "relative") {
-        const resolved = resolveRelativePath(basePath, classified.path);
-        const target: ViewTarget = { path: resolved, viewer: null, params: {}, zoom: false };
-        const resolvedHref = viewHref(boxSlug, target);
-        return (
-          <a
-            href={resolvedHref}
-            onClick={(e) => {
-              if (e.defaultPrevented) return;
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-              e.preventDefault();
-              const label = flattenText(children).trim();
-              onNavigate(target, label ? { label } : undefined);
-            }}
-            {...props}
-          >
-            {children}
-          </a>
-        );
-      }
-      const isExternal =
-        linkHref.startsWith("http://") || linkHref.startsWith("https://");
-      return (
-        <a
-          href={linkHref}
-          {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-          {...props}
-        >
-          {children}
-        </a>
-      );
-    },
-  };
+function Para({ children }: { children?: ReactNode }) {
+  if (isLoneImageReactChildren(children)) {
+    return children as React.ReactElement;
+  }
+  return <p>{children}</p>;
 }
 
-function makeCommentComponents(ctx: LinkContext): Partial<Components> {
-  return {
-    ...makeDefaultComponents(ctx),
-    code({ children, node: _node, ...props }) {
-      const text = typeof children === "string" ? children : "";
-      if (isCommentCode(text)) {
-        return (
-          <code
-            {...props}
-            className="text-warm-400 italic font-normal bg-transparent"
-          >
-            {text}
-          </code>
-        );
-      }
-      return <code {...props}>{children}</code>;
+interface RenderConfigBundle {
+  config: Config;
+  components: Record<string, React.ComponentType<Record<string, unknown>>>;
+}
+
+function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
+  const config: Config = {
+    ...markdocConfig,
+    nodes: {
+      ...(markdocConfig.nodes ?? {}),
+      document: { render: "Fragment" },
+      paragraph: { render: "Para", children: ["inline"] },
+      link: {
+        render: "Link",
+        children: ["strong", "em", "s", "code", "text", "tag"],
+        attributes: {
+          href: { type: String },
+          title: { type: String },
+        },
+      },
+      image: {
+        render: "Img",
+        attributes: {
+          src: { type: String },
+          alt: { type: String },
+          title: { type: String },
+        },
+      },
     },
   };
+  const Link = makeLink(linkCtx);
+  const Img = makeImg(linkCtx);
+  const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
+  const Task = ({ done }: { done?: boolean }) => (
+    <input
+      type="checkbox"
+      checked={done === true}
+      disabled
+      readOnly
+      className="mr-2 align-middle accent-warm-500"
+    />
+  );
+  const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
+    Fragment: Fragment as unknown as React.ComponentType<Record<string, unknown>>,
+    Para: Para as unknown as React.ComponentType<Record<string, unknown>>,
+    Link: Link as unknown as React.ComponentType<Record<string, unknown>>,
+    Img: Img as unknown as React.ComponentType<Record<string, unknown>>,
+    QuoteInline: QuoteInline as unknown as React.ComponentType<Record<string, unknown>>,
+    QuoteBlock: QuoteBlock as unknown as React.ComponentType<Record<string, unknown>>,
+    Task: Task as unknown as React.ComponentType<Record<string, unknown>>,
+  };
+  return { config, components };
 }
 
 type ProseVariant = false | "block" | "inline";
 
+export type MarkdownComponentOverrides = Partial<
+  Record<string, React.ComponentType<Record<string, unknown>>>
+>;
+
 interface MarkdownProps {
   children: string;
-  components?: Partial<Components>;
-  /** Show HTML comments as visible styled text. Defaults to false. */
-  showComments?: boolean;
   /**
-   * Wrap the rendered output in a Tailwind Typography container.
-   * - `"block"` — `<div>` wrapper (default for rendered pages).
-   * - `"inline"` — `<span>` wrapper (for markdown within flowing text).
-   * - `false` (default) — no wrapper; caller decides.
+   * Per-call component overrides. Keys are the names Markdoc emits into
+   * the renderable tree — `Para`, `Link`, `Img`, `QuoteInline`,
+   * `QuoteBlock`, or any custom tag name. Values replace the default
+   * component entirely.
    */
+  components?: MarkdownComponentOverrides;
   prose?: ProseVariant;
-  /**
-   * Required. Called when the user clicks a `view:` or relative link — the
-   * caller decides whether to push a URL, swap a sidebar pane, etc. See
-   * {@link RendererProps.onNavigate} for the broader contract.
-   */
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  /**
-   * Path of the document being rendered (relative to the box root). Used to
-   * resolve relative links like `[1040](1040.pdf)` against the document's
-   * own directory. If omitted, relative links are treated as already
-   * box-root-relative.
-   */
   basePath?: string;
 }
 
 export function Markdown({
   children,
   components,
-  showComments,
   prose = false,
   onNavigate,
   basePath,
 }: MarkdownProps) {
   const { boxSlug } = useParams({ strict: false });
-  const plugins = showComments ? pluginsWithComments : defaultPlugins;
-  const defaultBase = useMemo(
-    () => {
-      const ctx: LinkContext = { onNavigate, basePath, boxSlug };
-      return showComments ? makeCommentComponents(ctx) : makeDefaultComponents(ctx);
-    },
-    [showComments, onNavigate, basePath, boxSlug],
-  );
-  const merged = components
-    ? { ...defaultBase, ...components }
-    : defaultBase;
+  const { tree, mergedComponents } = useMemo(() => {
+    const ctx: LinkContext = { onNavigate, basePath, boxSlug };
+    const { config, components: defaults } = buildRenderConfig(ctx);
+    const ast = parse(children);
+    const t: RenderableTreeNode = transform(ast, config);
+    const merged = components === undefined ? defaults : { ...defaults, ...components };
+    return { tree: t, mergedComponents: merged };
+  }, [children, onNavigate, basePath, boxSlug, components]);
 
-  const rendered = (
-    <ReactMarkdown
-      remarkPlugins={plugins}
-      rehypePlugins={rehypePlugins}
-      components={merged}
-      urlTransform={viewUrlTransform}
-    >
-      {children}
-    </ReactMarkdown>
-  );
+  const rendered = renderers.react(tree, React, {
+    components: mergedComponents as Record<string, React.ComponentType<Record<string, unknown>>>,
+  });
 
   if (prose === "block") {
     return <div className="prose prose-sm max-w-none text-warm-700">{rendered}</div>;
@@ -263,5 +273,5 @@ export function Markdown({
   if (prose === "inline") {
     return <span className="prose prose-sm inline max-w-none">{rendered}</span>;
   }
-  return rendered;
+  return rendered as React.ReactElement;
 }

@@ -205,7 +205,7 @@ function RecipeSectionView({
               <li key={i} className="leading-relaxed">
                 <span className="prose prose-sm inline max-w-none">
                   <Markdown
-                    components={{ p: ({ children }) => children as React.ReactElement }}
+                    components={{ Para: ({ children }) => children as React.ReactElement }}
                     onNavigate={onNavigate}
                     basePath={basePath}
                   >

@@ -14,6 +14,7 @@
     "lint:circular": "madge --circular --extensions ts,tsx src/"
   },
   "dependencies": {
+    "@markdoc/markdoc": "^0.5.2",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-router": "^1.166.3",
@@ -26,11 +27,8 @@
     "ldrs": "^1.1.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
     "react-textarea-autosize": "^8.5.9",
-    "rehype-raw": "^7.0.0",
-    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
     "xstate": "^5.28.0"
   },

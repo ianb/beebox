@@ -11,8 +11,10 @@
  */
 
 import { Markdown } from "./Markdown";
+import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/quote-extract";
 import type { RendererProps } from "../renderers";
 import type { ReactNode } from "react";
+import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
 type Scalar = string | number | boolean | null;
 
@@ -92,9 +94,62 @@ function FieldRow({ name, value }: { name: string; value: unknown }) {
   );
 }
 
+/**
+ * Subtle "Direct quotes from: …" subtitle when the doc body contains one
+ * or more `{% quote from="..." %}` tags. Person-ref speakers become links
+ * to their person card via `onNavigate`; display-name speakers render as
+ * plain text. Kept compact (single line, muted styling) so docs with
+ * heavy quoting don't get a banner — the goal is to surface provenance,
+ * not announce it.
+ */
+function QuoteSpeakersLine({
+  speakers,
+  onNavigate,
+}: {
+  speakers: string[];
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+}): ReactNode {
+  if (speakers.length === 0) return null;
+  return (
+    <div className="text-xs text-warm-500 mb-3">
+      <span className="font-medium">Direct quotes from:</span>{" "}
+      {speakers.map((speaker, i) => {
+        const display = speakerDisplay(speaker);
+        const node = isPersonRef(speaker) ? (
+          <button
+            key={speaker}
+            type="button"
+            onClick={() => {
+              const target: ViewTarget = {
+                path: speaker,
+                viewer: null,
+                params: {},
+                zoom: false,
+              };
+              onNavigate(target, { label: display });
+            }}
+            className="text-warm-600 hover:text-warm-800 underline-offset-2 hover:underline cursor-pointer"
+          >
+            {display}
+          </button>
+        ) : (
+          <span key={speaker}>{display}</span>
+        );
+        return (
+          <span key={`${speaker}-wrap`}>
+            {i > 0 ? ", " : ""}
+            {node}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function MarkdownCardView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter;
   const body = data.body;
+  const speakers = body === undefined ? [] : extractQuoteSpeakers(body);
 
   return (
     <div className="p-4 max-w-3xl">
@@ -103,6 +158,8 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
           <FieldsTable fields={frontmatter} />
         </div>
       ) : null}
+
+      <QuoteSpeakersLine speakers={speakers} onNavigate={onNavigate} />
 
       {body !== undefined && body.trim() !== "" ? (
         <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
