@@ -180,6 +180,9 @@ function handleSystemInit(
  *   chunks     — total STREAM_TEXT events to emit (default 200)
  *   intervalMs — delay between events (default 40)
  *   chunkLen   — approx chars per chunk (default 25)
+ *
+ * Emits a STREAM_TOOL event partway through so the live tool-list layout
+ * (e.g. ordering relative to the throbber) is exercised too.
  */
 function runFakeStream(
   message: string,
@@ -192,6 +195,7 @@ function runFakeStream(
   const chunks = Number.parseInt(parts[1], 10) || 200;
   const intervalMs = Number.parseInt(parts[2], 10) || 40;
   const chunkLen = Number.parseInt(parts[3], 10) || 25;
+  const toolAt = Math.floor(chunks / 3);
 
   const para = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ";
   let body = "# Fakestream\n\n";
@@ -204,6 +208,18 @@ function runFakeStream(
       window.clearInterval(handle);
       terminal({ type: "STREAM_RESULT" });
       return;
+    }
+    if (emitted === toolAt) {
+      sendBack({
+        type: "STREAM_TOOL",
+        tool: {
+          type: "tool_use",
+          toolName: "Read",
+          toolId: "fakestream-tool-1",
+          input: { file_path: "/tmp/fakestream.txt" },
+          inputSummary: "Read",
+        },
+      });
     }
     const next = body.slice(pos, pos + chunkLen);
     pos = (pos + chunkLen) % body.length;
