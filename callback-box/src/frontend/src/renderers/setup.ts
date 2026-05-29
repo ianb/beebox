@@ -4,6 +4,7 @@
  */
 
 import "./builtins";
+import "./markdown-card";
 import "./image";
 import "./pdf";
 import "./recipe";

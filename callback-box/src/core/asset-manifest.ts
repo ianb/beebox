@@ -1,11 +1,16 @@
 /**
- * Attach manifests — track binary attachments via a per-`.attach/`
- * `manifest.json` file while the binaries themselves stay gitignored.
- * See docs/attach-manifests.md for the full design.
+ * Asset manifests — track binary assets (the gitignored subset of
+ * attachments) via a per-`.attach/` `manifest.json` file while the asset
+ * bytes themselves stay gitignored. See docs/asset-manifests.md for the
+ * full design.
+ *
+ * Terminology: an *attachment* is anything inside a `.attach/` scope (a
+ * sidecar `.txt`, a notes file, etc.); an *asset* is the subset whose
+ * bytes live on disk only and are tracked through this manifest.
  *
  * This file owns the manifest format and the pure read/write/hash helpers.
  * The hook-style directory walk that verifies + auto-claims lives in
- * src/core/attach-manifest-scan.ts.
+ * src/core/asset-manifest-scan.ts.
  */
 
 import { createHash } from "node:crypto";
@@ -13,7 +18,7 @@ import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-export interface AttachManifestEntry {
+export interface AssetManifestEntry {
   /** File size in bytes. */
   size: number;
   /** ISO mtime — used as a speed hint for the hash-skip path. Not load-bearing. */
@@ -22,14 +27,14 @@ export interface AttachManifestEntry {
   sha256: string;
 }
 
-export interface AttachManifest {
+export interface AssetManifest {
   /** Map of direct-child filename → entry. Does not include nested attach scopes. */
-  files: Record<string, AttachManifestEntry>;
+  files: Record<string, AssetManifestEntry>;
 }
 
 export const MANIFEST_FILENAME = "manifest.json";
 
-export function emptyManifest(): AttachManifest {
+export function emptyManifest(): AssetManifest {
   return { files: {} };
 }
 
@@ -37,7 +42,7 @@ export function manifestPath(attachDir: string): string {
   return path.join(attachDir, MANIFEST_FILENAME);
 }
 
-export function findEntry(m: AttachManifest, name: string): AttachManifestEntry | undefined {
+export function findEntry(m: AssetManifest, name: string): AssetManifestEntry | undefined {
   return m.files[name];
 }
 
@@ -49,7 +54,7 @@ export function findEntry(m: AttachManifest, name: string): AttachManifestEntry 
  * size + mtime? Used to skip rehashing during a directory walk.
  */
 export function entryMatchesStat(
-  entry: AttachManifestEntry,
+  entry: AssetManifestEntry,
   stat: { size: number; mtime: Date }
 ): boolean {
   return entry.size === stat.size && entry.mtime === stat.mtime.toISOString();
@@ -58,7 +63,7 @@ export function entryMatchesStat(
 /**
  * Compute a fresh manifest entry from a file on disk (size, mtime, sha256).
  */
-export async function computeEntry(absPath: string): Promise<AttachManifestEntry> {
+export async function computeEntry(absPath: string): Promise<AssetManifestEntry> {
   const stat = await fs.stat(absPath);
   return {
     size: stat.size,
@@ -72,7 +77,7 @@ export async function computeEntry(absPath: string): Promise<AttachManifestEntry
  * exist. Throws on JSON parse errors or shape mismatch so a corrupted
  * manifest fails loudly rather than silently behaving as if empty.
  */
-export async function loadManifest(attachDir: string): Promise<AttachManifest> {
+export async function loadManifest(attachDir: string): Promise<AssetManifest> {
   const filePath = manifestPath(attachDir);
   let content: string;
   try {
@@ -89,9 +94,9 @@ export async function loadManifest(attachDir: string): Promise<AttachManifest> {
     typeof (parsed as { files?: unknown }).files !== "object" ||
     (parsed as { files: unknown }).files === null
   ) {
-    throw new Error(`Attach manifest at ${filePath} is malformed (expected { files: {...} })`);
+    throw new Error(`Asset manifest at ${filePath} is malformed (expected { files: {...} })`);
   }
-  return parsed as AttachManifest;
+  return parsed as AssetManifest;
 }
 
 /**
@@ -100,11 +105,11 @@ export async function loadManifest(attachDir: string): Promise<AttachManifest> {
  */
 export async function saveManifest(
   attachDir: string,
-  manifest: AttachManifest
+  manifest: AssetManifest
 ): Promise<void> {
   await fs.mkdir(attachDir, { recursive: true });
   const filePath = manifestPath(attachDir);
-  const sortedFiles: Record<string, AttachManifestEntry> = {};
+  const sortedFiles: Record<string, AssetManifestEntry> = {};
   for (const key of Object.keys(manifest.files).toSorted()) {
     sortedFiles[key] = manifest.files[key]!;
   }

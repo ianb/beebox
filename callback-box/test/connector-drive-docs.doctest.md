@@ -14,6 +14,11 @@ import {
 import { createGoogleDriveConnector } from "../src/connectors/google-drive.js";
 import { createGdocTemplate } from "../src/schemas/gdoc.js";
 
+// Several assertions exercise conflict/error paths that log to console.
+// Silence so they don't pollute test output.
+console.warn = () => {};
+console.error = () => {};
+
 function makeDoc(opts: {
   id: string;
   title: string;

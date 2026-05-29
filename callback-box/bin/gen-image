@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+// Thin stub: run src/dev/gen-image.ts via the project's local tsx.
+// All real logic lives in the .ts file; this just hands argv to it.
+
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, join, resolve } from "node:path";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const projectRoot = resolve(here, "..");
+const tsxBin = join(projectRoot, "node_modules", ".bin", "tsx");
+const tsSrc = join(projectRoot, "src", "dev", "gen-image.ts");
+
+const child = spawn(tsxBin, [tsSrc, ...process.argv.slice(2)], {
+  stdio: "inherit",
+});
+child.on("exit", (code, signal) => {
+  if (signal !== null) process.kill(process.pid, signal);
+  else process.exit(code === null ? 1 : code);
+});

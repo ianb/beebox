@@ -4,6 +4,10 @@
 
 ```ts setup
 import { parseAllSpeechTags, hasAssistantSpeech } from "../src/frontend/src/lib/speech-parsing.js";
+
+// Some assertions feed unknown voices to exercise the warn-and-default path.
+// Silence the warning so it doesn't pollute test output.
+console.warn = () => {};
 ```
 
 ## Basic speech extraction

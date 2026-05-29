@@ -27,7 +27,7 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **asset** — The subset of attachments whose bytes live on disk only, not in git. Tracked via the asset manifest. Photos, PDFs, audio, video, gzipped data — anything in the gitignored extensions list. Every asset is an attachment; not every attachment is an asset.
 
-**asset manifest** — `manifest.json` inside each `.attach/` directory recording every asset's size, mtime, and sha256. Commits to git; the assets themselves don't. Kept in sync by the pre-commit hook. See `docs/attach-manifests.md`.
+**asset manifest** — `manifest.json` inside each `.attach/` directory recording every asset's size, mtime, and sha256. Commits to git; the assets themselves don't. Kept in sync by the pre-commit hook. See `docs/asset-manifests.md`.
 
 ## System concepts
 
@@ -49,4 +49,4 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **cb** — The CLI. The universal interface to a box. Every operation an agent does in a box goes through `cb` or through direct file edits.
 
-**cb attachments** — Umbrella command for asset/manifest maintenance: `verify`, `migrate`, `init-gitignore`, `untrack-binaries`, `add`, `overwrite`. Operates on the attach scope as a whole even though most subcommands target the asset subset.
+**cb attachments** — Umbrella command for asset/manifest maintenance: `verify`, `migrate`, `init-gitignore`, `untrack-assets`, `add`, `overwrite`. Operates on the attach scope as a whole even though most subcommands target the asset subset.

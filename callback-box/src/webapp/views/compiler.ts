@@ -113,6 +113,9 @@ export async function compileView(viewPath: string): Promise<{ output: string; m
     jsx: "automatic",
     write: false,
     plugins: [reactExternalPlugin],
+    // Surfacing compile errors is the route's job (it returns an ErrorView
+    // module); esbuild's own stderr printout is redundant noise here.
+    logLevel: "silent",
   });
 
   const outputFile = result.outputFiles[0];

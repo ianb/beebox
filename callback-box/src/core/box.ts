@@ -147,10 +147,9 @@ tmp/
 *.swp
 *~
 
-# cb-attach-binaries (managed by cb attachments init-gitignore)
-# Binary attachments inside .attach/ scopes are tracked via per-dir
-# manifest.json (size + sha256), not committed directly. See
-# docs/attach-manifests.md.
+# cb-assets (managed by cb attachments init-gitignore)
+# Assets inside .attach/ scopes are tracked via per-dir manifest.json
+# (size + sha256), not committed directly. See docs/asset-manifests.md.
 **/*.attach/**/*.jpg
 **/*.attach/**/*.jpeg
 **/*.attach/**/*.png
@@ -320,8 +319,7 @@ function normalizeGuideForComparison(content: string): string {
  * overwrites it with the latest template. If the user has modified the guide,
  * parks the new template under `config/_template-updates/` for manual merging.
  *
- * Skips any domain where a guide already exists from migration (e.g., news
- * guide migrated from the legacy news-guide format).
+ * Skips any domain where a guide already exists.
  *
  * @returns List of installed/updated guide names
  */

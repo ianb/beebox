@@ -4,11 +4,10 @@
  * chrome) so it lives in components/ rather than in the page.
  */
 
-import { href } from "../../lib/routing";
 import { cbSource } from "../../lib/source-tag";
 import { StatusBadge } from "../ui/StatusBadge";
 import type { RouterOutput } from "../../lib/trpc";
-import { getApiBase } from "../../api";
+import { getApiBase, withBase } from "../../api";
 
 type BrowseData = RouterOutput["status"]["browse"];
 
@@ -78,7 +77,7 @@ export function BrowseSidebarList({
           key={card.relativePath}
           onClick={() => {
             onSelectFile(card.relativePath);
-            window.history.replaceState(null, "", href(`/${boxSlug}/browse/${card.relativePath}`));
+            window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${card.relativePath}`));
           }}
           {...cbSource("card", card.relativePath)}
           aria-label={card.name === card.type ? `${card.name} card${card.status ? `, ${card.status}` : ""}` : `${card.name}, ${card.type} card${card.status ? `, ${card.status}` : ""}`}
@@ -105,7 +104,7 @@ export function BrowseSidebarList({
           key={file.relativePath}
           onClick={() => {
             onSelectFile(file.relativePath);
-            window.history.replaceState(null, "", href(`/${boxSlug}/browse/${file.relativePath}`));
+            window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${file.relativePath}`));
           }}
           onContextMenu={(event) => onFileContextMenu(event, file.relativePath)}
           {...(imageDataAttrs(file.relativePath, file.name) ?? {})}

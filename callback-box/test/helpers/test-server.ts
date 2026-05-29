@@ -35,6 +35,17 @@ export interface TestServerOptions {
   services?: Services;
 }
 
+// Filter chat-history backfill noise: every makeTestServer() boots a fresh
+// box, which triggers the one-time "Scanning JSONLs / Done — added N
+// session(s)" log pair from chat-session-history.ts. Production-useful but
+// pure noise across hundreds of route tests.
+const _origLog = console.log;
+console.log = (...args: unknown[]) => {
+  const first = args[0];
+  if (typeof first === "string" && first.startsWith("[chat-history:")) return;
+  _origLog(...args);
+};
+
 export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
   const tmpDir = await mkdtemp(join(tmpdir(), "cb-route-test-"));
 
@@ -58,7 +69,9 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     boxRoot: tmpDir,
     cleanup: async () => {
       await server.close();
-      await rm(tmpDir, { recursive: true, force: true });
+      // maxRetries handles benign ENOTEMPTY races on macOS when background
+      // writes (chat-history backfill, scheduler tick) finish just as we walk.
+      await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     },
   };
 }

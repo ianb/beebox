@@ -31,11 +31,15 @@ function trailerString(value: string | string[] | undefined): string | undefined
 }
 
 const PHASE_TONE: Record<string, BadgeTone> = {
-  triage: "info",
-  analyze: "warning",
-  brief: "success",
-  fetch: "info",
-  "process-feedback": "info",
+  intake: "info",
+  transcribe: "info",
+  "describe-images": "info",
+  summarize: "warning",
+  "plan-extraction": "warning",
+  assemble: "warning",
+  extract: "warning",
+  archive: "success",
+  refresh: "info",
 };
 
 function PhaseBadge({ phase }: { phase: string }) {

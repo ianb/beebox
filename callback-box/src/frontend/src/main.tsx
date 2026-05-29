@@ -6,6 +6,7 @@ import { LightboxProvider } from "./components/LightboxProvider";
 import "./index.css";
 import "./renderers/setup";
 import { registerBuiltinFileTypes } from "./file-types";
+import { withBase } from "./api";
 
 registerBuiltinFileTypes();
 
@@ -20,5 +21,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 );
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js");
+  navigator.serviceWorker.register(withBase("/sw.js"));
 }

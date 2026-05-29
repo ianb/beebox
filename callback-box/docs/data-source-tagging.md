@@ -22,7 +22,7 @@ Space-separated list of `type:identifier` pairs indicating where the displayed d
 Multiple sources on one element are space-separated:
 
 ```tsx
-<div data-cb-source="card:store/news/brief.card card:store/news/source.card">
+<div data-cb-source="card:store/recipes/Pesto.recipe.card card:store/recipes/Pasta.recipe.card">
 ```
 
 ### `data-cb-source-item`

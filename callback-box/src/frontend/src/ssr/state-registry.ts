@@ -223,7 +223,6 @@ export const routeConfigs: Record<string, RouteConfig> = {
           "scheduler.log": [],
           "status.activity": [],
           "status.questions": [],
-          "status.newsStatus": { count: 0 },
         },
       },
       busy: {
@@ -272,22 +271,6 @@ export const routeConfigs: Record<string, RouteConfig> = {
           sse: "connected",
           chat: "idle",
           voiceRecorder: "recording",
-        },
-      },
-    },
-  },
-  "/news": {
-    machines: ["sse"],
-    scenarios: {
-      default: {
-        description: "News page with live data",
-        machines: { sse: "disconnected" },
-      },
-      empty: {
-        description: "No news briefs available",
-        machines: { sse: "disconnected" },
-        queryOverrides: {
-          "briefs.list": [],
         },
       },
     },

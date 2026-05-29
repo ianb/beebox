@@ -5,6 +5,7 @@
  */
 
 import { Link } from "@tanstack/react-router";
+import { withBase } from "../api";
 import { href } from "../lib/routing";
 
 interface Box {
@@ -15,7 +16,7 @@ interface Box {
 export function SignInLink({ returnTo }: { returnTo: string }) {
   return (
     <a
-      href={`/auth/login?returnTo=${encodeURIComponent(returnTo)}`}
+      href={withBase(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`)}
       className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"
     >
       Sign in with Google
@@ -61,7 +62,7 @@ export function BoxActionsTile({ box }: { box: Box }) {
 export function BoxShareTile({ box, search }: { box: Box; search: string }) {
   return (
     <a
-      href={`/${box.slug}/share${search}`}
+      href={withBase(`/${box.slug}/share${search}`)}
       className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-accent hover:shadow transition-all"
     >
       <span className="text-lg font-medium text-primary">{box.name}</span>

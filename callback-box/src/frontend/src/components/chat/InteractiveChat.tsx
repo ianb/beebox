@@ -14,7 +14,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } fro
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
-import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, getChatFeatures, setChatFeature, postAudioForHqTranscription, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
+import { getApiBase, getEventSourceBase, getChatHistory, getChatStatus, setChatModel, restartChatSubprocess, getChatFeatures, setChatFeature, postAudioForHqTranscription, withBase, type SessionEntry, type SessionContentBlock, type ChatImageAttachment } from "../../api";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { extractImageFiles, processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
@@ -22,7 +22,8 @@ import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { detectKeyword } from "../../lib/speech-keywords";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
-import { parseAllSpeechTags, VALID_VOICES, type SpeechSegment } from "../../lib/speech-parsing";
+import { parseAllSpeechTags, isTTSVoice, type SpeechSegment } from "../../lib/speech-parsing";
+import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import { getTTSClient } from "../../lib/tts-client";
 import { unlockAudioContext } from "../../lib/audio-context";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
@@ -294,9 +295,9 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
 const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Default (Opus)", model: null },
   { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
-  { label: "Opus 4.7", model: "claude-opus-4-7" },
+  { label: "Opus 4.8", model: "claude-opus-4-8" },
   { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
-  { label: "Opus 4.7 (1M context)", model: "claude-opus-4-7[1m]" },
+  { label: "Opus 4.8 (1M context)", model: "claude-opus-4-8[1m]" },
 ];
 
 type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper" | "openai-realtime";
@@ -1265,7 +1266,7 @@ function VirtualizedMessageList({
               </div>
             );
           } else if (group.type === "user") {
-            body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={item.acks} /></div>;
+            body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={item.acks} onZoomView={onZoomView} /></div>;
           } else {
             body = (
               <div className="py-0.5">
@@ -1312,7 +1313,7 @@ function ChatContextLink({ dir, boxSlug }: { dir: string | null; boxSlug: string
   if (!dir) return null;
   return (
     <a
-      href={`/${boxSlug}/browse/${dir}`}
+      href={withBase(`/${boxSlug}/browse/${dir}`)}
       className="ml-3 text-xs text-white/80 hover:text-white truncate"
       title={`Context: ${dir}/`}
     >
@@ -1426,10 +1427,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     ]);
     setSelectedModel(model);
     if (sessionId) {
-      console.warn(`[chatfsm] set-model request sessionId=${sessionId} model=${model ?? "<default>"}`);
+      console.debug(`[chatfsm] set-model request sessionId=${sessionId} model=${model ?? "<default>"}`);
       setChatModel({ sessionId, model })
         .then((res) => {
-          console.warn(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
+          console.debug(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
           // Re-sync UI to whatever the server actually persisted, in case a
           // race / bug means the request landed differently than expected.
           setSelectedModel(res.model);
@@ -1439,7 +1440,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           console.warn(`[chatfsm] set-model error: ${msg}`);
         });
     } else {
-      console.warn("[chatfsm] set-model skipped — sessionId is null");
+      console.debug("[chatfsm] set-model skipped — sessionId is null");
     }
   }, [selectedModel, groups.length, sessionId]);
   const [panel, setPanel] = useState<{ tabs: PanelTab[]; activePath: string | null }>({ tabs: [], activePath: null });
@@ -1579,7 +1580,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   // this view's session only.
   useSSE(`${getEventSourceBase()}/events`, {
     onConnect: useCallback(() => {
-      console.warn("[chatfsm] sse-connect");
+      console.debug("[chatfsm] sse-connect");
       // Re-sync after a (re)connect: any chat-complete / chat-history events
       // we missed while disconnected won't replay if the gap exceeded the
       // event-bus retention. REFRESH is a global handler that's ignored in
@@ -1587,7 +1588,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       send({ type: "REFRESH" });
     }, [send]),
     onDisconnect: useCallback(() => {
-      console.warn("[chatfsm] sse-disconnect");
+      console.debug("[chatfsm] sse-disconnect");
     }, []),
     onEvent: useCallback((event: SSEEvent) => {
       if (event.event === "schedule-fired") {
@@ -1603,13 +1604,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       } else if (event.event === "chat-history") {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
         if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
-        console.warn(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
+        console.debug(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
       } else if (event.event === "chat-complete") {
         const data = event.data as { sessionId: string | null };
         if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
-        console.warn("[chatfsm] sse-chat-complete");
+        console.debug("[chatfsm] sse-chat-complete");
         // Agent turn completed — refresh history to pick up the response.
         send({ type: "REFRESH" });
       } else if (event.event === "chat-user-message") {
@@ -1667,18 +1668,23 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
   // Load voice config from personality on mount
   useEffect(() => {
+    const tts = getTTSClient();
     fetch(`${getApiBase()}/chat/voice-config`)
-      .then((r) => r.json())
-      .then((config: { model?: string; instructions?: string[] }) => {
-        const tts = getTTSClient();
-        if (config.model && (VALID_VOICES as readonly string[]).includes(config.model as typeof VALID_VOICES[number])) {
-          tts.setVoiceConfig({ voice: config.model as typeof VALID_VOICES[number] });
+      .then((r) => r.json() as Promise<CompiledSpeakingVoice>)
+      .then((config) => {
+        if (config.model && isTTSVoice(config.model)) {
+          tts.setVoiceConfig({ voice: config.model });
         }
-        if (config.instructions?.length) {
+        if (config.instructions && config.instructions.length > 0) {
           tts.setVoiceConfig({ baseInstructions: config.instructions.join(" ") });
         }
       })
-      .catch(() => {});
+      .catch((e) => {
+        console.warn("[chat] voice-config fetch failed; using defaults", e);
+      })
+      .finally(() => {
+        tts.markConfigLoaded();
+      });
   }, []);
 
   // Number of speech segments already dispatched to playback from the
@@ -2120,18 +2126,19 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       // Narration mode swaps in a high-quality transcription before sending
       // to the agent — the realtime text is good enough for the live UI
       // but accuracy matters more for the persistent record.
-      const submit = (finalText: string) => {
-        doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
+      const submit = (finalText: string, opts: { diarized?: boolean } = {}) => {
+        const diarizedAttr = opts.diarized === true ? " diarized=\"1\"" : "";
+        doSend(`<speech${diarizedAttr} local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
       };
       if (narrationEnabledRef.current && audioBlob) {
         setHqInFlight(true);
         setPendingHqDraft(text);
-        void postAudioForHqTranscription(audioBlob)
-          .then((hqText) => {
+        void postAudioForHqTranscription(audioBlob, { sessionId })
+          .then((hqResult) => {
             // Clear the pending bubble before submit so it doesn't overlap
             // with the real user message about to land in the chat history.
             setPendingHqDraft(null);
-            if (hqText === null) {
+            if (hqResult === null) {
               console.warn("[hq-transcribe] returned null — falling back to realtime");
               submit(text);
               return;
@@ -2139,8 +2146,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
             // Re-run keyword detection on the HQ text so the agent sees the
             // send-message (or other) keyword as a pill, not plain words.
             // If HQ misheard the keyword entirely, just submit the raw text.
-            const keyword = detectKeyword(hqText);
-            submit(keyword ? keyword.processedTranscript : hqText);
+            const keyword = detectKeyword(hqResult.text);
+            submit(keyword ? keyword.processedTranscript : hqResult.text, { diarized: hqResult.diarized });
           })
           .finally(() => { setHqInFlight(false); });
       } else {

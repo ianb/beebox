@@ -4,6 +4,7 @@
  * Uses shared pre-unlocked Audio element for iOS Safari compatibility.
  */
 
+import { withBase } from "../api";
 import { playAudioUrl } from "./audio-context";
 
 class EarCon {
@@ -18,7 +19,7 @@ class EarCon {
   }
 
   play() {
-    const url = `/earcons/${this.filename}`;
+    const url = withBase(`/earcons/${this.filename}`);
     const result = playAudioUrl(url, this.volume);
     return { started: result.finished, finished: result.finished, stop: result.stop };
   }

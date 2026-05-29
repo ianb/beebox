@@ -7,6 +7,10 @@
 #   down <name>        Tell the router to stop a worktree's processes.
 #   panic              Kill the router + any known children, wipe state.
 #                      Use when you suspect orphans.
+#   sweep              Remove worktrees whose branch is fully merged into
+#                      main, are clean, and have no active claude session.
+#                      Also prunes orphaned browse/log/pid state for
+#                      already-removed worktrees. Add --dry-run to preview.
 #   help               This text.
 
 set -euo pipefail
@@ -22,7 +26,7 @@ shift || true
 
 case "$cmd" in
   serve)
-    exec node "$REPO_DIR/bin/router.mjs" "$@"
+    exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/bin/router.ts" "$@"
     ;;
 
   status | list)
@@ -107,6 +111,81 @@ case "$cmd" in
       done
     fi
     echo "router stopped, state cleaned"
+    ;;
+
+  sweep)
+    dry_run=false
+    [ "${1:-}" = "--dry-run" ] && dry_run=true
+    MONO="$REPO_DIR"
+    WT_ROOT="$HOME/src/callback-worktrees"
+    BOX_ROOT="$HOME/src/box-worktrees"
+    BROWSE_ROOT="$STATE_DIR/browse"
+    LOGS_ROOT="$STATE_DIR/logs"
+
+    # Which worktrees have an active claude process (so we never touch them)?
+    active=$(ps -axo command 2>/dev/null | grep -oE "claude --worktree [a-zA-Z0-9_-]+" | awk '{print $NF}' | sort -u)
+
+    removed=0
+    for d in "$WT_ROOT"/*; do
+      [ -e "$d" ] || continue
+      name=$(basename "$d")
+      # Skip non-dirs (e.g. stray symlinks) and known-active worktrees.
+      if [ ! -d "$d" ]; then
+        echo "stray (not a directory): $d — leaving alone, inspect manually"
+        continue
+      fi
+      if echo "$active" | grep -qxF "$name"; then continue; fi
+      ahead=$(git -C "$d" rev-list --count main..HEAD 2>/dev/null || echo "?")
+      dirty=$(git -C "$d" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
+        echo "skip $name: ahead=$ahead dirty=$dirty (has unmerged work)"
+        continue
+      fi
+      branch=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+      echo "remove $name (branch=$branch)"
+      if [ "$dry_run" = false ]; then
+        curl -fsS -m 3 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$name" >/dev/null 2>&1 || true
+        git -C "$MONO" worktree remove --force "$d" 2>/dev/null || true
+        [ -n "$branch" ] && git -C "$MONO" branch -D "$branch" >/dev/null 2>&1 || true
+        rm -rf "$BOX_ROOT/$name" "$BROWSE_ROOT/$name"
+        rm -f "$LOGS_ROOT/$name.log" "$PID_DIR/$name.json"
+        removed=$((removed + 1))
+      fi
+    done
+
+    # Orphaned browse/log/pid state (no matching worktree, not "main").
+    orphan_browse=0; orphan_logs=0; orphan_pids=0
+    for d in "$BROWSE_ROOT"/*; do
+      [ -d "$d" ] || continue
+      name=$(basename "$d")
+      [ "$name" = "main" ] && continue
+      [ -d "$WT_ROOT/$name" ] && continue
+      echo "orphan browse: $d"
+      [ "$dry_run" = false ] && rm -rf "$d"
+      orphan_browse=$((orphan_browse + 1))
+    done
+    for f in "$LOGS_ROOT"/*.log; do
+      [ -f "$f" ] || continue
+      name=$(basename "$f" .log)
+      [ "$name" = "main" ] && continue
+      [ -d "$WT_ROOT/$name" ] && continue
+      echo "orphan log: $f"
+      [ "$dry_run" = false ] && rm -f "$f"
+      orphan_logs=$((orphan_logs + 1))
+    done
+    for f in "$PID_DIR"/*.json; do
+      [ -f "$f" ] || continue
+      name=$(basename "$f" .json)
+      [ "$name" = "main" ] && continue
+      [ -d "$WT_ROOT/$name" ] && continue
+      echo "orphan pidfile: $f"
+      [ "$dry_run" = false ] && rm -f "$f"
+      orphan_pids=$((orphan_pids + 1))
+    done
+
+    suffix=""
+    [ "$dry_run" = true ] && suffix=" (dry-run; nothing removed)"
+    echo "sweep done: $removed worktrees, $orphan_browse browse, $orphan_logs logs, $orphan_pids pids$suffix"
     ;;
 
   help | -h | --help)

@@ -133,7 +133,7 @@ commits ahead, no dirty files) and removes:
 
 - The worktree directory at `~/src/callback-worktrees/<name>/`
 - The branch `worktree-<name>`
-- The cloned box at `~/src/box-worktrees/test1-<name>/`
+- The cloned box tree at `~/src/box-worktrees/<name>/` (containing `test1/`)
 - Any router state for this worktree
 
 You can mention this to the human so they know what to expect, but you

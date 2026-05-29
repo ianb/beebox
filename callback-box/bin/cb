@@ -14,6 +14,7 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 exec node \
+  --disable-warning=DEP0040 \
   --import "file://$PROJECT_DIR/tsx-preload.mjs" \
   --require "$PROJECT_DIR/node_modules/tsx/dist/preflight.cjs" \
   --import "file://$PROJECT_DIR/node_modules/tsx/dist/loader.mjs" \

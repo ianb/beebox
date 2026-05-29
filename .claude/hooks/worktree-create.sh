@@ -8,7 +8,9 @@
 #     cardworks have file: deps on personal-vibe-check at file:../personal-vibe-check.
 #     The relative path only resolves correctly when the worktree is a
 #     sibling of the monorepo root (same depth as main checkout).
-#   - clones ~/src/boxes/test1 to ~/src/box-worktrees/test1-<name>/
+#   - clones ~/src/boxes/test1 to ~/src/box-worktrees/<name>/test1/
+#     (URL slug = basename = "test1" for every worktree, so links like
+#     /<wt>/test1/... swap cleanly across worktrees)
 #     (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md)
 #   - runs pnpm install at the worktree root (root husky), in cardworks (and
 #     builds it), callback-box, and callback-box/src/frontend. After this the
@@ -18,7 +20,7 @@
 # we don't start any dev server here. Ports are also allocated dynamically by
 # the router — no need to write a .env file with FRONTEND_PORT/BACKEND_PORT.
 # A .env file is still respected by the router if you create one (BOXES line
-# overrides the default ~/src/box-worktrees/test1-<name>/), but not required.
+# overrides the default ~/src/box-worktrees/<name>/test1/), but not required.
 #
 # Stdin: JSON with at least one of { name, worktree_path }.
 # Stdout: the final worktree path (required for Claude Code to use it).
@@ -52,7 +54,7 @@ fi
 new_branch="worktree-$NAME"
 worktree_path="$HOME/src/callback-worktrees/$NAME"
 BOX_SRC="$HOME/src/boxes/test1"
-BOX_DEST="$HOME/src/box-worktrees/test1-$NAME"
+BOX_DEST="$HOME/src/box-worktrees/$NAME/test1"
 
 echo "[worktree-create] name=$NAME base=$base_ref path=$worktree_path"
 

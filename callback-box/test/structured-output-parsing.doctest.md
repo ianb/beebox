@@ -14,6 +14,11 @@ import {
   parseCallouts,
   stripStructuredOutputTags,
 } from "../src/frontend/src/lib/structured-output-parsing.js";
+
+// Several assertions feed deliberately malformed tags to exercise the
+// warn-and-skip paths. Silence console.warn so the warnings don't pollute
+// test output.
+console.warn = () => {};
 ```
 
 ## Ack kinds registry

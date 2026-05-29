@@ -103,7 +103,7 @@ tests:
     tags: [cards, schemas, questions]
 
   - id: question-directive
-    prompt: "I want to ask the user whether to include tech news in their brief. Create the question card."
+    prompt: "I want to ask the user whether to archive a recipe under store/recipes or store/archive. Create the question card."
     expected_level: knows_about
     watch_for: "Includes a <directive> element describing what to do with the answer"
     should_read: ["docs/generated/card-question.md"]
@@ -111,7 +111,7 @@ tests:
     tags: [cards, questions]
     notes: >
       The directive is critical — without it, answering the question is a dead end.
-      The agent should describe the concrete action (e.g., update news guide) not
+      The agent should describe the concrete action (e.g., move the recipe) not
       just restate the question.
 
   - id: question-answer-creates-job
@@ -294,14 +294,14 @@ tests:
       Updated from discoverable: agent guide now lists all guide cards with
       their applies-to descriptions. Agent should know this directly.
 
-  - id: modify-news-triage
-    prompt: "If I wanted to change how news items are triaged, what would I modify?"
+  - id: modify-intake-triage
+    prompt: "If I wanted to change how inbox items are triaged, what would I modify?"
     expected_level: knows_about
-    watch_for: "Knows about the news guide from agent guide, reads the compiled guide for details"
-    should_read: ["docs/generated/news-guide.md"]
+    watch_for: "Knows about the intake guide from agent guide, reads the compiled guide for details"
+    should_read: ["docs/generated/intake-guide.md"]
     tags: [guides]
     notes: >
-      Updated from discoverable: agent guide now lists the news guide and its
+      Updated from discoverable: agent guide now lists the intake guide and its
       compiled path. Agent should follow the pointer to read the compiled guide.
 
   - id: cooking-guide-awareness
@@ -707,7 +707,7 @@ tests:
       procedure run directories, or saying "I don't have access to logs."
 
   - id: git-trailers
-    prompt: "How can I find all commits from the news brief phase?"
+    prompt: "How can I find all commits from the capture-assembly phase?"
     expected_level: knows_directly
     watch_for: "Uses git log --grep with the Phase trailer"
     correct_contains: ["Phase"]
@@ -1510,7 +1510,7 @@ tests:
       odd file placements, or unclear behaviors — without interrupting the
       current task. Should mention it writes to config/feedback/ and commits.
       Should not confuse this with the feedback card type (user feedback on
-      news briefs etc.).
+      briefings, captures, etc.).
     correct_contains: ["config/feedback", "commit"]
     correct_contains_any: ["friction", "confusing", "conventions", "unclear", "tooling"]
     tags: [feedback, cli]
@@ -1938,3 +1938,77 @@ tests:
       feedback card.
     correct_contains_any: [".person.card", "person card", "Person card"]
     tags: [cards, classification, behavioral]
+
+  # === Direct Quotes ===
+  #
+  # The user's expressive words (when they're working through an idea,
+  # voicing an opinion, describing how they see something) are wrapped in
+  # a Markdoc `{% quote %}` tag to preserve their authentic voice as
+  # distinct from the agent's paraphrase. Verbatim content only inside
+  # the tag; functional asks ("remind me at 4pm") need no tag. The agent
+  # guide's `quotesSection` (loaded via CLAUDE.md) carries the rules.
+  #
+  # Status (2026-05-29): 4/4 pass on rewritten ~185-word `quotesSection`.
+  # All four answered with zero file reads and zero searches — true
+  # knows_directly. The qualitative answers were noticeably better than
+  # the first run against a longer 448-word section: the when-to-use
+  # answer cited the guide's own language back ("working through an idea,
+  # voicing an opinion") and the functional-vs-expressive answer cleanly
+  # refused to quote a "remind me to call Maria on Friday" ask. The
+  # when-to-use audit's keyword list was broadened on the second iteration
+  # ("mix"/"selective"/"voice" added) because the agent's natural reply
+  # used those instead of "verbatim" — knowledge was correct, only the
+  # vocabulary differed.
+
+  - id: quote-tag-syntax
+    prompt: >
+      When you write a doc that reproduces the user's own words verbatim,
+      how do you mark those words?
+    expected_level: knows_directly
+    watch_for: >
+      Names the `{% quote %}` Markdoc tag. Does not invent some other
+      syntax (no `<quote>`, no `> blockquote` for direct quotes, no
+      manual `"…"`).
+    correct_contains_any: ["{% quote"]
+    tags: [quotes, cards, markdown]
+
+  - id: quote-when-to-use
+    prompt: >
+      The user is in a long chat working through an idea — mostly
+      thinking out loud about a personal philosophy. Should I quote
+      everything they said with `{% quote %}`, paraphrase it all, or
+      some mix?
+    expected_level: knows_directly
+    watch_for: >
+      Preserves the user's authentic expression — quote the expressive
+      spans verbatim, paraphrase the connecting prose. Does NOT say
+      "quote everything" or "paraphrase everything."
+    correct_contains_any: ["mix", "selective", "voice", "verbatim", "exact words", "authentic"]
+    tags: [quotes, cards, behavioral]
+
+  - id: quote-functional-vs-expressive
+    prompt: >
+      The user says "remind me to call Maria on Friday." Should I wrap
+      that in a `{% quote %}` tag when I create the reminder?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — functional asks/instructions don't need quoting. Just act
+      on the request (create the reminder/todo). The quote tag is for
+      preserving expressive content, not transcribing every utterance.
+    correct_contains_any: ["functional", "no", "don't", "not need"]
+    tags: [quotes, cards, behavioral]
+
+  - id: quote-no-fabrication
+    prompt: >
+      The user told me in a memo "I want to redesign the kitchen." I'm
+      now writing a doc and want to convey their enthusiasm. Can I write
+      `{% quote %}I'm so excited to redesign the kitchen!{% /quote %}` to
+      capture how they felt?
+    expected_level: knows_directly
+    watch_for: >
+      Refuses to fabricate. Says: only the user's exact words go inside
+      the tag. The right move is to quote what they actually said ("I
+      want to redesign the kitchen") and paraphrase the enthusiasm
+      outside the tag — NOT to invent enthusiastic phrasing inside.
+    correct_contains_any: ["fabricat", "exact", "actual words", "verbatim", "no"]
+    tags: [quotes, behavioral, integrity]

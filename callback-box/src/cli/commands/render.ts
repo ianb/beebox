@@ -22,7 +22,7 @@ function collect(val: string, acc: string[]): string[] {
 export const renderCommand = new Command("render")
   .description("Render a frontend page to HTML (SSR)")
   .argument("<boxDir>", "Path to the box directory")
-  .argument("[route]", "Route path to render (e.g., /dashboard, /news)", "/")
+  .argument("[route]", "Route path to render (e.g., /dashboard, /chat)", "/")
   .option("-s, --selector <css>", "CSS selector to extract specific elements")
   .option("--raw", "Include scripts and styles in output")
   .option("--list-states", "List available machine states and scenarios for the route")

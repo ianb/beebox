@@ -80,8 +80,8 @@ if curl -fsS -m 5 "http://127.0.0.1:3210/__router/stop/$name" >/dev/null 2>&1; t
   echo "[session-end]   told router to stop $name"
 fi
 
-# Remove the cloned box (test1-$name).
-BOX_DEST="$HOME/src/box-worktrees/test1-$name"
+# Remove the cloned box tree ($name/, which contains test1/).
+BOX_DEST="$HOME/src/box-worktrees/$name"
 if [ -d "$BOX_DEST" ]; then
   rm -rf "$BOX_DEST"
   echo "[session-end]   removed $BOX_DEST"
@@ -100,5 +100,15 @@ fi
 if git branch -D "$branch" >/dev/null 2>&1; then
   echo "[session-end]   deleted branch $branch"
 fi
+
+# Cache state: browse profile + socket dir, router log, pid file.
+# These don't show up in any UI, but they accumulate, and if the session
+# ended cleanly there's no reason to leave them behind.
+BROWSE_DIR="$HOME/.cache/callback-mono/browse/$name"
+LOG_FILE="$HOME/.cache/callback-mono/logs/$name.log"
+PID_FILE="$HOME/.cache/callback-mono/pids/$name.json"
+[ -d "$BROWSE_DIR" ] && rm -rf "$BROWSE_DIR" && echo "[session-end]   removed $BROWSE_DIR"
+[ -f "$LOG_FILE" ]   && rm -f  "$LOG_FILE"   && echo "[session-end]   removed $LOG_FILE"
+[ -f "$PID_FILE" ]   && rm -f  "$PID_FILE"   && echo "[session-end]   removed $PID_FILE"
 
 echo "[session-end] done"

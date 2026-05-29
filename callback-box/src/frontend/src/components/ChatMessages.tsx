@@ -2,14 +2,13 @@
  * Shared message rendering components for chat UI.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "@tanstack/react-router";
-import { Markdown } from "./Markdown";
+import { Markdown, type MarkdownComponentOverrides } from "./Markdown";
 import { Image } from "./ui/Image";
 import { Pre } from "./ui/Pre";
 import { FileView } from "./FileView";
 import type { LightboxImage } from "./ImageLightbox";
-import type { Components } from "react-markdown";
 import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
@@ -539,66 +538,14 @@ function isImagePath(path: string): boolean {
 }
 
 /**
- * Minimal hast node shape (from react-markdown's `node` prop) used for
- * paragraph inspection. Hast elements have `tagName` + `properties`; text
- * nodes have `value`.
- */
-interface HastChild {
-  type: string;
-  tagName?: string;
-  value?: string;
-  properties?: { href?: unknown; src?: unknown; alt?: unknown };
-  children?: HastChild[];
-}
-
-function hastText(node: HastChild): string {
-  if (node.type === "text") return node.value || "";
-  if (!node.children) return "";
-  return node.children.map(hastText).join("");
-}
-
-/**
- * Scan a paragraph's hast node for view: links that point at image files,
- * and return their resolved src+alt. Returns null if any non-image,
- * non-whitespace child is present — so we only take over when the paragraph
- * is exclusively view-image links.
- *
- * This is needed because react-markdown's custom `a` component wraps link
- * nodes in our handler function, so extractImages (which reads rendered
- * React children) can't see the underlying <img> our handler emits. We
- * inspect the source AST instead.
- */
-function extractViewImagesFromNode(node: HastChild | undefined): Array<{ src: string; alt: string }> | null {
-  if (!node || !node.children) return null;
-  const images: Array<{ src: string; alt: string }> = [];
-  for (const child of node.children) {
-    if (child.type === "text" && (child.value || "").trim() === "") continue;
-    if (
-      child.type === "element" &&
-      child.tagName === "a" &&
-      typeof child.properties?.href === "string" &&
-      child.properties.href.startsWith("view:")
-    ) {
-      const target = parseViewUrl(child.properties.href);
-      if (isImagePath(target.path)) {
-        images.push({
-          src: `${getApiBase()}/files/${target.path}`,
-          alt: hastText(child),
-        });
-        continue;
-      }
-    }
-    return null;
-  }
-  return images.length > 0 ? images : null;
-}
-
-/**
  * Paragraph override that detects image-only paragraphs and renders them
- * as centered thumbnails (single) or a grid (multiple).
+ * as centered thumbnails (single) or a grid (multiple). The image-only
+ * case covers both markdown image syntax (`![](…)`) and `view:` links to
+ * image files, because the shared `Link` component for those renders a
+ * `ChatInlineImage` — so they show up as rendered children we can detect.
  */
-function ChatParagraph({ children, node, ...props }: React.HTMLAttributes<HTMLParagraphElement> & { node?: unknown }) {
-  const images = extractImages(children) ?? extractViewImagesFromNode(node as HastChild | undefined);
+function ChatParagraph({ children }: { children?: React.ReactNode }) {
+  const images = extractImages(children);
 
   if (images) {
     if (images.length === 1) {
@@ -617,7 +564,7 @@ function ChatParagraph({ children, node, ...props }: React.HTMLAttributes<HTMLPa
     );
   }
 
-  return <p {...props}>{children}</p>;
+  return <p>{children}</p>;
 }
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
@@ -625,53 +572,53 @@ export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 function makeChatMarkdownComponents(
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
   { boxSlug, onZoomView }: { boxSlug: string | undefined; onZoomView?: OnZoomView },
-): Partial<Components> {
-  return {
-    p: ChatParagraph,
-    img({ src, alt }) {
-      const resolved = src ? resolveImageSrc(src, { boxSlug, basePath: undefined }) : "";
-      return <ChatInlineImage src={resolved} alt={alt || ""} />;
-    },
-    a({ href, children, node: _node, ...props }) {
-      if (href && href.startsWith("view:")) {
-        const target = parseViewUrl(href);
-        // Image view: links render inline as an image with the same sizing
-        // and lightbox behavior as markdown images.
-        if (isImagePath(target.path)) {
-          const alt = typeof children === "string" ? children : target.path;
-          return <ChatInlineImage src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
-        }
-        if (target.zoom && onZoomView) {
-          const label = typeof children === "string" ? children : target.path;
-          return (
-            <button
-              onClick={() => onZoomView({ target: { ...target, zoom: false }, label })}
-              className="text-primary hover:text-primary/80 underline cursor-pointer"
-            >
-              {children}
-            </button>
-          );
-        }
-        return (
-          <FileView
-            path={target.path}
-            mode="chat"
-            rendererName={target.viewer}
-            onNavigate={onNavigate}
-          />
-        );
+): MarkdownComponentOverrides {
+  function ChatImg({ src, alt }: { src?: string; alt?: string }) {
+    const resolved = src ? resolveImageSrc(src, { boxSlug, basePath: undefined }) : "";
+    return <ChatInlineImage src={resolved} alt={alt || ""} />;
+  }
+  function ChatLink({ href, children }: { href?: string; children?: React.ReactNode }) {
+    if (href && href.startsWith("view:")) {
+      const target = parseViewUrl(href);
+      if (isImagePath(target.path)) {
+        const alt = typeof children === "string" ? children : target.path;
+        return <ChatInlineImage src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
       }
-      const isExternal = typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
-      if (isExternal) {
+      if (target.zoom && onZoomView) {
+        const label = typeof children === "string" ? children : target.path;
         return (
-          <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+          <button
+            onClick={() => onZoomView({ target: { ...target, zoom: false }, label })}
+            className="text-primary hover:text-primary/80 underline cursor-pointer"
+          >
             {children}
-            <ExternalLinkIndicator />
-          </a>
+          </button>
         );
       }
-      return <a href={href} {...props}>{children}</a>;
-    },
+      return (
+        <FileView
+          path={target.path}
+          mode="chat"
+          rendererName={target.viewer}
+          onNavigate={onNavigate}
+        />
+      );
+    }
+    const isExternal = typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
+    if (isExternal) {
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {children}
+          <ExternalLinkIndicator />
+        </a>
+      );
+    }
+    return <a href={href}>{children}</a>;
+  }
+  return {
+    Para: ChatParagraph as React.ComponentType<Record<string, unknown>>,
+    Img: ChatImg as React.ComponentType<Record<string, unknown>>,
+    Link: ChatLink as React.ComponentType<Record<string, unknown>>,
   };
 }
 
@@ -1010,7 +957,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail, acks }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; acks?: AckIndication[] }) {
+export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoomView }: { entries: SessionEntry[]; debugView?: boolean; currentUserEmail?: string; acks?: AckIndication[]; onZoomView?: OnZoomView }) {
   const allTexts = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
@@ -1061,7 +1008,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks }: { en
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
       <div className="relative">
-        <AckBadgeCluster acks={acks} />
+        <AckBadgeCluster acks={acks} onZoomView={onZoomView} />
         <div
           className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
           title={pendingTitle}
@@ -1082,27 +1029,96 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks }: { en
  * bubble; additional badges extend to the right. Same background as the
  * user bubble so they read as part of it.
  */
-function AckBadgeCluster({ acks }: { acks: AckIndication[] | undefined }) {
+function AckBadgeCluster({ acks, onZoomView }: { acks: AckIndication[] | undefined; onZoomView?: OnZoomView }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
   if (!acks || acks.length === 0) return null;
   return (
     <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
-      {acks.map((ack, i) => <AckBadge key={i} ack={ack} />)}
+      {acks.map((ack, i) => (
+        <AckBadge
+          key={i}
+          ack={ack}
+          open={openIndex === i}
+          onToggle={() => setOpenIndex((cur) => (cur === i ? null : i))}
+          onClose={() => setOpenIndex(null)}
+          onZoomView={onZoomView}
+        />
+      ))}
     </span>
   );
 }
 
-function AckBadge({ ack }: { ack: AckIndication }) {
+function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
+  ack: AckIndication;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onZoomView?: OnZoomView;
+}) {
   const descriptor = getAckKind(ack.kind);
+  const rootRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(e: MouseEvent) {
+      if (rootRef.current !== null && !rootRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open, onClose]);
+
   if (!descriptor) return null;
   const label = ack.text ? `${descriptor.defaultPhrase} — ${ack.text}` : descriptor.defaultPhrase;
-  const title = ack.ref ? `${label} · ${ack.ref}` : label;
+
+  function handleRefClick() {
+    if (!ack.ref || !onZoomView) return;
+    const target = parseViewUrl(ack.ref);
+    onZoomView({ target: { ...target, zoom: false }, label: target.path });
+    onClose();
+  }
+
   return (
-    <span
-      title={title}
-      aria-label={label}
-      className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info text-white text-[9px] leading-none ring-1 ring-warm-50 cursor-pointer"
-    >
-      <span aria-hidden>{descriptor.icon}</span>
+    <span ref={rootRef} className="relative inline-flex">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={label}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info text-white text-[9px] leading-none ring-1 ring-warm-50 cursor-pointer"
+      >
+        <span aria-hidden>{descriptor.icon}</span>
+      </button>
+      {open ? (
+        <div
+          role="dialog"
+          className="absolute left-0 top-full mt-1 z-50 bg-white text-warm-800 rounded-lg shadow-lg border border-warm-200 px-3 py-2 w-64 text-xs normal-case tracking-normal"
+        >
+          <div className="font-medium text-warm-900">{label}</div>
+          {ack.ref ? (
+            onZoomView ? (
+              <button
+                type="button"
+                onClick={handleRefClick}
+                className="mt-1 block text-left text-info hover:underline break-all font-mono text-[11px]"
+              >
+                {ack.ref}
+              </button>
+            ) : (
+              <div className="mt-1 text-warm-500 break-all font-mono text-[11px]">{ack.ref}</div>
+            )
+          ) : null}
+        </div>
+      ) : null}
     </span>
   );
 }

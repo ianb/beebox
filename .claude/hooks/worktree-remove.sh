@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Claude Code WorktreeRemove hook.
 #
-# Companion to worktree-create.sh. Removes the cloned test box at
-# ~/src/box-worktrees/test1-<name>/. Claude Code handles git worktree removal
-# itself; we only clean up the sibling box.
+# Companion to worktree-create.sh. Removes the per-worktree box tree at
+# ~/src/box-worktrees/<name>/ (which contains test1/ inside it).
+# Claude Code handles git worktree removal itself; we only clean up the
+# sibling box.
 #
 # Stdin: JSON with at least one of { name, worktree_path }. Claude Code 2.1
 # sends { name, session_id, cwd, hook_event_name } — the docs at
@@ -31,7 +32,7 @@ else
   exit 0
 fi
 
-BOX_DEST="$HOME/src/box-worktrees/test1-$NAME"
+BOX_DEST="$HOME/src/box-worktrees/$NAME"
 ROUTER_PORT="${ROUTER_PORT:-3210}"
 echo "[worktree-remove] name=$NAME"
 
@@ -56,3 +57,10 @@ if [ -d "$BROWSE_DIR" ]; then
   echo "[worktree-remove] removing browse state $BROWSE_DIR"
   rm -rf "$BROWSE_DIR"
 fi
+
+# Router log + PID file. These survive `bin/worktrees panic` and similar
+# cleanups since neither targets cache state directly.
+LOG_FILE="$HOME/.cache/callback-mono/logs/$NAME.log"
+PID_FILE="$HOME/.cache/callback-mono/pids/$NAME.json"
+[ -f "$LOG_FILE" ] && rm -f "$LOG_FILE" && echo "[worktree-remove] removed $LOG_FILE"
+[ -f "$PID_FILE" ] && rm -f "$PID_FILE" && echo "[worktree-remove] removed $PID_FILE"

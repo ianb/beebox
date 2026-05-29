@@ -9,7 +9,7 @@
  * - Context notes affecting decisions
  *
  * Guides live at config/*.guide.card. The filename stem is the identity
- * (e.g., config/news.guide.card, config/intake.guide.card).
+ * (e.g., config/intake.guide.card, config/calendar.guide.card).
  *
  * The full guide is the learning document (read by the revision agent).
  * A compiled version in docs/generated/ strips it down to actionable
@@ -20,7 +20,7 @@ import { element, escapeText, escapeAttr, type ElementNode } from "cardworks";
 import { z } from "zod";
 
 // ============================================
-// Shared enums (also used by news-guide.tsx)
+// Shared enums
 // ============================================
 
 export const ConfidenceLevel = z.enum([
@@ -514,44 +514,6 @@ interface GuideSeed {
 }
 
 const DOMAIN_SEEDS: Record<string, GuideSeed> = {
-  news: {
-    jobTypes: "news-job",
-    appliesTo: "Use when processing news items from RSS feeds",
-    actions: [
-      {
-        name: "Write Brief",
-        when: "After processing news items, when there are enough worth covering",
-        instructions: "Group by theme. Use direct headlines. Include expandos for depth. Reference the guide for tone and style preferences.",
-      },
-      {
-        name: "Skip",
-        when: "Item doesn't match interests or is low quality",
-        instructions: "Trash the item with cb rm",
-      },
-      {
-        name: "Ask User",
-        when: "Unsure about disposition or need clarification",
-        instructions: "Create a question card in box/questions/",
-      },
-    ],
-    triageRules: [],
-    defaultAction: {
-      action: "Write Brief",
-      text: "When no specific rule applies, include if it seems technical and substantive",
-    },
-    experiment: {
-      id: "exp-initial",
-      hypothesis: "Initial triage rules need calibration through reader feedback",
-      approach: "Present diverse content, note what gets engagement vs gets skipped",
-    },
-    reactions: [
-      { id: "good-mix", sentiment: "positive", text: "Good mix of topics" },
-      { id: "too-long", sentiment: "negative", text: "This felt too long" },
-      { id: "want-more", sentiment: "positive", text: "I want more on this topic" },
-      { id: "already-knew", sentiment: "neutral", text: "I already knew most of this" },
-      { id: "off-topic", sentiment: "negative", text: "Topics I don't care about" },
-    ],
-  },
   intake: {
     jobTypes: "intake-job",
     appliesTo: "Use when triaging new inbox items (memos, bookmarks, captures)",
