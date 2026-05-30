@@ -29,6 +29,16 @@
   302 backend suppressions. (vibe-check's own dev deps aren't installed in this
   worktree, so its self-tests weren't re-run; the change is config-only and both
   callback-box halves lint clean against it.)
+- **2026-05-30 — `??` ban retired, `as` ban kept (`.tsx` no-restricted-syntax).**
+  Reviewed the 72 `.tsx`-only sites. The ~44 `??` bans were clean default idioms
+  (`options.x ?? default`) — inconsistent with allowing optional chaining — so the
+  nullish selector was removed from personal-vibe-check (0.2.0 → 0.3.0) for the
+  `react:false` `.tsx` path; pruned its 44 suppressions. The `as`-cast ban (27,
+  all parse-boundary casts in `guide.tsx`) is **kept** — `as` is treated like
+  Rust's `unsafe`: allowed only when guarded by a justifying comment or
+  centralized in one typed helper (documented in CODE-STYLE.md / CONVENTIONS.md).
+  Those 27 `as` + 1 default-switch remain as debt; the `as` cluster will dissolve
+  when `guide.tsx` is split into typed parse helpers during the structural pass.
 - **2026-05-30 — bare-catch rule enabled for the frontend.** In the frontend
   (`react: true`), `no-restricted-syntax` carries *only* the bare-catch selector
   (no `??`/`as`/switch), so enabling it surfaced exactly 14 bare catches across

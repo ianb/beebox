@@ -233,21 +233,8 @@
       "count": 1
     }
   },
-  "src/schemas/calendar-review-job.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
   "src/schemas/capture-session.tsx": {
     "max-lines": {
-      "count": 1
-    },
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
-  "src/schemas/doc.tsx": {
-    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -259,7 +246,7 @@
       "count": 2
     },
     "no-restricted-syntax": {
-      "count": 46
+      "count": 26
     }
   },
   "src/schemas/image.tsx": {
@@ -267,12 +254,7 @@
       "count": 1
     },
     "no-restricted-syntax": {
-      "count": 2
-    }
-  },
-  "src/schemas/intake-job.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
+      "count": 1
     }
   },
   "src/schemas/personality.tsx": {
@@ -281,14 +263,6 @@
     },
     "max-lines-per-function": {
       "count": 2
-    },
-    "no-restricted-syntax": {
-      "count": 13
-    }
-  },
-  "src/schemas/recipe.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
     }
   },
   "src/schemas/record.tsx": {
@@ -301,7 +275,7 @@
       "count": 1
     },
     "no-restricted-syntax": {
-      "count": 4
+      "count": 1
     }
   },
   "src/schemas/templates.ts": {

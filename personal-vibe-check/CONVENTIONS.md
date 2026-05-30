@@ -54,6 +54,7 @@ Prettier handles formatting (indentation, line wrapping, spacing) automatically.
 
 - **Semicolons**: always (enforced by eslint and prettier)
 - **Quotes**: double quotes (enforced by eslint and prettier)
+- **`as` type assertions** are banned in `.tsx` (and discouraged everywhere) — treat `as` like Rust's `unsafe`: allowed only when genuinely necessary (e.g. an untyped parse boundary), and then either guarded with an `// eslint-disable-next-line no-restricted-syntax -- <why>` comment or centralized in one typed helper. `as const` is always fine.
 - **No default parameters**: handle defaults explicitly in function body
 - **Max 2 positional parameters**: functions with more must use a named params object:
   ```typescript

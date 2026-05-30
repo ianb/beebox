@@ -52,6 +52,7 @@ pnpm lint:circular  # Circular dependency detector (madge)
   // Bad: property names don't match, forcing verbose call sites
   save(path, { fileContent: content, contentHash: hash });
   ```
+- **`as` type assertions are like Rust's `unsafe`** (banned in `.tsx` by lint, discouraged everywhere): allowed only when genuinely necessary — e.g. at a parse boundary where data arrives untyped. When you need one, either guard it with an `// eslint-disable-next-line no-restricted-syntax -- <why it's sound>` comment, or centralize the cast in a single well-named typed helper (`getChildren(el): ElementNode[]`) that does it once and is reused. Never sprinkle bare `as` to silence the type checker. (`as const` is always fine.)
 - Prefer explicit types over inference where it aids readability
 - Use meaningful variable names
 - Files max 300 lines, functions max 150 lines (excluding blanks/comments)

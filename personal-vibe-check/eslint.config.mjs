@@ -463,6 +463,32 @@ export function vibeCheck(options) {
     ? ["src/**/*.{ts,tsx,js,jsx}"]
     : ["src/**/*.{ts,js}"];
 
+  // eslint-config-agent applies a strict `no-restricted-syntax` selector set to
+  // .tsx files. We keep all of it EXCEPT the nullish-coalescing (`??`) ban —
+  // `a ?? b` is good idiom (same call as retiring no-optional-chaining), not a
+  // smell. The `as`-cast ban stays: treat `as` like Rust's `unsafe` — allowed
+  // only when guarded by a justifying `eslint-disable` comment or centralized
+  // in a single typed helper. This override is only needed when react:false;
+  // the react config already replaces this rule with the catch-only variant on
+  // .tsx, which never had the `??` ban.
+  const tsxRestrictedSyntaxNoNullish = [
+    { selector: "SwitchStatement > SwitchCase > ReturnStatement[argument=null]", message: "Switch case functions must provide an explicit return value. Default return values are not allowed." },
+    { selector: "SwitchStatement > SwitchCase > BlockStatement > ReturnStatement[argument=null]", message: "Switch case functions must provide an explicit return value. Default return values are not allowed." },
+    { selector: "SwitchStatement > SwitchCase[test=null]", message: "Default cases are not allowed in switch statements. Handle all possible cases explicitly." },
+    { selector: "SwitchStatement > SwitchCase ArrowFunctionExpression:not([returnType])", message: "Switch case arrow functions must have explicit return type annotations." },
+    { selector: "SwitchStatement > SwitchCase FunctionExpression:not([returnType])", message: "Switch case function expressions must have explicit return type annotations." },
+    { selector: "SwitchStatement > SwitchCase > BlockStatement ArrowFunctionExpression:not([returnType])", message: "Switch case arrow functions must have explicit return type annotations." },
+    { selector: "SwitchStatement > SwitchCase > BlockStatement FunctionExpression:not([returnType])", message: "Switch case function expressions must have explicit return type annotations." },
+    { selector: "FunctionDeclaration:has(SwitchStatement):not([returnType])", message: "Functions containing switch statements must have explicit return type annotations." },
+    { selector: "ArrowFunctionExpression:has(SwitchStatement):not([returnType])", message: "Arrow functions containing switch statements must have explicit return type annotations." },
+    { selector: "FunctionExpression:has(SwitchStatement):not([returnType])", message: "Function expressions containing switch statements must have explicit return type annotations." },
+    { selector: 'TSAsExpression[typeAnnotation.type="TSIndexedAccessType"]', message: 'Type assertions with indexed access types like "as (typeof X)[number]" are not allowed. Use a named type instead.' },
+    { selector: 'TSAsExpression:not(:has(TSTypeReference[typeName.name="const"]))', message: 'Type assertions with "as" are not allowed except for "as const". If a cast is genuinely needed (e.g. at a parse boundary), guard it with an `eslint-disable-next-line` comment explaining why, or centralize it in one typed helper.' },
+    { selector: "PropertyDefinition[value]", message: "Class properties cannot have default values. Initialize properties in the constructor or through methods instead." },
+    { selector: "MemberExpression[object.type='MemberExpression'][object.object.name='process'][object.property.name='env']", message: "Direct access to process.env properties is not allowed. Use process.env as a whole object instead (e.g., validate(process.env))." },
+    { selector: "ExportNamedDeclaration:not([source]):not(:has(VariableDeclaration)):not(:has(FunctionDeclaration)):not(:has(ClassDeclaration)):not(:has(TSInterfaceDeclaration)):not(:has(TSTypeAliasDeclaration)):not(:has(TSEnumDeclaration))", message: 'Export specifier syntax "export { ... }" is not allowed. Use direct exports instead. And make sure to only use one export per file.' },
+  ];
+
   return [
     ...baseConfig,
     {
@@ -505,6 +531,18 @@ export function vibeCheck(options) {
       // .tsx even when react:false, which disabledRules wouldn't reach.
       rules: { "no-optional-chaining/no-optional-chaining": "off" },
     },
+    // When react:false, .tsx files fall through to eslint-config-agent's strict
+    // no-restricted-syntax (which bans `??`). Replace it with our variant that
+    // allows `??` but keeps the `as`/switch/etc. selectors. (react:true already
+    // overrides this rule on .tsx with the catch-only variant.)
+    ...(react
+      ? []
+      : [
+          {
+            files: ["**/*.{tsx,jsx}"],
+            rules: { "no-restricted-syntax": ["error", ...tsxRestrictedSyntaxNoNullish] },
+          },
+        ]),
   ];
 }
 
