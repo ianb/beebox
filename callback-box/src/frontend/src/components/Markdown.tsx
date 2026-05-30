@@ -25,7 +25,7 @@ import { Fragment, useMemo } from "react";
 import * as React from "react";
 import { useParams } from "@tanstack/react-router";
 import { parse, transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
-import { markdocConfig } from "../lib/markdoc-config";
+import { markdocConfig } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { Image } from "./ui/Image";

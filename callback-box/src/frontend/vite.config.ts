@@ -1,3 +1,4 @@
+import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -18,7 +19,9 @@ const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main
 // are defined as /<box>/api/..., they don't know about the worktree prefix.
 const backendTarget = `http://localhost:${BACKEND_PORT}`;
 const stripBase = (incoming: string) =>
-  BASE_PREFIX ? incoming.replace(new RegExp(`^${BASE_PREFIX}`), "") : incoming;
+  BASE_PREFIX && incoming.startsWith(BASE_PREFIX)
+    ? incoming.slice(BASE_PREFIX.length)
+    : incoming;
 
 // HMR connects DIRECTLY to this Vite's port — bypassing the router so the
 // router never has to deal with WebSocket upgrades. The browser learns the
@@ -31,6 +34,15 @@ const hmrConfig = {
 export default defineConfig({
   base: VITE_BASE,
   plugins: [react()],
+  resolve: {
+    // Mirror the `@shared/*` path alias from tsconfig.json so Vite
+    // resolves value imports at runtime. The matching `@backend/*` alias
+    // in tsconfig is type-only (frontend only imports types from there);
+    // a runtime alias is only needed for paths used as value imports.
+    alias: {
+      "@shared": resolvePath(__dirname, "../shared"),
+    },
+  },
   build: {
     outDir: "dist",
     sourcemap: true,

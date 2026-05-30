@@ -1,5 +1,13 @@
 /**
- * Markdoc parser config for the shared `<Markdown>` component.
+ * Markdoc parser config shared between the frontend React renderer and
+ * any backend Markdoc consumer (currently `body-refs.ts`'s body walker;
+ * eventually Track 2's `compileBriefing` AST → markdown emitter).
+ *
+ * **Pure TypeScript only.** No React, no `fs`/Node-only APIs, no DOM
+ * imports. Both tsconfigs (`tsconfig.json` for backend, `src/frontend/
+ * tsconfig.json` for frontend) include this directory. The
+ * frontend imports via the `@shared/*` path alias; backend uses
+ * relative paths.
  *
  * Markdoc replaces the previous react-markdown + remark/rehype stack. All
  * markdown bodies in the box render through this config: doc cards, memos,
