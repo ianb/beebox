@@ -18,6 +18,63 @@ import {
 import { isCardFile, boxPath } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { attachDirFor } from "../../lib/attach-path.js";
+import { cardSchemas } from "../../schemas/registry.js";
+
+/**
+ * Cardworks' `loader.load()` parses card bodies as XML — fine for the
+ * legacy XML schemas (procedure, guide, landmark, capture-session,
+ * procedure-run) but not for Phase-2 frontmatter+markdown cards
+ * (doc, briefing, memo, recipe, …). For Phase-2 cards we have to do
+ * the move ourselves; the substring rewrite pass below picks up ref
+ * updates in every other card regardless of card kind.
+ *
+ * Detect by extracting the type from the filename and checking it
+ * against the registered Phase-2 card schemas. Anything else (XML
+ * card, plain file, unknown type) falls through to the cardworks
+ * loader path.
+ */
+const PHASE2_TYPES = new Set(cardSchemas.map((s) => s.type));
+
+function cardTypeFromPath(p: string): string | undefined {
+  const base = p.split("/").pop() ?? p;
+  const match = /^.+\.([^.]+)\.card$/.exec(base);
+  if (match === null) return undefined;
+  return match[1];
+}
+
+function isPhase2CardPath(p: string): boolean {
+  const type = cardTypeFromPath(p);
+  return type !== undefined && PHASE2_TYPES.has(type);
+}
+
+/**
+ * Rename a file and (if present) its sibling `<basename>.attach/`
+ * directory atomically — the Phase-2 analogue of what cardworks'
+ * `loader.move()` does for XML cards. Returns the list of moved
+ * file paths in the same `{from, to}` shape cardworks emits.
+ */
+async function movePhase2CardFiles(
+  sourcePath: string,
+  destPath: string,
+): Promise<Array<{ from: string; to: string }>> {
+  const moved: Array<{ from: string; to: string }> = [];
+  const oldAttach = attachDirFor(sourcePath);
+  const newAttach = attachDirFor(destPath);
+  await fs.mkdir(path.dirname(destPath), { recursive: true });
+  await fs.rename(sourcePath, destPath);
+  moved.push({ from: sourcePath, to: destPath });
+  if (oldAttach !== newAttach) {
+    try {
+      await fs.rename(oldAttach, newAttach);
+      moved.push({ from: oldAttach, to: newAttach });
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "ENOENT") throw err;
+      // No attach dir to move; fine.
+    }
+  }
+  return moved;
+}
 
 /**
  * Remove empty ancestor directories up to (but not including) stopAt.
@@ -184,13 +241,34 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   const oldAttachRel = path.relative(ctx.boxRoot, oldAttachAbsDir);
   const newAttachRel = path.relative(ctx.boxRoot, newAttachAbsDir);
 
+  // Phase-2 cards: cardworks' XML-only loader can't parse them, so handle
+  // the file + attach-dir rename ourselves. Cross-card ref updates come
+  // from the substring rewrite pass below — it operates on raw text, so
+  // it catches refs in YAML frontmatter and in body Markdoc tags equally.
+  // XML cards: delegate to cardworks (which also walks frontmatter refs
+  // via extractRefs and re-serializes referrers).
+  //
+  // The loader is constructed unconditionally because `listCards()` is
+  // needed for the substring rewrite pass below regardless of card kind.
   const loader = new CardLoader(ctx.boxRoot);
-  const card = await loader.load(sourcePath);
-  const { result } = await loader.move(card, destPath);
+  let movedFiles: Array<{ from: string; to: string }>;
+  let updatedCards: Array<{ path: string; refsUpdated: number }> = [];
+
+  if (isPhase2CardPath(sourcePath)) {
+    movedFiles = await movePhase2CardFiles(sourcePath, destPath);
+  } else {
+    const card = await loader.load(sourcePath);
+    const { result } = await loader.move(card, destPath);
+    movedFiles = result.movedFiles;
+    updatedCards = result.updatedCards.map((u) => ({
+      path: path.relative(ctx.boxRoot, u.path),
+      refsUpdated: u.refsUpdated,
+    }));
+  }
 
   ctx.writeLine(`Moved: ${relSourcePath} → ${relDestPath}`);
 
-  for (const file of result.movedFiles) {
+  for (const file of movedFiles) {
     if (file.from !== sourcePath) {
       const relFrom = path.relative(ctx.boxRoot, file.from);
       const relTo = path.relative(ctx.boxRoot, file.to);
@@ -198,11 +276,10 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
     }
   }
 
-  if (result.updatedCards.length > 0) {
-    ctx.writeLine(`Updated references in ${result.updatedCards.length} card(s):`);
-    for (const update of result.updatedCards) {
-      const relPath = path.relative(ctx.boxRoot, update.path);
-      ctx.writeLine(`  ${relPath} (${update.refsUpdated} ref${update.refsUpdated > 1 ? "s" : ""})`);
+  if (updatedCards.length > 0) {
+    ctx.writeLine(`Updated references in ${updatedCards.length} card(s):`);
+    for (const update of updatedCards) {
+      ctx.writeLine(`  ${update.path} (${update.refsUpdated} ref${update.refsUpdated > 1 ? "s" : ""})`);
     }
   }
 
@@ -261,29 +338,23 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   await removeEmptyAncestors(path.dirname(sourcePath), ctx.boxRoot);
 
   const filesToStage: string[] = [];
-  for (const file of result.movedFiles) {
+  for (const file of movedFiles) {
     filesToStage.push(path.relative(ctx.boxRoot, file.from));
     filesToStage.push(path.relative(ctx.boxRoot, file.to));
   }
-  for (const update of result.updatedCards) {
-    filesToStage.push(path.relative(ctx.boxRoot, update.path));
+  for (const update of updatedCards) {
+    filesToStage.push(update.path);
   }
   filesToStage.push(...extraStaged);
 
   return {
     from: relSourcePath,
     to: relDestPath,
-    movedFiles: result.movedFiles.map((f) => ({
+    movedFiles: movedFiles.map((f) => ({
       from: path.relative(ctx.boxRoot, f.from),
       to: path.relative(ctx.boxRoot, f.to),
     })),
-    updatedCards: [
-      ...result.updatedCards.map((u) => ({
-        path: path.relative(ctx.boxRoot, u.path),
-        refsUpdated: u.refsUpdated,
-      })),
-      ...extraUpdated,
-    ],
+    updatedCards: [...updatedCards, ...extraUpdated],
     filesToStage,
   };
 }
