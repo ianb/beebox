@@ -26,6 +26,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { glob } from "glob";
 import { GoogleGenAI } from "@google/genai";
 import { parse as parseYaml } from "yaml";
@@ -79,7 +80,7 @@ interface ImageMetadata {
 // Config
 // ---------------------------------------------------------------------------
 
-const DOCS_DIR = path.resolve(import.meta.dirname, "../../docs/architecture");
+const DOCS_DIR = path.join(PACKAGE_ROOT, "docs", "architecture");
 
 function loadConfig(): ImageGenConfig {
   const configPath = path.join(DOCS_DIR, "image-gen.yaml");

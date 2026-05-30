@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { loadBoxesConfig } from "../../core/boxes-config.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 /**
  * Resolve directory arguments into BoxSpec array.
@@ -77,8 +78,8 @@ export const serveCommand = new Command("serve")
     if (options.dev) {
       // exec into node --watch with tsx loader, bypassing the CLI wrapper.
       // Uses node's native watcher (not tsx --watch) for proper signal handling.
-      const projectDir = path.resolve(import.meta.dirname, "../../..");
-      const serverTs = path.join(projectDir, "src/webapp/server.ts");
+      const projectDir = PACKAGE_ROOT;
+      const serverTs = path.join(projectDir, "src/webapp/server-main.ts");
       const srcDir = path.join(projectDir, "src");
       const resolvedDirs = boxDirs.map((d) => path.resolve(d));
 
