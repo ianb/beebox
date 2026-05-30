@@ -10,7 +10,10 @@ export interface CancelButtonProps {
   className?: string;
 }
 
-export function CancelButton({ onClick, children = "Cancel", disabled = false, size = "md", className }: CancelButtonProps) {
+export function CancelButton({ onClick, children, disabled, size, className }: CancelButtonProps) {
+  children = children ?? "Cancel";
+  disabled = disabled ?? false;
+  size = size ?? "md";
   return (
     <Button intent="secondary" size={size} disabled={disabled} onClick={onClick} className={className}>
       {children}

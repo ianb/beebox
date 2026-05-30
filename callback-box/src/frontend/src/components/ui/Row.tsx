@@ -46,12 +46,16 @@ const JUSTIFY_CLASSES: Record<RowJustify, string> = {
 
 export function Row({
   children,
-  gap = "sm",
-  align = "center",
-  justify = "start",
-  wrap = false,
+  gap,
+  align,
+  justify,
+  wrap,
   className,
 }: RowProps) {
+  gap = gap ?? "sm";
+  align = align ?? "center";
+  justify = justify ?? "start";
+  wrap = wrap ?? false;
   const classes = cn(
     "flex",
     GAP_CLASSES[gap],

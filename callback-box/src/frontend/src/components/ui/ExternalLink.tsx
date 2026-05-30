@@ -47,7 +47,9 @@ const VARIANT_CLASSES: Record<ExternalLinkVariant, string> = {
     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-warm-300 rounded hover:bg-warm-50 text-warm-700",
 };
 
-export function ExternalLink({ href, children, hideIcon = false, title, variant = "inline", download, className }: ExternalLinkProps) {
+export function ExternalLink({ href, children, hideIcon, title, variant, download, className }: ExternalLinkProps) {
+  hideIcon = hideIcon ?? false;
+  variant = variant ?? "inline";
   const isDownload = download !== undefined && download !== false;
   return (
     <a

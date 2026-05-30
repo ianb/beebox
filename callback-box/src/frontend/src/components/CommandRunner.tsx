@@ -69,13 +69,16 @@ function formatArgsForDisplay(args: Record<string, unknown>): string {
 
 export function CommandRunner({
   command,
-  args = {},
+  args: argsArg,
   onComplete,
-  autoRun = false,
+  autoRun: autoRunArg,
   label,
   onClose,
-  className = "",
+  className: classNameArg,
 }: CommandRunnerProps) {
+  const args = argsArg ?? {};
+  const autoRun = autoRunArg ?? false;
+  const className = classNameArg ?? "";
   const [state, setState] = useState<RunState>("idle");
   const [output, setOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -239,11 +242,13 @@ interface CommandButtonProps {
 
 export function CommandButton({
   command,
-  args = {},
+  args: argsArg,
   onComplete,
-  className = "",
+  className: classNameArg,
   children,
 }: CommandButtonProps) {
+  const args = argsArg ?? {};
+  const className = classNameArg ?? "";
   const [isExpanded, setIsExpanded] = useState(false);
 
   const commandLabel = `cb ${command}`;

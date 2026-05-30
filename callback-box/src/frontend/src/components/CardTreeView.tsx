@@ -188,7 +188,8 @@ function RefLine({
 /**
  * Render a single element node.
  */
-function ElementTree({ element, depth = 0, cardPath, onNavigate }: ElementTreeProps) {
+function ElementTree({ element, depth: depthArg, cardPath, onNavigate }: ElementTreeProps) {
+  const depth = depthArg ?? 0;
   const [collapsed, setCollapsed] = useState(false);
   const fallbackNavigate = useViewNavigate();
   const handleNavigate = onNavigate ?? fallbackNavigate;

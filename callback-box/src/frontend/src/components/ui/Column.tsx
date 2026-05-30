@@ -44,7 +44,11 @@ const OVERFLOW_CLASSES: Record<ColumnOverflow, string> = {
   scroll: "overflow-scroll",
 };
 
-export function Column({ children, gap = "none", align = "stretch", overflow = "visible", hideOnMobile = false, className }: ColumnProps) {
+export function Column({ children, gap, align, overflow, hideOnMobile, className }: ColumnProps) {
+  gap = gap ?? "none";
+  align = align ?? "stretch";
+  overflow = overflow ?? "visible";
+  hideOnMobile = hideOnMobile ?? false;
   const classes = cn(
     "flex flex-col",
     GAP_CLASSES[gap],

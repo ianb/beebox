@@ -32,13 +32,16 @@ function Chevron({ open }: { open: boolean }) {
 export function Accordion({
   title,
   children,
-  defaultOpen = false,
+  defaultOpen: defaultOpenArg,
   open: controlledOpen,
   onOpenChange,
-  variant = "bordered",
-  disabled = false,
+  variant: variantArg,
+  disabled: disabledArg,
   className,
 }: AccordionProps) {
+  const defaultOpen = defaultOpenArg ?? false;
+  const variant = variantArg ?? "bordered";
+  const disabled = disabledArg ?? false;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
   const bodyId = useId();

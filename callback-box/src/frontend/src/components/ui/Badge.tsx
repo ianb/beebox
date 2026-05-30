@@ -27,7 +27,9 @@ const SIZE_CLASSES: Record<BadgeSize, string> = {
   md: "text-xs px-2 py-0.5",
 };
 
-export function Badge({ children, tone = "neutral", size = "md", className, title }: BadgeProps) {
+export function Badge({ children, tone, size, className, title }: BadgeProps) {
+  tone = tone ?? "neutral";
+  size = size ?? "md";
   const classes = cn(
     "inline-block rounded font-medium",
     TONE_CLASSES[tone],

@@ -25,12 +25,14 @@ const TONE_CLASSES: Record<TextLinkTone, string> = {
 export function TextLink({
   to,
   children,
-  tone = "default",
-  underline = true,
+  tone: toneArg,
+  underline: underlineArg,
   onClick,
   title,
   className,
 }: TextLinkProps) {
+  const tone = toneArg ?? "default";
+  const underline = underlineArg ?? true;
   const classes = cn(TONE_CLASSES[tone], underline ? "hover:underline" : "", className);
   return (
     <Link to={to} onClick={onClick} title={title} className={classes}>

@@ -28,12 +28,14 @@ const INTENT_CLASSES: Record<InlineActionIntent, string> = {
 export function InlineAction({
   children,
   onClick,
-  intent = "emphatic",
-  disabled = false,
+  intent: intentArg,
+  disabled: disabledArg,
   title,
   flash,
   className,
 }: InlineActionProps) {
+  const intent = intentArg ?? "emphatic";
+  const disabled = disabledArg ?? false;
   const [pending, setPending] = useState(false);
   const [flashing, setFlashing] = useState(false);
   const flashTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);

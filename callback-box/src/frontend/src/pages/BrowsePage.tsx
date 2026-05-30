@@ -63,7 +63,8 @@ interface ContextMenuState {
   path: string;
 }
 
-export function BrowsePage({ currentPath = "", onNavigate }: BrowsePageProps) {
+export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
+  const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
   const navigate = useNavigate();

@@ -144,7 +144,8 @@ function ExpandedControls({
   );
 }
 
-export function FileEntry({ summary, compact = false, onPanel, className }: FileEntryProps) {
+export function FileEntry({ summary, compact, onPanel, className }: FileEntryProps) {
+  compact = compact ?? false;
   const [expanded, setExpanded] = useState(false);
   const ui = resolveFileTypeUI(summary);
   const Icon = ui.icon;

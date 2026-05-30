@@ -13,6 +13,7 @@ export interface VisuallyHiddenProps {
   as?: ElementType;
 }
 
-export function VisuallyHidden({ children, as: Tag = "span" }: VisuallyHiddenProps) {
+export function VisuallyHidden({ children, as: asArg }: VisuallyHiddenProps) {
+  const Tag = asArg ?? "span";
   return <Tag className="sr-only">{children}</Tag>;
 }

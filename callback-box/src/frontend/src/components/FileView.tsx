@@ -225,7 +225,8 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode = "page", rendererName, onNavigate }: FileViewProps) {
+export function FileView({ path, mode, rendererName, onNavigate }: FileViewProps) {
+  mode = mode ?? "page";
   const { data, loading, error } = useFileData(path);
 
   // Track user's toggle selection scoped to the current path. When the path

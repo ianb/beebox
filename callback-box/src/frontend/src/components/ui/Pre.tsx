@@ -35,14 +35,19 @@ const SCROLL_CLASSES: Record<"sm" | "md" | "lg", string> = {
 
 export function Pre({
   children,
-  size = "sm",
-  boxed = false,
-  scroll = false,
-  error = false,
-  muted = false,
+  size,
+  boxed,
+  scroll,
+  error,
+  muted,
   title,
   className,
 }: PreProps) {
+  size = size ?? "sm";
+  boxed = boxed ?? false;
+  scroll = scroll ?? false;
+  error = error ?? false;
+  muted = muted ?? false;
   const colorClass = error ? "text-danger-dark" : muted ? "text-warm-500" : "text-warm-800";
   const boxClass = boxed
     ? error

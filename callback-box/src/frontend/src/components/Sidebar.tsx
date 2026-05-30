@@ -27,10 +27,13 @@ export function Sidebar({
   title,
   subtitle,
   children,
-  widthPx = 320,
-  defaultCollapsed = false,
-  detailSelected = false,
+  widthPx,
+  defaultCollapsed,
+  detailSelected,
 }: SidebarProps) {
+  widthPx = widthPx ?? 320;
+  defaultCollapsed = defaultCollapsed ?? false;
+  detailSelected = detailSelected ?? false;
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   const collapsedWidth = 40;

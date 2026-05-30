@@ -31,7 +31,8 @@ export interface WakeLockApi {
  * request needed, which matters on mobile where the re-request often
  * fails outside a user gesture.
  */
-export function useDebouncedWakeLock(active: boolean, releaseDelayMs = 3000): void {
+export function useDebouncedWakeLock(active: boolean, releaseDelayMsArg?: number): void {
+  const releaseDelayMs = releaseDelayMsArg ?? 3000;
   const { requestWakeLock, releaseWakeLock } = useWakeLock();
   const timerRef = useRef<number | null>(null);
   useEffect(() => {

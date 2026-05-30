@@ -56,17 +56,24 @@ const ROUNDING_CLASSES: Record<CardRounding, string> = {
 
 export function Card({
   children,
-  padding = "md",
-  background = "white",
-  border = "default",
-  rounding = "lg",
-  shadow = false,
-  muted = false,
+  padding,
+  background,
+  border,
+  rounding,
+  shadow,
+  muted,
   className,
-  as: Tag = "div",
+  as: asArg,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
 }: CardProps) {
+  padding = padding ?? "md";
+  background = background ?? "white";
+  border = border ?? "default";
+  rounding = rounding ?? "lg";
+  shadow = shadow ?? false;
+  muted = muted ?? false;
+  const Tag = asArg ?? "div";
   const classes = cn(
     PADDING_CLASSES[padding],
     BACKGROUND_CLASSES[background],

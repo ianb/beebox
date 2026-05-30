@@ -24,7 +24,8 @@ class EarCon {
     return { started: result.finished, finished: result.finished, stop: result.stop };
   }
 
-  repeatPlay(period: number, limit = 5000) {
+  repeatPlay(period: number, limit?: number) {
+    limit = limit ?? 5000;
     const handles: Array<{ stop: () => void }> = [];
     handles.push(this.play());
     const start = Date.now();

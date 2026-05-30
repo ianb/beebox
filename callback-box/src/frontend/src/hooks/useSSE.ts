@@ -21,7 +21,8 @@ export interface UseSSEReturn {
   reconnect: () => void;
 }
 
-export function useSSE(url: string, options: UseSSEOptions = {}): UseSSEReturn {
+export function useSSE(url: string, optionsArg?: UseSSEOptions): UseSSEReturn {
+  const options = optionsArg ?? {};
   const input = useMemo(() => ({ url }), [url]);
   const [snapshot, send] = useSSRMachine(sseMachine, { input });
 

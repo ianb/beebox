@@ -59,19 +59,29 @@ const WEIGHT_CLASSES: Record<TextWeight, string> = {
 
 export function Text({
   children,
-  tone = "default",
-  size = "base",
-  weight = "normal",
-  as = "span",
-  italic = false,
-  mono = false,
-  truncate = false,
-  center = false,
-  uppercase = false,
-  breakAll = false,
+  tone,
+  size,
+  weight,
+  as,
+  italic,
+  mono,
+  truncate,
+  center,
+  uppercase,
+  breakAll,
   className,
   title,
 }: TextProps) {
+  tone = tone ?? "default";
+  size = size ?? "base";
+  weight = weight ?? "normal";
+  as = as ?? "span";
+  italic = italic ?? false;
+  mono = mono ?? false;
+  truncate = truncate ?? false;
+  center = center ?? false;
+  uppercase = uppercase ?? false;
+  breakAll = breakAll ?? false;
   const classes = cn(
     TONE_CLASSES[tone],
     SIZE_CLASSES[size],

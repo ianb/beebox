@@ -60,7 +60,8 @@ export function VoiceRecorder({ onCreated }: VoiceRecorderProps) {
 
 // Shared UI components for voice recording
 
-export function MicrophoneIcon({ className = "w-5 h-5" }: { className?: string }) {
+export function MicrophoneIcon({ className }: { className?: string }) {
+  className = className ?? "w-5 h-5";
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 20 20">
       <path
@@ -72,7 +73,8 @@ export function MicrophoneIcon({ className = "w-5 h-5" }: { className?: string }
   );
 }
 
-export function StopIcon({ className = "w-5 h-5" }: { className?: string }) {
+export function StopIcon({ className }: { className?: string }) {
+  className = className ?? "w-5 h-5";
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 20 20">
       <path

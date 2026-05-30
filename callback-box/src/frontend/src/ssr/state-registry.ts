@@ -369,11 +369,12 @@ export function buildSnapshot(opts: BuildSnapshotOptions): unknown {
  */
 export function buildSSRStateMap(
   routePath: string,
-  options: {
+  options?: {
     scenario?: string;
     machineOverrides?: Record<string, string>; // machineId → stateValue
-  } = {},
+  },
 ): Record<string, unknown> {
+  options = options ?? {};
   const ssrState: Record<string, unknown> = {};
   const normalizedRoute = routePath === "/" ? "/" : "/" + routePath.replace(/^\//, "").replace(/\/.*/, "");
   const routeConfig = routeConfigs[normalizedRoute];

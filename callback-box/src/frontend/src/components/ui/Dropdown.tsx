@@ -49,7 +49,11 @@ export interface DropdownProps {
   onClose?: () => void;
 }
 
-export function Dropdown({ trigger, children, align = "right", vertical = "below", width = "w-48", dense = false, className, onClose }: DropdownProps) {
+export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose }: DropdownProps) {
+  const align = alignArg ?? "right";
+  const vertical = verticalArg ?? "below";
+  const width = widthArg ?? "w-48";
+  const dense = denseArg ?? false;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);

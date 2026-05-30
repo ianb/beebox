@@ -10,7 +10,8 @@ interface IconProps {
   size?: number;
 }
 
-function stroke({ size = 16, d }: { size?: number; d: string }) {
+function stroke({ size, d }: { size?: number; d: string }) {
+  size = size ?? 16;
   return (
     <svg
       width={size}

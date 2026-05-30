@@ -270,10 +270,11 @@ interface MarkdownProps {
 export function Markdown({
   children,
   components,
-  prose = false,
+  prose,
   onNavigate,
   basePath,
 }: MarkdownProps) {
+  prose = prose ?? false;
   const { boxSlug } = useParams({ strict: false });
   const { tree, mergedComponents } = useMemo(() => {
     const ctx: LinkContext = { onNavigate, basePath, boxSlug };

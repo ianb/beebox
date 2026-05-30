@@ -32,7 +32,11 @@ function XIcon({ size }: { size: CloseButtonSize }) {
   );
 }
 
-export function CloseButton({ onClick, label = "Close", size = "md", onDark = false, disabled = false, className }: CloseButtonProps) {
+export function CloseButton({ onClick, label, size, onDark, disabled, className }: CloseButtonProps) {
+  label = label ?? "Close";
+  size = size ?? "md";
+  onDark = onDark ?? false;
+  disabled = disabled ?? false;
   const colorClass = onDark
     ? "bg-white/90 hover:bg-white text-warm-700 shadow"
     : "bg-transparent hover:bg-warm-100 text-warm-500 hover:text-warm-700";

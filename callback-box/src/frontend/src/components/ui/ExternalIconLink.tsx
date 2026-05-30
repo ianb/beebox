@@ -31,7 +31,9 @@ function OpenInNewTabIcon({ size }: { size: ExternalIconLinkSize }) {
   );
 }
 
-export function ExternalIconLink({ href, label, size = "md", onDark = false, className }: ExternalIconLinkProps) {
+export function ExternalIconLink({ href, label, size, onDark, className }: ExternalIconLinkProps) {
+  size = size ?? "md";
+  onDark = onDark ?? false;
   const colorClass = onDark
     ? "bg-white/90 hover:bg-white text-warm-700 shadow"
     : "bg-transparent hover:bg-warm-200 text-warm-500 hover:text-warm-700";

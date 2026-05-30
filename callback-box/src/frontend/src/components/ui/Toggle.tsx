@@ -18,7 +18,8 @@ export interface ToggleProps {
  * CheckboxField, which is form-bound). Fires on every click; callers
  * drive the `checked` value.
  */
-export function Toggle({ checked, onChange, disabled = false, label, className }: ToggleProps) {
+export function Toggle({ checked, onChange, disabled, label, className }: ToggleProps) {
+  disabled = disabled ?? false;
   const classes = cn(
     "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
     checked ? "bg-success" : "bg-warm-300",

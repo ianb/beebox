@@ -21,7 +21,9 @@ const GAP_CLASSES: Record<StackGap, string> = {
   lg: "space-y-4",
 };
 
-export function Stack({ children, gap = "md", as = "div", className }: StackProps) {
+export function Stack({ children, gap: gapArg, as: asArg, className }: StackProps) {
+  const gap = gapArg ?? "md";
+  const as = asArg ?? "div";
   const classes = cn(GAP_CLASSES[gap], className);
   if (as === "section") return <section className={classes}>{children}</section>;
   if (as === "article") return <article className={classes}>{children}</article>;

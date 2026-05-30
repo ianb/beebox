@@ -162,7 +162,8 @@ function applyFeaturesChange(opts: {
  * speech bubble suggests an extended utterance rather than a one-shot
  * command.
  */
-function NarrationMicIcon({ className = "w-5 h-5" }: { className?: string }) {
+function NarrationMicIcon({ className }: { className?: string }) {
+  className = className ?? "w-5 h-5";
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       {/* Chat bubble (top-right) */}
@@ -2182,8 +2183,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       // Narration mode swaps in a high-quality transcription before sending
       // to the agent — the realtime text is good enough for the live UI
       // but accuracy matters more for the persistent record.
-      const submit = (finalText: string, opts: { diarized?: boolean } = {}) => {
-        const diarizedAttr = opts.diarized === true ? " diarized=\"1\"" : "";
+      const submit = (finalText: string, opts?: { diarized?: boolean }) => {
+        const diarizedAttr = opts?.diarized === true ? " diarized=\"1\"" : "";
         doSend(`<speech${diarizedAttr} local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
       };
       if (narrationEnabledRef.current && audioBlob) {

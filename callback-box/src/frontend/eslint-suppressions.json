@@ -13,19 +13,9 @@
       "count": 1
     }
   },
-  "src/components/CardTreeView.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
   "src/components/ChatMessages.tsx": {
     "max-lines": {
       "count": 1
-    }
-  },
-  "src/components/CommandRunner.tsx": {
-    "default/no-default-params": {
-      "count": 5
     }
   },
   "src/components/CommitDetail.tsx": {
@@ -34,9 +24,6 @@
     }
   },
   "src/components/FileView.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-generic-error": {
       "count": 1
     },
@@ -58,24 +45,9 @@
       "count": 1
     }
   },
-  "src/components/Markdown.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
   "src/components/NewMemo.tsx": {
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "src/components/Sidebar.tsx": {
-    "default/no-default-params": {
-      "count": 3
-    }
-  },
-  "src/components/VoiceRecorder.tsx": {
-    "default/no-default-params": {
-      "count": 2
     }
   },
   "src/components/admin/AllowedEmailsSection.tsx": {
@@ -118,9 +90,6 @@
     }
   },
   "src/components/chat/InteractiveChat.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    },
     "max-lines": {
       "count": 1
     },
@@ -128,127 +97,9 @@
       "count": 3
     }
   },
-  "src/components/ui/Accordion.tsx": {
-    "default/no-default-params": {
-      "count": 3
-    }
-  },
-  "src/components/ui/Avatar.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
-  "src/components/ui/Badge.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
-  "src/components/ui/CancelButton.tsx": {
-    "default/no-default-params": {
-      "count": 3
-    }
-  },
-  "src/components/ui/Card.tsx": {
-    "default/no-default-params": {
-      "count": 7
-    }
-  },
-  "src/components/ui/CloseButton.tsx": {
-    "default/no-default-params": {
-      "count": 4
-    }
-  },
-  "src/components/ui/Column.tsx": {
-    "default/no-default-params": {
-      "count": 4
-    }
-  },
-  "src/components/ui/Dropdown.tsx": {
-    "default/no-default-params": {
-      "count": 4
-    }
-  },
-  "src/components/ui/ExternalIconLink.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
-  "src/components/ui/ExternalLink.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
-  "src/components/ui/FileEntry.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
-  "src/components/ui/InlineAction.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
-  "src/components/ui/Pre.tsx": {
-    "default/no-default-params": {
-      "count": 5
-    }
-  },
-  "src/components/ui/Row.tsx": {
-    "default/no-default-params": {
-      "count": 4
-    }
-  },
-  "src/components/ui/Stack.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
-  "src/components/ui/Text.tsx": {
-    "default/no-default-params": {
-      "count": 10
-    }
-  },
-  "src/components/ui/TextLink.tsx": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
-  "src/components/ui/Toggle.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
-  "src/components/ui/VisuallyHidden.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
   "src/components/ui/fields.tsx": {
-    "default/no-default-params": {
-      "count": 14
-    },
     "max-lines": {
       "count": 1
-    }
-  },
-  "src/file-types/icons.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
-  "src/hooks/useSSE.ts": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
-  "src/hooks/useWakeLock.ts": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
-  "src/lib/earcons.ts": {
-    "default/no-default-params": {
-      "count": 2
     }
   },
   "src/lib/file-upload.ts": {
@@ -326,9 +177,6 @@
     }
   },
   "src/pages/BrowsePage.tsx": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-generic-error": {
       "count": 1
     },
@@ -379,9 +227,6 @@
     }
   },
   "src/ssr/state-registry.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-generic-error": {
       "count": 3
     },

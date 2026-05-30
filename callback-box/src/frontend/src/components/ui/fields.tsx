@@ -65,16 +65,19 @@ export function TextField({
   label,
   value,
   onChange,
-  type = "text",
+  type,
   error,
   helper,
   id,
   inputClassName,
   className,
-  required = false,
-  hideLabel = false,
+  required,
+  hideLabel,
   ...rest
 }: TextFieldProps) {
+  type = type ?? "text";
+  required = required ?? false;
+  hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
@@ -123,11 +126,14 @@ export function TextareaField({
   id,
   inputClassName,
   className,
-  required = false,
-  rows = 4,
-  hideLabel = false,
+  required,
+  rows,
+  hideLabel,
   ...rest
 }: TextareaFieldProps) {
+  required = required ?? false;
+  rows = rows ?? 4;
+  hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
@@ -172,10 +178,12 @@ export function NumberField({
   id,
   inputClassName,
   className,
-  required = false,
-  hideLabel = false,
+  required,
+  hideLabel,
   ...rest
 }: NumberFieldProps) {
+  required = required ?? false;
+  hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
@@ -223,11 +231,12 @@ export function CheckboxField({
   error,
   helper,
   id,
-  required = false,
+  required,
   disabled,
   className,
   ...rest
 }: CheckboxFieldProps) {
+  required = required ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
@@ -299,10 +308,12 @@ export function SelectField({
   id,
   inputClassName,
   className,
-  required = false,
-  hideLabel = false,
+  required,
+  hideLabel,
   ...rest
 }: SelectFieldProps) {
+  required = required ?? false;
+  hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
@@ -360,14 +371,17 @@ export function RadioGroup({
   onChange,
   options,
   name,
-  variant = "list",
+  variant,
   error,
   helper,
-  required = false,
+  required,
   id,
-  disabled = false,
+  disabled,
   className,
 }: RadioGroupProps) {
+  variant = variant ?? "list";
+  required = required ?? false;
+  disabled = disabled ?? false;
   const autoId = useId();
   const groupId = id !== undefined ? id : autoId;
   const groupName = name !== undefined ? name : groupId;
