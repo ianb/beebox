@@ -32,6 +32,19 @@ enum is opt-in after dogfooding shows the values cluster. `{% source %}`'s
 `as=` and `{% correction %}`'s `test=` are both natural-language by
 design.
 
+**Convention discovered during Track 3 implementation:** any tag with a
+`ref` attribute whose rendered output is a React component must rename
+`ref` to a non-reserved prop name in the Markdoc transform before
+emitting the renderable tree. React reserves `ref` as the special
+ref-forwarding prop and intercepts it before it reaches the component.
+`{% source %}`'s schema transform does `const { ref, ...rest } =
+attributes; return new Tag(..., { ...rest, sourceRef: ref }, ...)` and
+the React component accepts `sourceRef`. Future ref-bearing tags
+(`{% subrecipe %}`, `{% key-person %}`) follow the same shape. The
+Markdoc-side authoring syntax stays `ref="..."`, and Track 4's body
+ref-tracking still finds it (the walker checks the AST node's
+attributes, not the renderable tree).
+
 ## Track 1: Recipe → Markdoc-annotated document
 
 ### Today
@@ -327,6 +340,16 @@ rebuilds):
    attribute named `ref` alongside the frontmatter refs it already
    yields.
 2. Extend `move.ts`'s rewrite pass to update body-tag `ref=` attributes
+   via substring replace across other cards' contents. Same shape as
+   the existing attach-scope rewrite (user-approved; rewrites in code
+   fences are acceptable). AST-aware rewrite via `Markdoc.format` is
+   deferred — see open question 4 below — but unnecessary for this
+   track since substring works for the move case.
+
+   *Implementation note: shipped in `src/core/commands/move.ts:209-261`.
+   The pass extends the existing attach-rewrite loop with a second
+   rewrite entry keyed on the moved card's path itself; both rewrites
+   apply in one read-modify-write per card.*
    too.
 
 Same warning-not-error policy as today's frontmatter refs (per
@@ -368,17 +391,19 @@ plan ships as a whole.
    optimising the renderer; the answer might be "fewer source tags per
    doc" rather than "smaller chips."
 
-4. **Markdoc programmatic editing / round-tripping.** How does Markdoc
-   handle programmatic editing and round-tripping? `Markdoc.parse`
-   produces an AST; whether re-serializing it preserves comments,
-   whitespace, attribute ordering, and tag shorthand is not stated in
-   the docs. Investigation needed before deciding whether Track 4's
-   `move.ts` extension parses Markdoc (correct, but possibly lossy on
-   round-trip) or extends the existing substring `replaceAll` approach
-   (works for full paths, may rewrite occurrences in code fences —
-   which the user has confirmed is acceptable). Lean: substring as a
-   pragmatic first pass; revisit if Markdoc round-trip turns out to be
-   clean.
+4. **Markdoc round-trip reliability.** `Markdoc.format(ast)` exists
+   (released v0.1.5, labeled experimental by upstream) and serializes
+   an AST back to Markdoc text — used for things like programmatically
+   adding `id` attributes to all heading nodes. Round-trip fidelity on
+   real bodies (attribute ordering, comment preservation, whitespace,
+   tag shorthand) is not formally guaranteed. We don't need it for any
+   committed track: Track 4's `move.ts` extension shipped using the
+   substring approach (user-approved; rewrites in code fences are
+   acceptable) and Track 2's `compileBriefing` rewrite is pure
+   one-way AST → markdown (no round-trip). Open if a future track —
+   automated recipe migration, in-place edit tooling — needs in-place
+   editing. Validate by running `Markdoc.format(Markdoc.parse(body))`
+   against a corpus of real bodies before depending on it.
 
 ## Rollout shape
 
@@ -410,3 +435,26 @@ without body ref-tracking would leave broken refs invisible to
 (depends on the shared-frontend-backend-code subplan, plus the
 server-side emitter). Track 1 (recipe `{% ingredient %}` +
 `{% step %}`) last — largest scope, edits an existing live schema.
+
+### Progress within the plan
+
+- **Track 4** — committed (`39680dc1`). `extractBodyRefs` in
+  `src/core/body-refs.ts`; `card-lint.ts` merges body refs into the
+  existing resolution loop; `move.ts` rewrites the moved card's path
+  across other cards' contents alongside the existing attach-scope
+  rewrite. Doctest coverage in `test/card-lint.doctest.md`.
+- **Track 3** — committed (`63141dce`). `{% source %}` schema in
+  `src/frontend/src/lib/markdoc-config.ts` (to be moved to
+  `src/shared/` per the subplan); `SourceInline` + `SourceBlock`
+  components in `src/frontend/src/components/Source.tsx`; agent-guide
+  section at `src/core/agent-guide/source.ts`; four knowledge audits
+  (all pass `knows_directly` on first run).
+- **Shared-code subplan** — written, see
+  `docs/shared-frontend-backend-code.subplan.md`. One-chunk
+  implementation: move config, set up tsconfig path alias, update
+  imports. No knowledge audits needed (infrastructure).
+- **Track 2** — pending. Implements once the subplan lands.
+- **Track 1** — pending. Independent; can go last.
+
+Nothing has merged to main; the plan ships when all four tracks plus
+the subplan complete.
