@@ -11,6 +11,38 @@ import { transcribeAudioDeepgram } from "./transcription-deepgram.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
+class MissingWhisperKeyError extends Error implements TranscriptionError {
+  readonly permanent = true;
+  readonly code = "missing_api_key";
+  constructor() {
+    super("THINKING_OPENAI_API_KEY environment variable is required for transcription");
+    this.name = "MissingWhisperKeyError";
+  }
+}
+
+class WhisperNetworkError extends Error implements TranscriptionError {
+  readonly permanent = false;
+  readonly code = "network_error";
+  constructor(cause: string) {
+    super(`Network error: ${cause}`);
+    this.name = "WhisperNetworkError";
+  }
+}
+
+class WhisperApiError extends Error implements TranscriptionError {
+  readonly permanent: boolean;
+  readonly code: string;
+  constructor(
+    { status, statusText, details }: { status: number; statusText: string; details: string },
+    meta: { permanent: boolean; code: string },
+  ) {
+    super(`Whisper API error: ${status} ${statusText} - ${details}`);
+    this.name = "WhisperApiError";
+    this.permanent = meta.permanent;
+    this.code = meta.code;
+  }
+}
+
 /**
  * Map our HQ service identifiers to OpenAI model names. The classic
  * Whisper model (`whisper-1`) returns verbose_json with duration/language
@@ -55,8 +87,7 @@ export interface TranscriptionOptions {
   wordTimestamps?: boolean;
 }
 
-export interface TranscriptionError {
-  message: string;
+export interface TranscriptionError extends Error {
   permanent: boolean; // If true, don't retry
   code?: string;
 }
@@ -121,7 +152,7 @@ export async function loadTranscriptionConfig(boxRoot?: string): Promise<Transcr
     if (err.code === "ENOENT") return defaults;
     // Permissions / I/O failures are not the same as "no config" — surface
     // them rather than silently returning defaults.
-    throw e;
+    throw e as Error;
   }
   // JSON parse errors are real bugs (corrupted config); let them bubble.
   const stored = JSON.parse(content) as StoredTranscriptionConfig;
@@ -145,7 +176,7 @@ export async function updateTranscriptionConfig(
     content = await fs.readFile(configPath, "utf-8");
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (err.code !== "ENOENT") throw e as Error;
     // No file yet — start fresh.
   }
   if (content !== null) {
@@ -219,12 +250,7 @@ async function transcribeAudioWhisper(
   const { audioBuffer, filename, prompt, options } = params;
   const apiKey = process.env["THINKING_OPENAI_API_KEY"];
   if (!apiKey) {
-    const error: TranscriptionError = {
-      message: "THINKING_OPENAI_API_KEY environment variable is required for transcription",
-      permanent: true,
-      code: "missing_api_key",
-    };
-    throw error;
+    throw new MissingWhisperKeyError();
   }
   const model = OPENAI_WHISPER_MODELS[opts.variant];
   const isLlm = isLlmWhisperVariant(opts.variant);
@@ -331,43 +357,32 @@ async function transcribeAudioWhisper(
     };
   } catch (error) {
     if (isTranscriptionError(error)) {
-      throw error;
+      throw error as Error;
     }
 
     // ky HTTPError — parse the response for error details
     const httpErr = error as HTTPError;
     if (httpErr.response) {
-      const parsed = await parseErrorResponse(httpErr.response);
-      throw parsed;
+      throw await parseErrorResponse(httpErr.response);
     }
 
     // Network or other errors are intermittent
-    const transcriptionError: TranscriptionError = {
-      message: `Network error: ${(error as Error).message}`,
-      permanent: false,
-      code: "network_error",
-    };
-    throw transcriptionError;
+    throw new WhisperNetworkError((error as Error).message);
   }
 }
 
+const AUDIO_CONTENT_TYPES: Record<string, string> = {
+  webm: "audio/webm",
+  mp3: "audio/mpeg",
+  m4a: "audio/m4a",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  flac: "audio/flac",
+};
+
 function getContentType(ext: string | undefined): string {
-  switch (ext) {
-    case "webm":
-      return "audio/webm";
-    case "mp3":
-      return "audio/mpeg";
-    case "m4a":
-      return "audio/m4a";
-    case "wav":
-      return "audio/wav";
-    case "ogg":
-      return "audio/ogg";
-    case "flac":
-      return "audio/flac";
-    default:
-      return "audio/webm";
-  }
+  const contentType = ext === undefined ? undefined : AUDIO_CONTENT_TYPES[ext];
+  return contentType ?? "audio/webm";
 }
 
 async function parseErrorResponse(response: Response): Promise<TranscriptionError> {
@@ -386,11 +401,10 @@ async function parseErrorResponse(response: Response): Promise<TranscriptionErro
   // Determine if error is permanent
   const permanent = isPermanentError(response.status, errorCode);
 
-  return {
-    message: `Whisper API error: ${response.status} ${response.statusText} - ${errorDetails}`,
-    permanent,
-    code: errorCode ?? `http_${response.status}`,
-  };
+  return new WhisperApiError(
+    { status: response.status, statusText: response.statusText, details: errorDetails },
+    { permanent, code: errorCode ?? `http_${response.status}` }
+  );
 }
 
 function isPermanentError(status: number, code: string | undefined): boolean {
@@ -400,17 +414,8 @@ function isPermanentError(status: number, code: string | undefined): boolean {
   }
 
   // Specific permanent error codes
-  const permanentCodes = [
-    "invalid_api_key",
-    "invalid_request_error",
-    "invalid_file_format",
-  ];
-
-  if (code && permanentCodes.includes(code)) {
-    return true;
-  }
-
-  return false;
+  const permanentCodes = ["invalid_api_key", "invalid_request_error", "invalid_file_format"];
+  return code !== undefined && permanentCodes.includes(code);
 }
 
 function isTranscriptionError(error: unknown): error is TranscriptionError {

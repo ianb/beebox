@@ -7,6 +7,31 @@
 import { simpleGit, CleanOptions } from "simple-git";
 
 /**
+ * A git command failed with an error we don't specifically handle (i.e. not an
+ * index.lock collision). Wraps the underlying cause so callers get a typed,
+ * programmatically-distinguishable error while the original message is
+ * preserved.
+ */
+class GitCommandError extends Error {
+  readonly cause: unknown;
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "GitCommandError";
+    this.cause = cause;
+  }
+}
+
+/**
+ * A git operation was called with no paths where at least one is required.
+ */
+class NoPathsError extends Error {
+  constructor() {
+    super("commitPaths requires at least one path");
+    this.name = "NoPathsError";
+  }
+}
+
+/**
  * Check if a git error is an index.lock collision. These happen when LFS
  * post-commit hooks or filter-process operations overlap with the next
  * git command — common when boxes track large binary files via LFS.
@@ -120,7 +145,7 @@ export async function stageFiles(boxRoot: string, paths: string[]): Promise<void
       await sleep(2000);
       await simpleGit(boxRoot).add(paths);
     } else {
-      throw err;
+      throw new GitCommandError(err);
     }
   }
 }
@@ -150,7 +175,7 @@ export async function stageAll(boxRoot: string): Promise<void> {
       await sleep(2000);
       await simpleGit(boxRoot).raw(["add", "-A"]);
     } else {
-      throw err;
+      throw new GitCommandError(err);
     }
   }
 }
@@ -177,7 +202,7 @@ export async function commit(
       await sleep(2000);
       await git.commit(message, commitArgs);
     } else {
-      throw err;
+      throw new GitCommandError(err);
     }
   }
 
@@ -200,7 +225,7 @@ export async function commitPaths(
 ): Promise<string> {
   const { paths } = options;
   if (paths.length === 0) {
-    throw new Error("commitPaths requires at least one path");
+    throw new NoPathsError();
   }
 
   const message = buildCommitMessage(options);
@@ -218,7 +243,7 @@ export async function commitPaths(
       await sleep(2000);
       await git.raw(commitArgs);
     } else {
-      throw err;
+      throw new GitCommandError(err);
     }
   }
 

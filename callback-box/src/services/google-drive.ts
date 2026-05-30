@@ -7,6 +7,18 @@
 
 import ky from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
+import { NotFoundError } from "../lib/errors.js";
+
+class NoExportForMimeTypeError extends Error {
+  readonly mimeType: string;
+  readonly fileId: string;
+  constructor(mimeType: string, fileId: string) {
+    super(`No export for mimeType ${mimeType} on ${fileId}`);
+    this.name = "NoExportForMimeTypeError";
+    this.mimeType = mimeType;
+    this.fileId = fileId;
+  }
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -346,7 +358,7 @@ export function createFakeGoogleDrive(
 
     async getFile(fileId) {
       const file = fake.files.find((f) => f.id === fileId);
-      if (!file) throw new Error(`File not found: ${fileId}`);
+      if (!file) throw new NotFoundError(fileId, "File");
       return file;
     },
 
@@ -364,21 +376,21 @@ export function createFakeGoogleDrive(
 
     async getSpreadsheet(fileId) {
       const ss = fake.spreadsheets.get(fileId);
-      if (!ss) throw new Error(`Spreadsheet not found: ${fileId}`);
+      if (!ss) throw new NotFoundError(fileId, "Spreadsheet");
       return ss.metadata;
     },
 
     async getSheetValues(fileId, sheetOpts) {
       const ss = fake.spreadsheets.get(fileId);
-      if (!ss) throw new Error(`Spreadsheet not found: ${fileId}`);
+      if (!ss) throw new NotFoundError(fileId, "Spreadsheet");
       const values = ss.sheets.get(sheetOpts.sheetTitle);
-      if (!values) throw new Error(`Sheet not found: ${sheetOpts.sheetTitle}`);
+      if (!values) throw new NotFoundError(sheetOpts.sheetTitle, "Sheet");
       return values;
     },
 
     async updateSheetValues(fileId, updateOpts) {
       const ss = fake.spreadsheets.get(fileId);
-      if (!ss) throw new Error(`Spreadsheet not found: ${fileId}`);
+      if (!ss) throw new NotFoundError(fileId, "Spreadsheet");
       ss.sheets.set(updateOpts.sheetTitle, updateOpts.values);
       fake.updateLog.push({
         fileId,
@@ -389,17 +401,17 @@ export function createFakeGoogleDrive(
 
     async exportFile(fileId, mimeType) {
       const doc = fake.documents.get(fileId);
-      if (!doc) throw new Error(`Document not found: ${fileId}`);
+      if (!doc) throw new NotFoundError(fileId, "Document");
       const content = doc.exports.get(mimeType);
       if (content === undefined) {
-        throw new Error(`No export for mimeType ${mimeType} on ${fileId}`);
+        throw new NoExportForMimeTypeError(mimeType, fileId);
       }
       return content;
     },
 
     async updateFileContent(fileId, updateOpts) {
       const doc = fake.documents.get(fileId);
-      if (!doc) throw new Error(`Document not found: ${fileId}`);
+      if (!doc) throw new NotFoundError(fileId, "Document");
       doc.exports.set(updateOpts.mimeType, updateOpts.content);
       doc.structure.revisionId = `rev-${Date.now()}-${fake.contentUpdateLog.length + 1}`;
       const file = fake.files.find((f) => f.id === fileId);
@@ -413,7 +425,7 @@ export function createFakeGoogleDrive(
 
     async getDocument(fileId) {
       const doc = fake.documents.get(fileId);
-      if (!doc) throw new Error(`Document not found: ${fileId}`);
+      if (!doc) throw new NotFoundError(fileId, "Document");
       return doc.structure;
     },
 

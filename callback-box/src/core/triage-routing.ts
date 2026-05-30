@@ -16,6 +16,15 @@ import { getBoxDir } from "../cli/lib/paths.js";
 import { createSelectQuestionTemplate } from "../schemas/question.js";
 import type { TriageCategory } from "./triage-instructions.js";
 
+class TriageDestinationConflictError extends Error {
+  readonly file: string;
+  constructor(file: string) {
+    super(`triage destination already has a file named ${file}`);
+    this.name = "TriageDestinationConflictError";
+    this.file = file;
+  }
+}
+
 /**
  * Three confidence levels — no numbers, no `wrong`. See design doc §5.
  */
@@ -56,9 +65,9 @@ async function moveItem(file: string, { srcDir, dstDir }: { srcDir: string; dstD
   const dst = path.join(dstDir, file);
   try {
     await fs.access(dst);
-    throw new Error(`triage destination already has a file named ${file}`);
+    throw new TriageDestinationConflictError(file);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e as Error;
   }
   await fs.rename(path.join(srcDir, file), dst);
 }

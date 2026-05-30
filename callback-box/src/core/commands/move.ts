@@ -40,6 +40,17 @@ import {
  */
 const PHASE2_TYPES = new Set(cardSchemas.map((s) => s.type));
 
+class AttachDirRenameError extends Error {
+  readonly from: string;
+  readonly to: string;
+  constructor({ from, to, cause }: { from: string; to: string; cause: unknown }) {
+    super(`failed to rename attach directory: ${from} → ${to}`, { cause });
+    this.name = "AttachDirRenameError";
+    this.from = from;
+    this.to = to;
+  }
+}
+
 function cardTypeFromPath(p: string): string | undefined {
   const base = p.split("/").pop() ?? p;
   const match = /^.+\.([^.]+)\.card$/.exec(base);
@@ -74,7 +85,7 @@ async function movePhase2CardFiles(
       moved.push({ from: oldAttach, to: newAttach });
     } catch (e) {
       const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw err;
+      if (err.code !== "ENOENT") throw new AttachDirRenameError({ from: oldAttach, to: newAttach, cause: err });
       // No attach dir to move; fine.
     }
   }

@@ -5,6 +5,13 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 
+class NotInBoxError extends Error {
+  constructor() {
+    super("Not in a callback box. Run 'cb init' to create one, or navigate to an existing box.");
+    this.name = "NotInBoxError";
+  }
+}
+
 /**
  * Standard directory names in a callback box.
  *
@@ -103,9 +110,7 @@ export async function findBoxRoot(startPath: string): Promise<string | null> {
 export async function requireBoxRoot(startPath?: string): Promise<string> {
   const root = await findBoxRoot(startPath ?? process.cwd());
   if (!root) {
-    throw new Error(
-      "Not in a callback box. Run 'cb init' to create one, or navigate to an existing box."
-    );
+    throw new NotInBoxError();
   }
   return root;
 }

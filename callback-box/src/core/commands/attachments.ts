@@ -35,6 +35,15 @@ import { scanBoxAttachments } from "../asset-manifest-scan.js";
 
 const execFileAsync = promisify(execFile);
 
+class GitignoreReadError extends Error {
+  readonly gitignorePath: string;
+  constructor(gitignorePath: string, cause: unknown) {
+    super(`failed to read .gitignore: ${gitignorePath}`, { cause });
+    this.name = "GitignoreReadError";
+    this.gitignorePath = gitignorePath;
+  }
+}
+
 interface AttachmentsArgs {
   subcommand: string;
   /** Path argument for overwrite / add. Relative to box root. */
@@ -111,7 +120,7 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
     existing = await fs.readFile(gitignorePath, "utf-8");
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (err.code !== "ENOENT") throw new GitignoreReadError(gitignorePath, e);
   }
   if (
     existing.includes(GITIGNORE_BLOCK_MARKER) ||

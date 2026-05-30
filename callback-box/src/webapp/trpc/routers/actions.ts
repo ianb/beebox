@@ -42,7 +42,9 @@ export const actionsRouter = router({
           logs,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError) {
+          throw new TRPCError({ code: error.code, message: error.message, cause: error.cause });
+        }
         ctx.eventBus.emit("wakeup-error", {
           timestamp: new Date().toISOString(),
           error: (error as Error).message,

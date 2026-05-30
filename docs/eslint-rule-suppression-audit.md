@@ -16,6 +16,8 @@
   270 bare `catch {}` bound and made non-silent (log / rethrow / inspect /
   justified-`_e`), then ENOENT-guarded so normal file-absence doesn't spam
   output. Suppressions pruned 1000 → 730. **0 bare catches remain.**
+- **2026-05-30 — `default/no-default-params` (30) + `security/detect-non-literal-regexp` (3) burned down (backend).** Defaults hoisted into bodies (`x?: T` + `x = x ?? default;`). The 3 dynamic regexes are reviewed-safe (escaped glob / hardcoded keys) and got documented inline `eslint-disable` lines rather than living in suppressions.
+- **2026-05-30 — `error/*` family burned down (backend, all 4 rules → 0).** 234 violations across 52 files. One reusable `NotFoundError(id, resource)` in `src/lib/errors.ts` covers the 15 "X not found" sites; ~60 local purpose-named classes cover the bespoke conditions (message composed inside the class, dynamic data as fields). Key constraints discovered: the `error/*` rules flag a string/template literal only in the **first** constructor arg, so reusable classes pass the label as a non-first arg; and `error/no-throw-literal` rejects re-throwing a caught `unknown` — fixed with a behavior-preserving `throw e as Error` at 29 inspect-and-rethrow sites. Existing message-carrying classes (e.g. `CardIOError`) were refactored to compose from a leading structured field rather than split into micro-classes.
 - **2026-05-30 — bare-catch rule enabled for the frontend.** In the frontend
   (`react: true`), `no-restricted-syntax` carries *only* the bare-catch selector
   (no `??`/`as`/switch), so enabling it surfaced exactly 14 bare catches across

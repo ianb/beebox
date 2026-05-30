@@ -13,6 +13,13 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { OAuth2Client } from "google-auth-library";
 
+class NoTokenStoragePathError extends Error {
+  constructor() {
+    super("No token storage path: set CB_GOOGLE_TOKENS_FILE or provide boxRoot");
+    this.name = "NoTokenStoragePathError";
+  }
+}
+
 export interface GoogleTokens {
   refreshToken?: string;
   accessToken?: string;
@@ -118,7 +125,7 @@ export async function saveGoogleTokens(
   const central = centralTokenPath();
   const targetPath = central || (boxRoot ? legacySecretPath(boxRoot) : null);
   if (!targetPath) {
-    throw new Error("No token storage path: set CB_GOOGLE_TOKENS_FILE or provide boxRoot");
+    throw new NoTokenStoragePathError();
   }
 
   let existing: GoogleTokens = {};

@@ -18,6 +18,14 @@ import * as path from "node:path";
 import { parseCard, type ElementNode } from "cardworks";
 import { isKnownFeature, isValidValue } from "../chat-features.js";
 
+class LandmarkDirReadError extends Error {
+  constructor(cause: unknown, dir: string) {
+    super(`Failed to read landmark directory: ${dir}`);
+    this.name = "LandmarkDirReadError";
+    this.cause = cause;
+  }
+}
+
 /**
  * Extract feature seeds from a parsed landmark element. Only attributes
  * that name a known feature with a valid value are returned. Unknown
@@ -58,7 +66,7 @@ export async function readLandmarkFeaturesForDir(
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return null;
-    throw e;
+    throw new LandmarkDirReadError(e, absDir);
   }
   const landmarkName = entries.find((n) => n.endsWith(".landmark.card"));
   if (!landmarkName) return null;

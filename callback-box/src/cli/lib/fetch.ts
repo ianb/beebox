@@ -31,6 +31,13 @@ export interface FetchStub {
   after?: string | undefined;
 }
 
+class UnstubbedFetchError extends Error {
+  constructor(url: string) {
+    super(`Unstubbed fetch in scenario: ${url}`);
+    this.name = "UnstubbedFetchError";
+  }
+}
+
 let stubs: FetchStub[] | null = null;
 let scenarioDir: string | null = null;
 let envStubsLoaded = false;
@@ -212,7 +219,7 @@ export function installStrictFetch(): void {
     }
 
     // Strict mode: no stub matched and not allow-listed
-    throw new Error(`Unstubbed fetch in scenario: ${url}`);
+    throw new UnstubbedFetchError(url);
   };
 }
 

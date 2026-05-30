@@ -14,6 +14,13 @@ import {
   LockHeldError,
 } from "../lib/file-lock.js";
 
+class ScriptAlreadyRunningError extends Error {
+  constructor(scriptName: string, pid: number) {
+    super(`Script "${scriptName}" is already running (pid ${pid})`);
+    this.name = "ScriptAlreadyRunningError";
+  }
+}
+
 export interface RunRecord {
   ts: string;
   durationMs: number;
@@ -135,9 +142,9 @@ export async function acquireScriptLock(
     await acquireFileLock(lockFilePath(opts.boxRoot, opts.scriptName), metadata);
   } catch (err) {
     if (err instanceof LockHeldError) {
-      throw new Error(`Script "${opts.scriptName}" is already running (pid ${err.holder.pid})`);
+      throw new ScriptAlreadyRunningError(opts.scriptName, err.holder.pid);
     }
-    throw err;
+    throw err as Error;
   }
 }
 

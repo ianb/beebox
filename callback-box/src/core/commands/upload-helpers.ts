@@ -12,6 +12,24 @@ import * as path from "node:path";
 export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff"];
 export const PDF_EXTENSION = ".pdf";
 
+class UnsupportedFileTypeError extends Error {
+  readonly names: string;
+  constructor(names: string) {
+    super(`Unsupported file type(s): ${names}. Supported: ${PDF_EXTENSION}, ${SUPPORTED_IMAGE_EXTENSIONS.join(", ")}`);
+    this.name = "UnsupportedFileTypeError";
+    this.names = names;
+  }
+}
+
+class MalformedLedgerError extends Error {
+  readonly ledgerPath: string;
+  constructor(ledgerPath: string) {
+    super(`Ledger at ${ledgerPath} is not in the expected format (version: 1, entries: [...])`);
+    this.name = "MalformedLedgerError";
+    this.ledgerPath = ledgerPath;
+  }
+}
+
 /**
  * A scan-import dispatch group. PDFs are always single-file groups; image
  * files are grouped by scanner-style `<prefix>_NNN.ext` filename, with any
@@ -58,7 +76,7 @@ export function groupScanFiles(files: string[]): ScanGroup[] {
   }
   if (unsupported.length > 0) {
     const names = unsupported.map((f) => path.basename(f)).join(", ");
-    throw new Error(`Unsupported file type(s): ${names}. Supported: ${PDF_EXTENSION}, ${SUPPORTED_IMAGE_EXTENSIONS.join(", ")}`);
+    throw new UnsupportedFileTypeError(names);
   }
 
   const groups: ScanGroup[] = [];
@@ -138,7 +156,7 @@ export async function loadLedger(boxRoot: string): Promise<UploadLedger> {
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return emptyLedger();
-    throw e;
+    throw e as Error;
   }
   const parsed = JSON.parse(content) as unknown;
   if (
@@ -147,7 +165,7 @@ export async function loadLedger(boxRoot: string): Promise<UploadLedger> {
     (parsed as { version?: unknown }).version !== 1 ||
     !Array.isArray((parsed as { entries?: unknown }).entries)
   ) {
-    throw new Error(`Ledger at ${ledgerPath} is not in the expected format (version: 1, entries: [...])`);
+    throw new MalformedLedgerError(ledgerPath);
   }
   return parsed as UploadLedger;
 }

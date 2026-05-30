@@ -15,6 +15,15 @@ import type { ScenarioDefinition, StubsDefinition } from "./types.js";
 
 const SCENARIOS_DIR = path.join(os.homedir(), "src/boxes/scenarios");
 
+class InvalidScenarioStepsError extends Error {
+  readonly scenarioName: string;
+  constructor(scenarioName: string) {
+    super(`Scenario ${scenarioName}: missing or invalid 'steps' array`);
+    this.name = "InvalidScenarioStepsError";
+    this.scenarioName = scenarioName;
+  }
+}
+
 /**
  * Get the root scenarios directory.
  */
@@ -74,7 +83,7 @@ export async function loadScenario(name: string): Promise<ScenarioDefinition> {
 
   if (!parsed.name) parsed.name = name;
   if (!parsed.steps || !Array.isArray(parsed.steps)) {
-    throw new Error(`Scenario ${name}: missing or invalid 'steps' array`);
+    throw new InvalidScenarioStepsError(name);
   }
 
   return parsed;

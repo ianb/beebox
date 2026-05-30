@@ -33,9 +33,13 @@ const CARD_XML_CONTENT_TYPE = "application/x-card+xml";
  * to distinguish format-level problems from arbitrary IO errors.
  */
 export class CardIOError extends Error {
-  constructor(message: string) {
-    super(message);
+  readonly source: string;
+  readonly detail: string;
+  constructor(source: string, detail: string) {
+    super(`${source}: ${detail}`);
     this.name = "CardIOError";
+    this.source = source;
+    this.detail = detail;
   }
 }
 
@@ -113,7 +117,7 @@ export function parseCardText(
 ): ParsedCard {
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) {
-    throw new CardIOError(`${source}: missing frontmatter block`);
+    throw new CardIOError(source, "missing frontmatter block");
   }
 
   let frontmatter: unknown;
@@ -121,12 +125,12 @@ export function parseCardText(
     frontmatter = parseYaml(split.frontmatterText);
   } catch (e) {
     const err = e as Error;
-    throw new CardIOError(`${source}: invalid YAML frontmatter: ${err.message}`);
+    throw new CardIOError(source, `invalid YAML frontmatter: ${err.message}`);
   }
   // YAML parses an empty block as `null`; treat that as an empty mapping
   // so cards whose only frontmatter field got stripped still parse.
   if (Array.isArray(frontmatter) || (frontmatter !== null && typeof frontmatter !== "object")) {
-    throw new CardIOError(`${source}: frontmatter must be a YAML mapping`);
+    throw new CardIOError(source, "frontmatter must be a YAML mapping");
   }
   const fm = (frontmatter as Record<string, unknown> | null) ?? {};
 
@@ -137,17 +141,19 @@ export function parseCardText(
   const resolved = type ?? typeFromFilename(source) ?? yamlType;
   if (resolved === undefined) {
     throw new CardIOError(
-      `${source}: cannot determine card type — filename must match Foo.<type>.card`
+      source,
+      "cannot determine card type — filename must match Foo.<type>.card"
     );
   }
   if (type !== undefined && yamlType !== undefined && yamlType !== type) {
     throw new CardIOError(
-      `${source}: frontmatter type "${yamlType}" does not match filename type "${type}"`
+      source,
+      `frontmatter type "${yamlType}" does not match filename type "${type}"`
     );
   }
   const schema = schemas.get(resolved);
   if (schema === undefined) {
-    throw new CardIOError(`${source}: no schema registered for type "${resolved}"`);
+    throw new CardIOError(source, `no schema registered for type "${resolved}"`);
   }
 
   // cardworks bakes `type: z.literal(...)` into frontmatterSchema, so we
@@ -157,7 +163,8 @@ export function parseCardText(
   const fmParse = schema.frontmatterSchema.safeParse(fmForValidation);
   if (!fmParse.success) {
     throw new CardIOError(
-      `${source}: invalid ${resolved} frontmatter:\n${formatZodIssues(fmParse.error.issues)}`
+      source,
+      `invalid ${resolved} frontmatter:\n${formatZodIssues(fmParse.error.issues)}`
     );
   }
   const fmFields = fmParse.data as Record<string, unknown>;
@@ -172,20 +179,22 @@ export function parseCardText(
       bodyValue = split.body;
       if (contentType !== CARD_XML_CONTENT_TYPE) {
         throw new CardIOError(
-          `${source}: schema "${resolved}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
+          source,
+          `schema "${resolved}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
         );
       }
     }
     const bodyParse = schema.bodyField.schema.safeParse(bodyValue);
     if (!bodyParse.success) {
       throw new CardIOError(
-        `${source}: invalid ${resolved} body:\n${formatZodIssues(bodyParse.error.issues)}`
+        source,
+        `invalid ${resolved} body:\n${formatZodIssues(bodyParse.error.issues)}`
       );
     }
     bodyValue = bodyParse.data;
   } else {
     if (split.body.trim().length > 0) {
-      throw new CardIOError(`${source}: schema "${resolved}" declares no body, but file has body content`);
+      throw new CardIOError(source, `schema "${resolved}" declares no body, but file has body content`);
     }
   }
 

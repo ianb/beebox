@@ -23,6 +23,13 @@ import { createChatJobTemplate, type ChatJobFields } from "../schemas/chat-job.j
 import { getBoxTimeISO } from "../cli/lib/time.js";
 import { sanitizeFilenameStem } from "../lib/filename.js";
 
+class MissingFrontmatterError extends Error {
+  constructor(absPath: string) {
+    super(`Chat thread missing frontmatter: ${absPath}`);
+    this.name = "MissingFrontmatterError";
+  }
+}
+
 export function safeFilename(text: string, fallback?: string): string {
   fallback = fallback ?? "untitled";
   return sanitizeFilenameStem(sanitize(text), { fallback });
@@ -32,7 +39,7 @@ async function readThreadFields(absPath: string): Promise<ChatThreadFields> {
   const content = await fs.readFile(absPath, "utf-8");
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) {
-    throw new Error(`Chat thread missing frontmatter: ${absPath}`);
+    throw new MissingFrontmatterError(absPath);
   }
   return parseYaml(split.frontmatterText) as ChatThreadFields;
 }

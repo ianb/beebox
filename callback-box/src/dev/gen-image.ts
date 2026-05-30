@@ -47,9 +47,9 @@ type ContentPart =
   | { inlineData: { mimeType: string; data: string } };
 
 class GenImageError extends Error {
-  exitCode: number;
-  constructor(message: string, exitCode: number) {
-    super(message);
+  readonly exitCode: number;
+  constructor(exitCode: number, detail: string) {
+    super(detail);
     this.name = "GenImageError";
     this.exitCode = exitCode;
   }
@@ -70,7 +70,7 @@ function parseArgs(argv: string[]): Args {
     const a = argv[i] as string;
     const next = (): string => {
       const v = argv[++i];
-      if (v === undefined) throw new GenImageError(`${a} requires a value`, 1);
+      if (v === undefined) throw new GenImageError(1, `${a} requires a value`);
       return v;
     };
     switch (a) {
@@ -82,12 +82,12 @@ function parseArgs(argv: string[]): Args {
       case "-v": case "--verbose":  args.verbose = true; break;
       case "-h": case "--help":     args.help = true; break;
       default:
-        if (a.startsWith("-")) throw new GenImageError(`unknown option: ${a}`, 1);
+        if (a.startsWith("-")) throw new GenImageError(1, `unknown option: ${a}`);
         positional.push(a);
     }
   }
   if (positional.length > 1) {
-    throw new GenImageError("at most one positional prompt argument allowed", 1);
+    throw new GenImageError(1, "at most one positional prompt argument allowed");
   }
   if (positional.length === 1 && args.prompt === null) {
     args.prompt = positional[0] as string;
@@ -143,8 +143,8 @@ function resolveApiKey(override: string | null): { key: string; from: string } {
     if (v !== undefined && v.length > 0) return { key: v, from: name };
   }
   throw new GenImageError(
-    `no API key found in ${candidates.join(", ")} — set one or pass -k`,
     1,
+    `no API key found in ${candidates.join(", ")} — set one or pass -k`,
   );
 }
 
@@ -197,13 +197,13 @@ async function main(): Promise<void> {
     return;
   }
   if (args.output === null) {
-    throw new GenImageError("-o/--output is required", 1);
+    throw new GenImageError(1, "-o/--output is required");
   }
 
   let prompt = args.prompt;
   if (prompt === null || prompt.length === 0) prompt = await readPromptFromStdin();
   if (prompt.length === 0) {
-    throw new GenImageError("no prompt (pass as arg, -p, or via stdin)", 1);
+    throw new GenImageError(1, "no prompt (pass as arg, -p, or via stdin)");
   }
 
   const { key, from } = resolveApiKey(args.keyEnvOverride);
@@ -229,14 +229,14 @@ async function main(): Promise<void> {
     const e = err as { status?: number; message?: string };
     if (e.status === 429) {
       throw new GenImageError(
+        3,
         `429 quota exceeded on $${from}.\n` +
         "  Try a different key with -k, e.g.:\n" +
         "    gen-image -k SKE_GEMINI_API_KEY ...",
-        3,
       );
     }
     const msg = e.message !== undefined ? e.message : String(err);
-    throw new GenImageError(`API error: ${msg}`, 3);
+    throw new GenImageError(3, `API error: ${msg}`);
   }
 
   if (args.verbose) {
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
   }
 
   const part = firstImagePart(response);
-  if (part === null) throw new GenImageError("no image part in response", 2);
+  if (part === null) throw new GenImageError(2, "no image part in response");
 
   await writeFile(args.output, Buffer.from(part.inlineData.data, "base64"));
   console.log(resolve(args.output));

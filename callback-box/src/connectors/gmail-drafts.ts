@@ -136,11 +136,8 @@ async function uploadOneDraft(opts: {
   });
   const fields = readDraftFields(parsed.fields);
 
-  // Resolve threading from in-reply-to ref (if present). The ref points at
-  // a received `email-message` card, in any of three forms:
-  //   - relative to the draft's directory ("msg-001.email-message.card")
-  //   - box-relative ("box/inbox/email/thread-X/msg-001.email-message.card")
-  //   - box-anchored absolute ("/box/inbox/email/thread-X/msg-001...")
+  // Resolve threading from in-reply-to ref (if present). The ref points at a
+  // received `email-message` card (see resolveCardRef for the accepted forms).
   // If we can't resolve it, throw — silent fallback means the draft uploads
   // as a brand-new thread, which the user only notices when they open Gmail.
   let inReplyToMessageId: string | undefined;
@@ -154,9 +151,7 @@ async function uploadOneDraft(opts: {
     });
     const source = await readSourceMessage(sourcePath);
     if (!source) {
-      throw new Error(
-        `in-reply-to ref "${fields.inReplyToRef}" did not resolve to a readable email-message card with message-id and thread-id (looked at ${sourcePath})`,
-      );
+      throw new UnresolvedInReplyToRefError(fields.inReplyToRef, sourcePath);
     }
     inReplyToMessageId = source.messageId;
     references = source.messageId;
@@ -202,9 +197,8 @@ function readDraftFields(fields: Record<string, unknown>): DraftFields {
     const ref = (irt as Record<string, unknown>)["ref"];
     if (typeof ref === "string" && ref !== "") inReplyToRef = ref;
   }
-  if (!to) throw new MissingFieldError("to");
-  if (!subject) throw new MissingFieldError("subject");
-  if (!body) throw new MissingFieldError("body");
+  const missing = !to ? "to" : !subject ? "subject" : !body ? "body" : undefined;
+  if (missing !== undefined) throw new MissingFieldError(missing);
   return { to, cc, bcc, subject, body, inReplyToRef };
 }
 
@@ -337,16 +331,16 @@ async function stampDraftCard(opts: {
   const content = await fs.readFile(opts.cardPath, "utf-8");
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) {
-    throw new Error(`stampDraftCard: ${opts.cardPath} has no frontmatter`);
+    throw new StampDraftCardError(opts.cardPath, `${opts.cardPath} has no frontmatter`);
   }
   let fm: unknown;
   try {
     fm = parseYaml(split.frontmatterText);
   } catch (e) {
-    throw new Error(`stampDraftCard: invalid YAML in ${opts.cardPath}: ${(e as Error).message}`);
+    throw new StampDraftCardError(opts.cardPath, `invalid YAML in ${opts.cardPath}: ${(e as Error).message}`);
   }
   if (fm === null || typeof fm !== "object" || Array.isArray(fm)) {
-    throw new Error(`stampDraftCard: frontmatter in ${opts.cardPath} is not a mapping`);
+    throw new StampDraftCardError(opts.cardPath, `frontmatter in ${opts.cardPath} is not a mapping`);
   }
   const fields = fm as Record<string, unknown>;
   fields["gmail-draft-id"] = opts.draftId;
@@ -356,10 +350,24 @@ async function stampDraftCard(opts: {
 }
 
 class MissingFieldError extends Error {
-  field: string;
-  constructor(field: string) {
+  constructor(readonly field: string) {
     super(`Draft is missing required <${field}>`);
     this.name = "MissingFieldError";
-    this.field = field;
+  }
+}
+
+class UnresolvedInReplyToRefError extends Error {
+  constructor(readonly ref: string, readonly sourcePath: string) {
+    super(
+      `in-reply-to ref "${ref}" did not resolve to a readable email-message card with message-id and thread-id (looked at ${sourcePath})`,
+    );
+    this.name = "UnresolvedInReplyToRefError";
+  }
+}
+
+class StampDraftCardError extends Error {
+  constructor(readonly cardPath: string, detail: string) {
+    super(`stampDraftCard: ${detail}`);
+    this.name = "StampDraftCardError";
   }
 }

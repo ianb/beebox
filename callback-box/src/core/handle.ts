@@ -29,6 +29,15 @@ import type { CommandContext } from "./command-runner.js";
 /** Env var the handler procedure reads to get its bucket. */
 export const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";
 
+class DirectoryReadError extends Error {
+  readonly dir: string;
+  constructor(dir: string, cause: unknown) {
+    super(`failed to read directory: ${dir}`, { cause });
+    this.name = "DirectoryReadError";
+    this.dir = dir;
+  }
+}
+
 export interface RunProcedureInput {
   /** Box-relative path to the `.procedure.card`. */
   procedurePath: string;
@@ -101,7 +110,7 @@ async function listCategoryBuckets(boxRoot: string): Promise<string[]> {
     entries = await fs.readdir(triagedDir, { withFileTypes: true });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
+    throw new DirectoryReadError(triagedDir, e);
   }
   return entries
     .filter((e) => e.isDirectory())
@@ -117,7 +126,7 @@ async function listBucketItems({ boxRoot, category }: { boxRoot: string; categor
     entries = await fs.readdir(dir, { withFileTypes: true });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
+    throw new DirectoryReadError(dir, e);
   }
   return entries
     .filter((e) => !e.isDirectory())

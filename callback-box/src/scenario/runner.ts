@@ -24,6 +24,27 @@ import { loadFetchStubs, clearFetchStubs, installStrictFetch, uninstallStrictFet
 import { loadScenario, loadStubs, getScenarioDir, getBoxRoot } from "./loader.js";
 import type { ScenarioStep, ValidationCheck } from "./types.js";
 
+class WrongBranchError extends Error {
+  constructor(currentBranch: string) {
+    super(`Box must be on 'main' branch (currently on '${currentBranch}')`);
+    this.name = "WrongBranchError";
+  }
+}
+
+class UncommittedChangesError extends Error {
+  constructor() {
+    super("Box has uncommitted changes — commit or stash before running a scenario");
+    this.name = "UncommittedChangesError";
+  }
+}
+
+class CheckpointNotFoundError extends Error {
+  constructor(checkpoint: string) {
+    super(`Checkpoint '${checkpoint}' not found in scenario steps`);
+    this.name = "CheckpointNotFoundError";
+  }
+}
+
 export interface RunScenarioOptions {
   name: string;
   from?: string | undefined;
@@ -200,12 +221,12 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   // Pre-flight checks
   const currentBranch = await getCurrentBranch(boxRoot);
   if (currentBranch !== "main") {
-    throw new Error(`Box must be on 'main' branch (currently on '${currentBranch}')`);
+    throw new WrongBranchError(currentBranch);
   }
 
   const status = await getStatus(boxRoot);
   if (!status.clean) {
-    throw new Error("Box has uncommitted changes — commit or stash before running a scenario");
+    throw new UncommittedChangesError();
   }
 
   // Create test branch
@@ -261,7 +282,7 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   if (options.from) {
     const idx = scenario.steps.findIndex((s) => s.checkpoint === options.from);
     if (idx === -1) {
-      throw new Error(`Checkpoint '${options.from}' not found in scenario steps`);
+      throw new CheckpointNotFoundError(options.from);
     }
     startIndex = idx + 1; // Start after the checkpoint step
     log(options, `Starting from checkpoint: ${options.from} (step ${startIndex + 1})`);

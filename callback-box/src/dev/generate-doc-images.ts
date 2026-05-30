@@ -27,6 +27,7 @@ import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { NotFoundError } from "../lib/errors.js";
 import { glob } from "glob";
 import { GoogleGenAI } from "@google/genai";
 import { parse as parseYaml } from "yaml";
@@ -85,7 +86,7 @@ const DOCS_DIR = path.join(PACKAGE_ROOT, "docs", "architecture");
 function loadConfig(): ImageGenConfig {
   const configPath = path.join(DOCS_DIR, "image-gen.yaml");
   if (!existsSync(configPath)) {
-    throw new Error(`Config not found: ${configPath}`);
+    throw new NotFoundError(configPath, "Config");
   }
   const raw = parseYaml(readFileSync(configPath, "utf8")) as Record<string, unknown>;
   const style = String(raw.style || "").trim();

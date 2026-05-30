@@ -15,6 +15,27 @@ import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
 const { rrulestr } = rrulePkg;
 
+export class InvalidDurationError extends Error {
+  constructor(input: string) {
+    super(`Invalid duration: "${input}". Use format like "5m", "1h", "1d", "2w".`);
+    this.name = "InvalidDurationError";
+  }
+}
+
+export class UnknownDurationUnitError extends Error {
+  constructor(unit: string) {
+    super(`Unknown duration unit: "${unit}"`);
+    this.name = "UnknownDurationUnitError";
+  }
+}
+
+export class InvalidBudgetError extends Error {
+  constructor(input: string) {
+    super(`Invalid budget: "${input}". Use format like "10m/5h".`);
+    this.name = "InvalidBudgetError";
+  }
+}
+
 // ============================================
 // Schema
 // ============================================
@@ -182,7 +203,7 @@ export function parseScheduledScript(fields: ScheduledScriptFields): ParsedSched
 export function parseDuration(str: string): number {
   const match = str.match(/^(\d+\.?\d*)\s*(s|m|h|d|w)$/);
   if (!match) {
-    throw new Error(`Invalid duration: "${str}". Use format like "5m", "1h", "1d", "2w".`);
+    throw new InvalidDurationError(str);
   }
 
   const value = parseFloat(match[1]!);
@@ -200,7 +221,7 @@ export function parseDuration(str: string): number {
     case "w":
       return value * 7 * 24 * 60 * 60 * 1000;
     default:
-      throw new Error(`Unknown duration unit: "${unit}"`);
+      throw new UnknownDurationUnitError(unit);
   }
 }
 
@@ -211,7 +232,7 @@ export function parseDuration(str: string): number {
 export function parseBudget(str: string): { limitMs: number; windowMs: number } {
   const slash = str.indexOf("/");
   if (slash < 1 || slash >= str.length - 1) {
-    throw new Error(`Invalid budget: "${str}". Use format like "10m/5h".`);
+    throw new InvalidBudgetError(str);
   }
   return {
     limitMs: parseDuration(str.slice(0, slash)),

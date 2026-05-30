@@ -41,6 +41,13 @@ import { getBoxTimeISO } from "../cli/lib/time.js";
 import type { TelegramService } from "../services/telegram.js";
 import { createTelegramService } from "../services/telegram.js";
 
+class MissingPublicUrlError extends Error {
+  constructor() {
+    super("publicUrl not set in config/box.json — cannot set Telegram webhook");
+    this.name = "MissingPublicUrlError";
+  }
+}
+
 export interface TelegramConfig {
   botToken: string;
   webhookSecret: string;
@@ -418,7 +425,7 @@ class TelegramConnector implements Connector {
   private async setupWebhook(config: TelegramConfig): Promise<void> {
     const publicUrl = await loadPublicUrl(this.boxRoot);
     if (!publicUrl) {
-      throw new Error("publicUrl not set in config/box.json — cannot set Telegram webhook");
+      throw new MissingPublicUrlError();
     }
 
     const boxSlug = path.basename(this.boxRoot);

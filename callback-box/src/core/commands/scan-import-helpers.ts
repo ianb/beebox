@@ -10,6 +10,13 @@ import * as fs from "node:fs/promises";
 import { GoogleGenAI } from "@google/genai";
 import { getMimeType, GeminiEmptyResponseError } from "./describe-images-helpers.js";
 
+class InvalidBatchSizeError extends Error {
+  constructor() {
+    super("batchSize must be >= 2");
+    this.name = "InvalidBatchSizeError";
+  }
+}
+
 /**
  * Per-page output from the scan-mode analyzer. The model classifies each
  * page and (when applicable) names a partner page within the same batch.
@@ -240,7 +247,7 @@ export interface ScanBatchPlan {
  *   [0,1,2,3,4,5,6,7], [7,8,9,10,11,12,13,14], [14,15,16,17,18,19]
  */
 export function planScanBatches(totalPages: number, batchSize: number): ScanBatchPlan[] {
-  if (batchSize < 2) throw new Error("batchSize must be >= 2");
+  if (batchSize < 2) throw new InvalidBatchSizeError();
   if (totalPages === 0) return [];
   if (totalPages <= batchSize) {
     return [{ globalIndices: Array.from({ length: totalPages }, (_, i) => i) }];

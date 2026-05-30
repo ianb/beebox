@@ -18,6 +18,15 @@ interface CacheEntry {
   meta: ViewMeta;
 }
 
+class EmptyEsbuildOutputError extends Error {
+  readonly viewPath: string;
+  constructor(viewPath: string) {
+    super(`esbuild produced no output for ${viewPath}`);
+    this.name = "EmptyEsbuildOutputError";
+    this.viewPath = viewPath;
+  }
+}
+
 const cache = new Map<string, CacheEntry>();
 
 const reactExternalPlugin: esbuild.Plugin = {
@@ -122,7 +131,7 @@ export async function compileView(viewPath: string): Promise<{ output: string; m
 
   const outputFile = result.outputFiles[0];
   if (!outputFile) {
-    throw new Error(`esbuild produced no output for ${viewPath}`);
+    throw new EmptyEsbuildOutputError(viewPath);
   }
   const output = outputFile.text;
   cache.set(viewPath, { mtime, output, meta });

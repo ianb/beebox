@@ -316,7 +316,9 @@ export const cardRouter = router({
           element,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError) {
+          throw new TRPCError({ code: error.code, message: error.message, cause: error.cause });
+        }
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Patch failed: ${(error as Error).message}`,

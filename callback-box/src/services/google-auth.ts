@@ -7,6 +7,13 @@
 
 import type { OAuth2Client } from "google-auth-library";
 
+class AccessTokenUnavailableError extends Error {
+  constructor() {
+    super("Failed to get access token");
+    this.name = "AccessTokenUnavailableError";
+  }
+}
+
 // ─── Service interface ───────────────────────────────────────────────────────
 
 export interface GoogleAuthService {
@@ -20,7 +27,7 @@ export function createGoogleAuthService(client: OAuth2Client): GoogleAuthService
   return {
     async getAccessToken() {
       const { token } = await client.getAccessToken();
-      if (!token) throw new Error("Failed to get access token");
+      if (!token) throw new AccessTokenUnavailableError();
       return token;
     },
   };

@@ -44,6 +44,20 @@ import {
 } from "../services/claude-chat.js";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
+class UnknownFeatureError extends Error {
+  constructor(feature: string) {
+    super(`Unknown feature: ${feature}`);
+    this.name = "UnknownFeatureError";
+  }
+}
+
+class InvalidFeatureValueError extends Error {
+  constructor(feature: string, value: string) {
+    super(`Invalid value for ${feature}: ${value}`);
+    this.name = "InvalidFeatureValueError";
+  }
+}
+
 /**
  * Compute the tail size honoring both an explicit tail and a minimum number
  * of real user messages to include. Returns null to mean "no trimming".
@@ -1058,8 +1072,8 @@ export class ChatSession extends EventEmitter {
    * has been assigned. Emits `features-changed`.
    */
   async setFeature(name: string, value: string): Promise<void> {
-    if (!isKnownFeature(name)) throw new Error(`Unknown feature: ${name}`);
-    if (!isValidValue(name, value)) throw new Error(`Invalid value for ${name}: ${value}`);
+    if (!isKnownFeature(name)) throw new UnknownFeatureError(name);
+    if (!isValidValue(name, value)) throw new InvalidFeatureValueError(name, value);
     await this.ensureFeaturesLoaded();
     if (this.currentFeatures === null) this.currentFeatures = resolveFeatures();
     if (this.currentFeatures[name] === value) return; // no-op

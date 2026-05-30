@@ -95,13 +95,21 @@ const filenameNormalizationStep: IntakeStep = {
 
 export const intakeSteps: IntakeStep[] = [filenameNormalizationStep];
 
+class DirReadError extends Error {
+  constructor(cause: unknown, dir: string) {
+    super(`Failed to read directory: ${dir}`);
+    this.name = "DirReadError";
+    this.cause = cause;
+  }
+}
+
 async function readDir(dir: string): Promise<Dirent[]> {
   try {
     return await fs.readdir(dir, { withFileTypes: true });
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return [];
-    throw e;
+    throw new DirReadError(e, dir);
   }
 }
 

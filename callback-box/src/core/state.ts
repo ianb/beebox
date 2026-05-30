@@ -14,6 +14,13 @@ import { createCardSchemaMap, getAllSchemas } from "../schemas/registry.js";
 import { getBoxMetadata } from "./box.js";
 import type { ElementSchema } from "cardworks";
 
+class InvalidBoxError extends Error {
+  constructor() {
+    super("Invalid callback box: missing marker file");
+    this.name = "InvalidBoxError";
+  }
+}
+
 export interface CardInfo {
   path: string;
   relativePath: string;
@@ -134,7 +141,7 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
   const metadata = await getBoxMetadata(root);
 
   if (!metadata) {
-    throw new Error("Invalid callback box: missing marker file");
+    throw new InvalidBoxError();
   }
 
   const [git, inbox, questions, recentActivity] = await Promise.all([

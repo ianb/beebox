@@ -25,6 +25,15 @@ import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 
+class ManifestReadError extends Error {
+  readonly manifestPath: string;
+  constructor(manifestPath: string, cause: unknown) {
+    super(`failed to read migration manifest: ${manifestPath}`, { cause });
+    this.name = "ManifestReadError";
+    this.manifestPath = manifestPath;
+  }
+}
+
 async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
   const abs = path.join(boxRoot, MANIFEST_PATH);
   try {
@@ -39,7 +48,7 @@ async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return null;
-    throw e;
+    throw new ManifestReadError(abs, e);
   }
 }
 

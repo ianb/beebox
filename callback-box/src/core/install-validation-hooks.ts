@@ -135,7 +135,7 @@ async function readJsonIfExists(filePath: string): Promise<SettingsShape> {
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return {};
-    throw e;
+    throw e as Error;
   }
 }
 
@@ -170,7 +170,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
     isRepo = (await fs.stat(path.join(boxRoot, ".git"))).isDirectory();
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (err.code !== "ENOENT") throw e as Error;
   }
 
   if (isRepo) {
@@ -180,7 +180,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
       existing = await fs.readFile(hookAbs, "utf-8");
     } catch (e) {
       const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw e;
+      if (err.code !== "ENOENT") throw e as Error;
     }
 
     const isManaged = existing !== null && existing.includes(PRE_COMMIT_MARKER);

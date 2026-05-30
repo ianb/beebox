@@ -15,6 +15,15 @@ import {
 
 const LOCK_FILE = ".cb-lock";
 
+class LockAcquisitionError extends Error {
+  readonly lockFilePath: string;
+  constructor(lockFilePath: string, cause: unknown) {
+    super(`failed to acquire wakeup lock: ${lockFilePath}`, { cause });
+    this.name = "LockAcquisitionError";
+    this.lockFilePath = lockFilePath;
+  }
+}
+
 export interface LockInfo {
   pid: number;
   startedAt: string;
@@ -39,7 +48,7 @@ export async function acquireLock(boxRoot: string): Promise<LockInfo | null> {
     };
   } catch (err) {
     if (err instanceof LockHeldError) return null;
-    throw err;
+    throw new LockAcquisitionError(lockPath(boxRoot), err);
   }
 }
 

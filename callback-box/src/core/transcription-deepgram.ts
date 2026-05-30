@@ -18,6 +18,40 @@ import { getDeepgramCredentials } from "./deepgram-key.js";
 const DEEPGRAM_ENDPOINT = "https://api.deepgram.com/v1/listen";
 const DEEPGRAM_MODEL = "nova-3";
 
+class MissingDeepgramKeyError extends Error implements TranscriptionError {
+  readonly permanent = true;
+  readonly code = "missing_api_key";
+  constructor() {
+    super(
+      "Deepgram API key not found (checked config/connectors/deepgram.secret.json and CALLBACK_DEEPGRAM_API_KEY env var)"
+    );
+    this.name = "MissingDeepgramKeyError";
+  }
+}
+
+class DeepgramNetworkError extends Error implements TranscriptionError {
+  readonly permanent = false;
+  readonly code = "network_error";
+  constructor(cause: string) {
+    super(`Network error: ${cause}`);
+    this.name = "DeepgramNetworkError";
+  }
+}
+
+class DeepgramApiError extends Error implements TranscriptionError {
+  readonly permanent: boolean;
+  readonly code: string;
+  constructor(
+    { status, statusText, details }: { status: number; statusText: string; details: string },
+    { permanent, code }: { permanent: boolean; code: string }
+  ) {
+    super(`Deepgram API error: ${status} ${statusText} - ${details}`);
+    this.name = "DeepgramApiError";
+    this.permanent = permanent;
+    this.code = code;
+  }
+}
+
 interface DeepgramWord {
   word: string;
   start: number;
@@ -54,13 +88,7 @@ export async function transcribeAudioDeepgram(
   const { audioBuffer, filename, options, boxRoot } = params;
   const creds = await getDeepgramCredentials(boxRoot);
   if (!creds) {
-    const error: TranscriptionError = {
-      message:
-        "Deepgram API key not found (checked config/connectors/deepgram.secret.json and CALLBACK_DEEPGRAM_API_KEY env var)",
-      permanent: true,
-      code: "missing_api_key",
-    };
-    throw error;
+    throw new MissingDeepgramKeyError();
   }
 
   const ext = filename.split(".").pop()?.toLowerCase();
@@ -110,19 +138,14 @@ export async function transcribeAudioDeepgram(
     return { text, duration, language };
   } catch (error) {
     if (isTranscriptionError(error)) {
-      throw error;
+      throw error as Error;
     }
     const httpErr = error as HTTPError;
     if (httpErr.response) {
       const parsed = await parseErrorResponse(httpErr.response);
-      throw parsed;
+      throw parsed as Error;
     }
-    const transcriptionError: TranscriptionError = {
-      message: `Network error: ${(error as Error).message}`,
-      permanent: false,
-      code: "network_error",
-    };
-    throw transcriptionError;
+    throw new DeepgramNetworkError((error as Error).message);
   }
 }
 
@@ -145,7 +168,7 @@ function getContentType(ext: string | undefined): string {
   }
 }
 
-async function parseErrorResponse(response: Response): Promise<TranscriptionError> {
+async function parseErrorResponse(response: Response): Promise<DeepgramApiError> {
   let errorDetails: string;
   let errorCode: string | undefined;
   try {
@@ -164,11 +187,10 @@ async function parseErrorResponse(response: Response): Promise<TranscriptionErro
 
   const permanent = isPermanentError(response.status, errorCode);
 
-  return {
-    message: `Deepgram API error: ${response.status} ${response.statusText} - ${errorDetails}`,
-    permanent,
-    code: errorCode ?? `http_${response.status}`,
-  };
+  return new DeepgramApiError(
+    { status: response.status, statusText: response.statusText, details: errorDetails },
+    { permanent, code: errorCode ?? `http_${response.status}` }
+  );
 }
 
 function isPermanentError(status: number, code: string | undefined): boolean {
@@ -187,11 +209,9 @@ function isPermanentError(status: number, code: string | undefined): boolean {
   return false;
 }
 
-function isTranscriptionError(error: unknown): error is TranscriptionError {
+function isTranscriptionError(error: unknown): error is Error & TranscriptionError {
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
+    error instanceof Error &&
     "permanent" in error
   );
 }

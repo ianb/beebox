@@ -678,7 +678,7 @@ class GoogleCalendarConnector implements Connector {
       persistent = JSON.parse(content);
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) {
-        throw err;
+        throw err as Error;
       }
       persistent = { syncTokens: {}, eventFiles: {} };
     }
@@ -969,7 +969,7 @@ class GoogleCalendarConnector implements Connector {
             if (icsContent) note.icsContent = icsContent;
             notes.push(note);
           } catch (err: unknown) {
-            if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+            if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
           }
           delete state.eventFiles[event.id];
         }
@@ -994,7 +994,7 @@ class GoogleCalendarConnector implements Connector {
             path.relative(this.boxRoot, path.join(calDir, oldName))
           );
         } catch (err: unknown) {
-          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
         }
       }
 
@@ -1115,7 +1115,7 @@ class GoogleCalendarConnector implements Connector {
     try {
       files = await fs.readdir(calDir);
     } catch (err: unknown) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
       return { pushed, deleted, notes };
     }
 
@@ -1274,7 +1274,7 @@ class GoogleCalendarConnector implements Connector {
         console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
         return false;
       }
-      throw err;
+      throw err as Error;
     }
   }
 
@@ -1293,7 +1293,7 @@ class GoogleCalendarConnector implements Connector {
         console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
         return null;
       }
-      throw err;
+      throw err as Error;
     }
   }
 
@@ -1312,7 +1312,7 @@ class GoogleCalendarConnector implements Connector {
         console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
         return null;
       }
-      throw err;
+      throw err as Error;
     }
   }
 

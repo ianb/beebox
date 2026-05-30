@@ -7,6 +7,7 @@
 
 import ky, { type HTTPError } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
+import { NotFoundError } from "../lib/errors.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCale
       } catch (err) {
         // 410 Gone means already deleted — not an error
         if ((err as HTTPError).response?.status === 410) return;
-        throw err;
+        throw err as Error;
       }
     },
   };
@@ -184,7 +185,7 @@ export function createFakeGoogleCalendar(
     async patchEvent(_calendarId, { eventId, event }) {
       const idx = fake.events.findIndex((e) => e.id === eventId);
       if (idx === -1) {
-        throw new Error(`patchEvent: no event with id ${eventId}`);
+        throw new NotFoundError(eventId, "Calendar event");
       }
       const merged: CalendarEvent = { ...fake.events[idx]!, ...event } as CalendarEvent;
       fake.events[idx] = merged;

@@ -84,6 +84,20 @@ export class LockHeldError extends Error {
   }
 }
 
+class LockAcquireFailedError extends Error {
+  constructor(readonly path: string) {
+    super(`Failed to acquire lock at ${path} after retry`);
+    this.name = "LockAcquireFailedError";
+  }
+}
+
+class LockForceAcquireFailedError extends Error {
+  constructor(readonly path: string) {
+    super(`Failed to force-acquire lock at ${path}`);
+    this.name = "LockForceAcquireFailedError";
+  }
+}
+
 // Tolerance window for boot-epoch comparison. NTP corrections at startup
 // can shift Date.now()-os.uptime() by a few seconds; a real reboot is well
 // outside this window, so we still detect it.
@@ -175,7 +189,7 @@ async function writeExclusive(path: string, holder: LockHolder): Promise<boolean
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "EEXIST") return false;
-    throw err;
+    throw err as Error;
   }
   try {
     await handle.writeFile(JSON.stringify(holder, null, 2) + "\n");
@@ -190,7 +204,7 @@ async function unlinkIgnoringMissing(path: string): Promise<void> {
     await fs.unlink(path);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT") throw err;
+    if (code !== "ENOENT") throw err as Error;
   }
 }
 
@@ -221,7 +235,7 @@ export async function acquireLock(
   if (winner && isHolderLive(winner)) {
     throw new LockHeldError(winner);
   }
-  throw new Error(`Failed to acquire lock at ${path} after retry`);
+  throw new LockAcquireFailedError(path);
 }
 
 /**
@@ -264,7 +278,7 @@ export async function forceAcquireLock(
   // Race with another acquirer; one more shot.
   await unlinkIgnoringMissing(path);
   if (await writeExclusive(path, holder)) return holder;
-  throw new Error(`Failed to force-acquire lock at ${path}`);
+  throw new LockForceAcquireFailedError(path);
 }
 
 /**
@@ -283,7 +297,7 @@ export async function scanLocks(
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ENOENT") return result;
-    throw err;
+    throw err as Error;
   }
   for (const entry of entries) {
     if (!entry.endsWith(suffix)) continue;

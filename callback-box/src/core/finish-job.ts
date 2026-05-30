@@ -9,6 +9,15 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { stageFiles, commit } from "../cli/lib/git.js";
 
+class JobDeleteError extends Error {
+  readonly jobPath: string;
+  constructor(jobPath: string, cause: unknown) {
+    super(`failed to delete job card: ${jobPath}`, { cause });
+    this.name = "JobDeleteError";
+    this.jobPath = jobPath;
+  }
+}
+
 export interface FinishJobParams {
   boxRoot: string;
   /** Job card path relative to boxRoot (e.g., "box/jobs/foo.intake.job.card") */
@@ -47,7 +56,7 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
     if (code === "ENOENT") {
       return; // Already gone
     }
-    throw err;
+    throw new JobDeleteError(absPath, err);
   }
 
   // Stage and commit the deletion

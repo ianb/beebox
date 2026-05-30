@@ -287,13 +287,21 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
  * Acquire the reactor lock. Returns true on success, false if a live
  * holder owns it. Dead holders are reclaimed automatically.
  */
+class ReactorLockError extends Error {
+  constructor(cause: unknown, lockPath: string) {
+    super(`Failed to acquire reactor lock: ${lockPath}`);
+    this.name = "ReactorLockError";
+    this.cause = cause;
+  }
+}
+
 async function acquireReactorLock(lockPath: string): Promise<boolean> {
   try {
     await acquireFileLock(lockPath, { kind: "reactor" });
     return true;
   } catch (err) {
     if (err instanceof LockHeldError) return false;
-    throw err;
+    throw new ReactorLockError(err, lockPath);
   }
 }
 

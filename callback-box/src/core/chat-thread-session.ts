@@ -22,6 +22,27 @@ function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatThreadSession:${context}]`, ...args);
 }
 
+class NonErrorThrownError extends Error {
+  constructor(value: string) {
+    super(value);
+    this.name = "NonErrorThrownError";
+  }
+}
+
+class SessionBusyError extends Error {
+  constructor() {
+    super("Session is busy");
+    this.name = "SessionBusyError";
+  }
+}
+
+class RunNotReadyError extends Error {
+  constructor() {
+    super("Run not ready after start");
+    this.name = "RunNotReadyError";
+  }
+}
+
 export interface ChatThreadSessionOptions {
   boxRoot: string;
   threadRef: string;
@@ -189,7 +210,7 @@ export class ChatThreadSession extends EventEmitter {
         if (msg !== null) this.handleMessage(msg);
       }
     } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
+      const err = e instanceof Error ? e : new NonErrorThrownError(String(e));
       log("error", `Run errored: ${err.message}`);
       this.emit("error", err);
     } finally {
@@ -269,7 +290,7 @@ export class ChatThreadSession extends EventEmitter {
    */
   async send(message: string): Promise<void> {
     if (this.busy) {
-      throw new Error("Session is busy");
+      throw new SessionBusyError();
     }
 
     if (this.run === null || this.run.closed) {
@@ -277,7 +298,7 @@ export class ChatThreadSession extends EventEmitter {
     }
 
     if (this.run === null) {
-      return Promise.reject(new Error("Run not ready after start"));
+      return Promise.reject(new RunNotReadyError());
     }
 
     this.busy = true;

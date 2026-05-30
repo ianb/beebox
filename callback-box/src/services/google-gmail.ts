@@ -7,6 +7,7 @@
 
 import ky from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
+import { NotFoundError } from "../lib/errors.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -205,14 +206,14 @@ export function createFakeGoogleGmail(
 
     async getMessage(id) {
       const msg = fake.messages.find((m) => m.id === id);
-      if (!msg) throw new Error(`Message not found: ${id}`);
+      if (!msg) throw new NotFoundError(id, "Message");
       return msg;
     },
 
     async getAttachment(messageId, attachmentId) {
       const key = `${messageId}:${attachmentId}`;
       const att = fake.attachments.get(key);
-      if (!att) throw new Error(`Attachment not found: ${key}`);
+      if (!att) throw new NotFoundError(key, "Attachment");
       return att;
     },
 

@@ -15,6 +15,25 @@ import {
 import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { attachDirFor } from "../../lib/attach-path.js";
+import { NotFoundError } from "../../lib/errors.js";
+
+class NotACardFileError extends Error {
+  readonly cardPath: string;
+  constructor(cardPath: string) {
+    super(`Path must be a .card file: ${cardPath}`);
+    this.name = "NotACardFileError";
+    this.cardPath = cardPath;
+  }
+}
+
+class InvalidCardNameError extends Error {
+  readonly basename: string;
+  constructor(basename: string) {
+    super(`Invalid card name format: ${basename}`);
+    this.name = "InvalidCardNameError";
+    this.basename = basename;
+  }
+}
 
 /**
  * Arguments for the trash command.
@@ -46,7 +65,7 @@ async function trashOne(
 
   // Validate it's a card file
   if (!isCardFile(sourcePath)) {
-    throw new Error(`Path must be a .card file: ${cardPath}`);
+    throw new NotACardFileError(cardPath);
   }
 
   // Check source exists
@@ -55,14 +74,14 @@ async function trashOne(
   } catch (_e) {
     // access() only fails here when the card is missing/unreadable; the
     // underlying ENOENT carries no detail beyond the path we already report.
-    throw new Error(`Card not found: ${cardPath}`);
+    throw new NotFoundError(cardPath, "Card");
   }
 
   // Parse card name
   const basename = path.basename(sourcePath);
   const parsed = parseCardName(basename);
   if (!parsed) {
-    throw new Error(`Invalid card name format: ${basename}`);
+    throw new InvalidCardNameError(basename);
   }
 
   // Build destination path in trash

@@ -21,6 +21,13 @@ import { createFileTemplate } from "../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script.js";
 
+class SessionDisappearedError extends Error {
+  constructor() {
+    super("Session disappeared during upload");
+    this.name = "SessionDisappearedError";
+  }
+}
+
 interface CaptureSessionData {
   id: string;
   boxSlug: string;
@@ -165,7 +172,7 @@ export async function registerCaptureRoutes(
     // would otherwise read-modify-write and drop each other's file records.
     await withSessionLock(session.id, async () => {
       const current = await readSession(session.id);
-      if (!current) throw new Error("Session disappeared during upload");
+      if (!current) throw new SessionDisappearedError();
       current.files.push(record);
       await writeSession(current);
     });

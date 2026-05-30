@@ -14,6 +14,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+class PackageRootNotFoundError extends Error {
+  constructor() {
+    super("package-root: could not locate the callback-box package root");
+    this.name = "PackageRootNotFoundError";
+  }
+}
+
 function findPackageRoot(): string {
   let dir = import.meta.dirname;
   for (;;) {
@@ -28,7 +35,7 @@ function findPackageRoot(): string {
     }
     const parent = dirname(dir);
     if (parent === dir) {
-      throw new Error("package-root: could not locate the callback-box package root");
+      throw new PackageRootNotFoundError();
     }
     dir = parent;
   }

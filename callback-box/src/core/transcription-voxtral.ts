@@ -14,6 +14,40 @@ import { getMistralApiKey } from "./mistral-key.js";
 const VOXTRAL_ENDPOINT = "https://api.mistral.ai/v1/audio/transcriptions";
 const VOXTRAL_MODEL = "voxtral-mini-latest";
 
+class MissingMistralKeyError extends Error implements TranscriptionError {
+  readonly permanent = true;
+  readonly code = "missing_api_key";
+  constructor() {
+    super(
+      "Mistral API key not found (checked config/connectors/mistral.secret.json and CALLBACK_MISTRAL_API_KEY env var)"
+    );
+    this.name = "MissingMistralKeyError";
+  }
+}
+
+class VoxtralNetworkError extends Error implements TranscriptionError {
+  readonly permanent = false;
+  readonly code = "network_error";
+  constructor(cause: string) {
+    super(`Network error: ${cause}`);
+    this.name = "VoxtralNetworkError";
+  }
+}
+
+class VoxtralApiError extends Error implements TranscriptionError {
+  readonly permanent: boolean;
+  readonly code: string;
+  constructor(
+    { status, statusText, details }: { status: number; statusText: string; details: string },
+    { permanent, code }: { permanent: boolean; code: string }
+  ) {
+    super(`Voxtral API error: ${status} ${statusText} - ${details}`);
+    this.name = "VoxtralApiError";
+    this.permanent = permanent;
+    this.code = code;
+  }
+}
+
 /**
  * Transcribe audio using Mistral Voxtral API.
  *
@@ -31,13 +65,7 @@ export async function transcribeAudioVoxtral(
   const diarization = opts.diarization === true;
   const apiKey = await getMistralApiKey(boxRoot);
   if (!apiKey) {
-    const error: TranscriptionError = {
-      message:
-        "Mistral API key not found (checked config/connectors/mistral.secret.json and CALLBACK_MISTRAL_API_KEY env var)",
-      permanent: true,
-      code: "missing_api_key",
-    };
-    throw error;
+    throw new MissingMistralKeyError();
   }
 
   // Detect content type from extension
@@ -213,22 +241,17 @@ export async function transcribeAudioVoxtral(
     };
   } catch (error) {
     if (isTranscriptionError(error)) {
-      throw error;
+      throw error as Error;
     }
 
     // ky HTTPError — parse the response for error details
     const httpErr = error as HTTPError;
     if (httpErr.response) {
       const parsed = await parseErrorResponse(httpErr.response);
-      throw parsed;
+      throw parsed as Error;
     }
 
-    const transcriptionError: TranscriptionError = {
-      message: `Network error: ${(error as Error).message}`,
-      permanent: false,
-      code: "network_error",
-    };
-    throw transcriptionError;
+    throw new VoxtralNetworkError((error as Error).message);
   }
 }
 
@@ -367,7 +390,7 @@ function getContentType(ext: string | undefined): string {
 
 async function parseErrorResponse(
   response: Response
-): Promise<TranscriptionError> {
+): Promise<VoxtralApiError> {
   let errorDetails: string;
   let errorCode: string | undefined;
 
@@ -386,11 +409,10 @@ async function parseErrorResponse(
 
   const permanent = isPermanentError(response.status, errorCode);
 
-  return {
-    message: `Voxtral API error: ${response.status} ${response.statusText} - ${errorDetails}`,
-    permanent,
-    code: errorCode ?? `http_${response.status}`,
-  };
+  return new VoxtralApiError(
+    { status: response.status, statusText: response.statusText, details: errorDetails },
+    { permanent, code: errorCode ?? `http_${response.status}` }
+  );
 }
 
 function isPermanentError(
@@ -416,11 +438,9 @@ function isPermanentError(
 
 function isTranscriptionError(
   error: unknown
-): error is TranscriptionError {
+): error is Error & TranscriptionError {
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
+    error instanceof Error &&
     "permanent" in error
   );
 }

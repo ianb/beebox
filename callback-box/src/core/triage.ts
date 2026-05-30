@@ -26,6 +26,15 @@ import {
   type TriageDecision,
 } from "./triage-routing.js";
 
+class TriageAgentFailedError extends Error {
+  readonly detail: string;
+  constructor(detail: string) {
+    super(`triage agent failed: ${detail}`);
+    this.name = "TriageAgentFailedError";
+    this.detail = detail;
+  }
+}
+
 /**
  * Maximum bytes of file content included per item in the triage
  * prompt. Items larger than this are truncated with an ellipsis.
@@ -45,7 +54,7 @@ async function listStagedItems(boxRoot: string): Promise<StagedItem[]> {
     entries = await fs.readdir(stagedDir, { withFileTypes: true });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
+    throw e as Error;
   }
   const items: StagedItem[] = [];
   for (const entry of entries) {
@@ -140,7 +149,7 @@ async function liveDecide(
     prompt: userPrompt(items),
   });
   if (!result.success || result.data === null) {
-    throw new Error(`triage agent failed: ${result.error ?? "no data"}`);
+    throw new TriageAgentFailedError(result.error ?? "no data");
   }
   return result.data;
 }

@@ -41,6 +41,18 @@ import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/l
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * Diagnostic marker — constructed (never thrown) only to capture a stack
+ * trace when generateDocs is mistakenly called against the callback-box
+ * source repo instead of a box. See the DIAG block in generateDocs().
+ */
+class GenerateDocsAgainstSourceError extends Error {
+  constructor() {
+    super("generateDocs called against the callback-box repo");
+    this.name = "GenerateDocsAgainstSourceError";
+  }
+}
+
 const AGENT_GUIDE_DIR = ".callback-box";
 const AGENT_GUIDE_FILE = "agent-guide.md";
 const DOCS_DIR = "docs/generated";
@@ -349,7 +361,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Remove once the caller is identified.
   if (boxRoot.endsWith("/callback/callback-box") || boxRoot.endsWith("/src/callback/callback-box")) {
     console.warn(`[generateDocs:DIAG] called with boxRoot=${boxRoot}`);
-    console.warn(new Error("generateDocs called against the callback-box repo").stack);
+    console.warn(new GenerateDocsAgainstSourceError().stack);
   }
 
   // Fast path: skip if no input files changed and source code unchanged.

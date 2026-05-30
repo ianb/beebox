@@ -62,6 +62,13 @@ export interface CommandResult {
   error?: string;
 }
 
+class CommandAlreadyRegisteredError extends Error {
+  constructor(name: string) {
+    super(`Command '${name}' is already registered`);
+    this.name = "CommandAlreadyRegisteredError";
+  }
+}
+
 // Command registry
 const registry = new Map<string, CommandDefinition>();
 
@@ -70,7 +77,7 @@ const registry = new Map<string, CommandDefinition>();
  */
 export function registerCommand(cmd: CommandDefinition): void {
   if (registry.has(cmd.name)) {
-    throw new Error(`Command '${cmd.name}' is already registered`);
+    throw new CommandAlreadyRegisteredError(cmd.name);
   }
   registry.set(cmd.name, cmd);
 }

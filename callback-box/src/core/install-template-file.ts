@@ -78,7 +78,7 @@ async function readVersions(boxRoot: string): Promise<VersionsFile> {
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return {};
-    throw e;
+    throw e as Error;
   }
 }
 
@@ -106,7 +106,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     localContent = await fs.readFile(targetAbs, "utf-8");
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (err.code !== "ENOENT") throw e as Error;
   }
 
   const templateHash = sha256(normalize(templateContent));
@@ -195,7 +195,7 @@ export async function pruneStaleTemplateUpdates(
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return [];
-    throw e;
+    throw e as Error;
   }
 
   const removed: string[] = [];

@@ -10,6 +10,13 @@ import * as path from "node:path";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 
+class InvalidTimespanError extends Error {
+  constructor(input: string) {
+    super(`Invalid timespan: "${input}". Use e.g. "7d", "2w", "1m".`);
+    this.name = "InvalidTimespanError";
+  }
+}
+
 export interface CalendarEvent {
   uid: string;
   summary: string;
@@ -325,7 +332,7 @@ export function validateIcsTimezone(content: string): string | null {
 export function parseTimespan(input: string): number {
   const match = input.match(/^(\d+)\s*([dmw]?)$/i);
   if (!match) {
-    throw new Error(`Invalid timespan: "${input}". Use e.g. "7d", "2w", "1m".`);
+    throw new InvalidTimespanError(input);
   }
   const n = parseInt(match[1]!, 10);
   const unit = (match[2] || "d").toLowerCase();

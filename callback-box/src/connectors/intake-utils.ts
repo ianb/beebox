@@ -18,6 +18,13 @@ import { splitCardContent } from "cardworks";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 
+class IntakeJobReadError extends Error {
+  constructor(jobPath: string) {
+    super(`appendToIntakeJob: failed to read ${jobPath}`);
+    this.name = "IntakeJobReadError";
+  }
+}
+
 export interface IntakeJobOptions {
   boxRoot: string;
   source: string;
@@ -153,7 +160,7 @@ async function appendToIntakeJob(
 ): Promise<void> {
   const fields = await readIntakeJobFields(jobPath);
   if (fields === null) {
-    throw new Error(`appendToIntakeJob: failed to read ${jobPath}`);
+    throw new IntakeJobReadError(jobPath);
   }
   fields.description = opts.description;
   fields.items = [...fields.items, ...opts.items.map((ref) => ({ ref }))];
