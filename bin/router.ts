@@ -659,22 +659,33 @@ const server = http.createServer(async (req, res) => {
 
   if (url === "/__router/status" || url === "/__router/status/") {
     res.writeHead(200, { "content-type": "application/json" });
+    // Disk-discovery first so cold worktrees (not yet hit by a request)
+    // still appear in the status response — otherwise the JSON looks
+    // empty when a freshly-created worktree exists but hasn't been
+    // warmed yet, which is misleading next to the homepage which does
+    // list it.
+    const discovered = await discoverWorktrees();
     const state: Record<string, unknown> = {};
-    for (const [name, entry] of worktrees) {
-      state[name] = {
-        state: entry.state,
-        frontendPort: entry.frontendPort,
-        backendPort: entry.backendPort,
-        dashboardPort: entry.dashboardPort,
-        dashboardUrl: entry.dashboardUrl,
-        vitePid: entry.vite?.pid,
-        fastifyPid: entry.fastify?.pid,
-        socketDir: entry.socketDir,
-        profileDir: entry.profileDir,
-        startedAt: entry.startedAt,
-        lastActivity: entry.lastActivity,
-        idleMs: entry.lastActivity ? Date.now() - entry.lastActivity : null,
-      };
+    for (const w of discovered) {
+      const entry = worktrees.get(w.name);
+      if (entry) {
+        state[w.name] = {
+          state: entry.state,
+          frontendPort: entry.frontendPort,
+          backendPort: entry.backendPort,
+          dashboardPort: entry.dashboardPort,
+          dashboardUrl: entry.dashboardUrl,
+          vitePid: entry.vite?.pid,
+          fastifyPid: entry.fastify?.pid,
+          socketDir: entry.socketDir,
+          profileDir: entry.profileDir,
+          startedAt: entry.startedAt,
+          lastActivity: entry.lastActivity,
+          idleMs: entry.lastActivity ? Date.now() - entry.lastActivity : null,
+        };
+      } else {
+        state[w.name] = { state: "cold" };
+      }
     }
     res.end(
       JSON.stringify(
