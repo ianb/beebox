@@ -52,7 +52,9 @@ async function trashOne(
   // Check source exists
   try {
     await fs.access(sourcePath);
-  } catch {
+  } catch (_e) {
+    // access() only fails here when the card is missing/unreadable; the
+    // underlying ENOENT carries no detail beyond the path we already report.
     throw new Error(`Card not found: ${cardPath}`);
   }
 
@@ -74,8 +76,9 @@ async function trashOne(
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     const newName = `${parsed.name}_${timestamp}.${parsed.type}.card`;
     finalDestPath = path.join(trashDir, newName);
-  } catch {
-    // Destination doesn't exist, use as-is
+  } catch (_e) {
+    // access() throwing means the destination doesn't exist — the normal
+    // case. Nothing to inspect; keep the un-timestamped destination path.
   }
 
   // Ensure trash directory exists
@@ -102,8 +105,9 @@ async function trashOne(
       await fs.access(destAttachDir);
       const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
       finalAttachDest = `${destAttachDir}_${timestamp}`;
-    } catch {
-      // No collision
+    } catch (_e) {
+      // access() throwing means no collision at the attach destination —
+      // the normal case. Nothing to inspect; keep the plain destination.
     }
     await fs.rename(sourceAttachDir, finalAttachDest);
     const relAttachSource = path.relative(ctx.boxRoot, sourceAttachDir);
@@ -111,8 +115,9 @@ async function trashOne(
     relatedFiles.push(path.basename(sourceAttachDir));
     movedFiles.push(relAttachSource);
     ctx.writeLine(`  Also moved attach scope: ${relAttachSource} → ${relAttachDest}`);
-  } catch {
-    // No attach scope — nothing to move
+  } catch (_e) {
+    // The initial access() throwing means this card has no attach scope —
+    // the common case. Nothing to move and nothing actionable to inspect.
   }
 
   return { relSourcePath, relDestPath, relatedFiles, movedFiles };

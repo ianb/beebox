@@ -116,8 +116,8 @@ async function findAudioAttachment(cardPath: string): Promise<string | null> {
     try {
       await fs.access(audioPath);
       return audioPath;
-    } catch {
-      // try next extension
+    } catch (_e) {
+      // access() throwing just means this extension isn't present — try the next.
     }
   }
   return null;

@@ -71,7 +71,8 @@ async function executeUpload(
       if (!stat.isFile()) {
         return { success: false, error: `Not a regular file: ${abs}` };
       }
-    } catch {
+    } catch (e) {
+      console.warn(`Could not stat ${abs}:`, e);
       return { success: false, error: `File not found: ${abs}` };
     }
     absoluteFiles.push(abs);

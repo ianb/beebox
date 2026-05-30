@@ -223,7 +223,8 @@ export const cardRouter = router({
         let rawXml: string;
         try {
           rawXml = await fs.readFile(fullPath, "utf-8");
-        } catch {
+        } catch (e) {
+          console.warn(`Could not re-read ${input.path} after validation failure:`, e);
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Card validation failed: ${msg}`,
@@ -237,8 +238,9 @@ export const cardRouter = router({
           const parsed = await parseCard(rawXml, { source: input.path });
           element = sanitizeElement(parsed);
           tagName = parsed.tagName;
-        } catch {
-          // XML itself is malformed — fall back to raw text only
+        } catch (e) {
+          // XML itself is malformed — fall back to raw text only.
+          console.warn(`Could not parse raw XML for ${input.path}, showing raw text only:`, e);
         }
 
         return {

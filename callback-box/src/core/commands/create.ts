@@ -131,8 +131,9 @@ async function executeCreate(
   try {
     await fs.access(fullPath);
     return { success: false, error: `File already exists: ${fullPath}` };
-  } catch {
-    // File doesn't exist, good
+  } catch (_e) {
+    // access() throws when the file is absent — the expected, desired path
+    // here (we only proceed to create when the target doesn't yet exist).
   }
 
   // Ensure directory exists

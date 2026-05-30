@@ -237,8 +237,10 @@ export async function getLastSessionForDirectory(
     try {
       await fs.access(logPath);
       return entry.id;
-    } catch {
-      // Ghost entry — no log on disk. Skip and keep looking. Logged so a
+    } catch (_e) {
+      // Ghost entry — no log on disk. The fs.access rejection only tells us
+      // the file is absent (which is the signal we want), so we ignore the
+      // error object itself and log our own contextual warning instead. A
       // recurring ghost-creation bug shows up as repeated skips for the
       // same id across sessions.
       console.warn(`[chat-session-history] Skipping ghost entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id} (no JSONL at ${logPath})`);
@@ -331,7 +333,10 @@ async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
       let raw: { type?: string; message?: { content?: unknown } };
       try {
         raw = JSON.parse(line);
-      } catch {
+      } catch (e) {
+        // Tolerate a malformed JSONL line (partial write, truncation) — skip
+        // it and keep scanning the rest of the log for chat markers.
+        console.warn(`[chat-history] Skipping unparseable line in ${logPath}: ${e instanceof Error ? e.message : String(e)}`);
         continue;
       }
       if (raw.type !== "user") continue;

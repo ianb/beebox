@@ -28,7 +28,13 @@ function loadParentStubs(boxRoot: string): StubsTime | null {
     const parsed = parseYaml(content) as StubsTime | null;
     stubsCache.set(boxRoot, parsed ?? null);
     return parsed ?? null;
-  } catch {
+  } catch (e) {
+    // No stubs.yaml in most boxes (it's a scenario-test fixture); a missing
+    // file is the normal case and stays silent. A present-but-malformed file
+    // (or any non-ENOENT error) is worth surfacing before falling back.
+    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) {
+      console.warn("Could not load parent stubs.yaml, using real time:", e);
+    }
     stubsCache.set(boxRoot, null);
     return null;
   }

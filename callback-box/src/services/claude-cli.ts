@@ -27,7 +27,8 @@ export function createClaudeCliService(): ClaudeCliService {
           const output = stdout || "";
           try {
             resolve(JSON.parse(output));
-          } catch {
+          } catch (e) {
+            console.warn("claude auth status output was not JSON, falling back to raw/error:", e);
             resolve(err
               ? { loggedIn: false, error: err.message }
               : { loggedIn: false, raw: output });

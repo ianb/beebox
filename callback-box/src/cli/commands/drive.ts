@@ -139,8 +139,10 @@ driveCommand
       await fs.access(cardPath);
       console.error(`Card already exists at: ${path.relative(boxRoot, cardPath)}`);
       process.exit(1);
-    } catch {
-      // Good
+    } catch (_e) {
+      // Expected: fs.access throws when the card does not exist, which is the
+      // desired state for a fresh create. The specific error is irrelevant —
+      // any failure to access means there's nothing to collide with, so proceed.
     }
 
     // Delegate first-time creation to the handler's pull(): it knows

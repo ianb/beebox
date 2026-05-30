@@ -1,8 +1,36 @@
 # ESLint rule-suppression audit
 
-**Status:** open issue, not yet fixed
+**Status:** in progress — ratchet landed; bare-catch rule burned down (backend)
 **Found:** 2026-05-30, during the `fix-cb-mv` worktree (a tangent off the `cb mv` work)
 **Scope:** `callback-box` (backend + frontend) and `cardworks`
+
+## Progress log
+
+- **2026-05-30 — ratchet landed (backend).** Removed the off-block from
+  `callback-box/eslint.config.mjs`; captured existing debt in committed
+  `eslint-suppressions.json` (1000 violations) via `eslint --suppress-all`;
+  added `--pass-on-unpruned-suppressions` to the backend lint-staged command;
+  kept `custom/jsx-classname-required` off with a comment. All rules now
+  enforced for new/touched code.
+- **2026-05-30 — `no-restricted-syntax` bare-catch burned down (backend).** All
+  270 bare `catch {}` bound and made non-silent (log / rethrow / inspect /
+  justified-`_e`), then ENOENT-guarded so normal file-absence doesn't spam
+  output. Suppressions pruned 1000 → 730. **0 bare catches remain.**
+
+### Two corrections to this doc's original numbers
+
+- The "6 rules re-enable for free" (below) is really **2**:
+  `security/detect-bidi-characters` and `@typescript-eslint/no-this-alias`. The
+  other four (`detect-object-injection`, `no-hardcoded-urls`, `single-export`,
+  `require-spec-file`) are disabled in vibe-check's *own* preset for `.ts`
+  files — removing callback-box's override doesn't enable them. "0 violations"
+  masked "rule off." (They *are* on for `.tsx`, where they happen to have 0
+  hits.)
+- `no-restricted-syntax` (342) is **not** homogeneous. It's **270 bare catches**
+  (`.ts` files, one selector) + **72 in `.tsx`** files, whose strict config gives
+  the rule a different selector set: `??` nullish-coalescing (44), `as`
+  assertions (27), default switch case (1). The 270 are done; the 72 `.tsx`
+  `??`/`as` items remain suppressed and are a separate burn-down.
 
 ## TL;DR
 

@@ -38,7 +38,13 @@ export async function loadCalendarConfig(
   try {
     const content = await fs.readFile(configPath(boxRoot), "utf-8");
     return JSON.parse(content);
-  } catch {
+  } catch (e) {
+    // No config file yet (or it's unreadable/malformed): fall back to an empty
+    // config. A missing file is expected before first setup; log so a corrupt
+    // file isn't silently treated as "no calendars configured".
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Could not load calendar config, using defaults:", e);
+    }
     return {};
   }
 }

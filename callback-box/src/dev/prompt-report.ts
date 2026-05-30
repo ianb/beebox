@@ -133,8 +133,10 @@ async function collectPrompts(): Promise<PromptEntry[]> {
         text: content,
       });
     }
-  } catch {
-    // templates dir might not exist
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read procedure templates dir ${TEMPLATES_DIR}, skipping:`, e);
+    }
   }
 
   // ── 6. Procedure context block (template) ────────────────────────

@@ -107,7 +107,10 @@ async function findExistingIntakeJob(
   let entries: string[];
   try {
     entries = await fs.readdir(jobsDir);
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`findExistingIntakeJob: could not read ${jobsDir}, assuming no existing job:`, e);
+    }
     return null;
   }
 
@@ -133,7 +136,10 @@ async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | 
       return null;
     }
     return parsed as IntakeJobFields;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`readIntakeJobFields: could not read or parse ${filePath}, skipping:`, e);
+    }
     return null;
   }
 }

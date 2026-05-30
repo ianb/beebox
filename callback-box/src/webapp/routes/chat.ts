@@ -264,7 +264,10 @@ export async function registerChatRoutes(
       } finally {
         await handle.close();
       }
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn("[chat] failed to read session log tail, starting speaker letters at A:", e);
+      }
       return "";
     }
   }
@@ -438,8 +441,9 @@ export async function registerChatRoutes(
         const onMessage = (msg: ChatMessage) => {
           try {
             reply.raw.write(`data: ${JSON.stringify(msg)}\n\n`);
-          } catch {
-            // Client disconnected
+          } catch (_e) {
+            // Client disconnected — the write target is gone; nothing
+            // actionable in the error and the stream is torn down below.
           }
         };
 
@@ -457,8 +461,9 @@ export async function registerChatRoutes(
             reply.raw.write(
               `data: ${JSON.stringify({ type: "error", error: err.message })}\n\n`
             );
-          } catch {
-            // Client disconnected
+          } catch (_e) {
+            // Client disconnected — the write target is gone; nothing
+            // actionable in the error and the stream is torn down below.
           }
           finish();
         };
@@ -578,7 +583,10 @@ export async function registerChatRoutes(
           const meta = await getSessionMetadata({ sessionId, logPath });
           if (meta.firstUserSnippet) label = meta.firstUserSnippet;
           if (meta.endTime) lastUsedAt = meta.endTime.toISOString();
-        } catch {
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.warn(`[chat] session ${sessionId} log unreadable, keeping id-prefix label:`, e);
+          }
           // JSONL missing or unreadable — keep id-prefix label.
         }
         return {
@@ -783,7 +791,9 @@ export async function registerChatRoutes(
       console.warn("[chat] speaking-voice.json failed validation:", parsed.error.message);
       return { model: undefined, instructions: [] };
     } catch (e) {
-      console.warn("[chat] failed to read speaking-voice.json:", e);
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn("[chat] failed to read speaking-voice.json:", e);
+      }
       return { model: undefined, instructions: [] };
     }
   });

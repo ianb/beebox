@@ -62,14 +62,19 @@ function doResolve(): string | null {
     let resolved: string;
     try {
       resolved = require.resolve(subpath);
-    } catch {
+    } catch (_e) {
+      // This variant's sub-package isn't installed on this platform — that's
+      // the normal case for the variants we don't match; try the next one.
       continue;
     }
     try {
       accessSync(resolved, constants.X_OK);
       return resolved;
-    } catch {
-      // File present but not executable; skip.
+    } catch (e) {
+      // File present but not executable (e.g. wrong-libc binary the kernel
+      // refuses to exec) — skip and try the next variant. Worth a note since
+      // this is the exact failure mode the module exists to work around.
+      console.debug(`resolveClaudeCodeBinary: ${resolved} not executable, skipping:`, e);
     }
   }
   return null;

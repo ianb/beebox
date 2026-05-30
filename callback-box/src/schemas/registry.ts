@@ -142,7 +142,9 @@ async function ensureEsmPackageJson(schemasDir: string): Promise<void> {
   try {
     const { stat } = await import("node:fs/promises");
     await stat(pkgJsonPath);
-  } catch {
+  } catch (_e) {
+    // package.json is absent (stat throws ENOENT) — that's the expected
+    // trigger to create it; the error carries no other actionable info.
     const { writeFile } = await import("node:fs/promises");
     await writeFile(pkgJsonPath, '{"type":"module"}\n');
   }
@@ -161,7 +163,10 @@ export async function loadBoxSchemas(boxRoot: string): Promise<ElementSchema[]> 
   let files: string[];
   try {
     files = await readdir(schemasDir);
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read box schemas dir ${schemasDir}, skipping box-local schemas:`, e);
+    }
     return [];
   }
 

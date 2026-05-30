@@ -60,7 +60,10 @@ async function readDriveIdFromCard(cardPath: string): Promise<string | null> {
     // Legacy XML form (kept while older boxes still have unmigrated cards)
     const xmlMatch = /drive-id="([^"]+)"/.exec(content);
     return xmlMatch ? xmlMatch[1]! : null;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`[google-drive] Could not read drive-id from ${cardPath}, skipping: ${e instanceof Error ? e.message : String(e)}`);
+    }
     return null;
   }
 }
@@ -286,8 +289,10 @@ class GoogleDriveConnector implements Connector {
       try {
         await fs.access(cardPath);
         continue; // Already exists
-      } catch {
-        // Good, doesn't exist yet
+      } catch (_e) {
+        // fs.access throws precisely when the card path is absent, which is
+        // the case we want here — fall through to create it. The error only
+        // signals "not found" and carries nothing else worth surfacing.
       }
 
       const result = await this.syncFile({

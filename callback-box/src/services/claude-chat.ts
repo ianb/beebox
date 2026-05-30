@@ -232,8 +232,9 @@ export function createChatBackend(): ChatBackend {
       try {
         const wq = await startup({ options: buildQueryOptions(opts) });
         warmSlot = { warmQuery: wq, opts };
-      } catch {
+      } catch (e) {
         // Warming is best-effort; the next start() will fall back to a cold spawn.
+        console.warn("Chat backend warm-up failed, will cold-spawn on next start:", e);
       } finally {
         warming = null;
       }

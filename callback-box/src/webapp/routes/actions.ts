@@ -268,8 +268,8 @@ export async function registerActionRoutes(
       // Clean up temp file
       try {
         await fs.unlink(tempPath);
-      } catch {
-        // Ignore cleanup errors
+      } catch (e) {
+        console.warn(`Failed to clean up temp upload file ${tempPath}:`, e);
       }
 
       if (!result.success) {

@@ -86,8 +86,11 @@ async function loadPublicUrl(boxRoot: string): Promise<string | null> {
     const content = await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8");
     const parsed = JSON.parse(content);
     if (parsed.publicUrl) return parsed.publicUrl;
-  } catch {
-    // Fall through
+  } catch (e) {
+    // box.json missing or unparseable — fall through to the env var.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read publicUrl from config/box.json, falling back to PUBLIC_URL: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
   return process.env.PUBLIC_URL ?? null;
 }
@@ -102,7 +105,9 @@ export async function loadTelegramConfig(boxRoot: string): Promise<TelegramConfi
     const parsed = JSON.parse(content);
     if (parsed.botToken && parsed.webhookSecret) return parsed;
     return null;
-  } catch {
+  } catch (_e) {
+    // Secret file absent or unreadable — Telegram is simply not configured
+    // for this box, which is a normal, expected state (not an error).
     return null;
   }
 }
@@ -495,7 +500,8 @@ class TelegramConnector implements Connector {
     let threadPaths: string[];
     try {
       threadPaths = await glob("*/thread.chat-thread.card", { cwd: chatDir });
-    } catch {
+    } catch (e) {
+      console.warn(`Could not glob Telegram thread files in ${chatDir}, skipping outbound send: ${e instanceof Error ? e.message : String(e)}`);
       return [];
     }
 

@@ -100,7 +100,10 @@ async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]
     try {
       const content = await fs.readFile(absPath, "utf-8");
       element = await parseCard(content, { source: absPath });
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Skipping unreadable/unparsable landmark card ${absPath}:`, e);
+      }
       continue;
     }
     if (element.tagName !== "landmark") continue;
@@ -141,22 +144,25 @@ async function loadAllSessions(
     let logPath: string;
     try {
       logPath = await resolveSessionLogPath(boxRoot, entry.id);
-    } catch {
+    } catch (e) {
+      console.warn(`Skipping session ${entry.id}: cannot resolve log path:`, e);
       continue;
     }
     let mtime: Date;
     try {
       const stat = await fs.stat(logPath);
       mtime = stat.mtime;
-    } catch {
-      continue; // log missing — session was cleaned up
+    } catch (_e) {
+      // log missing — session was cleaned up; nothing actionable, skip it
+      continue;
     }
 
     let label = entry.id.slice(0, 8);
     try {
       const meta = await getSessionMetadata({ sessionId: entry.id, logPath, snippetMaxLen: 400 });
       if (meta.firstUserSnippet) label = meta.firstUserSnippet;
-    } catch {
+    } catch (e) {
+      console.warn(`Could not read metadata for session ${entry.id}, using id-prefix label:`, e);
       // keep the id-prefix fallback
     }
 

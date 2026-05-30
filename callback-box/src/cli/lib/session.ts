@@ -84,7 +84,12 @@ export async function listSessions(
   let files: string[];
   try {
     files = await fs.promises.readdir(dir);
-  } catch {
+  } catch (e) {
+    // No session dir yet (box never had a Claude Code run) is the common
+    // case — treat any read failure as "no sessions" but record it.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug("listSessions: could not read session dir, treating as empty:", e);
+    }
     return [];
   }
 
@@ -97,7 +102,12 @@ export async function listSessions(
     try {
       const stat = await fs.promises.stat(filePath);
       sessions.push({ sessionId, mtime: stat.mtime, path: filePath });
-    } catch {
+    } catch (e) {
+      // File vanished between readdir and stat (concurrent cleanup) — skip
+      // it rather than fail the whole listing, but note the anomaly.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug(`listSessions: could not stat ${filePath}, skipping:`, e);
+      }
       continue;
     }
   }
@@ -379,7 +389,10 @@ export async function getSessionMetadata(args: {
     let raw: Record<string, unknown>;
     try {
       raw = JSON.parse(line);
-    } catch {
+    } catch (e) {
+      // A malformed JSONL line (partial/concurrent write) shouldn't abort the
+      // whole scan — skip it, but surface that we dropped a line.
+      console.debug("getSessionMetadata: skipping unparseable JSONL line:", e);
       continue;
     }
     if (raw.type !== "user" && raw.type !== "assistant") continue;
@@ -510,7 +523,10 @@ export async function parseSessionLog(
     let raw: Record<string, unknown>;
     try {
       raw = JSON.parse(line);
-    } catch {
+    } catch (e) {
+      // A malformed JSONL line (partial/concurrent write) shouldn't abort the
+      // whole parse — skip it, but surface that we dropped a line.
+      console.debug("parseSessionLog: skipping unparseable JSONL line:", e);
       continue;
     }
 

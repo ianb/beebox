@@ -31,7 +31,9 @@ async function fileExists(absPath: string): Promise<boolean> {
   try {
     await fs.access(absPath);
     return true;
-  } catch {
+  } catch (_e) {
+    // access() throws when the path is absent or unreadable; for an
+    // existence probe, both mean "not there" — no info to log.
     return false;
   }
 }

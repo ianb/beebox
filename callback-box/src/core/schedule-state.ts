@@ -52,7 +52,10 @@ export async function loadScriptState(boxRoot: string, scriptName: string): Prom
   try {
     const content = await fs.readFile(stateFile(boxRoot, scriptName), "utf-8");
     return JSON.parse(content) as ScriptState;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not load schedule state for "${scriptName}", using empty state:`, e);
+    }
     return { ...EMPTY_STATE };
   }
 }
@@ -255,7 +258,10 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
   let entries: string[];
   try {
     entries = await fs.readdir(runsDir);
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read procedure runs directory ${runsDir}:`, e);
+    }
     return [];
   }
   const now = Date.now();
@@ -267,13 +273,19 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
     try {
       const stat = await fs.stat(cardPath);
       mtimeMs = stat.mtimeMs;
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Could not stat run card ${cardPath}, skipping:`, e);
+      }
       continue;
     }
     if (now - mtimeMs > STALE_RUN_CARD_AGE_MS) continue;
     try {
       content = await fs.readFile(cardPath, "utf-8");
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Could not read run card ${cardPath}, skipping:`, e);
+      }
       continue;
     }
     if (/<procedure-run[^>]*\bstatus=["'](?:pending|running)["']/.test(content)) {

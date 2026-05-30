@@ -77,7 +77,12 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
   let entries: string[];
   try {
     entries = await fs.readdir(emailDir);
-  } catch {
+  } catch (e) {
+    // No email dir (or unreadable) means no drafts to upload — expected on boxes
+    // that have never received email.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug(`gmail-drafts: cannot read ${emailDir}, no drafts to upload:`, e);
+    }
     return drafts;
   }
   for (const entry of entries) {
@@ -85,14 +90,16 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
     let stat;
     try {
       stat = await fs.stat(threadDir);
-    } catch {
+    } catch (e) {
+      console.warn(`gmail-drafts: cannot stat ${threadDir}, skipping:`, e);
       continue;
     }
     if (!stat.isDirectory()) continue;
     let files: string[];
     try {
       files = await fs.readdir(threadDir);
-    } catch {
+    } catch (e) {
+      console.warn(`gmail-drafts: cannot read ${threadDir}, skipping:`, e);
       continue;
     }
     for (const file of files) {
@@ -107,8 +114,9 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
         if (status === "draft" && !stamped) {
           drafts.push(cardPath);
         }
-      } catch {
-        // unparseable — skip
+      } catch (e) {
+        // unparseable or unreadable — skip this card, keep scanning the rest
+        console.warn(`gmail-drafts: cannot read/parse ${cardPath}, skipping:`, e);
         continue;
       }
     }
@@ -214,7 +222,10 @@ function peekFrontmatter(content: string): Record<string, unknown> | null {
       return null;
     }
     return parsed as Record<string, unknown>;
-  } catch {
+  } catch (e) {
+    // Malformed frontmatter YAML — treat as "no frontmatter" so the caller skips
+    // this card rather than crashing the whole scan.
+    console.warn("gmail-drafts: failed to parse card frontmatter YAML:", e);
     return null;
   }
 }
@@ -232,7 +243,11 @@ async function readSourceMessage(
     const threadId = parsed.fields["thread-id"];
     if (typeof messageId !== "string" || typeof threadId !== "string") return null;
     return { messageId, threadId };
-  } catch {
+  } catch (e) {
+    // Unreadable/unparseable source card — return null so uploadOneDraft raises a
+    // precise "ref did not resolve" error. Log the underlying cause first so it
+    // isn't lost behind that message.
+    console.warn(`gmail-drafts: cannot read source message ${absPath}:`, e);
     return null;
   }
 }

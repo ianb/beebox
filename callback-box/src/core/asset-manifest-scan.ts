@@ -123,7 +123,13 @@ export async function findAttachScopes(boxRoot: string): Promise<AttachScope[]> 
     let entries: Dirent[];
     try {
       entries = await fs.readdir(absDir, { withFileTypes: true });
-    } catch {
+    } catch (e) {
+      // A directory we can't read (race with a delete, permissions, or a
+      // non-dir that slipped through) just contributes no attach scopes. Log so
+      // an unexpected IO failure during the walk is visible.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Could not read ${absDir} while finding attach scopes, skipping:`, e);
+      }
       return;
     }
     for (const e of entries) {

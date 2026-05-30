@@ -149,7 +149,10 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
   const viewsDir = path.join(boxRoot, "views");
   try {
     await fs.access(viewsDir);
-  } catch {
+  } catch (_e) {
+    // fs.access throwing means the box has no views/ directory — a box with no
+    // views is normal, so return an empty list. The error carries no
+    // actionable info beyond "directory absent".
     return [];
   }
 

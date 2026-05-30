@@ -27,7 +27,10 @@ export const scheduledCommand = new Command("scheduled")
       files = (await fs.readdir(schedulesDir)).filter((f) =>
         f.endsWith(".scheduled-script.card")
       );
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Could not read schedules directory at ${schedulesDir}:`, e);
+      }
       console.log("No schedules directory found.");
       return;
     }

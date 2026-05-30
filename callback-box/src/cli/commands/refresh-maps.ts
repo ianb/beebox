@@ -42,7 +42,10 @@ async function readSavedBrief(boxRoot: string): Promise<MapBrief | null> {
   try {
     const raw = await fs.readFile(path.join(boxRoot, BRIEF_FILE), "utf-8");
     return JSON.parse(raw) as MapBrief;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("refresh-maps: could not read saved brief, treating as absent:", e);
+    }
     return null;
   }
 }
@@ -50,8 +53,9 @@ async function readSavedBrief(boxRoot: string): Promise<MapBrief | null> {
 async function deleteSavedBrief(boxRoot: string): Promise<void> {
   try {
     await fs.unlink(path.join(boxRoot, BRIEF_FILE));
-  } catch {
-    // already gone
+  } catch (_e) {
+    // Best-effort cleanup: the brief is already gone (never written, or
+    // deleted by a prior run), which is the desired end state regardless.
   }
 }
 

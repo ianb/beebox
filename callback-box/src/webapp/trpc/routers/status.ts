@@ -87,7 +87,10 @@ export const statusRouter = router({
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
       try {
         entries = await fs.readdir(resolved, { withFileTypes: true });
-      } catch {
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`browse: cannot read directory ${resolved}, returning empty listing:`, e);
+        }
         return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
       }
 
@@ -120,8 +123,11 @@ export const statusRouter = router({
           try {
             const subEntries = await fs.readdir(dirFullPath, { recursive: true });
             fileCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
-          } catch {
-            // Can't read directory
+          } catch (e) {
+            // Can't read subdirectory — leave fileCount at 0 rather than failing the whole listing.
+            if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+              console.warn(`browse: cannot count cards in ${dirFullPath}:`, e);
+            }
           }
           dirs.push({ name: entry.name, fileCount });
           continue;
@@ -149,7 +155,9 @@ export const statusRouter = router({
               title: card.element.attrs["title"],
               hasAttachments,
             });
-          } catch {
+          } catch (e) {
+            // Card failed to load/parse — still list it (as unknown) so the UI shows it.
+            console.warn(`browse: cannot load card ${fullPath}:`, e);
             cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown", hasAttachments });
           }
           continue;

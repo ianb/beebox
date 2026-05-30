@@ -88,7 +88,7 @@ export function execWithTimeout(
     }
 
     const timer = setTimeout(() => {
-      try { process.kill(-child.pid!, "SIGKILL"); } catch { /* already dead */ }
+      try { process.kill(-child.pid!, "SIGKILL"); } catch (_e) { /* process group already exited — nothing to kill */ }
       const base = `Command timed out after ${options.timeout}ms`;
       reject(new Error(appendOutputTail(base, { stdout: stdoutBuf, stderr: stderrBuf })));
     }, options.timeout);
@@ -153,7 +153,8 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     files = (await fs.readdir(schedulesDir)).filter((f) =>
       f.endsWith(".scheduled-script.card")
     );
-  } catch {
+  } catch (_e) {
+    // No schedules directory (box has none configured) — nothing to run
     return 0;
   }
 
@@ -275,8 +276,8 @@ export async function handleCreateAfterSuccess(
       await fs.access(fullPath);
       console.log(`  Chain: ${chain.path} already exists, skipping`);
       continue;
-    } catch {
-      // doesn't exist, proceed
+    } catch (_e) {
+      // access throws when the file doesn't exist — the expected case; proceed to create it
     }
 
     const basename = path.basename(chain.path);

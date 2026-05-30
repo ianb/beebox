@@ -78,7 +78,8 @@ async function fileExists(filePath: string): Promise<boolean> {
   try {
     await fs.access(filePath);
     return true;
-  } catch {
+  } catch (_e) {
+    // access() throwing IS the answer here: the file is absent/unreadable.
     return false;
   }
 }

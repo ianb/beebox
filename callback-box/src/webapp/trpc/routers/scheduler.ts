@@ -82,7 +82,8 @@ export const schedulerRouter = router({
 
       try {
         await fs.access(logPath);
-      } catch {
+      } catch (_e) {
+        // No log file yet means there are no entries to return.
         return { entries: [] as SchedulerLogEntry[] };
       }
 
@@ -103,8 +104,8 @@ export const schedulerRouter = router({
             if (!hasMatch) continue;
           }
           entries.push(entry);
-        } catch {
-          // Skip malformed lines
+        } catch (e) {
+          console.warn("Skipping malformed scheduler log line:", e);
         }
       }
 
@@ -124,7 +125,8 @@ export const schedulerRouter = router({
       files = (await fs.readdir(schedulesDir)).filter((f) =>
         f.endsWith(".scheduled-script.card")
       );
-    } catch {
+    } catch (_e) {
+      // No schedules directory means there are no schedules to list.
       return { schedules: [] as ScheduleEntry[] };
     }
 
@@ -141,7 +143,8 @@ export const schedulerRouter = router({
         const content = await fs.readFile(cardPath, "utf-8");
         const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
         parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
-      } catch {
+      } catch (e) {
+        console.warn(`Failed to parse schedule "${scriptName}", listing as parse error:`, e);
         schedules.push({
           name: scriptName,
           description: undefined,
@@ -227,7 +230,8 @@ export const schedulerRouter = router({
 
       try {
         await fs.access(fullPath);
-      } catch {
+      } catch (_e) {
+        // Access failure here means the schedule file does not exist; surface as NOT_FOUND.
         throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
       }
 
@@ -265,7 +269,8 @@ export const schedulerRouter = router({
       let content: string;
       try {
         content = await fs.readFile(cardPath, "utf-8");
-      } catch {
+      } catch (_e) {
+        // Read failure here means the schedule file does not exist; surface as NOT_FOUND.
         throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
       }
 

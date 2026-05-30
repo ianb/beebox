@@ -340,7 +340,8 @@ export class ChatSessionPool {
     try {
       const data = await fs.readFile(filePath, "utf-8");
       this.store = JSON.parse(data) as SessionStore;
-    } catch {
+    } catch (err) {
+      log("loadStore", `Could not load session store from ${filePath}, starting empty: ${err}`);
       this.store = {};
     }
     return this.store;

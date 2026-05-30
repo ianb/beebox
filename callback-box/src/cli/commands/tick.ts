@@ -66,8 +66,10 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     files = (await fs.readdir(schedulesDir)).filter((f) =>
       f.endsWith(".scheduled-script.card")
     );
-  } catch {
-    if (!options.quiet) console.log("No schedules directory found.");
+  } catch (e) {
+    if (!options.quiet && (e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`No schedules directory found (or unreadable): ${e instanceof Error ? e.message : String(e)}`);
+    }
     return { ranCount: 0, skipCount: 0, errorCount: 0, scripts: [] };
   }
 
@@ -184,8 +186,10 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     try {
       const stat = await fs.stat(cardPath);
       preRunMtimeMs = stat.mtimeMs;
-    } catch {
-      // file may have been deleted between readdir and here
+    } catch (_e) {
+      // File may have been deleted between readdir and here; preRunMtimeMs
+      // stays 0 so the post-run recreation check simply treats any later
+      // mtime as a recreation. No actionable error info here.
     }
     await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
     const wallStart = Date.now();
@@ -231,8 +235,9 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
             shouldDelete = false;
             if (!options.quiet) console.log(`  One-shot script recreated during execution, keeping: ${file}`);
           }
-        } catch {
-          // File already gone — nothing to delete
+        } catch (_e) {
+          // File already gone — nothing to delete; the stat failure carries
+          // no actionable info since the desired end state (no file) holds.
           shouldDelete = false;
         }
         if (shouldDelete) {

@@ -40,7 +40,8 @@ export async function registerSchedulerRoutes(
 
     try {
       await fs.access(logPath);
-    } catch {
+    } catch (_e) {
+      // No scheduler log file yet for this box — no entries to return.
       return { entries: [] };
     }
 
@@ -69,8 +70,8 @@ export async function registerSchedulerRoutes(
         }
 
         entries.push(entry);
-      } catch {
-        // Skip malformed lines
+      } catch (e) {
+        console.warn("[scheduler] skipping malformed log line:", e);
       }
     }
 
@@ -96,7 +97,8 @@ export async function registerSchedulerRoutes(
       files = (await fs.readdir(schedulesDir)).filter((f) =>
         f.endsWith(".scheduled-script.card"),
       );
-    } catch {
+    } catch (_e) {
+      // Schedules directory doesn't exist for this box — nothing to list.
       return { schedules: [] };
     }
 
@@ -113,7 +115,8 @@ export async function registerSchedulerRoutes(
         const content = await fs.readFile(cardPath, "utf-8");
         const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
         parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
-      } catch {
+      } catch (e) {
+        console.warn(`[scheduler] failed to parse ${file}, listing as parse error:`, e);
         schedules.push({
           name: scriptName,
           description: undefined,

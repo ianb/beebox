@@ -324,7 +324,10 @@ export async function registerApiRoutes(
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
       try {
         entries = await fs.readdir(resolved, { withFileTypes: true });
-      } catch {
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`Could not read directory, returning empty listing: ${resolved}:`, e);
+        }
         return { path: reqPath, dirs: [], cards: [] };
       }
 
@@ -387,7 +390,8 @@ export async function registerApiRoutes(
             status: card.element.attrs["status"],
             hasAttachments,
           });
-        } catch {
+        } catch (e) {
+          console.warn(`Could not load card for browse listing, marking unknown: ${relativePath}:`, e);
           cards.push({
             relativePath,
             name: parsed.name,
@@ -489,7 +493,10 @@ export async function registerApiRoutes(
           .header("ETag", etag)
           .header("Last-Modified", lastModified)
           .send(content);
-      } catch {
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`Could not stat/read file, returning 404: ${resolved}:`, e);
+        }
         return reply.status(404).send({ error: "Not found" });
       }
     }
@@ -519,7 +526,10 @@ export async function registerApiRoutes(
         if (!stat.isFile()) {
           return reply.status(404).send({ error: "Not found" });
         }
-      } catch {
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`Could not stat file for delete, returning 404: ${resolved}:`, e);
+        }
         return reply.status(404).send({ error: "Not found" });
       }
 
@@ -570,7 +580,10 @@ export async function registerApiRoutes(
       try {
         const content = await fs.readFile(resolved, "utf-8");
         return reply.header("Content-Type", "text/plain").send(content);
-      } catch {
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`Could not read task output file, returning 404: ${resolved}:`, e);
+        }
         return reply.status(404).send({ error: "Output file not found" });
       }
     }

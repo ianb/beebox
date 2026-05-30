@@ -96,7 +96,8 @@ async function removeEmptyAncestors(
       const entries = await fs.readdir(current);
       if (entries.length > 0) break;
       await fs.rmdir(current);
-    } catch {
+    } catch (e) {
+      console.warn(`Stopping ancestor cleanup at ${current}:`, e);
       break;
     }
     current = path.dirname(current);
@@ -139,7 +140,9 @@ async function isDirectory(filePath: string): Promise<boolean> {
   try {
     const stat = await fs.stat(filePath);
     return stat.isDirectory();
-  } catch {
+  } catch (_e) {
+    // stat throws ENOENT when the path doesn't exist; "not a directory"
+    // is the correct answer and the specific error carries nothing useful.
     return false;
   }
 }
@@ -214,8 +217,8 @@ async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
       updatedCards.push({ path: relPath, refsUpdated: result.count });
       filesToStage.push(relPath);
       ctx.writeLine(`  Updated ${result.count} ref${result.count > 1 ? "s" : ""} in ${relPath}`);
-    } catch {
-      // Skip cards that can't be read
+    } catch (e) {
+      console.warn(`Skipping card that can't be read during ref rewrite: ${cardPath}:`, e);
     }
   }
 
@@ -344,8 +347,8 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
       extraUpdated.push({ path: relPath, refsUpdated: count });
       extraStaged.push(relPath);
       ctx.writeLine(`  Updated ${count} ref${count > 1 ? "s" : ""} in ${relPath}`);
-    } catch {
-      // Skip cards that can't be read
+    } catch (e) {
+      console.warn(`Skipping card that can't be read during ref rewrite: ${cardPath}:`, e);
     }
   }
 
@@ -365,8 +368,8 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
       await fs.writeFile(destPath, relocated);
       ctx.writeLine(`  Rewrote ${count} relative ref${count > 1 ? "s" : ""} in the moved card`);
     }
-  } catch {
-    // Moved card unreadable; nothing to relocate.
+  } catch (e) {
+    console.warn(`Moved card unreadable; nothing to relocate: ${destPath}:`, e);
   }
 
   // Clean up empty source directory

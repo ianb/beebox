@@ -377,7 +377,8 @@ async function parseErrorResponse(response: Response): Promise<TranscriptionErro
     const errorJson = (await response.json()) as { error?: { message?: string; code?: string } };
     errorDetails = errorJson.error?.message ?? JSON.stringify(errorJson);
     errorCode = errorJson.error?.code;
-  } catch {
+  } catch (e) {
+    console.warn("Whisper error response was not JSON, falling back to text body:", e);
     errorDetails = await response.text();
   }
 

@@ -25,7 +25,13 @@ export async function loadDriveConfig(boxRoot: string): Promise<DriveConfig> {
   try {
     const content = await fs.readFile(path.join(boxRoot, CONFIG_REL), "utf-8");
     return JSON.parse(content);
-  } catch {
+  } catch (e) {
+    // No config file yet (or it's unreadable/malformed): fall back to an empty
+    // config. A missing file is expected before first setup; log so a corrupt
+    // file isn't silently treated as "no folder mounts".
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Could not load drive config, using defaults:", e);
+    }
     return {};
   }
 }

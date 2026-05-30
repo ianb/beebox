@@ -79,8 +79,12 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
     try {
       const content = await fs.readFile(central, "utf-8");
       return JSON.parse(content);
-    } catch {
-      // File doesn't exist yet — fall through
+    } catch (e) {
+      // Usually the file doesn't exist yet; fall through to the legacy
+      // location. Log at debug so a real read/parse error is still visible.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug("Could not read centralized Google tokens file, falling back:", e);
+      }
     }
   }
 
@@ -89,7 +93,12 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
     try {
       const content = await fs.readFile(legacySecretPath(boxRoot), "utf-8");
       return JSON.parse(content);
-    } catch {
+    } catch (e) {
+      // No legacy tokens file (or it's unreadable) — treat as "no tokens".
+      // Log at debug so a real read/parse error is still visible.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug("Could not read legacy Google tokens file:", e);
+      }
       return null;
     }
   }
@@ -115,8 +124,12 @@ export async function saveGoogleTokens(
   try {
     const content = await fs.readFile(targetPath, "utf-8");
     existing = JSON.parse(content);
-  } catch {
-    // Starting fresh
+  } catch (e) {
+    // No existing tokens file (or unreadable) — start fresh and merge into {}.
+    // Log at debug so a real read/parse error is still visible.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug("Could not read existing Google tokens file, starting fresh:", e);
+    }
   }
 
   const merged = { ...existing, ...updates };
@@ -191,7 +204,12 @@ export async function loadGoogleSecret(boxRoot: string): Promise<GoogleSecretCon
   try {
     const content = await fs.readFile(legacySecretPath(boxRoot), "utf-8");
     return JSON.parse(content);
-  } catch {
+  } catch (e) {
+    // No legacy secret file (or it's unreadable) — treat as "no config".
+    // Log at debug so a real read/parse error is still visible.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug("Could not read legacy Google secret file:", e);
+    }
     return null;
   }
 }

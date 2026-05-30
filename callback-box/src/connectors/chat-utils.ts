@@ -57,7 +57,9 @@ export async function ensureThreadFile(options: {
 
   try {
     await fs.access(threadPath);
-  } catch {
+  } catch (_e) {
+    // access() throws when the thread file doesn't exist yet — that's the
+    // signal to create it. The error carries no actionable detail.
     await fs.mkdir(threadDir, { recursive: true });
     const content = createChatThreadTemplate({
       chatId,
@@ -164,7 +166,8 @@ export async function findExistingChatJob(
   let entries: string[];
   try {
     entries = await fs.readdir(jobsDir);
-  } catch {
+  } catch (_e) {
+    // No jobs directory means no existing chat jobs — nothing to find.
     return null;
   }
 
@@ -180,7 +183,10 @@ export async function findExistingChatJob(
       if (fields.thread?.ref === threadRef) {
         return path.relative(boxRoot, filePath);
       }
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Skipping unreadable chat job file ${filePath}:`, e);
+      }
       continue;
     }
   }
@@ -252,7 +258,9 @@ export async function updatePersonEntry(options: {
   // the card later. Doesn't overwrite existing cards.
   try {
     await fs.access(personCardPath);
-  } catch {
+  } catch (_e) {
+    // access() throws when no person card exists yet — that's the signal to
+    // seed a minimal one. The error carries no actionable detail.
     const cardYaml = `status: active\nname: ${displayName}\n`;
     await fs.writeFile(personCardPath, `---\n${cardYaml}---\n`);
   }
@@ -270,8 +278,8 @@ export async function updatePersonEntry(options: {
     if (JSON.stringify(parsed) === JSON.stringify(data)) {
       return null;
     }
-  } catch {
-    // File doesn't exist — create it
+  } catch (_e) {
+    // File doesn't exist (or is unparseable) — fall through to write it.
   }
 
   await fs.mkdir(personDir, { recursive: true });

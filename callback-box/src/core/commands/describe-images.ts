@@ -188,8 +188,9 @@ async function executeDescribeImages(
       try {
         await fs.access(cardPath);
         existingCard = cardPath;
-      } catch {
-        // No existing card
+      } catch (_e) {
+        // access() throws when no sibling .image.card exists yet — expected;
+        // existingCard stays null and one gets created below.
       }
       items.push({ cardPath: existingCard, imagePath: fullPath, index: items.length });
     } else {

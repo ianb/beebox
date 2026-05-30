@@ -123,7 +123,9 @@ async function buildContext(input: {
       cardType: loaded.element.tagName,
       xml: { card: await loader.load(cardPath) },
     };
-  } catch {
+  } catch (e) {
+    // Couldn't load as a known card — skip pre-actions for this file.
+    console.warn(`Could not load card for pre-actions: ${cardPath}:`, e);
     return null;
   }
 }

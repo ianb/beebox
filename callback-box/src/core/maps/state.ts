@@ -37,7 +37,11 @@ export async function loadMapState(boxRoot: string): Promise<MapState> {
       return { maps: {} };
     }
     return { maps: parsed.maps };
-  } catch {
+  } catch (e) {
+    // Missing or unreadable/corrupt state file — start fresh (documented behavior).
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug("Map state unreadable, starting fresh:", e);
+    }
     return { maps: {} };
   }
 }

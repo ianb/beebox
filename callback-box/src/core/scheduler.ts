@@ -51,7 +51,9 @@ export async function isBox(boxPath: string): Promise<boolean> {
   try {
     await fs.access(path.join(boxPath, BOX_MARKER));
     return true;
-  } catch {
+  } catch (_e) {
+    // access() throwing is the expected "not a box" signal (marker absent or
+    // unreadable); the boolean return IS how we report it, no info to log.
     return false;
   }
 }
@@ -93,8 +95,13 @@ async function rotateLogIfNeeded(logPath: string): Promise<void> {
     const keepFrom = content.indexOf("\n", Math.floor(content.length / 2));
     if (keepFrom === -1) return;
     await fs.writeFile(logPath, content.slice(keepFrom + 1));
-  } catch {
-    // File may not exist yet
+  } catch (e) {
+    // Log rotation is best-effort: the file may not exist yet, or a concurrent
+    // write may be in flight. Skipping rotation just lets the log grow a bit;
+    // it does not affect scheduler operation.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`rotateLogIfNeeded: could not rotate ${logPath}:`, e);
+    }
   }
 }
 

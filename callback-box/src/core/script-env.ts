@@ -67,7 +67,8 @@ export function parsePublicUrl(publicUrl: string | undefined | null): BoxEnvPiec
   let url: URL;
   try {
     url = new URL(publicUrl);
-  } catch {
+  } catch (e) {
+    console.warn(`Unparseable publicUrl, treating as no box env (${publicUrl}):`, e);
     return { serverUrl: null, boxName: null };
   }
   const serverUrl = `${url.protocol}//${url.host}`;

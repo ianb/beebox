@@ -199,7 +199,14 @@ async function runUntrackAssets(ctx: CommandContext): Promise<CommandResult> {
     let manifest = manifestCache.get(scopeAbs);
     if (!manifest) {
       try { manifest = await loadManifest(scopeAbs); }
-      catch { manifest = { files: {} }; }
+      catch (e) {
+        // No manifest yet (or unreadable) — treat the scope as covering
+        // nothing, so its files land in `uncovered` and the safety check
+        // refuses to untrack them. Warn so a genuinely corrupt manifest is
+        // visible rather than silently downgraded to "empty".
+        console.warn(`Could not load manifest at ${scopeAbs}, treating as empty: ${e instanceof Error ? e.message : String(e)}`);
+        manifest = { files: {} };
+      }
       manifestCache.set(scopeAbs, manifest);
     }
     const scopeRel = relPath.slice(scope.length + 1);  // strip "<scope>/"
@@ -350,7 +357,10 @@ async function runAdd(
   }
   try {
     await fs.access(absPath);
-  } catch {
+  } catch (_e) {
+    // fs.access rejects when the file is missing/unreadable — which is
+    // exactly the case we report. The error carries no detail worth
+    // surfacing beyond "does not exist", so we don't include it.
     return { success: false, error: `${relPath} does not exist` };
   }
 

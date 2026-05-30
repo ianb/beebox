@@ -49,12 +49,17 @@ export async function listScenarios(): Promise<string[]> {
       try {
         await fs.access(path.join(SCENARIOS_DIR, entry.name, "scenario.yaml"));
         names.push(entry.name);
-      } catch {
-        // Skip directories without scenario.yaml
+      } catch (_e) {
+        // No scenario.yaml — this directory isn't a scenario. Expected.
       }
     }
     return names.toSorted();
-  } catch {
+  } catch (e) {
+    // Scenarios dir absent/unreadable. Empty list is the right answer, but
+    // surface it in case a real read error is masking existing scenarios.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Failed to read scenarios directory, treating as empty:", e);
+    }
     return [];
   }
 }
@@ -83,7 +88,8 @@ export async function loadStubs(name: string): Promise<StubsDefinition | null> {
   try {
     const content = await fs.readFile(yamlPath, "utf-8");
     return parseYaml(content) as StubsDefinition;
-  } catch {
+  } catch (_e) {
+    // stubs.yaml is optional — absent file means "no stubs". Expected.
     return null;
   }
 }

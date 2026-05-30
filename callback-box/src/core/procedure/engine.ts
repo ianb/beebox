@@ -106,7 +106,8 @@ export async function startProcedure(
 
   try {
     await fs.access(procedureCardPath);
-  } catch {
+  } catch (e) {
+    console.warn(`Procedure definition not accessible at ${procedureCardPath}:`, e);
     return {
       success: false,
       error: `Procedure definition not found: ${procedureCardPath}`,
@@ -254,7 +255,10 @@ export async function listProcedures(
     }
 
     return { success: true, data: cards };
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read procedures directory ${procedureDir}:`, e);
+    }
     ctx.writeLine(fmt.dim("No config/procedures/ directory."));
     return { success: true, data: [] };
   }
@@ -280,7 +284,10 @@ export async function procedureStatus(
         return { success: true };
       }
       runDir = path.join(runsDir, sorted[0]!);
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Could not read runs directory ${runsDir}:`, e);
+      }
       ctx.writeLine(fmt.dim("No procedure/runs/ directory."));
       return { success: true };
     }
@@ -976,8 +983,11 @@ async function getStepLineRange(
     if (startLine && endLine) {
       return `lines ${startLine}-${endLine}`;
     }
-  } catch {
+  } catch (e) {
     // If we can't read the file, just skip the line range
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read procedure card for step line range ${procedureCardPath}:`, e);
+    }
   }
   return undefined;
 }

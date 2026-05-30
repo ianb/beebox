@@ -28,7 +28,11 @@ export async function cleanupOldTmpUploads(
   let entries: string[];
   try {
     entries = await fs.readdir(tmpDir);
-  } catch {
+  } catch (e) {
+    // tmp/ may not exist yet (no uploads ever made) — nothing to clean.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug(`cleanupOldTmpUploads: cannot read ${tmpDir}, skipping:`, e);
+    }
     return 0;
   }
 
@@ -38,7 +42,12 @@ export async function cleanupOldTmpUploads(
     let stat: Awaited<ReturnType<typeof fs.stat>>;
     try {
       stat = await fs.stat(fullPath);
-    } catch {
+    } catch (e) {
+      // Entry vanished between readdir and stat (race), or is unreadable —
+      // skip it; the next sweep will catch it if it still matters.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug(`cleanupOldTmpUploads: cannot stat ${fullPath}, skipping:`, e);
+      }
       continue;
     }
     if (!stat.isFile()) continue;

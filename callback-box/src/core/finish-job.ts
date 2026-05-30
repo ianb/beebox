@@ -33,8 +33,10 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
     if (parts.length >= 4) {
       jobType = parts[parts.length - 3]!; // "intake"
     }
-  } catch {
-    // File might already be gone, that's ok
+  } catch (_e) {
+    // Reading the card here is best-effort context for the commit message;
+    // if it's already gone or unreadable we proceed with empty desc/type
+    // and the unlink below handles the real "already gone" case.
   }
 
   // Delete the job file

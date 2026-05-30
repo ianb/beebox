@@ -81,7 +81,8 @@ async function isWritable(dirPath: string): Promise<boolean> {
   try {
     await fs.access(dirPath, fsConstants.W_OK);
     return true;
-  } catch {
+  } catch (_e) {
+    // access(W_OK) throwing IS the answer: not writable (or missing). Return false.
     return false;
   }
 }
@@ -105,8 +106,8 @@ async function sweepLegacyHealthCheckFiles(boxRoot: string): Promise<void> {
           await fs.unlink(path.join(dir, name)).catch(() => {});
         }
       }
-    } catch {
-      // Directory missing or unreadable — nothing to sweep.
+    } catch (_e) {
+      // Directory missing or unreadable — nothing to sweep. Cleanup is best-effort.
     }
   }
 }
@@ -242,8 +243,9 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
       const creds = await fs.readFile(credsPath, "utf-8");
       const parsed = JSON.parse(creds);
       hasClaudeCredentials = !!(parsed.claudeAiOauth && parsed.claudeAiOauth.accessToken);
-    } catch {
-      // Not found or invalid
+    } catch (_e) {
+      // Credentials file missing or unparseable — treated as "not configured",
+      // which the check below reports as an error. No actionable detail to log.
     }
     checks.push({
       name: "claude-credentials",

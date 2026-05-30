@@ -33,7 +33,13 @@ export async function loadTransientState<T>(opts: LoadOptions<T>): Promise<T> {
   try {
     const content = await fs.readFile(transientStatePath(opts.boxRoot, opts.connectorName), "utf-8");
     return JSON.parse(content);
-  } catch {
+  } catch (e) {
+    // Transient state is gitignored and absent on first run — a missing file is
+    // the normal path to defaultValue. Log so a corrupt/unreadable state file
+    // isn't silently reset to defaults.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not load transient state for ${opts.connectorName}, using default:`, e);
+    }
     return opts.defaultValue;
   }
 }

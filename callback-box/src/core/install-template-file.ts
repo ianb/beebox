@@ -216,8 +216,9 @@ export async function pruneStaleTemplateUpdates(
   for (const dir of dirs) {
     try {
       await fs.rmdir(dir);
-    } catch {
-      // Not empty — leave it.
+    } catch (e) {
+      // Not empty (or already gone) — leave it. Sweeping is best-effort.
+      console.debug("Leaving non-empty template-updates dir:", dir, e);
     }
   }
 

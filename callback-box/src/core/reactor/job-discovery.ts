@@ -21,7 +21,12 @@ export async function findJobCards(
   let entries: string[];
   try {
     entries = await fs.readdir(jobsDir, { recursive: true });
-  } catch {
+  } catch (e) {
+    // jobs/ may not exist yet (fresh box, or no jobs produced) — treat as
+    // no pending jobs rather than an error.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug(`findJobCards: cannot read ${jobsDir}, treating as empty:`, e);
+    }
     return [];
   }
 
@@ -40,8 +45,10 @@ export async function findJobCards(
       // the file is reliable because root attrs precede children.
       const sourceMatch = content.match(/source="([^"]*)"/);
       if (sourceMatch) source = sourceMatch[1];
-    } catch {
-      // Can't read — default to normal priority, no source
+    } catch (e) {
+      // Can't read this card — default to normal priority, no source. The job
+      // is still surfaced; whatever processes it will hit the same read error.
+      console.debug(`findJobCards: cannot read ${file}, using defaults:`, e);
     }
     if (sourceFilter !== undefined && source !== sourceFilter) continue;
     results.push({ file, priority });

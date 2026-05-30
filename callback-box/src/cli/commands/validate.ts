@@ -59,7 +59,10 @@ async function readHookFilePath(): Promise<string | undefined> {
     const parsed = JSON.parse(raw) as { tool_input?: { file_path?: unknown } };
     const fp = parsed.tool_input?.file_path;
     return typeof fp === "string" ? fp : undefined;
-  } catch {
+  } catch (_e) {
+    // stdin wasn't valid JSON: per this helper's contract the hook just exits 0
+    // silently when there's no parseable payload, so the parse error is expected
+    // and carries nothing actionable.
     return undefined;
   }
 }

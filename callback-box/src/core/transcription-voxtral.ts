@@ -378,7 +378,8 @@ async function parseErrorResponse(
     errorDetails =
       errorJson.error?.message ?? errorJson.message ?? JSON.stringify(errorJson);
     errorCode = errorJson.error?.code;
-  } catch {
+  } catch (e) {
+    console.warn("Voxtral error response was not JSON, falling back to text body:", e);
     errorDetails = await response.text();
   }
 

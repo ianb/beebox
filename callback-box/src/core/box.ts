@@ -73,7 +73,9 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
     await fs.mkdir(path.dirname(manifestPath), { recursive: true });
     try {
       await fs.access(manifestPath);
-    } catch {
+    } catch (_e) {
+      // No manifest yet (fs.access throws ENOENT) — seed one. The error
+      // carries no actionable info; absence is the normal create path.
       const now = new Date().toISOString();
       const lines = MIGRATIONS
         .map((m) => `${JSON.stringify({ name: m.name, "applied-at": now })}\n`)
@@ -86,7 +88,9 @@ export async function initBox(boxRoot: string, options: InitOptions = {}): Promi
   const transcriptionConfigPath = path.join(resolvedRoot, "config/transcription.json");
   try {
     await fs.access(transcriptionConfigPath);
-  } catch {
+  } catch (_e) {
+    // Config absent (fs.access throws ENOENT) — install the default. The
+    // error carries no actionable info; absence is the normal install path.
     await fs.mkdir(path.join(resolvedRoot, "config"), { recursive: true });
     await fs.writeFile(
       transcriptionConfigPath,
@@ -206,7 +210,9 @@ export async function ensureDirectories(boxRoot: string): Promise<void> {
     const gitkeep = path.join(fullPath, ".gitkeep");
     try {
       await fs.access(gitkeep);
-    } catch {
+    } catch (_e) {
+      // No .gitkeep yet (fs.access throws ENOENT) — create it. The error
+      // carries no actionable info; absence is the normal create path.
       await fs.writeFile(gitkeep, "");
     }
   }
@@ -223,7 +229,9 @@ export async function isValidBox(boxRoot: string): Promise<boolean> {
   try {
     await fs.access(markerPath);
     return true;
-  } catch {
+  } catch (_e) {
+    // No marker file (fs.access throws ENOENT) — that is precisely what
+    // "not a valid box" means. The error carries no actionable info.
     return false;
   }
 }
@@ -241,7 +249,13 @@ export async function getBoxMetadata(
   try {
     const content = await fs.readFile(markerPath, "utf-8");
     return JSON.parse(content) as { version: string; created: string };
-  } catch {
+  } catch (e) {
+    // Missing marker is the normal "not a box" case; a malformed marker is
+    // worth surfacing. Either way we report no metadata, but log so a
+    // corrupt marker doesn't vanish silently.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read box marker at ${markerPath}:`, e);
+    }
     return null;
   }
 }
@@ -278,7 +292,11 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
     templateFiles = (await fs.readdir(templatesDir)).filter((f) =>
       f.endsWith(".procedure.card")
     );
-  } catch {
+  } catch (e) {
+    // No procedure templates to install (dir missing, or unreadable). Skip
+    // installing rather than fail init, but log so a misconfigured package
+    // layout doesn't silently drop all default procedures.
+    console.warn(`Could not read procedure templates from ${templatesDir}:`, e);
     return [];
   }
 
@@ -369,7 +387,10 @@ export async function installRootLandmark(boxRoot: string): Promise<boolean> {
   let entries: string[];
   try {
     entries = await fs.readdir(boxRoot);
-  } catch {
+  } catch (e) {
+    // Can't list the box root — skip installing the root landmark rather
+    // than fail, but log: an unreadable box root is unexpected here.
+    console.warn(`Could not read box root ${boxRoot} for landmark check:`, e);
     return false;
   }
   if (entries.some((name) => name.endsWith(".landmark.card"))) return false;
@@ -685,7 +706,9 @@ async function installTricksFiles(boxRoot: string): Promise<void> {
   const packageJsonPath = path.join(boxRoot, "tricks/package.json");
   try {
     await fs.access(packageJsonPath);
-  } catch {
+  } catch (_e) {
+    // No tricks package.json yet (fs.access throws ENOENT) — scaffold it.
+    // The error carries no actionable info; absence is the normal path.
     await fs.mkdir(path.join(boxRoot, "tricks"), { recursive: true });
     await fs.writeFile(packageJsonPath, TRICKS_PACKAGE_JSON);
   }
@@ -693,7 +716,9 @@ async function installTricksFiles(boxRoot: string): Promise<void> {
   const claudeMdPath = path.join(boxRoot, "tricks/scripts/CLAUDE.md");
   try {
     await fs.access(claudeMdPath);
-  } catch {
+  } catch (_e) {
+    // No tricks CLAUDE.md yet (fs.access throws ENOENT) — scaffold it. The
+    // error carries no actionable info; absence is the normal path.
     await fs.mkdir(path.join(boxRoot, "tricks/scripts"), { recursive: true });
     await fs.writeFile(claudeMdPath, TRICKS_CLAUDE_MD);
   }
@@ -730,8 +755,10 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
         return false; // Already set up
       }
     }
-  } catch {
-    // Doesn't exist yet — that's fine
+  } catch (_e) {
+    // lstat throws ENOENT when the global path doesn't exist yet — the
+    // normal first-time case. The error carries no actionable info; we
+    // fall through to create the symlink below.
   }
 
   // Ensure local .claude/memory/ exists
@@ -748,14 +775,17 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
         try {
           await fs.access(dest);
           // Local file already exists — skip (don't overwrite)
-        } catch {
+        } catch (_e) {
+          // fs.access throws ENOENT when dest is absent — the normal case
+          // for moving a file in. The error carries no actionable info.
           await fs.rename(src, dest);
         }
       }
       await fs.rm(globalMemoryDir, { recursive: true });
     }
-  } catch {
-    // Global dir doesn't exist — nothing to move
+  } catch (_e) {
+    // lstat throws ENOENT when the global dir doesn't exist — nothing to
+    // move. The error carries no actionable info; absence is expected.
   }
 
   // Ensure parent directory for symlink exists
@@ -764,8 +794,9 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   // Remove whatever's at the global path (stale symlink, empty dir, etc.)
   try {
     await fs.rm(globalMemoryDir, { recursive: true });
-  } catch {
-    // Nothing there
+  } catch (_e) {
+    // Nothing at the global path to clear before symlinking. The error
+    // carries no actionable info; absence is the expected, fine case.
   }
 
   // Create symlink: global → local
@@ -777,7 +808,9 @@ async function installSchemasGuide(boxRoot: string): Promise<void> {
   const claudeMdPath = path.join(boxRoot, "config/schemas/CLAUDE.md");
   try {
     await fs.access(claudeMdPath);
-  } catch {
+  } catch (_e) {
+    // No schemas guide yet (fs.access throws ENOENT) — install it. The
+    // error carries no actionable info; absence is the normal path.
     await fs.mkdir(path.join(boxRoot, "config/schemas"), { recursive: true });
     await fs.writeFile(claudeMdPath, SCHEMAS_CLAUDE_MD);
   }
@@ -807,7 +840,9 @@ async function installViewsGuide(boxRoot: string): Promise<void> {
   const claudeMdPath = path.join(boxRoot, "views/CLAUDE.md");
   try {
     await fs.access(claudeMdPath);
-  } catch {
+  } catch (_e) {
+    // No views guide yet (fs.access throws ENOENT) — install it. The error
+    // carries no actionable info; absence is the normal path.
     await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
     await fs.writeFile(claudeMdPath, VIEWS_CLAUDE_MD);
   }

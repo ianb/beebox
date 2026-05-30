@@ -62,7 +62,10 @@ async function scanDir(ctx: ScanContext, absDir: string): Promise<void> {
   let entries: Array<{ name: string; isDirectory: () => boolean; isFile: () => boolean }>;
   try {
     entries = await fs.readdir(absDir, { withFileTypes: true });
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read directory during attach-layout scan, skipping ${absDir}:`, e);
+    }
     return;
   }
 

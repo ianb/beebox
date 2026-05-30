@@ -128,7 +128,12 @@ async function loadUserIgnorePatterns(boxRoot: string): Promise<string[]> {
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0 && !line.startsWith("#"));
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && "code" in e && e.code === "ENOENT") {
+      // No .cb-maps-ignore file is the normal case; fall back to defaults.
+      return [];
+    }
+    console.warn(`Failed to read ${IGNORE_FILE}, using default ignore patterns:`, e);
     return [];
   }
 }
@@ -231,7 +236,10 @@ async function listMappableDirs(
     let entries: Dirent[];
     try {
       entries = await fs.readdir(abs, { withFileTypes: true });
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Failed to read directory ${abs} while walking for mappable dirs, skipping:`, e);
+      }
       return 0;
     }
     let visibleSubdirs = 0;
@@ -263,7 +271,10 @@ async function fileExists(absPath: string): Promise<boolean> {
   try {
     await fs.access(absPath);
     return true;
-  } catch {
+  } catch (_e) {
+    // fs.access throws iff the path is inaccessible/absent — that is exactly
+    // the "false" answer this predicate exists to report; the error carries
+    // no information beyond that.
     return false;
   }
 }
@@ -290,7 +301,11 @@ async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): Promise<
   let raw: string;
   try {
     raw = await simpleGit(boxRoot).raw(["ls-tree", ref]);
-  } catch {
+  } catch (e) {
+    // ls-tree fails when the dir didn't exist at this commit (e.g. comparing
+    // against an older asOf where the path was absent). Treat as empty listing
+    // so the diff still reports the right added/deleted set.
+    console.debug(`git ls-tree ${ref} failed, treating as empty listing:`, e);
     return [];
   }
   const items: string[] = [];
@@ -324,7 +339,10 @@ async function listChildrenOnDisk(opts: ListChildrenOnDiskOptions): Promise<stri
   let entries: Dirent[];
   try {
     entries = await fs.readdir(abs, { withFileTypes: true });
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Failed to read directory ${abs} for on-disk children listing, treating as empty:`, e);
+    }
     return [];
   }
   const items: string[] = [];

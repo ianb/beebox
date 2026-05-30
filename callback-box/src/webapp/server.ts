@@ -399,16 +399,16 @@ async function killPreviousServer(pidFile: string): Promise<void> {
         // Still alive, force kill
         console.log(`Force killing previous server (PID ${pid})...`);
         process.kill(pid, "SIGKILL");
-      } catch {
-        // Already dead, good
+      } catch (_e) {
+        // kill(pid, 0) threw — process already exited between SIGTERM and now. Good.
       }
-    } catch {
-      // Process doesn't exist, stale PID file
+    } catch (_e) {
+      // kill(pid, 0) threw — process doesn't exist, stale PID file. Nothing to kill.
     }
 
     await fs.promises.unlink(pidFile).catch(() => {});
-  } catch {
-    // No PID file, nothing to do
+  } catch (_e) {
+    // readFile threw — no PID file (or unreadable). No previous server to kill.
   }
 }
 

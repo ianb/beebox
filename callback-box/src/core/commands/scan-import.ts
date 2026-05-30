@@ -88,8 +88,10 @@ async function readScanContextFile(boxRoot: string): Promise<string | null> {
     try {
       const content = await fs.readFile(path.join(boxRoot, name), "utf-8");
       if (content.trim().length > 0) return content;
-    } catch {
-      // try next candidate
+    } catch (_e) {
+      // Context file is optional — readFile rejects when this candidate
+      // name doesn't exist, which is the common case. Try the next name;
+      // returning null (no context) at the end is a valid outcome.
     }
   }
   return null;
@@ -138,7 +140,10 @@ async function executeScanImport(
     const abs = path.isAbsolute(f) ? f : path.join(ctx.boxRoot, f);
     try {
       await fs.access(abs);
-    } catch {
+    } catch (_e) {
+      // fs.access rejects when the input path is missing/unreadable — that
+      // is precisely the condition we report back to the caller. The error
+      // adds no detail beyond the path, so we don't surface it.
       return { success: false, error: `Input file not found: ${abs}` };
     }
     resolved.push(abs);

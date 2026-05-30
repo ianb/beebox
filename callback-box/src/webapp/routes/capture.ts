@@ -430,8 +430,10 @@ async function createProcessCapturesTrigger(boxRoot: string): Promise<void> {
     // Already exists — the procedure will handle all pending sessions
     console.log("[capture] process-captures trigger already exists, skipping");
     return;
-  } catch {
-    // Doesn't exist, create it
+  } catch (_e) {
+    // fs.access throwing means the trigger file doesn't exist yet, which is
+    // the normal path here — fall through and create it. The specific error
+    // carries no actionable info beyond "not present".
   }
 
   const content = createScheduledScriptTemplate({

@@ -85,8 +85,8 @@ function ensureEnvStubs(): void {
         ...(h.after && { after: h.after }),
       }));
     }
-  } catch {
-    // File doesn't exist or parse error — no stubs
+  } catch (e) {
+    console.warn(`Could not load fetch stubs from ${stubsFile}, continuing with none:`, e);
   }
 }
 
@@ -121,7 +121,9 @@ function isAllowListed(url: string): boolean {
     const parsed = new URL(url);
     const host = parsed.hostname;
     return host === "localhost" || host === "127.0.0.1" || host === "::1";
-  } catch {
+  } catch (_e) {
+    // Unparseable URL can't be a localhost host, so it isn't allow-listed.
+    // The error carries no actionable info here — the caller will reject it.
     return false;
   }
 }

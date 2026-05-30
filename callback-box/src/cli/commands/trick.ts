@@ -57,7 +57,10 @@ async function readDescription(entryPoint: string): Promise<string> {
       /export\s+const\s+description\s*=\s*["'`]([^"'`]*)["'`]/
     );
     return match?.[1] ?? "";
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read trick description, continuing without one: ${entryPoint}:`, e);
+    }
     return "";
   }
 }
@@ -71,7 +74,10 @@ async function discoverTricks(boxRoot: string): Promise<TrickInfo[]> {
   let entries: string[];
   try {
     entries = await fs.readdir(scriptsDir);
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read tricks directory, treating as no tricks: ${scriptsDir}:`, e);
+    }
     return [];
   }
 
@@ -81,7 +87,9 @@ async function discoverTricks(boxRoot: string): Promise<TrickInfo[]> {
     const entryPoint = path.join(scriptsDir, entry, "index.ts");
     try {
       await fs.access(entryPoint);
-    } catch {
+    } catch (_e) {
+      // No index.ts in this directory — not a trick, skip it. fs.access
+      // throwing here just means the file is absent, which is expected.
       continue;
     }
 
@@ -158,7 +166,9 @@ export const trickCommand = new Command("trick")
     const entryPoint = path.join(boxRoot, "tricks/scripts", name, "index.ts");
     try {
       await fs.access(entryPoint);
-    } catch {
+    } catch (_e) {
+      // fs.access throws only because the entry point is absent; the
+      // not-found message below is the meaningful handling of that.
       console.error(`Trick not found: ${name}`);
       console.error(`Expected: tricks/scripts/${name}/index.ts`);
       process.exitCode = 1;

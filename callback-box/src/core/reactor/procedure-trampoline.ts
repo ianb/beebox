@@ -33,8 +33,9 @@ export async function detectProcedureInJob(content: string, filePath: string): P
         return { procedureRef: child.attrs["ref"], ...(directive && { directive }) };
       }
     }
-  } catch {
-    // Not valid XML or no procedure element — not a procedure job
+  } catch (_e) {
+    // Expected for non-XML job cards: unparseable means "not a procedure job".
+    // Detection probe, not an error path — fall through to return null.
   }
   return null;
 }

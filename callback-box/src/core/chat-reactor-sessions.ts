@@ -33,7 +33,10 @@ export async function loadChatSessions(boxRoot: string): Promise<SessionStore> {
   try {
     const data = await fs.readFile(filePath, "utf-8");
     return JSON.parse(data) as SessionStore;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not load chat sessions from ${filePath}, starting empty:`, e);
+    }
     return {};
   }
 }

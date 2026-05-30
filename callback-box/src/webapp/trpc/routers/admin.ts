@@ -26,7 +26,11 @@ export const adminRouter = router({
       try {
         const boxJson = JSON.parse(await fs.readFile(path.join(ctx.boxRoot, "config/box.json"), "utf-8"));
         if (boxJson.publicUrl) publicUrl = boxJson.publicUrl;
-      } catch { /* */ }
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn("Could not read publicUrl from box.json, falling back to env:", e);
+        }
+      }
       publicUrl = publicUrl ?? process.env.PUBLIC_URL ?? undefined;
       return { configured: false, publicUrl, boxSlug: ctx.boxSlug };
     }
@@ -81,7 +85,11 @@ export const adminRouter = router({
       try {
         const boxJson = JSON.parse(await fs.readFile(path.join(ctx.boxRoot, "config/box.json"), "utf-8"));
         if (boxJson.publicUrl) publicUrl = boxJson.publicUrl;
-      } catch { /* */ }
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn("Could not read publicUrl from box.json, falling back to env:", e);
+        }
+      }
       publicUrl = publicUrl ?? process.env.PUBLIC_URL ?? undefined;
 
       let webhookUrl: string | null = null;
@@ -117,13 +125,17 @@ export const adminRouter = router({
       try {
         const tg = ctx.services.telegram ?? createTelegramService(config.botToken);
         await tg.deleteWebhook();
-      } catch { /* best effort */ }
+      } catch (e) { console.warn("Failed to delete Telegram webhook during disconnect (continuing):", e); }
     }
 
     const configPath = path.join(ctx.boxRoot, "config/connectors/telegram.secret.json");
     try {
       await fs.unlink(configPath);
-    } catch { /* already gone */ }
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn("Could not remove Telegram config file (may already be gone):", e);
+      }
+    }
 
     return { success: true };
   }),
@@ -139,7 +151,10 @@ export const adminRouter = router({
         publicUrl: (config.publicUrl ?? null) as string | null,
         googleServices: (config.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
       };
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug("box.json missing or unreadable, returning default box config:", e);
+      }
       return {
         boxSlug: ctx.boxSlug,
         allowedEmails: [] as string[],
@@ -160,7 +175,10 @@ export const adminRouter = router({
           ? (config.labels.filter((l: unknown): l is string => typeof l === "string"))
           : ([] as string[]),
       };
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug("gmail.json missing or unreadable, returning empty Gmail config:", e);
+      }
       return { query: "", labels: [] as string[] };
     }
   }),
@@ -195,7 +213,11 @@ export const adminRouter = router({
       let existing: Record<string, unknown> = {};
       try {
         existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
-      } catch { /* start fresh */ }
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.debug("box.json missing or unreadable, starting fresh config:", e);
+        }
+      }
 
       existing.allowedEmails = input.allowedEmails.filter(
         (e) => typeof e === "string" && e.includes("@")

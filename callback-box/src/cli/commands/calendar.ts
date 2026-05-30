@@ -113,8 +113,10 @@ calendarCommand
       const content = await fs.readFile(statePath, "utf-8");
       const state = JSON.parse(content);
       eventCount = Object.keys(state.eventFiles || {}).length;
-    } catch {
-      // No state
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Could not read calendar state at ${statePath}, assuming no events stored:`, e);
+      }
     }
 
     console.log("Available calendars:\n");

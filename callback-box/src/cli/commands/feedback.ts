@@ -71,7 +71,10 @@ async function getSessionContext(boxRoot: string): Promise<string | null> {
   try {
     const result = await parseSessionLog({ logPath: session.logPath });
     entries = result.entries;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not parse session log at ${session.logPath}, no session context available:`, e);
+    }
     return null;
   }
 

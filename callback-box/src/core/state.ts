@@ -61,7 +61,10 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read card directory ${dir}, treating as empty:`, e);
+    }
     return cards;
   }
 
@@ -103,7 +106,8 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
           subdir,
         });
       }
-    } catch {
+    } catch (e) {
+      console.warn(`Could not load card ${fullPath}, listing as unknown:`, e);
       cards.push({
         path: fullPath,
         relativePath: path.relative(boxRoot, fullPath),

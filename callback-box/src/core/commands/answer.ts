@@ -56,7 +56,8 @@ async function executeAnswer(
   let content: string;
   try {
     content = await fs.readFile(fullPath, "utf-8");
-  } catch {
+  } catch (e) {
+    console.warn(`Could not load card ${fullPath}:`, e);
     return { success: false, error: `Could not load card: ${answerArgs.question}` };
   }
 

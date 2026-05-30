@@ -82,7 +82,8 @@ async function getCallbackBoxCommit(): Promise<string | null> {
       cwd: PACKAGE_ROOT,
     });
     return stdout.trim();
-  } catch {
+  } catch (e) {
+    console.warn("[generate-docs] git rev-parse HEAD failed; treating commit as unknown:", e);
     return null;
   }
 }
@@ -104,7 +105,9 @@ async function hasDocIdMarker(boxRoot: string): Promise<boolean> {
   try {
     await stat(join(boxRoot, DOCID_DEBUG_MARKER));
     return true;
-  } catch {
+  } catch (_e) {
+    // stat throws ENOENT when the marker is absent — that simply means
+    // docid-debug is off. No other failure mode is actionable here.
     return false;
   }
 }
@@ -121,8 +124,8 @@ export async function setDocIdDebug(boxRoot: string, enabled: boolean): Promise<
     try {
       const { unlink } = await import("node:fs/promises");
       await unlink(markerPath);
-    } catch {
-      // Already gone
+    } catch (_e) {
+      // Already gone — disabling an absent marker is a no-op, nothing to report.
     }
   }
 }
@@ -160,7 +163,10 @@ async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[]> {
   let files: string[];
   try {
     files = await readdir(procedureDir);
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`[generate-docs] could not read ${procedureDir}; assuming no procedures:`, e);
+    }
     return [];
   }
 
@@ -179,8 +185,9 @@ async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[]> {
       // Take just the first sentence/line for the compact index
       const shortDesc = desc.split(/\n/)[0]?.replace(/\.\s.*/, ".").trim() || desc;
       results.push({ name, filename, description: shortDesc });
-    } catch {
-      // Skip unparseable procedure cards
+    } catch (e) {
+      // Skip unparseable procedure cards — still index them with a placeholder.
+      console.warn(`[generate-docs] could not parse procedure card ${filename}:`, e);
       results.push({
         name: filename.replace(".procedure.card", ""),
         filename,
@@ -203,8 +210,9 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
     try {
       const s = await stat(filePath);
       if (s.mtimeMs > newest) newest = s.mtimeMs;
-    } catch {
-      // File doesn't exist — skip
+    } catch (_e) {
+      // Optional input file absent — it simply doesn't contribute an mtime.
+      // These probes run over many maybe-present paths; logging each miss is noise.
     }
   };
 
@@ -212,7 +220,9 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
     let files: string[];
     try {
       files = await readdir(dirPath);
-    } catch {
+    } catch (_e) {
+      // Optional input directory absent — contributes no mtimes. Probed over
+      // many maybe-present dirs, so logging each miss would be noise.
       return;
     }
     for (const f of files) {
@@ -239,15 +249,17 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
       let slugs: string[];
       try {
         slugs = await readdir(connectorDir);
-      } catch {
+      } catch (_e) {
+        // Not a readable connector dir — no chat guides under it to date.
+        // Part of the mtime probe; logging each miss would be noise.
         continue;
       }
       for (const slug of slugs) {
         await check(join(connectorDir, slug, "chat.guide.card"));
       }
     }
-  } catch {
-    // No store/chat directory
+  } catch (_e) {
+    // No store/chat directory — box has no chats yet. Expected; nothing to report.
   }
 
   return newest;
@@ -454,8 +466,12 @@ async function compileBriefings(boxRoot: string, debug: boolean): Promise<string
       withDocId({ relativePath: "briefing.md", content: compiled, debug })
     );
     compiledPaths.push("briefing.md");
-  } catch {
-    // No root briefing or parse error — skip
+  } catch (e) {
+    // Missing root briefing is normal (skip); a parse error means a malformed
+    // card we failed to compile — surface it either way so bad cards aren't silent.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`[generate-docs] could not compile ${rootBriefingPath} (absent or malformed):`, e);
+    }
   }
 
   // TODO: scan subdirectories for directory briefings in the future
@@ -506,7 +522,10 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
   let files: string[];
   try {
     files = await readdir(configDir);
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`[generate-docs] could not read ${configDir}; assuming no guides:`, e);
+    }
     return [];
   }
 
@@ -553,8 +572,9 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
           compiledPath,
         });
       }
-    } catch {
-      // Skip unparseable guide cards
+    } catch (e) {
+      // Skip unparseable guide cards, but surface them so malformed cards aren't silent.
+      console.warn(`[generate-docs] could not parse guide card ${filename}:`, e);
     }
   }
 
@@ -594,7 +614,8 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
   let connectors: string[];
   try {
     connectors = await readdir(chatRoot);
-  } catch {
+  } catch (_e) {
+    // No store/chat directory — box has no chats, so no per-chat guides. Expected.
     return;
   }
 
@@ -603,7 +624,8 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
     let connectorStat;
     try {
       connectorStat = await stat(connectorDir);
-    } catch {
+    } catch (_e) {
+      // Entry vanished or is unreadable between readdir and stat — nothing to compile here.
       continue;
     }
     if (!connectorStat.isDirectory()) continue;
@@ -611,7 +633,8 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
     let chatSlugs: string[];
     try {
       chatSlugs = await readdir(connectorDir);
-    } catch {
+    } catch (_e) {
+      // Connector dir became unreadable — skip; no chat guides to compile under it.
       continue;
     }
 
@@ -620,8 +643,8 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
       let content: string;
       try {
         content = await readFile(guideFile, "utf-8");
-      } catch {
-        continue; // No guide card for this chat
+      } catch (_e) {
+        continue; // No guide card for this chat — the common case, not an error.
       }
 
       try {
@@ -654,8 +677,9 @@ async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
         ];
 
         await writeFile(join(rulesDir, ruleFilename), lines.join("\n"));
-      } catch {
-        // Skip unparseable guide cards
+      } catch (e) {
+        // Skip unparseable chat guide cards, but surface them so malformed cards aren't silent.
+        console.warn(`[generate-docs] could not compile chat guide ${guideFile}:`, e);
       }
     }
   }
@@ -1259,8 +1283,10 @@ async function ensureClaudeMdIncludes(boxRoot: string, briefingPaths: string[]):
   let content: string;
   try {
     content = await readFile(claudePath, "utf-8");
-  } catch {
-    // No CLAUDE.md — create one with all includes
+  } catch (_e) {
+    // No CLAUDE.md — create one with all includes. Absence is the normal
+    // first-run trigger; the subsequent writeFile would resurface any real
+    // I/O problem (e.g. permissions) rather than silently masking it.
     const seed = [
       ...requiredIncludes,
       "",

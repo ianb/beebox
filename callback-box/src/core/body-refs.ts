@@ -48,7 +48,12 @@ export function extractBodyRefs(body: string): BodyRef[] {
   let ast: Node;
   try {
     ast = parse(body);
-  } catch {
+  } catch (_e) {
+    // Intentional: per this module's header, a Markdoc parse failure means
+    // "no body refs found". Markdoc parses any legal CommonMark (a superset),
+    // so this is rare; when it happens we'd rather miss a few ref warnings than
+    // fail card validation, and the agent still gets the parse error via the
+    // separate Markdoc.validate path the frontend runs.
     return [];
   }
   const out: BodyRef[] = [];

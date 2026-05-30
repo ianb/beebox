@@ -30,7 +30,13 @@ function getSessionSecret(): string {
   try {
     cachedSecret = fs.readFileSync(secretFile, "utf-8").trim();
     return cachedSecret;
-  } catch {
+  } catch (e) {
+    // Missing file is the normal first-run case (generate below). Anything
+    // else (permissions, corruption) we'd want to notice before overwriting.
+    const code = e instanceof Error && "code" in e ? (e as NodeJS.ErrnoException).code : undefined;
+    if (code !== "ENOENT") {
+      console.warn(`Failed to read session secret at ${secretFile}, regenerating:`, e);
+    }
     const generated = crypto.randomBytes(32).toString("hex");
     fs.writeFileSync(secretFile, generated, { mode: 0o600 });
     cachedSecret = generated;
@@ -120,7 +126,8 @@ export function verifySession(cookie: string): SessionUser | null {
   let payload: string;
   try {
     payload = Buffer.from(payloadB64, "base64url").toString("utf-8");
-  } catch {
+  } catch (_e) {
+    // Malformed/garbage cookie value — untrusted input, treat as no session.
     return null;
   }
 
@@ -138,7 +145,8 @@ export function verifySession(cookie: string): SessionUser | null {
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
     if (typeof data.email !== "string") return null;
     return { email: data.email, name: data.name || data.email, picture: data.picture };
-  } catch {
+  } catch (_e) {
+    // Payload isn't valid JSON — untrusted/tampered cookie, treat as no session.
     return null;
   }
 }

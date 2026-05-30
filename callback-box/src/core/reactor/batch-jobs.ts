@@ -80,8 +80,11 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
     try {
       const refContent = await fs.readFile(refPath, "utf-8");
       desc += `\n\n#### ${ref}\n\`\`\`xml\n${refContent.trim()}\n\`\`\``;
-    } catch {
-      // Referenced file doesn't exist — agent will discover this
+    } catch (e) {
+      // Referenced file doesn't exist — omit it; the agent will discover this.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug(`Could not inline ref ${ref}:`, e);
+      }
     }
   }
 

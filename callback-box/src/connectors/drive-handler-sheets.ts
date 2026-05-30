@@ -92,8 +92,12 @@ const sheetsHandler: DriveTypeHandler = {
         let localContent = "";
         try {
           localContent = await fs.readFile(jsonPath, "utf-8");
-        } catch {
-          // File missing — will be written below
+        } catch (e) {
+          // File missing (or unreadable) — leave localContent empty so it
+          // hashes as a mismatch and gets written below; note why we ignored.
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.debug(`drive-handler-sheets: could not read ${jsonPath}, treating as absent:`, e);
+          }
         }
         const localHash = contentHash(localContent);
 
@@ -123,8 +127,12 @@ const sheetsHandler: DriveTypeHandler = {
         const filePath = path.join(localDir, relPath);
         try {
           await fs.unlink(filePath);
-        } catch {
-          // Already gone
+        } catch (e) {
+          // Cleanup is best-effort — the file may already be gone. Note it
+          // but keep deleting the state entry below.
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.debug(`drive-handler-sheets: could not unlink stale tab file ${filePath}:`, e);
+          }
         }
         delete state.contentHashes[relPath];
         changed = true;
@@ -156,8 +164,12 @@ const sheetsHandler: DriveTypeHandler = {
     let existingCard = "";
     try {
       existingCard = await fs.readFile(cardPath, "utf-8");
-    } catch {
-      // New card
+    } catch (e) {
+      // No card yet (first pull) — leave existingCard empty so the compare
+      // below treats it as new and writes it; note why we ignored.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug(`drive-handler-sheets: no existing card at ${cardPath}, treating as new:`, e);
+      }
     }
 
     if (cardContent !== existingCard) {
@@ -183,7 +195,12 @@ const sheetsHandler: DriveTypeHandler = {
       let localContent: string;
       try {
         localContent = await fs.readFile(filePath, "utf-8");
-      } catch {
+      } catch (e) {
+        // No local file to push for this tab (deleted/never materialized) —
+        // skip it, but note we couldn't read it.
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.debug(`drive-handler-sheets: could not read ${filePath} to push, skipping:`, e);
+        }
         continue;
       }
 

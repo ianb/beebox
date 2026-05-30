@@ -60,8 +60,10 @@ async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSu
         input.fields = loaded.fields;
         input.type = loaded.schema.type;
       }
-    } catch {
-      // fall through to fallback loader
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Failed to load card ${relPath}, falling through to fallback loader:`, e);
+      }
     }
   } else {
     try {
@@ -69,8 +71,10 @@ async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSu
       if (stat.isFile() && stat.size < 64 * 1024) {
         input.content = await fs.readFile(fullPath, "utf-8");
       }
-    } catch {
-      // fall through
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Failed to stat/read ${relPath}, leaving content unset:`, e);
+      }
     }
   }
 

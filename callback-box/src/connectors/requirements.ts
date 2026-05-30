@@ -47,7 +47,10 @@ async function legacySecretPresent(boxRoot: string, name: string): Promise<boole
   try {
     await access(path.join(boxRoot, "config/connectors", `${name}.secret.json`));
     return true;
-  } catch {
+  } catch (_e) {
+    // access() failing here means the secret file isn't present/readable, which
+    // is exactly the "not configured" answer this probe returns. The error
+    // carries no information beyond that boolean.
     return false;
   }
 }

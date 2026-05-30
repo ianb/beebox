@@ -19,7 +19,8 @@ import { buildScriptEnv } from "../script-env.js";
 function resolveCbPath(): string {
   try {
     return execSync("which cb", { encoding: "utf-8" }).trim();
-  } catch {
+  } catch (e) {
+    console.warn("`which cb` failed, falling back to argv/PATH lookup:", e);
     return process.argv[1] ?? "cb";
   }
 }

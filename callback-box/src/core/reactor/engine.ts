@@ -183,7 +183,10 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
         const content = await fs.readFile(absPath, "utf-8");
         const procedureInfo = await detectProcedureInJob(content, absPath);
         jobsWithContent.push({ card, relPath: jp, content, procedureInfo });
-      } catch {
+      } catch (e) {
+        // Couldn't read this job card — queue it as unreadable so the batch
+        // path reports "(could not read)" rather than crashing the cycle.
+        console.warn(`Could not read job card ${jp}:`, e);
         jobsWithContent.push({ card, relPath: jp, content: "", procedureInfo: null });
       }
     }

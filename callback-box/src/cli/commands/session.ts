@@ -264,7 +264,11 @@ export const sessionCommand = new Command("session")
         try {
           cutoff = Date.now() - parseDuration(options.since);
           sinceLabel = `the last ${options.since}`;
-        } catch {
+        } catch (_e) {
+          // Not a duration like "1d"/"30m": fall back to parsing as an ISO
+          // timestamp below. The duration parse error is expected here and
+          // carries no info the ISO fallback needs; an invalid ISO value is
+          // reported explicitly with its own error message.
           const parsed = new Date(options.since);
           if (isNaN(parsed.getTime())) {
             console.error(

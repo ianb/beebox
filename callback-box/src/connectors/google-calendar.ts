@@ -458,7 +458,8 @@ function icsToGoogleEvent(content: string): (GoogleCalendarEvent & { _calendarId
     if (calId) result._calendarId = String(calId);
 
     return result;
-  } catch {
+  } catch (e) {
+    console.warn("Failed to parse local .ics file, skipping:", e);
     return null;
   }
 }
@@ -549,8 +550,9 @@ function describeChanges(oldContent: string, newContent: string): string[] {
     if (oldTransp !== newTransp) {
       changes.push(newTransp === "TRANSPARENT" ? "marked as free" : "marked as busy");
     }
-  } catch {
+  } catch (e) {
     // Can't parse — skip diffing
+    console.warn("Failed to diff ICS content, skipping change descriptions:", e);
   }
   return changes;
 }
@@ -955,8 +957,8 @@ class GoogleCalendarConnector implements Connector {
             let icsContent: string | undefined;
             try {
               icsContent = await fs.readFile(filePath, "utf-8");
-            } catch {
-              // File already gone
+            } catch (_e) {
+              // File already gone — icsContent stays undefined; capture is best-effort for the review job, the unlink below handles the real deletion.
             }
             await fs.unlink(filePath);
             deleted.push(path.relative(this.boxRoot, filePath));
@@ -1007,8 +1009,8 @@ class GoogleCalendarConnector implements Connector {
           localContent = await fs.readFile(
             path.join(calDir, oldName || filename), "utf-8"
           );
-        } catch {
-          // File missing — proceed with write
+        } catch (_e) {
+          // File missing — localContent stays undefined and we proceed to write the fresh ICS; the read is only for local-edit detection, not required.
         }
 
         if (localContent && storedHash && contentHash(localContent) !== storedHash) {
@@ -1202,8 +1204,9 @@ class GoogleCalendarConnector implements Connector {
       let content: string;
       try {
         content = await fs.readFile(filePath, "utf-8");
-      } catch {
-        continue; // File missing — not a delete request
+      } catch (_e) {
+        // File missing — a tracked event with no local file is not a delete request; skip it. The error carries no actionable info beyond the file's absence.
+        continue;
       }
 
       // Check for X-CB-DELETE property
@@ -1235,8 +1238,8 @@ class GoogleCalendarConnector implements Connector {
       let icsContent: string | undefined;
       try {
         icsContent = await fs.readFile(filePath, "utf-8");
-      } catch {
-        // File already gone
+      } catch (_e) {
+        // File already gone — icsContent stays undefined; capture is best-effort for the review job, the deleteEvent/unlink below handle the real deletion.
       }
       const success = await this.deleteEvent(calendar, { calendarId, googleEventId });
       if (success) {

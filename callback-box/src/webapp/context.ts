@@ -46,8 +46,10 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
         prompt: fields.prompt,
         options: options && options.length > 0 ? options : undefined,
       });
-    } catch {
-      // Skip invalid cards
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Skipping invalid question card ${q.path}:`, e);
+      }
     }
   }
 

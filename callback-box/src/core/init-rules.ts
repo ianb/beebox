@@ -77,8 +77,11 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
         await unlink(join(rulesDir, file));
       }
     }
-  } catch {
-    // Directory may not exist yet, that's fine
+  } catch (e) {
+    // Directory may not exist yet, that's fine — nothing to clean up.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.debug("Skipping old-rule cleanup (rules dir not readable):", e);
+    }
   }
 
   const generated: string[] = [];

@@ -336,7 +336,10 @@ class GmailConnector implements Connector {
     try {
       const content = await fs.readFile(this.configPath(), "utf-8");
       return JSON.parse(content);
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug("Gmail: no connector config found, using defaults:", e);
+      }
       return {};
     }
   }
@@ -345,7 +348,10 @@ class GmailConnector implements Connector {
     try {
       const content = await fs.readFile(this.statePath(), "utf-8");
       return JSON.parse(content);
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug("Gmail: no prior state found, starting fresh:", e);
+      }
       return { seenMessageIds: [] };
     }
   }
@@ -369,8 +375,10 @@ class GmailConnector implements Connector {
   private async cleanupLegacySecret(): Promise<void> {
     try {
       await fs.unlink(this.legacySecretPath());
-    } catch {
-      // File didn't exist — nothing to clean up
+    } catch (_e) {
+      // Best-effort cleanup: the legacy IMAP secret almost always doesn't
+      // exist (already removed or never present). A failure here carries no
+      // actionable info and must not interrupt the sync — safe to ignore.
     }
   }
 
@@ -435,8 +443,9 @@ class GmailConnector implements Connector {
       try {
         const labels = await service.listLabels();
         for (const l of labels) labelMap.set(l.id, l.name);
-      } catch {
+      } catch (e) {
         // Non-fatal: cards will fall back to label IDs
+        console.warn("Gmail: could not list labels, cards will use label IDs:", e);
       }
 
       const query = this.buildQuery(config, transient.lastPullDate);
@@ -501,8 +510,11 @@ class GmailConnector implements Connector {
           if (existingCard) {
             existingBasename = existingCard.slice(0, -".email-thread.card".length);
           }
-        } catch {
-          // emailDir doesn't exist yet
+        } catch (e) {
+          // emailDir doesn't exist yet — treat thread as new
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.warn("Gmail: could not scan email dir for existing thread, treating as new:", e);
+          }
         }
 
         const actualBasename = existingBasename ?? threadBasename;
@@ -519,8 +531,11 @@ class GmailConnector implements Connector {
           existingCount = files.filter((f) =>
             f.match(/^msg-\d+\.email-message\.card$/),
           ).length;
-        } catch {
-          // empty dir
+        } catch (e) {
+          // empty dir — no existing messages to count
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.warn("Gmail: could not read attach dir to count messages:", e);
+          }
         }
 
         const participants = new Set<string>();
@@ -604,8 +619,11 @@ class GmailConnector implements Connector {
               messageRefs.unshift(ref);
             }
           }
-        } catch {
-          // no existing files
+        } catch (e) {
+          // no existing files to merge into the thread's message refs
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.warn("Gmail: could not read attach dir to merge message refs:", e);
+          }
         }
 
         const allLabels = new Set<string>();

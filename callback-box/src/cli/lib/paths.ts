@@ -79,8 +79,9 @@ export async function findBoxRoot(startPath: string): Promise<string | null> {
     try {
       await fs.access(markerPath);
       return current;
-    } catch {
-      // Marker not found, try parent
+    } catch (_e) {
+      // Marker absent at this level — the only meaningful outcome of access()
+      // here; walk up to the parent. No actionable info in the error.
     }
 
     const parent = path.dirname(current);

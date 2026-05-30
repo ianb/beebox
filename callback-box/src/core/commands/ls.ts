@@ -55,8 +55,10 @@ async function expandPath(
         .toSorted()
         .map((e) => path.join(absolute, e));
     }
-  } catch {
-    // Not a directory or doesn't exist
+  } catch (_e) {
+    // fs.stat rejects when the path doesn't exist — that's expected here,
+    // it just means "not a directory", and we fall through to treating the
+    // argument as a literal file path. No detail in the error to act on.
   }
 
   // Literal file
@@ -117,8 +119,11 @@ async function executeLs(
       const line = `${relativePath}\t${formatted}`;
       ctx.writeLine(line);
       lines.push(line);
-    } catch {
-      // Can't parse — just show path
+    } catch (e) {
+      // Can't read or parse this card — fall back to showing just the path
+      // so `ls` still lists it. Warn so an unreadable/malformed card is
+      // visible rather than silently rendered template-free.
+      console.warn(`ls: could not apply format to ${relativePath}: ${e instanceof Error ? e.message : String(e)}`);
       ctx.writeLine(relativePath);
       lines.push(relativePath);
     }

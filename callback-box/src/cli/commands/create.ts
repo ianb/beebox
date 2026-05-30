@@ -87,8 +87,9 @@ export const createCommand = new Command("create")
       if (raw.startsWith("[")) {
         try {
           value = JSON.parse(raw);
-        } catch {
-          // Not valid JSON, keep as string
+        } catch (_e) {
+          // Not valid JSON: the value just isn't a JSON array, keep the raw string as-is.
+          // The parse error carries no actionable info for a key=value CLI argument.
         }
       }
 

@@ -122,7 +122,9 @@ schedulerCommand
       if (pidMatch) {
         console.log(`  PID: ${pidMatch[1]}`);
       }
-    } catch {
+    } catch (_e) {
+      // launchctl exits non-zero when the label isn't loaded — the
+      // error carries no detail beyond "not loaded", which we report.
       console.log("\nLaunchd service: not loaded");
     }
 
@@ -139,9 +141,9 @@ schedulerCommand
     let cbPath: string;
     try {
       cbPath = execSync("which cb", { encoding: "utf-8" }).trim();
-    } catch {
+    } catch (e) {
       cbPath = process.argv[1] ?? "cb";
-      console.warn(`Warning: could not resolve cb binary via 'which', using ${cbPath}`);
+      console.warn(`Warning: could not resolve cb binary via 'which', using ${cbPath}:`, e);
     }
 
     // launchd doesn't source shell profiles, so PATH won't include nvm/node.
@@ -220,7 +222,9 @@ schedulerCommand
       const logPath = boxLogFile(boxPath);
       try {
         await fs.access(logPath);
-      } catch {
+      } catch (_e) {
+        // No log file for this box yet — expected when a box has never
+        // had a scheduler tick. Skip it and move on.
         continue;
       }
 
@@ -246,8 +250,10 @@ schedulerCommand
             if (!match) continue;
           }
           allEntries.push(entry);
-        } catch {
-          // skip malformed
+        } catch (e) {
+          // Skip malformed JSONL lines, but surface them — a corrupt
+          // line shouldn't abort the whole log read silently.
+          console.warn(`Skipping malformed log line in ${logPath}:`, e);
         }
       }
     }
@@ -321,14 +327,18 @@ schedulerCommand
     try {
       execSync(`launchctl unload ${PLIST_PATH} 2>&1`);
       console.log("Unloaded launchd service");
-    } catch {
-      // May not be loaded
+    } catch (_e) {
+      // unload fails when the service isn't loaded — fine during
+      // uninstall, the goal (not loaded) is already met.
+      console.log("Launchd service was not loaded");
     }
 
     try {
       await fs.unlink(PLIST_PATH);
       console.log(`Removed ${PLIST_PATH}`);
-    } catch {
+    } catch (_e) {
+      // unlink fails when the plist is already absent — the desired
+      // end state (no plist) is already satisfied.
       console.log(`Plist not found: ${PLIST_PATH}`);
     }
   });

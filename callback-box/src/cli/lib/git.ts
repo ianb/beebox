@@ -79,7 +79,8 @@ export async function initRepo(
 export async function isRepo(dir: string): Promise<boolean> {
   try {
     return await simpleGit(dir).checkIsRepo();
-  } catch {
+  } catch (_e) {
+    // checkIsRepo throws when dir is not a git repo — that's the answer we want.
     return false;
   }
 }
@@ -268,8 +269,9 @@ export async function getLog(
         trailers: Object.keys(trailers).length > 0 ? trailers : undefined,
       };
     });
-  } catch {
-    // No commits yet
+  } catch (_e) {
+    // log() throws on a repo with no commits yet — an empty history is the
+    // expected, non-error result here.
     return [];
   }
 }
@@ -304,7 +306,8 @@ export async function hasCommits(boxRoot: string): Promise<boolean> {
   try {
     await simpleGit(boxRoot).revparse(["HEAD"]);
     return true;
-  } catch {
+  } catch (_e) {
+    // revparse HEAD fails when there are no commits yet — that means false.
     return false;
   }
 }
@@ -533,8 +536,9 @@ export async function getLogPaginated(
         }
         statMap.set(hash, stat);
       }
-    } catch {
-      // stat data is optional — ignore failures
+    } catch (e) {
+      // File stats are decorative — log-history still renders without them.
+      console.warn("Failed to compute commit file stats; continuing without them:", e);
     }
 
     return result.all.map((entry) => {
@@ -550,8 +554,9 @@ export async function getLogPaginated(
         fileStat: statMap.get(entry.hash),
       };
     });
-  } catch {
-    // No commits yet
+  } catch (_e) {
+    // log() throws on a repo with no commits yet — an empty page is the
+    // expected, non-error result here.
     return [];
   }
 }
@@ -571,11 +576,15 @@ export async function getCommitDiff(
   try {
     // Try normal diff against parent, with low rename threshold
     return await git.diff(["-M10", `${hash}~1`, hash]);
-  } catch {
-    // Probably the initial commit with no parent
+  } catch (_e) {
+    // Diff against parent fails for the initial commit (no `${hash}~1`).
+    // Fall back to `show`, which renders the initial commit's contents.
     try {
       return await git.raw(["show", "-M10", "--format=", hash]);
-    } catch {
+    } catch (e) {
+      // Even `show` failed — likely a bad/unknown hash. Surface it and
+      // fall back to an empty diff so the caller still renders.
+      console.warn(`Failed to get diff for commit ${hash}; returning empty diff:`, e);
       return "";
     }
   }
@@ -640,8 +649,10 @@ export async function getTrailerFacets(boxRoot: string): Promise<TrailerFacets> 
         }
       }
     }
-  } catch {
-    // No commits or git error — empty facets
+  } catch (e) {
+    // A repo with no commits yields empty facets legitimately; any other
+    // git failure is worth surfacing rather than silently showing no filters.
+    console.warn("Failed to scan trailer facets; returning empty facets:", e);
   }
 
   return {
@@ -691,7 +702,9 @@ async function getLogFiltered(
       ...pageArgs,
       `--format=${FS}%H${FS}%aI${FS}%s${FS}%b${RS}`,
     ]);
-  } catch {
+  } catch (_e) {
+    // A filtered log over a repo with no matching/any commits throws — an
+    // empty result set is the expected, non-error outcome here.
     return [];
   }
 
@@ -757,8 +770,10 @@ async function getLogFiltered(
       }
       entry.fileStat = stat;
     }
-  } catch {
-    // stats are optional
+  } catch (e) {
+    // File stats are decorative — the filtered history still renders the
+    // entries without per-commit stat counts.
+    console.warn("Failed to compute filtered commit file stats; continuing without them:", e);
   }
 
   return entries;

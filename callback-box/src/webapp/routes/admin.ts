@@ -34,7 +34,11 @@ async function loadPublicUrl(boxRoot: string): Promise<string | undefined> {
   try {
     const boxJson = JSON.parse(await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8"));
     if (boxJson.publicUrl) return boxJson.publicUrl;
-  } catch { /* ignore */ }
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Could not read box.json publicUrl, falling back to PUBLIC_URL env:", e);
+    }
+  }
   return process.env.PUBLIC_URL ?? undefined;
 }
 
@@ -245,13 +249,13 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
       try {
         const tg = getTelegram(config.botToken);
         await tg.deleteWebhook();
-      } catch { /* best effort */ }
+      } catch (e) { console.warn("Failed to delete Telegram webhook during disconnect, continuing:", e); }
     }
 
     const configPath = path.join(boxRoot, "config/connectors/telegram.secret.json");
     try {
       await fs.unlink(configPath);
-    } catch { /* already gone */ }
+    } catch (_e) { /* already gone — unlink failing means the config file is absent, which is the desired disconnect end state */ }
 
     return { success: true };
   });
@@ -334,7 +338,10 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
         ownerEmail,
         googleServices: config.googleServices ?? {},
       };
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn("Could not read box.json, returning empty config defaults:", e);
+      }
       return { boxSlug, allowedEmails: [], publicUrl: null, ownerEmail, googleServices: {} };
     }
   });
@@ -349,7 +356,11 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     let existing: Record<string, unknown> = {};
     try {
       existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
-    } catch { /* start fresh */ }
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn("Could not read existing box.json, starting from an empty config:", e);
+      }
+    }
 
     if (body.allowedEmails) {
       existing.allowedEmails = body.allowedEmails.filter((e) => typeof e === "string" && e.includes("@"));

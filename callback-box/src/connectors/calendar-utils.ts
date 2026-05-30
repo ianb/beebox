@@ -201,7 +201,13 @@ export async function loadAllEvents(
   let files: string[];
   try {
     files = await fs.readdir(calendarDir);
-  } catch {
+  } catch (e) {
+    // Calendar dir may not exist (no calendar synced yet) — that's a normal
+    // empty result. Log so a permissions/IO failure isn't mistaken for "no
+    // events".
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read calendar dir ${calendarDir}, returning no events:`, e);
+    }
     return [];
   }
 

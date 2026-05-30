@@ -60,8 +60,8 @@ registerCommand({
     let entries: Array<{ name: string; isDirectory: () => boolean }>;
     try {
       entries = await fs.readdir(inboxDir, { withFileTypes: true });
-    } catch {
-      ctx.writeLine("No inbox directory found.");
+    } catch (e) {
+      ctx.writeLine(`No inbox directory found (or unreadable): ${e instanceof Error ? e.message : String(e)}`);
       return { success: true, data: { transcribed: 0 } };
     }
 
@@ -84,7 +84,9 @@ registerCommand({
       let attachEntries: string[];
       try {
         attachEntries = await fs.readdir(sessionAttachDir);
-      } catch {
+      } catch (_e) {
+        // No attach directory for this session means it has no audio cards to
+        // transcribe — a normal, expected state, so skip it silently.
         continue;
       }
 
@@ -113,7 +115,9 @@ registerCommand({
 
         try {
           await fs.access(audioPath);
-        } catch {
+        } catch (_e) {
+          // Referenced audio file is missing/inaccessible — nothing to
+          // transcribe; the writeLine below surfaces the skip to the user.
           ctx.writeLine(`  Skipping ${cardFile}: audio file ${audioRef} not found`);
           continue;
         }

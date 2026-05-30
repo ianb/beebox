@@ -326,7 +326,8 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
   let jobFiles: string[];
   try {
     jobFiles = await fs.readdir(jobsDir);
-  } catch {
+  } catch (_e) {
+    // No jobs dir yet (ENOENT) — nothing to clean up.
     return 0;
   }
 
@@ -340,7 +341,8 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
     let content: string;
     try {
       content = await fs.readFile(filePath, "utf-8");
-    } catch {
+    } catch (e) {
+      console.warn(`  Skipping unreadable job file ${relPath}:`, e);
       continue;
     }
 
@@ -365,8 +367,10 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
         await fs.access(path.join(boxRoot, ref));
         allMissing = false;
         break;
-      } catch {
-        // File doesn't exist
+      } catch (_e) {
+        // access() throwing IS the test result: this ref's file is gone.
+        // Keep allMissing true and check the next ref; the error itself
+        // carries no actionable info beyond "not accessible".
       }
     }
 
@@ -433,8 +437,8 @@ export async function createIntakeJobsForUnjobbed(
         existingRefs.add(match[1]!);
       }
     }
-  } catch {
-    // No jobs dir yet
+  } catch (_e) {
+    // No jobs dir yet (ENOENT) — treat as no existing refs.
   }
 
   // Scan inbox for card files
@@ -445,7 +449,9 @@ export async function createIntakeJobsForUnjobbed(
     let entries: string[];
     try {
       entries = await fs.readdir(dir);
-    } catch {
+    } catch (_e) {
+      // Directory doesn't exist (e.g. a connector inboxPath not yet
+      // created) — nothing to scan here.
       return;
     }
 

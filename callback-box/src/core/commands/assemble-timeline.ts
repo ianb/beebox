@@ -34,7 +34,10 @@ async function readImageCard(cardPath: string): Promise<ImageFields | null> {
       schemas: createCardSchemaMap(),
     });
     return parsed.fields as unknown as ImageFields;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Failed to read image card ${cardPath}, treating as unavailable:`, e);
+    }
     return null;
   }
 }
@@ -47,7 +50,10 @@ async function readAudioCard(cardPath: string): Promise<AudioFields | null> {
       schemas: createCardSchemaMap(),
     });
     return parsed.fields as unknown as AudioFields;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Failed to read audio card ${cardPath}, treating as unavailable:`, e);
+    }
     return null;
   }
 }
@@ -82,7 +88,10 @@ registerCommand({
     let entries: Array<{ name: string; isDirectory: () => boolean }>;
     try {
       entries = await fs.readdir(inboxDir, { withFileTypes: true });
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Could not read inbox directory ${inboxDir}, assuming none:`, e);
+      }
       ctx.writeLine("No inbox directory found.");
       return { success: true, data: { assembled: 0 } };
     }
@@ -101,7 +110,10 @@ registerCommand({
       let attachFiles: string[];
       try {
         attachFiles = await fs.readdir(sessionAttachDir);
-      } catch {
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`No attach dir for ${sessionLabel} (${sessionAttachDir}), skipping:`, e);
+        }
         continue;
       }
 
@@ -172,8 +184,11 @@ registerCommand({
         try {
           const raw = await fs.readFile(timingPath, "utf-8");
           timingData = JSON.parse(raw);
-        } catch {
+        } catch (e) {
           ctx.writeLine(`    Warning: no timing data for ${ac}`);
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.warn(`Could not load timing data ${timingPath} for ${ac}:`, e);
+          }
           continue;
         }
 

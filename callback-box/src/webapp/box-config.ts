@@ -61,7 +61,10 @@ export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
   try {
     const stat = await fs.promises.stat(configPath);
     mtime = stat.mtimeMs;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`No box config at ${configPath}, using defaults:`, e);
+    }
     return {};
   }
 
@@ -75,7 +78,10 @@ export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
     const config: BoxConfig = JSON.parse(raw);
     cache.set(boxRoot, { config, mtime });
     return config;
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not read or parse box config at ${configPath}, using defaults:`, e);
+    }
     return {};
   }
 }

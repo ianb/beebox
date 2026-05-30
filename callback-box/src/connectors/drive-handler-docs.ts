@@ -197,8 +197,11 @@ const docsHandler: DriveTypeHandler = {
       let localContent = "";
       try {
         localContent = await fs.readFile(mdPath, "utf-8");
-      } catch {
+      } catch (e) {
         // File missing — treat as no local edit, will be written below
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.debug(`[google-drive] No local markdown at ${mdPath}, treating as no local edit:`, e);
+        }
       }
       const localHash = contentHash(localContent);
       if (localHash === storedHash && newHash !== storedHash) {
@@ -227,8 +230,8 @@ const docsHandler: DriveTypeHandler = {
     try {
       await fs.access(remoteMdPath);
       hasRemoteFile = true;
-    } catch {
-      // No conflict file
+    } catch (_e) {
+      // No conflict file — absence is the expected, non-error case for fs.access
     }
 
     // Build (or rebuild) the card. Fall back to Drive metadata if the
@@ -250,8 +253,11 @@ const docsHandler: DriveTypeHandler = {
     let existingCard = "";
     try {
       existingCard = await fs.readFile(cardPath, "utf-8");
-    } catch {
-      // New card
+    } catch (e) {
+      // New card — no existing file to diff against
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug(`[google-drive] No existing card at ${cardPath}, treating as new:`, e);
+      }
     }
     if (cardContent !== existingCard) {
       await fs.mkdir(path.dirname(cardPath), { recursive: true });
@@ -275,8 +281,11 @@ const docsHandler: DriveTypeHandler = {
     let localContent: string;
     try {
       localContent = await fs.readFile(mdPath, "utf-8");
-    } catch {
-      // Nothing to push.
+    } catch (e) {
+      // Nothing to push — no local markdown file exists.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug(`[google-drive] No local markdown at ${mdPath}, nothing to push:`, e);
+      }
       return { pushed: [] };
     }
 
@@ -300,8 +309,8 @@ const docsHandler: DriveTypeHandler = {
         `[google-drive] Skipping push for ${file.name}: unresolved conflict (${cardBasename}.remote.md exists)`,
       );
       return { pushed: [] };
-    } catch {
-      // No conflict file — proceed with conflict check below.
+    } catch (_e) {
+      // No conflict file — absence is the expected, non-error case for fs.access; proceed with conflict check below.
     }
 
     // Conflict check: re-read remote state, ensure it matches what we

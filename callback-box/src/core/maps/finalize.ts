@@ -23,7 +23,9 @@ const INCLUDE_LINE = "@MAP.md";
 async function readFileOrNull(absPath: string): Promise<string | null> {
   try {
     return await fs.readFile(absPath, "utf-8");
-  } catch {
+  } catch (_e) {
+    // Read failure (typically ENOENT) means "no existing file" — the
+    // caller treats null as absent and creates one. No actionable info.
     return null;
   }
 }
@@ -32,7 +34,8 @@ async function dirExists(absPath: string): Promise<boolean> {
   try {
     const stat = await fs.stat(absPath);
     return stat.isDirectory();
-  } catch {
+  } catch (_e) {
+    // stat failure (typically ENOENT) means the path is not a directory.
     return false;
   }
 }
@@ -41,7 +44,8 @@ async function fileExists(absPath: string): Promise<boolean> {
   try {
     await fs.access(absPath);
     return true;
-  } catch {
+  } catch (_e) {
+    // access failure (typically ENOENT) means the file does not exist.
     return false;
   }
 }
