@@ -41,7 +41,6 @@ import { landmarksSection } from "./landmarks.js";
 import { quotesSection } from "./quotes.js";
 import { sourceSection } from "./source.js";
 import { briefingTagsSection } from "./briefing-tags.js";
-import { recipeTagsSection } from "./recipe-tags.js";
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
@@ -80,7 +79,6 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...quotesSection(),
     ...sourceSection(),
     ...briefingTagsSection(),
-    ...recipeTagsSection(),
     ...generalPrinciplesSection(),
     ...gitHistorySection(),
     ...whereToRecordSection(),
