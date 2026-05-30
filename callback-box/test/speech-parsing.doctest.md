@@ -174,3 +174,59 @@ const segs = parseAllSpeechTags(
 segs[0].instructions
 => Real note.
 ```
+
+## Name attribute
+
+An optional `name` attribute labels the speaker of a chunk:
+
+```
+const segs = parseAllSpeechTags('<speech name="Bob">hi, I am bob!</speech>');
+segs[0].name
+=> Bob
+
+segs[0].text
+=> hi, I am bob!
+```
+
+No `name` attribute leaves it undefined:
+
+```
+const segs = parseAllSpeechTags("<speech>plain</speech>");
+segs[0].name
+=> undefined
+```
+
+## Splitting into ordered parts
+
+`splitSpeechParts` interleaves non-spoken text and `<speech>` chunks, tagging
+each chunk with its absolute index (matching parseAllSpeechTags order):
+
+```ts setup
+import { splitSpeechParts } from "../src/frontend/src/lib/speech-parsing.js";
+```
+
+```
+const parts = splitSpeechParts("Intro text <speech>one</speech> mid <speech name=\"Q\">two</speech>");
+parts.map(p => p.type).join(",")
+=> text,speech,text,speech
+
+parts.filter(p => p.type === "speech").map(p => p.index).join(",")
+=> 0,1
+```
+
+``` continue
+const speechParts = parts.filter(p => p.type === "speech");
+speechParts[1]?.type === "speech" ? speechParts[1].segment.name : "?"
+=> Q
+```
+
+Content with no speech is a single text part:
+
+```
+const parts = splitSpeechParts("just prose, nothing spoken");
+parts.length
+=> 1
+
+parts[0]?.type
+=> text
+```

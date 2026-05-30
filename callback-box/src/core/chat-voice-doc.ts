@@ -45,6 +45,16 @@ Typical uses:
 
 An unknown voice name logs a warning and falls back to the personality card's base voice.
 
+## Labeling the Speaker
+
+Add a \`name\` attribute to show a small speaker label on that spoken chunk in the chat UI:
+
+\`\`\`xml
+<speech name="Bob" voice="onyx">Hi, I'm Bob!</speech>
+\`\`\`
+
+The label is **display-only** — it changes how the chunk looks (and reads in the replay menu), not how it sounds. Pair it with \`voice\` when role-playing or quoting distinct speakers so each line is both voiced and labeled. Omit it for ordinary narration; an unlabeled chunk shows no label.
+
 ## Replacing Base Instructions
 
 The nested \`<instructions>\` tag normally appends to the base. To **replace** them entirely for one segment, add \`override-instructions="1"\`:
