@@ -1938,7 +1938,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     // Release the object URLs after send — the base64 payload is independent
     // of the object URL, so dropping them doesn't affect the message.
     for (const a of attachments) {
-      try { URL.revokeObjectURL(a.objectUrl); } catch { /* already revoked */ }
+      try { URL.revokeObjectURL(a.objectUrl); } catch (_e) { /* already revoked — harmless */ }
     }
     setAttachments([]);
     nextAttachmentIdRef.current = 1;
@@ -2035,7 +2035,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     setAttachments((prev) => {
       const target = prev.find((a) => a.id === id);
       if (target) {
-        try { URL.revokeObjectURL(target.objectUrl); } catch { /* already revoked */ }
+        try { URL.revokeObjectURL(target.objectUrl); } catch (_e) { /* already revoked — harmless */ }
       }
       return prev.filter((a) => a.id !== id);
     });

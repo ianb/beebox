@@ -84,7 +84,8 @@ function scaleAmount(raw: string, scale: number): ReactNode {
   try {
     const f = new Fraction(raw).mul(scale);
     return formatFraction(f);
-  } catch {
+  } catch (_e) {
+    // raw isn't a parseable fraction (e.g. "to taste") — leave it unscaled.
     return raw;
   }
 }

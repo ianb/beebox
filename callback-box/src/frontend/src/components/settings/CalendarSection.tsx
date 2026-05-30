@@ -40,8 +40,8 @@ export function CalendarSection() {
     try {
       await updateMutation.mutateAsync({ ...config, calendars: newList });
       utils.calendar.invalidate();
-    } catch {
-      // error handled by mutation state
+    } catch (_e) {
+      // error surfaced to the user via the mutation's error state
     }
   };
 

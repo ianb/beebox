@@ -72,8 +72,9 @@ const pollForLogin = fromCallback(({ sendBack }) => {
         const status = (await resp.json()) as ClaudeStatus;
         sendBack({ type: "POLL_RESULT", status });
       }
-    } catch {
-      // Ignore poll errors, keep trying
+    } catch (_e) {
+      // Transient poll failure (network/offline); the interval retries every
+      // 3s, so logging each miss would just spam.
     }
   }, 3000);
   return () => clearInterval(id);

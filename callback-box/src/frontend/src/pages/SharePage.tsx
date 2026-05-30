@@ -162,8 +162,8 @@ export function SharePage() {
                 if (data.type === "result" && data.success) {
                   success = true;
                 }
-              } catch {
-                // skip
+              } catch (e) {
+                console.debug("Skipping unparseable SSE data line:", e);
               }
             }
           }

@@ -60,8 +60,8 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
       utils.admin.gmailConfig.invalidate();
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
-    } catch {
-      // error surfaced via updateMutation.error
+    } catch (_e) {
+      // error surfaced to the user via updateMutation.error state
     }
   };
 

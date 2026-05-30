@@ -190,7 +190,8 @@ export function apiFileUrl(boxSlug: string, path: string): string {
 function viteBase(): string {
   try {
     return (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
-  } catch {
+  } catch (_e) {
+    // import.meta.env is undefined in plain-Node test runners (see above).
     return "/";
   }
 }

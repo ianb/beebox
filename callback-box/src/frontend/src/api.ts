@@ -487,8 +487,10 @@ export async function sendChatMessage(params: {
         try {
           const data = JSON.parse(line.slice(6));
           onMessage(data);
-        } catch {
-          // Skip unparseable lines
+        } catch (e) {
+          // Malformed SSE data line — partial frames can occur mid-stream, so
+          // log at debug rather than spamming warn.
+          console.debug("Skipping unparseable SSE data line:", e);
         }
       }
     }
@@ -499,8 +501,8 @@ export async function sendChatMessage(params: {
     try {
       const data = JSON.parse(buffer.slice(6));
       onMessage(data);
-    } catch {
-      // Skip
+    } catch (e) {
+      console.debug("Skipping unparseable trailing SSE buffer:", e);
     }
   }
 }

@@ -92,7 +92,8 @@ function SheetView({ data }: RendererProps) {
             const json = await resp.json();
             results.set(tab.title, json);
           }
-        } catch {
+        } catch (e) {
+          console.warn("Failed to load sheet tab data; skipping tab:", e);
           // Skip failed tabs
         }
       }

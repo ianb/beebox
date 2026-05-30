@@ -185,7 +185,8 @@ function parseXmlToElementNode(xml: string): ElementNode | null {
     const error = doc.querySelector("parsererror");
     if (error) return null;
     return domToElementNode(doc.documentElement);
-  } catch {
+  } catch (_e) {
+    // Unparseable XML — caller treats null as "not renderable".
     return null;
   }
 }

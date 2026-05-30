@@ -16,6 +16,15 @@
   270 bare `catch {}` bound and made non-silent (log / rethrow / inspect /
   justified-`_e`), then ENOENT-guarded so normal file-absence doesn't spam
   output. Suppressions pruned 1000 → 730. **0 bare catches remain.**
+- **2026-05-30 — bare-catch rule enabled for the frontend.** In the frontend
+  (`react: true`), `no-restricted-syntax` carries *only* the bare-catch selector
+  (no `??`/`as`/switch), so enabling it surfaced exactly 14 bare catches across
+  11 files. All fixed by hand (SSE-parse → `console.debug`, discrete fetch
+  failures → `console.warn`, justified swallows like already-revoked object URLs
+  / mutation errors already shown in the UI → bound `_e` + comment). Rule lands
+  **fully clean — no suppressions needed.** The frontend's other off-block rules
+  (optional-chaining, error/*, max-lines*, default-params) remain off and are a
+  separate burn-down.
 
 ### Two corrections to this doc's original numbers
 

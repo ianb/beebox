@@ -148,7 +148,8 @@ function parseMockInto(val: string, target: Record<string, unknown>): void {
   if (eqIdx > 0) {
     try {
       target[val.slice(0, eqIdx)] = JSON.parse(val.slice(eqIdx + 1));
-    } catch {
+    } catch (_e) {
+      // The error message already reports the offending value; we exit anyway.
       console.error(`Invalid JSON for --mock: ${val.slice(eqIdx + 1)}`);
       process.exit(1);
     }
@@ -215,8 +216,10 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
       try {
         const data = await fn();
         queryClient.setQueryData(key, data);
-      } catch {
-        // Silently skip — component will show empty state
+      } catch (e) {
+        // Non-fatal: the client will refetch this query on hydration. Surface
+        // it so SSR-time backend problems are visible in server logs.
+        console.warn("SSR prefetch failed; client will refetch:", e);
       }
     }),
   );
