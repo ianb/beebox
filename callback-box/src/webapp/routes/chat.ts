@@ -59,6 +59,7 @@ import {
   parseCancelScheduleTags,
 } from "../../core/chat-schedules.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
+import { serveMockTts } from "../tts-mock.js";
 
 interface SendBody {
   message: string;
@@ -794,10 +795,30 @@ export async function registerChatRoutes(
   });
 
   // POST /api/chat/tts - Proxy TTS requests to OpenAI
-  server.post<{ Body: { text: string; instructions?: string; voice?: string } }>(
+  server.post<{
+    Body: {
+      text: string;
+      instructions?: string;
+      voice?: string;
+      // Dev-only mock fields (honored only when NODE_ENV !== "production");
+      // see tts-mock.ts and the /dev/speech harness.
+      mock?: boolean;
+      fixture?: string;
+      delayMs?: number;
+      chunkMs?: number;
+      chunkSize?: number;
+    };
+  }>(
     "/api/chat/tts",
     async (request, reply) => {
-      const { text, instructions, voice } = request.body;
+      const { text, instructions, voice, mock, fixture, delayMs, chunkMs, chunkSize } = request.body;
+
+      // Serve slow fixture audio instead of calling OpenAI, for the speech
+      // browser test. Never reachable in production.
+      if (mock && process.env.NODE_ENV !== "production") {
+        return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize });
+      }
+
       const resolvedVoice = voice && (VOICE_MODELS as readonly string[]).includes(voice) ? voice : "marin";
 
       if (openaiAudio) {

@@ -23,6 +23,7 @@ import { CardViewPage } from "./pages/card/CardViewPage";
 import { ViewPage } from "./pages/ViewPage";
 import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
 import { ChatsPage } from "./pages/chats/ChatsPage";
+import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 
 // --- Root route ---
 
@@ -159,6 +160,13 @@ const chatsRoute = createRoute({
   component: ChatsPage,
 });
 
+// Dev-only test harness for the speech replay menu (see SpeechTestHarness).
+const devSpeechRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/dev/speech",
+  component: SpeechTestPage,
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
@@ -188,6 +196,8 @@ const routeTree = rootRoute.addChildren([
     viewRoute,
     landmarksRoute,
     chatsRoute,
+    // Dev-only routes are omitted from production builds entirely.
+    ...(import.meta.env.DEV ? [devSpeechRoute] : []),
     boxCatchAllRoute,
   ]),
 ]);

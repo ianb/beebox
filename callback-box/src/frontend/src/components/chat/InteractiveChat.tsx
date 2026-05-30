@@ -34,7 +34,7 @@ import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { chatMachine, HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, groupMessages, extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/structured-output-parsing";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
@@ -1057,7 +1057,7 @@ const CenteredList = forwardRef<HTMLDivElement, { children?: ReactNode; style?: 
 
 function VirtualizedMessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
-  debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
+  debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, proseEnabled, pendingHqDraft,
 }: {
   messages: SessionEntry[];
@@ -1069,8 +1069,10 @@ function VirtualizedMessageList({
   processingShown: boolean;
   debugView: boolean;
   currentUserEmail: string | undefined;
-  speechPlayback: { isPlaying: boolean };
+  speechPlayback: { isPlaying: boolean; playingMessageId: string | null; remainingCount: number };
   handleStopSpeech: () => void;
+  handleSkipSpeech: () => void;
+  handleReplaySpeech: (options: ReplaySpeechOptions) => void;
   onZoomView: OnZoomView;
   snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
   totalEntries: number;
@@ -1308,13 +1310,26 @@ function VirtualizedMessageList({
           } else if (group.type === "user") {
             body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={item.acks} onZoomView={onZoomView} /></div>;
           } else {
+            // "This message is playing" matches either an explicit replay
+            // (playingMessageId is this group's uuid) or auto-played speech
+            // from the latest turn (playingMessageId is a synthetic stream-*
+            // id — uuids never start with "stream", so this can't collide).
+            const groupUuid = group.entries[0]?.uuid ?? "";
+            const pid = speechPlayback.playingMessageId;
+            const isStreamId = typeof pid === "string" && pid.startsWith("stream");
+            const playingThis = speechPlayback.isPlaying &&
+              (pid === groupUuid || (isStreamId && groupIndex === lastAssistantGroupIndex));
             body = (
               <div className="py-0.5">
                 <AssistantMessage
                   entries={group.entries}
                   debugView={debugView}
-                  speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
+                  speechPlaying={playingThis}
+                  anySpeechPlaying={speechPlayback.isPlaying}
+                  speechCanSkip={Boolean(speechPlayback.isPlaying && speechPlayback.remainingCount > 1)}
                   onStopSpeech={handleStopSpeech}
+                  onSkipSpeech={handleSkipSpeech}
+                  onReplaySpeech={handleReplaySpeech}
                   onZoomView={onZoomView}
                   proseEnabled={proseEnabled}
                 />
@@ -2280,6 +2295,21 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     speechPlayback.stop();
   }, [speechPlayback]);
 
+  const handleSkipSpeech = useCallback(() => {
+    speechPlayback.skip();
+  }, [speechPlayback]);
+
+  const handleReplaySpeech = useCallback((options: ReplaySpeechOptions) => {
+    // A manual replay shouldn't fight an in-progress recording: pause the mic
+    // the same way auto-played speech does (see queueSpeechBatch).
+    if (transcriptionRef.current && transcriptionRef.current.state === "recording") {
+      voicePausedRef.current = true;
+      setVoicePaused(true);
+      transcriptionRef.current.cancel();
+    }
+    speechPlayback.replay(options);
+  }, [speechPlayback]);
+
   // Keep textarea focused when it's visible and available for input.
   // On mobile (< sm), the textarea is only visible in typing mode or while transcribing.
   // Safari needs a short delay after the element appears before focus will open the keyboard.
@@ -2389,6 +2419,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         currentUserEmail={currentUser?.email}
         speechPlayback={speechPlayback}
         handleStopSpeech={handleStopSpeech}
+        handleSkipSpeech={handleSkipSpeech}
+        handleReplaySpeech={handleReplaySpeech}
         onZoomView={onZoomView}
         snapshot={snapshot}
         totalEntries={totalEntries}
