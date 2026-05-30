@@ -1,28 +1,26 @@
+// ⚠️ DO NOT disable or turn "off" any lint rule here without very clear and
+// explicit permission from the user. Every rule in personal-vibe-check is a
+// deliberate choice, and several restate CODE-STYLE.md. Silently disabling a
+// rule to make a new preset land (or to dodge a wave of violations) is exactly
+// how this config ended up lying about our style for months. If a rule is
+// genuinely wrong, raise it — don't quietly switch it off. Existing debt is
+// ratcheted via eslint-suppressions.json, not by disabling rules.
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 export default [
   ...vibeCheck({ react: false, ignores: ["src/frontend/**", "**/*.mjs"] }),
   {
     rules: {
-      "no-optional-chaining/no-optional-chaining": "off",
-      "default/no-default-params": "off",
       "max-params": ["error", 2],
-      "max-lines": "off",
-      "max-lines-per-function": "off",
-      "error/require-custom-error": "off",
-      "error/no-generic-error": "off",
-      "error/no-literal-error-message": "off",
-      "error/no-throw-literal": "off",
-      "security/detect-non-literal-regexp": "off",
-      "security/detect-object-injection": "off",
-      "security/detect-bidi-characters": "off",
-      "default/no-hardcoded-urls": "off",
+      // Kept off deliberately. personal-vibe-check itself disables this as
+      // "nonsensical" (requires className on every JSX element), but its preset
+      // re-enables it for .tsx/JSX files — where our schema files (e.g.
+      // capture-session.tsx) legitimately render className-free elements.
       "custom/jsx-classname-required": "off",
-      "no-restricted-syntax": "off",
-      "complexity": "off",
-      "@typescript-eslint/no-this-alias": "off",
-      "single-export/single-export": "off",
-      "ddd/require-spec-file": "off",
-
     },
   },
+  // NOTE: The other 16 rules in this block were turned off when
+  // personal-vibe-check was integrated (1efb334c, 2026-02-14), silently
+  // disabling a chunk of our own documented style. They are now re-enabled;
+  // existing debt is recorded in eslint-suppressions.json and burned down
+  // rule-by-rule. See docs/eslint-rule-suppression-audit.md.
 ];

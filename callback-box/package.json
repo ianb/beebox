@@ -110,7 +110,7 @@
       "eslint --config src/frontend/eslint.config.mjs"
     ],
     "src/!(frontend)/**/*.ts": [
-      "eslint"
+      "eslint --pass-on-unpruned-suppressions"
     ]
   },
   "pnpm": {
