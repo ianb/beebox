@@ -6,6 +6,7 @@
  */
 
 import * as path from "node:path";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { runShell } from "../core/procedure/shell.js";
 import { createAgent } from "../core/agent.js";
 import {
@@ -248,8 +249,7 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   }
 
   // Ensure cb CLI is on PATH — use this repo's own bin/ directory
-  const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
-  const binDir = path.join(repoRoot, "bin");
+  const binDir = path.join(PACKAGE_ROOT, "bin");
   process.env.PATH = `${binDir}:${process.env.PATH ?? ""}`;
 
   // Install strict fetch — all fetch() calls must match a stub or throw

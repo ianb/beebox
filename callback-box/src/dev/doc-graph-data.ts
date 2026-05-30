@@ -7,8 +7,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
-export const ROOT = path.resolve(import.meta.dirname, "../..");
+export const ROOT = PACKAGE_ROOT;
 
 // Output paths of report emitters. Their contents quote other files verbatim,
 // so extracting references from them would falsely inflate incoming counts.

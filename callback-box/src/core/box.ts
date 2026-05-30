@@ -15,8 +15,7 @@ import { createBriefingTemplate } from "../schemas/briefing.js";
 import { createLandmarkTemplate } from "../schemas/landmark.js";
 import { MIGRATIONS } from "./migrations.js";
 import { installTemplateFile, type InstallResult } from "./install-template-file.js";
-
-const __dirname = import.meta.dirname;
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 export interface InitOptions {
   /** Skip git initialization */
@@ -272,7 +271,7 @@ function describeInstall(result: InstallResult, displayName: string): string | n
  * @returns List of installed/updated procedure names
  */
 export async function installProcedures(boxRoot: string): Promise<string[]> {
-  const templatesDir = path.join(__dirname, "..", "..", "templates", "procedures");
+  const templatesDir = path.join(PACKAGE_ROOT, "templates", "procedures");
 
   let templateFiles: string[];
   try {

@@ -11,6 +11,7 @@ import fastifyWebsocket from "@fastify/websocket";
 import fastifyCookie from "@fastify/cookie";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { registerApiRoutes } from "./routes/api.js";
 import { registerSseRoutes } from "./routes/sse.js";
 import { createEventBus } from "../core/event-bus.js";
@@ -153,7 +154,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Fastify
   });
 
   // Build info — written by deploy.sh, shows what's deployed
-  const deployInfoDir = path.join(import.meta.dirname, "../..");
+  const deployInfoDir = PACKAGE_ROOT;
   server.get("/api/build-info", async () => {
     try {
       const raw = fs.readFileSync(path.join(deployInfoDir, "deploy-info.json"), "utf-8");
@@ -494,22 +495,4 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
     }, 2000);
     orphanCheck.unref();
   }
-}
-
-// Allow running directly: node --import tsx ./src/webapp/server.ts [boxDirs...]
-// Supports PORT and HOST env vars (standard Procfile convention).
-if (import.meta.url.endsWith(process.argv[1]?.replace(/^file:\/\//, "") ?? "")) {
-  const dirs = process.argv.slice(2);
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : undefined;
-  const host = process.env.HOST || undefined;
-
-  const boxes: BoxSpec[] | undefined =
-    dirs.length > 0
-      ? dirs.map((dir) => {
-          const boxRoot = path.resolve(dir);
-          return { slug: path.basename(boxRoot), boxRoot };
-        })
-      : undefined;
-
-  startServer({ port, host, boxes });
 }

@@ -21,12 +21,12 @@
 
 import * as path from "node:path";
 import { loadBoxConfig } from "../webapp/box-config.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 // Path to callback-box's own bin/ so subprocesses can find `cb`.
 // Prepended to PATH inside buildScriptEnv so every box-spawned subprocess
 // works regardless of how the parent process was launched.
-const __dirname = import.meta.dirname;
-const CB_BIN_DIR = path.resolve(__dirname, "../../bin");
+const CB_BIN_DIR = path.join(PACKAGE_ROOT, "bin");
 
 interface BoxEnvPieces {
   serverUrl: string | null;

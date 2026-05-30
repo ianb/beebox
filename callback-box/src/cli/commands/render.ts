@@ -12,6 +12,7 @@
 import { Command } from "commander";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 /** Commander accumulator for repeatable options */
 function collect(val: string, acc: string[]): string[] {
@@ -42,7 +43,7 @@ export const renderCommand = new Command("render")
       mock?: string[];
     };
 
-    const projectDir = path.resolve(import.meta.dirname, "../../..");
+    const projectDir = PACKAGE_ROOT;
     const renderScript = path.join(projectDir, "src/frontend/src/ssr/render.tsx");
 
     const ssrLoader = path.join(projectDir, "src/frontend/src/ssr/register-loader.mjs");

@@ -16,9 +16,10 @@ import { CHAT_SYSTEM_PROMPT } from "../core/chat-session.js";
 import { buildThreadSystemPrompt } from "../core/chat-thread-session.js";
 import { COMMIT_NUDGE_PROMPT } from "../core/agent.js";
 import { connectorRules } from "../core/init-rules.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 const PLACEHOLDER = "${boxRoot}";
-const TEMPLATES_DIR = path.join(import.meta.dirname, "..", "..", "templates", "procedures");
+const TEMPLATES_DIR = path.join(PACKAGE_ROOT, "templates", "procedures");
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -252,7 +253,7 @@ if (outputPath) {
   console.log(`Wrote ${entries.length} prompts to ${resolved}`);
 } else {
   // Default: write to docs/prompts.md
-  const defaultPath = path.join(import.meta.dirname, "..", "..", "docs", "prompts.md");
+  const defaultPath = path.join(PACKAGE_ROOT, "docs", "prompts.md");
   await fs.writeFile(defaultPath, markdown);
   console.log(`Wrote ${entries.length} prompts to docs/prompts.md`);
 }

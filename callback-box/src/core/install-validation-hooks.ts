@@ -21,6 +21,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 /**
  * Resolve `bin/cb` in the callback-box checkout that's running this code.
@@ -28,8 +29,7 @@ import * as path from "node:path";
  * user's PATH — the hook always invokes the same `cb` that installed it.
  */
 function resolveCbBin(): string {
-  // src/core/install-validation-hooks.ts → callback-box root → bin/cb
-  return path.resolve(import.meta.dirname, "..", "..", "bin", "cb");
+  return path.join(PACKAGE_ROOT, "bin", "cb");
 }
 
 const SETTINGS_PATH = ".claude/settings.json";
