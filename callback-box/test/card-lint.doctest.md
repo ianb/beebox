@@ -7,6 +7,7 @@ its frontmatter, then merges results into a single LintSummary.
 ```ts setup
 import { z } from "zod";
 import {
+  body,
   cardSchema,
   element,
   type CardSchema,
@@ -30,12 +31,22 @@ const threadSchema: CardSchema = cardSchema("email-thread", {
   },
 });
 
+const docSchema: CardSchema = cardSchema("doc", {
+  fields: {
+    title: z.string(),
+    body: body(z.string()),
+  },
+});
+
 const memoSchema: ElementSchema = element("memo", {
   attrs: { status: z.string() },
 });
 
 const ctx: LoadCardContext = {
-  cardSchemas: new Map<string, CardSchema>([["email-thread", threadSchema]]),
+  cardSchemas: new Map<string, CardSchema>([
+    ["email-thread", threadSchema],
+    ["doc", docSchema],
+  ]),
   elementSchemas: new Map<string, ElementSchema>([["memo", memoSchema]]),
 };
 ```
@@ -111,6 +122,62 @@ result.totalWarnings
 
 result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
+```
+
+## Broken refs in Markdoc body tags surface as warnings too
+
+Refs carried by Markdoc tag attributes inside a card body (e.g.
+`{% source ref="..." %}`, `{% subrecipe ref="..." %}`) get the same
+broken-ref treatment as frontmatter refs — resolved against the loader,
+missing targets reported as warnings. The path field on the warning
+points at `body:<line>:<tagName>.<attr>` so the human can locate it.
+Ref paths follow the same convention as frontmatter refs: leading `/`
+is box-root-absolute (the convention recommended by `record.tsx`'s
+instructions); bare paths are resolved relative to the source card.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana made the call: {% source ref=\"/box/people/missing.person.card\" as=\"verbatim\" %}{% /source %}\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Meeting.doc.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 0
+
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message
+=> Broken reference at body:1:source.ref: /box/people/missing.person.card does not exist
+```
+
+## Resolved body refs lint clean
+
+A body Markdoc tag whose `ref` resolves to an existing target produces
+no warning, same as a resolved frontmatter ref.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/people/dana.person.card",
+  "---\ntype: person\nname: Dana\n---\n",
+);
+await box.write(
+  "box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/box/people/dana.person.card\" as=\"verbatim\" %}ship Friday{% /source %}\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Meeting.doc.card")],
+  { loader, ctx },
+);
+result.totalWarnings
+=> 0
 ```
 
 ## XML cards still flow through the existing cardworks lintCard path

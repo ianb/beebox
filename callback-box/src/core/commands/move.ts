@@ -18,6 +18,68 @@ import {
 import { isCardFile, boxPath } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { attachDirFor } from "../../lib/attach-path.js";
+import { cardSchemas } from "../../schemas/registry.js";
+import {
+  rewriteReferrerRefs,
+  rewriteMovedCardRefs,
+  type Remap,
+} from "../rewrite-card-refs.js";
+
+/**
+ * Cardworks' `loader.load()` parses card bodies as XML — fine for the
+ * legacy XML schemas (procedure, guide, landmark, capture-session,
+ * procedure-run) but not for Phase-2 frontmatter+markdown cards
+ * (doc, briefing, memo, recipe, …). For Phase-2 cards we have to do
+ * the move ourselves; the substring rewrite pass below picks up ref
+ * updates in every other card regardless of card kind.
+ *
+ * Detect by extracting the type from the filename and checking it
+ * against the registered Phase-2 card schemas. Anything else (XML
+ * card, plain file, unknown type) falls through to the cardworks
+ * loader path.
+ */
+const PHASE2_TYPES = new Set(cardSchemas.map((s) => s.type));
+
+function cardTypeFromPath(p: string): string | undefined {
+  const base = p.split("/").pop() ?? p;
+  const match = /^.+\.([^.]+)\.card$/.exec(base);
+  if (match === null) return undefined;
+  return match[1];
+}
+
+function isPhase2CardPath(p: string): boolean {
+  const type = cardTypeFromPath(p);
+  return type !== undefined && PHASE2_TYPES.has(type);
+}
+
+/**
+ * Rename a file and (if present) its sibling `<basename>.attach/`
+ * directory atomically — the Phase-2 analogue of what cardworks'
+ * `loader.move()` does for XML cards. Returns the list of moved
+ * file paths in the same `{from, to}` shape cardworks emits.
+ */
+async function movePhase2CardFiles(
+  sourcePath: string,
+  destPath: string,
+): Promise<Array<{ from: string; to: string }>> {
+  const moved: Array<{ from: string; to: string }> = [];
+  const oldAttach = attachDirFor(sourcePath);
+  const newAttach = attachDirFor(destPath);
+  await fs.mkdir(path.dirname(destPath), { recursive: true });
+  await fs.rename(sourcePath, destPath);
+  moved.push({ from: sourcePath, to: destPath });
+  if (oldAttach !== newAttach) {
+    try {
+      await fs.rename(oldAttach, newAttach);
+      moved.push({ from: oldAttach, to: newAttach });
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "ENOENT") throw err;
+      // No attach dir to move; fine.
+    }
+  }
+  return moved;
+}
 
 /**
  * Remove empty ancestor directories up to (but not including) stopAt.
@@ -114,26 +176,44 @@ async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
   const filesToStage: string[] = [];
   const updatedCards: Array<{ path: string; refsUpdated: number }> = [];
 
-  // Scan all cards outside the moved directory for references to the old path
+  // Anything that resolved under the old directory now lives under the new one.
+  const remap: Remap = (abs) => {
+    if (abs === sourcePath) return destPath;
+    if (abs.startsWith(sourcePath + path.sep)) {
+      return destPath + abs.slice(sourcePath.length);
+    }
+    return null;
+  };
+
+  // Rewrite refs from cards *outside* the moved directory that point into it
+  // (relative or absolute), and recompute the moved cards' own *outgoing*
+  // relative refs to targets that stayed outside.
   const loader = new CardLoader(ctx.boxRoot);
   const allCards = await loader.listCards();
-  const externalCards = allCards.filter((c) => !c.startsWith(destPath + "/"));
-
-  for (const cardPath of externalCards) {
+  for (const cardPath of allCards) {
+    const inside = cardPath === destPath || cardPath.startsWith(destPath + path.sep);
     try {
       const content = await fs.readFile(cardPath, "utf-8");
-      // Check if this card references anything under the old directory
-      if (!content.includes(relSourcePath)) continue;
-
-      // Replace old path references with new path references
-      const updatedContent = content.replaceAll(relSourcePath, relDestPath);
-      if (updatedContent !== content) {
-        await fs.writeFile(cardPath, updatedContent);
-        const refsUpdated = (content.split(relSourcePath).length - 1);
-        updatedCards.push({ path: path.relative(ctx.boxRoot, cardPath), refsUpdated });
-        filesToStage.push(path.relative(ctx.boxRoot, cardPath));
-        ctx.writeLine(`  Updated references in ${path.relative(ctx.boxRoot, cardPath)} (${refsUpdated} ref${refsUpdated > 1 ? "s" : ""})`);
-      }
+      const result = inside
+        ? rewriteMovedCardRefs({
+            boxRoot: ctx.boxRoot,
+            oldCardAbs: sourcePath + cardPath.slice(destPath.length),
+            newCardAbs: cardPath,
+            text: content,
+            remap,
+          })
+        : rewriteReferrerRefs({
+            boxRoot: ctx.boxRoot,
+            cardAbsPath: cardPath,
+            text: content,
+            remap,
+          });
+      if (result.count === 0 || result.text === content) continue;
+      await fs.writeFile(cardPath, result.text);
+      const relPath = path.relative(ctx.boxRoot, cardPath);
+      updatedCards.push({ path: relPath, refsUpdated: result.count });
+      filesToStage.push(relPath);
+      ctx.writeLine(`  Updated ${result.count} ref${result.count > 1 ? "s" : ""} in ${relPath}`);
     } catch {
       // Skip cards that can't be read
     }
@@ -169,10 +249,12 @@ interface MoveOneParams {
  *
  * Beyond what cardworks' built-in move handles (card file + same-basename
  * siblings, including the `<basename>.attach/` directory, plus cross-card
- * refs that point at the moved card), this also rewrites refs from OTHER
- * cards that point at non-card files inside the moved attach scope. Those
- * refs use full paths (not the `attach/` virtual prefix, which is scoped to
- * the owning card) and aren't picked up by cardworks' card-ref handler.
+ * refs that point at the moved card), this runs a resolution-based ref
+ * rewrite (rewrite-card-refs.ts) over every other card. That covers what
+ * cardworks misses: refs written relative to the referring card, refs into
+ * the moved attach scope, body Markdoc tag refs, inline markdown links, and
+ * Phase-2 frontmatter cards cardworks can't parse. The moved card's own
+ * relative refs are recomputed for its new location too.
  */
 async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   const { ctx, sourcePath, destPath } = params;
@@ -181,16 +263,34 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
 
   const oldAttachAbsDir = attachDirFor(sourcePath);
   const newAttachAbsDir = attachDirFor(destPath);
-  const oldAttachRel = path.relative(ctx.boxRoot, oldAttachAbsDir);
-  const newAttachRel = path.relative(ctx.boxRoot, newAttachAbsDir);
 
+  // Phase-2 cards: cardworks' XML-only loader can't parse them, so handle
+  // the file + attach-dir rename ourselves. Cross-card ref updates come
+  // from the resolution-based rewrite pass below, which handles every card
+  // kind. XML cards: delegate to cardworks for the file moves and referrer
+  // re-serialization (the pass below is idempotent over what it already did).
+  //
+  // The loader is constructed unconditionally because `listCards()` is
+  // needed for the ref rewrite pass below regardless of card kind.
   const loader = new CardLoader(ctx.boxRoot);
-  const card = await loader.load(sourcePath);
-  const { result } = await loader.move(card, destPath);
+  let movedFiles: Array<{ from: string; to: string }>;
+  let updatedCards: Array<{ path: string; refsUpdated: number }> = [];
+
+  if (isPhase2CardPath(sourcePath)) {
+    movedFiles = await movePhase2CardFiles(sourcePath, destPath);
+  } else {
+    const card = await loader.load(sourcePath);
+    const { result } = await loader.move(card, destPath);
+    movedFiles = result.movedFiles;
+    updatedCards = result.updatedCards.map((u) => ({
+      path: path.relative(ctx.boxRoot, u.path),
+      refsUpdated: u.refsUpdated,
+    }));
+  }
 
   ctx.writeLine(`Moved: ${relSourcePath} → ${relDestPath}`);
 
-  for (const file of result.movedFiles) {
+  for (const file of movedFiles) {
     if (file.from !== sourcePath) {
       const relFrom = path.relative(ctx.boxRoot, file.from);
       const relTo = path.relative(ctx.boxRoot, file.to);
@@ -198,72 +298,98 @@ async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
     }
   }
 
-  if (result.updatedCards.length > 0) {
-    ctx.writeLine(`Updated references in ${result.updatedCards.length} card(s):`);
-    for (const update of result.updatedCards) {
-      const relPath = path.relative(ctx.boxRoot, update.path);
-      ctx.writeLine(`  ${relPath} (${update.refsUpdated} ref${update.refsUpdated > 1 ? "s" : ""})`);
+  if (updatedCards.length > 0) {
+    ctx.writeLine(`Updated references in ${updatedCards.length} card(s):`);
+    for (const update of updatedCards) {
+      ctx.writeLine(`  ${update.path} (${update.refsUpdated} ref${update.refsUpdated > 1 ? "s" : ""})`);
     }
   }
 
-  // Rewrite refs that pointed into the old attach scope (from cards outside
-  // the moved subtree). cardworks already handled refs to cards; here we
-  // catch refs to non-card files like `<source ref="/box/.../photo.jpg">`.
-  // Crude but reliable: substring replace of the old attach-rel path in
-  // every other card's content.
+  // Rewrite refs in every *other* card that points at the moved card or into
+  // its attach directory. Resolution-based (see rewrite-card-refs.ts), so refs
+  // written relative to the referring card are caught — not just box-root
+  // paths — and refs sitting in body Markdoc tags, inline markdown links, and
+  // frontmatter alike. cardworks already re-serialized card-to-card refs in
+  // XML referrers; this pass is idempotent over those (the ref now resolves to
+  // the new location, which `remap` leaves alone) and additionally covers
+  // attach-scope refs and every Phase-2 card cardworks can't parse.
+  const remap: Remap = (abs) => {
+    if (abs === sourcePath) return destPath;
+    if (abs === oldAttachAbsDir) return newAttachAbsDir;
+    if (abs.startsWith(oldAttachAbsDir + path.sep)) {
+      return newAttachAbsDir + abs.slice(oldAttachAbsDir.length);
+    }
+    return null;
+  };
+
   const extraStaged: string[] = [];
   const extraUpdated: Array<{ path: string; refsUpdated: number }> = [];
-  if (oldAttachRel !== newAttachRel) {
-    const allCards = await loader.listCards();
-    for (const cardPath of allCards) {
-      // Skip cards inside the new attach scope (just moved there) and the
-      // moved card itself.
-      if (cardPath === destPath) continue;
-      if (cardPath.startsWith(newAttachAbsDir + "/")) continue;
-      try {
-        const content = await fs.readFile(cardPath, "utf-8");
-        if (!content.includes(oldAttachRel)) continue;
-        const updated = content.replaceAll(oldAttachRel, newAttachRel);
-        if (updated === content) continue;
-        await fs.writeFile(cardPath, updated);
-        const refsUpdated = content.split(oldAttachRel).length - 1;
-        const relPath = path.relative(ctx.boxRoot, cardPath);
-        extraUpdated.push({ path: relPath, refsUpdated });
-        extraStaged.push(relPath);
-        ctx.writeLine(`  Updated attach-scope refs in ${relPath} (${refsUpdated})`);
-      } catch {
-        // Skip cards that can't be read
-      }
+  const allCards = await loader.listCards();
+  for (const cardPath of allCards) {
+    // Skip the moved card (handled below) and cards that just moved into the
+    // new attach scope (their internal refs travelled with them intact).
+    if (cardPath === destPath) continue;
+    if (cardPath.startsWith(newAttachAbsDir + path.sep)) continue;
+    try {
+      const original = await fs.readFile(cardPath, "utf-8");
+      const { text: updated, count } = rewriteReferrerRefs({
+        boxRoot: ctx.boxRoot,
+        cardAbsPath: cardPath,
+        text: original,
+        remap,
+      });
+      if (count === 0 || updated === original) continue;
+      await fs.writeFile(cardPath, updated);
+      const relPath = path.relative(ctx.boxRoot, cardPath);
+      extraUpdated.push({ path: relPath, refsUpdated: count });
+      extraStaged.push(relPath);
+      ctx.writeLine(`  Updated ${count} ref${count > 1 ? "s" : ""} in ${relPath}`);
+    } catch {
+      // Skip cards that can't be read
     }
+  }
+
+  // The moved card relocated, so its own *relative* refs to cards that stayed
+  // put must be recomputed from the new location (absolute and `attach/` refs
+  // are unaffected and left as-is).
+  try {
+    const movedText = await fs.readFile(destPath, "utf-8");
+    const { text: relocated, count } = rewriteMovedCardRefs({
+      boxRoot: ctx.boxRoot,
+      oldCardAbs: sourcePath,
+      newCardAbs: destPath,
+      text: movedText,
+      remap,
+    });
+    if (count > 0 && relocated !== movedText) {
+      await fs.writeFile(destPath, relocated);
+      ctx.writeLine(`  Rewrote ${count} relative ref${count > 1 ? "s" : ""} in the moved card`);
+    }
+  } catch {
+    // Moved card unreadable; nothing to relocate.
   }
 
   // Clean up empty source directory
   await removeEmptyAncestors(path.dirname(sourcePath), ctx.boxRoot);
 
   const filesToStage: string[] = [];
-  for (const file of result.movedFiles) {
+  for (const file of movedFiles) {
     filesToStage.push(path.relative(ctx.boxRoot, file.from));
     filesToStage.push(path.relative(ctx.boxRoot, file.to));
   }
-  for (const update of result.updatedCards) {
-    filesToStage.push(path.relative(ctx.boxRoot, update.path));
+  for (const update of updatedCards) {
+    filesToStage.push(update.path);
   }
   filesToStage.push(...extraStaged);
 
   return {
     from: relSourcePath,
     to: relDestPath,
-    movedFiles: result.movedFiles.map((f) => ({
+    movedFiles: movedFiles.map((f) => ({
       from: path.relative(ctx.boxRoot, f.from),
       to: path.relative(ctx.boxRoot, f.to),
     })),
-    updatedCards: [
-      ...result.updatedCards.map((u) => ({
-        path: path.relative(ctx.boxRoot, u.path),
-        refsUpdated: u.refsUpdated,
-      })),
-      ...extraUpdated,
-    ],
+    updatedCards: [...updatedCards, ...extraUpdated],
     filesToStage,
   };
 }

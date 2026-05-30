@@ -25,8 +25,11 @@ import { Fragment, useMemo } from "react";
 import * as React from "react";
 import { useParams } from "@tanstack/react-router";
 import { parse, transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
-import { markdocConfig } from "../lib/markdoc-config";
+import { markdocConfig } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
+import { makeSourceComponents } from "./Source";
+import { makeBriefingComponents } from "./BriefingTags";
+import { makeRecipeComponents } from "./RecipeTags";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
@@ -205,6 +208,9 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const Link = makeLink(linkCtx);
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
+  const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate });
+  const briefing = makeBriefingComponents({ onNavigate: linkCtx.onNavigate });
+  const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -214,14 +220,29 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
       className="mr-2 align-middle accent-warm-500"
     />
   );
+  const cast = <T,>(c: T) => c as unknown as React.ComponentType<Record<string, unknown>>;
   const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
-    Fragment: Fragment as unknown as React.ComponentType<Record<string, unknown>>,
-    Para: Para as unknown as React.ComponentType<Record<string, unknown>>,
-    Link: Link as unknown as React.ComponentType<Record<string, unknown>>,
-    Img: Img as unknown as React.ComponentType<Record<string, unknown>>,
-    QuoteInline: QuoteInline as unknown as React.ComponentType<Record<string, unknown>>,
-    QuoteBlock: QuoteBlock as unknown as React.ComponentType<Record<string, unknown>>,
-    Task: Task as unknown as React.ComponentType<Record<string, unknown>>,
+    Fragment: cast(Fragment),
+    Para: cast(Para),
+    Link: cast(Link),
+    Img: cast(Img),
+    QuoteInline: cast(QuoteInline),
+    QuoteBlock: cast(QuoteBlock),
+    SourceInline: cast(SourceInline),
+    SourceBlock: cast(SourceBlock),
+    Purpose: cast(briefing.Purpose),
+    KeyPerson: cast(briefing.KeyPerson),
+    Correction: cast(briefing.Correction),
+    Property: cast(briefing.Property),
+    ProjectPhase: cast(briefing.ProjectPhase),
+    IngredientInline: cast(recipe.IngredientInline),
+    IngredientBlock: cast(recipe.IngredientBlock),
+    Step: cast(recipe.Step),
+    RecipeYield: cast(recipe.RecipeYield),
+    Substitution: cast(recipe.Substitution),
+    Subrecipe: cast(recipe.Subrecipe),
+    RecipeSection: cast(recipe.RecipeSection),
+    Task: cast(Task),
   };
   return { config, components };
 }
