@@ -532,15 +532,24 @@ export function vibeCheck(options) {
       rules: { "no-optional-chaining/no-optional-chaining": "off" },
     },
     // When react:false, .tsx files fall through to eslint-config-agent's strict
-    // no-restricted-syntax (which bans `??`). Replace it with our variant that
-    // allows `??` but keeps the `as`/switch/etc. selectors. (react:true already
-    // overrides this rule on .tsx with the catch-only variant.)
+    // React profile, which (a) bans `??` via no-restricted-syntax and (b) sets
+    // much shorter size budgets (max-lines 100, max-lines-per-function 70) and
+    // disables complexity. Both are wrong for .tsx here: JSX/markup is verbose,
+    // so .tsx wants the SAME budgets as .ts, not less, and `??` is fine.
+    // Override to allow `??` (keeping the `as`/switch selectors) and equalize
+    // the size/complexity limits with .ts. (react:true overrides these on .tsx
+    // through the main block instead.)
     ...(react
       ? []
       : [
           {
             files: ["**/*.{tsx,jsx}"],
-            rules: { "no-restricted-syntax": ["error", ...tsxRestrictedSyntaxNoNullish] },
+            rules: {
+              "no-restricted-syntax": ["error", ...tsxRestrictedSyntaxNoNullish],
+              "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+              "max-lines-per-function": ["error", { max: 150, skipBlankLines: true, skipComments: true }],
+              "complexity": ["error", 25],
+            },
           },
         ]),
   ];
