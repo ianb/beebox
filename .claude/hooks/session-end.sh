@@ -69,7 +69,12 @@ if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
   exit 0
 fi
 
-name=$(basename "$cwd")
+# IMPORTANT: derive the name from $worktree_path, not $cwd. When the
+# session ends with cwd = main (the original bug that motivated the
+# transcript-path fallback above), $cwd is the main checkout, so
+# basename($cwd) = "callback-mono" — wrong name, wrong target for the
+# removal step below.
+name=$(basename "$worktree_path")
 MONO="$HOME/src/callback-mono"
 
 echo "[session-end] worktree '$branch' is fully merged into main and clean — cleaning up"
@@ -92,8 +97,8 @@ fi
 cd "$MONO"
 
 # Remove the worktree directory.
-if git worktree remove --force "$cwd" 2>/dev/null; then
-  echo "[session-end]   removed worktree $cwd"
+if git worktree remove --force "$worktree_path" 2>/dev/null; then
+  echo "[session-end]   removed worktree $worktree_path"
 fi
 
 # Delete the branch.
