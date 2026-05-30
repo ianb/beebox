@@ -182,8 +182,9 @@ export const STALE_TEMPLATE_UPDATE_MS = 30 * 24 * 60 * 60 * 1000;
  */
 export async function pruneStaleTemplateUpdates(
   boxRoot: string,
-  options: { maxAgeMs?: number; now?: number } = {},
+  options?: { maxAgeMs?: number; now?: number },
 ): Promise<string[]> {
+  options = options ?? {};
   const maxAgeMs = options.maxAgeMs ?? STALE_TEMPLATE_UPDATE_MS;
   const now = options.now ?? Date.now();
   const rootAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR);

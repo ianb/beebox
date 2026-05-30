@@ -68,7 +68,8 @@ export interface ServerContext {
 /**
  * Create and configure the Fastify server.
  */
-export async function createServer(options: ServerOptions = {}): Promise<FastifyInstance> {
+export async function createServer(options?: ServerOptions): Promise<FastifyInstance> {
+  options = options ?? {};
   // Build boxes array from either boxes or legacy boxRoot
   let boxes: BoxSpec[];
   if (options.boxes && options.boxes.length > 0) {
@@ -415,7 +416,8 @@ async function killPreviousServer(pidFile: string): Promise<void> {
 /**
  * Start the server.
  */
-export async function startServer(options: ServerOptions = {}): Promise<void> {
+export async function startServer(options?: ServerOptions): Promise<void> {
+  options = options ?? {};
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? "localhost";
 

@@ -145,7 +145,8 @@ function safeAttachmentFilename(
   return `${base}${ext}`;
 }
 
-function makeSnippet(text: string, maxLen = 100): string {
+function makeSnippet(text: string, maxLen?: number): string {
+  maxLen = maxLen ?? 100;
   return text
     .replace(/\s+/g, " ")
     .trim()

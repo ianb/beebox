@@ -24,8 +24,9 @@ const VOXTRAL_MODEL = "voxtral-mini-latest";
  */
 export async function transcribeAudioVoxtral(
   params: TranscribeAudioParams,
-  opts: { diarization?: boolean } = {},
+  opts?: { diarization?: boolean },
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
+  opts = opts ?? {};
   const { audioBuffer, filename, prompt, options, boxRoot } = params;
   const diarization = opts.diarization === true;
   const apiKey = await getMistralApiKey(boxRoot);

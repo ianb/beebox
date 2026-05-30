@@ -112,8 +112,9 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
  */
 export async function saveGoogleTokens(
   updates: Partial<GoogleTokens>,
-  { boxRoot }: { boxRoot?: string } = {},
+  opts?: { boxRoot?: string },
 ): Promise<void> {
+  const { boxRoot } = opts ?? {};
   const central = centralTokenPath();
   const targetPath = central || (boxRoot ? legacySecretPath(boxRoot) : null);
   if (!targetPath) {

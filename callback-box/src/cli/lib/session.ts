@@ -340,7 +340,8 @@ export function stripSpeechWrappers(text: string): string {
   return out;
 }
 
-function extractSnippet(text: string, maxLen = 60): string | null {
+function extractSnippet(text: string, maxLen?: number): string | null {
+  maxLen = maxLen ?? 60;
   const cleaned = stripSpeechWrappers(text).replace(/\s+/g, " ").trim();
   if (!cleaned) return null;
   if (cleaned.length <= maxLen) return cleaned;
@@ -508,7 +509,9 @@ export interface ParseSessionLogParams {
 export async function parseSessionLog(
   params: ParseSessionLogParams
 ): Promise<{ entries: SessionEntry[]; total: number; hasMore: boolean }> {
-  const { logPath, offset = 0, limit = 10000 } = params;
+  const { logPath } = params;
+  const offset = params.offset ?? 0;
+  const limit = params.limit ?? 10000;
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
   const rl = readline.createInterface({
     input: fileStream,

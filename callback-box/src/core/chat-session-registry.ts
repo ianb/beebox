@@ -90,8 +90,9 @@ export class ChatSessionRegistry extends EventEmitter {
    */
   private readonly pending = new Set<ChatSession>();
 
-  constructor(boxRoot: string, options: ChatSessionRegistryOptions = {}) {
+  constructor(boxRoot: string, options?: ChatSessionRegistryOptions) {
     super();
+    options = options ?? {};
     this.boxRoot = boxRoot;
     this.maxLive = options.maxLiveProcesses ?? DEFAULT_MAX_LIVE;
     this.idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
@@ -205,7 +206,8 @@ export class ChatSessionRegistry extends EventEmitter {
    * association is persisted to `chat-session-history` once the session id
    * is assigned, so resumes (here or on a fresh server boot) reapply it.
    */
-  createNew(opts: { contextDir?: string; seedFeatures?: Record<string, string> } = {}): ChatSession {
+  createNew(opts?: { contextDir?: string; seedFeatures?: Record<string, string> }): ChatSession {
+    opts = opts ?? {};
     const { contextDir, seedFeatures } = opts;
     const baseOpts = this.buildSessionOptions(null);
     const session = new ChatSession(this.boxRoot, {

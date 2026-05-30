@@ -38,7 +38,8 @@ export interface InitResult {
  * @param boxRoot - Directory to initialize (will be created if needed)
  * @param options - Initialization options
  */
-export async function initBox(boxRoot: string, options: InitOptions = {}): Promise<InitResult> {
+export async function initBox(boxRoot: string, options?: InitOptions): Promise<InitResult> {
+  options = options ?? {};
   const resolvedRoot = path.resolve(boxRoot);
 
   // Create root directory if needed

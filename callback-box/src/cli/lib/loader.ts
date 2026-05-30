@@ -25,8 +25,9 @@ export interface CreateLoaderOptions {
  */
 export async function createLoader(
   boxRoot: string,
-  options: CreateLoaderOptions = {}
+  options?: CreateLoaderOptions
 ): Promise<CardLoader> {
+  options = options ?? {};
   const loaderOptions: CardLoaderOptions = {
     schemas: await createSchemaRegistry(boxRoot),
     requireVersion: options.requireVersion ?? false,
@@ -54,7 +55,9 @@ export interface CreateMemoryLoaderParams {
 export async function createMemoryLoader(
   params: CreateMemoryLoaderParams
 ): Promise<MemoryCardLoader> {
-  const { projectRoot, files = {}, options = {} } = params;
+  const { projectRoot } = params;
+  const files = params.files ?? {};
+  const options = params.options ?? {};
   return new MemoryCardLoader(projectRoot, {
     schemas: await createSchemaRegistry(),
     requireVersion: options.requireVersion ?? false,

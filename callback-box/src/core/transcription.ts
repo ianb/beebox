@@ -213,8 +213,9 @@ export async function transcribeAudioHq(
  */
 async function transcribeAudioWhisper(
   params: TranscribeAudioParams,
-  opts: { variant: WhisperVariant } = { variant: "whisper" },
+  opts?: { variant: WhisperVariant },
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
+  opts = opts ?? { variant: "whisper" };
   const { audioBuffer, filename, prompt, options } = params;
   const apiKey = process.env["THINKING_OPENAI_API_KEY"];
   if (!apiKey) {

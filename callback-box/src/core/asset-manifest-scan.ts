@@ -155,8 +155,9 @@ export async function findAttachScopes(boxRoot: string): Promise<AttachScope[]> 
  */
 export async function scanAttachScope(
   scope: AttachScope,
-  options: ScanOptions = {}
+  options?: ScanOptions
 ): Promise<ScanScopeResult> {
+  options = options ?? {};
   const result: ScanScopeResult = {
     attachDir: scope.relPath,
     claimed: [],
@@ -313,8 +314,9 @@ export interface ScanBoxResult {
  */
 export async function scanBoxAttachments(
   boxRoot: string,
-  options: ScanOptions = {}
+  options?: ScanOptions
 ): Promise<ScanBoxResult> {
+  options = options ?? {};
   const scopes = await findAttachScopes(boxRoot);
   const results: ScanScopeResult[] = [];
   const errors: ScanError[] = [];

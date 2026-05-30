@@ -417,8 +417,9 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
  */
 export async function createIntakeJobsForUnjobbed(
   boxRoot: string,
-  options: { connector?: Connector } = {}
+  options?: { connector?: Connector }
 ): Promise<number> {
+  options = options ?? {};
   const { connector } = options;
 
   // Subdirectories with their own pipelines — skip these on a full scan.

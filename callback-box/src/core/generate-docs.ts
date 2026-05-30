@@ -342,7 +342,8 @@ async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
 /**
  * Generate all agent documentation for a box.
  */
-export async function generateDocs(boxRoot: string, options: GenerateDocsOptions = {}): Promise<void> {
+export async function generateDocs(boxRoot: string, options?: GenerateDocsOptions): Promise<void> {
+  options = options ?? {};
   // TEMPORARY — diagnose unexpected writes to the callback-box source repo
   // (`.callback-box/` and `docs/generated/` showing up here as untracked).
   // Remove once the caller is identified.

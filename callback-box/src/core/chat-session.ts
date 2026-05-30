@@ -558,8 +558,9 @@ export class ChatSession extends EventEmitter {
    */
   private resolvedContextDir: string | null | undefined = undefined;
 
-  constructor(boxRoot: string, options: ChatSessionOptions = {}) {
+  constructor(boxRoot: string, options?: ChatSessionOptions) {
     super();
+    options = options ?? {};
     this.boxRoot = boxRoot;
     this.options = options;
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;

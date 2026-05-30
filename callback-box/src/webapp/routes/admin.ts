@@ -66,7 +66,8 @@ function addOwnerCheck(server: FastifyInstance) {
 /**
  * System-wide admin routes (Claude Code auth). Registered at root level.
  */
-export async function registerSystemAdminRoutes(server: FastifyInstance, services: Services = {}) {
+export async function registerSystemAdminRoutes(server: FastifyInstance, services?: Services) {
+  services = services ?? {};
   addOwnerCheck(server);
 
   const claude = services.claudeCli ?? createClaudeCliService();
@@ -152,14 +153,15 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
 /**
  * Per-box admin routes (Telegram, box config). Registered under each box prefix.
  */
-export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot, boxSlug, services = {} }: { boxRoot: string; boxSlug: string; services?: Services }) {
+export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot, boxSlug, services }: { boxRoot: string; boxSlug: string; services?: Services }) {
+  const resolvedServices: Services = services ?? {};
   addOwnerCheck(server);
 
   // --- Telegram connector management ---
 
   /** Get or create a TelegramService for a given bot token */
   function getTelegram(botToken: string) {
-    return services.telegram ?? createTelegramService(botToken);
+    return resolvedServices.telegram ?? createTelegramService(botToken);
   }
 
   server.get("/api/admin/telegram-status", async () => {

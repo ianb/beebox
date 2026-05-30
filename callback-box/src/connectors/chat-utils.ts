@@ -23,7 +23,8 @@ import { createChatJobTemplate, type ChatJobFields } from "../schemas/chat-job.j
 import { getBoxTimeISO } from "../cli/lib/time.js";
 import { sanitizeFilenameStem } from "../lib/filename.js";
 
-export function safeFilename(text: string, fallback = "untitled"): string {
+export function safeFilename(text: string, fallback?: string): string {
+  fallback = fallback ?? "untitled";
   return sanitizeFilenameStem(sanitize(text), { fallback });
 }
 

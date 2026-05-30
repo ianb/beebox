@@ -121,7 +121,10 @@ export const fmt = {
   bullet: (text: string) => `  ${chalk.dim("•")} ${text}`,
 
   /** Indented text */
-  indent: (text: string, level = 1) => "  ".repeat(level) + text,
+  indent: (text: string, level?: number) => {
+    level = level ?? 1;
+    return "  ".repeat(level) + text;
+  },
 };
 
 /**

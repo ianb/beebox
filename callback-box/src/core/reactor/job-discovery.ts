@@ -15,8 +15,9 @@ import type { JobCardInfo } from "./types.js";
 
 export async function findJobCards(
   jobsDir: string,
-  options: { typeFilter?: string | undefined; sourceFilter?: string | undefined } = {}
+  options?: { typeFilter?: string | undefined; sourceFilter?: string | undefined }
 ): Promise<JobCardInfo[]> {
+  options = options ?? {};
   const { typeFilter, sourceFilter } = options;
   let entries: string[];
   try {

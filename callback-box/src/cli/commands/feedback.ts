@@ -20,7 +20,8 @@ import {
 
 const MAX_CONTEXT_ENTRIES = 12;
 
-function slugify(text: string, maxLen = 40): string {
+function slugify(text: string, maxLen?: number): string {
+  maxLen = maxLen ?? 40;
   return text
     .toLowerCase()
     .replace(/[^\s\w-]/g, "")

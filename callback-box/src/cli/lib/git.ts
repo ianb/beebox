@@ -68,8 +68,9 @@ export interface GitStatus {
  */
 export async function initRepo(
   boxRoot: string,
-  initialBranch = "main"
+  initialBranch?: string
 ): Promise<void> {
+  initialBranch = initialBranch ?? "main";
   await simpleGit(boxRoot).raw(["init", "-b", initialBranch]);
 }
 
@@ -247,8 +248,9 @@ function buildCommitMessage(options: GitCommitOptions): string {
  */
 export async function getLog(
   boxRoot: string,
-  count = 10
+  count?: number
 ): Promise<GitLogEntry[]> {
+  count = count ?? 10;
   if (count === 0) return [];
 
   try {
@@ -285,8 +287,9 @@ export async function getLog(
  */
 export async function getDiff(
   boxRoot: string,
-  staged = false
+  staged?: boolean
 ): Promise<string> {
+  staged = staged ?? false;
   const args = staged ? ["--cached"] : [];
   return await simpleGit(boxRoot).diff(args);
 }
@@ -603,8 +606,9 @@ export async function getHead(boxRoot: string): Promise<string> {
  */
 export async function clean(
   boxRoot: string,
-  opts: { gitignored?: boolean; directories?: boolean } = {}
+  opts?: { gitignored?: boolean; directories?: boolean }
 ): Promise<void> {
+  opts = opts ?? {};
   const modes: CleanOptions[] = [CleanOptions.FORCE];
   if (opts.gitignored) modes.push(CleanOptions.IGNORED_ONLY);
   if (opts.directories) modes.push(CleanOptions.RECURSIVE);

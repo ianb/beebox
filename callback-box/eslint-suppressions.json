@@ -14,11 +14,6 @@
       "count": 5
     }
   },
-  "src/cli/commands/feedback.ts": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
   "src/cli/commands/google-auth.ts": {
     "no-optional-chaining/no-optional-chaining": {
       "count": 3
@@ -81,9 +76,6 @@
     "complexity": {
       "count": 1
     },
-    "default/no-default-params": {
-      "count": 1
-    },
     "max-lines": {
       "count": 1
     },
@@ -105,15 +97,7 @@
       "count": 1
     }
   },
-  "src/cli/lib/format.ts": {
-    "default/no-default-params": {
-      "count": 1
-    }
-  },
   "src/cli/lib/git.ts": {
-    "default/no-default-params": {
-      "count": 4
-    },
     "error/no-generic-error": {
       "count": 1
     },
@@ -131,11 +115,6 @@
     },
     "no-optional-chaining/no-optional-chaining": {
       "count": 2
-    }
-  },
-  "src/cli/lib/loader.ts": {
-    "default/no-default-params": {
-      "count": 1
     }
   },
   "src/cli/lib/lock.ts": {
@@ -157,9 +136,6 @@
   "src/cli/lib/session.ts": {
     "complexity": {
       "count": 2
-    },
-    "default/no-default-params": {
-      "count": 1
     },
     "max-lines": {
       "count": 1
@@ -185,9 +161,6 @@
     }
   },
   "src/connectors/chat-utils.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-generic-error": {
       "count": 1
     },
@@ -226,9 +199,6 @@
     "complexity": {
       "count": 1
     },
-    "default/no-default-params": {
-      "count": 1
-    },
     "max-lines": {
       "count": 1
     },
@@ -237,9 +207,6 @@
     }
   },
   "src/connectors/google-auth.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-generic-error": {
       "count": 1
     },
@@ -303,11 +270,6 @@
       "count": 14
     }
   },
-  "src/core/asset-manifest-scan.ts": {
-    "default/no-default-params": {
-      "count": 2
-    }
-  },
   "src/core/asset-manifest.ts": {
     "error/no-generic-error": {
       "count": 1
@@ -323,9 +285,6 @@
     }
   },
   "src/core/box.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "max-lines": {
       "count": 1
     }
@@ -349,17 +308,11 @@
     }
   },
   "src/core/chat-session-registry.ts": {
-    "default/no-default-params": {
-      "count": 4
-    },
     "no-optional-chaining/no-optional-chaining": {
       "count": 2
     }
   },
   "src/core/chat-session.ts": {
-    "default/no-default-params": {
-      "count": 2
-    },
     "error/no-generic-error": {
       "count": 2
     },
@@ -507,9 +460,6 @@
     }
   },
   "src/core/generate-docs.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-literal-error-message": {
       "count": 1
     },
@@ -534,9 +484,6 @@
     }
   },
   "src/core/install-template-file.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-throw-literal": {
       "count": 3
     },
@@ -613,9 +560,6 @@
     }
   },
   "src/core/reactor/job-discovery.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "no-optional-chaining/no-optional-chaining": {
       "count": 1
     }
@@ -672,9 +616,6 @@
     "complexity": {
       "count": 1
     },
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-throw-literal": {
       "count": 4
     },
@@ -689,9 +630,6 @@
     }
   },
   "src/core/transcription.ts": {
-    "default/no-default-params": {
-      "count": 1
-    },
     "error/no-throw-literal": {
       "count": 6
     },
@@ -1052,9 +990,6 @@
     }
   },
   "src/webapp/routes/admin.ts": {
-    "default/no-default-params": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1109,9 +1044,6 @@
     }
   },
   "src/webapp/server.ts": {
-    "default/no-default-params": {
-      "count": 2
-    },
     "max-lines": {
       "count": 1
     },
