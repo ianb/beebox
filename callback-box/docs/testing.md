@@ -471,6 +471,44 @@ Not a test you run manually, but a live validation hook. When an agent writes or
 
 Also enforces directory structure rules (e.g., trick scripts must be in subdirectories of `tricks/scripts/`).
 
+## 6. Frontend Dev Stubs
+
+Some frontend bugs only manifest against real layout and measurement — scroll
+behavior, virtualization, streaming-driven reflow — and can't be reproduced in a
+doctest. For these, drive the running app with `bin/browse` (see
+`.claude/skills/agent-browser/SKILL.md`) and use a dev stub to make the input
+deterministic instead of depending on a live agent response.
+
+### `/fakestream` — deterministic chat streaming
+
+**Location:** `src/frontend/src/machines/chatMachine.ts` (`runFakeStream`)
+**Trigger:** Send a chat message beginning with `/fakestream`.
+
+Instead of calling the backend, the chat machine plays a timed script of
+`STREAM_TEXT` events, growing the assistant bubble at a controlled rate with no
+API calls. This reproduces streaming-UI bugs (scroll-follow, layout jitter)
+frame-for-frame.
+
+```
+/fakestream [chunks] [intervalMs] [chunkLen]
+```
+
+- `chunks` — total text events to emit (default 200)
+- `intervalMs` — delay between events (default 40)
+- `chunkLen` — approx chars per event (default 25)
+
+Example: `/fakestream 2000 30 25` streams ~50k chars over ~60s. Measure scroll
+state from the browser to assert behavior deterministically:
+
+```js
+// fromBottom should stay ~0 while scrollHeight grows (auto-follow working)
+const s = document.querySelector('[data-testid="virtuoso-scroller"]');
+({ fromBottom: s.scrollHeight - s.scrollTop - s.clientHeight, scrollHeight: s.scrollHeight });
+```
+
+The stub is gated purely on the message prefix, so it ships harmlessly — a real
+message never starts with `/fakestream`.
+
 ## Choosing the Right Approach
 
 | Question | Approach |
@@ -480,6 +518,7 @@ Also enforces directory structure rules (e.g., trick scripts must be in subdirec
 | Does the agent know where to find X? | Knowledge audit |
 | Did the CLI tools help or hinder the agent? | Session critique |
 | Does a card validate after agent edits? | Card validator (automatic) |
+| Does the streaming UI scroll/reflow correctly? | Frontend dev stub (`/fakestream` + `bin/browse`) |
 
 **Overlap:** Some things could be tested at multiple levels. Prefer the lowest level that catches the bug:
 - A template generating bad XML → unit test (fast, deterministic)

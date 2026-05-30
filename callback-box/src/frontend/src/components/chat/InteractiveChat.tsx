@@ -10,7 +10,7 @@
  * a session switch (or new-chat reset) cleanly remounts the machine.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, type ReactNode, type CSSProperties } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import TextareaAutosize from "react-textarea-autosize";
@@ -34,7 +34,7 @@ import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { DebugLogPanel } from "../DebugLog";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { chatMachine, HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
-import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, groupMessages, extractChatImages, type MessageGroup, type OnZoomView } from "../ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, groupMessages, extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/structured-output-parsing";
 import { FileView } from "../FileView";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
@@ -960,14 +960,19 @@ function PendingHqMessage({ text }: { text: string }) {
  */
 function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   const visible = chunkOnParagraphs(text);
+  if (!visible) return null;
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
-      {visible ? (
-        <MarkdownContent text={visible} onZoomView={onZoomView} />
-      ) : null}
-      <div className="flex justify-center mt-6">
-        <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
-      </div>
+      <MarkdownContent text={visible} onZoomView={onZoomView} />
+    </div>
+  );
+}
+
+/** The streaming progress throbber, shown below the live text + tools. */
+function StreamingThrobber() {
+  return (
+    <div className="flex justify-center my-6">
+      <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
     </div>
   );
 }
@@ -1005,6 +1010,11 @@ function dataItemKey(d: DataItem): string {
 
 const VIRTUOSO_INITIAL_FIRST_INDEX = 1_000_000_000;
 
+// Distance from the bottom (px) within which streaming chunks still
+// auto-follow. Sized to cover the height of a few text deltas — a real
+// scroll-up by the user clears the threshold easily.
+const AUTO_FOLLOW_THRESHOLD = 200;
+
 // Virtuoso requires Header/Footer components to be stable references; if a
 // new component identity is passed each render they remount. We keep them
 // module-level and pass dynamic data via the `context` prop instead.
@@ -1031,9 +1041,23 @@ function LoadOlderHeader({ context }: { context?: ChatListContext }) {
   );
 }
 
+// Virtuoso's scroller fills the full width of the chat column so wheel/touch
+// events anywhere across it (including the left/right gutters) scroll the
+// messages. The visible content is kept centered at the same max-width as the
+// header and composer by constraining the inner list, not the scroller.
+const CenteredList = forwardRef<HTMLDivElement, { children?: ReactNode; style?: CSSProperties }>(
+  function CenteredList({ children, style }, ref) {
+    return (
+      <div ref={ref} style={style} className="mx-auto w-full max-w-5xl">
+        {children}
+      </div>
+    );
+  },
+);
+
 function VirtualizedMessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
-  debugView, currentUserEmail, speechPlayback, handleStopSpeech, onZoomView, snapshot,
+  debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, proseEnabled, pendingHqDraft,
 }: {
   messages: SessionEntry[];
@@ -1045,8 +1069,10 @@ function VirtualizedMessageList({
   processingShown: boolean;
   debugView: boolean;
   currentUserEmail: string | undefined;
-  speechPlayback: { isPlaying: boolean };
+  speechPlayback: { isPlaying: boolean; playingMessageId: string | null; remainingCount: number };
   handleStopSpeech: () => void;
+  handleSkipSpeech: () => void;
+  handleReplaySpeech: (options: ReplaySpeechOptions) => void;
   onZoomView: OnZoomView;
   snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
   totalEntries: number;
@@ -1058,6 +1084,7 @@ function VirtualizedMessageList({
 }) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const atBottomRef = useRef(true);
+  const scrollerRef = useRef<HTMLElement | Window | null>(null);
   // Whether we've performed the on-mount scroll-to-bottom yet. Initial
   // load of an existing chat should land at the latest message, not the
   // top — `initialTopMostItemIndex` alone isn't reliable here because data
@@ -1142,17 +1169,30 @@ function VirtualizedMessageList({
     atBottomRef.current = b;
   }, []);
 
+  const handleScrollerRef = useCallback((el: HTMLElement | Window | null) => {
+    scrollerRef.current = el;
+  }, []);
+
   // During streaming, the tail item's height grows without changing data
-  // length — followOutput won't fire — so re-pin to bottom imperatively
-  // while the user is at the bottom.
+  // length — followOutput won't fire — so re-pin to bottom imperatively.
+  // We can't gate on `atBottomRef` here: each chunk grows scrollHeight
+  // before this effect runs, transiently flipping atBottom to false, so
+  // the gate skips the scroll and we fall progressively further behind.
+  // Read the live DOM position instead — if we were near the bottom when
+  // the chunk arrived, follow it; if the user has scrolled up by more
+  // than a chunk's worth, leave them alone.
   useEffect(() => {
-    if (streamingShown && atBottomRef.current) {
-      virtuosoRef.current?.scrollToIndex({
-        index: "LAST",
-        align: "end",
-        behavior: "auto",
-      });
-    }
+    if (!streamingShown) return;
+    const el = scrollerRef.current;
+    if (!el || el === window) return;
+    const target = el as HTMLElement;
+    const fromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (fromBottom > AUTO_FOLLOW_THRESHOLD) return;
+    virtuosoRef.current?.scrollToIndex({
+      index: "LAST",
+      align: "end",
+      behavior: "auto",
+    });
   }, [streamText, streamTools.length, streamingShown]);
 
   // Scroll to bottom when user sends a message (even if scrolled up).
@@ -1201,10 +1241,11 @@ function VirtualizedMessageList({
   const lastAssistantGroupIndex = groups.findLastIndex((g) => g.type === "assistant");
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col overflow-x-hidden">
+    <div className="flex-1 w-full min-w-0 flex flex-col overflow-x-hidden">
       <div data-image-list hidden>{chatImagesJson}</div>
       <Virtuoso<DataItem, ChatListContext>
         ref={virtuosoRef}
+        scrollerRef={handleScrollerRef}
         className="flex-1"
         data={data}
         firstItemIndex={firstItemIndex}
@@ -1214,7 +1255,7 @@ function VirtualizedMessageList({
         atBottomThreshold={80}
         computeItemKey={(_, item) => dataItemKey(item)}
         context={headerContext}
-        components={{ Header: LoadOlderHeader }}
+        components={{ Header: LoadOlderHeader, List: CenteredList }}
         itemContent={(_, item) => {
           if (item.kind === "marker") {
             return (
@@ -1235,6 +1276,7 @@ function VirtualizedMessageList({
                       <ToolList blocks={streamTools} />
                     </div>
                   ) : null}
+                  <StreamingThrobber />
                 </div>
               </MessageErrorBoundary>
             );
@@ -1268,13 +1310,26 @@ function VirtualizedMessageList({
           } else if (group.type === "user") {
             body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} acks={item.acks} onZoomView={onZoomView} /></div>;
           } else {
+            // "This message is playing" matches either an explicit replay
+            // (playingMessageId is this group's uuid) or auto-played speech
+            // from the latest turn (playingMessageId is a synthetic stream-*
+            // id — uuids never start with "stream", so this can't collide).
+            const groupUuid = group.entries[0]?.uuid ?? "";
+            const pid = speechPlayback.playingMessageId;
+            const isStreamId = typeof pid === "string" && pid.startsWith("stream");
+            const playingThis = speechPlayback.isPlaying &&
+              (pid === groupUuid || (isStreamId && groupIndex === lastAssistantGroupIndex));
             body = (
               <div className="py-0.5">
                 <AssistantMessage
                   entries={group.entries}
                   debugView={debugView}
-                  speechPlaying={Boolean(speechPlayback.isPlaying && groupIndex === lastAssistantGroupIndex)}
+                  speechPlaying={playingThis}
+                  anySpeechPlaying={speechPlayback.isPlaying}
+                  speechCanSkip={Boolean(speechPlayback.isPlaying && speechPlayback.remainingCount > 1)}
                   onStopSpeech={handleStopSpeech}
+                  onSkipSpeech={handleSkipSpeech}
+                  onReplaySpeech={handleReplaySpeech}
                   onZoomView={onZoomView}
                   proseEnabled={proseEnabled}
                 />
@@ -2240,6 +2295,21 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     speechPlayback.stop();
   }, [speechPlayback]);
 
+  const handleSkipSpeech = useCallback(() => {
+    speechPlayback.skip();
+  }, [speechPlayback]);
+
+  const handleReplaySpeech = useCallback((options: ReplaySpeechOptions) => {
+    // A manual replay shouldn't fight an in-progress recording: pause the mic
+    // the same way auto-played speech does (see queueSpeechBatch).
+    if (transcriptionRef.current && transcriptionRef.current.state === "recording") {
+      voicePausedRef.current = true;
+      setVoicePaused(true);
+      transcriptionRef.current.cancel();
+    }
+    speechPlayback.replay(options);
+  }, [speechPlayback]);
+
   // Keep textarea focused when it's visible and available for input.
   // On mobile (< sm), the textarea is only visible in typing mode or while transcribing.
   // Safari needs a short delay after the element appears before focus will open the keyboard.
@@ -2301,9 +2371,10 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           })}
         />
       ) : null}
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 max-w-5xl w-full mx-auto">
-      {/* Header with debug controls */}
-      <header className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full">
+      {/* Header with debug controls — centered at the same max-width as the
+          message list and composer below. */}
+      <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
         <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
         <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={handleToggleNarration} />
@@ -2348,6 +2419,8 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         currentUserEmail={currentUser?.email}
         speechPlayback={speechPlayback}
         handleStopSpeech={handleStopSpeech}
+        handleSkipSpeech={handleSkipSpeech}
+        handleReplaySpeech={handleReplaySpeech}
         onZoomView={onZoomView}
         snapshot={snapshot}
         totalEntries={totalEntries}
@@ -2358,6 +2431,9 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         pendingHqDraft={pendingHqDraft}
       />
 
+      {/* Everything below the scroll pane (status banners + composer) is
+          centered at the same max-width as the header and messages. */}
+      <div className="flex flex-col w-full max-w-5xl mx-auto min-w-0">
       {/* Error display */}
       {error || transcription.error ? (
         <div className="px-4 py-2 bg-danger-50 border-t border-danger-light text-danger-dark text-sm">
@@ -2503,6 +2579,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
           />
         </div>
       ) : null}
+      </div>
     </div>
     </div>
     {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}

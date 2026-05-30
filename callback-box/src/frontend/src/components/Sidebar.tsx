@@ -75,7 +75,7 @@ export function Sidebar({
             </button>
           </div>
 
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto" tabIndex={0} aria-label={title}>
             {children}
           </div>
         </>

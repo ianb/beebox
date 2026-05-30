@@ -10,6 +10,7 @@
 
 import { join } from "node:path";
 import { execFile } from "node:child_process";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import type { ZodTypeAny } from "zod";
@@ -77,9 +78,8 @@ const DOCID_DEBUG_MARKER = ".callback-box/docid-debug";
  */
 async function getCallbackBoxCommit(): Promise<string | null> {
   try {
-    const cbRoot = new URL("../../", import.meta.url);
     const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
-      cwd: cbRoot.pathname,
+      cwd: PACKAGE_ROOT,
     });
     return stdout.trim();
   } catch {

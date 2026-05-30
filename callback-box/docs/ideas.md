@@ -900,6 +900,38 @@ Three directions to consider, not mutually exclusive:
 - **Keep the wrapper but make it invisible** — symlink `bin/browse` into a PATH dir during install, or document an alias. Preserves the path-rewriting feature and removes the `cd` annoyance.
 - **Small patches if we keep it:** print a one-line "ok" on `reload` and `network requests --clear` (silent success forced an agent into a `sleep`-and-pray pattern); investigate why `reload` didn't bust the `manifest.webmanifest` cache after a file edit (a `reload --hard` option, or always sending `Cache-Control: no-cache` on reload, would close that gap).
 
+## Color contrast — full WCAG AA audit (deferred)
+
+`bin/tour --all` surfaces ~18 `color-contrast` violations (serious, per
+axe-core) across every routed page. Top failing tokens against white
+backgrounds:
+
+- `text-warm-500` (#B8A890, ~2.3:1) — used widely as secondary text
+- `text-warm-600` (#9B8E7E, ~3.5:1) — borderline; still fails AA
+- `text-warm-400` (#D9CEBD, ~1.4:1) — used on the lightest secondary text
+- `text-warning` (#D99A2B, ~2.0:1), `text-primary` (#9B6BA6, ~3.7:1)
+  and several `-dark` semantic variants — saturated mid-tones that
+  fail AA against white.
+
+Not interesting right now; intentionally deferred. Three plausible
+fixes when the time comes:
+
+1. **Re-map the warm scale** so warm-500/600 darken into AA-passing
+   territory. Single-file palette change; shifts the visual identity
+   of every secondary-text surface.
+2. **Move text to warm-700+** by sweeping source and reserving 400–600
+   for borders/backgrounds (the conventional Tailwind split).
+   Many-file change; preserves visual identity.
+3. **Bump the semantic `-dark` variants** (warning-dark, primary-dark,
+   success-dark) so error/warning/success text passes AA without
+   re-tuning the neutral scale.
+
+To re-enable the rule for one tour run: remove `color-contrast` from
+`SUPPRESS_RULES` in `callback-box/test/tours/tour-lib/axe.ts`.
+
+When this becomes interesting again, run `bin/tour --all` after
+re-enabling and the latest violation inventory will land under
+`callback-box/test/tours/.artifacts/<tour>/<runId>/*.axe.json`.
 ## "Before you build this" — embedding-indexed reuse search
 
 The repeated failure mode: agent is asked for X, agent writes X from scratch, X already existed under a slightly different name in `src/components/ui/` or `src/lib/` or `cardworks/`. The agent doesn't know what to grep for because the existing thing's name doesn't match the task vocabulary. Result: parallel implementations, drift, the codebase gets harder to navigate over time precisely *because* it has more in it.
@@ -965,6 +997,16 @@ prototyping:
   prosody signal (excited / tentative / rushed / reading-aloud) so downstream
   agents have non-textual context to work with. E.g. "user sounds frustrated"
   could shift how the agent triages the request.
+- **Live overlay on the chat input** — while the user is dictating in the
+  chat box, render the prosody read live above the input (a small badge
+  strip: "tentative", "rushed", color-shifted). Two purposes: (a) helps the
+  user see what the system is actually picking up about their delivery
+  before they hit send, which is a closed-loop calibration signal that
+  doesn't exist today; (b) makes it obvious when the prosody signal would
+  shift downstream behavior, so the user can decide whether to redo the
+  utterance with a different tone. Lightweight prototype: a small React
+  component subscribed to the Hume realtime stream, painted above the
+  textarea.
 - **Speak** — use Hume's TTS for outbound speech where prosody markup matters
   (briefings, longer narration). Compare against OpenAI TTS on naturalness for
   the kinds of content this system actually produces.
@@ -973,3 +1015,59 @@ Cheap to try because it's a connector + a couple of card-field additions; no
 deep architectural changes. Worth doing as a focused experiment to see whether
 the prosody annotations actually steer agent behavior in useful ways, or just
 add noise.
+
+## Check out aislop — AI-slop pattern scanner
+
+[scanaislop/aislop](https://github.com/scanaislop/aislop) is a code-quality
+scanner that lints for patterns commonly left by AI coding agents:
+narrative comments, dead code, `as any` casts, unhandled exceptions, etc.
+40+ rules across 7 languages, deterministic 0–100 score, autofix or
+hand-off-to-agent flows.
+
+Worth a look both as a **tool** (could slot into pre-commit alongside
+eslint/oxlint, or run periodically as a quality gauge) and as a **rule
+inventory** — even if we don't adopt the binary, the catalog of "things
+agents do wrong" maps directly onto what our own personal-vibe-check and
+`.claude/rules/` files try to prevent. Reading the rule list could surface
+gaps in our own conventions.
+
+Probably most useful as a periodic audit (a la `pnpm lint:knip`) rather
+than pre-commit — pre-commit is already busy and these patterns aren't
+all hard-block worthy.
+
+## Pandoc templates via Markdoc → Pandoc transcoding
+
+[pandoc-templates.org](https://pandoc-templates.org/) is a curated
+collection of typography-conscious Pandoc templates — academic papers,
+letters, slides, books — the kind of output Markdown ecosystems
+historically struggle to produce. The templates are mature, opinionated,
+and tuned for real print/PDF/HTML output.
+
+Switching to Pandoc directly probably isn't worth it: we just put in the
+work to standardize on Markdoc (typed body tags, JSX-ish components,
+schema-validated frontmatter), and that buys us things Pandoc doesn't
+(component-level rendering, structured AST traversal, the same body
+model the rest of the system uses). Throwing it out to chase
+template aesthetics would be a net loss.
+
+The interesting angle is **transcoding**: ship a Markdoc → Pandoc
+transformer for the cases where the output medium genuinely needs
+Pandoc's template engine (a printable brief, an exportable PDF, a
+slide deck from a guide card). Markdoc stays the authoring + rendering
+layer; Pandoc becomes a downstream sink for specific export targets.
+The transcoder would be a `cb` subcommand (e.g. `cb export pandoc
+<card>`) that walks the Markdoc AST and emits Pandoc-flavored Markdown
+or directly the Pandoc JSON AST, then pipes through `pandoc` with one
+of these templates selected by export target.
+
+Open questions:
+- Which Markdoc components have lossy/lossless Pandoc equivalents?
+  Custom Markdoc tags will need either a stripped/textual fallback
+  or a per-tag transformer.
+- Does anything in the box ecosystem actually need this today, or is
+  it a "nice when we want a real PDF" capability that sits unused
+  for months? (Honest answer probably the latter — file it but don't
+  build it until a real export need shows up.)
+- Pandoc adds a runtime dep (the `pandoc` binary). Deploy script
+  already installs imagemagick; pandoc would be the same shape of
+  add. Cheap.

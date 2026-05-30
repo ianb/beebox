@@ -11,6 +11,7 @@ import { Card } from "../ui/Card";
 import { InlineAction } from "../ui/InlineAction";
 import { Pre } from "../ui/Pre";
 import { Toggle } from "../ui/Toggle";
+import { VisuallyHidden } from "../ui/VisuallyHidden";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -156,19 +157,25 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
   );
 }
 
+function ScheduleTableHead() {
+  return (
+    <thead>
+      <tr className="text-left text-xs text-warm-600 border-b">
+        <th className="pb-2 font-medium">Name</th>
+        <th className="pb-2 font-medium">Schedule</th>
+        <th className="pb-2 font-medium">Last Run</th>
+        <th className="pb-2 font-medium">Status</th>
+        <th className="pb-2 font-medium"><VisuallyHidden>Actions</VisuallyHidden></th>
+      </tr>
+    </thead>
+  );
+}
+
 function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-warm-600 border-b">
-            <th className="pb-2 font-medium">Name</th>
-            <th className="pb-2 font-medium">Schedule</th>
-            <th className="pb-2 font-medium">Last Run</th>
-            <th className="pb-2 font-medium">Status</th>
-            <th className="pb-2 font-medium" />
-          </tr>
-        </thead>
+        <ScheduleTableHead />
         <tbody className="divide-y divide-warm-200">
           {schedules.map((s) => (
             <ScheduleRow key={s.name} s={s} />
@@ -237,7 +244,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
   if (loading) {
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
-        <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
+        <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
         <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
       </Card>
     );
@@ -246,7 +253,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
   if (error) {
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
-        <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
+        <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
         <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       </Card>
     );
@@ -255,7 +262,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
   if (schedules.length === 0) {
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
-        <h3 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h3>
+        <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
         <p className="text-sm text-warm-500">No scheduled scripts in config/schedules/</p>
       </Card>
     );
@@ -267,7 +274,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
   return (
     <Card as="section" aria-label="Schedules" shadow border="none">
-      <h3 className="text-sm font-semibold text-warm-700 mb-3">Schedules</h3>
+      <h2 className="text-sm font-semibold text-warm-700 mb-3">Schedules</h2>
 
       <ScheduleTable schedules={schedules} />
 

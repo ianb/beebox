@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
-# Callback Box CLI wrapper
-# Uses tsx with the correct tsconfig.json preloaded
+# Callback Box CLI wrapper.
+#
+# Runs a bundled, single-file build of the CLI (dist/cli.mjs) for fast cold
+# starts. The bundle collapses the source module graph into one file, avoiding
+# the per-module tsx loader-hook overhead that makes plain `tsx src/cli` slow.
+#
+# Hybrid behavior:
+#   - Prod (CB_CLI_PREBUILT set): trust the bundle, no staleness check.
+#   - Dev (default): self-heal — rebuild the bundle when any backend source is
+#     newer than it, then run it. If a build ever fails, fall back to tsx so
+#     `cb` always works.
 
 # Resolve symlinks to get the real script location
 SOURCE="${BASH_SOURCE[0]}"
@@ -13,9 +22,51 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-exec node \
-  --disable-warning=DEP0040 \
-  --import "file://$PROJECT_DIR/tsx-preload.mjs" \
-  --require "$PROJECT_DIR/node_modules/tsx/dist/preflight.cjs" \
-  --import "file://$PROJECT_DIR/node_modules/tsx/dist/loader.mjs" \
-  "$PROJECT_DIR/src/cli/index.ts" "$@"
+BUNDLE="$PROJECT_DIR/dist/cli.mjs"
+# V8 compile cache — caches bytecode of the bundle across runs (~20% faster).
+export NODE_COMPILE_CACHE="$PROJECT_DIR/dist/.compile-cache"
+
+run_bundle() {
+  exec node --disable-warning=DEP0040 --enable-source-maps "$BUNDLE" "$@"
+}
+
+run_tsx() {
+  exec node \
+    --disable-warning=DEP0040 \
+    --import "file://$PROJECT_DIR/tsx-preload.mjs" \
+    --require "$PROJECT_DIR/node_modules/tsx/dist/preflight.cjs" \
+    --import "file://$PROJECT_DIR/node_modules/tsx/dist/loader.mjs" \
+    "$PROJECT_DIR/src/cli/index.ts" "$@"
+}
+
+# Prod fast path: a deploy built the bundle and source won't change underneath
+# us, so skip the staleness scan entirely.
+if [ -n "$CB_CLI_PREBUILT" ] && [ -f "$BUNDLE" ]; then
+  run_bundle "$@"
+fi
+
+# Dev: rebuild if the bundle is missing or any backend source (.ts, excluding
+# the frontend tree, which is spawned separately and not in the bundle) is
+# newer than it. Pruning src/frontend keeps this scan ~5ms even on a fresh
+# bundle. package.json is checked too so dependency changes trigger a rebuild.
+needs_build=0
+if [ ! -f "$BUNDLE" ]; then
+  needs_build=1
+elif [ "$PROJECT_DIR/package.json" -nt "$BUNDLE" ]; then
+  needs_build=1
+elif [ -n "$(find "$PROJECT_DIR/src" -path "$PROJECT_DIR/src/frontend" -prune -o -name '*.ts' -newer "$BUNDLE" -print -quit 2>/dev/null)" ]; then
+  needs_build=1
+fi
+
+if [ "$needs_build" = 1 ]; then
+  if ! node "$PROJECT_DIR/scripts/build-cli.mjs" >/dev/null 2>&1; then
+    # Build failed — fall back to running source directly via tsx.
+    run_tsx "$@"
+  fi
+fi
+
+if [ -f "$BUNDLE" ]; then
+  run_bundle "$@"
+else
+  run_tsx "$@"
+fi

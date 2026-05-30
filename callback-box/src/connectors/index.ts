@@ -25,7 +25,7 @@ export interface Connector {
   /**
    * How this connector was triggered. Set by the caller before sync().
    * Included as a "Triggered-By" trailer on commits.
-   * Examples: "cb wakeup", "cb wakeup --connector rss", "cb finalize"
+   * Examples: "cb wakeup", "cb wakeup --connector gmail", "cb finalize"
    */
   triggeredBy?: string;
 

@@ -9,6 +9,7 @@ import * as fs from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
@@ -39,10 +40,7 @@ export interface VersionInfo {
 
 // deploy-info.json sits at the callback-box repo root. From this file
 // (src/webapp/trpc/routers/health.ts) that's four levels up.
-const DEPLOY_INFO_PATH = path.resolve(
-  import.meta.dirname,
-  "../../../../deploy-info.json",
-);
+const DEPLOY_INFO_PATH = path.join(PACKAGE_ROOT, "deploy-info.json");
 
 const PROCESS_STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
 

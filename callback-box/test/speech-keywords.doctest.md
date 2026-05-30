@@ -14,6 +14,9 @@ Several phrases trigger sending:
 detectKeyword("send message")?.action
 => send
 
+detectKeyword("sent message")?.action
+=> send
+
 detectKeyword("said message")?.action
 => send
 

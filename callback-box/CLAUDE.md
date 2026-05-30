@@ -11,7 +11,7 @@ This is not an app — it's a system that Claude Code operates. The human teache
 - `http://localhost:3210/main/<box>/...` — the main checkout
 - `http://localhost:3210/<name>/<box>/...` — any git worktree
 
-Overmind and Procfile.dev are gone. The router (`bin/router.mjs`) spawns the same two processes (Vite, Fastify) directly as its children — flat tree, predictable signal handling, no tmux. See the monorepo CLAUDE.md for the lifecycle commands (`worktrees status`, `down`, `panic`).
+Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same two processes (Vite, Fastify) directly as its children — flat tree, predictable signal handling, no tmux. See the monorepo CLAUDE.md for the lifecycle commands (`worktrees status`, `down`, `panic`).
 
 **Testing** — `pnpm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
 - `pnpm typecheck` — TypeScript (both backend and frontend)

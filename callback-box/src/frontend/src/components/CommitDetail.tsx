@@ -381,7 +381,7 @@ function CommitTab({
           ))}
         </div>
       ) : null}
-      <h2 className="font-medium text-warm-900">{commit.subject}</h2>
+      <h1 className="font-medium text-warm-900">{commit.subject}</h1>
       {bodyText ? <div className="mt-2 prose prose-sm max-w-none text-warm-700">
           <Markdown onNavigate={handleNavigate}>{bodyText}</Markdown>
         </div> : null}
@@ -564,7 +564,7 @@ export function CommitDetail({
   return (
     <div className="h-full flex flex-col bg-white" {...cbSource("commit", commit.hash)}>
       {onBack ? <MobileBackButton label="Back to commits" onClick={onBack} /> : null}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" tabIndex={0} aria-label="Commit details">
       {/* Commit info */}
       <CommitTab
         commit={commit}

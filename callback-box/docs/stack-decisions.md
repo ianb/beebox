@@ -8,23 +8,23 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 
 | # | Decision | Notes |
 |---|---|---|
-| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | 12 routers, ~50 procedures. SSE streaming, file uploads, WebSocket, OAuth remain as REST (by design). |
+| 2 | [tRPC (API layer)](#decision-2-api-layer--trpc) | Default for HTTP endpoints. A small, deliberate set stays REST (SSE streaming, file uploads, WebSocket, OAuth, webhooks, binary proxy) — see the watch-list in the decision. |
 | 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | All tRPC-migrated components use TanStack Query via `@trpc/react-query` hooks. |
 | 5 | [Fastify (keep)](#decision-5-backend-server--fastify-keep) | Already in use, no change needed. |
-| 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | All tRPC input schemas use Zod. No manual validation in new API code. |
+| 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | All tRPC input schemas use Zod (now zod v4). No manual validation in new API code. |
 | 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
-| 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | 931 tests, 53 files. Doctest system built. DI pattern established. |
-| 15 | [remark/unified](#decision-15-markdown-parsing--remarkunified) | Frontend rendering migrated to `@markdoc/markdoc` (2026-05) for custom tags like `{% quote %}`. remark/unified still powers the doctest loader's code-block extraction. |
-| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, date-fns, html-entities, sanitize-filename, ky. proper-lockfile reverted in 2026-04 — replaced by `src/lib/file-lock.ts` after sleep / SIGKILL failure modes. |
-| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated. 5 machine files (~1050 lines), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
-| 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Procfile.dev + standalone server.ts entry point. `cb serve --dev` uses node --watch directly. |
-| 4 | [TanStack Router](#decision-4-routing--tanstack-router) | Code-based route tree, typed params, `href()` helper for dynamic paths. Replaced react-router-dom. |
+| 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | `@anthropic-ai/claude-agent-sdk` drives agent invocation: typed message stream, session resume, in-process hooks, structured output. MCP tools + file checkpointing not yet used. |
+| 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | Doctest system built (runner: `tap`). DI pattern established. |
+| 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced react-markdown/remark in 2026-05) for custom tags like `{% quote %}`. See `docs/cards-as-markdown.md`. |
+| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, sanitize-filename, ky. proper-lockfile reverted 2026-04 → `src/lib/file-lock.ts`. date-fns still TODO. html-entities now orphaned (rss connector removed). |
+| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated (`src/frontend/src/machines/`), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
+| 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Superseded by Decision 24. `cb serve --dev` still works for backend-only. |
+| 4 | [TanStack Router](#decision-4-routing--tanstack-router) | Code-based route tree, typed params, `href()` helper for dynamic paths. Replaced react-router-dom (dep removed). |
 
 ### Up next
 
 | # | Decision | Status | Notes |
 |---|---|---|---|
-| 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | **Planned** | Independent of frontend work. Hooks + MCP tools are the draw. |
 | 6 | [Tailwind + component catalog](#decision-6-component-system--tailwind--custom-components) | **Partial** | Tailwind in use. Build catalog when agent component duplication becomes a problem. |
 | 19 | [Knowledge/acceptance audits](#decision-19-acceptance-testing--extend-knowledge-audit-framework) | **Partial** | knowledge-audit.ts exists. Extend to task completion audits when needed. |
 
@@ -40,7 +40,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 17 | [Phosphor Icons](#decision-17-icons--phosphor-icons) | Add when icon surface grows. |
 | 18 | [Mistral Voxtral](#decision-18-speech-recognition--mistral-voxtra) | Note for future model preference. |
 | 21 | [View Transitions API](#decision-21-page-transitions--view-transitions-api) | Pure CSS, no dependency. Add when transitions are desired. |
-| 22 | [rehype-highlight](#decision-22-syntax-highlighting--rehype-highlight-or-rehype-prism) | Do when touching the markdown pipeline for other reasons. |
+| 22 | [Syntax highlighting](#decision-22-syntax-highlighting--rehype-highlight-or-rehype-prism) | Premise gone (no remark pipeline — Markdoc now). If wanted, do it Markdoc-style, not via rehype-highlight. |
 
 ---
 
@@ -196,7 +196,7 @@ This works but is the one area where the machine boundaries leak — each machin
 **Rigor:** Directional (discussed, not built/benchmarked)
 **Choice:** tRPC
 **Alternative considered:** OpenAPI with code generation (better for polyglot backends)
-**Current state:** Nearly complete — 12 tRPC routers with ~50 procedures. REST retained only for SSE streaming, file uploads, WebSocket, and OAuth.
+**Current state:** Done. tRPC is the default for HTTP endpoints; the routers live in `src/webapp/trpc/routers/` (see `router.ts` for the current set — kept as the source of truth rather than enumerated here, since it churns). REST is retained only for the deliberate exceptions listed below.
 
 ### Why tRPC
 
@@ -221,30 +221,16 @@ This works but is the one area where the machine boundaries leak — each machin
 
 **Infrastructure:**
 - `src/webapp/trpc/trpc.ts` — initTRPC with context
-- `src/webapp/trpc/context.ts` — TrpcContext: `{ boxRoot, boxSlug, eventBus, services, chatSession }`
-- `src/webapp/trpc/router.ts` — Root appRouter merging 12 sub-routers, exports `AppRouter` type
+- `src/webapp/trpc/context.ts` — TrpcContext: `{ boxRoot, boxSlug, eventBus, services }`
+- `src/webapp/trpc/router.ts` — Root appRouter merging the sub-routers, exports `AppRouter` type
 - Fastify adapter registered per-box at `/:boxSlug/api/trpc`
 - Frontend: `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query` in TrpcProvider
 
-**Routers (12):**
-
-| Router | Procedures | Notes |
-|--------|-----------|-------|
-| `history` | list, diff, sessionLog | Cursor-based pagination with `useInfiniteQuery` |
-| `status` | status, inbox, questions, context, activity, browse | Bulk of the dashboard data |
-| `card` | get, patch | Patch uses Zod discriminated union for ops |
-| `scheduler` | log, schedules | Explicit return interfaces needed (see lessons) |
-| `calendar` | available, config, updateConfig | Uses `ctx.services.calendar` |
-| `actions` | wakeup, answer, create | Mutations with `ctx.eventBus.emit()` |
-| `briefs` | list, get, markRead, feedback, queryResponse, guideReactions, completeReading | Largest router; audio as base64 |
-| `chat` | history, status, interrupt, reset, voiceConfig | Streaming `chat.send` stays REST |
-| `commands` | list, get, executeSync | Streaming `execute` stays REST |
-| `debugLog` | get, submit, clear | In-memory log store |
-| `admin` | telegramStatus/Setup/Disconnect, boxConfig, updateBoxConfig, claudeStatus/Login/Logout | Uses multiple services |
+**Routers:** The sub-router set lives in `src/webapp/trpc/routers/` and is registered in `router.ts`. It grows and shifts as features land (e.g. the old `briefs` router was removed; `drive`, `files`, `landmarks`, `todos`, `transcription`, `health` were added), so the live `router.ts` is the source of truth — this doc no longer enumerates routers/procedures. Patterns worth knowing: cursor-based pagination (`history`) uses `useInfiniteQuery`; `card.patch` uses a Zod discriminated union for ops; mutations emit via `ctx.eventBus.emit()`.
 
 **Type sharing:** Frontend imports `type { AppRouter }` via relative path. `RouterOutput` helper type (`inferRouterOutputs<AppRouter>`) provides inferred types for component props — eliminates manually duplicated interfaces.
 
-**What stays REST (and why):**
+**What stays REST (and why) — the watch-list.** These are deliberate exceptions, each with a real transport reason. The list is small on purpose; if it starts growing for reasons other than the categories below (streaming, binary, multipart, webhooks, OAuth redirects), that's a signal worth revisiting.
 
 | Endpoint | Why not tRPC |
 |----------|-------------|
@@ -258,7 +244,7 @@ This works but is the one area where the machine boundaries leak — each machin
 | `telegram.ts` | Inbound webhook — Telegram POSTs to us. External caller, not our frontend. |
 | `chat/tts` | Binary proxy — streams audio bytes from TTS service. tRPC is JSON-only. |
 
-**Frontend `api.ts`** reduced from ~815 lines to ~250 lines. Contains only `getApiBase()`, SSE/streaming functions, file upload functions, and legacy type exports. These functions use manual `fetch()` (not TanStack Query) because TanStack Query is designed for cacheable request/response patterns — SSE streams, file uploads, and long-lived connections don't fit that model.
+**Frontend `api.ts`** shrank substantially (from ~815 lines) and now holds only `getApiBase()`, SSE/streaming functions, file upload functions, and legacy type exports. These functions use manual `fetch()` (not TanStack Query) because TanStack Query is designed for cacheable request/response patterns — SSE streams, file uploads, and long-lived connections don't fit that model.
 
 ### Lessons learned
 
@@ -335,16 +321,15 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 - **Type-safe route parameters.** Route params and search params are typed, reducing runtime errors.
 - **Data loaders.** Routes can declare data requirements that load before rendering, integrating with the API layer.
 
-### Concerns and open questions
+### Notes from the migration
 
-- **Migration cost.** React Router v7 is well-established in the codebase with 15+ routes. Migration requires touching every route definition and every `useParams`/`useNavigate` call.
-- **XState routable states.** Investigated: XState v5.28.0's "routable states" are a machine-internal feature for jumping to any marked state via `{ type: "xstate.route", to: "#stateId" }`. They have **no URL awareness** — no path matching, no params, no `pushState`. A URL router is still needed regardless. Routable states are useful for within-machine navigation but don't replace React Router or TanStack Router.
-- **Maturity.** TanStack Router is newer and less battle-tested than React Router. The type safety story is compelling but the ecosystem is smaller.
-- **Is this worth the migration?** React Router v7 works fine. The improvement is type safety on route params and loader integration. If tRPC already types the API layer, how much additional value does typed routing add?
+- **XState routable states.** Investigated: XState v5.28.0's "routable states" are a machine-internal feature for jumping to any marked state via `{ type: "xstate.route", to: "#stateId" }`. They have **no URL awareness** — no path matching, no params, no `pushState`. A URL router is still needed regardless. Routable states are useful for within-machine navigation but don't replace a URL router.
+- **Migration cost (resolved).** The move off React Router v7 touched every route definition and every `useParams`/`useNavigate` call. The `href()` helper (`src/frontend/src/lib/routing.ts`) centralizes dynamic-path construction so call sites get typed paths.
+- **Maturity (resolved).** TanStack Router is newer than React Router but proved solid for this app's ~15 routes. Type-safe params were the main draw; loader integration is available but not heavily leaned on yet.
 
 ### Implementation notes
 
-Deferred. React Router v7 is working. Migration cost is high relative to benefit, especially if tRPC provides the type safety that matters most. Revisit only if TanStack Router's loader integration proves compelling when adopting TanStack Query.
+**Done.** Code-based route tree in `src/frontend/src/router.tsx` using `@tanstack/react-router@^1.166.3` (`createRouter` / `createRoute` / `createRootRoute`). `href()` helper in `src/frontend/src/lib/routing.ts`. `react-router-dom` has been removed from `package.json` (no remaining imports).
 
 ---
 
@@ -353,7 +338,7 @@ Deferred. React Router v7 is working. Migration cost is high relative to benefit
 **Decided:** 2026-03-02
 **Rigor:** Low (no alternatives seriously considered)
 **Choice:** Fastify v5 (already in use)
-**Current state:** 13 route files, WebSocket support, SSE via `reply.hijack()`
+**Current state:** Raw route files in `src/webapp/routes/`, WebSocket support (`@fastify/websocket`), SSE via `reply.hijack()`. Most endpoints have moved to tRPC (Decision 2); the remaining raw routes are the streaming/upload/OAuth/webhook exceptions.
 
 ### Why keep Fastify
 
@@ -409,7 +394,7 @@ Tailwind is in use. The component catalog/registry (JSDoc extraction, queryable 
 **Decided:** 2026-03-02
 **Rigor:** Low (already in use, natural fit with tRPC)
 **Choice:** Zod
-**Current state:** Zod is installed (`zod@^3.24.0`) but underused — most validation is manual `if` checks
+**Current state:** Done. Zod (`zod@^4.4.3`) is the standard for validation — every tRPC procedure input is a Zod schema. (Originally adopted at v3; upgraded to v4.)
 
 ### Why Zod
 
@@ -494,7 +479,7 @@ The architecture is build-your-own with proven components:
 
 ### Implementation notes
 
-Not started. No dependencies installed (@parcel/watcher, better-sqlite3). Build when query-time file parsing becomes a bottleneck or when the resource subscription service (Decision 9) needs a solid foundation. The current approach of reading/parsing files at query time works for the current scale.
+Not started **as a card index**. Note that `better-sqlite3` is now a dependency, but for unrelated uses (token-usage tracking in `src/core/usage.ts`, the event bus) — not a queryable card index. `@parcel/watcher` is still not installed; `chokidar` remains the file-watch primitive. Build the index when query-time file parsing becomes a bottleneck or when the resource subscription service (Decision 9) needs a solid foundation. The current approach of reading/parsing files at query time works for the current scale.
 
 ---
 
@@ -559,7 +544,7 @@ One file watcher pipeline, two consumers: the queryable index and client notific
 
 ### Implementation notes
 
-Not started. Depends on Decision 8 (file index) for the file watcher infrastructure. The current ad-hoc SSE watcher works for the current use case. Build when the frontend needs fine-grained resource subscriptions.
+Not started, and in practice this hasn't mattered. The current ad-hoc SSE watcher (coarse "something changed, invalidate" signals bridged into TanStack Query) is doing the job naively and that's fine — fine-grained per-resource subscriptions and ETag-style versioning remain a "build if it ever becomes a real pain point" idea, not a pending task. Depends on Decision 8 (file index) for the shared file-watcher infrastructure if it's ever formalized.
 
 ---
 
@@ -645,9 +630,9 @@ Not started. The Principal type and CASL rules can be added without changing the
 ## Decision 12: Agent Invocation — Anthropic Agent SDK
 
 **Decided:** 2026-03-02
-**Rigor:** Directional (research complete, adoption pending)
+**Rigor:** Directional (researched), then adopted
 **Choice:** `@anthropic-ai/claude-agent-sdk`
-**Current state:** Spawning `claude` CLI as a subprocess, parsing stdout
+**Current state:** **Done.** Agent invocation runs through the SDK (`@anthropic-ai/claude-agent-sdk@^0.2.128`). Stdout parsing is gone.
 
 ### What the Agent SDK is
 
@@ -667,16 +652,22 @@ Not just an API client — it wraps the Claude Code binary and provides a typed 
 
 No workflow orchestration, job queuing, state machines, or retry logic. Those remain ours (procedure engine, scheduler). The SDK is a cleaner agent runner, not a higher-level framework.
 
-### Immediate value
+### What got adopted
 
-1. Replace ad-hoc stdout parsing with typed message streams
-2. `PreToolUse` hooks to audit/gate agent actions before they execute
-3. In-process MCP tools for box-specific operations (Zod-typed, no external process)
-4. Session resume for long-running or interrupted agent tasks
+- **Typed message stream.** `query()` from the SDK drives agent runs in `src/core/agent.ts` — no more stdout parsing.
+- **Session resume.** `agent.ts` resumes a session via `resumeSessionId` (e.g. the "didn't commit → resume with a nudge" retry path).
+- **In-process hooks.** `src/core/sdk-hooks.ts` runs a `PostToolUse` hook inside the server process — it replaced the file-based `plugins/card-validator/` plugin, so card/markdown linting runs without per-tool-call shell startup and with structured logging.
+- **Structured output.** `outputFormat: { type: "json_schema", schema }` (agent.ts) enforces typed JSON results where a run needs them.
+
+### Not (yet) adopted
+
+- **In-process MCP tools** (`createSdkMcpServer` / `tool()`) — no box-specific MCP tools defined yet.
+- **File checkpointing** (`enableFileCheckpointing` / `rewindFiles`) — not used; git remains the rollback story.
+- **Subagents** via the SDK's `Task` tool.
 
 ### Implementation notes
 
-Not started. Not in package.json. The current subprocess approach works and is well-tested (Agent interface, createAgent/createFakeAgent, ensureAgentCommitted). The SDK would replace the internals of `createAgent()` — the `Agent` interface and test infrastructure would remain unchanged. Main motivation: hooks and MCP tools, not just cleaner IPC.
+**Done** for the core motivation (typed streams, hooks, structured output, resume). The `Agent` interface and test infrastructure (`createAgent`/`createFakeAgent`, `ensureAgentCommitted`) survived the switch — the SDK replaced the internals, not the seams. Note: `src/services/claude-cli.ts` still shells out, but only for `claude auth status/login/logout` (the admin auth surface) — it is not the agent-invocation path. MCP tools and file checkpointing remain the open follow-ups.
 
 ---
 
@@ -745,8 +736,8 @@ Not started. No dependencies installed. The Pino part is low-friction (Fastify h
 
 **Decided:** 2026-03-02
 **Rigor:** Deep (extensive discussion of philosophy and mechanics, library research)
-**Choice:** TAP protocol via jstap/node:test, doctest-style inline tests, custom `expect()` with display serializers
-**Current state:** 931 tests across 53 files, doctests are the primary test format
+**Choice:** TAP protocol (runner: `tap`), doctest-style markdown tests, custom `check()` with display serializers
+**Current state:** Done. Doctests are the primary test format. (Test/file counts intentionally not tracked here — they churn constantly and aren't the argument.)
 
 ### Philosophy: testing for agents, not just humans
 
@@ -762,7 +753,7 @@ Tests serve different purposes in an agent-driven workflow than in traditional d
 
 ### Test runner: TAP protocol
 
-**jstap** is currently in use and handles TypeScript adequately. **node:test** (built into Node.js) also outputs TAP natively. Either works. The key commitment is to the TAP protocol, not a specific runner — any runner that outputs TAP is compatible with the tooling.
+**`tap`** is the runner in use (`"test": "tap"`) and handles TypeScript adequately. **node:test** (built into Node.js) also outputs TAP natively. The key commitment is to the TAP protocol, not a specific runner — any runner that outputs TAP is compatible with the tooling.
 
 **Not Vitest.** Vitest is excellent for humans but its value is in the interactive terminal experience, which agents don't benefit from. TAP's simplicity is the feature.
 
@@ -777,7 +768,7 @@ Infrastructure includes:
 - `makeTestServer()` — Fastify inject, no network
 - `createFakeAgent()` — records invocations, configurable responses
 - `print()` — accumulates lines for multi-line assertions
-- Wildcards: `«string»`, `«number»`, `«codeblock»`, `«blankline»`, extractions
+- Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus named extractions (`«name=*»`, `«name=type»`). See `.claude/rules/doctest.md`.
 
 ### Display serializers
 
@@ -799,18 +790,23 @@ Mocking is built into the code through explicit dependency injection, not bolted
 
 ### Implementation notes
 
-Core doctest system is **done** and working well. 931 tests across 53 files. See `docs/testing-gaps.md` for detailed coverage status. The remaining items from the original vision are future enhancements, not blockers.
+Core doctest system is **done** and working well. See `docs/testing-gaps.md` for coverage status. The remaining items from the original vision are future enhancements, not blockers.
 
 ---
 
-## Decision 15: Markdown Parsing — remark/unified
+## Decision 15: Markdown Parsing — Markdoc
 
-**Decided:** 2026-03-02
-**Rigor:** Compared 5 libraries against specific requirements
-**Choice:** remark/unified ecosystem
-**Also considered:** marked, markdown-it, micromark, MDX
+**Decided:** 2026-03-02 (remark/unified) → **revised 2026-05 (Markdoc)**
+**Rigor:** Originally compared 5 libraries against specific requirements; later revised when cards moved to a Markdown + YAML-frontmatter format with inline structured tags.
+**Choice:** **`@markdoc/markdoc`** — frontend rendering pipeline (`src/frontend/src/components/Markdown.tsx`, `src/frontend/src/lib/markdoc-config.ts`)
+**Previously:** remark/unified via react-markdown + remark-gfm
+**Also considered (2026-03):** marked, markdown-it, micromark, MDX
 
-### Why remark
+> **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Markdoc (`parse → transform → renderers.react`), with built-in node renders mapped to our components (`Link`, `Img`, `Para`, …) and custom block/inline tags like `{% quote %}` and `{% transcription %}`. `react-markdown` and `remark-gfm` are no longer dependencies. The driver was the card-format migration: cards became Markdown body + YAML frontmatter + **Markdoc inline tags** (validated per-type), so using Markdoc for rendering too means one tag system end-to-end rather than card-body tags in one dialect and rendering in another. Full rationale: **`docs/cards-as-markdown.md`**.
+>
+> The remark-specific rationale below is retained as history. Note its load-bearing claims for *other* decisions have shifted: the markdown pipeline that Decision 22 (syntax highlighting) and the source-position-tracing ideas assumed no longer exists in that form — Markdoc has its own AST with source locations, but the rehype-highlight plan in particular is moot.
+
+### Why remark (historical — 2026-03 rationale)
 
 The decision was driven by three specific requirements:
 
@@ -839,13 +835,13 @@ Position tracking is needed for:
 
 ### Implementation notes
 
-**Doctest loader.** Still on remark/unified — uses the mdast AST for code block extraction with source positions. Unchanged.
-
 **Frontend rendering — migrated to Markdoc (2026-05).** The frontend now renders markdown through `@markdoc/markdoc`. The driver is the shared `<Markdown>` component at `src/frontend/src/components/Markdown.tsx`; the Markdoc config and the custom `{% quote %}` tag live in `src/frontend/src/lib/markdoc-config.ts`; node overrides (link, image, paragraph, document → React components) and the Quote tag implementation (`src/frontend/src/components/Quote.tsx`) hang off that pipeline. All ~8 consumer sites (`MarkdownCardView`, `RecipeView`, `ChatMessages`, `CommitDetail`, `CardTreeView`, `CalloutBlock`, `renderers/markdown.tsx`, `renderers/image.tsx`) still go through `<Markdown>` — the swap was transparent to them. `react-markdown`, `remark-gfm`, `rehype-raw`, and the custom `remark-comments` / `rehype-strip-ref` plugins are gone from `package.json` and from `src/`.
 
-Why the switch: Markdoc's tag syntax (`{% quote from="people/dana" %}…{% /quote %}`) gives us first-class custom content types with attributes, validated at parse time, without bolting on rehype plugins to invent syntax inside HTML comments. Source position tracking and the doctest loader were never frontend concerns, so losing them on the render path costs nothing.
+Why the switch: Markdoc's tag syntax (`{% quote from="people/dana" %}…{% /quote %}`) gives us first-class custom content types with attributes, validated at parse time, without bolting on rehype plugins to invent syntax inside HTML comments. See `docs/cards-as-markdown.md` for the fuller rationale (cards moved to the same Markdoc tag system).
 
-KaTeX integration is available but may not be actively used yet.
+**Doctest loader.** A separate concern, unaffected by the render swap. It extracts fenced code blocks from `.doctest.md` files with plain regex (`agent-doctest/src/doctest-hooks.mjs`), not an AST — so the remark/unified-based source-position story this decision originally imagined never actually got built, and remark/unified is no longer a dependency anywhere in the repo.
+
+KaTeX/math support is not currently wired into the Markdoc pipeline — revisit if math rendering is needed.
 
 ---
 
@@ -1041,8 +1037,10 @@ Not started. Pure CSS — add when page transitions become desired. No dependenc
 
 **Decided:** 2026-03-02
 **Rigor:** Low (follows from Decision 15)
-**Choice:** rehype-highlight (wraps highlight.js) within the remark/unified pipeline
-**Current state:** highlight.js used directly in the frontend
+**Choice:** ~~rehype-highlight (wraps highlight.js) within the remark/unified pipeline~~ — **premise gone** (see note)
+**Current state:** highlight.js still installed; rendering is now Markdoc, not remark/rehype
+
+> **Premise invalidated (2026-05).** This decision assumed the remark/unified pipeline from Decision 15. That pipeline was replaced by Markdoc, so "run highlighting inside the rehype chain" no longer applies. If/when syntax highlighting in rendered markdown is wanted, it needs a Markdoc-shaped approach (a fence/code node render that calls highlight.js, or a Markdoc transform) — not rehype-highlight. The rest of this section is retained for history.
 
 ### Why rehype-highlight
 
@@ -1065,12 +1063,21 @@ Not started. highlight.js is used directly. Moving it into the remark pipeline v
 
 | Library | Replaces | Status |
 |---|---|---|
-| **execa** | Duplicate `execFile` wrappers with manual error handling | ✅ Done — used in `procedure/shell.ts` and `cli/lib/git.ts` |
-| **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | ✅ Done — used in 40+ files |
-| **html-entities** | Regex-based HTML stripping and entity decoding in `rss.ts` | ✅ Done — `decode()` replaces 6 hardcoded entity regexes in `stripHtml()` |
+| **execa** | Duplicate `execFile` wrappers with manual error handling | ✅ Done — used in `procedure/shell.ts` (git operations moved to simple-git, Decision 10) |
+| **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | ❌ **Not done (TODO)** — never landed; not a dependency. Date formatting is still ad-hoc native (`toLocaleDateString`/`Intl`) across ~15 files. See the TODO below. |
+| **html-entities** | Regex-based HTML stripping and entity decoding in `rss.ts` | ⚠️ Adopted, now orphaned — the RSS/news connector (`rss.ts`) was removed, so there are no remaining `src/` imports. `html-entities` is still in `package.json`; candidate for removal. |
 | **sanitize-filename** | Multiple duplicate `safeFilename()` functions | ✅ Done — wraps sanitize-filename with existing alphanumeric/underscore/50-char constraints |
 | ~~**proper-lockfile**~~ | Two separate file-locking implementations | ❌ Reverted 2026-04 — see note below |
-| **ky** | Bare `fetch()` with no retry or error normalization | ✅ Done — 10 files migrated, retry + timeout for external APIs |
+| **ky** | Bare `fetch()` with no retry or error normalization | ✅ Done — retry + timeout for external APIs (~11 files) |
+
+### TODO: adopt date-fns
+
+Not yet done — a self-contained task to hand off:
+
+1. Add `date-fns` to `callback-box/package.json` (it formats dates only; no extra runtime deps).
+2. Replace ad-hoc/native date formatting with date-fns `format()` / `formatDistanceToNow()` etc. Current hand-rolled sites to convert (from a `toLocaleDateString`/`Intl`/manual `getMonth()` scan) include, on the backend: `src/connectors/google-calendar.ts`, `src/connectors/calendar-utils.ts`, `src/cli/commands/status.ts`, `src/dev/doc-graph-html.ts`, `src/dev/prompt-report.ts`; and on the frontend: `src/frontend/src/components/CommitTimeline.tsx`, `CommitDetail.tsx`, `SessionLog.tsx`, `dashboard/ScheduleOverview.tsx`, `dashboard/SystemInfo.tsx`, `settings/DriveSection.tsx`, `renderers/image.tsx`, `renderers/sheet.tsx`. (Re-grep before starting — the list drifts.)
+3. **Watch out for timezone semantics.** Calendar code (`google-calendar.ts`, `calendar-utils.ts`) is timezone-sensitive — verify against existing tests rather than mechanically swapping; date-fns formats in local time unless paired with `date-fns-tz`.
+4. Keep the project conventions: no default parameters, double quotes, explicit types. Add/adjust doctests for any user-visible format change.
 
 ### Why these and not others
 
@@ -1101,9 +1108,11 @@ Both are modern fetch wrappers with retry support. ky is ~3KB gzipped (ofetch is
 |---|---|
 | ~~**mobx, mobx-react-lite, mobx-state-tree**~~ | ✅ Removed. Decision 1 chose XState; these were evaluation remnants. |
 | ~~**zustand**~~ | ✅ Removed. Evaluation remnant from the state management comparison. |
-| **xml2js** | Cardworks handles all XML card parsing. xml2js should not be used directly. |
-| **chokidar** | Decision 8 chose @parcel/watcher. Remove once file watching is migrated. |
-| **highlight.js** (direct usage) | Decision 22 moves highlighting into the remark pipeline via rehype-highlight. The package stays as a transitive dependency of rehype-highlight, but direct imports should be replaced. |
+| ~~**react-router-dom**~~ | ✅ Removed (2026-05). Replaced by TanStack Router (Decision 4); had no remaining imports. |
+| **xml2js** | Cardworks handles all XML card parsing. xml2js should not be used directly (no direct `src/` imports found — safe to drop). |
+| **chokidar** | Still the file-watch primitive. Decision 8 imagined migrating to @parcel/watcher, but that index was never built and @parcel/watcher was never installed — so chokidar stays for now. |
+| **html-entities** | Orphaned after the RSS/news connector was removed (no `src/` imports). Drop it. |
+| **highlight.js** | Decision 22's rehype-highlight plan is moot (no remark pipeline — see Decision 15). highlight.js is still installed but not directly imported in `src/frontend/src`; reassess whether it's needed at all under Markdoc. |
 
 ---
 
@@ -1112,7 +1121,7 @@ Both are modern fetch wrappers with retry support. ky is ~3KB gzipped (ofetch is
 **Decided:** 2026-05-26
 **Supersedes:** Decision 20 (Overmind + Procfile.dev)
 **Rigor:** Deep (researched lazy-start patterns, surveyed alternatives, weighed scope of build)
-**Choice:** A single Node daemon (`bin/router.mjs`) that listens on one port and lazy-spawns a Vite + Fastify pair per worktree on first HTTP request.
+**Choice:** A single Node daemon (`bin/router.ts`) that listens on one port and lazy-spawns a Vite + Fastify pair per worktree on first HTTP request.
 
 ### Why we replaced Overmind
 
@@ -1130,7 +1139,7 @@ than asking the user to remember which port maps to which worktree.
 
 ### The router
 
-`bin/router.mjs` listens on `:3210`. It parses the first URL path segment
+`bin/router.ts` listens on `:3210`. It parses the first URL path segment
 as a worktree name, and:
 
 1. If that worktree's Vite + Fastify pair isn't running, it spawns them as
@@ -1170,7 +1179,7 @@ Other process supervisors (`mprocs`, `process-compose`, `pm2`,
 
 ### Implementation notes
 
-**Done.** Lives at `bin/router.mjs` and `bin/worktrees`. See the root
+**Done.** Lives at `bin/router.ts` and `bin/worktrees`. See the root
 `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 runner (Decision 20) is gone — `Procfile.dev` deleted, `cb serve --dev`
 still works for the rare "just the backend" case.

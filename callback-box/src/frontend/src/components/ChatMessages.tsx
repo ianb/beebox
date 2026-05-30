@@ -12,7 +12,8 @@ import type { LightboxImage } from "./ImageLightbox";
 import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
-import { hasAssistantSpeech } from "../lib/speech-parsing";
+import { hasAssistantSpeech, parseAllSpeechTags, type SpeechSegment } from "../lib/speech-parsing";
+import { SpeechMenu } from "./chat/SpeechMenu";
 import { getAckKind, parseCallouts, stripStructuredOutputTags, type AckIndication } from "../lib/structured-output-parsing";
 import { CalloutStack } from "./chat/CalloutBlock";
 
@@ -1183,40 +1184,35 @@ function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | ActivityGrou
   return grouped;
 }
 
-function SpeechIcon({ playing, onStop }: { playing: boolean; onStop?: () => void }) {
-  return (
-    <svg
-      onClick={playing ? onStop : undefined}
-      role={playing ? "button" : undefined}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`inline-block w-4 h-4 align-text-bottom ${
-        playing ? "text-primary animate-pulse cursor-pointer" : "text-primary opacity-40"
-      }`}
-    >
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-    </svg>
-  );
+export interface ReplaySpeechOptions {
+  messageId: string;
+  segments: SpeechSegment[];
+  fromIndex: number;
 }
 
 export function AssistantMessage({
   entries,
   debugView,
   speechPlaying,
+  anySpeechPlaying,
+  speechCanSkip,
   onStopSpeech,
+  onSkipSpeech,
+  onReplaySpeech,
   onZoomView,
   proseEnabled,
 }: {
   entries: SessionEntry[];
   debugView?: boolean;
+  /** This message's speech is the one currently playing. */
   speechPlaying?: boolean;
+  /** Some speech (this message or another) is currently playing. */
+  anySpeechPlaying?: boolean;
+  /** A next segment exists in the currently-playing queue. */
+  speechCanSkip?: boolean;
   onStopSpeech?: () => void;
+  onSkipSpeech?: () => void;
+  onReplaySpeech?: (options: ReplaySpeechOptions) => void;
   onZoomView?: OnZoomView;
   /** When false, untagged prose hides; only callouts and acks render. Default true. */
   proseEnabled?: boolean;
@@ -1227,6 +1223,8 @@ export function AssistantMessage({
   ).join("\n");
   const hasSpeech = hasAssistantSpeech(allText);
   const isPlaying = speechPlaying === true;
+  const segments = useMemo(() => (hasSpeech ? parseAllSpeechTags(allText) : []), [hasSpeech, allText]);
+  const messageId = entries.length > 0 ? entries[0].uuid : "";
   const hasSilentThinking = entries.some((e) =>
     e.content.some((b) => b.type === "thinking" && !b.text?.trim()),
   );
@@ -1241,7 +1239,17 @@ export function AssistantMessage({
       {!debugView && (hasSpeech || hasSilentThinking) ? (
         <div className="absolute right-2 top-2 flex items-center gap-2">
           {hasSilentThinking ? <ThinkingCornerMark /> : null}
-          {hasSpeech ? <SpeechIcon playing={isPlaying} onStop={onStopSpeech} /> : null}
+          {hasSpeech ? (
+            <SpeechMenu
+              segments={segments}
+              playing={isPlaying}
+              anyPlaying={anySpeechPlaying === true}
+              canSkip={speechCanSkip === true}
+              onStop={() => onStopSpeech?.()}
+              onSkip={() => onSkipSpeech?.()}
+              onReplay={(fromIndex) => onReplaySpeech?.({ messageId, segments, fromIndex })}
+            />
+          ) : null}
         </div>
       ) : null}
       {showProse ? grouped.map((group, i) =>

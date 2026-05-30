@@ -46,11 +46,11 @@ Sessions are keyed by thread ref (extracted from `<thread ref="...">` in the job
 
 ### Why two paths?
 
-Batch processing is natural for jobs that are independent tasks (e.g., "write a summary", "process this RSS item"). But chat requires per-thread continuity — batching multiple chat messages into one prompt would lose the session history that makes multi-turn conversation work. The `type` filter on the reactor command selects which path to use.
+Batch processing is natural for jobs that are independent tasks (e.g., "write a summary", "process this email"). But chat requires per-thread continuity — batching multiple chat messages into one prompt would lose the session history that makes multi-turn conversation work. The `type` filter on the reactor command selects which path to use.
 
 ## Job Lifecycle
 
-1. **Creation:** Jobs appear in `box/jobs/` via connectors (sync phase), intake, or manual placement. They're XML files with the `.job.card` suffix. Each root element carries a `source="..."` attribute naming the connector that owns it (e.g. `gmail`, `rss`, `telegram`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`).
+1. **Creation:** Jobs appear in `box/jobs/` via connectors (sync phase), intake, or manual placement. They're XML files with the `.job.card` suffix. Each root element carries a `source="..."` attribute naming the connector that owns it (e.g. `gmail`, `telegram`, `calendar`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`).
 2. **Discovery:** `findJobCards()` scans the directory, extracts priority and source from the XML, and sorts normal-priority first.
 3. **Partitioning:** Jobs containing `<procedure ref="...">` are separated for the procedure trampoline. The rest go to agent processing.
 4. **Processing:** The agent (or procedure engine) does the work, commits changes, and calls `cb finish <path>` to delete the job file.
@@ -58,7 +58,7 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
 
 ## Source Filter
 
-`runReactor` accepts a `sourceFilter` option. When set, jobs whose root `source` attribute does not match are skipped — left in `box/jobs/` for a later run that does match them. This is how `cb wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source="gmail"` jobs, even if RSS or feedback jobs are also pending.
+`runReactor` accepts a `sourceFilter` option. When set, jobs whose root `source` attribute does not match are skipped — left in `box/jobs/` for a later run that does match them. This is how `cb wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source="gmail"` jobs, even if telegram or feedback jobs are also pending.
 
 Cross-cutting jobs (e.g. `feedback-sync` for guide revisions, `question-answer` for question follow-ups) carry sources that no connector matches, so they only run when the reactor is invoked with no filter (a full `cb wakeup`, or `cb reactor` directly).
 
@@ -116,6 +116,6 @@ On boxes with no connectors configured (like test boxes), both commands graceful
 
 - **Finalize runs unconditionally** after all cycles, even if no outbound items were created. This is cheap (just scans `box/output/`) but could be skipped if no agent work happened.
 
-- **Job priority** is limited to "normal" and "low". The `--skip-low-priority` flag lets scheduled runs skip low-priority jobs (e.g., RSS digests) while still processing urgent items.
+- **Job priority** is limited to "normal" and "low". The `--skip-low-priority` flag lets scheduled runs skip low-priority jobs (e.g., digest summaries) while still processing urgent items.
 
 - **Error handling** is optimistic — a failed agent invocation doesn't prevent subsequent jobs from being processed in the next cycle. Failed chat sessions are reset so the next message starts fresh.

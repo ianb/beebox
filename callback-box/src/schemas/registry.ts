@@ -10,6 +10,7 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { SchemaRegistry, type ElementSchema, type CardSchema } from "cardworks";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
@@ -96,7 +97,7 @@ const SCHEMA_DEPS = new Set(["cardworks", "zod"]);
  * by searching callback-box's node_modules.
  */
 const CB_VIRTUAL_PARENT = pathToFileURL(
-  join(import.meta.dirname, "..", "..", "node_modules", "_virtual.js")
+  join(PACKAGE_ROOT, "node_modules", "_virtual.js")
 ).href;
 
 /**

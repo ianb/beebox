@@ -11,7 +11,9 @@ when the human says they're done with this worktree.**
 
 ## Test failures are NEVER acceptable
 
-The single most important rule in this skill:
+The single most important rule in this skill (applies whenever the
+worktree touched code — see "When tests don't apply" below for the
+narrow exception):
 
 > If `pnpm test` reports ANY failure — anywhere in the suite, in any file,
 > for any reason — you do not proceed. You do not file the failure under
@@ -23,6 +25,17 @@ You may be tempted to think "those tests were failing before I started",
 test infrastructure is broken". Those are not exits from this rule.
 Either the failure is yours to fix or it's a real bug that has to be
 escalated — never silently shrugged off.
+
+### When tests don't apply
+
+Tests are contingent on code. If the worktree's diff is entirely
+documentation, notes, ideas, or other non-code artifacts (`.md`,
+`docs/`, `ideas.md`, comments-only changes, etc.), there's no
+behavior to verify and step 4 below can be skipped. Run `pnpm
+typecheck` and `pnpm lint` anyway in case a stray edit slipped into
+a code file. If you're unsure whether a change qualifies as
+documentation-only, run the tests — the bias is toward running them,
+not skipping.
 
 ## The flow
 
@@ -92,7 +105,37 @@ pnpm lint
 These run in pre-commit anyway, but running them explicitly now means
 the next step (merge) won't get blocked by pre-commit lint errors.
 
-### 5. Merge the worktree branch into main
+### 5. Reconcile planning docs with reality
+
+If the worktree introduced or modified a planning document — a design
+doc, RFC, "plan", "proposal", or anything written in the future tense
+about work that has now actually happened — update it before the
+merge:
+
+- **If the plan is now implemented**, the doc shouldn't read like a
+  plan anymore. Either:
+  - Rename and rewrite it into a description of what *exists*
+    (present-tense reference doc), or
+  - Move it under a "history" / "decisions" / "implemented" folder
+    with a clear marker that it's a frozen record of what was
+    proposed, or
+  - Delete it if the content is now duplicated by the code, schemas,
+    or other docs that the implementation produced.
+- **If the plan is partially implemented**, edit the prose to mark
+  which parts are now real (with a link to where they live) and which
+  parts are still future. Don't leave a doc that says "we will
+  introduce X" when X already exists.
+- **Filenames matter.** A file named `plan-foo.md` whose content is
+  now historical confuses future readers; a file named
+  `foo-implementation.md` or `foo.md` (a regular reference doc)
+  doesn't.
+
+Skip this step if the worktree didn't touch any planning-style docs.
+If you're unsure whether a doc is a "plan" vs. a regular reference,
+read the opening paragraph — future-tense plus aspirational verbs
+("will", "proposes", "we should") is the giveaway.
+
+### 6. Merge the worktree branch into main
 
 The agent is INSIDE the worktree, so use `-C` to operate on the main
 checkout:
@@ -109,7 +152,7 @@ deploy regardless of whether the merge is fast-forward or not. If git
 complains about conflicts, something's off (step 3 should have
 surfaced them) — stop and ask.
 
-### 6. Confirm and report
+### 7. Confirm and report
 
 Show the human:
 
@@ -124,7 +167,7 @@ Then say something like:
 > will be auto-cleaned by the SessionEnd hook since the branch is now
 > fully merged.
 
-### 7. (Implicit) Session exit cleanup
+### 8. (Implicit) Session exit cleanup
 
 You don't do this — the SessionEnd hook at
 `.claude/hooks/session-end.sh` runs when the human exits the session.

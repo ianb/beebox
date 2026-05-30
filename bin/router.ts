@@ -320,7 +320,7 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
       "--import=./tsx-preload.mjs",
       "--import",
       "tsx",
-      "./src/webapp/server.ts",
+      "./src/webapp/server-main.ts",
       ...wt.boxes,
     ],
     {

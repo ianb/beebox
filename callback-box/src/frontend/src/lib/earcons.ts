@@ -20,7 +20,7 @@ class EarCon {
 
   play() {
     const url = withBase(`/earcons/${this.filename}`);
-    const result = playAudioUrl(url, this.volume);
+    const result = playAudioUrl(url, { volume: this.volume });
     return { started: result.finished, finished: result.finished, stop: result.stop };
   }
 

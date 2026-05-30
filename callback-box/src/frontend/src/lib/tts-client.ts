@@ -2,10 +2,20 @@
  * TTS client for chat speech output.
  * Fetches audio from the backend proxy (/api/chat/tts) and plays it.
  * Uses shared pre-unlocked Audio element for iOS Safari compatibility.
+ *
+ * Two performance properties matter here:
+ *   - The head segment of a response streams into playback as it downloads
+ *     (via playAudioStream / MediaSource) instead of waiting for the whole
+ *     file, so the first sound starts as early as possible. Subsequent
+ *     segments are prefetched in parallel by the playback machine.
+ *   - Completed audio is cached in memory (see audio-cache) so replays don't
+ *     re-hit the backend. Only fully-downloaded audio is cached.
  */
 
 import { getApiBase } from "../api";
-import { playAudioBlob } from "./audio-context";
+import { playAudioBlob, playAudioStream, supportsMediaSource } from "./audio-context";
+import { getAudioCache, cacheKey } from "./audio-cache";
+import { logSpeechEvent } from "./speech-test-log";
 import { isTTSVoice, type TTSVoice } from "./speech-parsing";
 
 const DEFAULT_VOICE: TTSVoice = "marin";
@@ -35,12 +45,23 @@ interface SpeechQueueItem {
   reject: (error: Error) => void;
 }
 
+interface ResolvedKey {
+  key: string;
+  instructions: string;
+  voice: string;
+}
+
 class TTSClient {
   private queue: SpeechQueueItem[] = [];
   private playing = false;
   private currentStop: (() => void) | null = null;
   private currentAbort: (() => void) | null = null;
   private onPlayingChange?: (playing: boolean) => void;
+  private readonly cache = getAudioCache();
+  // Extra request-body fields merged into every /chat/tts call. Empty in
+  // normal use; the dev test harness sets mock/delay fields here so the
+  // backend serves slow fixture audio instead of calling OpenAI.
+  private testExtras: Record<string, unknown> = {};
   private voiceConfig: VoiceConfig = {
     voice: DEFAULT_VOICE,
     baseInstructions: DEFAULT_INSTRUCTIONS,
@@ -64,6 +85,11 @@ class TTSClient {
    */
   markConfigLoaded(): void {
     this.markConfigReady();
+  }
+
+  /** Dev/test only: extra fields merged into every /chat/tts request body. */
+  setTestRequestExtras(extras: Record<string, unknown>): void {
+    this.testExtras = extras;
   }
 
   private buildInstructions(custom?: string, overrideBase?: boolean): string {
@@ -139,6 +165,25 @@ class TTSClient {
     this.setPlaying(false);
   }
 
+  /**
+   * Fast-forward: end the segment currently playing so the playback machine
+   * advances to the next queued one. Prefers stopping playback gracefully
+   * (resolves the speak() promise → onDone advances); falls back to aborting
+   * an in-flight fetch (rejects → onError skips ahead).
+   */
+  skipCurrent(): void {
+    logSpeechEvent("skip", {});
+    if (this.currentStop) {
+      this.currentStop();
+      this.currentStop = null;
+      return;
+    }
+    if (this.currentAbort) {
+      this.currentAbort();
+      this.currentAbort = null;
+    }
+  }
+
   getIsPlaying(): boolean {
     return this.playing;
   }
@@ -146,6 +191,10 @@ class TTSClient {
   private setPlaying(value: boolean): void {
     this.playing = value;
     this.onPlayingChange?.(value);
+  }
+
+  private label(text: string): string {
+    return text.slice(0, 16);
   }
 
   private async processQueue(): Promise<void> {
@@ -168,41 +217,115 @@ class TTSClient {
 
   private async playItem(item: SpeechQueueItem): Promise<void> {
     const prefetch = item.options?.prefetch;
-    let buffer: ArrayBuffer;
     if (prefetch) {
+      // Already (being) downloaded ahead of time; fetchAudio cached it.
       this.currentAbort = prefetch.abort;
-      buffer = await prefetch.buffer;
-    } else {
-      const ac = new AbortController();
-      this.currentAbort = () => ac.abort();
-      buffer = await this.fetchAudio(item.text, { options: item.options, signal: ac.signal });
+      const buffer = await prefetch.buffer;
+      this.currentAbort = null;
+      await this.playBuffer(buffer, item.text);
+      return;
     }
-    this.currentAbort = null;
 
-    const { stop, finished } = playAudioBlob(buffer);
+    // On-demand head segment. Serve from cache, stream if we can, else
+    // fall back to download-then-play.
+    const resolved = await this.resolveKey(item.text, item.options);
+    const cached = this.cache.get(resolved.key);
+    if (cached) {
+      logSpeechEvent("cacheHit", { label: this.label(item.text), key: resolved.key });
+      await this.playBuffer(cached, item.text);
+      return;
+    }
+
+    if (supportsMediaSource()) {
+      await this.streamAndPlay(item.text, resolved);
+      return;
+    }
+
+    const ac = new AbortController();
+    this.currentAbort = () => ac.abort();
+    const buffer = await this.fetchAudio(item.text, { options: item.options, signal: ac.signal });
+    this.currentAbort = null;
+    await this.playBuffer(buffer, item.text);
+  }
+
+  private async playBuffer(buffer: ArrayBuffer, text: string): Promise<void> {
+    const { stop, finished } = playAudioBlob(buffer, { label: this.label(text) });
     this.currentStop = stop;
     await finished;
     this.currentStop = null;
   }
 
-  private async fetchAudio(
-    text: string,
-    { options, signal }: { options?: SpeechOptions; signal: AbortSignal },
-  ): Promise<ArrayBuffer> {
-    // Wait for personality voice config to load before reading
-    // voiceConfig — otherwise the first utterance after page load uses
-    // the hard-coded default.
+  /**
+   * Stream the head segment: start playing as chunks arrive, accumulate the
+   * full buffer, and cache it once the download completes. A stop mid-download
+   * leaves the buffer incomplete (null) so nothing partial is cached.
+   */
+  private async streamAndPlay(text: string, resolved: ResolvedKey): Promise<void> {
+    const label = this.label(text);
+    const ac = new AbortController();
+    this.currentAbort = () => ac.abort();
+    logSpeechEvent("download.start", { label, streaming: true, key: resolved.key });
+
+    const response = await fetch(`${getApiBase()}/chat/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: this.requestBody(text, resolved),
+      signal: ac.signal,
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`TTS API error ${response.status}: ${err}`);
+    }
+    this.currentAbort = null;
+
+    const body = response.body;
+    if (!body) throw new Error("Empty response body");
+
+    const { stop, finished, buffer } = playAudioStream(body, { label });
+    this.currentStop = stop;
+
+    const full = await buffer;
+    if (full) {
+      this.cache.set(resolved.key, full);
+      logSpeechEvent("download.complete", { label, key: resolved.key });
+    }
+    await finished;
+    this.currentStop = null;
+  }
+
+  private async resolveKey(text: string, options?: SpeechOptions): Promise<ResolvedKey> {
+    // Wait for personality voice config to load before reading voiceConfig —
+    // otherwise the first utterance after page load uses the hard-coded
+    // default (and would be cached under the wrong key).
     await this.configReady;
     const instructions = this.buildInstructions(
       options?.instructions,
       options?.overrideInstructions,
     );
     const voice = this.resolveVoice(options?.voice);
+    return { key: cacheKey({ text, voice, instructions }), instructions, voice };
+  }
 
+  private requestBody(text: string, { instructions, voice }: { instructions: string; voice: string }): string {
+    return JSON.stringify({ text, instructions, voice, ...this.testExtras });
+  }
+
+  private async fetchAudio(
+    text: string,
+    { options, signal }: { options?: SpeechOptions; signal: AbortSignal },
+  ): Promise<ArrayBuffer> {
+    const resolved = await this.resolveKey(text, options);
+    const cached = this.cache.get(resolved.key);
+    if (cached) {
+      logSpeechEvent("cacheHit", { label: this.label(text), key: resolved.key });
+      return cached;
+    }
+
+    logSpeechEvent("download.start", { label: this.label(text), key: resolved.key });
     const response = await fetch(`${getApiBase()}/chat/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, instructions, voice }),
+      body: this.requestBody(text, resolved),
       signal,
     });
 
@@ -211,7 +334,10 @@ class TTSClient {
       throw new Error(`TTS API error ${response.status}: ${err}`);
     }
 
-    return this.readStreamToBuffer(response);
+    const buffer = await this.readStreamToBuffer(response);
+    this.cache.set(resolved.key, buffer);
+    logSpeechEvent("download.complete", { label: this.label(text), key: resolved.key });
+    return buffer;
   }
 
   private async readStreamToBuffer(response: Response): Promise<ArrayBuffer> {

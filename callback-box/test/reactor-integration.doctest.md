@@ -13,6 +13,18 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
+
+// Override the reactor's slow real subsystems with no-ops. None of these
+// tests assert on their effects, but each does real, expensive work per run:
+//   - runSync / runFinalize spawn `cb wakeup` / `cb finalize` (a ~1s Node+tsx
+//     cold start each, no-opping on an empty test box)
+//   - generateDocs regenerates agent docs (~1s cold on a fresh box)
+// Faking them keeps these tests in-process, fast, and deterministic.
+const testOverrides = {
+  runSync: async () => true,
+  runFinalize: async () => true,
+  generateDocs: async () => {},
+};
 ```
 
 ## Batch processing with fake agent
@@ -38,6 +50,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
 });
 
@@ -89,6 +102,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
 });
 
@@ -123,6 +137,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
   dryRun: true,
 });
@@ -151,6 +166,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
   skipLowPriority: true,
 });
@@ -189,6 +205,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
   type: "chat",
 });
@@ -235,6 +252,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
   type: "chat",
 });
@@ -274,6 +292,7 @@ const agentFactory = (opts) => {
 const logs = [];
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
   onLog: (text) => logs.push(text),
 });
@@ -313,6 +332,7 @@ await fs.writeFile(lockFile, JSON.stringify(liveHolder));
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: (opts) => createFakeAgent({ name: opts.name, act: async () => ({ success: true }) }),
 });
 
@@ -358,6 +378,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
 });
 
@@ -397,6 +418,7 @@ const agentFactory = (opts) => {
 
 const result = await runReactor({
   boxRoot: box.root,
+  ...testOverrides,
   createAgent: agentFactory,
   maxCycles: 3,
 });

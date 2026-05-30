@@ -16,15 +16,11 @@ export function detectWorktreeContext(): WorktreeContext {
   const worktree = explicit !== undefined && explicit !== ""
     ? explicit
     : (worktreeMatch !== null && worktreeMatch[1] !== undefined ? worktreeMatch[1] : "main");
-  // The dev router clones the base test1 box into a per-worktree copy at
-  // ~/src/box-worktrees/test1-<worktree>/ and registers it under that slug
-  // (see bin/router.mjs). Match that here so /<worktree>/<box>/... resolves
-  // to a real registered box — otherwise tRPC calls 404 with opaque
-  // "Unable to transform response" errors in the UI.
-  const defaultBox = worktree === "main" ? "test1" : `test1-${worktree}`;
+  // Box slug is just "test1" — the dev router clones the base test1 box
+  // into a per-worktree copy and registers it under that slug.
   const box = process.env["BROWSE_BOX"] !== undefined && process.env["BROWSE_BOX"] !== ""
     ? process.env["BROWSE_BOX"]
-    : defaultBox;
+    : "test1";
   const portStr = process.env["ROUTER_PORT"];
   const port = portStr !== undefined && portStr !== "" ? Number.parseInt(portStr, 10) : 3210;
   if (!Number.isFinite(port) || port <= 0) {

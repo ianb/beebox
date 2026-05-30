@@ -1,12 +1,21 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { cn } from "../../lib/cn";
 
 interface DropdownContextValue {
   close: () => void;
+  /** Tighter padding for menu items + dividers. */
+  dense: boolean;
 }
 
 const DropdownContext = createContext<DropdownContextValue | null>(null);
+
+/** Close the enclosing Dropdown. No-op outside one. For custom menu content. */
+export function useDropdownClose(): () => void {
+  const ctx = useContext(DropdownContext);
+  return ctx !== null ? ctx.close : () => {};
+}
 
 export type DropdownAlign = "left" | "right";
 export type DropdownVertical = "below" | "above";
@@ -31,6 +40,8 @@ export interface DropdownProps {
   vertical?: DropdownVertical;
   /** Tailwind width class for the menu. Default `"w-48"`. */
   width?: string;
+  /** Tighter padding for menu items + dividers. */
+  dense?: boolean;
   /** Outer-layout classes for the relative-positioned wrapper (margin, padding, flex item, sizing, position). */
   className?: string;
   /** Called whenever the menu transitions from open to closed. Use to reset
@@ -38,9 +49,10 @@ export interface DropdownProps {
   onClose?: () => void;
 }
 
-export function Dropdown({ trigger, children, align = "right", vertical = "below", width = "w-48", className, onClose }: DropdownProps) {
+export function Dropdown({ trigger, children, align = "right", vertical = "below", width = "w-48", dense = false, className, onClose }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; });
   // Fire onClose on the open→closed transition.
@@ -53,12 +65,41 @@ export function Dropdown({ trigger, children, align = "right", vertical = "below
     prevOpenRef.current = open;
   }, [open]);
 
+  // The menu is portaled to document.body so it escapes any `overflow-hidden`
+  // / clipping ancestor (e.g. chat message bubbles). Because it's no longer in
+  // normal flow, it's positioned `fixed` from the trigger's viewport rect and
+  // repositioned on scroll/resize.
+  const [coords, setCoords] = useState<CSSProperties>({});
+  useLayoutEffect(() => {
+    if (!open || rootRef.current === null) return;
+    const update = () => {
+      const root = rootRef.current;
+      if (root === null) return;
+      const rect = root.getBoundingClientRect();
+      const gap = 4;
+      const next: CSSProperties = { position: "fixed" };
+      if (vertical === "above") next.bottom = window.innerHeight - rect.top + gap;
+      else next.top = rect.bottom + gap;
+      if (align === "right") next.right = window.innerWidth - rect.right;
+      else next.left = rect.left;
+      setCoords(next);
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open, align, vertical]);
+
   useEffect(() => {
     if (!open) return;
     function handlePointer(e: MouseEvent) {
-      if (rootRef.current !== null && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      const inRoot = rootRef.current !== null && rootRef.current.contains(target);
+      const inMenu = menuRef.current !== null && menuRef.current.contains(target);
+      if (!inRoot && !inMenu) setOpen(false);
     }
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -71,9 +112,7 @@ export function Dropdown({ trigger, children, align = "right", vertical = "below
     };
   }, [open]);
 
-  const alignClass = align === "right" ? "right-0" : "left-0";
-  const verticalClass = vertical === "above" ? "bottom-full mb-1" : "top-full mt-1";
-  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: () => setOpen(false) }), []);
+  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: () => setOpen(false), dense }), [dense]);
   const triggerProps: DropdownTriggerProps = {
     open,
     toggle: () => setOpen((o) => !o),
@@ -83,16 +122,21 @@ export function Dropdown({ trigger, children, align = "right", vertical = "below
   return (
     <div className={cn("relative", className)} ref={rootRef}>
       {trigger(triggerProps)}
-      {open ? (
-        <div
-          role="menu"
-          className={cn("absolute bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 text-sm", verticalClass, alignClass, width)}
-        >
-          <DropdownContext.Provider value={ctxValue}>
-            {children}
-          </DropdownContext.Provider>
-        </div>
-      ) : null}
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={menuRef}
+              role="menu"
+              style={coords}
+              className={cn("bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm", dense ? "py-0.5" : "py-1", width)}
+            >
+              <DropdownContext.Provider value={ctxValue}>
+                {children}
+              </DropdownContext.Provider>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -124,17 +168,19 @@ interface RowClassOpts {
   active: boolean;
   danger: boolean;
   disabled: boolean;
+  dense: boolean;
 }
 
-function rowClass({ active, danger, disabled }: RowClassOpts): string {
+function rowClass({ active, danger, disabled, dense }: RowClassOpts): string {
+  const pad = dense ? "px-3 py-1" : "px-3 py-2";
   if (disabled) {
-    return "block w-full text-left px-3 py-2 text-warm-400 cursor-not-allowed";
+    return `block w-full text-left ${pad} text-warm-400 cursor-not-allowed`;
   }
   if (active) {
-    return "block w-full text-left px-3 py-2 bg-warm-100 text-warm-900 font-medium";
+    return `block w-full text-left ${pad} bg-warm-100 text-warm-900 font-medium`;
   }
   const color = danger ? "text-danger hover:bg-danger/10" : "text-warm-700 hover:bg-warm-50";
-  return `block w-full text-left px-3 py-2 transition-colors ${color}`;
+  return `block w-full text-left ${pad} transition-colors ${color}`;
 }
 
 function MenuItemContent({ icon, children }: { icon: ReactNode | undefined; children: ReactNode }) {
@@ -152,8 +198,9 @@ function noop() {}
 export function MenuItem(props: MenuItemProps) {
   const ctx = useContext(DropdownContext);
   const close = ctx !== null ? ctx.close : noop;
+  const dense = ctx !== null ? ctx.dense : false;
   const { children, icon, disabled = false, danger = false, active = false, keepOpen = false } = props;
-  const className = rowClass({ active, danger, disabled });
+  const className = rowClass({ active, danger, disabled, dense });
   const content = <MenuItemContent icon={icon}>{children}</MenuItemContent>;
 
   if ("to" in props && props.to !== undefined) {
@@ -197,5 +244,7 @@ export function MenuItem(props: MenuItemProps) {
 }
 
 export function MenuDivider() {
-  return <div className="border-t border-warm-100 my-1" role="separator" />;
+  const ctx = useContext(DropdownContext);
+  const dense = ctx !== null ? ctx.dense : false;
+  return <div className={cn("border-t border-warm-100", dense ? "my-0.5" : "my-1")} role="separator" />;
 }

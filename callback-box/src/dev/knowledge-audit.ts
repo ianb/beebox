@@ -15,8 +15,9 @@ import * as path from "node:path";
 import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
 import { generateReport } from "./lib/report.js";
 import { generateDocs } from "../core/generate-docs.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
-const DEFAULT_TESTS_DIR = path.dirname(new URL(import.meta.url).pathname);
+const DEFAULT_TESTS_DIR = path.join(PACKAGE_ROOT, "src", "dev");
 const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");
 
 const program = new Command()

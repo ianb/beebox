@@ -21,8 +21,9 @@ import {
   type Migration,
   type ManifestEntry,
 } from "../../core/migrations.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
-const CALLBACK_BOX_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
+const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 
 async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
   const abs = path.join(boxRoot, MANIFEST_PATH);
