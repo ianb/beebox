@@ -28,6 +28,7 @@ import { parse, transform, renderers, type Config, type RenderableTreeNode } fro
 import { markdocConfig } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
+import { makeBriefingComponents } from "./BriefingTags";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
@@ -207,6 +208,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate });
+  const briefing = makeBriefingComponents({ onNavigate: linkCtx.onNavigate });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -216,16 +218,22 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
       className="mr-2 align-middle accent-warm-500"
     />
   );
+  const cast = <T,>(c: T) => c as unknown as React.ComponentType<Record<string, unknown>>;
   const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
-    Fragment: Fragment as unknown as React.ComponentType<Record<string, unknown>>,
-    Para: Para as unknown as React.ComponentType<Record<string, unknown>>,
-    Link: Link as unknown as React.ComponentType<Record<string, unknown>>,
-    Img: Img as unknown as React.ComponentType<Record<string, unknown>>,
-    QuoteInline: QuoteInline as unknown as React.ComponentType<Record<string, unknown>>,
-    QuoteBlock: QuoteBlock as unknown as React.ComponentType<Record<string, unknown>>,
-    SourceInline: SourceInline as unknown as React.ComponentType<Record<string, unknown>>,
-    SourceBlock: SourceBlock as unknown as React.ComponentType<Record<string, unknown>>,
-    Task: Task as unknown as React.ComponentType<Record<string, unknown>>,
+    Fragment: cast(Fragment),
+    Para: cast(Para),
+    Link: cast(Link),
+    Img: cast(Img),
+    QuoteInline: cast(QuoteInline),
+    QuoteBlock: cast(QuoteBlock),
+    SourceInline: cast(SourceInline),
+    SourceBlock: cast(SourceBlock),
+    Purpose: cast(briefing.Purpose),
+    KeyPerson: cast(briefing.KeyPerson),
+    Correction: cast(briefing.Correction),
+    Property: cast(briefing.Property),
+    ProjectPhase: cast(briefing.ProjectPhase),
+    Task: cast(Task),
   };
   return { config, components };
 }

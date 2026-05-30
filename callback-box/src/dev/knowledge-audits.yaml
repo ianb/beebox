@@ -2083,3 +2083,69 @@ tests:
       is the exception that surfaces non-original content.
     correct_contains_any: ["no", "own framing", "connective", "default", "unwrapped", "exception"]
     tags: [source, behavioral, provenance]
+
+  # === Briefing tags ===
+  #
+  # Briefings carry all semantic content in the body as Markdoc tags
+  # now — `{% purpose %}`, `{% key-person %}`, `{% correction %}`,
+  # `{% property %}`, `{% project-phase %}`. Frontmatter is identity-
+  # only. Agent guide section `briefing-tags.ts`.
+  #
+  # Status (2026-05-30): 4/4 pass on first run. All four answered
+  # with zero file reads and zero searches.
+
+  - id: briefing-tag-vocabulary
+    prompt: >
+      I'm editing a briefing card. What Markdoc tags are available for
+      structuring the body?
+    expected_level: knows_directly
+    watch_for: >
+      Names all five: `{% purpose %}`, `{% key-person %}`,
+      `{% correction %}`, `{% property %}`, `{% project-phase %}`.
+      Doesn't invent extra ones; doesn't say "use frontmatter fields"
+      (those are gone).
+    correct_contains_any: ["{% purpose", "purpose", "key-person", "correction"]
+    tags: [briefing, cards, markdown]
+
+  - id: briefing-key-person-ref
+    prompt: >
+      I'm adding a key person to a briefing. Their person card lives
+      at `box/people/sam.person.card`. How should I write the
+      `{% key-person %}` tag, and what attribute do I use to link to
+      their card?
+    expected_level: knows_directly
+    watch_for: >
+      Names the `ref` attribute pointing at the person card. Uses
+      absolute form `/box/people/sam.person.card` (or accepts that
+      bare path resolves). May mention `called` and `role` as the
+      other attributes.
+    correct_contains_any: ["ref=", "/box/people/sam", "people/sam"]
+    tags: [briefing, cards, references]
+
+  - id: briefing-prose-vs-tag
+    prompt: >
+      The briefing needs a "Legal" section explaining that the ledger
+      is in probate. Should I invent a `{% legal %}` tag, or write it
+      as plain markdown?
+    expected_level: knows_directly
+    watch_for: >
+      Says plain markdown (e.g., `## Legal` followed by prose). The
+      briefing vocabulary is the five tags listed in the agent guide;
+      everything else stays as plain markdown headings and paragraphs.
+      Does NOT invent a new tag.
+    correct_contains_any: ["plain markdown", "## Legal", "heading", "prose", "don't invent"]
+    tags: [briefing, cards, behavioral]
+
+  - id: briefing-correction-test
+    prompt: >
+      I'm adding a correction to a briefing: "Always confirm before
+      sending an email." What's the `test` attribute on
+      `{% correction %}` for, and is it required?
+    expected_level: knows_directly
+    watch_for: >
+      Says `test` is optional, describes how to verify the correction
+      is being followed (free-form natural language). Not required.
+      Recognises it as analogous to `{% source %}`'s `as=` — a
+      free-form descriptive attribute.
+    correct_contains_any: ["optional", "verify", "test", "how to"]
+    tags: [briefing, cards, behavioral]
