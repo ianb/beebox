@@ -305,6 +305,58 @@ function emitTag(node: Node, out: string[]): void {
       out.push(done ? "[x] " : "[ ] ");
       return;
     }
+    case "ingredient": {
+      const amount = typeof attrs["amount"] === "string" ? attrs["amount"] : "";
+      const unit = typeof attrs["unit"] === "string" ? attrs["unit"] : "";
+      const buf: string[] = [];
+      emitChildren(node, buf);
+      const name = buf.join("").trim();
+      const qty = amount === "" ? "" : `${amount}${unit === "" ? "" : ` ${unit}`} `;
+      if (node.inline) {
+        out.push(`**${qty}${name}**`);
+      } else {
+        out.push(`- ${qty}${name}\n`);
+      }
+      return;
+    }
+    case "step": {
+      const buf: string[] = [];
+      emitChildren(node, buf);
+      out.push(`${buf.join("").trim()}\n\n`);
+      return;
+    }
+    case "yield": {
+      const amount = typeof attrs["amount"] === "string" ? attrs["amount"] : "";
+      const buf: string[] = [];
+      emitChildren(node, buf);
+      const text = buf.join("").trim();
+      const base = amount === "" ? "" : ` _(base ${amount})_`;
+      out.push(`**Yield:** ${text}${base}\n\n`);
+      return;
+    }
+    case "substitution": {
+      const forAttr = typeof attrs["for"] === "string" ? attrs["for"] : "";
+      const buf: string[] = [];
+      emitChildren(node, buf);
+      const text = buf.join("").trim();
+      const forStr = forAttr === "" ? "" : ` _(for ${forAttr})_`;
+      out.push(`**Substitution${forStr}:** ${text}\n\n`);
+      return;
+    }
+    case "subrecipe": {
+      const ref = typeof attrs["ref"] === "string" ? attrs["ref"] : "";
+      const buf: string[] = [];
+      emitChildren(node, buf);
+      const text = buf.join("").trim();
+      out.push(`**Subrecipe:** [→ ${ref}]${text === "" ? "" : ` — ${text}`}\n\n`);
+      return;
+    }
+    case "recipe-section": {
+      const name = typeof attrs["name"] === "string" ? attrs["name"] : "";
+      if (name !== "") out.push(`## ${name}\n\n`);
+      emitChildren(node, out);
+      return;
+    }
     default: {
       const tagName = tag === undefined ? "(unnamed)" : tag;
       console.warn(`markdoc-emit: unknown tag {% ${tagName} %}; emitting inner content only`);

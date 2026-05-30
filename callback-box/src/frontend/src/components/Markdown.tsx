@@ -29,6 +29,7 @@ import { markdocConfig } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";
+import { makeRecipeComponents } from "./RecipeTags";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
@@ -209,6 +210,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate });
   const briefing = makeBriefingComponents({ onNavigate: linkCtx.onNavigate });
+  const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -233,6 +235,13 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     Correction: cast(briefing.Correction),
     Property: cast(briefing.Property),
     ProjectPhase: cast(briefing.ProjectPhase),
+    IngredientInline: cast(recipe.IngredientInline),
+    IngredientBlock: cast(recipe.IngredientBlock),
+    Step: cast(recipe.Step),
+    RecipeYield: cast(recipe.RecipeYield),
+    Substitution: cast(recipe.Substitution),
+    Subrecipe: cast(recipe.Subrecipe),
+    RecipeSection: cast(recipe.RecipeSection),
     Task: cast(Task),
   };
   return { config, components };

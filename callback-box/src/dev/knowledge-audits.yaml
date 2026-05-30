@@ -2149,3 +2149,57 @@ tests:
       free-form descriptive attribute.
     correct_contains_any: ["optional", "verify", "test", "how to"]
     tags: [briefing, cards, behavioral]
+
+  # === Recipe tags ===
+  #
+  # Recipes are now Phase-2 cards with body Markdoc — `{% ingredient %}`,
+  # `{% step %}`, `{% yield %}`, `{% substitution %}`, `{% subrecipe %}`,
+  # `{% recipe-section %}`. The frontend recipe view scales ingredient
+  # amounts via a React context that wraps the Markdoc body. Agent
+  # guide section `recipe-tags.ts`.
+  #
+  # Status (2026-05-30): 3/3 pass on first run with zero file reads
+  # and zero searches. The pre-existing `cooking-follow-recipe-pattern`
+  # failure is unrelated to this work (about agent interaction
+  # pacing, not recipe schema).
+
+  - id: recipe-tag-vocabulary
+    prompt: >
+      I'm writing a recipe card. What Markdoc tags are available for
+      structuring the body?
+    expected_level: knows_directly
+    watch_for: >
+      Names at least `{% ingredient %}` and `{% step %}` (the core
+      pair). Bonus credit for naming the rest: `{% yield %}`,
+      `{% substitution %}`, `{% subrecipe %}`, `{% recipe-section %}`.
+      Does NOT say "use XML elements" (the old schema is gone).
+    correct_contains_any: ["{% ingredient", "{% step", "ingredient", "step"]
+    tags: [recipe, cards, markdown]
+
+  - id: recipe-ingredient-attrs
+    prompt: >
+      I want to write "2 cups all-purpose flour" as an ingredient in a
+      recipe. What does the `{% ingredient %}` tag look like, and what
+      attributes does it take?
+    expected_level: knows_directly
+    watch_for: >
+      Names the `amount` and `unit` attributes; puts the ingredient
+      name in the body. Shape like `{% ingredient amount="2"
+      unit="cups" %}all-purpose flour{% /ingredient %}`. Recognises
+      that the recipe view uses `amount` for scaling.
+    correct_contains_any: ["amount=\"2\"", "amount='2'", "amount=", "unit=\"cups\"", "unit="]
+    tags: [recipe, cards, markdown]
+
+  - id: recipe-prose-vs-tag
+    prompt: >
+      The recipe needs a "Tips" section with general cooking advice
+      that doesn't fit ingredients or steps. Should I invent a
+      `{% tips %}` tag, or write it as plain markdown?
+    expected_level: knows_directly
+    watch_for: >
+      Says plain markdown (e.g., `## Tips` followed by prose). The
+      recipe vocabulary is the six tags listed in the agent guide;
+      everything else stays as plain markdown headings and paragraphs.
+      Does NOT invent a new tag.
+    correct_contains_any: ["plain markdown", "## Tips", "heading", "prose", "don't invent"]
+    tags: [recipe, cards, behavioral]

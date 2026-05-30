@@ -7,6 +7,28 @@ body {
   @apply bg-warm-50 text-warm-900;
 }
 
+/* Recipe step auto-numbering via CSS counter. RecipeView wraps the body
+   in `.recipe-body`, which resets the counter; each `{% step %}` carries
+   the `.recipe-step` class and renders its number via ::before. Outside
+   a recipe-body container, the counter doesn't reset and the ::before
+   counter is undefined — falls back to nothing gracefully. */
+.recipe-body {
+  counter-reset: recipe-step;
+}
+.recipe-body .recipe-step {
+  counter-increment: recipe-step;
+  display: flex;
+  gap: 0.75rem;
+}
+.recipe-body .recipe-step::before {
+  content: counter(recipe-step) ".";
+  color: rgb(115 100 90);
+  font-weight: 500;
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  text-align: right;
+}
+
 /* Remove backtick decorations from inline code in prose */
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {

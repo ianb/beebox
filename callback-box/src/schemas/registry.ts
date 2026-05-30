@@ -50,7 +50,6 @@ export const schemas: ElementSchema[] = [
   ProcedureSchema,
   ProcedureRunSchema,
   CaptureSessionSchema,
-  RecipeSchema,
   GuideSchema,
   LandmarkSchema,
 ];
@@ -61,6 +60,7 @@ export const schemas: ElementSchema[] = [
  * from XML to frontmatter, they move from the array above to this one.
  */
 export const cardSchemas: CardSchema[] = [
+  RecipeSchema,
   EmailThreadSchema,
   EmailMessageSchema,
   EmailOutboundSchema,

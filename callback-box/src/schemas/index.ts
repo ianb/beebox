@@ -39,7 +39,7 @@ export type { AudioFields, AudioStatus } from "./audio.js";
 export type { FileFields, FileStatus } from "./file.js";
 export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js";
 export type { RecordFields, RecordStatus } from "./record.js";
-export type { Recipe } from "./recipe.js";
+export type { RecipeFields } from "./recipe.js";
 export type { IntakeJobFields } from "./intake-job.js";
 export type { CalendarReviewJobFields } from "./calendar-review-job.js";
 export type { QuestionFollowupJobFields } from "./question-followup-job.js";
