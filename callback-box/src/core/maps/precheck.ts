@@ -151,6 +151,7 @@ function basenameGlobMatch(pattern: string, name: string): boolean {
       regex += ch;
     }
   }
+  // eslint-disable-next-line security/detect-non-literal-regexp -- regex is built from pattern with every metacharacter escaped above (only `*` -> `[^/]*`), so it is injection- and ReDoS-safe.
   return new RegExp("^" + regex + "$").test(name);
 }
 

@@ -57,11 +57,13 @@ function slugFromFilename(filename: string): string {
  */
 function extractMeta(source: string, { slug, mtime }: { slug: string; mtime: string }): ViewMeta {
   function extractString(key: string): string {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- key is only ever a hardcoded metadata field name (see callers below), never user input.
     const match = source.match(new RegExp(`export\\s+const\\s+${key}\\s*=\\s*["'\`]([^"'\`]*)["'\`]`));
     return match && match[1] !== undefined ? match[1] : "";
   }
 
   function extractStringArray(key: string): string[] {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- key is only ever a hardcoded metadata field name (see callers below), never user input.
     const match = source.match(new RegExp(`export\\s+const\\s+${key}\\s*=\\s*\\[([^\\]]*)\\]`));
     if (!match || match[1] === undefined) return [];
     const arrayContent = match[1];

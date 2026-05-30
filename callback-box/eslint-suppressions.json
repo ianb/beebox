@@ -562,9 +562,6 @@
   "src/core/maps/precheck.ts": {
     "max-lines": {
       "count": 1
-    },
-    "security/detect-non-literal-regexp": {
-      "count": 1
     }
   },
   "src/core/markdoc-emit.ts": {
@@ -1178,9 +1175,6 @@
     },
     "error/require-custom-error": {
       "count": 1
-    },
-    "security/detect-non-literal-regexp": {
-      "count": 2
     }
   }
 }
