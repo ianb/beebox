@@ -1,0 +1,34 @@
+/**
+ * Shared types for the web app server and its sibling helper modules.
+ * A leaf module (no value imports) so siblings can share these without
+ * forming an import cycle with server.ts.
+ */
+
+import type { FastifyInstance } from "fastify";
+import type { Services } from "../services/index.js";
+
+export interface BoxSpec {
+  slug: string;
+  boxRoot: string;
+}
+
+export interface ServerOptions {
+  port?: number | undefined;
+  host?: string | undefined;
+  boxes?: BoxSpec[] | undefined;
+  /** @deprecated Use boxes instead */
+  boxRoot?: string | undefined;
+  /** External service implementations — pass fakes in tests */
+  services?: Services | undefined;
+  /**
+   * Pre-warm a Claude subprocess for chat on box init. Set true in
+   * production (`cb serve`); leave undefined in tests so test runs don't
+   * spawn a real Claude subprocess that hangs the test runner.
+   */
+  prewarmChat?: boolean | undefined;
+}
+
+export interface ServerContext {
+  boxRoot: string;
+  server: FastifyInstance;
+}

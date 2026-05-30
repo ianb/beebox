@@ -16,10 +16,7 @@
  * }
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { glob } from "glob";
-import type { ChatThreadFields } from "../schemas/chat-thread.js";
 import {
   registerConnector,
   type Connector,
@@ -27,135 +24,31 @@ import {
 } from "./index.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
-import {
-  safeFilename,
-  ensureThreadFile,
-  appendMessageToThread,
-  findUnsentAgentMessages,
-  stampSentMessage,
-  createChatJob,
-  updatePersonEntry,
-  ensureParticipant,
-} from "./chat-utils.js";
+import { createChatJob } from "./chat-utils.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 import type { TelegramService } from "../services/telegram.js";
 import { createTelegramService } from "../services/telegram.js";
+import type {
+  TelegramConfig,
+  TelegramState,
+  TelegramUpdate,
+} from "./telegram-types.js";
+import {
+  MissingPublicUrlError,
+  loadPublicUrl,
+  loadTelegramConfig,
+  extractMessage,
+} from "./telegram-helpers.js";
+import {
+  processUpdateToThread,
+  type IngestResult,
+} from "./telegram-ingest.js";
+import { sendOutbound } from "./telegram-outbound.js";
 
-class MissingPublicUrlError extends Error {
-  constructor() {
-    super("publicUrl not set in config/box.json — cannot set Telegram webhook");
-    this.name = "MissingPublicUrlError";
-  }
-}
-
-export interface TelegramConfig {
-  botToken: string;
-  webhookSecret: string;
-}
-
-interface TelegramState {
-  lastUpdateId?: number;
-  chatMappings?: Record<string, string>;
-  callbacks?: Record<string, { at: string }>;
-}
-
-/** Shape of the update objects we accept (from webhook or getUpdates). */
-export interface TelegramUpdate {
-  update_id: number;
-  message?: TelegramMessageObj;
-  edited_message?: TelegramMessageObj;
-}
-
-/** Minimal Telegram message shape we extract fields from. */
-interface TelegramMessageObj {
-  message_id: number;
-  date: number;
-  chat: {
-    id: number;
-    title?: string | undefined;
-    type: string;
-  };
-  from?: {
-    id: number;
-    first_name: string;
-    last_name?: string | undefined;
-    username?: string | undefined;
-  };
-  text?: string | undefined;
-  caption?: string | undefined;
-}
-
-/**
- * Load publicUrl from config/box.json. Falls back to PUBLIC_URL env var.
- */
-async function loadPublicUrl(boxRoot: string): Promise<string | null> {
-  try {
-    const content = await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8");
-    const parsed = JSON.parse(content);
-    if (parsed.publicUrl) return parsed.publicUrl;
-  } catch (e) {
-    // box.json missing or unparseable — fall through to the env var.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`Could not read publicUrl from config/box.json, falling back to PUBLIC_URL: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-  return process.env.PUBLIC_URL ?? null;
-}
-
-/**
- * Load telegram config from the secret file. Returns null if not configured.
- */
-export async function loadTelegramConfig(boxRoot: string): Promise<TelegramConfig | null> {
-  try {
-    const configPath = path.join(boxRoot, "config/connectors/telegram.secret.json");
-    const content = await fs.readFile(configPath, "utf-8");
-    const parsed = JSON.parse(content);
-    if (parsed.botToken && parsed.webhookSecret) return parsed;
-    return null;
-  } catch (_e) {
-    // Secret file absent or unreadable — Telegram is simply not configured
-    // for this box, which is a normal, expected state (not an error).
-    return null;
-  }
-}
-
-/**
- * Get the chat slug for a Telegram chat, creating a mapping if needed.
- */
-function getChatSlug(
-  state: TelegramState,
-  opts: { chatId: number; chatTitle: string | undefined; senderName: string }
-): string {
-  const mappings = state.chatMappings ?? {};
-  const chatKey = String(opts.chatId);
-  const existing = mappings[chatKey];
-  if (existing) return existing;
-
-  // Private chats use the sender name; groups use the chat title
-  const label = opts.chatTitle ?? opts.senderName;
-  const slug = safeFilename(label);
-  mappings[chatKey] = slug;
-  state.chatMappings = mappings;
-  return slug;
-}
-
-/** Extract message fields from a Telegram update. Returns null if not processable. */
-export function extractMessage(update: TelegramUpdate): {
-  msg: TelegramMessageObj;
-  text: string;
-  senderName: string;
-  timestamp: string;
-} | null {
-  const msg = update.message ?? update.edited_message;
-  if (!msg) return null;
-  const text = msg.text ?? msg.caption;
-  if (!text) return null;
-  const senderName =
-    [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") ||
-    "Unknown";
-  const timestamp = new Date(msg.date * 1000).toISOString();
-  return { msg, text, senderName, timestamp };
-}
+// Re-export the public surface that previously lived in this file so existing
+// importers ("./telegram.js") keep working unchanged.
+export type { TelegramConfig, TelegramUpdate } from "./telegram-types.js";
+export { loadTelegramConfig, extractMessage } from "./telegram-helpers.js";
 
 class TelegramConnector implements Connector {
   name = "telegram";
@@ -342,81 +235,8 @@ class TelegramConnector implements Connector {
   async processUpdateToThread(
     update: TelegramUpdate,
     state: TelegramState
-  ): Promise<{
-    threadRelPath: string;
-    newThread: boolean;
-    personFile: string | null;
-    personRef: string | null;
-  } | null> {
-    const extracted = extractMessage(update);
-    if (!extracted) return null;
-    const { msg, text, senderName, timestamp } = extracted;
-
-    const chatSlug = getChatSlug(state, {
-      chatId: msg.chat.id,
-      chatTitle: msg.chat.title,
-      senderName,
-    });
-
-    // Update people directory first (need the ref for participants)
-    let personFile: string | null = null;
-    let personRef: string | null = null;
-    if (msg.from) {
-      const displayName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ");
-      const personSlug = safeFilename(displayName);
-      // Absolute box-root path so the ref resolves the same from any
-      // chat-thread location (threads live at varying depths).
-      if (personSlug) personRef = `/people/${personSlug}.person.card`;
-
-      personFile = await updatePersonEntry({
-        boxRoot: this.boxRoot,
-        connector: "telegram",
-        connectorId: msg.from.id,
-        firstName: msg.from.first_name,
-        ...(msg.from.last_name != null ? { lastName: msg.from.last_name } : {}),
-        ...(msg.from.username != null ? { username: msg.from.username } : {}),
-      });
-    }
-
-    // Ensure thread file exists (with description and initial participant)
-    const description = msg.chat.title ?? senderName;
-    const threadRelPath = await ensureThreadFile({
-      boxRoot: this.boxRoot,
-      connector: "telegram",
-      chatSlug,
-      chatId: String(msg.chat.id),
-      description,
-      ...(personRef ? { participants: [personRef] } : {}),
-    });
-
-    // Check if thread file is new (only has the root element, no messages)
-    const absPath = path.join(this.boxRoot, threadRelPath);
-    const content = await fs.readFile(absPath, "utf-8");
-    const newThread = !content.includes("<message");
-
-    // Ensure this sender is in the participants list
-    if (personRef) {
-      await ensureParticipant({
-        boxRoot: this.boxRoot,
-        threadRelPath,
-        personRef,
-      });
-    }
-
-    // Append message to thread
-    await appendMessageToThread({
-      boxRoot: this.boxRoot,
-      threadRelPath,
-      message: {
-        id: String(msg.message_id),
-        sender: senderName,
-        ...(msg.from?.id != null ? { senderId: String(msg.from.id) } : {}),
-        time: timestamp,
-        text,
-      },
-    });
-
-    return { threadRelPath, newThread, personFile, personRef };
+  ): Promise<IngestResult | null> {
+    return processUpdateToThread({ boxRoot: this.boxRoot, update, state });
   }
 
   /**
@@ -503,124 +323,11 @@ class TelegramConnector implements Connector {
    * Send outbound messages: scan thread files for unsent agent messages.
    */
   private async sendOutbound(config: TelegramConfig): Promise<string[]> {
-    const chatDir = path.join(this.boxRoot, "store/chat/telegram");
-    let threadPaths: string[];
-    try {
-      threadPaths = await glob("*/thread.chat-thread.card", { cwd: chatDir });
-    } catch (e) {
-      console.warn(`Could not glob Telegram thread files in ${chatDir}, skipping outbound send: ${e instanceof Error ? e.message : String(e)}`);
-      return [];
-    }
-
-    if (threadPaths.length === 0) return [];
-
-    const tg = this.getTelegram(config.botToken);
-    const pushed: string[] = [];
-
-    for (const relThread of threadPaths) {
-      const absPath = path.join(chatDir, relThread);
-      const threadRelPath = path.relative(this.boxRoot, absPath);
-
-      try {
-        const { fields, unsent } = await findUnsentAgentMessages(absPath);
-        if (unsent.length === 0) continue;
-
-        const chatId = fields["chat-id"];
-        if (!chatId) continue;
-
-        // Record callback-in from trailing seen entry for later
-        await this.recordCallbackTimers(fields, threadRelPath);
-
-        for (const msg of unsent) {
-          const text = msg.text?.trim();
-          if (!text) continue;
-
-          const result = await tg.sendMessage(chatId, text);
-          const sentAt = new Date().toISOString();
-
-          await stampSentMessage({
-            absPath,
-            messageText: text,
-            sentAt,
-            messageId: String(result.message_id),
-          });
-        }
-
-        // Commit the stamped thread
-        await stageFiles(this.boxRoot, [threadRelPath]);
-        const slug = path.basename(path.dirname(threadRelPath));
-        await commit(this.boxRoot, {
-          message: `Send telegram message to ${slug}`,
-          trailers: {
-            "Pushed-By": "telegram-connector",
-            ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}),
-          },
-        });
-
-        pushed.push(threadRelPath);
-      } catch (err) {
-        console.error(`Failed to send outbound for ${threadRelPath}: ${(err as Error).message}`);
-      }
-    }
-
-    return pushed;
-  }
-
-  /**
-   * Scan for <seen callback-in="..."> elements and record timers in state.
-   */
-  private async recordCallbackTimers(
-    fields: ChatThreadFields,
-    threadRelPath: string
-  ): Promise<void> {
-    const entries = fields.entries ?? [];
-    const lastEntry = entries[entries.length - 1];
-    if (!lastEntry || lastEntry.kind !== "seen") return;
-
-    const callbackIn = lastEntry["callback-in"];
-    if (!callbackIn) return;
-
-    const durationMs = parseDuration(callbackIn);
-    if (!durationMs) return;
-
-    const state = await loadTransientState<TelegramState>({
+    return sendOutbound({
       boxRoot: this.boxRoot,
-      connectorName: "telegram",
-      defaultValue: {},
+      triggeredBy: this.triggeredBy,
+      tg: this.getTelegram(config.botToken),
     });
-
-    const callbacks = state.callbacks ?? {};
-    const at = new Date(Date.now() + durationMs).toISOString();
-    callbacks[threadRelPath] = { at };
-    state.callbacks = callbacks;
-
-    await saveTransientState({
-      boxRoot: this.boxRoot,
-      connectorName: "telegram",
-      data: state,
-    });
-  }
-}
-
-/**
- * Parse a human-friendly duration string like "5m", "1h", "30s" into milliseconds.
- */
-function parseDuration(dur: string): number | null {
-  const match = dur.match(/^(\d+)\s*([dhms])$/);
-  if (!match) return null;
-  const value = parseInt(match[1]!, 10);
-  const unit = match[2];
-  switch (unit) {
-    case "s":
-      return value * 1000;
-    case "m":
-      return value * 60 * 1000;
-    case "h":
-      return value * 60 * 60 * 1000;
-    case "d":
-      return value * 24 * 60 * 60 * 1000;
-    default:
-      return null;
   }
 }
 

@@ -5,20 +5,8 @@
  * Fake maintains in-memory spreadsheets for testing.
  */
 
-import ky from "ky";
+import ky, { type KyInstance } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
-import { NotFoundError } from "../lib/errors.js";
-
-class NoExportForMimeTypeError extends Error {
-  readonly mimeType: string;
-  readonly fileId: string;
-  constructor(mimeType: string, fileId: string) {
-    super(`No export for mimeType ${mimeType} on ${fileId}`);
-    this.name = "NoExportForMimeTypeError";
-    this.mimeType = mimeType;
-    this.fileId = fileId;
-  }
-}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -133,58 +121,26 @@ export interface GoogleDriveService {
 
 // ─── Real implementation ────────────────────────────────────────────────────
 
+function createAuthedApi(prefixUrl: string, auth: GoogleAuthService): KyInstance {
+  return ky.create({
+    prefixUrl,
+    retry: 2,
+    hooks: {
+      beforeRequest: [
+        async (request) => {
+          const token = await auth.getAccessToken();
+          request.headers.set("Authorization", `Bearer ${token}`);
+        },
+      ],
+    },
+  });
+}
+
 export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveService {
-  const driveApi = ky.create({
-    prefixUrl: "https://www.googleapis.com/drive/v3",
-    retry: 2,
-    hooks: {
-      beforeRequest: [
-        async (request) => {
-          const token = await auth.getAccessToken();
-          request.headers.set("Authorization", `Bearer ${token}`);
-        },
-      ],
-    },
-  });
-
-  const sheetsApi = ky.create({
-    prefixUrl: "https://sheets.googleapis.com/v4",
-    retry: 2,
-    hooks: {
-      beforeRequest: [
-        async (request) => {
-          const token = await auth.getAccessToken();
-          request.headers.set("Authorization", `Bearer ${token}`);
-        },
-      ],
-    },
-  });
-
-  const docsApi = ky.create({
-    prefixUrl: "https://docs.googleapis.com/v1",
-    retry: 2,
-    hooks: {
-      beforeRequest: [
-        async (request) => {
-          const token = await auth.getAccessToken();
-          request.headers.set("Authorization", `Bearer ${token}`);
-        },
-      ],
-    },
-  });
-
-  const uploadApi = ky.create({
-    prefixUrl: "https://www.googleapis.com/upload/drive/v3",
-    retry: 2,
-    hooks: {
-      beforeRequest: [
-        async (request) => {
-          const token = await auth.getAccessToken();
-          request.headers.set("Authorization", `Bearer ${token}`);
-        },
-      ],
-    },
-  });
+  const driveApi = createAuthedApi("https://www.googleapis.com/drive/v3", auth);
+  const sheetsApi = createAuthedApi("https://sheets.googleapis.com/v4", auth);
+  const docsApi = createAuthedApi("https://docs.googleapis.com/v1", auth);
+  const uploadApi = createAuthedApi("https://www.googleapis.com/upload/drive/v3", auth);
 
   return {
     async getFile(fileId) {
@@ -312,128 +268,12 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
 
 // ─── Fake implementation ────────────────────────────────────────────────────
 
-export interface FakeSpreadsheet {
-  metadata: SpreadsheetMetadata;
-  sheets: Map<string, string[][]>;
-}
-
-/**
- * In-memory representation of a Google Doc for fakes.
- *
- * `exports` maps mimeType → content so tests can prepare the markdown body
- * the connector will pull. `structure` is what `getDocument()` returns —
- * tests populate `inlineObjects`, `footnotes`, etc. to exercise lossy
- * detection. `revisionId` and `modifiedTime` change on every
- * `updateFileContent` so conflict detection works.
- */
-export interface FakeDocument {
-  structure: DocumentStructure;
-  exports: Map<string, string>;
-  comments: DriveComment[];
-}
-
-export interface FakeGoogleDriveOptions {
-  files?: DriveFile[];
-  spreadsheets?: Map<string, FakeSpreadsheet>;
-  documents?: Map<string, FakeDocument>;
-}
-
-export interface FakeGoogleDriveService extends GoogleDriveService {
-  files: DriveFile[];
-  spreadsheets: Map<string, FakeSpreadsheet>;
-  documents: Map<string, FakeDocument>;
-  updateLog: Array<{ fileId: string; sheetTitle: string; values: string[][] }>;
-  contentUpdateLog: Array<{ fileId: string; mimeType: string; content: string }>;
-}
-
-export function createFakeGoogleDrive(
-  opts?: FakeGoogleDriveOptions,
-): FakeGoogleDriveService {
-  const fake: FakeGoogleDriveService = {
-    files: opts?.files ? [...opts.files] : [],
-    spreadsheets: opts?.spreadsheets ? new Map(opts.spreadsheets) : new Map(),
-    documents: opts?.documents ? new Map(opts.documents) : new Map(),
-    updateLog: [],
-    contentUpdateLog: [],
-
-    async getFile(fileId) {
-      const file = fake.files.find((f) => f.id === fileId);
-      if (!file) throw new NotFoundError(fileId, "File");
-      return file;
-    },
-
-    async listFiles(folderId) {
-      return fake.files.filter(
-        (f) => f.parents && f.parents.includes(folderId),
-      );
-    },
-
-    async listSpreadsheets() {
-      return fake.files.filter(
-        (f) => f.mimeType === "application/vnd.google-apps.spreadsheet",
-      );
-    },
-
-    async getSpreadsheet(fileId) {
-      const ss = fake.spreadsheets.get(fileId);
-      if (!ss) throw new NotFoundError(fileId, "Spreadsheet");
-      return ss.metadata;
-    },
-
-    async getSheetValues(fileId, sheetOpts) {
-      const ss = fake.spreadsheets.get(fileId);
-      if (!ss) throw new NotFoundError(fileId, "Spreadsheet");
-      const values = ss.sheets.get(sheetOpts.sheetTitle);
-      if (!values) throw new NotFoundError(sheetOpts.sheetTitle, "Sheet");
-      return values;
-    },
-
-    async updateSheetValues(fileId, updateOpts) {
-      const ss = fake.spreadsheets.get(fileId);
-      if (!ss) throw new NotFoundError(fileId, "Spreadsheet");
-      ss.sheets.set(updateOpts.sheetTitle, updateOpts.values);
-      fake.updateLog.push({
-        fileId,
-        sheetTitle: updateOpts.sheetTitle,
-        values: updateOpts.values,
-      });
-    },
-
-    async exportFile(fileId, mimeType) {
-      const doc = fake.documents.get(fileId);
-      if (!doc) throw new NotFoundError(fileId, "Document");
-      const content = doc.exports.get(mimeType);
-      if (content === undefined) {
-        throw new NoExportForMimeTypeError(mimeType, fileId);
-      }
-      return content;
-    },
-
-    async updateFileContent(fileId, updateOpts) {
-      const doc = fake.documents.get(fileId);
-      if (!doc) throw new NotFoundError(fileId, "Document");
-      doc.exports.set(updateOpts.mimeType, updateOpts.content);
-      doc.structure.revisionId = `rev-${Date.now()}-${fake.contentUpdateLog.length + 1}`;
-      const file = fake.files.find((f) => f.id === fileId);
-      if (file) file.modifiedTime = new Date().toISOString();
-      fake.contentUpdateLog.push({
-        fileId,
-        mimeType: updateOpts.mimeType,
-        content: updateOpts.content,
-      });
-    },
-
-    async getDocument(fileId) {
-      const doc = fake.documents.get(fileId);
-      if (!doc) throw new NotFoundError(fileId, "Document");
-      return doc.structure;
-    },
-
-    async listComments(fileId) {
-      const doc = fake.documents.get(fileId);
-      return doc ? [...doc.comments] : [];
-    },
-  };
-
-  return fake;
-}
+// The in-memory fake lives in a sibling module; re-export it so the public
+// surface of this module (and `services/index.ts`) is unchanged.
+export type {
+  FakeSpreadsheet,
+  FakeDocument,
+  FakeGoogleDriveOptions,
+  FakeGoogleDriveService,
+} from "./google-drive-fake.js";
+export { createFakeGoogleDrive } from "./google-drive-fake.js";

@@ -14,12 +14,9 @@
  * client-side. Filename format: {YYYY-MM-DD}_{shortId}.ics
  */
 
-import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { HTTPError } from "ky";
-// eslint-disable-next-line import-x/no-rename-default
-import ICAL from "ical.js";
 import {
   registerConnector,
   type Connector,
@@ -30,7 +27,6 @@ import { createGoogleAuthService } from "../services/google-auth.js";
 import {
   createGoogleCalendarService,
   type GoogleCalendarService,
-  type CalendarEvent,
 } from "../services/google-calendar.js";
 import { isGoogleServiceAllowed } from "../webapp/box-config.js";
 import {
@@ -39,603 +35,25 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "./calendar-config.js";
-import { validateIcsTimezone } from "./calendar-utils.js";
 import { stageFiles, commit, getStatus } from "../cli/lib/git.js";
 import {
   createCalendarReviewJobTemplate,
   type CalendarChangeInput,
 } from "../schemas/calendar-review-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
-import { loadTransientState, saveTransientState } from "./transient-state.js";
-
-interface CalendarTransientState {
-  syncTokens: Record<string, string>;
-}
-
-interface EventFileEntry {
-  filename: string;
-  calendarId: string;
-  /** Hash of the ICS content last written by the connector (for detecting local edits) */
-  contentHash?: string;
-}
-
-interface CalendarState {
-  /** syncToken per calendar ID */
-  syncTokens: Record<string, string>;
-  /** Google event ID → file info (or legacy plain filename string) */
-  eventFiles: Record<string, string | EventFileEntry>;
-}
-
-/** Get filename from eventFiles entry (handles legacy string format) */
-function getFilename(entry: string | EventFileEntry): string {
-  return typeof entry === "string" ? entry : entry.filename;
-}
-
-/** Short content hash for detecting local edits to .ics files */
-function contentHash(content: string): string {
-  return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
-}
-
-type GoogleCalendarEvent = CalendarEvent;
-
-/**
- * Parse local time parts from an ISO dateTime string (e.g., "2026-03-29T14:00:00-05:00").
- * The time in the string IS the local time — we extract it directly without UTC conversion.
- */
-function parseLocalTimeParts(dateTime: string): { year: number; month: number; day: number; hour: number; minute: number; second: number } | null {
-  const match = dateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-  if (!match) return null;
-  return {
-    year: parseInt(match[1]!, 10),
-    month: parseInt(match[2]!, 10),
-    day: parseInt(match[3]!, 10),
-    hour: parseInt(match[4]!, 10),
-    minute: parseInt(match[5]!, 10),
-    second: parseInt(match[6]!, 10),
-  };
-}
-
-/**
- * Generate a VTIMEZONE component for an IANA timezone name.
- * Uses Intl API to determine current-year offsets for STANDARD and DAYLIGHT.
- */
-function generateVtimezone(tzid: string): ICAL.Component {
-  const vtimezone = new ICAL.Component("vtimezone");
-  vtimezone.updatePropertyWithValue("tzid", tzid);
-
-  // Sample offsets at mid-January (standard) and mid-July (daylight) of current year
-  const year = new Date().getFullYear();
-  const jan = new Date(year, 0, 15, 12, 0, 0);
-  const jul = new Date(year, 6, 15, 12, 0, 0);
-
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: tzid,
-    timeZoneName: "shortOffset",
-    hour: "numeric",
-  });
-
-  function getOffsetMinutes(date: Date): number {
-    // Get UTC time and local time in the target timezone, compute difference
-    const utcParts = new Intl.DateTimeFormat("en-US", {
-      timeZone: "UTC",
-      year: "numeric", month: "numeric", day: "numeric",
-      hour: "numeric", minute: "numeric", hour12: false,
-    }).formatToParts(date);
-    const tzParts = new Intl.DateTimeFormat("en-US", {
-      timeZone: tzid,
-      year: "numeric", month: "numeric", day: "numeric",
-      hour: "numeric", minute: "numeric", hour12: false,
-    }).formatToParts(date);
-
-    function toMinutes(parts: Intl.DateTimeFormatPart[]): number {
-      const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value || "0", 10);
-      return ((get("year") * 365 + get("month") * 31 + get("day")) * 24 + get("hour")) * 60 + get("minute");
-    }
-    return toMinutes(tzParts) - toMinutes(utcParts);
-  }
-
-  function formatOffset(minutes: number): string {
-    // ical.js's utc-offset property type expects input in the colon-separated
-    // form "+HH:MM" (it strips the colon on serialization via slice(0,3)+slice(4,6)).
-    // Passing "+HHMM" without the colon produces a truncated "+HH" + just-one-char
-    // = "+HH0" in the .ics output because slice(4,6) reads past end-of-string.
-    const sign = minutes >= 0 ? "+" : "-";
-    const abs = Math.abs(minutes);
-    const h = String(Math.floor(abs / 60)).padStart(2, "0");
-    const m = String(abs % 60).padStart(2, "0");
-    return `${sign}${h}:${m}`;
-  }
-
-  function getTzName(date: Date): string {
-    const parts = fmt.formatToParts(date);
-    const tzPart = parts.find((p) => p.type === "timeZoneName");
-    return tzPart?.value || tzid;
-  }
-
-  const janOffset = getOffsetMinutes(jan);
-  const julOffset = getOffsetMinutes(jul);
-  const janName = getTzName(jan);
-  const julName = getTzName(jul);
-
-  // Note: ICAL.Time.fromDateTimeString requires ISO 8601 "extended" format
-  // (YYYY-MM-DDTHH:MM:SS, 19+ chars) — it rejects the iCal "basic" format
-  // (YYYYMMDDTHHMMSS) with `invalid date-time value`. The serialized output
-  // in the .ics file still uses the basic format per RFC 5545; only the
-  // parser input needs the separators.
-  if (janOffset === julOffset) {
-    // No DST — just STANDARD
-    const standard = new ICAL.Component("standard");
-    standard.updatePropertyWithValue("dtstart", ICAL.Time.fromDateTimeString("1970-01-01T00:00:00"));
-    standard.updatePropertyWithValue("tzoffsetfrom", formatOffset(janOffset));
-    standard.updatePropertyWithValue("tzoffsetto", formatOffset(janOffset));
-    standard.updatePropertyWithValue("tzname", janName);
-    vtimezone.addSubcomponent(standard);
-  } else {
-    // Has DST — determine which is standard vs daylight
-    const stdOffset = Math.min(janOffset, julOffset);
-    const dstOffset = Math.max(janOffset, julOffset);
-    const stdName = janOffset < julOffset ? janName : julName;
-    const dstName = janOffset < julOffset ? julName : janName;
-
-    // Northern hemisphere: standard starts in Nov, daylight in Mar
-    // Southern hemisphere: reversed
-    const northernHemisphere = julOffset > janOffset;
-
-    const standard = new ICAL.Component("standard");
-    standard.updatePropertyWithValue("dtstart",
-      ICAL.Time.fromDateTimeString(northernHemisphere ? "1970-11-01T02:00:00" : "1970-04-01T03:00:00"));
-    if (northernHemisphere) {
-      standard.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=11;BYDAY=1SU"));
-    } else {
-      standard.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=4;BYDAY=1SU"));
-    }
-    standard.updatePropertyWithValue("tzoffsetfrom", formatOffset(dstOffset));
-    standard.updatePropertyWithValue("tzoffsetto", formatOffset(stdOffset));
-    standard.updatePropertyWithValue("tzname", stdName);
-    vtimezone.addSubcomponent(standard);
-
-    const daylight = new ICAL.Component("daylight");
-    daylight.updatePropertyWithValue("dtstart",
-      ICAL.Time.fromDateTimeString(northernHemisphere ? "1970-03-08T02:00:00" : "1970-10-04T02:00:00"));
-    if (northernHemisphere) {
-      daylight.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=3;BYDAY=2SU"));
-    } else {
-      daylight.updatePropertyWithValue("rrule", ICAL.Recur.fromString("FREQ=YEARLY;BYMONTH=10;BYDAY=1SU"));
-    }
-    daylight.updatePropertyWithValue("tzoffsetfrom", formatOffset(stdOffset));
-    daylight.updatePropertyWithValue("tzoffsetto", formatOffset(dstOffset));
-    daylight.updatePropertyWithValue("tzname", dstName);
-    vtimezone.addSubcomponent(daylight);
-  }
-
-  return vtimezone;
-}
-
-/**
- * Set a datetime property with timezone on a VEVENT component.
- * Parses local time from the ISO string and sets TZID parameter.
- */
-function setDateTimeWithTz(
-  vevent: ICAL.Component,
-  opts: { propName: string; dateTime: string; timeZone: string | undefined },
-): void {
-  const { propName, dateTime, timeZone } = opts;
-  const parts = parseLocalTimeParts(dateTime);
-  if (parts && timeZone) {
-    // Format as ISO 8601 extended ("2026-04-01T14:00:00"). fromDateTimeString
-    // rejects iCal basic format; see note in generateVtimezone above.
-    const pad = (n: number, w: number) => String(n).padStart(w, "0");
-    const dtStr = `${pad(parts.year, 4)}-${pad(parts.month, 2)}-${pad(parts.day, 2)}T${pad(parts.hour, 2)}:${pad(parts.minute, 2)}:${pad(parts.second, 2)}`;
-    const dt = ICAL.Time.fromDateTimeString(dtStr);
-    const prop = vevent.updatePropertyWithValue(propName, dt);
-    prop.setParameter("tzid", timeZone);
-  } else {
-    // No timezone or unparseable — use JS Date conversion (UTC-based)
-    const dt = ICAL.Time.fromJSDate(new Date(dateTime), false);
-    vevent.updatePropertyWithValue(propName, dt);
-  }
-}
-
-function eventToIcs(
-  event: GoogleCalendarEvent,
-  opts: { calendarId: string; calendarName?: string; calendarRole?: string },
-): string {
-  const { calendarId, calendarName, calendarRole } = opts;
-  const comp = new ICAL.Component(["vcalendar", [], []]);
-  comp.updatePropertyWithValue("prodid", "-//Callback Box//EN");
-  comp.updatePropertyWithValue("version", "2.0");
-
-  // Collect timezones used by this event and add VTIMEZONE components
-  const timezones = new Set<string>();
-  const startTz = event.start?.timeZone;
-  const endTz = event.end?.timeZone;
-  if (startTz) timezones.add(startTz);
-  if (endTz) timezones.add(endTz);
-  for (const tz of timezones) {
-    comp.addSubcomponent(generateVtimezone(tz));
-  }
-
-  const vevent = new ICAL.Component("vevent");
-  comp.addSubcomponent(vevent);
-
-  vevent.updatePropertyWithValue("uid", event.iCalUID || event.id);
-  vevent.updatePropertyWithValue("summary", event.summary || "(no title)");
-
-  if (event.description) {
-    vevent.updatePropertyWithValue("description", event.description);
-  }
-  if (event.location) {
-    vevent.updatePropertyWithValue("location", event.location);
-  }
-
-  // Start time
-  if (event.start) {
-    if (event.start.dateTime) {
-      setDateTimeWithTz(vevent, { propName: "dtstart", dateTime: event.start.dateTime, timeZone: event.start.timeZone });
-    } else if (event.start.date) {
-      const dt = ICAL.Time.fromDateString(event.start.date);
-      const prop = vevent.updatePropertyWithValue("dtstart", dt);
-      prop.setParameter("value", "DATE");
-    }
-  }
-
-  // End time
-  if (event.end) {
-    if (event.end.dateTime) {
-      setDateTimeWithTz(vevent, { propName: "dtend", dateTime: event.end.dateTime, timeZone: event.end.timeZone });
-    } else if (event.end.date) {
-      const dt = ICAL.Time.fromDateString(event.end.date);
-      const prop = vevent.updatePropertyWithValue("dtend", dt);
-      prop.setParameter("value", "DATE");
-    }
-  }
-
-  if (event.created) {
-    vevent.updatePropertyWithValue(
-      "created",
-      ICAL.Time.fromJSDate(new Date(event.created), true)
-    );
-  }
-  if (event.updated) {
-    vevent.updatePropertyWithValue(
-      "last-modified",
-      ICAL.Time.fromJSDate(new Date(event.updated), true)
-    );
-  }
-
-  if (event.status === "cancelled") {
-    vevent.updatePropertyWithValue("status", "CANCELLED");
-  } else if (event.status === "tentative") {
-    vevent.updatePropertyWithValue("status", "TENTATIVE");
-  } else {
-    vevent.updatePropertyWithValue("status", "CONFIRMED");
-  }
-
-  // Transparency (busy/free)
-  if (event.transparency === "transparent") {
-    vevent.updatePropertyWithValue("transp", "TRANSPARENT");
-  } else {
-    vevent.updatePropertyWithValue("transp", "OPAQUE");
-  }
-
-  // Organizer
-  if (event.organizer?.email) {
-    const prop = new ICAL.Property("organizer");
-    prop.setValue(`mailto:${event.organizer.email}`);
-    if (event.organizer.displayName) {
-      prop.setParameter("cn", event.organizer.displayName);
-    }
-    vevent.addProperty(prop);
-  }
-
-  // Attendees
-  if (event.attendees) {
-    for (const att of event.attendees) {
-      if (!att.email) continue;
-      const prop = new ICAL.Property("attendee");
-      prop.setValue(`mailto:${att.email}`);
-      if (att.displayName) {
-        prop.setParameter("cn", att.displayName);
-      }
-      if (att.responseStatus) {
-        const statusMap: Record<string, string> = {
-          accepted: "ACCEPTED",
-          declined: "DECLINED",
-          tentative: "TENTATIVE",
-          needsAction: "NEEDS-ACTION",
-        };
-        prop.setParameter(
-          "partstat",
-          statusMap[att.responseStatus] || att.responseStatus.toUpperCase()
-        );
-      }
-      vevent.addProperty(prop);
-    }
-  }
-
-  // Recurrence rules (for recurring master events)
-  if (event.recurrence) {
-    for (const rule of event.recurrence) {
-      // Each entry is a raw iCalendar line like "RRULE:FREQ=WEEKLY;BYDAY=MO"
-      // or "EXDATE;VALUE=DATE:20240101". Parse via ical.js to handle all formats.
-      const prop = ICAL.Property.fromString(rule);
-      vevent.addProperty(prop);
-    }
-  }
-
-  // Source calendar tracking
-  vevent.updatePropertyWithValue("x-cb-calendar-id", calendarId);
-  if (calendarName) {
-    vevent.updatePropertyWithValue("x-cb-calendar-name", calendarName);
-  }
-  if (calendarRole) {
-    vevent.updatePropertyWithValue("x-cb-calendar-role", calendarRole);
-  }
-
-  return comp.toString();
-}
-
-function eventFilename(event: GoogleCalendarEvent): string {
-  const dateStr =
-    event.start?.dateTime?.slice(0, 10) ||
-    event.start?.date ||
-    "no-date";
-  const shortId = event.id.slice(-8);
-  return `${dateStr}_${shortId}.ics`;
-}
-
-/** Check if an event's start falls within a time window */
-function isInWindow(event: GoogleCalendarEvent, window: { start: Date; end: Date }): boolean {
-  // Recurring masters: Google already filtered server-side via timeMin/timeMax
-  if (event.recurrence) return true;
-  const dateTime = event.start?.dateTime;
-  const dateOnly = event.start?.date;
-  if (!dateTime && !dateOnly) return true;
-  const eventStart = dateTime ? new Date(dateTime) : new Date(dateOnly + "T00:00:00");
-  return eventStart >= window.start && eventStart <= window.end;
-}
-
-/**
- * Parse a local .ics file back into a Google Calendar API event object.
- * Returns null if the file can't be parsed.
- * Includes _calendarId from X-CB-CALENDAR-ID if present.
- */
-function icsToGoogleEvent(content: string): (GoogleCalendarEvent & { _calendarId?: string }) | null {
-  try {
-    const parsed = ICAL.parse(content);
-    const comp = new ICAL.Component(parsed);
-    const vevent = comp.getFirstSubcomponent("vevent");
-    if (!vevent) return null;
-
-    const event = new ICAL.Event(vevent);
-    const result: GoogleCalendarEvent & { _calendarId?: string } = {
-      id: "",
-      status: "confirmed",
-      summary: event.summary || "(no title)",
-    };
-
-    if (event.description) result.description = event.description;
-    if (event.location) result.location = event.location;
-
-    // Start time
-    const dtstartProp = vevent.getFirstProperty("dtstart");
-    const dtstart = dtstartProp ? (dtstartProp.getFirstValue() as ICAL.Time | null) : null;
-    if (dtstart) {
-      if (dtstart.isDate) {
-        result.start = { date: dtstart.toString() };
-      } else {
-        const startTzid = dtstartProp?.getParameter("tzid");
-        result.start = { dateTime: dtstart.toJSDate().toISOString() };
-        if (startTzid) result.start.timeZone = String(startTzid);
-      }
-    }
-
-    // End time
-    const dtendProp = vevent.getFirstProperty("dtend");
-    const dtend = dtendProp ? (dtendProp.getFirstValue() as ICAL.Time | null) : null;
-    if (dtend) {
-      if (dtend.isDate) {
-        result.end = { date: dtend.toString() };
-      } else {
-        const endTzid = dtendProp?.getParameter("tzid");
-        result.end = { dateTime: dtend.toJSDate().toISOString() };
-        if (endTzid) result.end.timeZone = String(endTzid);
-      }
-    }
-
-    // Transparency
-    const transp = String(vevent.getFirstPropertyValue("transp") || "OPAQUE").toUpperCase();
-    if (transp === "TRANSPARENT") {
-      result.transparency = "transparent";
-    }
-
-    // Recurrence rules
-    const rrules = vevent.getAllProperties("rrule");
-    if (rrules.length > 0) {
-      result.recurrence = rrules.map((p: ICAL.Property) => p.toICALString().trim());
-    }
-
-    // Source calendar ID
-    const calId = vevent.getFirstPropertyValue("x-cb-calendar-id");
-    if (calId) result._calendarId = String(calId);
-
-    return result;
-  } catch (e) {
-    console.warn("Failed to parse local .ics file, skipping:", e);
-    return null;
-  }
-}
-
-interface SyncNote {
-  action: "new" | "updated" | "deleted" | "pushed" | "cancelled";
-  summary: string;
-  detail?: string;
-  ref?: string;
-  /** Full ICS content for deleted events (embedded in calendar-review job) */
-  icsContent?: string;
-  /** Event start date for priority heuristic */
-  eventStart?: Date;
-}
-
-/** Parse event start as a Date (for priority heuristic) */
-function parseEventStart(event: GoogleCalendarEvent): Date | undefined {
-  const dateTime = event.start?.dateTime;
-  const dateOnly = event.start?.date;
-  if (!dateTime && !dateOnly) return undefined;
-  return dateTime ? new Date(dateTime) : new Date(dateOnly + "T00:00:00");
-}
-
-/** Format an event date for commit messages: "Thu Feb 20" or "Thu Feb 20 3:00 PM" */
-function formatEventDate(event: GoogleCalendarEvent): string {
-  const dateTime = event.start?.dateTime;
-  const dateOnly = event.start?.date;
-  if (!dateTime && !dateOnly) return "";
-  const d = dateTime ? new Date(dateTime) : new Date(dateOnly + "T00:00:00");
-  const dayStr = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-  if (dateOnly) return dayStr;
-  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  return `${dayStr} ${timeStr}`;
-}
-
-/** Compare old and new ICS content, return human-readable change descriptions */
-function describeChanges(oldContent: string, newContent: string): string[] {
-  const changes: string[] = [];
-  try {
-    const oldComp = new ICAL.Component(ICAL.parse(oldContent));
-    const newComp = new ICAL.Component(ICAL.parse(newContent));
-    const oldV = oldComp.getFirstSubcomponent("vevent");
-    const newV = newComp.getFirstSubcomponent("vevent");
-    if (!oldV || !newV) return changes;
-
-    const getProp = (v: ICAL.Component, name: string): string =>
-      String(v.getFirstPropertyValue(name) || "");
-
-    // Summary
-    const oldSummary = getProp(oldV, "summary");
-    const newSummary = getProp(newV, "summary");
-    if (oldSummary !== newSummary) {
-      changes.push(`title changed from "${oldSummary}" to "${newSummary}"`);
-    }
-
-    // Start/end times
-    const oldStart = getProp(oldV, "dtstart");
-    const newStart = getProp(newV, "dtstart");
-    const oldEnd = getProp(oldV, "dtend");
-    const newEnd = getProp(newV, "dtend");
-    if (oldStart !== newStart || oldEnd !== newEnd) {
-      changes.push("time changed");
-    }
-
-    // Location
-    const oldLoc = getProp(oldV, "location");
-    const newLoc = getProp(newV, "location");
-    if (oldLoc !== newLoc) {
-      if (!oldLoc) {
-        changes.push(`added location: ${newLoc}`);
-      } else if (!newLoc) {
-        changes.push("location removed");
-      } else {
-        changes.push(`location changed to ${newLoc}`);
-      }
-    }
-
-    // Description
-    const oldDesc = getProp(oldV, "description");
-    const newDesc = getProp(newV, "description");
-    if (oldDesc !== newDesc) {
-      changes.push("description updated");
-    }
-
-    // Transparency
-    const oldTransp = getProp(oldV, "transp");
-    const newTransp = getProp(newV, "transp");
-    if (oldTransp !== newTransp) {
-      changes.push(newTransp === "TRANSPARENT" ? "marked as free" : "marked as busy");
-    }
-  } catch (e) {
-    // Can't parse — skip diffing
-    console.warn("Failed to diff ICS content, skipping change descriptions:", e);
-  }
-  return changes;
-}
-
-/**
- * Extract X-CB-REASON and X-CB-REF from ICS content.
- * Returns the values and stripped content.
- */
-function extractCbAnnotations(content: string): { reason?: string; ref?: string; stripped: string } {
-  let reason: string | undefined;
-  let ref: string | undefined;
-
-  const reasonMatch = content.match(/^x-cb-reason[:;](.*)$/im);
-  if (reasonMatch) reason = reasonMatch[1]?.trim();
-
-  const refMatch = content.match(/^x-cb-ref[:;](.*)$/im);
-  if (refMatch) ref = refMatch[1]?.trim();
-
-  // Strip the annotation lines
-  const stripped = content
-    .replace(/^x-cb-reason[:;].*\r?\n?/gim, "")
-    .replace(/^x-cb-ref[:;].*\r?\n?/gim, "");
-
-  const result: { reason?: string; ref?: string; stripped: string } = { stripped };
-  if (reason) result.reason = reason;
-  if (ref) result.ref = ref;
-  return result;
-}
-
-/** Build narrative commit message from SyncNotes */
-function buildNarrativeCommitMessage(
-  notes: SyncNote[],
-  opts: { isFullResync: boolean; totalEvents?: number },
-): string {
-  if (opts.isFullResync) {
-    const count = opts.totalEvents ?? notes.length;
-    return `Sync calendar: full re-sync (token expired), ${count} events refreshed`;
-  }
-
-  const counts: Record<string, number> = {};
-  for (const note of notes) {
-    counts[note.action] = (counts[note.action] || 0) + 1;
-  }
-
-  const parts: string[] = [];
-  if (counts["new"]) parts.push(`${counts["new"]} new`);
-  if (counts["updated"]) parts.push(`${counts["updated"]} updated`);
-  if (counts["deleted"]) parts.push(`${counts["deleted"]} deleted`);
-  if (counts["pushed"]) parts.push(`${counts["pushed"]} pushed`);
-  if (counts["cancelled"]) parts.push(`${counts["cancelled"]} cancelled`);
-
-  let message = `Sync calendar: ${parts.join(", ")}`;
-
-  // Group notes by action for the body
-  const sections: Array<{ label: string; action: SyncNote["action"] }> = [
-    { label: "New", action: "new" },
-    { label: "Updated", action: "updated" },
-    { label: "Pushed", action: "pushed" },
-    { label: "Deleted", action: "deleted" },
-    { label: "Cancelled", action: "cancelled" },
-  ];
-
-  const bodyParts: string[] = [];
-  for (const { label, action } of sections) {
-    const items = notes.filter((n) => n.action === action);
-    if (items.length === 0) continue;
-    const lines = items.map((n) => {
-      let line = `- ${n.summary}`;
-      if (n.detail) line += ` — ${n.detail}`;
-      if (n.ref) line += ` [ref: ${n.ref}]`;
-      return line;
-    });
-    bodyParts.push(`${label}:\n${lines.join("\n")}`);
-  }
-
-  if (bodyParts.length > 0) {
-    message += `\n\n${bodyParts.join("\n\n")}`;
-  }
-
-  return message;
-}
+import {
+  buildNarrativeCommitMessage,
+  type SyncNote,
+} from "./google-calendar-notes.js";
+import {
+  calendarStatePath,
+  calendarDir,
+  loadCalendarState,
+  saveCalendarState,
+  type CalendarState,
+} from "./google-calendar-state.js";
+import { syncCalendar } from "./google-calendar-sync.js";
+import { pushAndCleanOrphans, processLocalDeletes } from "./google-calendar-push.js";
 
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
@@ -659,14 +77,11 @@ class GoogleCalendarConnector implements Connector {
   }
 
   private statePath(): string {
-    return path.join(
-      this.boxRoot,
-      "config/connectors/google-calendar-state.json"
-    );
+    return calendarStatePath(this.boxRoot);
   }
 
   private calendarDir(): string {
-    return path.join(this.boxRoot, "store/calendar");
+    return calendarDir(this.boxRoot);
   }
 
   private async loadConfig(): Promise<CalendarConfig> {
@@ -674,33 +89,11 @@ class GoogleCalendarConnector implements Connector {
   }
 
   private async loadState(): Promise<CalendarState> {
-    let persistent: CalendarState;
-    try {
-      const content = await fs.readFile(this.statePath(), "utf-8");
-      persistent = JSON.parse(content);
-    } catch (err: unknown) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) {
-        throw err as Error;
-      }
-      persistent = { syncTokens: {}, eventFiles: {} };
-    }
-    // Merge syncTokens from transient state (gitignored)
-    const transient = await loadTransientState<CalendarTransientState>({
-      boxRoot: this.boxRoot, connectorName: "google-calendar", defaultValue: { syncTokens: {} },
-    });
-    persistent.syncTokens = { ...persistent.syncTokens, ...transient.syncTokens };
-    return persistent;
+    return loadCalendarState(this.boxRoot);
   }
 
   private async saveState(state: CalendarState): Promise<void> {
-    // Save syncTokens to transient (gitignored), eventFiles to persistent (committed)
-    await saveTransientState({
-      boxRoot: this.boxRoot, connectorName: "google-calendar",
-      data: { syncTokens: state.syncTokens },
-    });
-    const persistent = { syncTokens: {}, eventFiles: state.eventFiles };
-    await fs.mkdir(path.dirname(this.statePath()), { recursive: true });
-    await fs.writeFile(this.statePath(), JSON.stringify(persistent, null, 2));
+    return saveCalendarState(this.boxRoot, state);
   }
 
   async sync(): Promise<SyncResult> {
@@ -764,56 +157,26 @@ class GoogleCalendarConnector implements Connector {
       if (calendarNames[calendarId]) icsOpts.calendarName = calendarNames[calendarId];
       if (calendarRoles[calendarId]) icsOpts.calendarRole = calendarRoles[calendarId];
 
-      try {
-        const result = await this.syncCalendar({
-          calendar, calendarId, syncToken: existingSyncToken,
-          syncDaysBack, syncDaysForward, state, icsOpts, calDir,
-          windowStart, windowEnd,
-        });
-        created.push(...result.created);
-        updated.push(...result.updated);
-        deleted.push(...result.deleted);
-        allNotes.push(...result.notes);
-      } catch (err) {
-        const status = err instanceof HTTPError ? err.response?.status : undefined;
-        const message = (err as Error).message;
-        if (status === 410 || message.includes("410")) {
-          console.log(
-            `  Sync token expired for ${calendarId}, doing full sync...`
-          );
-          isFullResync = true;
-          delete state.syncTokens[calendarId];
-          await this.saveState(state);
-          const result = await this.syncCalendar({
-            calendar, calendarId, syncToken: undefined,
-            syncDaysBack, syncDaysForward, state, icsOpts, calDir,
-            windowStart, windowEnd,
-          });
-          created.push(...result.created);
-          updated.push(...result.updated);
-          deleted.push(...result.deleted);
-          // Don't add individual notes for full re-sync — the message will summarize
-        } else {
-          await this.saveState(state);
-          return {
-            success: false,
-            created,
-            updated,
-            error: `Calendar sync failed for ${calendarId}: ${message}`,
-          };
-        }
+      const outcome = await this.runCalendarSync({
+        calendar, calendarId, syncToken: existingSyncToken, icsOpts, state, calDir,
+        syncDaysBack, syncDaysForward, windowStart, windowEnd,
+        acc: { created, updated, deleted, allNotes },
+      });
+      if (outcome.fullResync) isFullResync = true;
+      if (outcome.error) {
+        return { success: false, created, updated, error: outcome.error };
       }
     }
 
     // Process locally-marked deletes (X-CB-DELETE property)
-    const deleteResult = await this.processLocalDeletes({ calendar, state, calDir });
+    const deleteResult = await processLocalDeletes({ boxRoot: this.boxRoot, calendar, state, calDir });
     deleted.push(...deleteResult.deleted);
     allNotes.push(...deleteResult.notes);
 
     // Push locally-created files to Google, clean unparseable orphans
     const defaultCalendarId = calendars[0] || "primary";
-    const orphanResult = await this.pushAndCleanOrphans(
-      { calendar, state, calDir, defaultCalendarId },
+    const orphanResult = await pushAndCleanOrphans(
+      { boxRoot: this.boxRoot, calendar, state, calDir, defaultCalendarId },
     );
     const pushed = orphanResult.pushed;
     deleted.push(...orphanResult.deleted);
@@ -921,436 +284,54 @@ class GoogleCalendarConnector implements Connector {
     return jobRelPath;
   }
 
-  private async syncCalendar(opts: {
+  /**
+   * Sync one calendar, retrying with a full sync if the sync token expired (410).
+   * Accumulates results into `acc`; returns whether a full resync happened and
+   * any fatal error message. State is persisted on the error/410 paths.
+   */
+  private async runCalendarSync(opts: {
     calendar: GoogleCalendarService;
     calendarId: string;
     syncToken: string | undefined;
+    icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string };
+    state: CalendarState;
+    calDir: string;
     syncDaysBack: number;
     syncDaysForward: number;
-    state: CalendarState;
-    icsOpts: { calendarId: string; calendarName?: string; calendarRole?: string };
-    calDir: string;
     windowStart: Date;
     windowEnd: Date;
-  }): Promise<{ created: string[]; updated: string[]; deleted: string[]; notes: SyncNote[] }> {
-    const { calendar, calendarId, syncToken, syncDaysBack, syncDaysForward,
-            state, icsOpts, calDir, windowStart, windowEnd } = opts;
-    const created: string[] = [];
-    const updated: string[] = [];
-    const deleted: string[] = [];
-    const notes: SyncNote[] = [];
+    acc: { created: string[]; updated: string[]; deleted: string[]; allNotes: SyncNote[] };
+  }): Promise<{ fullResync: boolean; error?: string }> {
+    const { calendar, calendarId, syncToken, icsOpts, state, calDir,
+            syncDaysBack, syncDaysForward, windowStart, windowEnd, acc } = opts;
+    const base = {
+      boxRoot: this.boxRoot, calendar, calendarId, syncDaysBack, syncDaysForward,
+      state, icsOpts, calDir, windowStart, windowEnd,
+    };
+    const collect = (r: { created: string[]; updated: string[]; deleted: string[]; notes: SyncNote[] }, opts2: { withNotes: boolean }): void => {
+      acc.created.push(...r.created);
+      acc.updated.push(...r.updated);
+      acc.deleted.push(...r.deleted);
+      if (opts2.withNotes) acc.allNotes.push(...r.notes);
+    };
 
-    const events = await this.fetchEvents({
-      calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state,
-    });
-
-    for (const event of events) {
-      // Skip exception instances (single-instance overrides of recurring events).
-      // We only store the recurring master with its RRULE.
-      if (event.recurringEventId) continue;
-
-      if (event.status === "cancelled") {
-        const existingEntry = state.eventFiles[event.id];
-        if (existingEntry) {
-          const oldName = getFilename(existingEntry);
-          const filePath = path.join(calDir, oldName);
-          try {
-            // Capture ICS content before deleting for calendar-review job
-            let icsContent: string | undefined;
-            try {
-              icsContent = await fs.readFile(filePath, "utf-8");
-            } catch (_e) {
-              // File already gone — icsContent stays undefined; capture is best-effort for the review job, the unlink below handles the real deletion.
-            }
-            await fs.unlink(filePath);
-            deleted.push(path.relative(this.boxRoot, filePath));
-            const note: SyncNote = {
-              action: "cancelled",
-              summary: event.summary || oldName,
-            };
-            if (icsContent) note.icsContent = icsContent;
-            notes.push(note);
-          } catch (err: unknown) {
-            if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
-          }
-          delete state.eventFiles[event.id];
-        }
-        continue;
-      }
-
-      // Filter out events outside the sync window
-      if (!isInWindow(event, { start: windowStart, end: windowEnd })) {
-        continue;
-      }
-
-      const filename = eventFilename(event);
-      const filePath = path.join(calDir, filename);
-      const icsContent = eventToIcs(event, icsOpts);
-
-      const existingEntry = state.eventFiles[event.id];
-      const oldName = existingEntry ? getFilename(existingEntry) : undefined;
-      if (oldName && oldName !== filename) {
-        try {
-          await fs.unlink(path.join(calDir, oldName));
-          deleted.push(
-            path.relative(this.boxRoot, path.join(calDir, oldName))
-          );
-        } catch (err: unknown) {
-          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
-        }
-      }
-
-      const relPath = path.relative(this.boxRoot, filePath);
-      const eventStart = parseEventStart(event);
-
-      // Check for local edits before overwriting
-      if (existingEntry) {
-        const storedHash = typeof existingEntry === "string" ? undefined : existingEntry.contentHash;
-        let localContent: string | undefined;
-        try {
-          localContent = await fs.readFile(
-            path.join(calDir, oldName || filename), "utf-8"
-          );
-        } catch (_e) {
-          // File missing — localContent stays undefined and we proceed to write the fresh ICS; the read is only for local-edit detection, not required.
-        }
-
-        if (localContent && storedHash && contentHash(localContent) !== storedHash) {
-          // Local file was edited — push local changes to Google instead of overwriting
-          const localEvent = icsToGoogleEvent(localContent);
-          if (localEvent) {
-            const entryCalId = typeof existingEntry === "string" ? icsOpts.calendarId : existingEntry.calendarId;
-            delete localEvent._calendarId;
-            const patchResult = await this.patchEvent(calendar, {
-              calendarId: entryCalId,
-              googleEventId: event.id,
-              event: localEvent,
-            });
-            if (patchResult) {
-              // Patch succeeded — rewrite file from Google's response to normalize
-              const patchedIcs = eventToIcs(patchResult, icsOpts);
-              await fs.writeFile(filePath, patchedIcs);
-              state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs) };
-              updated.push(relPath);
-              const note: SyncNote = {
-                action: "pushed",
-                summary: `${localEvent.summary || filename} (local edit pushed)`,
-                ref: relPath,
-              };
-              if (eventStart) note.eventStart = eventStart;
-              notes.push(note);
-              continue;
-            }
-            // Patch failed — fall through to overwrite with Google's version
-            console.warn(`  Failed to push local edit for ${filename}, overwriting with Google version`);
-          }
-        }
-
-        // Normal update path: diff old vs new content for update notes
-        if (localContent) {
-          const changes = describeChanges(localContent, icsContent);
-          if (changes.length > 0) {
-            const note: SyncNote = {
-              action: "updated",
-              summary: event.summary || filename,
-              detail: changes.join(", "),
-              ref: relPath,
-            };
-            if (eventStart) note.eventStart = eventStart;
-            notes.push(note);
-          }
-          // If no visible changes, skip the note (just metadata refresh)
-        } else {
-          const note: SyncNote = {
-            action: "updated",
-            summary: event.summary || filename,
-            ref: relPath,
-          };
-          if (eventStart) note.eventStart = eventStart;
-          notes.push(note);
-        }
-      } else {
-        // New event from Google
-        const dateStr = formatEventDate(event);
-        const calLabel = icsOpts.calendarName && calendarId !== "primary"
-          ? `, ${icsOpts.calendarName}` : "";
-        const note: SyncNote = {
-          action: "new",
-          summary: `${event.summary || "(no title)"}${dateStr ? ` (${dateStr}${calLabel})` : ""}`,
-          ref: relPath,
-        };
-        if (eventStart) note.eventStart = eventStart;
-        notes.push(note);
-      }
-
-      await fs.writeFile(filePath, icsContent);
-
-      if (existingEntry) {
-        updated.push(relPath);
-      } else {
-        created.push(relPath);
-      }
-
-      state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(icsContent) };
-    }
-
-    return { created, updated, deleted, notes };
-  }
-
-  /**
-   * Push locally-created .ics files (not tracked in state) to Google Calendar,
-   * then track them. Returns { pushed, deleted, notes } arrays.
-   */
-  private async pushAndCleanOrphans(
-    opts: { calendar: GoogleCalendarService; state: CalendarState; calDir: string; defaultCalendarId: string },
-  ): Promise<{ pushed: string[]; deleted: string[]; notes: SyncNote[] }> {
-    const { calendar, state, calDir, defaultCalendarId } = opts;
-    const pushed: string[] = [];
-    const deleted: string[] = [];
-    const notes: SyncNote[] = [];
-    const trackedFiles = new Set<string>();
-    for (const entry of Object.values(state.eventFiles)) {
-      trackedFiles.add(getFilename(entry));
-    }
-
-    let files: string[];
     try {
-      files = await fs.readdir(calDir);
-    } catch (err: unknown) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
-      return { pushed, deleted, notes };
-    }
-
-    for (const file of files) {
-      if (!file.endsWith(".ics")) continue;
-      if (trackedFiles.has(file)) continue;
-
-      const filePath = path.join(calDir, file);
-      const relPath = path.relative(this.boxRoot, filePath);
-
-      try {
-        const content = await fs.readFile(filePath, "utf-8");
-        const apiEvent = icsToGoogleEvent(content);
-        if (!apiEvent) {
-          // Unparseable — delete orphan
-          await fs.unlink(filePath);
-          deleted.push(relPath);
-          continue;
-        }
-
-        // Validate timezone on non-all-day events
-        const tzError = validateIcsTimezone(content);
-        if (tzError) {
-          console.warn(`  Skipping ${file}: ${tzError}`);
-          continue;
-        }
-
-        // Extract and strip annotations before pushing
-        const { reason, ref, stripped } = extractCbAnnotations(content);
-
-        // Determine target calendar from X-CB-CALENDAR-ID or use default
-        const calendarId = apiEvent._calendarId || defaultCalendarId;
-        // Remove our internal field before sending to API
-        delete apiEvent._calendarId;
-
-        const result = await this.insertEvent(calendar, { calendarId, event: apiEvent });
-        if (result) {
-          // Track the file with its new Google event ID
-          state.eventFiles[result.id] = { filename: file, calendarId };
-          pushed.push(relPath);
-
-          // Write back stripped content (without annotations)
-          if (reason || ref) {
-            await fs.writeFile(filePath, stripped);
-          }
-
-          // Build push note
-          const dateStr = formatEventDate(apiEvent);
-          const pushNote: SyncNote = {
-            action: "pushed",
-            summary: `${apiEvent.summary || file}${dateStr ? ` (${dateStr})` : ""}`,
-          };
-          if (reason) pushNote.detail = reason;
-          if (ref) pushNote.ref = ref;
-          notes.push(pushNote);
-        } else {
-          // Push failed — leave the file alone (don't delete it)
-          console.warn(`  Failed to push ${file}, keeping locally`);
-        }
-      } catch (err: unknown) {
-        console.warn(`  Error processing ${file}:`, err);
-      }
-    }
-
-    return { pushed, deleted, notes };
-  }
-
-  /**
-   * Scan tracked .ics files for X-CB-DELETE property. If found, delete the
-   * event from Google Calendar, remove the local file, and untrack it.
-   * Safety cap: at most 3 deletes per sync. Skips read-only calendars.
-   */
-  private async processLocalDeletes(
-    opts: { calendar: GoogleCalendarService; state: CalendarState; calDir: string },
-  ): Promise<{ deleted: string[]; notes: SyncNote[] }> {
-    const { calendar, state, calDir } = opts;
-    const deleted: string[] = [];
-    const notes: SyncNote[] = [];
-    const MAX_DELETES = 3;
-
-    for (const [googleEventId, entry] of Object.entries(state.eventFiles)) {
-      const filename = getFilename(entry);
-      const calendarId = typeof entry === "string" ? undefined : entry.calendarId;
-      const filePath = path.join(calDir, filename);
-
-      let content: string;
-      try {
-        content = await fs.readFile(filePath, "utf-8");
-      } catch (_e) {
-        // File missing — a tracked event with no local file is not a delete request; skip it. The error carries no actionable info beyond the file's absence.
-        continue;
-      }
-
-      // Check for X-CB-DELETE property
-      const deleteMatch = content.match(/^x-cb-delete[:;](.*)$/im);
-      if (!deleteMatch) continue;
-
-      const reason = deleteMatch[1]?.trim() || "(no reason)";
-
-      // Extract event summary for the commit message
-      const summaryMatch = content.match(/^summary[:;](.*)$/im);
-      const summary = summaryMatch?.[1]?.trim() || filename;
-
-      // Extract optional X-CB-REF
-      const refMatch = content.match(/^x-cb-ref[:;](.*)$/im);
-      const ref = refMatch?.[1]?.trim();
-
-      if (deleted.length >= MAX_DELETES) {
-        console.warn(`  Skipping delete of ${filename} — reached limit of ${MAX_DELETES} deletes per sync`);
-        continue;
-      }
-
-      if (!calendarId) {
-        console.warn(`  Skipping delete of ${filename} — no calendar ID in state`);
-        continue;
-      }
-
-      console.log(`  Deleting ${filename}: ${reason}`);
-      // Capture ICS content before deleting for calendar-review job
-      let icsContent: string | undefined;
-      try {
-        icsContent = await fs.readFile(filePath, "utf-8");
-      } catch (_e) {
-        // File already gone — icsContent stays undefined; capture is best-effort for the review job, the deleteEvent/unlink below handle the real deletion.
-      }
-      const success = await this.deleteEvent(calendar, { calendarId, googleEventId });
-      if (success) {
-        await fs.unlink(filePath);
-        delete state.eventFiles[googleEventId];
-        deleted.push(path.relative(this.boxRoot, filePath));
-        const deleteNote: SyncNote = { action: "deleted", summary, detail: reason };
-        if (icsContent) deleteNote.icsContent = icsContent;
-        if (ref) deleteNote.ref = ref;
-        notes.push(deleteNote);
-      } else {
-        console.warn(`  Failed to delete ${filename} from Google Calendar`);
-      }
-    }
-
-    return { deleted, notes };
-  }
-
-  /** Delete an event via the calendar service. Returns false on HTTP errors. */
-  private async deleteEvent(
-    calendar: GoogleCalendarService,
-    opts: { calendarId: string; googleEventId: string },
-  ): Promise<boolean> {
-    const { calendarId, googleEventId } = opts;
-    try {
-      await calendar.deleteEvent(calendarId, googleEventId);
-      return true;
+      collect(await syncCalendar({ ...base, syncToken }), { withNotes: true });
+      return { fullResync: false };
     } catch (err) {
-      if (err instanceof HTTPError) {
-        const status = err.response?.status;
-        const text = await err.response.text();
-        console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
-        return false;
+      const status = err instanceof HTTPError ? err.response?.status : undefined;
+      const message = (err as Error).message;
+      if (status !== 410 && !message.includes("410")) {
+        await this.saveState(state);
+        return { fullResync: false, error: `Calendar sync failed for ${calendarId}: ${message}` };
       }
-      throw err as Error;
+      console.log(`  Sync token expired for ${calendarId}, doing full sync...`);
+      delete state.syncTokens[calendarId];
+      await this.saveState(state);
+      // Don't add individual notes for full re-sync — the message will summarize
+      collect(await syncCalendar({ ...base, syncToken: undefined }), { withNotes: false });
+      return { fullResync: true };
     }
-  }
-
-  /** Insert an event via the calendar service. Returns null on HTTP errors. */
-  private async insertEvent(
-    calendar: GoogleCalendarService,
-    opts: { calendarId: string; event: GoogleCalendarEvent },
-  ): Promise<GoogleCalendarEvent | null> {
-    const { calendarId, event } = opts;
-    try {
-      return await calendar.insertEvent(calendarId, event);
-    } catch (err) {
-      if (err instanceof HTTPError) {
-        const status = err.response?.status;
-        const text = await err.response.text();
-        console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
-        return null;
-      }
-      throw err as Error;
-    }
-  }
-
-  /** Patch an event via the calendar service. Returns null on HTTP errors. */
-  private async patchEvent(
-    calendar: GoogleCalendarService,
-    opts: { calendarId: string; googleEventId: string; event: GoogleCalendarEvent },
-  ): Promise<GoogleCalendarEvent | null> {
-    const { calendarId, googleEventId, event } = opts;
-    try {
-      return await calendar.patchEvent(calendarId, { eventId: googleEventId, event });
-    } catch (err) {
-      if (err instanceof HTTPError) {
-        const status = err.response?.status;
-        const text = await err.response.text();
-        console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
-        return null;
-      }
-      throw err as Error;
-    }
-  }
-
-  private async fetchEvents(
-    opts: { calendar: GoogleCalendarService; calendarId: string; syncToken: string | undefined; syncDaysBack: number; syncDaysForward: number; state: CalendarState },
-  ): Promise<GoogleCalendarEvent[]> {
-    const { calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state } = opts;
-    const allEvents: GoogleCalendarEvent[] = [];
-    let pageToken: string | undefined;
-
-    // Compute time window for full sync (ignored when syncToken is set)
-    const now = new Date();
-    const timeMin = new Date(now);
-    timeMin.setDate(timeMin.getDate() - syncDaysBack);
-    const timeMax = new Date(now);
-    timeMax.setDate(timeMax.getDate() + syncDaysForward);
-
-    do {
-      const listOpts: { syncToken?: string; timeMin?: string; timeMax?: string; pageToken?: string } = {};
-      if (syncToken) {
-        listOpts.syncToken = syncToken;
-      } else {
-        listOpts.timeMin = timeMin.toISOString();
-        listOpts.timeMax = timeMax.toISOString();
-      }
-      if (pageToken) listOpts.pageToken = pageToken;
-
-      const data = await calendar.listEvents(calendarId, listOpts);
-      if (data.items) allEvents.push(...data.items);
-      pageToken = data.nextPageToken;
-      if (data.nextSyncToken) {
-        state.syncTokens[calendarId] = data.nextSyncToken;
-      }
-    } while (pageToken);
-
-    return allEvents;
   }
 
 }

@@ -23,11 +23,15 @@
  * Document flow output:
  *   <sessionAttach>/source.file.card + source.attach/source.pdf
  *   box/inbox/<name>.capture-session.card  (no image refs)
+ *
+ * Internal implementation is split across siblings: `scan-import-session.ts`
+ * (layout + input classification), `scan-import-document.ts` (the PDF/document
+ * flow), `scan-import-cards.ts` (photo/back/orphan/unsure card emission), and
+ * `scan-import-helpers.ts` (Gemini batching + reconciliation).
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { randomUUID } from "node:crypto";
 import {
   registerCommand,
   type CommandContext,
@@ -35,95 +39,30 @@ import {
 } from "../command-runner.js";
 import { createLoader } from "../../cli/lib/loader.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
-import { getBoxTimeISO } from "../../cli/lib/time.js";
-import { createImageTemplate } from "../../schemas/image.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
-import { createFileTemplate } from "../../schemas/file.js";
-import { createTextQuestionTemplate } from "../../schemas/question.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
-import {
-  PDF_EXTENSION,
-  SUPPORTED_IMAGE_EXTENSIONS,
-} from "./upload-helpers.js";
 import {
   runScanBatches,
   resolveScanPages,
   bundleResolvedPages,
-  type PhotoBundle,
 } from "./scan-import-helpers.js";
+import {
+  createSessionLayout,
+  readScanContextFile,
+  isImageFile,
+  isPdfFile,
+} from "./scan-import-session.js";
+import { runDocumentMode } from "./scan-import-document.js";
+import {
+  emitPhotoBundle,
+  emitOrphanBackQuestion,
+  emitUnsureQuestion,
+} from "./scan-import-cards.js";
 
 export interface ScanImportArgs {
   inputs: string[];
   context?: string;
 }
-
-interface SessionLayout {
-  sessionId: string;
-  /** Basename of the session card (e.g. `scan-20260310T1924-abc12345`). */
-  sessionBasename: string;
-  /** Inbox-relative dir holding the session card. */
-  inboxRelDir: string;
-  /** Absolute path to the directory that holds the session card. */
-  inboxAbsDir: string;
-  /** Filename of the session card itself. */
-  sessionCardFilename: string;
-  /** Absolute path to the session card. */
-  sessionCardAbsPath: string;
-  /** Inbox-relative path to the session card. */
-  sessionCardRelPath: string;
-  /** Inbox-relative dir of the session's attach scope. */
-  sessionAttachRelDir: string;
-  /** Absolute path to the session's attach scope. */
-  sessionAttachAbsDir: string;
-  startedAt: string;
-}
-
-const isImageFile = (p: string): boolean =>
-  SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(p).toLowerCase());
-const isPdfFile = (p: string): boolean =>
-  path.extname(p).toLowerCase() === PDF_EXTENSION;
-
-async function readScanContextFile(boxRoot: string): Promise<string | null> {
-  for (const name of ["CLAUDE_SCANS.md", "claude_scans.md"]) {
-    try {
-      const content = await fs.readFile(path.join(boxRoot, name), "utf-8");
-      if (content.trim().length > 0) return content;
-    } catch (_e) {
-      // Context file is optional — readFile rejects when this candidate
-      // name doesn't exist, which is the common case. Try the next name;
-      // returning null (no context) at the end is a valid outcome.
-    }
-  }
-  return null;
-}
-
-async function createSessionLayout(ctx: CommandContext): Promise<SessionLayout> {
-  const sessionId = randomUUID();
-  const shortId = sessionId.slice(0, 8);
-  const startedAt = getBoxTimeISO(ctx.boxRoot);
-  const stamp = startedAt.replace(/[:-]/g, "").slice(0, 13);
-  const formattedDate = `${stamp.slice(0, 8)}T${stamp.slice(9, 13)}`;
-  const sessionBasename = `scan-${formattedDate}-${shortId}`;
-  const inboxRelDir = "box/inbox";
-  const inboxAbsDir = path.join(ctx.boxRoot, inboxRelDir);
-  const sessionCardFilename = `${sessionBasename}.capture-session.card`;
-  const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.attach`;
-  const sessionAttachAbsDir = path.join(ctx.boxRoot, sessionAttachRelDir);
-  await fs.mkdir(sessionAttachAbsDir, { recursive: true });
-  return {
-    sessionId,
-    sessionBasename,
-    inboxRelDir,
-    inboxAbsDir,
-    sessionCardFilename,
-    sessionCardAbsPath: path.join(inboxAbsDir, sessionCardFilename),
-    sessionCardRelPath: `${inboxRelDir}/${sessionCardFilename}`,
-    sessionAttachRelDir,
-    sessionAttachAbsDir,
-    startedAt,
-  };
-}
-
 
 async function executeScanImport(
   ctx: CommandContext,
@@ -186,6 +125,27 @@ interface RunPhotoModeArgs {
   extraContext: string | undefined;
 }
 
+/**
+ * Build the combined boxholder context from the optional CLAUDE_SCANS.md file
+ * and any `--context` argument, logging which sources contributed.
+ */
+async function resolveBoxholderContext(
+  ctx: CommandContext,
+  extraContext: string | undefined
+): Promise<string | null> {
+  const fileContext = await readScanContextFile(ctx.boxRoot);
+  const contextParts: string[] = [];
+  if (fileContext) contextParts.push(fileContext.trim());
+  if (extraContext && extraContext.trim().length > 0) contextParts.push(extraContext.trim());
+  const boxholderContext = contextParts.length > 0 ? contextParts.join("\n\n---\n\n") : null;
+  if (boxholderContext) {
+    ctx.writeLine(
+      `Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`
+    );
+  }
+  return boxholderContext;
+}
+
 async function runPhotoMode(
   ctx: CommandContext,
   args: RunPhotoModeArgs
@@ -221,16 +181,7 @@ async function runPhotoMode(
   const apiPages = archivePages;
   const sourceLabel = `${imagePaths.length} images`;
 
-  const fileContext = await readScanContextFile(ctx.boxRoot);
-  const contextParts: string[] = [];
-  if (fileContext) contextParts.push(fileContext.trim());
-  if (extraContext && extraContext.trim().length > 0) contextParts.push(extraContext.trim());
-  const boxholderContext = contextParts.length > 0 ? contextParts.join("\n\n---\n\n") : null;
-  if (boxholderContext) {
-    ctx.writeLine(
-      `Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`
-    );
-  }
+  const boxholderContext = await resolveBoxholderContext(ctx, extraContext);
 
   ctx.writeLine(`Analyzing ${apiPages.length} pages with Gemini Flash...`);
   const batchResult = await runScanBatches({
@@ -257,101 +208,40 @@ async function runPhotoMode(
   const questionPaths: string[] = [];
 
   for (const [i, bundle] of bundles.entries()) {
-    const photoIdx = String(i + 1).padStart(3, "0");
-    const photoBasename = `photo-${photoIdx}`;
-    const photoFilename = `${photoBasename}.jpg`;
-    const cardFilename = `${photoBasename}.image.card`;
-
-    // Photo and its back live in the image card's attach scope.
-    const photoAttachAbs = path.join(sessionAttachAbsDir, `${photoBasename}.attach`);
-    await fs.mkdir(photoAttachAbs, { recursive: true });
-    await fs.rename(archivePages[bundle.photoIndex]!, path.join(photoAttachAbs, photoFilename));
-    filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.attach/${photoFilename}`);
-
-    let backFilename: string | null = null;
-    if (bundle.backIndex !== null) {
-      backFilename = `${photoBasename}-back.jpg`;
-      await fs.rename(archivePages[bundle.backIndex]!, path.join(photoAttachAbs, backFilename));
-      filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.attach/${backFilename}`);
-    }
-
-    const cardContent = createImageTemplate({
-      capturedAt: startedAt,
-      source: "gallery",
-      filename: photoFilename,
+    await emitPhotoBundle({
+      loader,
+      index: i,
+      bundle,
+      startedAt,
+      sessionAttachAbsDir,
+      sessionAttachRelDir,
+      archivePages,
+      filesToStage,
+      imageRefs,
+      questionPaths,
     });
-    const cardPath = path.join(sessionAttachAbsDir, cardFilename);
-    await fs.writeFile(cardPath, cardContent);
-    await applyBundleAnalysisToCard(loader, { cardPath, bundle });
-    filesToStage.push(`${sessionAttachRelDir}/${cardFilename}`);
-    imageRefs.push(cardFilename);
-
-    if (bundle.flagForReview) {
-      const memo = [
-        `Photo ${photoIdx} (page ${bundle.photoIndex + 1}${bundle.backIndex !== null ? `, back on page ${bundle.backIndex + 1}` : ""}) needs review:`,
-        ...bundle.flagReasons.map((r) => `- ${r}`),
-      ].join("\n");
-      const directiveParts = [`Open ${sessionAttachRelDir}/${cardFilename} and adjust description or text blocks.`];
-      if (backFilename) {
-        directiveParts.push(`Cross-check the back transcription against ${sessionAttachRelDir}/${photoBasename}.attach/${backFilename}.`);
-      }
-      const questionContent = createTextQuestionTemplate({
-        memo,
-        prompt: `Review ${photoBasename}: confirm description and back-of-photo text are accurate.`,
-        directive: directiveParts.join(" "),
-      });
-      const questionFilename = `${photoBasename}.review.question.card`;
-      const questionPath = path.join(sessionAttachAbsDir, questionFilename);
-      await fs.writeFile(questionPath, questionContent);
-      filesToStage.push(`${sessionAttachRelDir}/${questionFilename}`);
-      questionPaths.push(`${sessionAttachRelDir}/${questionFilename}`);
-    }
   }
 
   for (const [i, orphan] of orphanBacks.entries()) {
-    const idx = String(i + 1).padStart(3, "0");
-    const basename = `orphan-back-${idx}`;
-    const filename = `${basename}.jpg`;
-    // Loose image (no card) — lives directly in the session's attach scope.
-    await fs.rename(archivePages[orphan.index]!, path.join(sessionAttachAbsDir, filename));
-    filesToStage.push(`${sessionAttachRelDir}/${filename}`);
-    const ocrText = orphan.analysis.text_blocks.map((b) => b.text).join("\n").trim();
-    const memo = [
-      `Found a back-of-photo with no matching photo (page ${orphan.index + 1}).`,
-      ocrText ? `Transcribed text:\n${ocrText}` : "(no transcribed text)",
-    ].join("\n\n");
-    const questionContent = createTextQuestionTemplate({
-      memo,
-      prompt: `Which photo does ${filename} belong with, or should it be discarded?`,
-      directive: `If it belongs with a photo in this session, attach by appending text blocks to that image card. Otherwise delete ${sessionAttachRelDir}/${filename}.`,
+    await emitOrphanBackQuestion(orphan, {
+      index: i,
+      sessionAttachAbsDir,
+      sessionAttachRelDir,
+      archivePages,
+      filesToStage,
+      questionPaths,
     });
-    const questionFilename = `${basename}.question.card`;
-    const questionPath = path.join(sessionAttachAbsDir, questionFilename);
-    await fs.writeFile(questionPath, questionContent);
-    filesToStage.push(`${sessionAttachRelDir}/${questionFilename}`);
-    questionPaths.push(`${sessionAttachRelDir}/${questionFilename}`);
   }
 
   for (const [i, page] of unsurePages.entries()) {
-    const idx = String(i + 1).padStart(3, "0");
-    const basename = `unsure-${idx}`;
-    const filename = `${basename}.jpg`;
-    await fs.rename(archivePages[page.index]!, path.join(sessionAttachAbsDir, filename));
-    filesToStage.push(`${sessionAttachRelDir}/${filename}`);
-    const memo = [
-      `Could not classify page ${page.index + 1}.`,
-      page.analysis.flag_reason ?? "(no specific reason given)",
-    ].join("\n\n");
-    const questionContent = createTextQuestionTemplate({
-      memo,
-      prompt: `What is ${filename}? (photo, back-of-photo, or trash)`,
-      directive: `If a photo, create an image card. If a back, attach to the relevant photo card. Otherwise delete ${sessionAttachRelDir}/${filename}.`,
+    await emitUnsureQuestion(page, {
+      index: i,
+      sessionAttachAbsDir,
+      sessionAttachRelDir,
+      archivePages,
+      filesToStage,
+      questionPaths,
     });
-    const questionFilename = `${basename}.question.card`;
-    const questionPath = path.join(sessionAttachAbsDir, questionFilename);
-    await fs.writeFile(questionPath, questionContent);
-    filesToStage.push(`${sessionAttachRelDir}/${questionFilename}`);
-    questionPaths.push(`${sessionAttachRelDir}/${questionFilename}`);
   }
 
   await fs.rm(archiveDir, { recursive: true, force: true });
@@ -402,150 +292,6 @@ async function runPhotoMode(
       intakeJobPath,
     },
   };
-}
-
-async function runDocumentMode(
-  ctx: CommandContext,
-  args: { pdfPath: string }
-): Promise<CommandResult> {
-  const layout = await createSessionLayout(ctx);
-  const {
-    sessionAttachAbsDir,
-    sessionAttachRelDir,
-    sessionCardAbsPath,
-    sessionCardRelPath,
-    sessionId,
-    startedAt,
-  } = layout;
-  ctx.writeLine(`Document intake → ${sessionCardRelPath}`);
-  ctx.writeLine(`Source: ${args.pdfPath}`);
-
-  // The PDF lives in the file-card's own attach scope.
-  const fileCardBasename = "source";
-  const fileCardFilename = `${fileCardBasename}.file.card`;
-  const fileAttachAbsDir = path.join(sessionAttachAbsDir, `${fileCardBasename}.attach`);
-  await fs.mkdir(fileAttachAbsDir, { recursive: true });
-  const pdfDestPath = path.join(fileAttachAbsDir, "source.pdf");
-  await fs.copyFile(args.pdfPath, pdfDestPath);
-  const stat = await fs.stat(pdfDestPath);
-  const fileCard = createFileTemplate({
-    capturedAt: startedAt,
-    source: "scan-import",
-    filename: "source.pdf",
-    originalName: path.basename(args.pdfPath),
-    mimeType: "application/pdf",
-    size: stat.size,
-  });
-  await fs.writeFile(path.join(sessionAttachAbsDir, fileCardFilename), fileCard);
-
-  const sessionCardContent = createCaptureSessionTemplate({
-    sessionId,
-    startedAt,
-    endedAt: startedAt,
-    imageRefs: [],
-    audioRefs: [],
-    fileRefs: [fileCardFilename],
-  });
-  await fs.writeFile(sessionCardAbsPath, sessionCardContent);
-
-  const filesToStage = [
-    `${sessionAttachRelDir}/${fileCardBasename}.attach/source.pdf`,
-    `${sessionAttachRelDir}/${fileCardFilename}`,
-    sessionCardRelPath,
-  ];
-  await stageFiles(ctx.boxRoot, filesToStage);
-  await commit(ctx.boxRoot, {
-    message: `Document import: ${path.basename(args.pdfPath)}`,
-    trailers: { "Created-By": "scan-import" },
-  });
-
-  const intakeJobPath = await createOrAppendIntakeJob({
-    boxRoot: ctx.boxRoot,
-    source: "scan",
-    items: [sessionCardRelPath],
-    description: `Document PDF: ${path.basename(args.pdfPath)}`,
-  });
-  ctx.writeLine(`\nIntake job: ${intakeJobPath}`);
-  ctx.writeLine(`Session: ${sessionCardRelPath}`);
-
-  return {
-    success: true,
-    data: {
-      mode: "document",
-      sessionRelDir: sessionAttachRelDir,
-      sessionCardPath: sessionCardRelPath,
-      intakeJobPath,
-    },
-  };
-}
-
-async function applyBundleAnalysisToCard(
-  loader: Awaited<ReturnType<typeof createLoader>>,
-  { cardPath, bundle }: { cardPath: string; bundle: PhotoBundle }
-): Promise<void> {
-  const card = await loader.load(cardPath);
-  const el = card.element;
-
-  el.attrs["status"] = "analyzed";
-  const photo = bundle.photo;
-  const back = bundle.back;
-
-  const photoTextBlocks = photo.text_blocks.map((b) => ({
-    source: b.source || "photo",
-    text: b.text,
-  }));
-  const backTextBlocks = back
-    ? back.text_blocks.map((b) => ({ source: b.source || "back", text: b.text }))
-    : [];
-  const allTextBlocks = [...photoTextBlocks, ...backTextBlocks];
-  const hasText = allTextBlocks.length > 0;
-
-  el.attrs["has-text"] = hasText ? "true" : "false";
-  if (photo.rotation !== 0) {
-    el.attrs["rotation"] = String(photo.rotation);
-  }
-
-  const descChild = el.children.find((c) => c.tagName === "description");
-  if (descChild) descChild.text = photo.description;
-
-  el.children = el.children.filter(
-    (c) =>
-      c.tagName !== "text" &&
-      c.tagName !== "exif" &&
-      c.tagName !== "subject-bbox" &&
-      c.tagName !== "document"
-  );
-
-  for (const block of allTextBlocks) {
-    el.children.push({
-      tagName: "text",
-      attrs: { source: block.source },
-      text: block.text,
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
-  }
-
-  if (photo.subject_bbox && photo.subject_bbox.length === 4) {
-    el.children.push({
-      tagName: "subject-bbox",
-      attrs: {
-        y1: String(photo.subject_bbox[0]),
-        x1: String(photo.subject_bbox[1]),
-        y2: String(photo.subject_bbox[2]),
-        x2: String(photo.subject_bbox[3]),
-      },
-      text: "",
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
-  }
-
-  await loader.save(card);
 }
 
 registerCommand({

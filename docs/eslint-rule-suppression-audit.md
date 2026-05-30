@@ -1,6 +1,7 @@
 # ESLint rule-suppression audit
 
-**Status:** in progress — ratchet landed; bare-catch rule burned down (backend)
+**Status:** backend COMPLETE — every silenced rule re-enabled, all debt paid down
+(0 suppressions). Frontend + cardworks still pending (see end).
 **Found:** 2026-05-30, during the `fix-cb-mv` worktree (a tangent off the `cb mv` work)
 **Scope:** `callback-box` (backend + frontend) and `cardworks`
 
@@ -39,6 +40,31 @@
   centralized in one typed helper (documented in CODE-STYLE.md / CONVENTIONS.md).
   Those 27 `as` + 1 default-switch remain as debt; the `as` cluster will dissolve
   when `guide.tsx` is split into typed parse helpers during the structural pass.
+- **2026-05-30 — `.tsx` size/complexity limits equalized with `.ts`.** The base
+  React profile gave backend `.tsx` much tighter budgets (max-lines 100,
+  max-lines-per-function 70, complexity off) — backwards for verbose JSX. Set
+  them to match `.ts` (300/150/25) in personal-vibe-check (0.4.0). Small schema
+  `.tsx` files cleared for free; the large ones split against a sane 300 budget.
+- **2026-05-30 — structural rules burned down (backend): `max-lines`,
+  `max-lines-per-function`, `complexity`.** ~49 files refactored across three
+  workflow waves. Pattern: extract cohesive *internal* logic into sibling
+  modules while keeping each file's public exports/signatures identical (so no
+  importers change), and decompose over-long/over-complex functions into helpers.
+  ~110 new sibling modules; pure behavior-preserving refactors. Notable:
+  `google-calendar.ts` (1366→6 modules), `generate-docs.ts` (1351→7),
+  `chat-session.ts` (1213→several), `guide.tsx` (747→48-line barrel + 4 typed
+  siblings, with all 26 parse-boundary `as` casts centralized into 2 commented
+  helpers per the `as` policy). New cross-module cycles are all type-only
+  (acceptable; madge flags them but doesn't distinguish type imports).
+- **2026-05-30 — BACKEND COMPLETE.** `eslint-suppressions.json` is empty;
+  `pnpm lint` + `pnpm typecheck` green; 1570 tests pass. The 1009-violation
+  backlog is fully paid down and every rule is enforced.
+
+  **Still pending:** the frontend (`src/frontend/eslint.config.mjs` still has an
+  off-block: `default/no-default-params`, `max-lines`, `max-lines-per-function`,
+  `error/*`, the comment-justified `react-hooks/set-state-in-effect`) and
+  `cardworks` (never audited with its real config). Same ratchet approach
+  applies there.
 - **2026-05-30 — bare-catch rule enabled for the frontend.** In the frontend
   (`react: true`), `no-restricted-syntax` carries *only* the bare-catch selector
   (no `??`/`as`/switch), so enabling it surfaced exactly 14 bare catches across

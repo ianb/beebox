@@ -155,6 +155,7 @@ export interface ImageAttrs {
 export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
   const fallback = titleFromFilename(raw.path);
   // For Phase 2 image cards the raw input is the parsed YAML fields object.
+  // eslint-disable-next-line no-restricted-syntax -- raw is the loosely-typed loader input; reading the optional Phase-2 `fields` object off it requires one boundary cast.
   const fields = (raw as { fields?: Partial<ImageFields> }).fields;
   if (fields === undefined) {
     return { path: raw.path, tagName: "image", title: fallback, attrs: { status: "new" } };

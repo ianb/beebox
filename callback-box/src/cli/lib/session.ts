@@ -10,40 +10,28 @@ import * as readline from "node:readline";
 import * as path from "node:path";
 import * as os from "node:os";
 
-/**
- * Content block from a session log entry.
- */
-export interface SessionContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
-  text?: string;
-  toolName?: string;
-  toolId?: string;
-  inputSummary?: string;
-  /** Raw input from the tool_use block, for richer formatting in CLI */
-  input?: Record<string, unknown>;
-  toolUseId?: string;
-  resultSummary?: string;
-  /** For image blocks: MIME type like "image/png" */
-  mediaType?: string;
-  /** For image blocks with base64 source: raw base64 (no data: prefix) */
-  dataBase64?: string;
-  /** For image blocks with URL source */
-  imageUrl?: string;
-}
+import { type SessionEntry, buildEntry } from "./session-entry.js";
+import {
+  extractSnippet,
+  isCompactionSummary,
+  isPlumbingMessage,
+  parseSelfNote,
+} from "./session-text.js";
 
-/**
- * Parsed session log entry.
- */
-export interface SessionEntry {
-  uuid: string;
-  type: "user" | "assistant" | "compaction" | "interrupted";
-  timestamp: string;
-  content: SessionContentBlock[];
-  /** Display name of the sender (for user messages in multi-user chat) */
-  user?: string;
-  /** Email of the sender (for identity matching across devices) */
-  userEmail?: string;
-}
+// Re-exported so existing callers of `cli/lib/session` keep their imports.
+export {
+  type SessionContentBlock,
+  summarizeToolInput,
+  summarizeToolResult,
+  transformContent,
+} from "./session-content.js";
+export {
+  type SelfNoteInfo,
+  parseSelfNote,
+  parseSelfNotes,
+  stripSpeechWrappers,
+} from "./session-text.js";
+export { type SessionEntry } from "./session-entry.js";
 
 /**
  * Encode a cwd into Claude Code's `~/.claude/projects/<dir>` key. The
@@ -116,236 +104,26 @@ export async function listSessions(
   return sessions;
 }
 
-/** User messages that are internal Claude Code plumbing, not real user input */
-const plumbingPatterns = [
-  /^Tool loaded\.$/,
-  /^Todos have been modified/,
-];
-
-function isPlumbingMessage(text: string): boolean {
-  const trimmed = text.trim();
-  return plumbingPatterns.some((p) => p.test(trimmed));
-}
-
-/** Detect compaction summary messages injected by Claude Code after context compaction */
-const COMPACTION_PREFIX = "This session is being continued from a previous conversation that ran out of context.";
-
-function isCompactionSummary(text: string): boolean {
-  return text.trimStart().startsWith(COMPACTION_PREFIX);
-}
-
 /**
- * Summarize tool input for compact display.
+ * Parse one JSONL line, returning null for blank lines and unparseable lines
+ * (a partial/concurrent write shouldn't abort the whole scan). `where`
+ * identifies the caller in the debug log when a line is dropped.
  */
-export function summarizeToolInput(
-  toolName: string,
-  input: Record<string, unknown>
-): string {
-  if (!input) return "";
-
-  switch (toolName) {
-    case "Read":
-      return String(input.file_path || "");
-    case "Edit":
-      return String(input.file_path || "");
-    case "Write":
-      return `${input.file_path} (${String(input.content || "").length} chars)`;
-    case "Bash":
-      return String(input.description || input.command || "").substring(0, 120);
-    case "Glob":
-      return String(input.pattern || "");
-    case "Grep":
-      return `${input.pattern} in ${input.path || "."}`;
-    case "TodoWrite":
-      return "update todos";
-    case "Task":
-      return String(input.description || input.prompt || "").substring(0, 120);
-    default:
-      return JSON.stringify(input).substring(0, 150);
+function parseJsonlLine(line: string, where: string): Record<string, unknown> | null {
+  if (!line.trim()) return null;
+  try {
+    return JSON.parse(line) as Record<string, unknown>;
+  } catch (e) {
+    console.debug(`${where}: skipping unparseable JSONL line:`, e);
+    return null;
   }
 }
 
-/**
- * Summarize tool result content for compact display.
- */
-export function summarizeToolResult(content: unknown): string {
-  if (typeof content === "string") {
-    return content.substring(0, 500);
-  }
-  if (Array.isArray(content)) {
-    return content
-      .map((c: unknown) =>
-        typeof c === "string" ? c : (c as { text?: string })?.text || ""
-      )
-      .join("\n")
-      .substring(0, 500);
-  }
-  return "";
-}
-
-/**
- * Transform raw message content into SessionContentBlocks.
- */
-export function transformContent(content: unknown): SessionContentBlock[] {
-  if (typeof content === "string") {
-    return [{ type: "text", text: content }];
-  }
-
-  if (!Array.isArray(content)) return [];
-
-  const blocks: SessionContentBlock[] = [];
-  for (const block of content as Array<Record<string, unknown>>) {
-    if (block.type === "text") {
-      blocks.push({ type: "text", text: String(block.text || "") });
-      continue;
-    }
-
-    if (block.type === "tool_use") {
-      const input = (block.input || {}) as Record<string, unknown>;
-      blocks.push({
-        type: "tool_use",
-        toolName: String(block.name || ""),
-        toolId: String(block.id || ""),
-        input,
-        inputSummary: summarizeToolInput(String(block.name || ""), input),
-      });
-      continue;
-    }
-
-    if (block.type === "tool_result") {
-      blocks.push({
-        type: "tool_result",
-        toolUseId: String(block.tool_use_id || ""),
-        resultSummary: summarizeToolResult(block.content),
-      });
-      continue;
-    }
-
-    if (block.type === "thinking") {
-      blocks.push({ type: "thinking", text: String(block.thinking || "") });
-      continue;
-    }
-    if (block.type === "redacted_thinking") {
-      blocks.push({ type: "thinking", text: "[redacted]" });
-      continue;
-    }
-
-    if (block.type === "image") {
-      // Preserve image blocks so user-pasted images render in history.
-      // PDF-reading plumbing (user-role turns containing only images) is
-      // filtered at the message level below — turns with no text content
-      // get dropped entirely, so synthetic image-only plumbing stays hidden.
-      const source = block.source as
-        | { type?: string; media_type?: string; data?: string; url?: string }
-        | undefined;
-      const imgBlock: SessionContentBlock = { type: "image" };
-      if (source?.media_type) imgBlock.mediaType = String(source.media_type);
-      if (source?.type === "base64" && source.data) {
-        imgBlock.dataBase64 = String(source.data);
-      }
-      if (source?.type === "url" && source.url) {
-        imgBlock.imageUrl = String(source.url);
-      }
-      blocks.push(imgBlock);
-      continue;
-    }
-
-    // Unknown block types: fall through with a placeholder so we don't
-    // silently swallow something new. This is visible in the UI, which is
-    // the point — we want to notice new block types.
-    blocks.push({ type: "text", text: `[${String(block.type)}]` });
-  }
-  return blocks;
-}
-
-/**
- * Parsed self-note metadata. Self-notes are agent-authored user-position
- * messages wrapped in `<self-note ref="..." commit="...">body</self-note>`.
- * See `cb chat self-note` and the webapp `/api/chat/self-note` endpoint.
- */
-export interface SelfNoteInfo {
-  ref: string | null;
-  commit: string | null;
-  body: string;
-}
-
-function decodeXmlAttr(v: string): string {
-  return v
-    .replace(/&quot;/g, "\"")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
-}
-
-/**
- * If `text` is composed entirely of one or more `<self-note>` blocks
- * (separated by whitespace, with no non-whitespace between them), return
- * the parsed notes. Otherwise null — a mixed message (self-notes plus
- * other text) falls through to normal user rendering so the other text
- * isn't silently hidden.
- *
- * Multiple notes per entry happen naturally: `ChatSession.drainQueue()`
- * concatenates queued messages with `\n\n`, so a burst of
- * `cb chat self-note` calls during one turn arrives as a single user
- * entry containing several `<self-note>` blocks back-to-back.
- */
-export function parseSelfNotes(text: string): SelfNoteInfo[] | null {
-  const re = /<self-note\b([^>]*)>([\S\s]*?)<\/self-note>/g;
-  const notes: SelfNoteInfo[] = [];
-  let lastEnd = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const between = text.slice(lastEnd, m.index);
-    if (between.trim().length > 0) return null;
-    const attrs = m[1] || "";
-    const body = (m[2] || "").trim();
-    const refMatch = attrs.match(/\bref="([^"]*)"/);
-    const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
-    notes.push({
-      ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
-      commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
-      body,
-    });
-    lastEnd = m.index + m[0].length;
-  }
-  if (notes.length === 0) return null;
-  if (text.slice(lastEnd).trim().length > 0) return null;
-  return notes;
-}
-
-/**
- * Legacy single-note accessor kept for call sites that expect one note.
- * Returns the first self-note in a pure-self-note text block, or null.
- * New code should prefer `parseSelfNotes`.
- */
-export function parseSelfNote(text: string): SelfNoteInfo | null {
-  const notes = parseSelfNotes(text);
-  return notes && notes.length > 0 ? notes[0]! : null;
-}
-
-/**
- * Strip voice-direction metadata and speech/typed tag shells from user text.
- * Used both for snippets in --list and for --dialogue-only rendering.
- */
-export function stripSpeechWrappers(text: string): string {
-  let out = text;
-  // Drop <instructions>...</instructions> voice-direction blocks
-  out = out.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/g, "");
-  // Drop self-closing voice-keyword marker tags
-  out = out.replace(/<(?:send-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
-  // Drop the <chat-app .../> snapshot tag prepended to every user message
-  out = out.replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)/gi, "");
-  // Unwrap outer <speech>/<typed> shells, keeping their text content
-  out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
-  return out;
-}
-
-function extractSnippet(text: string, maxLen?: number): string | null {
-  maxLen = maxLen ?? 60;
-  const cleaned = stripSpeechWrappers(text).replace(/\s+/g, " ").trim();
-  if (!cleaned) return null;
-  if (cleaned.length <= maxLen) return cleaned;
-  return cleaned.substring(0, maxLen - 1).trimEnd() + "\u2026";
+/** Normalize a raw `message.content` field into an array of block records. */
+function contentBlocks(content: unknown): Array<Record<string, unknown>> {
+  if (typeof content === "string") return [{ type: "text", text: content }];
+  if (Array.isArray(content)) return content as Array<Record<string, unknown>>;
+  return [];
 }
 
 /**
@@ -360,6 +138,60 @@ export interface SessionMetadata {
   assistantTurns: number;
   toolCount: number;
   firstUserSnippet: string | null;
+}
+
+/** Accumulator threaded through the per-line scan in getSessionMetadata. */
+interface MetadataAccumulator {
+  userTurns: number;
+  assistantTurns: number;
+  toolCount: number;
+  firstUserSnippet: string | null;
+}
+
+/**
+ * Fold a user entry's blocks into the metadata accumulator. Returns true when
+ * the entry counted as a real user turn (so the caller advances timestamps).
+ */
+function foldUserMetadata(
+  blocks: Array<Record<string, unknown>>,
+  args: { acc: MetadataAccumulator; snippetMaxLen: number | undefined }
+): boolean {
+  const { acc, snippetMaxLen } = args;
+  const textBlocks = blocks.filter(
+    (b) => b.type === "text" && b.text && String(b.text).trim()
+  );
+  if (textBlocks.length === 0) return false;
+  const text = textBlocks.map((b) => String(b.text || "")).join("\n").trim();
+  if (isPlumbingMessage(text) || isCompactionSummary(text)) return false;
+  if (parseSelfNote(text)) return false;
+  acc.userTurns += 1;
+  if (acc.firstUserSnippet === null) {
+    acc.firstUserSnippet = extractSnippet(text, snippetMaxLen);
+  }
+  return true;
+}
+
+/**
+ * Fold an assistant entry's blocks into the metadata accumulator. Returns true
+ * when the entry had visible content (so the caller advances timestamps).
+ */
+function foldAssistantMetadata(
+  blocks: Array<Record<string, unknown>>,
+  acc: MetadataAccumulator
+): boolean {
+  let hasVisible = false;
+  for (const block of blocks) {
+    if (block.type === "text" && block.text && String(block.text).trim()) {
+      hasVisible = true;
+    }
+    if (block.type === "tool_use") {
+      acc.toolCount += 1;
+      hasVisible = true;
+    }
+  }
+  if (!hasVisible) return false;
+  acc.assistantTurns += 1;
+  return true;
 }
 
 /**
@@ -379,23 +211,16 @@ export async function getSessionMetadata(args: {
 
   let startTime: Date | null = null;
   let endTime: Date | null = null;
-  let userTurns = 0;
-  let assistantTurns = 0;
-  let toolCount = 0;
-  let firstUserSnippet: string | null = null;
+  const acc: MetadataAccumulator = {
+    userTurns: 0,
+    assistantTurns: 0,
+    toolCount: 0,
+    firstUserSnippet: null,
+  };
 
   for await (const line of rl) {
-    if (!line.trim()) continue;
-
-    let raw: Record<string, unknown>;
-    try {
-      raw = JSON.parse(line);
-    } catch (e) {
-      // A malformed JSONL line (partial/concurrent write) shouldn't abort the
-      // whole scan — skip it, but surface that we dropped a line.
-      console.debug("getSessionMetadata: skipping unparseable JSONL line:", e);
-      continue;
-    }
+    const raw = parseJsonlLine(line, "getSessionMetadata");
+    if (!raw) continue;
     if (raw.type !== "user" && raw.type !== "assistant") continue;
 
     const message = raw.message as Record<string, unknown> | undefined;
@@ -405,38 +230,12 @@ export async function getSessionMetadata(args: {
     if (raw.isMeta === true) continue;
     if (raw.type === "assistant" && message.model === "<synthetic>") continue;
 
-    const content = message.content;
-    const blocks: Array<Record<string, unknown>> =
-      typeof content === "string"
-        ? [{ type: "text", text: content }]
-        : Array.isArray(content)
-          ? (content as Array<Record<string, unknown>>)
-          : [];
-
-    if (raw.type === "user") {
-      const textBlocks = blocks.filter(
-        (b) => b.type === "text" && b.text && String(b.text).trim()
-      );
-      if (textBlocks.length === 0) continue;
-      const text = textBlocks.map((b) => String(b.text || "")).join("\n").trim();
-      if (isPlumbingMessage(text) || isCompactionSummary(text)) continue;
-      if (parseSelfNote(text)) continue;
-      userTurns += 1;
-      if (firstUserSnippet === null) firstUserSnippet = extractSnippet(text, args.snippetMaxLen);
-    } else {
-      let hasVisible = false;
-      for (const block of blocks) {
-        if (block.type === "text" && block.text && String(block.text).trim()) {
-          hasVisible = true;
-        }
-        if (block.type === "tool_use") {
-          toolCount += 1;
-          hasVisible = true;
-        }
-      }
-      if (!hasVisible) continue;
-      assistantTurns += 1;
-    }
+    const blocks = contentBlocks(message.content);
+    const counted =
+      raw.type === "user"
+        ? foldUserMetadata(blocks, { acc, snippetMaxLen: args.snippetMaxLen })
+        : foldAssistantMetadata(blocks, acc);
+    if (!counted) continue;
 
     const ts = raw.timestamp ? new Date(String(raw.timestamp)) : null;
     if (ts && !isNaN(ts.getTime())) {
@@ -450,10 +249,10 @@ export async function getSessionMetadata(args: {
     path: args.logPath,
     startTime,
     endTime,
-    userTurns,
-    assistantTurns,
-    toolCount,
-    firstUserSnippet,
+    userTurns: acc.userTurns,
+    assistantTurns: acc.assistantTurns,
+    toolCount: acc.toolCount,
+    firstUserSnippet: acc.firstUserSnippet,
   };
 }
 
@@ -521,123 +320,10 @@ export async function parseSessionLog(
   const filtered: SessionEntry[] = [];
 
   for await (const line of rl) {
-    if (!line.trim()) continue;
-
-    let raw: Record<string, unknown>;
-    try {
-      raw = JSON.parse(line);
-    } catch (e) {
-      // A malformed JSONL line (partial/concurrent write) shouldn't abort the
-      // whole parse — skip it, but surface that we dropped a line.
-      console.debug("parseSessionLog: skipping unparseable JSONL line:", e);
-      continue;
-    }
-
-    // Skip compact_boundary system messages — the compaction summary user
-    // message that follows is the one we display
-    if (raw.type === "system" && raw.subtype === "compact_boundary") continue;
-
-    // Only keep user and assistant entries
-    if (raw.type !== "user" && raw.type !== "assistant") continue;
-
-    const message = raw.message as Record<string, unknown> | undefined;
-    if (!message) continue;
-
-    const content = transformContent(message.content);
-
-    // Skip SDK meta prompts (e.g. "Continue from where you left off.") — internal wakeup plumbing
-    if (raw.isMeta === true) continue;
-
-    // Skip synthetic assistant responses (model === "<synthetic>") — generated locally, not by the LLM
-    if (raw.type === "assistant" && message.model === "<synthetic>") continue;
-
-    // Harvest tool_result blocks from user entries and graft each result's
-    // summary onto its matching tool_use block in the prior assistant entry.
-    // The chat UI treats tool calls as a single unit (call + response), so
-    // results need to ride alongside their tool_use rather than appearing as
-    // standalone messages.
-    if (raw.type === "user") {
-      const resultsById = new Map<string, string>();
-      for (const block of content) {
-        if (block.type === "tool_result" && block.toolUseId) {
-          resultsById.set(block.toolUseId, block.resultSummary || "");
-        }
-      }
-      if (resultsById.size > 0) {
-        for (let i = filtered.length - 1; i >= 0; i--) {
-          const prev = filtered[i];
-          if (!prev || prev.type !== "assistant") break;
-          for (const b of prev.content) {
-            if (b.type === "tool_use" && b.toolId) {
-              const r = resultsById.get(b.toolId);
-              if (r !== undefined) b.resultSummary = r;
-            }
-          }
-        }
-      }
-    }
-
-    // Skip user entries that are API plumbing (tool_result blocks, "Tool loaded." etc.)
-    if (raw.type === "user") {
-      const textBlocks = content.filter(
-        (block) => block.type === "text" && block.text?.trim()
-      );
-      if (textBlocks.length === 0) continue;
-      const allPlumbing = textBlocks.every(
-        (block) => isPlumbingMessage(block.text || "")
-      );
-      if (allPlumbing) continue;
-
-      // Detect compaction summary messages (injected after context compaction)
-      const firstText = textBlocks[0]?.text || "";
-      if (isCompactionSummary(firstText)) {
-        filtered.push({
-          uuid: String(raw.uuid || ""),
-          type: "compaction",
-          timestamp: String(raw.timestamp || ""),
-          content,
-        });
-        continue;
-      }
-
-      // Detect interrupted-turn markers
-      if (firstText.trim() === "[Request interrupted by user]") {
-        filtered.push({
-          uuid: String(raw.uuid || ""),
-          type: "interrupted",
-          timestamp: String(raw.timestamp || ""),
-          content: [],
-        });
-        continue;
-      }
-    }
-
-    // Skip assistant entries with no visible content
-    if (raw.type === "assistant" && content.length === 0) continue;
-
-    // Extract user="..." and user-email="..." from <typed> or <speech> tags in user messages
-    let user: string | undefined;
-    let userEmail: string | undefined;
-    if (raw.type === "user") {
-      const firstText = content.find((b) => b.type === "text")?.text || "";
-      const userMatch = firstText.match(/<(?:typed|speech)\b[^>]*\buser="([^"]*)"/);
-      if (userMatch && userMatch[1]) {
-        user = userMatch[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
-      }
-      const emailMatch = firstText.match(/<(?:typed|speech)\b[^>]*\buser-email="([^"]*)"/);
-      if (emailMatch && emailMatch[1]) {
-        userEmail = emailMatch[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
-      }
-    }
-
-    filtered.push({
-      uuid: String(raw.uuid || ""),
-      type: raw.type as "user" | "assistant",
-      timestamp: String(raw.timestamp || ""),
-      content,
-      ...(user ? { user } : {}),
-      ...(userEmail ? { userEmail } : {}),
-    });
+    const raw = parseJsonlLine(line, "parseSessionLog");
+    if (!raw) continue;
+    const entry = buildEntry(raw, filtered);
+    if (entry) filtered.push(entry);
   }
 
   const total = filtered.length;

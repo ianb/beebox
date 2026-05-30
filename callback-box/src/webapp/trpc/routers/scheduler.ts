@@ -3,7 +3,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
-import { performance } from "node:perf_hooks";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { boxLogFile } from "../../../core/scheduler.js";
@@ -11,23 +10,15 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { splitCardContent } from "cardworks";
 import {
   parseScheduledScript,
-  isWithinBudget,
   type ScheduledScriptFields,
 } from "../../../schemas/scheduled-script.js";
 import { parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
-import { checkMissingConnectors } from "../../../connectors/requirements.js";
-import {
-  loadScriptState,
-  saveScriptState,
-  recordRun,
-  acquireScriptLock,
-  releaseScriptLock,
-  loadRunningScripts,
-} from "../../../core/schedule-state.js";
-import { execWithTimeout, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
-import { buildScriptEnv } from "../../../core/script-env.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
+import { listSchedules, type ScheduleEntry } from "./scheduler-schedules.js";
+import { checkTriggerPreconditions, runScheduledScript } from "./scheduler-run.js";
+
+export type { ScheduleEntry };
 
 /** Clean log entry type without index signature for tRPC serialization */
 export interface SchedulerLogEntry {
@@ -47,25 +38,6 @@ export interface SchedulerLogEntry {
     }>;
   } | undefined;
   error?: string | undefined;
-}
-
-export interface ScheduleEntry {
-  name: string;
-  description: string | undefined;
-  schedule: string;
-  scheduleType: "cron" | "at" | "rrule" | "wakeup-only";
-  enabled: boolean;
-  onWakeup: boolean;
-  notBefore: string | undefined;
-  runs: string;
-  lastRun: string | null;
-  lastResult: "success" | "failure" | null;
-  lastError: string | null;
-  runCount: number;
-  once: boolean;
-  budget?: { limitMs: number; windowMs: number; usedMs: number } | undefined;
-  running?: { startedAt: string; triggeredBy: string } | undefined;
-  missingRequirements?: string[] | undefined;
 }
 
 export const schedulerRouter = router({
@@ -118,104 +90,7 @@ export const schedulerRouter = router({
     }),
 
   schedules: publicProcedure.query(async ({ ctx }) => {
-    const schedulesDir = path.join(ctx.boxRoot, "config/schedules");
-
-    let files: string[];
-    try {
-      files = (await fs.readdir(schedulesDir)).filter((f) =>
-        f.endsWith(".scheduled-script.card")
-      );
-    } catch (_e) {
-      // No schedules directory means there are no schedules to list.
-      return { schedules: [] as ScheduleEntry[] };
-    }
-
-    const schedules: ScheduleEntry[] = [];
-    const now = new Date();
-    const running = await loadRunningScripts(ctx.boxRoot);
-
-    for (const file of files) {
-      const scriptName = file.replace(".scheduled-script.card", "");
-      const cardPath = path.join(schedulesDir, file);
-
-      let parsed;
-      try {
-        const content = await fs.readFile(cardPath, "utf-8");
-        const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
-        parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
-      } catch (e) {
-        console.warn(`Failed to parse schedule "${scriptName}", listing as parse error:`, e);
-        schedules.push({
-          name: scriptName,
-          description: undefined,
-          schedule: "parse error",
-          scheduleType: "wakeup-only",
-          enabled: false,
-          onWakeup: false,
-          notBefore: undefined,
-          runs: "",
-          lastRun: null,
-          lastResult: null,
-          lastError: null,
-          runCount: 0,
-          once: false,
-          budget: undefined,
-          running: undefined,
-        });
-        continue;
-      }
-
-      const state = await loadScriptState(ctx.boxRoot, scriptName);
-
-      let schedule: string;
-      let scheduleType: "cron" | "at" | "rrule" | "wakeup-only";
-      if (parsed.cron) {
-        schedule = `cron ${parsed.cron}`;
-        scheduleType = "cron";
-      } else if (parsed.at) {
-        schedule = `at ${parsed.at}`;
-        scheduleType = "at";
-      } else if (parsed.rrule) {
-        schedule = `rrule ${parsed.rrule.substring(0, 60)}`;
-        scheduleType = "rrule";
-      } else {
-        schedule = "on-wakeup only";
-        scheduleType = "wakeup-only";
-      }
-
-      let budgetInfo: { limitMs: number; windowMs: number; usedMs: number } | undefined;
-      if (parsed.budget) {
-        const check = isWithinBudget(parsed.budget, { recentRuns: state.recentRuns, now });
-        budgetInfo = { limitMs: parsed.budget.limitMs, windowMs: parsed.budget.windowMs, usedMs: check.usedMs };
-      }
-
-      const lock = running.get(scriptName);
-
-      const missingReqs = parsed.requires
-        ? await checkMissingConnectors(ctx.boxRoot, parsed.requires)
-        : undefined;
-
-      schedules.push({
-        name: scriptName,
-        description: parsed.description,
-        schedule,
-        scheduleType,
-        enabled: parsed.enabled,
-        onWakeup: parsed.onWakeup,
-        notBefore: parsed.notBefore,
-        runs: parsed.runs,
-        lastRun: state.lastRun,
-        lastResult: state.lastResult as "success" | "failure" | null,
-        lastError: state.lastError,
-        runCount: state.runCount,
-        once: parsed.once,
-        budget: budgetInfo,
-        running: lock ? { startedAt: lock.startedAt, triggeredBy: lock.triggeredBy } : undefined,
-        missingRequirements: missingReqs && missingReqs.length > 0 ? missingReqs : undefined,
-      });
-    }
-
-    return { schedules };
+    return { schedules: await listSchedules(ctx.boxRoot) };
   }),
 
   setEnabled: publicProcedure
@@ -277,109 +152,8 @@ export const schedulerRouter = router({
       const card = parseCardText(content, { source: fileName, schemas: createCardSchemaMap() });
       const parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
 
-      if (!parsed.enabled) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `Schedule "${input.name}" is disabled` });
-      }
+      await checkTriggerPreconditions({ boxRoot: ctx.boxRoot, name: input.name, parsed });
 
-      // Check requirements
-      if (parsed.requires) {
-        const missing = await checkMissingConnectors(ctx.boxRoot, parsed.requires);
-        if (missing.length > 0) {
-          throw new TRPCError({
-            code: "PRECONDITION_FAILED",
-            message: `Missing connectors: ${missing.join(", ")}`,
-          });
-        }
-      }
-
-      // Check lock conflicts
-      const running = await loadRunningScripts(ctx.boxRoot);
-      if (running.has(input.name)) {
-        throw new TRPCError({ code: "CONFLICT", message: `"${input.name}" is already running` });
-      }
-      if (parsed.lockGroup) {
-        const conflict = [...running.entries()].find(
-          ([name, lock]) => lock.lockGroup === parsed.lockGroup && name !== input.name
-        );
-        if (conflict) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: `Lock group "${parsed.lockGroup}" held by ${conflict[0]}`,
-          });
-        }
-      }
-
-      // Run the script
-      const SCRIPT_TIMEOUT = 10 * 60 * 1000;
-      const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
-      const SLEEP_THRESHOLD_MS = 5_000;
-      const now = new Date();
-      const state = await loadScriptState(ctx.boxRoot, input.name);
-
-      await acquireScriptLock({
-        boxRoot: ctx.boxRoot,
-        scriptName: input.name,
-        triggeredBy: "webapp-trigger",
-        ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}),
-      });
-
-      const wallStart = Date.now();
-      const monoStart = performance.now();
-      try {
-        const scriptEnv = await buildScriptEnv(ctx.boxRoot, {
-          CB_TRIGGERED_BY: "webapp-trigger",
-        });
-        await execWithTimeout(parsed.runs, {
-          cwd: ctx.boxRoot,
-          stdio: "ignore",
-          timeout: SCRIPT_TIMEOUT,
-          env: scriptEnv,
-        });
-
-        const wallElapsed = Date.now() - wallStart;
-        const monoElapsed = performance.now() - monoStart;
-        const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
-        const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
-
-        state.lastRun = now.toISOString();
-        state.lastResult = "success";
-        state.lastError = null;
-        state.runCount++;
-        const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
-        recordRun(state, {
-          record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
-          windowMs,
-          now,
-        });
-        await saveScriptState({ boxRoot: ctx.boxRoot, scriptName: input.name, state });
-
-        await handleCreateAfterSuccess({ boxRoot: ctx.boxRoot, parsed, scriptName: input.name });
-
-        return { success: true, durationMs };
-      } catch (err) {
-        const wallElapsed = Date.now() - wallStart;
-        const monoElapsed = performance.now() - monoStart;
-        const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
-        const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
-
-        state.lastRun = now.toISOString();
-        state.lastResult = "failure";
-        state.lastError = (err as Error).message;
-        state.runCount++;
-        const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
-        recordRun(state, {
-          record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
-          windowMs,
-          now,
-        });
-        await saveScriptState({ boxRoot: ctx.boxRoot, scriptName: input.name, state });
-
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: (err as Error).message,
-        });
-      } finally {
-        await releaseScriptLock({ boxRoot: ctx.boxRoot, scriptName: input.name });
-      }
+      return runScheduledScript({ boxRoot: ctx.boxRoot, name: input.name, parsed });
     }),
 });

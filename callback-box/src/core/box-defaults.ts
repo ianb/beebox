@@ -1,0 +1,266 @@
+/**
+ * Default-card installers for `cb init`.
+ *
+ * These install the seed cards every box ships with — procedures, domain
+ * guides, the personality card, the root landmark and briefing, and the
+ * default scheduled scripts. All share the same update-or-preserve behavior
+ * provided by `installTemplateFile`: a fresh box gets the canonical file, an
+ * unmodified box gets the new template, and a user-modified file gets the new
+ * version parked under `config/_template-updates/` for manual merging.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { BOX_DIRS } from "../cli/lib/paths.js";
+import { createInitialGuideTemplate } from "../schemas/guide.js";
+import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
+import { createInitialPersonalityTemplate } from "../schemas/personality.js";
+import { createBriefingTemplate } from "../schemas/briefing.js";
+import { createLandmarkTemplate } from "../schemas/landmark.js";
+import { installTemplateFile, type InstallResult } from "./install-template-file.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
+
+/**
+ * Translate a single-template install result into the legacy `installed[]`
+ * string that the `cb init` UI prints. `fresh` and `overwritten` outcomes
+ * surface the canonical filename; `parked` surfaces the
+ * `_template-updates/...` path with an "(update available)" hint; other
+ * outcomes (`unchanged`, `skipped`) produce no entry.
+ */
+function describeInstall(result: InstallResult, displayName: string): string | null {
+  if (result.outcome === "fresh") return displayName;
+  if (result.outcome === "overwritten") return `${displayName} (updated)`;
+  if (result.outcome === "parked") return `${result.writtenAt} (update available)`;
+  return null;
+}
+
+/**
+ * Install procedure templates into a box.
+ *
+ * On fresh install: copies template procedure cards to config/procedures/.
+ * On update: if the box's copy matches the previously installed version,
+ * updates it. If the box's copy has been modified, writes the new version
+ * into `config/_template-updates/procedures/` for manual merging.
+ *
+ * @returns List of installed/updated procedure names
+ */
+export async function installProcedures(boxRoot: string): Promise<string[]> {
+  const templatesDir = path.join(PACKAGE_ROOT, "templates", "procedures");
+
+  let templateFiles: string[];
+  try {
+    templateFiles = (await fs.readdir(templatesDir)).filter((f) =>
+      f.endsWith(".procedure.card")
+    );
+  } catch (e) {
+    // No procedure templates to install (dir missing, or unreadable). Skip
+    // installing rather than fail init, but log so a misconfigured package
+    // layout doesn't silently drop all default procedures.
+    console.warn(`Could not read procedure templates from ${templatesDir}:`, e);
+    return [];
+  }
+
+  const installed: string[] = [];
+  for (const file of templateFiles) {
+    const templateContent = await fs.readFile(path.join(templatesDir, file), "utf-8");
+    const result = await installTemplateFile({
+      boxRoot,
+      relPath: path.join(BOX_DIRS.procedures, file),
+      templateContent,
+    });
+    const entry = describeInstall(result, file);
+    if (entry !== null) installed.push(entry);
+  }
+  return installed;
+}
+
+/** Known guide domains that get default templates */
+const GUIDE_DOMAINS = ["intake", "calendar"];
+
+/**
+ * Strip ISO timestamps from guide content so we can compare
+ * template output across runs (created-at changes each time).
+ */
+function normalizeGuideForComparison(content: string): string {
+  return content.replace(
+    / (created-at|updated-at|added-at)="[^"]*"/g,
+    ""
+  );
+}
+
+/**
+ * Install default guide cards into a box.
+ *
+ * On fresh install: writes default guide cards to config/.
+ * On update: if the box's copy matches the template (ignoring timestamps),
+ * overwrites it with the latest template. If the user has modified the guide,
+ * parks the new template under `config/_template-updates/` for manual merging.
+ *
+ * Skips any domain where a guide already exists.
+ *
+ * @returns List of installed/updated guide names
+ */
+export async function installGuides(boxRoot: string): Promise<string[]> {
+  const installed: string[] = [];
+  for (const domain of GUIDE_DOMAINS) {
+    const fileName = `${domain}.guide.card`;
+    const templateContent = createInitialGuideTemplate({ name: domain });
+    const result = await installTemplateFile({
+      boxRoot,
+      relPath: path.join("config", fileName),
+      templateContent,
+      normalize: normalizeGuideForComparison,
+    });
+    const entry = describeInstall(result, fileName);
+    if (entry !== null) installed.push(entry);
+  }
+  return installed;
+}
+
+/**
+ * Install the personality card template if missing.
+ *
+ * Unlike guides (which have domain seeds), there's only one personality
+ * card per box: config/main.personality.card.
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installPersonality(boxRoot: string): Promise<boolean> {
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "config/main.personality.card",
+    templateContent: createInitialPersonalityTemplate(),
+  });
+  return result.outcome === "fresh";
+}
+
+/**
+ * Install a default landmark card in the box root if no landmark card
+ * exists there. The root landmark is "magical" — it always exists on
+ * the Landmarks page so chats can be bound to the box root. The user
+ * can rename or edit the file freely; we only refill when the box
+ * root has no `*.landmark.card` at all.
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installRootLandmark(boxRoot: string): Promise<boolean> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(boxRoot);
+  } catch (e) {
+    // Can't list the box root — skip installing the root landmark rather
+    // than fail, but log: an unreadable box root is unexpected here.
+    console.warn(`Could not read box root ${boxRoot} for landmark check:`, e);
+    return false;
+  }
+  if (entries.some((name) => name.endsWith(".landmark.card"))) return false;
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "Box.landmark.card",
+    templateContent: createLandmarkTemplate({ label: "Box", symbol: "📦" }),
+  });
+  return result.outcome === "fresh";
+}
+
+/**
+ * Install the root briefing card template if missing.
+ *
+ * Every box gets a briefing.briefing.card at the root.
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installBriefing(boxRoot: string): Promise<boolean> {
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "briefing.briefing.card",
+    templateContent: createBriefingTemplate(),
+  });
+  return result.outcome === "fresh";
+}
+
+// ============================================
+// Default scheduled scripts
+// ============================================
+
+interface DefaultSchedule {
+  name: string;
+  description: string;
+  cron?: string;
+  notBefore?: string;
+  onWakeup?: boolean;
+  runs: string;
+  source: string;
+  createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
+  lockGroup?: string;
+  enabled?: boolean;
+  requires?: string[];
+}
+
+const DEFAULT_SCHEDULES: DefaultSchedule[] = [
+  {
+    name: "check-email",
+    description: "Pull new emails from Gmail for triage and response",
+    cron: "*/15 * * * *",
+    notBefore: "10m",
+    onWakeup: true,
+    enabled: false,
+    runs: "cb wakeup --connector gmail",
+    source: "Check email frequently during active hours",
+    requires: ["gmail"],
+  },
+  {
+    name: "check-calendar",
+    description: "Sync Google Calendar events and detect changes",
+    cron: "0 * * * *",
+    notBefore: "30m",
+    onWakeup: true,
+    enabled: false,
+    runs: "cb wakeup --connector google-calendar",
+    source: "Sync calendar changes hourly",
+    requires: ["google"],
+  },
+  {
+    name: "refresh-maps",
+    description: "Refresh MAP.md files when files or directories were added/deleted",
+    cron: "0 5 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    enabled: true,
+    runs: "cb procedure run refresh-maps",
+    source: "Daily check; precheck no-ops when nothing changed",
+  },
+];
+
+/**
+ * Install default scheduled-script cards into a box.
+ *
+ * Same update-or-preserve pattern as procedures and guides.
+ *
+ * @returns List of installed/updated schedule names
+ */
+export async function installSchedules(boxRoot: string): Promise<string[]> {
+  const installed: string[] = [];
+  for (const sched of DEFAULT_SCHEDULES) {
+    const fileName = `${sched.name}.scheduled-script.card`;
+    const templateContent = createScheduledScriptTemplate({
+      ...(sched.cron && { cron: sched.cron }),
+      ...(sched.notBefore && { notBefore: sched.notBefore }),
+      ...(sched.onWakeup && { onWakeup: sched.onWakeup }),
+      ...(sched.createAfterSuccess && { createAfterSuccess: sched.createAfterSuccess }),
+      ...(sched.lockGroup && { lockGroup: sched.lockGroup }),
+      ...(sched.enabled === false && { enabled: false }),
+      ...(sched.requires && sched.requires.length > 0 && { requires: sched.requires }),
+      runs: sched.runs,
+      description: sched.description,
+      source: sched.source,
+    });
+    const result = await installTemplateFile({
+      boxRoot,
+      relPath: path.join("config/schedules", fileName),
+      templateContent,
+    });
+    const entry = describeInstall(result, fileName);
+    if (entry !== null) installed.push(entry);
+  }
+  return installed;
+}

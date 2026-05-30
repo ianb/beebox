@@ -1,0 +1,104 @@
+/**
+ * Public types for the agent invocation surface (`src/core/agent.ts`).
+ *
+ * Kept in a leaf module so the main agent file stays under the line cap.
+ * `agent.ts` re-exports these, so consumers can keep importing them from
+ * either location.
+ */
+
+import type { z } from "zod";
+
+/**
+ * Options passed to Agent.invoke() by the calling code.
+ * The agent doesn't know these ahead of time — they're provided
+ * by the command that uses the agent.
+ */
+export interface AgentInvokeOptions {
+  boxRoot: string;
+  /** System prompt — provided on first invoke, omitted on resume. */
+  systemPrompt?: string;
+  /** User prompt for this invocation. */
+  prompt: string;
+  /** Model override (e.g., "claude-haiku-4-5-20251001"). */
+  model?: string;
+  /** Maximum agent turns (default: 20). */
+  maxTurns?: number;
+  /**
+   * Hard cost ceiling in USD. The SDK stops with `error_max_budget_usd`
+   * if exceeded — surfaced here as `success: false` with a budget error.
+   */
+  maxBudgetUsd?: number;
+  /** Whether to run in dry-run mode (no side effects). */
+  dryRun?: boolean;
+  /**
+   * Override the SDK's working directory. Defaults to `boxRoot`. Set to a
+   * subdirectory to reproduce a landmark-style session — the CLAUDE.md
+   * walk-up at that path is auto-loaded into the agent's context. Pair
+   * with `additionalDirectories: [boxRoot]` to keep the rest of the box
+   * accessible.
+   */
+  cwd?: string;
+  /**
+   * Extra directories the agent can read/write beyond `cwd`. Forwarded to
+   * the SDK's `additionalDirectories` option.
+   */
+  additionalDirectories?: string[];
+}
+
+export interface AgentResult {
+  success: boolean;
+  output: string;
+  error?: string;
+  exitCode: number;
+  sessionId: string;
+  /** Populated when the underlying run was started with `outputSchema`. */
+  structuredOutput?: unknown;
+  /**
+   * The SDK's final-turn assistant text (the `result` field of the
+   * `SDKResultSuccess`). Cleaner than `output`, which carries our rendered
+   * tool-call summaries and ANSI codes.
+   */
+  resultText?: string;
+}
+
+/**
+ * Result of `Agent.invokeStructured`. Same fields as `AgentResult` plus
+ * the parsed `data`. On structured-output failure (no result, schema
+ * mismatch, agent error) `success` is false, `data` is null, and `error`
+ * carries the cause.
+ */
+export interface StructuredAgentResult<T> extends AgentResult {
+  data: T | null;
+}
+
+/**
+ * A named agent with session lifecycle.
+ *
+ * First invoke() starts a new session; the SDK assigns a session id which
+ * becomes available via `sessionId` once the first system message arrives.
+ * Subsequent invoke() calls resume the same session.
+ *
+ * `sessionId` is `null` before the first invoke completes — the SDK assigns
+ * it server-side, we don't generate it ourselves. All known consumers read
+ * it only after `await agent.invoke(...)`, at which point it's set.
+ */
+export interface Agent {
+  readonly name: string;
+  readonly sessionId: string | null;
+  invoke(options: AgentInvokeOptions): Promise<AgentResult>;
+  /**
+   * Structured-output variant: the agent returns JSON matching `schema`
+   * instead of free-form text. The SDK passes the schema to the model,
+   * waits for the structured turn, and surfaces the result via
+   * `result.structured_output`. We validate it against the same Zod
+   * schema and return both the parsed `data` and the regular result
+   * fields.
+   *
+   * Use when the agent's job is "produce a decision/object", not
+   * "do work and commit".
+   */
+  invokeStructured<T>(
+    schema: z.ZodType<T>,
+    options: AgentInvokeOptions,
+  ): Promise<StructuredAgentResult<T>>;
+}

@@ -1,0 +1,138 @@
+/**
+ * Step 4 of `cb wakeup`: initialize connectors, resolve the active
+ * (`--connector X`) scope, run each connector's `sync()`, and print a
+ * per-connector + total summary.
+ *
+ * Kept next to wakeup.ts so the command's action handler stays a thin
+ * sequence of steps rather than carrying the connector loop inline.
+ */
+
+import { createGmailConnector } from "../../connectors/gmail.js";
+import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
+import { createTelegramConnector } from "../../connectors/telegram.js";
+import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
+import { getAllConnectors, type Connector } from "../../connectors/index.js";
+
+/**
+ * Run the configured connectors and report results.
+ *
+ * Returns the connector that was scoped to via `--connector X` (or
+ * `undefined` for a full wakeup) so later steps can scope their inbox
+ * scan and the reactor's `sourceFilter`.
+ */
+export async function runConnectors(
+  boxRoot: string,
+  options: { connector?: string | undefined }
+): Promise<{ activeConnector: Connector | undefined }> {
+  // Initialize connectors
+  createGmailConnector(boxRoot);
+  createGoogleCalendarConnector(boxRoot);
+  createTelegramConnector(boxRoot);
+  createGoogleDriveConnector(boxRoot);
+
+  const connectors = getAllConnectors();
+
+  if (connectors.length === 0) {
+    console.log("  No connectors configured.");
+    return { activeConnector: undefined };
+  }
+
+  // Filter by name if specified
+  const toRun = options.connector
+    ? connectors.filter((c) => c.name === options.connector)
+    : connectors;
+
+  if (toRun.length === 0) {
+    console.error(`Connector not found: ${options.connector}`);
+    process.exit(1);
+  }
+
+  const activeConnector = options.connector ? toRun[0] : undefined;
+
+  let totalCreated = 0;
+  let totalPushed = 0;
+  let totalJobs = 0;
+  let totalErrors = 0;
+
+  for (const connector of toRun) {
+    connector.triggeredBy = "cb wakeup";
+    console.log(`Syncing ${connector.name}...`);
+
+    try {
+      const result = await connector.sync();
+      const counts = reportSyncResult(result);
+      totalPushed += counts.pushed;
+      totalCreated += counts.created;
+      totalJobs += counts.jobs;
+      totalErrors += counts.errors;
+    } catch (err) {
+      console.error(`  Failed: ${(err as Error).message}`);
+      totalErrors++;
+    }
+  }
+
+  const parts: string[] = [];
+  if (totalPushed > 0) parts.push(`${totalPushed} pushed`);
+  parts.push(`${totalCreated} created`);
+  if (totalJobs > 0) parts.push(`${totalJobs} jobs`);
+  parts.push(`${totalErrors} errors`);
+  console.log(`\nTotal: ${parts.join(", ")}.`);
+
+  return { activeConnector };
+}
+
+type SyncResult = Awaited<ReturnType<Connector["sync"]>>;
+
+/**
+ * Print one connector's sync result and return the counts it
+ * contributed, for the run's running totals.
+ */
+function reportSyncResult(
+  result: SyncResult
+): { pushed: number; created: number; jobs: number; errors: number } {
+  let pushed = 0;
+  let created = 0;
+  let jobs = 0;
+  let errors = 0;
+
+  if (result.pushed && result.pushed.length > 0) {
+    console.log(`  Pushed ${result.pushed.length} card(s):`);
+    for (const card of result.pushed) {
+      console.log(`    - ${card}`);
+    }
+    pushed = result.pushed.length;
+  }
+
+  if (result.created.length > 0) {
+    console.log(`  Created ${result.created.length} card(s):`);
+    for (const card of result.created) {
+      console.log(`    - ${card}`);
+    }
+    created = result.created.length;
+  }
+
+  if (result.jobs && result.jobs.length > 0) {
+    console.log(`  Jobs created: ${result.jobs.length}`);
+    for (const job of result.jobs) {
+      console.log(`    - ${job}`);
+    }
+    jobs = result.jobs.length;
+  }
+
+  if (result.updated.length > 0) {
+    console.log(`  Updated ${result.updated.length} card(s)`);
+  }
+
+  if (result.error) {
+    console.error(`  Error: ${result.error}`);
+    errors = 1;
+  } else if (
+    result.created.length === 0 &&
+    result.updated.length === 0 &&
+    (!result.pushed || result.pushed.length === 0)
+  ) {
+    console.log("  No new items.");
+  }
+
+  return { pushed, created, jobs, errors };
+}
