@@ -65,6 +65,16 @@ function ForwardGlyph() {
   );
 }
 
+function ReloadGlyph() {
+  // Circular arrow: replay from the start.
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="w-4 h-4">
+      <polyline points="21 4 21 9 16 9" />
+      <path d="M20.4 9A8 8 0 1 0 21 14" />
+    </svg>
+  );
+}
+
 function ControlButton({
   label,
   disabled,
@@ -128,14 +138,15 @@ export function SpeechMenu({ segments, playing, anyPlaying, canSkip, onStop, onS
         <ControlButton label="Stop" disabled={!anyPlaying} onClick={onStop}>
           <StopGlyph />
         </ControlButton>
+        <ControlButton label="Replay" disabled={false} onClick={() => onReplay(0)}>
+          <ReloadGlyph />
+        </ControlButton>
         {hasMultiple ? (
           <ControlButton label="Fast-forward" disabled={!(playing && canSkip)} onClick={onSkip}>
             <ForwardGlyph />
           </ControlButton>
         ) : null}
       </div>
-      <MenuDivider />
-      <MenuItem onClick={() => onReplay(0)}>Replay</MenuItem>
       {hasMultiple ? (
         <>
           <MenuDivider />

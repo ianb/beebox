@@ -25,6 +25,8 @@ type TTSClient = ReturnType<typeof getTTSClient>;
 interface QueueItem {
   segment: SpeechSegment;
   prefetch: PrefetchHandle | null;
+  /** Absolute index of this segment within its message (for the now-playing highlight). */
+  index: number;
 }
 
 interface SpeechPlaybackContext {
@@ -37,7 +39,7 @@ interface SpeechPlaybackContext {
 }
 
 type SpeechPlaybackEvent =
-  | { type: "PLAY"; messageId: string; segments: SpeechSegment[]; ttsClient: TTSClient }
+  | { type: "PLAY"; messageId: string; segments: SpeechSegment[]; baseIndex: number; ttsClient: TTSClient }
   | { type: "STOP"; ttsClient: TTSClient };
 
 function speechOptions(segment: SpeechSegment) {
@@ -59,11 +61,12 @@ function speechOptions(segment: SpeechSegment) {
  */
 function buildQueueItems(
   segments: SpeechSegment[],
-  { ttsClient, queueOffset }: { ttsClient: TTSClient; queueOffset: number },
+  { ttsClient, queueOffset, baseIndex }: { ttsClient: TTSClient; queueOffset: number; baseIndex: number },
 ): QueueItem[] {
   const prefetchEnabled = shouldPrefetchSpeech();
   return segments.map((segment, i) => ({
     segment,
+    index: baseIndex + i,
     prefetch:
       prefetchEnabled && queueOffset + i >= 1
         ? ttsClient.prefetch(segment.text, speechOptions(segment))
@@ -118,7 +121,7 @@ export const speechPlaybackMachine = setup({
           target: "playing",
           actions: assign(({ event }) => ({
             playingMessageId: event.messageId,
-            queue: buildQueueItems(event.segments, { ttsClient: event.ttsClient, queueOffset: 0 }),
+            queue: buildQueueItems(event.segments, { ttsClient: event.ttsClient, queueOffset: 0, baseIndex: event.baseIndex }),
             ttsClient: event.ttsClient,
           })),
         },
@@ -196,6 +199,7 @@ export const speechPlaybackMachine = setup({
               ...buildQueueItems(event.segments, {
                 ttsClient: event.ttsClient,
                 queueOffset: context.queue.length,
+                baseIndex: event.baseIndex,
               }),
             ],
             playingMessageId: event.messageId,

@@ -13,6 +13,8 @@ import type { SpeechSegment } from "../lib/speech-parsing";
 interface PlaySegmentsOptions {
   messageId: string;
   segments: SpeechSegment[];
+  /** Absolute index of segments[0] within the message. Default 0. */
+  baseIndex?: number;
 }
 
 interface ReplayOptions {
@@ -25,6 +27,8 @@ interface ReplayOptions {
 export interface SpeechPlayback {
   isPlaying: boolean;
   playingMessageId: string | null;
+  /** Absolute index of the segment currently playing, or null when idle. */
+  playingSegmentIndex: number | null;
   /** Segments still queued, including the one currently playing. */
   remainingCount: number;
   playSegments: (options: PlaySegmentsOptions) => Promise<void>;
@@ -49,6 +53,8 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
   const isPlaying = snapshot.matches("playing");
   const { playingMessageId } = snapshot.context;
   const remainingCount = snapshot.context.queue.length;
+  const head = snapshot.context.queue[0];
+  const playingSegmentIndex = head !== undefined ? head.index : null;
 
   // Escape key stops playback
   useEffect(() => {
@@ -63,10 +69,10 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
   }, [isPlaying, ttsClient, send]);
 
   const playSegments = useCallback(
-    async ({ messageId, segments }: PlaySegmentsOptions) => {
+    async ({ messageId, segments, baseIndex }: PlaySegmentsOptions) => {
       if (playedMessagesRef.current.has(messageId)) return;
       playedMessagesRef.current.add(messageId);
-      send({ type: "PLAY", messageId, segments, ttsClient });
+      send({ type: "PLAY", messageId, segments, baseIndex: baseIndex === undefined ? 0 : baseIndex, ttsClient });
     },
     [ttsClient, send]
   );
@@ -85,7 +91,7 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
       // Bypasses the played-message dedupe in playSegments so replay always
       // works, even for a message we already auto-played once.
       send({ type: "STOP", ttsClient });
-      send({ type: "PLAY", messageId, segments: slice, ttsClient });
+      send({ type: "PLAY", messageId, segments: slice, baseIndex: start, ttsClient });
     },
     [ttsClient, send]
   );
@@ -98,5 +104,5 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
     playedMessagesRef.current.add(messageId);
   }, []);
 
-  return { isPlaying, playingMessageId, remainingCount, playSegments, skip, replay, stop, markAsPlayed };
+  return { isPlaying, playingMessageId, playingSegmentIndex, remainingCount, playSegments, skip, replay, stop, markAsPlayed };
 }

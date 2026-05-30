@@ -1069,7 +1069,7 @@ function VirtualizedMessageList({
   processingShown: boolean;
   debugView: boolean;
   currentUserEmail: string | undefined;
-  speechPlayback: { isPlaying: boolean; playingMessageId: string | null; remainingCount: number };
+  speechPlayback: { isPlaying: boolean; playingMessageId: string | null; playingSegmentIndex: number | null; remainingCount: number };
   handleStopSpeech: () => void;
   handleSkipSpeech: () => void;
   handleReplaySpeech: (options: ReplaySpeechOptions) => void;
@@ -1325,6 +1325,7 @@ function VirtualizedMessageList({
                   entries={group.entries}
                   debugView={debugView}
                   speechPlaying={playingThis}
+                  speechActiveIndex={playingThis ? speechPlayback.playingSegmentIndex : null}
                   anySpeechPlaying={speechPlayback.isPlaying}
                   speechCanSkip={Boolean(speechPlayback.isPlaying && speechPlayback.remainingCount > 1)}
                   onStopSpeech={handleStopSpeech}
@@ -1753,7 +1754,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
    * suppressed — i.e. handled), false otherwise.
    */
   const queueSpeechBatch = useCallback(
-    (newSegments: SpeechSegment[], messageId: string): boolean => {
+    ({ segments: newSegments, messageId, baseIndex }: { segments: SpeechSegment[]; messageId: string; baseIndex: number }): boolean => {
       if (newSegments.length === 0) return false;
 
       speechPlayedRef.current = true;
@@ -1778,7 +1779,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
         transcriptionRef.current.cancel();
       }
 
-      speechPlayback.playSegments({ messageId, segments: newSegments });
+      speechPlayback.playSegments({ messageId, segments: newSegments, baseIndex });
       return true;
     },
     [speechPlayback, muted]
@@ -1812,7 +1813,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     }
 
     const messageId = `stream-${Date.now()}-${playedSegmentCountRef.current}`;
-    queueSpeechBatch(newSegments, messageId);
+    queueSpeechBatch({ segments: newSegments, messageId, baseIndex: playedSegmentCountRef.current });
     playedSegmentCountRef.current = closedCount;
   }, [snapshot.value, snapshot.context.streamText, queueSpeechBatch]);
 
@@ -1839,7 +1840,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       const remaining = allSegments.slice(playedSegmentCountRef.current);
       if (allSegments.length > 0) speechPlayedRef.current = true;
       if (remaining.length > 0) {
-        queueSpeechBatch(remaining, `stream-end-${Date.now()}`);
+        queueSpeechBatch({ segments: remaining, messageId: `stream-end-${Date.now()}`, baseIndex: playedSegmentCountRef.current });
         playedSegmentCountRef.current = allSegments.length;
       }
     }

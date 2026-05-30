@@ -12,8 +12,9 @@ import type { LightboxImage } from "./ImageLightbox";
 import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { getApiBase } from "../api";
 import type { SessionEntry, SessionContentBlock } from "../api";
-import { hasAssistantSpeech, parseAllSpeechTags, type SpeechSegment } from "../lib/speech-parsing";
+import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../lib/speech-parsing";
 import { SpeechMenu } from "./chat/SpeechMenu";
+import { SpeechChunk } from "./chat/SpeechChunk";
 import { getAckKind, parseCallouts, stripStructuredOutputTags, type AckIndication } from "../lib/structured-output-parsing";
 import { CalloutStack } from "./chat/CalloutBlock";
 
@@ -1190,10 +1191,55 @@ export interface ReplaySpeechOptions {
   fromIndex: number;
 }
 
+/** Number of `<speech>` chunks in a text fragment (for absolute index offsets). */
+function countSpeech(text: string): number {
+  const m = text.match(/<speech[\s>]/gi);
+  return m ? m.length : 0;
+}
+
+/**
+ * Render an assistant text group, wrapping each `<speech>` chunk in a
+ * SpeechChunk so it can show the now-playing highlight and an optional name
+ * label. Non-spoken text renders as ordinary markdown. `indexOffset` makes
+ * each chunk's index absolute across the whole message (groups may be split
+ * by tool activity); `activeIndex` is the segment currently playing.
+ */
+function AssistantSpeechText({
+  text,
+  indexOffset,
+  activeIndex,
+  onZoomView,
+}: {
+  text: string;
+  indexOffset: number;
+  activeIndex: number | null;
+  onZoomView?: OnZoomView;
+}) {
+  const parts = useMemo(() => splitSpeechParts(text), [text]);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.type === "text" ? (
+          <MarkdownContent key={i} text={part.text} onZoomView={onZoomView} />
+        ) : (
+          <SpeechChunk
+            key={i}
+            name={part.segment.name}
+            active={activeIndex !== null && indexOffset + part.index === activeIndex}
+          >
+            <MarkdownContent text={part.segment.displayText} onZoomView={onZoomView} />
+          </SpeechChunk>
+        )
+      )}
+    </>
+  );
+}
+
 export function AssistantMessage({
   entries,
   debugView,
   speechPlaying,
+  speechActiveIndex,
   anySpeechPlaying,
   speechCanSkip,
   onStopSpeech,
@@ -1206,6 +1252,8 @@ export function AssistantMessage({
   debugView?: boolean;
   /** This message's speech is the one currently playing. */
   speechPlaying?: boolean;
+  /** Absolute index of the segment currently playing in this message, or null. */
+  speechActiveIndex?: number | null;
   /** Some speech (this message or another) is currently playing. */
   anySpeechPlaying?: boolean;
   /** A next segment exists in the currently-playing queue. */
@@ -1233,6 +1281,20 @@ export function AssistantMessage({
   // are rendered as badges on the preceding user message — see InteractiveChat.
   const callouts = useMemo(() => parseCallouts(allText), [allText]);
   const showProse = proseEnabled !== false;
+  const activeIndex = speechActiveIndex === undefined ? null : speechActiveIndex;
+
+  // Absolute speech-segment index at the start of each group, so a chunk's
+  // highlight index stays correct even when tool activity splits the message
+  // into multiple text groups.
+  const groupSpeechOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    let count = 0;
+    for (const group of grouped) {
+      offsets.push(count);
+      if (group.kind === "text") count += countSpeech(group.text);
+    }
+    return offsets;
+  }, [grouped]);
 
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
@@ -1257,7 +1319,13 @@ export function AssistantMessage({
           debugView ? (
             <Pre key={i} size="xs" boxed>{group.text}</Pre>
           ) : (
-            <MarkdownContent key={i} text={group.text} onZoomView={onZoomView} />
+            <AssistantSpeechText
+              key={i}
+              text={group.text}
+              indexOffset={groupSpeechOffsets[i] ?? 0}
+              activeIndex={activeIndex}
+              onZoomView={onZoomView}
+            />
           )
         ) : (
           <ActivityGroup key={i} parts={group.parts} />

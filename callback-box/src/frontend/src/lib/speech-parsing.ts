@@ -19,8 +19,14 @@ export interface SpeechSegment {
   emotion?: string;
   voice?: TTSVoice;
   overrideInstructions?: boolean;
+  /** Optional speaker label (the `name` attribute), shown on the chunk. */
+  name?: string;
   displayText: string;
   hasTextBefore: boolean;
+}
+
+function unescapeAttr(value: string): string {
+  return value.replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
 }
 
 /**
@@ -91,6 +97,7 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
     }
 
     const overrideInstructions = tag.attrs["override-instructions"] === "1";
+    const name = tag.attrs.name ? unescapeAttr(tag.attrs.name) : undefined;
 
     segments.push({
       text,
@@ -98,12 +105,57 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
       emotion: tag.attrs.emotion || undefined,
       voice,
       overrideInstructions: overrideInstructions || undefined,
+      name,
       displayText: text,
       hasTextBefore,
     });
   }
 
   return segments;
+}
+
+export type SpeechPart =
+  | { type: "text"; text: string }
+  | { type: "speech"; segment: SpeechSegment; index: number };
+
+/**
+ * Split assistant content into an ordered sequence of spoken and non-spoken
+ * parts, so each `<speech>` chunk can be rendered as its own element (e.g.
+ * for the now-playing highlight). Speech parts carry their absolute index
+ * within the content — matching parseAllSpeechTags order, which is what the
+ * playback machine reports as the currently-playing index.
+ */
+export function splitSpeechParts(content: string): SpeechPart[] {
+  const segments = parseAllSpeechTags(content);
+  if (segments.length === 0) {
+    return content.trim().length > 0 ? [{ type: "text", text: content }] : [];
+  }
+
+  const starts: number[] = [];
+  const speechRegex = /<speech[\s>]/gi;
+  let m;
+  while ((m = speechRegex.exec(content)) !== null) starts.push(m.index);
+
+  const parts: SpeechPart[] = [];
+  let cursor = 0;
+  let segIndex = 0;
+  for (const start of starts) {
+    const segment = segments[segIndex];
+    if (segment === undefined) break;
+    if (start > cursor) {
+      const between = content.slice(cursor, start);
+      if (between.trim().length > 0) parts.push({ type: "text", text: between });
+    }
+    const closeIndex = content.indexOf("</speech>", start);
+    cursor = closeIndex !== -1 ? closeIndex + "</speech>".length : content.length;
+    parts.push({ type: "speech", segment, index: segIndex });
+    segIndex++;
+  }
+  if (cursor < content.length) {
+    const tail = content.slice(cursor);
+    if (tail.trim().length > 0) parts.push({ type: "text", text: tail });
+  }
+  return parts;
 }
 
 /**

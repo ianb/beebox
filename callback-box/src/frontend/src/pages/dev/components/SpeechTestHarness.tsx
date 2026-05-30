@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { SpeechMenu } from "../../../components/chat/SpeechMenu";
+import { SpeechChunk } from "../../../components/chat/SpeechChunk";
 import { useSpeechPlayback } from "../../../hooks/useSpeechPlayback";
 import { getTTSClient } from "../../../lib/tts-client";
 import { logSpeechEvent } from "../../../lib/speech-test-log";
@@ -20,11 +21,12 @@ import type { SpeechSegment } from "../../../lib/speech-parsing";
 
 // Distinct text per segment so the mock picks distinct fixtures and the test
 // log labels (first chars of text) are recognizable. Must NOT start with
-// "stream" — see the playing-match logic in InteractiveChat.
+// "stream" — see the playing-match logic in InteractiveChat. One segment
+// carries a name to exercise the speaker label.
 const MESSAGE_ID = "speech-test-msg";
 const SEGMENTS: SpeechSegment[] = [
   { text: "This is the first segment of the test speech.", displayText: "This is the first segment of the test speech.", hasTextBefore: false },
-  { text: "And now here is the second segment, a little different.", displayText: "And now here is the second segment, a little different.", hasTextBefore: false },
+  { text: "And now here is the second segment, a little different.", displayText: "And now here is the second segment, a little different.", name: "Bob", hasTextBefore: false },
   { text: "Finally, this is the third and last segment.", displayText: "Finally, this is the third and last segment.", hasTextBefore: false },
 ];
 
@@ -123,8 +125,22 @@ export function SpeechTestHarness() {
 
       <div className="text-sm text-warm-700">
         <div data-testid="state">
-          isPlaying={String(sp.isPlaying)} playingMessageId={String(sp.playingMessageId)} remaining={sp.remainingCount}
+          isPlaying={String(sp.isPlaying)} playingMessageId={String(sp.playingMessageId)} segment={String(sp.playingSegmentIndex)} remaining={sp.remainingCount}
         </div>
+      </div>
+
+      {/* Rendered message body: each speech chunk highlights while playing. */}
+      <div data-testid="chunks" className="flex flex-col gap-1 bg-accent/30 rounded-lg p-3">
+        {SEGMENTS.map((seg, i) => {
+          const active = playing && sp.playingSegmentIndex === i;
+          return (
+            <div key={i} data-chunk={i} data-active={String(active)}>
+              <SpeechChunk name={seg.name} active={active}>
+                <div>{seg.displayText}</div>
+              </SpeechChunk>
+            </div>
+          );
+        })}
       </div>
 
       <pre data-testid="log" className="text-xs bg-warm-50 border border-warm-200 rounded p-3 overflow-auto max-h-96">
