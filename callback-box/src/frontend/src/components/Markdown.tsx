@@ -27,6 +27,7 @@ import { useParams } from "@tanstack/react-router";
 import { parse, transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
 import { markdocConfig } from "../lib/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
+import { makeSourceComponents } from "./Source";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
@@ -205,6 +206,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const Link = makeLink(linkCtx);
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
+  const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -221,6 +223,8 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     Img: Img as unknown as React.ComponentType<Record<string, unknown>>,
     QuoteInline: QuoteInline as unknown as React.ComponentType<Record<string, unknown>>,
     QuoteBlock: QuoteBlock as unknown as React.ComponentType<Record<string, unknown>>,
+    SourceInline: SourceInline as unknown as React.ComponentType<Record<string, unknown>>,
+    SourceBlock: SourceBlock as unknown as React.ComponentType<Record<string, unknown>>,
     Task: Task as unknown as React.ComponentType<Record<string, unknown>>,
   };
   return { config, components };

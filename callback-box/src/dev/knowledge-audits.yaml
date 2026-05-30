@@ -2012,3 +2012,74 @@ tests:
       outside the tag — NOT to invent enthusiastic phrasing inside.
     correct_contains_any: ["fabricat", "exact", "actual words", "verbatim", "no"]
     tags: [quotes, behavioral, integrity]
+
+  # === Provenance (`{% source %}`) ===
+  #
+  # `{% source ref="..." as="..." %}` marks content derived from a card
+  # or file: required `ref` (auto-tracked by `cb validate` and `cb mv`
+  # via Track 4's body ref-walker) and optional free-form `as=`
+  # describing how the content was derived. Complements `{% quote %}`:
+  # the two compose for "verbatim from there." Agent-guide section is
+  # the `sourceSection` (loaded via CLAUDE.md).
+  #
+  # Status (2026-05-30): 4/4 pass on first run. All four answered with
+  # zero file reads and zero searches — true knows_directly. Answers
+  # were qualitatively strong: composition test produced the canonical
+  # nested-tag form unprompted; skip-for-own-framing test quoted the
+  # guide back at the agent and explained the dilution-of-signal
+  # rationale beyond what the watch_for asked for.
+
+  - id: source-tag-syntax
+    prompt: >
+      I'm writing a doc that summarizes a voice memo. How do I mark the
+      summary so the doc tells the reader where the content came from?
+    expected_level: knows_directly
+    watch_for: >
+      Names the `{% source %}` Markdoc tag and the required `ref`
+      attribute pointing at the source card. May also mention the
+      optional `as` attribute for describing the derivation.
+    correct_contains_any: ["{% source", "source ref", "source tag"]
+    tags: [source, cards, markdown, provenance]
+
+  - id: source-as-is-free-form
+    prompt: >
+      The user's name appears in a captured email header. I'm pulling it
+      out into a person card. What should I put in `{% source %}`'s `as`
+      attribute — is there a fixed enum I should pick from?
+    expected_level: knows_directly
+    watch_for: >
+      Says `as=` is free-form natural language, not an enum. Encourages
+      writing the actual derivation (something like `as="extracted
+      name"` or `as="from email From: header"`), not picking a closest-
+      fit category.
+    correct_contains_any: ["free-form", "natural language", "not an enum", "no enum", "honest", "describe"]
+    tags: [source, behavioral, provenance]
+
+  - id: source-vs-quote-composition
+    prompt: >
+      I want to record that the user said "ship Friday, no exceptions"
+      verbatim, and I also want to cite the chat thread the words came
+      from. What tags do I use?
+    expected_level: knows_directly
+    watch_for: >
+      Composes `{% source ref="..." %}` around `{% quote %}...{% /quote %}`.
+      Recognises that `{% quote %}` marks verbatim words and `{% source %}`
+      pins the origin; both together = "verbatim from there." Does NOT
+      collapse them into one tag.
+    correct_contains_any: ["{% source", "{% quote", "compose", "wrap", "nest", "both"]
+    tags: [source, quotes, cards, provenance]
+
+  - id: source-when-to-skip
+    prompt: >
+      I'm writing a doc and most of it is my own framing and
+      connective prose between things the user said. Should every
+      sentence I write be wrapped in `{% source %}` pointing at
+      myself?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — `{% source %}` marks spans derived from another card or
+      file, not the agent's own framing prose. Connective tissue and
+      transitions don't need the tag. The default is unwrapped; the tag
+      is the exception that surfaces non-original content.
+    correct_contains_any: ["no", "own framing", "connective", "default", "unwrapped", "exception"]
+    tags: [source, behavioral, provenance]

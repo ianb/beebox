@@ -39,6 +39,7 @@ import {
 } from "./behavior.js";
 import { landmarksSection } from "./landmarks.js";
 import { quotesSection } from "./quotes.js";
+import { sourceSection } from "./source.js";
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
@@ -75,6 +76,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...creatingCardsSection(),
     ...questionsSection(),
     ...quotesSection(),
+    ...sourceSection(),
     ...generalPrinciplesSection(),
     ...gitHistorySection(),
     ...whereToRecordSection(),

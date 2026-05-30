@@ -11,6 +11,12 @@
  *    tag body has no newlines, block otherwise. The tag transforms into
  *    either `QuoteInline` or `QuoteBlock` based on `node.inline`, so the
  *    React component for each shape can be specialized.
+ *  - `source` — universal provenance tag: where the wrapped content
+ *    came from and (optionally) how it was derived. Required `ref`
+ *    (which feeds Track 4's body ref-tracking automatically). Optional
+ *    `as` — natural-language description of the derivation
+ *    ("verbatim", "summary", "inferred from the address", …). Inline/
+ *    block split same as `quote`.
  *  - `task` — internal: GFM task-list checkbox. Not authored directly;
  *    the `item` node transform below detects leading `[ ]` / `[x]` in a
  *    list item's first text run and rewrites it to a `Task` tag, since
@@ -32,6 +38,24 @@ const quote: Schema = {
     const attributes = node.transformAttributes(config);
     const children = node.transformChildren(config);
     return new Tag(node.inline ? "QuoteInline" : "QuoteBlock", attributes, children);
+  },
+};
+
+const source: Schema = {
+  attributes: {
+    ref: { type: String, required: true },
+    as: { type: String },
+  },
+  transform(node, config) {
+    // Markdoc-side attribute is `ref` (which is also what Track 4's body
+    // ref-tracking walks for and what the cardworks frontmatter convention
+    // uses). React reserves `ref` as a special prop on components, so we
+    // rename to `sourceRef` in the renderable tree — the React component
+    // only ever sees the non-reserved name.
+    const { ref, ...rest } = node.transformAttributes(config) as { ref?: string };
+    const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
+    const children = node.transformChildren(config);
+    return new Tag(node.inline ? "SourceInline" : "SourceBlock", renamed, children);
   },
 };
 
@@ -77,6 +101,6 @@ function rewriteTaskPrefix(children: RenderableTreeNode[]): RenderableTreeNode[]
 }
 
 export const markdocConfig: Config = {
-  tags: { quote, task },
+  tags: { quote, source, task },
   nodes: { item },
 };
