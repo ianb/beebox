@@ -4,8 +4,7 @@
  * Called by generate-docs.ts to produce docs/generated/views.md.
  */
 
-export function generateViewsDoc(): string {
-  return `# Views: Agent-Generated React Components
+const introSection = `# Views: Agent-Generated React Components
 
 Views are \`.tsx\` files in the \`views/\` directory at the box root. They get compiled server-side and rendered in the browser — either as standalone pages or embedded in chat messages.
 
@@ -20,9 +19,9 @@ Create a view when:
 Don't create a view for:
 - Simple one-off answers (just reply in chat)
 - Static text that doesn't change (use a card or document)
-- Something that requires server-side processing (use a job instead)
+- Something that requires server-side processing (use a job instead)`;
 
-## File Format
+const fileFormatSection = `## File Format
 
 Each view is a \`.tsx\` file with named exports for metadata and a default export for the component:
 
@@ -53,9 +52,9 @@ export default function EstateOverview({ cards, navigate, boxSlug, params }) {
     </div>
   );
 }
-\`\`\`
+\`\`\``;
 
-## Metadata Exports
+const metadataAndPropsSection = `## Metadata Exports
 
 | Export | Type | Required | Description |
 |--------|------|----------|-------------|
@@ -90,9 +89,9 @@ Each card in the \`cards\` array has:
 }
 \`\`\`
 
-Child elements have the same shape: \`{ tagName, attrs, text?, children? }\`.
+Child elements have the same shape: \`{ tagName, attrs, text?, children? }\`.`;
 
-## Dependencies
+const dependenciesAndParamsSection = `## Dependencies
 
 The \`dependencies\` array controls two things:
 1. **Which cards are loaded** — only \`.card\` files matching these globs are passed as \`cards\`
@@ -132,9 +131,9 @@ You can also use custom query parameters for filtering, sorting, etc. — they a
 
 React is provided automatically. **Do NOT import React** — the build system handles it. If you do write \`import React from "react"\`, it will still work (the compiler intercepts it), but it's unnecessary.
 
-You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.
+You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.`;
 
-## Showing Files in Chat
+const showingFilesSection = `## Showing Files in Chat
 
 To show a file to the user, use a \`view:\` link with the file path:
 
@@ -164,9 +163,9 @@ Directory paths work too:
 [Catalog](view:store/catalogs/My_Catalog)
 \`\`\`
 
-**Note:** \`view:\` links are for file and directory paths only. Do not use them for custom view slugs.
+**Note:** \`view:\` links are for file and directory paths only. Do not use them for custom view slugs.`;
 
-### Inline vs Companion Views
+const companionViewsSection = `### Inline vs Companion Views
 
 There are two ways views appear in chat:
 
@@ -198,9 +197,9 @@ When a companion view is open, every user message includes a \`zoomed-view\` att
 
 This tells the agent what the user is looking at, so it can tailor its responses. The attribute value is the full view URI (without \`&zoom\`).
 
-**Note:** Companion views are a chat-only feature. The \`&zoom\` parameter and \`zoomed-view\` attribute are only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't support them.
+**Note:** Companion views are a chat-only feature. The \`&zoom\` parameter and \`zoomed-view\` attribute are only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't support them.`;
 
-## Examples
+const examplesSection = `## Examples
 
 ### Simple Card List
 
@@ -274,9 +273,9 @@ export default function InboxDashboard({ cards }) {
     </div>
   );
 }
-\`\`\`
+\`\`\``;
 
-## Styling
+const stylingAndErrorsSection = `## Styling
 
 Views render inside the app's existing layout. You can use:
 - Inline styles (as shown in examples)
@@ -285,6 +284,19 @@ Views render inside the app's existing layout. You can use:
 
 ## Error Handling
 
-If your view has a syntax error, the browser shows the compile error instead of crashing. If your view throws at runtime, an error boundary catches it and shows the error with a retry button.
-`;
+If your view has a syntax error, the browser shows the compile error instead of crashing. If your view throws at runtime, an error boundary catches it and shows the error with a retry button.`;
+
+export function generateViewsDoc(): string {
+  return (
+    [
+      introSection,
+      fileFormatSection,
+      metadataAndPropsSection,
+      dependenciesAndParamsSection,
+      showingFilesSection,
+      companionViewsSection,
+      examplesSection,
+      stylingAndErrorsSection,
+    ].join("\n\n") + "\n"
+  );
 }

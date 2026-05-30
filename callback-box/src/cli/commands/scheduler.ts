@@ -5,15 +5,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import * as readline from "node:readline";
-import { createReadStream } from "node:fs";
 import { execSync } from "node:child_process";
 import { Command } from "commander";
 import {
   loadSchedulerConfig,
   isBox,
   runScheduler,
-  boxLogFile,
   LOG_DIR,
   type LogEntry,
 } from "../../core/scheduler.js";
@@ -22,6 +19,12 @@ import {
   addBoxToManifest,
   removeBoxFromManifest,
 } from "../../core/boxes-config.js";
+import {
+  resolveLogBoxes,
+  readBoxEntries,
+  renderLogEntry,
+  type LogFilters,
+} from "./scheduler-helpers.js";
 
 const PLIST_LABEL = "com.callback.scheduler";
 const PLIST_PATH = path.join(
@@ -202,60 +205,17 @@ schedulerCommand
   .action(async (options: { box?: string; limit: string; errors?: boolean; script?: string; json?: boolean }) => {
     const limit = parseInt(options.limit, 10);
 
-    // Determine which boxes to read logs from
-    let boxes: string[];
-    if (options.box) {
-      boxes = [path.resolve(options.box)];
-    } else {
-      const config = await loadSchedulerConfig();
-      boxes = config.boxes;
-    }
-
+    const boxes = await resolveLogBoxes(options.box);
     if (boxes.length === 0) {
       console.log("No boxes configured.");
       return;
     }
 
     // Read entries from all box logs
+    const filters: LogFilters = { errors: options.errors, script: options.script };
     const allEntries: LogEntry[] = [];
     for (const boxPath of boxes) {
-      const logPath = boxLogFile(boxPath);
-      try {
-        await fs.access(logPath);
-      } catch (_e) {
-        // No log file for this box yet — expected when a box has never
-        // had a scheduler tick. Skip it and move on.
-        continue;
-      }
-
-      const rl = readline.createInterface({
-        input: createReadStream(logPath),
-        crlfDelay: Infinity,
-      });
-
-      for await (const line of rl) {
-        if (!line.trim()) continue;
-        try {
-          const entry = JSON.parse(line) as LogEntry;
-          if (options.errors) {
-            if (entry.error) { /* keep */ }
-            else if (entry.result && entry.result.errors > 0) { /* keep */ }
-            else continue;
-          }
-          if (options.script) {
-            // Keep only tick entries where this script ran or errored.
-            const match = entry.result && entry.result.scripts.some(
-              (s) => s.name === options.script && (s.status === "ran" || s.status === "error"),
-            );
-            if (!match) continue;
-          }
-          allEntries.push(entry);
-        } catch (e) {
-          // Skip malformed JSONL lines, but surface them — a corrupt
-          // line shouldn't abort the whole log read silently.
-          console.warn(`Skipping malformed log line in ${logPath}:`, e);
-        }
-      }
+      allEntries.push(...(await readBoxEntries(boxPath, filters)));
     }
 
     // Sort newest first
@@ -275,44 +235,7 @@ schedulerCommand
     }
 
     for (const e of shown) {
-      const ts = e.ts.replace("T", " ").replace(/\.\d+Z$/, "Z");
-      if (e.event === "tick" && e.result) {
-        const boxName = path.basename(e.box ?? "?");
-        const r = e.result;
-        let ranScripts = r.scripts.filter((s) => s.status === "ran");
-        let errorScripts = r.scripts.filter((s) => s.status === "error");
-
-        // When filtering to a single script, render just that script's line
-        // with timestamp + box context — suppress the tick summary header.
-        if (options.script) {
-          ranScripts = ranScripts.filter((s) => s.name === options.script);
-          errorScripts = errorScripts.filter((s) => s.name === options.script);
-          for (const s of ranScripts) {
-            const dur = s.durationMs ? ` (${(s.durationMs / 1000).toFixed(1)}s)` : "";
-            console.log(`${ts}  ${boxName}: → ${s.name}${dur}`);
-          }
-          for (const s of errorScripts) {
-            console.log(`${ts}  ${boxName}: ✗ ${s.name}: ${s.error ?? "unknown error"}`);
-          }
-          continue;
-        }
-
-        if (r.ran === 0 && r.errors === 0) {
-          console.log(`${ts}  ${boxName}: all ${r.skipped} skipped`);
-        } else {
-          console.log(`${ts}  ${boxName}: ${r.ran} ran, ${r.skipped} skipped, ${r.errors} errors`);
-          for (const s of ranScripts) {
-            const dur = s.durationMs ? ` (${(s.durationMs / 1000).toFixed(1)}s)` : "";
-            console.log(`  → ${s.name}${dur}`);
-          }
-          for (const s of errorScripts) {
-            console.log(`  ✗ ${s.name}: ${s.error ?? "unknown error"}`);
-          }
-        }
-      } else if (e.event === "tick" && e.error) {
-        const boxName = path.basename(e.box ?? "?");
-        console.log(`${ts}  ${boxName}: ERROR ${e.error}`);
-      }
+      renderLogEntry(e, options.script);
     }
 
     if (allEntries.length > limit) {

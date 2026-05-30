@@ -157,6 +157,148 @@ async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
   };
 }
 
+interface ValidationContext {
+  loader: Awaited<ReturnType<typeof createLoader>>;
+  ctx: LoadCardContext;
+}
+
+interface ValidationResults {
+  cardSummary: LintSummary | null;
+  mdSummary: MarkdownLintSummary | null;
+  attachErrors: AttachLintError[];
+}
+
+/**
+ * Hook mode: read the touched card path from stdin, validate it, and exit.
+ * Non-card paths exit 0 silently; errors exit 2 so the agent sees feedback.
+ * This always exits the process and never returns.
+ */
+async function runHookMode(): Promise<never> {
+  const fp = await readHookFilePath();
+  if (fp === undefined || !isCardFile(fp)) {
+    process.exit(0);
+  }
+  const boxRoot = await requireBoxRoot();
+  const loader = await createLoader(boxRoot);
+  const ctx = await buildLoadContext(boxRoot);
+  const summary = await lintCardsDispatch([fp], { loader, ctx });
+  if (summary.totalErrors > 0) {
+    const output = formatLintResults(summary, { colors: false });
+    process.stderr.write(`${output}\n`);
+    process.exit(2);
+  }
+  process.exit(0);
+}
+
+interface CollectArgs {
+  boxRoot: string;
+  loader: ValidationContext["loader"];
+  ctx: LoadCardContext;
+  resolved: string[];
+  json: boolean;
+}
+
+/**
+ * Pick the validation scope from the options and run it. Mirrors the original
+ * staged / all-or-empty / explicit-paths branch order exactly.
+ */
+async function collectResults(
+  options: { staged?: boolean; all?: boolean; json?: boolean },
+  args: CollectArgs
+): Promise<ValidationResults> {
+  if (options.staged) return collectStagedResults(args);
+  if (options.all || args.resolved.length === 0) return collectAllResults(args);
+  return collectExplicitResults(args);
+}
+
+/** Validate the union of git-staged cards and any explicit card paths given. */
+async function collectStagedResults({ boxRoot, loader, ctx, resolved, json }: CollectArgs): Promise<ValidationResults> {
+  const staged = await listStagedCards(boxRoot);
+  const explicit = resolved.filter(isCardFile);
+  const all = [...staged, ...explicit];
+  if (all.length === 0 && !json) {
+    console.log("No staged cards to validate.");
+  }
+  const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { loader, ctx }) : null;
+  return { cardSummary, mdSummary: null, attachErrors: [] };
+}
+
+/** Validate every card, markdown file, and attach layout in the box. */
+async function collectAllResults({ boxRoot, loader, ctx }: CollectArgs): Promise<ValidationResults> {
+  const cardPaths = (await loader.listCards()).filter((p) => !isTrashedCard(p));
+  const cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
+  const mdFiles = await findMarkdownFiles(boxRoot);
+  const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles) : null;
+  const attachErrors = await lintAttachLayout(boxRoot);
+  return { cardSummary, mdSummary, attachErrors };
+}
+
+/** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
+async function collectExplicitResults({ loader, ctx, resolved }: CollectArgs): Promise<ValidationResults> {
+  const cardPaths = resolved.filter(isCardFile);
+  const mdPaths = resolved.filter(isMarkdownFile);
+  const unknown = resolved.filter((p) => !isCardFile(p) && !isMarkdownFile(p));
+  if (unknown.length > 0) {
+    console.error(`Error: not a card or markdown file: ${unknown.join(", ")}`);
+    process.exit(1);
+  }
+  const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { loader, ctx }) : null;
+  const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths) : null;
+  return { cardSummary, mdSummary, attachErrors: [] };
+}
+
+/** Print human-readable card/markdown/attach results to stdout. */
+function printTextResults({ cardSummary, mdSummary, attachErrors }: ValidationResults): void {
+  if (cardSummary !== null) {
+    const output = formatLintResults(cardSummary, { colors: true });
+    if (output) console.log(output);
+  }
+  if (mdSummary !== null) {
+    const output = formatMarkdownResults(mdSummary, { colors: true });
+    if (output) console.log(`\n${output}`);
+    if (mdSummary.totalErrors > 0) {
+      const fileWord = mdSummary.filesWithErrors === 1 ? "file" : "files";
+      console.log(
+        `\n${String(mdSummary.filesChecked)} markdown file${mdSummary.filesChecked === 1 ? "" : "s"} checked, ` +
+        `${String(mdSummary.totalErrors)} error${mdSummary.totalErrors === 1 ? "" : "s"} in ` +
+        `${String(mdSummary.filesWithErrors)} ${fileWord}`
+      );
+    }
+  }
+  if (attachErrors.length > 0) {
+    const output = formatAttachLintErrors(attachErrors, { colors: true });
+    console.log(`\n${output}`);
+    console.log(`\nAttach layout: ${attachErrors.length} issue(s)`);
+  }
+}
+
+/**
+ * Verify the git working tree is clean. Exits 1 (printing the dirty files) if
+ * not. Prints a confirmation line in non-JSON mode when clean.
+ */
+async function checkCommitted(boxRoot: string, { json }: { json: boolean }): Promise<void> {
+  const status = await getStatus(boxRoot);
+  if (!status.clean) {
+    const dirty = [...status.staged, ...status.modified, ...status.untracked];
+    console.error("\nGit working tree is not clean:");
+    for (const file of dirty) {
+      console.error(`  ${file}`);
+    }
+    process.exit(1);
+  }
+  if (!json) {
+    console.log("Git working tree is clean.");
+  }
+}
+
+function countTotalErrors({ cardSummary, mdSummary, attachErrors }: ValidationResults): number {
+  return (
+    (cardSummary !== null ? cardSummary.totalErrors : 0) +
+    (mdSummary !== null ? mdSummary.totalErrors : 0) +
+    attachErrors.length
+  );
+}
+
 export const validateCommand = new Command("validate")
   .description("Validate cards and markdown in the box")
   .argument("[paths...]", "Files to validate (cards or markdown). Omit to validate everything; pair with --staged to validate staged cards.")
@@ -172,114 +314,37 @@ export const validateCommand = new Command("validate")
     ) => {
       try {
         if (options.hook) {
-          const fp = await readHookFilePath();
-          if (fp === undefined || !isCardFile(fp)) {
-            process.exit(0);
-          }
-          const boxRoot = await requireBoxRoot();
-          const loader = await createLoader(boxRoot);
-          const ctx = await buildLoadContext(boxRoot);
-          const summary = await lintCardsDispatch([fp], { loader, ctx });
-          if (summary.totalErrors > 0) {
-            const output = formatLintResults(summary, { colors: false });
-            process.stderr.write(`${output}\n`);
-            process.exit(2);
-          }
-          process.exit(0);
+          await runHookMode();
         }
 
         const boxRoot = await requireBoxRoot();
         const loader = await createLoader(boxRoot);
         const ctx = await buildLoadContext(boxRoot);
-
-        let cardSummary: LintSummary | null = null;
-        let mdSummary: MarkdownLintSummary | null = null;
-        let attachErrors: AttachLintError[] = [];
+        const json = options.json === true;
 
         const resolved = targetPaths.map((p) =>
           path.isAbsolute(p) ? p : path.join(process.cwd(), p)
         );
 
-        if (options.staged) {
-          const staged = await listStagedCards(boxRoot);
-          const explicit = resolved.filter(isCardFile);
-          const all = [...staged, ...explicit];
-          if (all.length === 0 && !options.json) {
-            console.log("No staged cards to validate.");
-          }
-          if (all.length > 0) {
-            cardSummary = await lintCardsDispatch(all, { loader, ctx });
-          }
-        } else if (options.all || resolved.length === 0) {
-          const cardPaths = (await loader.listCards()).filter((p) => !isTrashedCard(p));
-          cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
-          const mdFiles = await findMarkdownFiles(boxRoot);
-          if (mdFiles.length > 0) {
-            mdSummary = await lintMarkdownFiles(mdFiles);
-          }
-          attachErrors = await lintAttachLayout(boxRoot);
-        } else {
-          const cardPaths = resolved.filter(isCardFile);
-          const mdPaths = resolved.filter(isMarkdownFile);
-          const unknown = resolved.filter((p) => !isCardFile(p) && !isMarkdownFile(p));
-          if (unknown.length > 0) {
-            console.error(`Error: not a card or markdown file: ${unknown.join(", ")}`);
-            process.exit(1);
-          }
-          if (cardPaths.length > 0) {
-            cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
-          }
-          if (mdPaths.length > 0) {
-            mdSummary = await lintMarkdownFiles(mdPaths);
-          }
-        }
+        const results = await collectResults(options, { boxRoot, loader, ctx, resolved, json });
 
-        if (options.json) {
-          console.log(JSON.stringify({ cards: cardSummary, markdown: mdSummary, attach: attachErrors }, null, 2));
+        if (json) {
+          console.log(
+            JSON.stringify(
+              { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors },
+              null,
+              2
+            )
+          );
         } else {
-          if (cardSummary !== null) {
-            const output = formatLintResults(cardSummary, { colors: true });
-            if (output) console.log(output);
-          }
-          if (mdSummary !== null) {
-            const output = formatMarkdownResults(mdSummary, { colors: true });
-            if (output) console.log(`\n${output}`);
-            if (mdSummary.totalErrors > 0) {
-              const fileWord = mdSummary.filesWithErrors === 1 ? "file" : "files";
-              console.log(
-                `\n${String(mdSummary.filesChecked)} markdown file${mdSummary.filesChecked === 1 ? "" : "s"} checked, ` +
-                `${String(mdSummary.totalErrors)} error${mdSummary.totalErrors === 1 ? "" : "s"} in ` +
-                `${String(mdSummary.filesWithErrors)} ${fileWord}`
-              );
-            }
-          }
-          if (attachErrors.length > 0) {
-            const output = formatAttachLintErrors(attachErrors, { colors: true });
-            console.log(`\n${output}`);
-            console.log(`\nAttach layout: ${attachErrors.length} issue(s)`);
-          }
+          printTextResults(results);
         }
 
         if (options.committed) {
-          const status = await getStatus(boxRoot);
-          if (!status.clean) {
-            const dirty = [...status.staged, ...status.modified, ...status.untracked];
-            console.error("\nGit working tree is not clean:");
-            for (const file of dirty) {
-              console.error(`  ${file}`);
-            }
-            process.exit(1);
-          }
-          if (!options.json) {
-            console.log("Git working tree is clean.");
-          }
+          await checkCommitted(boxRoot, { json });
         }
 
-        const totalErrors =
-          (cardSummary !== null ? cardSummary.totalErrors : 0) +
-          (mdSummary !== null ? mdSummary.totalErrors : 0) +
-          attachErrors.length;
-        if (totalErrors > 0) {
+        if (countTotalErrors(results) > 0) {
           process.exit(1);
         }
       } catch (error) {

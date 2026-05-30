@@ -157,11 +157,18 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
   const resolvedServices: Services = services ?? {};
   addOwnerCheck(server);
 
+  registerTelegramAdminRoutes(server, { boxRoot, boxSlug, services: resolvedServices });
+  registerGoogleAdminRoutes(server, { boxRoot, boxSlug });
+  registerBoxConfigRoutes(server, { boxRoot, boxSlug });
+}
+
+/** Telegram connector management routes. */
+function registerTelegramAdminRoutes(server: FastifyInstance, { boxRoot, boxSlug, services }: { boxRoot: string; boxSlug: string; services: Services }) {
   // --- Telegram connector management ---
 
   /** Get or create a TelegramService for a given bot token */
   function getTelegram(botToken: string) {
-    return resolvedServices.telegram ?? createTelegramService(botToken);
+    return services.telegram ?? createTelegramService(botToken);
   }
 
   server.get("/api/admin/telegram-status", async () => {
@@ -261,7 +268,10 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
 
     return { success: true };
   });
+}
 
+/** Google Services OAuth routes. */
+function registerGoogleAdminRoutes(server: FastifyInstance, { boxRoot, boxSlug }: { boxRoot: string; boxSlug: string }) {
   // --- Google Services OAuth ---
   // Client credentials from GOOGLE_OAUTH_CLIENT_ID/SECRET env vars.
   // Tokens stored centrally via CB_GOOGLE_TOKENS_FILE (shared across all boxes).
@@ -324,7 +334,10 @@ export async function registerBoxAdminRoutes(server: FastifyInstance, { boxRoot,
     } catch (_e) { /* already gone */ }
     return { success: true };
   });
+}
 
+/** Box configuration routes (allowedEmails, googleServices). */
+function registerBoxConfigRoutes(server: FastifyInstance, { boxRoot, boxSlug }: { boxRoot: string; boxSlug: string }) {
   // --- Box configuration (allowedEmails, etc.) ---
 
   server.get("/api/admin/box-config", async () => {

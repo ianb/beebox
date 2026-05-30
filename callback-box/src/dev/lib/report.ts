@@ -35,6 +35,29 @@ function formatTestResult(result: TestResult): string {
   const { test, behavior, checks } = result;
   const lines: string[] = [];
 
+  lines.push(...formatTestHeader(test));
+  lines.push(...formatAgentBehavior(behavior));
+  lines.push(...formatResponse(behavior));
+
+  const checkLines = formatCheckLines(checks);
+  if (checkLines.length > 0) {
+    lines.push("**Automated checks:**");
+    lines.push(...checkLines);
+    lines.push("");
+  }
+
+  lines.push("**Assessment:** (to be filled in during evaluation)");
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+type Test = TestResult["test"];
+type Behavior = TestResult["behavior"];
+type Checks = TestResult["checks"];
+
+function formatTestHeader(test: Test): string[] {
+  const lines: string[] = [];
   lines.push(`## ${test.id}`);
   lines.push(`**Prompt:** "${test.prompt}"`);
   lines.push(`**Expected level:** ${test.expected_level}`);
@@ -43,8 +66,11 @@ function formatTestResult(result: TestResult): string {
     lines.push(`**Notes:** ${test.notes}`);
   }
   lines.push("");
+  return lines;
+}
 
-  // Agent behavior
+function formatAgentBehavior(behavior: Behavior): string[] {
+  const lines: string[] = [];
   lines.push("**Agent behavior:**");
   lines.push(`- Files read: ${behavior.filesRead.length === 0 ? "(none)" : behavior.filesRead.join(", ")}`);
   lines.push(`- Searches: ${behavior.searches.length === 0 ? "(none)" : behavior.searches.map((s) => `${s.tool}: ${s.summary}`).join("; ")}`);
@@ -53,8 +79,11 @@ function formatTestResult(result: TestResult): string {
   }
   lines.push(`- Response length: ${behavior.responseLength} words`);
   lines.push("");
+  return lines;
+}
 
-  // Response (quoted)
+function formatResponse(behavior: Behavior): string[] {
+  const lines: string[] = [];
   lines.push("**Response:**");
   const truncated = behavior.responseText.length > 2000
     ? behavior.responseText.substring(0, 2000) + "..."
@@ -63,8 +92,10 @@ function formatTestResult(result: TestResult): string {
     lines.push(`> ${line}`);
   }
   lines.push("");
+  return lines;
+}
 
-  // Automated checks
+function formatCheckLines(checks: Checks): string[] {
   const checkLines: string[] = [];
   for (const c of checks.containsChecks) {
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Response contains "${c.expected}"`);
@@ -92,15 +123,5 @@ function formatTestResult(result: TestResult): string {
     const detail = c.found && c.matchedCommand ? ` (matched: "${c.matchedCommand}")` : "";
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Bash command contains "${c.expected}"${detail}`);
   }
-
-  if (checkLines.length > 0) {
-    lines.push("**Automated checks:**");
-    lines.push(...checkLines);
-    lines.push("");
-  }
-
-  lines.push("**Assessment:** (to be filled in during evaluation)");
-  lines.push("");
-
-  return lines.join("\n");
+  return checkLines;
 }

@@ -1,9 +1,4 @@
 {
-  "src/cli/commands/scheduler.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/cli/commands/session.ts": {
     "complexity": {
       "count": 2
@@ -12,19 +7,6 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "src/cli/commands/tick.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "src/cli/commands/validate.ts": {
-    "complexity": {
       "count": 1
     }
   },
@@ -89,26 +71,8 @@
       "count": 1
     }
   },
-  "src/core/card-io.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/core/chat-session.ts": {
     "max-lines": {
-      "count": 1
-    }
-  },
-  "src/core/commands/answer.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "src/core/commands/assemble-timeline.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -146,11 +110,6 @@
       "count": 1
     }
   },
-  "src/core/commands/upload.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/core/generate-docs.ts": {
     "max-lines": {
       "count": 1
@@ -183,11 +142,6 @@
       "count": 1
     }
   },
-  "src/core/reactor/engine.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/core/transcription-voxtral.ts": {
     "complexity": {
       "count": 1
@@ -195,11 +149,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "src/core/views-doc.ts": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -220,16 +169,6 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "src/dev/lib/report.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "src/dev/lib/session-report.ts": {
-    "complexity": {
       "count": 1
     }
   },
@@ -292,16 +231,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "src/webapp/routes/actions.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "src/webapp/routes/admin.ts": {
     "max-lines-per-function": {
       "count": 1
     }

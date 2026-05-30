@@ -23,6 +23,7 @@ import {
   findEntry,
   addEntry,
   groupScanFiles,
+  type UploadLedger,
   type UploadLedgerEntry,
   type ScanGroup,
 } from "./upload-helpers.js";
@@ -43,49 +44,148 @@ function isSupportedKind(kind: string): kind is UploadKind {
   return (SUPPORTED_KINDS as readonly string[]).includes(kind);
 }
 
-async function executeUpload(
-  ctx: CommandContext,
+/** Validate the raw upload args. Returns an error string, or the typed args. */
+function validateUploadArgs(
   args: Record<string, unknown>
-): Promise<CommandResult> {
-  const { files, kind, force, context: extraContext, limit } = args as unknown as UploadArgs;
+): { error: string } | { args: UploadArgs } {
+  const typed = args as unknown as UploadArgs;
+  const { files, kind } = typed;
 
   if (!files || files.length === 0) {
-    return { success: false, error: "At least one file is required" };
+    return { error: "At least one file is required" };
   }
   if (!kind) {
-    return { success: false, error: "--as <kind> is required" };
+    return { error: "--as <kind> is required" };
   }
   if (!isSupportedKind(kind)) {
-    return {
-      success: false,
-      error: `Unknown kind '${kind}'. Supported: ${SUPPORTED_KINDS.join(", ")}`,
-    };
+    return { error: `Unknown kind '${kind}'. Supported: ${SUPPORTED_KINDS.join(", ")}` };
   }
+  return { args: typed };
+}
 
-  // Resolve to absolute paths and validate up-front so a typo doesn't half-finish a batch.
+/**
+ * Resolve inputs to absolute paths and validate up-front so a typo doesn't
+ * half-finish a batch. Returns an error string, or the absolute paths.
+ */
+async function resolveAndValidateFiles(
+  files: string[]
+): Promise<{ error: string } | { absoluteFiles: string[] }> {
   const absoluteFiles: string[] = [];
   for (const f of files) {
     const abs = path.isAbsolute(f) ? f : path.resolve(process.cwd(), f);
     try {
       const stat = await fs.stat(abs);
       if (!stat.isFile()) {
-        return { success: false, error: `Not a regular file: ${abs}` };
+        return { error: `Not a regular file: ${abs}` };
       }
     } catch (e) {
       console.warn(`Could not stat ${abs}:`, e);
-      return { success: false, error: `File not found: ${abs}` };
+      return { error: `File not found: ${abs}` };
     }
     absoluteFiles.push(abs);
   }
+  return { absoluteFiles };
+}
 
-  // For smoke tests: cap the number of files before grouping so a paired batch
-  // still gets its photo-and-back together (sorted, so first N are contiguous).
-  const limitedFiles = typeof limit === "number" && limit > 0 && limit < absoluteFiles.length
-    ? absoluteFiles.toSorted().slice(0, limit)
-    : absoluteFiles;
+/**
+ * Cap the number of files before grouping (for smoke tests) so a paired batch
+ * still gets its photo-and-back together (sorted, so first N are contiguous).
+ */
+function applyFileLimit(
+  ctx: CommandContext,
+  { absoluteFiles, limit }: { absoluteFiles: string[]; limit: number | undefined }
+): string[] {
+  const limitedFiles =
+    typeof limit === "number" && limit > 0 && limit < absoluteFiles.length
+      ? absoluteFiles.toSorted().slice(0, limit)
+      : absoluteFiles;
   if (limitedFiles.length < absoluteFiles.length) {
     ctx.writeLine(`Limit applied: processing ${limitedFiles.length} of ${absoluteFiles.length} file(s)`);
   }
+  return limitedFiles;
+}
+
+interface GroupOutcome {
+  status: "imported" | "skipped" | "failed";
+}
+
+/**
+ * Process one scan group: hash its files, skip if all already in the ledger
+ * (unless forced), otherwise dispatch to scan-import and record the result.
+ * Persists the ledger after a successful import.
+ */
+async function processGroup(
+  ctx: CommandContext,
+  options: {
+    group: ScanGroup;
+    ledger: UploadLedger;
+    kind: string;
+    force: boolean | undefined;
+    extraContext: string | undefined;
+  }
+): Promise<GroupOutcome> {
+  const { group, ledger, kind, force, extraContext } = options;
+  ctx.writeLine(`\n→ [${group.kind}] ${group.label}`);
+
+  const hashes: { file: string; hash: string }[] = [];
+  for (const file of group.files) {
+    hashes.push({ file, hash: await sha256File(file) });
+  }
+  const existingForHashes = hashes.map((h) => findEntry(ledger, h.hash));
+  const allSeen = existingForHashes.every((e) => e !== undefined);
+  if (allSeen && !force) {
+    const withSession = existingForHashes.find((e) => e !== undefined && typeof e.sessionRelDir === "string");
+    const where = withSession && withSession.sessionRelDir ? ` → ${withSession.sessionRelDir}` : "";
+    ctx.writeLine(
+      `  skipped (all ${group.files.length} file${group.files.length === 1 ? "" : "s"} already uploaded${where}); use --force to re-import`
+    );
+    return { status: "skipped" };
+  }
+
+  const scanArgs: Record<string, unknown> = { inputs: group.files };
+  if (extraContext && extraContext.trim().length > 0) scanArgs["context"] = extraContext;
+  const result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
+
+  if (!result.success) {
+    ctx.writeLine(`  failed: ${result.error}`);
+    return { status: "failed" };
+  }
+
+  const data = result.data as { sessionRelDir?: string } | undefined;
+  const sessionRelDir = data && typeof data.sessionRelDir === "string" ? data.sessionRelDir : undefined;
+  for (const { file, hash } of hashes) {
+    if (findEntry(ledger, hash) !== undefined) continue;
+    const entry: UploadLedgerEntry = {
+      hash,
+      originalName: path.basename(file),
+      originalPath: file,
+      uploadedAt: getBoxTimeISO(ctx.boxRoot),
+      kind,
+    };
+    if (sessionRelDir) entry.sessionRelDir = sessionRelDir;
+    addEntry(ledger, entry);
+  }
+  // Save after each group so a crash mid-batch still preserves the dedup record.
+  await saveLedger(ctx.boxRoot, ledger);
+  return { status: "imported" };
+}
+
+async function executeUpload(
+  ctx: CommandContext,
+  args: Record<string, unknown>
+): Promise<CommandResult> {
+  const validated = validateUploadArgs(args);
+  if ("error" in validated) {
+    return { success: false, error: validated.error };
+  }
+  const { kind, force, context: extraContext, limit } = validated.args;
+
+  const resolved = await resolveAndValidateFiles(validated.args.files);
+  if ("error" in resolved) {
+    return { success: false, error: resolved.error };
+  }
+
+  const limitedFiles = applyFileLimit(ctx, { absoluteFiles: resolved.absoluteFiles, limit });
 
   let groups: ScanGroup[];
   try {
@@ -105,51 +205,10 @@ async function executeUpload(
   let failed = 0;
 
   for (const group of groups) {
-    ctx.writeLine(`\n→ [${group.kind}] ${group.label}`);
-
-    const hashes: { file: string; hash: string }[] = [];
-    for (const file of group.files) {
-      hashes.push({ file, hash: await sha256File(file) });
-    }
-    const existingForHashes = hashes.map((h) => findEntry(ledger, h.hash));
-    const allSeen = existingForHashes.every((e) => e !== undefined);
-    if (allSeen && !force) {
-      const withSession = existingForHashes.find((e) => e !== undefined && typeof e.sessionRelDir === "string");
-      const where = withSession && withSession.sessionRelDir ? ` → ${withSession.sessionRelDir}` : "";
-      ctx.writeLine(
-        `  skipped (all ${group.files.length} file${group.files.length === 1 ? "" : "s"} already uploaded${where}); use --force to re-import`
-      );
-      skipped++;
-      continue;
-    }
-
-    const scanArgs: Record<string, unknown> = { inputs: group.files };
-    if (extraContext && extraContext.trim().length > 0) scanArgs["context"] = extraContext;
-    const result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
-
-    if (!result.success) {
-      ctx.writeLine(`  failed: ${result.error}`);
-      failed++;
-      continue;
-    }
-
-    const data = result.data as { sessionRelDir?: string } | undefined;
-    const sessionRelDir = data && typeof data.sessionRelDir === "string" ? data.sessionRelDir : undefined;
-    for (const { file, hash } of hashes) {
-      if (findEntry(ledger, hash) !== undefined) continue;
-      const entry: UploadLedgerEntry = {
-        hash,
-        originalName: path.basename(file),
-        originalPath: file,
-        uploadedAt: getBoxTimeISO(ctx.boxRoot),
-        kind,
-      };
-      if (sessionRelDir) entry.sessionRelDir = sessionRelDir;
-      addEntry(ledger, entry);
-    }
-    // Save after each group so a crash mid-batch still preserves the dedup record.
-    await saveLedger(ctx.boxRoot, ledger);
-    imported++;
+    const outcome = await processGroup(ctx, { group, ledger, kind, force, extraContext });
+    if (outcome.status === "imported") imported++;
+    else if (outcome.status === "skipped") skipped++;
+    else failed++;
   }
 
   ctx.writeLine(`\nUpload summary: ${imported} group${imported === 1 ? "" : "s"} imported, ${skipped} skipped, ${failed} failed`);

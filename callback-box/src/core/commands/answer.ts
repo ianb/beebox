@@ -27,6 +27,182 @@ export interface AnswerArgs {
   via?: string;
 }
 
+/**
+ * Load, parse, and validate the question card at the given path.
+ * Returns either the parsed fields or a failure result to short-circuit on.
+ */
+async function loadPendingQuestion(
+  fullPath: string,
+  questionRef: string
+): Promise<
+  { ok: true; fields: QuestionFields; content: string } | { ok: false; result: CommandResult }
+> {
+  let content: string;
+  try {
+    content = await fs.readFile(fullPath, "utf-8");
+  } catch (e) {
+    console.warn(`Could not load card ${fullPath}:`, e);
+    return {
+      ok: false,
+      result: { success: false, error: `Could not load card: ${questionRef}` },
+    };
+  }
+
+  let fields: QuestionFields;
+  try {
+    const card = parseCardText(content, {
+      source: fullPath,
+      schemas: createCardSchemaMap(),
+    });
+    if (card.schema.type !== "question") {
+      return {
+        ok: false,
+        result: { success: false, error: `Not a question card (got ${card.schema.type})` },
+      };
+    }
+    fields = card.fields as unknown as QuestionFields;
+  } catch (err) {
+    return {
+      ok: false,
+      result: {
+        success: false,
+        error: `Could not parse question: ${(err as Error).message}`,
+      },
+    };
+  }
+
+  if (fields.status !== "pending") {
+    return {
+      ok: false,
+      result: {
+        success: false,
+        error: `Question is not pending (status: ${fields.status})`,
+      },
+    };
+  }
+
+  return { ok: true, fields, content };
+}
+
+/**
+ * Resolve the raw answer/selectedId against a select-type question's options.
+ * Returns the normalized answer/selection or a failure result.
+ */
+function resolveSelectAnswer(
+  rawAnswer: string,
+  questionOptions: QuestionFields["input"]["options"] & object
+):
+  | { ok: true; finalAnswer: string; selectedId: string | undefined }
+  | { ok: false; result: CommandResult } {
+  const optionIndex = (rawAnswer.codePointAt(0) ?? 0) - 97;
+  if (rawAnswer.length === 1 && optionIndex >= 0 && optionIndex < questionOptions.length) {
+    const option = questionOptions[optionIndex];
+    if (option) {
+      return { ok: true, finalAnswer: option.label, selectedId: option.id };
+    }
+    return { ok: true, finalAnswer: rawAnswer, selectedId: undefined };
+  }
+
+  const match = questionOptions.find(
+    (o) => o.label.toLowerCase() === rawAnswer.toLowerCase()
+  );
+  if (match) {
+    return { ok: true, finalAnswer: match.label, selectedId: match.id };
+  }
+
+  const optionsList = questionOptions
+    .map((o, i) => `  ${String.fromCodePoint(97 + i)}) ${o.label}`)
+    .join("\n");
+  return {
+    ok: false,
+    result: {
+      success: false,
+      error: `Invalid option. Available options:\n${optionsList}`,
+    },
+  };
+}
+
+/**
+ * Resolve the raw answer for a confirm-type question to yes/no.
+ */
+function resolveConfirmAnswer(
+  rawAnswer: string
+):
+  | { ok: true; finalAnswer: string; selectedId: string }
+  | { ok: false; result: CommandResult } {
+  const normalized = rawAnswer.toLowerCase();
+  if (["yes", "y", "true", "1"].includes(normalized)) {
+    return { ok: true, finalAnswer: "yes", selectedId: "yes" };
+  }
+  if (["no", "n", "false", "0"].includes(normalized)) {
+    return { ok: true, finalAnswer: "no", selectedId: "no" };
+  }
+  return {
+    ok: false,
+    result: {
+      success: false,
+      error: "Confirm questions require yes/no answer",
+    },
+  };
+}
+
+/**
+ * Resolve the final answer text and selected option ID for a question,
+ * applying select/confirm normalization. Returns a failure result on
+ * invalid input.
+ */
+function resolveAnswer(
+  fields: QuestionFields,
+  args: { answer: string; selectedId: string | undefined }
+):
+  | { ok: true; finalAnswer: string; selectedId: string | undefined }
+  | { ok: false; result: CommandResult } {
+  const inputType = fields.input.type;
+  const questionOptions = fields.input.options ?? [];
+
+  if (inputType === "select" && !args.selectedId) {
+    return resolveSelectAnswer(args.answer, questionOptions);
+  }
+
+  if (inputType === "confirm") {
+    return resolveConfirmAnswer(args.answer);
+  }
+
+  return { ok: true, finalAnswer: args.answer, selectedId: args.selectedId };
+}
+
+/**
+ * Create and commit a follow-up job card for an answered question.
+ * Returns the box-relative path of the created job.
+ */
+async function createFollowupJob(
+  ctx: CommandContext,
+  params: { fields: QuestionFields; questionRef: string; finalAnswer: string }
+): Promise<string> {
+  const { fields, questionRef, finalAnswer } = params;
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[.:]/g, "-")
+    .slice(0, 19);
+  const jobFilename = `${timestamp}-question-followup.question-followup.job.card`;
+  const jobPath = path.join(ctx.boxRoot, "box/jobs", jobFilename);
+  const jobContent = createQuestionFollowupJobTemplate({
+    description: `Follow up on answered question: ${fields.prompt}`,
+    questionRef,
+    directive: fields.directive ?? "Process the answer to this question",
+    answer: finalAnswer,
+  });
+
+  await fs.mkdir(path.join(ctx.boxRoot, "box/jobs"), { recursive: true });
+  await fs.writeFile(jobPath, jobContent);
+  const jobRelative = path.relative(ctx.boxRoot, jobPath);
+  await stageFiles(ctx.boxRoot, [jobRelative]);
+  await commit(ctx.boxRoot, {
+    message: "Create follow-up job for answered question",
+  });
+  return jobRelative;
+}
+
 async function executeAnswer(
   ctx: CommandContext,
   args: Record<string, unknown>
@@ -53,85 +229,20 @@ async function executeAnswer(
     return { success: false, error: "Path must be a card file (*.card)" };
   }
 
-  let content: string;
-  try {
-    content = await fs.readFile(fullPath, "utf-8");
-  } catch (e) {
-    console.warn(`Could not load card ${fullPath}:`, e);
-    return { success: false, error: `Could not load card: ${answerArgs.question}` };
+  const loaded = await loadPendingQuestion(fullPath, answerArgs.question);
+  if (!loaded.ok) {
+    return loaded.result;
   }
+  const { fields, content } = loaded;
 
-  let fields: QuestionFields;
-  try {
-    const card = parseCardText(content, {
-      source: fullPath,
-      schemas: createCardSchemaMap(),
-    });
-    if (card.schema.type !== "question") {
-      return { success: false, error: `Not a question card (got ${card.schema.type})` };
-    }
-    fields = card.fields as unknown as QuestionFields;
-  } catch (err) {
-    return { success: false, error: `Could not parse question: ${(err as Error).message}` };
+  const resolved = resolveAnswer(fields, {
+    answer: answerArgs.answer,
+    selectedId: answerArgs.selectedId,
+  });
+  if (!resolved.ok) {
+    return resolved.result;
   }
-
-  if (fields.status !== "pending") {
-    return {
-      success: false,
-      error: `Question is not pending (status: ${fields.status})`,
-    };
-  }
-
-  const inputType = fields.input.type;
-  const questionOptions = fields.input.options ?? [];
-
-  let finalAnswer = answerArgs.answer;
-  let selectedId = answerArgs.selectedId;
-
-  if (inputType === "select" && !selectedId) {
-    const optionIndex = (answerArgs.answer.codePointAt(0) ?? 0) - 97;
-    if (
-      answerArgs.answer.length === 1 &&
-      optionIndex >= 0 &&
-      optionIndex < questionOptions.length
-    ) {
-      const option = questionOptions[optionIndex];
-      if (option) {
-        selectedId = option.id;
-        finalAnswer = option.label;
-      }
-    } else {
-      const match = questionOptions.find(
-        (o) => o.label.toLowerCase() === answerArgs.answer.toLowerCase()
-      );
-      if (match) {
-        selectedId = match.id;
-        finalAnswer = match.label;
-      } else {
-        const optionsList = questionOptions
-          .map((o, i) => `  ${String.fromCodePoint(97 + i)}) ${o.label}`)
-          .join("\n");
-        return {
-          success: false,
-          error: `Invalid option. Available options:\n${optionsList}`,
-        };
-      }
-    }
-  } else if (inputType === "confirm") {
-    const normalized = answerArgs.answer.toLowerCase();
-    if (["yes", "y", "true", "1"].includes(normalized)) {
-      finalAnswer = "yes";
-      selectedId = "yes";
-    } else if (["no", "n", "false", "0"].includes(normalized)) {
-      finalAnswer = "no";
-      selectedId = "no";
-    } else {
-      return {
-        success: false,
-        error: "Confirm questions require yes/no answer",
-      };
-    }
-  }
+  const { finalAnswer, selectedId } = resolved;
 
   fields.status = "answered";
   fields.answer = {
@@ -162,25 +273,10 @@ async function executeAnswer(
     ctx.writeLine(`  Selected: ${selectedId}`);
   }
 
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[.:]/g, "-")
-    .slice(0, 19);
-  const jobFilename = `${timestamp}-question-followup.question-followup.job.card`;
-  const jobPath = path.join(ctx.boxRoot, "box/jobs", jobFilename);
-  const jobContent = createQuestionFollowupJobTemplate({
-    description: `Follow up on answered question: ${fields.prompt}`,
+  const jobRelative = await createFollowupJob(ctx, {
+    fields,
     questionRef: relativePath,
-    directive: fields.directive ?? "Process the answer to this question",
-    answer: finalAnswer,
-  });
-
-  await fs.mkdir(path.join(ctx.boxRoot, "box/jobs"), { recursive: true });
-  await fs.writeFile(jobPath, jobContent);
-  const jobRelative = path.relative(ctx.boxRoot, jobPath);
-  await stageFiles(ctx.boxRoot, [jobRelative]);
-  await commit(ctx.boxRoot, {
-    message: "Create follow-up job for answered question",
+    finalAnswer,
   });
   ctx.writeLine(`  Created follow-up job: ${jobRelative}`);
 

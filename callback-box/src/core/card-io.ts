@@ -120,37 +120,9 @@ export function parseCardText(
     throw new CardIOError(source, "missing frontmatter block");
   }
 
-  let frontmatter: unknown;
-  try {
-    frontmatter = parseYaml(split.frontmatterText);
-  } catch (e) {
-    const err = e as Error;
-    throw new CardIOError(source, `invalid YAML frontmatter: ${err.message}`);
-  }
-  // YAML parses an empty block as `null`; treat that as an empty mapping
-  // so cards whose only frontmatter field got stripped still parse.
-  if (Array.isArray(frontmatter) || (frontmatter !== null && typeof frontmatter !== "object")) {
-    throw new CardIOError(source, "frontmatter must be a YAML mapping");
-  }
-  const fm = (frontmatter as Record<string, unknown> | null) ?? {};
+  const fm = parseFrontmatterMapping(split.frontmatterText, source);
 
-  // Resolve the type: caller-supplied wins, otherwise derive from the
-  // source filename (Foo.<type>.card), otherwise fall back to any
-  // `type:` field in the YAML for callers that haven't been updated yet.
-  const yamlType = typeof fm["type"] === "string" ? (fm["type"] as string) : undefined;
-  const resolved = type ?? typeFromFilename(source) ?? yamlType;
-  if (resolved === undefined) {
-    throw new CardIOError(
-      source,
-      "cannot determine card type — filename must match Foo.<type>.card"
-    );
-  }
-  if (type !== undefined && yamlType !== undefined && yamlType !== type) {
-    throw new CardIOError(
-      source,
-      `frontmatter type "${yamlType}" does not match filename type "${type}"`
-    );
-  }
+  const resolved = resolveCardType({ fm, source, type });
   const schema = schemas.get(resolved);
   if (schema === undefined) {
     throw new CardIOError(source, `no schema registered for type "${resolved}"`);
@@ -171,32 +143,7 @@ export function parseCardText(
 
   const contentType = typeof fm["content-type"] === "string" ? fm["content-type"] : undefined;
 
-  let bodyValue: unknown;
-  if (schema.bodyField !== null && schema.bodyFieldName !== null) {
-    if (schema.bodyField.kind === "markdown") {
-      bodyValue = split.body;
-    } else if (schema.bodyField.kind === "xml") {
-      bodyValue = split.body;
-      if (contentType !== CARD_XML_CONTENT_TYPE) {
-        throw new CardIOError(
-          source,
-          `schema "${resolved}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
-        );
-      }
-    }
-    const bodyParse = schema.bodyField.schema.safeParse(bodyValue);
-    if (!bodyParse.success) {
-      throw new CardIOError(
-        source,
-        `invalid ${resolved} body:\n${formatZodIssues(bodyParse.error.issues)}`
-      );
-    }
-    bodyValue = bodyParse.data;
-  } else {
-    if (split.body.trim().length > 0) {
-      throw new CardIOError(source, `schema "${resolved}" declares no body, but file has body content`);
-    }
-  }
+  const bodyValue = validateCardBody({ schema, body: split.body, contentType, resolved, source });
 
   const fields: Record<string, unknown> = { ...fmFields };
   if (schema.bodyFieldName !== null) {
@@ -209,6 +156,91 @@ export function parseCardText(
     rawBody: split.body,
     contentType,
   };
+}
+
+/**
+ * Parse the frontmatter YAML block into a plain mapping. An empty block
+ * (which YAML parses as `null`) becomes an empty mapping; non-mapping YAML
+ * (arrays, scalars) is a format error.
+ */
+function parseFrontmatterMapping(frontmatterText: string, source: string): Record<string, unknown> {
+  let frontmatter: unknown;
+  try {
+    frontmatter = parseYaml(frontmatterText);
+  } catch (e) {
+    const err = e as Error;
+    throw new CardIOError(source, `invalid YAML frontmatter: ${err.message}`);
+  }
+  // YAML parses an empty block as `null`; treat that as an empty mapping
+  // so cards whose only frontmatter field got stripped still parse.
+  if (Array.isArray(frontmatter) || (frontmatter !== null && typeof frontmatter !== "object")) {
+    throw new CardIOError(source, "frontmatter must be a YAML mapping");
+  }
+  return (frontmatter as Record<string, unknown> | null) ?? {};
+}
+
+/**
+ * Resolve the card type: caller-supplied wins, otherwise derive from the
+ * source filename (Foo.<type>.card), otherwise fall back to any `type:`
+ * field in the YAML for callers that haven't been updated yet. A YAML
+ * `type:` that contradicts a caller-supplied `type` is a format error.
+ */
+function resolveCardType(input: {
+  fm: Record<string, unknown>;
+  source: string;
+  type: string | undefined;
+}): string {
+  const { fm, source, type } = input;
+  const yamlType = typeof fm["type"] === "string" ? (fm["type"] as string) : undefined;
+  const resolved = type ?? typeFromFilename(source) ?? yamlType;
+  if (resolved === undefined) {
+    throw new CardIOError(
+      source,
+      "cannot determine card type — filename must match Foo.<type>.card"
+    );
+  }
+  if (type !== undefined && yamlType !== undefined && yamlType !== type) {
+    throw new CardIOError(
+      source,
+      `frontmatter type "${yamlType}" does not match filename type "${type}"`
+    );
+  }
+  return resolved;
+}
+
+/**
+ * Validate the body text against the schema's body field (if any) and
+ * return the parsed body value. Schemas without a body field reject any
+ * non-whitespace body content. Returns undefined when no body field exists.
+ */
+function validateCardBody(input: {
+  schema: CardSchema;
+  body: string;
+  contentType: string | undefined;
+  resolved: string;
+  source: string;
+}): unknown {
+  const { schema, body, contentType, resolved, source } = input;
+  if (schema.bodyField === null || schema.bodyFieldName === null) {
+    if (body.trim().length > 0) {
+      throw new CardIOError(source, `schema "${resolved}" declares no body, but file has body content`);
+    }
+    return undefined;
+  }
+  if (schema.bodyField.kind === "xml" && contentType !== CARD_XML_CONTENT_TYPE) {
+    throw new CardIOError(
+      source,
+      `schema "${resolved}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
+    );
+  }
+  const bodyParse = schema.bodyField.schema.safeParse(body);
+  if (!bodyParse.success) {
+    throw new CardIOError(
+      source,
+      `invalid ${resolved} body:\n${formatZodIssues(bodyParse.error.issues)}`
+    );
+  }
+  return bodyParse.data;
 }
 
 /**

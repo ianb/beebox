@@ -34,15 +34,20 @@ interface ReportEntry {
   toolCalls: ToolCall[];
 }
 
+interface RawEntry {
+  type: string;
+  content: unknown[];
+}
+
 /**
- * Parse a session log into report entries, pairing tool_use with tool_result.
+ * Read a session log file and collect all user/assistant entries in order,
+ * normalizing each message's content into an array of blocks.
  */
-async function parseForReport(logPath: string): Promise<ReportEntry[]> {
+async function collectRawEntries(logPath: string): Promise<RawEntry[]> {
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
-  // Collect all raw entries in order
-  const rawEntries: Array<{ type: string; content: unknown[] }> = [];
+  const rawEntries: RawEntry[] = [];
 
   for await (const line of rl) {
     if (!line.trim()) continue;
@@ -64,7 +69,13 @@ async function parseForReport(logPath: string): Promise<ReportEntry[]> {
     rawEntries.push({ type: raw.type as string, content: blocks });
   }
 
-  // Build a map of tool_use_id → tool_result content from user entries
+  return rawEntries;
+}
+
+/**
+ * Build a map of tool_use_id → tool_result content from user entries.
+ */
+function buildResultMap(rawEntries: RawEntry[]): Map<string, string> {
   const resultMap = new Map<string, string>();
   for (const entry of rawEntries) {
     if (entry.type !== "user") continue;
@@ -75,47 +86,66 @@ async function parseForReport(logPath: string): Promise<ReportEntry[]> {
       }
     }
   }
+  return resultMap;
+}
 
-  // Build report entries from assistant + user text turns
+/**
+ * Convert a user entry's blocks into a report entry, or null if it carries no
+ * real text (i.e. it's just tool_result plumbing).
+ */
+function buildUserEntry(blocks: RawBlock[]): ReportEntry | null {
+  const textBlocks = blocks.filter((b) => b.type === "text" && b.text && b.text.trim());
+  if (textBlocks.length === 0) return null;
+  const text = textBlocks.map((b) => b.text || "").join("\n").trim();
+  return { role: "user", text, toolCalls: [] };
+}
+
+/**
+ * Convert an assistant entry's blocks into a report entry, pairing tool_use
+ * blocks with their results, or null if it carries neither text nor tool calls.
+ */
+function buildAssistantEntry(blocks: RawBlock[], resultMap: Map<string, string>): ReportEntry | null {
+  const textParts: string[] = [];
+  const toolCalls: ToolCall[] = [];
+
+  for (const block of blocks) {
+    if (block.type === "text" && block.text && block.text.trim()) {
+      textParts.push(block.text.trim());
+    }
+    if (block.type === "tool_use" && block.name && block.id) {
+      const input = (block.input || {}) as Record<string, unknown>;
+      const output = resultMap.get(block.id) || null;
+      toolCalls.push({
+        toolName: block.name,
+        toolId: block.id,
+        input,
+        description: describeToolCall(block.name, input),
+        output,
+      });
+    }
+  }
+
+  const text = textParts.length > 0 ? textParts.join("\n\n") : null;
+  if (text || toolCalls.length > 0) {
+    return { role: "assistant", text, toolCalls };
+  }
+  return null;
+}
+
+/**
+ * Parse a session log into report entries, pairing tool_use with tool_result.
+ */
+async function parseForReport(logPath: string): Promise<ReportEntry[]> {
+  const rawEntries = await collectRawEntries(logPath);
+  const resultMap = buildResultMap(rawEntries);
+
   const report: ReportEntry[] = [];
-
   for (const entry of rawEntries) {
     const blocks = entry.content as RawBlock[];
-
-    if (entry.type === "user") {
-      // Only include user entries with real text (not just tool_result plumbing)
-      const textBlocks = blocks.filter((b) => b.type === "text" && b.text && b.text.trim());
-      if (textBlocks.length === 0) continue;
-      const text = textBlocks.map((b) => b.text || "").join("\n").trim();
-      report.push({ role: "user", text, toolCalls: [] });
-      continue;
-    }
-
-    // Assistant entry
-    const textParts: string[] = [];
-    const toolCalls: ToolCall[] = [];
-
-    for (const block of blocks) {
-      if (block.type === "text" && block.text && block.text.trim()) {
-        textParts.push(block.text.trim());
-      }
-      if (block.type === "tool_use" && block.name && block.id) {
-        const input = (block.input || {}) as Record<string, unknown>;
-        const output = resultMap.get(block.id) || null;
-        toolCalls.push({
-          toolName: block.name,
-          toolId: block.id,
-          input,
-          description: describeToolCall(block.name, input),
-          output,
-        });
-      }
-    }
-
-    const text = textParts.length > 0 ? textParts.join("\n\n") : null;
-    if (text || toolCalls.length > 0) {
-      report.push({ role: "assistant", text, toolCalls });
-    }
+    const reportEntry = entry.type === "user"
+      ? buildUserEntry(blocks)
+      : buildAssistantEntry(blocks, resultMap);
+    if (reportEntry) report.push(reportEntry);
   }
 
   return report;
