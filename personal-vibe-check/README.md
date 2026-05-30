@@ -149,7 +149,6 @@ The `CONVENTIONS.md` file in this package contains coding rules to add to your p
 
 - **Semicolons**: always
 - **Quotes**: double quotes
-- **No optional chaining** (`?.`): use explicit null checks
 - **No default parameters**: handle defaults in function body
 - **Max 2 positional parameters**: use a named params object for more
 - **No `any` type**: enforced by both tsconfig and eslint

@@ -33,7 +33,6 @@ pnpm lint:circular  # Circular dependency detector (madge)
 
 - **Semicolons**: always (enforced by eslint)
 - **Quotes**: double quotes (enforced by eslint)
-- **No optional chaining** (`?.`): use explicit null checks for clarity
 - **No default parameters**: handle defaults explicitly in function body
 - **Max 2 positional parameters**: functions with more must use a named params object:
   ```typescript

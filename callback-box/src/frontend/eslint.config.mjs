@@ -8,7 +8,6 @@ export default [
   ...vibeCheck({ react: true }),
   {
     rules: {
-      "no-optional-chaining/no-optional-chaining": "off",
       "default/no-default-params": "off",
       "max-params": ["error", 2],
       "max-lines": "off",

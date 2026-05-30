@@ -247,8 +247,10 @@ function eventToIcs(
 
   // Collect timezones used by this event and add VTIMEZONE components
   const timezones = new Set<string>();
-  if (event.start?.timeZone) timezones.add(event.start.timeZone);
-  if (event.end?.timeZone) timezones.add(event.end.timeZone);
+  const startTz = event.start?.timeZone;
+  const endTz = event.end?.timeZone;
+  if (startTz) timezones.add(startTz);
+  if (endTz) timezones.add(endTz);
   for (const tz of timezones) {
     comp.addSubcomponent(generateVtimezone(tz));
   }

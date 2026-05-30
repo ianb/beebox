@@ -1,24 +1,4 @@
 {
-  "src/cli/commands/calendar.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/cli/commands/create.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/cli/commands/drive.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 5
-    }
-  },
-  "src/cli/commands/google-auth.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
   "src/cli/commands/scheduler.ts": {
     "complexity": {
       "count": 1
@@ -33,14 +13,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 6
-    }
-  },
-  "src/cli/commands/tick-utils.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
     }
   },
   "src/cli/commands/tick.ts": {
@@ -49,21 +21,10 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
-    }
-  },
-  "src/cli/commands/trick.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
     }
   },
   "src/cli/commands/validate.ts": {
     "complexity": {
-      "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
       "count": 1
     }
   },
@@ -78,17 +39,9 @@
       "count": 1
     }
   },
-  "src/cli/lib/fetch.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
   "src/cli/lib/git.ts": {
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
     }
   },
   "src/cli/lib/session.ts": {
@@ -97,29 +50,6 @@
     },
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 7
-    }
-  },
-  "src/cli/lib/time.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/connectors/chat-utils.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/connectors/drive-handler-docs.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 5
-    }
-  },
-  "src/connectors/drive-handler-sheets.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 4
     }
   },
   "src/connectors/gmail.ts": {
@@ -139,17 +69,11 @@
     },
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 27
     }
   },
   "src/connectors/telegram.ts": {
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 4
     }
   },
   "src/core/agent.ts": {
@@ -158,9 +82,6 @@
     },
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 14
     }
   },
   "src/core/box.ts": {
@@ -173,34 +94,9 @@
       "count": 1
     }
   },
-  "src/core/chat-session-history.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/core/chat-session-pool.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/core/chat-session-registry.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
-    }
-  },
   "src/core/chat-session.ts": {
     "max-lines": {
       "count": 1
-    }
-  },
-  "src/core/chat-thread-session.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
-  "src/core/command-runner.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
     }
   },
   "src/core/commands/answer.ts": {
@@ -219,11 +115,6 @@
   "src/core/commands/attachments.ts": {
     "max-lines": {
       "count": 1
-    }
-  },
-  "src/core/commands/describe-images-helpers.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 15
     }
   },
   "src/core/commands/describe-images.ts": {
@@ -245,9 +136,6 @@
   "src/core/commands/scan-import-helpers.ts": {
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 15
     }
   },
   "src/core/commands/scan-import.ts": {
@@ -269,19 +157,6 @@
     },
     "max-lines-per-function": {
       "count": 2
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
-  "src/core/housekeeping.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
-  "src/core/install-template-file.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
     }
   },
   "src/core/maps/precheck.ts": {
@@ -297,11 +172,6 @@
       "count": 1
     }
   },
-  "src/core/preactions/transcribe.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
   "src/core/procedure/engine.ts": {
     "complexity": {
       "count": 2
@@ -311,52 +181,11 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 7
-    }
-  },
-  "src/core/reactor/batch-jobs.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 4
-    }
-  },
-  "src/core/reactor/chat-jobs.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 5
     }
   },
   "src/core/reactor/engine.ts": {
     "complexity": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 16
-    }
-  },
-  "src/core/reactor/job-discovery.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/core/reactor/procedure-trampoline.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 8
-    }
-  },
-  "src/core/reactor/subprocess.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 6
-    }
-  },
-  "src/core/scheduler.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/core/transcription-deepgram.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 12
     }
   },
   "src/core/transcription-voxtral.ts": {
@@ -368,14 +197,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 13
-    }
-  },
-  "src/core/transcription.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 5
     }
   },
   "src/core/views-doc.ts": {
@@ -402,11 +223,6 @@
       "count": 1
     }
   },
-  "src/dev/knowledge-audit.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
   "src/dev/lib/report.ts": {
     "complexity": {
       "count": 1
@@ -415,11 +231,6 @@
   "src/dev/lib/session-report.ts": {
     "complexity": {
       "count": 1
-    }
-  },
-  "src/scenario/runner.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 4
     }
   },
   "src/schemas/calendar-review-job.tsx": {
@@ -447,18 +258,12 @@
     "max-lines-per-function": {
       "count": 2
     },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 11
-    },
     "no-restricted-syntax": {
       "count": 46
     }
   },
   "src/schemas/image.tsx": {
     "max-lines": {
-      "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
       "count": 1
     },
     "no-restricted-syntax": {
@@ -470,19 +275,11 @@
       "count": 2
     }
   },
-  "src/schemas/memo.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
   "src/schemas/personality.tsx": {
     "max-lines": {
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
-    },
-    "no-optional-chaining/no-optional-chaining": {
       "count": 2
     },
     "no-restricted-syntax": {
@@ -499,16 +296,8 @@
       "count": 1
     }
   },
-  "src/schemas/registry.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
   "src/schemas/scheduled-script.tsx": {
     "max-lines": {
-      "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
       "count": 1
     },
     "no-restricted-syntax": {
@@ -518,32 +307,11 @@
   "src/schemas/templates.ts": {
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
     }
   },
   "src/services/claude-chat.ts": {
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
-  "src/services/claude-cli.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/services/google-auth.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/services/google-calendar.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 9
     }
   },
   "src/services/google-drive.ts": {
@@ -552,47 +320,11 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
-  "src/services/google-gmail.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
-  "src/services/openai-audio.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 10
-    }
-  },
-  "src/services/telegram.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/webapp/auth.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
-    }
-  },
-  "src/webapp/box-config.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/webapp/context.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
     }
   },
   "src/webapp/routes/actions.ts": {
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 4
     }
   },
   "src/webapp/routes/admin.ts": {
@@ -605,19 +337,6 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 3
-    }
-  },
-  "src/webapp/routes/auth.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 4
-    }
-  },
-  "src/webapp/routes/calendar.ts": {
-    "no-optional-chaining/no-optional-chaining": {
       "count": 1
     }
   },
@@ -635,9 +354,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
     }
   },
   "src/webapp/server.ts": {
@@ -646,47 +362,11 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 4
-    }
-  },
-  "src/webapp/trpc/routers/actions.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
-    }
-  },
-  "src/webapp/trpc/routers/calendar.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/webapp/trpc/routers/card.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 1
-    }
-  },
-  "src/webapp/trpc/routers/drive.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
     }
   },
   "src/webapp/trpc/routers/scheduler.ts": {
     "max-lines": {
       "count": 1
-    },
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
-    }
-  },
-  "src/webapp/trpc/routers/status.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
-    }
-  },
-  "src/webapp/trpc/routers/transcription.ts": {
-    "no-optional-chaining/no-optional-chaining": {
-      "count": 2
     }
   }
 }

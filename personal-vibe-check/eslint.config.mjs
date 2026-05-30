@@ -180,8 +180,6 @@ const enabledRules = {
   "custom/no-default-class-export": "error",
   // No default params — handle defaults explicitly in function body for visibility
   "default/no-default-params": "error",
-  // No optional chaining (?.) — use explicit null checks for clarity
-  "no-optional-chaining/no-optional-chaining": "error",
   // Don't throw non-Error values — ensures stack traces are always available
   "error/no-throw-literal": "error",
   // Use custom error classes, not new Error() — enables programmatic error inspection
@@ -496,6 +494,16 @@ export function vibeCheck(options) {
           ? { "personal-vibe-check/restrict-component-classes": ["error", restrictClassesOptions] }
           : {}),
       },
+    },
+    {
+      // Optional chaining (?.) is allowed — this rule is retired. Reviewed
+      // 2026-05-30 on a real codebase: `a?.b ?? default` and optional calls
+      // read clearly, and forcing explicit null checks made nested chains
+      // (`x?.[0]?.y`, `find()?.z`) demonstrably worse. The clarity win didn't
+      // materialize. Disabled here (not in disabledRules) with no `files` key so
+      // it applies to every file — the base config enables the rule and matches
+      // .tsx even when react:false, which disabledRules wouldn't reach.
+      rules: { "no-optional-chaining/no-optional-chaining": "off" },
     },
   ];
 }

@@ -18,6 +18,17 @@
   output. Suppressions pruned 1000 → 730. **0 bare catches remain.**
 - **2026-05-30 — `default/no-default-params` (30) + `security/detect-non-literal-regexp` (3) burned down (backend).** Defaults hoisted into bodies (`x?: T` + `x = x ?? default;`). The 3 dynamic regexes are reviewed-safe (escaped glob / hardcoded keys) and got documented inline `eslint-disable` lines rather than living in suppressions.
 - **2026-05-30 — `error/*` family burned down (backend, all 4 rules → 0).** 234 violations across 52 files. One reusable `NotFoundError(id, resource)` in `src/lib/errors.ts` covers the 15 "X not found" sites; ~60 local purpose-named classes cover the bespoke conditions (message composed inside the class, dynamic data as fields). Key constraints discovered: the `error/*` rules flag a string/template literal only in the **first** constructor arg, so reusable classes pass the label as a non-first arg; and `error/no-throw-literal` rejects re-throwing a caught `unknown` — fixed with a behavior-preserving `throw e as Error` at 29 inspect-and-rethrow sites. Existing message-carrying classes (e.g. `CardIOError`) were refactored to compose from a leading structured field rather than split into micro-classes.
+- **2026-05-30 — `no-optional-chaining` RETIRED (not burned down).** Reviewed the
+  302 sites on real code: optional chaining + `??` reads clearly and forcing
+  explicit null checks made nested chains (`x?.[0]?.y`, `find()?.z`) worse. The
+  maintainer decided the rule isn't earning its keep, so it was disabled at the
+  source — `personal-vibe-check` (bumped to 0.2.0, off via a global config entry
+  so it also covers `.tsx` under `react:false`, which `disabledRules` doesn't
+  reach). Removed the now-redundant frontend override and the "No optional
+  chaining" bullet from CODE-STYLE.md + vibe-check CONVENTIONS/README. Pruned all
+  302 backend suppressions. (vibe-check's own dev deps aren't installed in this
+  worktree, so its self-tests weren't re-run; the change is config-only and both
+  callback-box halves lint clean against it.)
 - **2026-05-30 — bare-catch rule enabled for the frontend.** In the frontend
   (`react: true`), `no-restricted-syntax` carries *only* the bare-catch selector
   (no `??`/`as`/switch), so enabling it surfaced exactly 14 bare catches across
