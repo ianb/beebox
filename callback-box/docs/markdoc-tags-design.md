@@ -391,19 +391,51 @@ plan ships as a whole.
    optimising the renderer; the answer might be "fewer source tags per
    doc" rather than "smaller chips."
 
-4. **Markdoc round-trip reliability.** `Markdoc.format(ast)` exists
-   (released v0.1.5, labeled experimental by upstream) and serializes
-   an AST back to Markdoc text — used for things like programmatically
-   adding `id` attributes to all heading nodes. Round-trip fidelity on
-   real bodies (attribute ordering, comment preservation, whitespace,
-   tag shorthand) is not formally guaranteed. We don't need it for any
-   committed track: Track 4's `move.ts` extension shipped using the
-   substring approach (user-approved; rewrites in code fences are
-   acceptable) and Track 2's `compileBriefing` rewrite is pure
-   one-way AST → markdown (no round-trip). Open if a future track —
-   automated recipe migration, in-place edit tooling — needs in-place
-   editing. Validate by running `Markdoc.format(Markdoc.parse(body))`
-   against a corpus of real bodies before depending on it.
+4. **Markdoc round-trip reliability — RESOLVED, do not use `format()`
+   on arbitrary input.** The full investigation lives at
+   `docs/markdoc-format-investigation.md`; the catalogue covers ~70
+   normalizations across ~18 categories. The verdict:
+
+   - **`format` is safe for tool-emitted canonical Markdoc with our
+     vocabulary** — our `{% quote %}`, `{% source %}`, `{% task /%}`
+     all round-trip byte-identical, ref values aren't normalized,
+     attribute order/types preserved.
+   - **`format` is dangerous on hand-edited or non-canonical input.**
+     Three silent-data-loss bugs:
+     `{% tag x='y' %}body{% /tag %}` (single quotes) →
+     `"body\n\n{% tag /%}\n"`; `{% tag x = "y" %}body{% /tag %}`
+     (spaces around `=`) → same; `{% tag x = "y" /%}` → empty string.
+     No parse error, no diagnostic.
+   - **`format` is non-converging on some inputs.** Code-fence inside
+     blockquote (`> ` ` ``` `) adds an extra fence pair on every pass.
+     Double-backtick code spans with internal backticks also fail to
+     stabilize. The earlier "idempotent on second pass" claim is
+     false.
+   - **`format` drops code-fence info-string args after the language
+     token.** ` ```ts setup ` → ` ```ts `, losing the `setup`
+     annotation. This is unacceptable: any doctest example embedded
+     in a card body would be silently corrupted.
+
+   **Implications:**
+
+   - `move.ts` stays substring-based (already shipped). The AST-aware
+     alternative would force-canonicalize moved cards' bodies and
+     silently destroy non-canonical tag syntax. Substring's failure
+     mode (rewrites inside code fences) is visible and bounded.
+   - `compileBriefing` (Track 2) must implement its own AST →
+     markdown emitter rather than calling `format()`. The info-string
+     drop alone disqualifies `format`.
+   - **Do not add `format()` calls anywhere in the codebase without
+     explicit justification.** The functions look interchangeable for
+     tool-emitted content but the failure modes for general-purpose
+     editing are severe.
+   - **Detection belongs in extended linting** (out of scope for this
+     plan; future subplan). A markdown lint phase that does Markdoc
+     type checking could catch the dangerous attribute syntaxes
+     (single-quoted, spaces around `=`) before they get written to
+     disk, since these are arguably malformed Markdoc that should
+     never have been accepted. Track 2's `cb validate` reform could
+     incorporate this, or it lives in its own subplan.
 
 ## Rollout shape
 
