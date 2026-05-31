@@ -1,0 +1,287 @@
+/**
+ * Header chrome + control surfaces for InteractiveChat: the schedule
+ * countdown pill, narration badge/icon, mute and new-session buttons, the
+ * debug dropdown menu, the companion view panel, and the context link.
+ * These are presentational/self-contained — they take props and emit
+ * callbacks, holding no chat-machine state of their own.
+ */
+
+import { useState, useEffect, useRef } from "react";
+import { useParams } from "@tanstack/react-router";
+import { CloseButton } from "../ui/CloseButton";
+import { ExternalIconLink } from "../ui/ExternalIconLink";
+import { FileView } from "../FileView";
+import { withBase } from "../../api";
+import { cn } from "../../lib/cn";
+import { href } from "../../lib/routing";
+import type { ChatSchedule } from "../../../../core/chat-schedules";
+import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+
+/**
+ * Countdown pill showing time remaining for an active schedule.
+ */
+export function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSchedule; onCancel: () => void; onFired?: () => void }) {
+  const [remaining, setRemaining] = useState("");
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    const update = () => {
+      const ms = new Date(schedule.firesAt).getTime() - Date.now();
+      if (ms <= 0) {
+        setRemaining("now");
+        if (!firedRef.current) {
+          firedRef.current = true;
+          onFired?.();
+        }
+        return;
+      }
+      const totalSec = Math.ceil(ms / 1000);
+      if (totalSec >= 3600) {
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        setRemaining(m > 0 ? `${h}h ${m}m` : `${h}h`);
+      } else if (totalSec >= 60) {
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        setRemaining(s > 0 ? `${m}m ${s}s` : `${m}m`);
+      } else {
+        setRemaining(`${totalSec}s`);
+      }
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [schedule.firesAt, onFired]);
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/15 text-accent-dark text-xs font-medium border border-accent/30">
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {schedule.label}: {remaining}
+      {schedule.alarm ? " 🔔" : null}
+      <button
+        onClick={onCancel}
+        className="ml-0.5 text-accent-dark/60 hover:text-accent-dark"
+        title="Cancel schedule"
+      >
+        {"×"}
+      </button>
+    </span>
+  );
+}
+
+/**
+ * Mic-with-chat-bubble icon used in place of the standard handheld mic
+ * when narration is enabled. Hints at "long talking" — the mic with a
+ * speech bubble suggests an extended utterance rather than a one-shot
+ * command.
+ */
+export function NarrationMicIcon({ className }: { className?: string }) {
+  className = className ?? "w-5 h-5";
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Chat bubble (top-right) */}
+      <path
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M14 3h6a1 1 0 011 1v5a1 1 0 01-1 1h-3.5L14 12.5V3z"
+      />
+      {/* Mic body (bottom-left) */}
+      <rect x="5" y="9" width="5" height="8" rx="2.5" strokeWidth={2} />
+      <path
+        strokeWidth={2}
+        strokeLinecap="round"
+        d="M3 14a4.5 4.5 0 009 0M7.5 19v2.5m-2 0h4"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Header chip that signals narration mode is active. Shows a "transcribing…"
+ * sub-label while the HQ pass is in flight after a send-message checkpoint,
+ * so the user can see the agent isn't ignoring them — it's waiting on the
+ * round-trip to the HQ transcription service.
+ */
+export function NarrationStatusBadge({
+  enabled,
+  hqInFlight,
+  onTurnOff,
+}: {
+  enabled: boolean;
+  hqInFlight: boolean;
+  onTurnOff: () => void;
+}) {
+  if (!enabled) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium"
+      title="Narration mode is on — silent responses, structured output, HQ transcription on send"
+    >
+      <span aria-hidden>🎙️</span>
+      <span>narration</span>
+      {hqInFlight ? <span className="opacity-80">· transcribing…</span> : null}
+      <button
+        type="button"
+        onClick={onTurnOff}
+        aria-label="Turn off narration mode"
+        title="Turn off narration"
+        className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-white/20 focus:outline-none focus-visible:ring-1 focus-visible:ring-white"
+      >
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </span>
+  );
+}
+
+export function MuteButton({ muted, onToggle }: { muted: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
+      title={muted ? "Unmute speech" : "Mute speech"}
+      aria-label={muted ? "Unmute speech" : "Mute speech"}
+      aria-pressed={muted}
+    >
+      {muted ? (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM17 9l4 6m0-6-4 6" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M18.36 5.64a9 9 0 0 1 0 12.72" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+export function NewSessionButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
+      title="New Session"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+  );
+}
+
+export interface PanelTab {
+  target: ViewTarget;
+  label: string;
+}
+
+/**
+ * Companion view panel shown alongside chat when one or more views are open.
+ * Tabs are keyed by path: opening a file that's already open reactivates it
+ * rather than duplicating a tab, and in-file link clicks open new tabs.
+ */
+export function CompanionViewPanel({
+  tabs,
+  activePath,
+  onSelectTab,
+  onCloseTab,
+  onClosePanel,
+  onNavigate,
+}: {
+  tabs: PanelTab[];
+  activePath: string;
+  onSelectTab: (path: string) => void;
+  onCloseTab: (path: string) => void;
+  onClosePanel: () => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+}) {
+  const { boxSlug } = useParams({ strict: false });
+  const active = tabs.find((t) => t.target.path === activePath);
+  if (!active) return null;
+  const browseHref = href(`/${boxSlug}/browse/${active.target.path}`);
+  return (
+    <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
+      <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
+        <div role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex overflow-x-auto">
+          {tabs.map((tab) => {
+            const isActive = tab.target.path === activePath;
+            return (
+              <div
+                key={tab.target.path}
+                className={cn(
+                  "flex-shrink-0 max-w-[14rem] flex items-center border-r border-warm-300 border-b-2",
+                  isActive
+                    ? "bg-white border-b-primary"
+                    : "border-b-transparent hover:bg-warm-100",
+                )}
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => onSelectTab(tab.target.path)}
+                  title={tab.target.path}
+                  className={cn(
+                    "flex-1 min-w-0 truncate text-left text-sm pl-3 pr-1 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                    isActive ? "text-warm-900 font-medium" : "text-warm-600",
+                  )}
+                >
+                  {tab.label}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCloseTab(tab.target.path);
+                  }}
+                  aria-label={`Close ${tab.label}`}
+                  title="Close tab"
+                  className="flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6l-12 12" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex-shrink-0 flex items-center gap-1 px-2 border-l border-warm-300">
+          <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
+          <CloseButton onClick={onClosePanel} label="Close companion view" size="sm" />
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <FileView
+          key={active.target.path}
+          path={active.target.path}
+          mode="companion"
+          rendererName={active.target.viewer}
+          onNavigate={onNavigate}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Small "Context: <dir>" link in the chat header for chats that were
+ * started from a landmark.
+ */
+export function ChatContextLink({ dir, boxSlug }: { dir: string | null; boxSlug: string }) {
+  if (!dir) return null;
+  return (
+    <a
+      href={withBase(`/${boxSlug}/browse/${dir}`)}
+      className="ml-3 text-xs text-white/80 hover:text-white truncate"
+      title={`Context: ${dir}/`}
+    >
+      {dir}/
+    </a>
+  );
+}

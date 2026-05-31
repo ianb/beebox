@@ -1,0 +1,112 @@
+/**
+ * Pure helpers and shared constants for InteractiveChat and its sibling
+ * modules. No JSX, no React hooks — just string/number formatting, id
+ * minting, and the model-option table. Kept separate so the controls,
+ * composer, and message-list siblings can share them without a value
+ * import cycle through the main component.
+ */
+
+/**
+ * Format the current local time as HH:MM for the typed/speech tag.
+ */
+export function localTime(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+// Minted at SEND-dispatch time and threaded through to /chat/send so the
+// backend's processedMessageIds dedupe (chat.ts:269-284) catches the case
+// where the streamActor body runs twice for one logical send (StrictMode
+// double-mount, accidental double-dispatch, etc.).
+export function newMessageId(): string {
+  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function composerTextareaClasses({ mobile, isTranscribing }: { mobile: boolean; isTranscribing: boolean }): string {
+  const sizeClass = mobile ? "text-base" : "text-sm min-w-0";
+  const stateClass = isTranscribing
+    ? "bg-white text-warm-800 border-primary/40 shadow-[0_0_0_1px_rgba(56,149,211,0.08)]"
+    : "bg-white border-warm-400";
+  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-500`;
+}
+
+/**
+ * Format a millisecond gap as "Xh" or "XdYh" (hours omitted when zero).
+ * Returns null when the gap is under 6 hours — callers should omit the attribute then.
+ */
+export function formatTimePassed(ms: number): string | null {
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
+  if (ms < SIX_HOURS) return null;
+  const totalHours = Math.floor(ms / (60 * 60 * 1000));
+  if (totalHours < 24) return `${totalHours}h`;
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  return hours > 0 ? `${days}d${hours}h` : `${days}d`;
+}
+
+/**
+ * Model options surfaced in the chat debug menu. `null` = CLI default.
+ * Ordered as presented to the user.
+ */
+export const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
+  { label: "Default (Opus)", model: null },
+  { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
+  { label: "Opus 4.8", model: "claude-opus-4-8" },
+  { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
+  { label: "Opus 4.8 (1M context)", model: "claude-opus-4-8[1m]" },
+];
+
+/**
+ * Ephemeral marker shown in the message stream when the user switches models.
+ * `afterGroupCount` snapshots the number of message groups at insertion time
+ * — the marker renders between that group and whatever comes after, which
+ * gives chronological ordering relative to later-arriving messages.
+ * Not persisted: these disappear on page reload.
+ */
+export interface ModelMarker {
+  id: string;
+  label: string;
+  afterGroupCount: number;
+}
+
+/**
+ * Type guard for the `chat-features-changed` SSE event payload. Returns
+ * the narrowed payload if shape matches, otherwise null — keeps the
+ * `event.data: unknown` from the SSE machine type-safe at the use site.
+ */
+function parseFeaturesChangedPayload(
+  data: unknown,
+): { sessionId: string; features: Record<string, string> } | null {
+  function reject(reason: string): null {
+    // Server contract violation — log so it doesn't slip past in production.
+    console.warn(`[chat] chat-features-changed payload rejected: ${reason}`);
+    return null;
+  }
+  if (data === null || typeof data !== "object") return reject("not an object");
+  if (!("sessionId" in data) || typeof data.sessionId !== "string") return reject("missing sessionId");
+  if (!("features" in data) || data.features === null || typeof data.features !== "object") {
+    return reject("missing features");
+  }
+  const features: Record<string, string> = {};
+  for (const [k, v] of Object.entries(data.features)) {
+    if (typeof v === "string") features[k] = v;
+    else console.warn(`[chat] chat-features-changed: dropping non-string value for ${k}`);
+  }
+  return { sessionId: data.sessionId, features };
+}
+
+/**
+ * Apply a chat-features-changed payload to local state if the session id
+ * matches (or no session id filter is in effect). Module-scoped so the
+ * SSE dispatcher useCallback can stay under the complexity budget.
+ */
+export function applyFeaturesChange(opts: {
+  data: unknown;
+  currentSessionId: string | null;
+  setFeatures: (features: Record<string, string>) => void;
+}): void {
+  const payload = parseFeaturesChangedPayload(opts.data);
+  if (!payload) return;
+  if (opts.currentSessionId && payload.sessionId !== opts.currentSessionId) return;
+  opts.setFeatures(payload.features);
+}

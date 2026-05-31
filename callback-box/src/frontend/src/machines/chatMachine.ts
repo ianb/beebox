@@ -8,433 +8,32 @@
  * Voice turn-taking coordination stays in the component layer.
  */
 
-import { setup, assign, fromCallback, fromPromise } from "xstate";
-import {
-  getChatHistory,
-  getChatStatus,
-  sendChatMessage,
-  interruptChat,
-  type SessionEntry,
-  type SessionContentBlock,
-  type ChatImageAttachment,
-} from "../api";
+import { setup, assign } from "xstate";
+import { interruptChat } from "../api";
 import { buildOptimisticContent, reconcilePending } from "./chat-shared";
+import {
+  HISTORY_TAIL,
+  MIN_REAL_USER_MESSAGES,
+  logFsm,
+  type ChatContext,
+  type ChatEvent,
+  type ChatMachineInput,
+} from "./chat-types";
+import {
+  fetchInitialActor,
+  fetchHistoryActor,
+  streamActor,
+  rollupStreamToEntry,
+} from "./chat-actors";
+import {
+  appendQueuedSend,
+  dispatchQueuedSend,
+  applyServerMessages,
+  appendOtherUserMessage,
+  promoteLastToPending,
+} from "./chat-actions";
 
-/**
- * Logged at console.debug so it's silent by default in Chrome (visible
- * only with the Verbose filter on). Not forwarded to the server debug
- * log. Kept terse and structured for local grepping when investigating
- * a chat-machine wedge.
- */
-function logFsm(event: string, detail?: Record<string, unknown>): void {
-  const parts = [`[chatfsm] ${event}`];
-  if (detail) {
-    for (const [k, v] of Object.entries(detail)) {
-      parts.push(`${k}=${typeof v === "string" ? v : JSON.stringify(v)}`);
-    }
-  }
-  console.debug(parts.join(" "));
-}
-
-// -- Events --
-
-type ChatEvent =
-  | { type: "SEND"; message: string; messageId: string; images?: ChatImageAttachment[] }
-  | { type: "INTERRUPT" }
-  | { type: "DISMISS_ERROR" }
-  | { type: "STREAM_TEXT"; text: string }
-  | { type: "STREAM_TOOL"; tool: SessionContentBlock }
-  | { type: "STREAM_BUSY" }
-  | { type: "STREAM_QUEUED" }
-  | { type: "STREAM_ERROR"; error: string }
-  | { type: "STREAM_RESULT" }
-  | { type: "STREAM_FAILED"; error: string }
-  | { type: "REFRESH" }
-  | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
-  | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }
-  | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] }
-  | { type: "SESSION_ASSIGNED"; sessionId: string };
-
-// -- Context --
-
-/** How many recent entries to load initially and on refresh. */
-export const HISTORY_TAIL = 200;
-/** Floor on how many real (typed/spoken) user messages the initial load must cover. */
-export const MIN_REAL_USER_MESSAGES = 2;
-
-interface ChatContext {
-  messages: SessionEntry[];
-  /** Messages sent while agent was busy — preserved across refreshes until server catches up. */
-  pendingMessages: SessionEntry[];
-  streamText: string;
-  streamTools: SessionContentBlock[];
-  /** True when tools ran since the last text — the next text block needs a paragraph separator. */
-  streamNeedsSeparator: boolean;
-  error: string | null;
-  /**
-   * What to address backend chat calls by — either an existing session id
-   * or `"new"` to start a fresh conversation. Held alongside `sessionId`
-   * because for a freshly-created chat the server-assigned id arrives
-   * after the first send completes.
-   */
-  sessionInput: string;
-  sessionId: string | null;
-  /**
-   * Box-relative landmark directory this chat is bound to, set only when
-   * the chat was opened from a landmark with `sessionInput === "new"`.
-   * Passed to the backend on the first send so the SDK is spawned with
-   * `cwd` at that directory; cleared once the session id is assigned (by
-   * which point the backend has persisted the association).
-   */
-  contextDir?: string;
-  /** Subprocess is alive (true once first send has started; stays true between turns). */
-  processRunning: boolean;
-  /** Subprocess is currently mid-turn — drives the "agent is processing" indicator. */
-  processBusy: boolean;
-  /** Total number of entries in the full session log. */
-  totalEntries: number;
-}
-
-interface ChatMachineInput {
-  /** `"new"` for a fresh conversation, or an existing session id. */
-  sessionInput: string;
-  /**
-   * Landmark directory binding for fresh chats. Only honored when
-   * `sessionInput === "new"`; ignored for resumed sessions (those read
-   * the binding from `chat-session-history` on the backend).
-   */
-  contextDir?: string | undefined;
-}
-
-// -- Actors --
-
-interface SessionInput {
-  /** Either a known session id or the "new" sentinel. Null/undefined means brand-new shell with no history. */
-  sessionInput: string;
-}
-
-const fetchInitialActor = fromPromise<
-  { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
-  SessionInput
->(async ({ input }) => {
-  if (input.sessionInput === "new") {
-    return { entries: [], total: 0, sessionId: null, running: false, busy: false };
-  }
-  const [history, status] = await Promise.all([
-    getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
-    getChatStatus({ sessionId: input.sessionInput }),
-  ]);
-  return {
-    entries: history.entries,
-    total: history.total,
-    sessionId: history.sessionId ?? status.sessionId,
-    running: status.running,
-    busy: status.busy,
-  };
-});
-
-const fetchHistoryActor = fromPromise<
-  { sessionId: string | null; entries: SessionEntry[]; total: number; running: boolean; busy: boolean },
-  SessionInput
->(async ({ input }) => {
-  if (input.sessionInput === "new") {
-    return { sessionId: null, entries: [], total: 0, running: false, busy: false };
-  }
-  const [history, status] = await Promise.all([
-    getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
-    getChatStatus({ sessionId: input.sessionInput }),
-  ]);
-  return {
-    sessionId: history.sessionId ?? status.sessionId,
-    entries: history.entries,
-    total: history.total,
-    running: status.running,
-    busy: status.busy,
-  };
-});
-
-/**
- * The SDK's `system/init` message is the first frame of every stream and
- * carries the session id this turn is running under (possibly different from
- * what we sent — the SDK rotates on resume in some paths). Forward it onto
- * the machine immediately so the URL update / id pinning doesn't have to wait
- * for the side-channel `chat-session-assigned` event on /events, which can be
- * lost across a backend restart and leave the frontend stuck on `session=new`.
- */
-function handleSystemInit(
-  msg: { subtype?: string; session_id?: string },
-  ctx: { sessionInput: string; sendBack: (event: ChatEvent) => void },
-): void {
-  if (msg.subtype !== "init") return;
-  const assigned = msg.session_id;
-  if (!assigned || assigned === ctx.sessionInput) return;
-  ctx.sendBack({ type: "SESSION_ASSIGNED", sessionId: assigned });
-}
-
-/**
- * Dev-only stream stub. When a user message begins with `/fakestream`, the
- * machine plays a timed script of STREAM_TEXT events instead of hitting the
- * backend. Used to reproduce streaming-UI bugs (scroll, layout) deterministically.
- *
- * Syntax: `/fakestream [chunks] [intervalMs] [chunkLen]`
- *   chunks     — total STREAM_TEXT events to emit (default 200)
- *   intervalMs — delay between events (default 40)
- *   chunkLen   — approx chars per chunk (default 25)
- *
- * Emits a STREAM_TOOL event partway through so the live tool-list layout
- * (e.g. ordering relative to the throbber) is exercised too.
- */
-function runFakeStream(
-  message: string,
-  { sendBack, terminal }: {
-    sendBack: (event: ChatEvent) => void;
-    terminal: (event: ChatEvent) => void;
-  },
-): () => void {
-  const parts = message.trim().split(/\s+/);
-  const chunks = Number.parseInt(parts[1], 10) || 200;
-  const intervalMs = Number.parseInt(parts[2], 10) || 40;
-  const chunkLen = Number.parseInt(parts[3], 10) || 25;
-  const toolAt = Math.floor(chunks / 3);
-
-  const para = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ";
-  let body = "# Fakestream\n\n";
-  for (let i = 0; i < 12; i++) body += para + "\n\n";
-
-  let pos = 0;
-  let emitted = 0;
-  const handle = window.setInterval(() => {
-    if (emitted >= chunks) {
-      window.clearInterval(handle);
-      terminal({ type: "STREAM_RESULT" });
-      return;
-    }
-    if (emitted === toolAt) {
-      sendBack({
-        type: "STREAM_TOOL",
-        tool: {
-          type: "tool_use",
-          toolName: "Read",
-          toolId: "fakestream-tool-1",
-          input: { file_path: "/tmp/fakestream.txt" },
-          inputSummary: "Read",
-        },
-      });
-    }
-    const next = body.slice(pos, pos + chunkLen);
-    pos = (pos + chunkLen) % body.length;
-    sendBack({ type: "STREAM_TEXT", text: next });
-    emitted++;
-  }, intervalMs);
-
-  return () => window.clearInterval(handle);
-}
-
-const streamActor = fromCallback(
-  ({
-    sendBack,
-    input,
-  }: {
-    sendBack: (event: ChatEvent) => void;
-    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string };
-  }) => {
-    // Track whether the stream ever produced a terminal event. If the SSE
-    // ends cleanly without one (proxy timeout, server closed the socket
-    // after the subprocess emitted `result` but before we parsed it, etc.),
-    // the machine would otherwise sit in `streaming` forever.
-    let terminalFired = false;
-    let msgCount = 0;
-    // When the backend has `includePartialMessages` on, text deltas arrive
-    // before the final `assistant` message. We accumulate them via
-    // STREAM_TEXT events; the final assistant message would re-deliver the
-    // same text, so we suppress its text blocks (tool_use blocks still
-    // come through, as those don't stream as deltas the same way).
-    let sawTextPartial = false;
-    const terminal = (event: ChatEvent) => {
-      terminalFired = true;
-      logFsm("stream-terminal", { event: event.type, msgCount });
-      sendBack(event);
-    };
-
-    logFsm("stream-start", {
-      msgLen: input.message.length,
-      images: input.images ? input.images.length : 0,
-    });
-
-    const unwrapped = input.message.replace(/^<typed[^>]*>/, "").replace(/<\/typed>$/, "");
-    if (unwrapped.startsWith("/fakestream")) {
-      return runFakeStream(unwrapped, { sendBack, terminal });
-    }
-
-    sendChatMessage({
-      session: input.sessionInput,
-      message: input.message,
-      messageId: input.messageId,
-      ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
-      ...(input.contextDir ? { contextDir: input.contextDir } : {}),
-      onMessage: (msg) => {
-        msgCount++;
-        const type = msg.type as string;
-
-        if (type === "system") {
-          handleSystemInit(msg, { sessionInput: input.sessionInput, sendBack });
-          return;
-        }
-
-        if (type === "busy") {
-          terminal({ type: "STREAM_BUSY" });
-          return;
-        }
-
-        if (type === "queued") {
-          terminal({ type: "STREAM_QUEUED" });
-          return;
-        }
-
-        if (type === "error") {
-          terminal({
-            type: "STREAM_ERROR",
-            error: (msg.error as string) || "Unknown error",
-          });
-          return;
-        }
-
-        if (type === "stream_event") {
-          // Anthropic raw streaming events. We surface text_delta for live
-          // text rendering and the speech-tag accumulator. Other event
-          // shapes (input_json_delta for tool_use, message_start/stop,
-          // ping, etc.) are ignored — the final assistant message still
-          // delivers tool_use blocks atomically.
-          const event = (msg as { event?: { type?: string; delta?: { type?: string; text?: string } } }).event;
-          if (
-            event !== undefined &&
-            event.type === "content_block_delta" &&
-            event.delta !== undefined &&
-            event.delta.type === "text_delta" &&
-            typeof event.delta.text === "string" &&
-            event.delta.text.length > 0
-          ) {
-            sawTextPartial = true;
-            sendBack({ type: "STREAM_TEXT", text: event.delta.text });
-          }
-          return;
-        }
-
-        if (type === "assistant") {
-          const message = msg.message as
-            | {
-                content?: Array<{
-                  type: string;
-                  text?: string;
-                  name?: string;
-                  id?: string;
-                  input?: Record<string, unknown>;
-                }>;
-              }
-            | undefined;
-          if (message?.content) {
-            for (const block of message.content) {
-              if (block.type === "text" && block.text) {
-                // If we already accumulated this text via stream_event
-                // deltas, skip it — otherwise we'd double-append.
-                if (sawTextPartial) continue;
-                sendBack({ type: "STREAM_TEXT", text: block.text });
-              } else if (block.type === "tool_use") {
-                sendBack({
-                  type: "STREAM_TOOL",
-                  tool: {
-                    type: "tool_use",
-                    toolName: block.name,
-                    toolId: block.id,
-                    input: block.input,
-                    inputSummary: block.name ?? "",
-                  },
-                });
-              }
-            }
-          }
-        }
-
-        if (type === "result") {
-          // The SDK signals turn-level failures (e.g. asked to resume a
-          // session id with no log on disk) by setting is_error on an
-          // otherwise empty result. Treat those as stream errors so the
-          // UI shows a message instead of silently going idle while the
-          // optimistic bubble sits stranded.
-          const isError = (msg as { is_error?: boolean }).is_error === true;
-          if (isError) {
-            const subtype = (msg as { subtype?: string }).subtype ?? "unknown";
-            terminal({
-              type: "STREAM_ERROR",
-              error: `Agent turn failed (${subtype}). The session id in this tab's URL has no log on disk — start a new chat.`,
-            });
-          } else {
-            terminal({ type: "STREAM_RESULT" });
-          }
-        }
-      },
-    })
-      .then(() => {
-        if (!terminalFired) {
-          logFsm("stream-eof-no-terminal", { msgCount });
-          // Stream ended without any terminal event — fall back to a history
-          // refresh so the UI can recover whatever the server completed.
-          sendBack({
-            type: "STREAM_FAILED",
-            error: "Stream ended without result",
-          });
-        }
-      })
-      .catch((err) => {
-        const msg = err instanceof Error ? err.message : "Send failed";
-        logFsm("stream-throw", { msg, msgCount });
-        sendBack({
-          type: "STREAM_FAILED",
-          error: msg,
-        });
-      });
-
-    return () => {};
-  }
-);
-
-/**
- * Build a synthetic assistant entry from the in-memory stream buffers so a
- * completed turn stays visible when we can't refetch from the server (the
- * "new" session case — the backend hasn't surfaced a session id yet, so
- * `getChatHistory` has nothing to return).
- */
-function rollupStreamToEntry(
-  streamText: string,
-  streamTools: SessionContentBlock[],
-): SessionEntry | null {
-  if (!streamText && streamTools.length === 0) return null;
-  const content: SessionContentBlock[] = [...streamTools];
-  if (streamText) content.push({ type: "text", text: streamText });
-  return {
-    uuid: `assistant-stream-${Date.now()}`,
-    type: "assistant",
-    timestamp: new Date().toISOString(),
-    content,
-  };
-}
-
-/**
- * Fire-and-forget: send a message to the backend knowing it will be queued.
- * We don't need to track the SSE response — the backend enqueues it and
- * the chat-complete SSE event will trigger a history refresh when the
- * queued turn finishes.
- */
-function queueMessageToBackend(opts: { session: string; message: string; messageId: string; images?: ChatImageAttachment[] }): void {
-  const { session, message, messageId, images } = opts;
-  sendChatMessage({
-    session,
-    message,
-    messageId,
-    ...(images && images.length > 0 ? { images } : {}),
-    onMessage: () => {}, // ignore — will be "queued" then close
-  }).catch(() => {}); // fire-and-forget
-}
+export { HISTORY_TAIL, MIN_REAL_USER_MESSAGES };
 
 // -- Machine --
 
@@ -471,17 +70,7 @@ export const chatMachine = setup({
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
     SET_MESSAGES: {
-      actions: assign(({ context, event }) => {
-        const reconciled = reconcilePending({
-          serverMessages: event.messages,
-          pendingMessages: context.pendingMessages,
-        });
-        return {
-          messages: reconciled.messages,
-          pendingMessages: reconciled.pendingMessages,
-          sessionId: event.sessionId,
-        };
-      }),
+      actions: assign(applyServerMessages),
     },
     // Global handler: refresh history from any state (e.g., after SSE chat-complete)
     REFRESH: {
@@ -499,18 +88,7 @@ export const chatMachine = setup({
     },
     // Global handler: another user sent a message (via SSE broadcast)
     OTHER_USER_MESSAGE: {
-      actions: assign(({ context, event }) => ({
-        messages: [
-          ...context.messages,
-          {
-            uuid: `other-${Date.now()}`,
-            type: "user" as const,
-            timestamp: event.timestamp,
-            content: [{ type: "text" as const, text: event.message }],
-            user: event.userName,
-          },
-        ],
-      })),
+      actions: assign(appendOtherUserMessage),
     },
     // Global handler: prepend older messages loaded on demand
     PREPEND_MESSAGES: {
@@ -629,25 +207,8 @@ export const chatMachine = setup({
               len: event.message.length,
               pending: context.pendingMessages.length,
             }),
-            assign(({ context, event }) => {
-              const entry: SessionEntry = {
-                uuid: `user-${Date.now()}`,
-                type: "user" as const,
-                timestamp: new Date().toISOString(),
-                content: buildOptimisticContent(event.message, event.images),
-                pending: true,
-              };
-              return {
-                messages: [...context.messages, entry],
-                pendingMessages: [...context.pendingMessages, entry],
-              };
-            }),
-            ({ event, context }) => queueMessageToBackend({
-              session: context.sessionInput,
-              message: event.message,
-              messageId: event.messageId,
-              ...(event.images ? { images: event.images } : {}),
-            }),
+            assign(appendQueuedSend),
+            dispatchQueuedSend,
           ],
         },
         STREAM_TEXT: {
@@ -677,16 +238,7 @@ export const chatMachine = setup({
           // (dimmed) until the server has actually processed the queued turn.
           // Without this, the optimistic message is unprotected by reconcile
           // and there's no visible signal that work is still pending.
-          actions: assign(({ context }) => {
-            const last = context.messages[context.messages.length - 1];
-            if (!last || last.type !== "user") return {};
-            if (context.pendingMessages.some((p) => p.uuid === last.uuid)) return {};
-            const promoted: SessionEntry = { ...last, pending: true };
-            return {
-              messages: [...context.messages.slice(0, -1), promoted],
-              pendingMessages: [...context.pendingMessages, promoted],
-            };
-          }),
+          actions: assign(promoteLastToPending),
         },
         STREAM_ERROR: {
           target: "idle",
@@ -728,25 +280,8 @@ export const chatMachine = setup({
               len: event.message.length,
               pending: context.pendingMessages.length,
             }),
-            assign(({ context, event }) => {
-              const entry: SessionEntry = {
-                uuid: `user-${Date.now()}`,
-                type: "user" as const,
-                timestamp: new Date().toISOString(),
-                content: buildOptimisticContent(event.message, event.images),
-                pending: true,
-              };
-              return {
-                messages: [...context.messages, entry],
-                pendingMessages: [...context.pendingMessages, entry],
-              };
-            }),
-            ({ event, context }) => queueMessageToBackend({
-              session: context.sessionInput,
-              message: event.message,
-              messageId: event.messageId,
-              ...(event.images ? { images: event.images } : {}),
-            }),
+            assign(appendQueuedSend),
+            dispatchQueuedSend,
           ],
         },
       },

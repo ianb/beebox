@@ -9,11 +9,7 @@
  * and redirects here with query params preserved.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
-import { withBase } from "../api";
-import { RequestError } from "../lib/errors";
-import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { TextareaField } from "../components/ui/fields";
 import { Button } from "../components/ui/Button";
@@ -23,30 +19,8 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { VoiceNoteButton } from "../components/VoiceNoteButton";
-
-type ShareState = "ready" | "saving" | "saved" | "error";
-
-/**
- * Parse a URL from share params. Some apps put the URL in the text field.
- */
-function extractUrl(params: URLSearchParams): string {
-  const url = params.get("url");
-  if (url) return url;
-
-  const text = params.get("text") || "";
-  const urlMatch = text.match(/https?:\/\/\S+/);
-  if (urlMatch) return urlMatch[0];
-
-  return "";
-}
-
-/**
- * Extract non-URL text from the text param (some apps combine note + URL).
- */
-function extractText(params: URLSearchParams): string {
-  const text = params.get("text") || "";
-  return text.replace(/https?:\/\/\S+/g, "").trim();
-}
+import { extractText, extractUrl } from "./share-params";
+import { useShareNote } from "./useShareNote";
 
 function CenteredPanel({ children }: { children: React.ReactNode }) {
   return (
@@ -65,132 +39,15 @@ export function SharePage() {
   const sharedTitle = params.get("title") || "";
   const sharedText = extractText(params);
 
-  const [note, setNote] = useState(sharedText);
-  const [usedVoice, setUsedVoice] = useState(false);
-  const [shareState, setShareState] = useState<ShareState>("ready");
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const transcription = useRealtimeTranscription({
-    onKeywordSend: (text) => {
-      setNote((prev) => (prev ? `${prev}\n\n${text}` : text));
-    },
-  });
-
-  // Append finalized transcription chunks into the note field. The ref
-  // gate prevents duplicate appends when transcription state churns
-  // without producing new text. setState is intentional: this is a
-  // bridge from an external transcription stream to local form state.
-  const prevTranscriptRef = useRef("");
-
-  useEffect(() => {
-    if (
-      transcription.state === "idle" &&
-      transcription.transcript &&
-      transcription.transcript !== prevTranscriptRef.current
-    ) {
-      const text = transcription.transcript.trim();
-      if (text) {
-        setNote((prev) => (prev ? `${prev}\n\n${text}` : text));
-      }
-      prevTranscriptRef.current = transcription.transcript;
-    }
-  }, [transcription.state, transcription.transcript]);
-
-
-  const handleSave = useCallback(async () => {
-    if (!sharedUrl || !boxSlug) return;
-
-    let extraNote = "";
-    if (transcription.state === "recording") {
-      const finalText = await transcription.stop();
-      extraNote = finalText.trim();
-    }
-
-    setShareState("saving");
-    setErrorMessage("");
-
-    const fullNote = extraNote
-      ? (note.trim() ? `${note.trim()}\n\n${extraNote}` : extraNote)
-      : note.trim();
-
-    try {
-      const now = new Date();
-      const timestamp = now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
-      const safeName = (sharedTitle || "Link")
-        .replace(/[^\w -]/g, "")
-        .replace(/\s+/g, "_")
-        .slice(0, 40);
-      const cardPath = `box/inbox/links/${safeName}_${timestamp}.bookmark.card`;
-
-      let noteText = fullNote;
-      if (noteText && usedVoice) {
-        noteText = `[Audio Input Transcription]\n${noteText}`;
-      }
-
-      const args: Record<string, unknown> = {
-        path: cardPath,
-        commit: true,
-        args: {
-          title: sharedTitle || sharedUrl,
-          link: sharedUrl,
-          ...(noteText ? { note: noteText } : {}),
-        },
-      };
-
-      const response = await fetch(withBase(`/${boxSlug}/api/commands/execute`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command: "create", args }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: response.statusText }));
-        throw new RequestError(err.error || "Save failed");
-      }
-
-      const reader = response.body?.getReader();
-      if (reader) {
-        const decoder = new TextDecoder();
-        let success = false;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value);
-          for (const line of text.split("\n")) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.type === "result" && data.success) {
-                  success = true;
-                }
-              } catch (e) {
-                console.debug("Skipping unparseable SSE data line:", e);
-              }
-            }
-          }
-        }
-        if (!success) {
-          const message = "Command did not report success";
-          throw new RequestError(message);
-        }
-      }
-
-      setShareState("saved");
-    } catch (err) {
-      setShareState("error");
-      setErrorMessage((err as Error).message);
-    }
-  }, [sharedUrl, sharedTitle, boxSlug, note, usedVoice, transcription]);
-
-  const handleVoiceToggle = useCallback(() => {
-    if (transcription.state === "recording") {
-      transcription.stop();
-    } else if (transcription.state === "idle") {
-      prevTranscriptRef.current = "";
-      setUsedVoice(true);
-      transcription.start();
-    }
-  }, [transcription]);
+  const {
+    note,
+    setNote,
+    shareState,
+    errorMessage,
+    transcription,
+    handleSave,
+    handleVoiceToggle,
+  } = useShareNote({ boxSlug, sharedUrl, sharedTitle, sharedText });
 
   if (!sharedUrl) {
     return (

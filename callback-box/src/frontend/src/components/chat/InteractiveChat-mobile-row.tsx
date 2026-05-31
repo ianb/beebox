@@ -1,0 +1,109 @@
+/**
+ * Mobile-only textarea row shown below InteractiveChat's button bar when the
+ * user is typing or while transcription is in flight. Presentational — the
+ * transcription handle, input setters, and send callbacks come in as props.
+ */
+
+import TextareaAutosize from "react-textarea-autosize";
+import { RecordingIndicator } from "../VoiceRecorder";
+import { composerTextareaClasses, localTime } from "./InteractiveChat-helpers";
+import type { TranscriptionHandle } from "./InteractiveChat-composer";
+
+/**
+ * Mobile-only textarea row shown below the button bar when typing or transcribing.
+ */
+export function MobileTextareaRow({
+  input, setInput, isTranscribing, transcription,
+  handleSend, handleCancelTranscription,
+  turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
+  onPaste, onDrop,
+}: {
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  isTranscribing: boolean;
+  transcription: TranscriptionHandle;
+  handleSend: () => void;
+  handleCancelTranscription: () => void;
+  turnTakingRef: React.MutableRefObject<boolean>;
+  doSend: (wrapped: string) => void;
+  zoomedViewAttr: () => string;
+  timePassedAttr: () => string;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+}) {
+  const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
+
+  return (
+    <div className="flex gap-2 items-center">
+      {isTranscribing ? (
+        <div className="flex-shrink-0 self-center">
+          <RecordingIndicator />
+        </div>
+      ) : null}
+      <TextareaAutosize
+        value={isTranscribing ? transcription.transcript : input}
+        onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
+        onPaste={onPaste}
+        onDrop={onDrop}
+        readOnly={isTranscribing}
+        enterKeyHint="enter"
+        placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
+        className={composerTextareaClasses({ mobile: true, isTranscribing })}
+        minRows={2}
+        maxRows={8}
+        autoFocus
+      />
+      {isTranscribing ? (
+        <>
+          <button
+            onClick={handleCancelTranscription}
+            className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
+            title="Cancel (Esc)"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              turnTakingRef.current = false;
+              const text = transcription.transcript;
+              if (text) setInput((existing) => (existing ? existing + " " + text : text));
+              transcription.stop();
+            }}
+            className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+            title="Edit before sending"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          <button
+            onClick={async () => {
+              const finalText = await transcription.stop();
+              const text = finalText.trim();
+              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+            }}
+            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
+            title="Send"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={handleSend}
+          disabled={!input.trim()}
+          className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+          title="Send"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
