@@ -11,28 +11,14 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "agent-browser-typed": "link:./packages/agent-browser-typed"
+    "agent-browser-typed": "workspace:*"
   },
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^22.10.0",
     "eslint": "^9.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ],
-    "ignoredBuiltDependencies": [
-      "@ianbicking/personal-vibe-check"
-    ],
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "eslint-plugin-react-hooks": "7"
-      }
-    }
   }
 }

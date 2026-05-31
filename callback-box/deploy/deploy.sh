@@ -40,22 +40,25 @@ if [[ "$SKIP_FRONTEND" != true ]]; then
 fi
 
 # Build cardworks locally before syncing. The server consumes it through a
-# node_modules symlink to /opt/callback/cardworks and the remote deploy step
-# only runs `pnpm install` when node_modules is missing — it never rebuilds
-# cardworks. So the dist/ we rsync must already match the source we rsync.
-# cardworks/dist is gitignored, so rsync ships whatever build is on disk here;
-# a stale one once shipped an old API surface that crashed `cb validate` and
-# hung chat. Always rebuild so source and dist stay in lockstep on the server.
+# workspace symlink (callback-box/node_modules/cardworks -> ../../cardworks)
+# and the remote deploy step installs deps but never builds cardworks. So the
+# dist/ we rsync must already match the source we rsync. cardworks/dist is
+# gitignored, so rsync ships whatever build is on disk here; a stale one once
+# shipped an old API surface that crashed `cb validate` and hung chat. Always
+# rebuild so source and dist stay in lockstep on the server.
 if [[ -d "$MONO_DIR/cardworks" ]]; then
   echo "Building cardworks..."
   cd "$MONO_DIR/cardworks" && pnpm --silent build
 fi
 
-# Sync monorepo packages. personal-vibe-check is a file: dep of callback-box
-# and cardworks, so it must be present alongside them on the server. It used
-# to live outside the monorepo at ~/src/personal-vibe-check (special-cased
-# here); now it's a sibling inside the monorepo and gets synced like the rest.
-for repo in cardworks personal-vibe-check callback-box; do
+# Sync monorepo packages. These are pnpm workspace members linked via
+# `workspace:*` deps, so they must all be present alongside callback-box on the
+# server for the root `pnpm install` to resolve. personal-vibe-check and
+# agent-doctest are devDeps of callback-box (the server install is non-prod
+# because the runtime uses tsx, itself a devDep); cardworks is a runtime dep.
+# browse/agent-browser-typed are deliberately NOT synced — they're dev-only
+# tooling and a partial workspace installs fine (pnpm ignores absent members).
+for repo in cardworks personal-vibe-check agent-doctest callback-box; do
   local_path="$MONO_DIR/$repo/"
   if [[ ! -d "$local_path" ]]; then
     echo "  $repo: not found at $local_path, skipping"
@@ -64,6 +67,19 @@ for repo in cardworks personal-vibe-check callback-box; do
   echo "Syncing $repo..."
   rsync "${RSYNC_OPTS[@]}" "$local_path" "root@$SERVER_IP:$INSTALL_DIR/$repo/"
 done
+
+# Sync the workspace root itself. With workspace deps, /opt/callback becomes the
+# pnpm workspace root: the single root lockfile + manifest + .npmrc + patches
+# drive one reproducible `pnpm install --frozen-lockfile` from there (below).
+# These are individual files, so no --delete (it would nuke the synced subdirs).
+echo "Syncing workspace root..."
+rsync -az \
+  "$MONO_DIR/package.json" \
+  "$MONO_DIR/pnpm-workspace.yaml" \
+  "$MONO_DIR/.npmrc" \
+  "$MONO_DIR/pnpm-lock.yaml" \
+  "root@$SERVER_IP:$INSTALL_DIR/"
+rsync -az --delete "$MONO_DIR/patches/" "root@$SERVER_IP:$INSTALL_DIR/patches/"
 
 # Install deps if package-lock changed (compare hash)
 echo "Checking dependencies..."
@@ -83,18 +99,29 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     echo "  Removing stale /opt/personal-vibe-check (superseded by /opt/callback/personal-vibe-check)..."
     rm -rf /opt/personal-vibe-check
   fi
-  # Always reconcile node_modules to the synced lockfile. The previous guard
-  # (`! pnpm ls --depth 0`) exited 0 even when package.json declared deps that
-  # weren't installed, so a newly-added dependency was silently skipped on
-  # deploy — which crash-looped the server on a missing @markdoc/markdoc until
-  # someone ran pnpm install by hand. `pnpm install` is idempotent and fast
-  # (~2-3s) when already in sync, so just run it unconditionally.
-  cd /opt/callback/personal-vibe-check
-  echo "  Reconciling personal-vibe-check deps..."
-  pnpm install
-  cd /opt/callback/callback-box
-  echo "  Reconciling callback-box deps..."
-  pnpm install
+  # One-time cutover from the old per-subdir installs to a single workspace
+  # install. Before this change each subdir had its own isolated node_modules;
+  # the workspace uses a hoisted node_modules at the root. Remove the legacy
+  # per-package trees once (keyed on the root node_modules not yet existing) so
+  # nothing stale shadows the hoisted layout — the exact class of bug this
+  # migration fixes. After the first workspace deploy this branch is skipped.
+  if [[ ! -d /opt/callback/node_modules ]]; then
+    echo "  First workspace deploy: clearing legacy per-package node_modules..."
+    rm -rf /opt/callback/cardworks/node_modules \
+           /opt/callback/personal-vibe-check/node_modules \
+           /opt/callback/agent-doctest/node_modules \
+           /opt/callback/callback-box/node_modules \
+           /opt/callback/callback-box/src/frontend/node_modules
+  fi
+  # Reconcile the whole workspace to the synced lockfile in one frozen install
+  # from the workspace root. --frozen-lockfile makes the server resolution match
+  # dev byte-for-byte (and fails loudly if the lockfile is stale rather than
+  # silently resolving something new). HUSKY=0 skips husky's hook install (no
+  # .git on the server) so it doesn't print a spurious ".git can't be found".
+  # patch-package still runs via the root postinstall to patch eslint-config-agent.
+  cd /opt/callback
+  echo "  Reconciling workspace deps (frozen)..."
+  HUSKY=0 pnpm install --frozen-lockfile
 REMOTE
 
 # Write deploy info (git hashes + timestamp).

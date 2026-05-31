@@ -15,7 +15,7 @@
     "lint": "eslint src/"
   },
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "workspace:*",
     "@tapjs/core": "^4.0.0",
     "@types/node": "^22.0.0",
     "esbuild": "^0.20.0",
@@ -37,15 +37,5 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/ianb/agent-doctest.git"
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "@ianbicking/personal-vibe-check"
-    ],
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "eslint-plugin-react-hooks": "7"
-      }
-    }
   }
 }

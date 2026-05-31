@@ -42,11 +42,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/chokidar": "^1.7.5",
     "@types/node": "^22.0.0",
     "@types/xml2js": "^0.4.14",
-    "agent-doctest": "file:../agent-doctest",
+    "agent-doctest": "workspace:*",
     "axe-core": "^4.11.4",
     "eslint": "^9.39.2",
     "eslint-import-resolver-typescript": "^4.4.4",
@@ -75,7 +75,7 @@
     "@types/ws": "^8.18.1",
     "ansi-to-html": "^0.7.2",
     "better-sqlite3": "^12.6.2",
-    "cardworks": "link:../cardworks",
+    "cardworks": "workspace:*",
     "chalk": "^5.6.2",
     "cheerio": "^1.2.0",
     "chokidar": "^5.0.0",
@@ -112,25 +112,5 @@
     "src/!(frontend)/**/*.ts": [
       "eslint"
     ]
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@google/genai",
-      "better-sqlite3",
-      "esbuild",
-      "protobufjs",
-      "unrs-resolver"
-    ],
-    "ignoredBuiltDependencies": [
-      "@ianbicking/personal-vibe-check"
-    ],
-    "overrides": {
-      "whatwg-url": "^14"
-    },
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "eslint-plugin-react-hooks": "7"
-      }
-    }
   }
 }

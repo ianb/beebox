@@ -45,7 +45,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@ianbicking/personal-vibe-check": "file:../personal-vibe-check",
+    "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^22.12.0",
     "eslint": "^9.19.0",
     "husky": "^9.1.7",
@@ -57,21 +57,6 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.22.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ],
-    "ignoredBuiltDependencies": [
-      "@ianbicking/personal-vibe-check"
-    ],
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "@typescript-eslint/parser": "8",
-        "eslint-plugin-react-hooks": "7"
-      }
-    }
   },
   "lint-staged": {
     "src/**/*.ts": [

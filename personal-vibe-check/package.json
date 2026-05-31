@@ -55,7 +55,6 @@
   "license": "ISC",
   "author": "Ian Bicking",
   "scripts": {
-    "postinstall": "patch-package",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "format": "prettier --write src/",
@@ -64,16 +63,5 @@
     "lint:knip": "knip",
     "lint:circular": "madge --circular --extensions ts,tsx src/",
     "test": "node --test rules/test/*.test.mjs"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ],
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "eslint-plugin-react-hooks": "7"
-      }
-    }
   }
 }
