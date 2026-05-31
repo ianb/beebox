@@ -6,12 +6,32 @@
  * import cycle through the main component.
  */
 
+import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
+
 /**
  * Format the current local time as HH:MM for the typed/speech tag.
  */
 export function localTime(): string {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * Build a `<speech>` message, folding any attached selections into the body
+ * via the shared serializer (spoken text carries no `[selectionN]` tokens, so
+ * every selection is appended). `attrs` is the caller-built attribute string
+ * (` local-time="…"` plus the optional zoomed-view/time-passed attributes).
+ */
+export function buildSpeechMessage(opts: {
+  text: string;
+  diarized: boolean;
+  selections: SelectionItem[];
+  attrs: string;
+}): string {
+  const { text, diarized, selections, attrs } = opts;
+  const diarizedAttr = diarized ? " diarized=\"1\"" : "";
+  const body = applySelections(text, { selections });
+  return `<speech${diarizedAttr}${attrs}>${body}</speech>`;
 }
 
 // Minted at SEND-dispatch time and threaded through to /chat/send so the

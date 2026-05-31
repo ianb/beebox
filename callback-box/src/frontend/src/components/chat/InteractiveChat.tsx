@@ -108,12 +108,13 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     return formatted ? ` time-passed="${formatted}"` : "";
   }, [messages]);
 
-  const voice = useChatVoice({
-    snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
-    setInput, doSend, zoomedViewAttr, timePassedAttr,
-  });
   const attach = useChatAttachments({ input, setInput, textareaRef });
   const selections = useChatSelections({ input, setInput, textareaRef });
+  const voice = useChatVoice({
+    snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
+    selections: selections.selections, resetSelections: selections.resetSelections,
+    setInput, doSend, zoomedViewAttr, timePassedAttr,
+  });
 
   useChatSse({
     sessionId, sessionInput, boxSlug, currentUser, send,

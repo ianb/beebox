@@ -15,8 +15,9 @@ import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { detectKeyword } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
 import { sendSound, tick, recordingStart, recordingStop } from "../../lib/earcons";
-import { localTime } from "./InteractiveChat-helpers";
+import { localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
 import { useSpeechDispatch, type VoiceRefs } from "./InteractiveChat-speech";
+import { type SelectionItem } from "../../lib/selection-serialize";
 import type { ReplaySpeechOptions } from "../ChatMessages";
 
 interface SnapshotLike {
@@ -37,16 +38,26 @@ function runKeywordSend(opts: {
   refs: VoiceRefs;
   sessionId: string | null;
   narrationEnabledRef: React.MutableRefObject<boolean>;
+  selectionsRef: React.MutableRefObject<SelectionItem[]>;
+  resetSelections: () => void;
   setHqInFlight: React.Dispatch<React.SetStateAction<boolean>>;
   setPendingHqDraft: React.Dispatch<React.SetStateAction<string | null>>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
 }) {
-  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, setHqInFlight, setPendingHqDraft, doSend, zoomedViewAttr, timePassedAttr } = opts;
+  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, zoomedViewAttr, timePassedAttr } = opts;
   if (!text.trim()) {
     transcription.start();
     return;
+  }
+  // Snapshot the pending selections at keyword-fire (phase 1) and clear them
+  // now: they belong to *this* utterance. The deferred HQ submit reads this
+  // frozen snapshot, so selections added during the HQ window go to the next
+  // message. Spoken bodies carry no tokens, so the serializer appends them.
+  const selectionsSnapshot = selectionsRef.current;
+  if (selectionsSnapshot.length > 0) {
+    resetSelections();
   }
   sendSound.play();
   refs.stopTickRef.current = tick.repeatPlay(1000, 30000);
@@ -54,8 +65,9 @@ function runKeywordSend(opts: {
   // to the agent — the realtime text is good enough for the live UI
   // but accuracy matters more for the persistent record.
   const submit = (finalText: string, submitOpts?: { diarized?: boolean }) => {
-    const diarizedAttr = submitOpts?.diarized === true ? " diarized=\"1\"" : "";
-    doSend(`<speech${diarizedAttr} local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${finalText}</speech>`);
+    const diarized = submitOpts !== undefined && submitOpts.diarized === true;
+    const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
+    doSend(buildSpeechMessage({ text: finalText, diarized, selections: selectionsSnapshot, attrs }));
   };
   if (narrationEnabledRef.current && audioBlob) {
     setHqInFlight(true);
@@ -92,12 +104,14 @@ export function useChatVoice(opts: {
   sessionId: string | null;
   muted: boolean;
   narrationEnabled: boolean;
+  selections: SelectionItem[];
+  resetSelections: () => void;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, setInput, doSend, zoomedViewAttr, timePassedAttr } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, setInput, doSend, zoomedViewAttr, timePassedAttr } = opts;
 
   const [voicePaused, setVoicePaused] = useState(false);
   const { speechPlayback, refs } = useSpeechDispatch({ snapshot, muted, setVoicePaused });
@@ -108,6 +122,10 @@ export function useChatVoice(opts: {
   // narration takes effect on the next send.
   const narrationEnabledRef = useRef(narrationEnabled);
   useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
+  // Keep the latest selections readable at keyword-fire time (the onKeywordSend
+  // closure is captured by the transcription hook, not re-read per render).
+  const selectionsRef = useRef(selections);
+  useEffect(() => { selectionsRef.current = selections; });
   const [hqInFlight, setHqInFlight] = useState(false);
   // Realtime transcript shown as a pending user-message bubble while the
   // HQ pass runs. Null when no narration submit is in flight. Driven by
@@ -118,7 +136,7 @@ export function useChatVoice(opts: {
     wantAudioBlob: () => narrationEnabledRef.current,
     onKeywordSend: (text, audioBlob) => runKeywordSend({
       text, audioBlob, transcription,
-      refs, sessionId, narrationEnabledRef, setHqInFlight, setPendingHqDraft,
+      refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft,
       doSend, zoomedViewAttr, timePassedAttr,
     }),
     onKeywordCancel: () => {
