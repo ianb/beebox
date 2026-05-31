@@ -6,8 +6,11 @@
  * wires them into the layout regions.
  */
 
+import { useRef, useCallback, useEffect } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import { VirtualizedMessageList } from "./InteractiveChat-messages";
+import { lastWords } from "../../lib/selection-serialize";
+import type { AddSelectionInput } from "../../lib/selection-position";
 import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
@@ -215,6 +218,20 @@ export function InteractiveChatBody(props: ChatBodyProps) {
   const { tabs, voice, selections, schedules, error, pendingCount, showDebugLog, setShowDebugLog, send } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
   const { addSelection } = selections;
+  // Capture the live transcript phrase at grab-time so voice selections get a
+  // positional anchor. Refs keep the handler identity stable while reading the
+  // latest values at click time. Typed selections (not transcribing) pass a
+  // null anchor → inline token instead.
+  const transcriptRef = useRef("");
+  const transcribingRef = useRef(false);
+  useEffect(() => {
+    transcriptRef.current = voice.transcription.transcript;
+    transcribingRef.current = voice.isTranscribing;
+  });
+  const handleAddSelection = useCallback((selection: AddSelectionInput) => {
+    const anchor = transcribingRef.current ? lastWords(transcriptRef.current, 8) : null;
+    addSelection(selection, anchor);
+  }, [addSelection]);
   return (
     <ChatView
       hasCompanion={Boolean(activeView)}
@@ -230,7 +247,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
               target: { ...target, zoom: false },
               label: hint && hint.label ? hint.label : target.path,
             })}
-            onAddSelection={addSelection}
+            onAddSelection={handleAddSelection}
           />
         ) : null
       }

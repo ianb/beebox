@@ -69,3 +69,43 @@ JSON.stringify(applySelections("[selection1] and [selection9]", { selections: [
 =>
 "<user-selection ref=\"/a.card\">alpha</user-selection> and [selection9]"
 ```
+
+## Voice anchor: inserted after the anchored phrase (not appended)
+
+```
+JSON.stringify(applySelections("let me look at this part and continue", { selections: [
+  { id: 1, ref: "/a.card", text: "X", position: "", anchor: "look at this part" },
+] }))
+=>
+"let me look at this part <user-selection ref=\"/a.card\">X</user-selection> and continue"
+```
+
+## Voice anchor: case/punctuation-insensitive (survives the HQ pass)
+
+```
+JSON.stringify(applySelections("So, what does THIS part mean?", { selections: [
+  { id: 1, ref: "/a.card", text: "X", position: "", anchor: "this part" },
+] }))
+=>
+"So, what does THIS part <user-selection ref=\"/a.card\">X</user-selection> mean?"
+```
+
+## Voice anchor: empty anchor places the selection at the start
+
+```
+JSON.stringify(applySelections("the rest of it", { selections: [
+  { id: 1, ref: "/a.card", text: "X", position: "", anchor: "" },
+] }))
+=>
+"<user-selection ref=\"/a.card\">X</user-selection> the rest of it"
+```
+
+## Voice anchor: phrase not found falls back to appending
+
+```
+JSON.stringify(applySelections("hello world", { selections: [
+  { id: 1, ref: "/a.card", text: "X", position: "", anchor: "goodbye moon" },
+] }))
+=>
+"hello world\n<user-selection ref=\"/a.card\">X</user-selection>"
+```
