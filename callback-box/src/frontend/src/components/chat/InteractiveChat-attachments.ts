@@ -26,18 +26,19 @@ export function insertTokensAtCursor(tokens: string, opts: {
   const ta = textareaRef.current;
   const taFocused = ta !== null && document.activeElement === ta;
   if (!alwaysFocus && !(ta && taFocused)) {
-    setInput((prev) => (prev ? prev + " " + tokens : tokens));
+    setInput((prev) => (prev ? prev + " " + tokens + " " : tokens + " "));
     return;
   }
   const selStart = taFocused && ta !== null && ta.selectionStart !== null ? ta.selectionStart : input.length;
   const selEnd = taFocused && ta !== null && ta.selectionEnd !== null ? ta.selectionEnd : selStart;
   const before = input.slice(0, selStart);
   const after = input.slice(selEnd);
-  // Pad with a space before the tokens if needed so they don't glue to
-  // the preceding word.
-  const pad = before.length > 0 && !/\s$/.test(before) ? " " : "";
-  setInput(before + pad + tokens + after);
-  const cursorAt = (before + pad + tokens).length;
+  // Pad with a space before/after the tokens (when not already whitespace) so
+  // they don't glue to adjacent words and the caret lands ready to keep typing.
+  const padBefore = before.length > 0 && !/\s$/.test(before) ? " " : "";
+  const padAfter = after.length === 0 || !/^\s/.test(after) ? " " : "";
+  setInput(before + padBefore + tokens + padAfter + after);
+  const cursorAt = (before + padBefore + tokens + padAfter).length;
   requestAnimationFrame(() => {
     if (ta !== null && ta.isConnected) {
       ta.focus();
@@ -132,10 +133,10 @@ export function useChatAttachments(opts: {
     }
     if (newItems.length === 0) return;
     setFileAttachments((prev) => [...prev, ...newItems]);
-    // Always trail a space so the user can keep typing after the token, and
-    // always focus the textarea — the upload is triggered from a menu, so
-    // focus is on the menu button, not the composer.
-    const tokens = newItems.map((f) => `[file${f.id}]`).join(" ") + " ";
+    // Always focus the textarea — the upload is triggered from a menu, so
+    // focus is on the menu button, not the composer. The helper pads a
+    // trailing space so the user can keep typing after the token.
+    const tokens = newItems.map((f) => `[file${f.id}]`).join(" ");
     insertTokensAtCursor(tokens, { input, setInput, textareaRef, alwaysFocus: true });
   }, [input, setInput, textareaRef]);
 
