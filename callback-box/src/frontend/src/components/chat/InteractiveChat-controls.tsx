@@ -16,6 +16,7 @@ import { cn } from "../../lib/cn";
 import { href } from "../../lib/routing";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import type { AddSelectionInput } from "../../lib/selection-position";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
@@ -31,7 +32,7 @@ export function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSc
         setRemaining("now");
         if (!firedRef.current) {
           firedRef.current = true;
-          onFired?.();
+          if (onFired !== undefined) onFired();
         }
         return;
       }
@@ -192,6 +193,7 @@ export function CompanionViewPanel({
   onCloseTab,
   onClosePanel,
   onNavigate,
+  onAddSelection,
 }: {
   tabs: PanelTab[];
   activePath: string;
@@ -199,6 +201,7 @@ export function CompanionViewPanel({
   onCloseTab: (path: string) => void;
   onClosePanel: () => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  onAddSelection?: (selection: AddSelectionInput) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const active = tabs.find((t) => t.target.path === activePath);
@@ -263,6 +266,7 @@ export function CompanionViewPanel({
           mode="companion"
           rendererName={active.target.viewer}
           onNavigate={onNavigate}
+          onAddSelection={onAddSelection}
         />
       </div>
     </div>

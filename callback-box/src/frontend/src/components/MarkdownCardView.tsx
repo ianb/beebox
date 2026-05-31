@@ -154,7 +154,7 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
   return (
     <div className="p-4 max-w-3xl">
       {frontmatter !== undefined && Object.keys(frontmatter).length > 0 ? (
-        <div className="mb-4 pb-3 border-b border-warm-200">
+        <div className="mb-4 pb-3 border-b border-warm-200" data-card-section="frontmatter">
           <FieldsTable fields={frontmatter} />
         </div>
       ) : null}
@@ -162,9 +162,11 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
       <QuoteSpeakersLine speakers={speakers} onNavigate={onNavigate} />
 
       {body !== undefined && body.trim() !== "" ? (
-        <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
-          {body}
-        </Markdown>
+        <div data-card-section="body">
+          <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
+            {body}
+          </Markdown>
+        </div>
       ) : (
         <div className="text-sm text-warm-500 italic">No body content</div>
       )}

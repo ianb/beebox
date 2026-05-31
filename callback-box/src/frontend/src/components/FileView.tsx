@@ -32,6 +32,8 @@ import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { RequestError } from "../lib/errors";
+import { SelectionCapture } from "./SelectionCapture";
+import type { AddSelectionInput } from "../lib/selection-position";
 import { Pre } from "./ui/Pre";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { StatusBadge } from "./ui/StatusBadge";
@@ -49,6 +51,13 @@ interface FileViewProps {
    * replacing a sidebar pane, etc.
    */
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  /**
+   * Optional. When provided, text selections in the rendered document
+   * surface a floating "+" that hands the selection to this callback (used
+   * in the chat companion pane). Absent everywhere else — no affordance
+   * without a composer to receive it.
+   */
+  onAddSelection?: (selection: AddSelectionInput) => void;
 }
 
 /* ---------- path classification ---------- */
@@ -229,9 +238,15 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode, rendererName, onNavigate }: FileViewProps) {
+export function FileView({ path, mode, rendererName, onNavigate, onAddSelection }: FileViewProps) {
   mode = mode ?? "page";
   const { data, loading, error } = useFileData(path);
+
+  const handleCapture = useCallback((selection: { text: string; position: string }) => {
+    if (onAddSelection === undefined) return;
+    const ref = path.startsWith("/") ? path : `/${path}`;
+    onAddSelection({ ref, text: selection.text, position: selection.position });
+  }, [onAddSelection, path]);
 
   // Track user's toggle selection scoped to the current path. When the path
   // changes, the stored path no longer matches so selection resets without
@@ -265,7 +280,10 @@ export function FileView({ path, mode, rendererName, onNavigate }: FileViewProps
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
   }
 
-  const body = <active.Component data={data} onNavigate={onNavigate} />;
+  const rendered = <active.Component data={data} onNavigate={onNavigate} />;
+  const body = onAddSelection === undefined
+    ? rendered
+    : <SelectionCapture onCapture={handleCapture}>{rendered}</SelectionCapture>;
 
   if (mode === "chat") {
     return (
