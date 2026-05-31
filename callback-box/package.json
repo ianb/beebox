@@ -75,7 +75,7 @@
     "@types/ws": "^8.18.1",
     "ansi-to-html": "^0.7.2",
     "better-sqlite3": "^12.6.2",
-    "cardworks": "file:../cardworks",
+    "cardworks": "link:../cardworks",
     "chalk": "^5.6.2",
     "cheerio": "^1.2.0",
     "chokidar": "^5.0.0",
