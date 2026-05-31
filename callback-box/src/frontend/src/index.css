@@ -41,6 +41,22 @@ body {
   word-break: break-word;
 }
 
+/* Markdown paragraphs render as <div class="cb-paragraph"> instead of <p> so
+   block-level content (inline file previews, figures, custom tags) can nest
+   without React DOM-nesting warnings. Restore the paragraph vertical rhythm;
+   em-based so it tracks the prose size, with first/last resets to match the
+   typography plugin's edge handling. Applies inside and outside .prose. */
+.cb-paragraph {
+  margin-top: 1.1428571em;
+  margin-bottom: 1.1428571em;
+}
+.cb-paragraph:first-child {
+  margin-top: 0;
+}
+.cb-paragraph:last-child {
+  margin-bottom: 0;
+}
+
 /* Highlight.js XML customizations - dim the angle brackets */
 .hljs-tag {
   color: #ccc;

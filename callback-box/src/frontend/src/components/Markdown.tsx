@@ -179,7 +179,11 @@ function Para({ children }: { children?: ReactNode }) {
   if (isLoneImageReactChildren(children)) {
     return children as React.ReactElement;
   }
-  return <p>{children}</p>;
+  // A <div>, not a <p>: paragraphs routinely wrap block-level content here
+  // (inline file previews, figures, our custom tags), which is invalid inside
+  // <p> and triggers React DOM-nesting warnings. `.cb-paragraph` (index.css)
+  // restores the prose paragraph spacing.
+  return <div className="cb-paragraph">{children}</div>;
 }
 
 interface RenderConfigBundle {

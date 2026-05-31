@@ -74,20 +74,6 @@ function extractImages(children: React.ReactNode): Array<{ src: string; alt: str
 }
 
 /**
- * True when a child is a `view:` link to a non-image, non-zoom file — i.e. a
- * link that `ChatLink` renders as an inline `FileView` (block-level). Such a
- * block can't live inside a `<p>`, so a paragraph that is just this link is
- * unwrapped (same idea as the lone-image case).
- */
-function isBlockFilePreviewChild(child: React.ReactNode): boolean {
-  if (child === null || typeof child !== "object" || !("type" in child) || !child.props) return false;
-  const href = child.props.href;
-  if (typeof href !== "string" || !href.startsWith("view:")) return false;
-  const target = parseViewUrl(href);
-  return !isImagePath(target.path) && target.zoom !== true;
-}
-
-/**
  * Paragraph override that detects image-only paragraphs and renders them
  * as centered thumbnails (single) or a grid (multiple). The image-only
  * case covers both markdown image syntax (`![](…)`) and `view:` links to
@@ -96,15 +82,6 @@ function isBlockFilePreviewChild(child: React.ReactNode): boolean {
  */
 function ChatParagraph({ children }: { children?: React.ReactNode }) {
   const images = extractImages(children);
-
-  // A paragraph that is just a file-preview link renders a block <FileView>,
-  // which is invalid inside <p>. Unwrap it (same treatment as lone images).
-  const meaningful = (Array.isArray(children) ? children : [children]).filter(
-    (c) => !(typeof c === "string" && c.trim() === ""),
-  );
-  if (meaningful.length === 1 && isBlockFilePreviewChild(meaningful[0])) {
-    return <div className="my-2">{children}</div>;
-  }
 
   if (images) {
     if (images.length === 1) {
@@ -123,7 +100,9 @@ function ChatParagraph({ children }: { children?: React.ReactNode }) {
     );
   }
 
-  return <p>{children}</p>;
+  // A <div>, not a <p>: chat markdown links can expand to block-level file
+  // previews, invalid inside <p>. `.cb-paragraph` (index.css) restores spacing.
+  return <div className="cb-paragraph">{children}</div>;
 }
 
 function makeChatMarkdownComponents(
