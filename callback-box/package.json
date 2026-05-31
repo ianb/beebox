@@ -107,10 +107,10 @@
   },
   "lint-staged": {
     "src/frontend/src/**/*.{ts,tsx,js}": [
-      "eslint --config src/frontend/eslint.config.mjs --suppressions-location src/frontend/eslint-suppressions.json --pass-on-unpruned-suppressions"
+      "eslint --config src/frontend/eslint.config.mjs"
     ],
     "src/!(frontend)/**/*.ts": [
-      "eslint --pass-on-unpruned-suppressions"
+      "eslint"
     ]
   },
   "pnpm": {
