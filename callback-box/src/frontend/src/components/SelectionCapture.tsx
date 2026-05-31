@@ -67,8 +67,17 @@ export function SelectionCapture({ onCapture, children }: SelectionCaptureProps)
     }
   }, [button, onCapture]);
 
+  // Run refresh on the next task, not synchronously on mouseup. Clicking
+  // inside an existing selection keeps that selection alive through mouseup
+  // (drag affordance) and only collapses it on the following click — a
+  // synchronous refresh would read the still-present selection and wrongly
+  // re-show the "+". Deferring lets the collapse settle first.
+  const scheduleRefresh = useCallback(() => {
+    window.setTimeout(refresh, 0);
+  }, [refresh]);
+
   return (
-    <div ref={containerRef} onMouseUp={refresh} onMouseDown={() => setButton(null)}>
+    <div ref={containerRef} onMouseUp={scheduleRefresh} onMouseDown={() => setButton(null)}>
       {children}
       {button === null ? null : (
         <button
