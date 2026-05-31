@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { trpc } from "../lib/trpc";
 import type { FileSummary } from "../../../core/file-summary";
+import { parseAcks } from "../lib/structured-output-parsing";
 
 // Tool-input keys we treat as "agent touched this file". Deliberately
 // excludes generic `path` (used by Grep/Glob/LS for the search *scope*,
@@ -30,6 +31,11 @@ function extractFromText(text: string, out: string[]): void {
   while ((m = VIEW_LINK_RE.exec(text)) !== null) {
     const raw = m[1];
     if (raw) out.push(raw);
+  }
+  // <ack ref="…"> tags also indicate the agent touched a file — surface
+  // those in recent-files too. Reuses the same parser the badge UI uses.
+  for (const ack of parseAcks(text)) {
+    if (ack.ref) out.push(ack.ref);
   }
 }
 
