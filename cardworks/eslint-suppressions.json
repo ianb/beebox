@@ -1,0 +1,159 @@
+{
+  "src/card/card.ts": {
+    "default/no-default-params": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 3
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/fs/memory-fs.ts": {
+    "error/no-literal-error-message": {
+      "count": 4
+    },
+    "security/detect-non-literal-regexp": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "src/fs/node-fs.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 4
+    },
+    "security/detect-non-literal-regexp": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "src/jsx/factory.ts": {
+    "default/no-default-params": {
+      "count": 1
+    },
+    "error/no-literal-error-message": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    }
+  },
+  "src/jsx/types.ts": {
+    "@typescript-eslint/consistent-type-imports": {
+      "count": 1
+    }
+  },
+  "src/lint/format.ts": {
+    "default/no-default-params": {
+      "count": 2
+    }
+  },
+  "src/lint/lint.ts": {
+    "default/no-default-params": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 5
+    }
+  },
+  "src/loader/loader.ts": {
+    "default/no-default-params": {
+      "count": 8
+    },
+    "error/no-generic-error": {
+      "count": 1
+    },
+    "error/no-literal-error-message": {
+      "count": 3
+    },
+    "error/require-custom-error": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 5
+    },
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/parser/dom-to-object.ts": {
+    "max-params": {
+      "count": 3
+    }
+  },
+  "src/parser/frontmatter.ts": {
+    "unicorn/prefer-code-point": {
+      "count": 1
+    }
+  },
+  "src/parser/parse.ts": {
+    "error/no-literal-error-message": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    }
+  },
+  "src/refs/xpath.ts": {
+    "max-params": {
+      "count": 2
+    },
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/schema/card-schema.ts": {
+    "default/no-default-params": {
+      "count": 1
+    },
+    "error/no-generic-error": {
+      "count": 2
+    },
+    "error/no-literal-error-message": {
+      "count": 2
+    },
+    "error/require-custom-error": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/no-for-loop": {
+      "count": 1
+    }
+  },
+  "src/schema/element.ts": {
+    "default/no-default-params": {
+      "count": 1
+    }
+  },
+  "src/schema/format-error.ts": {
+    "max-params": {
+      "count": 4
+    }
+  },
+  "src/schema/registry.ts": {
+    "default/no-default-params": {
+      "count": 2
+    }
+  },
+  "src/serialize/serialize.ts": {
+    "default/no-default-params": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    }
+  }
+}

@@ -30,7 +30,7 @@ export interface SplitCardContent {
   hasFrontmatter: boolean;
 }
 
-const FRONTMATTER_BLOCK = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/;
+const FRONTMATTER_BLOCK = /^---\r?\n([\S\s]*?)\r?\n---\r?\n/;
 
 /**
  * Split a .card file's raw text into optional frontmatter and body.

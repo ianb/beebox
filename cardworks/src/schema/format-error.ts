@@ -91,7 +91,7 @@ function formatUnionError(
   }
 
   // We found the matching branch — show only its errors (excluding the tagName match)
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- index validated by findMatchingBranch
+
   const matchingIssues = branchErrors[matchingBranchIndex]!;
   const relevantIssues = matchingIssues.filter((i) => !isTagNameIssue(i));
 
@@ -168,9 +168,9 @@ function formatErrorLine(pathStr: string, message: string, rootNode?: unknown, p
  * Returns the index, or -1 if none match.
  */
 function findMatchingBranch(branchErrors: readonly (readonly ZodIssue[])[], tagName: string): number {
-  for (let i = 0; i < branchErrors.length; i++) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- loop bounded by array length
-    const issues = branchErrors[i]!;
+  for (const [i, branchError] of branchErrors.entries()) {
+
+    const issues = branchError!;
     // A branch matches if it does NOT have a tagName literal error for this tag.
     // i.e., the tagName was accepted by this branch.
     const hasTagNameError = issues.some(

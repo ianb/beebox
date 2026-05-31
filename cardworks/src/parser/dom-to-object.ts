@@ -149,12 +149,12 @@ export function domToObject(
   for (let i = 0; i < childNodes.length; i++) {
     const child = childNodes.item(i);
     // childNodes.item can return null in the DOM spec
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
     if (child === null) continue;
 
     if (isComment(child)) {
       // textContent can be null in DOM spec
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
       const commentText = dedent(child.textContent ?? "");
       hasComments = true;
 
@@ -181,7 +181,7 @@ export function domToObject(
       pendingComment = undefined;
     } else if (isText(child)) {
       // textContent can be null in DOM spec
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
       const text = child.textContent ?? "";
       // Track if there's any non-whitespace text
       if (text.trim().length > 0) {

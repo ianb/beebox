@@ -171,8 +171,7 @@ function walkForRefs(
     }
     if (key === "refs" && Array.isArray(child)) {
       const items = child as unknown[];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+      for (const [i, item] of items.entries()) {
         if (typeof item === "string") {
           out.push({ path: `${childPath}[${String(i)}]`, ref: item });
         }

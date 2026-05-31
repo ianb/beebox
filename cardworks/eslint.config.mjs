@@ -1,20 +1,14 @@
+// ⚠️ DO NOT disable or turn "off" any lint rule here without very clear and
+// explicit permission from the user. Every rule in personal-vibe-check is a
+// deliberate choice. Silently disabling a rule to dodge violations is how
+// configs drift out of sync with our own style. If a rule is genuinely wrong,
+// raise it — don't quietly switch it off. Burn down debt rule-by-rule instead.
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 export default [
   ...vibeCheck({ react: false }),
   {
     rules: {
-      "no-optional-chaining/no-optional-chaining": "off",
-      "default/no-default-params": "off",
       "max-params": ["error", 2],
-      "security/detect-non-literal-regexp": "off",
-      "max-lines": "off",
-      "max-lines-per-function": "off",
-      "error/no-literal-error-message": "off",
-      "error/require-custom-error": "off",
-      "error/no-generic-error": "off",
-      "no-restricted-syntax": "off",
-      "single-export/single-export": "off",
-      "ddd/require-spec-file": "off",
     },
   },
 ];

@@ -14,12 +14,12 @@ export interface FormatOptions {
 
 // ANSI color codes
 const colors = {
-  red: "\x1b[31m",
-  yellow: "\x1b[33m",
-  green: "\x1b[32m",
-  gray: "\x1b[90m",
-  bold: "\x1b[1m",
-  reset: "\x1b[0m",
+  red: "\u001B[31m",
+  yellow: "\u001B[33m",
+  green: "\u001B[32m",
+  gray: "\u001B[90m",
+  bold: "\u001B[1m",
+  reset: "\u001B[0m",
 };
 
 /**

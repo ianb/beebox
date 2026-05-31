@@ -39,7 +39,7 @@ export function executeXPath(
   // xpath-ts accepts xmldom's Document at runtime, but types don't match
   let xpathResult: unknown[];
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const selected = xpath.select(expr, doc as any);
     if (!Array.isArray(selected)) {
       // xpath.select can return a string/number/boolean for certain expressions
@@ -273,7 +273,7 @@ export function evaluateXPathString(expr: string, root: ElementNode): string {
 
   let selected: unknown;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     selected = xpath.select(expr, contextNode as any);
   } catch {
     return "";

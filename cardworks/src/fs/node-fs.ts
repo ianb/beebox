@@ -52,7 +52,7 @@ export class NodeFileSystem implements FileSystem {
     regexPattern = regexPattern.replace(/\?/g, "<<QUESTION>>");
 
     // Escape regex special chars
-    regexPattern = regexPattern.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+    regexPattern = regexPattern.replace(/[$()+.[\\\]^{|}]/g, "\\$&");
 
     // Replace placeholders with regex equivalents
     regexPattern = regexPattern.replace(/<<GLOBSTARSLASH>>/g, "(.*/)?");

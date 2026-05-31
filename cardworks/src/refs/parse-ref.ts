@@ -50,7 +50,7 @@ export function parseRef(ref: string): ParsedRef {
     // Make sure @ is not part of a path (e.g., not in the middle of a filename)
     const afterAt = remaining.slice(versionIndex + 1);
     // Version should look like a version string (starts with digit or has version-like pattern)
-    if (/^[\d]/.test(afterAt) || /^v\d/.test(afterAt)) {
+    if (/^\d/.test(afterAt) || /^v\d/.test(afterAt)) {
       version = afterAt;
       remaining = remaining.slice(0, versionIndex);
     }
