@@ -22,6 +22,7 @@ import { trpc } from "../../lib/trpc";
 import { newMessageId, formatTimePassed } from "./InteractiveChat-helpers";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useChatTabs } from "./InteractiveChat-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
+import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
 import { useChatSse } from "./InteractiveChat-sse";
 import { useChatActions } from "./InteractiveChat-actions";
@@ -41,7 +42,8 @@ function useEffectiveContextDir(params: {
     { sessionId: params.sessionId ?? "" },
     { enabled: Boolean(params.sessionId) },
   );
-  return params.contextDir ?? query.data?.contextDir ?? null;
+  const queried = query.data ? query.data.contextDir : undefined;
+  return params.contextDir ?? queried ?? null;
 }
 
 interface InteractiveChatProps {
@@ -111,6 +113,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     setInput, doSend, zoomedViewAttr, timePassedAttr,
   });
   const attach = useChatAttachments({ input, setInput, textareaRef });
+  const selections = useChatSelections({ input, setInput, textareaRef });
 
   useChatSse({
     sessionId, sessionInput, boxSlug, currentUser, send,
@@ -120,7 +123,9 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     input, setInput, attachments: attach.attachments, fileAttachments: attach.fileAttachments,
-    resetAttachments: attach.resetAttachments, addImageFiles: attach.addImageFiles,
+    selections: selections.selections,
+    resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
+    addImageFiles: attach.addImageFiles,
     turnTakingRef: voice.turnTakingRef, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr,
@@ -141,6 +146,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       mute={mute}
       voice={voice}
       attach={attach}
+      selections={selections}
       actions={actions}
       schedules={schedules}
       effectiveContextDir={effectiveContextDir}
@@ -156,7 +162,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       totalEntries={totalEntries}
       pendingCount={pendingMessages.length}
       error={error}
-      currentUserEmail={currentUser?.email}
+      currentUserEmail={currentUser ? currentUser.email : undefined}
       modelMarkers={model.modelMarkers}
       loadingOlder={loadingOlder}
       scrollToBottomTrigger={scrollToBottomTrigger}

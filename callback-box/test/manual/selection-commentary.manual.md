@@ -27,12 +27,29 @@ end-to-end through the actual UI.
      read from the selection rect).
    - Starting a new selection (mousedown) or selecting nothing dismisses it.
 2. **Whitespace-only / empty selection → no "+".**
-3. **Click the "+".** It should (once Track 3 lands) insert a `[selectionN]`
-   token + pill; for Track 2 in isolation it calls `onAddSelection` with:
+3. **Click the "+".** A `[selectionN]` token is inserted at the composer
+   caret and a pill appears above the composer (Track 3). The capture carries:
    - `ref` = the open doc's path, leading-slash absolute.
    - `text` = the verbatim rendered selection.
    - `position` = e.g. `body; heading: <h> (#<slug>); paragraph <n>; ~line <L>`.
 4. **Selecting collapses on click** — the highlight clears after capture.
+
+## Composer pills + send (Track 3, typed path)
+
+1. **Pill** shows `selectionN` + a truncated snippet. Clicking it opens a
+   popover with the source doc name, the position, and the full text.
+2. **Trash (×)** on the pill removes it and strips the `[selectionN]` token
+   from the textarea.
+3. **Type around the token** (e.g. `compare [selection1] with this`), then
+   send. Inspect the outgoing message (session log / debug view): the token is
+   replaced inline by
+   `<user-selection ref="…" position="…">…</user-selection>` inside `<typed>`.
+4. **Multiple selections**: add two, delete one token by hand, send — the
+   surviving token expands inline, the orphaned selection is appended after
+   the typed text.
+5. **Voice path (Track 4)**: with a selection pending, send a spoken message —
+   the `<user-selection>` is appended after the `<speech>` body (no token to
+   replace). [Pending Track 4.]
 
 ## Position locator — expected shapes (`extractSelection`)
 

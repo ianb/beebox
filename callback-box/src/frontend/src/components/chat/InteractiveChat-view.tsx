@@ -18,6 +18,7 @@ import type { ModelMarker } from "./InteractiveChat-helpers";
 import type { useChatTabs, useChatModelFeatures, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
 import type { useChatVoice } from "./InteractiveChat-voice";
 import type { useChatAttachments } from "./InteractiveChat-attachments";
+import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
 
 interface ChatBodyProps {
@@ -26,6 +27,7 @@ interface ChatBodyProps {
   mute: ReturnType<typeof useChatMute>;
   voice: ReturnType<typeof useChatVoice>;
   attach: ReturnType<typeof useChatAttachments>;
+  selections: ReturnType<typeof useChatSelections>;
   actions: ReturnType<typeof useChatActions>;
   schedules: ReturnType<typeof useChatSchedules>;
   effectiveContextDir: string | null;
@@ -138,16 +140,19 @@ function MessageListRegion(props: ChatBodyProps) {
 
 function ComposerRegion(props: ChatBodyProps) {
   const {
-    model, voice, attach, actions, isStreaming, input, setInput, textareaRef,
+    model, voice, attach, selections, actions, isStreaming, input, setInput, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, doSend, zoomedViewAttr, timePassedAttr,
   } = props;
   const { speechPlayback, transcription, isTranscribing, voicePaused, turnTakingRef, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { attachments, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
+  const { selections: selectionItems, removeSelection } = selections;
   const { handleSend, handleKeyDown, handleInterrupt, handlePaste, handleDrop } = actions;
   return (
     <ChatComposerSection
       attachments={attachments}
       fileAttachments={fileAttachments}
+      selections={selectionItems}
+      onRemoveSelection={removeSelection}
       onRemoveAttachment={removeAttachment}
       onRemoveFileAttachment={removeFileAttachment}
       fileInputRef={fileInputRef}
@@ -207,8 +212,9 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, schedules, error, pendingCount, showDebugLog, setShowDebugLog, send } = props;
+  const { tabs, voice, selections, schedules, error, pendingCount, showDebugLog, setShowDebugLog, send } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
+  const { addSelection } = selections;
   return (
     <ChatView
       hasCompanion={Boolean(activeView)}
@@ -224,6 +230,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
               target: { ...target, zoom: false },
               label: hint && hint.label ? hint.label : target.path,
             })}
+            onAddSelection={addSelection}
           />
         ) : null
       }

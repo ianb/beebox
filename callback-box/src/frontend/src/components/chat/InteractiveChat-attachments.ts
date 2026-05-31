@@ -16,7 +16,7 @@ import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments
  * append when the textarea isn't focused, restoring the caret afterward.
  * `input` is the current composer text (snapshotted by the caller).
  */
-function insertTokensAtCursor(tokens: string, opts: {
+export function insertTokensAtCursor(tokens: string, opts: {
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -158,7 +158,8 @@ export function useChatAttachments(opts: {
   }, [setInput]);
 
   const handleAttachFiles = useCallback(() => {
-    fileInputRef.current?.click();
+    const el = fileInputRef.current;
+    if (el !== null) el.click();
   }, []);
 
   const resetAttachments = useCallback(() => {

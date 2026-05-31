@@ -15,9 +15,10 @@ import { unlockAudioContext } from "../../lib/audio-context";
 import { href } from "../../lib/routing";
 import { localTime, newMessageId } from "./InteractiveChat-helpers";
 import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
+import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
 import type { ChatEvent } from "../../machines/chat-types";
 
-export function useChatActions(opts: {
+interface ChatActionsOpts {
   send: (event: ChatEvent) => void;
   sessionId: string | null;
   boxSlug: string | undefined;
@@ -30,7 +31,9 @@ export function useChatActions(opts: {
   setInput: React.Dispatch<React.SetStateAction<string>>;
   attachments: AttachmentItem[];
   fileAttachments: FileAttachmentItem[];
+  selections: SelectionItem[];
   resetAttachments: () => void;
+  resetSelections: () => void;
   addImageFiles: (files: File[]) => void;
   turnTakingRef: React.MutableRefObject<boolean>;
   isTranscribing: boolean;
@@ -42,10 +45,12 @@ export function useChatActions(opts: {
   setScrollToBottomTrigger: React.Dispatch<React.SetStateAction<number>>;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
-}) {
+}
+
+export function useChatActions(opts: ChatActionsOpts) {
   const {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    input, setInput, attachments, fileAttachments, resetAttachments, addImageFiles,
+    input, setInput, attachments, fileAttachments, selections, resetAttachments, resetSelections, addImageFiles,
     turnTakingRef, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr,
   } = opts;
@@ -66,7 +71,7 @@ export function useChatActions(opts: {
 
   const handleSend = useCallback(() => {
     const text = input.trim();
-    if (!text && attachments.length === 0 && fileAttachments.length === 0) return;
+    if (!text && attachments.length === 0 && fileAttachments.length === 0 && selections.length === 0) return;
     turnTakingRef.current = false;
     unlockAudioContext();
 
@@ -77,7 +82,10 @@ export function useChatActions(opts: {
       dataBase64: a.dataBase64,
     }));
 
-    const typed = `<typed local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</typed>`;
+    // Fold attached selections in: `[selectionN]` tokens become inline
+    // <user-selection> elements; any without a surviving token are appended.
+    const body = applySelections(text, { selections });
+    const typed = `<typed local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${body}</typed>`;
     // File attachments emit a sibling <attachments> block of markdown-style
     // reference links so the agent sees the path each [fileN] token resolves
     // to without us having to inline the file's bytes anywhere.
@@ -89,13 +97,14 @@ export function useChatActions(opts: {
     const wrapped = typed + attachmentsBlock;
 
     resetAttachments();
+    resetSelections();
     setInput("");
     doSendWithImages(wrapped, images);
     setScrollToBottomTrigger((n) => n + 1);
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [input, attachments, fileAttachments, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked, turnTakingRef, resetAttachments, setInput, setScrollToBottomTrigger, setTypingMode]);
+  }, [input, attachments, fileAttachments, selections, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked, turnTakingRef, resetAttachments, resetSelections, setInput, setScrollToBottomTrigger, setTypingMode]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const images = extractImageFiles(e.clipboardData);
@@ -219,7 +228,8 @@ function useTextareaFocus(opts: {
     }
     if (typingMode) {
       setTimeout(() => {
-        textareaRef.current?.focus();
+        const ta = textareaRef.current;
+        if (ta !== null) ta.focus();
       }, 100);
     }
   }, [isTranscribing, typingMode, textareaRef]);

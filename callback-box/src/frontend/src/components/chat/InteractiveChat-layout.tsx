@@ -8,6 +8,8 @@
 
 import { type ReactNode } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
+import { SelectionPanel } from "../ChatSelections";
+import { type SelectionItem } from "../../lib/selection-serialize";
 import { SessionListButton } from "../SessionListButton";
 import { RecentFilesButton } from "../RecentFilesButton";
 import { getTTSClient } from "../../lib/tts-client";
@@ -118,8 +120,10 @@ export function ChatStatusBanners(props: {
 export interface ComposerSectionProps {
   attachments: AttachmentItem[];
   fileAttachments: FileAttachmentItem[];
+  selections: SelectionItem[];
   onRemoveAttachment: (id: number) => void;
   onRemoveFileAttachment: (id: number) => void;
+  onRemoveSelection: (id: number) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   typingMode: boolean;
@@ -133,7 +137,7 @@ export interface ComposerSectionProps {
 
 export function ChatComposerSection(props: ComposerSectionProps) {
   const {
-    attachments, fileAttachments, onRemoveAttachment, onRemoveFileAttachment,
+    attachments, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
     isTranscribing, inputArea, mobileRow,
   } = props;
@@ -141,6 +145,9 @@ export function ChatComposerSection(props: ComposerSectionProps) {
     <>
       {/* Image attachment panel: shows thumbnails above the composer */}
       <AttachmentPanel attachments={attachments} onRemove={onRemoveAttachment} />
+
+      {/* Selection panel: pills for document text attached from the companion pane */}
+      <SelectionPanel selections={selections} onRemove={onRemoveSelection} />
 
       {/* File attachment panel: chips for non-image uploads */}
       <FileAttachmentPanel attachments={fileAttachments} onRemove={onRemoveFileAttachment} />
