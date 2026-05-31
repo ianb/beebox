@@ -166,8 +166,8 @@ export function VirtualizedMessageList({
   const streamingShown = snapshot.matches("streaming");
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, processingShown, pendingHqDraft }),
-    [groups, modelMarkers, streamingShown, processingShown, pendingHqDraft],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView }),
+    [groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView],
   );
 
   const { virtuosoRef, handleAtBottomStateChange, handleScrollerRef } = useChatListScroll({

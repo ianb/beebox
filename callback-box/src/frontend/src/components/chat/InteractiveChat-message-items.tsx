@@ -126,6 +126,11 @@ export interface SpeechPlaybackState {
  * Build the interleaved data array: groups + chronological markers, with
  * `<ack>` tags hung off the preceding user message and no-response-only
  * assistant groups suppressed. Pure given its inputs.
+ *
+ * When `debugView` is on the suppression is skipped: a no-response-only turn
+ * (e.g. the model replying `<ack kind="no-response"/>` to a trivial message)
+ * is otherwise invisible except for a faint badge, which reads as "the chat
+ * didn't respond." Debug view should show exactly what the model emitted.
  */
 export function buildDataItems(opts: {
   groups: MessageGroup[];
@@ -133,8 +138,9 @@ export function buildDataItems(opts: {
   streamingShown: boolean;
   processingShown: boolean;
   pendingHqDraft: string | null;
+  debugView: boolean;
 }): DataItem[] {
-  const { groups, modelMarkers, streamingShown, processingShown, pendingHqDraft } = opts;
+  const { groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -149,9 +155,10 @@ export function buildDataItems(opts: {
           last.acks = [...(last.acks ?? []), ...groupAcks];
         }
       }
-      if (isNoResponseOnly(allText)) {
+      if (isNoResponseOnly(allText) && !debugView) {
         // Suppress the empty bubble but still emit markers anchored here
-        // so chronological order is preserved.
+        // so chronological order is preserved. Skipped in debug view so the
+        // raw no-response ack stays visible.
         for (const m of modelMarkers) {
           if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
         }
