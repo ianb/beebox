@@ -1,5 +1,44 @@
 # Selection Commentary — referencing document text in chat input
 
+> **Status: Implemented (2026-05).** This document is the original design
+> plan, kept as a historical record. The feature shipped on the
+> `worktree-commetary` branch; the text below is forward-tense ("this plan
+> adds…") but the work is done. Where the code lives:
+>
+> - **Heading anchors** (Track 1) — `src/shared/markdoc-config.ts`
+>   (`makeHeadingNode`), test `test/markdoc-headings.doctest.md`.
+> - **Selection capture / position** (Track 2) —
+>   `src/frontend/src/lib/selection-position.ts`,
+>   `src/frontend/src/components/SelectionCapture.tsx`, `FileView` prop;
+>   test `test/selection-position.doctest.md`.
+> - **State / pills / serializer / typed wiring** (Track 3) —
+>   `src/frontend/src/lib/selection-serialize.ts` (`applySelections`),
+>   `InteractiveChat-selections.ts`, `ChatSelections.tsx`; test
+>   `test/selection-serialize.doctest.md`.
+> - **Voice fold-in** (Track 4) — `InteractiveChat-voice.ts`,
+>   `buildSpeechMessage` in `InteractiveChat-helpers.ts`; test
+>   `test/speech-message.doctest.md`.
+> - **Agent guide + audit** (Track 5) — `src/core/agent-guide/chat.ts`
+>   (`selectionsSection`), `knowledge-audits.yaml` (`chat-user-selection-tag`).
+> - **Sent-message pill** — `chat/user-message.tsx` (`MessageSelectionPill`).
+>
+> **Deviations from this plan, decided during implementation:**
+> - **Voice positional anchoring was added** beyond the plan. The plan had
+>   voice selections *append* after the spoken body; in practice they now
+>   anchor to the transcript phrase spoken at grab-time and insert at that
+>   point (word-level, case/punctuation-insensitive, falling back to append).
+>   See `applySelections`' anchor handling.
+> - **The DOM-doctest harness subplan was deferred, not built.** Per the
+>   "test what we can" decision, the pure logic is doctested, `extractSelection`
+>   was validated against the live DOM via `bin/browse`, and the irreducibly-
+>   browser parts ("+" geometry, voice) are covered by
+>   `test/manual/selection-commentary.manual.md` — the natural-language
+>   reference script.
+> - **Several adjacent fixes rode along** (found while dogfooding): base-prefix
+>   on "open in browse" links, paragraphs render as `<div>` not `<p>`,
+>   `/auth/me` returns 200 when auth is disabled, the "+" click/dismiss race,
+>   and trailing-space padding for inserted tokens.
+
 This plan adds a way to attach a **text selection from an open document**
 to a chat message. The user selects text in a document shown in the chat
 companion pane, a floating **"+"** appears near the selection, clicking it
