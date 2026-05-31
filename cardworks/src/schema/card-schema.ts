@@ -13,6 +13,19 @@ import { z, type ZodType } from "zod";
 const BODY_FIELD_TAG = Symbol("cardworks.bodyField");
 
 /**
+ * Thrown when a cardSchema() declaration is invalid (multiple body fields,
+ * or no fields at all). Carries the offending card type for inspection.
+ */
+class CardSchemaDeclarationError extends Error {
+  readonly type: string;
+  constructor(type: string, detail: string) {
+    super(`cardSchema(${type}): ${detail}`);
+    this.name = "CardSchemaDeclarationError";
+    this.type = type;
+  }
+}
+
+/**
  * Supported body content kinds. Markdown bodies are plain UTF-8 text;
  * XML bodies are validated against an XML element schema (the body
  * itself is the element — there is no synthetic root wrapper).
@@ -36,8 +49,9 @@ export interface BodyField<TSchema extends ZodType = ZodType> {
  */
 export function body<TSchema extends ZodType>(
   schema: TSchema,
-  options: BodyFieldOptions = {}
+  options?: BodyFieldOptions
 ): BodyField<TSchema> {
+  options = options ?? {};
   const kind = options.kind === undefined ? "markdown" : options.kind;
   return { [BODY_FIELD_TAG]: true, schema, kind };
 }
@@ -106,8 +120,9 @@ export function cardSchema<
   for (const [name, decl] of Object.entries(config.fields)) {
     if (isBodyField(decl)) {
       if (bodyFieldName !== null) {
-        throw new Error(
-          `cardSchema(${type}): multiple body fields not supported (${bodyFieldName}, ${name})`
+        throw new CardSchemaDeclarationError(
+          type,
+          `multiple body fields not supported (${bodyFieldName}, ${name})`
         );
       }
       bodyFieldName = name;
@@ -117,7 +132,7 @@ export function cardSchema<
     }
   }
   if (bodyField === null && Object.keys(config.fields).length === 0) {
-    throw new Error(`cardSchema(${type}): must declare at least one field`);
+    throw new CardSchemaDeclarationError(type, "must declare at least one field");
   }
   const schema: CardSchema<TTag, TFields> = {
     type,
@@ -147,18 +162,19 @@ export function extractRefs(
   fields: Record<string, unknown>
 ): Array<{ path: string; ref: string }> {
   const out: Array<{ path: string; ref: string }> = [];
-  walkForRefs(fields, "", out);
+  walkForRefs(fields, { currentPath: "", out });
   return out;
 }
 
-function walkForRefs(
-  value: unknown,
-  currentPath: string,
-  out: Array<{ path: string; ref: string }>
-): void {
+interface WalkForRefsOptions {
+  currentPath: string;
+  out: Array<{ path: string; ref: string }>;
+}
+
+function walkForRefs(value: unknown, { currentPath, out }: WalkForRefsOptions): void {
   if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      walkForRefs(value[i], `${currentPath}[${String(i)}]`, out);
+    for (const [i, item] of value.entries()) {
+      walkForRefs(item, { currentPath: `${currentPath}[${String(i)}]`, out });
     }
     return;
   }
@@ -178,6 +194,6 @@ function walkForRefs(
       }
       continue;
     }
-    walkForRefs(child, childPath, out);
+    walkForRefs(child, { currentPath: childPath, out });
   }
 }

@@ -12,7 +12,8 @@ export class SchemaRegistry {
    *
    * @param schemas - Optional array of ElementSchemas to register
    */
-  constructor(schemas: ElementSchema[] = []) {
+  constructor(schemas?: ElementSchema[]) {
+    schemas = schemas ?? [];
     for (const schema of schemas) {
       this.register(schema);
     }

@@ -1,6 +1,16 @@
 import type { FileSystem } from "./types.js";
 
 /**
+ * Error thrown when a path is not present in the in-memory filesystem.
+ */
+class FileNotFoundError extends Error {
+  constructor(path: string) {
+    super(`File not found: ${path}`);
+    this.name = "FileNotFoundError";
+  }
+}
+
+/**
  * File metadata for in-memory files.
  */
 interface FileMeta {
@@ -38,7 +48,7 @@ export class MemoryFileSystem implements FileSystem {
     const normalized = this.normalizePath(path);
     const content = this.files.get(normalized);
     if (content === undefined) {
-      return Promise.reject(new Error(`File not found: ${path}`));
+      return Promise.reject(new FileNotFoundError(path));
     }
     return Promise.resolve(content);
   }
@@ -52,7 +62,7 @@ export class MemoryFileSystem implements FileSystem {
       if (textContent !== undefined) {
         return Promise.resolve(new TextEncoder().encode(textContent));
       }
-      return Promise.reject(new Error(`File not found: ${path}`));
+      return Promise.reject(new FileNotFoundError(path));
     }
     return Promise.resolve(content);
   }
@@ -125,6 +135,10 @@ export class MemoryFileSystem implements FileSystem {
     regexPattern = regexPattern.replace(/<<STAR>>/g, "[^/]*");
     regexPattern = regexPattern.replace(/<<QUESTION>>/g, "[^/]");
 
+    // regexPattern is derived from a glob pattern with all regex
+    // metacharacters escaped above; constructing a RegExp from it is the
+    // intended behavior of glob matching.
+    // eslint-disable-next-line security/detect-non-literal-regexp
     const regex = new RegExp(`^${regexPattern}$`);
 
     // Check all files (text and binary)
@@ -139,7 +153,7 @@ export class MemoryFileSystem implements FileSystem {
       }
     }
 
-    return Promise.resolve(results.sort());
+    return Promise.resolve(results.toSorted());
   }
 
   move(from: string, to: string): Promise<void> {
@@ -172,7 +186,7 @@ export class MemoryFileSystem implements FileSystem {
       return Promise.resolve();
     }
 
-    return Promise.reject(new Error(`File not found: ${from}`));
+    return Promise.reject(new FileNotFoundError(from));
   }
 
   resolve(base: string, relative: string): string {
@@ -201,7 +215,7 @@ export class MemoryFileSystem implements FileSystem {
     if (meta) {
       return Promise.resolve({ mtime: meta.mtime, size: meta.size });
     }
-    return Promise.reject(new Error(`File not found: ${path}`));
+    return Promise.reject(new FileNotFoundError(path));
   }
 
   /**

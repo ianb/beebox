@@ -3,269 +3,80 @@ import type { ElementNode } from "../parser/provenance.js";
 import { parseCard } from "../parser/parse.js";
 import { serialize as serializeElement } from "../serialize/serialize.js";
 import { resolveRef, resolveRefs, type ResolvedRef } from "../refs/resolve.js";
-import { parseRef } from "../refs/parse-ref.js";
 import { NodeFileSystem } from "../fs/node-fs.js";
 import { MemoryFileSystem } from "../fs/memory-fs.js";
 import { SchemaRegistry } from "../schema/registry.js";
-import type { ElementSchema } from "../schema/element.js";
 import { formatValidationError } from "../schema/format-error.js";
 import type { ZodError } from "zod";
 import { type Card, createCard } from "../card/card.js";
+import { basename, dirname, extname, sharedStem } from "./path-utils.js";
+import {
+  collectRefsFromNode,
+  updateRefsInNode,
+  type RefTraversalContext,
+} from "./ref-traversal.js";
+import type {
+  CardLoaderOptions,
+  CardReference,
+  ICardLoader,
+  MemoryCardLoaderOptions,
+  MoveResult,
+} from "./types.js";
+
+export type {
+  CardLoaderOptions,
+  CardReference,
+  ICardLoader,
+  MemoryCardLoaderOptions,
+  MoveResult,
+} from "./types.js";
 
 /**
- * Result of a move operation.
+ * Details for a {@link ValidationError}.
  */
-export interface MoveResult {
-  /** Files that were moved (from -> to) */
-  movedFiles: Array<{ from: string; to: string }>;
-  /** Cards that had references updated */
-  updatedCards: Array<{ path: string; refsUpdated: number }>;
-}
-
-/**
- * A reference from one card to another.
- */
-export interface CardReference {
-  /** Path of the card containing the reference */
-  fromPath: string;
-  /** Path of the referenced card */
-  toPath: string;
-  /** The original reference string as written */
-  refString: string;
-  /** The tag name of the element containing the reference */
-  elementTagName: string;
-  /** Whether this came from a `ref` or `refs` attribute */
-  attributeName: "ref" | "refs";
-  /** Version specified in the reference (if any) */
-  version?: string;
-  /** Fragment specified in the reference (if any) */
-  fragment?: string;
-}
-
-/**
- * Get the directory portion of a path.
- */
-function dirname(path: string): string {
-  const lastSlash = path.lastIndexOf("/");
-  return lastSlash === -1 ? "." : path.slice(0, lastSlash);
-}
-
-/**
- * Get the filename portion of a path.
- */
-function basename(path: string): string {
-  const lastSlash = path.lastIndexOf("/");
-  return lastSlash === -1 ? path : path.slice(lastSlash + 1);
-}
-
-/**
- * Get the extension of a filename (including the dot).
- */
-function extname(filename: string): string {
-  const lastDot = filename.lastIndexOf(".");
-  return lastDot === -1 ? "" : filename.slice(lastDot);
-}
-
-/**
- * Get the shared basename of a card/attachment pair.
- *
- * Cards are named `Name.type.card` and their sibling attachments are named
- * `Name.ext` (e.g. `photo-001.image.card` + `photo-001.jpg`). To detect the
- * pair we need to treat "Name" as the shared stem — which means stripping
- * BOTH `.type` and `.card` for card files, but only the single extension for
- * non-card files.
- */
-function sharedStem(filename: string): string {
-  if (filename.endsWith(".card")) {
-    const withoutCard = filename.slice(0, -".card".length);
-    const lastDot = withoutCard.lastIndexOf(".");
-    return lastDot === -1 ? withoutCard : withoutCard.slice(0, lastDot);
-  }
-  const ext = extname(filename);
-  return ext ? filename.slice(0, -ext.length) : filename;
-}
-
-/**
- * Compute relative path from a directory to a file.
- * Unlike relativePath, this takes a directory, not a file path.
- */
-function relative(from: string, to: string): string {
-  const fromParts = from.split("/").filter(Boolean);
-  const toParts = to.split("/").filter(Boolean);
-
-  // Find common prefix
-  let commonLength = 0;
-  while (
-    commonLength < fromParts.length &&
-    commonLength < toParts.length &&
-    fromParts[commonLength] === toParts[commonLength]
-  ) {
-    commonLength++;
-  }
-
-  // Build relative path
-  const upCount = fromParts.length - commonLength;
-  const downParts = toParts.slice(commonLength);
-
-  const parts: string[] = [];
-  for (let i = 0; i < upCount; i++) {
-    parts.push("..");
-  }
-  parts.push(...downParts);
-
-  return parts.join("/") || ".";
-}
-
-/**
- * Compute relative path from one file to another.
- */
-function relativePath(from: string, to: string): string {
-  const fromParts = dirname(from).split("/").filter(Boolean);
-  const toParts = to.split("/").filter(Boolean);
-  const toFilename = toParts.pop() ?? "";
-
-  // Find common prefix
-  let commonLength = 0;
-  while (
-    commonLength < fromParts.length &&
-    commonLength < toParts.length &&
-    fromParts[commonLength] === toParts[commonLength]
-  ) {
-    commonLength++;
-  }
-
-  // Build relative path
-  const upCount = fromParts.length - commonLength;
-  const downParts = toParts.slice(commonLength);
-
-  const parts: string[] = [];
-  for (let i = 0; i < upCount; i++) {
-    parts.push("..");
-  }
-  parts.push(...downParts, toFilename);
-
-  const result = parts.join("/");
-  return result.startsWith(".") ? result : "./" + result;
-}
-
-/**
- * Options for creating a card loader.
- */
-export interface CardLoaderOptions {
-  /** Schema registry or array of schemas for validation */
-  schemas?: SchemaRegistry | ElementSchema[];
-  /**
-   * Whether to require and add version attributes.
-   * - true (default): Add version="1.0.0" on save if missing
-   * - false: Don't add version, but preserve if present
-   */
-  requireVersion?: boolean;
-  /**
-   * Whether to indent serialized XML.
-   * - true (default): Indent with 2 spaces
-   * - false: No indentation (compact output)
-   */
-  indent?: boolean;
+export interface ValidationErrorOptions {
+  path: string;
+  tagName: string;
+  zodError: ZodError;
 }
 
 /**
  * Error thrown when card validation fails.
  */
 export class ValidationError extends Error {
-  constructor(
-    message: string,
-    public readonly path: string,
-    public readonly tagName: string,
-    public readonly zodError: ZodError
-  ) {
+  public readonly path: string;
+  public readonly tagName: string;
+  public readonly zodError: ZodError;
+
+  constructor(message: string, { path, tagName, zodError }: ValidationErrorOptions) {
     super(message);
     this.name = "ValidationError";
+    this.path = path;
+    this.tagName = tagName;
+    this.zodError = zodError;
   }
 }
 
 /**
- * Interface for card loaders.
+ * Error thrown when a move would change a card's file extension.
  */
-export interface ICardLoader {
-  /**
-   * Load a card from a file path.
-   */
-  load(path: string): Promise<Card>;
+class ExtensionChangeError extends Error {
+  constructor(
+    public readonly fromExt: string,
+    public readonly toExt: string
+  ) {
+    super(`Cannot change extension from "${fromExt}" to "${toExt}"`);
+    this.name = "ExtensionChangeError";
+  }
+}
 
-  /**
-   * Save a card to its file path.
-   */
-  save(card: Card): Promise<void>;
-
-  /**
-   * Save a card to a different path, returning a new Card.
-   */
-  saveAs(card: Card, newPath: string): Promise<Card>;
-
-  /**
-   * Serialize an element to XML string using the loader's options.
-   */
-  serialize(element: ElementNode): string;
-
-  /**
-   * Resolve a reference from a given source file.
-   */
-  resolveRef(ref: string, fromPath: string): Promise<ResolvedRef>;
-
-  /**
-   * Resolve multiple references from a refs attribute value.
-   */
-  resolveRefs(refs: string, fromPath: string): Promise<ResolvedRef[]>;
-
-  /**
-   * Check if a card file exists.
-   */
-  exists(path: string): Promise<boolean>;
-
-  /**
-   * Get the project root directory.
-   */
-  getProjectRoot(): string;
-
-  /**
-   * Move/rename a card and update all references.
-   */
-  move(card: Card, toPath: string): Promise<{ card: Card; result: MoveResult }>;
-
-  /**
-   * List all card files in the project.
-   */
-  listCards(): Promise<string[]>;
-
-  /**
-   * Find all references pointing to a given card (incoming links / backlinks).
-   */
-  findIncomingRefs(targetPath: string): Promise<CardReference[]>;
-
-  /**
-   * Find all references from a given card (outgoing links).
-   */
-  findOutgoingRefs(sourcePath: string): Promise<CardReference[]>;
-
-  /**
-   * Check if a schema is registered for a given tag name.
-   */
-  hasSchema(tagName: string): boolean;
-
-  /**
-   * Check if any schemas are registered.
-   */
-  hasAnySchemas(): boolean;
-
-  /**
-   * Validate XML content in memory without writing to disk.
-   * Parses the XML and validates against the registered schema.
-   * Returns the parsed element on success, throws on failure.
-   *
-   * @param content - XML string to validate
-   * @param sourceName - Display name for error messages
-   */
-  validateContent(content: string, sourceName?: string): Promise<ElementNode>;
+/**
+ * Constructor arguments for {@link BaseCardLoader}, grouping the filesystem
+ * and loader options that come after the positional `projectRoot`.
+ */
+interface BaseCardLoaderArgs {
+  fs: FileSystem;
+  options?: CardLoaderOptions;
 }
 
 /**
@@ -275,12 +86,14 @@ abstract class BaseCardLoader implements ICardLoader {
   protected readonly schemas: SchemaRegistry;
   protected readonly requireVersion: boolean;
   protected readonly indent: boolean;
+  protected readonly fs: FileSystem;
 
   constructor(
-    protected readonly fs: FileSystem,
     protected readonly projectRoot: string,
-    options: CardLoaderOptions = {}
+    { fs, options }: BaseCardLoaderArgs
   ) {
+    this.fs = fs;
+    options = options ?? {};
     if (options.schemas instanceof SchemaRegistry) {
       this.schemas = options.schemas;
     } else if (Array.isArray(options.schemas)) {
@@ -345,12 +158,8 @@ abstract class BaseCardLoader implements ICardLoader {
       const result = schema.safeParse(node);
       if (!result.success) {
         const formatted = formatValidationError(result.error, node);
-        throw new ValidationError(
-          `${path}: Validation failed for <${node.tagName}>:\n${formatted}`,
-          path,
-          node.tagName,
-          result.error
-        );
+        const message = `${path}: Validation failed for <${node.tagName}>:\n${formatted}`;
+        throw new ValidationError(message, { path, tagName: node.tagName, zodError: result.error });
       }
     }
 
@@ -358,7 +167,7 @@ abstract class BaseCardLoader implements ICardLoader {
     // Note: uses default serialize options (not loader options) since Card.isDirty()
     // compares against serializeElement() with default options
     const snapshot = serializeElement(node);
-    return createCard(path, node, this.fs, snapshot);
+    return createCard(path, { element: node, fs: this.fs, snapshot });
   }
 
   /**
@@ -383,7 +192,7 @@ abstract class BaseCardLoader implements ICardLoader {
     const element = this.prepareForSave(card.element);
     const content = serializeElement(element, this.getSerializeOptions());
     await this.fs.write(newPath, content);
-    return createCard(newPath, card.element, this.fs, content);
+    return createCard(newPath, { element: card.element, fs: this.fs, snapshot: content });
   }
 
   /**
@@ -450,7 +259,8 @@ abstract class BaseCardLoader implements ICardLoader {
   /**
    * Validate XML content in memory without writing to disk.
    */
-  async validateContent(content: string, sourceName: string = "<inline>"): Promise<ElementNode> {
+  async validateContent(content: string, sourceName?: string): Promise<ElementNode> {
+    sourceName = sourceName ?? "<inline>";
     const node = await parseCard(content, { source: sourceName });
 
     const schema = this.schemas.get(node.tagName);
@@ -458,12 +268,8 @@ abstract class BaseCardLoader implements ICardLoader {
       const result = schema.safeParse(node);
       if (!result.success) {
         const formatted = formatValidationError(result.error, node);
-        throw new ValidationError(
-          `${sourceName}: Validation failed for <${node.tagName}>:\n${formatted}`,
-          sourceName,
-          node.tagName,
-          result.error
-        );
+        const message = `${sourceName}: Validation failed for <${node.tagName}>:\n${formatted}`;
+        throw new ValidationError(message, { path: sourceName, tagName: node.tagName, zodError: result.error });
       }
     }
 
@@ -485,7 +291,7 @@ abstract class BaseCardLoader implements ICardLoader {
     const fromExt = extname(basename(from));
     const toExt = extname(basename(to));
     if (fromExt !== toExt) {
-      throw new Error(`Cannot change extension from "${fromExt}" to "${toExt}"`);
+      throw new ExtensionChangeError(fromExt, toExt);
     }
 
     const result: MoveResult = {
@@ -524,14 +330,20 @@ abstract class BaseCardLoader implements ICardLoader {
         const content = await this.fs.read(cardPath);
         const node = await parseCard(content, { source: cardPath });
 
-        const refsUpdated = await this.updateRefsInNode(node, cardPath, from, to);
+        const refsUpdated = await updateRefsInNode(node, {
+          ctx: this.refContext(),
+          cardPath,
+          oldPath: from,
+          newPath: to,
+        });
 
         if (refsUpdated > 0) {
           await this.fs.write(cardPath, serializeElement(node, this.getSerializeOptions()));
           result.updatedCards.push({ path: cardPath, refsUpdated });
         }
-      } catch {
+      } catch (e) {
         // Skip cards that can't be parsed (malformed XML, etc.)
+        console.warn(`Skipping card that could not be processed: ${cardPath}`, e);
         continue;
       }
     }
@@ -545,7 +357,7 @@ abstract class BaseCardLoader implements ICardLoader {
     // Return a new Card with the updated path
     const element = this.prepareForSave(card.element);
     const content = serializeElement(element, this.getSerializeOptions());
-    const newCard = createCard(to, card.element, this.fs, content);
+    const newCard = createCard(to, { element: card.element, fs: this.fs, snapshot: content });
 
     return { card: newCard, result };
   }
@@ -574,7 +386,7 @@ abstract class BaseCardLoader implements ICardLoader {
       try {
         const content = await this.fs.read(cardPath);
         const node = await parseCard(content, { source: cardPath });
-        const refs = await this.collectRefsFromNode(node, cardPath);
+        const refs = await collectRefsFromNode(node, { ctx: this.refContext(), cardPath });
 
         // Filter to refs that point to the target
         for (const ref of refs) {
@@ -582,8 +394,9 @@ abstract class BaseCardLoader implements ICardLoader {
             results.push(ref);
           }
         }
-      } catch {
+      } catch (e) {
         // Skip cards that can't be parsed
+        console.warn(`Skipping card that could not be processed: ${cardPath}`, e);
       }
     }
 
@@ -599,188 +412,14 @@ abstract class BaseCardLoader implements ICardLoader {
   async findOutgoingRefs(sourcePath: string): Promise<CardReference[]> {
     const content = await this.fs.read(sourcePath);
     const node = await parseCard(content, { source: sourcePath });
-    return this.collectRefsFromNode(node, sourcePath);
+    return collectRefsFromNode(node, { ctx: this.refContext(), cardPath: sourcePath });
   }
 
   /**
-   * Collect all references from a node tree.
+   * Build the context passed to the reference-traversal helpers.
    */
-  private async collectRefsFromNode(
-    node: ElementNode,
-    cardPath: string
-  ): Promise<CardReference[]> {
-    const results: CardReference[] = [];
-
-    // Check ref attribute (single reference)
-    const refAttr = node.attrs["ref"];
-    if (refAttr) {
-      const ref = await this.makeCardReference(refAttr, cardPath, node.tagName, "ref");
-      if (ref) {
-        results.push(ref);
-      }
-    }
-
-    // Check refs attribute (multiple references)
-    const refsAttr = node.attrs["refs"];
-    if (refsAttr) {
-      const refStrings = refsAttr.split(/\s+/).filter((s) => s.length > 0);
-      for (const refStr of refStrings) {
-        const ref = await this.makeCardReference(refStr, cardPath, node.tagName, "refs");
-        if (ref) {
-          results.push(ref);
-        }
-      }
-    }
-
-    // Recursively collect from children
-    for (const child of node.children) {
-      const childRefs = await this.collectRefsFromNode(child, cardPath);
-      results.push(...childRefs);
-    }
-
-    return results;
-  }
-
-  /**
-   * Create a CardReference from a reference string.
-   */
-  private async makeCardReference(
-    refStr: string,
-    fromPath: string,
-    elementTagName: string,
-    attributeName: "ref" | "refs"
-  ): Promise<CardReference | undefined> {
-    try {
-      const parsed = parseRef(refStr);
-      const resolved = await resolveRef(refStr, {
-        fs: this.fs,
-        projectRoot: this.projectRoot,
-        currentFile: fromPath,
-      });
-
-      // Build the reference object
-      const ref: CardReference = {
-        fromPath,
-        toPath: resolved.resolvedPath,
-        refString: refStr,
-        elementTagName,
-        attributeName,
-      };
-
-      // Add optional properties only if defined
-      if (parsed.version !== undefined) {
-        ref.version = parsed.version;
-      }
-
-      if (parsed.fragment) {
-        if (parsed.fragment.type === "query") {
-          ref.fragment = `query(${parsed.fragment.value})`;
-        } else {
-          ref.fragment = parsed.fragment.value;
-        }
-      }
-
-      return ref;
-    } catch {
-      // Skip invalid references
-      return undefined;
-    }
-  }
-
-  /**
-   * Update refs in a node tree that point to the moved file.
-   * Returns the number of refs updated.
-   */
-  private async updateRefsInNode(
-    node: ElementNode,
-    cardPath: string,
-    oldPath: string,
-    newPath: string
-  ): Promise<number> {
-    let updated = 0;
-
-    // Check this node's ref attribute (single reference)
-    const refAttr = node.attrs["ref"];
-    if (refAttr) {
-      const newRef = await this.updateSingleRef(refAttr, cardPath, oldPath, newPath);
-      if (newRef !== refAttr) {
-        node.attrs["ref"] = newRef;
-        updated++;
-      }
-    }
-
-    // Check this node's refs attribute (multiple references)
-    const refsAttr = node.attrs["refs"];
-    if (refsAttr) {
-      const refStrings = refsAttr.split(/\s+/).filter((s) => s.length > 0);
-      const updatedRefs: string[] = [];
-      let anyUpdated = false;
-
-      for (const refStr of refStrings) {
-        const newRef = await this.updateSingleRef(refStr, cardPath, oldPath, newPath);
-        updatedRefs.push(newRef);
-        if (newRef !== refStr) {
-          anyUpdated = true;
-          updated++;
-        }
-      }
-
-      if (anyUpdated) {
-        node.attrs["refs"] = updatedRefs.join(" ");
-      }
-    }
-
-    // Recursively check children
-    for (const child of node.children) {
-      updated += await this.updateRefsInNode(child, cardPath, oldPath, newPath);
-    }
-
-    return updated;
-  }
-
-  /**
-   * Update a single reference if it points to the moved file.
-   * Returns the updated reference string (or original if not updated).
-   */
-  private async updateSingleRef(
-    refStr: string,
-    cardPath: string,
-    oldPath: string,
-    newPath: string
-  ): Promise<string> {
-    const parsed = parseRef(refStr);
-    const resolved = await resolveRef(refStr, {
-      fs: this.fs,
-      projectRoot: this.projectRoot,
-      currentFile: cardPath,
-    });
-
-    // Check if this ref points to the file being moved
-    if (resolved.resolvedPath === oldPath) {
-      // Compute new path, preserving absolute vs relative style
-      let newRef: string;
-      if (parsed.isAbsolute) {
-        // Preserve absolute ref style - path from project root
-        newRef = "/" + relative(this.projectRoot, newPath);
-      } else {
-        // Compute relative path from card to new location
-        newRef = relativePath(cardPath, newPath);
-      }
-      if (parsed.version) {
-        newRef += `@${parsed.version}`;
-      }
-      if (parsed.fragment) {
-        if (parsed.fragment.type === "query") {
-          newRef += `#query(${parsed.fragment.value})`;
-        } else {
-          newRef += `#${parsed.fragment.value}`;
-        }
-      }
-
-      return newRef;
-    }
-
-    return refStr;
+  private refContext(): RefTraversalContext {
+    return { fs: this.fs, projectRoot: this.projectRoot };
   }
 }
 
@@ -796,17 +435,9 @@ abstract class BaseCardLoader implements ICardLoader {
  * ```
  */
 export class CardLoader extends BaseCardLoader {
-  constructor(projectRoot: string, options: CardLoaderOptions = {}) {
-    super(new NodeFileSystem(), projectRoot, options);
+  constructor(projectRoot: string, options?: CardLoaderOptions) {
+    super(projectRoot, { fs: new NodeFileSystem(), options: options ?? {} });
   }
-}
-
-/**
- * Options for MemoryCardLoader.
- */
-export interface MemoryCardLoaderOptions extends CardLoaderOptions {
-  /** Initial files to populate the memory filesystem */
-  files?: Record<string, string>;
 }
 
 /**
@@ -826,9 +457,10 @@ export interface MemoryCardLoaderOptions extends CardLoaderOptions {
 export class MemoryCardLoader extends BaseCardLoader {
   private memoryFs: MemoryFileSystem;
 
-  constructor(projectRoot: string, options: MemoryCardLoaderOptions = {}) {
+  constructor(projectRoot: string, options?: MemoryCardLoaderOptions) {
+    options = options ?? {};
     const memoryFs = new MemoryFileSystem(options.files ?? {});
-    super(memoryFs, projectRoot, options);
+    super(projectRoot, { fs: memoryFs, options });
     this.memoryFs = memoryFs;
   }
 

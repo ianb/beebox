@@ -3,6 +3,15 @@ import * as path from "node:path";
 import type { FileSystem } from "./types.js";
 
 /**
+ * Context for a recursive directory walk, invariant across the recursion.
+ */
+interface WalkDirOptions {
+  basePath: string;
+  pattern: RegExp;
+  results: string[];
+}
+
+/**
  * Node.js filesystem implementation.
  */
 export class NodeFileSystem implements FileSystem {
@@ -26,7 +35,10 @@ export class NodeFileSystem implements FileSystem {
     try {
       await fs.access(filePath);
       return true;
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`exists: access failed for ${filePath}`, e);
+      }
       return false;
     }
   }
@@ -34,7 +46,10 @@ export class NodeFileSystem implements FileSystem {
   async list(dirPath: string): Promise<string[]> {
     try {
       return await fs.readdir(dirPath);
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`list: readdir failed for ${dirPath}`, e);
+      }
       return [];
     }
   }
@@ -60,24 +75,29 @@ export class NodeFileSystem implements FileSystem {
     regexPattern = regexPattern.replace(/<<STAR>>/g, "[^/]*");
     regexPattern = regexPattern.replace(/<<QUESTION>>/g, "[^/]");
 
+    // regexPattern is derived solely from the glob `pattern` via the controlled
+    // placeholder substitutions above, with all regex-special chars escaped, so
+    // it cannot inject arbitrary regex syntax.
+    // eslint-disable-next-line security/detect-non-literal-regexp
     const regex = new RegExp(`^${regexPattern}$`);
 
     // Recursively walk the directory
-    await this.walkDir(basePath, basePath, regex, results);
+    await this.walkDir(basePath, { basePath, pattern: regex, results });
 
-    return results.sort();
+    return results.toSorted();
   }
 
   private async walkDir(
-    basePath: string,
     currentPath: string,
-    pattern: RegExp,
-    results: string[]
+    { basePath, pattern, results }: WalkDirOptions
   ): Promise<void> {
     let entries: string[];
     try {
       entries = await fs.readdir(currentPath);
-    } catch {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`walkDir: readdir failed for ${currentPath}`, e);
+      }
       return;
     }
 
@@ -88,14 +108,17 @@ export class NodeFileSystem implements FileSystem {
       try {
         const stat = await fs.stat(fullPath);
         if (stat.isDirectory()) {
-          await this.walkDir(basePath, fullPath, pattern, results);
+          await this.walkDir(fullPath, { basePath, pattern, results });
         } else if (stat.isFile()) {
           if (pattern.test(relativePath)) {
             results.push(fullPath);
           }
         }
-      } catch {
-        // Skip files we can't stat
+      } catch (e) {
+        // Skip files we can't stat; a vanished/inaccessible entry is expected.
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`walkDir: stat failed for ${fullPath}`, e);
+        }
       }
     }
   }

@@ -20,17 +20,25 @@ export interface XPathResult {
 }
 
 /**
+ * Options for {@link executeXPath}.
+ */
+export interface ExecuteXPathOptions {
+  /** The root ElementNode to query */
+  root: ElementNode;
+  /** If true, warns when multiple results found */
+  expectOne: boolean;
+}
+
+/**
  * Execute an XPath query against an ElementNode tree.
  *
  * @param expr - The XPath expression
- * @param root - The root ElementNode to query
- * @param expectOne - If true, warns when multiple results found
+ * @param options - The root ElementNode to query and whether one match is expected
  * @returns The query result with matched nodes
  */
 export function executeXPath(
   expr: string,
-  root: ElementNode,
-  expectOne: boolean
+  { root, expectOne }: ExecuteXPathOptions
 ): XPathResult {
   // Rebuild DOM from ElementNode
   const doc = elementNodeToDocument(root);
@@ -69,7 +77,7 @@ export function executeXPath(
   }
 
   // Map DOM nodes back to ElementNodes
-  const matchedNodes = mapDomNodesToElementNodes(elementDomNodes, root, doc);
+  const matchedNodes = mapDomNodesToElementNodes(elementDomNodes, { root, doc });
 
   // Build result
   const queryResult: XPathResult = { nodes: matchedNodes };
@@ -162,10 +170,14 @@ function escapeText(text: string): string {
  * This works by computing a path (sequence of child indices) from root to each
  * matched DOM node, then following the same path in the ElementNode tree.
  */
+interface MapDomNodesOptions {
+  root: ElementNode;
+  doc: XmldomDocument;
+}
+
 function mapDomNodesToElementNodes(
   domNodes: XmldomElement[],
-  root: ElementNode,
-  doc: XmldomDocument
+  { root, doc }: MapDomNodesOptions
 ): ElementNode[] {
   const results: ElementNode[] = [];
   const docRoot = doc.documentElement;
@@ -275,7 +287,9 @@ export function evaluateXPathString(expr: string, root: ElementNode): string {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     selected = xpath.select(expr, contextNode as any);
-  } catch {
+  } catch (_e) {
+    // Intentional: an invalid/unmatched XPath expression yields the empty
+    // string result (documented behavior), so we deliberately ignore the error.
     return "";
   }
 

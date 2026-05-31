@@ -79,7 +79,7 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
       return lintFrontmatterCard({ path, content, options, type });
     }
   }
-  return lintCard(options.loader, path);
+  return lintCard(options.loader, { path });
 }
 
 async function lintFrontmatterCard(input: {

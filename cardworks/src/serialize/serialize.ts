@@ -40,8 +40,9 @@ export function escapeAttr(value: string): string {
  */
 export function serialize(
   node: ElementNode,
-  options: SerializeOptions = {}
+  options?: SerializeOptions
 ): string {
+  options = options ?? {};
   const indent = options.indent ?? "";
   const lines: string[] = [];
 
@@ -49,9 +50,19 @@ export function serialize(
     lines.push('<?xml version="1.0" encoding="UTF-8"?>');
   }
 
-  serializeNode(node, lines, 0, indent);
+  serializeNode(node, { lines, depth: 0, indent });
 
   return lines.join("\n");
+}
+
+/**
+ * Options for {@link serializeNode}: the output buffer, current depth, and
+ * indentation string.
+ */
+interface SerializeNodeOptions {
+  lines: string[];
+  depth: number;
+  indent: string;
 }
 
 /**
@@ -59,9 +70,7 @@ export function serialize(
  */
 function serializeNode(
   node: ElementNode,
-  lines: string[],
-  depth: number,
-  indent: string
+  { lines, depth, indent }: SerializeNodeOptions
 ): void {
   const padding = indent.repeat(depth);
 
@@ -84,7 +93,7 @@ function serializeNode(
     lines.push(`${padding}${tagOpen}/>`);
   } else if (hasText && !hasChildren) {
     // Simple text content
-    const textContent = serializeTextContent(node.text ?? "", depth, indent);
+    const textContent = serializeTextContent(node.text ?? "", { depth, indent });
     if (textContent.includes("\n")) {
       // Multiline text
       lines.push(`${padding}${tagOpen}>`);
@@ -102,7 +111,7 @@ function serializeNode(
     // Element with children
     lines.push(`${padding}${tagOpen}>`);
     for (const child of node.children) {
-      serializeNode(child, lines, depth + 1, indent);
+      serializeNode(child, { lines, depth: depth + 1, indent });
     }
     lines.push(`${padding}</${node.tagName}>`);
   }
@@ -123,12 +132,19 @@ function serializeAttrs(attrs: Record<string, string>): string {
 }
 
 /**
+ * Options for {@link serializeTextContent}.
+ */
+interface SerializeTextContentOptions {
+  depth: number;
+  indent: string;
+}
+
+/**
  * Serialize text content, preserving multiline structure.
  */
 function serializeTextContent(
   text: string,
-  depth: number,
-  indent: string
+  { depth, indent }: SerializeTextContentOptions
 ): string {
   const lines = text.split("\n");
 
@@ -172,7 +188,7 @@ function serializeMixedContent(mixed: MixedContent[]): string {
         // Nested children in mixed content - serialize recursively inline
         const childLines: string[] = [];
         for (const child of item.children) {
-          serializeNode(child, childLines, 0, "");
+          serializeNode(child, { lines: childLines, depth: 0, indent: "" });
         }
         parts.push(`${tagOpen}>${childLines.join("")}</${item.tagName}>`);
       } else {

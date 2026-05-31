@@ -10,13 +10,24 @@ interface LineTracker {
 }
 
 /**
+ * Options for {@link createLineTracker}.
+ */
+export interface CreateLineTrackerOptions {
+  source: string;
+  lineOffset: number;
+}
+
+/**
  * Create a line tracker from XML content.
  *
  * `lineOffset` shifts reported `startLine`/`endLine` values so locations
  * line up with the original file when the caller has stripped a prefix
  * (e.g. YAML frontmatter) before handing the body to the parser.
  */
-export function createLineTracker(xml: string, source: string, lineOffset: number): LineTracker {
+export function createLineTracker(
+  xml: string,
+  { source, lineOffset }: CreateLineTrackerOptions
+): LineTracker {
   return {
     lines: xml.split("\n"),
     source,
@@ -66,12 +77,20 @@ export function dedent(text: string): string {
 }
 
 /**
+ * Options for {@link getNodeLocation}.
+ */
+interface GetNodeLocationOptions {
+  tracker: LineTracker;
+  xml: string;
+}
+
+/**
  * Extract location from a DOM node using its position in the source.
  */
 function getNodeLocation(
   node: Node,
-  tracker: LineTracker,
-  _xml: string
+  // `xml` is currently unused but kept so callers thread it uniformly.
+  { tracker }: GetNodeLocationOptions
 ): Location {
   // xmldom provides lineNumber and columnNumber on nodes
   const nodeWithPos = node as Node & {
@@ -114,13 +133,20 @@ function isComment(node: Node): node is Comment {
 }
 
 /**
+ * Options for {@link domToObject}.
+ */
+export interface DomToObjectOptions {
+  tracker: LineTracker;
+  xml: string;
+  precedingComment?: string | undefined;
+}
+
+/**
  * Transform a DOM element to an ElementNode.
  */
 export function domToObject(
   element: Element,
-  tracker: LineTracker,
-  xml: string,
-  precedingComment?: string
+  { tracker, xml, precedingComment }: DomToObjectOptions
 ): ElementNode {
   const tagName = element.tagName;
   const attrs: Record<string, string> = {};
@@ -174,8 +200,8 @@ export function domToObject(
         pendingComment = commentText;
       }
     } else if (isElement(child)) {
-      const childNode = domToObject(child, tracker, xml, pendingComment);
-      childNode.location = getNodeLocation(child, tracker, xml);
+      const childNode = domToObject(child, { tracker, xml, precedingComment: pendingComment });
+      childNode.location = getNodeLocation(child, { tracker, xml });
       children.push(childNode);
       mixedContent.push(childNode);
       pendingComment = undefined;
@@ -198,7 +224,7 @@ export function domToObject(
     attrs,
     comments,
     children,
-    location: getNodeLocation(element, tracker, xml),
+    location: getNodeLocation(element, { tracker, xml }),
     dirty: false,
   };
 

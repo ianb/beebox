@@ -52,7 +52,7 @@ export function splitCardContent(content: string): SplitCardContent {
   const body = content.slice(prefixLength);
   let lineOffset = 0;
   for (let i = 0; i < prefixLength; i++) {
-    if (content.charCodeAt(i) === 10) {
+    if (content.codePointAt(i) === 10) {
       lineOffset++;
     }
   }

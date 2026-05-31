@@ -75,20 +75,31 @@ function sharedStem(filename: string): string {
 }
 
 /**
+ * Construction options for {@link CardImpl}.
+ */
+interface CardImplOptions {
+  element: ElementNode;
+  loadedAt: Date;
+  fs: FileSystem;
+  snapshot: string;
+}
+
+/**
  * Internal implementation of Card for cards loaded from disk.
  */
 class CardImpl implements Card {
   private readonly snapshot: string;
   private readonly fs: FileSystem;
   readonly isNew = false;
+  public readonly element: ElementNode;
+  public readonly loadedAt: Date;
 
   constructor(
     public readonly path: string,
-    public readonly element: ElementNode,
-    public readonly loadedAt: Date,
-    fs: FileSystem,
-    snapshot: string
+    { element, loadedAt, fs, snapshot }: CardImplOptions
   ) {
+    this.element = element;
+    this.loadedAt = loadedAt;
     this.fs = fs;
     this.snapshot = snapshot;
     attachCardToElements(element, this);
@@ -106,8 +117,11 @@ class CardImpl implements Card {
     try {
       const stat = await this.fs.stat(this.path);
       return stat.mtime > this.loadedAt;
-    } catch {
-      // File may have been deleted
+    } catch (e) {
+      // File may have been deleted; ENOENT is the normal case here.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Failed to stat card "${this.path}":`, e);
+      }
       return true;
     }
   }
@@ -127,12 +141,23 @@ class CardImpl implements Card {
         const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
         result[extKey] = `${dir}/${entry}`;
       }
-    } catch {
-      // Directory may not exist or be unreadable
+    } catch (e) {
+      // Directory may not exist or be unreadable; ENOENT is the normal case.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Failed to list media for card "${this.path}":`, e);
+      }
     }
 
     return result;
   }
+}
+
+/**
+ * Construction options for {@link NewCardImpl}.
+ */
+export interface NewCardImplOptions {
+  element: ElementNode;
+  fs?: FileSystem | undefined;
 }
 
 /**
@@ -143,12 +168,13 @@ export class NewCardImpl implements Card {
   readonly loadedAt = undefined;
   readonly isNew = true;
   private readonly fs: FileSystem | undefined;
+  public readonly element: ElementNode;
 
   constructor(
     public readonly path: string,
-    public readonly element: ElementNode,
-    fs?: FileSystem
+    { element, fs }: NewCardImplOptions
   ) {
+    this.element = element;
     this.fs = fs;
     attachCardToElements(element, this);
   }
@@ -187,8 +213,11 @@ export class NewCardImpl implements Card {
         const extKey = entryExt.startsWith(".") ? entryExt.slice(1) : entryExt;
         result[extKey] = `${dir}/${entry}`;
       }
-    } catch {
-      // Directory may not exist or be unreadable
+    } catch (e) {
+      // Directory may not exist or be unreadable; ENOENT is the normal case.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Failed to list media for card "${this.path}":`, e);
+      }
     }
 
     return result;
@@ -220,15 +249,27 @@ function attachCardToElements(element: ElementNode, card: Card): void {
 }
 
 /**
+ * Options for {@link createCard}.
+ */
+export interface CreateCardOptions {
+  element: ElementNode;
+  fs: FileSystem;
+  snapshot: string;
+  loadedAt?: Date;
+}
+
+/**
  * Create a new Card from an element and path.
  * This is used internally by CardLoader.
  */
 export function createCard(
   path: string,
-  element: ElementNode,
-  fs: FileSystem,
-  snapshot: string,
-  loadedAt: Date = new Date()
+  { element, fs, snapshot, loadedAt }: CreateCardOptions
 ): Card {
-  return new CardImpl(path, element, loadedAt, fs, snapshot);
+  return new CardImpl(path, {
+    element,
+    loadedAt: loadedAt ?? new Date(),
+    fs,
+    snapshot,
+  });
 }

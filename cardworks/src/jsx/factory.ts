@@ -10,14 +10,20 @@ import type { ZodError } from "zod";
 /**
  * Error thrown when JSX card creation fails validation.
  */
+export interface JSXValidationErrorOptions {
+  tagName: string;
+  zodError: ZodError;
+}
+
 export class JSXValidationError extends Error {
-  constructor(
-    message: string,
-    public readonly tagName: string,
-    public readonly zodError: ZodError
-  ) {
+  public readonly tagName: string;
+  public readonly zodError: ZodError;
+
+  constructor(message: string, { tagName, zodError }: JSXValidationErrorOptions) {
     super(message);
     this.name = "JSXValidationError";
+    this.tagName = tagName;
+    this.zodError = zodError;
   }
 }
 
@@ -57,8 +63,9 @@ export interface CreateCardOptions {
  */
 export function defineCardJSX<T extends Record<string, ElementSchema>>(
   schemas: T,
-  options: CreateCardOptions = {}
+  options?: CreateCardOptions
 ): CardJSXFactory<T> {
+  const resolvedOptions = options ?? {};
   /**
    * JSX runtime function for single or no children.
    * Called by the JSX transform for elements like <foo /> or <foo>single</foo>
@@ -107,16 +114,16 @@ export function defineCardJSX<T extends Record<string, ElementSchema>>(
     if (schema) {
       const result = schema.safeParse(element);
       if (!result.success) {
-        throw new JSXValidationError(
-          `JSX validation failed for <${element.tagName}>: ${result.error.message}`,
-          element.tagName,
-          result.error
-        );
+        const message = `JSX validation failed for <${element.tagName}>: ${result.error.message}`;
+        throw new JSXValidationError(message, {
+          tagName: element.tagName,
+          zodError: result.error,
+        });
       }
     }
 
     // Create as new card (never loaded from disk)
-    return new NewCardImpl(path, element, options.fs);
+    return new NewCardImpl(path, { element, fs: resolvedOptions.fs });
   }
 
   return { jsx, jsxs, Fragment, createCard };

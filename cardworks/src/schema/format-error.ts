@@ -17,23 +17,32 @@ type IssuePath = readonly PropertyKey[];
  */
 export function formatValidationError(error: ZodError, node?: unknown): string {
   const lines: string[] = [];
-  formatIssues(error.issues, lines, node);
+  formatIssues(error.issues, { lines, rootNode: node });
   return lines.join("\n");
 }
 
-function formatIssues(issues: readonly ZodIssue[], lines: string[], node?: unknown): void {
+/**
+ * Accumulator + context threaded through the issue formatters: the output
+ * line buffer and the root node used to resolve paths/line numbers.
+ */
+interface FormatContext {
+  lines: string[];
+  rootNode?: unknown;
+}
+
+function formatIssues(issues: readonly ZodIssue[], ctx: FormatContext): void {
   for (const issue of issues) {
     if (issue.code === "invalid_union") {
-      formatUnionError(issue, lines, node);
+      formatUnionError(issue, ctx);
     } else {
-      formatSimpleIssue(issue, lines, node);
+      formatSimpleIssue(issue, ctx);
     }
   }
 }
 
-function formatSimpleIssue(issue: ZodIssue, lines: string[], rootNode?: unknown): void {
+function formatSimpleIssue(issue: ZodIssue, { lines, rootNode }: FormatContext): void {
   const pathStr = issue.path.length > 0 ? formatPath(issue.path, rootNode) : "(root)";
-  lines.push(formatErrorLine(pathStr, issue.message, rootNode, issue.path));
+  lines.push(formatErrorLine(pathStr, { message: issue.message, rootNode, path: issue.path }));
 }
 
 /**
@@ -47,15 +56,14 @@ function formatSimpleIssue(issue: ZodIssue, lines: string[], rootNode?: unknown)
  */
 function formatUnionError(
   issue: ZodIssue & { code: "invalid_union" },
-  lines: string[],
-  rootNode?: unknown,
+  { lines, rootNode }: FormatContext,
 ): void {
   // zod 4: `errors` is `ZodIssue[][]`, one entry per union branch.
   // The `multiple_match` variant has `errors: []`, in which case we
   // fall back to the simple message.
   const branchErrors = (issue as { errors?: readonly (readonly ZodIssue[])[] }).errors ?? [];
   if (branchErrors.length === 0) {
-    formatSimpleIssue(issue, lines);
+    formatSimpleIssue(issue, { lines });
     return;
   }
 
@@ -68,9 +76,9 @@ function formatUnionError(
     const expectedTags = collectExpectedTagNames(branchErrors);
     if (expectedTags.length > 0) {
       const path = issue.path.length > 0 ? formatPath(issue.path, rootNode) : "(root)";
-      lines.push(formatErrorLine(path, `Invalid value, expected one of: <${expectedTags.join(">, <")}>`, rootNode, issue.path));
+      lines.push(formatErrorLine(path, { message: `Invalid value, expected one of: <${expectedTags.join(">, <")}>`, rootNode, path: issue.path }));
     } else {
-      formatSimpleIssue(issue, lines);
+      formatSimpleIssue(issue, { lines });
     }
     return;
   }
@@ -83,9 +91,9 @@ function formatUnionError(
     const expectedTags = collectExpectedTagNames(branchErrors);
     const path = formatPath(issue.path, rootNode);
     if (expectedTags.length > 0) {
-      lines.push(formatErrorLine(path, `Unexpected element <${actualTagName}>, expected one of: <${expectedTags.join(">, <")}>`, rootNode, issue.path));
+      lines.push(formatErrorLine(path, { message: `Unexpected element <${actualTagName}>, expected one of: <${expectedTags.join(">, <")}>`, rootNode, path: issue.path }));
     } else {
-      lines.push(formatErrorLine(path, `Unexpected element <${actualTagName}>`, rootNode, issue.path));
+      lines.push(formatErrorLine(path, { message: `Unexpected element <${actualTagName}>`, rootNode, path: issue.path }));
     }
     return;
   }
@@ -98,7 +106,7 @@ function formatUnionError(
   if (relevantIssues.length === 0) {
     // The matching branch succeeded on everything except... shouldn't happen,
     // but if it does, show the raw issue
-    formatSimpleIssue(issue, lines, rootNode);
+    formatSimpleIssue(issue, { lines, rootNode });
     return;
   }
 
@@ -106,11 +114,11 @@ function formatUnionError(
   for (const subIssue of relevantIssues) {
     if (subIssue.code === "invalid_union") {
       // Nested unions (e.g., children of children) — recurse
-      formatUnionError(subIssue, lines, rootNode);
+      formatUnionError(subIssue, { lines, rootNode });
     } else {
       const fullPath = [...issue.path, ...subIssue.path];
       const pathStr = formatPath(fullPath, rootNode);
-      lines.push(formatErrorLine(pathStr, subIssue.message, rootNode, fullPath));
+      lines.push(formatErrorLine(pathStr, { message: subIssue.message, rootNode, path: fullPath }));
     }
   }
 }
@@ -155,9 +163,18 @@ function getLineNumber(rootNode: unknown, path: IssuePath): number | undefined {
 }
 
 /**
+ * Options for {@link formatErrorLine}.
+ */
+interface FormatErrorLineOptions {
+  message: string;
+  rootNode?: unknown;
+  path?: IssuePath;
+}
+
+/**
  * Format an error line with optional line number prefix.
  */
-function formatErrorLine(pathStr: string, message: string, rootNode?: unknown, path?: IssuePath): string {
+function formatErrorLine(pathStr: string, { message, rootNode, path }: FormatErrorLineOptions): string {
   const line = rootNode && path ? getLineNumber(rootNode, path) : undefined;
   const prefix = line ? `line ${String(line)}: ` : "";
   return `  ${prefix}${pathStr}: ${message}`;

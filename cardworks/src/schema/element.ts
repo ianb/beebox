@@ -74,7 +74,7 @@ export function element<
   TText extends ZodType,
 >(
   tagName: TTag,
-  config: ElementConfig<TAttrs, TChildren, TText> = {} as ElementConfig<TAttrs, TChildren, TText>
+  config?: ElementConfig<TAttrs, TChildren, TText>
 ): ElementSchema<{
   tagName: TTag;
   attrs: TAttrs extends ZodRawShape ? z.infer<ZodObject<TAttrs>> : Record<string, string>;
@@ -91,6 +91,8 @@ export function element<
   };
   dirty: boolean;
 }> {
+  config = config ?? ({} as ElementConfig<TAttrs, TChildren, TText>);
+
   // Build the attrs schema
   const attrsSchema = config.attrs
     ? z.object(config.attrs)

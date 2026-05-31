@@ -16,7 +16,7 @@ test("lintCard: valid card returns no errors", async (t) => {
     schemas: [CardSchema],
   });
 
-  const result = await lintCard(loader, "/project/Valid.card");
+  const result = await lintCard(loader, { path: "/project/Valid.card" });
 
   t.equal(result.errors.length, 0);
   t.equal(result.warnings.length, 0);
@@ -29,7 +29,7 @@ test("lintCard: parse error is reported", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/Invalid.card");
+  const result = await lintCard(loader, { path: "/project/Invalid.card" });
 
   t.equal(result.errors.length, 1);
   t.equal(result.errors[0]?.type, "parse");
@@ -48,7 +48,7 @@ test("lintCard: validation error is reported", async (t) => {
     schemas: [StrictSchema],
   });
 
-  const result = await lintCard(loader, "/project/Invalid.card");
+  const result = await lintCard(loader, { path: "/project/Invalid.card" });
 
   t.equal(result.errors.length, 1);
   t.equal(result.errors[0]?.type, "validation");
@@ -63,7 +63,7 @@ test("lintCard: broken reference is reported", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/Main.card");
+  const result = await lintCard(loader, { path: "/project/Main.card" });
 
   t.equal(result.errors.length, 1);
   t.equal(result.errors[0]?.type, "reference");
@@ -80,7 +80,7 @@ test("lintCard: version mismatch is reported as warning", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/Main.card");
+  const result = await lintCard(loader, { path: "/project/Main.card" });
 
   t.equal(result.errors.length, 0);
   t.equal(result.warnings.length, 1);
@@ -97,7 +97,7 @@ test("lintCard: checkRefs can be disabled", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/Main.card", { checkRefs: false });
+  const result = await lintCard(loader, { path: "/project/Main.card", checkRefs: false });
 
   t.equal(result.errors.length, 0);
   t.equal(result.warnings.length, 0);
@@ -193,7 +193,7 @@ test("lintCard: duplicate IDs are reported as warning", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/DupIds.card");
+  const result = await lintCard(loader, { path: "/project/DupIds.card" });
 
   t.equal(result.errors.length, 0);
   t.equal(result.warnings.length, 1);
@@ -214,7 +214,7 @@ test("lintCard: multiple duplicate IDs are all reported", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/MultiDup.card");
+  const result = await lintCard(loader, { path: "/project/MultiDup.card" });
 
   // 3 duplicates: second foo, second bar, third foo
   t.equal(result.warnings.length, 3);
@@ -232,7 +232,7 @@ test("lintCard: refs attribute checks multiple references", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/Main.card");
+  const result = await lintCard(loader, { path: "/project/Main.card" });
 
   // Should have 1 error for the missing file
   t.equal(result.errors.length, 1);
@@ -251,7 +251,7 @@ test("lintCard: refs attribute reports version mismatches", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/Main.card");
+  const result = await lintCard(loader, { path: "/project/Main.card" });
 
   t.equal(result.errors.length, 0);
   // B.card has version mismatch (requested 2.0.0, found 3.0.0)
@@ -271,7 +271,7 @@ test("lintCard: fragment errors are reported", async (t) => {
     },
   });
 
-  const result = await lintCard(loader, "/project/Main.card");
+  const result = await lintCard(loader, { path: "/project/Main.card" });
 
   t.equal(result.errors.length, 1);
   t.equal(result.errors[0]?.type, "reference");

@@ -1,7 +1,8 @@
 # ESLint rule-suppression audit
 
-**Status:** backend COMPLETE — every silenced rule re-enabled, all debt paid down
-(0 suppressions). Frontend + cardworks still pending (see end).
+**Status:** ✅ COMPLETE — callback-box (backend + frontend) and cardworks all have
+every silenced rule re-enabled and zero suppressions. The personal-vibe-check
+preset itself was updated (0.4.0) where rules were retired/adjusted.
 **Found:** 2026-05-30, during the `fix-cb-mv` worktree (a tangent off the `cb mv` work)
 **Scope:** `callback-box` (backend + frontend) and `cardworks`
 
@@ -65,6 +66,17 @@
   `error/*`, the comment-justified `react-hooks/set-state-in-effect`) and
   `cardworks` (never audited with its real config). Same ratchet approach
   applies there.
+- **2026-05-31 — frontend COMPLETE.** Ratchet established, then burned down:
+  default/no-default-params (97), error/* (143 firings → custom classes incl. a
+  reusable `RequestError`), max-lines / max-lines-per-function (split into React-
+  aware sibling modules/hooks). `src/frontend/eslint-suppressions.json` empty.
+- **2026-05-31 — cardworks COMPLETE.** Its lint had been broken entirely (a stale
+  `eslint.config.js` shadowed the vibeCheck `.mjs` and failed to load), so *no*
+  rule was ever enforced. Deleted the stale config, auto-fixed the mechanical
+  backlog, then burned down catch/default-params/error-classes/max-lines and all
+  29 `max-params` (refactored to named-params objects; the one external caller,
+  callback-box's `lintCard`, updated in lockstep). `cardworks/eslint-suppressions.json`
+  empty; 505 tests pass.
 - **2026-05-30 — bare-catch rule enabled for the frontend.** In the frontend
   (`react: true`), `no-restricted-syntax` carries *only* the bare-catch selector
   (no `??`/`as`/switch), so enabling it surfaced exactly 14 bare catches across

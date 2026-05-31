@@ -228,7 +228,7 @@ function resolveFragment(fragment: RefFragment, root: ElementNode): FragmentResu
 
   // XPath query
   const expectOne = fragment.type === "query";
-  const xpathResult = executeXPath(fragment.value, root, expectOne);
+  const xpathResult = executeXPath(fragment.value, { root, expectOne });
 
   const result: FragmentResult = { nodes: xpathResult.nodes };
   if (xpathResult.error !== undefined) {

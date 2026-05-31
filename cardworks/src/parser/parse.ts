@@ -17,17 +17,21 @@ export interface ParseXmlOptions {
 }
 
 /**
+ * Location details for a {@link ParseError}.
+ */
+export interface ParseErrorLocation {
+  source: string;
+  line?: number | undefined;
+  column?: number | undefined;
+}
+
+/**
  * Error thrown when XML parsing fails.
  */
 export class ParseError extends Error {
   public readonly location: Location;
 
-  constructor(
-    message: string,
-    source: string,
-    line?: number,
-    column?: number
-  ) {
+  constructor(message: string, { source, line, column }: ParseErrorLocation) {
     const loc = line ? `${source}:${String(line)}:${String(column ?? 1)}` : source;
     super(`${loc}: ${message}`);
     this.name = "ParseError";
@@ -74,12 +78,11 @@ export function parseXml(xml: string, options: ParseXmlOptions): Promise<Element
     // xmldom throws directly for fatal errors
     const err = e as Error & { locator?: { lineNumber?: number; columnNumber?: number } };
     return Promise.reject(
-      new ParseError(
-        err.message,
+      new ParseError(err.message, {
         source,
-        shift(err.locator?.lineNumber),
-        err.locator?.columnNumber
-      )
+        line: shift(err.locator?.lineNumber),
+        column: err.locator?.columnNumber,
+      })
     );
   }
 
@@ -87,39 +90,39 @@ export function parseXml(xml: string, options: ParseXmlOptions): Promise<Element
   if (errors.length > 0) {
     const firstError = errors[0];
     return Promise.reject(
-      new ParseError(
-        firstError?.message ?? "Unknown parse error",
+      new ParseError(firstError?.message ?? "Unknown parse error", {
         source,
-        shift(firstError?.line),
-        firstError?.column
-      )
+        line: shift(firstError?.line),
+        column: firstError?.column,
+      })
     );
   }
 
   // Find the root element
   const root = doc.documentElement;
   if (!root) {
-    return Promise.reject(new ParseError("No root element found", source));
+    const message = "No root element found";
+    return Promise.reject(new ParseError(message, { source }));
   }
 
   // Create line tracker for location
-  const tracker = createLineTracker(xml, source, lineOffset);
+  const tracker = createLineTracker(xml, { source, lineOffset });
 
   // Transform to our object model
-  const result = domToObject(root as unknown as Element, tracker, xml);
+  const result = domToObject(root as unknown as Element, { tracker, xml });
 
   // Validate version format if present (version itself is optional)
   const version = result.attrs["version"];
   if (version) {
     const versionPattern = /^\d+\.\d+\.\d+$/;
     if (!versionPattern.test(version)) {
+      const message = `Invalid version "${version}" - must be in X.Y.Z format (e.g., "1.0.0")`;
       return Promise.reject(
-        new ParseError(
-          `Invalid version "${version}" - must be in X.Y.Z format (e.g., "1.0.0")`,
+        new ParseError(message, {
           source,
-          result.location.startLine,
-          result.location.startColumn
-        )
+          line: result.location.startLine,
+          column: result.location.startColumn,
+        })
       );
     }
   }

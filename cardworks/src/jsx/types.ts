@@ -1,3 +1,4 @@
+import type { Card } from "../card/card.js";
 import type { ElementNode } from "../parser/provenance.js";
 import type { ElementSchema } from "../schema/element.js";
 
@@ -66,5 +67,5 @@ export interface CardJSXFactory<T extends Record<string, ElementSchema>> {
    * Create a Card from a JSX-created element.
    * Validates against the schema if registered.
    */
-  createCard: (path: string, element: ElementNode) => import("../card/card.js").Card;
+  createCard: (path: string, element: ElementNode) => Card;
 }

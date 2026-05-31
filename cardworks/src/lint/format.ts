@@ -43,7 +43,8 @@ function formatIssue(issue: LintIssue, useColors: boolean): string {
 /**
  * Format a single lint result.
  */
-export function formatLintResult(result: LintResult, options: FormatOptions = {}): string {
+export function formatLintResult(result: LintResult, options?: FormatOptions): string {
+  options = options ?? {};
   const useColors = options.colors ?? true;
   const c = useColors ? colors : { red: "", yellow: "", green: "", gray: "", bold: "", reset: "" };
 
@@ -80,7 +81,8 @@ export function formatLintResult(result: LintResult, options: FormatOptions = {}
 /**
  * Format all lint results.
  */
-export function formatLintResults(summary: LintSummary, options: FormatOptions = {}): string {
+export function formatLintResults(summary: LintSummary, options?: FormatOptions): string {
+  options = options ?? {};
   const useColors = options.colors ?? true;
   const c = useColors ? colors : { red: "", yellow: "", green: "", gray: "", bold: "", reset: "" };
 

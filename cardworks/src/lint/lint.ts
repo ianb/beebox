@@ -42,13 +42,21 @@ export interface LintOptions {
 }
 
 /**
+ * Options for {@link lintCard}: the card path plus optional lint settings.
+ */
+export interface LintCardOptions extends LintOptions {
+  /** The path to the card file to lint */
+  path: string;
+}
+
+/**
  * Lint a single card file.
  */
 export async function lintCard(
   loader: ICardLoader,
-  path: string,
-  options: LintOptions = {}
+  options: LintCardOptions
 ): Promise<LintResult> {
+  const { path } = options;
   const errors: LintIssue[] = [];
   const warnings: LintIssue[] = [];
   const checkRefs = options.checkRefs ?? true;
@@ -72,7 +80,7 @@ export async function lintCard(
 
     // Check references if enabled
     if (checkRefs) {
-      await checkRefsInNode(card.element, path, loader, errors, warnings);
+      await checkRefsInNode(card.element, { cardPath: path, loader, errors, warnings });
     }
   } catch (e) {
     if (e instanceof Error) {
@@ -148,19 +156,24 @@ function collectIds(node: ElementNode, occurrences: IdOccurrence[]): void {
 }
 
 /**
+ * Shared context threaded through the reference-checking helpers: the card
+ * being linted, the loader used to resolve refs, and the issue accumulators.
+ */
+interface RefCheckContext {
+  cardPath: string;
+  loader: ICardLoader;
+  errors: LintIssue[];
+  warnings: LintIssue[];
+}
+
+/**
  * Check references in a node tree.
  */
-async function checkRefsInNode(
-  node: ElementNode,
-  cardPath: string,
-  loader: ICardLoader,
-  errors: LintIssue[],
-  warnings: LintIssue[]
-): Promise<void> {
+async function checkRefsInNode(node: ElementNode, ctx: RefCheckContext): Promise<void> {
   // Check ref attribute (single reference)
   const refAttr = node.attrs["ref"];
   if (refAttr) {
-    await checkSingleRef(refAttr, node.location, cardPath, loader, errors, warnings);
+    await checkSingleRef(refAttr, { location: node.location, ctx });
   }
 
   // Check refs attribute (multiple whitespace-separated references)
@@ -168,14 +181,22 @@ async function checkRefsInNode(
   if (refsAttr) {
     const parsedRefs = parseRefs(refsAttr);
     for (const parsed of parsedRefs) {
-      await checkSingleRef(parsed.original, node.location, cardPath, loader, errors, warnings);
+      await checkSingleRef(parsed.original, { location: node.location, ctx });
     }
   }
 
   // Recurse into children
   for (const child of node.children) {
-    await checkRefsInNode(child, cardPath, loader, errors, warnings);
+    await checkRefsInNode(child, ctx);
   }
+}
+
+/**
+ * Options for {@link checkSingleRef}.
+ */
+interface CheckSingleRefOptions {
+  location: Location;
+  ctx: RefCheckContext;
 }
 
 /**
@@ -183,12 +204,9 @@ async function checkRefsInNode(
  */
 async function checkSingleRef(
   refStr: string,
-  location: Location,
-  cardPath: string,
-  loader: ICardLoader,
-  errors: LintIssue[],
-  warnings: LintIssue[]
+  { location, ctx }: CheckSingleRefOptions
 ): Promise<void> {
+  const { cardPath, loader, errors, warnings } = ctx;
   try {
     const parsed = parseRef(refStr);
     const resolved = await loader.resolveRef(refStr, cardPath);
@@ -232,6 +250,16 @@ async function checkSingleRef(
 }
 
 /**
+ * Options for {@link lintContent}.
+ */
+export interface LintContentOptions {
+  /** XML string to validate */
+  content: string;
+  /** Display name for error messages (default: "<inline>") */
+  sourceName?: string;
+}
+
+/**
  * Lint XML content in memory without writing to disk.
  *
  * Parses the XML and checks structure (well-formedness, duplicate IDs,
@@ -239,14 +267,14 @@ async function checkSingleRef(
  * a file path.
  *
  * @param loader - Card loader with registered schemas (for tag checking)
- * @param content - XML string to validate
- * @param sourceName - Display name for error messages (default: "<inline>")
+ * @param options - The XML content and optional display name
  */
 export async function lintContent(
   loader: ICardLoader,
-  content: string,
-  sourceName: string = "<inline>"
+  options: LintContentOptions
 ): Promise<LintResult> {
+  const { content } = options;
+  const sourceName = options.sourceName ?? "<inline>";
   const errors: LintIssue[] = [];
   const warnings: LintIssue[] = [];
 
@@ -284,10 +312,19 @@ export async function lintContent(
  */
 export async function lintAll(
   loader: ICardLoader,
-  options: LintOptions = {}
+  options?: LintOptions
 ): Promise<LintSummary> {
+  const resolved = options ?? {};
   const paths = await loader.listCards();
-  return lintCards(loader, paths, options);
+  return lintCards(loader, { paths, ...resolved });
+}
+
+/**
+ * Options for {@link lintCards}: the card paths plus optional lint settings.
+ */
+export interface LintCardsOptions extends LintOptions {
+  /** The paths to the card files to lint */
+  paths: string[];
 }
 
 /**
@@ -295,16 +332,16 @@ export async function lintAll(
  */
 export async function lintCards(
   loader: ICardLoader,
-  paths: string[],
-  options: LintOptions = {}
+  options: LintCardsOptions
 ): Promise<LintSummary> {
+  const { paths, ...lintOptions } = options;
   const results: LintResult[] = [];
   let totalErrors = 0;
   let totalWarnings = 0;
   let filesWithErrors = 0;
 
   for (const path of paths) {
-    const result = await lintCard(loader, path, options);
+    const result = await lintCard(loader, { path, ...lintOptions });
     results.push(result);
 
     totalErrors += result.errors.length;
