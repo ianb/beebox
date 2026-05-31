@@ -65,6 +65,13 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
   // Register auth routes (login, callback, logout, me) when auth is enabled
   if (isAuthEnabled()) {
     await server.register(registerAuthRoutes, { boxes });
+  } else {
+    // Auth disabled (no GOOGLE_OAUTH_CLIENT_ID — e.g. local dev): answer the
+    // client's /auth/me probe with `200 null` instead of letting it 404 and
+    // spam the browser console. There's no session, so there's no user.
+    server.get("/auth/me", async (_request, reply) => {
+      return reply.type("application/json").send("null");
+    });
   }
   // System-wide admin routes (Claude Code auth)
   await server.register(async (instance) => {
