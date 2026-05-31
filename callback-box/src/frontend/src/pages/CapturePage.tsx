@@ -21,6 +21,7 @@ import { DeviceSettings } from "../components/capture/DeviceSettings";
 import { CameraViewport } from "../components/capture/CameraViewport";
 import { CaptureErrorBanner } from "../components/capture/CaptureErrorBanner";
 import { CaptureControls } from "../components/capture/CaptureControls";
+import { RequestError } from "../lib/errors";
 
 type UploadState = "uploading" | "uploaded" | "failed";
 
@@ -56,7 +57,10 @@ function saveDevicePrefs(prefs: DevicePrefs): void {
 
 async function createCaptureSession(): Promise<{ sessionId: string; startedAt: string }> {
   const res = await fetch(`${getApiBase()}/capture/sessions`, { method: "POST" });
-  if (!res.ok) throw new Error(`Create session failed: ${res.status}`);
+  if (!res.ok) {
+    const message = `Create session failed: ${res.status}`;
+    throw new RequestError(message);
+  }
   return res.json();
 }
 
@@ -107,7 +111,8 @@ async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
       // Network error (offline, DNS failure, etc.) — retry
       if (attempt < MAX_UPLOAD_RETRIES) continue;
       const msg = networkErr instanceof Error ? networkErr.message : String(networkErr);
-      throw new Error(`Upload failed (network error after ${MAX_UPLOAD_RETRIES + 1} attempts): ${msg}`);
+      const message = `Upload failed (network error after ${MAX_UPLOAD_RETRIES + 1} attempts): ${msg}`;
+      throw new RequestError(message);
     }
 
     if (res.ok) return;
@@ -116,7 +121,8 @@ async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
     if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
       let detail = "";
       try { detail = await res.text(); } catch (_e) { /* ignore */ }
-      throw new Error(`Upload failed (${res.status}): ${detail || res.statusText}`);
+      const message = `Upload failed (${res.status}): ${detail || res.statusText}`;
+      throw new RequestError(message);
     }
 
     // 5xx or 408/429 — retry
@@ -124,7 +130,8 @@ async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
 
     let detail = "";
     try { detail = await res.text(); } catch (_e) { /* ignore */ }
-    throw new Error(`Upload failed (${res.status} after ${MAX_UPLOAD_RETRIES + 1} attempts): ${detail || res.statusText}`);
+    const message = `Upload failed (${res.status} after ${MAX_UPLOAD_RETRIES + 1} attempts): ${detail || res.statusText}`;
+    throw new RequestError(message);
   }
 }
 
@@ -132,14 +139,20 @@ async function finalizeCaptureSession(sessionId: string): Promise<void> {
   const res = await fetch(`${getApiBase()}/capture/sessions/${sessionId}/finalize`, {
     method: "POST",
   });
-  if (!res.ok) throw new Error(`Finalize failed: ${res.status}`);
+  if (!res.ok) {
+    const message = `Finalize failed: ${res.status}`;
+    throw new RequestError(message);
+  }
 }
 
 async function cancelCaptureSession(sessionId: string): Promise<void> {
   const res = await fetch(`${getApiBase()}/capture/sessions/${sessionId}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error(`Cancel failed: ${res.status}`);
+  if (!res.ok) {
+    const message = `Cancel failed: ${res.status}`;
+    throw new RequestError(message);
+  }
 }
 
 // --- Component ---

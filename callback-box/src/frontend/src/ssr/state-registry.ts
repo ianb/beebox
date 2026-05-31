@@ -15,6 +15,13 @@ import { voiceRecorderMachine } from "../machines/voiceRecorderMachine";
 import { realtimeTranscriptionMachine } from "../machines/realtimeTranscriptionMachine";
 import type { SessionEntry, SessionContentBlock } from "../api";
 
+class RegistryLookupError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "RegistryLookupError";
+  }
+}
+
 // --- Types ---
 
 export interface MachineStateInfo {
@@ -349,14 +356,17 @@ interface BuildSnapshotOptions {
 export function buildSnapshot(opts: BuildSnapshotOptions): unknown {
   const { machineId, stateValue, contextOverrides } = opts;
   const info = machineRegistry[machineId];
-  if (!info) throw new Error(`Unknown machine: ${machineId}`);
+  if (!info) {
+    const message = `Unknown machine: ${machineId}`;
+    throw new RegistryLookupError(message);
+  }
 
   const stateInfo = info.states[stateValue];
   if (!stateInfo) {
-    throw new Error(
+    const message =
       `Unknown state "${stateValue}" for machine "${machineId}". ` +
-        `Available: ${Object.keys(info.states).join(", ")}`,
-    );
+      `Available: ${Object.keys(info.states).join(", ")}`;
+    throw new RegistryLookupError(message);
   }
 
   const context = { ...stateInfo.context, ...contextOverrides };
@@ -386,9 +396,8 @@ export function buildSSRStateMap(
     const scenario = routeConfig.scenarios[options.scenario];
     if (!scenario) {
       const available = Object.keys(routeConfig.scenarios).join(", ");
-      throw new Error(
-        `Unknown scenario "${options.scenario}" for route "${normalizedRoute}". Available: ${available}`,
-      );
+      const message = `Unknown scenario "${options.scenario}" for route "${normalizedRoute}". Available: ${available}`;
+      throw new RegistryLookupError(message);
     }
     if (scenario.machines) {
       Object.assign(machineStates, scenario.machines);

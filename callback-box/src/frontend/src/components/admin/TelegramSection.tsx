@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TextField } from "../ui/fields";
 import { Button } from "../ui/Button";
+import { RequestError } from "../../lib/errors";
 
 interface TelegramStatus {
   configured: boolean;
@@ -29,7 +30,10 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
   const fetchStatus = useCallback(async () => {
     try {
       const resp = await fetch(`${apiBase}/admin/telegram-status`);
-      if (!resp.ok) throw new Error(`Status check failed: ${resp.status}`);
+      if (!resp.ok) {
+        const message = `Status check failed: ${resp.status}`;
+        throw new RequestError(message);
+      }
       const data: TelegramStatus = await resp.json();
       setStatus(data);
       setError(null);
@@ -60,7 +64,7 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
       });
       const data = await resp.json();
       if (!resp.ok) {
-        throw new Error(data.error || "Setup failed");
+        throw new RequestError(data.error || "Setup failed");
       }
       setBotToken("");
       await fetchStatus();
@@ -79,7 +83,7 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
       const resp = await fetch(`${apiBase}/admin/telegram-disconnect`, { method: "POST" });
       const data = await resp.json();
       if (!data.success) {
-        throw new Error(data.error || "Disconnect failed");
+        throw new RequestError(data.error || "Disconnect failed");
       }
       await fetchStatus();
     } catch (err) {

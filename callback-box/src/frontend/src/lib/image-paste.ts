@@ -14,6 +14,27 @@ const MAX_DIMENSION = 1920;
 const JPEG_QUALITY = 0.85;
 
 /**
+ * Something went wrong while decoding/re-encoding a pasted or dropped image.
+ * The detail names the specific failed step (decode, reader, encode, etc.).
+ */
+class ImageProcessingError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "ImageProcessingError";
+  }
+}
+
+// Fixed failure details, named so they're passed as identifiers — a bare string
+// literal is disallowed as an Error constructor's first argument.
+const IMG_ERR = {
+  decode: "Failed to decode image",
+  readerResult: "Unexpected reader result",
+  fileReader: "FileReader failed",
+  canvasContext: "Canvas 2D context unavailable",
+  toBlob: "canvas.toBlob failed",
+} as const;
+
+/**
  * Decoded result ready to attach to a chat message.
  */
 export interface ProcessedImage {
@@ -39,7 +60,7 @@ function readImageElement(blob: Blob): Promise<HTMLImageElement> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Failed to decode image"));
+      reject(new ImageProcessingError(IMG_ERR.decode));
     };
     img.src = url;
   });
@@ -51,14 +72,15 @@ function blobToBase64(blob: Blob): Promise<string> {
     reader.onload = () => {
       const result = reader.result;
       if (typeof result !== "string") {
-        reject(new Error("Unexpected reader result"));
+        reject(new ImageProcessingError(IMG_ERR.readerResult));
         return;
       }
       // result is a data URL like "data:image/png;base64,AAAA...". Strip prefix.
       const comma = result.indexOf(",");
       resolve(comma !== -1 ? result.slice(comma + 1) : result);
     };
-    reader.onerror = () => reject(reader.error ?? new Error("FileReader failed"));
+    reader.onerror = () =>
+      reject(reader.error ?? new ImageProcessingError(IMG_ERR.fileReader));
     reader.readAsDataURL(blob);
   });
 }
@@ -86,12 +108,12 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas 2D context unavailable");
+  if (!ctx) throw new ImageProcessingError(IMG_ERR.canvasContext);
   ctx.drawImage(img, 0, 0, width, height);
 
   const outBlob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("canvas.toBlob failed"))),
+      (b) => (b ? resolve(b) : reject(new ImageProcessingError(IMG_ERR.toBlob))),
       outputType,
       isPng ? undefined : JPEG_QUALITY
     );

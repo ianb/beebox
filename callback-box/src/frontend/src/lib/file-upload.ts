@@ -8,6 +8,7 @@
  */
 
 import { getApiBase } from "../api";
+import { RequestError } from "./errors";
 
 export interface UploadedFile {
   /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
@@ -28,7 +29,7 @@ export async function uploadChatFile(file: File): Promise<UploadedFile> {
     const err = await response
       .json()
       .catch(() => ({ error: response.statusText }));
-    throw new Error(err.error || "File upload failed");
+    throw new RequestError(err.error || "File upload failed");
   }
   return (await response.json()) as UploadedFile;
 }

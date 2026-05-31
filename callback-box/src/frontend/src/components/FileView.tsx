@@ -31,6 +31,7 @@ import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
+import { RequestError } from "../lib/errors";
 import { Pre } from "./ui/Pre";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { StatusBadge } from "./ui/StatusBadge";
@@ -87,7 +88,10 @@ function useFileData(path: string): LoadResult {
     enabled: fetchText,
     queryFn: async ({ signal }) => {
       const resp = await fetch(`${apiBase}/files/${path}`, { signal });
-      if (!resp.ok) throw new Error(`Failed to load: ${resp.status} ${resp.statusText}`);
+      if (!resp.ok) {
+        const message = `Failed to load: ${resp.status} ${resp.statusText}`;
+        throw new RequestError(message);
+      }
       return resp.text();
     },
   });

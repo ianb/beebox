@@ -1,14 +1,5 @@
 {
   "src/api.ts": {
-    "error/no-generic-error": {
-      "count": 7
-    },
-    "error/no-literal-error-message": {
-      "count": 2
-    },
-    "error/require-custom-error": {
-      "count": 7
-    },
     "max-lines": {
       "count": 1
     }
@@ -23,68 +14,17 @@
       "count": 1
     }
   },
-  "src/components/FileView.tsx": {
-    "error/no-generic-error": {
-      "count": 1
-    },
-    "error/no-literal-error-message": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 1
-    }
-  },
-  "src/components/LightboxProvider.tsx": {
-    "error/no-generic-error": {
-      "count": 1
-    },
-    "error/no-literal-error-message": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 1
-    }
-  },
   "src/components/NewMemo.tsx": {
     "max-lines-per-function": {
       "count": 1
     }
   },
-  "src/components/admin/AllowedEmailsSection.tsx": {
-    "error/no-generic-error": {
-      "count": 2
-    },
-    "error/no-literal-error-message": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 2
-    }
-  },
   "src/components/admin/GoogleServicesSection.tsx": {
-    "error/no-generic-error": {
-      "count": 4
-    },
-    "error/no-literal-error-message": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 4
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
   "src/components/admin/TelegramSection.tsx": {
-    "error/no-generic-error": {
-      "count": 3
-    },
-    "error/no-literal-error-message": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 3
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -102,48 +42,9 @@
       "count": 1
     }
   },
-  "src/lib/file-upload.ts": {
-    "error/no-generic-error": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 1
-    }
-  },
-  "src/lib/image-paste.ts": {
-    "error/no-generic-error": {
-      "count": 1
-    },
-    "error/no-literal-error-message": {
-      "count": 5
-    },
-    "error/require-custom-error": {
-      "count": 1
-    }
-  },
   "src/lib/patmatch.ts": {
-    "error/no-generic-error": {
-      "count": 7
-    },
-    "error/no-literal-error-message": {
-      "count": 7
-    },
-    "error/require-custom-error": {
-      "count": 7
-    },
     "max-lines": {
       "count": 1
-    }
-  },
-  "src/lib/tts-client.ts": {
-    "error/no-generic-error": {
-      "count": 4
-    },
-    "error/no-literal-error-message": {
-      "count": 5
-    },
-    "error/require-custom-error": {
-      "count": 4
     }
   },
   "src/machines/chatMachine.ts": {
@@ -151,49 +52,12 @@
       "count": 1
     }
   },
-  "src/machines/claudeAuthMachine.ts": {
-    "error/no-generic-error": {
-      "count": 5
-    },
-    "error/no-literal-error-message": {
-      "count": 2
-    },
-    "error/require-custom-error": {
-      "count": 5
-    }
-  },
   "src/machines/realtimeTranscriptionMachine.ts": {
-    "error/no-generic-error": {
-      "count": 3
-    },
-    "error/no-literal-error-message": {
-      "count": 3
-    },
-    "error/require-custom-error": {
-      "count": 3
-    },
     "max-lines": {
       "count": 1
     }
   },
-  "src/pages/BrowsePage.tsx": {
-    "error/no-generic-error": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 1
-    }
-  },
   "src/pages/CapturePage.tsx": {
-    "error/no-generic-error": {
-      "count": 6
-    },
-    "error/no-literal-error-message": {
-      "count": 6
-    },
-    "error/require-custom-error": {
-      "count": 6
-    },
     "max-lines": {
       "count": 1
     },
@@ -202,40 +66,11 @@
     }
   },
   "src/pages/SharePage.tsx": {
-    "error/no-generic-error": {
-      "count": 2
-    },
-    "error/no-literal-error-message": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
-  "src/renderers/binary.tsx": {
-    "error/no-generic-error": {
-      "count": 1
-    },
-    "error/no-literal-error-message": {
-      "count": 1
-    },
-    "error/require-custom-error": {
-      "count": 1
-    }
-  },
   "src/ssr/state-registry.ts": {
-    "error/no-generic-error": {
-      "count": 3
-    },
-    "error/no-literal-error-message": {
-      "count": 2
-    },
-    "error/require-custom-error": {
-      "count": 3
-    },
     "max-lines": {
       "count": 1
     }

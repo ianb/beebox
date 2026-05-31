@@ -28,6 +28,13 @@ interface LightboxContextValue {
 
 const LightboxContext = createContext<LightboxContextValue | null>(null);
 
+class LightboxContextError extends Error {
+  constructor() {
+    super("useLightbox must be used inside <LightboxProvider>");
+    this.name = "LightboxContextError";
+  }
+}
+
 /**
  * Walk the document for both individual `[data-image-src]` markers and
  * bulk `[data-image-list]` JSON containers, returning a single ordered
@@ -128,6 +135,6 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
 
 export function useLightbox(): LightboxContextValue {
   const ctx = useContext(LightboxContext);
-  if (!ctx) throw new Error("useLightbox must be used inside <LightboxProvider>");
+  if (!ctx) throw new LightboxContextError();
   return ctx;
 }

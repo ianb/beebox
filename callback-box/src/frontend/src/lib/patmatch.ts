@@ -28,6 +28,59 @@ If you join leading+original+trailing then you'll get exactly the original strin
 
 */
 
+class BadTagError extends Error {
+  constructor(src: string, remaining: string) {
+    super(
+      `Invalid pattern (bad tag): ${JSON.stringify(src)} at ${JSON.stringify(remaining)}`
+    );
+    this.name = "BadTagError";
+  }
+}
+
+class BadWordError extends Error {
+  constructor(src: string, remaining: string) {
+    super(
+      `Invalid pattern (bad word): ${JSON.stringify(src)} at ${JSON.stringify(remaining)}`
+    );
+    this.name = "BadWordError";
+  }
+}
+
+class UnknownSeparatorError extends Error {
+  constructor(separator: string) {
+    super(`Unknown separator: ${separator}`);
+    this.name = "UnknownSeparatorError";
+  }
+}
+
+class TagsWithNoWordsError extends Error {
+  constructor() {
+    super("Pattern has tags with no words");
+    this.name = "TagsWithNoWordsError";
+  }
+}
+
+class UnexpectedTagsError extends Error {
+  constructor() {
+    super("Unexpected tags");
+    this.name = "UnexpectedTagsError";
+  }
+}
+
+class UnexpectedTokenError extends Error {
+  constructor(token: string) {
+    super(`Unexpected "${token}"`);
+    this.name = "UnexpectedTokenError";
+  }
+}
+
+class ExpectedClosingParenError extends Error {
+  constructor() {
+    super("Expected closing )");
+    this.name = "ExpectedClosingParenError";
+  }
+}
+
 function tokenizePattern(src: string): (string | Record<string, string>)[] {
   const tagRe = /^\[([^\]=]+)=([^\]]+)\]/gu;
   const re = /^\n|\(|\)|\||\?|\s+|[^()|?[\]=\s]+/gu;
@@ -43,9 +96,7 @@ function tokenizePattern(src: string): (string | Record<string, string>)[] {
       continue;
     }
     if (remaining.startsWith("[")) {
-      throw new Error(
-        `Invalid pattern (bad tag): ${JSON.stringify(src)} at ${JSON.stringify(remaining)}`
-      );
+      throw new BadTagError(src, remaining);
     }
     const match = remaining.match(re);
     if (match) {
@@ -55,9 +106,7 @@ function tokenizePattern(src: string): (string | Record<string, string>)[] {
       remaining = remaining.slice(match[0].length);
       continue;
     }
-    throw new Error(
-      `Invalid pattern (bad word): ${JSON.stringify(src)} at ${JSON.stringify(remaining)}`
-    );
+    throw new BadWordError(src, remaining);
   }
   return list;
 }
@@ -271,7 +320,7 @@ class OrMatcher extends Matcher {
     } else if (this.separator === "\n") {
       return this.matchers.map((m) => m.repr()).join("\n");
     } else {
-      throw new Error(`Unknown separator: ${this.separator}`);
+      throw new UnknownSeparatorError(this.separator);
     }
   }
 }
@@ -299,7 +348,7 @@ function compileLines(stream: TokenStream): Matcher {
     if (stream.isEmpty() || stream.peek() === "\n") {
       if (currentSequence.length === 0) {
         if (Object.keys(tags).length > 0) {
-          throw new Error("Pattern has tags with no words");
+          throw new TagsWithNoWordsError();
         }
         if (stream.isEmpty()) {
           break;
@@ -331,7 +380,7 @@ function compileLines(stream: TokenStream): Matcher {
 function compileForWord(stream: TokenStream): Matcher {
   const token = stream.next();
   if (typeof token !== "string") {
-    throw new Error("Unexpected tags");
+    throw new UnexpectedTagsError();
   }
   if (token === "(") {
     return compileGroup(stream);
@@ -342,7 +391,7 @@ function compileForWord(stream: TokenStream): Matcher {
     return new OptionalMatcher({}, match);
   }
   if (token === "?" || token === ")") {
-    throw new Error(`Unexpected "${token}"`);
+    throw new UnexpectedTokenError(token);
   }
   const word = normalizeWord(token);
   if (stream.peek() === "?") {
@@ -358,7 +407,7 @@ function compileGroup(stream: TokenStream): Matcher {
   let isOptional = false;
   while (true) {
     if (stream.isEmpty()) {
-      throw new Error("Expected closing )");
+      throw new ExpectedClosingParenError();
     }
     const token = stream.peek();
     if (token === ")") {

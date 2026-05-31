@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TextField } from "../ui/fields";
 import { Button } from "../ui/Button";
+import { RequestError } from "../../lib/errors";
 
 export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
   const [emails, setEmails] = useState<string[]>([]);
@@ -18,7 +19,10 @@ export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
   const fetchConfig = useCallback(async () => {
     try {
       const resp = await fetch(`${apiBase}/admin/box-config`);
-      if (!resp.ok) throw new Error(`Failed to load config: ${resp.status}`);
+      if (!resp.ok) {
+        const message = `Failed to load config: ${resp.status}`;
+        throw new RequestError(message);
+      }
       const data = await resp.json();
       setEmails(data.allowedEmails ?? []);
       setOwnerEmail(data.ownerEmail ?? null);
@@ -48,7 +52,7 @@ export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
         body: JSON.stringify({ allowedEmails: updated }),
       });
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Save failed");
+      if (!resp.ok) throw new RequestError(data.error || "Save failed");
       setEmails(data.allowedEmails ?? updated);
     } catch (err) {
       setError((err as Error).message);

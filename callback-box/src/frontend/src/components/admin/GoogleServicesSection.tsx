@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { CheckboxField } from "../ui/fields";
 import { Button } from "../ui/Button";
+import { RequestError } from "../../lib/errors";
 
 interface GoogleStatus {
   available: boolean;
@@ -33,7 +34,10 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
   const fetchStatus = useCallback(async () => {
     try {
       const resp = await fetch(`${apiBase}/admin/google-status`);
-      if (!resp.ok) throw new Error(`Status check failed: ${resp.status}`);
+      if (!resp.ok) {
+        const message = `Status check failed: ${resp.status}`;
+        throw new RequestError(message);
+      }
       const data: GoogleStatus = await resp.json();
       setStatus(data);
       setError(null);
@@ -82,7 +86,7 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
       });
       const data = await resp.json();
       if (!resp.ok) {
-        throw new Error(data.error || "Setup failed");
+        throw new RequestError(data.error || "Setup failed");
       }
       window.location.href = data.authUrl;
     } catch (err) {
@@ -100,7 +104,7 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
       const resp = await fetch(`${apiBase}/admin/google-disconnect`, { method: "POST" });
       const data = await resp.json();
       if (!data.success) {
-        throw new Error(data.error || "Disconnect failed");
+        throw new RequestError(data.error || "Disconnect failed");
       }
       await fetchStatus();
     } catch (err) {
@@ -124,7 +128,7 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
       });
       const data = await resp.json();
       if (!data.success) {
-        throw new Error(data.error || "Failed to save service settings");
+        throw new RequestError(data.error || "Failed to save service settings");
       }
       setStatus({ ...status, enabledServices: updated });
     } catch (err) {

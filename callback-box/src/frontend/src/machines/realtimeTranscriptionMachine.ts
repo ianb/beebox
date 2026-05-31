@@ -43,6 +43,17 @@ import { encodePcmChunksAsWav } from "../lib/wav-encode";
 
 export type TranscriptionState = "idle" | "connecting" | "recording" | "finalizing";
 
+/**
+ * A machine action was reached by an event it wasn't wired for (a config bug).
+ * The detail names the action and the offending event.
+ */
+class MachineActionError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "MachineActionError";
+  }
+}
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -496,7 +507,8 @@ export const realtimeTranscriptionMachine = setup({
   actions: {
     applyTextUpdate: assign(({ event }) => {
       if (event.type !== "TEXT_UPDATE") {
-        throw new Error(`applyTextUpdate: unexpected event type "${event.type}"`);
+        const message = `applyTextUpdate: unexpected event type "${event.type}"`;
+        throw new MachineActionError(message);
       }
       return { finalTranscript: event.finalText, interimTranscript: event.interimText };
     }),
@@ -506,7 +518,8 @@ export const realtimeTranscriptionMachine = setup({
       // share a `message: string` field. Narrow by checking the field
       // directly so the shared parent shape stays type-safe.
       if (!("message" in event) || typeof event.message !== "string") {
-        throw new Error(`setError: event "${event.type}" has no message field`);
+        const message = `setError: event "${event.type}" has no message field`;
+        throw new MachineActionError(message);
       }
       return { error: event.message };
     }),
@@ -514,7 +527,8 @@ export const realtimeTranscriptionMachine = setup({
       if (event.type !== "TRANSCRIPTION_DONE") {
         // Wired only to the TRANSCRIPTION_DONE transition; anything else is
         // a configuration bug — surface it loudly rather than silently no-op.
-        throw new Error(`setFinalTranscript: unexpected event type "${event.type}"`);
+        const message = `setFinalTranscript: unexpected event type "${event.type}"`;
+        throw new MachineActionError(message);
       }
       const final = event.text && event.text.length > 0 ? event.text : context.finalTranscript;
       return {

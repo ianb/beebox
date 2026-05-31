@@ -9,6 +9,7 @@
 
 import { setup, assign, fromPromise, fromCallback } from "xstate";
 import { withBase } from "../api";
+import { RequestError } from "../lib/errors";
 
 interface ClaudeStatus {
   loggedIn?: boolean;
@@ -35,7 +36,10 @@ type ClaudeAuthEvent =
 
 const fetchStatus = fromPromise(async () => {
   const resp = await fetch(withBase("/api/admin/claude-status"));
-  if (!resp.ok) throw new Error(`Status check failed: ${resp.status}`);
+  if (!resp.ok) {
+    const message = `Status check failed: ${resp.status}`;
+    throw new RequestError(message);
+  }
   return (await resp.json()) as ClaudeStatus;
 });
 
@@ -43,11 +47,11 @@ const startLogin = fromPromise(async () => {
   const resp = await fetch(withBase("/api/admin/claude-login"), { method: "POST" });
   if (!resp.ok) {
     const data = await resp.json().catch(() => ({ error: resp.statusText }));
-    throw new Error(data.error || "Login failed");
+    throw new RequestError(data.error || "Login failed");
   }
   const result = (await resp.json()) as { authUrl?: string; error?: string };
   if (!result.authUrl) {
-    throw new Error(result.error || "No auth URL received");
+    throw new RequestError(result.error || "No auth URL received");
   }
   return result.authUrl;
 });
@@ -56,11 +60,14 @@ const doLogout = fromPromise(async () => {
   const resp = await fetch(withBase("/api/admin/claude-logout"), { method: "POST" });
   const data = await resp.json();
   if (!data.success) {
-    throw new Error(data.error || "Logout failed");
+    throw new RequestError(data.error || "Logout failed");
   }
   // Fetch fresh status after logout
   const statusResp = await fetch(withBase("/api/admin/claude-status"));
-  if (!statusResp.ok) throw new Error(`Status check failed: ${statusResp.status}`);
+  if (!statusResp.ok) {
+    const message = `Status check failed: ${statusResp.status}`;
+    throw new RequestError(message);
+  }
   return (await statusResp.json()) as ClaudeStatus;
 });
 

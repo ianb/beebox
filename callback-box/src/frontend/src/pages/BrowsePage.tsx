@@ -19,6 +19,7 @@ import { Row } from "../components/ui/Row";
 import { Column } from "../components/ui/Column";
 import { Text } from "../components/ui/Text";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { RequestError } from "../lib/errors";
 
 /**
  * Strip a trailing extension and convert underscores to spaces.
@@ -165,7 +166,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(payload?.error || `Delete failed (${response.status})`);
+        throw new RequestError(payload?.error || `Delete failed (${response.status})`);
       }
       await utils.status.browse.invalidate({ path: dirPath });
       if (selectedFilePath === path) {

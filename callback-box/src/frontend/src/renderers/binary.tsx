@@ -11,6 +11,7 @@ import { registerFileRenderer, type RendererProps } from "./index";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { ExternalLink } from "../components/ui/ExternalLink";
+import { RequestError } from "../lib/errors";
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -33,7 +34,10 @@ function BinaryRenderer({ data }: RendererProps) {
     queryKey: ["file-meta", data.path],
     queryFn: async () => {
       const resp = await fetch(url, { method: "HEAD" });
-      if (!resp.ok) throw new Error(`HEAD ${data.path}: ${resp.status}`);
+      if (!resp.ok) {
+        const message = `HEAD ${data.path}: ${resp.status}`;
+        throw new RequestError(message);
+      }
       return {
         size: Number(resp.headers.get("content-length") ?? "0"),
         contentType: resp.headers.get("content-type") ?? "application/octet-stream",

@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { withBase } from "../api";
+import { RequestError } from "../lib/errors";
 import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { TextareaField } from "../components/ui/fields";
@@ -144,7 +145,7 @@ export function SharePage() {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: response.statusText }));
-        throw new Error(err.error || "Save failed");
+        throw new RequestError(err.error || "Save failed");
       }
 
       const reader = response.body?.getReader();
@@ -169,7 +170,8 @@ export function SharePage() {
           }
         }
         if (!success) {
-          throw new Error("Command did not report success");
+          const message = "Command did not report success";
+          throw new RequestError(message);
         }
       }
 

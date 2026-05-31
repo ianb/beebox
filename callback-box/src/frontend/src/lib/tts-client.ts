@@ -17,6 +17,23 @@ import { playAudioBlob, playAudioStream, supportsMediaSource } from "./audio-con
 import { getAudioCache, cacheKey } from "./audio-cache";
 import { logSpeechEvent } from "./speech-test-log";
 import { isTTSVoice, type TTSVoice } from "./speech-parsing";
+import { RequestError } from "./errors";
+
+/** Thrown when playback is stopped before/while a queued utterance plays. */
+class PlaybackStoppedError extends Error {
+  constructor() {
+    super("Playback stopped");
+    this.name = "PlaybackStoppedError";
+  }
+}
+
+/** Wraps a non-Error value thrown during playback so callers always get an Error. */
+class PlaybackError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "PlaybackError";
+  }
+}
 
 const DEFAULT_VOICE: TTSVoice = "marin";
 const DEFAULT_INSTRUCTIONS = "Fast and concise, but with a friendly lilting tone.";
@@ -160,7 +177,7 @@ class TTSClient {
     const pending = this.queue.splice(0);
     for (const item of pending) {
       item.options?.prefetch?.abort();
-      item.reject(new Error("Playback stopped"));
+      item.reject(new PlaybackStoppedError());
     }
     this.setPlaying(false);
   }
@@ -208,7 +225,7 @@ class TTSClient {
       item.resolve();
     } catch (error) {
       console.error("[TTS] Playback error:", error);
-      item.reject(error instanceof Error ? error : new Error(String(error)));
+      item.reject(error instanceof Error ? error : new PlaybackError(String(error)));
     } finally {
       this.setPlaying(false);
       this.processQueue();
@@ -274,12 +291,16 @@ class TTSClient {
     });
     if (!response.ok) {
       const err = await response.text();
-      throw new Error(`TTS API error ${response.status}: ${err}`);
+      const message = `TTS API error ${response.status}: ${err}`;
+      throw new RequestError(message);
     }
     this.currentAbort = null;
 
     const body = response.body;
-    if (!body) throw new Error("Empty response body");
+    if (!body) {
+      const message = "Empty response body";
+      throw new RequestError(message);
+    }
 
     const { stop, finished, buffer } = playAudioStream(body, { label });
     this.currentStop = stop;
@@ -331,7 +352,8 @@ class TTSClient {
 
     if (!response.ok) {
       const err = await response.text();
-      throw new Error(`TTS API error ${response.status}: ${err}`);
+      const message = `TTS API error ${response.status}: ${err}`;
+      throw new RequestError(message);
     }
 
     const buffer = await this.readStreamToBuffer(response);
@@ -342,7 +364,10 @@ class TTSClient {
 
   private async readStreamToBuffer(response: Response): Promise<ArrayBuffer> {
     const reader = response.body?.getReader();
-    if (!reader) throw new Error("Empty response body");
+    if (!reader) {
+      const message = "Empty response body";
+      throw new RequestError(message);
+    }
 
     const chunks: Uint8Array[] = [];
     let totalLength = 0;

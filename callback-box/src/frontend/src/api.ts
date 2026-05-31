@@ -9,6 +9,16 @@
  * - Legacy type exports still referenced by components
  */
 
+import { RequestError } from "./lib/errors";
+
+/** A streaming response arrived without a readable body. */
+class NoResponseBodyError extends Error {
+  constructor() {
+    super("No response body");
+    this.name = "NoResponseBodyError";
+  }
+}
+
 /**
  * Pure helper exported for testability: combine a base URL prefix and a
  * path. Kept separate from `withBase()` so the join logic can be unit-
@@ -182,7 +192,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || error.message || "Request failed");
+    throw new RequestError(error.error || error.message || "Request failed");
   }
 
   return response.json();
@@ -203,7 +213,7 @@ export async function createVoiceMemo(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || error.message || "Request failed");
+    throw new RequestError(error.error || error.message || "Request failed");
   }
 
   return response.json();
@@ -226,7 +236,7 @@ export async function uploadFile(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || error.message || "Upload failed");
+    throw new RequestError(error.error || error.message || "Upload failed");
   }
 
   return response.json();
@@ -257,14 +267,12 @@ export async function executeCommand(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || "Command execution failed");
+    throw new RequestError(error.error || "Command execution failed");
   }
 
   // Parse SSE stream
   const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error("No response body");
-  }
+  if (!reader) throw new NoResponseBodyError();
 
   const decoder = new TextDecoder();
   let result: CommandResult = { success: false, error: "No result received" };
@@ -447,7 +455,7 @@ export async function sendChatMessage(params: {
       const error = await response
         .json()
         .catch(() => ({ error: response.statusText }));
-      throw new Error(error.error || "Chat send failed");
+      throw new RequestError(error.error || "Chat send failed");
     }
 
     return response;
@@ -464,12 +472,12 @@ export async function sendChatMessage(params: {
       await new Promise((r) => setTimeout(r, 2000));
       response = await attempt(true);
     } else {
-      throw err instanceof Error ? err : new Error(String(err));
+      throw err instanceof Error ? err : new RequestError(String(err));
     }
   }
 
   const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body");
+  if (!reader) throw new NoResponseBodyError();
 
   const decoder = new TextDecoder();
   let buffer = "";
