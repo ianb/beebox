@@ -56,7 +56,7 @@ export function makeQuoteComponents(linkCtx: QuoteLinkContext): {
 } {
   function QuoteInline({ from, children }: { from?: string; children?: ReactNode }) {
     return (
-      <span className="text-info-dark italic font-serif font-medium" data-from={from}>
+      <span className="text-primary-dark italic font-serif" data-from={from}>
         <span className="text-primary/60 not-italic font-sans">{"“"}</span>
         {children}
         <span className="text-primary/60 not-italic font-sans">{"”"}</span>
@@ -76,7 +76,7 @@ export function makeQuoteComponents(linkCtx: QuoteLinkContext): {
         className="my-3 border-l-4 border-primary/40 bg-primary/5 pl-4 pr-3 py-2 rounded-r"
         data-from={from}
       >
-        <blockquote className="text-info-dark italic font-serif font-medium [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
+        <blockquote className="text-primary-dark italic font-serif [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
           {children}
         </blockquote>
         {from !== undefined && from !== "" ? (
