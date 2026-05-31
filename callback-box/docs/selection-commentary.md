@@ -26,8 +26,14 @@
 > - **Voice positional anchoring was added** beyond the plan. The plan had
 >   voice selections *append* after the spoken body; in practice they now
 >   anchor to the transcript phrase spoken at grab-time and insert at that
->   point (word-level, case/punctuation-insensitive, falling back to append).
->   See `applySelections`' anchor handling.
+>   point (word-level, case/punctuation-insensitive). When the HQ pass rewords
+>   the anchor phrase enough that it no longer matches, the selection falls back
+>   to an **estimated** placement — dropped at its rough time-proportional spot
+>   (from `spokenWords`/total body words) and tagged
+>   `placement="estimated, ~N% through the message"` — so lost selections stay
+>   in spoken order instead of piling up at the end. Only a selection with no
+>   anchor *and* no timing appends. See `applySelections` and the
+>   `SelectionItem.spokenWords` field.
 > - **The DOM-doctest harness subplan was deferred, not built.** Per the
 >   "test what we can" decision, the pure logic is doctested, `extractSelection`
 >   was validated against the live DOM via `bin/browse`, and the irreducibly-

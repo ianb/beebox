@@ -21,9 +21,10 @@ export function useChatSelections(opts: {
   const [selections, setSelections] = useState<SelectionItem[]>([]);
   const nextSelectionIdRef = useRef(1);
 
-  const addSelection = useCallback((selection: AddSelectionInput, anchor: string | null) => {
+  const addSelection = useCallback((selection: AddSelectionInput, voice: { anchor: string | null; spokenWords: number | null }) => {
+    const { anchor, spokenWords } = voice;
     const id = nextSelectionIdRef.current++;
-    setSelections((prev) => [...prev, { id, ref: selection.ref, text: selection.text, position: selection.position, anchor }]);
+    setSelections((prev) => [...prev, { id, ref: selection.ref, text: selection.text, position: selection.position, anchor, spokenWords }]);
     // Voice selections carry a transcript `anchor` (non-null) and are placed
     // by that phrase in applySelections — no textarea token (the textarea is
     // read-only during transcription and shows the transcript, not `input`).

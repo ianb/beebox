@@ -50,6 +50,7 @@ export function selectionsSection(): string[] {
     "- The wrapped text is **what the user saw** — the rendered text, verbatim. Treat it as a quote; don't re-derive it.",
     "- `ref` is the source document (box-relative path). Use it if you need the exact source markup or surrounding context.",
     "- `position` is a **rough** locator (section, nearest heading + its `#id`, paragraph, approximate line) — a hint for finding the original, not an exact offset. Clauses are omitted when not determinable.",
+    "- A `placement=\"estimated, ~N% through the message\"` attribute means the selection's *spot in this message* is approximate: the user grabbed it mid-speech but the phrase it anchored to was reworded by transcription, so it was positioned by rough timing (N% of the way through). The `position`/`ref` still point at the real source; only its order within the message is a guess.",
     "- It may appear **inline** inside `<typed>` (the user typed around it) or **appended after** a `<speech>` body (the user spoke and attached it separately). Treat both the same.",
     "",
   ];

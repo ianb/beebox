@@ -9,7 +9,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import { VirtualizedMessageList } from "./InteractiveChat-messages";
-import { lastWords } from "../../lib/selection-serialize";
+import { lastWords, countWords } from "../../lib/selection-serialize";
 import type { AddSelectionInput } from "../../lib/selection-position";
 import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
@@ -229,8 +229,14 @@ export function InteractiveChatBody(props: ChatBodyProps) {
     transcribingRef.current = voice.isTranscribing;
   });
   const handleAddSelection = useCallback((selection: AddSelectionInput) => {
-    const anchor = transcribingRef.current ? lastWords(transcriptRef.current, 8) : null;
-    addSelection(selection, anchor);
+    if (!transcribingRef.current) {
+      addSelection(selection, { anchor: null, spokenWords: null });
+      return;
+    }
+    // Voice grab: capture the anchor phrase and how far into the utterance we
+    // are (word count ≈ time), so a lost anchor still places by rough timing.
+    const transcript = transcriptRef.current;
+    addSelection(selection, { anchor: lastWords(transcript, 8), spokenWords: countWords(transcript) });
   }, [addSelection]);
   return (
     <ChatView

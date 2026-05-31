@@ -30,6 +30,7 @@ function decodeXml(value: string): string {
 
 const REF_ATTR_RE = /\bref="([^"]*)"/i;
 const POSITION_ATTR_RE = /\bposition="([^"]*)"/i;
+const PLACEMENT_ATTR_RE = /\bplacement="([^"]*)"/i;
 
 function readAttr(attrs: string, re: RegExp): string {
   const match = re.exec(attrs);
@@ -48,9 +49,10 @@ function snippet(value: string, max: number): string {
 }
 
 /** Pill shown in a sent user message for an attached document selection. */
-function MessageSelectionPill({ text, sourceRef, position }: { text: string; sourceRef: string; position: string }) {
+function MessageSelectionPill({ text, sourceRef, position, placement }: { text: string; sourceRef: string; position: string; placement: string }) {
   const titleParts = [`"${text}"`, docBasename(sourceRef)];
   if (position !== "") titleParts.push(position);
+  if (placement !== "") titleParts.push(placement);
   return (
     <span
       className="inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium align-baseline"
@@ -67,7 +69,7 @@ function MessageSelectionPill({ text, sourceRef, position }: { text: string; sou
 type MessagePart =
   | { type: "text"; value: string }
   | { type: "send"; phrase: string }
-  | { type: "selection"; text: string; sourceRef: string; position: string };
+  | { type: "selection"; text: string; sourceRef: string; position: string; placement: string };
 
 export function UserMessageText({ text }: { text: string }) {
   const stripped = stripUserDisplayTags(text);
@@ -91,6 +93,7 @@ export function UserMessageText({ text }: { text: string }) {
         text: decodeXml(match[3] ?? ""),
         sourceRef: readAttr(attrs, REF_ATTR_RE),
         position: readAttr(attrs, POSITION_ATTR_RE),
+        placement: readAttr(attrs, PLACEMENT_ATTR_RE),
       });
     }
     lastIndex = match.index + match[0].length;
@@ -111,7 +114,7 @@ export function UserMessageText({ text }: { text: string }) {
           return <span key={i}>{p.value}</span>;
         }
         if (p.type === "selection") {
-          return <MessageSelectionPill key={i} text={p.text} sourceRef={p.sourceRef} position={p.position} />;
+          return <MessageSelectionPill key={i} text={p.text} sourceRef={p.sourceRef} position={p.position} placement={p.placement} />;
         }
         return (
           <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium">
