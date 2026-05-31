@@ -25,6 +25,7 @@ import {
 import {
   externalToolsSection,
   chatAttachmentsSection,
+  selectionsSection,
   viewsSection,
 } from "./chat.js";
 import {
@@ -72,6 +73,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...tricksSection(),
     ...externalToolsSection(),
     ...chatAttachmentsSection(),
+    ...selectionsSection(),
     ...viewsSection(),
     ...cardTypesSection(allSchemas),
     ...creatingCardsSection(),

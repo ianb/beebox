@@ -908,6 +908,29 @@ tests:
       Failure: using just <instructions> (which adds and would leave a
       warm-and-urgent mashup), or inventing a different attribute.
 
+  # === Chat Input: document selections ===
+
+  - id: chat-user-selection-tag
+    prompt: >
+      A chat message contains:
+      <user-selection ref="/store/notes/Bread.doc.card" position="body; heading: Proofing the dough (#proofing-the-dough); paragraph 2; ~line 42">let it rise until doubled in size</user-selection>
+      What is this, and how should you treat the wrapped text and the position attribute?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Recognizes it as text the user selected from a document they were
+      viewing. Treats the wrapped text as a verbatim quote (what the user saw),
+      and position as a rough locator (heading/paragraph/line) for finding the
+      original — not an exact offset.
+    correct_contains_any: ["selected", "selection", "highlighted"]
+    tags: [chat, input-format]
+    notes: >
+      The Selections section of the chat agent guide explains this tag. Failure
+      modes: treating position as an exact offset, ignoring the ref and
+      re-deriving the quote, or not recognizing it as user-attached document
+      text. The text IS the quote; ref + position locate the source if the
+      exact markup is needed.
+
   # === Chat Structured-Output Tags (chat-app, ack, callout) ===
   #
   # Verify the chat-mode agent has direct knowledge of the structured

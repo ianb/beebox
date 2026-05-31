@@ -37,6 +37,24 @@ export function chatAttachmentsSection(): string[] {
   ];
 }
 
+export function selectionsSection(): string[] {
+  return [
+    "## Selections",
+    "",
+    "The user can select text in a document they have open and attach it to a message. It arrives as a `<user-selection>` element:",
+    "",
+    "```",
+    "<user-selection ref=\"/store/notes/Bread.doc.card\" position=\"body; heading: Proofing the dough (#proofing-the-dough); paragraph 2; ~line 42\">let it rise until doubled in size</user-selection>",
+    "```",
+    "",
+    "- The wrapped text is **what the user saw** — the rendered text, verbatim. Treat it as a quote; don't re-derive it.",
+    "- `ref` is the source document (box-relative path). Use it if you need the exact source markup or surrounding context.",
+    "- `position` is a **rough** locator (section, nearest heading + its `#id`, paragraph, approximate line) — a hint for finding the original, not an exact offset. Clauses are omitted when not determinable.",
+    "- It may appear **inline** inside `<typed>` (the user typed around it) or **appended after** a `<speech>` body (the user spoke and attached it separately). Treat both the same.",
+    "",
+  ];
+}
+
 export function viewsSection(): string[] {
   return [
     "## Views",
