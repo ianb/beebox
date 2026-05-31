@@ -24,8 +24,16 @@ export function useChatSelections(opts: {
   const addSelection = useCallback((selection: AddSelectionInput) => {
     const id = nextSelectionIdRef.current++;
     setSelections((prev) => [...prev, { id, ref: selection.ref, text: selection.text, position: selection.position }]);
-    // Capture comes from the document pane, not the textarea — always focus
-    // the composer so the user can keep typing after the inserted token.
+    // During live transcription the textarea is read-only and shows the
+    // transcript, not `input` — inserting a [selectionN] token would write
+    // into the hidden `input` and orphan it there. Skip the token in that
+    // case; the spoken message appends the selection (applySelections) and
+    // the pill is the on-screen feedback. When typing, insert inline and
+    // focus the composer so the user can keep typing after the token.
+    const ta = textareaRef.current;
+    if (ta !== null && ta.readOnly) {
+      return;
+    }
     insertTokensAtCursor(`[selection${id}]`, { input, setInput, textareaRef, alwaysFocus: true });
   }, [input, setInput, textareaRef]);
 
