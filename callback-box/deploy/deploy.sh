@@ -83,16 +83,18 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     echo "  Removing stale /opt/personal-vibe-check (superseded by /opt/callback/personal-vibe-check)..."
     rm -rf /opt/personal-vibe-check
   fi
+  # Always reconcile node_modules to the synced lockfile. The previous guard
+  # (`! pnpm ls --depth 0`) exited 0 even when package.json declared deps that
+  # weren't installed, so a newly-added dependency was silently skipped on
+  # deploy — which crash-looped the server on a missing @markdoc/markdoc until
+  # someone ran pnpm install by hand. `pnpm install` is idempotent and fast
+  # (~2-3s) when already in sync, so just run it unconditionally.
   cd /opt/callback/personal-vibe-check
-  if [[ ! -d node_modules ]] || ! pnpm ls --depth 0 &>/dev/null 2>&1; then
-    echo "  Installing personal-vibe-check deps..."
-    pnpm install
-  fi
+  echo "  Reconciling personal-vibe-check deps..."
+  pnpm install
   cd /opt/callback/callback-box
-  if [[ ! -d node_modules ]] || ! pnpm ls --depth 0 &>/dev/null 2>&1; then
-    echo "  Installing callback-box deps..."
-    pnpm install
-  fi
+  echo "  Reconciling callback-box deps..."
+  pnpm install
 REMOTE
 
 # Write deploy info (git hashes + timestamp).
