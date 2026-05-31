@@ -75,8 +75,12 @@ export function SelectionCapture({ onCapture, children }: SelectionCaptureProps)
           type="button"
           aria-label="Add selection to message"
           title="Add selection to message"
-          // Keep the selection alive — a plain click would collapse it before onClick.
-          onMouseDown={(e) => e.preventDefault()}
+          // preventDefault keeps the selection alive (a plain click collapses
+          // it); stopPropagation keeps this mousedown from reaching the
+          // container's onMouseDown, which would dismiss the button before the
+          // click fires. Same for mouseup vs the container's refresh.
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onMouseUp={(e) => e.stopPropagation()}
           onClick={handleClick}
           className="flex items-center justify-center w-7 h-7 rounded-full bg-accent text-white shadow-md hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-accent z-50"
           style={{ position: "fixed", left: button.left + 6, top: button.top - 6 }}
