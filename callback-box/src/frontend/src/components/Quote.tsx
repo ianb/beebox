@@ -56,12 +56,12 @@ export function makeQuoteComponents(linkCtx: QuoteLinkContext): {
 } {
   function QuoteInline({ from, children }: { from?: string; children?: ReactNode }) {
     return (
-      <span className="text-warm-800 italic" data-from={from}>
-        <span className="text-warm-500 not-italic">{"“"}</span>
+      <span className="text-primary-dark italic font-serif" data-from={from}>
+        <span className="text-primary/60 not-italic font-sans">{"“"}</span>
         {children}
-        <span className="text-warm-500 not-italic">{"”"}</span>
+        <span className="text-primary/60 not-italic font-sans">{"”"}</span>
         {from !== undefined && from !== "" ? (
-          <span className="not-italic text-warm-500 text-xs ml-1">
+          <span className="not-italic font-sans text-warm-500 text-xs ml-1">
             {" — "}
             <Attribution from={from} linkCtx={linkCtx} />
           </span>
@@ -73,14 +73,14 @@ export function makeQuoteComponents(linkCtx: QuoteLinkContext): {
   function QuoteBlock({ from, children }: { from?: string; children?: ReactNode }) {
     return (
       <figure
-        className="my-3 border-l-4 border-warm-400 bg-warm-50 pl-4 pr-3 py-2 rounded-r"
+        className="my-3 border-l-4 border-primary/40 bg-primary/5 pl-4 pr-3 py-2 rounded-r"
         data-from={from}
       >
-        <blockquote className="text-warm-800 italic [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
+        <blockquote className="text-primary-dark italic font-serif [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
           {children}
         </blockquote>
         {from !== undefined && from !== "" ? (
-          <figcaption className="text-xs text-warm-600 mt-1 not-italic">
+          <figcaption className="text-xs font-sans text-warm-600 mt-1 not-italic">
             {"— "}
             <Attribution from={from} linkCtx={linkCtx} />
           </figcaption>
