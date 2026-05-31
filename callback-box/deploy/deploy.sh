@@ -39,6 +39,18 @@ if [[ "$SKIP_FRONTEND" != true ]]; then
   cd "$REPO_DIR/src/frontend" && pnpm --silent build
 fi
 
+# Build cardworks locally before syncing. The server consumes it through a
+# node_modules symlink to /opt/callback/cardworks and the remote deploy step
+# only runs `pnpm install` when node_modules is missing — it never rebuilds
+# cardworks. So the dist/ we rsync must already match the source we rsync.
+# cardworks/dist is gitignored, so rsync ships whatever build is on disk here;
+# a stale one once shipped an old API surface that crashed `cb validate` and
+# hung chat. Always rebuild so source and dist stay in lockstep on the server.
+if [[ -d "$MONO_DIR/cardworks" ]]; then
+  echo "Building cardworks..."
+  cd "$MONO_DIR/cardworks" && pnpm --silent build
+fi
+
 # Sync monorepo packages. personal-vibe-check is a file: dep of callback-box
 # and cardworks, so it must be present alongside them on the server. It used
 # to live outside the monorepo at ~/src/personal-vibe-check (special-cased
