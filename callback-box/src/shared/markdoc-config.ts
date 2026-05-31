@@ -49,7 +49,75 @@
  * time, which is what `cb validate` calls into.
  */
 
-import { Tag, nodes as baseNodes, type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
+import Markdoc from "@markdoc/markdoc";
+import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
+
+// Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
+// module under Node's ESM loader (used by the doctest runner); the frontend
+// bundler tolerates them but the backend/test path does not. Destructure off
+// the default import instead — same pattern, and same lint exception, as
+// `body-refs.ts` / `markdoc-emit.ts`.
+// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
+const { Tag, nodes: baseNodes } = Markdoc;
+
+/**
+ * Slug for a heading's `id` anchor: lowercase, runs of non-alphanumerics
+ * collapsed to a single `-`, leading/trailing `-` trimmed. Empty input (a
+ * heading with no word characters — e.g. just an emoji) yields `""`; the
+ * caller substitutes a fallback.
+ */
+function slugifyHeading(text: string): string {
+  return text.toLowerCase().replace(/[^\da-z]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+/** Concatenated plain text of a heading node's inline children (text + inline code). */
+function headingText(node: Node): string {
+  let out = "";
+  for (const child of node.walk()) {
+    if (child.type !== "text" && child.type !== "code") continue;
+    const content: unknown = child.attributes["content"];
+    if (typeof content === "string") out += content;
+  }
+  return out;
+}
+
+/**
+ * Heading node with a stable `id` anchor (slug of the heading text) and a
+ * `data-line` carrying the 1-indexed source line from `node.lines`. The id
+ * gives rendered Markdown headings anchors (none by default) and is the most
+ * stable signal the selection-commentary position locator anchors to.
+ *
+ * Returns a fresh schema per call so the duplicate-slug `seen` set is scoped
+ * to a single transform pass — call it once per render config, not once
+ * globally. Lives here (shared, pure) so it's testable via Markdoc's own
+ * `renderers.html`; the React render config (`Markdown.tsx`) installs it.
+ */
+export function makeHeadingNode(): Schema {
+  const seen = new Set<string>();
+  return {
+    children: ["inline"],
+    attributes: { level: { type: Number, required: true, render: false } },
+    transform(node, config) {
+      const level = node.attributes["level"];
+      const base = slugifyHeading(headingText(node));
+      const slug = base === "" ? "section" : base;
+      let id = slug;
+      let n = 1;
+      while (seen.has(id)) {
+        id = `${slug}-${n}`;
+        n += 1;
+      }
+      seen.add(id);
+      const lines = node.lines;
+      const startLine = Array.isArray(lines) && typeof lines[0] === "number" ? lines[0] : null;
+      const children = node.transformChildren(config);
+      if (startLine === null) {
+        return new Tag(`h${level}`, { id }, children);
+      }
+      return new Tag(`h${level}`, { id, "data-line": String(startLine + 1) }, children);
+    },
+  };
+}
 
 const quote: Schema = {
   attributes: {

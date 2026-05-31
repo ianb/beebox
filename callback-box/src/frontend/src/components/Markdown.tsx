@@ -24,8 +24,8 @@
 import { Fragment, useMemo } from "react";
 import * as React from "react";
 import { useParams } from "@tanstack/react-router";
-import { parse, transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
-import { markdocConfig } from "@shared/markdoc-config";
+import Markdoc, { type Config, type RenderableTreeNode } from "@markdoc/markdoc";
+import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";
@@ -42,6 +42,13 @@ import {
 } from "../lib/view-url";
 import { withBase } from "../api";
 import type { ReactNode } from "react";
+
+// Value named imports (`{ parse, … }`) don't resolve from this CommonJS module
+// under Node's ESM loader (used by `cb render` SSR); Vite tolerates them but the
+// SSR path does not. Destructure off the default import — same pattern and lint
+// exception as `markdoc-config.ts` / `body-refs.ts`.
+// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM SSR; default-member access is the runtime-correct form for this CJS module
+const { parse, transform, renderers } = Markdoc;
 
 interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -186,6 +193,8 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     nodes: {
       ...(markdocConfig.nodes ?? {}),
       document: { render: "Fragment" },
+      // Fresh per render config so the duplicate-slug set is scoped to this pass.
+      heading: makeHeadingNode(),
       paragraph: { render: "Para", children: ["inline"] },
       link: {
         render: "Link",
