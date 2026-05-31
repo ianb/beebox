@@ -31,7 +31,7 @@ import { createWriteStream } from "node:fs";
 import type { Socket } from "node:net";
 import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
-import httpProxy from "http-proxy";
+import httpProxy from "http-proxy-3";
 
 type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
