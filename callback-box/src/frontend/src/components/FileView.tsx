@@ -25,9 +25,8 @@ import { useState, useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
-import { getApiBase, getEventSourceBase } from "../api";
+import { getApiBase, getEventSourceBase, withBase } from "../api";
 import { useSSE, type SSEEvent } from "../hooks/useSSE";
-import { href } from "../lib/routing";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
@@ -197,7 +196,7 @@ function ChatHeader({
   onSelect: (name: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
-  const browseHref = href(`/${boxSlug}/browse/${path}`);
+  const browseHref = withBase(`/${boxSlug}/browse/${path}`);
   return (
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">

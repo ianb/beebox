@@ -13,7 +13,6 @@ import { ExternalIconLink } from "../ui/ExternalIconLink";
 import { FileView } from "../FileView";
 import { withBase } from "../../api";
 import { cn } from "../../lib/cn";
-import { href } from "../../lib/routing";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import type { AddSelectionInput } from "../../lib/selection-position";
@@ -206,7 +205,7 @@ export function CompanionViewPanel({
   const { boxSlug } = useParams({ strict: false });
   const active = tabs.find((t) => t.target.path === activePath);
   if (!active) return null;
-  const browseHref = href(`/${boxSlug}/browse/${active.target.path}`);
+  const browseHref = withBase(`/${boxSlug}/browse/${active.target.path}`);
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
       <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
