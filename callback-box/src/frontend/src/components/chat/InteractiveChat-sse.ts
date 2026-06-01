@@ -16,8 +16,19 @@ import { alarm } from "../../lib/earcons";
 import { isTTSVoice } from "../../lib/speech-parsing";
 import { href } from "../../lib/routing";
 import { applyFeaturesChange } from "./InteractiveChat-helpers";
+import { bumpFileVersion } from "../../lib/file-version";
 import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import type { ChatEvent } from "../../machines/chat-types";
+
+// An agent (or anything) wrote a box file. Stamp a fresh cache-buster for that
+// path so chat images at the same URL re-fetch instead of showing the
+// browser's in-memory copy. See lib/file-version.ts.
+function stampFileVersion(eventData: unknown): void {
+  const data = eventData as { path?: string; timestamp?: string };
+  if (data.path && data.timestamp) {
+    bumpFileVersion(data.path, data.timestamp.replace(/\D/g, ""));
+  }
+}
 
 export function useChatSse(opts: {
   sessionId: string | null;
@@ -80,6 +91,8 @@ export function useChatSse(opts: {
             timestamp: data.timestamp,
           });
         }
+      } else if (event.event === "file-change") {
+        stampFileVersion(event.data);
       } else if (event.event === "chat-features-changed") {
         applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
       } else if (event.event === "chat-session-assigned") {

@@ -10,6 +10,7 @@ import { Markdown, type MarkdownComponentOverrides } from "../Markdown";
 import { Image } from "../ui/Image";
 import { FileView } from "../FileView";
 import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
+import { useBustedImageSrc } from "../../lib/file-version";
 import { getApiBase } from "../../api";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
@@ -21,9 +22,10 @@ export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
  * Used directly for inline images and re-used by image-only paragraphs.
  */
 function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
+  const bustedSrc = useBustedImageSrc(src);
   return (
     <Image
-      src={src}
+      src={bustedSrc}
       alt={alt}
       size="chat"
       lightbox
@@ -34,9 +36,10 @@ function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
 
 function ChatImage({ src, alt }: { src: string; alt: string }) {
   const hasCaption = alt.trim() !== "";
+  const bustedSrc = useBustedImageSrc(src);
   return (
     <Image
-      src={src}
+      src={bustedSrc}
       alt={alt}
       size="chat"
       lightbox

@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Use when the human says the worktree's work is done and they want it merged back to main. Drives the full close-out flow: commit any straggling changes, pull main into the worktree, run the test suite (ALL tests must pass — no exceptions), then merge the worktree branch into main. After this completes, the SessionEnd hook will auto-clean the worktree on session exit. Triggers include "finish", "wrap this up", "ship it", "merge this back", "/finish".
+description: Use when the human says the worktree's work is done and they want it merged back to main. Drives the full close-out flow: commit any straggling changes, pull main into the worktree, run the test suite (ALL tests must pass — no exceptions), resolve any feedback item the work addressed, then merge the worktree branch into main. After this completes, the SessionEnd hook will auto-clean the worktree on session exit. Triggers include "finish", "wrap this up", "ship it", "merge this back", "/finish".
 allowed-tools: Bash, Read, Edit, Write
 ---
 
@@ -135,7 +135,30 @@ If you're unsure whether a doc is a "plan" vs. a regular reference,
 read the opening paragraph — future-tense plus aspirational verbs
 ("will", "proposes", "we should") is the giveaway.
 
-### 6. Merge the worktree branch into main
+### 6. Resolve any feedback item this work addressed
+
+If this worktree's work was kicked off to address a `cb feedback` item —
+or otherwise resolves one — mark it resolved as part of close-out, so it
+doesn't resurface in the next feedback review. Only do this when the fix
+is actually verified (tests green, behavior confirmed). If you're unsure
+whether the work fully addresses the item, **ask the human** rather than
+resolving it prematurely.
+
+The feedback-review tool lives at the monorepo root:
+
+```bash
+cd ~/src/callback-mono/feedback-review
+pnpm dlx tsx collect.ts --resolve <feedback-file-basename>.md
+```
+
+The basename is the feedback file the work came from (e.g.
+`2026-05-28T05-52-18-when-regenerating-an-image-card-by-overw.md`); the
+handoff briefing that spun up the worktree usually names it. If the script
+prompts for the source box, give the box the feedback came from.
+
+Skip this step if the work wasn't tied to a feedback item.
+
+### 7. Merge the worktree branch into main
 
 The agent is INSIDE the worktree, so use `-C` to operate on the main
 checkout:
@@ -152,7 +175,7 @@ deploy regardless of whether the merge is fast-forward or not. If git
 complains about conflicts, something's off (step 3 should have
 surfaced them) — stop and ask.
 
-### 7. Confirm and report
+### 8. Confirm and report
 
 Show the human:
 
@@ -167,7 +190,7 @@ Then say something like:
 > will be auto-cleaned by the SessionEnd hook since the branch is now
 > fully merged.
 
-### 8. (Implicit) Session exit cleanup
+### 9. (Implicit) Session exit cleanup
 
 You don't do this — the SessionEnd hook at
 `.claude/hooks/session-end.sh` runs when the human exits the session.
