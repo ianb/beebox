@@ -6,7 +6,7 @@
  * wires them into the layout regions.
  */
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import { VirtualizedMessageList } from "./InteractiveChat-messages";
 import { lastWords, countWords } from "../../lib/selection-serialize";
@@ -29,6 +29,8 @@ interface ChatBodyProps {
   model: ReturnType<typeof useChatModelFeatures>;
   mute: ReturnType<typeof useChatMute>;
   voice: ReturnType<typeof useChatVoice>;
+  /** Recovery widget for an interrupted dictation, or null when none is pending. */
+  recoveredDictation: ReactNode;
   attach: ReturnType<typeof useChatAttachments>;
   selections: ReturnType<typeof useChatSelections>;
   actions: ReturnType<typeof useChatActions>;
@@ -143,7 +145,7 @@ function MessageListRegion(props: ChatBodyProps) {
 
 function ComposerRegion(props: ChatBodyProps) {
   const {
-    model, voice, attach, selections, actions, isStreaming, input, setInput, textareaRef,
+    model, voice, recoveredDictation, attach, selections, actions, isStreaming, input, setInput, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, doSend, zoomedViewAttr, timePassedAttr,
   } = props;
   const { speechPlayback, transcription, isTranscribing, voicePaused, turnTakingRef, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
@@ -165,6 +167,7 @@ function ComposerRegion(props: ChatBodyProps) {
       setTypingMode={setTypingMode}
       setTypingLocked={setTypingLocked}
       isTranscribing={isTranscribing}
+      recoveredDictation={recoveredDictation}
       inputArea={
         <ChatInputArea
           hideMobile={typingMode}

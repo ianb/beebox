@@ -43,10 +43,11 @@ function runKeywordSend(opts: {
   setHqInFlight: React.Dispatch<React.SetStateAction<boolean>>;
   setPendingHqDraft: React.Dispatch<React.SetStateAction<string | null>>;
   doSend: (wrapped: string) => void;
+  clearDraftRef: React.MutableRefObject<() => void>;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
 }) {
-  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, zoomedViewAttr, timePassedAttr } = opts;
+  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr } = opts;
   if (!text.trim()) {
     transcription.start();
     return;
@@ -68,6 +69,9 @@ function runKeywordSend(opts: {
     const diarized = submitOpts !== undefined && submitOpts.diarized === true;
     const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
     doSend(buildSpeechMessage({ text: finalText, diarized, selections: selectionsSnapshot, attrs }));
+    // The segment is committed — drop any persisted draft so the recovery
+    // widget doesn't resurface the text we just sent.
+    clearDraftRef.current();
   };
   if (narrationEnabledRef.current && audioBlob) {
     setHqInFlight(true);
@@ -106,12 +110,13 @@ export function useChatVoice(opts: {
   narrationEnabled: boolean;
   selections: SelectionItem[];
   resetSelections: () => void;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
+  /** Drops the persisted dictation draft once a segment commits (set by the chat). */
+  clearDraftRef: React.MutableRefObject<() => void>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, setInput, doSend, zoomedViewAttr, timePassedAttr } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, doSend, zoomedViewAttr, timePassedAttr } = opts;
 
   const [voicePaused, setVoicePaused] = useState(false);
   const { speechPlayback, refs } = useSpeechDispatch({ snapshot, muted, setVoicePaused });
@@ -137,7 +142,7 @@ export function useChatVoice(opts: {
     onKeywordSend: (text, audioBlob) => runKeywordSend({
       text, audioBlob, transcription,
       refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft,
-      doSend, zoomedViewAttr, timePassedAttr,
+      doSend, clearDraftRef, zoomedViewAttr, timePassedAttr,
     }),
     onKeywordCancel: () => {
       transcription.cancel();
@@ -170,20 +175,10 @@ export function useChatVoice(opts: {
   ].some(Boolean);
   useDebouncedWakeLock(voiceModeActive);
 
-  // When transcription ends with an error, preserve partial text into the input field.
-  // Uses queueMicrotask to avoid synchronous setState within the effect body.
-  const prevTranscribingRef = useRef(false);
-  useEffect(() => {
-    const wasTranscribing = prevTranscribingRef.current;
-    prevTranscribingRef.current = isTranscribing;
-    if (wasTranscribing && !isTranscribing && transcription.error && transcription.transcript.trim()) {
-      const partial = transcription.transcript.trim();
-      console.log("[chat] Preserved partial transcript on error:", partial.slice(0, 80));
-      queueMicrotask(() => {
-        setInput((prev) => (prev ? prev + " " + partial : partial));
-      });
-    }
-  }, [isTranscribing, transcription.error, transcription.transcript, setInput]);
+  // Partial-transcript loss on an interrupted session (error, screen sleep,
+  // reload) is handled by the persisted dictation draft + recovery widget
+  // (useDictationDraft), not by autofilling the composer — the draft survives
+  // a full reload, which an in-memory composer value wouldn't.
 
   // Escape key cancels transcription
   useEffect(() => {
