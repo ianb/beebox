@@ -7,6 +7,26 @@
  * worklet to the service, and translates service callbacks + socket lifecycle
  * into machine events. Captured PCM is WAV-wrapped on done for narration's HQ
  * pass.
+ *
+ * ## Network resilience
+ *
+ * A stalled-but-not-closed transport (the classic "phone clings to a dying
+ * wifi signal" case) keeps `ws.readyState === OPEN` while no bytes actually
+ * leave the device — `ws.send()` silently piles into `ws.bufferedAmount` and
+ * neither `onerror` nor `onclose` fires until TCP eventually times out
+ * (minutes). To catch this we run a liveness watchdog: while recording, any
+ * live socket drains `bufferedAmount` to 0 between our ~300ms PCM frames, so a
+ * `bufferedAmount` that stays above 0 for longer than {@link STALL_TIMEOUT_MS}
+ * means the socket is dead. On that (or a `window 'offline'` event) we emit
+ * CONNECTION_DEGRADED and attempt a transparent reconnect: tear down the dead
+ * socket, re-open the same service, and replay the PCM captured during the gap
+ * (we already keep every frame for narration). The mic/worklet/AudioContext
+ * stay alive throughout, so capture is continuous. On success we emit
+ * CONNECTION_RESTORED; the machine bounds the whole window and finalizes on the
+ * captured audio if no attempt succeeds.
+ *
+ * The per-segment state and lifecycle live in {@link TranscriptionSession};
+ * the actor wrapper just bridges it to XState's sendBack/receive/dispose.
  */
 
 import { fromCallback } from "xstate";
@@ -20,10 +40,368 @@ import {
   startOpenAIRealtimeConnection,
   startVoxtralConnection,
 } from "./transcription-connections";
+import type { TranscriptionService } from "../../../core/transcription";
 import type { TranscriptionEvent } from "./transcription-events";
 
 interface TranscriptionActorInput {
   dummy?: never;
+}
+
+type SendBack = (event: TranscriptionEvent) => void;
+
+/** Poll interval for the liveness watchdog. */
+const WATCHDOG_INTERVAL_MS = 500;
+/**
+ * How long `ws.bufferedAmount` may stay above 0 before we judge the socket
+ * stalled. A healthy socket drains our ~300ms PCM frames near-instantly, so a
+ * few seconds of no drain is decisive. Kept comfortably above one frame's
+ * worth of jitter.
+ */
+const STALL_TIMEOUT_MS = 2500;
+/** Per-attempt cap on waiting for a fresh socket to open during reconnect. */
+const RECONNECT_ATTEMPT_TIMEOUT_MS = 2500;
+/** Pause between failed reconnect attempts. */
+const RECONNECT_RETRY_DELAY_MS = 750;
+/**
+ * Worklet PCM frames to replay *before* the detected drop, to cover the
+ * detection latency (frames the dying socket buffered-but-never-delivered in
+ * the seconds before the watchdog tripped). Frames are ~300ms each
+ * (CHUNK_DURATION_MS in pcm-processor.worklet.js), so ~10 frames ≈ 3s.
+ */
+const REPLAY_PAD_CHUNKS = 10;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+class TranscriptionSession {
+  private readonly sendBack: SendBack;
+  private connection: ConnectionHandle | null = null;
+  private audioContext: AudioContext | null = null;
+  private stream: MediaStream | null = null;
+  private workletNode: AudioWorkletNode | null = null;
+  private disposed = false;
+  private connectedFired = false;
+  private service: TranscriptionService = "voxtral";
+  private callbacks: ServiceCallbacks | null = null;
+  /** Gates live worklet→socket forwarding; false during a reconnect replay. */
+  private forwardLive = true;
+  /** True while a reconnect attempt loop is in flight. */
+  private reconnecting = false;
+  /**
+   * Text confirmed by *previous* connections this segment. Each transport
+   * emits its session's full accumulated transcript as `finalText` (replace,
+   * not append) and a reconnect opens a fresh, empty-start session — so without
+   * a prefix the first post-reconnect update would wipe everything said before
+   * the drop. Folded in on reconnect, prepended to all the new session emits.
+   */
+  private committedPrefix = "";
+  /** Most recent `finalText` from the *current* connection (sans prefix). */
+  private lastConnectionFinal = "";
+  private watchdogId: ReturnType<typeof setInterval> | null = null;
+  /** Last time `bufferedAmount` was observed at 0 (i.e. fully drained). */
+  private lastDrainedAt = 0;
+  /**
+   * PCM s16le chunks captured for this segment. Concatenated and WAV-wrapped
+   * on TRANSCRIPTION_DONE so narration mode can re-send to the HQ pass. Also
+   * the replay source for transparent reconnects.
+   */
+  private readonly audioChunks: ArrayBuffer[] = [];
+
+  constructor(sendBack: SendBack) {
+    this.sendBack = sendBack;
+  }
+
+  private takeAudioBlob(): Blob | undefined {
+    if (this.audioChunks.length === 0) return undefined;
+    const blob = encodePcmChunksAsWav(this.audioChunks);
+    this.audioChunks.length = 0;
+    return blob;
+  }
+
+  /** Prepend text confirmed by prior connections (see committedPrefix). */
+  private mergeFinal(text: string): string {
+    if (!this.committedPrefix) return text;
+    if (!text) return this.committedPrefix;
+    return `${this.committedPrefix} ${text}`;
+  }
+
+  private stopWatchdog() {
+    if (this.watchdogId !== null) {
+      clearInterval(this.watchdogId);
+      this.watchdogId = null;
+    }
+  }
+
+  private startConnection(cbs: ServiceCallbacks): Promise<ConnectionHandle> {
+    if (this.service === "deepgram") return startDeepgramConnection(cbs);
+    if (this.service === "openai-realtime") return startOpenAIRealtimeConnection(cbs);
+    // Default: voxtral (whisper has no realtime path; treat like voxtral)
+    return Promise.resolve(startVoxtralConnection(cbs));
+  }
+
+  /**
+   * Wire the socket-lifecycle handlers the actor owns (onopen/onerror/onclose).
+   * `onmessage` is set by the per-service connection helper. Used for both the
+   * initial socket and reconnected ones.
+   */
+  private attachActorHandlers(ws: WebSocket) {
+    ws.onopen = () => {
+      if (this.disposed || this.connectedFired) return;
+      this.connectedFired = true;
+      this.sendBack({ type: "WS_CONNECTED" });
+    };
+    ws.onerror = () => {
+      if (this.disposed || this.reconnecting) return;
+      console.error("[realtime-transcription] WebSocket error");
+      this.sendBack({ type: "WS_ERROR", message: "WebSocket connection error" });
+    };
+    ws.onclose = () => {
+      if (this.disposed || this.reconnecting) return;
+      // For Deepgram and OpenAI realtime, the final transcript lives on the
+      // handle — emit a TRANSCRIPTION_DONE so the machine can leave finalizing.
+      const handle = ws as WebSocket & {
+        __dgFinal?: () => string;
+        __openaiFinal?: () => string;
+      };
+      const finalFn = handle.__dgFinal ?? handle.__openaiFinal;
+      if (finalFn) {
+        const audioBlob = this.takeAudioBlob();
+        this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.mergeFinal(finalFn()), audioBlob });
+      } else {
+        this.sendBack({ type: "WS_CLOSED" });
+      }
+    };
+  }
+
+  private startWatchdog() {
+    this.stopWatchdog();
+    this.lastDrainedAt = performance.now();
+    this.watchdogId = setInterval(() => {
+      if (this.disposed || this.reconnecting || !this.connection) return;
+      const ws = this.connection.ws;
+      if (ws.readyState !== WebSocket.OPEN) return; // onclose/onerror owns real closes
+      if (ws.bufferedAmount === 0) {
+        this.lastDrainedAt = performance.now();
+        return;
+      }
+      if (performance.now() - this.lastDrainedAt > STALL_TIMEOUT_MS) {
+        this.beginReconnect();
+      }
+    }, WATCHDOG_INTERVAL_MS);
+  }
+
+  /** Resolve true once the socket opens, false on error/close/timeout. */
+  private waitForOpen(ws: WebSocket): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        resolve(true);
+        return;
+      }
+      const finish = (ok: boolean) => {
+        clearTimeout(timer);
+        ws.removeEventListener("open", onOpen);
+        ws.removeEventListener("error", onFail);
+        ws.removeEventListener("close", onFail);
+        resolve(ok);
+      };
+      const onOpen = () => finish(true);
+      const onFail = () => finish(false);
+      const timer = setTimeout(() => finish(false), RECONNECT_ATTEMPT_TIMEOUT_MS);
+      ws.addEventListener("open", onOpen);
+      ws.addEventListener("error", onFail);
+      ws.addEventListener("close", onFail);
+    });
+  }
+
+  /** Detach handlers and close a socket without firing machine events. */
+  private discardSocket(handle: ConnectionHandle | null) {
+    if (!handle) return;
+    const ws = handle.ws;
+    ws.onopen = null;
+    ws.onerror = null;
+    ws.onclose = null;
+    ws.onmessage = null;
+    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      ws.close();
+    }
+  }
+
+  private beginReconnect() {
+    if (this.reconnecting || this.disposed || !this.callbacks) return;
+    this.reconnecting = true;
+    this.forwardLive = false;
+    // Fold the dying session's text into the prefix so the fresh session's
+    // (empty-start) accumulator appends to it rather than replacing it.
+    if (this.lastConnectionFinal) {
+      this.committedPrefix = this.committedPrefix
+        ? `${this.committedPrefix} ${this.lastConnectionFinal}`
+        : this.lastConnectionFinal;
+      this.lastConnectionFinal = "";
+    }
+    this.sendBack({ type: "CONNECTION_DEGRADED" });
+    // Replay from before the drop to cover detection latency.
+    const replayFrom = Math.max(0, this.audioChunks.length - REPLAY_PAD_CHUNKS);
+    this.discardSocket(this.connection);
+    this.connection = null;
+    void this.attemptReconnect(replayFrom);
+  }
+
+  private async attemptReconnect(replayFrom: number) {
+    while (!this.disposed && this.reconnecting) {
+      let next: ConnectionHandle | null = null;
+      try {
+        if (!this.callbacks) return;
+        next = await this.startConnection(this.callbacks);
+        if (this.disposed || !this.reconnecting) {
+          this.discardSocket(next);
+          return;
+        }
+        const opened = await this.waitForOpen(next.ws);
+        if (!opened) {
+          this.discardSocket(next);
+          await delay(RECONNECT_RETRY_DELAY_MS);
+          continue;
+        }
+        // Synchronous from here: no await means no worklet message can
+        // interleave, so the replay can't race live forwarding.
+        this.connection = next;
+        this.attachActorHandlers(next.ws);
+        for (let i = replayFrom; i < this.audioChunks.length; i++) {
+          next.sendPcm(this.audioChunks[i]);
+        }
+        this.forwardLive = true;
+        this.reconnecting = false;
+        this.lastDrainedAt = performance.now();
+        this.sendBack({ type: "CONNECTION_RESTORED" });
+        return;
+      } catch (err) {
+        console.warn("[realtime-transcription] Reconnect attempt failed:", err);
+        this.discardSocket(next);
+        await delay(RECONNECT_RETRY_DELAY_MS);
+      }
+    }
+  }
+
+  /** Clean interface loss / DevTools "Offline" toggle — fast-path reconnect. */
+  private readonly onOffline = () => {
+    // The stalled-wifi case keeps navigator.onLine true, so the bufferedAmount
+    // watchdog is the real workhorse; this just reacts sooner when it can.
+    if (this.disposed || this.reconnecting || !this.connection) return;
+    this.beginReconnect();
+  };
+
+  async start() {
+    try {
+      const config = await trpcClient.transcription.config.query();
+      if (this.disposed) { this.cleanup(); return; }
+      this.service = config.service;
+
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (this.disposed) { this.cleanup(); return; }
+
+      this.audioContext = new AudioContext();
+      await this.audioContext.audioWorklet.addModule(pcmProcessorUrl);
+      if (this.disposed) { this.cleanup(); return; }
+
+      const source = this.audioContext.createMediaStreamSource(this.stream);
+      this.workletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
+      source.connect(this.workletNode);
+
+      this.callbacks = {
+        onTextUpdate: (finalText, interimText) => {
+          if (this.disposed) return;
+          this.lastConnectionFinal = finalText;
+          this.sendBack({ type: "TEXT_UPDATE", finalText: this.mergeFinal(finalText), interimText });
+        },
+        onDone: (text) => {
+          if (this.disposed) return;
+          const audioBlob = this.takeAudioBlob();
+          this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.mergeFinal(text ?? ""), audioBlob });
+        },
+        onServerError: (message) => {
+          if (this.disposed || this.reconnecting) return;
+          this.sendBack({ type: "SERVER_ERROR", message });
+        },
+      };
+
+      this.connection = await this.startConnection(this.callbacks);
+      if (this.disposed) { this.cleanup(); return; }
+
+      this.attachActorHandlers(this.connection.ws);
+      this.startWatchdog();
+      window.addEventListener("offline", this.onOffline);
+
+      this.workletNode.port.onmessage = (event) => {
+        if (event.data.type === "pcm") {
+          // Also keep a copy for the HQ pass (narration mode) and for replay on
+          // reconnect. Clone before forwarding because the worklet transfers
+          // ownership of the ArrayBuffer to the main thread.
+          this.audioChunks.push(event.data.samples.slice(0));
+          if (this.connection && this.forwardLive) this.connection.sendPcm(event.data.samples);
+        }
+      };
+    } catch (err) {
+      if (!this.disposed) {
+        const msg = err instanceof Error ? err.message : "Failed to start recording";
+        console.error("[realtime-transcription] Start error:", msg);
+        this.sendBack({ type: "SETUP_ERROR", message: msg });
+      }
+      this.cleanup();
+    }
+  }
+
+  stop() {
+    // A stop can land mid-reconnect (window expiry, or a voice keyword the
+    // user spoke during the blip) — abort the retry loop first.
+    this.reconnecting = false;
+    this.stopWatchdog();
+    this.stopCapture();
+    if (this.connection) {
+      this.connection.endStream();
+    }
+    // Finalize the segment immediately rather than waiting on the WS to send
+    // transcription.done — that often takes seconds or never arrives
+    // (FINALIZE_TIMEOUT fallback). The realtime transcript in machine context
+    // is what we have; if a better text arrives later from the WS, the machine
+    // is already in idle and the event is ignored. The audio blob is the thing
+    // we actually need for narration's HQ pass.
+    const audioBlob = this.takeAudioBlob();
+    this.sendBack({ type: "TRANSCRIPTION_DONE", audioBlob });
+  }
+
+  /** Stop the mic stream and tear down the worklet (shared by stop/cleanup). */
+  private stopCapture() {
+    if (this.stream) {
+      for (const track of this.stream.getTracks()) {
+        track.stop();
+      }
+      this.stream = null;
+    }
+    if (this.workletNode) {
+      this.workletNode.disconnect();
+      this.workletNode = null;
+    }
+  }
+
+  cleanup() {
+    this.disposed = true;
+    this.reconnecting = false;
+    this.stopWatchdog();
+    window.removeEventListener("offline", this.onOffline);
+    this.stopCapture();
+    if (this.audioContext) {
+      this.audioContext.close().catch(() => {});
+      this.audioContext = null;
+    }
+    if (this.connection) {
+      const ws = this.connection.ws;
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
+      this.connection = null;
+    }
+  }
 }
 
 export const transcriptionActor = fromCallback<
@@ -31,168 +409,16 @@ export const transcriptionActor = fromCallback<
   TranscriptionActorInput,
   TranscriptionEvent
 >(({ sendBack, receive }) => {
-  let connection: ConnectionHandle | null = null;
-  let audioContext: AudioContext | null = null;
-  let stream: MediaStream | null = null;
-  let workletNode: AudioWorkletNode | null = null;
-  let disposed = false;
-  let connectedFired = false;
-  /**
-   * PCM s16le chunks captured for this segment. Concatenated and WAV-wrapped
-   * on TRANSCRIPTION_DONE so narration mode can re-send to the HQ pass.
-   */
-  const audioChunks: ArrayBuffer[] = [];
-
-  function takeAudioBlob(): Blob | undefined {
-    if (audioChunks.length === 0) return undefined;
-    const blob = encodePcmChunksAsWav(audioChunks);
-    audioChunks.length = 0;
-    return blob;
-  }
-
-  function cleanup() {
-    disposed = true;
-    if (workletNode) {
-      workletNode.disconnect();
-      workletNode = null;
-    }
-    if (stream) {
-      for (const track of stream.getTracks()) {
-        track.stop();
-      }
-      stream = null;
-    }
-    if (audioContext) {
-      audioContext.close().catch(() => {});
-      audioContext = null;
-    }
-    if (connection) {
-      const ws = connection.ws;
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.close();
-      }
-      connection = null;
-    }
-  }
-
-  (async () => {
-    try {
-      const config = await trpcClient.transcription.config.query();
-      if (disposed) { cleanup(); return; }
-      const service = config.service;
-
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (disposed) { cleanup(); return; }
-
-      audioContext = new AudioContext();
-      await audioContext.audioWorklet.addModule(pcmProcessorUrl);
-      if (disposed) { cleanup(); return; }
-
-      const source = audioContext.createMediaStreamSource(stream);
-      workletNode = new AudioWorkletNode(audioContext, "pcm-processor");
-      source.connect(workletNode);
-
-      const callbacks: ServiceCallbacks = {
-        onTextUpdate: (finalText, interimText) => {
-          if (disposed) return;
-          sendBack({ type: "TEXT_UPDATE", finalText, interimText });
-        },
-        onDone: (text) => {
-          if (disposed) return;
-          const audioBlob = takeAudioBlob();
-          sendBack({ type: "TRANSCRIPTION_DONE", text, audioBlob });
-        },
-        onServerError: (message) => {
-          if (disposed) return;
-          sendBack({ type: "SERVER_ERROR", message });
-        },
-      };
-
-      if (service === "deepgram") {
-        connection = await startDeepgramConnection(callbacks);
-      } else if (service === "openai-realtime") {
-        connection = await startOpenAIRealtimeConnection(callbacks);
-      } else {
-        // Default: voxtral (whisper has no realtime path; treat like voxtral)
-        connection = startVoxtralConnection(callbacks);
-      }
-      if (disposed) { cleanup(); return; }
-
-      const ws = connection.ws;
-      ws.onopen = () => {
-        if (disposed || connectedFired) return;
-        connectedFired = true;
-        sendBack({ type: "WS_CONNECTED" });
-      };
-      ws.onerror = () => {
-        if (disposed) return;
-        console.error("[realtime-transcription] WebSocket error");
-        sendBack({ type: "WS_ERROR", message: "WebSocket connection error" });
-      };
-      ws.onclose = () => {
-        if (disposed) return;
-        // For Deepgram and OpenAI realtime, the final transcript lives on
-        // the handle — emit a TRANSCRIPTION_DONE so the machine can leave
-        // finalizing.
-        const handle = ws as WebSocket & {
-          __dgFinal?: () => string;
-          __openaiFinal?: () => string;
-        };
-        const finalFn = handle.__dgFinal ?? handle.__openaiFinal;
-        if (finalFn) {
-          const audioBlob = takeAudioBlob();
-          sendBack({ type: "TRANSCRIPTION_DONE", text: finalFn(), audioBlob });
-        } else {
-          sendBack({ type: "WS_CLOSED" });
-        }
-      };
-
-      workletNode.port.onmessage = (event) => {
-        if (event.data.type === "pcm") {
-          // Also keep a copy for the HQ pass (narration mode). Clone before
-          // forwarding because the worklet transfers ownership of the
-          // ArrayBuffer to the main thread.
-          audioChunks.push(event.data.samples.slice(0));
-          if (connection) connection.sendPcm(event.data.samples);
-        }
-      };
-    } catch (err) {
-      if (!disposed) {
-        const msg = err instanceof Error ? err.message : "Failed to start recording";
-        console.error("[realtime-transcription] Start error:", msg);
-        sendBack({ type: "SETUP_ERROR", message: msg });
-      }
-      cleanup();
-    }
-  })();
+  const session = new TranscriptionSession(sendBack);
+  void session.start();
 
   receive((event) => {
     if (event.type === "STOP") {
-      // Stop capturing audio; tell the service we're done.
-      if (stream) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      }
-      if (workletNode) {
-        workletNode.disconnect();
-        workletNode = null;
-      }
-      if (connection) {
-        connection.endStream();
-      }
-      // Finalize the segment immediately rather than waiting on the WS to
-      // send transcription.done — that often takes seconds or never arrives
-      // (FINALIZE_TIMEOUT fallback). The realtime transcript in machine
-      // context is what we have; if a better text arrives later from the WS,
-      // the machine is already in idle and the event is ignored. The audio
-      // blob is the thing we actually need for narration's HQ pass.
-      const audioBlob = takeAudioBlob();
-      sendBack({ type: "TRANSCRIPTION_DONE", audioBlob });
+      session.stop();
     } else if (event.type === "CANCEL") {
-      cleanup();
+      session.cleanup();
     }
   });
 
-  return cleanup;
+  return () => session.cleanup();
 });

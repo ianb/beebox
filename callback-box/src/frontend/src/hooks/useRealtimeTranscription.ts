@@ -111,11 +111,13 @@ export function useRealtimeTranscription(
   // Map machine state to TranscriptionState (nested under "active" parent)
   const state: TranscriptionState = snapshot.matches({ active: "recording" })
     ? "recording"
-    : snapshot.matches({ active: "finalizing" })
-      ? "finalizing"
-      : snapshot.matches({ active: "connecting" })
-        ? "connecting"
-        : "idle";
+    : snapshot.matches({ active: "reconnecting" })
+      ? "reconnecting"
+      : snapshot.matches({ active: "finalizing" })
+        ? "finalizing"
+        : snapshot.matches({ active: "connecting" })
+          ? "connecting"
+          : "idle";
 
   const { finalTranscript, interimTranscript, error } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);

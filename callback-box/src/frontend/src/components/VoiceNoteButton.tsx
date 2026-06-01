@@ -5,7 +5,7 @@
  * be rendered alongside by the caller using <Text size="xs" tone="muted">.
  */
 
-type VoiceNoteState = "idle" | "connecting" | "recording" | "finalizing";
+type VoiceNoteState = "idle" | "connecting" | "recording" | "reconnecting" | "finalizing";
 
 interface VoiceNoteButtonProps {
   state: VoiceNoteState;
@@ -14,7 +14,9 @@ interface VoiceNoteButtonProps {
 }
 
 export function VoiceNoteButton({ state, onToggle, disabled }: VoiceNoteButtonProps) {
-  const isRecording = state === "recording";
+  // Reconnecting is still a live recording session (mic open, capturing) — the
+  // user can stop it, so it reads as recording rather than busy.
+  const isRecording = state === "recording" || state === "reconnecting";
   const busy = state === "connecting" || state === "finalizing";
 
   const base = "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors";

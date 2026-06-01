@@ -105,6 +105,9 @@ export function SharePage() {
             {transcription.state === "connecting" ? (
               <Text size="xs" tone="muted">Connecting...</Text>
             ) : null}
+            {transcription.state === "reconnecting" ? (
+              <Text size="xs" tone="muted">Reconnecting...</Text>
+            ) : null}
             {transcription.state === "finalizing" ? (
               <Text size="xs" tone="muted">Finishing...</Text>
             ) : null}

@@ -161,6 +161,7 @@ export function useChatVoice(opts: {
   const isTranscribing =
     transcription.state === "connecting" ||
     transcription.state === "recording" ||
+    transcription.state === "reconnecting" ||
     transcription.state === "finalizing";
 
   // Screen wake lock — held for the entire voice-conversation window:

@@ -33,11 +33,11 @@
  */
 
 import { setup, assign } from "xstate";
-import { recordingStop } from "../lib/earcons";
+import { recordingStop, recordingDropped, recordingResumed } from "../lib/earcons";
 import { transcriptionActor } from "./transcription-actor";
 import type { TranscriptionEvent } from "./transcription-events";
 
-export type TranscriptionState = "idle" | "connecting" | "recording" | "finalizing";
+export type TranscriptionState = "idle" | "connecting" | "recording" | "reconnecting" | "finalizing";
 
 /**
  * A machine action was reached by an event it wasn't wired for (a config bug).
@@ -103,6 +103,19 @@ export const realtimeTranscriptionMachine = setup({
     setTimeoutWarning: assign({
       error: "Transcription timed out — partial text preserved",
     }),
+    setReconnecting: assign({
+      error: "Network interrupted — reconnecting…",
+    }),
+    clearError: assign({ error: null }),
+    setNetworkLost: assign({
+      error: "Recording stopped — network lost",
+    }),
+    playRecordingDropped: () => {
+      recordingDropped.play();
+    },
+    playRecordingResumed: () => {
+      recordingResumed.play();
+    },
     sendStopToTranscriber: ({ system }) => {
       const transcriber = system.get("transcriber");
       if (transcriber) {
@@ -117,6 +130,10 @@ export const realtimeTranscriptionMachine = setup({
     FINALIZE_TIMEOUT: 10000,
     SILENCE_TIMEOUT: 5 * 60 * 1000,
     MAX_DURATION: 15 * 60 * 1000,
+    // How long a transparent reconnect may run before we give up and end the
+    // segment. The actor retries connection attempts internally within this
+    // window; if none succeed we finalize on whatever audio/text we captured.
+    RECONNECT_WINDOW: 8000,
   },
 }).createMachine({
   id: "realtimeTranscription",
@@ -207,6 +224,60 @@ export const realtimeTranscriptionMachine = setup({
             TEXT_UPDATE: {
               target: "recording",
               reenter: true,
+              actions: "applyTextUpdate",
+            },
+            CONNECTION_DEGRADED: {
+              target: "reconnecting",
+              actions: ["playRecordingDropped", "setReconnecting"],
+            },
+            STOP: {
+              target: "finalizing",
+              actions: "sendStopToTranscriber",
+            },
+            CANCEL: {
+              target: "#realtimeTranscription.idle",
+              actions: [
+                "clearTranscript",
+                ({ system }) => {
+                  const transcriber = system.get("transcriber");
+                  if (transcriber) {
+                    transcriber.send({ type: "CANCEL" });
+                  }
+                },
+              ],
+            },
+            TRANSCRIPTION_DONE: {
+              target: "#realtimeTranscription.idle",
+              actions: "setFinalTranscript",
+            },
+          },
+        },
+        reconnecting: {
+          // Entered when the actor's liveness watchdog detects a stalled
+          // transport mid-recording. The actor is already retrying connection
+          // attempts internally; this state just bounds how long we wait and
+          // drives the audible feedback. If the window expires we finalize on
+          // whatever audio/text we captured (the local PCM blob is complete up
+          // to the drop, so narration's HQ pass still recovers the words).
+          after: {
+            RECONNECT_WINDOW: {
+              target: "finalizing",
+              actions: [
+                () => {
+                  console.warn("[realtime-transcription] Reconnect window expired — ending segment");
+                },
+                "setNetworkLost",
+                "sendStopToTranscriber",
+                "playMicOffSound",
+              ],
+            },
+          },
+          on: {
+            CONNECTION_RESTORED: {
+              target: "recording",
+              actions: ["playRecordingResumed", "clearError"],
+            },
+            TEXT_UPDATE: {
               actions: "applyTextUpdate",
             },
             STOP: {

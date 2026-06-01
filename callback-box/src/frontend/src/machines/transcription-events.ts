@@ -12,6 +12,8 @@ export type TranscriptionEvent =
   | { type: "WS_CONNECTED" }
   | { type: "WS_ERROR"; message: string }
   | { type: "WS_CLOSED" }
+  | { type: "CONNECTION_DEGRADED" }
+  | { type: "CONNECTION_RESTORED" }
   | { type: "TEXT_UPDATE"; finalText: string; interimText: string }
   | { type: "TRANSCRIPTION_DONE"; text?: string; audioBlob?: Blob }
   | { type: "SERVER_ERROR"; message: string }

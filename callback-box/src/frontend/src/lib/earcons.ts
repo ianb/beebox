@@ -50,3 +50,13 @@ export const recordingStart = new EarCon({ name: "recordingStart", filename: "re
 export const recordingStop = new EarCon({ name: "recordingStop", filename: "recording-stop.mp3", volume: 0.7 });
 // Source: https://freesound.org/people/SoapBoxRocket/sounds/846141/
 export const alarm = new EarCon({ name: "alarm", filename: "krell-alarm-7.wav", volume: 0.8 });
+// Mid-session recording feedback. recordingDropped fires the moment the
+// transport's liveness check fails (network stalled mid-recording);
+// recordingResumed fires when a transparent reconnect succeeds. The drop cue
+// is deliberately alarm-like and distinct from recordingStart so the user can
+// tell "recording broke" from "recording started" without looking. Resume
+// reuses the familiar go-live cue ("you're recording again"). These point at
+// existing assets for now; bespoke audio can be dropped in without touching
+// call sites. Coordinate the file choices with the sibling fail-to-start cue.
+export const recordingDropped = new EarCon({ name: "recordingDropped", filename: "krell-alarm-7.wav", volume: 0.7 });
+export const recordingResumed = new EarCon({ name: "recordingResumed", filename: "recording-start.mp3", volume: 0.7 });
