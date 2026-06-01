@@ -10,7 +10,7 @@
  * a session switch (or new-chat reset) cleanly remounts the machine.
  */
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { chatMachine } from "../../machines/chatMachine.js";
@@ -19,7 +19,9 @@ import { serializeViewUrl } from "../../lib/view-url";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
-import { newMessageId, formatTimePassed } from "./InteractiveChat-helpers";
+import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
+import { useDictationDraft } from "../../hooks/useDictationDraft";
+import { RecoveredDictation } from "./RecoveredDictation";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useChatTabs } from "./InteractiveChat-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
@@ -110,11 +112,47 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
   const attach = useChatAttachments({ input, setInput, textareaRef });
   const selections = useChatSelections({ input, setInput, textareaRef });
+  // Set after the draft hook below; threaded into voice so a committed segment
+  // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
+  const clearDraftRef = useRef<() => void>(() => {});
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    setInput, doSend, zoomedViewAttr, timePassedAttr,
+    clearDraftRef, doSend, zoomedViewAttr, timePassedAttr,
   });
+
+  // Persist the in-flight transcript so an interrupted session (screen sleep,
+  // tab eviction, reload) doesn't erase it. Recovery surfaces in a dedicated
+  // widget above the composer rather than autofilling the field.
+  const { recoveredDraft, clearDraft } = useDictationDraft({
+    boxSlug, sessionId,
+    transcript: voice.transcription.transcript,
+    isTranscribing: voice.isTranscribing,
+    narrationEnabled: model.narrationEnabled,
+  });
+  useEffect(() => { clearDraftRef.current = clearDraft; });
+
+  const handleRecoverSend = useCallback(() => {
+    if (!recoveredDraft) return;
+    // No audio survives a drop, so the realtime text stands in for the HQ pass
+    // (the design's documented HQ-failure fallback). Sent as a narration
+    // <speech> message; the session's narration flag re-syncs from the server.
+    const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
+    doSend(buildSpeechMessage({ text: recoveredDraft.text, diarized: false, selections: [], attrs }));
+    clearDraft();
+  }, [recoveredDraft, zoomedViewAttr, timePassedAttr, doSend, clearDraft]);
+
+  // Surface the recovery widget only when idle: hidden while the mic is open
+  // and while an HQ commit is in flight (the mic briefly idles between
+  // segments — don't flash the just-committed text as "recovered").
+  const recoveredDictation = recoveredDraft && !voice.isTranscribing && !voice.hqInFlight ? (
+    <RecoveredDictation
+      draft={recoveredDraft}
+      sessionId={sessionId}
+      onSend={handleRecoverSend}
+      onDiscard={clearDraft}
+    />
+  ) : null;
 
   useChatSse({
     sessionId, sessionInput, boxSlug, currentUser, send,
@@ -146,6 +184,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       model={model}
       mute={mute}
       voice={voice}
+      recoveredDictation={recoveredDictation}
       attach={attach}
       selections={selections}
       actions={actions}
