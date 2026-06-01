@@ -48,5 +48,7 @@ export const tick = new EarCon({ name: "tick", filename: "tick2.wav", volume: 0.
 export const stillListening = new EarCon({ name: "stillListening", filename: "book-close.wav", volume: 0.3 });
 export const recordingStart = new EarCon({ name: "recordingStart", filename: "recording-start.mp3", volume: 0.7 });
 export const recordingStop = new EarCon({ name: "recordingStop", filename: "recording-stop.mp3", volume: 0.7 });
-// Source: https://freesound.org/people/SoapBoxRocket/sounds/846141/
+// Distinct descending error cue for when recording fails to start. See SOURCES.md.
+export const recordingError = new EarCon({ name: "recordingError", filename: "recording-error.wav", volume: 0.7 });
+// Source: https://freesound.org/people/SoapBoxRocket/sounds/846141/ — see SOURCES.md
 export const alarm = new EarCon({ name: "alarm", filename: "krell-alarm-7.wav", volume: 0.8 });
