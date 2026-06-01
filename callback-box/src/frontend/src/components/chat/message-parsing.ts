@@ -6,6 +6,7 @@
 
 import type { LightboxImage } from "../ImageLightbox";
 import { parseViewUrl, resolveImageSrc } from "../../lib/view-url";
+import { bustImageSrc } from "../../lib/file-version";
 import { getApiBase } from "../../api";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 
@@ -269,7 +270,7 @@ function extractImagesFromMarkdown(
     const alt = match[1];
     const rawSrc = match[2];
     if (rawSrc) {
-      const src = resolveImageSrc(rawSrc, { boxSlug, basePath: undefined });
+      const src = bustImageSrc(resolveImageSrc(rawSrc, { boxSlug, basePath: undefined }));
       const trimmedAlt = alt.trim();
       out.push({
         src,
@@ -283,7 +284,7 @@ function extractImagesFromMarkdown(
     const target = parseViewUrl(`view:${match[2]}`);
     if (isImagePath(target.path)) {
       out.push({
-        src: `${getApiBase()}/files/${target.path}`,
+        src: bustImageSrc(`${getApiBase()}/files/${target.path}`),
         alt: label,
       });
     }

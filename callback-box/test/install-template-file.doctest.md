@@ -273,3 +273,26 @@ await pruneStaleTemplateUpdates(box);
 await fs.access(subdir).then(() => true).catch(() => false)
 => false
 ```
+
+A subdir that still holds a non-stale file is left in place — the sweep is best-effort and silent, so a non-empty directory is not an error:
+
+```
+const box = await makeBox();
+const subdir = path.join(box, "config/_template-updates/procedures");
+await fs.mkdir(subdir, { recursive: true });
+const stale = path.join(subdir, "old.procedure.card");
+await fs.writeFile(stale, "stale\n");
+await fs.writeFile(path.join(subdir, "fresh.procedure.card"), "fresh\n");
+const old = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+await fs.utimes(stale, old, old);
+
+const removed = await pruneStaleTemplateUpdates(box);
+[removed, await fs.access(subdir).then(() => true).catch(() => false)]
+=>
+[
+  [
+    "config/_template-updates/procedures/old.procedure.card"
+  ],
+  true
+]
+```
