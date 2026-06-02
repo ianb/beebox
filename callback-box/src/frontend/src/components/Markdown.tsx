@@ -30,6 +30,7 @@ import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";
 import { makeRecipeComponents } from "./RecipeTags";
+import { RedactedInline, RedactedBlock } from "./Redacted";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
@@ -256,6 +257,8 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     Subrecipe: cast(recipe.Subrecipe),
     RecipeSection: cast(recipe.RecipeSection),
     Task: cast(Task),
+    RedactedInline: cast(RedactedInline),
+    RedactedBlock: cast(RedactedBlock),
   };
   return { config, components };
 }
