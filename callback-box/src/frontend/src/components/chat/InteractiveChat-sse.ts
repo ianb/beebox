@@ -19,6 +19,7 @@ import { applyFeaturesChange } from "./InteractiveChat-helpers";
 import { bumpFileVersion } from "../../lib/file-version";
 import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import type { ChatEvent } from "../../machines/chat-types";
+import type { TaskEvent } from "./background-tasks";
 
 // An agent (or anything) wrote a box file. Stamp a fresh cache-buster for that
 // path so chat images at the same URL re-fetch instead of showing the
@@ -30,6 +31,46 @@ function stampFileVersion(eventData: unknown): void {
   }
 }
 
+/** True when an event tagged with `dataSessionId` belongs to this view's session. */
+function forSession(dataSessionId: string | null, sessionId: string | null): boolean {
+  return !(dataSessionId && sessionId && dataSessionId !== sessionId);
+}
+
+interface SecondaryEventDeps {
+  sessionId: string | null;
+  sessionInput: string;
+  send: (event: ChatEvent) => void;
+  setChatFeatures: (features: Record<string, string>) => void;
+  onTaskEvent: (task: TaskEvent) => void;
+}
+
+/**
+ * Dispatch the lower-frequency / session-lifecycle SSE events (background
+ * tasks, file changes, feature toggles, session assignment). Split out of the
+ * main dispatcher to keep each handler's branching legible.
+ */
+function handleSecondaryEvent(event: SSEEvent, deps: SecondaryEventDeps): void {
+  const { sessionId, sessionInput, send, setChatFeatures, onTaskEvent } = deps;
+  if (event.event === "chat-task") {
+    const data = event.data as { sessionId: string | null; task: TaskEvent };
+    if (forSession(data.sessionId, sessionId)) onTaskEvent(data.task);
+  } else if (event.event === "file-change") {
+    stampFileVersion(event.data);
+  } else if (event.event === "chat-features-changed") {
+    applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
+  } else if (event.event === "chat-session-assigned") {
+    const data = event.data as { sessionId: string };
+    // Lock the running machine onto the assigned id (so subsequent sends + the
+    // post-stream refresh use it). URL navigation is handled by the useEffect
+    // below, which also covers the faster in-stream `system/init` path.
+    // ChatPage stabilizes the React key across this transition so the in-flight
+    // stream survives.
+    if (sessionInput === "new" && !sessionId) {
+      send({ type: "SESSION_ASSIGNED", sessionId: data.sessionId });
+    }
+  }
+}
+
 export function useChatSse(opts: {
   sessionId: string | null;
   sessionInput: string;
@@ -38,8 +79,9 @@ export function useChatSse(opts: {
   send: (event: ChatEvent) => void;
   fetchSchedules: () => void;
   setChatFeatures: (features: Record<string, string>) => void;
+  onTaskEvent: (task: TaskEvent) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, send, fetchSchedules, setChatFeatures } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
   const navigate = useNavigate();
 
   // Handle SSE events: schedule-fired, chat-history, chat-user-message,
@@ -70,19 +112,19 @@ export function useChatSse(opts: {
         fetchSchedules();
       } else if (event.event === "chat-history") {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
-        if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
+        if (!forSession(data.sessionId, sessionId)) return;
         console.debug(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
       } else if (event.event === "chat-complete") {
         const data = event.data as { sessionId: string | null };
-        if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
+        if (!forSession(data.sessionId, sessionId)) return;
         console.debug("[chatfsm] sse-chat-complete");
         // Agent turn completed — refresh history to pick up the response.
         send({ type: "REFRESH" });
       } else if (event.event === "chat-user-message") {
         const data = event.data as { sessionId: string | null; message: string; user: { email: string; name: string } | null; timestamp: string };
-        if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
+        if (!forSession(data.sessionId, sessionId)) return;
         if (data.user && currentUser && data.user.email !== currentUser.email) {
           send({
             type: "OTHER_USER_MESSAGE",
@@ -91,22 +133,10 @@ export function useChatSse(opts: {
             timestamp: data.timestamp,
           });
         }
-      } else if (event.event === "file-change") {
-        stampFileVersion(event.data);
-      } else if (event.event === "chat-features-changed") {
-        applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
-      } else if (event.event === "chat-session-assigned") {
-        const data = event.data as { sessionId: string };
-        // Lock the running machine onto the assigned id (so subsequent
-        // sends + the post-stream refresh use it). URL navigation is handled
-        // by the useEffect below, which also covers the faster in-stream
-        // `system/init` path. ChatPage stabilizes the React key across this
-        // transition so the in-flight stream survives.
-        if (sessionInput === "new" && !sessionId) {
-          send({ type: "SESSION_ASSIGNED", sessionId: data.sessionId });
-        }
+      } else {
+        handleSecondaryEvent(event, { sessionId, sessionInput, send, setChatFeatures, onTaskEvent });
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, setChatFeatures]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, setChatFeatures, onTaskEvent]),
   });
 
   // Update the URL when the machine learns the assigned session id. Fires for

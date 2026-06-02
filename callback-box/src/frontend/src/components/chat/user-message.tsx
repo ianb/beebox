@@ -129,13 +129,33 @@ export function UserMessageText({ text }: { text: string }) {
   );
 }
 
+/**
+ * Map a settled task's status to its dot color and an optional label. The SDK's
+ * terminal statuses are `completed | failed | stopped | killed` ("error" is
+ * never emitted); anything non-success gets the danger color and a short label
+ * so a failed background task is visually distinct from a successful one.
+ */
+function taskStatusStyle(status: string): { color: string; label: string | null } {
+  switch (status) {
+    case "completed":
+      return { color: "text-success", label: null };
+    case "failed":
+    case "stopped":
+    case "killed":
+      return { color: "text-danger-dark", label: status };
+    case "running":
+    case "pending":
+      return { color: "text-info", label: status };
+    default:
+      return { color: "text-warm-600", label: null };
+  }
+}
+
 function TaskNotificationMessage({ notification }: { notification: TaskNotification }) {
   const [expanded, setExpanded] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [loadingOutput, setLoadingOutput] = useState(false);
-  const statusColor = notification.status === "completed"
-    ? "text-success"
-    : notification.status === "error" ? "text-danger-dark" : "text-warm-600";
+  const { color: statusColor, label: statusLabel } = taskStatusStyle(notification.status);
 
   const handleExpand = () => {
     const next = !expanded;
@@ -166,6 +186,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
           className="text-xs text-warm-500 hover:text-warm-700 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
         >
           <span className={statusColor}>&#x25CF;</span>
+          {statusLabel ? <span className={`font-medium ${statusColor}`}>{statusLabel}:</span> : null}
           {notification.summary}
           <span className="text-warm-400">{expanded ? "▾" : "▸"}</span>
         </button>

@@ -15,6 +15,8 @@ import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
 import { DebugLogPanel } from "../DebugLog";
+import { BackgroundTasks } from "./BackgroundTasks";
+import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import type { MessageGroup } from "../ChatMessages";
 import type { ModelMarker } from "./InteractiveChat-helpers";
@@ -39,6 +41,7 @@ interface ChatBodyProps {
   boxSlug: string | undefined;
   messages: SessionEntry[];
   groups: MessageGroup[];
+  backgroundTasks: LiveTask[];
   isStreaming: boolean;
   streamText: string;
   streamTools: SessionContentBlock[];
@@ -265,17 +268,20 @@ export function InteractiveChatBody(props: ChatBodyProps) {
       header={<HeaderRegion {...props} />}
       messageList={<MessageListRegion {...props} />}
       statusBanners={
-        <ChatStatusBanners
-          error={error}
-          transcriptionError={voice.transcription.error}
-          onDismissError={() => {
-            send({ type: "DISMISS_ERROR" });
-            voice.transcription.dismissError();
-          }}
-          pendingCount={pendingCount}
-          activeSchedules={schedules.activeSchedules}
-          onCancelSchedule={schedules.handleCancelSchedule}
-        />
+        <>
+          <BackgroundTasks tasks={props.backgroundTasks} />
+          <ChatStatusBanners
+            error={error}
+            transcriptionError={voice.transcription.error}
+            onDismissError={() => {
+              send({ type: "DISMISS_ERROR" });
+              voice.transcription.dismissError();
+            }}
+            pendingCount={pendingCount}
+            activeSchedules={schedules.activeSchedules}
+            onCancelSchedule={schedules.handleCancelSchedule}
+          />
+        </>
       }
       composerSection={<ComposerRegion {...props} />}
       debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
