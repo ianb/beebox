@@ -334,7 +334,10 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
   fastify.stdout?.pipe(logStream, { end: false });
   fastify.stderr?.pipe(logStream, { end: false });
 
-  const viteBin = path.join(wt.frontendCwd, "node_modules", ".bin", "vite");
+  // pnpm workspace with `node-linker=hoisted` (see /.npmrc) puts all binaries
+  // at the workspace root's node_modules/.bin — per-package node_modules/.bin
+  // dirs aren't populated. Resolve vite from the worktree's monorepo root.
+  const viteBin = path.join(wt.root, "node_modules", ".bin", "vite");
   const vite = execa(
     viteBin,
     ["dev", "--port", String(frontendPort)],
