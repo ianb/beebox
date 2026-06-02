@@ -19,7 +19,7 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { type ChatSession } from "../../core/chat-session.js";
+import { type ChatSession, type TaskEvent } from "../../core/chat-session.js";
 import { ChatSessionRegistry } from "../../core/chat-session-registry.js";
 import {
   getMostActive,
@@ -109,6 +109,17 @@ export async function registerChatRoutes(
       eventBus.emit("chat-complete", {
         sessionId: session.getSessionId(),
         timestamp: new Date().toISOString(),
+      });
+    });
+
+    // Bridge background-task lifecycle events (started / progress / settled)
+    // onto the shared bus, tagged with the session id. Transient because
+    // progress is ephemeral — terminal state is recoverable from the
+    // settled <task-notification> already persisted in the transcript.
+    session.on("task", (task: TaskEvent) => {
+      eventBus.emitTransient("chat-task", {
+        sessionId: session.getSessionId(),
+        task,
       });
     });
 
