@@ -101,6 +101,27 @@ export function resolveFeatures(stored?: FeatureMap | null): FeatureMap {
 }
 
 /**
+ * Build the seed feature map for a brand-new session by layering the client's
+ * pre-session choices (e.g. narration toggled on before the first message)
+ * over any landmark defaults — the explicit client choice wins. Unknown
+ * features and invalid values from either source are dropped. Returns a plain
+ * map, possibly empty.
+ */
+export function mergeSeedFeatures(input: {
+  landmark?: Record<string, string> | null | undefined;
+  request?: Record<string, string> | null | undefined;
+}): FeatureMap {
+  const out: FeatureMap = {};
+  for (const source of [input.landmark, input.request]) {
+    if (!source) continue;
+    for (const [name, value] of Object.entries(source)) {
+      if (isKnownFeature(name) && isValidValue(name, value)) out[name] = value;
+    }
+  }
+  return out;
+}
+
+/**
  * Serialize the system → agent snapshot. Carries `time` (lowercase,
  * free-form ISO string) plus all current feature states.
  *

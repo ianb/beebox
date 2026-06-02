@@ -33,7 +33,7 @@
  */
 
 import { setup, assign } from "xstate";
-import { recordingStop, recordingDropped, recordingResumed } from "../lib/earcons";
+import { recordingStop, recordingError, recordingDropped, recordingResumed } from "../lib/earcons";
 import { transcriptionActor } from "./transcription-actor";
 import type { TranscriptionEvent } from "./transcription-events";
 
@@ -116,6 +116,9 @@ export const realtimeTranscriptionMachine = setup({
     playRecordingResumed: () => {
       recordingResumed.play();
     },
+    setStartFailedError: assign({
+      error: "Recording didn't start. Please try again.",
+    }),
     sendStopToTranscriber: ({ system }) => {
       const transcriber = system.get("transcriber");
       if (transcriber) {
@@ -124,6 +127,9 @@ export const realtimeTranscriptionMachine = setup({
     },
     playMicOffSound: () => {
       recordingStop.play();
+    },
+    playStartFailedSound: () => {
+      recordingError.play();
     },
   },
   delays: {
@@ -134,6 +140,10 @@ export const realtimeTranscriptionMachine = setup({
     // segment. The actor retries connection attempts internally within this
     // window; if none succeed we finalize on whatever audio/text we captured.
     RECONNECT_WINDOW: 8000,
+    // How long to wait for recording to actually start (mic permission +
+    // worklet + WebSocket open) before treating it as a failure. Generous
+    // enough not to fire while a first-time permission dialog is still open.
+    CONNECT_TIMEOUT: 8000,
   },
 }).createMachine({
   id: "realtimeTranscription",
@@ -195,11 +205,43 @@ export const realtimeTranscriptionMachine = setup({
       initial: "connecting",
       states: {
         connecting: {
+          // Recording must reach the `recording` state within CONNECT_TIMEOUT;
+          // otherwise mic permission / worklet / WebSocket startup has hung
+          // (or is being ignored) — fail loudly with the error earcon rather
+          // than leaving the user in silence.
+          after: {
+            CONNECT_TIMEOUT: {
+              target: "#realtimeTranscription.idle",
+              actions: [
+                () => {
+                  console.warn("[realtime-transcription] Recording didn't start within timeout");
+                },
+                "setStartFailedError",
+                "playStartFailedSound",
+              ],
+            },
+          },
           on: {
             WS_CONNECTED: "recording",
             SETUP_ERROR: {
               target: "#realtimeTranscription.idle",
-              actions: "setError",
+              actions: ["setError", "playStartFailedSound"],
+            },
+            // A WebSocket that errors or closes before it ever opens is also a
+            // failure to start; cue it here. The parent-state WS_ERROR /
+            // WS_CLOSED handlers (which stay silent) still cover mid-recording
+            // drops, since a child handler only overrides while in `connecting`.
+            WS_ERROR: {
+              target: "#realtimeTranscription.idle",
+              actions: ["setError", "playStartFailedSound"],
+            },
+            SERVER_ERROR: {
+              target: "#realtimeTranscription.idle",
+              actions: ["setError", "playStartFailedSound"],
+            },
+            WS_CLOSED: {
+              target: "#realtimeTranscription.idle",
+              actions: ["setStartFailedError", "playStartFailedSound"],
             },
             CANCEL: {
               target: "#realtimeTranscription.idle",

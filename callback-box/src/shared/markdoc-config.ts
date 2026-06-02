@@ -38,6 +38,10 @@
  *    `ingredient` tag works inline (within a step's prose) or block
  *    (as a list item) — the recipe view's scaling logic reads the
  *    `amount` attribute.
+ *  - `redacted` — agent-authored spoiler/reveal. Inline or block (same
+ *    `node.inline` split as `quote`). Rendered as blurred text behind an
+ *    animated noise overlay; click/tap reveals. Agent-only — there's no
+ *    boxholder affordance for typing it.
  *  - `task` — internal: GFM task-list checkbox. Not authored directly;
  *    the `item` node transform below detects leading `[ ]` / `[x]` in a
  *    list item's first text run and rewrites it to a `Task` tag, since
@@ -282,6 +286,16 @@ const recipeSection: Schema = {
   },
 };
 
+const redacted: Schema = {
+  transform(node, config) {
+    return new Tag(
+      node.inline ? "RedactedInline" : "RedactedBlock",
+      node.transformAttributes(config),
+      node.transformChildren(config),
+    );
+  },
+};
+
 const task: Schema = {
   selfClosing: true,
   attributes: {
@@ -338,6 +352,7 @@ export const markdocConfig: Config = {
     substitution,
     subrecipe,
     "recipe-section": recipeSection,
+    redacted,
     task,
   },
   nodes: { item },

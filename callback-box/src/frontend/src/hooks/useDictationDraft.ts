@@ -13,8 +13,19 @@
  *      saved draft. Only an explicit `clearDraft()` (a successful send, or the
  *      user discarding) removes it.
  *
- * Recovery is surfaced by `recoveredDraft`; the consumer renders a dedicated
- * widget rather than auto-filling the composer.
+ * Recovery is surfaced by `recoveredDraft`, which is the draft found *at mount*
+ * — i.e. one persisted by a PREVIOUS page life (reload, tab eviction, crash).
+ * Drafts written during the current session are NOT surfaced: doing so fired
+ * the recovery widget every time the mic legitimately paused mid-conversation
+ * (TTS playback, the gap between narration segments, while a turn is
+ * processing), treating live in-progress speech as if it had been lost. Live
+ * writes are insurance for the *next* reload, not a signal about this session.
+ *
+ * Trade-off: an in-session drop where the page itself survives (WS closes but
+ * no reload) won't pop the widget — only a reload/eviction will. That's the
+ * case the original feedback was about, and it's worth the cost of never
+ * false-alarming during a normal conversation. The consumer renders a
+ * dedicated widget rather than auto-filling the composer.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,8 +55,14 @@ export function useDictationDraft(opts: {
   const { boxSlug, sessionId, transcript, isTranscribing, narrationEnabled } = opts;
   const key = draftKey({ boxSlug, sessionId });
 
+  // The recovery candidate: the draft present at mount (or when the session
+  // key changes). Deliberately NOT updated by live writes — see the file
+  // header for why surfacing live writes is a false-positive machine.
   const [recoveredDraft, setRecoveredDraft] = useState<DictationDraft | null>(() => readDraft(key));
   const timerRef = useRef<number | null>(null);
+  // Whether the user has dictated anything this session. Once true, the
+  // mount-time draft is superseded by live work and must not resurface.
+  const startedRef = useRef(false);
 
   const cancelPending = useCallback(() => {
     if (timerRef.current !== null) {
@@ -54,10 +71,11 @@ export function useDictationDraft(opts: {
     }
   }, []);
 
+  // Persist to storage only — never touches `recoveredDraft`, so a live
+  // session can't surface its own in-progress transcript as "recovered".
   const writeDraft = useCallback((text: string) => {
     const draft: DictationDraft = { text, narration: narrationEnabled, updatedAt: Date.now() };
     window.localStorage.setItem(key, serializeDraft(draft));
-    setRecoveredDraft(draft);
   }, [key, narrationEnabled]);
 
   const clearDraft = useCallback(() => {
@@ -66,12 +84,25 @@ export function useDictationDraft(opts: {
     setRecoveredDraft(null);
   }, [key, cancelPending]);
 
-  // Re-read when the storage key changes (e.g. a new chat gets its server
-  // session id, or the user switches sessions) so the widget reflects the
-  // right draft.
+  // Re-read when the storage key changes (a new chat gets its server session
+  // id, or the user switches sessions) so the widget reflects the right
+  // session's draft, and re-arm the "started this session" gate.
+  const prevKeyRef = useRef(key);
   useEffect(() => {
+    if (prevKeyRef.current === key) return;
+    prevKeyRef.current = key;
+    startedRef.current = false;
     setRecoveredDraft(readDraft(key));
   }, [key]);
+
+  // Once the user begins dictating this session, drop the mount-time draft so
+  // it can't reappear as "recovered" when the mic later pauses.
+  useEffect(() => {
+    if (isTranscribing && !startedRef.current) {
+      startedRef.current = true;
+      setRecoveredDraft(null);
+    }
+  }, [isTranscribing]);
 
   // Continuous, debounced persistence. Empty transcripts are deliberately not
   // written: that's what protects a saved draft from a START-after-drop that

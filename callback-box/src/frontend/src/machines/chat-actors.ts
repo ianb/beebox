@@ -148,7 +148,7 @@ export const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string };
+    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string> };
   }) => {
     // Track whether the stream ever produced a terminal event. If the SSE
     // ends cleanly without one (proxy timeout, server closed the socket
@@ -184,6 +184,7 @@ export const streamActor = fromCallback(
       messageId: input.messageId,
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       ...(input.contextDir ? { contextDir: input.contextDir } : {}),
+      ...(input.seedFeatures ? { seedFeatures: input.seedFeatures } : {}),
       onMessage: (msg) => {
         msgCount++;
         const type = msg.type as string;
