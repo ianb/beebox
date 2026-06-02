@@ -57,6 +57,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Avatar>` — user profile image with initial fallback. `fallbackClassName` for dark nav contexts.
 - `<Pre>` — preformatted block (code, xml, JSON dumps). Props: `size`, `boxed`, `scroll`, `error`, `muted`.
 - `<HighlightedCode>` — wraps highlight.js output in a `<code class="hljs">`. Use inside a `<Pre boxed>`.
+- `<JsonView>` — human-friendly JSON renderer (keys label indented values, arrays as hanging-indent `0:`/`1:` lists, recursive). Strings keep whitespace and wrap on any character; numbers/booleans/null show via `JSON.stringify` in a distinct color. Use for tool-call args and similar object dumps instead of `JSON.stringify` in a `<Pre>`.
 - `<Badge>` — pill label. Tones: neutral/info/success/warning/danger/accent. Sizes: sm/md.
 - `<StatusBadge>` — card-status badge that maps `status` (new/pending/answered/processing/processed) to the right Badge tone. Pass `children` to override the displayed text (e.g., show a count instead).
 - `<Text>` — typography primitive. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
