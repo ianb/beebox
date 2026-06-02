@@ -14,7 +14,13 @@ import {
   type SessionEntry,
 } from "../cli/lib/session.js";
 import type { ChatContentBlock } from "../services/claude-chat.js";
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  SDKMessage,
+  SDKTaskNotificationMessage,
+  SDKTaskProgressMessage,
+  SDKTaskStartedMessage,
+  SDKTaskUpdatedMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 
 /**
  * Content block in a chat message, for the wire shape consumed by the
@@ -36,6 +42,38 @@ export interface ChatMessageContent {
 }
 
 /**
+ * A background-task lifecycle event, normalized across the SDK's four
+ * `task_*` system messages (`task_started`, `task_progress`, `task_updated`,
+ * `task_notification`). The SDK reports a richer lifecycle than the settled
+ * `<task-notification>` transcript marker alone; this carries the in-flight
+ * states so the UI can show a task starting and progressing, not just its
+ * terminal result.
+ */
+export interface TaskEvent {
+  /** Lifecycle phase this event represents. */
+  phase: "started" | "progress" | "updated" | "settled";
+  taskId: string;
+  /** Tool_use block that launched the task, when known. */
+  toolUseId?: string;
+  /** Human-readable label for the task (started/progress/updated). */
+  description?: string;
+  /** Short progress or settle summary. */
+  summary?: string;
+  /**
+   * Lifecycle status. Terminal values are `completed | failed | stopped |
+   * killed`; in-flight values are `pending | running`. Absent on bare
+   * progress ticks.
+   */
+  status?: "pending" | "running" | "completed" | "failed" | "stopped" | "killed";
+  /** Captured output file path, for settled tasks. */
+  outputFile?: string;
+  /** Elapsed wall time in ms (from the SDK `usage.duration_ms`). */
+  elapsedMs?: number;
+  /** Most recent tool the task ran (progress ticks only). */
+  lastToolName?: string;
+}
+
+/**
  * A message emitted by ChatSession to consumers (chat routes, activity
  * pool). Stable wire shape for the frontend.
  */
@@ -46,6 +84,7 @@ export interface ChatMessage {
     | "user"
     | "stream_event"
     | "result"
+    | "task"
     | "rate_limit_event";
   subtype?: string;
   session_id?: string;
@@ -64,6 +103,8 @@ export interface ChatMessage {
   event?: unknown;
   /** For `stream_event` — link to the parent assistant turn (or null). */
   parent_tool_use_id?: string | null;
+  /** For `task` messages — the normalized background-task lifecycle event. */
+  task?: TaskEvent;
 }
 
 /**
@@ -103,6 +144,57 @@ export function effectiveTailSize(
 }
 
 /**
+ * Normalize one of the SDK's four `task_*` system messages into a `task`
+ * ChatMessage. Returns null for ambient/housekeeping tasks (`skip_transcript`)
+ * so they don't clutter the inline transcript — progress/updated ticks for
+ * such tasks are dropped downstream because no `started` ever registered them.
+ */
+function adaptTaskMessage(
+  msg:
+    | SDKTaskStartedMessage
+    | SDKTaskProgressMessage
+    | SDKTaskUpdatedMessage
+    | SDKTaskNotificationMessage,
+): ChatMessage | null {
+  const base = { type: "task" as const, session_id: msg.session_id, uuid: msg.uuid };
+  switch (msg.subtype) {
+    case "task_started": {
+      if (msg.skip_transcript === true) return null;
+      const task: TaskEvent = { phase: "started", taskId: msg.task_id, status: "running" };
+      if (msg.tool_use_id !== undefined) task.toolUseId = msg.tool_use_id;
+      if (msg.description) task.description = msg.description;
+      return { ...base, task };
+    }
+    case "task_progress": {
+      const task: TaskEvent = { phase: "progress", taskId: msg.task_id, status: "running" };
+      if (msg.tool_use_id !== undefined) task.toolUseId = msg.tool_use_id;
+      if (msg.description) task.description = msg.description;
+      if (msg.summary) task.summary = msg.summary;
+      if (msg.last_tool_name) task.lastToolName = msg.last_tool_name;
+      task.elapsedMs = msg.usage.duration_ms;
+      return { ...base, task };
+    }
+    case "task_updated": {
+      const task: TaskEvent = { phase: "updated", taskId: msg.task_id };
+      if (msg.patch.status !== undefined) task.status = msg.patch.status;
+      if (msg.patch.description !== undefined) task.description = msg.patch.description;
+      return { ...base, task };
+    }
+    case "task_notification": {
+      if (msg.skip_transcript === true) return null;
+      const task: TaskEvent = { phase: "settled", taskId: msg.task_id, status: msg.status };
+      if (msg.tool_use_id !== undefined) task.toolUseId = msg.tool_use_id;
+      if (msg.summary) task.summary = msg.summary;
+      if (msg.output_file) task.outputFile = msg.output_file;
+      if (msg.usage) task.elapsedMs = msg.usage.duration_ms;
+      return { ...base, task };
+    }
+    default:
+      return null;
+  }
+}
+
+/**
  * Map an SDKMessage to a ChatMessage (the stable wire shape).
  * Returns null for SDK message types we don't surface (partials, hooks,
  * status, etc.) — those stay internal to the SDK pipeline.
@@ -110,13 +202,25 @@ export function effectiveTailSize(
 export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
   switch (msg.type) {
     case "system": {
-      // We only forward the init system message, the only one with session_id.
-      if (msg.subtype !== "init") return null;
-      return {
-        type: "system",
-        subtype: "init",
-        session_id: msg.session_id,
-      };
+      if (msg.subtype === "init") {
+        return {
+          type: "system",
+          subtype: "init",
+          session_id: msg.session_id,
+        };
+      }
+      // Background-task lifecycle events are `type:"system"` with their own
+      // subtypes — forward them as normalized `task` messages so the UI can
+      // surface a task starting and progressing, not just its settled marker.
+      if (
+        msg.subtype === "task_started" ||
+        msg.subtype === "task_progress" ||
+        msg.subtype === "task_updated" ||
+        msg.subtype === "task_notification"
+      ) {
+        return adaptTaskMessage(msg);
+      }
+      return null;
     }
     case "assistant": {
       const result: ChatMessage = {

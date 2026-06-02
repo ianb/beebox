@@ -28,6 +28,7 @@ import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
 import { useChatSse } from "./InteractiveChat-sse";
 import { useChatActions } from "./InteractiveChat-actions";
+import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
 
 /**
@@ -70,6 +71,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const isLoading = snapshot.matches("loading");
   const currentUser = useCurrentUser();
   const { boxSlug } = useParams({ strict: false });
+  const backgroundTasks = useBackgroundTasks();
 
   const [input, setInput] = useState("");
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -157,6 +159,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   useChatSse({
     sessionId, sessionInput, boxSlug, currentUser, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
+    onTaskEvent: backgroundTasks.onTaskEvent,
   });
 
   const actions = useChatActions({
@@ -193,6 +196,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
       boxSlug={boxSlug}
       messages={messages}
       groups={groups}
+      backgroundTasks={backgroundTasks.tasks}
       isStreaming={isStreaming}
       streamText={streamText}
       streamTools={streamTools}
