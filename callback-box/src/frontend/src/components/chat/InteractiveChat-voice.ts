@@ -200,7 +200,15 @@ export function useChatVoice(opts: {
 
   const handleStopSpeech = useCallback(() => {
     speechPlayback.stop();
-  }, [speechPlayback]);
+    // If the mic was auto-paused for this speech (see queueSpeechBatch in
+    // InteractiveChat-speech.ts), stopping the speech should hand recording
+    // back — otherwise the user reads "Stop killed my voice input."
+    if (voicePausedRef.current) {
+      voicePausedRef.current = false;
+      setVoicePaused(false);
+      transcription.start();
+    }
+  }, [speechPlayback, transcription, voicePausedRef]);
 
   const handleSkipSpeech = useCallback(() => {
     speechPlayback.skip();
