@@ -27,6 +27,7 @@ export type ChatEvent =
   | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
   | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }
   | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] }
+  | { type: "SET_SEED_FEATURE"; feature: string; value: string }
   | { type: "SESSION_ASSIGNED"; sessionId: string };
 
 // -- Context --
@@ -61,6 +62,13 @@ export interface ChatContext {
    * which point the backend has persisted the association).
    */
   contextDir?: string;
+  /**
+   * Chat-feature seeds chosen before the session exists (e.g. turning on
+   * narration in a brand-new chat). Folded into the first send of a `"new"`
+   * session so the choice applies to the very first turn; cleared once the
+   * session id is assigned (the backend has persisted them by then).
+   */
+  seedFeatures?: Record<string, string>;
   /** Subprocess is alive (true once first send has started; stays true between turns). */
   processRunning: boolean;
   /** Subprocess is currently mid-turn — drives the "agent is processing" indicator. */

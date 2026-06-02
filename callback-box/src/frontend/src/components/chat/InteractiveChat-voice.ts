@@ -14,7 +14,7 @@ import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { detectKeyword } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
-import { sendSound, tick, recordingStart, recordingStop } from "../../lib/earcons";
+import { sendSound, tick, recordingStop } from "../../lib/earcons";
 import { localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
 import { useSpeechDispatch, type VoiceRefs } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection-serialize";
@@ -217,10 +217,11 @@ export function useChatVoice(opts: {
     speechPlayback.replay(replayOpts);
   }, [speechPlayback, transcriptionRef, voicePausedRef]);
 
-  const startVoice = useCallback(async () => {
+  const startVoice = useCallback(() => {
     turnTakingRef.current = true;
-    await recordingStart.play().started;
-    transcription.start();
+    // The earcon is armed here but plays inside the transcription hook once
+    // the mic is truly live — never before the permission dialog settles.
+    transcription.start({ earcon: true });
   }, [transcription, turnTakingRef]);
 
   const unpauseVoice = useCallback(() => {

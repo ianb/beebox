@@ -17,6 +17,7 @@ import {
   isKnownFeature,
   isValidValue,
   listFeatures,
+  mergeSeedFeatures,
   parseChatAppDeltas,
   resolveFeatures,
 } from "../src/core/chat-features.js";
@@ -91,6 +92,47 @@ defaults.
 ```
 JSON.stringify(resolveFeatures(null))
 => {"narration":"off","prose":"on"}
+```
+
+## Seeding a new session
+
+`mergeSeedFeatures` builds the initial feature map for a brand-new chat by
+layering the client's pre-session choices (e.g. narration toggled on before
+the first message) over any landmark defaults. The explicit client choice
+wins on conflict.
+
+```
+JSON.stringify(mergeSeedFeatures({
+  landmark: { narration: "off", prose: "off" },
+  request: { narration: "on" },
+}))
+=> {"narration":"on","prose":"off"}
+```
+
+Either source may be absent (no landmark, or no pre-session toggles). Missing
+sources contribute nothing; with neither, the map is empty and the session
+falls back to registry defaults downstream.
+
+```
+JSON.stringify(mergeSeedFeatures({ request: { narration: "on" } }))
+=> {"narration":"on"}
+
+JSON.stringify(mergeSeedFeatures({ landmark: { prose: "off" } }))
+=> {"prose":"off"}
+
+JSON.stringify(mergeSeedFeatures({}))
+=> {}
+```
+
+Unknown features and invalid values from either source are dropped, so a
+hand-edited landmark or a malformed request can't seed an illegal state.
+
+```
+JSON.stringify(mergeSeedFeatures({
+  landmark: { bogus: "yes" },
+  request: { narration: "maybe", prose: "off" },
+}))
+=> {"prose":"off"}
 ```
 
 ## Snapshot composition

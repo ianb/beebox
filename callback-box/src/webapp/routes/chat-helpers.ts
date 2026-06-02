@@ -28,6 +28,13 @@ export interface SendBody {
    * read the binding from `chat-session-history` instead.
    */
   contextDir?: string;
+  /**
+   * Chat-feature seeds chosen before the session existed (e.g. turning on
+   * narration in a brand-new chat). Honored only when `session === "new"`,
+   * merged over any landmark defaults, so the choice applies to the very
+   * first turn. Unknown features / invalid values are dropped server-side.
+   */
+  seedFeatures?: Record<string, string>;
 }
 
 export interface SelfNoteBody {

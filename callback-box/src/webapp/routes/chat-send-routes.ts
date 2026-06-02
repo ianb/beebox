@@ -12,6 +12,7 @@ import type { FastifyReply } from "fastify";
 import { type ChatMessage, type ChatSession } from "../../core/chat-session.js";
 import { getMostActive } from "../../core/chat-session-history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
+import { mergeSeedFeatures } from "../../core/chat-features.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import {
@@ -97,20 +98,25 @@ function streamTurn(
  */
 async function resolveSendTarget(
   ctx: ChatRoutesContext,
-  { sessionParam, contextDir }: { sessionParam: string; contextDir: string | undefined },
+  { sessionParam, contextDir, requestSeedFeatures }: {
+    sessionParam: string;
+    contextDir: string | undefined;
+    requestSeedFeatures: Record<string, string> | undefined;
+  },
 ): Promise<{ session: ChatSession; id: string | null }> {
   const { registry, boxRoot, wireSession } = ctx;
   if (sessionParam === "new") {
-    // Read landmark feature seeds (if any) for the bound directory and
-    // hand them to createNew, so the very first user message's <chat-app>
-    // snapshot reflects the landmark's defaults.
-    let seedFeatures: Record<string, string> | null = null;
-    if (contextDir !== undefined && contextDir !== "") {
-      seedFeatures = await readLandmarkFeaturesForDir(boxRoot, contextDir);
-    }
+    // Layer the client's pre-session choices (e.g. narration toggled on
+    // before the first message) over any landmark defaults — the explicit
+    // choice wins. The merged map seeds createNew so the very first user
+    // message's <chat-app> snapshot reflects it.
+    const landmark = contextDir !== undefined && contextDir !== ""
+      ? await readLandmarkFeaturesForDir(boxRoot, contextDir)
+      : null;
+    const seedFeatures = mergeSeedFeatures({ landmark, request: requestSeedFeatures });
     const session = registry.createNew({
       ...(contextDir !== undefined ? { contextDir } : {}),
-      ...(seedFeatures !== null ? { seedFeatures } : {}),
+      ...(Object.keys(seedFeatures).length > 0 ? { seedFeatures } : {}),
     });
     wireSession(session);
     return { session, id: null };
@@ -141,7 +147,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody }>("/api/chat/send", async (request, reply) => {
     const body = request.body ?? ({} as Partial<SendBody>);
-    const { message, messageId, images, session: sessionParam, contextDir } = body;
+    const { message, messageId, images, session: sessionParam, contextDir, seedFeatures } = body;
 
     if (!message) {
       return reply.status(400).send({ error: "message is required" });
@@ -155,7 +161,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       if (invalid) return reply.status(invalid.status).send({ error: invalid.error });
     }
 
-    const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, { sessionParam, contextDir });
+    const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, { sessionParam, contextDir, requestSeedFeatures: seedFeatures });
 
     // Identify the sender from the session (may be null if auth is disabled)
     const user = getSessionUser(request);
