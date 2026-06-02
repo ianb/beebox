@@ -197,7 +197,19 @@ export function useChatVoice(opts: {
     turnTakingRef.current = false;
     recordingStop.play();
     transcription.cancel();
-  }, [transcription, turnTakingRef]);
+    // The user deliberately discarded this dictation — drop the persisted
+    // draft too, so it doesn't resurface later as a phantom "Recovered
+    // dictation". (The draft only exists to rescue an *interrupted* session.)
+    clearDraftRef.current();
+  }, [transcription, turnTakingRef, clearDraftRef]);
+
+  // Exposed so the composer's manual stop/edit/send controls can drop the
+  // persisted draft once the transcript is safely in the user's hands (moved
+  // into the textarea as editable text, or sent). Without this, every manual
+  // stop leaks a draft that re-surfaces as a recovered-dictation widget.
+  const clearDraft = useCallback(() => {
+    clearDraftRef.current();
+  }, [clearDraftRef]);
 
   const handleStopSpeech = useCallback(() => {
     speechPlayback.stop();
@@ -249,6 +261,7 @@ export function useChatVoice(opts: {
     hqInFlight,
     pendingHqDraft,
     turnTakingRef,
+    clearDraft,
     handleStopSpeech,
     handleSkipSpeech,
     handleReplaySpeech,

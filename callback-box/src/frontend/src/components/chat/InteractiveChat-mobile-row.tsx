@@ -14,7 +14,7 @@ import type { TranscriptionHandle } from "./InteractiveChat-composer";
  */
 export function MobileTextareaRow({
   input, setInput, isTranscribing, transcription,
-  handleSend, handleCancelTranscription,
+  handleSend, handleCancelTranscription, clearDraft,
   turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
   onPaste, onDrop,
 }: {
@@ -24,6 +24,8 @@ export function MobileTextareaRow({
   transcription: TranscriptionHandle;
   handleSend: () => void;
   handleCancelTranscription: () => void;
+  /** Drops the persisted dictation draft when transcript is moved to input or sent. */
+  clearDraft: () => void;
   turnTakingRef: React.MutableRefObject<boolean>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
@@ -70,6 +72,8 @@ export function MobileTextareaRow({
               const text = transcription.transcript;
               if (text) setInput((existing) => (existing ? existing + " " + text : text));
               transcription.stop();
+              // Now editable typed text, not voice — drop the dictation draft.
+              clearDraft();
             }}
             className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
             title="Edit before sending"
@@ -83,6 +87,8 @@ export function MobileTextareaRow({
               const finalText = await transcription.stop();
               const text = finalText.trim();
               if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              // Segment committed — drop the persisted dictation draft.
+              clearDraft();
             }}
             className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
             title="Send"

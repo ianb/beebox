@@ -148,7 +148,7 @@ function ComposerRegion(props: ChatBodyProps) {
     model, voice, recoveredDictation, attach, selections, actions, isStreaming, input, setInput, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, doSend, zoomedViewAttr, timePassedAttr,
   } = props;
-  const { speechPlayback, transcription, isTranscribing, voicePaused, turnTakingRef, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
+  const { speechPlayback, transcription, isTranscribing, voicePaused, turnTakingRef, clearDraft, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { attachments, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
   const { selections: selectionItems, removeSelection } = selections;
   const { handleSend, handleKeyDown, handleInterrupt, handlePaste, handleDrop } = actions;
@@ -179,6 +179,7 @@ function ComposerRegion(props: ChatBodyProps) {
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
+          clearDraft={clearDraft}
           onKeyboard={() => setTypingMode(true)}
           onVoice={startVoice}
           speechPlaying={speechPlayback.isPlaying}
@@ -205,6 +206,7 @@ function ComposerRegion(props: ChatBodyProps) {
           transcription={transcription}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
+          clearDraft={clearDraft}
           turnTakingRef={turnTakingRef}
           doSend={doSend}
           zoomedViewAttr={zoomedViewAttr}
