@@ -7,27 +7,18 @@ body {
   @apply bg-warm-50 text-warm-900;
 }
 
-/* Always-visible scrollbar. macOS overlay scrollbars auto-hide, which makes a
-   clipped/overflowing box look complete. Styling the WebKit scrollbar forces
-   the bar to render whenever the content actually overflows (it stays absent
-   when everything fits), so an ever-present bar signals "there's more below". */
-.cb-scroll-always::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
-}
-.cb-scroll-always::-webkit-scrollbar-track {
-  @apply bg-warm-100;
-  border-radius: 9999px;
-}
-.cb-scroll-always::-webkit-scrollbar-thumb {
-  @apply bg-warm-300;
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-.cb-scroll-always::-webkit-scrollbar-thumb:hover {
-  @apply bg-warm-400;
-  background-clip: padding-box;
+/* "Clipped reads as clipped" — fade the bottom edge of an overflowing scroll
+   box so a hidden bottom is visible without restyling the scrollbar. An
+   earlier version of this used `::-webkit-scrollbar` rules; on macOS
+   Chromium, any webkit-scrollbar rule anywhere in the document disables
+   overlay scrollbars page-wide and the Virtuoso chat scroller picks up a
+   permanent bar as collateral damage. The mask-image approach is scoped
+   per-element and has no global side effect: when content fits, the fade
+   lands on empty padding and is invisible; when it overflows, the last
+   sliver of visible content fades, signaling more below. */
+.cb-scroll-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
 }
 
 /* Recipe step auto-numbering via CSS counter. RecipeView wraps the body
