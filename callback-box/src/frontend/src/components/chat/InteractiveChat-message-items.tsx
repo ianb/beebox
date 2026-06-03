@@ -82,11 +82,19 @@ function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZ
   );
 }
 
-/** The streaming progress throbber, shown below the live text + tools. */
-function StreamingThrobber() {
+/**
+ * The agent-working throbber. Shown both below the live streaming text/tools
+ * (during an active SSE turn) and on its own when a reloaded page learns the
+ * agent is mid-turn but has no live stream attached — so the indicator looks
+ * the same whether the turn is being streamed or just resumed after reload.
+ * The optional caption labels the standalone (reload) case, where there's no
+ * surrounding streamed text to give it context.
+ */
+function StreamingThrobber({ caption }: { caption?: string }) {
   return (
-    <div className="flex justify-center my-6">
+    <div className="flex flex-col items-center gap-2 my-6">
       <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
+      {caption ? <div className="text-sm text-warm-500 italic">{caption}</div> : null}
     </div>
   );
 }
@@ -281,11 +289,7 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
     );
   }
   if (item.kind === "processing") {
-    return (
-      <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 py-2 text-sm text-warm-500 italic">
-        Agent is processing…
-      </div>
-    );
+    return <StreamingThrobber caption="Agent is processing…" />;
   }
   if (item.kind === "pendingHq") {
     return <PendingHqMessage text={item.text} />;
