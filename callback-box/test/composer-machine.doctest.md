@@ -1,10 +1,12 @@
 # Composer input machine
 
-`composerMachine` orchestrates the chat composer's modal input state — the
-`voice` region (`idle | dictating | committing | speaking | pausedForSpeech`),
-the narration `hq` region, and the mobile `keyboard` region. It commands the
-real mic/TTS devices through named action seams; here we replace those seams
-with spies and assert the *decisions*. See `docs/composer-input-machine.md`.
+`composerMachine` is the coordination overlay for the chat composer's speech ↔
+mic interplay: the `voice` region (`idle | speaking | pausedForSpeech`), the
+narration `hq` region, and the mobile `keyboard` region. Whether the mic is
+recording lives in the transcription machine and is mirrored in as the
+`recording` flag. The machine commands the real mic/TTS devices through named
+action seams; here we replace those seams with spies and assert the
+*decisions*. See `docs/composer-input-machine.md`.
 
 ```ts setup
 import { createActor } from "xstate";
@@ -24,9 +26,6 @@ function mk(input) {
         playSpeech: seam("playSpeech"),
         stopSpeech: seam("stopSpeech"),
         markPlayed: seam("markPlayed"),
-        commitSend: ({ event }) => {
-          calls.push(event.type === "KEYWORD_SEND" ? `commitSend:${event.text}` : "commitSend");
-        },
       },
     }),
     { input: input ?? {} },
@@ -40,13 +39,14 @@ const queued = { type: "SPEECH_QUEUED", messageId: "m1", segments: [], baseIndex
 
 ## Starting dictation
 
-`START_DICTATION` enters `dictating`, marks a turn active, and commands the mic.
+`START_DICTATION` marks a turn active and commands the mic. The voice overlay
+stays `idle` — "recording" is the transcription machine's state, not ours.
 
 ```
 const { actor, calls } = mk();
 actor.send({ type: "START_DICTATION" });
 const s = actor.getSnapshot();
-s.matches({ voice: "dictating" })
+s.matches({ voice: "idle" })
 => true
 
 s.context.turnTaking
@@ -56,31 +56,31 @@ calls.join(",")
 => startMic
 ```
 
-## Speech while dictating pauses the mic (playback → recording)
+## Speech while recording pauses the mic (playback → recording)
 
-A queued segment arriving mid-recording (empty transcript) cancels the mic and
-plays — landing in `pausedForSpeech`, which remembers to resume.
+With the mic recording (empty transcript), a queued segment cancels the mic
+and plays — landing in `pausedForSpeech`, which remembers to resume.
 
 ```
 const { actor, calls } = mk();
-actor.send({ type: "START_DICTATION" });
+actor.send({ type: "RECORDING", value: true });
 actor.send(queued);
 actor.getSnapshot().matches({ voice: "pausedForSpeech" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic,playSpeech
+=> cancelMic,playSpeech
 ```
 
 When playback finishes, the mic auto-resumes (the whole point of `voicePaused`):
 
 ``` continue
 actor.send({ type: "SPEECH_DONE" });
-actor.getSnapshot().matches({ voice: "dictating" })
+actor.getSnapshot().matches({ voice: "idle" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic,playSpeech,resumeMic
+=> cancelMic,playSpeech,resumeMic
 ```
 
 ## Stopping speech from the paused state resumes the mic
@@ -90,45 +90,45 @@ the fix that used to be a hand-written `if (voicePausedRef.current)` branch.
 
 ```
 const { actor, calls } = mk();
-actor.send({ type: "START_DICTATION" });
+actor.send({ type: "RECORDING", value: true });
 actor.send(queued);
 actor.send({ type: "STOP_SPEECH" });
-actor.getSnapshot().matches({ voice: "dictating" })
+actor.getSnapshot().matches({ voice: "idle" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic,playSpeech,stopSpeech,resumeMic
+=> cancelMic,playSpeech,stopSpeech,resumeMic
 ```
 
-`RESUME` (tapping the pulsing mic) does the same — stop the speech, resume mic:
+`RESUME` (tapping the pulsing mic) does the same:
 
 ```
 const { actor, calls } = mk();
-actor.send({ type: "START_DICTATION" });
+actor.send({ type: "RECORDING", value: true });
 actor.send(queued);
 actor.send({ type: "RESUME" });
-actor.getSnapshot().matches({ voice: "dictating" })
+actor.getSnapshot().matches({ voice: "idle" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic,playSpeech,stopSpeech,resumeMic
+=> cancelMic,playSpeech,stopSpeech,resumeMic
 ```
 
 ## Talking suppresses the agent's voice (recording → speech output)
 
 If the transcript already has text when speech is queued, it is marked played
-but never spoken — the user isn't talked over. Stays in `dictating`.
+but never spoken — the user isn't talked over.
 
 ```
 const { actor, calls } = mk();
-actor.send({ type: "START_DICTATION" });
+actor.send({ type: "RECORDING", value: true });
 actor.send({ type: "TRANSCRIPT", nonEmpty: true });
 actor.send(queued);
-actor.getSnapshot().matches({ voice: "dictating" })
+actor.getSnapshot().matches({ voice: "idle" })
 => true
 
 calls.join(",")
-=> startMic,markPlayed
+=> markPlayed
 ```
 
 ## Muted speech never plays
@@ -137,15 +137,14 @@ calls.join(",")
 const { actor, calls } = mk();
 actor.send({ type: "SET_MUTE", value: true });
 actor.send(queued);
-const s = actor.getSnapshot();
-s.matches({ voice: "idle" })
+actor.getSnapshot().matches({ voice: "idle" })
 => true
 
 calls.join(",")
 => markPlayed
 ```
 
-## Speech from idle (no turn-taking) plays, then returns to idle
+## Speech with the mic idle plays, then returns to idle
 
 ```
 const { actor, calls } = mk();
@@ -163,15 +162,14 @@ actor.getSnapshot().matches({ voice: "idle" })
 => true
 ```
 
-## Speech during an active turn resumes the mic on completion
+## Speech during an active turn reopens the mic on completion
 
-`turnTaking` survives a mic that ended on its own (`MIC_OFF`), so when speech
-later completes the mic comes back.
+`turnTaking` (set by START_DICTATION) makes a completed `speaking` reopen the
+mic — the non-paused auto-restart.
 
 ```
 const { actor, calls } = mk();
 actor.send({ type: "START_DICTATION" });
-actor.send({ type: "MIC_OFF" });
 actor.send(queued);
 actor.getSnapshot().matches({ voice: "speaking" })
 => true
@@ -179,7 +177,7 @@ actor.getSnapshot().matches({ voice: "speaking" })
 
 ``` continue
 actor.send({ type: "SPEECH_DONE" });
-actor.getSnapshot().matches({ voice: "dictating" })
+actor.getSnapshot().matches({ voice: "idle" })
 => true
 
 calls.join(",")
@@ -188,70 +186,55 @@ calls.join(",")
 
 ## Manually starting the mic while speaking stops the speech
 
-Closes the latent `isTranscribing && speechPlaying` edge: entering `dictating`
-from `speaking` stops playback first.
+Closes the latent "recording while speech still playing" edge: a fresh
+START_DICTATION stops playback first.
 
 ```
 const { actor, calls } = mk();
 actor.send(queued);
 actor.send({ type: "START_DICTATION" });
-actor.getSnapshot().matches({ voice: "dictating" })
+actor.getSnapshot().matches({ voice: "idle" })
 => true
 
 calls.join(",")
 => playSpeech,stopSpeech,startMic
 ```
 
-## Keyword send commits, then restarts the mic to keep talking
-
-```
-const { actor, calls } = mk();
-actor.send({ type: "START_DICTATION" });
-actor.send({ type: "KEYWORD_SEND", text: "hello world", audioBlob: null });
-actor.getSnapshot().matches({ voice: "dictating" })
-=> true
-
-calls.join(",")
-=> startMic,commitSend:hello world,resumeMic
-```
-
 ## Manual stop ends the turn
 
-A user-driven `STOP_DICTATION` tears the mic down and ends turn-taking (so the
-agent won't auto-reopen the mic after its next reply).
+A user-driven `STOP_DICTATION` ends turn-taking (so the agent won't auto-reopen
+the mic after its next reply). Mic teardown is the handler's job, not the
+machine's.
 
 ```
 const { actor, calls } = mk();
 actor.send({ type: "START_DICTATION" });
 actor.send({ type: "STOP_DICTATION" });
 const s = actor.getSnapshot();
-s.matches({ voice: "idle" })
-=> true
-
 s.context.turnTaking
 => false
 
 calls.join(",")
-=> startMic,cancelMic
+=> startMic
 ```
 
 ## Manual replay pauses the mic without re-playing
 
 `SPEECH_EXTERNAL` (the SpeechMenu Replay, which plays on its own) pauses an
-active recording — landing in `pausedForSpeech` with no `playSpeech` call.
+active recording — `pausedForSpeech` with no `playSpeech` call.
 
 ```
 const { actor, calls } = mk();
-actor.send({ type: "START_DICTATION" });
+actor.send({ type: "RECORDING", value: true });
 actor.send({ type: "SPEECH_EXTERNAL" });
 actor.getSnapshot().matches({ voice: "pausedForSpeech" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic
+=> cancelMic
 ```
 
-From idle it just reflects that speech is playing:
+From an idle mic it just reflects that speech is playing:
 
 ```
 const { actor, calls } = mk();
@@ -319,9 +302,9 @@ actor.getSnapshot().matches({ keyboard: { open: "locked" } })
 => true
 ```
 
-## A send always ends the turn (root handler runs alongside the region)
+## A send always ends the turn (region runs alongside the keyboard)
 
-`MESSAGE_SENT` resets `turnTaking` via the root handler even as the keyboard
+`MESSAGE_SENT` resets `turnTaking` via the voice region even as the keyboard
 region closes — confirming the parallel regions both process the event.
 
 ```

@@ -1,28 +1,32 @@
 /**
- * Orchestration machine for the chat composer's modal input state.
+ * Coordination overlay for the chat composer's speech ↔ mic interplay.
  *
- * Background: the composer's behaviour was previously an emergent cross-product
- * of three independent machines (`chatMachine`, `realtimeTranscriptionMachine`,
+ * Background: the composer's behaviour was an emergent cross-product of three
+ * independent machines (`chatMachine`, `realtimeTranscriptionMachine`,
  * `speechPlaybackMachine`) glued by a pile of `useState`/`useRef` flags and
  * `useEffect` bodies in `InteractiveChat-voice.ts` / `-speech.ts`. The single
  * worst offender was `voicePaused`: a boolean straining to encode "the mic was
  * paused *for* this speech, so resume it when playback ends." See
- * `docs/composer-input-machine.md` for the full design rationale.
+ * `docs/composer-input-machine.md` for the design rationale.
  *
- * This machine makes that the explicit thing it is. The `voice` region is one
- * exclusive state chart — you cannot dictate while TTS plays, because TTS
- * *pauses* the mic — so `isTranscribing` / `speechPlaying` / `voicePaused`
- * collapse into four states: `idle | dictating | committing | speaking |
- * pausedForSpeech`. `pausedForSpeech` vs `speaking` is the whole of what
- * `voicePaused` meant: both have TTS playing; only the former resumes the mic.
+ * Scope: this machine owns only the *overlay* that no existing machine owns —
+ * the three speech-coordination states `idle | speaking | pausedForSpeech`.
+ * Whether the mic is recording is NOT modelled here; that genuinely belongs to
+ * `realtimeTranscriptionMachine` and is mirrored in as the `recording` context
+ * flag. Trying to own a `dictating` state here would duplicate that machine and
+ * force a race-prone React mirror — so we don't.
  *
- * The machine is an *orchestrator*, not a re-implementation: the real mic and
- * TTS still live in their own machines (driven by `useRealtimeTranscription` /
- * `useSpeechPlayback`). This machine owns the *decisions* and commands those
- * devices through named action seams (`startMic`, `cancelMic`, `playSpeech`,
- * `stopSpeech`, `markPlayed`, `commitSend`) that the wiring layer provides via
- * `.provide()`. Guards are pure functions of context, so the entire decision
- * logic is unit-testable with no React (see `composerMachine.doctest.md`).
+ *   - `speaking`         — TTS is playing; the mic was not recording, so nothing
+ *                          to resume (turn-taking may still reopen it).
+ *   - `pausedForSpeech`  — TTS is playing; the mic *was* recording and we paused
+ *                          it. This is exactly what `voicePaused` meant: resume
+ *                          the mic when playback ends.
+ *
+ * The machine commands the real mic/TTS devices through named action seams
+ * (`startMic`, `resumeMic`, `cancelMic`, `stopSpeech`, `playSpeech`,
+ * `markPlayed`) that the wiring provides via `.provide()`. Guards are pure
+ * functions of context, so the decision logic is unit-testable with no React
+ * (see `composerMachine.doctest.md`).
  */
 
 import { setup, assign } from "xstate";
@@ -33,9 +37,11 @@ export interface ComposerContext {
   narration: boolean;
   /** Speech muted. Mirrored from the mute hook; gates whether queued TTS ever plays. */
   muted: boolean;
-  /** A voice conversation is active — restart the mic after the agent finishes speaking. */
+  /** A voice conversation is active — reopen the mic after the agent finishes speaking/replying. */
   turnTaking: boolean;
-  /** Whether the live transcript currently has text. Used to suppress TTS while the user is mid-utterance. */
+  /** The transcription device is currently capturing. Mirrored from the transcription hook. */
+  recording: boolean;
+  /** Whether the live transcript currently has text. Suppresses TTS while the user is mid-utterance. */
   transcriptNonEmpty: boolean;
   /** Realtime text awaiting its HQ pass (narration). Rendered as a pending bubble; null when none. */
   pendingHqText: string | null;
@@ -47,9 +53,8 @@ export type ComposerEvent =
   | { type: "STOP_DICTATION" }
   | { type: "STOP_SPEECH" }
   | { type: "RESUME" }
-  // --- signals from the transcription device ---
-  | { type: "KEYWORD_SEND"; text: string; audioBlob: Blob | null }
-  | { type: "MIC_OFF" }
+  // --- mirrored state of the transcription device ---
+  | { type: "RECORDING"; value: boolean }
   | { type: "TRANSCRIPT"; nonEmpty: boolean }
   // --- signals from the playback device ---
   | { type: "SPEECH_QUEUED"; messageId: string; segments: SpeechSegment[]; baseIndex: number }
@@ -76,6 +81,9 @@ export const composerMachine = setup({
   },
   guards: {
     isMuted: ({ context }) => context.muted,
+    /** The mic is actively capturing (not connecting/finalizing) — only then do we pause it. */
+    recording: ({ context }) => context.recording,
+    /** The user has spoken text pending — suppress TTS so we don't talk over them. */
     transcriptNonEmpty: ({ context }) => context.transcriptNonEmpty,
     turnTaking: ({ context }) => context.turnTaking,
   },
@@ -84,6 +92,7 @@ export const composerMachine = setup({
     // declared as no-op stubs and overridden at wiring time via `.provide()`.
     beginTurn: assign({ turnTaking: true }),
     endTurn: assign({ turnTaking: false }),
+    setRecording: assign(({ event }) => ({ recording: event.type === "RECORDING" ? event.value : false })),
     setNarration: assign(({ event }) => ({ narration: event.type === "SET_NARRATION" ? event.value : false })),
     setMute: assign(({ event }) => ({ muted: event.type === "SET_MUTE" ? event.value : false })),
     setTranscript: assign(({ event }) => ({ transcriptNonEmpty: event.type === "TRANSCRIPT" ? event.nonEmpty : false })),
@@ -93,9 +102,9 @@ export const composerMachine = setup({
     // --- device-command seams (provided by the wiring; no-ops here) ---
     /** Begin a fresh recording segment, with the recording-start earcon. */
     startMic: () => {},
-    /** Resume/restart recording quietly (no earcon) — after a pause or a commit. */
+    /** Resume recording quietly (no earcon) — after a pause. */
     resumeMic: () => {},
-    /** Tear down the current recording segment without finalizing. */
+    /** Pause/tear down the current recording segment without finalizing. */
     cancelMic: () => {},
     /** Enqueue + play the segments carried on the current SPEECH_QUEUED event. */
     playSpeech: () => {},
@@ -103,8 +112,6 @@ export const composerMachine = setup({
     stopSpeech: () => {},
     /** Mark the current SPEECH_QUEUED message as played without playing it (suppressed/muted). */
     markPlayed: () => {},
-    /** Commit the KEYWORD_SEND utterance: build + dispatch the message, kick off the HQ pass in narration mode. */
-    commitSend: () => {},
   },
 }).createMachine({
   id: "composer",
@@ -113,81 +120,65 @@ export const composerMachine = setup({
     narration: input.narration ?? false,
     muted: input.muted ?? false,
     turnTaking: false,
+    recording: false,
     transcriptNonEmpty: false,
     pendingHqText: null,
   }),
-  // Internal (target-less) root handlers: mirror settings + transcript. None
-  // of these exit a region. (MESSAGE_SENT's turn-reset lives on the `voice`
-  // region instead, so it isn't shadowed when the `keyboard` region also
-  // handles the same event — an ancestor `on` loses to a descendant one.)
+  // Internal (target-less) root handlers mirror device/settings state. None
+  // exit a region.
   on: {
     SET_NARRATION: { actions: "setNarration" },
     SET_MUTE: { actions: "setMute" },
+    RECORDING: { actions: "setRecording" },
     TRANSCRIPT: { actions: "setTranscript" },
   },
   states: {
     voice: {
       initial: "idle",
-      // Region-level internal handler: any send ends the turn, in every
-      // voice substate, without exiting it. Sibling to the keyboard region's
-      // own MESSAGE_SENT transition, so both run.
+      // Region-level internal handler: any send ends the turn, without exiting
+      // the current voice state. Sibling to the keyboard region's own
+      // MESSAGE_SENT transition, so both run (an ancestor `on` would lose to a
+      // descendant one, so it can't live on the root).
       on: {
         MESSAGE_SENT: { actions: "endTurn" },
       },
       states: {
         idle: {
           on: {
-            START_DICTATION: { target: "dictating", actions: ["beginTurn", "startMic"] },
+            // Recording lives in the transcription machine; these just track
+            // turn-taking and command the mic device.
+            START_DICTATION: { actions: ["beginTurn", "startMic"] },
+            STOP_DICTATION: { actions: "endTurn" },
             SPEECH_QUEUED: [
               { guard: "isMuted", actions: "markPlayed" },
+              { guard: "transcriptNonEmpty", actions: "markPlayed" }, // talking → don't speak over the user
+              { guard: "recording", target: "pausedForSpeech", actions: ["cancelMic", "playSpeech"] },
               { target: "speaking", actions: "playSpeech" },
             ],
-            SPEECH_EXTERNAL: { target: "speaking" }, // manual replay from idle — caller plays
-          },
-        },
-        dictating: {
-          on: {
-            KEYWORD_SEND: { target: "committing" },
-            // A user-driven stop ends the voice turn; cancelMic is idempotent
-            // (the transcription machine ignores CANCEL once it has left
-            // recording, so a component that already tore down is harmless).
-            STOP_DICTATION: { target: "idle", actions: ["cancelMic", "endTurn"] },
-            // The transcription device returned to idle on its own (error,
-            // timeout, finalize). Leave turn-taking intact for error recovery.
-            MIC_OFF: { target: "idle" },
-            SPEECH_QUEUED: [
-              { guard: "isMuted", actions: "markPlayed" },
-              { guard: "transcriptNonEmpty", actions: "markPlayed" }, // suppress: don't talk over the user
-              { target: "pausedForSpeech", actions: ["cancelMic", "playSpeech"] },
+            SPEECH_EXTERNAL: [
+              { guard: "recording", target: "pausedForSpeech", actions: "cancelMic" },
+              { target: "speaking" },
             ],
-            SPEECH_EXTERNAL: { target: "pausedForSpeech", actions: "cancelMic" }, // manual replay mid-recording
           },
-        },
-        // Transient: dispatch the utterance, then restart the mic so the user
-        // can keep talking. `commitSend` reads the KEYWORD_SEND event that
-        // brought us here (text + audioBlob) and, in narration mode, raises
-        // START_HQ for the HQ round-trip.
-        committing: {
-          entry: "commitSend",
-          always: { target: "dictating", actions: "resumeMic" },
         },
         speaking: {
           on: {
             SPEECH_DONE: [
-              { guard: "turnTaking", target: "dictating", actions: "startMic" },
+              { guard: "turnTaking", target: "idle", actions: "startMic" }, // reopen the mic for the next turn
               { target: "idle" },
             ],
             STOP_SPEECH: { target: "idle", actions: "stopSpeech" },
-            START_DICTATION: { target: "dictating", actions: ["stopSpeech", "beginTurn", "startMic"] },
+            START_DICTATION: { target: "idle", actions: ["stopSpeech", "beginTurn", "startMic"] },
             SPEECH_QUEUED: { actions: "playSpeech" }, // enqueue more segments, stay speaking
           },
         },
         pausedForSpeech: {
           on: {
-            SPEECH_DONE: { target: "dictating", actions: "resumeMic" }, // auto-resume the mic
-            RESUME: { target: "dictating", actions: ["stopSpeech", "resumeMic"] },
-            STOP_SPEECH: { target: "dictating", actions: ["stopSpeech", "resumeMic"] },
+            SPEECH_DONE: { target: "idle", actions: "resumeMic" }, // auto-resume the paused mic
+            RESUME: { target: "idle", actions: ["stopSpeech", "resumeMic"] },
+            STOP_SPEECH: { target: "idle", actions: ["stopSpeech", "resumeMic"] },
             SPEECH_QUEUED: { actions: "playSpeech" },
+            START_DICTATION: { target: "idle", actions: ["stopSpeech", "beginTurn", "startMic"] },
           },
         },
       },

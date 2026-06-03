@@ -1,9 +1,24 @@
 # Composer input machine — design note
 
-**Status:** design proposal, not built. Audience: us, before deciding whether/how to
-implement. The companion doc `composer-states.md` (separate task) enumerates the *current*
-rendered states with screenshots; this doc proposes the **single state machine** that would
-replace the loose state behind them.
+**Status:** in progress. Audience: us. The companion doc `composer-states.md` (separate task)
+enumerates the *current* rendered states with screenshots; this doc proposes the state machine
+that replaces the loose state behind them.
+
+> **Implementation note (overlay decomposition).** The body below works up to a five-state voice
+> region (`idle | dictating | committing | speaking | pausedForSpeech`). That is the *idealized*
+> model — but `dictating`/`committing` duplicate `realtimeTranscriptionMachine`, and owning them
+> in a sibling React hook needs a race-prone mirror (a mid-tick keyword restart can fire a stale
+> "mic went idle" and kill the just-restarted mic). Owning them *cleanly* requires the composer
+> machine to **invoke** the transcription machine as a child actor — a larger rewrite of the
+> transcription stack, deferred.
+>
+> The **shipped machine** (`composerMachine.ts`) is therefore the *overlay* only: the three
+> speech-coordination states `idle | speaking | pausedForSpeech` that no existing machine owns,
+> plus the `hq` and `keyboard` regions. "Recording" stays in the transcription machine and is
+> mirrored in as the `recording` context flag; the mic-button "recording" look still reads
+> `transcription.state`. This kills `voicePaused`/`voicePausedRef` and makes the
+> suppress/pause/resume coordination declarative, with no React mirror and no races. The
+> five-state version below is kept as the target end-state should we later do the child-invoke.
 
 ## The problem
 
