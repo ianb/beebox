@@ -16,7 +16,7 @@ export interface JsonViewProps {
  */
 export function JsonView({ value, className }: JsonViewProps) {
   return (
-    <div className={cn("font-mono text-xs leading-relaxed", className)}>
+    <div className={cn("font-mono text-[11px] leading-snug", className)}>
       <JsonNode value={value} />
     </div>
   );
