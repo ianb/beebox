@@ -15,6 +15,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { runOnServer } from "./run-on-server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -119,18 +120,16 @@ function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
 }
 
 function collectRemoteFeedback(host: string): FeedbackFile[] {
-  let findOutput: string;
-  try {
-    findOutput = execSync(
-      `ssh root@${host} 'find ${REMOTE_BOXES_DIR} -maxdepth 5 -path "*/config/feedback/*.md" ! -path "*/resolved/*" 2>/dev/null'`,
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
-    );
-  } catch (e) {
-    console.error(`Warning: could not reach remote host ${host}: ${(e as Error).message}`);
+  const find = runOnServer({
+    host,
+    script: `find ${REMOTE_BOXES_DIR} -maxdepth 5 -path "*/config/feedback/*.md" ! -path "*/resolved/*" 2>/dev/null`,
+  });
+  if (find.exitCode !== 0) {
+    console.error(`Warning: could not reach remote host ${host}: ${find.stderr.trim()}`);
     return [];
   }
 
-  const files = findOutput.trim().split("\n").filter(Boolean);
+  const files = find.stdout.trim().split("\n").filter(Boolean);
   const items: FeedbackFile[] = [];
 
   for (const filePath of files.sort()) {
@@ -140,22 +139,18 @@ function collectRemoteFeedback(host: string): FeedbackFile[] {
     const boxRoot = `${REMOTE_BOXES_DIR}/${boxName}`;
     const relPath = filePath.slice(boxRoot.length + 1);
 
-    let content: string;
-    try {
-      content = execSync(`ssh root@${host} 'cat ${JSON.stringify(filePath)}'`, {
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-    } catch {
-      continue;
-    }
+    const read = runOnServer({
+      host,
+      script: `cat ${JSON.stringify(filePath)}`,
+    });
+    if (read.exitCode !== 0) continue;
 
     items.push({
       boxRoot,
       boxName: `remote:${boxName}`,
       filePath,
       relPath,
-      content,
+      content: read.stdout,
       remoteHost: host,
     });
   }
@@ -189,7 +184,6 @@ function resolveLocalFile(item: FeedbackFile): void {
 }
 
 function resolveRemoteFile(item: FeedbackFile): void {
-  const host = item.remoteHost!;
   const destPath = item.filePath.replace(
     "/config/feedback/",
     "/config/feedback/resolved/"
@@ -199,19 +193,24 @@ function resolveRemoteFile(item: FeedbackFile): void {
     "config/feedback/resolved/"
   );
 
-  const cmd = [
+  // Runs as the `callback` user (run-on-server default). NEVER drop the
+  // `su` and let git run as root — root-owned commits leave root-owned
+  // objects under .git/objects/ that later block callback-user commits.
+  // See feedback-review/run-on-server.ts for the why.
+  const script = [
+    "set -e",
     `mkdir -p ${JSON.stringify(path.dirname(destPath))}`,
     `mv ${JSON.stringify(item.filePath)} ${JSON.stringify(destPath)}`,
     `git -C ${JSON.stringify(item.boxRoot)} add ${JSON.stringify(item.relPath)} ${JSON.stringify(destRel)}`,
     `git -C ${JSON.stringify(item.boxRoot)} commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)}`,
-  ].join(" && ");
+  ].join("\n");
 
-  try {
-    execSync(`ssh root@${host} '${cmd}'`, { stdio: "pipe" });
-    console.log(`Resolved: [${item.boxName}] ${path.basename(item.filePath)}`);
-  } catch (err) {
-    console.error(`Remote git error resolving ${item.filePath}: ${(err as Error).message}`);
+  const r = runOnServer({ host: item.remoteHost!, script });
+  if (r.exitCode !== 0) {
+    console.error(`Remote git error resolving ${item.filePath}: ${r.stderr.trim()}`);
+    return;
   }
+  console.log(`Resolved: [${item.boxName}] ${path.basename(item.filePath)}`);
 }
 
 function resolveFile(item: FeedbackFile): void {
