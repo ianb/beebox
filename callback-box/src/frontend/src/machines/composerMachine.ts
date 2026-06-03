@@ -53,6 +53,8 @@ export type ComposerEvent =
   | { type: "TRANSCRIPT"; nonEmpty: boolean }
   // --- signals from the playback device ---
   | { type: "SPEECH_QUEUED"; messageId: string; segments: SpeechSegment[]; baseIndex: number }
+  /** Playback the machine didn't queue (manual replay): reflect that speech is now playing without re-playing it. */
+  | { type: "SPEECH_EXTERNAL" }
   | { type: "SPEECH_DONE" }
   // --- the narration HQ round-trip ---
   | { type: "START_HQ"; text: string }
@@ -89,8 +91,10 @@ export const composerMachine = setup({
     clearPendingHq: assign({ pendingHqText: null }),
 
     // --- device-command seams (provided by the wiring; no-ops here) ---
-    /** Begin / resume a recording segment on the transcription device. */
+    /** Begin a fresh recording segment, with the recording-start earcon. */
     startMic: () => {},
+    /** Resume/restart recording quietly (no earcon) — after a pause or a commit. */
+    resumeMic: () => {},
     /** Tear down the current recording segment without finalizing. */
     cancelMic: () => {},
     /** Enqueue + play the segments carried on the current SPEECH_QUEUED event. */
@@ -138,18 +142,25 @@ export const composerMachine = setup({
               { guard: "isMuted", actions: "markPlayed" },
               { target: "speaking", actions: "playSpeech" },
             ],
+            SPEECH_EXTERNAL: { target: "speaking" }, // manual replay from idle — caller plays
           },
         },
         dictating: {
           on: {
             KEYWORD_SEND: { target: "committing" },
-            STOP_DICTATION: { target: "idle", actions: "cancelMic" },
+            // A user-driven stop ends the voice turn; cancelMic is idempotent
+            // (the transcription machine ignores CANCEL once it has left
+            // recording, so a component that already tore down is harmless).
+            STOP_DICTATION: { target: "idle", actions: ["cancelMic", "endTurn"] },
+            // The transcription device returned to idle on its own (error,
+            // timeout, finalize). Leave turn-taking intact for error recovery.
             MIC_OFF: { target: "idle" },
             SPEECH_QUEUED: [
               { guard: "isMuted", actions: "markPlayed" },
               { guard: "transcriptNonEmpty", actions: "markPlayed" }, // suppress: don't talk over the user
               { target: "pausedForSpeech", actions: ["cancelMic", "playSpeech"] },
             ],
+            SPEECH_EXTERNAL: { target: "pausedForSpeech", actions: "cancelMic" }, // manual replay mid-recording
           },
         },
         // Transient: dispatch the utterance, then restart the mic so the user
@@ -158,7 +169,7 @@ export const composerMachine = setup({
         // START_HQ for the HQ round-trip.
         committing: {
           entry: "commitSend",
-          always: { target: "dictating", actions: "startMic" },
+          always: { target: "dictating", actions: "resumeMic" },
         },
         speaking: {
           on: {
@@ -173,9 +184,9 @@ export const composerMachine = setup({
         },
         pausedForSpeech: {
           on: {
-            SPEECH_DONE: { target: "dictating", actions: "startMic" }, // auto-resume the mic
-            RESUME: { target: "dictating", actions: ["stopSpeech", "startMic"] },
-            STOP_SPEECH: { target: "dictating", actions: ["stopSpeech", "startMic"] },
+            SPEECH_DONE: { target: "dictating", actions: "resumeMic" }, // auto-resume the mic
+            RESUME: { target: "dictating", actions: ["stopSpeech", "resumeMic"] },
+            STOP_SPEECH: { target: "dictating", actions: ["stopSpeech", "resumeMic"] },
             SPEECH_QUEUED: { actions: "playSpeech" },
           },
         },

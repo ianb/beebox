@@ -19,6 +19,7 @@ function mk(input) {
     composerMachine.provide({
       actions: {
         startMic: seam("startMic"),
+        resumeMic: seam("resumeMic"),
         cancelMic: seam("cancelMic"),
         playSpeech: seam("playSpeech"),
         stopSpeech: seam("stopSpeech"),
@@ -79,7 +80,7 @@ actor.getSnapshot().matches({ voice: "dictating" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic,playSpeech,startMic
+=> startMic,cancelMic,playSpeech,resumeMic
 ```
 
 ## Stopping speech from the paused state resumes the mic
@@ -96,7 +97,7 @@ actor.getSnapshot().matches({ voice: "dictating" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic,playSpeech,stopSpeech,startMic
+=> startMic,cancelMic,playSpeech,stopSpeech,resumeMic
 ```
 
 `RESUME` (tapping the pulsing mic) does the same — stop the speech, resume mic:
@@ -110,7 +111,7 @@ actor.getSnapshot().matches({ voice: "dictating" })
 => true
 
 calls.join(",")
-=> startMic,cancelMic,playSpeech,stopSpeech,startMic
+=> startMic,cancelMic,playSpeech,stopSpeech,resumeMic
 ```
 
 ## Talking suppresses the agent's voice (recording → speech output)
@@ -211,7 +212,55 @@ actor.getSnapshot().matches({ voice: "dictating" })
 => true
 
 calls.join(",")
-=> startMic,commitSend:hello world,startMic
+=> startMic,commitSend:hello world,resumeMic
+```
+
+## Manual stop ends the turn
+
+A user-driven `STOP_DICTATION` tears the mic down and ends turn-taking (so the
+agent won't auto-reopen the mic after its next reply).
+
+```
+const { actor, calls } = mk();
+actor.send({ type: "START_DICTATION" });
+actor.send({ type: "STOP_DICTATION" });
+const s = actor.getSnapshot();
+s.matches({ voice: "idle" })
+=> true
+
+s.context.turnTaking
+=> false
+
+calls.join(",")
+=> startMic,cancelMic
+```
+
+## Manual replay pauses the mic without re-playing
+
+`SPEECH_EXTERNAL` (the SpeechMenu Replay, which plays on its own) pauses an
+active recording — landing in `pausedForSpeech` with no `playSpeech` call.
+
+```
+const { actor, calls } = mk();
+actor.send({ type: "START_DICTATION" });
+actor.send({ type: "SPEECH_EXTERNAL" });
+actor.getSnapshot().matches({ voice: "pausedForSpeech" })
+=> true
+
+calls.join(",")
+=> startMic,cancelMic
+```
+
+From idle it just reflects that speech is playing:
+
+```
+const { actor, calls } = mk();
+actor.send({ type: "SPEECH_EXTERNAL" });
+actor.getSnapshot().matches({ voice: "speaking" })
+=> true
+
+JSON.stringify(calls)
+=> []
 ```
 
 ## Narration HQ round-trip
