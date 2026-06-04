@@ -294,9 +294,18 @@ requires reading outside boxRoot, which nothing currently permits.
   guard is hygiene, not a hardened boundary.
 - **Route.** A raw Fastify route (file-download shape, per the tRPC-vs-raw
   rule in CLAUDE.md) e.g. `GET /api/external/:ref` returning the bytes +
-  content-type, **registered only when a dev flag is set** (so the deployed
-  server at `/opt/callback/` never mounts it). Strip query suffixes before
-  resolving (Vite `?raw` lesson).
+  content-type **plus the current `version` markers** (so the renderer can
+  drift-check without a second round-trip), **registered only when a dev flag
+  is set** (so the deployed server at `/opt/callback/` never mounts it). Strip
+  query suffixes before resolving (Vite `?raw` lesson).
+- **`buildVersionMarkers(absPath)` (server).** Produces the marker set for a
+  resolved file: `sha256:<hash>` of the current on-disk bytes always (the
+  file-specific drift signal), plus `git:<rev>` = the worktree's current
+  commit when the path is tracked (enables the later `git show <rev>:<path>`
+  diff-view). Used by the route (to report current markers) and by Track D
+  synthesis (to stamp an anchor) — one helper, one definition of "version,"
+  so creation and drift-check can't disagree. This is the "creating the
+  versions" unit the functional tests target.
 - **Allowlist.** Resolved roots: `WORKTREES_ROOT` and the main checkout root.
   Expressed as resolved prefixes, never personal-name literals (CLAUDE.md
   generic-source rule).
@@ -311,8 +320,12 @@ requires reading outside boxRoot, which nothing currently permits.
 + `ExternalRefError`, as a pure-ish function with a doctest covering: valid
 worktree ref, `main` ref, traversal attempt (`../../etc/passwd` → realpath
 escapes allowlist → error), denylisted path (`.git/config` → error), unknown
-worktree → error. Route mounting comes in a later chunk; the resolver has no
-open questions beyond the scheme literal (which only changes the parse prefix).
+worktree → error. Land `buildVersionMarkers` alongside, with a **functional
+test** (filesystem tier, `makeTmpBox()`/a tmp git repo) that builds markers for
+a committed file and a dirty file: `sha256:` matches the bytes in both, and
+`git:<rev>` is present when tracked and absent for an untracked/external path.
+Route mounting comes in a later chunk; the resolver has no open questions
+beyond the scheme literal (which only changes the parse prefix).
 
 ### Track C — the `commentary` card + viewer renderer
 
@@ -393,8 +406,15 @@ loads exactly when a `commentary` card is touched (`init-rules.ts:102-117`).
 **Vocabulary lock-ins.** None new; consumes A's tag and C's card.
 
 **First implementation chunk.** Write the `commentary` schema `instructions`
-prose. (Knowledge-audit entries are skip-by-default here — see Knowledge
-audits.) The box-standup is a usage action, not a code chunk.
+prose, plus a **functional test of the synthesis transform** — given a
+captured `<user-selection>` (target ref + `pos` + `placement`) and a resolved
+target, assert it produces a `{% source %}` carrying those exact selector
+fields and the `buildVersionMarkers` output, with the agent's remark as
+adjacent prose (not inside the tag). This is the second half of the
+"creating the selectors/versions" coverage the boxholder asked for: Track B
+tests marker *creation*, this tests selection → anchored `{% source %}`.
+(Knowledge-audit entries are skip-by-default here — see Knowledge audits.) The
+box-standup is a usage action, not a code chunk.
 
 ## Subplans
 
@@ -424,11 +444,11 @@ No other sub-question is large enough to need its own design step.
 |---|---|---|---|
 | External ref escapes allowlist via `../` or symlink | Yes — Track B chunk doctest | Yes — realpath + allowlist `startsWith`, `ExternalRefError` 403 | Clear (403) |
 | External ref names a removed/unknown worktree | Yes — Track B doctest | Yes — `discoverWorktrees()` miss → `ExternalRefError` | Clear (resolver error; viewer shows "target unavailable") |
-| Wrapped target edited since anchor (`version` marker mismatch) | To add — Track C | Yes — re-check markers (git rev preferred, else hash) on view, paint anchor stale | Clear (stale flag) — *this is the core drift case; silent here would be confidently-wrong commentary* |
+| Wrapped target edited since anchor (`version` marker mismatch) | Yes — `buildVersionMarkers` unit test + drift-check functional test (Track C) | Yes — re-check markers (git rev preferred, else hash) on view, paint anchor stale | Clear (stale flag) — *this is the core drift case; silent here would be confidently-wrong commentary* |
 | Target has no git history, only `sha256:` marker available | n/a (expected for external resources) | Hash marker alone still detects drift; no diff affordance | Clear (drift flagged; diff-view simply unavailable for that target) |
-| Markers match but `pos` line drifted (any byte change flips both git rev and hash) | Partial | Marker check catches it (any committed or on-disk change ⇒ mismatch ⇒ flag) | Clear (over-flags rather than under-flags — safe direction) |
+| Markers match but `pos` line drifted (any byte change flips both git rev and hash) | Yes — covered by the marker functional test | Marker check catches it (any committed or on-disk change ⇒ mismatch ⇒ flag) | Clear (over-flags rather than under-flags — safe direction) |
 | Selection over a `.ts` (plaintext) target → `pos` is line-only | n/a (degraded, not failure) | `formatPosition` tolerates missing heading/paragraph (`selection-position.ts:47-62`) | Clear (weaker anchor + quoted body still present) |
-| Dev route accidentally mounted in prod | To add | Dev flag gates mounting; deployed server never sets it | Clear (route 404 in prod) |
+| Dev route accidentally mounted in prod | Yes — route-gating route-doctest (Track B route chunk) | Dev flag gates mounting; deployed server never sets it | Clear (route 404 in prod) |
 | Commentary card body hand-edited with malformed `{% source %}` | Inherited | `cb validate` runs Markdoc validation on card load (CLAUDE.md validation contract) | Clear (validation error) |
 | Two agents edit one commentary card concurrently | No | Same as any card; not reconciled | DEFERRED (see edge cases) |
 
@@ -575,12 +595,28 @@ explicit signal, per cb-plan's no-partial-ship rule.
 
 ## Rollout shape
 
-- **Test posture.** Dogfooding precedes broad tests. Two cheap doctests land
-  with their chunks as regression guards (not because the surface is
-  high-stakes — see threat model): the Track B resolver
-  (traversal/denylist/unknown-worktree) and the Track A parse/validate. The
-  `commentary.tsx` renderer is exercised by dogfooding first; one route-doctest
-  for the external-file endpoint lands once the shape settles.
+- **Test posture (overrides cb-plan's default "dogfooding-first, defer
+  tests" — the boxholder wants real coverage).** Every new codepath lands with
+  tests in their chunk, in the project's doctest format (`.claude/rules/doctest.md`;
+  three tiers — pure-function, route via `makeTestServer()`, filesystem via
+  `makeTmpBox()`):
+  - **Unit (pure-function):** `{% source %}` parse/validate with all attributes
+    (Track A); `resolveExternalRef` allow/deny/traversal/unknown-worktree
+    (Track B); the `pos` builder's existing `selection-position.doctest.md`,
+    extended for the `position`→`pos` rename.
+  - **Functional — "creating the selectors/versions" specifically (the
+    boxholder's explicit ask):** `buildVersionMarkers` over a committed and a
+    dirty file (filesystem tier) — `sha256:` matches bytes, `git:<rev>` present
+    iff tracked (Track B); and the synthesis transform — a captured
+    `<user-selection>` (`pos` + `placement`) → a `{% source %}` carrying those
+    exact fields + the markers (Track D).
+  - **Route (`makeTestServer()`):** `GET /api/external/:ref` returns
+    bytes + current markers for an allowed ref, 403/404 for denied/unknown,
+    and 404 when the dev flag is off (Track B route chunk).
+  - **Renderer:** drift detection (stored vs. route-current markers ⇒ stale
+    paint) covered by a functional test on the marker pair; the full
+    `commentary.tsx` visual is dogfood-verified via `bin/browse`, the same
+    posture selection-commentary used for its irreducibly-browser parts.
 - **Knowledge-audit entries.** Skipped by default (see Knowledge audits); at
   most one optional light entry for `{% source %}`'s extended attributes.
 - **Migration.** None for card data — Track A attributes are additive and
