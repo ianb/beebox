@@ -53,10 +53,12 @@ loading tiers and consolidates two anchoring tags into one.
   `quotes.ts`) are the densest preference for how a body-anchoring tag is
   shaped and documented. Track A extends `{% source %}` rather than minting a
   new tag, per that precedent.
-- **Precedent — `gdoc` external-content card** (`src/schemas/gdoc.tsx`): a
-  card that stands in for content sourced elsewhere. The `commentary` card is
-  its live-filesystem cousin; we mirror its frontmatter-metadata +
-  `content.ref` shape (Track C).
+- **Precedent — body-bearing cards (`doc`/`briefing`).** A `commentary` card
+  needs a markdown **body** (the commentary), so its schema follows
+  `doc`/`briefing` (`body(z.string())`, `src/schemas/doc.tsx`), **not** `gdoc`
+  — codex #9 caught that `gdoc` is body-less and points at an attach file
+  (`gdoc.tsx:39`). `gdoc` is still the precedent for the *idea* of a card
+  standing in for external content, just not for the schema shape (Track C).
 - **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
   *"links in card schemas always use `ref="..."` for the target, not
   href/path/url"*). `ref` is the box-relative, `cb mv`-tracked form. External
@@ -72,9 +74,10 @@ loading tiers and consolidates two anchoring tags into one.
   whatever renderer is active:
   `src/frontend/src/components/FileView.tsx:283-285`: *"const body =
   onAddSelection === undefined ? rendered : `<SelectionCapture
-  onCapture={handleCapture}>{rendered}</SelectionCapture>`"*. So selecting
-  inside a wrapped-target pane needs no new capture code — only a per-pane
-  target ref. The serialized form is built at
+  onCapture={handleCapture}>{rendered}</SelectionCapture>`"*. The capture
+  *mechanism* (this wrapper) is reused, but the pipeline below is `ref`-bound,
+  so generalizing it to `href` is a real change — **not** free reuse (codex #4;
+  see Track C "Selection → composer"). The serialized form is built at
   `src/frontend/src/lib/selection-serialize.ts:69-73`: *"return
   `<user-selection ref="${escapeAttr(selection.ref)}"${positionAttr}${placementAttr}>${escapeText(selection.text)}</user-selection>`"*
   — attributes `ref` (required), `position` (optional), `placement`
@@ -109,10 +112,12 @@ loading tiers and consolidates two anchoring tags into one.
   `**/*.<type>.card` rule files. The `commentary` card's synthesis guidance
   rides this tier-3 mechanism (Track D).
 
-- **External-content card precedent — MIRROR.** `src/schemas/gdoc.tsx`:
-  pure-frontmatter metadata + a `content.ref` pointing at the renderable
-  body. `commentary` mirrors the metadata-card shape but resolves targets live
-  rather than from an attach copy.
+- **Body-bearing card precedent — MIRROR `doc`/`briefing`.** `commentary` has a
+  markdown body (the commentary prose), so it follows `doc`/`briefing`
+  (`src/schemas/doc.tsx`, `body(z.string())`). `gdoc` (`src/schemas/gdoc.tsx`)
+  is the precedent for *standing in for external content* but is **body-less**
+  (`content.ref` → attach file, `gdoc.tsx:39`), so it's the wrong schema shape
+  to copy (codex #9).
 
 - **Renderers — REUSE.** `src/frontend/src/renderers/` has `markdown.tsx`
   and `plaintext.tsx`; a wrapped `.md` renders via the former, a wrapped
@@ -198,10 +203,14 @@ holds *the span the user selected* (verbatim text from the target — the W3C
 the live file); the user's **comment** is the prose that *follows* the tag,
 outside it (per `agent-guide/source.ts`: "your own framing... doesn't need a
 `{% source %}` tag"). A selection is always verbatim, so it composes with an
-inner `{% quote %}`. In the common case the target and version come from the
-card's frontmatter (Track C), so an anchor is just `pos` + the quote:
+inner `{% quote %}`. **Each anchor is explicit** — it carries exactly one of
+`ref` (in-box) or `href` (external) plus its own `version`. The agent fills
+these from the card's frontmatter default at *write* time, so they stay
+consistent without being *inherited at render* time:
 ```
-{% source pos="body; heading: Track A (#track-a); paragraph 2; ~line 210" %}
+{% source href="file:/Users/.../chat-output-ia/callback-box/docs/plans/box-commentary-surface.md"
+          version="git:7ffeae4 sha256:9f3a1c2b"
+          pos="body; heading: Track A (#track-a); paragraph 2; ~line 210" %}
 {% quote %}a single tag expresses everything `<user-selection>` expresses{% /quote %}
 {% /source %}
 
@@ -210,43 +219,45 @@ Overstated — `placement` is composer-only, so it isn't a clean superset. Softe
 The first block is the anchored span; the trailing paragraph is the comment.
 Note `` `<user-selection>` `` is backtick-wrapped: the raw selection contained
 `<…>`, which the agent escapes to valid Markdown when writing the quote (see
-Track D). An anchor adds `href`/`version` **only to override the frontmatter
-default** — e.g. when anchoring to a different compared target:
-```
-{% source href="file:/Users/.../callback-mono/callback-box/docs/box-commentary-surface.md"
-          pos="…" version="sha256:9f3a1c2b" %}
-{% quote %}…{% /quote %}
-{% /source %}
-```
-- `href` / `ref` — **optional; an anchor with neither inherits the card's
-  frontmatter default** (`defaultHref` or `defaultRef`, Track C). Specify one
-  only to override — a *different* compared target, a one-off URL, or the
-  *other* kind than the default (you can write a `ref`-anchored source inside
-  an `href`-defaulted card). A single source carries `href` **xor** `ref`,
-  never both. `href` is the external full-URL form (`file:`, `http(s):`):
-  unlike a box-relative `ref`, it is **not** tracked or rewritten by `cb mv` /
-  body-ref validation (which `agent-guide/source.ts` describes for `ref`) —
-  `href` deliberately opts out of that machinery.
+Track D).
+
+**Why anchors are explicit, not inherited (codex review).** An earlier draft
+let an anchor omit `href`/`version` and inherit the card's frontmatter default.
+Codex flagged two real bugs: if the card default later changes, every omitted
+anchor silently *retargets*; and a single `defaultVersion` is wrong for anchors
+added later as the file moves on — `version` is a *historical fact per anchor*,
+not a card-level value. So each anchor is written explicit; the frontmatter
+default is an authoring convenience the agent stamps, not a render-time lookup.
+- `href` / `ref` — **exactly one, always present.** `ref` is the in-box,
+  box-relative, `cb mv`-tracked form; `href` is the external full-URL form
+  (`file:`, `http(s):`), untracked by `cb mv` (which is why it's a separate
+  attribute — `agent-guide/source.ts` describes the `ref` tracking `href` opts
+  out of). The global `source` schema gains `href` and relaxes `ref` from
+  required to **"exactly one of `ref`/`href`"** — enforced for commentary cards
+  via `card-lint` (see First implementation chunk), since `Markdoc.validate` is
+  not otherwise wired (codex #7).
 - `pos` — same freeform grammar as `formatPosition`
   (`selection-position.ts:47-62`); reused verbatim so the chat selection and
-  the persisted source share one string. Always per-anchor (never inherited).
-- `version` — **optional; inherits the card's frontmatter `defaultVersion`**
-  (Track C); specify only when this anchor was made against a different state.
-  A space-separated set of `"<kind>:<value>"` markers (the W3C "array of
-  selectors, prefer the precise one" pattern):
-  - `git:<rev>` — when the target is tracked. Cheap, and **diffable** (a later
-    viewer can `git show <rev>:<path>`).
-  - a content hash — the only marker that pins a **dirty/uncommitted** file's
-    exact bytes. **Encoding: a git-style short SHA** (truncated hex, e.g.
-    `sha256:9f3a1c2b`). Drift is an equality check, not collision resistance
-    (non-adversarial, per the threat model), so a short prefix is enough and
-    stays legible.
+  the persisted source share one string. Per-anchor.
+- `version` — **per-anchor, written at synthesis time** (never inherited). A
+  space-separated set of `"<kind>:<value>"` markers:
+  - a **content hash**, `sha256:<git-style-short-hex>` of the file bytes. **This
+    is the drift primary** (codex #2): the only marker that identifies *this
+    file's* exact state, including a dirty/uncommitted edit. Drift is an
+    equality check, not collision resistance (non-adversarial), so a short
+    prefix suffices.
+  - `git:<rev>` — **supplementary, for the diff affordance only**, not drift.
+    Ideally the *last commit that modified the file*
+    (`git log -1 --format=%h -- <path>`); worktree HEAD is an acceptable
+    fallback. (Codex #2: HEAD is wrong as a *drift* signal — it changes when any
+    file commits and doesn't change on a dirty edit — so it's never the primary;
+    it only says "which committed version to `git show` for a diff.")
 
-  An untracked/web resource carries only the hash; a tracked file can carry
-  both. On view, the renderer compares stored markers to the route's current
-  markers (git rev preferred, else hash); mismatch ⇒ flag "may be stale" (the
-  `data_through` freshness shape from `docs/prompt-audits.md` §"Cache
-  freshness"). Re-anchoring is **not** in this track.
+  An untracked/web resource carries only the hash. On view, the renderer
+  compares the anchor's **content hash** to the target's current hash; mismatch
+  ⇒ flag "may be stale" (the `data_through` freshness shape from
+  `docs/prompt-audits.md` §"Cache freshness"). Re-anchoring is **not** in this
+  track.
 - `placement` — carried verbatim from `<user-selection>` when present
   (`selection-serialize.ts:71`); per-anchor (never inherited). On a durable
   annotation it's a **provenance marker**: the `pos` was *estimated* (a
@@ -272,28 +283,30 @@ attributes (target ref, `pos`, `placement`, quoted body) **plus** the
 multi-marker `version`.
 
 **Vocabulary lock-ins.**
-- Attribute names: `pos`, `version`, `placement`, and `href` (external,
-  untracked) vs `ref` (in-box, tracked). `pos`/`placement` are per-anchor;
-  `href`/`version` inherit from frontmatter and appear on the tag only to
-  override.
-- `version` value format: space-separated `"<kind>:<value>"` markers (e.g.
-  `git:<rev>`, `sha256:<truncated-hex>`); the `kind:` prefix keeps the set
-  open-ended.
-- The `pos` string grammar is owned by `formatPosition`; `{% source %}`
-  consumes it. `placement` is owned by the selection serializer; `{% source %}`
-  carries it. Neither is re-specified here.
+- Attribute names: `pos`, `version`, `placement`, `href` (external, untracked),
+  `ref` (in-box, tracked). All per-anchor and explicit; `ref`/`href` are
+  exactly-one. No render-time inheritance.
+- `version` value format: space-separated `"<kind>:<value>"` markers — a
+  `sha256:<short-hex>` content hash (**drift primary**) and optionally
+  `git:<rev>` (diff affordance, last-modifying-commit). `kind:` prefix keeps
+  the set open-ended.
+- The `pos` string grammar is owned by `formatPosition`; `placement` by the
+  selection serializer. `{% source %}` carries both; neither is re-specified.
 
 **First implementation chunk.** Add `pos`, `version`, `placement`, and `href`
-to the `source` schema in `markdoc-config.ts` (attributes only, all optional,
-no behavior change to existing `ref`/`as` callers); rename `position` → `pos`
-in the `<user-selection>` serializer (`selection-serialize.ts:70`); thread the
-new attributes through the `SourceInline`/`SourceBlock` render rename the same
-way `ref`→`sourceRef` is handled (`markdoc-config.ts:144-145`); extend
-`agent-guide/source.ts` with a short "anchoring an existing span (pos, version
-markers, placement; href for external targets)" subsection; one doctest
-asserting a `{% source %}` with all attributes — including a multi-marker
-`version="git:… sha256:…"`, an `href="file:…"`, and a `placement` — parses and
-validates.
+to the `source` schema in `markdoc-config.ts`; relax `ref` from `required` to
+optional and add a tag `validate` requiring **exactly one of `ref`/`href`**.
+Because `Markdoc.validate` is not invoked anywhere today (codex #7 —
+`extractBodyRefs` swallows parse errors at `body-refs.ts:49`, `Markdown.tsx`
+calls `parse`/`transform` only), **wire that validation into `card-lint` for
+`*.commentary.card` bodies** so the rule runs where it matters. Rename
+`position` → `pos` in the `<user-selection>` serializer
+(`selection-serialize.ts:70`); thread the new attributes through the
+`SourceInline`/`SourceBlock` rename (`markdoc-config.ts:144-145`); extend
+`agent-guide/source.ts` with the "anchoring an existing span" subsection. One
+doctest asserts a `{% source %}` with `href`, `version` (hash + git), and
+`placement` parses; a second asserts a source with neither/both `ref`/`href`
+fails the new validate.
 
 ### Track B — `file:` addressing + gated live-read resolver
 
@@ -326,30 +339,35 @@ is fine.
 - **Resolver (server).** A new helper — call it `resolveExternalRef(href)` —
   that: parses the `file:` URL → absolute path (rejects non-`file:` for the
   read route); strips query suffixes (Vite `?raw` lesson); `fs.realpath`s it;
-  verifies the realpath `startsWith` one of the allowlisted resolved roots
-  (the same `startsWith`-after-resolve shape as `api-files.ts:67`, but against
-  the roots allowlist instead of boxRoot); refuses `.git/`, `.env*`, and
-  node_modules (denylist, per Vite); returns a custom `ExternalRefError` on any
-  failure (CODE-STYLE: custom error classes, no bare catch). Read-only — no
-  write counterpart. Per the threat model this guard is hygiene, not a hardened
-  boundary.
+  verifies the realpath sits under an allowlisted root with
+  **`path.relative(root, resolved)`** (not a raw `startsWith` — `/foo` prefixes
+  `/foobar`; codex #6): in-bounds iff the relative path doesn't start with `..`
+  and isn't absolute; refuses `.git/`, `.env*`, and node_modules (denylist, per
+  Vite); returns a custom `ExternalRefError` on any failure (CODE-STYLE: custom
+  error classes, no bare catch). Read-only. Per the threat model this guard is
+  hygiene, not a hardened boundary.
 - **Route.** A raw Fastify route (file-download shape, per the tRPC-vs-raw
-  rule in CLAUDE.md) e.g. `GET /api/external/:ref` returning the bytes +
-  content-type **plus the current `version` markers** (so the renderer can
-  drift-check without a second round-trip), **registered only when a dev flag
-  is set** (so the deployed server at `/opt/callback/` never mounts it). Strip
-  query suffixes before resolving (Vite `?raw` lesson).
-- **`buildVersionMarkers(absPath)` (server).** Produces the marker set for a
-  resolved file: `sha256:<hash>` of the current on-disk bytes always (the
-  file-specific drift signal), plus `git:<rev>` = the worktree's current
-  commit when the path is tracked (enables the later `git show <rev>:<path>`
-  diff-view). Used by the route (to report current markers) and by Track D
-  synthesis (to stamp an anchor) — one helper, one definition of "version,"
-  so creation and drift-check can't disagree. This is the "creating the
-  versions" unit the functional tests target.
-- **Allowlist.** Resolved roots the allowlist permits: the worktrees root
-  (`WORKTREES_ROOT`, `bin/router.ts:55`) and the main checkout root. Read from
-  the router's own config (single source of truth), as resolved prefixes.
+  rule in CLAUDE.md): `GET /api/external?href=<url-encoded file: URL>` — the
+  href goes in a **URL-encoded query param, not a `:ref` path segment** (a
+  `file:/Users/...` URL has slashes and a scheme; it can't sit in one path
+  segment — codex #6). It returns a **JSON envelope**
+  `{ contentBase64, contentType, markers }`, **not** raw bytes with markers
+  bolted on (you can't cleanly return a raw body *and* structured metadata —
+  codex #6). **Registered only when a dev flag is set** (the deployed server at
+  `/opt/callback/` never mounts it).
+- **`buildVersionMarkers(absPath)` (server).** Returns the marker set:
+  `sha256:<short-hex>` of the current on-disk bytes — the **drift primary** —
+  plus `git:<rev>` = the **last commit that modified the path**
+  (`git log -1 --format=%h -- <path>`, falling back to HEAD) for the diff
+  affordance only (codex #2: a worktree HEAD is not a file version). Used by the
+  route (current markers) and Track D synthesis (stamping an anchor) — one
+  helper, one definition of "version," so creation and drift-check agree. The
+  "creating the versions" unit the functional tests target.
+- **Allowlist.** Permitted resolved roots: the worktrees root and the main
+  checkout root. `WORKTREES_ROOT` is a **non-exported** const in the executable
+  `bin/router.ts:55` (codex #6), so this is *not* free reuse — export it (and a
+  main-checkout-root) from a shared module, or have the resolver read the same
+  config. Resolved prefixes, compared via `path.relative` as above.
 
 **Vocabulary lock-ins.**
 - `href` carries a full URL; `file:` is the only scheme the read route
@@ -384,46 +402,49 @@ that makes external targets viewable, selectable, and comment-anchored in one
 object.
 
 **Direction.**
-- **Schema** (`cardSchema("commentary", …)`, registered in
-  `registry.ts:63-89`). Frontmatter, modeled on HTML's `<base href>` —
-  declare the default once, let body anchors inherit:
+- **Schema** (`cardSchema("commentary", …)`, registered in `registry.ts:63-89`),
+  **body-bearing like `doc`/`briefing`** (`body(z.string())`, `doc.tsx:17`;
+  codex #9 — *not* body-less `gdoc`). Frontmatter declares the render canvas +
+  the agent's default target:
   ```
   ---
   type: commentary
-  defaultHref: file:/Users/.../chat-output-ia/callback-box/docs/box-commentary-surface.md  # default target
-  defaultVersion: git:7ffeae4 sha256:9f3a1c2b   # optional default version this pass is against
+  defaultHref: file:/Users/.../callback-box/docs/plans/box-commentary-surface.md  # default target (xor defaultRef)
   targets:                               # optional; additional URLs to render for compare
-    - file:/Users/.../callback-mono/callback-box/docs/box-commentary-surface.md   # main, side-by-side
+    - file:/Users/.../callback-mono/callback-box/docs/plans/box-commentary-surface.md
   ---
   ```
-  `defaultHref` **xor** `defaultRef` — a card defaults to an external target or
-  an in-box one, never both (a Zod refinement rejects both-set). The body is
-  freeform Markdoc commentary. A `{% source %}` with neither `href` nor `ref`
-  inherits that default (and `defaultVersion`); it spells out a target only to
-  override — a compared target, a one-off URL, or the *other* kind than the
-  default. The frontmatter declares the canvas (an empty commentary card still
-  shows its target(s) to select against). Multi-file / cross-worktree compare
-  falls out of `targets:` being a list — the default plus listed extras render
-  as side-by-side panes; absolute `file:` paths distinguish the worktrees.
+  `defaultHref` **xor** `defaultRef` (Zod refinement rejects both). **No
+  `defaultVersion`** — version is per-anchor (codex #3). The body is freeform
+  Markdoc commentary; every `{% source %}` anchor is **explicit** (its own
+  `ref`/`href` + `version`), stamped from the default by the synthesis, not
+  inherited at render time. The frontmatter declares the canvas (an empty card
+  still shows its target(s) to select against). Multi-file / cross-worktree
+  compare falls out of `targets:` being a list — absolute `file:` paths
+  distinguish the worktrees.
 - **Renderer** (`renderers/commentary.tsx`): one column per rendered target
-  (the `defaultHref`/`defaultRef` + `targets:`); each column renders the
-  resolved content through the existing markdown/plaintext renderer and is
-  wrapped in `SelectionCapture` (reusing `FileView.tsx:283-285`) whose
-  `onCapture` stamps that column's target; the commentary body renders
-  alongside, and each `{% source %}` anchor links to its span in the matching
-  column (resolving to the default when its `href`/`ref` is omitted). `version`
-  mismatch on a live target paints the affected anchors as stale.
-- **Selection → composer.** A captured selection serializes as
-  `<user-selection href="file:…" pos="…">text</user-selection>`. The one change
-  to the existing serializer (`selection-serialize.ts:69-73`) is an `href`
-  branch for external `file:` targets — in-box selections keep `ref`; the rest
-  of the path (pills, voice fold-in, send) is unchanged.
+  (`defaultHref`/`defaultRef` + `targets:`); each column renders resolved
+  content through the existing markdown/plaintext renderer, wrapped in
+  `SelectionCapture`; the commentary body renders alongside, each `{% source %}`
+  anchor linking to its span in the column matching the anchor's **explicit**
+  `href`/`ref`. Drift: compare the anchor's content hash to the target's current
+  hash; mismatch paints the anchor stale.
+- **Selection → composer (bigger than "one href branch" — codex #4).** The
+  capture *mechanism* (FileView wrapping the renderer in `SelectionCapture`,
+  `FileView.tsx:283-285`) is reused, but the selection pipeline is `ref`-bound
+  end to end, so generalizing to `href` touches four spots: `FileView.tsx:244`
+  derives the `ref` from the file path (the commentary renderer must instead
+  stamp the pane's `href`); the capture/`SelectionItem` types are `ref`-only
+  (`selection-position.ts:36`); the serializer emits `ref`/`position`
+  (`selection-serialize.ts:69`); the sent-message pill parses only
+  `ref`/`position` (`user-message.tsx:31`). Each takes an `href` branch — a real
+  frontend change, not free reuse.
 
 **Vocabulary lock-ins.**
 - Card type literal: `commentary`; file shape `*.commentary.card`.
 - Frontmatter keys: `defaultHref` **xor** `defaultRef` (the default target),
-  `defaultVersion` (optional), `targets` (optional array of additional render
-  targets).
+  `targets` (optional array of additional render targets). No `defaultVersion`
+  — version is per-anchor.
 
 **First implementation chunk.** The `commentary` schema + registry entry + a
 minimal `commentary.tsx` that renders a **single** target (no compare, no
@@ -447,18 +468,18 @@ agent may emit — so it belongs in the path-scoped schema-instruction tier that
 loads exactly when a `commentary` card is touched (`init-rules.ts:102-117`).
 
 **Direction.**
-- Schema `instructions`: when a `<user-selection>` arrives, append/update a
+- Schema `instructions`: when a `<user-selection>` arrives, append a
   `{% source %}` block in the body. The tag body = the user's exact selected
   span **escaped to valid Markdown/Markdoc** (code-wrap `` `<…>` ``, escape
   stray `` ` ``/`{%`/`%}`) — faithful rendering of what was displayed, not
-  paraphrase. Copy `pos` (and `placement`, if any) from the selection. Omit the
-  target and `version` when the selection hits the card's default
-  (`defaultHref`/`defaultRef`); otherwise write an explicit `href` (or `ref`,
-  if the override is in-box) and compute `version` via `buildVersionMarkers`
-  (Track B; the few-seconds synthesis window is not racy, per the boxholder). The agent's own remark goes as prose
-  adjacent to (not inside) the `{% source %}` (mirrors `agent-guide/source.ts`'s
-  "your framing is yours, the tag marks what came from elsewhere"). One
-  commentary card per coherent target-set.
+  paraphrase. Write **explicit** `href` (or `ref`) and `version` on *every*
+  anchor — stamp the card's default target unless the selection was against a
+  different one, and compute `version` via `buildVersionMarkers` (content hash +
+  last-modifying-commit; the few-seconds synthesis window is not racy, per the
+  boxholder). Copy `pos` (and `placement`, if any) from the selection. The
+  agent's own remark goes as prose adjacent to (not inside) the `{% source %}`
+  (mirrors `agent-guide/source.ts`'s "your framing is yours, the tag marks what
+  came from elsewhere"). One commentary card per coherent target-set.
 - Box usage: a dedicated persistent box at `~/src/boxes/<name>/` (served at
   `/main/<name>/`), seeded with commentary cards whose `targets:` point at this
   worktree's IA docs.
@@ -507,12 +528,11 @@ No other sub-question is large enough to need its own design step.
 | `file:` href escapes allowlist via `../` or symlink | Yes — Track B chunk doctest | Yes — realpath + allowlist `startsWith`, `ExternalRefError` 403 | Clear (403) |
 | `file:` href points at a removed/outside-roots path | Yes — Track B doctest | Yes — realpath miss / not-under-roots → `ExternalRefError` | Clear (resolver error; viewer shows "target unavailable") |
 | Selected span contains Markdoc/Markdown-breaking chars (`<…>`, `` ` ``, `{%`/`%}`) | Yes — synthesis functional test includes a markup span (Track D) | Yes — agent escapes the span to valid Markdown/Markdoc when quoting | Clear (renders as written; tag stays intact) |
-| Wrapped target edited since anchor (`version` marker mismatch) | Yes — `buildVersionMarkers` unit test + drift-check functional test (Track C) | Yes — re-check markers (git rev preferred, else hash) on view, paint anchor stale | Clear (stale flag) — *this is the core drift case; silent here would be confidently-wrong commentary* |
-| Target has no git history, only `sha256:` marker available | n/a (expected for external resources) | Hash marker alone still detects drift; no diff affordance | Clear (drift flagged; diff-view simply unavailable for that target) |
-| Markers match but `pos` line drifted (any byte change flips both git rev and hash) | Yes — covered by the marker functional test | Marker check catches it (any committed or on-disk change ⇒ mismatch ⇒ flag) | Clear (over-flags rather than under-flags — safe direction) |
-| Selection over a `.ts` (plaintext) target → `pos` is line-only | n/a (degraded, not failure) | `formatPosition` tolerates missing heading/paragraph (`selection-position.ts:47-62`) | Clear (weaker anchor + quoted body still present) |
+| Wrapped target edited since anchor | Yes — `buildVersionMarkers` unit test + drift-check functional test (Track C) | Yes — compare the anchor's **content hash** to the target's current hash; mismatch paints stale (git rev is diff-only, never the drift signal — codex #2) | Clear (stale flag) — *the core drift case; silent here would be confidently-wrong commentary* |
+| Target has no git history, only the content hash | n/a (expected for external/web resources) | Content hash alone detects drift; no diff affordance | Clear (drift flagged; diff-view simply unavailable for that target) |
+| Selection over a `.ts` (plaintext) target → no `pos` | n/a (degraded, not failure) | plaintext is one `<Pre>` with no headings/paragraphs/`data-line`, so `pos` is usually **empty** for code (codex #8); the quoted span is the only anchor. (Optional later: emit `data-line` from the plaintext renderer for line anchors.) | Clear (span-only anchor; quoted body still present) |
 | Dev route accidentally mounted in prod | Yes — route-gating route-doctest (Track B route chunk) | Dev flag gates mounting; deployed server never sets it | Clear (route 404 in prod) |
-| Commentary card body hand-edited with malformed `{% source %}` | Inherited | `cb validate` runs Markdoc validation on card load (CLAUDE.md validation contract) | Clear (validation error) |
+| Commentary card body hand-edited with malformed/anchor-less `{% source %}` | Yes — card-lint doctest (Track A) | The new exactly-one-of-`ref`/`href` validate, **wired into `card-lint` for `*.commentary.card`** (codex #7: `Markdoc.validate` is not otherwise invoked; `body-refs.ts:49` swallows parse errors) | Clear (lint error) |
 | Two agents edit one commentary card concurrently | No | Same as any card; not reconciled | DEFERRED (see edge cases) |
 
 ## Agent-flow / user-flow edge cases
@@ -529,19 +549,23 @@ No other sub-question is large enough to need its own design step.
   no reconciliation beyond git; commentary cards are expected to be
   single-writer (the chat agent during a commentary session). Cited in Open
   questions.
-- **Hand-edit drift** — boxholder hand-writes `{%source%}` (no spaces) or a
-  bad `version`. **ADDRESSED** — Markdoc validation on load (CLAUDE.md
-  validation contract); a malformed tag fails `cb validate` rather than
-  rendering wrong.
+- **Hand-edit drift** — boxholder hand-writes `{%source%}` (no spaces) or an
+  anchor-less source. **ADDRESSED via the new card-lint** (Track A): codex #7
+  showed `cb validate` does *not* catch this today — `Markdoc.validate` is never
+  invoked and `extractBodyRefs` (`body-refs.ts:49`) swallows parse errors — so
+  the plan adds the exactly-one-of-`ref`/`href` validate into `card-lint` for
+  `*.commentary.card`. (A truly unparseable tag still degrades to raw text in
+  the renderer rather than crashing; the lint is what surfaces it.)
 - **Fabricated free-form value** — agent invents `version` or `pos` rather
   than measuring. **ADDRESSED by making honesty easy** — `version` is computed
   from the live target (Track D synthesis), not authored; `pos` is copied from
   the selection string, not invented. The one free-form field, `as`, already
   has the "describe reality, don't enum-fit" guidance in `agent-guide/source.ts`.
 - **Validation error UX** — does a bad `{% source %}` read well to the agent?
-  **ADDRESSED** — Markdoc attribute validation names the offending attribute;
-  surfaced via the existing `cb validate --hook` PostToolUse path
-  (callback-box CLAUDE.md).
+  **ADDRESSED via the new card-lint check** — it names the offending tag
+  (missing/both `ref`/`href`), surfaced through the existing `cb validate
+  --hook` PostToolUse path. (Per #7 this is new work, not an existing
+  guarantee.)
 - **Partial migration / transition state** — `{% source %}` gains optional
   attributes (backward-compatible); the `position` → `pos` rename touches the
   `<user-selection>` serializer + its doctests, but that tag is transient (not
@@ -569,8 +593,10 @@ No other sub-question is large enough to need its own design step.
   drift-detection that snapshotting was wanted for, without a second
   content-storage path. (Recorded because snapshot was seriously considered.)
 - **Syntax-highlighted code renderer.** `.ts` targets render via existing
-  `plaintext.tsx`. Rationale: highlighting doesn't change the loop;
-  line-anchored selection already works.
+  `plaintext.tsx`. Rationale: highlighting doesn't change the loop. (Note: code
+  selection has no `pos` — codex #8 — so the quoted span is the anchor; emitting
+  `data-line` from the plaintext renderer for line anchors is a small optional
+  follow-on, not a blocker.)
 - **Live-rendering `http(s):` web targets in a pane.** Web hrefs are
   storable/quotable now (you can comment on a web page), but fetching and
   rendering one live in a column (CORS, sanitization, iframe) is a separate
@@ -587,27 +613,43 @@ No other sub-question is large enough to need its own design step.
   assumption. Rationale: commentary is an interactive chat-agent session, not a
   background-agent target.
 
+## Codex review — what was applied / declined
+
+A cross-model review (codex, read-only repo access; run via the `/codex` skill)
+read the source and falsified several claims. Applied: **#2** (content hash is
+the drift primary; `git:<rev>` demoted to a diff affordance and set to the
+last-modifying-commit per the boxholder); **#3** (no frontmatter-default
+*inheritance* — anchors carry explicit target + `version`; `defaultVersion`
+removed); **#5** (don't weaken the global `source` schema — `ref`/`href` is
+exactly-one, enforced for commentary via card-lint); **#4** (the `ref`→`href`
+selection-pipeline change is re-scoped as real frontend work, not free reuse);
+**#6** (route is a JSON envelope on a `?href=` query param, allowlist via
+`path.relative`, `WORKTREES_ROOT` must be exported); **#7** (`cb validate` does
+*not* catch malformed Markdoc today — the plan adds the check to card-lint);
+**#8** (`.ts` plaintext selection yields *no* `pos`, not line-only); **#9**
+(precedent is body-bearing `doc`/`briefing`, not body-less `gdoc`). Declined:
+**#1** ("cut the whole live-wrapper build") — codex independently reinvented the
+cheaper dogfood-with-an-in-box-doc path the boxholder already considered and
+rejected in favour of the live wrapper; recorded, not adopted. **#10** (memory/
+doctest citations "out of bounds") — those are legitimate project artifacts.
+
 ## Open design questions
 
-- **External addressing — SETTLED (recorded for the close read).** `href` for
-  external targets (full URLs: `file:`, `http(s):`), `ref` for in-box targets
-  (box-relative, `cb mv`-tracked); a source carries one xor the other. Scheme
-  is plain `file:<abs-path>` — no worktree registry, since an absolute path
-  already names the worktree; this dissolved the former `wt:main` question.
-  Frontmatter declares a single default, `defaultHref` **xor** `defaultRef`
-  (+ optional `defaultVersion`); anchors inherit it and override only by
-  naming a target explicitly (which may be the other kind). Per-box-data
-  exemption covers the `/Users/...` literal (CLAUDE.md). The `cb mv`-tracking
-  difference is the concrete justification for the two-attribute split.
-- **`version` content-hash encoding — SETTLED.** Git-style short SHA
-  (truncated hex). Drift detection is equality-only and non-adversarial, so a
-  short prefix suffices. Exact truncation length is an implementation detail of
-  `buildVersionMarkers`; not load-bearing.
-- **Frontmatter default vs. multi-target compare** (minor, open). For a compare
-  card with `targets:`, an anchor against a non-default target spells out the
-  full `href`. Nuance: whether to let anchors reference a `targets:` entry by a
-  short label instead of repeating the URL. **Lean:** full `href` for now (no
-  label indirection); revisit if compare cards get noisy.
+- **External addressing — SETTLED.** `href` for external targets (full URLs:
+  `file:`, `http(s):`), `ref` for in-box (box-relative, `cb mv`-tracked); a
+  source carries exactly one. Scheme is plain `file:<abs-path>` (an absolute
+  path names the worktree; the former `wt:main` question dissolved). Frontmatter
+  declares one default, `defaultHref` **xor** `defaultRef`; the synthesis
+  **stamps** it onto each anchor explicitly (no render-time inheritance — codex
+  #3). Per-box-data exemption covers the `/Users/...` literal. The `cb mv`
+  difference justifies the two-attribute split.
+- **`version` encoding — SETTLED.** Content hash `sha256:<git-style-short-hex>`
+  as the drift primary; `git:<rev>` (last-modifying-commit) supplementary for
+  diffing. Truncation length is an implementation detail of `buildVersionMarkers`.
+- **Compare-card anchor verbosity** (minor, open). Anchors are now always
+  explicit, so a compare anchor repeats the full `href`. Nuance: let anchors
+  reference a `targets:` entry by a short label instead. **Lean:** full `href`
+  for now; revisit if compare cards get noisy.
 - **Single `commentary` card type vs. wrapper + sidecar.** Committed to single
   (`targets:` frontmatter + body commentary). Recorded as settled, not open —
   noted because the conversation left it "not sure." Rationale: one
