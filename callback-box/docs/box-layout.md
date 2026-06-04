@@ -48,10 +48,10 @@ Items move through these directories as they're processed. **Location is state**
 | Directory | Purpose |
 |-----------|---------|
 | `box/inbox/` | Incoming items awaiting triage. Created by capture UI, connectors, `cb create`. |
-| `box/inbox/intake/` | Items being prepared before triage (transcription, OCR, filename normalization). See `docs/triage-design.md`. |
+| `box/inbox/intake/` | Items being prepared before triage (transcription, OCR, filename normalization). See `docs/plans/triage-design.md`. |
 | `box/inbox/staged/` | Intake-complete; waiting for the triage agent. |
 | `box/inbox/triaged/` | Per-category holding spots (`<category>/`), plus `_unsure/` for low-confidence items paired with a question card. |
-| `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal triage pipeline (its lifecycle is `docs/triage-design.md` Open Question #9). |
+| `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal triage pipeline (its lifecycle is `docs/plans/triage-design.md` Open Question #9). |
 | `box/jobs/` | Pending job cards for the reactor. Filename pattern: `<timestamp>.<type>.job.card`. |
 | `box/output/` | Outbound cards staged for delivery (push notifications, replies). Flushed by `cb finalize`. |
 | `box/questions/` | Open questions awaiting a user answer. |

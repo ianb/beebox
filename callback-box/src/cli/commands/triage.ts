@@ -2,7 +2,7 @@
  * cb triage — Run one pass of the triage stage.
  *
  * Thin wrapper around the core triage command. See
- * `docs/triage-design.md` for the surrounding pipeline.
+ * `docs/plans/triage-design.md` for the surrounding pipeline.
  */
 
 import { Command } from "commander";

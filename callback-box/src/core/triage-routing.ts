@@ -7,7 +7,7 @@
  * - `guess`: move to `inbox/triaged/_unsure/` and create one question
  *   card listing the candidate categories.
  *
- * See `docs/triage-design.md` §5 (Confidence and the question system).
+ * See `docs/plans/triage-design.md` §5 (Confidence and the question system).
  */
 
 import * as fs from "node:fs/promises";

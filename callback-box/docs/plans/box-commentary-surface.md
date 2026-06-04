@@ -48,7 +48,7 @@ loading tiers and consolidates two anchoring tags into one.
   params (named-params object beyond that), no `any`, no bare `catch {}`,
   custom error classes, files ≤300 lines.
 - **Precedent — `{% quote %}` / `{% source %}` work.** The shipped
-  selection-commentary feature (`docs/selection-commentary.md`) and the
+  selection-commentary feature (`docs/implemented-plans/selection-commentary.md`) and the
   agent-guide tier-2 sections (`src/core/agent-guide/source.ts`,
   `quotes.ts`) are the densest preference for how a body-anchoring tag is
   shaped and documented. Track A extends `{% source %}` rather than minting a

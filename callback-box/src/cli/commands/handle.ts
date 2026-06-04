@@ -2,7 +2,7 @@
  * cb handle — Run handler procedures for triaged category buckets.
  *
  * Thin wrapper around the core handle command. See
- * `docs/triage-design.md` §Handle (stage 3).
+ * `docs/plans/triage-design.md` §Handle (stage 3).
  */
 
 import { Command } from "commander";

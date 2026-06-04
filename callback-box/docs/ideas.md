@@ -359,7 +359,7 @@ Open questions:
 - **Where does triage run?** During `cb wakeup` per-item as new things land? As a separate `cb intake` step? Inside the reactor on intake-jobs? The answer affects how aggressively rules get applied (a wakeup-time rule that auto-trashes feels different from a reactor decision that asks first).
 - **One guide or per-stream?** A single `intake.guide.card` is simpler but blurs domains; per-stream guides (recipes vs bookmarks vs voice memos) match how feedback naturally clusters but multiplies setup.
 - **Feedback surface.** Where does the boxholder say "this routing was wrong"? Probably a lightweight "wrong bucket" gesture on archived items + periodic guide-revision passes that read accumulated signals and rewrite the guide.
-- **Relation to landmarks/triage-design.** `docs/triage-design.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
+- **Relation to landmarks/triage-design.** `docs/plans/triage-design.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
 
 ## Capitalize glossary terms as Proper Nouns?
 

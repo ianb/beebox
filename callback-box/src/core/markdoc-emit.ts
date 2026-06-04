@@ -9,7 +9,7 @@
  *
  * **Why not `Markdoc.format()`.** The upstream serializer has several
  * silent-data-loss and non-convergence bugs documented at
- * `docs/markdoc-format-investigation.md`. The most disqualifying for us:
+ * `docs/implemented-plans/markdoc-format-investigation.md`. The most disqualifying for us:
  * info-string args after a code fence's language token get dropped
  * (` ```ts setup ` → ` ```ts `). Doctest examples embedded in a card
  * body would be silently corrupted. Hand-rolling this emitter avoids

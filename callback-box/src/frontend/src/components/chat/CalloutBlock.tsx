@@ -4,7 +4,7 @@
  * The body renders as markdown so the agent can use formatting.
  *
  * See `lib/structured-output-parsing.ts` for the data model and
- * `docs/narration-mode-design.md` for the design rationale.
+ * `docs/implemented-plans/narration-mode-design.md` for the design rationale.
  */
 
 import { useCallback } from "react";

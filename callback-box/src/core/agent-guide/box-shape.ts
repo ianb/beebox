@@ -54,7 +54,7 @@ export function howItemsEnterSection(): string[] {
     "Two parallel sorting paths process items that land in `box/inbox/`:",
     "",
     "- **Inbox jobs (legacy)** — the wakeup cycle creates job cards in `box/jobs/` for the reactor to process. This is the historical path; most current routing still goes through it.",
-    "- **The intake → triage → handle pipeline (new)** — see `docs/triage-design.md`. Items move through `box/inbox/intake/` → `box/inbox/staged/` → `box/inbox/triaged/<category>/`, driven by `cb intake` / `cb triage` / `cb handle`. The two paths coexist; the new pipeline isn't wired into wakeup yet.",
+    "- **The intake → triage → handle pipeline (new)** — see `docs/plans/triage-design.md`. Items move through `box/inbox/intake/` → `box/inbox/staged/` → `box/inbox/triaged/<category>/`, driven by `cb intake` / `cb triage` / `cb handle`. The two paths coexist; the new pipeline isn't wired into wakeup yet.",
     "",
     "You don't need to move items to the inbox yourself — connectors and capture handle arrivals.",
     "",

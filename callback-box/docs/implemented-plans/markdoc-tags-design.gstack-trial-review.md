@@ -69,7 +69,7 @@ One realistic prod failure per new codepath, with: test exists? handling exists?
 ## Findings
 
 ### Bilingual `compileBriefing` has no conflict/dedup semantics
-**Location in plan:** `docs/markdoc-tags-design.md:146-150` ("Compile-briefing transition")
+**Location in plan:** `docs/implemented-plans/markdoc-tags-design.md:146-150` ("Compile-briefing transition")
 **Citation:** *"Keep `compileBriefing()` bilingual: parse old frontmatter forms AND scan body for new tags. Old briefings keep working without migration. New briefings (and edits) gradually move to the body form. No forced migration script in the first pass."*
 **Issue:** The plan doesn't say what happens when a single briefing has both forms simultaneously. During the migration window — which open question #4 leaves indefinite — partial migrations and parallel edits will produce this state.
 **Why it matters:** Compiled briefing is what agents see. Duplicate corrections waste context; conflicting corrections silently mislead. Per the failure-modes table, this is the one **silent + no test + no handling** combination in the plan.
@@ -77,7 +77,7 @@ One realistic prod failure per new codepath, with: test exists? handling exists?
 **Traces to preference:** Validation-on-load + the "Read before writing" principle — the compiled briefing IS the agent's read of the box, and silently double-emitting corrupts that read.
 
 ### `{% step %}` numbering and ingredient-scaling are flagged but not decided
-**Location in plan:** `docs/markdoc-tags-design.md:252-260` (open questions 1 and 2)
+**Location in plan:** `docs/implemented-plans/markdoc-tags-design.md:252-260` (open questions 1 and 2)
 **Citation:** *"Auto-number or expect the writer to manage prose like 'First, …'? Lean: auto-number on render, no numbering in source"* and *"The scaling math (`amount × ratio`) currently lives in the frontend. Same code can read `amount=` attributes from Markdoc tags. Confirm before implementing."*
 **Issue:** Both are listed as "open" but Track 1's "Minimum first step" says "Migrate just `{% ingredient %}` and `{% step %}`" — the smallest viable migration touches exactly these two undecided questions.
 **Why it matters:** "Confirm before implementing" is a reasonable hedge, but the design hands off the actual confirmation work to implementation time, which couples plan-uncertainty with code-uncertainty. The `{% quote %}` precedent (one tag, one renderer, one agent-guide entry, ship) worked because every shape decision was settled at design time.
@@ -85,7 +85,7 @@ One realistic prod failure per new codepath, with: test exists? handling exists?
 **Traces to preference:** The `{% quote %}` precedent — small, fully-decided, ship-ready. Open questions inside the "minimum first step" violate this.
 
 ### `{% source %}` renderer omits stale-ref behavior
-**Location in plan:** `docs/markdoc-tags-design.md:236-244` ("Renderer")
+**Location in plan:** `docs/implemented-plans/markdoc-tags-design.md:236-244` ("Renderer")
 **Citation:** *"Inline use: a small bracketed citation marker after the wrapped span, e.g. `[→ Voice 2026-03-15]`. Clicking navigates via `onNavigate`."*
 **Issue:** The renderer assumes `ref` resolves. Open question #3 covers the *vague-ref* case (no path known) but not the *invalid-ref* case (path was valid, now isn't).
 **Why it matters:** Source refs into `box/inbox/...` will go stale routinely as cards are processed and moved to `store/archive/`. Without a stated behavior, the chip will silently 404 on click during normal box operation.
@@ -93,7 +93,7 @@ One realistic prod failure per new codepath, with: test exists? handling exists?
 **Traces to preference:** Transparency / "Never silently ignore errors" (CODE-STYLE.md line 30). A click that does nothing is a silent failure.
 
 ### "Universal" `{% source %}` has no accept-list mechanism
-**Location in plan:** `docs/markdoc-tags-design.md:172-175`
+**Location in plan:** `docs/implemented-plans/markdoc-tags-design.md:172-175`
 **Citation:** *"Add `{% source %}` as a universal provenance tag. Universal = available in every schema's body (subject to per-schema accept-lists if any want to restrict it, which I don't currently expect)."*
 **Issue:** "Subject to per-schema accept-lists" gestures at a mechanism that doesn't exist in the codebase yet (the current Markdoc config in `src/frontend/src/lib/markdoc-config.ts` is a single global `tags:` record; no per-schema filter). The vocabulary-constraint section (lines 14-18) makes the same gesture.
 **Why it matters:** Not a near-term problem — the plan correctly notes no schema currently wants to opt out. But the design doc asserts accept-lists as part of the model on lines 14-18 without acknowledging they're not implemented. A future reader (or agent) will look for the mechanism and not find it.
@@ -101,7 +101,7 @@ One realistic prod failure per new codepath, with: test exists? handling exists?
 **Traces to preference:** "Don't add features... beyond what the task requires." The plan is right not to build accept-lists now; it just needs to say so out loud.
 
 ### `{% correction %}` `test` attribute parallel to `{% source %}` `as` is observed but not used
-**Location in plan:** `docs/markdoc-tags-design.md:272-273` (open question 5)
+**Location in plan:** `docs/implemented-plans/markdoc-tags-design.md:272-273` (open question 5)
 **Citation:** *"`{% correction %}`'s `test` attribute as natural language. Mirrors the `as` attribute on `{% source %}`. Worth flagging the parallel."*
 **Issue:** The parallel is noted then dropped. If both are intentionally free-form natural language, that's a small but real piece of vocabulary policy ("attribute values are prose, not enums, by default") worth lifting out of "open questions" into a stated convention.
 **Why it matters:** Minor, but cheap to fix and it tightens the universal-vocabulary section. Without it, the next tag proposer rederives the question.

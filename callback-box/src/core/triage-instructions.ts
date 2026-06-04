@@ -3,7 +3,7 @@
  * `<triage-destination>` role. The doc is what the triage subagent
  * reads to decide where to route each staged item.
  *
- * See `docs/triage-design.md` §3 and §Triage (stage 2).
+ * See `docs/plans/triage-design.md` §3 and §Triage (stage 2).
  */
 
 import * as fs from "node:fs/promises";

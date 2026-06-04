@@ -80,6 +80,6 @@ See `src/services/CLAUDE.md` for the full service layer documentation.
 
 - `chat-utils.ts` — Thread file management: `ensureThreadFile()`, `appendMessageToThread()`, `findUnsentAgentMessages()`, `stampSentMessage()`, `safeFilename()`, `updatePersonEntry()`
 - `calendar-utils.ts` — ICS parsing, event formatting, timespan parsing
-- `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, distinct from the new intake → triage → handle pipeline in `docs/triage-design.md`)
+- `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, distinct from the new intake → triage → handle pipeline in `docs/plans/triage-design.md`)
 - `transient-state.ts` — `loadTransientState()` / `saveTransientState()` for non-committed state
 - `calendar-config.ts` — Calendar sync configuration management

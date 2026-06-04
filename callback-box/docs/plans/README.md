@@ -37,18 +37,23 @@ the reference material already lives elsewhere.
 - **`finish`** should `git mv docs/plans/<topic>.md docs/implemented-plans/` as
   part of the merge close-out, so shipping a plan files it automatically.
 
-## Migration backlog (existing plan-shaped docs in docs/)
+## Migration (done)
 
-Not yet moved — these are proposals/design docs currently sitting in `docs/`
-alongside reference material. Move to `plans/` (still open) or
-`implemented-plans/` (shipped) when convenient:
+The first backlog batch was migrated and all `docs/…` references rewritten:
 
-- `selection-commentary.md` — shipped 2026-05 → `implemented-plans/`
-- `markdoc-tags-design.md`, `markdoc-tags-design.review.md`,
-  `markdoc-format-investigation.md` — design/decision records
-- `shared-frontend-backend-code.subplan.md` — subplan
-- `source-editor.md`, `triage-design.md`, `narration-mode-design.md`,
-  `pdf-intake-design.md` — design proposals
+- → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-design.md`
+  (+ `.review.md`, `.gstack-trial-review.md`), `markdoc-format-investigation.md`,
+  `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
+  (feature shipped, despite the doc's stale "proposal" header).
+- → `plans/` (still open): `triage-design.md` (in progress),
+  `pdf-intake-design.md` (not yet implemented), `source-editor.md`.
 
-(Sweep deferred — establish the convention going forward first, migrate the
-backlog in a batch.)
+**Follow-ups:**
+- Regenerate the doc graph (`pnpm doc-graph`) — it's generated and still shows
+  the old paths; it self-heals on the next run.
+- A few more plan-shaped docs remain in `docs/` and need a judgment call on
+  reference-vs-proposal before moving: `activities-design.md`,
+  `capture-pipeline-redesign.md`, `event-bus-design.md`, `design-card-views.md`,
+  `photo-storage-investigation.md`. Left in place (some read more like vision/
+  reference than active proposals — `DESIGN.md`, `design-vision.md`,
+  `stack-decisions.md` are reference and stay).
