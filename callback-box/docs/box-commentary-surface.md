@@ -28,10 +28,12 @@ loading tiers and consolidates two anchoring tags into one.
   external-file read is a file-download shape, so it extends the raw
   `routes/api-files.ts` family rather than tRPC — traced in Track B.
 - `callback-box/CLAUDE.md` (Behavioral Notes) — *"Keep source and docs
-  generic — never hardcode personal names."* The external addressing scheme
-  and the allowlist must be expressed in terms of resolved roots, not
-  `/Users/ianbicking/...` literals — which is one reason an absolute `file:`
-  URI scheme is disfavored (see Open questions).
+  generic — never hardcode personal names."* This governs **shared** text
+  (source, prompts, schemas, docs, rules) — the allowlist roots are read from
+  config, never literals. But the same note exempts *"per-box config, throwaway
+  replies, and personal memory"*, and commentary cards are per-box data — so a
+  `file:/Users/...` href **in a commentary card** is fine (it's not shared
+  source). That exemption is what lets the `file:` scheme work (Track B).
 - **Threat model (the security posture this plan trades against).** The
   boxholder runs box agents with `--dangerously-skip-permissions` — they
   already have full read access to the machine — and the dev server is
@@ -57,8 +59,9 @@ loading tiers and consolidates two anchoring tags into one.
   `content.ref` shape (Track C).
 - **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
   *"links in card schemas always use `ref="..."` for the target, not
-  href/path/url"*). An out-of-box target is a deliberate departure from this;
-  the `href`-vs-`ref` question is in Open questions.
+  href/path/url"*). `ref` is the box-relative, `cb mv`-tracked form. External
+  URLs are deliberately the *other* attribute, `href` — untracked by `cb mv`,
+  which is exactly why the split is principled, not just cosmetic (Track A).
 - `~/.claude/.../memory` — *"Never disable lint rules; fix the code or ask."*
   Applies to the new frontend renderer and server route.
 
@@ -93,12 +96,11 @@ loading tiers and consolidates two anchoring tags into one.
   needs to read **outside** boxRoot — so it is a **new, separately-gated
   resolver**, not a relaxation of this guard (Track B).
 
-- **Worktree enumeration — REUSE.** `bin/router.ts:55-56` defines the roots
-  (*"WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees")"*),
-  `resolveWorktree(name)` maps a name → absolute path
-  (`bin/router.ts:103`, `:116`), and `discoverWorktrees()`
-  (`bin/router.ts:548-566`) enumerates them. The external resolver reuses this
-  mapping rather than re-deriving paths.
+- **Worktree roots — REUSE (roots only).** `bin/router.ts:55-56` defines the
+  roots (*"WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees")"*).
+  With plain `file:` absolute paths, the resolver needs only these **roots**
+  for its allowlist — no per-name lookup (`resolveWorktree`/`discoverWorktrees`
+  are not needed), since an absolute path already identifies the worktree.
 
 - **Card schema registration + path-scoped instruction rules — REUSE.**
   Frontmatter schemas register in `src/schemas/registry.ts:63-89`
@@ -196,112 +198,143 @@ holds *the span the user selected* (verbatim text from the target — the W3C
 the live file); the user's **comment** is the prose that *follows* the tag,
 outside it (per `agent-guide/source.ts`: "your own framing... doesn't need a
 `{% source %}` tag"). A selection is always verbatim, so it composes with an
-inner `{% quote %}` and `as="verbatim"`:
+inner `{% quote %}`. In the common case the target and version come from the
+card's frontmatter (Track C), so an anchor is just `pos` + the quote:
 ```
-{% source href="wt:chat-output-ia:callback-box/docs/box-commentary-surface.md"
-          pos="body; heading: Track A (#track-a); paragraph 2; ~line 210"
-          version="git:7ffeae4 sha256:9f3a…"  /* one or more kind:value markers */
-          placement="estimated, ~50% through the message"  /* only when the spot was approximate */
-          as="verbatim" %}
-{% quote %}a single tag expresses everything <user-selection> expresses{% /quote %}
+{% source pos="body; heading: Track A (#track-a); paragraph 2; ~line 210" %}
+{% quote %}a single tag expresses everything `<user-selection>` expresses{% /quote %}
 {% /source %}
 
 Overstated — `placement` is composer-only, so it isn't a clean superset. Soften this.
 ```
 The first block is the anchored span; the trailing paragraph is the comment.
-(`href` and the `wt:` scheme are provisional — see Open questions. An in-box
-`{% source %}` still uses `ref`; the example targets an out-of-box file.)
+Note `` `<user-selection>` `` is backtick-wrapped: the raw selection contained
+`<…>`, which the agent escapes to valid Markdown when writing the quote (see
+Track D). An anchor adds `href`/`version` **only to override the frontmatter
+default** — e.g. when anchoring to a different compared target:
+```
+{% source href="file:/Users/.../callback-mono/callback-box/docs/box-commentary-surface.md"
+          pos="…" version="sha256:9f3a1c2b" %}
+{% quote %}…{% /quote %}
+{% /source %}
+```
+- `href` — **optional; inherits the card's frontmatter `href`** (Track C).
+  Specify it only to override — anchoring to a *different* compared target, or
+  a one-off URL not in the frontmatter. It's `href` (not `ref`) because these
+  are full external URLs (`file:`, and `http(s):` for web pages): unlike an
+  in-box `ref`, they are **not** tracked or rewritten by `cb mv` / body-ref
+  validation (which `agent-guide/source.ts` describes for `ref`) — `href`
+  deliberately opts out of that machinery. In-box `{% source %}` still uses
+  `ref`.
 - `pos` — same freeform grammar as `formatPosition`
   (`selection-position.ts:47-62`); reused verbatim so the chat selection and
-  the persisted source share one string. (Short name per the boxholder; the
-  meaning is obvious in context.)
-- `version` — **a set of one or more version markers**, space-separated,
-  each `"<kind>:<value>"`. This mirrors the W3C "array of selectors, prefer
-  the precise one, fall back" pattern. Two kinds matter at MVP:
-  - `git:<rev>` — when the target is tracked (the rev is the one in the
-    *callback-mono* repo, since worktrees share its history). Cheap to store,
-    and **diffable** — a later viewer can `git show <rev>:<path>` to show what
-    changed (the deferred diff-view becomes much cheaper with this marker
-    present).
-  - `sha256:<hash>` — always available, and the only marker that pins a
-    **dirty/uncommitted** worktree file's exact on-disk bytes. The git rev
-    identifies the committed baseline; the hash identifies what was actually
-    on disk when the anchor was made.
+  the persisted source share one string. Always per-anchor (never inherited).
+- `version` — **optional; inherits the card's frontmatter `version`** (Track
+  C); specify only when this anchor was made against a different state. A
+  space-separated set of `"<kind>:<value>"` markers (the W3C "array of
+  selectors, prefer the precise one" pattern):
+  - `git:<rev>` — when the target is tracked. Cheap, and **diffable** (a later
+    viewer can `git show <rev>:<path>`).
+  - a content hash — the only marker that pins a **dirty/uncommitted** file's
+    exact bytes. Encoding: a **truncated hash** suffices, because this is an
+    equality check for drift, not collision resistance (non-adversarial, per
+    the threat model) — a git-short-SHA-style prefix (`sha256:9f3a1c2b`) is far
+    shorter than a full 64-hex digest and just as good for "did it change." If
+    full strength is ever wanted, `sha256-<base64>` is the standard compact
+    digest form (Subresource Integrity), ~43 chars vs 64. **Lean: truncated
+    hex** for legibility.
 
-  A purely external resource with no git history carries only `sha256:`. A
-  tracked file can carry both. On view, the renderer checks markers in
-  preference order (git rev if present, else hash); any mismatch ⇒ flag the
-  anchor "may be stale" (the `data_through`/freshness shape from
-  `docs/prompt-audits.md` §"Cache freshness"). Re-anchoring on mismatch is
-  **not** in this track.
+  An untracked/web resource carries only the hash; a tracked file can carry
+  both. On view, the renderer compares stored markers to the route's current
+  markers (git rev preferred, else hash); mismatch ⇒ flag "may be stale" (the
+  `data_through` freshness shape from `docs/prompt-audits.md` §"Cache
+  freshness"). Re-anchoring is **not** in this track.
 - `placement` — carried verbatim from `<user-selection>` when present
-  (`selection-serialize.ts:71`). On a durable annotation it is a **provenance
-  marker**: it records that the anchor's `pos` was *estimated* (a voice-grabbed
-  selection whose exact spot was lost and dropped by rough timing), so a reader
-  treats `pos` as approximate rather than exact. Omitted ⇒ the spot is exact.
-  The value phrasing ("through the message") is composer-flavored but preserved
-  as-is rather than re-minted.
-- The tag body remains the quoted `exact` (W3C `TextQuoteSelector.exact`).
+  (`selection-serialize.ts:71`); per-anchor (never inherited). On a durable
+  annotation it's a **provenance marker**: the `pos` was *estimated* (a
+  voice-grab whose exact spot was lost), so treat `pos` as approximate. Omitted
+  ⇒ exact. The value phrasing ("through the message") is composer-flavored but
+  preserved as-is.
+- The tag **body** is the quoted `exact` (W3C `TextQuoteSelector.exact`),
+  inside `{% quote %}`. The agent **escapes the span to valid Markdown/Markdoc**
+  when writing it — code-wrap `` `<…>` ``, escape a stray `` ` ``, `{%`, `%}` —
+  so a selection that contains markup neither breaks the tag nor renders wrong.
+  This is faithful rendering of what was displayed, not paraphrase (the same
+  carve-out as the speech-correction note in `agent-guide/quotes.ts`).
   `prefix`/`suffix` selectors are deferred (NOT in scope).
+- **Not `as`.** The general `{% source %}` `as` attribute describes a
+  *non-verbatim* derivation ("summary", "inferred from…"). Commentary anchors
+  are always verbatim selections, so `as` is unused here — the inner
+  `{% quote %}` already marks "verbatim," and the agent's interpretation lives
+  in the adjacent prose, not the tag. (`as` stays available for general
+  `{% source %}` use elsewhere.)
 
 `{% source %}` is therefore a true superset of `<user-selection>`'s
 attributes (target ref, `pos`, `placement`, quoted body) **plus** the
 multi-marker `version`.
 
 **Vocabulary lock-ins.**
-- Attribute names: `pos` (renamed from `position`, applied to
-  `<user-selection>` too), `version`, `placement`. (`ref`-vs-`href` for the
-  target is *not* locked — see Open questions.)
-- `version` value format: a space-separated set of `"<kind>:<value>"` markers
-  (e.g. `git:<rev>`, `sha256:<hex>`); the `kind:` prefix makes the set
-  open-ended (new marker kinds can be added without a new attribute), and
-  values are truncatable for display.
+- Attribute names: `pos`, `version`, `placement`, and `href` (external,
+  untracked) vs `ref` (in-box, tracked). `pos`/`placement` are per-anchor;
+  `href`/`version` inherit from frontmatter and appear on the tag only to
+  override.
+- `version` value format: space-separated `"<kind>:<value>"` markers (e.g.
+  `git:<rev>`, `sha256:<truncated-hex>`); the `kind:` prefix keeps the set
+  open-ended.
 - The `pos` string grammar is owned by `formatPosition`; `{% source %}`
-  consumes it, never re-specifies it. `placement` is owned by the selection
-  serializer; `{% source %}` carries it, never re-specifies it.
+  consumes it. `placement` is owned by the selection serializer; `{% source %}`
+  carries it. Neither is re-specified here.
 
-**First implementation chunk.** Add `pos`, `version`, and `placement` to the
-`source` schema in `markdoc-config.ts` (attributes only, all optional, no
-behavior change to existing `ref`/`as` callers); rename `position` → `pos` in
-the `<user-selection>` serializer (`selection-serialize.ts:70`); thread the
+**First implementation chunk.** Add `pos`, `version`, `placement`, and `href`
+to the `source` schema in `markdoc-config.ts` (attributes only, all optional,
+no behavior change to existing `ref`/`as` callers); rename `position` → `pos`
+in the `<user-selection>` serializer (`selection-serialize.ts:70`); thread the
 new attributes through the `SourceInline`/`SourceBlock` render rename the same
 way `ref`→`sourceRef` is handled (`markdoc-config.ts:144-145`); extend
 `agent-guide/source.ts` with a short "anchoring an existing span (pos, version
-markers, placement)" subsection; one doctest asserting a `{% source %}` with
-all attributes — including a multi-marker `version="git:… sha256:…"` and a
-`placement` — parses and validates. The target-attribute name is `ref` for
-this chunk (in-box); `href` (if chosen) is additive and lands with Track B.
+markers, placement; href for external targets)" subsection; one doctest
+asserting a `{% source %}` with all attributes — including a multi-marker
+`version="git:… sha256:…"`, an `href="file:…"`, and a `placement` — parses and
+validates.
 
-### Track B — external addressing scheme + gated live-read resolver
+### Track B — `file:` addressing + gated live-read resolver
 
-**What.** An external addressing scheme (provisionally `href="wt:<worktree>:<repo-relative-path>"`)
-and a single resolver that maps it to an absolute path under an **allowlist**
-of canonicalized roots, reads the file **read-only**, and is **mounted only in
-dev**. A new download-shaped route serves the bytes to the viewer. (Scheme
-literal and attribute name pending — see Open questions; the resolver logic is
-identical regardless.)
+**What.** `href` carries a full URL — `file:<absolute-path>` for local files
+(across worktrees), `http(s):` for web pages. A single resolver maps a `file:`
+URL to an absolute path under an **allowlist** of canonicalized roots, reads
+it **read-only**, and is **mounted only in dev**. A download-shaped route
+serves the bytes to the viewer. (`http(s):` targets are referenceable/quotable
+now; live-rendering a web page in a pane is deferred — NOT in scope.)
 
 **Why this needs to change.** The viewer can only target box-relative paths
 today, and the box file route hard-confines to boxRoot
-(`api-files.ts:67-69`). Wrapping a live repo file — across worktrees —
-requires reading outside boxRoot, which nothing currently permits.
+(`api-files.ts:67-69`). Wrapping a live repo file — across worktrees, or a web
+page — requires reading outside boxRoot, which nothing currently permits.
+
+**Why `file:` (settled).** The boxholder chose plain `file:` absolute URLs
+over a symbolic `wt:<name>:` scheme. An absolute path already distinguishes
+worktrees (each is a distinct directory), so no worktree-name registry or
+`main`-resolution is needed — the earlier `wt:main` question dissolves. The
+generic-source rule doesn't fight this: commentary cards are **per-box data**
+(CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
+not shared source/docs/prompts, so a `/Users/...` literal in a commentary card
+is fine.
 
 **Direction.**
-- **Scheme.** A worktree-aware symbolic form, provisionally
-  `wt:<name>:<repo-rel>`, where `<name>` resolves via the router's known
-  roots: `discoverWorktrees()` for worktree names (`bin/router.ts:548-566`) →
-  `WORKTREES_ROOT/<name>/` (`:55`, `:103`), and a reserved `main` token → the
-  main checkout root. (Resolving `main`'s on-disk path is a detail to settle —
-  see Open questions.)
-- **Resolver (server).** A new helper — call it `resolveExternalRef(ref)` —
-  that: parses the scheme; rejects anything not the external scheme; builds the
-  candidate path; `fs.realpath`s it; verifies the realpath `startsWith` one of
-  the allowlisted resolved roots (the same `startsWith`-after-resolve shape as
-  `api-files.ts:67`, but against the roots allowlist instead of boxRoot);
-  refuses `.git/`, `.env*`, and node_modules (denylist, per Vite); returns a
-  custom `ExternalRefError` on any failure (CODE-STYLE: custom error classes,
-  no bare catch). Read-only — no write counterpart. Per the threat model this
-  guard is hygiene, not a hardened boundary.
+- **Scheme.** `href="file:<abs-path>"` (e.g.
+  `file:/Users/.../callback-worktrees/chat-output-ia/callback-box/...`). No
+  worktree lookup — the absolute path is the address. `http(s):` hrefs are
+  stored and quotable but not resolved by the file route.
+- **Resolver (server).** A new helper — call it `resolveExternalRef(href)` —
+  that: parses the `file:` URL → absolute path (rejects non-`file:` for the
+  read route); strips query suffixes (Vite `?raw` lesson); `fs.realpath`s it;
+  verifies the realpath `startsWith` one of the allowlisted resolved roots
+  (the same `startsWith`-after-resolve shape as `api-files.ts:67`, but against
+  the roots allowlist instead of boxRoot); refuses `.git/`, `.env*`, and
+  node_modules (denylist, per Vite); returns a custom `ExternalRefError` on any
+  failure (CODE-STYLE: custom error classes, no bare catch). Read-only — no
+  write counterpart. Per the threat model this guard is hygiene, not a hardened
+  boundary.
 - **Route.** A raw Fastify route (file-download shape, per the tRPC-vs-raw
   rule in CLAUDE.md) e.g. `GET /api/external/:ref` returning the bytes +
   content-type **plus the current `version` markers** (so the renderer can
@@ -316,26 +349,25 @@ requires reading outside boxRoot, which nothing currently permits.
   synthesis (to stamp an anchor) — one helper, one definition of "version,"
   so creation and drift-check can't disagree. This is the "creating the
   versions" unit the functional tests target.
-- **Allowlist.** Resolved roots: `WORKTREES_ROOT` and the main checkout root.
-  Expressed as resolved prefixes, never personal-name literals (CLAUDE.md
-  generic-source rule).
+- **Allowlist.** Resolved roots the allowlist permits: the worktrees root
+  (`WORKTREES_ROOT`, `bin/router.ts:55`) and the main checkout root. Read from
+  the router's own config (single source of truth), as resolved prefixes.
 
 **Vocabulary lock-ins.**
-- The resolver is the **only** code that turns an external ref into a
+- `href` carries a full URL; `file:` is the only scheme the read route
+  resolves. The resolver is the **only** code that turns a `file:` URL into a
   filesystem path; viewer and synthesis never construct paths themselves.
-- (Scheme literal and `ref`/`href` attribute are deliberately *not* locked
-  here — Open questions.)
 
 **First implementation chunk.** `resolveExternalRef` + its allowlist/denylist
-+ `ExternalRefError`, as a pure-ish function with a doctest covering: valid
-worktree ref, `main` ref, traversal attempt (`../../etc/passwd` → realpath
-escapes allowlist → error), denylisted path (`.git/config` → error), unknown
-worktree → error. Land `buildVersionMarkers` alongside, with a **functional
-test** (filesystem tier, `makeTmpBox()`/a tmp git repo) that builds markers for
-a committed file and a dirty file: `sha256:` matches the bytes in both, and
-`git:<rev>` is present when tracked and absent for an untracked/external path.
-Route mounting comes in a later chunk; the resolver has no open questions
-beyond the scheme literal (which only changes the parse prefix).
++ `ExternalRefError`, as a pure-ish function with a doctest covering: a valid
+`file:` URL under an allowed root, traversal attempt
+(`file:/…/../../etc/passwd` → realpath escapes allowlist → error), denylisted
+path (`.git/config` → error), and a `file:` URL outside all roots → error.
+Land `buildVersionMarkers` alongside, with a **functional test** (filesystem
+tier, `makeTmpBox()`/a tmp git repo) that builds markers for a committed file
+and a dirty file: the content hash matches the bytes in both, and `git:<rev>`
+is present when tracked and absent for an untracked/external path. Route
+mounting comes in a later chunk.
 
 ### Track C — the `commentary` card + viewer renderer
 
@@ -355,28 +387,42 @@ object.
 
 **Direction.**
 - **Schema** (`cardSchema("commentary", …)`, registered in
-  `registry.ts:63-89`): `targets:` — array of `{ ref/href: string,
-  label?: string }`; the body is freeform Markdoc commentary. Frontmatter
-  declares the canvas (so an empty commentary card still shows its targets to
-  select against); body `{% source %}` tags annotate into them. Multi-file
-  and cross-worktree both fall out of `targets:` being a list — wrapping the
-  same repo-rel path under `wt:main` and `wt:<name>` puts the two versions
-  side by side. (This is also why no single ref must name multiple worktrees:
-  multiplicity lives in the list.)
-- **Renderer** (`renderers/commentary.tsx`): one column per target; each
-  column renders the resolved content through the existing markdown/plaintext
-  renderer and is wrapped in `SelectionCapture` (reusing
-  `FileView.tsx:283-285`) whose `onCapture` stamps that column's target ref;
-  a commentary pane renders the body, and each `{% source %}` anchor links to
-  its span in the matching column. `version` mismatch on a live target paints
-  the affected anchors as stale.
-- **Selection → composer.** A captured selection serializes (today's path) as
-  `<user-selection ref="…" pos="…">text</user-selection>` — the target ref is
-  now an external ref instead of a box path; everything downstream is unchanged.
+  `registry.ts:63-89`). Frontmatter, modeled on HTML's `<base href>` —
+  declare the default once, let body anchors inherit:
+  ```
+  ---
+  type: commentary
+  href: file:/Users/.../chat-output-ia/callback-box/docs/box-commentary-surface.md  # base/default target
+  version: git:7ffeae4 sha256:9f3a1c2b   # optional default version this pass is against
+  targets:                               # optional; additional URLs to render for compare
+    - file:/Users/.../callback-mono/callback-box/docs/box-commentary-surface.md   # main, side-by-side
+  ---
+  ```
+  The body is freeform Markdoc commentary. A `{% source %}` omits `href`/
+  `version` to mean the frontmatter default; specifies them only to anchor at a
+  compared target or a one-off URL. The frontmatter declares the canvas (an
+  empty commentary card still shows its target(s) to select against). Multi-
+  file / cross-worktree compare falls out of `targets:` being a list — the
+  default `href` plus listed extras render as side-by-side panes; absolute
+  `file:` paths distinguish the worktrees.
+- **Renderer** (`renderers/commentary.tsx`): one column per rendered target
+  (default `href` + `targets:`); each column renders the resolved content
+  through the existing markdown/plaintext renderer and is wrapped in
+  `SelectionCapture` (reusing `FileView.tsx:283-285`) whose `onCapture` stamps
+  that column's `href`; the commentary body renders alongside, and each
+  `{% source %}` anchor links to its span in the matching column (resolving its
+  `href` to the default when omitted). `version` mismatch on a live target
+  paints the affected anchors as stale.
+- **Selection → composer.** A captured selection serializes as
+  `<user-selection href="file:…" pos="…">text</user-selection>`. The one change
+  to the existing serializer (`selection-serialize.ts:69-73`) is an `href`
+  branch for external `file:` targets — in-box selections keep `ref`; the rest
+  of the path (pills, voice fold-in, send) is unchanged.
 
 **Vocabulary lock-ins.**
 - Card type literal: `commentary`; file shape `*.commentary.card`.
-- Frontmatter key: `targets` (array).
+- Frontmatter keys: `href` (base/default target), `version` (optional default),
+  `targets` (optional array of additional render targets).
 
 **First implementation chunk.** The `commentary` schema + registry entry + a
 minimal `commentary.tsx` that renders a **single** target (no compare, no
@@ -400,15 +446,18 @@ agent may emit — so it belongs in the path-scoped schema-instruction tier that
 loads exactly when a `commentary` card is touched (`init-rules.ts:102-117`).
 
 **Direction.**
-- Schema `instructions`: when a `<user-selection>` against a `targets:` ref
-  arrives, append/update a `{% source %}` block in the body — body = the
-  user's exact selected span; copy `pos` (and `placement`, if any) from the
-  selection; add `version` markers measured at synthesis time — `git:<rev>`
-  when the target is tracked plus `sha256:<hash>` of the live bytes (the
-  few-seconds synthesis window is not racy, per the boxholder); the agent's
-  own remark goes as prose adjacent to (not inside) the `{% source %}` (mirrors
-  `agent-guide/source.ts`'s "your framing is yours, the tag marks what came
-  from elsewhere"). One commentary card per coherent target-set.
+- Schema `instructions`: when a `<user-selection>` arrives, append/update a
+  `{% source %}` block in the body. The tag body = the user's exact selected
+  span **escaped to valid Markdown/Markdoc** (code-wrap `` `<…>` ``, escape
+  stray `` ` ``/`{%`/`%}`) — faithful rendering of what was displayed, not
+  paraphrase. Copy `pos` (and `placement`, if any) from the selection. Omit
+  `href` and `version` when the selection targets the card's frontmatter
+  default; include them only when it doesn't — and when included, compute
+  `version` via `buildVersionMarkers` (Track B; the few-seconds synthesis
+  window is not racy, per the boxholder). The agent's own remark goes as prose
+  adjacent to (not inside) the `{% source %}` (mirrors `agent-guide/source.ts`'s
+  "your framing is yours, the tag marks what came from elsewhere"). One
+  commentary card per coherent target-set.
 - Box usage: a dedicated persistent box at `~/src/boxes/<name>/` (served at
   `/main/<name>/`), seeded with commentary cards whose `targets:` point at this
   worktree's IA docs.
@@ -417,12 +466,14 @@ loads exactly when a `commentary` card is touched (`init-rules.ts:102-117`).
 
 **First implementation chunk.** Write the `commentary` schema `instructions`
 prose, plus a **functional test of the synthesis transform** — given a
-captured `<user-selection>` (target ref + `pos` + `placement`) and a resolved
+captured `<user-selection>` (`href` + `pos` + `placement`) and a resolved
 target, assert it produces a `{% source %}` carrying those exact selector
 fields and the `buildVersionMarkers` output, with the agent's remark as
-adjacent prose (not inside the tag). This is the second half of the
-"creating the selectors/versions" coverage the boxholder asked for: Track B
-tests marker *creation*, this tests selection → anchored `{% source %}`.
+adjacent prose (not inside the tag). Include a case where the **selected span
+contains markup** (`<…>`, a `{%`) and assert it's escaped to valid
+Markdown/Markdoc in the quote. This is the second half of the "creating the
+selectors/versions" coverage the boxholder asked for: Track B tests marker
+*creation*, this tests selection → anchored `{% source %}`.
 (Knowledge-audit entries are skip-by-default here — see Knowledge audits.) The
 box-standup is a usage action, not a code chunk.
 
@@ -452,8 +503,9 @@ No other sub-question is large enough to need its own design step.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| External ref escapes allowlist via `../` or symlink | Yes — Track B chunk doctest | Yes — realpath + allowlist `startsWith`, `ExternalRefError` 403 | Clear (403) |
-| External ref names a removed/unknown worktree | Yes — Track B doctest | Yes — `discoverWorktrees()` miss → `ExternalRefError` | Clear (resolver error; viewer shows "target unavailable") |
+| `file:` href escapes allowlist via `../` or symlink | Yes — Track B chunk doctest | Yes — realpath + allowlist `startsWith`, `ExternalRefError` 403 | Clear (403) |
+| `file:` href points at a removed/outside-roots path | Yes — Track B doctest | Yes — realpath miss / not-under-roots → `ExternalRefError` | Clear (resolver error; viewer shows "target unavailable") |
+| Selected span contains Markdoc/Markdown-breaking chars (`<…>`, `` ` ``, `{%`/`%}`) | Yes — synthesis functional test includes a markup span (Track D) | Yes — agent escapes the span to valid Markdown/Markdoc when quoting | Clear (renders as written; tag stays intact) |
 | Wrapped target edited since anchor (`version` marker mismatch) | Yes — `buildVersionMarkers` unit test + drift-check functional test (Track C) | Yes — re-check markers (git rev preferred, else hash) on view, paint anchor stale | Clear (stale flag) — *this is the core drift case; silent here would be confidently-wrong commentary* |
 | Target has no git history, only `sha256:` marker available | n/a (expected for external resources) | Hash marker alone still detects drift; no diff affordance | Clear (drift flagged; diff-view simply unavailable for that target) |
 | Markers match but `pos` line drifted (any byte change flips both git rev and hash) | Yes — covered by the marker functional test | Marker check catches it (any committed or on-disk change ⇒ mismatch ⇒ flag) | Clear (over-flags rather than under-flags — safe direction) |
@@ -518,6 +570,11 @@ No other sub-question is large enough to need its own design step.
 - **Syntax-highlighted code renderer.** `.ts` targets render via existing
   `plaintext.tsx`. Rationale: highlighting doesn't change the loop;
   line-anchored selection already works.
+- **Live-rendering `http(s):` web targets in a pane.** Web hrefs are
+  storable/quotable now (you can comment on a web page), but fetching and
+  rendering one live in a column (CORS, sanitization, iframe) is a separate
+  build. Rationale: the `file:` local case is the immediate need; web targets
+  ride the same `href` vocabulary without the rendering work.
 - **True highlighted diff of compared targets.** Compare = N columns
   side-by-side; a change-highlighted diff is a separate feature (the `git:`
   marker is the hook to build it later). Rationale: prior art shows diff is its
@@ -531,30 +588,24 @@ No other sub-question is large enough to need its own design step.
 
 ## Open design questions
 
-- **External addressing: scheme literal + attribute name.** Two coupled,
-  unsettled sub-decisions:
-  - *Attribute.* In-box targets use `ref` by established convention
-    (`docs/prompt-audits.md:184`). An out-of-box target is genuinely
-    different, so `href` is a defensible "external, not in this box" signal.
-    **Lean:** `href` for external, keep `ref` for in-box — a clean rule, at
-    the cost of a second addressing attribute on `{% source %}` and `targets:`.
-  - *Scheme/value.* A worktree-aware symbolic scheme (`wt:<name>:<path>`,
-    provisional) stays symbolic (portable; no machine-path literals, which the
-    generic-source rule disfavors) and names *which* worktree. Plain `file:`
-    is more recognizable but embeds absolute machine paths and is
-    worktree-blind. **Lean:** a worktree-aware symbolic scheme; exact spelling
-    TBD.
-  - *Multi-worktree "awkwardness" dissolves:* no single ref needs to name many
-    worktrees — `targets:` is a list, so comparing the same file across `main`
-    + a worktree is two entries, whichever scheme. The scheme only has to name
-    *one* target unambiguously.
-  - Does not block Track B's resolver chunk — only the parse prefix and the
-    attribute name change; resolver logic is identical.
-- **Resolving `wt:main` → on-disk path.** `discoverWorktrees()` enumerates
-  `WORKTREES_ROOT` (`bin/router.ts:548-566`); the main checkout lives
-  elsewhere (the monorepo root). The resolver needs main's root from the same
-  config the router uses. **Lean:** read it from the router's own
-  configuration rather than re-deriving. Settle before Track B's route chunk.
+- **External addressing — SETTLED (recorded for the close read).** `href` for
+  external targets (full URLs: `file:`, `http(s):`), `ref` for in-box targets
+  (box-relative, `cb mv`-tracked). Scheme is plain `file:<abs-path>` — no
+  worktree registry, since an absolute path already names the worktree; this
+  dissolved the former `wt:main` resolution question. Per-box-data exemption
+  covers the `/Users/...` literal (CLAUDE.md). The `cb mv`-tracking difference
+  is the concrete justification for the two-attribute split.
+- **`version` content-hash encoding + length.** Lean: truncated hex
+  (git-short-SHA style, ~8–12 chars) — drift detection is equality-only and
+  non-adversarial. `sha256-<base64>` (SRI) is the standard full-strength
+  compact form if ever wanted. Pick a truncation length when implementing
+  `buildVersionMarkers`; not load-bearing.
+- **Frontmatter default vs. multi-target compare.** The `<base href>` default
+  is clean for the single-target case (anchors omit `href`). For a compare
+  card with `targets:`, each anchor against a non-default target must spell out
+  `href`. Open nuance: whether to also let anchors reference a `targets:` entry
+  by a short label instead of repeating the full URL. **Lean:** full `href`
+  for now (no label indirection); revisit if compare cards get noisy.
 - **Single `commentary` card type vs. wrapper + sidecar.** Committed to single
   (`targets:` frontmatter + body commentary). Recorded as settled, not open —
   noted because the conversation left it "not sure." Rationale: one
@@ -586,11 +637,11 @@ ref-only). Everything else: skip-with-rationale.
 1. **Track A chunk** — `{% source %}` gains `pos`/`version`/`placement`,
    `position`→`pos` rename in the selection serializer, guide + doctest.
    Unblocks the anchor vocabulary; backward-compatible for cards.
-2. **Track B resolver chunk** — `resolveExternalRef` + allowlist/denylist +
-   `ExternalRefError` + doctest (traversal/denylist/unknown-worktree). Depends
-   on nothing in A; sequenced second because it's the riskier surface.
-3. **Track B route chunk** — dev-gated `/api/external/:ref` route. Depends on
-   the resolver and on settling `wt:main` resolution + the scheme literal.
+2. **Track B resolver chunk** — `resolveExternalRef` (`file:` → allowlisted
+   path) + denylist + `ExternalRefError` + `buildVersionMarkers`, with their
+   doctests. Depends on nothing in A; sequenced second as the riskier surface.
+3. **Track B route chunk** — dev-gated `/api/external/:ref` route returning
+   bytes + current markers. Depends on the resolver.
 4. **Track C single-target chunk** — `commentary` schema + registry + minimal
    `commentary.tsx` rendering one live target through the route. Depends on A
    (attributes exist) + B (resolver/route).
