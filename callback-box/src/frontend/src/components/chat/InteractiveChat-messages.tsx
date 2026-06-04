@@ -28,6 +28,16 @@ const VIRTUOSO_INITIAL_FIRST_INDEX = 1_000_000_000;
 // not a band of small scroll-ups that get yanked back.
 const RE_PIN_THRESHOLD = 24;
 
+// An upward scroll only disengages follow if a genuine user scroll input fired
+// within this window. Layout-driven scrolls — the mobile soft keyboard
+// dismissing on send clamps scrollTop downward, firing a phantom "scroll up" —
+// carry no wheel/touch/key input, so they must not disengage.
+const USER_SCROLL_WINDOW_MS = 250;
+
+// Keys that scroll the (focusable) message list; pressing one counts as a user
+// scroll so keyboard-driven scroll-up disengages follow like a wheel/touch does.
+const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
+
 // Virtuoso requires Header/Footer components to be stable references; if a
 // new component identity is passed each render they remount. We keep them
 // module-level and pass dynamic data via the `context` prop instead.
@@ -88,18 +98,32 @@ function useChatListScroll(opts: {
   const pinnedRef = useRef(true);
   const scrollerRef = useRef<HTMLElement | Window | null>(null);
   const lastScrollTopRef = useRef(0);
+  const lastUserScrollAtRef = useRef(0);
   const initialScrollDoneRef = useRef(false);
 
   const pinToBottom = useCallback(() => {
     virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: "auto" });
   }, []);
 
+  // A wheel/touch-drag/scroll-key fired: the next upward scroll is the user's
+  // doing, so it's allowed to disengage follow. Without a recent mark, an
+  // upward scroll is layout-driven (keyboard dismiss, address bar, reflow) and
+  // must be ignored — see USER_SCROLL_WINDOW_MS.
+  const markUserScroll = useCallback(() => {
+    lastUserScrollAtRef.current = performance.now();
+  }, []);
+
+  const handleKeyScroll = useCallback((e: KeyboardEvent) => {
+    if (SCROLL_KEYS.has(e.key)) lastUserScrollAtRef.current = performance.now();
+  }, []);
+
   // Maintain pinnedRef from real scroll events. Content growing *below* the
   // viewport doesn't move scrollTop, so it fires no scroll event and can't
-  // disengage follow — only an actual user scroll does. Disengage is
-  // direction-based (any upward scroll), so there's no band of "small scroll
-  // ups" that get fought; re-engage only once genuinely back at the bottom.
-  // Our own pinToBottom() scrolls *down*, so it never trips the disengage.
+  // disengage follow. Disengage is direction-based (any upward scroll, so no
+  // band of "small scroll ups" gets fought) but gated on a recent user-scroll
+  // input, so phantom upward scrolls from layout changes don't disengage.
+  // Re-engage only once genuinely back at the bottom; our own pinToBottom()
+  // scrolls *down*, so it re-pins rather than disengaging.
   const handleScroll = useCallback(() => {
     const target = scrollerRef.current;
     if (!(target instanceof HTMLElement)) return;
@@ -107,7 +131,10 @@ function useChatListScroll(opts: {
     const fromBottom = target.scrollHeight - top - target.clientHeight;
     if (top > lastScrollTopRef.current) {
       if (fromBottom <= RE_PIN_THRESHOLD) pinnedRef.current = true;
-    } else if (top < lastScrollTopRef.current - 2) {
+    } else if (
+      top < lastScrollTopRef.current - 2 &&
+      performance.now() - lastUserScrollAtRef.current < USER_SCROLL_WINDOW_MS
+    ) {
       pinnedRef.current = false;
     }
     lastScrollTopRef.current = top;
@@ -115,13 +142,21 @@ function useChatListScroll(opts: {
 
   const handleScrollerRef = useCallback((el: HTMLElement | Window | null) => {
     const prev = scrollerRef.current;
-    if (prev instanceof HTMLElement) prev.removeEventListener("scroll", handleScroll);
+    if (prev instanceof HTMLElement) {
+      prev.removeEventListener("scroll", handleScroll);
+      prev.removeEventListener("wheel", markUserScroll);
+      prev.removeEventListener("touchmove", markUserScroll);
+      prev.removeEventListener("keydown", handleKeyScroll);
+    }
     scrollerRef.current = el;
     if (el instanceof HTMLElement) {
       lastScrollTopRef.current = el.scrollTop;
       el.addEventListener("scroll", handleScroll, { passive: true });
+      el.addEventListener("wheel", markUserScroll, { passive: true });
+      el.addEventListener("touchmove", markUserScroll, { passive: true });
+      el.addEventListener("keydown", handleKeyScroll);
     }
-  }, [handleScroll]);
+  }, [handleScroll, markUserScroll, handleKeyScroll]);
 
   // Virtuoso's atBottom signal is unreliable during tail growth — it flips
   // false transiently as scrollHeight grows ahead of the follow — so we only
