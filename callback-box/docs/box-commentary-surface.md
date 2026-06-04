@@ -190,17 +190,27 @@ box agent would have to invent an ad-hoc shape when turning a selection into
 commentary.
 
 **Direction.**
+A commentary entry is **quote-then-remark**: the `{% source %}` anchors and
+holds *the span the user selected* (verbatim text from the target — the W3C
+`exact` selector, and what lets the entry read standalone without resolving
+the live file); the user's **comment** is the prose that *follows* the tag,
+outside it (per `agent-guide/source.ts`: "your own framing... doesn't need a
+`{% source %}` tag"). A selection is always verbatim, so it composes with an
+inner `{% quote %}` and `as="verbatim"`:
 ```
 {% source href="wt:chat-output-ia:callback-box/docs/box-commentary-surface.md"
           pos="body; heading: Track A (#track-a); paragraph 2; ~line 210"
           version="git:7ffeae4 sha256:9f3a…"  /* one or more kind:value markers */
-          placement="estimated, ~50% through the message"  /* present only when the spot was approximate */
-          as="commentary" %}
-the exact span the user selected
+          placement="estimated, ~50% through the message"  /* only when the spot was approximate */
+          as="verbatim" %}
+{% quote %}a single tag expresses everything <user-selection> expresses{% /quote %}
 {% /source %}
+
+Overstated — `placement` is composer-only, so it isn't a clean superset. Soften this.
 ```
-(`href` and the `wt:` scheme above are provisional — see Open questions. An
-in-box `{% source %}` still uses `ref`; the example targets an out-of-box file.)
+The first block is the anchored span; the trailing paragraph is the comment.
+(`href` and the `wt:` scheme are provisional — see Open questions. An in-box
+`{% source %}` still uses `ref`; the example targets an out-of-box file.)
 - `pos` — same freeform grammar as `formatPosition`
   (`selection-position.ts:47-62`); reused verbatim so the chat selection and
   the persisted source share one string. (Short name per the boxholder; the
