@@ -113,14 +113,17 @@ about work that has now actually happened — update it before the
 merge:
 
 - **If the plan is now implemented**, the doc shouldn't read like a
-  plan anymore. Either:
-  - Rename and rewrite it into a description of what *exists*
-    (present-tense reference doc), or
-  - Move it under a "history" / "decisions" / "implemented" folder
-    with a clear marker that it's a frozen record of what was
-    proposed, or
-  - Delete it if the content is now duplicated by the code, schemas,
-    or other docs that the implementation produced.
+  plan anymore. Default action: **`git mv` it from `docs/plans/` to
+  `docs/implemented-plans/`** (the convention — see
+  `callback-box/docs/plans/README.md`), so it stays a findable frozen
+  record without masquerading as current docs. Then either:
+  - fold any durable "how it works now" parts into a present-tense
+    reference doc under `docs/` (and leave the moved plan as the
+    historical record), or
+  - delete the plan instead of moving it if the content is now fully
+    duplicated by the code, schemas, or reference docs.
+  Apply this only when applicable — a plan that's a regular `docs/`
+  reference doc, or one not under `docs/plans/`, may just need a rewrite.
 - **If the plan is partially implemented**, edit the prose to mark
   which parts are now real (with a link to where they live) and which
   parts are still future. Don't leave a doc that says "we will

@@ -72,8 +72,10 @@ Skip it for:
 
 ## The plan template
 
-Write the plan to `callback-box/docs/<topic>.md` (or wherever the
-project docs convention puts it). Use the section headers below
+Write the plan to `callback-box/docs/plans/<topic>.md` — active proposals
+live there, separate from reference docs (see `docs/plans/README.md`).
+Subplans: `<topic>.subplan.md`; reviews: `<topic>.review.md`. When the plan
+ships, `/finish` moves it to `docs/implemented-plans/`. Use the section headers below
 verbatim. Every section is mandatory; if a section is genuinely empty
 ("there is no prior art for this"), say so explicitly — don't omit it.
 
