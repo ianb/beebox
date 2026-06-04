@@ -218,31 +218,29 @@ default** — e.g. when anchoring to a different compared target:
 {% quote %}…{% /quote %}
 {% /source %}
 ```
-- `href` — **optional; inherits the card's frontmatter `href`** (Track C).
-  Specify it only to override — anchoring to a *different* compared target, or
-  a one-off URL not in the frontmatter. It's `href` (not `ref`) because these
-  are full external URLs (`file:`, and `http(s):` for web pages): unlike an
-  in-box `ref`, they are **not** tracked or rewritten by `cb mv` / body-ref
-  validation (which `agent-guide/source.ts` describes for `ref`) — `href`
-  deliberately opts out of that machinery. In-box `{% source %}` still uses
-  `ref`.
+- `href` / `ref` — **optional; an anchor with neither inherits the card's
+  frontmatter default** (`defaultHref` or `defaultRef`, Track C). Specify one
+  only to override — a *different* compared target, a one-off URL, or the
+  *other* kind than the default (you can write a `ref`-anchored source inside
+  an `href`-defaulted card). A single source carries `href` **xor** `ref`,
+  never both. `href` is the external full-URL form (`file:`, `http(s):`):
+  unlike a box-relative `ref`, it is **not** tracked or rewritten by `cb mv` /
+  body-ref validation (which `agent-guide/source.ts` describes for `ref`) —
+  `href` deliberately opts out of that machinery.
 - `pos` — same freeform grammar as `formatPosition`
   (`selection-position.ts:47-62`); reused verbatim so the chat selection and
   the persisted source share one string. Always per-anchor (never inherited).
-- `version` — **optional; inherits the card's frontmatter `version`** (Track
-  C); specify only when this anchor was made against a different state. A
-  space-separated set of `"<kind>:<value>"` markers (the W3C "array of
+- `version` — **optional; inherits the card's frontmatter `defaultVersion`**
+  (Track C); specify only when this anchor was made against a different state.
+  A space-separated set of `"<kind>:<value>"` markers (the W3C "array of
   selectors, prefer the precise one" pattern):
   - `git:<rev>` — when the target is tracked. Cheap, and **diffable** (a later
     viewer can `git show <rev>:<path>`).
   - a content hash — the only marker that pins a **dirty/uncommitted** file's
-    exact bytes. Encoding: a **truncated hash** suffices, because this is an
-    equality check for drift, not collision resistance (non-adversarial, per
-    the threat model) — a git-short-SHA-style prefix (`sha256:9f3a1c2b`) is far
-    shorter than a full 64-hex digest and just as good for "did it change." If
-    full strength is ever wanted, `sha256-<base64>` is the standard compact
-    digest form (Subresource Integrity), ~43 chars vs 64. **Lean: truncated
-    hex** for legibility.
+    exact bytes. **Encoding: a git-style short SHA** (truncated hex, e.g.
+    `sha256:9f3a1c2b`). Drift is an equality check, not collision resistance
+    (non-adversarial, per the threat model), so a short prefix is enough and
+    stays legible.
 
   An untracked/web resource carries only the hash; a tracked file can carry
   both. On view, the renderer compares stored markers to the route's current
@@ -392,27 +390,29 @@ object.
   ```
   ---
   type: commentary
-  href: file:/Users/.../chat-output-ia/callback-box/docs/box-commentary-surface.md  # base/default target
-  version: git:7ffeae4 sha256:9f3a1c2b   # optional default version this pass is against
+  defaultHref: file:/Users/.../chat-output-ia/callback-box/docs/box-commentary-surface.md  # default target
+  defaultVersion: git:7ffeae4 sha256:9f3a1c2b   # optional default version this pass is against
   targets:                               # optional; additional URLs to render for compare
     - file:/Users/.../callback-mono/callback-box/docs/box-commentary-surface.md   # main, side-by-side
   ---
   ```
-  The body is freeform Markdoc commentary. A `{% source %}` omits `href`/
-  `version` to mean the frontmatter default; specifies them only to anchor at a
-  compared target or a one-off URL. The frontmatter declares the canvas (an
-  empty commentary card still shows its target(s) to select against). Multi-
-  file / cross-worktree compare falls out of `targets:` being a list — the
-  default `href` plus listed extras render as side-by-side panes; absolute
-  `file:` paths distinguish the worktrees.
+  `defaultHref` **xor** `defaultRef` — a card defaults to an external target or
+  an in-box one, never both (a Zod refinement rejects both-set). The body is
+  freeform Markdoc commentary. A `{% source %}` with neither `href` nor `ref`
+  inherits that default (and `defaultVersion`); it spells out a target only to
+  override — a compared target, a one-off URL, or the *other* kind than the
+  default. The frontmatter declares the canvas (an empty commentary card still
+  shows its target(s) to select against). Multi-file / cross-worktree compare
+  falls out of `targets:` being a list — the default plus listed extras render
+  as side-by-side panes; absolute `file:` paths distinguish the worktrees.
 - **Renderer** (`renderers/commentary.tsx`): one column per rendered target
-  (default `href` + `targets:`); each column renders the resolved content
-  through the existing markdown/plaintext renderer and is wrapped in
-  `SelectionCapture` (reusing `FileView.tsx:283-285`) whose `onCapture` stamps
-  that column's `href`; the commentary body renders alongside, and each
-  `{% source %}` anchor links to its span in the matching column (resolving its
-  `href` to the default when omitted). `version` mismatch on a live target
-  paints the affected anchors as stale.
+  (the `defaultHref`/`defaultRef` + `targets:`); each column renders the
+  resolved content through the existing markdown/plaintext renderer and is
+  wrapped in `SelectionCapture` (reusing `FileView.tsx:283-285`) whose
+  `onCapture` stamps that column's target; the commentary body renders
+  alongside, and each `{% source %}` anchor links to its span in the matching
+  column (resolving to the default when its `href`/`ref` is omitted). `version`
+  mismatch on a live target paints the affected anchors as stale.
 - **Selection → composer.** A captured selection serializes as
   `<user-selection href="file:…" pos="…">text</user-selection>`. The one change
   to the existing serializer (`selection-serialize.ts:69-73`) is an `href`
@@ -421,8 +421,9 @@ object.
 
 **Vocabulary lock-ins.**
 - Card type literal: `commentary`; file shape `*.commentary.card`.
-- Frontmatter keys: `href` (base/default target), `version` (optional default),
-  `targets` (optional array of additional render targets).
+- Frontmatter keys: `defaultHref` **xor** `defaultRef` (the default target),
+  `defaultVersion` (optional), `targets` (optional array of additional render
+  targets).
 
 **First implementation chunk.** The `commentary` schema + registry entry + a
 minimal `commentary.tsx` that renders a **single** target (no compare, no
@@ -450,11 +451,11 @@ loads exactly when a `commentary` card is touched (`init-rules.ts:102-117`).
   `{% source %}` block in the body. The tag body = the user's exact selected
   span **escaped to valid Markdown/Markdoc** (code-wrap `` `<…>` ``, escape
   stray `` ` ``/`{%`/`%}`) — faithful rendering of what was displayed, not
-  paraphrase. Copy `pos` (and `placement`, if any) from the selection. Omit
-  `href` and `version` when the selection targets the card's frontmatter
-  default; include them only when it doesn't — and when included, compute
-  `version` via `buildVersionMarkers` (Track B; the few-seconds synthesis
-  window is not racy, per the boxholder). The agent's own remark goes as prose
+  paraphrase. Copy `pos` (and `placement`, if any) from the selection. Omit the
+  target and `version` when the selection hits the card's default
+  (`defaultHref`/`defaultRef`); otherwise write an explicit `href` (or `ref`,
+  if the override is in-box) and compute `version` via `buildVersionMarkers`
+  (Track B; the few-seconds synthesis window is not racy, per the boxholder). The agent's own remark goes as prose
   adjacent to (not inside) the `{% source %}` (mirrors `agent-guide/source.ts`'s
   "your framing is yours, the tag marks what came from elsewhere"). One
   commentary card per coherent target-set.
@@ -590,22 +591,23 @@ No other sub-question is large enough to need its own design step.
 
 - **External addressing — SETTLED (recorded for the close read).** `href` for
   external targets (full URLs: `file:`, `http(s):`), `ref` for in-box targets
-  (box-relative, `cb mv`-tracked). Scheme is plain `file:<abs-path>` — no
-  worktree registry, since an absolute path already names the worktree; this
-  dissolved the former `wt:main` resolution question. Per-box-data exemption
-  covers the `/Users/...` literal (CLAUDE.md). The `cb mv`-tracking difference
-  is the concrete justification for the two-attribute split.
-- **`version` content-hash encoding + length.** Lean: truncated hex
-  (git-short-SHA style, ~8–12 chars) — drift detection is equality-only and
-  non-adversarial. `sha256-<base64>` (SRI) is the standard full-strength
-  compact form if ever wanted. Pick a truncation length when implementing
+  (box-relative, `cb mv`-tracked); a source carries one xor the other. Scheme
+  is plain `file:<abs-path>` — no worktree registry, since an absolute path
+  already names the worktree; this dissolved the former `wt:main` question.
+  Frontmatter declares a single default, `defaultHref` **xor** `defaultRef`
+  (+ optional `defaultVersion`); anchors inherit it and override only by
+  naming a target explicitly (which may be the other kind). Per-box-data
+  exemption covers the `/Users/...` literal (CLAUDE.md). The `cb mv`-tracking
+  difference is the concrete justification for the two-attribute split.
+- **`version` content-hash encoding — SETTLED.** Git-style short SHA
+  (truncated hex). Drift detection is equality-only and non-adversarial, so a
+  short prefix suffices. Exact truncation length is an implementation detail of
   `buildVersionMarkers`; not load-bearing.
-- **Frontmatter default vs. multi-target compare.** The `<base href>` default
-  is clean for the single-target case (anchors omit `href`). For a compare
-  card with `targets:`, each anchor against a non-default target must spell out
-  `href`. Open nuance: whether to also let anchors reference a `targets:` entry
-  by a short label instead of repeating the full URL. **Lean:** full `href`
-  for now (no label indirection); revisit if compare cards get noisy.
+- **Frontmatter default vs. multi-target compare** (minor, open). For a compare
+  card with `targets:`, an anchor against a non-default target spells out the
+  full `href`. Nuance: whether to let anchors reference a `targets:` entry by a
+  short label instead of repeating the URL. **Lean:** full `href` for now (no
+  label indirection); revisit if compare cards get noisy.
 - **Single `commentary` card type vs. wrapper + sidecar.** Committed to single
   (`targets:` frontmatter + body commentary). Recorded as settled, not open —
   noted because the conversation left it "not sure." Rationale: one
