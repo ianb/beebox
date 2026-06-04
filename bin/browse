@@ -10,8 +10,15 @@
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-if [[ ! -x "$REPO_DIR/browse/node_modules/.bin/tsx" ]]; then
-  echo "browse: tsx not found in browse/node_modules. Run 'pnpm install' in browse/." >&2
+# The repo uses pnpm's hoisted node-linker (.npmrc: node-linker=hoisted), so
+# binaries land in the ROOT node_modules/.bin, not per-package. Prefer that;
+# fall back to a package-local bin for an isolated-linker setup.
+TSX_BIN="$REPO_DIR/node_modules/.bin/tsx"
+if [[ ! -x "$TSX_BIN" ]]; then
+  TSX_BIN="$REPO_DIR/browse/node_modules/.bin/tsx"
+fi
+if [[ ! -x "$TSX_BIN" ]]; then
+  echo "browse: tsx not found in node_modules/.bin or browse/node_modules/.bin. Run 'pnpm install'." >&2
   exit 1
 fi
 
@@ -31,4 +38,4 @@ export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
 export AGENT_BROWSER_PROFILE="${browse_base}/profile"
 export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
 
-exec "$REPO_DIR/browse/node_modules/.bin/tsx" "$REPO_DIR/browse/src/cli.ts" "$@"
+exec "$TSX_BIN" "$REPO_DIR/browse/src/cli.ts" "$@"
