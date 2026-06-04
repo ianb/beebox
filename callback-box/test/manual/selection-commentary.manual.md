@@ -43,7 +43,7 @@ end-to-end through the actual UI.
 3. **Type around the token** (e.g. `compare [selection1] with this`), then
    send. Inspect the outgoing message (session log / debug view): the token is
    replaced inline by
-   `<user-selection ref="…" position="…">…</user-selection>` inside `<typed>`.
+   `<user-selection ref="…" pos="…">…</user-selection>` inside `<typed>`.
 4. **Multiple selections**: add two, delete one token by hand, send — the
    surviving token expands inline, the orphaned selection is appended after
    the typed text.

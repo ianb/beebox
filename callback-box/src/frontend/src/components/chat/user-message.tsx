@@ -29,7 +29,7 @@ function decodeXml(value: string): string {
 }
 
 const REF_ATTR_RE = /\bref="([^"]*)"/i;
-const POSITION_ATTR_RE = /\bposition="([^"]*)"/i;
+const POSITION_ATTR_RE = /\bpos="([^"]*)"/i;
 const PLACEMENT_ATTR_RE = /\bplacement="([^"]*)"/i;
 
 function readAttr(attrs: string, re: RegExp): string {
@@ -76,7 +76,7 @@ export function UserMessageText({ text }: { text: string }) {
 
   const parts: MessagePart[] = [];
   // Pills: <send-message phrase="…"/> (voice keyword) and <user-selection
-  // ref="…" position="…">quoted text</user-selection> (attached document text).
+  // ref="…" pos="…">quoted text</user-selection> (attached document text).
   const tagRe = /<send-message\s+phrase="([^"]*?)"\s*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>/gi;
   let lastIndex = 0;
   let match;

@@ -132,8 +132,39 @@ const quote: Schema = {
 
 const source: Schema = {
   attributes: {
-    ref: { type: String, required: true },
+    // In-box target (box-relative, `cb mv`-tracked) XOR external target
+    // (`href`, a full URL — untracked). Exactly one is required; the `validate`
+    // below enforces it. `ref` is no longer `required: true` on its own because
+    // `href` can stand in its place.
+    ref: { type: String },
+    href: { type: String },
     as: { type: String },
+    // Anchoring metadata for commentary use: where in the target (`pos`, the
+    // freeform locator from selection-position.ts), which file state it was
+    // anchored against (`version`, space-separated `kind:value` markers — a
+    // sha256 content hash as the drift primary, optionally a git rev for
+    // diffing), and whether `pos` was estimated (`placement`).
+    pos: { type: String },
+    version: { type: String },
+    placement: { type: String },
+  },
+  validate(node) {
+    const ref: unknown = node.attributes["ref"];
+    const href: unknown = node.attributes["href"];
+    const hasRef = typeof ref === "string" && ref !== "";
+    const hasHref = typeof href === "string" && href !== "";
+    if (hasRef === hasHref) {
+      return [
+        {
+          id: "source-ref-xor-href",
+          level: "error",
+          message: hasRef
+            ? "{% source %} takes exactly one of `ref` or `href`, not both"
+            : "{% source %} requires exactly one of `ref` (in-box) or `href` (external)",
+        },
+      ];
+    }
+    return [];
   },
   transform(node, config) {
     // Markdoc-side attribute is `ref` (which is also what Track 4's body
