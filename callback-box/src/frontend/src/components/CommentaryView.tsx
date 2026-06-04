@@ -63,8 +63,12 @@ function TargetPane({
 }) {
   const { data, isLoading, error } = useExternalTarget(href);
 
+  // Label the column with its href so a {% source href=… %} anchor (which
+  // carries `data-source-href`) can locate its target column, and so a
+  // selection captured in this pane knows which target it's against. The
+  // ref/href parity here is what chunk 5b's anchor-linking + capture build on.
   return (
-    <div className="min-w-0 flex-1" data-card-section="body">
+    <div className="min-w-0 flex-1" data-card-section="body" data-target-href={href}>
       <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-warm-200 pb-1">
         <Text as="div" size="xs" tone="subtle" className="truncate font-mono">{href}</Text>
         {data !== undefined ? (
