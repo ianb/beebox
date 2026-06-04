@@ -90,12 +90,26 @@ function TargetPane({
   );
 }
 
+/** The external hrefs to render as panes: the default target plus any `targets`. */
+function targetHrefs(frontmatter: Record<string, unknown>): string[] {
+  const hrefs: string[] = [];
+  const defaultHref = frontmatter["defaultHref"];
+  if (typeof defaultHref === "string" && defaultHref !== "") hrefs.push(defaultHref);
+  const targets = frontmatter["targets"];
+  if (Array.isArray(targets)) {
+    for (const entry of targets) {
+      if (typeof entry === "string" && entry !== "") hrefs.push(entry);
+    }
+  }
+  return hrefs;
+}
+
 export function CommentaryView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const defaultHref = frontmatter["defaultHref"];
   const defaultRef = frontmatter["defaultRef"];
   const title = frontmatter["title"];
   const body = data.body;
+  const hrefs = targetHrefs(frontmatter);
 
   return (
     <div className="p-4">
@@ -104,8 +118,10 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       ) : null}
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        {typeof defaultHref === "string" && defaultHref !== "" ? (
-          <TargetPane href={defaultHref} onNavigate={onNavigate} basePath={data.path} />
+        {hrefs.length > 0 ? (
+          hrefs.map((href) => (
+            <TargetPane key={href} href={href} onNavigate={onNavigate} basePath={data.path} />
+          ))
         ) : (
           <div className="min-w-0 flex-1">
             <Text as="div" tone="subtle" className="p-2 italic">
