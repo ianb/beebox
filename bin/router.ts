@@ -217,18 +217,21 @@ interface CapturedError {
   message: string;
   /** Which lifecycle phase failed (waitForHttp, spawn, etc.). */
   phase: string;
-  viteStderr: string;
-  fastifyStderr: string;
+  /** Tail of stdout+stderr (interleaved) from each child. Both streams are
+   *  captured because some startup output (fastify's "Server running at …",
+   *  vite's box-listing) lands on stdout, not stderr. */
+  viteOutput: string;
+  fastifyOutput: string;
   at: number;
 }
 
 /**
  * Fixed-size in-memory ring buffer for capturing the tail of a child's
- * stderr. Used by the failed-startup UI so the user can see what went
- * wrong without grepping the log file. `write` is byte-counted (UTF-8
- * after Buffer→string conversion).
+ * stdout+stderr (interleaved). Used by the failed-startup UI so the user
+ * can see what went wrong without grepping the log file. `write` is
+ * byte-counted (UTF-8 after Buffer→string conversion).
  */
-function makeStderrRing(maxBytes: number): { write: (s: string) => void; read: () => string } {
+function makeOutputRing(maxBytes: number): { write: (s: string) => void; read: () => string } {
   let buf = "";
   return {
     write(s) {
@@ -374,8 +377,9 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
   fastify.catch(() => { /* handled via .on("exit") + failed-state UX */ });
   fastify.stdout?.pipe(logStream, { end: false });
   fastify.stderr?.pipe(logStream, { end: false });
-  const fastifyStderrRing = makeStderrRing(8 * 1024);
-  fastify.stderr?.on("data", (d: Buffer) => fastifyStderrRing.write(d.toString("utf8")));
+  const fastifyOutputRing = makeOutputRing(8 * 1024);
+  fastify.stdout?.on("data", (d: Buffer) => fastifyOutputRing.write(d.toString("utf8")));
+  fastify.stderr?.on("data", (d: Buffer) => fastifyOutputRing.write(d.toString("utf8")));
 
   // pnpm workspace with `node-linker=hoisted` (see /.npmrc) puts all binaries
   // at the workspace root's node_modules/.bin — per-package node_modules/.bin
@@ -395,8 +399,9 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
   vite.catch(() => { /* see fastify.catch above — same reason */ });
   vite.stdout?.pipe(logStream, { end: false });
   vite.stderr?.pipe(logStream, { end: false });
-  const viteStderrRing = makeStderrRing(8 * 1024);
-  vite.stderr?.on("data", (d: Buffer) => viteStderrRing.write(d.toString("utf8")));
+  const viteOutputRing = makeOutputRing(8 * 1024);
+  vite.stdout?.on("data", (d: Buffer) => viteOutputRing.write(d.toString("utf8")));
+  vite.stderr?.on("data", (d: Buffer) => viteOutputRing.write(d.toString("utf8")));
 
   // Kill any orphaned dashboard daemon for this socket dir before starting a new one.
   await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
@@ -447,8 +452,8 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
     const captured: CapturedError = {
       message: (err as Error).message,
       phase: "waitForHttp",
-      viteStderr: viteStderrRing.read(),
-      fastifyStderr: fastifyStderrRing.read(),
+      viteOutput: viteOutputRing.read(),
+      fastifyOutput: fastifyOutputRing.read(),
       at: Date.now(),
     };
     log(`[${name}] startup failed in ${captured.phase}: ${captured.message}`);
@@ -738,12 +743,12 @@ async function renderIndex(): Promise<string> {
 function renderFailedPage(name: string, err: CapturedError): string {
   const logPath = path.join(LOG_DIR, `${name}.log`);
   const sinceMs = Date.now() - err.at;
-  const viteSection = err.viteStderr.trim()
-    ? `<h2>vite stderr (last ${err.viteStderr.length} bytes)</h2><pre>${escapeHtml(err.viteStderr)}</pre>`
-    : `<h2>vite stderr</h2><p class="muted">(empty)</p>`;
-  const fastifySection = err.fastifyStderr.trim()
-    ? `<h2>fastify stderr (last ${err.fastifyStderr.length} bytes)</h2><pre>${escapeHtml(err.fastifyStderr)}</pre>`
-    : `<h2>fastify stderr</h2><p class="muted">(empty)</p>`;
+  const viteSection = err.viteOutput.trim()
+    ? `<h2>vite output (last ${err.viteOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.viteOutput)}</pre>`
+    : `<h2>vite output</h2><p class="muted">(empty)</p>`;
+  const fastifySection = err.fastifyOutput.trim()
+    ? `<h2>fastify output (last ${err.fastifyOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.fastifyOutput)}</pre>`
+    : `<h2>fastify output</h2><p class="muted">(empty)</p>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -845,19 +850,21 @@ const server = http.createServer(async (req, res) => {
       res.end("missing worktree name");
       return;
     }
+    // POST-only — a GET probe (e.g. a curl with no -X) shouldn't have a
+    // side effect. The failure page's retry button POSTs.
+    if (req.method !== "POST") {
+      res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
+      res.end("retry requires POST\n");
+      return;
+    }
     // Clear any failed-state entry so ensureRunning will spawn a fresh
     // attempt rather than re-throwing the cached error.
     const existing = worktrees.get(name);
     if (existing?.state === "failed") {
       worktrees.delete(name);
     }
-    if (req.method === "POST") {
-      res.writeHead(303, { location: `/${name}/` });
-      res.end();
-      return;
-    }
-    res.writeHead(200, { "content-type": "text/plain" });
-    res.end(`cleared failed state for ${name}; fetch /${name}/ to retry startup\n`);
+    res.writeHead(303, { location: `/${name}/` });
+    res.end();
     return;
   }
 

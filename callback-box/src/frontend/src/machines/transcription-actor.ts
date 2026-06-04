@@ -40,6 +40,7 @@ import {
   startOpenAIRealtimeConnection,
   startVoxtralConnection,
 } from "./transcription-connections";
+import { waitForOpen } from "./transcription-wait-for-open";
 import type { TranscriptionService } from "../../../core/transcription";
 import type { TranscriptionEvent } from "./transcription-events";
 
@@ -84,6 +85,9 @@ class TranscriptionSession {
   private connectedFired = false;
   private service: TranscriptionService = "voxtral";
   private callbacks: ServiceCallbacks | null = null;
+  /** Set at the top of start(); the debug log uses this to report which
+   *  pipeline step the parent machine's CONNECT_TIMEOUT hung on. */
+  private startedAt = 0;
   /** Gates live worklet→socket forwarding; false during a reconnect replay. */
   private forwardLive = true;
   /** True while a reconnect attempt loop is in flight. */
@@ -149,6 +153,7 @@ class TranscriptionSession {
     ws.onopen = () => {
       if (this.disposed || this.connectedFired) return;
       this.connectedFired = true;
+      console.info(`[realtime-transcription] step ws-open @${Math.round(performance.now() - this.startedAt)}ms`);
       this.sendBack({ type: "WS_CONNECTED" });
     };
     ws.onerror = () => {
@@ -189,29 +194,6 @@ class TranscriptionSession {
         this.beginReconnect();
       }
     }, WATCHDOG_INTERVAL_MS);
-  }
-
-  /** Resolve true once the socket opens, false on error/close/timeout. */
-  private waitForOpen(ws: WebSocket): Promise<boolean> {
-    return new Promise((resolve) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        resolve(true);
-        return;
-      }
-      const finish = (ok: boolean) => {
-        clearTimeout(timer);
-        ws.removeEventListener("open", onOpen);
-        ws.removeEventListener("error", onFail);
-        ws.removeEventListener("close", onFail);
-        resolve(ok);
-      };
-      const onOpen = () => finish(true);
-      const onFail = () => finish(false);
-      const timer = setTimeout(() => finish(false), RECONNECT_ATTEMPT_TIMEOUT_MS);
-      ws.addEventListener("open", onOpen);
-      ws.addEventListener("error", onFail);
-      ws.addEventListener("close", onFail);
-    });
   }
 
   /** Detach handlers and close a socket without firing machine events. */
@@ -257,7 +239,7 @@ class TranscriptionSession {
           this.discardSocket(next);
           return;
         }
-        const opened = await this.waitForOpen(next.ws);
+        const opened = await waitForOpen(next.ws, RECONNECT_ATTEMPT_TIMEOUT_MS);
         if (!opened) {
           this.discardSocket(next);
           await delay(RECONNECT_RETRY_DELAY_MS);
@@ -292,17 +274,22 @@ class TranscriptionSession {
   };
 
   async start() {
+    this.startedAt = performance.now();
+    const step = (n: string) => console.info(`[realtime-transcription] step ${n} @${Math.round(performance.now() - this.startedAt)}ms`);
     try {
       const config = await trpcClient.transcription.config.query();
       if (this.disposed) { this.cleanup(); return; }
       this.service = config.service;
+      step("config");
 
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (this.disposed) { this.cleanup(); return; }
+      step("getUserMedia");
 
       this.audioContext = new AudioContext();
       await this.audioContext.audioWorklet.addModule(pcmProcessorUrl);
       if (this.disposed) { this.cleanup(); return; }
+      step("audioWorklet");
 
       const source = this.audioContext.createMediaStreamSource(this.stream);
       this.workletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
@@ -327,6 +314,7 @@ class TranscriptionSession {
 
       this.connection = await this.startConnection(this.callbacks);
       if (this.disposed) { this.cleanup(); return; }
+      step("ws-construct");
 
       this.attachActorHandlers(this.connection.ws);
       this.startWatchdog();
