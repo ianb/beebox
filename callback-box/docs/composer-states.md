@@ -251,6 +251,13 @@ voice states come from the dev gallery at **`/dev/composer-states`** (dev-only,
 omitted from production builds — see `router.tsx` and
 `pages/dev/components/ComposerStatesHarness.tsx`). The gallery renders the real
 presentational composer with fabricated props, so it stays prop-typed against
-the components and breaks the typecheck if their contracts drift. Drive one
-state with `?state=<name>` for a clean capture. To re-shoot, point `bin/browse`
-at `/dev/composer-states?state=<name>` and `screenshot`.
+the components and breaks the typecheck if their contracts drift.
+
+The gallery doesn't hand-pick states — it declares the axes (primary mode ×
+narration × muted × streaming), takes the full cross-product, filters the
+impossible combos (listing them with reasons), and renders all **32**
+realizable ones. Each card is keyed by its active axes
+(`idle`, `idle-streaming`, `recording-narration-muted`, …); isolate one with
+`?state=<key>` for a clean capture. To re-shoot, point `bin/browse` at
+`/dev/composer-states?state=<key>` and `screenshot`. The named-state shots above
+are the readable subset; the gallery is the exhaustive grid.
