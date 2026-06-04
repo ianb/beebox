@@ -27,7 +27,7 @@ export interface ReplaySpeechOptions {
  * each chunk's index absolute across the whole message (groups may be split
  * by tool activity); `activeIndex` is the segment currently playing.
  */
-function AssistantSpeechText({
+export function AssistantSpeechText({
   text,
   indexOffset,
   activeIndex,
