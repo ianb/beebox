@@ -1,23 +1,29 @@
 /**
- * Voice orchestration for InteractiveChat. Composes the speech-dispatch hook
- * (TTS playback off the stream) with realtime transcription + keyword
- * spotting, the narration HQ-transcription pass, the screen wake lock, and
- * the transcription handlers. The two halves share the voice refs created in
- * useSpeechDispatch so mic pause/resume stays coordinated with playback.
+ * Voice orchestration for InteractiveChat. Owns the composer machine
+ * (`composerMachine`) — the speech ↔ mic coordination overlay — and wires it
+ * to the two device hooks it commands: realtime transcription (the mic) and
+ * `useSpeechDispatch` (TTS playback off the stream).
  *
- * All hooks run unconditionally and in a fixed order, so rules-of-hooks hold
- * exactly as in the original inline component.
+ * The machine is the single source of truth for the modal voice state. Its
+ * device-command seams (startMic/resumeMic/cancelMic/playSpeech/stopSpeech/
+ * markPlayed) are wired here to the live device handles via refs; the handlers
+ * and mirror effects below translate user intents and device state into
+ * machine events. The old `voicePaused`/`voicePausedRef`/`turnTakingRef`
+ * tangle is gone — `voicePaused` is now `voice === "pausedForSpeech"`.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
+import { useSSRMachine } from "../../hooks/useSSRMachine";
+import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
 import { detectKeyword } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
 import { sendSound, tick, recordingStop } from "../../lib/earcons";
 import { localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
-import { useSpeechDispatch, type VoiceRefs } from "./InteractiveChat-speech";
+import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection-serialize";
+import type { SpeechSegment } from "../../lib/speech-parsing";
 import type { ReplaySpeechOptions } from "../ChatMessages";
 
 interface SnapshotLike {
@@ -26,28 +32,43 @@ interface SnapshotLike {
 }
 
 /**
- * Run the realtime-transcription `onKeywordSend` flow. Module-level so the
- * hook body stays under the per-function line budget. Invoked from inside
- * the inline event handler, so reading `*.current` here is at fire time, not
- * render time.
+ * Live device handles the machine seams command. A plain mutable holder
+ * (not a ref) so the `.provide()` closures can capture it without tripping the
+ * "no refs during render" rule; effects keep its fields pointed at the current
+ * transcription / playback handles.
+ */
+interface VoiceDevices {
+  transcription: { start: (o?: { earcon?: boolean }) => void; cancel: () => void } | null;
+  speechPlayback: {
+    playSegments: (o: { messageId: string; segments: SpeechSegment[]; baseIndex: number }) => void;
+    stop: () => void;
+    markAsPlayed: (id: string) => void;
+  } | null;
+}
+
+/**
+ * Run the realtime-transcription `onKeywordSend` flow: commit the utterance and
+ * restart the mic so the user can keep talking. Narration mode runs a
+ * high-quality transcription pass before sending; the `hq` region of the
+ * composer machine carries the in-flight + pending-draft state for the UI.
+ * Module-level so the hook body stays under the per-function line budget.
  */
 function runKeywordSend(opts: {
   text: string;
   audioBlob: Blob | null;
   transcription: { start: () => void };
-  refs: VoiceRefs;
+  stopTickRef: React.MutableRefObject<(() => void) | null>;
+  composerSend: (event: ComposerEvent) => void;
   sessionId: string | null;
   narrationEnabledRef: React.MutableRefObject<boolean>;
   selectionsRef: React.MutableRefObject<SelectionItem[]>;
   resetSelections: () => void;
-  setHqInFlight: React.Dispatch<React.SetStateAction<boolean>>;
-  setPendingHqDraft: React.Dispatch<React.SetStateAction<string | null>>;
   doSend: (wrapped: string) => void;
   clearDraftRef: React.MutableRefObject<() => void>;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
 }) {
-  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr } = opts;
+  const { text, audioBlob, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr } = opts;
   if (!text.trim()) {
     transcription.start();
     return;
@@ -61,10 +82,7 @@ function runKeywordSend(opts: {
     resetSelections();
   }
   sendSound.play();
-  refs.stopTickRef.current = tick.repeatPlay(1000, 30000);
-  // Narration mode swaps in a high-quality transcription before sending
-  // to the agent — the realtime text is good enough for the live UI
-  // but accuracy matters more for the persistent record.
+  stopTickRef.current = tick.repeatPlay(1000, 30000);
   const submit = (finalText: string, submitOpts?: { diarized?: boolean }) => {
     const diarized = submitOpts !== undefined && submitOpts.diarized === true;
     const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
@@ -74,13 +92,12 @@ function runKeywordSend(opts: {
     clearDraftRef.current();
   };
   if (narrationEnabledRef.current && audioBlob) {
-    setHqInFlight(true);
-    setPendingHqDraft(text);
+    composerSend({ type: "START_HQ", text });
     void postAudioForHqTranscription(audioBlob, { sessionId })
       .then((hqResult) => {
-        // Clear the pending bubble before submit so it doesn't overlap
-        // with the real user message about to land in the chat history.
-        setPendingHqDraft(null);
+        // Clear the in-flight/pending state before submit so the pending
+        // bubble doesn't overlap the real user message about to land.
+        composerSend({ type: "HQ_DONE" });
         if (hqResult === null) {
           console.warn("[hq-transcribe] returned null — falling back to realtime");
           submit(text);
@@ -88,18 +105,17 @@ function runKeywordSend(opts: {
         }
         // Re-run keyword detection on the HQ text so the agent sees the
         // send-message (or other) keyword as a pill, not plain words.
-        // If HQ misheard the keyword entirely, just submit the raw text.
         const keyword = detectKeyword(hqResult.text);
         submit(keyword ? keyword.processedTranscript : hqResult.text, { diarized: hqResult.diarized });
       })
-      .finally(() => { setHqInFlight(false); });
+      .catch(() => { composerSend({ type: "HQ_DONE" }); });
   } else {
     if (narrationEnabledRef.current) {
       console.warn("[hq-transcribe] narration enabled but no audioBlob — submitting realtime text");
     }
     submit(text);
   }
-  // Restart recording so the user can keep talking
+  // Restart recording so the user can keep talking.
   transcription.start();
 }
 
@@ -118,37 +134,52 @@ export function useChatVoice(opts: {
 }) {
   const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, doSend, zoomedViewAttr, timePassedAttr } = opts;
 
-  const [voicePaused, setVoicePaused] = useState(false);
-  const { speechPlayback, refs } = useSpeechDispatch({ snapshot, muted, setVoicePaused });
-  const { turnTakingRef, transcriptionRef, voicePausedRef } = refs;
+  // Live device handles, in a ref the command subscriber reads at emit time
+  // (never during render). Effects below keep its fields current.
+  const devicesRef = useRef<VoiceDevices>({ transcription: null, speechPlayback: null });
+  const [composerSnapshot, composerSend, composerActor] = useSSRMachine(composerMachine, {
+    input: { narration: narrationEnabled, muted },
+  });
 
-  // Realtime transcription with voice keyword spotting. `wantAudioBlob`
-  // is a predicate read at keyword-fire time so a mid-session toggle of
-  // narration takes effect on the next send.
+  // Execute the device commands the machine emits against the live handles.
+  useEffect(() => {
+    const sub = composerActor.on("command", ({ command }) => {
+      const d = devicesRef.current;
+      switch (command.type) {
+        case "startMic": d.transcription?.start({ earcon: true }); break;
+        case "resumeMic": d.transcription?.start(); break;
+        case "cancelMic": d.transcription?.cancel(); break;
+        case "stopSpeech": d.speechPlayback?.stop(); break;
+        case "playSpeech": d.speechPlayback?.playSegments({ messageId: command.messageId, segments: command.segments, baseIndex: command.baseIndex }); break;
+        case "markPlayed": d.speechPlayback?.markAsPlayed(command.messageId); break;
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [composerActor]);
+
+  const { speechPlayback, stopTickRef } = useSpeechDispatch({ snapshot, composerSnapshot, composerSend });
+  useEffect(() => {
+    devicesRef.current.speechPlayback = speechPlayback;
+  });
+
+  // `wantAudioBlob` is read at keyword-fire time so a mid-session narration
+  // toggle takes effect on the next send. Selections likewise read at fire time.
   const narrationEnabledRef = useRef(narrationEnabled);
   useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
-  // Keep the latest selections readable at keyword-fire time (the onKeywordSend
-  // closure is captured by the transcription hook, not re-read per render).
   const selectionsRef = useRef(selections);
   useEffect(() => { selectionsRef.current = selections; });
-  const [hqInFlight, setHqInFlight] = useState(false);
-  // Realtime transcript shown as a pending user-message bubble while the
-  // HQ pass runs. Null when no narration submit is in flight. Driven by
-  // the same lifecycle as hqInFlight but carries the text to render.
-  const [pendingHqDraft, setPendingHqDraft] = useState<string | null>(null);
 
   const transcription = useRealtimeTranscription({
     wantAudioBlob: () => narrationEnabledRef.current,
     onKeywordSend: (text, audioBlob) => runKeywordSend({
-      text, audioBlob, transcription,
-      refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft,
-      doSend, clearDraftRef, zoomedViewAttr, timePassedAttr,
+      text, audioBlob, transcription, stopTickRef, composerSend, sessionId,
+      narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr,
     }),
     onKeywordCancel: () => {
       transcription.cancel();
     },
     onKeywordMicOff: () => {
-      turnTakingRef.current = false;
+      composerSend({ type: "STOP_DICTATION" });
       recordingStop.play();
     },
     onKeywordErase: () => {
@@ -156,7 +187,7 @@ export function useChatVoice(opts: {
     },
   });
   useEffect(() => {
-    transcriptionRef.current = transcription;
+    devicesRef.current.transcription = transcription;
   });
   const isTranscribing =
     transcription.state === "connecting" ||
@@ -164,103 +195,97 @@ export function useChatVoice(opts: {
     transcription.state === "reconnecting" ||
     transcription.state === "finalizing";
 
-  // Screen wake lock — held for the entire voice-conversation window:
-  // mic recording, mic paused for speech, OR TTS actively playing.
-  // Release is debounced (in useDebouncedWakeLock) so the brief idle
-  // gap between narration segments doesn't churn request/release —
-  // re-requesting outside a user gesture fails on mobile.
-  const voiceModeActive = [
-    isTranscribing,
-    voicePaused,
-    speechPlayback.isPlaying,
-  ].some(Boolean);
+  // Mirror device + settings state into the machine so its guards can read it.
+  useEffect(() => {
+    composerSend({ type: "RECORDING", value: transcription.state === "recording" });
+  }, [transcription.state, composerSend]);
+  useEffect(() => {
+    composerSend({ type: "TRANSCRIPT", nonEmpty: transcription.transcript.trim().length > 0 });
+  }, [transcription.transcript, composerSend]);
+  useEffect(() => {
+    composerSend({ type: "SET_NARRATION", value: narrationEnabled });
+  }, [narrationEnabled, composerSend]);
+  useEffect(() => {
+    composerSend({ type: "SET_MUTE", value: muted });
+    // Stop any in-flight speech the moment mute is engaged.
+    if (muted) composerSend({ type: "STOP_SPEECH" });
+  }, [muted, composerSend]);
+
+  const voicePaused = composerSnapshot.matches({ voice: "pausedForSpeech" });
+
+  // Screen wake lock — held for the whole voice-conversation window: mic
+  // recording, mic paused for speech, or TTS actively playing. Release is
+  // debounced so the brief idle gap between narration segments doesn't churn.
+  const voiceModeActive = [isTranscribing, voicePaused, speechPlayback.isPlaying].some(Boolean);
   useDebouncedWakeLock(voiceModeActive);
 
-  // Partial-transcript loss on an interrupted session (error, screen sleep,
-  // reload) is handled by the persisted dictation draft + recovery widget
-  // (useDictationDraft), not by autofilling the composer — the draft survives
-  // a full reload, which an in-memory composer value wouldn't.
+  const handleCancelTranscription = useCallback(() => {
+    recordingStop.play();
+    composerSend({ type: "STOP_DICTATION" });
+    transcription.cancel();
+    // The user deliberately discarded this dictation — drop the persisted draft
+    // so it doesn't resurface later as a phantom "Recovered dictation".
+    clearDraftRef.current();
+  }, [transcription, composerSend, clearDraftRef]);
 
-  // Escape key cancels transcription
+  // Escape cancels transcription (same as the Cancel control).
   useEffect(() => {
     if (!isTranscribing) return;
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        transcription.cancel();
-      }
+      if (e.key === "Escape") handleCancelTranscription();
     };
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [isTranscribing, transcription]);
-
-  const handleCancelTranscription = useCallback(() => {
-    turnTakingRef.current = false;
-    recordingStop.play();
-    transcription.cancel();
-    // The user deliberately discarded this dictation — drop the persisted
-    // draft too, so it doesn't resurface later as a phantom "Recovered
-    // dictation". (The draft only exists to rescue an *interrupted* session.)
-    clearDraftRef.current();
-  }, [transcription, turnTakingRef, clearDraftRef]);
+  }, [isTranscribing, handleCancelTranscription]);
 
   // Exposed so the composer's manual stop/edit/send controls can drop the
-  // persisted draft once the transcript is safely in the user's hands (moved
-  // into the textarea as editable text, or sent). Without this, every manual
-  // stop leaks a draft that re-surfaces as a recovered-dictation widget.
+  // persisted draft once the transcript is safely in the user's hands.
   const clearDraft = useCallback(() => {
     clearDraftRef.current();
   }, [clearDraftRef]);
 
   const handleStopSpeech = useCallback(() => {
-    speechPlayback.stop();
-    // If the mic was auto-paused for this speech (see queueSpeechBatch in
-    // InteractiveChat-speech.ts), stopping the speech should hand recording
-    // back — otherwise the user reads "Stop killed my voice input."
-    if (voicePausedRef.current) {
-      voicePausedRef.current = false;
-      setVoicePaused(false);
-      transcription.start();
-    }
-  }, [speechPlayback, transcription, voicePausedRef]);
+    // The machine hands the mic back if speech was paused for it (the SpeechMenu
+    // Stop fix) — see pausedForSpeech's STOP_SPEECH transition.
+    composerSend({ type: "STOP_SPEECH" });
+  }, [composerSend]);
 
   const handleSkipSpeech = useCallback(() => {
     speechPlayback.skip();
   }, [speechPlayback]);
 
   const handleReplaySpeech = useCallback((replayOpts: ReplaySpeechOptions) => {
-    // A manual replay shouldn't fight an in-progress recording: pause the mic
-    // the same way auto-played speech does (see queueSpeechBatch).
-    if (transcriptionRef.current && transcriptionRef.current.state === "recording") {
-      voicePausedRef.current = true;
-      setVoicePaused(true);
-      transcriptionRef.current.cancel();
-    }
+    // Reflect that speech is now playing (pausing the mic if recording); the
+    // replay itself plays, so the machine doesn't re-queue it.
+    composerSend({ type: "SPEECH_EXTERNAL" });
     speechPlayback.replay(replayOpts);
-  }, [speechPlayback, transcriptionRef, voicePausedRef]);
+  }, [speechPlayback, composerSend]);
 
   const startVoice = useCallback(() => {
-    turnTakingRef.current = true;
-    // The earcon is armed here but plays inside the transcription hook once
-    // the mic is truly live — never before the permission dialog settles.
-    transcription.start({ earcon: true });
-  }, [transcription, turnTakingRef]);
+    composerSend({ type: "START_DICTATION" });
+  }, [composerSend]);
 
   const unpauseVoice = useCallback(() => {
-    // Abort speech and resume recording
-    speechPlayback.stop();
-    voicePausedRef.current = false;
-    setVoicePaused(false);
-    transcription.start();
-  }, [speechPlayback, transcription, voicePausedRef]);
+    composerSend({ type: "RESUME" });
+  }, [composerSend]);
+
+  // End the voice turn without tearing the mic down here — the caller (typed
+  // send, or a manual stop control that handles its own transcript) owns that.
+  const stopDictation = useCallback(() => {
+    composerSend({ type: "STOP_DICTATION" });
+  }, [composerSend]);
+
+  const notifySent = useCallback(() => {
+    composerSend({ type: "MESSAGE_SENT" });
+  }, [composerSend]);
 
   return {
     speechPlayback,
     transcription,
     isTranscribing,
     voicePaused,
-    hqInFlight,
-    pendingHqDraft,
-    turnTakingRef,
+    hqInFlight: composerSnapshot.matches({ hq: "inFlight" }),
+    pendingHqDraft: composerSnapshot.context.pendingHqText,
     clearDraft,
     handleStopSpeech,
     handleSkipSpeech,
@@ -268,5 +293,7 @@ export function useChatVoice(opts: {
     handleCancelTranscription,
     startVoice,
     unpauseVoice,
+    stopDictation,
+    notifySent,
   };
 }

@@ -29,10 +29,25 @@
  * (see `composerMachine.doctest.md`).
  */
 
-import { setup, assign } from "xstate";
+import { setup, assign, emit } from "xstate";
 import type { SpeechSegment } from "../lib/speech-parsing";
 
-export interface ComposerContext {
+/**
+ * Device command emitted by the machine for the wiring layer to execute
+ * against the live transcription / playback handles. Emitting (rather than
+ * running the side effect in a provided action) keeps the React wiring off the
+ * "no refs during render" rules — the subscriber reads the live handles at
+ * emit time, never during render.
+ */
+type DeviceCommand =
+  | { type: "startMic" } // fresh recording segment, with the recording-start earcon
+  | { type: "resumeMic" } // resume recording quietly (no earcon), after a pause
+  | { type: "cancelMic" } // pause/tear down the current segment without finalizing
+  | { type: "stopSpeech" } // stop TTS playback immediately
+  | { type: "playSpeech"; messageId: string; segments: SpeechSegment[]; baseIndex: number }
+  | { type: "markPlayed"; messageId: string }; // mark queued speech played without playing it
+
+interface ComposerContext {
   /** Narration mode (HQ transcription on send, silent responses). Mirrored from the model hook. */
   narration: boolean;
   /** Speech muted. Mirrored from the mute hook; gates whether queued TTS ever plays. */
@@ -77,6 +92,7 @@ export const composerMachine = setup({
   types: {
     context: {} as ComposerContext,
     events: {} as ComposerEvent,
+    emitted: {} as { type: "command"; command: DeviceCommand },
     input: {} as Partial<Pick<ComposerContext, "narration" | "muted">>,
   },
   guards: {
@@ -99,19 +115,22 @@ export const composerMachine = setup({
     setPendingHq: assign(({ event }) => ({ pendingHqText: event.type === "START_HQ" ? event.text : null })),
     clearPendingHq: assign({ pendingHqText: null }),
 
-    // --- device-command seams (provided by the wiring; no-ops here) ---
-    /** Begin a fresh recording segment, with the recording-start earcon. */
-    startMic: () => {},
-    /** Resume recording quietly (no earcon) — after a pause. */
-    resumeMic: () => {},
-    /** Pause/tear down the current recording segment without finalizing. */
-    cancelMic: () => {},
-    /** Enqueue + play the segments carried on the current SPEECH_QUEUED event. */
-    playSpeech: () => {},
-    /** Stop TTS playback immediately. */
-    stopSpeech: () => {},
-    /** Mark the current SPEECH_QUEUED message as played without playing it (suppressed/muted). */
-    markPlayed: () => {},
+    // --- device commands: emitted for the wiring layer to execute ---
+    startMic: emit({ type: "command", command: { type: "startMic" } }),
+    resumeMic: emit({ type: "command", command: { type: "resumeMic" } }),
+    cancelMic: emit({ type: "command", command: { type: "cancelMic" } }),
+    stopSpeech: emit({ type: "command", command: { type: "stopSpeech" } }),
+    playSpeech: emit(({ event }) => ({
+      type: "command",
+      command:
+        event.type === "SPEECH_QUEUED"
+          ? { type: "playSpeech", messageId: event.messageId, segments: event.segments, baseIndex: event.baseIndex }
+          : { type: "playSpeech", messageId: "", segments: [], baseIndex: 0 },
+    })),
+    markPlayed: emit(({ event }) => ({
+      type: "command",
+      command: { type: "markPlayed", messageId: event.type === "SPEECH_QUEUED" ? event.messageId : "" },
+    })),
   },
 }).createMachine({
   id: "composer",

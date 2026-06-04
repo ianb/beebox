@@ -12,24 +12,11 @@ action seams; here we replace those seams with spies and assert the
 import { createActor } from "xstate";
 import { composerMachine } from "../src/frontend/src/machines/composerMachine.js";
 
-// Build a started actor whose device-command seams record into `calls`,
-// leaving the pure context assigns intact.
+// Build a started actor that records the device commands it emits into `calls`.
 function mk(input) {
   const calls = [];
-  const seam = (name) => () => { calls.push(name); };
-  const actor = createActor(
-    composerMachine.provide({
-      actions: {
-        startMic: seam("startMic"),
-        resumeMic: seam("resumeMic"),
-        cancelMic: seam("cancelMic"),
-        playSpeech: seam("playSpeech"),
-        stopSpeech: seam("stopSpeech"),
-        markPlayed: seam("markPlayed"),
-      },
-    }),
-    { input: input ?? {} },
-  );
+  const actor = createActor(composerMachine, { input: input ?? {} });
+  actor.on("command", ({ command }) => { calls.push(command.type); });
   actor.start();
   return { actor, calls };
 }

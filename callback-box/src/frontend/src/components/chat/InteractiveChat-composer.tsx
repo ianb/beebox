@@ -37,7 +37,7 @@ const STOP_CIRCLE_PATHS = (
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  turnTakingRef, doSend, zoomedViewAttr, timePassedAttr, onPaste, onDrop,
+  onStopDictation, doSend, zoomedViewAttr, timePassedAttr, onPaste, onDrop,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -48,7 +48,7 @@ function DesktopComposerRow({
   handleSend: () => void;
   handleCancelTranscription: () => void;
   clearDraft: () => void;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onStopDictation: () => void;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
@@ -90,7 +90,7 @@ function DesktopComposerRow({
           </button>
           <button
             onClick={() => {
-              turnTakingRef.current = false;
+              onStopDictation();
               const text = transcription.transcript;
               transcription.cancel();
               if (text) setInput((existing) => (existing ? existing + " " + text : text));
@@ -141,13 +141,13 @@ function DesktopComposerRow({
  * TTS-induced pause, swapping its icon to reflect the current voice state.
  */
 function VoiceToggleButton({
-  voicePaused, isTranscribing, narrationEnabled, transcription, turnTakingRef, setInput, clearDraft, onUnpause, onVoice,
+  voicePaused, isTranscribing, narrationEnabled, transcription, onStopDictation, setInput, clearDraft, onUnpause, onVoice,
 }: {
   voicePaused: boolean;
   isTranscribing: boolean;
   narrationEnabled: boolean;
   transcription: TranscriptionHandle;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onStopDictation: () => void;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   clearDraft: () => void;
   onUnpause: () => void;
@@ -162,7 +162,7 @@ function VoiceToggleButton({
           // Stop recording, preserve transcript into input for editing. It's
           // now editable typed text, not voice — drop the dictation draft so
           // it can't resurface later as a phantom "Recovered dictation".
-          turnTakingRef.current = false;
+          onStopDictation();
           const text = transcription.transcript;
           transcription.cancel();
           if (text) setInput((existing) => (existing ? existing + " " + text : text));
@@ -201,7 +201,7 @@ export function ChatInputArea({
   textareaRef, input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
-  isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
+  isStreaming, onInterrupt, onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAttachFiles, narrationEnabled,
 }: {
@@ -221,7 +221,7 @@ export function ChatInputArea({
   onStopSpeech: () => void;
   isStreaming: boolean;
   onInterrupt: () => void;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onStopDictation: () => void;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
@@ -270,7 +270,7 @@ export function ChatInputArea({
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
-          turnTakingRef={turnTakingRef}
+          onStopDictation={onStopDictation}
           doSend={doSend}
           zoomedViewAttr={zoomedViewAttr}
           timePassedAttr={timePassedAttr}
@@ -322,7 +322,7 @@ export function ChatInputArea({
           isTranscribing={isTranscribing}
           narrationEnabled={narrationEnabled}
           transcription={transcription}
-          turnTakingRef={turnTakingRef}
+          onStopDictation={onStopDictation}
           setInput={setInput}
           clearDraft={clearDraft}
           onUnpause={onUnpause}
