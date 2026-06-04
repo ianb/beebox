@@ -1,18 +1,23 @@
 /**
  * Dev-only gallery for the chat composer's visual states.
  *
- * Renders the REAL presentational composer (ChatInputArea + MobileTextareaRow +
- * the header chips) with fabricated props, so the voice states that normally
- * need a live mic / TTS can be inspected deterministically — no machine or
- * microphone involved. Because the components take all state as props, this
- * stays prop-typed against them and breaks the typecheck if their contracts
- * change.
+ * Renders the REAL composer section (ChatComposerSection, which owns the mobile
+ * keyboard block with its lock/close affordances, wrapping the real
+ * ChatInputArea + MobileTextareaRow + header chips) with fabricated props, so
+ * the states that normally need a live mic / TTS can be inspected
+ * deterministically — no machine or microphone involved. Because the components
+ * take all state as props, this stays prop-typed against them and breaks the
+ * typecheck if their contracts change.
  *
- * It does NOT hand-pick states — it declares the axes (primary mode × narration
- * × muted × streaming), takes the full cross-product, filters the impossible
- * combos (showing why), and renders every survivor. `?state=<key>` isolates one
- * combo for a clean capture; omit it for the whole exploded grid + the
- * impossible list.
+ * It does NOT hand-pick states — it declares the axes and renders the
+ * cross-product, filtering the impossible combos (showing why):
+ *   - button bar:  mode × narration × muted × streaming
+ *   - mobile keyboard: typingMode (unlocked / locked) × input (empty / typed)
+ * `?state=<key>` isolates one combo for a clean capture; omit it for the whole
+ * exploded grid + the impossible list.
+ *
+ * Mobile-only states (the recording drop-up row, the keyboard block) only
+ * differ at a narrow viewport — view the gallery at phone width to see them.
  *
  * Not part of the product — only mounted under /dev/composer-states in dev
  * builds (see router.tsx).
@@ -21,6 +26,7 @@
 import { useRef } from "react";
 import { ChatInputArea, type TranscriptionHandle } from "../../../components/chat/InteractiveChat-composer";
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
+import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout";
 import { NarrationStatusBadge, MuteButton } from "../../../components/chat/InteractiveChat-controls";
 
 // --- Axes ---
@@ -35,14 +41,18 @@ const MODE_LABEL: Record<Mode, string> = {
   speaking: "Speaking",
 };
 
+type Keyboard = "closed" | "unlocked" | "locked";
+
 interface Combo {
   mode: Mode;
   narration: boolean;
   muted: boolean;
   streaming: boolean;
+  keyboard: Keyboard;
 }
 
 const SAMPLE_TRANSCRIPT = "remind me to water the plants tomorrow";
+const SAMPLE_INPUT = "Remind me to water the plants tomorrow";
 
 /** Why this combo can't occur in practice, or null if it's realizable. */
 function impossibleReason(c: Combo): string | null {
@@ -53,25 +63,39 @@ function impossibleReason(c: Combo): string | null {
 }
 
 function comboKey(c: Combo): string {
-  return [c.mode, c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : ""]
+  const kb = c.keyboard === "unlocked" ? "keyboard" : c.keyboard === "locked" ? "keyboard-locked" : "";
+  return [c.mode, c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : "", kb]
     .filter(Boolean)
     .join("-");
 }
 
 function comboLabel(c: Combo): string {
-  const tags = [c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : ""].filter(Boolean);
+  const kb = c.keyboard === "unlocked" ? "keyboard (unlocked)" : c.keyboard === "locked" ? "keyboard (locked)" : "";
+  const tags = [c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : "", kb].filter(Boolean);
   return MODE_LABEL[c.mode] + (tags.length > 0 ? ` · ${tags.join(" · ")}` : "");
 }
 
+/**
+ * The realizable axis cross-product, in two families:
+ *   - button bar (keyboard closed): mode × narration × muted × streaming
+ *   - mobile keyboard (open): the bar is hidden, so only the textarea row +
+ *     lock/close show — narration/muted/streaming/voice don't affect it. Only
+ *     input-present (idle vs typing) and the lock matter.
+ */
 function allCombos(): Combo[] {
   const out: Combo[] = [];
   for (const mode of MODES) {
     for (const narration of [false, true]) {
       for (const muted of [false, true]) {
         for (const streaming of [false, true]) {
-          out.push({ mode, narration, muted, streaming });
+          out.push({ mode, narration, muted, streaming, keyboard: "closed" });
         }
       }
+    }
+  }
+  for (const keyboard of ["unlocked", "locked"] as const) {
+    for (const mode of ["idle", "typing"] as const) {
+      out.push({ mode, narration: false, muted: false, streaming: false, keyboard });
     }
   }
   return out;
@@ -80,7 +104,7 @@ function allCombos(): Combo[] {
 function specFor(c: Combo) {
   const isTranscribing = c.mode === "recording";
   return {
-    input: c.mode === "typing" ? "Remind me to water the plants tomorrow" : "",
+    input: c.mode === "typing" ? SAMPLE_INPUT : "",
     isTranscribing,
     transcript: isTranscribing ? SAMPLE_TRANSCRIPT : "",
     speechPlaying: c.mode === "paused" || c.mode === "speaking",
@@ -89,7 +113,8 @@ function specFor(c: Combo) {
     narrationEnabled: c.narration,
     badge: c.narration,
     muted: c.muted,
-    mobileRow: isTranscribing,
+    typingMode: c.keyboard !== "closed",
+    typingLocked: c.keyboard === "locked",
   };
 }
 
@@ -99,12 +124,56 @@ function noop() {}
 
 function StateBlock({ spec }: { spec: Spec }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const transcription: TranscriptionHandle = {
     transcript: spec.transcript,
     start: noop,
     stop: () => Promise.resolve(spec.transcript),
     cancel: noop,
   };
+  const inputArea = (
+    <ChatInputArea
+      hideMobile={spec.typingMode}
+      textareaRef={textareaRef}
+      input={spec.input}
+      setInput={noop}
+      isTranscribing={spec.isTranscribing}
+      transcription={transcription}
+      handleKeyDown={noop}
+      handleSend={noop}
+      handleCancelTranscription={noop}
+      clearDraft={noop}
+      onKeyboard={noop}
+      onVoice={noop}
+      speechPlaying={spec.speechPlaying}
+      onStopSpeech={noop}
+      isStreaming={spec.isStreaming}
+      onInterrupt={noop}
+      onStopDictation={noop}
+      doSend={noop}
+      zoomedViewAttr={() => ""}
+      timePassedAttr={() => ""}
+      voicePaused={spec.voicePaused}
+      onUnpause={noop}
+      onAttachFiles={noop}
+      narrationEnabled={spec.narrationEnabled}
+    />
+  );
+  const mobileRow = (
+    <MobileTextareaRow
+      input={spec.input}
+      setInput={noop}
+      isTranscribing={spec.isTranscribing}
+      transcription={transcription}
+      handleSend={noop}
+      handleCancelTranscription={noop}
+      clearDraft={noop}
+      onStopDictation={noop}
+      doSend={noop}
+      zoomedViewAttr={() => ""}
+      timePassedAttr={() => ""}
+    />
+  );
   return (
     <div className="w-full max-w-5xl mx-auto">
       {/* Faux header strip so narration badge / mute icon read in context. */}
@@ -114,48 +183,24 @@ function StateBlock({ spec }: { spec: Spec }) {
         <div className="flex-1" />
         <MuteButton muted={spec.muted} onToggle={noop} />
       </header>
-      <ChatInputArea
-        textareaRef={textareaRef}
-        input={spec.input}
-        setInput={noop}
+      <ChatComposerSection
+        attachments={[]}
+        fileAttachments={[]}
+        selections={[]}
+        onRemoveAttachment={noop}
+        onRemoveFileAttachment={noop}
+        onRemoveSelection={noop}
+        fileInputRef={fileInputRef}
+        onFileInputChange={noop}
+        typingMode={spec.typingMode}
+        typingLocked={spec.typingLocked}
+        setTypingMode={noop}
+        setTypingLocked={noop}
         isTranscribing={spec.isTranscribing}
-        transcription={transcription}
-        handleKeyDown={noop}
-        handleSend={noop}
-        handleCancelTranscription={noop}
-        clearDraft={noop}
-        onKeyboard={noop}
-        onVoice={noop}
-        speechPlaying={spec.speechPlaying}
-        onStopSpeech={noop}
-        isStreaming={spec.isStreaming}
-        onInterrupt={noop}
-        onStopDictation={noop}
-        doSend={noop}
-        zoomedViewAttr={() => ""}
-        timePassedAttr={() => ""}
-        voicePaused={spec.voicePaused}
-        onUnpause={noop}
-        onAttachFiles={noop}
-        narrationEnabled={spec.narrationEnabled}
+        recoveredDictation={null}
+        inputArea={inputArea}
+        mobileRow={mobileRow}
       />
-      {spec.mobileRow ? (
-        <div className="sm:hidden bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 pb-2">
-          <MobileTextareaRow
-            input={spec.input}
-            setInput={noop}
-            isTranscribing={spec.isTranscribing}
-            transcription={transcription}
-            handleSend={noop}
-            handleCancelTranscription={noop}
-            clearDraft={noop}
-            onStopDictation={noop}
-            doSend={noop}
-            zoomedViewAttr={() => ""}
-            timePassedAttr={() => ""}
-          />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -179,9 +224,10 @@ export function ComposerStatesHarness() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
       <div className="max-w-5xl mx-auto px-4 pb-2 text-sm text-warm-700">
-        <strong>{realizable.length}</strong> realizable button-bar combinations
-        (mode × narration × muted × streaming). <strong>{impossible.length}</strong> filtered as
-        impossible (below).
+        <strong>{realizable.length}</strong> realizable combinations (button bar:
+        mode × narration × muted × streaming; plus mobile keyboard: open ×
+        lock × input). <strong>{impossible.length}</strong> filtered as impossible
+        (below). Mobile-only states (recording row, keyboard block) need a phone-width viewport.
       </div>
       {realizable.map((c) => (
         <div key={comboKey(c)} data-state={comboKey(c)} className="mb-8">
