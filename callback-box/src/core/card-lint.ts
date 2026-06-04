@@ -26,6 +26,14 @@ import {
 } from "cardworks";
 import { parseCardText, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
+import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
+import { markdocConfig } from "../shared/markdoc-config.js";
+
+// Value named imports (`{ parse, validate }`) don't resolve from this CommonJS
+// module under Node's ESM loader (used by tsx / the doctest runner). Destructure
+// off the default import — same pattern + lint exception as `markdoc-config.ts`.
+// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
+const { parse: markdocParse, validate: markdocValidate } = Markdoc;
 
 export interface LintDispatchOptions {
   loader: ICardLoader;
@@ -124,7 +132,51 @@ async function lintFrontmatterCard(input: {
       });
     }
   }
-  return { path, errors: [], warnings };
+  const errors =
+    type === "commentary"
+      ? commentaryErrors({
+          fields: parsed.fields,
+          body: typeof bodyField === "string" ? bodyField : "",
+        })
+      : [];
+  return { path, errors, warnings };
+}
+
+/**
+ * Validation cardworks/Zod can't express for commentary cards: exactly one of
+ * `defaultHref`/`defaultRef`, and Markdoc validation of the body's tags (which
+ * fires the `{% source %}` ref-xor-href rule — nothing else runs
+ * `Markdoc.validate`, so this is where it lands).
+ */
+function commentaryErrors(input: { fields: Record<string, unknown>; body: string }): LintIssue[] {
+  const { fields, body } = input;
+  const errors: LintIssue[] = [];
+  const hasHref = typeof fields["defaultHref"] === "string" && fields["defaultHref"] !== "";
+  const hasRef = typeof fields["defaultRef"] === "string" && fields["defaultRef"] !== "";
+  if (hasHref === hasRef) {
+    errors.push({
+      type: "validation",
+      severity: "error",
+      message: "commentary card requires exactly one of defaultHref or defaultRef",
+    });
+  }
+  for (const message of validateMarkdocBody(body)) {
+    errors.push({ type: "validation", severity: "error", message });
+  }
+  return errors;
+}
+
+function validateMarkdocBody(body: string): string[] {
+  if (body === "") return [];
+  let ast: MarkdocNode;
+  try {
+    ast = markdocParse(body);
+  } catch (_e) {
+    return ["commentary body is not parseable Markdoc"];
+  }
+  return markdocValidate(ast, markdocConfig)
+    .filter((entry) => entry.error.level === "error" || entry.error.level === "critical")
+    .map((entry) => entry.error.message);
 }
 
 function errorResult(path: string, message: string): LintResult {

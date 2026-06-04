@@ -41,6 +41,7 @@ import { PersonSchema } from "./person.js";
 import { SheetSchema } from "./sheet.js";
 import { DocSchema } from "./doc.js";
 import { GdocSchema } from "./gdoc.js";
+import { CommentarySchema } from "./commentary.js";
 import { LandmarkSchema } from "./landmark.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
@@ -68,6 +69,7 @@ export const cardSchemas: CardSchema[] = [
   BriefingSchema,
   DocSchema,
   GdocSchema,
+  CommentarySchema,
   SheetSchema,
   FileSchema,
   ImageSchema,
