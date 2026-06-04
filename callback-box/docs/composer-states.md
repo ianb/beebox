@@ -114,52 +114,90 @@ the row closes after send; locked (`typingLocked`), it stays open.
 
 ---
 
-# Voice states — capture pending (needs a live mic)
+# Voice states — desktop
 
-These are the states the machine work was really about. Reaching them
-deterministically needs mic permission + a transcription socket (or a debug
-fixture that drives `composerMachine` + `realtimeTranscriptionMachine`
-directly). They're documented here from the code; **capturing them on a device
-also serves as the runtime acceptance check for `composerMachine`** (see the
-"What I'd flag for your runtime pass" items).
+These are the states the machine work was really about. They normally need a
+live mic / TTS, so the shots below are from the dev gallery
+(`/dev/composer-states`, dev-only) which renders the real presentational
+composer with fabricated props. Behaviour is documented from the code.
 
-### Recording (`isTranscribing`)
+## Recording (`isTranscribing`)
 
-Mic button becomes a **red stop square** ("Stop recording"). Desktop: a
-`RecordingIndicator` + the textarea goes read-only showing the live transcript
-("Listening…" until words arrive), with Cancel (✕) / Edit (✎) / Send controls.
-Mobile: the typing row shows the same, read-only.
-Sub-states (`connecting` / `recording` / `reconnecting` / `finalizing`) differ
-only in the `RecordingIndicator` + placeholder.
+Mic button becomes a **red stop square** ("Stop recording"). The textarea goes
+read-only showing the live transcript, with a `RecordingIndicator` dot and
+Cancel (✕) / Edit (✎) / Send controls. Sub-states (`connecting` / `recording` /
+`reconnecting` / `finalizing`) differ only in the indicator + placeholder.
+
+![desktop recording](composer-states/desktop-recording.png)
+
+Before any words arrive the placeholder reads "Listening…":
+
+![desktop recording listening](composer-states/desktop-recording-empty.png)
+
 → **Cancel/Esc** (`STOP_DICTATION`) · **keyword send** (`KEYWORD_SEND` → commit
 → keep recording) · speech queued while recording → **pausedForSpeech**.
 
-### Paused for speech (`voicePaused`)
+## Paused for speech (`voicePaused`)
 
 Mic button is the **pulsing pause** ("Resume recording (stops speech)") and the
-**Stop speaking** button shows. Reached when the agent speaks while you were
+**Stop speaking** circle shows. Reached when the agent speaks while you were
 recording — the mic is cancelled and TTS plays.
+
+![desktop paused](composer-states/desktop-paused.png)
+
 → **playback ends** → auto-resume mic (`resumeMic`) · **Resume** tap / **Stop
-speaking** → resume mic. This is the state that replaced the old `voicePaused`
-boolean; it should *not* flicker between the agent's sentences.
+speaking** → resume mic. This state replaced the old `voicePaused` boolean; it
+should *not* flicker between the agent's sentences.
 
-### Speaking, not paused (`speaking`)
+## Speaking, not paused (`speaking`)
 
-**Stop speaking** shows; mic stays the plain/narration mic (it wasn't
-recording). Reached when the agent speaks and you weren't mid-utterance (e.g. a
+**Stop speaking** shows; the mic stays the plain/narration mic (it wasn't
+recording). Reached when the agent speaks and you weren't mid-utterance (a
 replay-while-idle, or a spoken reply to a typed message).
+
+![desktop speaking](composer-states/desktop-speaking.png)
+
 → **playback ends** → idle (or reopen mic if a voice turn is active) · **Stop
 speaking** → idle.
 
-### Agent streaming (`isStreaming`)
+## Agent streaming (`isStreaming`)
 
-A **Stop agent** danger-circle appears (independent of the mic). Overlays idle /
-recording / speaking. Reached by sending any message while the agent replies.
+A **Stop agent** danger-circle (independent of the mic), shown while the agent
+replies:
 
-### Narration HQ in flight (`hq === inFlight`)
+![desktop streaming](composer-states/desktop-streaming.png)
 
-The narration badge shows `· transcribing…` while the HQ round-trip runs after a
-voice send; the mic has usually already reopened.
+It overlays the voice states too — here alongside Stop-speaking during
+mid-stream speech (two stop circles):
+
+![desktop speaking + streaming](composer-states/desktop-speaking-streaming.png)
+
+## Narration HQ in flight (`hq === inFlight`)
+
+The narration badge gains a `· transcribing…` sub-label while the HQ round-trip
+runs after a voice send; the mic has usually already reopened.
+
+![desktop narration HQ](composer-states/desktop-narration-hq.png)
+
+---
+
+# Voice states — mobile
+
+The mobile bar is icon-only; transcription shows the drop-up row beneath it, and
+the Stop-speaking / Stop-agent circles slot in between the spacer and the
+keyboard button.
+
+Recording — red stop-square mic + the drop-up transcript row:
+
+![mobile recording](composer-states/mobile-recording.png)
+
+Paused for speech — Stop-speaking circle + pulsing pause mic:
+
+![mobile paused](composer-states/mobile-paused.png)
+
+Speaking — Stop-speaking circle + plain mic:
+
+![mobile speaking](composer-states/mobile-speaking.png)
 
 ---
 
@@ -206,11 +244,13 @@ overlay the rows above, except where excluded below.
 
 ---
 
-## Capturing the rest
+## Regenerating these shots
 
-The six embedded shots are the states reachable from a plain browser session.
-The voice states need a mic-enabled capture pass (real device, or a temporary
-dev affordance that drives the two machines). Since `composerMachine`
-centralizes the coordination, such an affordance is now mostly "send the machine
-an event" — but forcing `recording` still needs the transcription machine, so
-it's a real (small) fixture, intentionally not shipped.
+The idle / typing / narration / muted shots come from a live chat session; the
+voice states come from the dev gallery at **`/dev/composer-states`** (dev-only,
+omitted from production builds — see `router.tsx` and
+`pages/dev/components/ComposerStatesHarness.tsx`). The gallery renders the real
+presentational composer with fabricated props, so it stays prop-typed against
+the components and breaks the typecheck if their contracts drift. Drive one
+state with `?state=<name>` for a clean capture. To re-shoot, point `bin/browse`
+at `/dev/composer-states?state=<name>` and `screenshot`.
