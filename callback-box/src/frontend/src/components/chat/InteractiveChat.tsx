@@ -21,6 +21,7 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
 import { useDictationDraft } from "../../hooks/useDictationDraft";
+import { useComposerDraft } from "../../hooks/useComposerDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatTabs } from "./InteractiveChat-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
@@ -74,6 +75,9 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const backgroundTasks = useBackgroundTasks();
 
   const [input, setInput] = useState("");
+  // Persist the unsent composer text so a remount (e.g. the router re-reading
+  // search params on wake-from-sleep) or a reload doesn't silently discard it.
+  useComposerDraft({ boxSlug, sessionId, input, setInput });
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
