@@ -6,7 +6,7 @@
 
 import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
-import { composerTextareaClasses, localTime } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
 /**
@@ -43,7 +43,7 @@ export function MobileTextareaRow({
         </div>
       ) : null}
       <TextareaAutosize
-        value={isTranscribing ? transcription.transcript : input}
+        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
         onPaste={onPaste}
         onDrop={onDrop}
@@ -85,8 +85,10 @@ export function MobileTextareaRow({
           <button
             onClick={async () => {
               const finalText = await transcription.stop();
-              const text = finalText.trim();
+              // Continue from any prior composer text so it isn't dropped.
+              const text = joinTranscript(input, finalText).trim();
               if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
             }}

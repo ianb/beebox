@@ -121,7 +121,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    clearDraftRef, doSend, zoomedViewAttr, timePassedAttr,
+    clearDraftRef, input, setInput, doSend, zoomedViewAttr, timePassedAttr,
   });
 
   // Persist the in-flight transcript so an interrupted session (screen sleep,

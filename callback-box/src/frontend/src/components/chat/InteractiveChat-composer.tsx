@@ -11,7 +11,7 @@ import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { unlockAudioContext } from "../../lib/audio-context";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { NarrationMicIcon } from "./InteractiveChat-controls";
-import { composerTextareaClasses, localTime } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 
 export interface TranscriptionHandle {
   transcript: string;
@@ -66,7 +66,7 @@ function DesktopComposerRow({
         ref={textareaRef}
         autoFocus
         enterKeyHint="send"
-        value={isTranscribing ? transcription.transcript : input}
+        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
         onKeyDown={handleKeyDown}
         onPaste={onPaste}
@@ -106,9 +106,11 @@ function DesktopComposerRow({
           </button>
           <button
             onClick={() => {
-              const text = transcription.transcript.trim();
+              // Continue from any prior composer text so it isn't dropped.
+              const text = joinTranscript(input, transcription.transcript).trim();
               transcription.cancel();
               if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
             }}

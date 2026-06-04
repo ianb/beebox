@@ -34,6 +34,19 @@ export function buildSpeechMessage(opts: {
   return `<speech${diarizedAttr}${attrs}>${body}</speech>`;
 }
 
+/**
+ * Join the composer's prior text with a voice transcript, single-spaced. When
+ * a recording is started while the composer already holds text (a previous
+ * stopped segment, or typing), the new segment continues from that text
+ * instead of discarding it. Mirrors the existing manual-stop append so the
+ * displayed value and the committed value always agree.
+ */
+export function joinTranscript(priorInput: string, transcript: string): string {
+  if (!priorInput) return transcript;
+  if (!transcript) return priorInput;
+  return `${priorInput} ${transcript}`;
+}
+
 // Minted at SEND-dispatch time and threaded through to /chat/send so the
 // backend's processedMessageIds dedupe (chat.ts:269-284) catches the case
 // where the streamActor body runs twice for one logical send (StrictMode
