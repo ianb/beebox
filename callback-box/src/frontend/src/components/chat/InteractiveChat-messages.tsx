@@ -22,10 +22,11 @@ import {
 
 const VIRTUOSO_INITIAL_FIRST_INDEX = 1_000_000_000;
 
-// Distance from the bottom (px) within which streaming chunks still
-// auto-follow. Sized to cover the height of a few text deltas — a real
-// scroll-up by the user clears the threshold easily.
-const AUTO_FOLLOW_THRESHOLD = 200;
+// Re-pin to the bottom once the user scrolls back within this many px of it.
+// Kept small: disengaging follow is direction-based (any upward scroll, see
+// handleScroll), so this is only the "you're back at the bottom" tolerance —
+// not a band of small scroll-ups that get yanked back.
+const RE_PIN_THRESHOLD = 24;
 
 // Virtuoso requires Header/Footer components to be stable references; if a
 // new component identity is passed each render they remount. We keep them
@@ -81,42 +82,69 @@ function useChatListScroll(opts: {
 }) {
   const { streamingShown, streamText, streamToolsLength, scrollToBottomTrigger, dataLength } = opts;
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const atBottomRef = useRef(true);
+  // Whether the view is "stuck to the bottom" and should follow new content.
+  // Disengaged when the user scrolls up, re-engaged when they return to the
+  // bottom. Drives both the streaming tail-follow and Virtuoso's followOutput.
+  const pinnedRef = useRef(true);
   const scrollerRef = useRef<HTMLElement | Window | null>(null);
+  const lastScrollTopRef = useRef(0);
   const initialScrollDoneRef = useRef(false);
 
-  const handleAtBottomStateChange = useCallback((b: boolean) => {
-    atBottomRef.current = b;
+  const pinToBottom = useCallback(() => {
+    virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: "auto" });
+  }, []);
+
+  // Maintain pinnedRef from real scroll events. Content growing *below* the
+  // viewport doesn't move scrollTop, so it fires no scroll event and can't
+  // disengage follow — only an actual user scroll does. Disengage is
+  // direction-based (any upward scroll), so there's no band of "small scroll
+  // ups" that get fought; re-engage only once genuinely back at the bottom.
+  // Our own pinToBottom() scrolls *down*, so it never trips the disengage.
+  const handleScroll = useCallback(() => {
+    const target = scrollerRef.current;
+    if (!(target instanceof HTMLElement)) return;
+    const top = target.scrollTop;
+    const fromBottom = target.scrollHeight - top - target.clientHeight;
+    if (top > lastScrollTopRef.current) {
+      if (fromBottom <= RE_PIN_THRESHOLD) pinnedRef.current = true;
+    } else if (top < lastScrollTopRef.current - 2) {
+      pinnedRef.current = false;
+    }
+    lastScrollTopRef.current = top;
   }, []);
 
   const handleScrollerRef = useCallback((el: HTMLElement | Window | null) => {
+    const prev = scrollerRef.current;
+    if (prev instanceof HTMLElement) prev.removeEventListener("scroll", handleScroll);
     scrollerRef.current = el;
+    if (el instanceof HTMLElement) {
+      lastScrollTopRef.current = el.scrollTop;
+      el.addEventListener("scroll", handleScroll, { passive: true });
+    }
+  }, [handleScroll]);
+
+  // Virtuoso's atBottom signal is unreliable during tail growth — it flips
+  // false transiently as scrollHeight grows ahead of the follow — so we only
+  // trust it to *re-engage* follow, never to disengage.
+  const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
+    if (atBottom) pinnedRef.current = true;
   }, []);
 
-  // During streaming, the tail item's height grows without changing data
-  // length — followOutput won't fire — so re-pin to bottom imperatively.
-  // We can't gate on `atBottomRef` here: each chunk grows scrollHeight
-  // before this effect runs, transiently flipping atBottom to false, so
-  // the gate skips the scroll and we fall progressively further behind.
-  // Read the live DOM position instead — if we were near the bottom when
-  // the chunk arrived, follow it; if the user has scrolled up by more
-  // than a chunk's worth, leave them alone.
+  // During streaming the tail item grows without a data-length change, so
+  // followOutput won't fire — re-pin imperatively while stuck to the bottom.
   useEffect(() => {
     if (!streamingShown) return;
-    const el = scrollerRef.current;
-    if (!el || el === window) return;
-    const target = el as HTMLElement;
-    const fromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-    if (fromBottom > AUTO_FOLLOW_THRESHOLD) return;
-    virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: "auto" });
-  }, [streamText, streamToolsLength, streamingShown]);
+    if (!pinnedRef.current) return;
+    pinToBottom();
+  }, [streamText, streamToolsLength, streamingShown, pinToBottom]);
 
   // Scroll to bottom when user sends a message (even if scrolled up).
   useEffect(() => {
     if (scrollToBottomTrigger > 0 && dataLength > 0) {
-      virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: "auto" });
+      pinnedRef.current = true;
+      pinToBottom();
     }
-  }, [scrollToBottomTrigger, dataLength]);
+  }, [scrollToBottomTrigger, dataLength, pinToBottom]);
 
   // First time data populates after mount, jump to the latest message.
   // The Virtuoso `initialTopMostItemIndex` prop is captured on virtuoso's
@@ -128,10 +156,16 @@ function useChatListScroll(opts: {
     if (initialScrollDoneRef.current) return;
     if (dataLength === 0) return;
     initialScrollDoneRef.current = true;
-    virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: "auto" });
-  }, [dataLength]);
+    pinnedRef.current = true;
+    pinToBottom();
+  }, [dataLength, pinToBottom]);
 
-  return { virtuosoRef, scrollerRef, handleAtBottomStateChange, handleScrollerRef };
+  // followOutput drives Virtuoso's auto-follow on data-length changes (new
+  // message items, processing toggles). Read our own pin state so it matches
+  // the streaming tail-follow exactly.
+  const followOutput = useCallback(() => (pinnedRef.current ? ("auto" as const) : false), []);
+
+  return { virtuosoRef, handleAtBottomStateChange, handleScrollerRef, followOutput };
 }
 
 export function VirtualizedMessageList({
@@ -170,7 +204,7 @@ export function VirtualizedMessageList({
     [groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView],
   );
 
-  const { virtuosoRef, handleAtBottomStateChange, handleScrollerRef } = useChatListScroll({
+  const { virtuosoRef, handleAtBottomStateChange, handleScrollerRef, followOutput } = useChatListScroll({
     streamingShown,
     streamText,
     streamToolsLength: streamTools.length,
@@ -250,7 +284,7 @@ export function VirtualizedMessageList({
         data={data}
         firstItemIndex={firstItemIndex}
         initialTopMostItemIndex={Math.max(0, data.length - 1)}
-        followOutput={(atBottom) => (atBottom ? "auto" : false)}
+        followOutput={followOutput}
         atBottomStateChange={handleAtBottomStateChange}
         atBottomThreshold={80}
         computeItemKey={(_, item) => dataItemKey(item)}
