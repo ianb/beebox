@@ -177,7 +177,8 @@ turning a selection into commentary.
 ```
 {% source ref="wt:chat-output-ia:callback-box/docs/box-review-surface.md"
           position="body; heading: Track A (#track-a); paragraph 2; ~line 210"
-          version="sha256:9f3a…"   /* short content hash of the target at anchor time */
+          version="git:7ffeae4 sha256:9f3a…"  /* one or more kind:value markers */
+          placement="estimated, ~50% through the message"  /* present only when the anchor's position was approximate */
           as="commentary" %}
 the exact span the user selected
 {% /source %}
@@ -185,40 +186,59 @@ the exact span the user selected
 - `position` — same freeform grammar as `formatPosition`
   (`selection-position.ts:47-62`); reused verbatim so the chat selection and
   the persisted source share one position string.
-- `version` — a short content hash of the **target file** (not git rev). A
-  worktree file is routinely dirty/uncommitted, so a commit sha cannot
-  identify its on-disk state; a content hash can. On view, the renderer
-  re-hashes the live target; mismatch ⇒ flag the anchor "may be stale" (the
-  `data_through`/freshness shape from `docs/prompt-audits.md` §"Cache
-  freshness"). Re-anchoring on mismatch is **not** in this track.
+- `version` — **a set of one or more version markers**, space-separated,
+  each `"<kind>:<value>"`. This mirrors the W3C "array of selectors, prefer
+  the precise one, fall back" pattern. Two kinds matter at MVP:
+  - `git:<rev>` — when the target is tracked (the rev is the one in the
+    *callback-mono* repo, since worktrees share its history). Cheap to store,
+    and **diffable** — a later viewer can `git show <rev>:<path>` to show what
+    changed (the deferred diff-view becomes much cheaper with this marker
+    present).
+  - `sha256:<hash>` — always available, and the only marker that pins a
+    **dirty/uncommitted** worktree file's exact on-disk bytes. The git rev
+    identifies the committed baseline; the hash identifies what was actually
+    on disk when the anchor was made.
+
+  A purely external resource with no git history carries only `sha256:`. A
+  tracked file can carry both. On view, the renderer checks markers in
+  preference order (git rev if present, else hash); any mismatch ⇒ flag the
+  anchor "may be stale" (the `data_through`/freshness shape from
+  `docs/prompt-audits.md` §"Cache freshness"). Re-anchoring on mismatch is
+  **not** in this track.
+- `placement` — carried verbatim from `<user-selection>` when present
+  (`selection-serialize.ts:71`). On a durable annotation it is a **provenance
+  marker**: it records that the anchor's position was *estimated* (a
+  voice-grabbed selection whose exact spot was lost and dropped by rough
+  timing), so a reader treats the `position` as approximate rather than
+  exact. Omitted ⇒ the position is exact. The value phrasing ("through the
+  message") is composer-flavored but preserved as-is rather than re-minted.
 - The tag body remains the quoted `exact` (W3C `TextQuoteSelector.exact`).
   `prefix`/`suffix` selectors are deferred (NOT in scope).
 
-**Honest scope correction on "superset."** `<user-selection>` also carries
-`placement="estimated, ~N% through the message"`
-(`selection-serialize.ts:71`). That is a **composer-transient** ordering hint
-for where a voice-grabbed selection sits *within one chat message* — it has
-no meaning on a durable body annotation. So `{% source %}` is a superset of
-`<user-selection>`'s **durable anchoring** attributes (ref, position, quoted
-body) + version, and deliberately drops `placement`. This is called out so
-"superset" isn't read as "also carry placement."
+`{% source %}` is therefore a true superset of `<user-selection>`'s
+attributes (ref, position, placement, quoted body) **plus** the multi-marker
+`version`.
 
 **Vocabulary lock-ins.**
-- Attribute names: `position` (not `pos`/`loc`), `version` (not
-  `rev`/`hash`), matching the existing `ref`/`as` register.
-- `version` value format: `"<algo>:<hex>"` (e.g. `sha256:…`), truncatable for
-  display; the algo prefix leaves room to change later.
+- Attribute names: `position` (not `pos`/`loc`), `version`, `placement`,
+  matching the existing `ref`/`as` register.
+- `version` value format: a space-separated set of `"<kind>:<value>"` markers
+  (e.g. `git:<rev>`, `sha256:<hex>`); the `kind:` prefix makes the set
+  open-ended (new marker kinds can be added without a new attribute), and
+  values are truncatable for display.
 - The position string grammar is owned by `formatPosition`; `{% source %}`
-  consumes it, never re-specifies it.
+  consumes it, never re-specifies it. `placement` is owned by the selection
+  serializer; `{% source %}` carries it, never re-specifies it.
 
-**First implementation chunk.** Add `position` + `version` to the `source`
-schema in `markdoc-config.ts` (attributes only, both optional, no behavior
-change to existing `ref`/`as` callers); thread them through the
+**First implementation chunk.** Add `position`, `version`, and `placement` to
+the `source` schema in `markdoc-config.ts` (attributes only, all optional, no
+behavior change to existing `ref`/`as` callers); thread them through the
 `SourceInline`/`SourceBlock` render rename the same way `ref`→`sourceRef` is
 handled (`markdoc-config.ts:144-145`); extend `agent-guide/source.ts` with a
-short "anchoring an existing span (position + version)" subsection; one
-doctest asserting a `{% source %}` with all four attributes parses and
-validates. No open questions inside this chunk.
+short "anchoring an existing span (position, version markers, placement)"
+subsection; one doctest asserting a `{% source %}` with all attributes —
+including a multi-marker `version="git:… sha256:…"` and a `placement` — parses
+and validates. No open questions inside this chunk.
 
 ### Track B — `wt:` external ref scheme + gated live-read resolver
 
@@ -332,9 +352,11 @@ tier that loads exactly when a `review` card is touched
 **Direction.**
 - Schema `instructions`: when a `<user-selection>` against a `targets:` ref
   arrives, append/update a `{% source %}` block in the body — body = the
-  user's exact selected span; add `position` from the selection; add `version`
-  = content hash of the live target at synthesis time; the agent's own
-  remark goes as prose adjacent to (not inside) the `{% source %}` (mirrors
+  user's exact selected span; copy `position` (and `placement`, if any) from
+  the selection; add `version` markers measured at synthesis time — `git:<rev>`
+  when the target is tracked plus `sha256:<hash>` of the live bytes (the
+  few-seconds synthesis window is not racy, per the boxholder); the agent's
+  own remark goes as prose adjacent to (not inside) the `{% source %}` (mirrors
   `agent-guide/source.ts`'s "your framing is yours, the tag marks what came
   from elsewhere"). One review card per coherent review target-set.
 - Box usage: a dedicated persistent box at `~/src/boxes/<name>/` (served at
@@ -374,8 +396,9 @@ No other sub-question is large enough to need its own design step.
 |---|---|---|---|
 | `wt:` ref escapes allowlist via `../` or symlink | Yes — Track B chunk doctest | Yes — realpath + allowlist `startsWith`, `ExternalRefError` 403 | Clear (403) |
 | `wt:` ref names a removed/unknown worktree | Yes — Track B doctest | Yes — `discoverWorktrees()` miss → `ExternalRefError` | Clear (resolver error; viewer shows "target unavailable") |
-| Wrapped target edited since anchor (`version` mismatch) | To add — Track C | Yes — re-hash on view, paint anchor stale | Clear (stale flag) — *this is the core drift case; silent here would be confidently-wrong commentary* |
-| `version` matches but `position` line drifted (whitespace-only edit changed hash too) | Partial | Re-hash catches it (any byte change ⇒ mismatch ⇒ flag) | Clear (over-flags rather than under-flags — safe direction) |
+| Wrapped target edited since anchor (`version` marker mismatch) | To add — Track C | Yes — re-check markers (git rev preferred, else hash) on view, paint anchor stale | Clear (stale flag) — *this is the core drift case; silent here would be confidently-wrong commentary* |
+| Target has no git history, only `sha256:` marker available | n/a (expected for external resources) | Hash marker alone still detects drift; no diff affordance | Clear (drift flagged; diff-view simply unavailable for that target) |
+| Markers match but `position` line drifted (any byte change flips both git rev and hash) | Partial | Marker check catches it (any committed or on-disk change ⇒ mismatch ⇒ flag) | Clear (over-flags rather than under-flags — safe direction) |
 | Selection over a `.ts` (plaintext) target → `position` is line-only | n/a (degraded, not failure) | `formatPosition` tolerates missing heading/paragraph (`selection-position.ts:47-62`) | Clear (weaker anchor + quoted body still present) |
 | Dev route accidentally mounted in prod | To add | Dev/review flag gates mounting; deployed server never sets it | Clear (route 404 in prod) |
 | Review card body hand-edited with malformed `{% source %}` | Inherited | `cb validate` runs Markdoc validation on card load (CLAUDE.md validation contract) | Clear (validation error) |
@@ -455,12 +478,6 @@ No other sub-question is large enough to need its own design step.
   configuration rather than re-deriving, to keep one source of truth. Settle
   before Track B's route chunk (not needed for the resolver doctest, which can
   test worktree + traversal cases first).
-- **`version` capture timing — at selection vs. at synthesis.** Capturing the
-  hash in the frontend at selection time pins to exactly what the user saw;
-  capturing at synthesis (agent re-reads + hashes) is simpler but admits a
-  few-seconds window. **Lean:** synthesis-time for MVP (window is tiny;
-  avoids extending `<user-selection>` with a hash attribute), revisit if it
-  bites.
 - **Single review card type vs. wrapper + sidecar.** Committed to single
   (`targets:` frontmatter + body commentary). Recorded as settled, not open —
   noted here only because the conversation left it "not sure." Rationale:
@@ -476,9 +493,11 @@ New agent-facing concepts, each defaulting to ≥1 `knows_directly` entry in
 entries — precedent for "a convention without an audit is one the agent
 forgets at the next compaction"):
 
-- **`{% source %}` now carries `position` + `version`** (Track A) — audit:
-  agent recalls that an existing-span citation adds `position` and a `version`
-  hash, and that `version` is measured not invented.
+- **`{% source %}` now carries `position`, `version` (markers), and
+  `placement`** (Track A) — audit: agent recalls that an existing-span
+  citation adds `position`, one or more `version` markers (`git:` and/or
+  `sha256:`), and `placement` when the spot was estimated — and that the
+  version markers are measured from the target, not invented.
 - **`review` card + `targets:` + synthesis behavior** (Tracks C/D) — audit:
   given a `<user-selection>` against a review target, the agent produces a
   body `{% source %}` anchor rather than free prose.
