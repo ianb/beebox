@@ -33,6 +33,24 @@ because one piece remains):
   with three example cards (single / compare / code).
 - All backend tested (doctests); the renderer dogfood-verified via `bin/browse`.
 
+**Follow-up landed (2026-06, the `ia-review` live-refs pass):** two pieces the
+plan above described differently were refined when wiring `ia-review` to live
+sources:
+
+- **Allowlist is now per-box, not global.** The "Allowlist" design below
+  (worktrees root + main-checkout root, read from a shared module) is
+  superseded: `GET /api/external` takes the requesting box's `boxRoot` and reads
+  that box's `config/box.json` `externalRoots` (the box's own root always
+  allowed), per request. The global `externalRoots()` env/worktrees-root default
+  is gone — it never reached the router-spawned server (`childEnv` only spreads
+  `process.env`). Roots are realpath'd before matching.
+- **The target pane renders recursively.** `TargetPane`'s content-type switch is
+  replaced by a dispatch through the file-renderer registry (`getRenderers`),
+  keyed on the target's own path — so an included `.md` renders as Markdown,
+  source as Plaintext, any future type through its own renderer.
+- The `ia-review` box's snapshot prompt copies are replaced by `commentary`
+  cards whose `defaultHref` points at the live callback-box sources.
+
 **Remaining (follow-up — chunk 5b, the interactive input layer):**
 
 - **Anchor-linking** — clicking a `{% source %}` chip scrolls/highlights its
