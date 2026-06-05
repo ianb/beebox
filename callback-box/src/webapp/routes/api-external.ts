@@ -12,15 +12,16 @@
 
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import {
   resolveExternalRef,
   buildVersionMarkers,
-  externalRoots,
   ExternalRefError,
   MalformedUrlError,
   NotFileUrlError,
 } from "../../core/external-ref.js";
+import { loadBoxConfig } from "../box-config.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".md": "text/markdown",
@@ -40,10 +41,42 @@ function contentTypeFor(absPath: string): string {
   return CONTENT_TYPES[path.extname(absPath).toLowerCase()] ?? "text/plain";
 }
 
+/** Expand a leading `~` / `~/` to the home directory; other paths pass through. */
+function expandTilde(p: string): string {
+  if (p === "~") return os.homedir();
+  if (p.startsWith("~/")) return path.join(os.homedir(), p.slice(2));
+  return p;
+}
+
+/**
+ * Canonicalize a root to its realpath so it compares cleanly against the
+ * realpath'd target in `resolveExternalRef` (e.g. macOS `/var` → `/private/var`).
+ * A configured root that doesn't exist falls back to its resolved-but-unreal
+ * form — it simply won't match anything.
+ */
+async function resolveRoot(p: string): Promise<string> {
+  const abs = path.resolve(expandTilde(p));
+  try {
+    return await fs.realpath(abs);
+  } catch (_e) {
+    return abs;
+  }
+}
+
+/**
+ * The roots this box's `file:` hrefs may resolve under: the box's own root
+ * (always) plus the box's declared `externalRoots` (config/box.json). Read
+ * per request so edits to box.json take effect without a restart
+ * (loadBoxConfig is mtime-cached, so this is cheap).
+ */
+async function rootsForBox(boxRoot: string): Promise<string[]> {
+  const config = await loadBoxConfig(boxRoot);
+  return Promise.all([boxRoot, ...(config.externalRoots ?? [])].map(resolveRoot));
+}
+
 /** Register `GET /api/external` — call only behind the dev gate (see api.ts). */
-export function registerApiExternalRoute(options: { server: FastifyInstance }): void {
-  const { server } = options;
-  const roots = externalRoots();
+export function registerApiExternalRoute(options: { server: FastifyInstance; boxRoot: string }): void {
+  const { server, boxRoot } = options;
 
   server.get<{ Querystring: { href?: string } }>("/api/external", async (request, reply) => {
     const href = request.query.href;
@@ -53,7 +86,7 @@ export function registerApiExternalRoute(options: { server: FastifyInstance }): 
 
     let real: string;
     try {
-      real = await resolveExternalRef(href, { roots });
+      real = await resolveExternalRef(href, { roots: await rootsForBox(boxRoot) });
     } catch (e) {
       // A malformed or non-file: URL is a client mistake (400); a path that
       // doesn't exist, escapes the roots, or is denylisted is "not available

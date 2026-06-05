@@ -26,11 +26,14 @@ git("commit", "-q", "-m", "add");
 const outside = path.join(os.tmpdir(), `ext-route-outside-${process.pid}.md`);
 writeFileSync(outside, "x\n");
 
-// The route reads its allowlist from this env at registration time.
-process.env["CALLBACK_EXTERNAL_ROOTS"] = root;
-
 function extUrl(href: string): string {
   return `/api/external?href=${encodeURIComponent(href)}`;
+}
+
+// The route reads its allowlist from the requesting box's config/box.json
+// (`externalRoots`), per request. Seed it into the test box.
+async function allowRoot(ctx: { seed(p: string, c: string): Promise<void> }): Promise<void> {
+  await ctx.seed("config/box.json", JSON.stringify({ externalRoots: [root] }));
 }
 ```
 
@@ -38,6 +41,7 @@ function extUrl(href: string): string {
 
 ```
 const ctx = await makeTestServer();
+await allowRoot(ctx);
 const res = await ctx.request({ method: "GET", url: extUrl(`file:${file}`) });
 res.statusCode
 => 200
@@ -58,10 +62,25 @@ res.body.markers.startsWith("sha256:")
 await ctx.cleanup();
 ```
 
+## The box's own root is always allowed (no config needed)
+
+```
+const ctx = await makeTestServer();
+await ctx.seed("notes/inside.md", "in-box\n");
+const url = extUrl(`file:${path.join(ctx.boxRoot, "notes", "inside.md")}`);
+(await ctx.request({ method: "GET", url })).statusCode
+=> 200
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
 ## A path outside the allowed roots is 404
 
 ```
 const ctx = await makeTestServer();
+await allowRoot(ctx);
 (await ctx.request({ method: "GET", url: extUrl(`file:${outside}`) })).statusCode
 => 404
 ```

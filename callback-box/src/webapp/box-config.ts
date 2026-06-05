@@ -18,6 +18,14 @@ export interface BoxConfig {
    * Example: { calendar: true, gmail: false, drive: false }
    */
   googleServices?: Partial<Record<"calendar" | "gmail" | "drive", boolean>>;
+  /**
+   * Extra filesystem roots this box's commentary cards may resolve `file:`
+   * hrefs under (the dev-only `/api/external` route — see
+   * `core/external-ref.ts`). The box's own root is always allowed implicitly;
+   * these are additional roots, e.g. a package source tree the box reviews.
+   * Absolute paths, with leading `~` expanded to the home directory.
+   */
+  externalRoots?: string[];
 }
 
 export type GoogleServiceName = "calendar" | "gmail" | "drive";

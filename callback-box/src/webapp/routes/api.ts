@@ -118,7 +118,7 @@ export async function registerApiRoutes(
   // /api/external — dev-only live wrapper for the commentary surface; reads
   // allowlisted files OUTSIDE the box root. Never mounted in production.
   if (process.env.NODE_ENV !== "production") {
-    registerApiExternalRoute({ server });
+    registerApiExternalRoute({ server, boxRoot });
   }
 
   // GET /api/task-output - Read a background task output file

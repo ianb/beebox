@@ -13,7 +13,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
 
 /** Base for every external-ref resolution failure; carries the offending value. */
@@ -55,23 +54,6 @@ export class DeniedPathError extends ExternalRefError {
     super("Denied path", absPath);
     this.name = "DeniedPathError";
   }
-}
-
-/**
- * Default allowlist of canonicalized roots a `file:` href may resolve under:
- * the worktrees root (mirrors `bin/router.ts`'s `WORKTREES_ROOT`), plus any
- * extra roots from `CALLBACK_EXTERNAL_ROOTS` (colon-separated — e.g. the main
- * monorepo checkout). Kept here as the single definition the route reads.
- */
-export function externalRoots(): string[] {
-  const roots = [path.join(os.homedir(), "src", "callback-worktrees")];
-  const extra = process.env["CALLBACK_EXTERNAL_ROOTS"];
-  if (extra !== undefined && extra !== "") {
-    for (const entry of extra.split(":")) {
-      if (entry !== "") roots.push(path.resolve(entry));
-    }
-  }
-  return roots;
 }
 
 /** The `rel` path under the first matching root, or null if under none. */

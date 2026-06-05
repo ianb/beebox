@@ -13,7 +13,7 @@ import { getApiBase } from "../api";
 import { Markdown } from "./Markdown";
 import { Pre } from "./ui/Pre";
 import { Text } from "./ui/Text";
-import type { RendererProps } from "../renderers";
+import { getRenderers, type FileData, type RendererProps } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
 class ExternalFetchError extends Error {
@@ -37,6 +37,31 @@ function decodeBase64Utf8(base64: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+/**
+ * Render fetched external content through the file-renderer registry, keyed on
+ * the target's own path — so an included `.md` renders as Markdown, source as
+ * Plaintext, and any future type through its own renderer, recursively. Falls
+ * back to preformatted text when nothing in the registry matches.
+ */
+function ExternalDocument({
+  href,
+  envelope,
+  onNavigate,
+}: {
+  href: string;
+  envelope: Envelope;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+}) {
+  const filePath = decodeURIComponent(new URL(href).pathname);
+  const fileData: FileData = { path: filePath, content: decodeBase64Utf8(envelope.contentBase64) };
+  const [renderer] = getRenderers(filePath, fileData);
+  if (renderer === undefined) {
+    return <Pre boxed scroll="lg">{fileData.content}</Pre>;
+  }
+  const Component = renderer.Component;
+  return <Component data={fileData} onNavigate={onNavigate} />;
+}
+
 function useExternalTarget(href: string) {
   const apiBase = getApiBase();
   return useQuery({
@@ -51,15 +76,13 @@ function useExternalTarget(href: string) {
   });
 }
 
-/** Render one external target's live content (markdown rendered, else preformatted). */
+/** Render one external target's live content through the file-renderer registry. */
 function TargetPane({
   href,
   onNavigate,
-  basePath,
 }: {
   href: string;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  basePath: string;
 }) {
   const { data, isLoading, error } = useExternalTarget(href);
 
@@ -82,13 +105,7 @@ function TargetPane({
           Couldn’t load this target. It may be missing or outside the allowed roots.
         </Text>
       ) : data !== undefined ? (
-        data.contentType.includes("markdown") ? (
-          <Markdown prose="block" onNavigate={onNavigate} basePath={basePath}>
-            {decodeBase64Utf8(data.contentBase64)}
-          </Markdown>
-        ) : (
-          <Pre boxed scroll="lg">{decodeBase64Utf8(data.contentBase64)}</Pre>
-        )
+        <ExternalDocument href={href} envelope={data} onNavigate={onNavigate} />
       ) : null}
     </div>
   );
@@ -124,7 +141,7 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       <div className="flex flex-col gap-6 lg:flex-row">
         {hrefs.length > 0 ? (
           hrefs.map((href) => (
-            <TargetPane key={href} href={href} onNavigate={onNavigate} basePath={data.path} />
+            <TargetPane key={href} href={href} onNavigate={onNavigate} />
           ))
         ) : (
           <div className="min-w-0 flex-1">
