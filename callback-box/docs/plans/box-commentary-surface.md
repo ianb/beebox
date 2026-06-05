@@ -17,6 +17,33 @@ This is also the first concrete artifact of the larger output-vocabulary IA
 pass (see the dogfooding note in **Tracks**): it exercises all three doc
 loading tiers and consolidates two anchoring tags into one.
 
+## Implementation status (2026-06, partially shipped)
+
+**Landed and merged** (kept in `docs/plans/` rather than `implemented-plans/`
+because one piece remains):
+
+- **Track A** — `{% source %}` gains `href`/`pos`/`version`/`placement` + the
+  ref-xor-href validate; `position`→`pos` rename.
+- **Track B** — `src/core/external-ref.ts` (`resolveExternalRef`,
+  `buildVersionMarkers`) + the dev-gated `GET /api/external` route.
+- **Track C** — `commentary` card schema + card-lint enforcement;
+  `CommentaryView` renderer (single-target **and** multi-target compare),
+  browser-verified; `Source.tsx` renders external `href` chips.
+- **Track D** — synthesis instructions live in the schema; the box is seeded
+  with three example cards (single / compare / code).
+- All backend tested (doctests); the renderer dogfood-verified via `bin/browse`.
+
+**Remaining (follow-up — chunk 5b, the interactive input layer):**
+
+- **Anchor-linking** — clicking a `{% source %}` chip scrolls/highlights its
+  span in the matching target column.
+- **The `ref`→`href` selection pipeline** — wiring `SelectionCapture` into the
+  target panes and threading `href` through `SelectionItem`/serializer/pill so a
+  selection captured in a pane knows which target it's against, feeding the
+  agent's synthesis. The data-* foundation (`data-source-href`,
+  `data-target-href`) is already in place; the consumption is best built/tuned
+  interactively against the live select→push→synthesize loop.
+
 ## Stated preferences this plan trades against
 
 - `callback-box/CLAUDE.md:101` — *"Read before writing. Don't guess file
