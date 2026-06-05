@@ -11,7 +11,7 @@ import { type ReactNode } from "react";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
-import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
+import { UserMessage, AssistantMessage, AssistantSpeechText, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/structured-output-parsing";
 import type { SessionContentBlock } from "../../api";
 import type { ModelMarker } from "./InteractiveChat-helpers";
@@ -70,23 +70,36 @@ function PendingHqMessage({ text }: { text: string }) {
 }
 
 /**
- * Streaming content being built up during a turn.
+ * Streaming content being built up during a turn. `chunkOnParagraphs` only
+ * ever exposes text up to a paragraph break or a closed `</speech>` tag, so
+ * any speech tag inside `visible` is complete — we can run it through the same
+ * speech-aware renderer the finalized message uses, giving spoken chunks their
+ * styling and speaker name as they stream in. The now-playing highlight stays
+ * off here (`activeIndex={null}`); it only applies once the turn is finalized.
  */
 function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   const visible = chunkOnParagraphs(text);
   if (!visible) return null;
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
-      <MarkdownContent text={visible} onZoomView={onZoomView} />
+      <AssistantSpeechText text={visible} indexOffset={0} activeIndex={null} onZoomView={onZoomView} />
     </div>
   );
 }
 
-/** The streaming progress throbber, shown below the live text + tools. */
-function StreamingThrobber() {
+/**
+ * The agent-working throbber. Shown both below the live streaming text/tools
+ * (during an active SSE turn) and on its own when a reloaded page learns the
+ * agent is mid-turn but has no live stream attached — so the indicator looks
+ * the same whether the turn is being streamed or just resumed after reload.
+ * The optional caption labels the standalone (reload) case, where there's no
+ * surrounding streamed text to give it context.
+ */
+function StreamingThrobber({ caption }: { caption?: string }) {
   return (
-    <div className="flex justify-center my-6">
+    <div className="flex flex-col items-center gap-2 my-6">
       <Grid size={40} color="#D4845A" speed={1.5} /> {/* coral */}
+      {caption ? <div className="text-sm text-warm-500 italic">{caption}</div> : null}
     </div>
   );
 }
@@ -281,11 +294,7 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
     );
   }
   if (item.kind === "processing") {
-    return (
-      <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 py-2 text-sm text-warm-500 italic">
-        Agent is processing…
-      </div>
-    );
+    return <StreamingThrobber caption="Agent is processing…" />;
   }
   if (item.kind === "pendingHq") {
     return <PendingHqMessage text={item.text} />;

@@ -203,6 +203,15 @@ export function CompanionViewPanel({
   onAddSelection?: (selection: AddSelectionInput) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
+  // Tabs that have been activated at least once. We mount a tab's view on
+  // first activation and keep it mounted thereafter, so each view retains its
+  // own scroll position and interactive state while inactive (it's hidden, not
+  // unmounted). Unopened tabs stay unrendered until first selected.
+  const [mounted, setMounted] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => {
+    if (mounted.has(activePath)) return;
+    setMounted((prev) => new Set(prev).add(activePath));
+  }, [activePath, mounted]);
   const active = tabs.find((t) => t.target.path === activePath);
   if (!active) return null;
   const browseHref = withBase(`/${boxSlug}/browse/${active.target.path}`);
@@ -258,15 +267,30 @@ export function CompanionViewPanel({
           <CloseButton onClick={onClosePanel} label="Close companion view" size="sm" />
         </div>
       </div>
-      <div className="flex-1 overflow-auto">
-        <FileView
-          key={active.target.path}
-          path={active.target.path}
-          mode="companion"
-          rendererName={active.target.viewer}
-          onNavigate={onNavigate}
-          onAddSelection={onAddSelection}
-        />
+      <div className="flex-1 min-h-0 relative">
+        {tabs.map((tab) => {
+          const isActive = tab.target.path === activePath;
+          // Skip tabs that have never been activated so they stay unrendered
+          // until first opened. The active tab always renders (the mounted set
+          // catches up via effect on the first render after activation).
+          if (!isActive && !mounted.has(tab.target.path)) return null;
+          return (
+            <div
+              key={tab.target.path}
+              role="tabpanel"
+              aria-hidden={!isActive}
+              className={cn("absolute inset-0 overflow-auto", !isActive && "hidden")}
+            >
+              <FileView
+                path={tab.target.path}
+                mode="companion"
+                rendererName={tab.target.viewer}
+                onNavigate={onNavigate}
+                onAddSelection={onAddSelection}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

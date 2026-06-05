@@ -211,7 +211,36 @@ async function sweepStaleChildren(): Promise<void> {
 
 // --- Process supervision ----------------------------------------------
 
-type EntryState = "starting" | "ready" | "stopping" | "dead";
+type EntryState = "starting" | "ready" | "stopping" | "dead" | "failed";
+
+interface CapturedError {
+  message: string;
+  /** Which lifecycle phase failed (waitForHttp, spawn, etc.). */
+  phase: string;
+  /** Tail of stdout+stderr (interleaved) from each child. Both streams are
+   *  captured because some startup output (fastify's "Server running at …",
+   *  vite's box-listing) lands on stdout, not stderr. */
+  viteOutput: string;
+  fastifyOutput: string;
+  at: number;
+}
+
+/**
+ * Fixed-size in-memory ring buffer for capturing the tail of a child's
+ * stdout+stderr (interleaved). Used by the failed-startup UI so the user
+ * can see what went wrong without grepping the log file. `write` is
+ * byte-counted (UTF-8 after Buffer→string conversion).
+ */
+function makeOutputRing(maxBytes: number): { write: (s: string) => void; read: () => string } {
+  let buf = "";
+  return {
+    write(s) {
+      buf += s;
+      if (buf.length > maxBytes) buf = buf.slice(buf.length - maxBytes);
+    },
+    read() { return buf; },
+  };
+}
 
 interface WorktreeEntry {
   state: EntryState;
@@ -230,6 +259,9 @@ interface WorktreeEntry {
   lastActivity?: number;
   idleTimer: NodeJS.Timeout | null;
   logFile?: string;
+  /** Populated when state === "failed". Surfaced on the error page so the
+   *  user can see what went wrong without grepping the log. */
+  lastError?: CapturedError;
 }
 
 const worktrees = new Map<string, WorktreeEntry>();
@@ -241,11 +273,17 @@ async function ensureRunning(name: string): Promise<WorktreeEntry> {
     return existing;
   }
   if (existing?.startPromise) return existing.startPromise;
-
-  const startPromise = startWorktree(name).catch((err) => {
-    worktrees.delete(name);
+  // Failed worktrees stay failed until the user explicitly retries (via the
+  // /__router/retry/<name> endpoint). Auto-restarting on every page-fetch
+  // would mask the failure and burn CPU / log noise — a broken worktree
+  // should *look* broken, with the captured error visible.
+  if (existing?.state === "failed" && existing.lastError) {
+    const err: StatusError = new Error(existing.lastError.message);
+    err.statusCode = 502;
     throw err;
-  });
+  }
+
+  const startPromise = startWorktree(name);
   worktrees.set(name, {
     state: "starting",
     startPromise,
@@ -331,10 +369,22 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
       cleanup: true,
     },
   ) as ChildProc;
+  // Swallow the execa promise rejection immediately — even on the
+  // failure path of startWorktree below. Without this the rejection
+  // becomes an unhandledRejection minutes later (when the killed child
+  // finally exits) and crashes the whole router. Was an actual bug
+  // until 2026-06-04 — see git log for context.
+  fastify.catch(() => { /* handled via .on("exit") + failed-state UX */ });
   fastify.stdout?.pipe(logStream, { end: false });
   fastify.stderr?.pipe(logStream, { end: false });
+  const fastifyOutputRing = makeOutputRing(8 * 1024);
+  fastify.stdout?.on("data", (d: Buffer) => fastifyOutputRing.write(d.toString("utf8")));
+  fastify.stderr?.on("data", (d: Buffer) => fastifyOutputRing.write(d.toString("utf8")));
 
-  const viteBin = path.join(wt.frontendCwd, "node_modules", ".bin", "vite");
+  // pnpm workspace with `node-linker=hoisted` (see /.npmrc) puts all binaries
+  // at the workspace root's node_modules/.bin — per-package node_modules/.bin
+  // dirs aren't populated. Resolve vite from the worktree's monorepo root.
+  const viteBin = path.join(wt.root, "node_modules", ".bin", "vite");
   const vite = execa(
     viteBin,
     ["dev", "--port", String(frontendPort)],
@@ -346,8 +396,12 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
       cleanup: true,
     },
   ) as ChildProc;
+  vite.catch(() => { /* see fastify.catch above — same reason */ });
   vite.stdout?.pipe(logStream, { end: false });
   vite.stderr?.pipe(logStream, { end: false });
+  const viteOutputRing = makeOutputRing(8 * 1024);
+  vite.stdout?.on("data", (d: Buffer) => viteOutputRing.write(d.toString("utf8")));
+  vite.stderr?.on("data", (d: Buffer) => viteOutputRing.write(d.toString("utf8")));
 
   // Kill any orphaned dashboard daemon for this socket dir before starting a new one.
   await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
@@ -392,7 +446,28 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
     killGroup(vite.pid);
     killGroup(fastify.pid);
     await removePidFile(name);
-    throw err;
+    // Park the entry in `failed` with what we captured. The HTTP request
+    // handler (and /__router/retry/<name>) reads `lastError` to render
+    // the error page; ensureRunning won't auto-restart a failed worktree.
+    const captured: CapturedError = {
+      message: (err as Error).message,
+      phase: "waitForHttp",
+      viteOutput: viteOutputRing.read(),
+      fastifyOutput: fastifyOutputRing.read(),
+      at: Date.now(),
+    };
+    log(`[${name}] startup failed in ${captured.phase}: ${captured.message}`);
+    worktrees.set(name, {
+      state: "failed",
+      name,
+      dashboardPort: null,
+      dashboardUrl: null,
+      idleTimer: null,
+      lastError: captured,
+    });
+    const wrapped: StatusError = new Error(captured.message);
+    wrapped.statusCode = 502;
+    throw wrapped;
   }
 
   const entry: WorktreeEntry = {
@@ -424,8 +499,8 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
     log(`[${name}] fastify exited code=${code} signal=${signal}`);
     onChildExit(name);
   });
-  vite.catch(() => {});
-  fastify.catch(() => {});
+  // execa-promise rejection handlers are attached at spawn time above — not
+  // here — so they're in place even on the waitForHttp-failure path.
 
   return entry;
 }
@@ -575,9 +650,11 @@ function escapeHtml(s: string): string {
 async function renderIndex(): Promise<string> {
   const list = await discoverWorktrees();
   const rows = list.map((w) => {
-    const status = w.running && w.entry?.lastActivity
-      ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
-      : `<span class="badge cold">cold (will lazy-start on click)</span>`;
+    const status = w.entry?.state === "failed"
+      ? `<span class="badge failed">failed · <a href="/${escapeHtml(w.name)}/">see error</a></span>`
+      : w.running && w.entry?.lastActivity
+        ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
+        : `<span class="badge cold">cold (will lazy-start on click)</span>`;
     const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">dashboard ↗</a>`;
     const stopForm = w.running
       ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
@@ -610,6 +687,8 @@ async function renderIndex(): Promise<string> {
   .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
   .badge.running { background: #d8f0d8; color: #2a6b2a; }
   .badge.cold    { background: #ececec; color: #666; }
+  .badge.failed  { background: #ffe1e1; color: #a22; }
+  .badge.failed a { color: #a22; text-decoration: underline; }
   .dash { font-size: 0.8em; color: #2255aa; text-decoration: none; padding: 0.15em 0.5em; border: 1px solid #d0deef; border-radius: 4px; background: #f4f8ff; }
   .dash:hover { background: #e6f0ff; text-decoration: underline; }
   .stopForm { margin-left: auto; }
@@ -649,6 +728,68 @@ async function renderIndex(): Promise<string> {
 <footer>
   <a href="/__router/status">status JSON</a>
 </footer>
+</body>
+</html>
+`;
+}
+
+/**
+ * HTML error page shown when a worktree failed to start. Surfaces the
+ * captured error message, the tail of each child's stderr, a link to
+ * the per-worktree log, and a retry button that POSTs to
+ * `/__router/retry/<name>`. Replaces the previous plain-text 502 so
+ * the failure is actually debuggable from the browser.
+ */
+function renderFailedPage(name: string, err: CapturedError): string {
+  const logPath = path.join(LOG_DIR, `${name}.log`);
+  const sinceMs = Date.now() - err.at;
+  const viteSection = err.viteOutput.trim()
+    ? `<h2>vite output (last ${err.viteOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.viteOutput)}</pre>`
+    : `<h2>vite output</h2><p class="muted">(empty)</p>`;
+  const fastifySection = err.fastifyOutput.trim()
+    ? `<h2>fastify output (last ${err.fastifyOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.fastifyOutput)}</pre>`
+    : `<h2>fastify output</h2><p class="muted">(empty)</p>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Worktree ${escapeHtml(name)} — failed to start</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 920px; margin: 2em auto; padding: 0 1em; color: #222; }
+  h1 { font-size: 1.2em; margin-bottom: 0.2em; color: #a22; }
+  h2 { font-size: 0.95em; margin: 1.5em 0 0.3em; color: #555; }
+  p.sub { color: #666; margin-top: 0; }
+  p.muted { color: #999; font-style: italic; }
+  .err { margin: 1em 0; padding: 0.8em 1em; background: #fff5f5; border-left: 4px solid #c33; border-radius: 3px; font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; white-space: pre-wrap; }
+  pre { background: #f7f7f7; padding: 0.8em 1em; border-radius: 4px; overflow-x: auto; font-size: 0.8em; line-height: 1.4; max-height: 24em; }
+  form { display: inline; }
+  button { font: 14px/1 system-ui; padding: 0.5em 1em; background: #2255aa; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+  button:hover { background: #1a4490; }
+  a { color: #2255aa; }
+  .actions { margin: 1.5em 0; display: flex; gap: 0.8em; align-items: center; }
+  .meta { font-size: 0.85em; color: #888; }
+  code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<h1>Worktree <code>${escapeHtml(name)}</code> failed to start</h1>
+<p class="sub">Phase: <code>${escapeHtml(err.phase)}</code> · <span class="meta">${Math.round(sinceMs / 1000)}s ago</span></p>
+
+<div class="err">${escapeHtml(err.message)}</div>
+
+<div class="actions">
+  <form method="POST" action="/__router/retry/${escapeHtml(name)}">
+    <button type="submit">Retry startup</button>
+  </form>
+  <a href="/">← back to router index</a>
+</div>
+
+${viteSection}
+${fastifySection}
+
+<h2>Per-worktree log</h2>
+<p class="meta">Full output (both children, all attempts) lives at <code>${escapeHtml(logPath)}</code>.</p>
+
 </body>
 </html>
 `;
@@ -699,6 +840,31 @@ const server = http.createServer(async (req, res) => {
         2,
       ),
     );
+    return;
+  }
+
+  if (url.startsWith("/__router/retry/")) {
+    const name = url.slice("/__router/retry/".length).replace(/\/$/, "");
+    if (!name) {
+      res.writeHead(400);
+      res.end("missing worktree name");
+      return;
+    }
+    // POST-only — a GET probe (e.g. a curl with no -X) shouldn't have a
+    // side effect. The failure page's retry button POSTs.
+    if (req.method !== "POST") {
+      res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
+      res.end("retry requires POST\n");
+      return;
+    }
+    // Clear any failed-state entry so ensureRunning will spawn a fresh
+    // attempt rather than re-throwing the cached error.
+    const existing = worktrees.get(name);
+    if (existing?.state === "failed") {
+      worktrees.delete(name);
+    }
+    res.writeHead(303, { location: `/${name}/` });
+    res.end();
     return;
   }
 
@@ -785,6 +951,15 @@ const server = http.createServer(async (req, res) => {
     entry = await ensureRunning(name);
   } catch (err) {
     const status = (err as StatusError).statusCode ?? 502;
+    // If we have a captured failure for this worktree, render the rich
+    // HTML error page (stderr tail + retry button). Otherwise fall back
+    // to plain text (e.g. 404 for unknown worktree name).
+    const failed = worktrees.get(name);
+    if (failed?.state === "failed" && failed.lastError) {
+      res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
+      res.end(renderFailedPage(name, failed.lastError));
+      return;
+    }
     res.writeHead(status, { "content-type": "text/plain" });
     res.end(`Failed to start worktree ${name}: ${(err as Error).message}\n`);
     return;

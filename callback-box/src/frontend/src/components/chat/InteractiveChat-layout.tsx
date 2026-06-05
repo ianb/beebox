@@ -131,6 +131,8 @@ export interface ComposerSectionProps {
   setTypingMode: (v: boolean) => void;
   setTypingLocked: React.Dispatch<React.SetStateAction<boolean>>;
   isTranscribing: boolean;
+  /** Interrupted-dictation recovery widget, rendered above the composer. */
+  recoveredDictation: ReactNode;
   inputArea: ReactNode;
   mobileRow: ReactNode;
 }
@@ -139,10 +141,13 @@ export function ChatComposerSection(props: ComposerSectionProps) {
   const {
     attachments, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
-    isTranscribing, inputArea, mobileRow,
+    isTranscribing, recoveredDictation, inputArea, mobileRow,
   } = props;
   return (
     <>
+      {/* Recovery widget for an interrupted dictation (above all composer panels) */}
+      {recoveredDictation}
+
       {/* Image attachment panel: shows thumbnails above the composer */}
       <AttachmentPanel attachments={attachments} onRemove={onRemoveAttachment} />
 

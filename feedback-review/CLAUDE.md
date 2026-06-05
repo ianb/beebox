@@ -45,3 +45,13 @@ Resolving moves the file to `config/feedback/resolved/` in its box and commits i
 The goal is to catch patterns: if multiple agents in different sessions report the
 same confusion, that's a strong signal that something needs fixing in the docs or
 command design.
+
+## Talking to the remote server
+
+`collect.ts` reads/resolves feedback from boxes on `box.example.com` as
+well as local boxes. All remote ops go through `runOnServer()` in
+`run-on-server.ts` (the single chokepoint). If you're touching the remote
+path here, read [`callback-box/docs/server-operations.md`](../callback-box/docs/server-operations.md#writing-scripts-that-run-on-the-server)
+for the rationale and the rule — short version: never SSH as root and write
+inside `/home/callback/` directly; always drop to the `callback` user first.
+`runOnServer` defaults to that.

@@ -33,11 +33,11 @@
  */
 
 import { setup, assign } from "xstate";
-import { recordingStop } from "../lib/earcons";
+import { recordingStop, recordingError, recordingDropped, recordingResumed } from "../lib/earcons";
 import { transcriptionActor } from "./transcription-actor";
 import type { TranscriptionEvent } from "./transcription-events";
 
-export type TranscriptionState = "idle" | "connecting" | "recording" | "finalizing";
+export type TranscriptionState = "idle" | "connecting" | "recording" | "reconnecting" | "finalizing";
 
 /**
  * A machine action was reached by an event it wasn't wired for (a config bug).
@@ -103,6 +103,22 @@ export const realtimeTranscriptionMachine = setup({
     setTimeoutWarning: assign({
       error: "Transcription timed out — partial text preserved",
     }),
+    setReconnecting: assign({
+      error: "Network interrupted — reconnecting…",
+    }),
+    clearError: assign({ error: null }),
+    setNetworkLost: assign({
+      error: "Recording stopped — network lost",
+    }),
+    playRecordingDropped: () => {
+      recordingDropped.play();
+    },
+    playRecordingResumed: () => {
+      recordingResumed.play();
+    },
+    setStartFailedError: assign({
+      error: "Recording didn't start. Please try again.",
+    }),
     sendStopToTranscriber: ({ system }) => {
       const transcriber = system.get("transcriber");
       if (transcriber) {
@@ -112,11 +128,22 @@ export const realtimeTranscriptionMachine = setup({
     playMicOffSound: () => {
       recordingStop.play();
     },
+    playStartFailedSound: () => {
+      recordingError.play();
+    },
   },
   delays: {
     FINALIZE_TIMEOUT: 10000,
     SILENCE_TIMEOUT: 5 * 60 * 1000,
     MAX_DURATION: 15 * 60 * 1000,
+    // How long a transparent reconnect may run before we give up and end the
+    // segment. The actor retries connection attempts internally within this
+    // window; if none succeed we finalize on whatever audio/text we captured.
+    RECONNECT_WINDOW: 8000,
+    // How long to wait for recording to actually start (mic permission +
+    // worklet + WebSocket open) before treating it as a failure. Generous
+    // enough not to fire while a first-time permission dialog is still open.
+    CONNECT_TIMEOUT: 8000,
   },
 }).createMachine({
   id: "realtimeTranscription",
@@ -178,11 +205,43 @@ export const realtimeTranscriptionMachine = setup({
       initial: "connecting",
       states: {
         connecting: {
+          // Recording must reach the `recording` state within CONNECT_TIMEOUT;
+          // otherwise mic permission / worklet / WebSocket startup has hung
+          // (or is being ignored) — fail loudly with the error earcon rather
+          // than leaving the user in silence.
+          after: {
+            CONNECT_TIMEOUT: {
+              target: "#realtimeTranscription.idle",
+              actions: [
+                () => {
+                  console.warn("[realtime-transcription] Recording didn't start within timeout");
+                },
+                "setStartFailedError",
+                "playStartFailedSound",
+              ],
+            },
+          },
           on: {
             WS_CONNECTED: "recording",
             SETUP_ERROR: {
               target: "#realtimeTranscription.idle",
-              actions: "setError",
+              actions: ["setError", "playStartFailedSound"],
+            },
+            // A WebSocket that errors or closes before it ever opens is also a
+            // failure to start; cue it here. The parent-state WS_ERROR /
+            // WS_CLOSED handlers (which stay silent) still cover mid-recording
+            // drops, since a child handler only overrides while in `connecting`.
+            WS_ERROR: {
+              target: "#realtimeTranscription.idle",
+              actions: ["setError", "playStartFailedSound"],
+            },
+            SERVER_ERROR: {
+              target: "#realtimeTranscription.idle",
+              actions: ["setError", "playStartFailedSound"],
+            },
+            WS_CLOSED: {
+              target: "#realtimeTranscription.idle",
+              actions: ["setStartFailedError", "playStartFailedSound"],
             },
             CANCEL: {
               target: "#realtimeTranscription.idle",
@@ -207,6 +266,60 @@ export const realtimeTranscriptionMachine = setup({
             TEXT_UPDATE: {
               target: "recording",
               reenter: true,
+              actions: "applyTextUpdate",
+            },
+            CONNECTION_DEGRADED: {
+              target: "reconnecting",
+              actions: ["playRecordingDropped", "setReconnecting"],
+            },
+            STOP: {
+              target: "finalizing",
+              actions: "sendStopToTranscriber",
+            },
+            CANCEL: {
+              target: "#realtimeTranscription.idle",
+              actions: [
+                "clearTranscript",
+                ({ system }) => {
+                  const transcriber = system.get("transcriber");
+                  if (transcriber) {
+                    transcriber.send({ type: "CANCEL" });
+                  }
+                },
+              ],
+            },
+            TRANSCRIPTION_DONE: {
+              target: "#realtimeTranscription.idle",
+              actions: "setFinalTranscript",
+            },
+          },
+        },
+        reconnecting: {
+          // Entered when the actor's liveness watchdog detects a stalled
+          // transport mid-recording. The actor is already retrying connection
+          // attempts internally; this state just bounds how long we wait and
+          // drives the audible feedback. If the window expires we finalize on
+          // whatever audio/text we captured (the local PCM blob is complete up
+          // to the drop, so narration's HQ pass still recovers the words).
+          after: {
+            RECONNECT_WINDOW: {
+              target: "finalizing",
+              actions: [
+                () => {
+                  console.warn("[realtime-transcription] Reconnect window expired — ending segment");
+                },
+                "setNetworkLost",
+                "sendStopToTranscriber",
+                "playMicOffSound",
+              ],
+            },
+          },
+          on: {
+            CONNECTION_RESTORED: {
+              target: "recording",
+              actions: ["playRecordingResumed", "clearError"],
+            },
+            TEXT_UPDATE: {
               actions: "applyTextUpdate",
             },
             STOP: {

@@ -27,7 +27,7 @@ export interface ReplaySpeechOptions {
  * each chunk's index absolute across the whole message (groups may be split
  * by tool activity); `activeIndex` is the segment currently playing.
  */
-function AssistantSpeechText({
+export function AssistantSpeechText({
   text,
   indexOffset,
   activeIndex,
@@ -120,7 +120,7 @@ export function AssistantMessage({
   }, [grouped]);
 
   return (
-    <div className="pl-3 sm:pl-6 py-2 min-w-0 overflow-hidden relative">
+    <div className="px-3 sm:px-6 py-2 min-w-0 overflow-hidden relative">
       {!debugView && (hasSpeech || hasSilentThinking) ? (
         <div className="absolute right-2 top-2 flex items-center gap-2">
           {hasSilentThinking ? <ThinkingCornerMark /> : null}

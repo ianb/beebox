@@ -100,24 +100,21 @@ else
   echo "[worktree-create] reusing existing box $BOX_DEST"
 fi
 
-# 3. pnpm install at every level. Root first so .husky/_/ exists (git hooks
-# fire). cardworks build before callback-box because callback-box's
-# node_modules/cardworks/ is populated from cardworks/dist/ at install time
-# (node-linker=hoisted).
-echo "[worktree-create] installing root husky..."
+# 3. pnpm install + cardworks build. ONE workspace install at the root —
+# never per-subpackage. Under pnpm workspaces with node-linker=hoisted,
+# running `pnpm install` inside a subpackage walks up to the workspace
+# root anyway, but in practice it also seems to wipe the root lockfile
+# in some cases, leaving the worktree with node_modules/ populated but
+# node_modules/.bin/ empty (which then breaks bin/browse, bin/cb, etc.).
+# Same shape as what deploy/deploy.sh does on the server.
+echo "[worktree-create] running pnpm install (workspace-wide)..."
 (cd "$worktree_path" && pnpm install)
 
+# cardworks/dist must exist before any callback-box import resolves
+# (node-linker=hoisted lays out cardworks via dist). The root install
+# above doesn't run the cardworks build script.
 echo "[worktree-create] building cardworks..."
-(cd "$worktree_path/cardworks" && pnpm install && pnpm build)
-
-echo "[worktree-create] running pnpm install in callback-box..."
-(cd "$worktree_path/callback-box" && pnpm install)
-
-echo "[worktree-create] running pnpm install in callback-box/src/frontend..."
-(cd "$worktree_path/callback-box/src/frontend" && pnpm install)
-
-echo "[worktree-create] running pnpm install in browse..."
-(cd "$worktree_path/browse" && pnpm install)
+(cd "$worktree_path" && pnpm --filter cardworks run build)
 
 # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
 # own cb on PATH. Per-worktree because each worktree has its own absolute

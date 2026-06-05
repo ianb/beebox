@@ -122,7 +122,7 @@ export function ChatDebugMenu({
     >
       {panel === "root" ? (<>
       <MenuItem onClick={onToggleDebugView}>{debugView ? "✓ " : "  "}Debug View</MenuItem>
-      <MenuItem onClick={onToggleNarration} disabled={sessionId === null}>
+      <MenuItem onClick={onToggleNarration}>
         {narrationEnabled ? "✓ " : "  "}Narration mode
       </MenuItem>
       <MenuDivider />

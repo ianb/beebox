@@ -6,7 +6,7 @@
  * wires them into the layout regions.
  */
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import { VirtualizedMessageList } from "./InteractiveChat-messages";
 import { lastWords, countWords } from "../../lib/selection-serialize";
@@ -15,6 +15,8 @@ import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
 import { DebugLogPanel } from "../DebugLog";
+import { BackgroundTasks } from "./BackgroundTasks";
+import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import type { MessageGroup } from "../ChatMessages";
 import type { ModelMarker } from "./InteractiveChat-helpers";
@@ -29,6 +31,8 @@ interface ChatBodyProps {
   model: ReturnType<typeof useChatModelFeatures>;
   mute: ReturnType<typeof useChatMute>;
   voice: ReturnType<typeof useChatVoice>;
+  /** Recovery widget for an interrupted dictation, or null when none is pending. */
+  recoveredDictation: ReactNode;
   attach: ReturnType<typeof useChatAttachments>;
   selections: ReturnType<typeof useChatSelections>;
   actions: ReturnType<typeof useChatActions>;
@@ -37,6 +41,7 @@ interface ChatBodyProps {
   boxSlug: string | undefined;
   messages: SessionEntry[];
   groups: MessageGroup[];
+  backgroundTasks: LiveTask[];
   isStreaming: boolean;
   streamText: string;
   streamTools: SessionContentBlock[];
@@ -143,10 +148,10 @@ function MessageListRegion(props: ChatBodyProps) {
 
 function ComposerRegion(props: ChatBodyProps) {
   const {
-    model, voice, attach, selections, actions, isStreaming, input, setInput, textareaRef,
+    model, voice, recoveredDictation, attach, selections, actions, isStreaming, input, setInput, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, doSend, zoomedViewAttr, timePassedAttr,
   } = props;
-  const { speechPlayback, transcription, isTranscribing, voicePaused, turnTakingRef, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
+  const { speechPlayback, transcription, isTranscribing, voicePaused, turnTakingRef, clearDraft, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { attachments, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
   const { selections: selectionItems, removeSelection } = selections;
   const { handleSend, handleKeyDown, handleInterrupt, handlePaste, handleDrop } = actions;
@@ -165,6 +170,7 @@ function ComposerRegion(props: ChatBodyProps) {
       setTypingMode={setTypingMode}
       setTypingLocked={setTypingLocked}
       isTranscribing={isTranscribing}
+      recoveredDictation={recoveredDictation}
       inputArea={
         <ChatInputArea
           hideMobile={typingMode}
@@ -176,6 +182,7 @@ function ComposerRegion(props: ChatBodyProps) {
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
+          clearDraft={clearDraft}
           onKeyboard={() => setTypingMode(true)}
           onVoice={startVoice}
           speechPlaying={speechPlayback.isPlaying}
@@ -202,6 +209,7 @@ function ComposerRegion(props: ChatBodyProps) {
           transcription={transcription}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
+          clearDraft={clearDraft}
           turnTakingRef={turnTakingRef}
           doSend={doSend}
           zoomedViewAttr={zoomedViewAttr}
@@ -260,17 +268,20 @@ export function InteractiveChatBody(props: ChatBodyProps) {
       header={<HeaderRegion {...props} />}
       messageList={<MessageListRegion {...props} />}
       statusBanners={
-        <ChatStatusBanners
-          error={error}
-          transcriptionError={voice.transcription.error}
-          onDismissError={() => {
-            send({ type: "DISMISS_ERROR" });
-            voice.transcription.dismissError();
-          }}
-          pendingCount={pendingCount}
-          activeSchedules={schedules.activeSchedules}
-          onCancelSchedule={schedules.handleCancelSchedule}
-        />
+        <>
+          <BackgroundTasks tasks={props.backgroundTasks} />
+          <ChatStatusBanners
+            error={error}
+            transcriptionError={voice.transcription.error}
+            onDismissError={() => {
+              send({ type: "DISMISS_ERROR" });
+              voice.transcription.dismissError();
+            }}
+            pendingCount={pendingCount}
+            activeSchedules={schedules.activeSchedules}
+            onCancelSchedule={schedules.handleCancelSchedule}
+          />
+        </>
       }
       composerSection={<ComposerRegion {...props} />}
       debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}

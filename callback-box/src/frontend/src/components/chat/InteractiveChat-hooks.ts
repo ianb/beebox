@@ -12,6 +12,7 @@ import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
+import type { ChatEvent } from "../../machines/chat-types";
 
 /**
  * Companion-view tab state: opening a view activates an existing tab (keyed
@@ -61,8 +62,8 @@ interface ChatSendFn {
  * read on mount; feature changes are optimistic and reconciled by the SSE
  * `chat-features-changed` handler in the parent.
  */
-export function useChatModelFeatures(opts: { sessionId: string | null; groupCount: number }) {
-  const { sessionId, groupCount } = opts;
+export function useChatModelFeatures(opts: { sessionId: string | null; groupCount: number; send: (event: ChatEvent) => void }) {
+  const { sessionId, groupCount, send } = opts;
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
   const [chatFeatures, setChatFeatures] = useState<Record<string, string>>({});
@@ -88,16 +89,23 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
   const narrationEnabled = chatFeatures.narration === "on";
 
   const handleToggleNarration = useCallback(() => {
-    if (!sessionId) return;
     const next = narrationEnabled ? "off" : "on";
-    // Optimistic — server-confirmed value lands via the SSE event handler.
+    // Optimistic — server-confirmed value lands via the SSE event handler
+    // (or, pre-session, reconciles from the server once the id is assigned).
     setChatFeatures((prev) => ({ ...prev, narration: next }));
+    if (!sessionId) {
+      // Brand-new chat: no session to set the flag on yet. Stash the choice
+      // as a machine seed so it rides along on the first send and applies to
+      // the very first turn.
+      send({ type: "SET_SEED_FEATURE", feature: "narration", value: next });
+      return;
+    }
     setChatFeature({ sessionId, feature: "narration", value: next })
       .then((res) => { setChatFeatures(res.features); })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] set-feature narration failed: ${e instanceof Error ? e.message : String(e)}`);
       });
-  }, [sessionId, narrationEnabled]);
+  }, [sessionId, narrationEnabled, send]);
 
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
@@ -258,5 +266,41 @@ export function usePendingMessagePoll(opts: {
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
   }, [pendingCount, send, sessionId]);
+}
+
+/**
+ * Poll status every 5s while the agent is busy with no live stream attached —
+ * the reloaded-mid-turn case. That "processing" indicator is otherwise a
+ * one-time `busy` snapshot taken at load, cleared only by a pushed
+ * chat-complete event; if that event is missed (and the event bus never
+ * reconnects to re-fire its onConnect REFRESH), the indicator sticks after the
+ * turn has actually finished. Polling actively reconfirms the turn is still
+ * running, and dispatches a single REFRESH the moment the server reports it
+ * done — pulling the completed response just like chat-complete would.
+ *
+ * Only `/status` is hit while busy (cheap, no state transition, so the throbber
+ * doesn't flicker); REFRESH fires once, on completion. Skipped during a live
+ * stream / in-flight refresh (`isStreaming`) — the SSE turn reports its own
+ * completion there.
+ */
+export function useProcessingStatusPoll(opts: {
+  processBusy: boolean;
+  isStreaming: boolean;
+  sessionId: string | null;
+  send: (event: ChatEvent) => void;
+}) {
+  const { processBusy, isStreaming, sessionId, send } = opts;
+  useEffect(() => {
+    if (!processBusy || isStreaming || !sessionId) return;
+    const poll = () => {
+      getChatStatus({ sessionId })
+        .then((status) => {
+          if (!status.busy) send({ type: "REFRESH" });
+        })
+        .catch(() => {});
+    };
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [processBusy, isStreaming, sessionId, send]);
 }
 

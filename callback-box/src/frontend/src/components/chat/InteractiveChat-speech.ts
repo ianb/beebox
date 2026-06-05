@@ -10,7 +10,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
 import { parseAllSpeechTags, type SpeechSegment } from "../../lib/speech-parsing";
-import { recordingStart } from "../../lib/earcons";
 
 interface SnapshotLike {
   value: unknown;
@@ -19,7 +18,7 @@ interface SnapshotLike {
 
 export interface VoiceRefs {
   turnTakingRef: React.MutableRefObject<boolean>;
-  transcriptionRef: React.MutableRefObject<{ start: () => void; cancel: () => void; state: string; transcript: string } | null>;
+  transcriptionRef: React.MutableRefObject<{ start: (opts?: { earcon?: boolean }) => void; cancel: () => void; state: string; transcript: string } | null>;
   stopTickRef: React.MutableRefObject<(() => void) | null>;
   speechPlayedRef: React.MutableRefObject<boolean>;
   voicePausedRef: React.MutableRefObject<boolean>;
@@ -35,7 +34,7 @@ export function useSpeechDispatch(opts: {
   const { snapshot, muted, setVoicePaused } = opts;
 
   const turnTakingRef = useRef(false);
-  const transcriptionRef = useRef<{ start: () => void; cancel: () => void; state: string; transcript: string } | null>(null);
+  const transcriptionRef = useRef<{ start: (opts?: { earcon?: boolean }) => void; cancel: () => void; state: string; transcript: string } | null>(null);
   const stopTickRef = useRef<(() => void) | null>(null);
   const prevStateRef = useRef<string>("loading");
   const speechPlayedRef = useRef(false);
@@ -55,8 +54,7 @@ export function useSpeechDispatch(opts: {
         setVoicePaused(false);
         transcriptionRef.current?.start();
       } else if (turnTakingRef.current && machineStateRef.current !== "streaming") {
-        recordingStart.play();
-        transcriptionRef.current?.start();
+        transcriptionRef.current?.start({ earcon: true });
       }
     },
   });
@@ -168,8 +166,7 @@ export function useSpeechDispatch(opts: {
       if (!speechPlayedRef.current && turnTakingRef.current) {
         // Only restart if not already recording (might be paused/resumed by TTS logic)
         if (!voicePausedRef.current) {
-          recordingStart.play();
-          transcriptionRef.current?.start();
+          transcriptionRef.current?.start({ earcon: true });
         }
       }
     }

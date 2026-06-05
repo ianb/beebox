@@ -218,8 +218,11 @@ export async function pruneStaleTemplateUpdates(
     try {
       await fs.rmdir(dir);
     } catch (e) {
-      // Not empty (or already gone) — leave it. Sweeping is best-effort.
-      console.debug("Leaving non-empty template-updates dir:", dir, e);
+      const err = e as NodeJS.ErrnoException;
+      // Not empty (still holds non-stale files) or already gone — both are
+      // expected outcomes of best-effort sweeping, not errors to report.
+      if (err.code === "ENOTEMPTY" || err.code === "ENOENT") continue;
+      throw e as Error;
     }
   }
 

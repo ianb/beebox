@@ -11,7 +11,7 @@ import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
 import { unlockAudioContext } from "../../lib/audio-context";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { NarrationMicIcon } from "./InteractiveChat-controls";
-import { composerTextareaClasses, localTime } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 
 export interface TranscriptionHandle {
   transcript: string;
@@ -36,7 +36,7 @@ const STOP_CIRCLE_PATHS = (
  */
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription,
-  handleKeyDown, handleSend, handleCancelTranscription,
+  handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   turnTakingRef, doSend, zoomedViewAttr, timePassedAttr, onPaste, onDrop,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -47,6 +47,7 @@ function DesktopComposerRow({
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
+  clearDraft: () => void;
   turnTakingRef: React.MutableRefObject<boolean>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
@@ -65,7 +66,7 @@ function DesktopComposerRow({
         ref={textareaRef}
         autoFocus
         enterKeyHint="send"
-        value={isTranscribing ? transcription.transcript : input}
+        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
         onKeyDown={handleKeyDown}
         onPaste={onPaste}
@@ -93,6 +94,8 @@ function DesktopComposerRow({
               const text = transcription.transcript;
               transcription.cancel();
               if (text) setInput((existing) => (existing ? existing + " " + text : text));
+              // Now editable typed text, not voice — drop the dictation draft.
+              clearDraft();
             }}
             className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
             title="Edit before sending"
@@ -103,9 +106,13 @@ function DesktopComposerRow({
           </button>
           <button
             onClick={() => {
-              const text = transcription.transcript.trim();
+              // Continue from any prior composer text so it isn't dropped.
+              const text = joinTranscript(input, transcription.transcript).trim();
               transcription.cancel();
               if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              setInput("");
+              // Segment committed — drop the persisted dictation draft.
+              clearDraft();
             }}
             className={`${CIRCLE_BTN} bg-accent text-white hover:bg-accent-dark`}
             title="Send"
@@ -136,7 +143,7 @@ function DesktopComposerRow({
  * TTS-induced pause, swapping its icon to reflect the current voice state.
  */
 function VoiceToggleButton({
-  voicePaused, isTranscribing, narrationEnabled, transcription, turnTakingRef, setInput, onUnpause, onVoice,
+  voicePaused, isTranscribing, narrationEnabled, transcription, turnTakingRef, setInput, clearDraft, onUnpause, onVoice,
 }: {
   voicePaused: boolean;
   isTranscribing: boolean;
@@ -144,6 +151,7 @@ function VoiceToggleButton({
   transcription: TranscriptionHandle;
   turnTakingRef: React.MutableRefObject<boolean>;
   setInput: React.Dispatch<React.SetStateAction<string>>;
+  clearDraft: () => void;
   onUnpause: () => void;
   onVoice: () => void;
 }) {
@@ -153,11 +161,14 @@ function VoiceToggleButton({
         if (voicePaused) {
           onUnpause();
         } else if (isTranscribing) {
-          // Stop recording, preserve transcript into input for editing
+          // Stop recording, preserve transcript into input for editing. It's
+          // now editable typed text, not voice — drop the dictation draft so
+          // it can't resurface later as a phantom "Recovered dictation".
           turnTakingRef.current = false;
           const text = transcription.transcript;
           transcription.cancel();
           if (text) setInput((existing) => (existing ? existing + " " + text : text));
+          clearDraft();
         } else {
           unlockAudioContext();
           onVoice();
@@ -190,7 +201,7 @@ function VoiceToggleButton({
  */
 export function ChatInputArea({
   textareaRef, input, setInput, isTranscribing, transcription,
-  handleKeyDown, handleSend, handleCancelTranscription,
+  handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
   isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
   voicePaused, onUnpause, hideMobile,
@@ -204,6 +215,8 @@ export function ChatInputArea({
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
+  /** Drops the persisted dictation draft when transcript is moved to input or sent. */
+  clearDraft: () => void;
   onKeyboard: () => void;
   onVoice: () => void;
   speechPlaying: boolean;
@@ -258,6 +271,7 @@ export function ChatInputArea({
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
+          clearDraft={clearDraft}
           turnTakingRef={turnTakingRef}
           doSend={doSend}
           zoomedViewAttr={zoomedViewAttr}
@@ -312,6 +326,7 @@ export function ChatInputArea({
           transcription={transcription}
           turnTakingRef={turnTakingRef}
           setInput={setInput}
+          clearDraft={clearDraft}
           onUnpause={onUnpause}
           onVoice={onVoice}
         />

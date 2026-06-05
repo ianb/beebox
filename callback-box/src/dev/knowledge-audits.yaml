@@ -2036,6 +2036,72 @@ tests:
     correct_contains_any: ["fabricat", "exact", "actual words", "verbatim", "no"]
     tags: [quotes, behavioral, integrity]
 
+  # --- Behavior audit (not knowledge) ---
+  #
+  # The four audits above test what the agent *knows* about `{% quote %}`
+  # (it answers in prose). This one tests what it *does*: run it in
+  # chat+narration mode, hand it an expressive voice dump, tell it to
+  # save the note, and check the card it writes actually preserves the
+  # user's distinctive phrasing inside a `{% quote %}` tag rather than
+  # paraphrasing it into the agent's own prose. This reproduces the
+  # 2026-05-19 `hearth`-box feedback: "Narration mode: paraphrasing is
+  # NOT okay … the words captured should be Ian's, not the assistant's
+  # version of Ian's."
+  #
+  # Why this shape: the guidance is split across two docs that only
+  # cross-link one way. `quotesSection` (always loaded via CLAUDE.md)
+  # teaches `{% quote %}` and points forward to narration-mode.md;
+  # narration-mode-doc.ts:39 ("use the user's wording … don't paraphrase")
+  # never names `{% quote %}`. An agent that consults only the narration
+  # doc on capture could preserve wording in plain prose without ever
+  # marking it — which is the gap this audit probes.
+  #
+  # cards_contain is a substring grep across created cards: it asserts the
+  # `{% quote` tag is present AND a distinctive verbatim phrase is present,
+  # but cannot prove the phrase sits *inside* the tag. Acceptable coverage;
+  # the watch_for carries the nuance for whoever reads the report.
+  #
+  # CONFOUND: the original failure happened in a long session with
+  # `{% quote %}` landing mid-session, so context pressure / pre-tag-
+  # landing is a likely cause. Each audit is a FRESH session, so a green
+  # result here does NOT prove the real long-session failure mode is
+  # fixed — it only proves the guidance is sufficient under clean
+  # conditions.
+  #
+  # Status (2026-06-01): PASSES on first run. The agent created
+  # Side_Project_Spark.doc.card, wrapped the user's distinctive phrasing
+  # in `{% quote %}` ("...the spark, not the slog" landed inside the tag),
+  # and replied with a bare `<ack kind="created">` — textbook narration
+  # behavior. So under clean conditions the split guidance is sufficient:
+  # the always-loaded `quotesSection` carried the agent even though
+  # narration-mode-doc.ts never names `{% quote %}`. The doc seam was NOT
+  # exercised into a failure here, so per "let the test decide" the
+  # narration doc is left unchanged. The long-session confound above is
+  # the remaining unknown a fresh-session audit cannot reach.
+
+  - id: narration-capture-uses-quote-tag
+    prompt: |
+      <chat-app narration="on" prose="off" time="2026-05-19T10:00:00Z"/>
+      <speech>Save this to a note for me. I've been chewing on why I keep abandoning side projects, and I think the beginning feels electric — like anything is possible — and then once it's just grinding work I lose the thread. It's not laziness. I'm addicted to the spark, not the slog. Write that down so I don't lose it.</speech>
+    expected_level: knows_about
+    chat_mode: true
+    watch_for: >
+      Creates a note/card and preserves the user's distinctive phrasing
+      verbatim inside a `{% quote %}` tag — e.g. "addicted to the spark,
+      not the slog" sits inside the tag, not rewritten. The failure mode
+      is paraphrasing the dump into bland prose ("the user reflected on
+      why they abandon projects, preferring beginnings to ongoing work")
+      with no `{% quote %}` at all. Any agent framing around the quote is
+      fine; what matters is Ian's words survive intact and marked.
+    cards_contain: ["{% quote", "the spark, not the slog"]
+    should_not_read: []
+    max_turns: 20
+    tags: [chat, narration, quotes, recording, behavioral]
+    notes: >
+      Behavior counterpart to the knowledge audits above. See the section
+      comment for the doc seam this probes and the long-session confound a
+      fresh-session audit cannot reproduce.
+
   # === Provenance (`{% source %}`) ===
   #
   # `{% source ref="..." as="..." %}` marks content derived from a card

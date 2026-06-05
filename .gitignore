@@ -21,5 +21,8 @@ dist/
 # OS
 .DS_Store
 
-# Agent scratch work area (transient; never committed)
-scratch/
+# Scratch artifacts the agent (or you) drop in scratch/ — orientation
+# docs, intermediate outputs, throwaway dumps. Only the README is
+# tracked, to preserve the convention. See scratch/README.md.
+scratch/*
+!scratch/README.md

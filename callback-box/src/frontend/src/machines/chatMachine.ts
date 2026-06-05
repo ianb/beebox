@@ -96,6 +96,14 @@ export const chatMachine = setup({
         messages: [...event.messages, ...context.messages],
       })),
     },
+    // Global handler: record a pre-session chat-feature choice (e.g. narration
+    // toggled on in a brand-new chat) to fold into the first send. Only while
+    // still "new"; once an id is assigned, toggles go through the server.
+    SET_SEED_FEATURE: {
+      actions: assign(({ context, event }) => context.sessionId === null
+        ? { seedFeatures: { ...context.seedFeatures, [event.feature]: event.value } }
+        : {}),
+    },
     // Global handler: backend assigned an id to a session that started as
     // "new". Lock subsequent sends and history fetches onto the real id so
     // we don't accidentally start another fresh session, and so refreshing
@@ -106,6 +114,8 @@ export const chatMachine = setup({
         sessionId: event.sessionId,
         // Drop the in-memory binding now that the backend has persisted
         // it to chat-session-history; future resumes look it up there.
+        // (Pending seedFeatures, if any, are now inert: sessionInput is the
+        // real id so they're never re-sent, and toggles go through the server.)
         contextDir: undefined,
       })),
     },
@@ -187,6 +197,7 @@ export const chatMachine = setup({
             ...(context.sessionInput === "new" && context.contextDir !== undefined
               ? { contextDir: context.contextDir }
               : {}),
+            ...(context.sessionInput === "new" && context.seedFeatures ? { seedFeatures: context.seedFeatures } : {}),
           };
         },
       },

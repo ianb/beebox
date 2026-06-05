@@ -18,7 +18,7 @@ import {
   type TranscriptionState,
 } from "../machines/realtimeTranscriptionMachine";
 import { detectKeyword, type KeywordResult } from "../lib/speech-keywords";
-import { stillListening } from "../lib/earcons";
+import { stillListening, recordingStart } from "../lib/earcons";
 
 const STILL_LISTENING_DELAY_MS = 10000;
 
@@ -53,7 +53,14 @@ export interface UseRealtimeTranscriptionResult {
   /** Live, unconfirmed text. May change as the recognizer revises. */
   interimTranscript: string;
   error: string | null;
-  start: () => void;
+  /**
+   * Begin a recording segment. Pass `{ earcon: true }` to play the
+   * recording-start cue — but only once capture is *truly* live (the machine
+   * reaches `recording`, i.e. getUserMedia resolved and the socket opened),
+   * never before the mic-permission dialog settles. Auto-disarmed if the
+   * attempt errors out (e.g. permission denied) before recording begins.
+   */
+  start: (opts?: { earcon?: boolean }) => void;
   /** Stop recording and wait for final transcript. Returns the final text. */
   stop: () => Promise<string>;
   cancel: () => void;
@@ -91,15 +98,26 @@ export function useRealtimeTranscription(
    * when the interim has no match.
    */
   const lastInterimFireKeyRef = useRef<string | null>(null);
+  /**
+   * Set by `start({ earcon: true })`. The recording-start earcon plays only
+   * when the machine actually reaches `recording` — so the "you're recording
+   * now" cue never precedes the mic-permission dialog or lies about a segment
+   * that hasn't gone live. Cleared on play, or on a return to idle without
+   * recording (error / cancel / permission denied).
+   */
+  const playStartEarconRef = useRef(false);
+  const prevEarconStateRef = useRef<TranscriptionState>("idle");
 
   // Map machine state to TranscriptionState (nested under "active" parent)
   const state: TranscriptionState = snapshot.matches({ active: "recording" })
     ? "recording"
-    : snapshot.matches({ active: "finalizing" })
-      ? "finalizing"
-      : snapshot.matches({ active: "connecting" })
-        ? "connecting"
-        : "idle";
+    : snapshot.matches({ active: "reconnecting" })
+      ? "reconnecting"
+      : snapshot.matches({ active: "finalizing" })
+        ? "finalizing"
+        : snapshot.matches({ active: "connecting" })
+          ? "connecting"
+          : "idle";
 
   const { finalTranscript, interimTranscript, error } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);
@@ -207,9 +225,28 @@ export function useRealtimeTranscription(
     }
   }, [state, transcript]);
 
-  const start = useCallback(() => {
+  // Recording-start earcon: fire the moment capture goes live (entering
+  // `recording`), and only when armed by start({ earcon: true }). This is the
+  // fix for "earcon plays before recording starts" — getUserMedia resolves
+  // inside the machine's `connecting` state, so anything that played the cue
+  // before start() ran would precede the permission dialog and lie about
+  // being live. Disarm on a return to idle without recording (denied/error).
+  useEffect(() => {
+    const prev = prevEarconStateRef.current;
+    prevEarconStateRef.current = state;
+    if (!playStartEarconRef.current) return;
+    if (state === "recording" && prev !== "recording") {
+      playStartEarconRef.current = false;
+      recordingStart.play();
+    } else if (state === "idle") {
+      playStartEarconRef.current = false;
+    }
+  }, [state]);
+
+  const start = useCallback((opts?: { earcon?: boolean }) => {
     prevFinalRef.current = "";
     lastInterimFireKeyRef.current = null;
+    if (opts?.earcon === true) playStartEarconRef.current = true;
     send({ type: "START" });
   }, [send]);
 

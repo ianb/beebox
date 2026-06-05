@@ -14,8 +14,8 @@ import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { detectKeyword } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
-import { sendSound, tick, recordingStart, recordingStop } from "../../lib/earcons";
-import { localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
+import { sendSound, tick, recordingStop } from "../../lib/earcons";
+import { localTime, buildSpeechMessage, joinTranscript } from "./InteractiveChat-helpers";
 import { useSpeechDispatch, type VoiceRefs } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection-serialize";
 import type { ReplaySpeechOptions } from "../ChatMessages";
@@ -43,14 +43,24 @@ function runKeywordSend(opts: {
   setHqInFlight: React.Dispatch<React.SetStateAction<boolean>>;
   setPendingHqDraft: React.Dispatch<React.SetStateAction<string | null>>;
   doSend: (wrapped: string) => void;
+  clearDraftRef: React.MutableRefObject<() => void>;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
+  /** Latest composer text at fire time, prepended so it isn't dropped. */
+  inputRef: React.MutableRefObject<string>;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, zoomedViewAttr, timePassedAttr } = opts;
-  if (!text.trim()) {
+  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput } = opts;
+  // Any text already in the composer (a prior stopped segment, or typing)
+  // continues into this utterance rather than being discarded.
+  const priorInput = inputRef.current.trim();
+  if (!priorInput && !text.trim()) {
     transcription.start();
     return;
   }
+  // The prior text is being committed with this utterance — clear it so the
+  // next segment doesn't prepend it a second time.
+  if (priorInput) setInput("");
   // Snapshot the pending selections at keyword-fire (phase 1) and clear them
   // now: they belong to *this* utterance. The deferred HQ submit reads this
   // frozen snapshot, so selections added during the HQ window go to the next
@@ -67,11 +77,17 @@ function runKeywordSend(opts: {
   const submit = (finalText: string, submitOpts?: { diarized?: boolean }) => {
     const diarized = submitOpts !== undefined && submitOpts.diarized === true;
     const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
-    doSend(buildSpeechMessage({ text: finalText, diarized, selections: selectionsSnapshot, attrs }));
+    // The HQ audio (and the realtime text) cover only the spoken segment, so
+    // fold the prior composer text back in at submit time.
+    const full = joinTranscript(priorInput, finalText);
+    doSend(buildSpeechMessage({ text: full, diarized, selections: selectionsSnapshot, attrs }));
+    // The segment is committed — drop any persisted draft so the recovery
+    // widget doesn't resurface the text we just sent.
+    clearDraftRef.current();
   };
   if (narrationEnabledRef.current && audioBlob) {
     setHqInFlight(true);
-    setPendingHqDraft(text);
+    setPendingHqDraft(joinTranscript(priorInput, text));
     void postAudioForHqTranscription(audioBlob, { sessionId })
       .then((hqResult) => {
         // Clear the pending bubble before submit so it doesn't overlap
@@ -106,12 +122,16 @@ export function useChatVoice(opts: {
   narrationEnabled: boolean;
   selections: SelectionItem[];
   resetSelections: () => void;
+  /** Drops the persisted dictation draft once a segment commits (set by the chat). */
+  clearDraftRef: React.MutableRefObject<() => void>;
+  /** Current composer text, so a voice-keyword send doesn't drop it. */
+  input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, setInput, doSend, zoomedViewAttr, timePassedAttr } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, input, setInput, doSend, zoomedViewAttr, timePassedAttr } = opts;
 
   const [voicePaused, setVoicePaused] = useState(false);
   const { speechPlayback, refs } = useSpeechDispatch({ snapshot, muted, setVoicePaused });
@@ -126,6 +146,10 @@ export function useChatVoice(opts: {
   // closure is captured by the transcription hook, not re-read per render).
   const selectionsRef = useRef(selections);
   useEffect(() => { selectionsRef.current = selections; });
+  // Same pattern for the composer text: read the latest value at keyword-fire
+  // time, since the onKeywordSend closure isn't re-read per render.
+  const inputRef = useRef(input);
+  useEffect(() => { inputRef.current = input; });
   const [hqInFlight, setHqInFlight] = useState(false);
   // Realtime transcript shown as a pending user-message bubble while the
   // HQ pass runs. Null when no narration submit is in flight. Driven by
@@ -137,7 +161,7 @@ export function useChatVoice(opts: {
     onKeywordSend: (text, audioBlob) => runKeywordSend({
       text, audioBlob, transcription,
       refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft,
-      doSend, zoomedViewAttr, timePassedAttr,
+      doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput,
     }),
     onKeywordCancel: () => {
       transcription.cancel();
@@ -156,6 +180,7 @@ export function useChatVoice(opts: {
   const isTranscribing =
     transcription.state === "connecting" ||
     transcription.state === "recording" ||
+    transcription.state === "reconnecting" ||
     transcription.state === "finalizing";
 
   // Screen wake lock — held for the entire voice-conversation window:
@@ -170,20 +195,10 @@ export function useChatVoice(opts: {
   ].some(Boolean);
   useDebouncedWakeLock(voiceModeActive);
 
-  // When transcription ends with an error, preserve partial text into the input field.
-  // Uses queueMicrotask to avoid synchronous setState within the effect body.
-  const prevTranscribingRef = useRef(false);
-  useEffect(() => {
-    const wasTranscribing = prevTranscribingRef.current;
-    prevTranscribingRef.current = isTranscribing;
-    if (wasTranscribing && !isTranscribing && transcription.error && transcription.transcript.trim()) {
-      const partial = transcription.transcript.trim();
-      console.log("[chat] Preserved partial transcript on error:", partial.slice(0, 80));
-      queueMicrotask(() => {
-        setInput((prev) => (prev ? prev + " " + partial : partial));
-      });
-    }
-  }, [isTranscribing, transcription.error, transcription.transcript, setInput]);
+  // Partial-transcript loss on an interrupted session (error, screen sleep,
+  // reload) is handled by the persisted dictation draft + recovery widget
+  // (useDictationDraft), not by autofilling the composer — the draft survives
+  // a full reload, which an in-memory composer value wouldn't.
 
   // Escape key cancels transcription
   useEffect(() => {
@@ -201,11 +216,31 @@ export function useChatVoice(opts: {
     turnTakingRef.current = false;
     recordingStop.play();
     transcription.cancel();
-  }, [transcription, turnTakingRef]);
+    // The user deliberately discarded this dictation — drop the persisted
+    // draft too, so it doesn't resurface later as a phantom "Recovered
+    // dictation". (The draft only exists to rescue an *interrupted* session.)
+    clearDraftRef.current();
+  }, [transcription, turnTakingRef, clearDraftRef]);
+
+  // Exposed so the composer's manual stop/edit/send controls can drop the
+  // persisted draft once the transcript is safely in the user's hands (moved
+  // into the textarea as editable text, or sent). Without this, every manual
+  // stop leaks a draft that re-surfaces as a recovered-dictation widget.
+  const clearDraft = useCallback(() => {
+    clearDraftRef.current();
+  }, [clearDraftRef]);
 
   const handleStopSpeech = useCallback(() => {
     speechPlayback.stop();
-  }, [speechPlayback]);
+    // If the mic was auto-paused for this speech (see queueSpeechBatch in
+    // InteractiveChat-speech.ts), stopping the speech should hand recording
+    // back — otherwise the user reads "Stop killed my voice input."
+    if (voicePausedRef.current) {
+      voicePausedRef.current = false;
+      setVoicePaused(false);
+      transcription.start();
+    }
+  }, [speechPlayback, transcription, voicePausedRef]);
 
   const handleSkipSpeech = useCallback(() => {
     speechPlayback.skip();
@@ -222,10 +257,11 @@ export function useChatVoice(opts: {
     speechPlayback.replay(replayOpts);
   }, [speechPlayback, transcriptionRef, voicePausedRef]);
 
-  const startVoice = useCallback(async () => {
+  const startVoice = useCallback(() => {
     turnTakingRef.current = true;
-    await recordingStart.play().started;
-    transcription.start();
+    // The earcon is armed here but plays inside the transcription hook once
+    // the mic is truly live — never before the permission dialog settles.
+    transcription.start({ earcon: true });
   }, [transcription, turnTakingRef]);
 
   const unpauseVoice = useCallback(() => {
@@ -244,6 +280,7 @@ export function useChatVoice(opts: {
     hqInFlight,
     pendingHqDraft,
     turnTakingRef,
+    clearDraft,
     handleStopSpeech,
     handleSkipSpeech,
     handleReplaySpeech,

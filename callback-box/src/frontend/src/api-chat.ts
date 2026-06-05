@@ -182,9 +182,16 @@ export async function sendChatMessage(params: {
    * `cwd` set to that directory and persists the association.
    */
   contextDir?: string;
+  /**
+   * Chat-feature seeds chosen before the session existed (e.g. narration
+   * toggled on in a brand-new chat). Only honored when `session === "new"`;
+   * the backend merges them over landmark defaults so the choice applies to
+   * the first turn.
+   */
+  seedFeatures?: Record<string, string>;
   onMessage: (msg: Record<string, unknown>) => void;
 }): Promise<void> {
-  const { session, message, images, contextDir, onMessage } = params;
+  const { session, message, images, contextDir, seedFeatures, onMessage } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const attempt = async (_retry: boolean): Promise<Response> => {
@@ -197,6 +204,7 @@ export async function sendChatMessage(params: {
         messageId,
         ...(images && images.length > 0 ? { images } : {}),
         ...(contextDir !== undefined ? { contextDir } : {}),
+        ...(seedFeatures !== undefined ? { seedFeatures } : {}),
       }),
     });
 

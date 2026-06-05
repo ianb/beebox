@@ -7,6 +7,20 @@ body {
   @apply bg-warm-50 text-warm-900;
 }
 
+/* "Clipped reads as clipped" — fade the bottom edge of an overflowing scroll
+   box so a hidden bottom is visible without restyling the scrollbar. An
+   earlier version of this used `::-webkit-scrollbar` rules; on macOS
+   Chromium, any webkit-scrollbar rule anywhere in the document disables
+   overlay scrollbars page-wide and the Virtuoso chat scroller picks up a
+   permanent bar as collateral damage. The mask-image approach is scoped
+   per-element and has no global side effect: when content fits, the fade
+   lands on empty padding and is invisible; when it overflows, the last
+   sliver of visible content fades, signaling more below. */
+.cb-scroll-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+}
+
 /* Recipe step auto-numbering via CSS counter. RecipeView wraps the body
    in `.recipe-body`, which resets the counter; each `{% step %}` carries
    the `.recipe-step` class and renders its number via ::before. Outside

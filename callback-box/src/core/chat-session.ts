@@ -39,6 +39,7 @@ import {
   type ChatMessage,
   type ChatMessageContent,
   type ChatSendInput,
+  type TaskEvent,
 } from "./chat-session-messages.js";
 import {
   combineQueuedInputs,
@@ -59,7 +60,7 @@ import type { ChatSessionOptions } from "./chat-session-options.js";
 
 export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY };
 export { buildContentBlocks };
-export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput };
+export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
 export type { ChatSessionOptions };
 
 const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
@@ -230,7 +231,9 @@ export class ChatSession extends EventEmitter {
         });
       }
     }
-
+    // Background-task events fire between turns (no per-turn SSE attached), so
+    // wireSession bridges them to the global event bus, not the per-turn stream.
+    if (msg.type === "task" && msg.task) { this.emit("task", msg.task); return; }
     // Accumulate assistant text for schedule parsing
     this.turnText = accumulateAssistantText(this.turnText, msg);
 

@@ -72,7 +72,16 @@ export function ChatPage() {
     });
   }
 
-  if (sessionInput === null) {
+  // `sessionInput` can momentarily read null when the router re-evaluates the
+  // search params (observed on wake-from-sleep: `?session=` briefly reads
+  // undefined before settling back to the same id). Falling through to the
+  // empty shell then would unmount InteractiveChat and silently discard the
+  // composer's unsent text. Once a real session has been shown, hold onto it
+  // (keyState.prev only ever stores non-null ids) so a transient null can't
+  // tear down a live chat; the empty shell is reserved for the genuine
+  // pre-resolution state where nothing has rendered yet.
+  const rendered = sessionInput ?? keyState.prev;
+  if (rendered === null) {
     return <div className="h-full" />;
   }
 
@@ -81,8 +90,8 @@ export function ChatPage() {
   return (
     <InteractiveChat
       key={keyState.epoch}
-      sessionInput={sessionInput}
-      contextDir={sessionInput === "new" ? contextDir : undefined}
+      sessionInput={rendered}
+      contextDir={rendered === "new" ? contextDir : undefined}
     />
   );
 }
