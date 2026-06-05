@@ -76,6 +76,7 @@ const MAIN_BOX_DEFAULTS = [
   path.join(os.homedir(), "src", "boxes", "hearth-test"),
   path.join(os.homedir(), "src", "boxes", "studio"),
   path.join(os.homedir(), "src", "boxes", "meta-cb"),
+  path.join(os.homedir(), "src", "boxes", "ia-review"),
 ];
 
 // --- Worktree resolution -----------------------------------------------
