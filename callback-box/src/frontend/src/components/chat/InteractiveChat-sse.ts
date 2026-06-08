@@ -10,6 +10,7 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useSSE, type SSEEvent } from "../../hooks/useSSE";
+import { useIsActiveChatTab } from "../../hooks/useIsActiveChatTab";
 import { getApiBase, getEventSourceBase, type SessionEntry } from "../../api";
 import { getTTSClient } from "../../lib/tts-client";
 import { alarm } from "../../lib/earcons";
@@ -86,12 +87,16 @@ export function useChatSse(opts: {
 }) {
   const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
   const navigate = useNavigate();
+  // The most-recently-engaged chat tab keeps /events alive even when hidden, so
+  // an idle-but-current session still gets real-time pushes (schedules, alarms,
+  // async agent output). Stale background tabs drop. See useIsActiveChatTab.
+  const isActiveTab = useIsActiveChatTab();
 
   // Handle SSE events: schedule-fired, chat-history, chat-user-message,
   // chat-session-assigned. Events tagged with a sessionId are filtered to
   // this view's session only.
   useSSE(`${getEventSourceBase()}/events`, {
-    keepAliveWhenHidden: isStreaming,
+    keepAliveWhenHidden: isStreaming || isActiveTab,
     onConnect: useCallback(() => {
       console.debug("[chatfsm] sse-connect");
       // Re-sync after a (re)connect: any chat-complete / chat-history events
