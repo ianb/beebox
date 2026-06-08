@@ -13,6 +13,16 @@ export interface UseSSEOptions {
   onError?: (error: Event) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  /**
+   * When true, don't drop the connection while the tab is hidden. Set this
+   * while work that depends on a live event stream is in flight — e.g. a chat
+   * turn whose completion arrives as a `chat-complete` event. Dropping /events
+   * mid-turn loses that event, and the reconnect-time resync races the SDK's
+   * async history flush, so the finished reply can fail to appear until a
+   * reload. Re-read each time the grace timer fires, so flipping it back to
+   * false lets the next interval disconnect a now-idle hidden tab.
+   */
+  keepAliveWhenHidden?: boolean;
 }
 
 export interface UseSSEReturn {
@@ -48,11 +58,21 @@ export function useSSE(url: string, optionsArg?: UseSSEOptions): UseSSEReturn {
   // reset by re-renders.
   useEffect(() => {
     let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    const armDisconnect = () => {
+      hideTimer = setTimeout(() => {
+        // A turn (or other live-stream-dependent work) is in flight — keep the
+        // connection so we don't miss its completion event. Re-check after
+        // another interval; we disconnect once it settles and we're still hidden.
+        if (optionsRef.current.keepAliveWhenHidden) {
+          armDisconnect();
+          return;
+        }
+        send({ type: "DISCONNECT" });
+      }, HIDE_GRACE_MS);
+    };
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        hideTimer = setTimeout(() => {
-          send({ type: "DISCONNECT" });
-        }, HIDE_GRACE_MS);
+        armDisconnect();
       } else {
         if (hideTimer !== undefined) {
           clearTimeout(hideTimer);

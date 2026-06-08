@@ -76,18 +76,22 @@ export function useChatSse(opts: {
   sessionInput: string;
   boxSlug: string | undefined;
   currentUser: { email: string } | null | undefined;
+  /** A turn is streaming or refreshing — keep /events alive even if the tab
+   *  is hidden so the completion event isn't missed. See keepAliveWhenHidden. */
+  isStreaming: boolean;
   send: (event: ChatEvent) => void;
   fetchSchedules: () => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
   const navigate = useNavigate();
 
   // Handle SSE events: schedule-fired, chat-history, chat-user-message,
   // chat-session-assigned. Events tagged with a sessionId are filtered to
   // this view's session only.
   useSSE(`${getEventSourceBase()}/events`, {
+    keepAliveWhenHidden: isStreaming,
     onConnect: useCallback(() => {
       console.debug("[chatfsm] sse-connect");
       // Re-sync after a (re)connect: any chat-complete / chat-history events
