@@ -99,6 +99,11 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     prefix: "/api/trpc",
     trpcOptions: {
       router: appRouter,
+      // Let the client send a read-only query over POST (input in the body
+      // instead of the URL). files.summarize carries a large path list that
+      // overflows the GET URL limit; the client routes it via POST. Queries
+      // don't mutate, so relaxing the GET-only check adds no CSRF surface.
+      allowMethodOverride: true,
       createContext: (): TrpcContext => ({
         boxRoot: box.boxRoot,
         boxSlug: box.slug,
