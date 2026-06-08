@@ -89,6 +89,11 @@ export interface RecentFile {
   summary: FileSummary<unknown> | null;
 }
 
+// The dropdown is a quick-jump list, not an exhaustive index — keep only the
+// most-recent files. Also bounds the summarize request so a long session can't
+// fan out into hundreds of file reads on every load.
+const MAX_RECENT_FILES = 20;
+
 /**
  * Observable list of recent files with lazy summaries.
  * `paths` is derived synchronously; summaries fetch in a single batch
@@ -99,7 +104,8 @@ export function useRecentFiles(entries: SessionEntry[]): {
   files: RecentFile[];
   isLoading: boolean;
 } {
-  const paths = useMemo(() => dedupeRecent(collectPaths(entries)), [entries]);
+  // dedupeRecent returns most-recent-first, so slicing keeps the newest.
+  const paths = useMemo(() => dedupeRecent(collectPaths(entries)).slice(0, MAX_RECENT_FILES), [entries]);
 
   const query = trpc.files.summarize.useQuery(
     { paths },
