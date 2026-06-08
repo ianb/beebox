@@ -155,6 +155,12 @@ export const sseMachine = setup({
       },
     },
     waiting: {
+      // Also honor a tab-hidden disconnect mid-reconnect — otherwise the
+      // grace timer's DISCONNECT is dropped here and we'd reconnect a hidden
+      // tab when the 5s delay elapses.
+      on: {
+        DISCONNECT: "disconnected",
+      },
       after: {
         RECONNECT_DELAY: "active",
       },
