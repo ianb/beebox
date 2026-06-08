@@ -23,7 +23,7 @@ import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from ".
 import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { useComposerDraft } from "../../hooks/useComposerDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
-import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatTabs } from "./InteractiveChat-hooks";
+import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs } from "./InteractiveChat-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
@@ -95,6 +95,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const schedules = useChatSchedules({ messages, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });
+  useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
   const doSend = useCallback(
     (wrapped: string) => {
