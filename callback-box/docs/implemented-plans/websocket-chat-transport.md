@@ -1,5 +1,22 @@
 # WebSocket chat transport
 
+> **Status: implemented** (2026-06). Frozen historical record. Deviations from
+> the plan as written:
+> - `POST /api/chat/send` stayed a raw Fastify route returning `{turnId}` JSON
+>   (not a tRPC mutation) — it needs the request's user + the session registry,
+>   which aren't in the tRPC context. Only `events.turnStream` became a
+>   subscription.
+> - No dev-router/Vite change was needed — both already proxy `/api` WS upgrades
+>   (Vite's per-box rule has `ws: true`).
+> - `tsconfig declaration: false` (unused emit; tRPC subscription routers can't
+>   emit portable `.d.ts` — TS2742).
+> - A codex review found and fixed: capture-before-send, a missed-wakeup race, a
+>   recover-path text-loss, an abort-listener leak, a bounded bus queue, plus the
+>   pre-existing fresh-session pin gap and concurrent-new-tab binding. The live
+>   transport is `events.subscribe` / `events.turnStream` in
+>   `src/webapp/trpc/routers/events.ts` + `src/core/chat-turn-buffer.ts`; the
+>   "how it works now" summary lives in `callback-box/CLAUDE.md`'s raw-route note.
+
 Replace the chat real-time transport — today two separate SSE streams (the
 global `/api/events` EventSource and the per-turn `POST /api/chat/send` body
 stream) — with a single multiplexed WebSocket per tab, built on tRPC
