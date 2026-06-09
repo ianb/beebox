@@ -80,6 +80,10 @@ export function BrowseSidebarList({
             window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${card.relativePath}`));
           }}
           {...cbSource("card", card.relativePath)}
+          {...(card.type === "image" ? {
+            "data-image-src": `${getApiBase()}/image/${card.relativePath}`,
+            "data-image-alt": card.name,
+          } : {})}
           aria-label={card.name === card.type ? `${card.name} card${card.status ? `, ${card.status}` : ""}` : `${card.name}, ${card.type} card${card.status ? `, ${card.status}` : ""}`}
           className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
             selectedFilePath === card.relativePath ? "bg-info-50" : ""

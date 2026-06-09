@@ -24,6 +24,7 @@ import { registerApiBrowseRoutes } from "./api-browse.js";
 import { registerApiFilesRoutes } from "./api-files.js";
 import { registerApiExternalRoute } from "./api-external.js";
 import { registerApiDebugLogRoutes } from "./api-debug-log.js";
+import { registerApiImageRoutes } from "./api-image.js";
 
 /**
  * Register API routes on the Fastify server.
@@ -114,6 +115,9 @@ export async function registerApiRoutes(
 
   // /api/files/* — serve and delete raw box files (images, audio, etc.)
   registerApiFilesRoutes({ server, boxRoot, eventBus });
+
+  // /api/image/* — unified image resolver (plain files + .image.card)
+  registerApiImageRoutes({ server, boxRoot });
 
   // /api/external — dev-only live wrapper for the commentary surface; reads
   // allowlisted files OUTSIDE the box root. Never mounted in production.

@@ -1,0 +1,168 @@
+/**
+ * Unified image resolver route.
+ *
+ *   GET /api/image/* — resolve and serve an image by box-relative path
+ *
+ * Accepts two forms:
+ *  - Plain image file (`.jpg`, `.png`, etc.) — served directly.
+ *  - `.image.card` file — reads `filename.ref` from the frontmatter,
+ *    resolves the `attach/` virtual prefix to `<stem>.attach/<file>`,
+ *    and serves the attached image.
+ *
+ * Intended as the canonical URL for referencing an image regardless of
+ * whether it's stored as a raw file or wrapped in a card. Thumbnails and
+ * resize params can be layered here in the future.
+ */
+
+import type { FastifyInstance } from "fastify";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { parse as parseYaml } from "yaml";
+
+const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"]);
+
+const IMAGE_MIME: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".bmp": "image/bmp",
+  ".svg": "image/svg+xml",
+};
+
+/**
+ * Resolve an `.image.card`'s attached image to an absolute filesystem path.
+ * Returns null if the card can't be read or has no `filename.ref`.
+ */
+async function resolveImageCard(cardAbs: string): Promise<string | null> {
+  let text: string;
+  try {
+    text = await fs.readFile(cardAbs, "utf-8");
+  } catch (_e) {
+    return null;
+  }
+
+  let ref: string | null = null;
+
+  if (text.startsWith("---")) {
+    // YAML frontmatter format (Phase 2)
+    const match = /^---\r?\n([\S\s]*?)\r?\n---/.exec(text);
+    if (match) {
+      let fields: unknown;
+      try {
+        fields = parseYaml(match[1] ?? "");
+      } catch (_e) {
+        fields = null;
+      }
+      if (
+        typeof fields === "object" &&
+        fields !== null &&
+        "filename" in fields &&
+        typeof (fields as Record<string, unknown>)["filename"] === "object"
+      ) {
+        const filename = (fields as Record<string, unknown>)["filename"] as Record<string, unknown>;
+        const r = filename["ref"];
+        if (typeof r === "string" && r.startsWith("attach/")) ref = r;
+      }
+    }
+  } else {
+    // XML format (legacy) — grab ref="attach/..." from <filename> element
+    const match = /<filename\b[^>]*\bref="(attach\/[^"]+)"/.exec(text);
+    if (match?.[1]) ref = match[1];
+  }
+
+  if (!ref) return null;
+
+  // `attach/<file>` is a virtual prefix scoped to `<cardStem>.attach/`.
+  const cardBaseName = path.basename(cardAbs);
+  const cardDir = path.dirname(cardAbs);
+  const stem = cardBaseName.replace(/(\.[^.]+)*\.card$/, "");
+  const attachDir = path.join(cardDir, `${stem}.attach`);
+  const filePart = ref.slice("attach/".length);
+
+  return path.join(attachDir, filePart);
+}
+
+export function registerApiImageRoutes({
+  server,
+  boxRoot,
+}: {
+  server: FastifyInstance;
+  boxRoot: string;
+}): void {
+  server.get<{ Params: { "*": string } }>(
+    "/api/image/*",
+    { exposeHeadRoute: true },
+    async (request, reply) => {
+      const reqPath = request.params["*"] ?? "";
+      if (!reqPath) return reply.status(400).send({ error: "Path required" });
+
+      const resolved = path.resolve(path.join(boxRoot, reqPath));
+      if (!resolved.startsWith(path.resolve(boxRoot))) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+      if (path.basename(resolved).startsWith(".")) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+
+      let imageAbs: string;
+
+      if (resolved.endsWith(".image.card")) {
+        const img = await resolveImageCard(resolved);
+        if (!img) return reply.status(404).send({ error: "Image not found in card" });
+        imageAbs = img;
+      } else {
+        const ext = path.extname(resolved).toLowerCase();
+        if (!IMAGE_EXTS.has(ext)) {
+          return reply.status(400).send({ error: "Not an image path" });
+        }
+        imageAbs = resolved;
+      }
+
+      if (!imageAbs.startsWith(path.resolve(boxRoot))) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+
+      try {
+        const stat = await fs.stat(imageAbs);
+        if (!stat.isFile()) return reply.status(404).send({ error: "Not found" });
+
+        const ext = path.extname(imageAbs).toLowerCase();
+        const contentType = IMAGE_MIME[ext] ?? "application/octet-stream";
+        const etag = `W/"${stat.mtimeMs.toString(36)}-${stat.size.toString(36)}"`;
+        const lastModified = stat.mtime.toUTCString();
+
+        const ifNoneMatch = request.headers["if-none-match"];
+        const ifModifiedSince = request.headers["if-modified-since"];
+        const etagMatches = ifNoneMatch === etag;
+        const mtimeMatches =
+          typeof ifModifiedSince === "string" &&
+          Number.isFinite(Date.parse(ifModifiedSince)) &&
+          Math.floor(Date.parse(ifModifiedSince) / 1000) >= Math.floor(stat.mtimeMs / 1000);
+
+        if (etagMatches || mtimeMatches) {
+          return reply
+            .header("ETag", etag)
+            .header("Last-Modified", lastModified)
+            .header("Cache-Control", "no-cache")
+            .status(304)
+            .send();
+        }
+
+        const content = await fs.readFile(imageAbs);
+        return reply
+          .header("Content-Type", contentType)
+          .header("Cache-Control", "no-cache")
+          .header("ETag", etag)
+          .header("Last-Modified", lastModified)
+          .send(content);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`[api-image] could not serve ${imageAbs}:`, e);
+        }
+        return reply.status(404).send({ error: "Not found" });
+      }
+    },
+  );
+}
