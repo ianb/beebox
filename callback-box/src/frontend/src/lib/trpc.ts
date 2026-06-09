@@ -1,8 +1,8 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { createTRPCClient, httpBatchLink, splitLink, type TRPCLink } from "@trpc/client";
+import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
-import { getApiBase, withBase } from "../api.js";
+import { getApiBase, getWebSocketUrl, withBase } from "../api.js";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -31,22 +31,47 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
 }
 
 /**
+ * One WebSocket client for the whole app, created on first use. `lazy` keeps it
+ * from opening a socket until the first subscription, and closes it ~30 s after
+ * the last unsubscribes; `keepAlive` runs a client-side ping so a dead server
+ * is detected and the auto-reconnect (exponential backoff) kicks in. The `url`
+ * is a thunk so nothing touches `window` until a subscription actually opens
+ * (keeps module load SSR-safe).
+ */
+let wsClientSingleton: ReturnType<typeof createWSClient> | null = null;
+function getWsClient(): ReturnType<typeof createWSClient> {
+  if (!wsClientSingleton) {
+    wsClientSingleton = createWSClient({
+      url: () => getWebSocketUrl(),
+      lazy: { enabled: true, closeMs: 30_000 },
+      keepAlive: { enabled: true },
+    });
+  }
+  return wsClientSingleton;
+}
+
+/**
  * Shared link config — used by both the React client (in trpc-provider)
  * and the vanilla client (for callers outside React, e.g. XState actors).
  *
- * tRPC batches queries into a single GET with the input encoded in the URL.
- * `files.summarize` can carry a long list of paths (every file a chat session
- * touched), which both overflows the server's URL limit (431) and — because
- * it's batched with the queries a page needs to render — drags those into the
- * same failure, stalling the load. So route that one query over POST (input in
- * the request body, no URL limit), and cap the GET batch URL length so an
- * oversized query can never poison its batch-mates again.
+ * Three-way routing:
+ * - Subscriptions go over the multiplexed WebSocket (`wsLink`), which gives
+ *   auto-reconnect + `lastEventId` resume — the resilient real-time transport.
+ * - `files.summarize` goes over POST (input in the body): it carries a long
+ *   path list that overflows the GET URL limit (431) and would otherwise drag
+ *   its batch-mates down with it.
+ * - Everything else (queries/mutations) goes over the GET/POST batch, with a
+ *   capped URL length so an oversized query can't poison its batch.
  */
 export function buildTrpcLink(): TRPCLink<AppRouter> {
   return splitLink({
-    condition: (op) => op.path === "files.summarize",
-    true: httpBatchLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
-    false: httpBatchLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
+    condition: (op) => op.type === "subscription",
+    true: wsLink({ client: getWsClient() }),
+    false: splitLink({
+      condition: (op) => op.path === "files.summarize",
+      true: httpBatchLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
+      false: httpBatchLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
+    }),
   });
 }
 

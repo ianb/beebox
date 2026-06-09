@@ -82,6 +82,17 @@ export function getEventSourceBase(): string {
   return getApiBase();
 }
 
+/**
+ * Absolute ws:// / wss:// URL for the box's tRPC WebSocket endpoint, used by
+ * the subscription `wsLink`. Built from the page origin + the box-scoped API
+ * base (so it rides the same router → Vite → Fastify proxy chain SSE used),
+ * upgraded to the secure scheme when the page is HTTPS.
+ */
+export function getWebSocketUrl(): string {
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}${getApiBase()}/trpc`;
+}
+
 // --- Shared fetch helper ---
 
 export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {

@@ -94,23 +94,37 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // Register SSE route (subscribes clients to EventBus)
   await registerSseRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
 
-  // Mount tRPC router alongside REST routes
+  // Mount tRPC router alongside REST routes. `useWSS` adds a WebSocket
+  // endpoint at the same prefix (GET upgrade on `/api/trpc`) that multiplexes
+  // subscriptions over one connection — the transport behind real-time chat.
+  // @fastify/websocket is registered once at the root (server.ts); the box
+  // auth preHandler and this createContext apply to the upgrade too.
+  //
+  // `keepAlive` is read by the WS handler at runtime but omitted from the
+  // adapter's option type (a tRPC types gap). Assigning trpcOptions via a const
+  // rather than an inline literal lets the supported extra property through
+  // without a cast (excess-property checks fire only on inline literals).
+  const trpcOptions = {
+    router: appRouter,
+    // Let the client send a read-only query over POST (input in the body
+    // instead of the URL). files.summarize carries a large path list that
+    // overflows the GET URL limit; the client routes it via POST. Queries
+    // don't mutate, so relaxing the GET-only check adds no CSRF surface.
+    allowMethodOverride: true,
+    // Server-side heartbeat: ping idle WS clients and drop ones that don't
+    // pong, freeing sockets held by crashed/NAT-dropped tabs.
+    keepAlive: { enabled: true, pingMs: 30_000, pongWaitMs: 5_000 },
+    createContext: (): TrpcContext => ({
+      boxRoot: box.boxRoot,
+      boxSlug: box.slug,
+      eventBus,
+      services: options.services ?? {},
+    }),
+  };
   await instance.register(fastifyTRPCPlugin<typeof appRouter>, {
     prefix: "/api/trpc",
-    trpcOptions: {
-      router: appRouter,
-      // Let the client send a read-only query over POST (input in the body
-      // instead of the URL). files.summarize carries a large path list that
-      // overflows the GET URL limit; the client routes it via POST. Queries
-      // don't mutate, so relaxing the GET-only check adds no CSRF surface.
-      allowMethodOverride: true,
-      createContext: (): TrpcContext => ({
-        boxRoot: box.boxRoot,
-        boxSlug: box.slug,
-        eventBus,
-        services: options.services ?? {},
-      }),
-    },
+    useWSS: true,
+    trpcOptions,
   });
 
   // REST routes that can't move to tRPC (SSE streaming, file uploads, WebSocket)
