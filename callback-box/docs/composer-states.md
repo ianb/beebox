@@ -35,13 +35,16 @@ machines that own them:
 
 | Condition | Icon | Title |
 |---|---|---|
-| `voicePaused` (`voice === pausedForSpeech`) | pulsing pause | "Resume recording (stops speech)" |
+| `voicePaused` (`voice === pausedForSpeech`) | pulsing mic + pause badge | "Resume recording (stops speech)" |
 | `isTranscribing` | red stop square | "Stop recording" |
 | `narrationEnabled` | mic-with-bubble | "Voice input (narration mode)" |
 | else | plain mic | "Voice input" |
 
 **Stop buttons** (can show together, left of the mic): `speechPlaying` → "Stop
-speaking" (danger circle); `isStreaming` → "Stop agent" (danger circle).
+speaking" (**speaker-x** — audio semantics, rhymes with the header mute icon);
+`isStreaming` → "Stop agent" (**stop-in-circle**). Deliberately different
+glyphs: they used to be identical, so when one showed alone you couldn't tell
+which action you were about to take.
 
 ---
 
@@ -110,6 +113,11 @@ the row closes after send; locked (`typingLocked`), it stays open.
 
 ![mobile typing](composer-states/mobile-typing.png)
 
+Locked, the lock button fills in (primary background) so the state reads at a
+glance — the open-vs-closed padlock outline alone was illegible at that size:
+
+![mobile typing locked](composer-states/mobile-typing-locked.png)
+
 → **lock** keeps it open across sends · **close** returns to the icon bar.
 
 ---
@@ -130,7 +138,9 @@ Cancel (✕) / Edit (✎) / Send controls. Sub-states (`connecting` / `recording
 
 ![desktop recording](composer-states/desktop-recording.png)
 
-Before any words arrive the placeholder reads "Listening…":
+Before any words arrive the placeholder reads "Listening…" and Send is
+disabled — there's nothing to commit yet (pressing it used to silently cancel
+the dictation):
 
 ![desktop recording listening](composer-states/desktop-recording-empty.png)
 
@@ -139,9 +149,10 @@ Before any words arrive the placeholder reads "Listening…":
 
 ## Paused for speech (`voicePaused`)
 
-Mic button is the **pulsing pause** ("Resume recording (stops speech)") and the
-**Stop speaking** circle shows. Reached when the agent speaks while you were
-recording — the mic is cancelled and TTS plays.
+Mic button is a **pulsing mic with a pause badge** ("Resume recording (stops
+speech)") — the mic is the action (tap to get it back), the badge is the state —
+and the **Stop speaking** speaker-x shows. Reached when the agent speaks while
+you were recording — the mic is cancelled and TTS plays.
 
 ![desktop paused](composer-states/desktop-paused.png)
 
@@ -168,7 +179,7 @@ replies:
 ![desktop streaming](composer-states/desktop-streaming.png)
 
 It overlays the voice states too — here alongside Stop-speaking during
-mid-stream speech (two stop circles):
+mid-stream speech (speaker-x + stop circle, one per concern):
 
 ![desktop speaking + streaming](composer-states/desktop-speaking-streaming.png)
 
@@ -191,11 +202,11 @@ Recording — red stop-square mic + the drop-up transcript row:
 
 ![mobile recording](composer-states/mobile-recording.png)
 
-Paused for speech — Stop-speaking circle + pulsing pause mic:
+Paused for speech — Stop-speaking speaker-x + pulsing mic with pause badge:
 
 ![mobile paused](composer-states/mobile-paused.png)
 
-Speaking — Stop-speaking circle + plain mic:
+Speaking — Stop-speaking speaker-x + plain mic:
 
 ![mobile speaking](composer-states/mobile-speaking.png)
 
@@ -214,8 +225,8 @@ Speaking — Stop-speaking circle + plain mic:
 | idle | recording | — | St | stop-square + **Stop agent** (post-voice-send, agent replying) |
 | speaking | idle | playing | — | mic; **Stop speaking** |
 | speaking | idle | playing | St | mic; **Stop speaking** + **Stop agent** (mid-stream speech) |
-| pausedForSpeech | idle (cancelled) | playing | — | **pulsing pause**; **Stop speaking** |
-| pausedForSpeech | idle (cancelled) | playing | St | pulsing pause; Stop speaking + Stop agent |
+| pausedForSpeech | idle (cancelled) | playing | — | **mic + pause badge**; **Stop speaking** |
+| pausedForSpeech | idle (cancelled) | playing | St | mic + pause badge; Stop speaking + Stop agent |
 
 × narration (badge + mic-bubble icon) and × muted (mute icon; forces TTS off)
 overlay the rows above, except where excluded below.
@@ -253,11 +264,13 @@ omitted from production builds — see `router.tsx` and
 presentational composer with fabricated props, so it stays prop-typed against
 the components and breaks the typecheck if their contracts drift.
 
-The gallery doesn't hand-pick states — it declares the axes (primary mode ×
-narration × muted × streaming), takes the full cross-product, filters the
-impossible combos (listing them with reasons), and renders all **32**
+The gallery doesn't hand-pick states — it declares the axes (button bar:
+primary mode × narration × muted × streaming; mobile keyboard: lock × input;
+plus the recording-before-words card), takes the cross-product, filters the
+impossible combos (listing them with reasons), and renders all **37**
 realizable ones. Each card is keyed by its active axes
-(`idle`, `idle-streaming`, `recording-narration-muted`, …); isolate one with
-`?state=<key>` for a clean capture. To re-shoot, point `bin/browse` at
+(`idle`, `idle-streaming`, `recording-narration-muted`, `recording-empty`,
+`typing-keyboard-locked`, …); isolate one with `?state=<key>` for a clean
+capture. To re-shoot, point `bin/browse` at
 `/dev/composer-states?state=<key>` and `screenshot`. The named-state shots above
 are the readable subset; the gallery is the exhaustive grid.

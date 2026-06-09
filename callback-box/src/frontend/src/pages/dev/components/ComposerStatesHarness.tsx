@@ -49,6 +49,8 @@ interface Combo {
   muted: boolean;
   streaming: boolean;
   keyboard: Keyboard;
+  /** Recording before any words arrive ("Listening…", Send disabled). */
+  emptyTranscript?: boolean;
 }
 
 const SAMPLE_TRANSCRIPT = "remind me to water the plants tomorrow";
@@ -64,14 +66,14 @@ function impossibleReason(c: Combo): string | null {
 
 function comboKey(c: Combo): string {
   const kb = c.keyboard === "unlocked" ? "keyboard" : c.keyboard === "locked" ? "keyboard-locked" : "";
-  return [c.mode, c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : "", kb]
+  return [c.mode, c.emptyTranscript === true ? "empty" : "", c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : "", kb]
     .filter(Boolean)
     .join("-");
 }
 
 function comboLabel(c: Combo): string {
   const kb = c.keyboard === "unlocked" ? "keyboard (unlocked)" : c.keyboard === "locked" ? "keyboard (locked)" : "";
-  const tags = [c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : "", kb].filter(Boolean);
+  const tags = [c.emptyTranscript === true ? "no words yet" : "", c.narration ? "narration" : "", c.muted ? "muted" : "", c.streaming ? "streaming" : "", kb].filter(Boolean);
   return MODE_LABEL[c.mode] + (tags.length > 0 ? ` · ${tags.join(" · ")}` : "");
 }
 
@@ -98,6 +100,8 @@ function allCombos(): Combo[] {
       out.push({ mode, narration: false, muted: false, streaming: false, keyboard });
     }
   }
+  // Recording before any words ("Listening…") — Send is disabled here.
+  out.push({ mode: "recording", narration: false, muted: false, streaming: false, keyboard: "closed", emptyTranscript: true });
   return out;
 }
 
@@ -106,7 +110,7 @@ function specFor(c: Combo) {
   return {
     input: c.mode === "typing" ? SAMPLE_INPUT : "",
     isTranscribing,
-    transcript: isTranscribing ? SAMPLE_TRANSCRIPT : "",
+    transcript: isTranscribing && c.emptyTranscript !== true ? SAMPLE_TRANSCRIPT : "",
     speechPlaying: c.mode === "paused" || c.mode === "speaking",
     voicePaused: c.mode === "paused",
     isStreaming: c.streaming,

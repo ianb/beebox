@@ -100,7 +100,8 @@ export function MobileTextareaRow({
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
             }}
-            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
+            disabled={!joinTranscript(input, transcription.transcript).trim()}
+            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
             title="Send"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
