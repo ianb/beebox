@@ -7,7 +7,7 @@
  * registry is the marker there) — with at least one user message,
  * (2) has been quiet past the quiescence window (don't observe a
  * conversation in progress), and (3) isn't already settled in walker
- * state. See `docs/plans/box-retrospectives.md`.
+ * state. See `docs/implemented-plans/box-retrospectives.md`.
  */
 
 import {

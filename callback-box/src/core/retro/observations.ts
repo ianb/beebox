@@ -1,7 +1,7 @@
 /**
  * Observation vocabulary for the retrospective — what the observer
  * extracts from one chat session, before integration. See
- * `docs/plans/box-retrospectives.md` for the locked kind/sink vocabulary.
+ * `docs/implemented-plans/box-retrospectives.md` for the locked kind/sink vocabulary.
  */
 
 import { createHash } from "node:crypto";

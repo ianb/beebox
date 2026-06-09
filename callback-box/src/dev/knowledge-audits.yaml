@@ -2310,7 +2310,7 @@ tests:
     correct_contains_any: ["plain markdown", "## Tips", "heading", "prose", "don't invent"]
     tags: [recipe, cards, behavioral]
 
-  # === Retrospective (docs/plans/box-retrospectives.md) ===
+  # === Retrospective (docs/implemented-plans/box-retrospectives.md) ===
 
   - id: retro-report-location
     prompt: >

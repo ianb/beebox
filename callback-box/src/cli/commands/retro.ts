@@ -4,7 +4,7 @@
  * Mines what the boxholder implicitly taught the agent (corrections,
  * preferences, register, recurring asks) and feeds the integration step
  * that updates personality/guide cards under the evidence model. See
- * `docs/plans/box-retrospectives.md`.
+ * `docs/implemented-plans/box-retrospectives.md`.
  *
  * `status` reports how many sessions are ready; `scan` runs the walker
  * (and, with the observer, records observations and the run report).
