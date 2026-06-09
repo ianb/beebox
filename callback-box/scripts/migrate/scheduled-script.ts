@@ -150,7 +150,9 @@ function convertOne(node: ElementNode, source: string): Record<string, unknown> 
 
 async function migrateFile(absPath: string): Promise<"converted" | "already-migrated"> {
   const raw = await readFile(absPath, "utf8");
-  if (/^---\r?\n[\s\S]*?\btype:\s*scheduled-script\b/m.test(raw)) {
+  // Any frontmatter card is already migrated — the filename is the type
+  // discriminator, and post-strip-type-field cards carry no `type:` line.
+  if (/^---\r?\n/.test(raw)) {
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
