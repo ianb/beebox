@@ -5,7 +5,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { performance } from "node:perf_hooks";
 import {
   isDue,
   isWithinBudget,
@@ -19,19 +18,17 @@ import {
   releaseScriptLock,
   loadRunningProcedures,
   loadActiveChats,
+  DEFAULT_RUN_WINDOW_MS,
 } from "../../core/schedule-state.js";
 import type {
   loadScriptState,
   loadRunningScripts,
 } from "../../core/schedule-state.js";
-import { execWithTimeout, handleCreateAfterSuccess } from "./tick-utils.js";
+import { execWithTimeout, SCRIPT_TIMEOUT } from "../../lib/exec-with-timeout.js";
+import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
-
-const SCRIPT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
-const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h default pruning window
-const SLEEP_THRESHOLD_MS = 5_000; // wall vs monotonic drift > 5s = sleep
 
 type RunningScripts = Awaited<ReturnType<typeof loadRunningScripts>>;
 type ScriptState = Awaited<ReturnType<typeof loadScriptState>>;
@@ -119,21 +116,6 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
   }
 
   return null;
-}
-
-/** Compute elapsed duration, preferring monotonic time if the wall clock
- * drifted (machine slept) during execution. */
-function measureDuration(wallStart: number, monoStart: number): {
-  durationMs: number;
-  sleepAffected: boolean;
-} {
-  const wallElapsed = Date.now() - wallStart;
-  const monoElapsed = performance.now() - monoStart;
-  const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
-  return {
-    durationMs: sleepAffected ? Math.round(monoElapsed) : wallElapsed,
-    sleepAffected,
-  };
 }
 
 interface RecordOutcomeArgs {
@@ -243,21 +225,18 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     // mtime as a recreation. No actionable error info here.
   }
   await acquireScriptLock({ boxRoot, scriptName, triggeredBy: "schedule", ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}) });
-  const wallStart = Date.now();
-  const monoStart = performance.now();
   const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
   try {
     const scriptEnv = await buildScriptEnv(boxRoot, {
       CB_TRIGGERED_BY: "schedule",
     });
-    await execWithTimeout(parsed.runs, {
+    const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
       cwd: boxRoot,
       stdio: options.quiet ? "ignore" : "inherit",
-      timeout: SCRIPT_TIMEOUT,
+      timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
       env: scriptEnv,
     });
 
-    const { durationMs, sleepAffected } = measureDuration(wallStart, monoStart);
     recordOutcome({ state, result: "success", error: null, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
 
@@ -265,7 +244,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
 
     return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
   } catch (err) {
-    const { durationMs, sleepAffected } = measureDuration(wallStart, monoStart);
+    const { durationMs, sleepAffected } = fallbackTiming(err);
     recordOutcome({ state, result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
     if (!options.quiet) console.error(`  Failed: ${(err as Error).message}`);

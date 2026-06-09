@@ -1,4 +1,3 @@
-import { performance } from "node:perf_hooks";
 import { TRPCError } from "@trpc/server";
 import type { parseScheduledScript } from "../../../schemas/scheduled-script.js";
 import {
@@ -8,31 +7,14 @@ import {
   acquireScriptLock,
   releaseScriptLock,
   loadRunningScripts,
+  DEFAULT_RUN_WINDOW_MS,
 } from "../../../core/schedule-state.js";
-import { execWithTimeout, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
+import { execWithTimeout, SCRIPT_TIMEOUT } from "../../../lib/exec-with-timeout.js";
+import { fallbackTiming, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
 import { buildScriptEnv } from "../../../core/script-env.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
 
-const SCRIPT_TIMEOUT = 10 * 60 * 1000;
-const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
-const SLEEP_THRESHOLD_MS = 5_000;
-
 type ParsedScript = ReturnType<typeof parseScheduledScript>;
-
-/**
- * Compute elapsed duration, preferring the monotonic clock when wall/mono
- * diverge enough to indicate the machine slept mid-run.
- */
-function measureDuration(wallStart: number, monoStart: number): {
-  durationMs: number;
-  sleepAffected: boolean;
-} {
-  const wallElapsed = Date.now() - wallStart;
-  const monoElapsed = performance.now() - monoStart;
-  const sleepAffected = Math.abs(wallElapsed - monoElapsed) > SLEEP_THRESHOLD_MS;
-  const durationMs = sleepAffected ? Math.round(monoElapsed) : wallElapsed;
-  return { durationMs, sleepAffected };
-}
 
 interface RecordOutcomeOptions {
   boxRoot: string;
@@ -128,20 +110,17 @@ export async function runScheduledScript(options: RunOptions): Promise<{ success
     ...(parsed.lockGroup ? { lockGroup: parsed.lockGroup } : {}),
   });
 
-  const wallStart = Date.now();
-  const monoStart = performance.now();
   try {
     const scriptEnv = await buildScriptEnv(boxRoot, {
       CB_TRIGGERED_BY: "webapp-trigger",
     });
-    await execWithTimeout(parsed.runs, {
+    const { durationMs, sleepAffected } = await execWithTimeout(parsed.runs, {
       cwd: boxRoot,
       stdio: "ignore",
-      timeout: SCRIPT_TIMEOUT,
+      timeout: parsed.timeoutMs ?? SCRIPT_TIMEOUT,
       env: scriptEnv,
     });
 
-    const { durationMs, sleepAffected } = measureDuration(wallStart, monoStart);
     await recordOutcome({
       boxRoot, scriptName: name, parsed, state, now,
       result: "success", error: null, durationMs, sleepAffected,
@@ -151,7 +130,7 @@ export async function runScheduledScript(options: RunOptions): Promise<{ success
 
     return { success: true, durationMs };
   } catch (err) {
-    const { durationMs, sleepAffected } = measureDuration(wallStart, monoStart);
+    const { durationMs, sleepAffected } = fallbackTiming(err);
     await recordOutcome({
       boxRoot, scriptName: name, parsed, state, now,
       result: "failure", error: (err as Error).message, durationMs, sleepAffected,
