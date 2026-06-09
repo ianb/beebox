@@ -10,7 +10,6 @@ import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { registerApiRoutes } from "./routes/api.js";
-import { registerSseRoutes } from "./routes/sse.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";
@@ -27,6 +26,7 @@ import type { TrpcContext } from "./trpc/context.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { EventBus } from "../core/event-bus.js";
+import { closeBoxWatcher } from "../core/box-file-watcher.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
@@ -91,8 +91,11 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     addBoxAuthHook(instance, box);
   }
 
-  // Register SSE route (subscribes clients to EventBus)
-  await registerSseRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+  // Real-time updates run over the tRPC WebSocket (events.subscribe), which
+  // starts the box file watcher itself. Close it on shutdown.
+  instance.addHook("onClose", async () => {
+    await closeBoxWatcher(box.boxRoot);
+  });
 
   // Mount tRPC router alongside REST routes. `useWSS` adds a WebSocket
   // endpoint at the same prefix (GET upgrade on `/api/trpc`) that multiplexes

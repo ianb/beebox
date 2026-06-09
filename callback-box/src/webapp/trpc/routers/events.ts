@@ -8,8 +8,8 @@
  * replays from `afterId`); transient (negative-id) events are yielded plain and
  * are not resumable, matching the prior SSE behavior.
  *
- * `ping` is the transport probe from Track 1, kept until the subscription has
- * fully replaced the SSE consumers.
+ * `turnStream` is the resumable per-turn agent output stream (see
+ * chat-turn-buffer).
  */
 
 import { z } from "zod";
@@ -19,8 +19,6 @@ import type { ChatMessage } from "../../../core/chat-session.js";
 import { ensureBoxWatcher } from "../../../core/box-file-watcher.js";
 import { getTurnBuffer } from "../../../core/chat-turn-buffer.js";
 import { router, publicProcedure } from "../trpc.js";
-
-const PING_INTERVAL_MS = 1000;
 
 /** Wire shape delivered to subscribers — matches the old SSEEvent `{event,data}`. */
 interface BusPayload {
@@ -38,16 +36,6 @@ type TurnStreamFrame =
   | { t: "msg"; msg: ChatMessage }
   | { t: "resync" }
   | { t: "error"; error: string };
-
-function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener("abort", () => {
-      clearTimeout(timer);
-      resolve();
-    }, { once: true });
-  });
-}
 
 export const eventsRouter = router({
   // The durable global stream. Replays missed persistent events from the bus
@@ -130,22 +118,6 @@ export const eventsRouter = router({
           return;
         }
         await buffer.waitForChange(signal);
-      }
-    }),
-
-  // Transport probe: verifies connect / multiplex / reconnect-resume end to
-  // end without depending on the event bus. `lastEventId` is injected by the
-  // client on reconnect; we resume the counter from it so a dropped frame is
-  // visibly recovered. Removed once `subscribe` (Track 2) is the real consumer.
-  ping: publicProcedure
-    .input(z.object({ lastEventId: z.string().nullish() }).optional())
-    .subscription(async function* (opts) {
-      const resume = opts.input?.lastEventId;
-      let n = resume ? Number(resume) : 0;
-      while (!opts.signal?.aborted) {
-        n += 1;
-        yield tracked(String(n), { n, at: new Date().toISOString() });
-        await sleep(PING_INTERVAL_MS, opts.signal);
       }
     }),
 });

@@ -71,18 +71,6 @@ export function getApiBase(): string {
 }
 
 /**
- * Get the base URL for EventSource (SSE) connections.
- *
- * Used to direct-connect to the backend port (bypassing Vite's proxy for
- * long-lived SSE). Under the monorepo router that backdoor doesn't apply —
- * the router proxies SSE just fine, and the backend port is dynamic anyway.
- * So we just use the same origin as the page in all cases now.
- */
-export function getEventSourceBase(): string {
-  return getApiBase();
-}
-
-/**
  * Absolute ws:// / wss:// URL for the box's tRPC WebSocket endpoint, used by
  * the subscription `wsLink`. Built from the page origin + the box-scoped API
  * base (so it rides the same router → Vite → Fastify proxy chain SSE used),

@@ -17,7 +17,6 @@ import { getApiBase, NoResponseBodyError } from "./api-core";
 
 export {
   getApiBase,
-  getEventSourceBase,
   getWebSocketUrl,
   joinBaseAndPath,
   withBase,
