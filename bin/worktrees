@@ -122,8 +122,18 @@ case "$cmd" in
     BROWSE_ROOT="$STATE_DIR/browse"
     LOGS_ROOT="$STATE_DIR/logs"
 
-    # Which worktrees have an active claude process (so we never touch them)?
+    # Which worktrees have an active claude session (so we never touch them)?
+    # Two signals, both required to be absent before removal:
+    #   1. argv — sessions launched as `claude --worktree <name>`
+    #   2. process cwd — sessions resumed from inside the worktree don't
+    #      carry the --worktree argv, but their claude process's cwd is in
+    #      the worktree. lsof on the claude pids surfaces those.
     active=$(ps -axo command 2>/dev/null | grep -oE "claude --worktree [a-zA-Z0-9_-]+" | awk '{print $NF}' | sort -u)
+    claude_pids=$(pgrep -x claude 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+    active_cwds=""
+    if [ -n "$claude_pids" ]; then
+      active_cwds=$(lsof -a -d cwd -p "$claude_pids" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u)
+    fi
 
     removed=0
     for d in "$WT_ROOT"/*; do
@@ -134,11 +144,22 @@ case "$cmd" in
         echo "stray (not a directory): $d — leaving alone, inspect manually"
         continue
       fi
-      if echo "$active" | grep -qxF "$name"; then continue; fi
+      if echo "$active" | grep -qxF "$name"; then
+        echo "skip $name: active claude session (argv)"
+        continue
+      fi
+      if [ -n "$active_cwds" ] && echo "$active_cwds" | grep -qE "^$d(/|\$)"; then
+        echo "skip $name: active claude session (cwd)"
+        continue
+      fi
       ahead=$(git -C "$d" rev-list --count main..HEAD 2>/dev/null || echo "?")
-      dirty=$(git -C "$d" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+      # Deletion-only entries don't block removal: a cleanup killed mid-
+      # delete (the old hook-timeout bug) leaves phantom `D` lines for
+      # tracked files whose content is all in git. Real dirt (modified,
+      # untracked, renamed, conflicted) still blocks.
+      dirty=$(git -C "$d" status --porcelain 2>/dev/null | grep -cvE '^( D|D ) ' || true)
       if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
-        echo "skip $name: ahead=$ahead dirty=$dirty (has unmerged work)"
+        echo "skip $name: ahead=$ahead non-deletion-dirty=$dirty (has unmerged work)"
         continue
       fi
       branch=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
@@ -146,6 +167,12 @@ case "$cmd" in
       if [ "$dry_run" = false ]; then
         curl -fsS -m 3 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$name" >/dev/null 2>&1 || true
         git -C "$MONO" worktree remove --force "$d" 2>/dev/null || true
+        # A half-deleted worktree can defeat `worktree remove` — fall back
+        # to deleting the directory and pruning the registration.
+        if [ -d "$d" ]; then
+          rm -rf "$d"
+          git -C "$MONO" worktree prune 2>/dev/null || true
+        fi
         [ -n "$branch" ] && git -C "$MONO" branch -D "$branch" >/dev/null 2>&1 || true
         rm -rf "$BOX_ROOT/$name" "$BROWSE_ROOT/$name"
         rm -f "$LOGS_ROOT/$name.log" "$PID_DIR/$name.json"

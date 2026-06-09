@@ -62,10 +62,16 @@ if [ -z "$branch" ] || [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then
 fi
 
 ahead=$(git rev-list --count main..HEAD 2>/dev/null || echo "?")
-dirty=$(git status --porcelain 2>/dev/null | wc -l | tr -d " ")
+# Deletion-only entries (` D ` unstaged / `D  ` staged) don't count as dirt:
+# a cleanup killed mid-removal (hook timeout) leaves a half-deleted tree
+# whose only changes are phantom deletions of tracked files — content that
+# all exists in git. Counting those as dirty made one interrupted cleanup
+# poison the worktree against every future cleanup. Anything that isn't a
+# pure deletion (modified, untracked, renamed, conflicted) still blocks.
+dirty=$(git status --porcelain 2>/dev/null | grep -cvE '^( D|D ) ' || true)
 
 if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
-  echo "[session-end] worktree '$branch' not fully merged (ahead=$ahead, dirty=$dirty) — leaving alone"
+  echo "[session-end] worktree '$branch' not fully merged (ahead=$ahead, non-deletion dirty=$dirty) — leaving alone"
   exit 0
 fi
 
@@ -85,26 +91,40 @@ if curl -fsS -m 5 "http://127.0.0.1:3210/__router/stop/$name" >/dev/null 2>&1; t
   echo "[session-end]   told router to stop $name"
 fi
 
-# Remove the cloned box tree ($name/, which contains test1/).
+# Deleting ~1GB of worktree + box synchronously here used to blow the hook
+# timeout: the kill landed mid-`git worktree remove`, leaving a half-deleted
+# but still-registered worktree (the accumulation bug of 2026-06). Instead:
+# rename everything into a trash dir (instant), do the cheap git bookkeeping,
+# and let a detached background process do the slow delete — it survives
+# both this hook and the session.
+TRASH="$HOME/.cache/callback-mono/trash"
+mkdir -p "$TRASH"
+ts=$(date +%s)
+
+# Trash the cloned box tree ($name/, which contains test1/).
 BOX_DEST="$HOME/src/box-worktrees/$name"
 if [ -d "$BOX_DEST" ]; then
-  rm -rf "$BOX_DEST"
-  echo "[session-end]   removed $BOX_DEST"
+  mv "$BOX_DEST" "$TRASH/box-$name-$ts"
+  echo "[session-end]   trashed $BOX_DEST"
 fi
 
-# Move out of the worktree dir before removing it, otherwise `git worktree
-# remove` complains.
+# Move out of the worktree dir before removing it.
 cd "$MONO"
 
-# Remove the worktree directory.
-if git worktree remove --force "$worktree_path" 2>/dev/null; then
-  echo "[session-end]   removed worktree $worktree_path"
+# Trash the worktree directory, then prune the now-dangling registration.
+if mv "$worktree_path" "$TRASH/wt-$name-$ts" 2>/dev/null; then
+  echo "[session-end]   trashed worktree $worktree_path"
 fi
+git worktree prune 2>/dev/null || true
 
 # Delete the branch.
 if git branch -D "$branch" >/dev/null 2>&1; then
   echo "[session-end]   deleted branch $branch"
 fi
+
+# Slow delete, detached. Clears earlier leftovers too.
+nohup rm -rf "$TRASH" >/dev/null 2>&1 &
+disown 2>/dev/null || true
 
 # Cache state: browse profile + socket dir, router log, pid file.
 # These don't show up in any UI, but they accumulate, and if the session
