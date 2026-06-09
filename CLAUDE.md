@@ -1,11 +1,12 @@
 ## Monorepo Layout
 
-Four projects live in one git repository (previously three independent repos, merged 2026-05):
+Five projects live in one git repository (previously independent repos, merged 2026-05):
 
 - **callback-box/** — Main system. See its CLAUDE.md for details.
 - **callback-clerk/** — Chrome extension that talks to a hosted callback-box instance.
 - **cardworks/** — XML card library (parsing, validation, JSX). Used by callback-box (consumed via `file:../cardworks` symlink in `callback-box/node_modules/`).
 - **agent-doctest/** — Doctest framework extracted from callback-box.
+- **personal-vibe-check/** — The shared ESLint/TS/Prettier preset (`@ianbicking/personal-vibe-check`), consumed by the other packages via `workspace:*`. Edit it HERE — the old standalone checkout at `~/src/personal-vibe-check` is stale and no longer what anything resolves to.
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box.
 

@@ -54,7 +54,7 @@ async function listStagedItems(boxRoot: string): Promise<StagedItem[]> {
     entries = await fs.readdir(stagedDir, { withFileTypes: true });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e as Error;
+    throw e;
   }
   const items: StagedItem[] = [];
   for (const entry of entries) {
