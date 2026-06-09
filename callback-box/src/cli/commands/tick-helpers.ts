@@ -84,11 +84,20 @@ interface SkipContext {
 
 /** Evaluate the pre-run skip gates (due, requires, budget, lock-group).
  * Returns a human-readable reason to skip, or null if the script should run.
- * An empty-string reason means "skip silently". */
+ * An empty-string reason means "skip silently".
+ *
+ * With `options.force`, the schedule (due-ness) and budget gates are
+ * bypassed — but not `enabled: false` (an explicit user statement), not
+ * missing connectors (the run would just fail), and not a live lock-group
+ * holder (never preempt running work). */
 export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
   const { boxRoot, parsed, scriptName, state, now, running, options } = ctx;
 
-  if (!isDue(parsed, { lastRun: state.lastRun, now })) {
+  if (options.force) {
+    if (!parsed.enabled) {
+      return options.quiet ? "" : `  Skipping ${scriptName}: disabled (enabled: false)`;
+    }
+  } else if (!isDue(parsed, { lastRun: state.lastRun, now })) {
     return "";
   }
 
@@ -99,7 +108,7 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
     }
   }
 
-  if (parsed.budget) {
+  if (parsed.budget && !options.force) {
     const check = isWithinBudget(parsed.budget, { recentRuns: state.recentRuns, now });
     if (!check.allowed) {
       return options.quiet ? "" : `  Skipping ${scriptName}: budget exceeded (${Math.round(check.usedMs / 1000)}s used)`;
