@@ -190,6 +190,9 @@ renderRunReport({
   missingTranscripts: 0,
   overflow: 2,
   registriesFound: [".callback-box/chat-thread-sessions.json"],
+  observations: [],
+  duplicatesSkipped: 0,
+  observerFailures: 0,
 })
 => # Retrospective run 2026-06-09T12-00-00
 «blankline»

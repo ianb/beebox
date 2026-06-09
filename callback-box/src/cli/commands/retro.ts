@@ -18,6 +18,8 @@ import {
   QUIESCENCE_MS,
   type DiscoveryResult,
 } from "../../core/retro/discovery.js";
+import { createSdkRetroObserver } from "../../core/retro/observer.js";
+import { runRetroScan } from "../../core/retro/scan.js";
 import { loadRetroState } from "../../core/retro/state.js";
 
 /** Default per-run cap on sessions observed; overflow waits for the next run. */
@@ -75,28 +77,44 @@ const scanCommand = new Command("scan")
       process.exit(1);
     }
 
-    if (!options.dryRun) {
-      console.error(
-        "cb retro scan: the observer is not implemented yet — run with --dry-run to preview the walker"
-      );
-      process.exit(1);
-    }
+    if (options.dryRun) {
+      const result = await discover(boxRoot);
+      const planned = result.qualified.slice(0, maxSessions);
+      const overflow = result.qualified.length - planned.length;
 
-    const result = await discover(boxRoot);
-    const planned = result.qualified.slice(0, maxSessions);
-    const overflow = result.qualified.length - planned.length;
-
-    console.log(
-      `would observe ${planned.length} of ${result.qualified.length} qualified session(s)`
-    );
-    for (const session of planned) {
-      const thread = session.threadRef ? `  ${session.threadRef}` : "";
       console.log(
-        `  ${session.sessionId}  ${session.mtime.toISOString()}  ${session.userMessages} user message(s)${thread}`
+        `would observe ${planned.length} of ${result.qualified.length} qualified session(s)`
       );
+      for (const session of planned) {
+        const thread = session.threadRef ? `  ${session.threadRef}` : "";
+        console.log(
+          `  ${session.sessionId}  ${session.mtime.toISOString()}  ${session.userMessages} user message(s)${thread}`
+        );
+      }
+      if (overflow > 0) console.log(`  (+${overflow} beyond the per-run cap)`);
+      for (const line of describeSkips(result)) console.log(line);
+      return;
     }
-    if (overflow > 0) console.log(`  (+${overflow} beyond the per-run cap)`);
-    for (const line of describeSkips(result)) console.log(line);
+
+    const observer = createSdkRetroObserver({ boxRoot });
+    const summary = await runRetroScan(boxRoot, {
+      observer,
+      maxSessions,
+      now: new Date(),
+    });
+
+    if (summary.reportPath === null) {
+      console.log(`run ${summary.runId}: no sessions ready to observe`);
+      return;
+    }
+    const parts = [
+      `observed ${summary.observed} session(s)`,
+      `${summary.observations} observation(s)`,
+    ];
+    if (summary.duplicatesSkipped > 0) parts.push(`${summary.duplicatesSkipped} duplicate(s) skipped`);
+    if (summary.observerFailures > 0) parts.push(`${summary.observerFailures} failure(s)`);
+    console.log(`run ${summary.runId}: ${parts.join(", ")}`);
+    console.log(`report: ${summary.reportPath}`);
   });
 
 export const retroCommand = new Command("retro")

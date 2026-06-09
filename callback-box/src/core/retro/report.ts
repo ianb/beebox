@@ -10,6 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { LedgerEntry } from "./ledger.js";
 
 export const RETRO_REPORTS_DIR = "store/reviews/retro";
 
@@ -32,6 +33,12 @@ export interface RetroRunReportData {
   /** Qualified sessions left for the next run by the per-run cap. */
   overflow: number;
   registriesFound: string[];
+  /** Observations recorded this run (already deduped and ledgered). */
+  observations: LedgerEntry[];
+  /** Observations dropped as exact duplicates of ledgered evidence. */
+  duplicatesSkipped: number;
+  /** Sessions whose observer pass failed (retried on a later run). */
+  observerFailures: number;
 }
 
 /** Box-relative path of a run's report file. */
@@ -62,8 +69,31 @@ function renderSkips(data: RetroRunReportData): string[] {
     skips.push(`${data.missingTranscripts} transcripts missing (cleared from ~/.claude)`);
   }
   if (data.overflow > 0) skips.push(`${data.overflow} beyond the per-run cap (next run picks them up)`);
+  if (data.observerFailures > 0) {
+    skips.push(`${data.observerFailures} observer failures (retried next run)`);
+  }
   if (skips.length === 0) return [];
   return ["", `Skipped: ${skips.join("; ")}.`];
+}
+
+function renderObservations(data: RetroRunReportData): string[] {
+  const lines: string[] = [];
+  if (data.observations.length === 0) {
+    lines.push("_None recorded._");
+  } else {
+    for (const obs of data.observations) {
+      const sink = obs.sinkRef ? `${obs.sink}: ${obs.sinkRef}` : obs.sink;
+      lines.push(`- **${obs.kind}** (\`${obs.sessionId}\`, → ${sink}): ${obs.proposal}`);
+      for (const quoteLine of obs.evidence.split("\n")) {
+        lines.push(`  > ${quoteLine}`);
+      }
+    }
+  }
+  if (data.duplicatesSkipped > 0) {
+    const plural = data.duplicatesSkipped === 1 ? "" : "s";
+    lines.push("", `${data.duplicatesSkipped} duplicate observation${plural} skipped (evidence already in the ledger).`);
+  }
+  return lines;
 }
 
 /**
@@ -96,7 +126,7 @@ export function renderRunReport(data: RetroRunReportData): string {
     "",
     "## Observations",
     "",
-    "_None recorded._",
+    ...renderObservations(data),
     "",
     "## Actions taken",
     "",
