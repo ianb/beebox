@@ -4,8 +4,10 @@
  * transcription handle, input setters, and send callbacks come in as props.
  */
 
+import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
+import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
@@ -35,6 +37,11 @@ export function MobileTextareaRow({
 }) {
   const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
+  // This textarea is separate from the desktop composer's (which has its own
+  // ref + autoscroll wired in useChatActions), so it needs its own pinning.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
+
   return (
     <div className="flex gap-2 items-center">
       {isTranscribing ? (
@@ -43,6 +50,7 @@ export function MobileTextareaRow({
         </div>
       ) : null}
       <TextareaAutosize
+        ref={textareaRef}
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
         onPaste={onPaste}

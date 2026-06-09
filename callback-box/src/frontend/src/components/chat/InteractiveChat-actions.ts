@@ -16,6 +16,7 @@ import { href } from "../../lib/routing";
 import { localTime, newMessageId } from "./InteractiveChat-helpers";
 import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
+import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import type { ChatEvent } from "../../machines/chat-types";
 
 interface ChatActionsOpts {
@@ -234,11 +235,5 @@ function useTextareaFocus(opts: {
     }
   }, [isTranscribing, typingMode, textareaRef]);
 
-  // Scroll textarea to bottom as transcript streams in
-  useEffect(() => {
-    if (isTranscribing && textareaRef.current) {
-      const el = textareaRef.current;
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [isTranscribing, transcriptTick, textareaRef]);
+  useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick });
 }
