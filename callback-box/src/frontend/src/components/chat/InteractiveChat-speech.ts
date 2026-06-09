@@ -1,112 +1,60 @@
 /**
- * TTS speech-playback orchestration for InteractiveChat: owns the shared
- * voice refs, the speech-playback handle, the batch-dispatch rules
- * (suppress while composing, pause mic while speaking), and the three
- * effects that drive playback off the stream (mute-stop, mid-stream
- * dispatch, end-of-turn/state-transition dispatch). Returns the refs +
- * the playback handle so the transcription hook can share them.
+ * TTS speech-dispatch for InteractiveChat: owns the speech-playback handle and
+ * the effects that turn the assistant's streamed `<speech>` tags into playback
+ * requests. The "should this play / pause the mic / be suppressed" decisions no
+ * longer live here — they belong to `composerMachine`. This hook just parses
+ * the stream and raises `SPEECH_QUEUED` / `SPEECH_DONE` (plus the post-reply
+ * mic reopen) into that machine.
  */
 
 import { useEffect, useRef, useCallback } from "react";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
-import { parseAllSpeechTags, type SpeechSegment } from "../../lib/speech-parsing";
+import { parseAllSpeechTags } from "../../lib/speech-parsing";
+import type { ComposerEvent } from "../../machines/composerMachine";
 
 interface SnapshotLike {
   value: unknown;
   context: { streamText: string };
 }
 
-export interface VoiceRefs {
-  turnTakingRef: React.MutableRefObject<boolean>;
-  transcriptionRef: React.MutableRefObject<{ start: (opts?: { earcon?: boolean }) => void; cancel: () => void; state: string; transcript: string } | null>;
-  stopTickRef: React.MutableRefObject<(() => void) | null>;
-  speechPlayedRef: React.MutableRefObject<boolean>;
-  voicePausedRef: React.MutableRefObject<boolean>;
+interface ComposerSnapshotLike {
+  context: { turnTaking: boolean };
+  matches: (state: { voice: "idle" | "speaking" | "pausedForSpeech" }) => boolean;
 }
-
-export type QueueSpeechBatch = (args: { segments: SpeechSegment[]; messageId: string; baseIndex: number }) => boolean;
 
 export function useSpeechDispatch(opts: {
   snapshot: SnapshotLike;
-  muted: boolean;
-  setVoicePaused: React.Dispatch<React.SetStateAction<boolean>>;
+  composerSnapshot: ComposerSnapshotLike;
+  composerSend: (event: ComposerEvent) => void;
 }) {
-  const { snapshot, muted, setVoicePaused } = opts;
+  const { snapshot, composerSnapshot, composerSend } = opts;
 
-  const turnTakingRef = useRef(false);
-  const transcriptionRef = useRef<{ start: (opts?: { earcon?: boolean }) => void; cancel: () => void; state: string; transcript: string } | null>(null);
+  // Tick earcon handle, armed by the keyword-send commit and silenced when the
+  // turn ends. Shared with the voice hook (which arms it).
   const stopTickRef = useRef<(() => void) | null>(null);
-  const prevStateRef = useRef<string>("loading");
+  // Did the current turn produce any speech? Gates the post-reply mic reopen —
+  // a spoken reply already hands the turn back via SPEECH_DONE.
   const speechPlayedRef = useRef(false);
-  const voicePausedRef = useRef(false);
-
-  // Track machine state for use in stable callbacks
-  const machineStateRef = useRef(snapshot.value);
-  useEffect(() => {
-    machineStateRef.current = snapshot.value;
-  });
-
-  const speechPlayback = useSpeechPlayback({
-    onComplete: () => {
-      // Resume recording if it was paused for TTS
-      if (voicePausedRef.current) {
-        voicePausedRef.current = false;
-        setVoicePaused(false);
-        transcriptionRef.current?.start();
-      } else if (turnTakingRef.current && machineStateRef.current !== "streaming") {
-        transcriptionRef.current?.start({ earcon: true });
-      }
-    },
-  });
-
-  // Number of speech segments already dispatched to playback from the
-  // current stream. Reset when a new turn starts.
+  const prevStateRef = useRef<string>("loading");
+  // Number of speech segments already dispatched from the current stream.
   const playedSegmentCountRef = useRef(0);
 
-  /**
-   * Dispatch a batch of new speech segments for playback, applying the
-   * "suppress if user is composing voice" and "pause mic while speaking"
-   * rules. Returns true if segments were queued (or intentionally
-   * suppressed — i.e. handled), false otherwise.
-   */
-  const queueSpeechBatch = useCallback<QueueSpeechBatch>(
-    ({ segments: newSegments, messageId, baseIndex }) => {
-      if (newSegments.length === 0) return false;
+  // Keep the latest composer snapshot readable inside effects without making
+  // them depend on every machine transition.
+  const composerSnapshotRef = useRef(composerSnapshot);
+  useEffect(() => { composerSnapshotRef.current = composerSnapshot; });
 
-      speechPlayedRef.current = true;
+  const speechPlayback = useSpeechPlayback({
+    onComplete: () => { composerSend({ type: "SPEECH_DONE" }); },
+  });
 
-      if (muted) {
-        speechPlayback.markAsPlayed(messageId);
-        return true;
-      }
+  const dispatch = useCallback((segments: ReturnType<typeof parseAllSpeechTags>, baseIndex: number) => {
+    if (segments.length === 0) return;
+    speechPlayedRef.current = true;
+    composerSend({ type: "SPEECH_QUEUED", messageId: `stream-${Date.now()}-${baseIndex}`, segments, baseIndex });
+  }, [composerSend]);
 
-      // Suppress TTS if user has in-progress voice text
-      const hasActiveTranscript = transcriptionRef.current &&
-        transcriptionRef.current.transcript.trim().length > 0;
-      if (hasActiveTranscript) {
-        speechPlayback.markAsPlayed(messageId);
-        return true;
-      }
-
-      // Pause recording while TTS plays
-      if (transcriptionRef.current && transcriptionRef.current.state === "recording") {
-        voicePausedRef.current = true;
-        queueMicrotask(() => setVoicePaused(true));
-        transcriptionRef.current.cancel();
-      }
-
-      speechPlayback.playSegments({ messageId, segments: newSegments, baseIndex });
-      return true;
-    },
-    [speechPlayback, muted, setVoicePaused]
-  );
-
-  // Stop any in-flight speech the moment mute is engaged.
-  useEffect(() => {
-    if (muted) speechPlayback.stop();
-  }, [muted, speechPlayback]);
-
-  // Mid-stream: play complete <speech>...</speech> segments as they arrive.
+  // Mid-stream: dispatch complete <speech>...</speech> segments as they arrive.
   // Counts closing </speech> tags to avoid parsing a half-received segment.
   useEffect(() => {
     if (snapshot.value !== "streaming") return;
@@ -116,37 +64,29 @@ export function useSpeechDispatch(opts: {
     if (closedCount <= playedSegmentCountRef.current) return;
 
     const allSegments = parseAllSpeechTags(text);
-    // parseAllSpeechTags may include a still-open tag at the end; clip to
-    // the number of actual closing tags so we only dispatch fully-closed
-    // segments.
     const complete = allSegments.slice(0, closedCount);
     const newSegments = complete.slice(playedSegmentCountRef.current);
     if (newSegments.length === 0) {
-      // Closing tag count advanced but parser didn't surface new segments
-      // (e.g. nested tags); sync the counter and move on.
       playedSegmentCountRef.current = closedCount;
       return;
     }
-
-    const messageId = `stream-${Date.now()}-${playedSegmentCountRef.current}`;
-    queueSpeechBatch({ segments: newSegments, messageId, baseIndex: playedSegmentCountRef.current });
+    dispatch(newSegments, playedSegmentCountRef.current);
     playedSegmentCountRef.current = closedCount;
-  }, [snapshot.value, snapshot.context.streamText, queueSpeechBatch]);
+  }, [snapshot.value, snapshot.context.streamText, composerSend, dispatch]);
 
-  // Handle state transitions: play any final speech, mic restart after refresh
+  // State transitions: reset per-turn counter, flush trailing speech, reopen
+  // the mic after a non-speech reply.
   useEffect(() => {
     const current = snapshot.value as string;
     const prev = prevStateRef.current;
     prevStateRef.current = current;
 
-    // Entering streaming: reset the mid-stream played counter for the new turn
     if (current === "streaming" && prev !== "streaming") {
       playedSegmentCountRef.current = 0;
     }
 
-    // streaming → refreshing: stop tick, play any segments that didn't
-    // get dispatched mid-stream (rare — parser behavior or last-tick
-    // tail from the final message).
+    // streaming → refreshing: stop tick, dispatch any segments that didn't get
+    // sent mid-stream (parser tail / final message).
     if (current === "refreshing" && prev === "streaming") {
       if (stopTickRef.current) {
         stopTickRef.current();
@@ -156,22 +96,22 @@ export function useSpeechDispatch(opts: {
       const remaining = allSegments.slice(playedSegmentCountRef.current);
       if (allSegments.length > 0) speechPlayedRef.current = true;
       if (remaining.length > 0) {
-        queueSpeechBatch({ segments: remaining, messageId: `stream-end-${Date.now()}`, baseIndex: playedSegmentCountRef.current });
+        dispatch(remaining, playedSegmentCountRef.current);
         playedSegmentCountRef.current = allSegments.length;
       }
     }
 
-    // refreshing → idle: restart mic for non-speech responses
+    // refreshing → idle: reopen the mic for a non-speech reply when a voice
+    // conversation is active and nothing is currently playing. A spoken reply
+    // instead hands the mic back via SPEECH_DONE.
     if (current === "idle" && prev === "refreshing") {
-      if (!speechPlayedRef.current && turnTakingRef.current) {
-        // Only restart if not already recording (might be paused/resumed by TTS logic)
-        if (!voicePausedRef.current) {
-          transcriptionRef.current?.start({ earcon: true });
-        }
+      const cs = composerSnapshotRef.current;
+      if (!speechPlayedRef.current && cs.context.turnTaking && cs.matches({ voice: "idle" })) {
+        composerSend({ type: "START_DICTATION" });
       }
+      speechPlayedRef.current = false;
     }
-  }, [snapshot.value, snapshot.context.streamText, queueSpeechBatch]);
+  }, [snapshot.value, snapshot.context.streamText, composerSend, dispatch]);
 
-  const refs: VoiceRefs = { turnTakingRef, transcriptionRef, stopTickRef, speechPlayedRef, voicePausedRef };
-  return { speechPlayback, queueSpeechBatch, refs };
+  return { speechPlayback, stopTickRef, speechPlayedRef };
 }

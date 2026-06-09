@@ -28,8 +28,8 @@ export function useShareNote(options: UseShareNoteOptions) {
   const [errorMessage, setErrorMessage] = useState("");
 
   const transcription = useRealtimeTranscription({
-    onKeywordSend: (text) => {
-      setNote((prev) => (prev ? `${prev}\n\n${text}` : text));
+    onKeywordSend: ({ processedTranscript }) => {
+      setNote((prev) => (prev ? `${prev}\n\n${processedTranscript}` : processedTranscript));
     },
   });
 

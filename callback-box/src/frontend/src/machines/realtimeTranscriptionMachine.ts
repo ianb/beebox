@@ -35,20 +35,9 @@
 import { setup, assign } from "xstate";
 import { recordingStop, recordingError, recordingDropped, recordingResumed } from "../lib/earcons";
 import { transcriptionActor } from "./transcription-actor";
-import type { TranscriptionEvent } from "./transcription-events";
+import { MachineActionError, type TranscriptionEvent, type DropCause } from "./transcription-events";
 
-export type TranscriptionState = "idle" | "connecting" | "recording" | "reconnecting" | "finalizing";
-
-/**
- * A machine action was reached by an event it wasn't wired for (a config bug).
- * The detail names the action and the offending event.
- */
-class MachineActionError extends Error {
-  constructor(detail: string) {
-    super(detail);
-    this.name = "MachineActionError";
-  }
-}
+export type { TranscriptionState } from "./transcription-events";
 
 // -- Machine --
 
@@ -61,6 +50,8 @@ export const realtimeTranscriptionMachine = setup({
       /** WAV blob of the segment's audio, set on TRANSCRIPTION_DONE.
        *  Consumed by narration mode for the HQ pass. */
       audioBlob: Blob | null;
+      /** Why the current/last drop happened; drives the expiry message. */
+      dropCause: DropCause | null;
     },
     events: {} as TranscriptionEvent,
   },
@@ -75,7 +66,7 @@ export const realtimeTranscriptionMachine = setup({
       }
       return { finalTranscript: event.finalText, interimTranscript: event.interimText };
     }),
-    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", error: null, audioBlob: null }),
+    clearTranscript: assign({ finalTranscript: "", interimTranscript: "", error: null, audioBlob: null, dropCause: null }),
     setError: assign(({ event }) => {
       // setError is wired to WS_ERROR / SERVER_ERROR / SETUP_ERROR — all
       // share a `message: string` field. Narrow by checking the field
@@ -103,13 +94,24 @@ export const realtimeTranscriptionMachine = setup({
     setTimeoutWarning: assign({
       error: "Transcription timed out — partial text preserved",
     }),
-    setReconnecting: assign({
-      error: "Network interrupted — reconnecting…",
+    setReconnecting: assign(({ event }) => {
+      if (event.type !== "CONNECTION_DEGRADED") {
+        const message = `setReconnecting: unexpected event type "${event.type}"`;
+        throw new MachineActionError(message);
+      }
+      return {
+        dropCause: event.cause,
+        error: event.cause === "microphone"
+          ? "Microphone interrupted — recovering…"
+          : "Network interrupted — reconnecting…",
+      };
     }),
-    clearError: assign({ error: null }),
-    setNetworkLost: assign({
-      error: "Recording stopped — network lost",
-    }),
+    clearError: assign({ error: null, dropCause: null }),
+    setDropEnded: assign(({ context }) => ({
+      error: context.dropCause === "microphone"
+        ? "Recording stopped — the microphone was taken away"
+        : "Recording stopped — network lost",
+    })),
     playRecordingDropped: () => {
       recordingDropped.play();
     },
@@ -123,6 +125,12 @@ export const realtimeTranscriptionMachine = setup({
       const transcriber = system.get("transcriber");
       if (transcriber) {
         transcriber.send({ type: "STOP" });
+      }
+    },
+    sendCancelToTranscriber: ({ system }) => {
+      const transcriber = system.get("transcriber");
+      if (transcriber) {
+        transcriber.send({ type: "CANCEL" });
       }
     },
     playMicOffSound: () => {
@@ -153,6 +161,7 @@ export const realtimeTranscriptionMachine = setup({
     interimTranscript: "",
     error: null,
     audioBlob: null,
+    dropCause: null,
   },
   states: {
     idle: {
@@ -183,9 +192,7 @@ export const realtimeTranscriptionMachine = setup({
         MAX_DURATION: {
           target: ".finalizing",
           actions: [
-            () => {
-              console.info("[realtime-transcription] Max duration reached — auto-stopping");
-            },
+            () => console.info("[realtime-transcription] Max duration reached — auto-stopping"),
             "sendStopToTranscriber",
             "playMicOffSound",
           ],
@@ -213,9 +220,7 @@ export const realtimeTranscriptionMachine = setup({
             CONNECT_TIMEOUT: {
               target: "#realtimeTranscription.idle",
               actions: [
-                () => {
-                  console.warn("[realtime-transcription] Recording didn't start within timeout");
-                },
+                () => console.warn("[realtime-transcription] Recording didn't start within timeout"),
                 "setStartFailedError",
                 "playStartFailedSound",
               ],
@@ -228,9 +233,9 @@ export const realtimeTranscriptionMachine = setup({
               actions: ["setError", "playStartFailedSound"],
             },
             // A WebSocket that errors or closes before it ever opens is also a
-            // failure to start; cue it here. The parent-state WS_ERROR /
-            // WS_CLOSED handlers (which stay silent) still cover mid-recording
-            // drops, since a child handler only overrides while in `connecting`.
+            // failure to start; cue it here. (Mid-recording failures have their
+            // own loud handlers on `recording`; the parent-state handlers only
+            // catch stragglers, e.g. an error landing during `finalizing`.)
             WS_ERROR: {
               target: "#realtimeTranscription.idle",
               actions: ["setError", "playStartFailedSound"],
@@ -254,9 +259,7 @@ export const realtimeTranscriptionMachine = setup({
             SILENCE_TIMEOUT: {
               target: "finalizing",
               actions: [
-                () => {
-                  console.info("[realtime-transcription] Silence timeout — auto-stopping");
-                },
+                () => console.info("[realtime-transcription] Silence timeout — auto-stopping"),
                 "sendStopToTranscriber",
                 "playMicOffSound",
               ],
@@ -272,21 +275,27 @@ export const realtimeTranscriptionMachine = setup({
               target: "reconnecting",
               actions: ["playRecordingDropped", "setReconnecting"],
             },
+            // A non-retryable failure mid-recording (close code a fresh socket
+            // can't fix, or a service-level error) ends the segment *loudly*
+            // and keeps what was captured: the actor's stop() emits
+            // TRANSCRIPTION_DONE immediately, and the unconsumed transcript is
+            // handed back to the UI (see onUnconsumedTranscript in
+            // useRealtimeTranscription) instead of silently vanishing.
+            WS_ERROR: {
+              target: "finalizing",
+              actions: ["setError", "playRecordingDropped", "sendStopToTranscriber"],
+            },
+            SERVER_ERROR: {
+              target: "finalizing",
+              actions: ["setError", "playRecordingDropped", "sendStopToTranscriber"],
+            },
             STOP: {
               target: "finalizing",
               actions: "sendStopToTranscriber",
             },
             CANCEL: {
               target: "#realtimeTranscription.idle",
-              actions: [
-                "clearTranscript",
-                ({ system }) => {
-                  const transcriber = system.get("transcriber");
-                  if (transcriber) {
-                    transcriber.send({ type: "CANCEL" });
-                  }
-                },
-              ],
+              actions: ["clearTranscript", "sendCancelToTranscriber"],
             },
             TRANSCRIPTION_DONE: {
               target: "#realtimeTranscription.idle",
@@ -305,10 +314,8 @@ export const realtimeTranscriptionMachine = setup({
             RECONNECT_WINDOW: {
               target: "finalizing",
               actions: [
-                () => {
-                  console.warn("[realtime-transcription] Reconnect window expired — ending segment");
-                },
-                "setNetworkLost",
+                () => console.warn("[realtime-transcription] Reconnect window expired — ending segment"),
+                "setDropEnded",
                 "sendStopToTranscriber",
                 "playMicOffSound",
               ],
@@ -328,15 +335,7 @@ export const realtimeTranscriptionMachine = setup({
             },
             CANCEL: {
               target: "#realtimeTranscription.idle",
-              actions: [
-                "clearTranscript",
-                ({ system }) => {
-                  const transcriber = system.get("transcriber");
-                  if (transcriber) {
-                    transcriber.send({ type: "CANCEL" });
-                  }
-                },
-              ],
+              actions: ["clearTranscript", "sendCancelToTranscriber"],
             },
             TRANSCRIPTION_DONE: {
               target: "#realtimeTranscription.idle",

@@ -24,6 +24,7 @@ import { ViewPage } from "./pages/ViewPage";
 import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
 import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
+import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 
 // --- Root route ---
 
@@ -167,6 +168,13 @@ const devSpeechRoute = createRoute({
   component: SpeechTestPage,
 });
 
+// Dev-only gallery of composer visual states (see ComposerStatesHarness).
+const devComposerStatesRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/dev/composer-states",
+  component: ComposerStatesPage,
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
@@ -197,7 +205,7 @@ const routeTree = rootRoute.addChildren([
     landmarksRoute,
     chatsRoute,
     // Dev-only routes are omitted from production builds entirely.
-    ...(import.meta.env.DEV ? [devSpeechRoute] : []),
+    ...(import.meta.env.DEV ? [devSpeechRoute, devComposerStatesRoute] : []),
     boxCatchAllRoute,
   ]),
 ]);

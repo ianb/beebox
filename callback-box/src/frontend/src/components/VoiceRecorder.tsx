@@ -86,7 +86,17 @@ export function StopIcon({ className }: { className?: string }) {
   );
 }
 
-export function RecordingIndicator() {
+export function RecordingIndicator({ degraded }: { degraded?: boolean }) {
+  // Degraded = the session is live but recovering (network or mic blip):
+  // hold a steady warning dot instead of the pulsing record dot, so a glance
+  // distinguishes "recording" from "trying to keep recording".
+  if (degraded === true) {
+    return (
+      <span className="relative flex h-3 w-3" title="Recording interrupted — recovering">
+        <span className="relative inline-flex rounded-full h-3 w-3 bg-warning" />
+      </span>
+    );
+  }
   return (
     <span className="relative flex h-3 w-3">
       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger-light opacity-75" />
