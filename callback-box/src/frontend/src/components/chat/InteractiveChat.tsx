@@ -163,7 +163,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   ) : null;
 
   useChatSse({
-    sessionId, sessionInput, boxSlug, currentUser, send,
+    sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
   });

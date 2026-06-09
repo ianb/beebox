@@ -39,6 +39,8 @@ function forSession(dataSessionId: string | null, sessionId: string | null): boo
 interface SecondaryEventDeps {
   sessionId: string | null;
   sessionInput: string;
+  /** True when this tab has its own turn in flight — gates broadcast adoption. */
+  isStreaming: boolean;
   send: (event: ChatEvent) => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
@@ -50,7 +52,7 @@ interface SecondaryEventDeps {
  * main dispatcher to keep each handler's branching legible.
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, sessionInput, send, setChatFeatures, onTaskEvent } = deps;
+  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent } = deps;
   if (event.event === "chat-task") {
     const data = event.data as { sessionId: string | null; task: TaskEvent };
     if (forSession(data.sessionId, sessionId)) onTaskEvent(data.task);
@@ -60,12 +62,13 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
   } else if (event.event === "chat-session-assigned") {
     const data = event.data as { sessionId: string };
-    // Lock the running machine onto the assigned id (so subsequent sends + the
-    // post-stream refresh use it). URL navigation is handled by the useEffect
-    // below, which also covers the faster in-stream `system/init` path.
-    // ChatPage stabilizes the React key across this transition so the in-flight
-    // stream survives.
-    if (sessionInput === "new" && !sessionId) {
+    // The authoritative, per-tab assignment is the in-stream `system/init`
+    // delivered over this tab's own turnStream — it always corrects the id.
+    // This bus broadcast is a backup (restart recovery), and it carries no
+    // client correlation, so only adopt it when this tab actually has a turn in
+    // flight. Otherwise a second, idle "new" tab would bind to another tab's
+    // session. URL navigation is the useEffect below.
+    if (sessionInput === "new" && !sessionId && isStreaming) {
       send({ type: "SESSION_ASSIGNED", sessionId: data.sessionId });
     }
   }
@@ -76,12 +79,14 @@ export function useChatSse(opts: {
   sessionInput: string;
   boxSlug: string | undefined;
   currentUser: { email: string } | null | undefined;
+  /** This tab has a turn streaming/refreshing — gates broadcast session adoption. */
+  isStreaming: boolean;
   send: (event: ChatEvent) => void;
   fetchSchedules: () => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
   const navigate = useNavigate();
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
@@ -131,9 +136,9 @@ export function useChatSse(opts: {
           });
         }
       } else {
-        handleSecondaryEvent(event, { sessionId, sessionInput, send, setChatFeatures, onTaskEvent });
+        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent });
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, setChatFeatures, onTaskEvent]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent]),
   });
 
   // Update the URL when the machine learns the assigned session id. Fires for

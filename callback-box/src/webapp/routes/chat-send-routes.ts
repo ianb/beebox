@@ -205,18 +205,18 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
       : attributed;
 
-    // Touch and pin the entry for the turn's lifetime so it survives the idle
-    // sweep. (Pending-new sessions aren't yet in `entries`; they pin on
-    // promotion via session-assigned.) The pin releases when the turn settles
-    // (see captureTurn), no longer tied to a client socket. Also mark this
-    // session as most-active so bare /chat resolves here next time.
-    let releasePin: () => void = () => {};
+    // Touch + enforce the live cap + mark most-active for an already-known
+    // session. (A pending "new" session has no id yet for these.)
     if (knownId !== null) {
       registry.touch(knownId, { subprocessUse: true });
       registry.enforceLiveCap(knownId);
-      releasePin = registry.pin(knownId);
       void registry.markMostActive(knownId).catch((_e) => {});
     }
+    // Pin the session for the turn's lifetime so it survives the idle sweep and
+    // a concurrent send's LRU eviction. pinSession works for a pending "new"
+    // session too (it carries into the entry's refCount on id promotion), which
+    // a by-id pin couldn't. Released when the turn settles (see captureTurn).
+    const releasePin = registry.pinSession(chatSession);
 
     // Wire the session's output into a resumable buffer *before* sending, so a
     // frame emitted before send() resolves (e.g. a prewarmed subprocess) isn't
