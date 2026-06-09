@@ -20,6 +20,9 @@ import { ensureBoxWatcher } from "../../../core/box-file-watcher.js";
 import { getTurnBuffer } from "../../../core/chat-turn-buffer.js";
 import { router, publicProcedure } from "../trpc.js";
 
+/** Cap on the per-subscriber bus queue before coalescing transient events. */
+const MAX_BUS_QUEUE = 1000;
+
 /** Wire shape delivered to subscribers — matches the old SSEEvent `{event,data}`. */
 interface BusPayload {
   event: string;
@@ -62,6 +65,16 @@ export const eventsRouter = router({
       const sub = opts.ctx.eventBus.subscribe({
         afterId,
         listener: (ev) => {
+          // Bound memory for a slow/backgrounded subscriber: when the queue is
+          // full, coalesce by dropping the oldest transient (negative-id)
+          // event — those (e.g. file-change) are idempotent UI hints. Persistent
+          // events are never dropped: they stay deliverable and resumable from
+          // the bus on reconnect, so the resume guarantee holds. (An all-
+          // persistent overflow is unrealistic at single-box event rates.)
+          if (queue.length >= MAX_BUS_QUEUE) {
+            const oldestTransient = queue.findIndex((q) => q.id < 0);
+            if (oldestTransient !== -1) queue.splice(oldestTransient, 1);
+          }
           queue.push(ev);
           ping();
         },
@@ -103,6 +116,10 @@ export const eventsRouter = router({
       }
 
       while (!signal?.aborted) {
+        // Snapshot the change counter before draining so a frame pushed while
+        // we're yielding can't be missed: waitForChange returns immediately if
+        // the version moved on.
+        const version = buffer.versionSnapshot();
         for (const frame of buffer.framesAfter(lastSeq)) {
           lastSeq = frame.seq;
           const out: TurnStreamFrame = { t: "msg", msg: frame.msg };
@@ -117,7 +134,7 @@ export const eventsRouter = router({
           }
           return;
         }
-        await buffer.waitForChange(signal);
+        await buffer.waitForChange(signal, version);
       }
     }),
 });

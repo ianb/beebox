@@ -40,6 +40,13 @@ export class TurnBuffer {
   complete = false;
   /** Terminal error, if the turn failed before producing a result. */
   errored: string | null = null;
+  /**
+   * Bumped on every state change (push / finish / fail). A reader captures it
+   * before draining, then passes it to `waitForChange`, which returns
+   * immediately if anything changed in between — closing the drain-then-wait
+   * window so a frame pushed mid-drain can't be missed until the next push.
+   */
+  private version = 0;
   private waiters = new Set<() => void>();
 
   constructor(turnId: string) {
@@ -53,18 +60,18 @@ export class TurnBuffer {
       const dropped = this.frames.shift();
       if (dropped) this.evictedThrough = dropped.seq;
     }
-    this.wake();
+    this.bump();
   }
 
   finish(): void {
     this.complete = true;
-    this.wake();
+    this.bump();
   }
 
   fail(error: string): void {
     this.errored = error;
     this.complete = true;
-    this.wake();
+    this.bump();
   }
 
   /** Frames with seq strictly greater than `afterSeq`. */
@@ -77,12 +84,25 @@ export class TurnBuffer {
     return afterSeq < this.evictedThrough;
   }
 
-  /** Resolve when new frames arrive / the turn finishes / the signal aborts. */
-  waitForChange(signal: AbortSignal | undefined): Promise<void> {
-    if (this.complete || signal?.aborted) return Promise.resolve();
+  /** Snapshot the change counter before draining frames. */
+  versionSnapshot(): number {
+    return this.version;
+  }
+
+  /**
+   * Resolve when the buffer changes after `sinceVersion`, the turn finishes, or
+   * the signal aborts. Short-circuits if a change already happened since the
+   * snapshot (no missed wakeup). The abort listener is removed on resolve so a
+   * long turn doesn't accumulate one listener per wake.
+   */
+  waitForChange(signal: AbortSignal | undefined, sinceVersion: number): Promise<void> {
+    if (this.complete || this.version !== sinceVersion || signal?.aborted) {
+      return Promise.resolve();
+    }
     return new Promise((resolve) => {
       const settle = (): void => {
         this.waiters.delete(settle);
+        signal?.removeEventListener("abort", settle);
         resolve();
       };
       this.waiters.add(settle);
@@ -90,7 +110,8 @@ export class TurnBuffer {
     });
   }
 
-  private wake(): void {
+  private bump(): void {
+    this.version += 1;
     for (const settle of [...this.waiters]) settle();
   }
 }
@@ -101,6 +122,11 @@ export function createTurnBuffer(turnId: string): TurnBuffer {
   const buffer = new TurnBuffer(turnId);
   turns.set(turnId, buffer);
   return buffer;
+}
+
+/** Forget a turn immediately (e.g. its send failed before the turn ran). */
+export function removeTurnBuffer(turnId: string): void {
+  turns.delete(turnId);
 }
 
 export function getTurnBuffer(turnId: string): TurnBuffer | undefined {

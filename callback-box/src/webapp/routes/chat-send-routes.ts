@@ -13,7 +13,7 @@ import { type ChatMessage, type ChatSession } from "../../core/chat-session.js";
 import { getMostActive } from "../../core/chat-session-history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { mergeSeedFeatures } from "../../core/chat-features.js";
-import { createTurnBuffer, scheduleTurnCleanup } from "../../core/chat-turn-buffer.js";
+import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat-turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import {
@@ -32,21 +32,30 @@ const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
  * any single connection: the client subscribes to `chat.turnStream` for the
  * output and can drop/reconnect without losing it. The pin is released and the
  * buffer scheduled for GC once the turn settles (done / error / session close).
+ *
+ * Wired up *before* the send so no early frame (system/init, an immediate
+ * result, a fast subprocess) is dropped between send-resolves and listener-
+ * attach. Returns `cancel`, which the caller invokes if the send fails before
+ * the turn runs — it detaches the listeners and forgets the buffer so a never-
+ * starting turn doesn't leak a buffer or capture the next turn's output.
  */
 function captureTurn(
   chatSession: ChatSession,
   { turnId, releasePin }: { turnId: string; releasePin: () => void },
-): void {
+): { cancel: () => void } {
   const buffer = createTurnBuffer(turnId);
 
   let settled = false;
-  const settle = (): void => {
-    if (settled) return;
-    settled = true;
+  const detach = (): void => {
     chatSession.removeListener("message", onMessage);
     chatSession.removeListener("done", onDone);
     chatSession.removeListener("error", onError);
     chatSession.removeListener("close", onClose);
+  };
+  const settle = (): void => {
+    if (settled) return;
+    settled = true;
+    detach();
     releasePin();
     scheduleTurnCleanup(turnId);
   };
@@ -72,6 +81,17 @@ function captureTurn(
   chatSession.on("done", onDone);
   chatSession.on("error", onError);
   chatSession.on("close", onClose);
+
+  // Send failed before the turn ran: detach and forget the buffer. Leaves the
+  // pin to the caller (it releases on the failure path). No-op once settled.
+  const cancel = (): void => {
+    if (settled) return;
+    settled = true;
+    detach();
+    removeTurnBuffer(turnId);
+  };
+
+  return { cancel };
 }
 
 /**
@@ -198,20 +218,22 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       void registry.markMostActive(knownId).catch((_e) => {});
     }
 
+    // Wire the session's output into a resumable buffer *before* sending, so a
+    // frame emitted before send() resolves (e.g. a prewarmed subprocess) isn't
+    // dropped. The output flows over chat.turnStream, resumable by this turnId.
+    const turnId = randomUUID();
+    const capture = captureTurn(chatSession, { turnId, releasePin });
+
     const sent = await chatSession.send({
       text: fullMessage,
       ...(images ? { images } : {}),
     });
     if (!sent) {
+      capture.cancel();
       releasePin();
       return reply.status(500).send({ error: "Failed to send message" });
     }
 
-    // Wire the session's output into a resumable buffer keyed by turnId (after
-    // send, like the old stream — the subprocess emits no frames synchronously).
-    // The output flows over chat.turnStream, resumable by this turnId.
-    const turnId = randomUUID();
-    captureTurn(chatSession, { turnId, releasePin });
     return reply.send({ turnId });
   });
 
