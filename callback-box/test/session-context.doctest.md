@@ -161,35 +161,21 @@ JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart
 
 With a most-active pointer (written whenever any chat session on the box
 sees activity) and a synced calendar, the session-start extras appear.
-(The `.ics` fixtures live in a setup block — the example-block transform
-doesn't preserve multi-line template literals.)
-
-```ts setup
-function icsFixture(lines: string[]): string {
-  return ["BEGIN:VCALENDAR", "BEGIN:VEVENT", ...lines, "END:VEVENT", "END:VCALENDAR"].join("\n");
-}
-const dentistIcs = icsFixture([
-  "UID:dentist-1",
-  "SUMMARY:Dentist",
-  "DTSTART:20260609T160000Z",
-  "DTEND:20260609T170000Z",
-  "STATUS:CONFIRMED",
-]);
-const laterIcs = icsFixture([
-  "UID:later-1",
-  "SUMMARY:Next Week Review",
-  "DTSTART:20260616T160000Z",
-  "DTEND:20260616T170000Z",
-  "STATUS:CONFIRMED",
-]);
-```
 
 ```continue
 await box.write(".callback-box/chat-session-id.json", JSON.stringify({
   sessionId: "prev-session",
   savedAt: "2026-06-06T10:00:00Z",
 }));
-await box.write("store/calendar/dentist.ics", dentistIcs);
+await box.write("store/calendar/dentist.ics", `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:dentist-1
+SUMMARY:Dentist
+DTSTART:20260609T160000Z
+DTEND:20260609T170000Z
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR`);
 
 JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true }), null, 2)
 => {
@@ -203,7 +189,15 @@ Events outside the 24-hour horizon don't surface — the attribute is
 about imminent commitments, not the whole calendar.
 
 ```continue
-await box.write("store/calendar/later.ics", laterIcs);
+await box.write("store/calendar/later.ics", `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:later-1
+SUMMARY:Next Week Review
+DTSTART:20260616T160000Z
+DTEND:20260616T170000Z
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR`);
 
 (await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true })).calendar
 => 16:00-17:00 Dentist
