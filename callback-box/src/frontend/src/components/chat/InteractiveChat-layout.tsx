@@ -176,7 +176,8 @@ export function ChatComposerSection(props: ComposerSectionProps) {
             <div className="absolute -top-10 right-3 flex gap-1 z-10">
               <button
                 onClick={() => setTypingLocked((v) => !v)}
-                className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
+                className={`p-1.5 rounded-full shadow-sm backdrop-blur-sm ${typingLocked ? "bg-primary text-white hover:bg-primary-dark" : "bg-warm-100/90 text-warm-600 hover:bg-warm-300"}`}
+                aria-pressed={typingLocked}
                 title={typingLocked ? "Unlock (close after send)" : "Lock open"}
               >
                 {typingLocked ? (

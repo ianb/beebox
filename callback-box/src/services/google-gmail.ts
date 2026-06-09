@@ -5,7 +5,7 @@
  * Fake maintains in-memory messages and labels.
  */
 
-import ky from "ky";
+import ky, { HTTPError } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
 import { NotFoundError } from "../lib/errors.js";
 
@@ -74,6 +74,32 @@ export interface GmailDraft {
   };
 }
 
+export interface GmailProfile {
+  emailAddress: string;
+  /** Current mailbox history checkpoint (numeric string). */
+  historyId: string;
+}
+
+/** Message stub as it appears inside history records. */
+export interface GmailHistoryMessageStub {
+  id: string;
+  threadId: string;
+  labelIds?: string[];
+}
+
+export interface GmailHistoryRecord {
+  id: string;
+  messagesAdded?: Array<{ message: GmailHistoryMessageStub }>;
+  labelsAdded?: Array<{ message: GmailHistoryMessageStub; labelIds: string[] }>;
+}
+
+export interface ListHistoryResult {
+  history: GmailHistoryRecord[];
+  /** Current mailbox history checkpoint — store and pass back next time. */
+  historyId: string;
+  nextPageToken?: string;
+}
+
 // ─── Service interface ───────────────────────────────────────────────────────
 
 export interface GoogleGmailService {
@@ -92,6 +118,19 @@ export interface GoogleGmailService {
 
   /** List all labels (system + user). */
   listLabels(): Promise<GmailLabel[]>;
+
+  /** Fetch the user's profile, including the current historyId checkpoint. */
+  getProfile(): Promise<GmailProfile>;
+
+  /**
+   * List mailbox changes since a previous historyId checkpoint (messageAdded
+   * and labelAdded types). Throws NotFoundError when the checkpoint is too
+   * old or invalid — callers fall back to a full listMessages sync.
+   */
+  listHistory(opts: {
+    startHistoryId: string;
+    pageToken?: string;
+  }): Promise<ListHistoryResult>;
 
   /**
    * Create a Gmail draft from a base64url-encoded RFC 2822 message.
@@ -155,6 +194,40 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
       return data.labels ?? [];
     },
 
+    async getProfile() {
+      return api.get("users/me/profile").json<GmailProfile>();
+    },
+
+    async listHistory(opts) {
+      const searchParams: Array<[string, string]> = [
+        ["startHistoryId", opts.startHistoryId],
+        ["historyTypes", "messageAdded"],
+        ["historyTypes", "labelAdded"],
+      ];
+      if (opts.pageToken) searchParams.push(["pageToken", opts.pageToken]);
+      try {
+        const data = await api
+          .get("users/me/history", { searchParams })
+          .json<{
+            history?: GmailHistoryRecord[];
+            historyId: string;
+            nextPageToken?: string;
+          }>();
+        const result: ListHistoryResult = {
+          history: data.history ?? [],
+          historyId: data.historyId,
+        };
+        if (data.nextPageToken) result.nextPageToken = data.nextPageToken;
+        return result;
+      } catch (e) {
+        // Gmail returns 404 when startHistoryId is expired or invalid
+        if (e instanceof HTTPError && e.response.status === 404) {
+          throw new NotFoundError(opts.startHistoryId, "History");
+        }
+        throw e;
+      }
+    },
+
     async createDraft(opts) {
       const message: { raw: string; threadId?: string } = { raw: opts.raw };
       if (opts.threadId) message.threadId = opts.threadId;
@@ -186,17 +259,77 @@ export interface FakeGoogleGmailService extends GoogleGmailService {
   attachments: Map<string, GmailAttachmentData>;
   /** Drafts created via createDraft() — tests inspect this directly. */
   drafts: FakeDraftRecord[];
+  /** History records accumulated by addMessage/addLabelsToMessage. */
+  historyRecords: GmailHistoryRecord[];
+  /** Add a message and record a messagesAdded history entry. */
+  addMessage(msg: GmailMessage): void;
+  /** Add labels to an existing message and record a labelsAdded entry. */
+  addLabelsToMessage(change: { id: string; labelIds: string[] }): void;
+  /** Invalidate all stored checkpoints — listHistory will throw NotFoundError. */
+  expireHistory(): void;
 }
 
 export function createFakeGoogleGmail(
   opts?: FakeGoogleGmailOptions,
 ): FakeGoogleGmailService {
   let draftSeq = 0;
+  // Messages passed at construction predate history tracking (no records),
+  // matching a mailbox whose contents existed before the first checkpoint.
+  let historyId = 1;
+  let oldestValidHistoryId = 1;
+  const stubFor = (msg: GmailMessage): GmailHistoryMessageStub => {
+    const stub: GmailHistoryMessageStub = { id: msg.id, threadId: msg.threadId };
+    if (msg.labelIds) stub.labelIds = [...msg.labelIds];
+    return stub;
+  };
   const fake: FakeGoogleGmailService = {
     messages: [...(opts?.messages ?? [])],
     labels: [...(opts?.labels ?? [])],
     attachments: opts?.attachments ? new Map(opts.attachments) : new Map(),
     drafts: [],
+    historyRecords: [],
+
+    addMessage(msg) {
+      fake.messages.push(msg);
+      historyId += 1;
+      fake.historyRecords.push({
+        id: String(historyId),
+        messagesAdded: [{ message: stubFor(msg) }],
+      });
+    },
+
+    addLabelsToMessage(change) {
+      const msg = fake.messages.find((m) => m.id === change.id);
+      if (!msg) throw new NotFoundError(change.id, "Message");
+      msg.labelIds = [...new Set([...(msg.labelIds ?? []), ...change.labelIds])];
+      historyId += 1;
+      fake.historyRecords.push({
+        id: String(historyId),
+        labelsAdded: [{ message: stubFor(msg), labelIds: [...change.labelIds] }],
+      });
+    },
+
+    expireHistory() {
+      historyId += 1;
+      oldestValidHistoryId = historyId;
+      // Mutate in place — withCallLog proxies hold a reference to this array
+      fake.historyRecords.length = 0;
+    },
+
+    async getProfile() {
+      return { emailAddress: "fake@example.com", historyId: String(historyId) };
+    },
+
+    async listHistory(listOpts) {
+      const start = Number(listOpts.startHistoryId);
+      if (Number.isNaN(start) || start < oldestValidHistoryId) {
+        throw new NotFoundError(listOpts.startHistoryId, "History");
+      }
+      return {
+        history: fake.historyRecords.filter((r) => Number(r.id) > start),
+        historyId: String(historyId),
+      };
+    },
 
     async listMessages(_opts) {
       return {

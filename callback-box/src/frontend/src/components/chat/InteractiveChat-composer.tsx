@@ -7,10 +7,9 @@
  */
 
 import TextareaAutosize from "react-textarea-autosize";
-import { MicrophoneIcon, RecordingIndicator } from "../VoiceRecorder";
-import { unlockAudioContext } from "../../lib/audio-context";
+import { RecordingIndicator } from "../VoiceRecorder";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
-import { NarrationMicIcon } from "./InteractiveChat-controls";
+import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 
@@ -25,12 +24,6 @@ export interface TranscriptionHandle {
 const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
 const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
-const STOP_CIRCLE_PATHS = (
-  <>
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-  </>
-);
 
 /**
  * Desktop-only inline textarea plus its trailing send / transcription-action
@@ -39,7 +32,7 @@ const STOP_CIRCLE_PATHS = (
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  turnTakingRef, doSend, zoomedViewAttr, timePassedAttr, onPaste, onDrop,
+  onStopDictation, doSend, zoomedViewAttr, timePassedAttr, onPaste, onDrop,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -50,7 +43,7 @@ function DesktopComposerRow({
   handleSend: () => void;
   handleCancelTranscription: () => void;
   clearDraft: () => void;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onStopDictation: () => void;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
@@ -92,7 +85,7 @@ function DesktopComposerRow({
           </button>
           <button
             onClick={() => {
-              turnTakingRef.current = false;
+              onStopDictation();
               const text = transcription.transcript;
               transcription.cancel();
               if (text) setInput((existing) => (existing ? existing + " " + text : text));
@@ -116,7 +109,8 @@ function DesktopComposerRow({
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
             }}
-            className={`${CIRCLE_BTN} bg-accent text-white hover:bg-accent-dark`}
+            disabled={!joinTranscript(input, transcription.transcript).trim()}
+            className={`${CIRCLE_BTN} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
             title="Send"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,62 +135,6 @@ function DesktopComposerRow({
 }
 
 /**
- * The trailing voice button — toggles recording on/off and resumes after a
- * TTS-induced pause, swapping its icon to reflect the current voice state.
- */
-function VoiceToggleButton({
-  voicePaused, isTranscribing, narrationEnabled, transcription, turnTakingRef, setInput, clearDraft, onUnpause, onVoice,
-}: {
-  voicePaused: boolean;
-  isTranscribing: boolean;
-  narrationEnabled: boolean;
-  transcription: TranscriptionHandle;
-  turnTakingRef: React.MutableRefObject<boolean>;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
-  clearDraft: () => void;
-  onUnpause: () => void;
-  onVoice: () => void;
-}) {
-  return (
-    <button
-      onClick={() => {
-        if (voicePaused) {
-          onUnpause();
-        } else if (isTranscribing) {
-          // Stop recording, preserve transcript into input for editing. It's
-          // now editable typed text, not voice — drop the dictation draft so
-          // it can't resurface later as a phantom "Recovered dictation".
-          turnTakingRef.current = false;
-          const text = transcription.transcript;
-          transcription.cancel();
-          if (text) setInput((existing) => (existing ? existing + " " + text : text));
-          clearDraft();
-        } else {
-          unlockAudioContext();
-          onVoice();
-        }
-      }}
-      className={`${CIRCLE_BTN} ${voicePaused ? "bg-primary/50 text-white animate-pulse" : isTranscribing ? "bg-danger text-white hover:bg-danger-dark active:opacity-80" : "bg-primary text-white hover:bg-primary-dark active:opacity-80"}`}
-      title={voicePaused ? "Resume recording (stops speech)" : isTranscribing ? "Stop recording" : narrationEnabled ? "Voice input (narration mode)" : "Voice input"}
-    >
-      {voicePaused ? (
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ) : isTranscribing ? (
-        <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-          <rect x="6" y="6" width="12" height="12" rx="2" />
-        </svg>
-      ) : narrationEnabled ? (
-        <NarrationMicIcon className="w-7 h-7" />
-      ) : (
-        <MicrophoneIcon className="w-7 h-7" />
-      )}
-    </button>
-  );
-}
-
-/**
  * Unified input area: button bar + inline textarea on desktop, button bar only on mobile.
  * On desktop (sm:+): [capture] [camera] [textarea...] [send] [stop] [voice] in one row.
  * On mobile: [capture] [camera] [spacer] [stop] [keyboard] [voice] — textarea appears below when typing.
@@ -205,7 +143,7 @@ export function ChatInputArea({
   textareaRef, input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
-  isStreaming, onInterrupt, turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
+  isStreaming, onInterrupt, onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAttachFiles, narrationEnabled,
 }: {
@@ -225,7 +163,7 @@ export function ChatInputArea({
   onStopSpeech: () => void;
   isStreaming: boolean;
   onInterrupt: () => void;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onStopDictation: () => void;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
@@ -274,7 +212,7 @@ export function ChatInputArea({
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
-          turnTakingRef={turnTakingRef}
+          onStopDictation={onStopDictation}
           doSend={doSend}
           zoomedViewAttr={zoomedViewAttr}
           timePassedAttr={timePassedAttr}
@@ -292,8 +230,9 @@ export function ChatInputArea({
             className={`${CIRCLE_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
             title="Stop speaking"
           >
+            {/* Speaker-x (audio), not the stop circle — that one stops the agent. */}
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {STOP_CIRCLE_PATHS}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM17 9l4 6m0-6-4 6" />
             </svg>
           </button>
         ) : null}
@@ -304,7 +243,8 @@ export function ChatInputArea({
             title="Stop agent"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {STOP_CIRCLE_PATHS}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
             </svg>
           </button>
         ) : null}
@@ -326,7 +266,7 @@ export function ChatInputArea({
           isTranscribing={isTranscribing}
           narrationEnabled={narrationEnabled}
           transcription={transcription}
-          turnTakingRef={turnTakingRef}
+          onStopDictation={onStopDictation}
           setInput={setInput}
           clearDraft={clearDraft}
           onUnpause={onUnpause}

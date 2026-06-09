@@ -47,6 +47,15 @@ content.includes("ref: box/inbox/note2.task.card")
 => true
 ```
 
+Running the scan again is a no-op: the YAML `- ref:` lines in the job
+created above are collected, so the same items aren't re-jobbed (this
+regressed once when ref collection only understood legacy XML `ref=""`):
+
+``` continue
+await createIntakeJobsForUnjobbed(box.root)
+=> 0
+```
+
 ### Skips items already referenced by a job
 
 If a pending job already references an inbox item, it's not double-counted:

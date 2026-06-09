@@ -95,6 +95,49 @@ const svc = createFakeGoogleGmail({
 => INBOX, Work
 ```
 
+## History tracking
+
+Messages passed at construction predate history (no records). `addMessage`
+and `addLabelsToMessage` advance the historyId and record changes, which
+`listHistory` replays from a checkpoint:
+
+```
+const svc = createFakeGoogleGmail({
+  messages: [{ id: "m0", threadId: "t0" }],
+});
+const before = await svc.getProfile();
+before.historyId
+=> 1
+
+svc.addMessage({ id: "m1", threadId: "t1", labelIds: ["INBOX"] });
+svc.addLabelsToMessage({ id: "m0", labelIds: ["Label_1"] });
+const result = await svc.listHistory({ startHistoryId: before.historyId });
+result.historyId
+=> 3
+
+JSON.stringify(result.history[0]?.messagesAdded?.[0]?.message.id)
+=> "m1"
+
+JSON.stringify(result.history[1]?.labelsAdded?.[0]?.labelIds)
+=> ["Label_1"]
+
+// Replaying from the latest checkpoint returns nothing new
+(await svc.listHistory({ startHistoryId: result.historyId })).history.length
+=> 0
+```
+
+`expireHistory` invalidates stored checkpoints, like Gmail aging out
+history — `listHistory` then throws NotFoundError and callers fall back to
+a full list:
+
+``` continue
+svc.expireHistory();
+let err = null;
+await svc.listHistory({ startHistoryId: result.historyId }).catch((e) => { err = e.message; });
+err
+=> History not found: 3
+```
+
 ## Call logging
 
 ```

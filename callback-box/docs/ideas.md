@@ -340,7 +340,21 @@ Open questions:
 
 The bigger framing question: this is the same insight as "use hooks instead of memory" at the personal-config layer, applied to the agent-loop layer. Callback-box has hooks at the git layer (pre-commit/post-commit) and at the scheduler layer (wakeup). Adding them at the agent-loop layer would be a third tier.
 
-## Hypothesis tracking for the boxholder agent
+## In-chat interactive questions from the agent
+
+Reported 2026-06-09: the chat agent can't actually ask the boxholder a question in chat — there's no working affordance for "agent asks, user answers, agent continues." The boxholder doesn't especially *like* being asked questions, but the models powering the agent ask them anyway (newer models especially), so the path has to work: a question with no answer affordance is a dead-end turn.
+
+Pieces that exist and don't cover this:
+- `box/questions/` — the async queue, for questions that can wait for a wakeup/review cycle. Not in-chat, not conversational.
+- `<callout context="...">` — renders content the user must see, but it's one-way; nothing marks "this expects a reply" or structures the reply.
+
+What's probably wanted:
+- A structured question tag in the chat output vocabulary (sibling of `<callout>`), rendered with answer affordances — tappable options for the enumerable case (the Claude Code AskUserQuestion shape: 2–4 options + free-text "other"), plain reply for the open case. The agent's next turn receives the selection as structured input rather than parsing prose.
+- A decision rule in the prompt about which channel a question belongs in: blocking-the-current-task → in-chat structured question; can-wait → `box/questions/` queue. (Connects to [[questions-aging-policy]] for the queued kind.)
+- Voice mode matters: when the user is hands-free, options should be speakable ("say one, two, or three" is awful; the agent should phrase the question so a natural spoken answer maps onto an option).
+- On mobile, tappable options are *faster* than typing — done well this reduces the friction of being asked, rather than adding to it.
+
+Open question: is this purely a display/vocabulary gap (the agent asks in prose today and it merely *feels* broken because nothing renders it as answerable), or does something actively break (question gets swallowed, turn ends oddly)? Worth reproducing the failure first to pin which.
 
 The agent forms suspicions constantly — "boxholder seems stressed about work this week," "the kitchen project may have stalled," "they're avoiding the topic of their sister." These are different from facts and currently have nowhere to live: too provisional for a person/topic card, too important to discard. Without persistence the agent re-derives them each session or, worse, forgets and asks something the suspicion would have steered it away from.
 
@@ -651,19 +665,11 @@ When processing image cards, prefer the date from EXIF `DateTimeOriginal` over f
 
 ## Gmail sync improvements
 
-The current Gmail connector dedups via a `seenMessageIds` list (capped at 5000) plus a `lastPullDate` `after:` filter. The cap and the date filter interact in ways worth revisiting:
-
-### Drop the `seenMessageIds` cap
-
-Each ID is ~16 chars, so 100k IDs is only ~1.6MB on disk. The 5000-cap exists to keep state small, but it means a labeled set larger than 5000 would roll IDs out and re-fetch them. Removing the cap (or raising it dramatically) lets the bare `label:inbox` query also drop the date filter safely, simplifying the code and fixing the labeling-as-routing case for the unbounded fallback too.
-
-### Detect newly-labeled messages even on the unbounded query
-
-For the bare `label:inbox` default, the date filter is currently kept (see `buildQuery`) to bound the list call. That means labeling an old message and expecting it to flow into the box doesn't work unless the user has configured `labels` or `query`. Options: widen the `after:` window (e.g. `lastPullDate - 30d`) to catch recently-labeled older messages, or use Gmail's history API (`users.history.list`) to incrementally pick up label changes. The history API is the right answer long-term but is a bigger change.
+*(Implemented 2026-06: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the history API with full-list fallback, baseline no-import first sync for the bare `label:inbox` default. See `src/connectors/gmail-pull.ts`.)* Remaining:
 
 ### Garbage-collect unlabeled messages
 
-If a message in the box loses its triggering label in Gmail (user archives it, removes the label, etc.), the box still has the inbox card and the seen ID. There's no signal back. A periodic reconciliation pass — list current matches, remove cards whose IDs no longer match — would close the loop, but needs careful design to avoid deleting cards the user has already acted on.
+If a message in the box loses its triggering label in Gmail (user archives it, removes the label, etc.), the box still has the inbox card and the seen ID. There's no signal back. A periodic reconciliation pass — list current matches, remove cards whose IDs no longer match — would close the loop, but needs careful design to avoid deleting cards the user has already acted on. (The history API plumbing now exists; `labelsRemoved` records would be the incremental signal.)
 
 ## Full-text + semantic search over a box
 
