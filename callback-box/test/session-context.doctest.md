@@ -203,6 +203,31 @@ END:VCALENDAR`);
 => 16:00-17:00 Dentist
 ```
 
+The `health` extra speaks only when a scheduled task is unhealthy —
+a healthy box (like everything above) omits it entirely.
+
+```continue
+await box.write("config/schedules/sync-notes.scheduled-script.card", `---
+cron: "0 * * * *"
+runs: cb wakeup --connector notes
+---
+`);
+await box.write("config/schedules/.state/sync-notes.json", JSON.stringify({
+  lastRun: "2026-06-09T09:00:00Z",
+  lastResult: "failure",
+  lastError: "ENETUNREACH",
+  lastSuccess: "2026-06-07T09:00:00Z",
+  consecutiveFailures: 4,
+  runCount: 50,
+}));
+
+(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true })).health
+=> sync-notes: failing ×4 (last success 2d ago)
+
+(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).health
+=> undefined
+```
+
 ```cleanup
 await box.cleanup();
 ```
