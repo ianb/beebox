@@ -43,7 +43,7 @@ export interface ScriptState {
   /** Health-alert latch: when a proactive alert was last sent for the
    * current unhealthy episode. Cleared on success so a relapse re-alerts. */
   alertedAt: string | null;
-  alertedFor: "failing" | "overdue" | null;
+  alertedFor: "failing" | "overdue" | "invalid" | null;
   runCount: number;
   recentRuns?: RunRecord[];
 }
