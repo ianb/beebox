@@ -238,14 +238,14 @@ steps:
     checkpoint: after-sync            # git tag for --from resumption
     validate:
       - committed: true               # working tree must be clean
-      - script: "ls box/jobs/*.intake-job.card | wc -l | grep -q 2"
+      - script: "ls box/jobs/*.intake.job.card | wc -l | grep -q 2"
       - prompt: "Check that intake jobs were created for the seeded inbox items"
 
   - name: process
     run: cb reactor
     validate:
       - committed: true
-      - script: "ls box/jobs/*.intake-job.card 2>/dev/null | wc -l | grep -q '^0$'"
+      - script: "ls box/jobs/*.intake.job.card 2>/dev/null | wc -l | grep -q '^0$'"
 ```
 
 ### Stubs (`stubs.yaml`)

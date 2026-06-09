@@ -34,7 +34,7 @@ count
 
 // A job was created in box/jobs/
 const allFiles = await readdir(join(box.root, "box/jobs"));
-const jobFiles = allFiles.filter(f => f.endsWith(".intake-job.card"));
+const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
 jobFiles.length
 => 1
 
@@ -70,7 +70,7 @@ await box.seed("box/inbox/already-handled.memo.card", "<memo>Old</memo>");
 
 // Create a job that already references it
 await box.seed(
-  "box/jobs/existing.intake-job.card",
+  "box/jobs/existing.intake.job.card",
   '<intake-job created="2026-01-01T00:00:00Z" source="test"><item ref="box/inbox/already-handled.memo.card" /></intake-job>',
 );
 box.commitAll("setup");
@@ -99,7 +99,7 @@ count
 => 3
 
 const allFiles = await readdir(join(box.root, "box/jobs"));
-const jobFiles = allFiles.filter(f => f.endsWith(".intake-job.card")).sort();
+const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card")).sort();
 jobFiles.length
 => 2
 
@@ -171,7 +171,7 @@ count
 => 1
 
 const allFiles = await readdir(join(box.root, "box/jobs"));
-const jobFiles = allFiles.filter(f => f.endsWith(".intake-job.card"));
+const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
 const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
 content.includes("source: gmail")
 => true
