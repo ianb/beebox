@@ -69,6 +69,15 @@ export const promptCommand = new Command("prompt")
         console.error(`cb prompt: FAILED (session ${agent.sessionId}, exit ${result.exitCode})`);
         process.exit(result.exitCode || 1);
       }
+
+      // Exit explicitly so a stray handle (SDK timer, lingering socket)
+      // can't keep the process alive past a completed run — schedulers
+      // would record that as a timeout failure. Flush stdout first:
+      // process.exit() drops data still queued on a pipe.
+      await new Promise<void>((resolve) => {
+        process.stdout.write("", () => resolve());
+      });
+      process.exit(0);
     }
   );
 
