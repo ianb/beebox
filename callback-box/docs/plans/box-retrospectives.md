@@ -219,12 +219,14 @@ integrator from recurrence:
 - Per the schema instructions, every trait/tone edit rewrites the
   personality body.
 
-Hallucination guard: each observation's `evidence` must appear verbatim
-(whitespace-normalized) in the session transcript; failures are dropped
-from the ledger and listed in the report under "discarded observations."
-Dedupe: an `evidenceHash` already in the ledger is skipped — this also
-neutralizes resumed-session transcript duplication regardless of how the
-SDK copies history across resumes.
+Hallucination guard: the observation schema *requires* the literal quote
+to be recorded in `evidence` — having to produce the quote is the guard
+(per the boxholder: the risk is asking for quote-*based* claims without
+asking for the quotes themselves). No automated re-verification against
+the transcript; deliberately kept lightweight. Dedupe: an `evidenceHash`
+already in the ledger is skipped — this neutralizes resumed-session
+transcript duplication regardless of how the SDK copies history across
+resumes.
 
 Per-run report: `store/reviews/retro/<runId>.md` — committed, plain
 markdown (machine-written audit artifact; a card schema would add
@@ -232,7 +234,7 @@ validation burden for no agent-facing benefit). Sections: **What I
 learned** (the boxholder-facing narrative, kept out of the core briefing
 per the converged design), **Sessions examined** (ids, thread refs,
 counts; including skipped/deferred/overflow), **Observations** (with
-evidence), **Discarded**, **Actions taken** (filled by the integrator:
+evidence), **Actions taken** (filled by the integrator:
 card edits with before/after gist, question cards created, confidence
 bumps with recurrence counts).
 
@@ -291,7 +293,7 @@ tool-friction rather than boxholder preference — is deferred outright
 | Chat registry file missing (box never chatted) | chunk-1 doctest | treat as zero chat sessions; report says "no chat registries found" | clear |
 | Transcript deleted between listing and read (user cleared `~/.claude`) | chunk-1 doctest | skip + report note (ENOENT pattern per `session.ts:75-82`) | clear |
 | Observer returns schema-invalid output | chunk-2 doctest (fake) | `invokeStructured` validation fails → session marked `failed`, retried next run, max 2 attempts, then reported | clear |
-| Observer fabricates an evidence quote | chunk-2 doctest (fake) | verbatim-quote check drops it; listed under "Discarded" in report | clear |
+| Observer fabricates an evidence quote | none | schema requires the literal quote be recorded — producing it is the guard; no automated re-verification (accepted simplification per boxholder) | silent if it happens; evidence is reviewable in report/ledger |
 | Resumed session re-presents old turns → duplicate observations inflate recurrence | chunk-2 doctest | `evidenceHash` dedupe; dedupe count in report | clear |
 | Live conversation observed mid-stream | chunk-1 doctest | 30-min quiescence window; deferred sessions listed in report | clear |
 | Backlog blowout after long idle (cost runaway) | chunk-1 doctest | `--max-sessions` cap; overflow named in report | clear |
@@ -322,9 +324,10 @@ and silent).
   **ADDRESSED**: integrator re-reads before editing; validation hook
   catches malformed results; frontmatter mutation is parse-mutate-
   reserialize per `CLAUDE.md`.
-- **Fabricated free-form value** — **ADDRESSED**: the verbatim-evidence
-  check makes honesty structurally cheaper than invention; every belief
-  carries provenance (`ref` + ledger + report).
+- **Fabricated free-form value** — **ADDRESSED**: the schema demands the
+  literal quote be recorded, which makes honesty structurally cheaper than
+  invention; every belief carries provenance (`ref` + ledger + report)
+  that the boxholder can spot-check.
 - **Validation error UX** — **ADDRESSED** (existing): `cb validate --hook`
   emits card-and-field-specific errors the agent already acts on today.
 - **Partial migration / transition state** — N/A: no existing data
