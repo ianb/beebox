@@ -12,7 +12,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
-import { detectKeyword } from "../../lib/speech-keywords";
+import { detectKeyword, appendSendKeywordTag } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
 import { sendSound, tick, recordingStop } from "../../lib/earcons";
 import { localTime, buildSpeechMessage, joinTranscript } from "./InteractiveChat-helpers";
@@ -33,6 +33,8 @@ interface SnapshotLike {
  */
 function runKeywordSend(opts: {
   text: string;
+  /** Trigger phrase the realtime pass matched (e.g. "send message"). */
+  matchedPhrase: string;
   audioBlob: Blob | null;
   transcription: { start: () => void };
   refs: VoiceRefs;
@@ -50,7 +52,7 @@ function runKeywordSend(opts: {
   inputRef: React.MutableRefObject<string>;
   setInput: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const { text, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput } = opts;
+  const { text, matchedPhrase, audioBlob, transcription, refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput } = opts;
   // Any text already in the composer (a prior stopped segment, or typing)
   // continues into this utterance rather than being discarded.
   const priorInput = inputRef.current.trim();
@@ -100,9 +102,14 @@ function runKeywordSend(opts: {
         }
         // Re-run keyword detection on the HQ text so the agent sees the
         // send-message (or other) keyword as a pill, not plain words.
-        // If HQ misheard the keyword entirely, just submit the raw text.
+        // The realtime pass heard the trigger (that's what fired this send),
+        // so when HQ normalized it away, re-inject the tag rather than let
+        // the trigger silently vanish from the persistent record.
         const keyword = detectKeyword(hqResult.text);
-        submit(keyword ? keyword.processedTranscript : hqResult.text, { diarized: hqResult.diarized });
+        const hqText = keyword
+          ? keyword.processedTranscript
+          : appendSendKeywordTag(hqResult.text, matchedPhrase);
+        submit(hqText, { diarized: hqResult.diarized });
       })
       .finally(() => { setHqInFlight(false); });
   } else {
@@ -158,8 +165,8 @@ export function useChatVoice(opts: {
 
   const transcription = useRealtimeTranscription({
     wantAudioBlob: () => narrationEnabledRef.current,
-    onKeywordSend: (text, audioBlob) => runKeywordSend({
-      text, audioBlob, transcription,
+    onKeywordSend: ({ processedTranscript, matchedPhrase, audioBlob }) => runKeywordSend({
+      text: processedTranscript, matchedPhrase, audioBlob, transcription,
       refs, sessionId, narrationEnabledRef, selectionsRef, resetSelections, setHqInFlight, setPendingHqDraft,
       doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput,
     }),

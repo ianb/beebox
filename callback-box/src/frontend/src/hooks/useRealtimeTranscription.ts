@@ -26,11 +26,17 @@ export type { TranscriptionState };
 
 export interface UseRealtimeTranscriptionOptions {
   /**
-   * Called when a send keyword fires. Receives the processed transcript
-   * and (if `wantAudioBlob` returned true and the segment captured any
-   * audio) a WAV blob the caller can use for narration mode's HQ pass.
+   * Called when a send keyword fires. Receives the processed transcript,
+   * the trigger phrase the realtime pass matched (so a later transcription
+   * pass that drops it can re-inject), and (if `wantAudioBlob` returned
+   * true and the segment captured any audio) a WAV blob the caller can use
+   * for narration mode's HQ pass.
    */
-  onKeywordSend?: (processedTranscript: string, audioBlob: Blob | null) => void;
+  onKeywordSend?: (send: {
+    processedTranscript: string;
+    matchedPhrase: string;
+    audioBlob: Blob | null;
+  }) => void;
   onKeywordCancel?: () => void;
   onKeywordMicOff?: () => void;
   onKeywordErase?: () => void;
@@ -86,10 +92,10 @@ export function useRealtimeTranscription(
   /**
    * When a send-keyword fires, we send STOP to the machine and wait for it
    * to transition to idle so the audio blob lands in context. The pending
-   * text is parked here in the meantime; the idle-transition effect picks
-   * it up and fires onKeywordSend(text, audioBlob).
+   * text + matched phrase are parked here in the meantime; the
+   * idle-transition effect picks them up and fires onKeywordSend.
    */
-  const pendingSendTextRef = useRef<string | null>(null);
+  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string } | null>(null);
   /**
    * Identifier of the most recent keyword fired against an *interim*
    * transcript ("<action>:<matchedPhrase>"). Suppresses re-firing when an
@@ -135,14 +141,21 @@ export function useRealtimeTranscription(
         // emits the segment's audio blob. The idle-transition effect below
         // fires onKeywordSend with both text and blob once the machine
         // settles. Used by narration mode to get the HQ-quality transcript.
-        pendingSendTextRef.current = keyword.processedTranscript;
+        pendingSendRef.current = {
+          processedTranscript: keyword.processedTranscript,
+          matchedPhrase: keyword.matchedPhrase,
+        };
         send({ type: "STOP" });
       } else {
         // Fast path: drop the in-flight stream and fire immediately so
         // the message commits with the realtime text — no waiting on WS
         // finalization (which adds 1-2s of dead air).
         send({ type: "CANCEL" });
-        optionsRef.current?.onKeywordSend?.(keyword.processedTranscript, null);
+        optionsRef.current?.onKeywordSend?.({
+          processedTranscript: keyword.processedTranscript,
+          matchedPhrase: keyword.matchedPhrase,
+          audioBlob: null,
+        });
       }
     } else if (keyword.action === "micOff") {
       send({ type: "CANCEL" });
@@ -159,10 +172,10 @@ export function useRealtimeTranscription(
   // and the audio blob is in context. Triggered by the state transition back
   // to idle. No-op when the fast path was taken (ref is null).
   useEffect(() => {
-    if (state !== "idle" || pendingSendTextRef.current === null) return;
-    const text = pendingSendTextRef.current;
-    pendingSendTextRef.current = null;
-    optionsRef.current?.onKeywordSend?.(text, snapshot.context.audioBlob);
+    if (state !== "idle" || pendingSendRef.current === null) return;
+    const pending = pendingSendRef.current;
+    pendingSendRef.current = null;
+    optionsRef.current?.onKeywordSend?.({ ...pending, audioBlob: snapshot.context.audioBlob });
   }, [state, snapshot.context.audioBlob]);
 
   // Keyword detection on confirmed (final) text — matches anywhere, so it
