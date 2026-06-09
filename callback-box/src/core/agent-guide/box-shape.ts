@@ -32,6 +32,7 @@ export function directoryLayoutSection(): string[] {
     "| `store/drive/` | Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync |",
     "| `store/integrated/` | Feedback absorbed into guides |",
     "| `store/recipes/` | Recipe collection (subdirectories for organization) |",
+    "| `store/reviews/retro/` | Retrospective run reports — what the retrospective observed in past chats and which belief edits it made |",
     "| `store/todos/` | Active todo lists — human action items |",
     "| `store/trash/` | Soft-deleted items |",
     "| `people/` | Person cards — key people referenced from briefings |",

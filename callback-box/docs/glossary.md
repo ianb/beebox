@@ -41,6 +41,8 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **cardworks** — The card library at `~/src/cardworks/`. Provides two schema primitives — `cardSchema()` for YAML-frontmatter cards and `element()` for legacy XML cards — plus parsing, serialization, Zod-based validation, the frontmatter splitter, and JSX support. Shared between callback-box and other projects in the monorepo.
 
+**retrospective** — The `process-retrospective` procedure (driven by `cb retro`): mines recent chat sessions for what the boxholder implicitly taught the agent and integrates it into personality/guide cards as `source: inferred` beliefs, confidence set by recurrence (1 session = hypothesis, 2–3 = low, 4+ = medium — the ceiling for inferred). Authoritative changes (briefing corrections, conflicts with `user-stated` beliefs) become question cards. Audit trail: run reports in `store/reviews/retro/`, ledger in `.callback-box/retro/`, commits trailered `Retro-Run: <runId>`. See `docs/plans/box-retrospectives.md`.
+
 **inbox** — `box/inbox/`. Where new cards land before processing.
 
 **archive** — `store/archive/`. Where processed cards move after the wakeup cycle finishes with them.

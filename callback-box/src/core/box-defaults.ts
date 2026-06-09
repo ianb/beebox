@@ -229,6 +229,18 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     runs: "cb procedure run refresh-maps",
     source: "Daily check; precheck no-ops when nothing changed",
   },
+  {
+    name: "process-retrospective",
+    description:
+      "Weekly retrospective: mine chat sessions for what the boxholder taught the agent, integrate into personality/guide cards",
+    cron: "0 7 * * 1",
+    notBefore: "3d",
+    onWakeup: false,
+    enabled: false,
+    lockGroup: "retro",
+    runs: "cb procedure run process-retrospective",
+    source: "Weekly Monday-morning sweep; enable per box once trialed",
+  },
 ];
 
 /**
