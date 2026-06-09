@@ -108,6 +108,39 @@ test("parseExamples: tracks lineOffset", async (t) => {
   t.equal(examples[1].lineOffset, 3);
 });
 
+test("parseExamples: blank lines and arrows inside a template literal are content, not boundaries", async (t) => {
+  const expr = 'const s = `first\n\n=> not an arrow\nlast`';
+  const examples = parseExamples(`${expr}\ns.length > 0\n=> true`);
+  t.equal(examples.length, 1);
+  t.equal(examples[0].expression, `${expr}\ns.length > 0`);
+  t.equal(examples[0].expected, "true");
+});
+
+test("generateTestSource: template-literal content is emitted verbatim (no injected indent)", async (t) => {
+  const md = '```\nconst ics = `BEGIN:VCALENDAR\nEND:VCALENDAR`;\nics.split("\\n").length\n=> 2\n```\n';
+  const source = generateTestSource(md, "/test.doctest.md");
+  t.ok(source.includes("const ics = `BEGIN:VCALENDAR\nEND:VCALENDAR`;"),
+    "template lines must not be re-indented");
+  t.notOk(/\n\s+END:VCALENDAR/.test(source), "no whitespace prepended inside the literal");
+});
+
+test("parseExamples: backticks inside quoted strings or line comments don't open a template", async (t) => {
+  // Three backticks inside a double-quoted string (markdown fence in test
+  // data) must not flip the template tracker — this exact shape appears in
+  // callback-box's reactor.doctest.md and once broke the whole file.
+  const examples = parseExamples('desc.includes("```xml")\n=> true\n\nfoo() // don`t count `these`\n=> 1');
+  t.equal(examples.length, 2);
+  t.equal(examples[0].expression, 'desc.includes("```xml")');
+  t.equal(examples[1].expected, "1");
+});
+
+test("generateTestSource: a semicolon at a template-literal line end is not a statement boundary", async (t) => {
+  const md = '```\nconst s = `content;\nmore`;\ns.includes(";")\n=> true\n```\n';
+  const source = generateTestSource(md, "/test.doctest.md");
+  t.ok(source.includes('t.check(__withPrints(__prints, s.includes(";"))'),
+    "the check expression is the line after the literal closes");
+});
+
 test("generateTestSource produces valid test module", async (t) => {
   const md = `# Test
 

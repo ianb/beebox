@@ -180,8 +180,9 @@ const enabledRules = {
   "custom/no-default-class-export": "error",
   // No default params — handle defaults explicitly in function body for visibility
   "default/no-default-params": "error",
-  // Don't throw non-Error values — ensures stack traces are always available
-  "error/no-throw-literal": "error",
+  // error/no-throw-literal is retired — replaced by the type-aware
+  // @typescript-eslint/only-throw-error in the projectService entry below
+  // (and globally disabled there; see that entry for the rationale).
   // Use custom error classes, not new Error() — enables programmatic error inspection
   "error/no-generic-error": "error",
   "error/require-custom-error": "error",
@@ -530,6 +531,47 @@ export function vibeCheck(options) {
       // it applies to every file — the base config enables the rule and matches
       // .tsx even when react:false, which disabledRules wouldn't reach.
       rules: { "no-optional-chaining/no-optional-chaining": "off" },
+    },
+    {
+      // error/no-throw-literal is retired — replaced by the type-aware rule in
+      // the next entry. Reviewed 2026-06-09 on a real codebase: the rule is
+      // purely syntactic, so it flagged EVERY `throw identifier` — including
+      // Error-typed variables and rethrows of caught errors — while missing
+      // `throw new NotAnError()` and `throw nonErrorCall()` entirely. It
+      // trained code into unsound `throw e as Error` casts (29 sites) and
+      // catch-everything fallbacks instead of the narrow "recover from one
+      // error type, rethrow the rest" style we actually want. Disabled with no
+      // `files` key because eslint-config-agent enables it globally (all file
+      // types, all directories), which the main block's allRulesOff can't reach.
+      rules: { "error/no-throw-literal": "off" },
+    },
+    {
+      // Type-aware rules. projectService builds a TS program per project,
+      // which adds roughly 1.5s to a single-file lint run (the per-edit hook)
+      // and ~2s to a full-tree run — keep this entry small. Scoped to src/
+      // TS files only: type info needs the file to be in the project's
+      // tsconfig, and .js shims have no type info.
+      files: ["src/**/*.{ts,tsx}"],
+      languageOptions: {
+        parserOptions: { projectService: true },
+      },
+      rules: {
+        // Don't throw non-Error values — ensures stack traces are always
+        // available. Bans literals, plain objects, and anything not typed as
+        // Error (including non-Error class instances and calls returning
+        // non-Error, which the old syntactic rule missed), while allowing
+        // `throw e` rethrows of caught values — narrow handling like
+        // `catch (e) { if (!(e instanceof RangeError)) throw e; ... }` is
+        // the style we want, not catch-everything fallbacks.
+        "@typescript-eslint/only-throw-error": [
+          "error",
+          {
+            allowRethrowing: true,
+            allowThrowingAny: false,
+            allowThrowingUnknown: false,
+          },
+        ],
+      },
     },
     // When react:false, .tsx files fall through to eslint-config-agent's strict
     // React profile, which (a) bans `??` via no-restricted-syntax and (b) sets

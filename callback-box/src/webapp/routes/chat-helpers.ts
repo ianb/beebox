@@ -47,6 +47,17 @@ export interface SelfNoteBody {
 /** Soft cap on total base64 image payload per request (25 MB). */
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
+/**
+ * Classify a request's User-Agent into the snapshot's `channel` value so
+ * the agent can shape output for the device (mobile screens don't render
+ * wide tables or long structured output well). Coarse on purpose —
+ * phone/tablet vs. everything else; undefined when there's no UA to read.
+ */
+export function classifyChannel(userAgent: string | undefined): string | undefined {
+  if (!userAgent) return undefined;
+  return /mobi|android|iphone|ipad/i.test(userAgent) ? "web-mobile" : "web-desktop";
+}
+
 export function escapeXmlAttr(v: string): string {
   return v
     .replace(/&/g, "&amp;")

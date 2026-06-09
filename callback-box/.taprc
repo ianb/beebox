@@ -25,4 +25,10 @@ jobs: 6
 # 5 minutes gives heavy files headroom under the capped contention above without
 # masking a genuine hang (a wedged test still surfaces, just later).
 timeout: 300
-reporter: min
+# Agent-first output: the consumers of test runs here are coding agents
+# reading through a pipe, not humans at a TTY. The plain `tap` reporter with
+# color off emits zero ANSI/cursor codes and full YAML failure diagnostics
+# (diff, file, line). Interactive reporters (`min`, `terse`, `base`) write
+# cursor-control sequences even when piped, which render as garbage.
+reporter: tap
+color: false

@@ -1,5 +1,19 @@
+# TS execution via tsx, NOT the @tapjs/typescript plugin. The three monorepo
+# projects share one tap install, and tap caches a single built plugin set —
+# if this project includes @tapjs/typescript while agent-doctest/callback-box
+# exclude it, every run of one project rebuilds the shared plugin set and the
+# *other* project's next run crashes (ERR_MODULE_NOT_FOUND on .js→.ts
+# imports, "no tests found"). All three .taprc files must agree on plugins.
+plugin:
+  - "!@tapjs/typescript"
+node-arg:
+  - --import=tsx
 include:
   - test/**/*.test.ts
 timeout: 30
 allow-incomplete-coverage: true
 allow-empty-coverage: true
+# Agent-first output: plain machine-readable TAP, no ANSI/cursor codes.
+# See callback-box/.taprc for rationale.
+reporter: tap
+color: false

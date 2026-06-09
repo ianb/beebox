@@ -190,6 +190,8 @@ Currently the boxholder agent gets the date but not derived context that frequen
 
 Implementation is trivial (compute at session start, inject into context) but the quality dividend is real because these are things conversations *constantly* reference and currently the agent has to derive or fudge.
 
+**IMPLEMENTED (web chat, June 2026)** — as read-only attributes on the per-turn `<chat-app>` snapshot, computed by `src/core/session-context.ts`: `local-time` (named weekday + box-local clock + phase of day) and `channel` (`web-desktop`/`web-mobile`, classified from the request User-Agent) on every message; `last-activity` (from the most-active pointer's `savedAt`) and `calendar` (next 24h of `store/calendar/`) on the first message of a brand-new session only. Deliberately in message text rather than the system prompt: the warm-pool backend reuses a prewarmed subprocess only on an exact system-prompt match, so the prompt must stay time-invariant. Remaining: Telegram thread sessions (`chat-thread-session.ts`) don't use the snapshot and got none of this — wire it up when touching that area.
+
 ## Scheduled-task health surfacing
 
 Scheduled automation (wakeup, scheduler ticks, overnight compaction once that exists, sync jobs) can silently stop running, and the failure isn't noticed until something downstream breaks (briefings stop updating, hunches stop being extracted, calendar drift). Stuff gets lost.
@@ -553,14 +555,6 @@ The analogy is how `git log --format=json` doesn't exist but git GUIs parse git'
 
 This also helps with the bounded-output problem: a renderer can decide what to show by default and expose a "show all" control, rather than the CLI trying to guess a good human default.
 
-### Agent "give up" mechanism
-
-Agent writes `.callback-box/agent-failure.json` with `{ reason, phase, sessionId }` to signal it can't complete. Caller detects, reverts uncommitted changes, logs failure. Prevents half-finished work from being committed.
-
-### Chat assistant as job dispatcher
-
-The chat frontend's system prompt should instruct the assistant to use jobs to start tasks rather than executing them synchronously. Also provide it with docs and CLI query tools to check: what's currently running, what's scheduled to run, when something last ran.
-
 ### Automatic transcript handling in schema instructions
 
 Several card type instructions (memo, audio, capture-session) include details about transcription handling (checking for `<transcription>`, skipping untranscribed audio, etc.). This should ideally be handled automatically by the processing pipeline rather than requiring agents to understand transcription state. The schema instructions should focus on describing the card's content and structure, not transcription machinery.
@@ -572,14 +566,6 @@ Implemented as `docs/doc-graph.md` (auto-generated cross-reference report). See 
 ### Speech playback timing
 
 Currently TTS speech doesn't play until the full response is complete (or at least a significant chunk). This means the "speak before doing work" pattern in the chat system prompt doesn't actually work as intended — the user hears the speech and sees the results at the same time, not speech-first. Investigate whether streaming partial speech playback is feasible so the user hears "Let me look into that" before tool calls start executing.
-
-### Voice keyword for photo capture
-
-Add a keyword trigger during voice input (especially the Clerk long recording mode) that captures a photo from the camera. Useful for annotating voice notes with visual context.
-
-### Image card EXIF date extraction
-
-When processing image cards, extract the date taken from EXIF data (DateTimeOriginal) rather than relying on file timestamps, which are unreliable after syncing/copying.
 
 ### Agent-editable UI text
 
@@ -655,7 +641,7 @@ The chat frontend's system prompt should instruct the assistant to *dispatch job
 
 ### Voice keyword for photo capture
 
-Add a keyword trigger during voice input (especially the Dropbox long-recording mode) that snaps a photo from the camera mid-recording. Useful for annotating voice notes with visual context — "take a picture" while dictating about something visual produces a linked photo + transcript pair.
+Add a keyword trigger during voice input (especially the Clerk / Dropbox long-recording modes) that snaps a photo from the camera mid-recording. Useful for annotating voice notes with visual context — "take a picture" while dictating about something visual produces a linked photo + transcript pair.
 
 ### Image card EXIF date extraction
 

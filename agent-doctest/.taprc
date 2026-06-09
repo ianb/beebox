@@ -7,3 +7,11 @@ node-arg:
 include:
   - test/**/*.test.ts
   - test/**/*.doctest.md
+# Agent-first output: plain machine-readable TAP, no ANSI/cursor codes.
+# See callback-box/.taprc for rationale.
+reporter: tap
+color: false
+# The uncovered remainder is the Node loader-hook plumbing (resolve/load),
+# which only runs via real module loading, not unit tests. Don't fail the
+# suite on it — same setting as cardworks.
+allow-incomplete-coverage: true

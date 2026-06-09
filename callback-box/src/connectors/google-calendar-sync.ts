@@ -66,7 +66,7 @@ async function handleCancelledEvent(
     if (icsContent) note.icsContent = icsContent;
     acc.notes.push(note);
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
   delete state.eventFiles[event.id];
 }
@@ -81,7 +81,7 @@ async function unlinkRenamed(
     await fs.unlink(path.join(calDir, oldName));
     acc.deleted.push(path.relative(boxRoot, path.join(calDir, oldName)));
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
 }
 

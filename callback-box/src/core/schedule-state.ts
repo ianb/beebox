@@ -147,7 +147,7 @@ export async function acquireScriptLock(
     if (err instanceof LockHeldError) {
       throw new ScriptAlreadyRunningError(opts.scriptName, err.holder.pid);
     }
-    throw err as Error;
+    throw err;
   }
 }
 

@@ -28,4 +28,21 @@ export default [
       "personal-vibe-check/restrict-component-classes": ["error", { matchAll: true }],
     },
   },
+  {
+    // Same options as the preset, plus an allowance for TanStack Router's
+    // `throw redirect(...)` pattern — the router catches thrown Redirects
+    // (router.tsx route guards).
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/only-throw-error": [
+        "error",
+        {
+          allowRethrowing: true,
+          allowThrowingAny: false,
+          allowThrowingUnknown: false,
+          allow: [{ from: "package", name: "Redirect", package: "@tanstack/router-core" }],
+        },
+      ],
+    },
+  },
 ];

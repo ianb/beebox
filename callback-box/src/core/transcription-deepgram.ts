@@ -138,12 +138,12 @@ export async function transcribeAudioDeepgram(
     return { text, duration, language };
   } catch (error) {
     if (isTranscriptionError(error)) {
-      throw error as Error;
+      throw error;
     }
     const httpErr = error as HTTPError;
     if (httpErr.response) {
       const parsed = await parseErrorResponse(httpErr.response);
-      throw parsed as Error;
+      throw parsed;
     }
     throw new DeepgramNetworkError((error as Error).message);
   }

@@ -44,7 +44,7 @@ export async function pushAndCleanOrphans(
   try {
     files = await fs.readdir(calDir);
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err as Error;
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return { pushed, deleted, notes };
   }
 

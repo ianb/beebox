@@ -152,7 +152,7 @@ export async function loadTranscriptionConfig(boxRoot?: string): Promise<Transcr
     if (err.code === "ENOENT") return defaults;
     // Permissions / I/O failures are not the same as "no config" — surface
     // them rather than silently returning defaults.
-    throw e as Error;
+    throw e;
   }
   // JSON parse errors are real bugs (corrupted config); let them bubble.
   const stored = JSON.parse(content) as StoredTranscriptionConfig;
@@ -176,7 +176,7 @@ export async function updateTranscriptionConfig(
     content = await fs.readFile(configPath, "utf-8");
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e as Error;
+    if (err.code !== "ENOENT") throw e;
     // No file yet — start fresh.
   }
   if (content !== null) {
@@ -357,7 +357,7 @@ async function transcribeAudioWhisper(
     };
   } catch (error) {
     if (isTranscriptionError(error)) {
-      throw error as Error;
+      throw error;
     }
 
     // ky HTTPError — parse the response for error details

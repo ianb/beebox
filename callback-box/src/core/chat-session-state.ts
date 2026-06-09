@@ -219,13 +219,16 @@ export function deleteSessionFile(boxRoot: string, sessionFile: string | null): 
 /**
  * Combine several queued sends into one turn: text joined with blank lines,
  * image attachments concatenated with per-message id offsets so `[imageN]`
- * tokens from different messages don't collide.
+ * tokens from different messages don't collide. The latest queued
+ * channel wins — it reflects where the user is now.
  */
 export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const combinedImages: ChatImage[] = [];
   const combinedTextParts: string[] = [];
+  let channel: string | undefined;
   let idOffset = 0;
   for (const q of queued) {
+    if (q.channel !== undefined) channel = q.channel;
     const imgs = q.images ?? [];
     let text = q.text;
     if (imgs.length > 0 && idOffset > 0) {
@@ -244,5 +247,9 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     combinedTextParts.push(text);
     idOffset += imgs.length;
   }
-  return { text: combinedTextParts.join("\n\n"), images: combinedImages };
+  return {
+    text: combinedTextParts.join("\n\n"),
+    images: combinedImages,
+    ...(channel !== undefined ? { channel } : {}),
+  };
 }

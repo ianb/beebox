@@ -77,6 +77,47 @@ export function parseCodeBlocks(markdown) {
 }
 
 /**
+ * Track whether a multi-line template literal is open across one line of
+ * example code. Scans the line with a small lexer: backticks inside
+ * single/double-quoted strings or after a `//` line comment don't count,
+ * and escapes (\`) are honored both inside and outside templates. Inside
+ * template content everything except the closing backtick is ignored.
+ *
+ * Known approximations (kept deliberately — doctest examples are short):
+ * backticks inside regex literals or inside `${}` interpolations aren't
+ * understood. The failure mode of NOT tracking templates at all — silently
+ * corrupting multi-line string content — is far worse than these edges.
+ */
+function nextTemplateState(inTemplate, line) {
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === "\\") {
+      i++; // skip the escaped character
+      continue;
+    }
+    if (inTemplate) {
+      if (c === "`") inTemplate = false;
+      continue;
+    }
+    if (inSingle) {
+      if (c === "'") inSingle = false;
+      continue;
+    }
+    if (inDouble) {
+      if (c === '"') inDouble = false;
+      continue;
+    }
+    if (c === "'") inSingle = true;
+    else if (c === '"') inDouble = true;
+    else if (c === "/" && line[i + 1] === "/") break;
+    else if (c === "`") inTemplate = true;
+  }
+  return inTemplate;
+}
+
+/**
  * Parse one or more examples from a code block.
  *
  * Single-line result:
@@ -113,10 +154,18 @@ export function parseExamples(content) {
       continue;
     }
 
-    // Collect expression lines (everything until => or end of content)
+    // Collect expression lines (everything until => or end of content).
+    // While inside a multi-line template literal, blank lines and
+    // `=>`-looking lines are string content, not example boundaries.
     const exprStart = i;
     const exprLines = [];
-    while (i < lines.length && lines[i] !== "=>" && !lines[i].startsWith("=> ") && lines[i].trim() !== "") {
+    let inTemplate = false;
+    while (
+      i < lines.length &&
+      (inTemplate ||
+        (lines[i] !== "=>" && !lines[i].startsWith("=> ") && lines[i].trim() !== ""))
+    ) {
+      inTemplate = nextTemplateState(inTemplate, lines[i]);
       exprLines.push(lines[i]);
       i++;
     }
@@ -193,10 +242,14 @@ function splitExpression(expression) {
     return { setup: [], expr: expression };
   }
 
-  // Find the last line ending with ;
+  // Find the last line ending with ; — but a `;` at the end of a line
+  // that's still inside a template literal is string content, not a
+  // statement boundary.
   let lastSemi = -1;
+  let inTemplate = false;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trimEnd().endsWith(";")) {
+    inTemplate = nextTemplateState(inTemplate, lines[i]);
+    if (!inTemplate && lines[i].trimEnd().endsWith(";")) {
       lastSemi = i;
     }
   }
@@ -219,6 +272,21 @@ function splitExpression(expression) {
 }
 
 /**
+ * Push source lines with a cosmetic indent — except lines that begin
+ * inside a multi-line template literal, which must be emitted verbatim:
+ * an injected indent there silently changes the string's content.
+ * @param {string[]|string} lines
+ */
+function emitLines(out, lines, indent) {
+  const list = Array.isArray(lines) ? lines : lines.split("\n");
+  let inTemplate = false;
+  for (const line of list) {
+    out.push(inTemplate ? line : `${indent}${line}`);
+    inTemplate = nextTemplateState(inTemplate, line);
+  }
+}
+
+/**
  * Emit examples into the output array (shared by normal and continue blocks).
  * @param {string} indent - indentation prefix (default "  ")
  */
@@ -228,22 +296,16 @@ function emitExamples(out, examples, indent = "  ") {
 
     if (ex.throws) {
       const { setup, expr } = splitExpression(ex.expression);
-      for (const line of setup) {
-        out.push(`${indent}${line}`);
-      }
+      emitLines(out, setup, indent);
       const mode = ex.expected.includes(":") ? "full" : "name";
       out.push(`${indent}t.checkThrows(() => (${expr}), { expected: ${JSON.stringify(ex.expected)}, mode: ${JSON.stringify(mode)} });`);
     } else if (ex.expected !== null) {
       const { setup, expr } = splitExpression(ex.expression);
-      for (const line of setup) {
-        out.push(`${indent}${line}`);
-      }
+      emitLines(out, setup, indent);
       out.push(`${indent}await t.check(__withPrints(__prints, ${expr}), ${JSON.stringify(ex.expected)});`);
     } else {
       // No assertion — just run the statements
-      for (const line of ex.expression.split("\n")) {
-        out.push(`${indent}${line}`);
-      }
+      emitLines(out, ex.expression, indent);
     }
   }
 }
@@ -319,9 +381,7 @@ export function generateTestSource(markdown, filePath) {
       if (testOpen) {
         // Emit teardown inline in the current test
         out.push(`  t.teardown(async () => {`);
-        for (const line of block.content.split("\n")) {
-          out.push(`    ${line}`);
-        }
+        emitLines(out, block.content, "    ");
         out.push(`  });`);
       } else {
         // Save for the next test
@@ -355,9 +415,7 @@ export function generateTestSource(markdown, filePath) {
       // Emit any pending cleanup as teardown
       if (pendingCleanup.length > 0) {
         out.push(`  t.teardown(async () => {`);
-        for (const line of pendingCleanup) {
-          out.push(`    ${line}`);
-        }
+        emitLines(out, pendingCleanup, "    ");
         out.push(`  });`);
         pendingCleanup = [];
       }

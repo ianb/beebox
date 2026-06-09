@@ -9,10 +9,8 @@
  */
 
 import { EventEmitter } from "node:events";
-import {
-  composeChatAppSnapshot,
-  type FeatureMap,
-} from "./chat-features.js";
+import { type FeatureMap } from "./chat-features.js";
+import { composeSendSnapshot } from "./session-context.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./chat-session-features.js";
 import {
   loadSessionHistory,
@@ -298,6 +296,27 @@ export class ChatSession extends EventEmitter {
       return false;
     }
 
+    const rawInput: ChatSendInput = typeof message === "string"
+      ? { text: message }
+      : message;
+
+    // Prepend the chat-app snapshot: feature flags, wall-clock time, and
+    // situational context (box-local time always; last-activity and
+    // calendar only on the first message of a brand-new conversation —
+    // sessionId is still unassigned at that point). Visible to the agent on
+    // every user turn; encapsulated to one tag so it's easy to skim past.
+    //
+    // Composed BEFORE the run starts: the snapshot does filesystem I/O, and
+    // observers of "a run exists" (drain-path tests, callers polling the
+    // backend) expect run.send to follow run creation with no awaits in
+    // between.
+    await this.features.ensureLoaded();
+    const snapshot = await composeSendSnapshot(this.boxRoot, {
+      features: this.features.snapshot(),
+      sessionStart: this.sessionId === null,
+      ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
+    });
+
     if (this.run === null || this.run.closed) {
       await this.startRun();
     }
@@ -310,18 +329,6 @@ export class ChatSession extends EventEmitter {
     this.busy = true;
     this.turnText = "";
 
-    const rawInput: ChatSendInput = typeof message === "string"
-      ? { text: message }
-      : message;
-
-    // Prepend the chat-app snapshot: feature flags + fresh wall-clock time.
-    // Visible to the agent on every user turn; encapsulated to one tag so
-    // it's easy for the agent to skim past when not relevant.
-    await this.features.ensureLoaded();
-    const snapshot = composeChatAppSnapshot({
-      features: this.features.snapshot(),
-      time: new Date().toISOString(),
-    });
     const input: ChatSendInput = {
       ...rawInput,
       text: `${snapshot}\n${rawInput.text}`,

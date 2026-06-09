@@ -121,6 +121,13 @@ export interface ChatImage {
 export interface ChatSendInput {
   text: string;
   images?: ChatImage[];
+  /**
+   * Where the user is sending from (e.g. "web-desktop", "web-mobile"),
+   * classified per request by the route layer. Surfaces to the agent as
+   * the snapshot's `channel` attribute so it can shape output for the
+   * device. Omitted when the transport doesn't know.
+   */
+  channel?: string;
 }
 
 /**
