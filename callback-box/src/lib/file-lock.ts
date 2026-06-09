@@ -189,7 +189,7 @@ async function writeExclusive(path: string, holder: LockHolder): Promise<boolean
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "EEXIST") return false;
-    throw err as Error;
+    throw err;
   }
   try {
     await handle.writeFile(JSON.stringify(holder, null, 2) + "\n");
@@ -204,7 +204,7 @@ async function unlinkIgnoringMissing(path: string): Promise<void> {
     await fs.unlink(path);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT") throw err as Error;
+    if (code !== "ENOENT") throw err;
   }
 }
 
@@ -297,7 +297,7 @@ export async function scanLocks(
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ENOENT") return result;
-    throw err as Error;
+    throw err;
   }
   for (const entry of entries) {
     if (!entry.endsWith(suffix)) continue;

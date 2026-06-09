@@ -136,7 +136,7 @@ export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCale
       } catch (err) {
         // 410 Gone means already deleted — not an error
         if ((err as HTTPError).response?.status === 410) return;
-        throw err as Error;
+        throw err;
       }
     },
   };

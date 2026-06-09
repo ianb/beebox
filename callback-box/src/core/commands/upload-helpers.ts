@@ -156,7 +156,7 @@ export async function loadLedger(boxRoot: string): Promise<UploadLedger> {
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return emptyLedger();
-    throw e as Error;
+    throw e;
   }
   const parsed = JSON.parse(content) as unknown;
   if (
