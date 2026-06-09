@@ -284,6 +284,17 @@ async function ensureRunning(name: string): Promise<WorktreeEntry> {
     throw err;
   }
 
+  // Validate the name BEFORE registering anything. Browsers fire background
+  // requests whose first path segment is not a worktree (`/.well-known/...`
+  // from Chrome devtools, crawler probes, typos); registering those — even
+  // as failures — pollutes the index page with phantom entries and burns a
+  // spawn attempt. Unknown names 404 without leaving a trace.
+  if ((await resolveWorktree(name)) === null) {
+    const err: StatusError = new Error(`Worktree ${JSON.stringify(name)} not found`);
+    err.statusCode = 404;
+    throw err;
+  }
+
   const startPromise = startWorktree(name);
   worktrees.set(name, {
     state: "starting",

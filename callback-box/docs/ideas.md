@@ -448,28 +448,6 @@ Several things go wrong when adding a new box to the server that are easy to for
 
 Longer term: `add-box.sh` or a `cb deploy-check` command could verify: all standard dirs exist and are writable, required secrets are present, `cb validate` passes, and the web endpoint responds.
 
-## Scheduler: `cb tick --force` and timeout durability
-
-Surfaced while debugging a Wren daily-rumination "failure" where the agent had actually completed and committed but the wrapper hung past the 10-minute mono timeout.
-
-### Add `--force` to `cb tick --script <name>`
-
-Currently `--script` only filters which schedules to evaluate; `not-before`, `budget`, and lock-group checks still apply, so there's no clean way to manually re-run a script that just ran. Add a `--force` flag that:
-
-- Bypasses `not-before` and `budget` checks.
-- On lock-group conflict, only skips if the holder is *live* (the file-lock primitive already auto-cleans dead holders, so this is mostly free — just remove the lock-group skip's reliance on a stale "running" map for force runs).
-- Does not preempt a live holder.
-
-### `cb prompt` doesn't exit promptly after the agent's final turn
-
-Symptom: a scheduled `cb prompt …` invocation continued running for ~65 minutes of wall time after the agent's final message landed (commit and journal entry succeeded), until the 10-min mono setTimeout finally fired and SIGKILLed the tree. This made a successful run look like a failure in the scheduler log.
-
-Hypothesis: the spawned `claude --print` process isn't closing stdout/exiting after returning its final response. Worth instrumenting `runAgent` in `src/core/agent.ts` — log when `child.on("close")` fires vs. when the last stdout chunk arrived. If they're far apart, the issue is in claude-code itself; if close fires promptly but our wrapper hangs after, look at the prompt-logger proxy lifecycle (`stopPromptLogger`) and any pending I/O in `cb prompt`.
-
-### Re-evaluate the per-script timeout
-
-`SCRIPT_TIMEOUT = 10m` is monotonic time, which means it pauses during macOS sleep. That's good — a script that was about to finish doesn't get killed just because the laptop closed. But `wren-weekly-research` has `--max-turns 30` (web research) and bumps right against 10 min of real CPU time. Either bump the per-script timeout (configurable in the card?) or add a `<timeout>` attribute on `<scheduled-script>`.
-
 ## Switch deploy from rsync to git push
 
 `deploy/deploy.sh` rsyncs the local working tree to `/opt/callback/`, excluding `.git`. Side effects:
@@ -817,6 +795,10 @@ Long horizon. The minimum viable version is just a `docs/patterns/` directory in
 <https://github.com/akiomik/mado> — fast Rust Markdown linter, CommonMark + GFM, ~50x faster than markdownlint. We already lint markdown, so this is mostly a speed win. Caveats: probably doesn't help with the link-checking we care about, and unclear whether either our current linter or mado understands Markdoc (which we plan to adopt).
 
 Comparison of markdown linters: <https://panache.bz/guide/comparison.html> (covers several dialects but not Markdoc).
+
+## Filed for later: sem — semantic git understanding
+
+<https://ataraxy-labs.github.io/sem/> — overlays entity-level (functions, classes, methods) understanding onto git operations. Commands: `diff`, `blame`, `impact`, `log`, `entities`, `context`. The `sem context` command generates token-budgeted context windows for LLM prompts; claims 2.3x accuracy improvement for AI agents vs raw line diffs. Worth exploring for agent workflows — e.g. as input to code review, or for the "before you build this" reuse-search problem. (Came in via `cb feedback` 2026-06-07.)
 
 ## Fancier PDF manipulation
 

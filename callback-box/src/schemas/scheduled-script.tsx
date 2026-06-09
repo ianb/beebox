@@ -57,6 +57,7 @@ export const ScheduledScriptSchema: CardSchema = cardSchema("scheduled-script", 
     enabled: z.boolean().optional(),
     budget: z.string().optional(),
     "lock-group": z.string().optional(),
+    timeout: z.string().optional(),
     description: z.string().optional(),
     runs: z.string(),
     source: SourceField.optional(),
@@ -80,6 +81,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **enabled**: Set to \`false\` to disable without deleting.
 - **budget**: Max cumulative runtime within a window. Format: \`"LIMIT/WINDOW"\` (e.g., \`"10m/5h"\` = max 10 minutes of runtime in any 5-hour window). Scripts exceeding their budget are skipped until the window clears.
 - **lock-group**: Named concurrency group. Scripts sharing a lock-group won't run concurrently — if one is already running, others in the same group are skipped.
+- **timeout**: Max runtime for a single run, as a duration string (e.g. \`25m\`). Counts only awake time (machine sleep doesn't eat the budget). Default: \`10m\`. The run is killed when it exceeds this.
 - **runs**: The command to execute (required). Runs with cwd set to box root.
 - **description**: Human-readable summary of what this schedule does.
 - **source**: Why this schedule exists. Either a plain string, or \`{text?, ref?}\` to link to a related card.
@@ -108,6 +110,7 @@ export interface ScheduledScriptFields {
   enabled?: boolean;
   budget?: string;
   "lock-group"?: string;
+  timeout?: string;
   description?: string;
   runs: string;
   source?: string | { text?: string; ref?: string };
@@ -138,6 +141,7 @@ export interface ParsedScheduledScript {
   createAfterSuccess: Array<{ path: string; args: Record<string, string> }>;
   budget: { limitMs: number; windowMs: number } | undefined;
   lockGroup: string | undefined;
+  timeoutMs: number | undefined;
   requires: ScheduleRequirements | undefined;
 }
 
@@ -172,6 +176,7 @@ export function parseScheduledScript(fields: ScheduledScriptFields): ParsedSched
     })),
     budget: fields.budget !== undefined ? parseBudget(fields.budget) : undefined,
     lockGroup: fields["lock-group"],
+    timeoutMs: fields.timeout !== undefined ? parseDuration(fields.timeout) : undefined,
     requires:
       fields.requires?.connectors && fields.requires.connectors.length > 0
         ? { connectors: fields.requires.connectors }
@@ -246,7 +251,9 @@ export function isDueForWakeup(script: ParsedScheduledScript, ctx: ScheduleCheck
 /**
  * Check if a script is within its runtime budget.
  * Returns true if the script is allowed to run (budget not exceeded).
- * Sums non-sleep-affected durations within the budget window.
+ * Sums run durations within the budget window. Durations are awake
+ * runtime (exec-with-timeout measures them sleep-free), so runs flagged
+ * sleepAffected count like any other — the flag is informational.
  */
 export function isWithinBudget(
   budget: { limitMs: number; windowMs: number },
@@ -256,7 +263,6 @@ export function isWithinBudget(
   const runs = opts.recentRuns ?? [];
   let usedMs = 0;
   for (const r of runs) {
-    if (r.sleepAffected) continue;
     if (new Date(r.ts).getTime() >= cutoff) {
       usedMs += r.durationMs;
     }

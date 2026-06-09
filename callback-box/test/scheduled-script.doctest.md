@@ -6,6 +6,7 @@ Parsing, scheduling, and budget utilities for scheduled script cards. Scripts de
 import {
   parseDuration,
   parseBudget,
+  parseScheduledScript,
   isDue,
   isDueForWakeup,
   isWithinBudget,
@@ -61,6 +62,20 @@ JSON.stringify(parseBudget("10m/5h"))
 
 JSON.stringify(parseBudget("30s/1m"))
 => {"limitMs":30000,"windowMs":60000}
+```
+
+## parseScheduledScript: timeout
+
+The optional `timeout` field caps a single run's awake runtime, as a duration
+string. It parses to `timeoutMs`; when absent, the runner falls back to the
+default `SCRIPT_TIMEOUT` (10 minutes).
+
+```
+parseScheduledScript({ type: "scheduled-script", runs: "echo hi", timeout: "25m" }).timeoutMs
+=> 1500000
+
+parseScheduledScript({ type: "scheduled-script", runs: "echo hi" }).timeoutMs
+=> undefined
 ```
 
 ## isDue
@@ -157,7 +172,7 @@ isDueForWakeup(makeScript({ onWakeup: true, enabled: false }), { lastRun: null, 
 
 ## isWithinBudget
 
-Checks runtime budget — sums non-sleep-affected run durations within the budget window. Returns `{ allowed, usedMs }`.
+Checks runtime budget — sums run durations within the budget window. Returns `{ allowed, usedMs }`. Durations are awake runtime (measured sleep-free by exec-with-timeout), so the `sleepAffected` flag is informational and does not exclude a run.
 
 No recent runs — always allowed:
 
@@ -180,11 +195,11 @@ JSON.stringify(isWithinBudget({ limitMs: 600_000, windowMs: 18_000_000 }, { rece
 => {"allowed":false,"usedMs":700000}
 ```
 
-Sleep-affected runs are excluded from the budget calculation:
+Sleep-affected runs count like any other — their recorded duration is already awake-only:
 
 ```
-JSON.stringify(isWithinBudget({ limitMs: 600_000, windowMs: 18_000_000 }, { recentRuns: [{ ts: "2026-02-21T09:00:00Z", durationMs: 500_000, sleepAffected: true }, { ts: "2026-02-21T09:30:00Z", durationMs: 100_000 }], now: new Date("2026-02-21T10:00:00Z") }))
-=> {"allowed":true,"usedMs":100000}
+JSON.stringify(isWithinBudget({ limitMs: 700_000, windowMs: 18_000_000 }, { recentRuns: [{ ts: "2026-02-21T09:00:00Z", durationMs: 500_000, sleepAffected: true }, { ts: "2026-02-21T09:30:00Z", durationMs: 100_000 }], now: new Date("2026-02-21T10:00:00Z") }))
+=> {"allowed":true,"usedMs":600000}
 ```
 
 Runs outside the window are also ignored:
