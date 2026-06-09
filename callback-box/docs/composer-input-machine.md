@@ -1,8 +1,10 @@
 # Composer input machine — design note
 
-**Status:** in progress. Audience: us. The companion doc `composer-states.md` (separate task)
-enumerates the *current* rendered states with screenshots; this doc proposes the state machine
-that replaces the loose state behind them.
+**Status:** implemented, as the overlay decomposition described in the note below
+(`src/frontend/src/machines/composerMachine.ts`, wired in `InteractiveChat-voice.ts`, doctested
+in `test/composer-machine.doctest.md`). Audience: us. The companion doc `composer-states.md`
+enumerates the rendered states with screenshots; this doc records the design of the machine
+behind them, and keeps the five-state child-invoke version as the target end-state.
 
 > **Implementation note (overlay decomposition).** The body below works up to a five-state voice
 > region (`idle | dictating | committing | speaking | pausedForSpeech`). That is the *idealized*
