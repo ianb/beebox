@@ -40,7 +40,7 @@ export {
   interruptChat,
   postAudioForHqTranscription,
   restartChatSubprocess,
-  sendChatMessage,
+  startChatTurn,
   setChatFeature,
   setChatModel,
 } from "./api-chat";

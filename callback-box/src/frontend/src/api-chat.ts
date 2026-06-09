@@ -6,7 +6,7 @@
  */
 
 import { RequestError } from "./lib/errors";
-import { fetchJson, getApiBase, NoResponseBodyError } from "./api-core";
+import { fetchJson, getApiBase } from "./api-core";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -160,14 +160,26 @@ export async function restartChatSubprocess(params: { sessionId: string }): Prom
   });
 }
 
+/** Outcome of starting a chat turn — see {@link startChatTurn}. */
+export interface ChatTurnStart {
+  /** Server-minted id to subscribe to (events.turnStream) for the output.
+   *  Absent when the send was queued or deduplicated (no new stream). */
+  turnId?: string;
+  /** The agent was busy; the message was queued and will surface via refresh. */
+  queued?: boolean;
+  /** This messageId was already processed; the turn is already done. */
+  deduplicated?: boolean;
+}
+
 /**
- * Send a chat message and stream the response via SSE.
- * Calls onMessage for each streamed JSON message from Claude.
- * Returns when the turn is complete.
+ * Start a chat turn. POSTs the message and returns immediately with a `turnId`
+ * (or `queued`/`deduplicated`). The turn's output is delivered separately over
+ * the `events.turnStream` subscription, keyed by that turnId — so a dropped
+ * connection resumes the stream instead of losing it.
  *
- * Retries once on network failure with a messageId to prevent duplicates.
+ * Retries once on network failure with a stable messageId to prevent dup turns.
  */
-export async function sendChatMessage(params: {
+export async function startChatTurn(params: {
   /** Session to send into. Pass `"new"` to start a fresh conversation. */
   session: string;
   message: string;
@@ -176,25 +188,15 @@ export async function sendChatMessage(params: {
    *  callers (e.g. an actor body that runs twice under StrictMode). */
   messageId?: string;
   images?: ChatImageAttachment[];
-  /**
-   * Box-relative landmark directory to bind a fresh chat to. Only honored
-   * when `session === "new"`; the backend uses it to spawn the SDK with
-   * `cwd` set to that directory and persists the association.
-   */
+  /** Box-relative landmark directory to bind a fresh chat to (session "new"). */
   contextDir?: string;
-  /**
-   * Chat-feature seeds chosen before the session existed (e.g. narration
-   * toggled on in a brand-new chat). Only honored when `session === "new"`;
-   * the backend merges them over landmark defaults so the choice applies to
-   * the first turn.
-   */
+  /** Pre-session chat-feature seeds (session "new"). */
   seedFeatures?: Record<string, string>;
-  onMessage: (msg: Record<string, unknown>) => void;
-}): Promise<void> {
-  const { session, message, images, contextDir, seedFeatures, onMessage } = params;
+}): Promise<ChatTurnStart> {
+  const { session, message, images, contextDir, seedFeatures } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const attempt = async (_retry: boolean): Promise<Response> => {
+  const attempt = async (): Promise<Response> => {
     const response = await fetch(`${getApiBase()}/chat/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -220,54 +222,18 @@ export async function sendChatMessage(params: {
 
   let response: Response;
   try {
-    response = await attempt(false);
+    response = await attempt();
   } catch (err) {
     // Retry once on network errors (not HTTP errors — those already threw above).
     // fetch() throws TypeError on network failure.
     if (err instanceof TypeError) {
       console.warn("[chat] Send failed with network error, retrying...", err.message);
       await new Promise((r) => setTimeout(r, 2000));
-      response = await attempt(true);
+      response = await attempt();
     } else {
       throw err instanceof Error ? err : new RequestError(String(err));
     }
   }
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new NoResponseBodyError();
-
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          onMessage(data);
-        } catch (e) {
-          // Malformed SSE data line — partial frames can occur mid-stream, so
-          // log at debug rather than spamming warn.
-          console.debug("Skipping unparseable SSE data line:", e);
-        }
-      }
-    }
-  }
-
-  // Process remaining buffer
-  if (buffer.startsWith("data: ")) {
-    try {
-      const data = JSON.parse(buffer.slice(6));
-      onMessage(data);
-    } catch (e) {
-      console.debug("Skipping unparseable trailing SSE buffer:", e);
-    }
-  }
+  return (await response.json()) as ChatTurnStart;
 }

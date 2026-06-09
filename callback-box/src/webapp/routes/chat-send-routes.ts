@@ -8,11 +8,12 @@
  * wire-session closure via {@link ChatRoutesContext}.
  */
 
-import type { FastifyReply } from "fastify";
+import { randomUUID } from "node:crypto";
 import { type ChatMessage, type ChatSession } from "../../core/chat-session.js";
 import { getMostActive } from "../../core/chat-session-history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { mergeSeedFeatures } from "../../core/chat-features.js";
+import { createTurnBuffer, scheduleTurnCleanup } from "../../core/chat-turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import {
@@ -26,66 +27,51 @@ import {
 const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Stream subprocess messages for an in-flight turn to the hijacked SSE socket
- * until the turn completes (done / error / close / client disconnect). Resolves
- * once the socket is torn down and the pin released.
+ * Capture an in-flight turn's messages into a resumable buffer keyed by
+ * `turnId`, instead of piping them to one client socket. The turn now outlives
+ * any single connection: the client subscribes to `chat.turnStream` for the
+ * output and can drop/reconnect without losing it. The pin is released and the
+ * buffer scheduled for GC once the turn settles (done / error / session close).
  */
-function streamTurn(
+function captureTurn(
   chatSession: ChatSession,
-  { reply, releasePin }: { reply: FastifyReply; releasePin: () => void },
-): Promise<void> {
-  return new Promise<void>((resolve) => {
-    const onMessage = (msg: ChatMessage) => {
-      try {
-        reply.raw.write(`data: ${JSON.stringify(msg)}\n\n`);
-      } catch (_e) {
-        // Client disconnected — the write target is gone; nothing
-        // actionable in the error and the stream is torn down below.
-      }
-    };
+  { turnId, releasePin }: { turnId: string; releasePin: () => void },
+): void {
+  const buffer = createTurnBuffer(turnId);
 
-    const finish = () => {
-      cleanup();
-      reply.raw.end();
-      releasePin();
-      resolve();
-    };
+  let settled = false;
+  const settle = (): void => {
+    if (settled) return;
+    settled = true;
+    chatSession.removeListener("message", onMessage);
+    chatSession.removeListener("done", onDone);
+    chatSession.removeListener("error", onError);
+    chatSession.removeListener("close", onClose);
+    releasePin();
+    scheduleTurnCleanup(turnId);
+  };
 
-    const onDone = () => finish();
+  const onMessage = (msg: ChatMessage): void => buffer.push(msg);
+  const onDone = (): void => {
+    buffer.finish();
+    settle();
+  };
+  const onError = (err: Error): void => {
+    buffer.fail(err.message);
+    settle();
+  };
+  // The subprocess exited without a `done` (crash / intentional stop). Mark the
+  // turn complete so a resuming subscriber stops waiting and falls back to
+  // history rather than hanging.
+  const onClose = (): void => {
+    buffer.finish();
+    settle();
+  };
 
-    const onError = (err: Error) => {
-      try {
-        reply.raw.write(
-          `data: ${JSON.stringify({ type: "error", error: err.message })}\n\n`
-        );
-      } catch (_e) {
-        // Client disconnected — the write target is gone; nothing
-        // actionable in the error and the stream is torn down below.
-      }
-      finish();
-    };
-
-    const onClose = () => finish();
-
-    const cleanup = () => {
-      chatSession.removeListener("message", onMessage);
-      chatSession.removeListener("done", onDone);
-      chatSession.removeListener("error", onError);
-      chatSession.removeListener("close", onClose);
-    };
-
-    chatSession.on("message", onMessage);
-    chatSession.on("done", onDone);
-    chatSession.on("error", onError);
-    chatSession.on("close", onClose);
-
-    // Handle client disconnect
-    reply.raw.on("close", () => {
-      cleanup();
-      releasePin();
-      resolve();
-    });
-  });
+  chatSession.on("message", onMessage);
+  chatSession.on("done", onDone);
+  chatSession.on("error", onError);
+  chatSession.on("close", onClose);
 }
 
 /**
@@ -133,14 +119,6 @@ function pruneMessageIds(processedMessageIds: Map<string, number>): void {
   }
 }
 
-function writeSseHead(reply: FastifyReply): void {
-  reply.raw.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-  });
-}
-
 export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   const { server, boxRoot, eventBus, registry, scheduleManager, processedMessageIds } = ctx;
 
@@ -172,22 +150,18 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const isSlashCommand = message.startsWith("/");
     const attributed = user && !isSlashCommand ? injectUserAttr(message, user) : message;
 
-    // Deduplicate retries: if we've already processed this messageId,
-    // return success without re-sending to the agent
+    // Deduplicate retries: if we've already processed this messageId, report it
+    // as already-done so the client finishes the turn (it will refresh history).
     if (messageId) {
       pruneMessageIds(processedMessageIds);
       if (processedMessageIds.has(messageId)) {
         console.log(`[chat] Duplicate message ${messageId}, skipping`);
-        reply.hijack();
-        writeSseHead(reply);
-        reply.raw.write(`data: ${JSON.stringify({ type: "result", deduplicated: true })}\n\n`);
-        reply.raw.end();
-        return;
+        return reply.send({ deduplicated: true });
       }
       processedMessageIds.set(messageId, Date.now());
     }
 
-    // Broadcast the user message to other clients via SSE.
+    // Broadcast the user message to other clients via the event bus.
     // For pending-new sessions, sessionId is still unknown; subscribers will
     // see it once `session-assigned` fires.
     eventBus.emit("chat-user-message", {
@@ -197,17 +171,11 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       timestamp: new Date().toISOString(),
     });
 
-    // Hijack the response so we control the socket directly and can hold
-    // it open across the SSE stream lifetime.
-    reply.hijack();
-    writeSseHead(reply);
-
-    // If busy, queue and return — the queue drains on the next "done".
+    // If busy, queue and return — the queue drains on the next "done", and the
+    // completed turn surfaces via the chat-complete event → history refresh.
     if (chatSession.isBusy()) {
       chatSession.enqueue({ text: attributed, ...(images ? { images } : {}) });
-      reply.raw.write(`data: ${JSON.stringify({ type: "queued" })}\n\n`);
-      reply.raw.end();
-      return;
+      return reply.send({ queued: true });
     }
 
     // Append active schedule info so the agent knows what's pending.
@@ -217,10 +185,11 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       ? attributed + "\n<pending-schedules>" + pendingInfo + "</pending-schedules>"
       : attributed;
 
-    // Touch and pin the entry while the SSE stream is open so it survives
-    // the idle sweep. (Pending-new sessions aren't yet in `entries`; they
-    // pin on promotion via session-assigned.) Also mark this session as
-    // the most-active so bare /chat resolves here next time.
+    // Touch and pin the entry for the turn's lifetime so it survives the idle
+    // sweep. (Pending-new sessions aren't yet in `entries`; they pin on
+    // promotion via session-assigned.) The pin releases when the turn settles
+    // (see captureTurn), no longer tied to a client socket. Also mark this
+    // session as most-active so bare /chat resolves here next time.
     let releasePin: () => void = () => {};
     if (knownId !== null) {
       registry.touch(knownId, { subprocessUse: true });
@@ -234,15 +203,16 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       ...(images ? { images } : {}),
     });
     if (!sent) {
-      reply.raw.write(
-        `data: ${JSON.stringify({ type: "error", error: "Failed to send message" })}\n\n`
-      );
-      reply.raw.end();
       releasePin();
-      return;
+      return reply.status(500).send({ error: "Failed to send message" });
     }
 
-    await streamTurn(chatSession, { reply, releasePin });
+    // Wire the session's output into a resumable buffer keyed by turnId (after
+    // send, like the old stream — the subprocess emits no frames synchronously).
+    // The output flows over chat.turnStream, resumable by this turnId.
+    const turnId = randomUUID();
+    captureTurn(chatSession, { turnId, releasePin });
+    return reply.send({ turnId });
   });
 
   // POST /api/chat/self-note — inject a self-note into a session transcript.

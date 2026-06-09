@@ -15,7 +15,9 @@
 import { z } from "zod";
 import { tracked } from "@trpc/server";
 import type { BusEvent } from "../../../core/event-bus.js";
+import type { ChatMessage } from "../../../core/chat-session.js";
 import { ensureBoxWatcher } from "../../../core/box-file-watcher.js";
+import { getTurnBuffer } from "../../../core/chat-turn-buffer.js";
 import { router, publicProcedure } from "../trpc.js";
 
 const PING_INTERVAL_MS = 1000;
@@ -25,6 +27,17 @@ interface BusPayload {
   event: string;
   data: unknown;
 }
+
+/**
+ * A frame on the per-turn stream. `msg` carries one agent message; `resync`
+ * tells the client to fall back to a history refetch (the turn is unknown,
+ * GC'd, or a reconnect landed past evicted frames); `error` is a terminal
+ * failure that produced no result.
+ */
+type TurnStreamFrame =
+  | { t: "msg"; msg: ChatMessage }
+  | { t: "resync" }
+  | { t: "error"; error: string };
 
 function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
   return new Promise((resolve) => {
@@ -83,6 +96,43 @@ export const eventsRouter = router({
         sub.unsubscribe();
       }
     }),
+  // Per-turn agent output stream, resumable by `turnId`. Replays the turn's
+  // buffered frames after `lastEventId` (the last seq the client saw), then
+  // streams live, tracking each by its seq so a dropped WebSocket resumes
+  // mid-turn with no gap. An unknown/GC'd turn or a reconnect past evicted
+  // frames yields `{t:"resync"}` → the client falls back to a history refetch.
+  turnStream: publicProcedure
+    .input(z.object({ turnId: z.string().min(1), lastEventId: z.string().nullish() }))
+    .subscription(async function* (opts) {
+      const signal = opts.signal;
+      const buffer = getTurnBuffer(opts.input.turnId);
+      let lastSeq = opts.input.lastEventId ? Number(opts.input.lastEventId) : 0;
+
+      if (!buffer || buffer.hasGapAfter(lastSeq)) {
+        const resync: TurnStreamFrame = { t: "resync" };
+        yield resync;
+        return;
+      }
+
+      while (!signal?.aborted) {
+        for (const frame of buffer.framesAfter(lastSeq)) {
+          lastSeq = frame.seq;
+          const out: TurnStreamFrame = { t: "msg", msg: frame.msg };
+          yield tracked(String(frame.seq), out);
+        }
+        if (buffer.complete && buffer.framesAfter(lastSeq).length === 0) {
+          // Delivered everything. A failure with no result frame is surfaced;
+          // otherwise the agent's own `result` frame already ended the turn.
+          if (buffer.errored !== null) {
+            const err: TurnStreamFrame = { t: "error", error: buffer.errored };
+            yield err;
+          }
+          return;
+        }
+        await buffer.waitForChange(signal);
+      }
+    }),
+
   // Transport probe: verifies connect / multiplex / reconnect-resume end to
   // end without depending on the event bus. `lastEventId` is injected by the
   // client on reconnect; we resume the counter from it so a dropped frame is
