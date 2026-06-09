@@ -12,8 +12,10 @@ import { unlockAudioContext } from "../../lib/audio-context";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { NarrationMicIcon } from "./InteractiveChat-controls";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 
 export interface TranscriptionHandle {
+  state: TranscriptionState;
   transcript: string;
   start: () => void;
   stop: () => Promise<string>;
@@ -59,7 +61,7 @@ function DesktopComposerRow({
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
       {isTranscribing ? (
         <div className="flex-shrink-0 self-center">
-          <RecordingIndicator />
+          <RecordingIndicator degraded={transcription.state === "reconnecting"} />
         </div>
       ) : null}
       <TextareaAutosize

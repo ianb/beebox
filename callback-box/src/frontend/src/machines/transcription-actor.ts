@@ -38,13 +38,21 @@
  * CONNECTION_RESTORED; the machine bounds the whole window and finalizes on the
  * captured audio if no attempt succeeds.
  *
+ * ## Mic resilience
+ *
+ * The *input* side can die independently of the network — the OS takes the
+ * microphone for a phone call/Siri/app switch and the socket stays healthy.
+ * MicCapture (transcription-mic.ts) owns that detection + re-acquisition;
+ * the session adds a no-PCM-frames check to the watchdog as a catch-all and
+ * arbitrates so CONNECTION_RESTORED only fires when both sides are live.
+ *
  * The per-segment state and lifecycle live in {@link TranscriptionSession};
  * the actor wrapper just bridges it to XState's sendBack/receive/dispose.
  */
 
 import { fromCallback } from "xstate";
-import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { trpcClient } from "../lib/trpc";
+import { MicCapture } from "./transcription-mic";
 import { encodePcmChunksAsWav } from "../lib/wav-encode";
 import {
   type ConnectionHandle,
@@ -83,6 +91,14 @@ const OPEN_TIMEOUT_MS = 2500;
 const REPLAY_PAD_CHUNKS = 10;
 /** Connect-retry: total attempts to open the *initial* socket before failing. */
 const CONNECT_MAX_ATTEMPTS = 3;
+/**
+ * How long the worklet may deliver no PCM frames mid-recording before we
+ * judge the capture pipeline dead. Frames normally arrive every ~300ms
+ * (CHUNK_DURATION_MS); none for several seconds means the track ended or the
+ * AudioContext was suspended without an event we caught. Catch-all behind
+ * MicCapture's explicit track `ended`/`mute` handlers.
+ */
+const MIC_SILENT_TIMEOUT_MS = 4000;
 /** Full-jitter backoff bounds between failed connect/reconnect attempts. */
 const RETRY_BACKOFF = { baseMs: 400, capMs: 2000 } as const;
 /**
@@ -97,9 +113,7 @@ const NON_RETRYABLE_CLOSE_CODES: ReadonlySet<number> = new Set([1003, 1008]);
 class TranscriptionSession {
   private readonly sendBack: SendBack;
   private connection: ConnectionHandle | null = null;
-  private audioContext: AudioContext | null = null;
-  private stream: MediaStream | null = null;
-  private workletNode: AudioWorkletNode | null = null;
+  private mic: MicCapture | null = null;
   private disposed = false;
   private connectedFired = false;
   private service: TranscriptionService = "voxtral";
@@ -111,6 +125,8 @@ class TranscriptionSession {
   private forwardLive = true;
   /** True while a reconnect attempt loop is in flight. */
   private reconnecting = false;
+  /** Last time the worklet delivered a PCM frame (mic liveness watchdog). */
+  private lastPcmAt = 0;
   /**
    * Set once we've initiated an intentional stop (user/silence/max-duration).
    * Distinguishes the normal end-of-stream close (finalize) from an unexpected
@@ -225,8 +241,17 @@ class TranscriptionSession {
   private startWatchdog() {
     this.stopWatchdog();
     this.lastDrainedAt = performance.now();
+    this.lastPcmAt = performance.now();
     this.watchdogId = setInterval(() => {
-      if (this.disposed || this.reconnecting || !this.connection) return;
+      if (this.disposed || this.reconnecting) return;
+      // Mic liveness: no PCM frames for too long means the capture side died
+      // without an event MicCapture caught (e.g. a suspended AudioContext).
+      // beginRecovery self-guards, so re-triggering while recovering is a no-op.
+      if (!this.stopping && this.mic && performance.now() - this.lastPcmAt > MIC_SILENT_TIMEOUT_MS) {
+        void this.mic.beginRecovery();
+        return;
+      }
+      if (!this.connection) return;
       const ws = this.connection.ws;
       if (ws.readyState !== WebSocket.OPEN) return; // onclose/onerror owns real closes
       if (ws.bufferedAmount === 0) {
@@ -262,7 +287,7 @@ class TranscriptionSession {
       this.committedPrefix = this.mergeFinal(this.lastConnectionFinal);
       this.lastConnectionFinal = "";
     }
-    this.sendBack({ type: "CONNECTION_DEGRADED" });
+    this.sendBack({ type: "CONNECTION_DEGRADED", cause: "network" });
     // Replay from before the drop to cover detection latency.
     const replayFrom = Math.max(0, this.audioChunks.length - REPLAY_PAD_CHUNKS);
     this.discardSocket(this.connection);
@@ -298,7 +323,10 @@ class TranscriptionSession {
     this.forwardLive = true;
     this.reconnecting = false;
     this.lastDrainedAt = performance.now();
-    this.sendBack({ type: "CONNECTION_RESTORED" });
+    // If the mic died during the network blip, its recovery owns "restored".
+    if (!this.mic || !this.mic.isRecovering()) {
+      this.sendBack({ type: "CONNECTION_RESTORED" });
+    }
   }
 
   /** Clean interface loss / DevTools "Offline" toggle — fast-path reconnect. */
@@ -318,18 +346,29 @@ class TranscriptionSession {
       this.service = config.service;
       step("config");
 
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mic = new MicCapture({
+        onPcm: (samples) => {
+          // Keep a copy for the HQ pass (narration mode) and for replay on
+          // reconnect. Clone before forwarding because the worklet transfers
+          // ownership of the ArrayBuffer to the main thread.
+          this.lastPcmAt = performance.now();
+          this.audioChunks.push(samples.slice(0));
+          if (this.connection && this.forwardLive) this.connection.sendPcm(samples);
+        },
+        onMicLost: () => {
+          if (this.disposed || this.stopping) return;
+          this.sendBack({ type: "CONNECTION_DEGRADED", cause: "microphone" });
+        },
+        onMicRestored: () => {
+          if (this.disposed || this.stopping) return;
+          this.lastPcmAt = performance.now();
+          // "Restored" means the whole pipeline is live again — if the socket
+          // is still mid-reconnect, its own success will send the event.
+          if (!this.reconnecting) this.sendBack({ type: "CONNECTION_RESTORED" });
+        },
+      });
+      await this.mic.start({ step });
       if (this.disposed) { this.cleanup(); return; }
-      step("getUserMedia");
-
-      this.audioContext = new AudioContext();
-      await this.audioContext.audioWorklet.addModule(pcmProcessorUrl);
-      if (this.disposed) { this.cleanup(); return; }
-      step("audioWorklet");
-
-      const source = this.audioContext.createMediaStreamSource(this.stream);
-      this.workletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
-      source.connect(this.workletNode);
 
       this.callbacks = {
         onTextUpdate: (finalText, interimText) => {
@@ -367,16 +406,6 @@ class TranscriptionSession {
       this.markConnected();
       this.startWatchdog();
       window.addEventListener("offline", this.onOffline);
-
-      this.workletNode.port.onmessage = (event) => {
-        if (event.data.type === "pcm") {
-          // Also keep a copy for the HQ pass (narration mode) and for replay on
-          // reconnect. Clone before forwarding because the worklet transfers
-          // ownership of the ArrayBuffer to the main thread.
-          this.audioChunks.push(event.data.samples.slice(0));
-          if (this.connection && this.forwardLive) this.connection.sendPcm(event.data.samples);
-        }
-      };
     } catch (err) {
       if (!this.disposed) {
         const msg = err instanceof Error ? err.message : "Failed to start recording";
@@ -394,7 +423,7 @@ class TranscriptionSession {
     this.stopping = true;
     this.reconnecting = false;
     this.stopWatchdog();
-    this.stopCapture();
+    if (this.mic) this.mic.stopCapture();
     if (this.connection) {
       this.connection.endStream();
     }
@@ -408,29 +437,14 @@ class TranscriptionSession {
     this.sendBack({ type: "TRANSCRIPTION_DONE", audioBlob });
   }
 
-  /** Stop the mic stream and tear down the worklet (shared by stop/cleanup). */
-  private stopCapture() {
-    if (this.stream) {
-      for (const track of this.stream.getTracks()) {
-        track.stop();
-      }
-      this.stream = null;
-    }
-    if (this.workletNode) {
-      this.workletNode.disconnect();
-      this.workletNode = null;
-    }
-  }
-
   cleanup() {
     this.disposed = true;
     this.reconnecting = false;
     this.stopWatchdog();
     window.removeEventListener("offline", this.onOffline);
-    this.stopCapture();
-    if (this.audioContext) {
-      this.audioContext.close().catch(() => {});
-      this.audioContext = null;
+    if (this.mic) {
+      this.mic.dispose();
+      this.mic = null;
     }
     if (this.connection) {
       const ws = this.connection.ws;

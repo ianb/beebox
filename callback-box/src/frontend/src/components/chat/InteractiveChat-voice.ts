@@ -180,6 +180,17 @@ export function useChatVoice(opts: {
     onKeywordErase: () => {
       // Transcript is already cleared by the hook; nothing else needed
     },
+    onUnconsumedTranscript: (text) => {
+      // Recording ended without a send or a manual stop (transport death, mic
+      // taken away, reconnect window expired, silence/max-duration auto-stop).
+      // Fold the words into the composer so they stay visible and editable
+      // instead of vanishing when isTranscribing flips false.
+      setInput((existing) => joinTranscript(existing, text));
+      // The text now lives in the composer (persisted as the composer draft),
+      // so drop the dictation draft — otherwise it resurfaces after the next
+      // reload as a phantom "Recovered dictation" duplicate.
+      clearDraftRef.current();
+    },
   });
   useEffect(() => {
     transcriptionRef.current = transcription;

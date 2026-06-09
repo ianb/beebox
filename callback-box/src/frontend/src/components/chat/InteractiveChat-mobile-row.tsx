@@ -46,7 +46,7 @@ export function MobileTextareaRow({
     <div className="flex gap-2 items-center">
       {isTranscribing ? (
         <div className="flex-shrink-0 self-center">
-          <RecordingIndicator />
+          <RecordingIndicator degraded={transcription.state === "reconnecting"} />
         </div>
       ) : null}
       <TextareaAutosize
