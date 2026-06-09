@@ -1,0 +1,176 @@
+<procedure name="process-retrospective">
+  <description>
+    Retrospective over recent chat sessions: scan transcripts for what the
+    boxholder implicitly taught the assistant (corrections, preferences,
+    register, recurring asks, context gaps), then integrate the
+    observations into the box's belief surfaces — the personality card and
+    guide cards — under the evidence model. Authoritative changes (briefing
+    corrections, conflicts with user-stated beliefs) become question cards
+    instead of direct edits. Every run leaves an audit report in
+    store/reviews/retro/ and commits with a Retro-Run trailer.
+
+    The scan precheck exits CHECK_SKIP when no new chat sessions are ready,
+    so on quiet days this procedure does no work and invokes no agent.
+  </description>
+
+  <step id="scan">
+    <description>Observe new chat sessions and record observations in the ledger</description>
+
+    <precheck>
+      <shell>
+        if ! cb retro status --check > /dev/null 2>&amp;1; then
+          exit $CHECK_SKIP
+        fi
+        cb retro status
+      </shell>
+      <why>
+        No need to run the observer when no chat session has gone quiet
+        since the last run.
+      </why>
+    </precheck>
+
+    <run>
+      <shell>cb retro scan</shell>
+    </run>
+
+    <validate severity="warn">
+      <shell>
+        # Phases run under set -e -o pipefail; `|| true` keeps an unmatched
+        # glob (ls failing) from aborting instead of falling through.
+        latest=$(ls -t store/reviews/retro/*.md 2>/dev/null | head -1 || true)
+        echo "Latest report: ${latest:-none}"
+        [ -n "$latest" ]
+      </shell>
+      <instruction>
+        A scan that observed sessions writes a run report under
+        store/reviews/retro/. No report means every qualifying session
+        failed observation — check the scan output.
+      </instruction>
+      <why>
+        The report is the audit trail; integration keys off it.
+      </why>
+    </validate>
+  </step>
+
+  <step id="integrate">
+    <description>Integrate ledgered observations into personality/guide cards under the evidence model</description>
+
+    <precheck pass-output="true">
+      <shell>
+        latest=$(ls -t store/reviews/retro/*.md 2>/dev/null | head -1 || true)
+        if [ -z "$latest" ]; then exit $CHECK_SKIP; fi
+        if ! grep -q '_Pending integration._' "$latest"; then
+          exit $CHECK_SKIP
+        fi
+        echo "Report to integrate: $latest"
+        echo ""
+        cat "$latest"
+      </shell>
+      <why>
+        Integration only runs when the newest report carries observations
+        that haven't been integrated yet (reports with no observations
+        finalize themselves at scan time).
+      </why>
+    </precheck>
+
+    <run>
+      <agent max-turns="40">
+        You are integrating retrospective observations into this box's belief
+        surfaces. The precheck output above contains the run report; its
+        runId is the report's filename without .md.
+
+        Observations were mined from real chat sessions. Each carries a
+        literal quote (evidence), a one-sentence proposal, and a suggested
+        sink. Your job is to turn them into belief updates the next agent
+        will actually benefit from — honestly weighted, never overstated.
+
+        STEP 1 - READ THE CONTEXT:
+        - The full observation ledger (recurrence lives here — the same
+          lesson observed across distinct sessions):
+        ```
+        cat .callback-box/retro/observations.jsonl
+        ```
+        - The personality card: config/main.personality.card
+        - Any guide card an observation targets (sinkRef, or pick the
+          obvious guide under config/).
+
+        STEP 2 - APPLY THE EVIDENCE MODEL (these rules are hard limits):
+        - New beliefs enter as source: inferred. Confidence by recurrence
+          across DISTINCT sessions in the ledger: 1 session = hypothesis,
+          2-3 = low, 4+ = medium.
+        - medium is the CEILING for inferred beliefs. Never raise an
+          inferred belief past medium; promotion beyond that needs the
+          boxholder (create a question card instead).
+        - NEVER edit or remove a belief whose source is user-stated. If
+          evidence conflicts with one, create a question card.
+        - NEVER touch speaking-voice, and never edit the briefing card
+          directly — a proposed briefing correction becomes a question
+          card quoting the evidence.
+        - Strengthen an existing matching belief (one confidence notch,
+          respecting the ceiling) rather than adding a near-duplicate.
+        - Set ref on a belief to the observation's thread card ref when it
+          has one (threadRef in the ledger entry).
+        - An observation may answer an item in the personality card's
+          unresolved: list — if so, resolve it (move the substance into a
+          trait/tone entry and drop the unresolved item).
+        - Skip observations that are noise on reflection (one-off
+          logistics, no durable lesson). Say so in the report — skipping
+          is a legitimate action.
+
+        STEP 3 - EDIT THE CARDS:
+        - Personality card edits: tone, traits, boxholder relationships,
+          unresolved, experiments only. After ANY trait/tone change,
+          rewrite the body paragraph to reflect the updated whole (the
+          body is what job agents see).
+        - Guide card edits: rules, reactions, experiments, per the guide's
+          own schema conventions.
+        - Question cards go in box/questions/ as .question.card files —
+          follow the existing examples in the box; include the evidence
+          quote and the proposed change in the body.
+
+        STEP 4 - FINALIZE THE REPORT:
+        Edit the run report:
+        - Replace the "What I learned" placeholder with 2-4 sentences in
+          first person — what you now believe about the boxholder and how
+          sure you are. Plain language, no jargon.
+        - Replace the "Actions taken" placeholder with one line per
+          observation: what you did (card + field edited, confidence set,
+          question card created, or skipped-as-noise) and why.
+
+        STEP 5 - COMMIT (REQUIRED — do not skip):
+        ```bash
+        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
+        Retrospective: &lt;one-line summary of belief changes&gt;
+
+        &lt;bullet list of edits / question cards / skips&gt;
+
+        Created-By: retrospective
+        Retro-Run: &lt;runId&gt;
+        EOF
+        )"
+        ```
+        Do NOT add Co-Authored-By. Keep the trailers exactly as shown —
+        they make retro commits filterable in the history browser.
+      </agent>
+    </run>
+
+    <validate severity="review">
+      <shell>
+        latest=$(ls -t store/reviews/retro/*.md 2>/dev/null | head -1 || true)
+        echo "Checking $latest"
+        ! grep -q '_Pending integration._' "$latest"
+      </shell>
+      <instruction>
+        The run report should have its "What I learned" and "Actions taken"
+        sections filled in, the belief edits should be committed with the
+        Retro-Run trailer, and the git diff should show only personality/
+        guide/question/report changes — never speaking-voice, never the
+        briefing card, never a user-stated belief.
+      </instruction>
+      <why>
+        An unfinalized report means observations were ledgered but never
+        became beliefs — the loop silently stops learning.
+      </why>
+    </validate>
+  </step>
+</procedure>

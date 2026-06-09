@@ -108,6 +108,9 @@ export function renderRunReport(data: RetroRunReportData): string {
       ? `Chat registries: ${data.registriesFound.map((r) => `\`${r}\``).join(", ")}.`
       : "No chat registries found — thread provenance unavailable for this box.";
 
+  // With no observations there is nothing for the integrator to do — the
+  // report finalizes itself rather than dangling a "pending" marker.
+  const hasObservations = data.observations.length > 0;
   const lines: string[] = [
     `# Retrospective run ${data.runId}`,
     "",
@@ -115,7 +118,7 @@ export function renderRunReport(data: RetroRunReportData): string {
     "",
     "## What I learned",
     "",
-    "_Pending integration._",
+    hasObservations ? "_Pending integration._" : "_Nothing new this run._",
     "",
     "## Sessions examined",
     "",
@@ -130,7 +133,7 @@ export function renderRunReport(data: RetroRunReportData): string {
     "",
     "## Actions taken",
     "",
-    "_Pending integration._",
+    hasObservations ? "_Pending integration._" : "_None — no observations to integrate._",
     "",
   ];
   return lines.join("\n");

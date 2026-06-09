@@ -200,7 +200,7 @@ Generated 2026-06-09T12:00:00Z.
 «blankline»
 ## What I learned
 «blankline»
-_Pending integration._
+_Nothing new this run._
 «blankline»
 ## Sessions examined
 «blankline»
@@ -217,7 +217,7 @@ _None recorded._
 «blankline»
 ## Actions taken
 «blankline»
-_Pending integration._
+_None — no observations to integrate._
 ```
 
 ```ts cleanup

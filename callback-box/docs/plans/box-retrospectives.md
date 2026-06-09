@@ -242,9 +242,13 @@ card edits with before/after gist, question cards created, confidence
 bumps with recurrence counts).
 
 Git: every integrator commit carries `Created-By: retrospective` and
-`Retro-Run: <runId>` trailers; `RETRO_TRAILER_KEYS` joins the vocabulary
-in `git-trailers.ts`. `git log --grep` on the trailer is the review
-query.
+`Retro-Run: <runId>` trailers. No new `RETRO_TRAILER_KEYS` vocabulary:
+`Created-By` is already a connector-axis key
+(`git-trailers.ts:15-21`), so retro commits are filterable in the
+history browser with zero new code, and `Retro-Run` parses fine as an
+arbitrary trailer (`parseTrailers` takes any key). A dedicated
+vocabulary constant with no consumer would be dead export (knip).
+`git log --grep '^Retro-Run: '` is the review query.
 
 State: `.callback-box/retro/state.json` — `lastRunAt`, plus per-session
 `{status: done|failed, attempts}` so a failed observer call retries next
