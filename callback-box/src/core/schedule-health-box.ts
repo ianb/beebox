@@ -132,7 +132,7 @@ export function formatDurationShort(ms: number): string {
   return `${Math.round(hours / 24)}d`;
 }
 
-function describeUnhealthyTask(task: TaskHealth, now: Date): string {
+export function describeUnhealthyTask(task: TaskHealth, now: Date): string {
   if (task.status === "invalid") return `${task.name}: card invalid`;
   if (task.status === "overdue") {
     return `${task.name}: overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
