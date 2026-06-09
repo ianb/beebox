@@ -24,7 +24,7 @@ Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, error?
 |-----------|------|-----------|-----------|-----------------|
 | Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes |
 | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Not yet wired |
-| Gmail | `gmail.ts` | `email-thread` | Pull only | Not yet wired |
+| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes |
 | Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes |
 
 ## Lifecycle
@@ -42,7 +42,7 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 Each connector reads its config from `config/connectors/`:
 - `telegram.secret.json` — `{ botToken, webhookSecret }`
 - `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
-- `gmail.secret.json` — IMAP credentials
+- `gmail.json` — `{ query }` or `{ labels }` (auth is the shared Google OAuth tokens; no per-connector secret). Persistent dedup ids live in `gmail-state.json` (committed), the history-API checkpoint in `gmail.state.json` (gitignored).
 
 Transient state (last sync offsets, mappings) goes in `config/connectors/<name>.state.json` or `<name>-state.json`.
 

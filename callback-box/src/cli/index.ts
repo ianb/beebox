@@ -31,6 +31,7 @@ import {
   scenarioCommand,
   tickCommand,
   scheduledCommand,
+  healthCommand,
   trickCommand,
   finalizeCommand,
   promptCommand,
@@ -86,6 +87,7 @@ program.addCommand(reactorCommand);
 program.addCommand(scenarioCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
+program.addCommand(healthCommand);
 program.addCommand(trickCommand);
 program.addCommand(finalizeCommand);
 program.addCommand(promptCommand);

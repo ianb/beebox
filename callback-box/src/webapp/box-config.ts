@@ -26,6 +26,16 @@ export interface BoxConfig {
    * Absolute paths, with leading `~` expanded to the home directory.
    */
   externalRoots?: string[];
+  /**
+   * Proactive scheduled-task health alerts (schedule-health-alert.ts).
+   * Absent → no proactive alerts for this box (cb health and the
+   * session-start snapshot still surface problems). Explicit opt-in
+   * because a misdirected alert is worse than no alert.
+   */
+  healthAlerts?: {
+    /** Telegram chat id to send alerts to (the boxholder's DM chat). */
+    telegramChat?: string;
+  };
 }
 
 export type GoogleServiceName = "calendar" | "gmail" | "drive";

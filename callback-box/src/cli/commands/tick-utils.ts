@@ -18,7 +18,7 @@ import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   loadScriptState,
   saveScriptState,
-  recordRun,
+  recordOutcome,
   acquireScriptLock,
   releaseScriptLock,
   loadRunningScripts,
@@ -123,11 +123,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
         env: scriptEnv,
       });
 
-      state.lastRun = now.toISOString();
-      state.lastResult = "success";
-      state.lastError = null;
-      state.runCount++;
-      recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
+      recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       ranCount++;
 
@@ -135,11 +131,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     } catch (err) {
       const { durationMs, sleepAffected } = fallbackTiming(err);
 
-      state.lastRun = now.toISOString();
-      state.lastResult = "failure";
-      state.lastError = (err as Error).message;
-      state.runCount++;
-      recordRun(state, { record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) }, windowMs, now });
+      recordOutcome(state, { result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       console.error(`  Failed: ${(err as Error).message}`);
     } finally {

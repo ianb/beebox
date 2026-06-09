@@ -19,6 +19,8 @@ import {
   loadCardFromText,
   type LoadCardContext,
 } from "../src/core/card-io.js";
+import { createCardSchemaMap } from "../src/schemas/registry.js";
+import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
 
 const docSchema: CardSchema = cardSchema("doc", {
   fields: {
@@ -137,6 +139,31 @@ loaded.kind === "frontmatter" ? loaded.schema.type : "?"
 
 loaded.kind === "frontmatter" ? loaded.fields["thread-id"] : "?"
 => t9
+```
+
+Job cards use the dotted filename convention `Foo.<kind>.job.card` (the
+reactor discovers jobs by that suffix) while their schemas register under
+hyphenated names — `*.intake.job.card` dispatches to `intake-job`. This
+regressed once when the filename discriminator only read the last dot
+segment ("job"), making every generated job card fail validation:
+
+```
+const registryCtx: LoadCardContext = {
+  cardSchemas: createCardSchemaMap(),
+  elementSchemas: new Map(),
+};
+const content = createIntakeJobTemplate({
+  created: "2026-06-09T00:00:00Z",
+  source: "gmail",
+  description: "Triage 1 inbox item",
+  items: ["box/inbox/a.memo.card"],
+});
+const loaded = await loadCardFromText({ content, source: "2026-06-09-gmail.intake.job.card", ctx: registryCtx });
+loaded.kind
+=> frontmatter
+
+loaded.kind === "frontmatter" ? loaded.schema.type : "?"
+=> intake-job
 ```
 
 A file whose frontmatter `type:` is unknown falls through to the XML path so legacy XML cards (with a content-type frontmatter only) keep working.

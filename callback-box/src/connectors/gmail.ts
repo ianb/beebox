@@ -8,9 +8,15 @@
  * Configuration:
  *   config/connectors/gmail.json - { "query": "label:inbox", "labels": [] }
  *
+ * Sync strategy (see gmail-pull.ts): incremental via the Gmail history API
+ * from a stored checkpoint, with full query listing as the bootstrap/fallback
+ * path. Dedup is by Gmail message id, checked BEFORE fetching, so re-listing
+ * never re-fetches message bodies.
+ *
  * State stored in:
- *   config/connectors/gmail-state.json    - { "seenMessageIds": [...] }
- *   config/connectors/gmail.state.json    - { "lastPullDate": "..." } (gitignored)
+ *   config/connectors/gmail-state.json - { "seenGmailIds": [...],     (committed)
+ *                                          "seenMessageIds": [...] }  (legacy)
+ *   config/connectors/gmail.state.json - { "historyId": "..." } (gitignored)
  *
  * Each Gmail thread becomes a directory in box/inbox/email/:
  *   thread-Subject_Line-abc123/
@@ -47,20 +53,22 @@ import {
 } from "./gmail-mime.js";
 import { buildGmailCommitMessage, type ThreadNote } from "./gmail-commit.js";
 import { writeThreadCards } from "./gmail-threads.js";
-
-interface GmailConfig {
-  /** Gmail search query (uses Gmail search syntax) */
-  query?: string;
-  /** Filter to specific labels — joined as label:foo OR label:bar if no query */
-  labels?: string[];
-}
+import { listCandidates, type GmailPullConfig } from "./gmail-pull.js";
 
 interface GmailState {
+  /**
+   * Legacy dedup keys: RFC822 Message-ID headers recorded by pulls that
+   * predate seenGmailIds. Read-only — checked after fetch so pre-upgrade
+   * boxes don't re-import, never appended to.
+   */
   seenMessageIds: string[];
+  /** Primary dedup keys: Gmail API message ids, checked before fetch. Uncapped. */
+  seenGmailIds?: string[];
 }
 
 interface GmailTransientState {
-  lastPullDate?: string;
+  /** History API checkpoint from the last successful sync. */
+  historyId?: string;
 }
 
 class GmailConnector implements Connector {
@@ -89,7 +97,7 @@ class GmailConnector implements Connector {
     return path.join(this.boxRoot, "config/connectors/gmail.secret.json");
   }
 
-  private async loadConfig(): Promise<GmailConfig> {
+  private async loadConfig(): Promise<GmailPullConfig> {
     try {
       const content = await fs.readFile(this.configPath(), "utf-8");
       return JSON.parse(content);
@@ -139,53 +147,6 @@ class GmailConnector implements Connector {
     }
   }
 
-  private buildQuery(config: GmailConfig, lastPullDate: string | undefined): string {
-    let base: string;
-    // A label-based or user-authored query is naturally bounded — applying
-    // an `after:` floor would hide messages that were *labeled* recently
-    // but received earlier, which breaks labeling-as-routing. Pagination +
-    // seenMessageIds dedup handle re-listing cheaply when the set is
-    // bounded. The bare `label:inbox` fallback is unbounded, so we keep
-    // the date filter there to protect the seenMessageIds cap.
-    let bounded: boolean;
-    if (config.query) {
-      base = config.query;
-      bounded = true;
-    } else if (config.labels && config.labels.length > 0) {
-      base = config.labels.map((l) => `label:${l}`).join(" OR ");
-      bounded = true;
-    } else {
-      base = "label:inbox";
-      bounded = false;
-    }
-
-    if (!bounded && lastPullDate) {
-      const datePart = lastPullDate.split("T")[0];
-      return `${base} after:${datePart}`;
-    }
-    return base;
-  }
-
-  /** List every message id matching the query, paginating through results. */
-  private async listMatchingRefs(
-    service: GoogleGmailService,
-    query: string,
-  ): Promise<Array<{ id: string; threadId: string }>> {
-    const refs: Array<{ id: string; threadId: string }> = [];
-    let pageToken: string | undefined;
-    do {
-      const listOpts: { q: string; pageToken?: string; maxResults: number } = {
-        q: query,
-        maxResults: 100,
-      };
-      if (pageToken) listOpts.pageToken = pageToken;
-      const result = await service.listMessages(listOpts);
-      refs.push(...result.messages);
-      pageToken = result.nextPageToken;
-    } while (pageToken);
-    return refs;
-  }
-
   /** Build the label-id → label-name map (non-fatal: falls back to ids). */
   private async loadLabelMap(service: GoogleGmailService): Promise<Map<string, string>> {
     const labelMap = new Map<string, string>();
@@ -198,24 +159,40 @@ class GmailConnector implements Connector {
     return labelMap;
   }
 
-  /** Fetch and parse every not-yet-seen message referenced by `refs`. */
+  /**
+   * Fetch and parse every not-yet-seen message referenced by `refs`.
+   * Refs whose Gmail id is already seen are skipped without an API call;
+   * the legacy Message-ID check (post-fetch) keeps pre-upgrade boxes from
+   * re-importing — when it hits, the Gmail id is folded into seenGmailIds
+   * so the next sync takes the cheap path.
+   */
   private async fetchNewMessages(opts: {
     service: GoogleGmailService;
     refs: Array<{ id: string; threadId: string }>;
-    seenMessageIds: string[];
+    seenGmailIds: Set<string>;
+    legacySeenMessageIds: Set<string>;
     labelMap: Map<string, string>;
-  }): Promise<FetchedMessage[]> {
-    const { service, refs, seenMessageIds, labelMap } = opts;
+  }): Promise<{
+    messages: FetchedMessage[];
+    gmailIdByMessageId: Map<string, string>;
+  }> {
+    const { service, refs, seenGmailIds, legacySeenMessageIds, labelMap } = opts;
     const messages: FetchedMessage[] = [];
+    const gmailIdByMessageId = new Map<string, string>();
     for (const ref of refs) {
+      if (seenGmailIds.has(ref.id)) continue;
       const raw = await service.getMessage(ref.id);
-      if (seenMessageIds.includes(messageIdFor(raw))) {
+      if (legacySeenMessageIds.has(messageIdFor(raw))) {
+        seenGmailIds.add(ref.id);
         continue;
       }
       const fetched = await parseGmailMessage(raw, { service, labelMap });
-      if (fetched) messages.push(fetched);
+      if (fetched) {
+        messages.push(fetched);
+        gmailIdByMessageId.set(fetched.messageId, ref.id);
+      }
     }
-    return messages;
+    return { messages, gmailIdByMessageId };
   }
 
   private async commitPulled(opts: {
@@ -235,11 +212,11 @@ class GmailConnector implements Connector {
     });
   }
 
-  private async saveTransient(): Promise<void> {
+  private async saveCheckpoint(historyId: string | undefined): Promise<void> {
     await saveTransientState({
       boxRoot: this.boxRoot,
       connectorName: "gmail",
-      data: { lastPullDate: new Date().toISOString() },
+      data: historyId ? { historyId } : {},
     });
   }
 
@@ -268,33 +245,59 @@ class GmailConnector implements Connector {
       defaultValue: {},
     });
 
+    const seenGmailIds = new Set(state.seenGmailIds);
+    const legacySeenMessageIds = new Set(state.seenMessageIds);
+
     let created: string[] = [];
     let updated: string[] = [];
     const threadNotes: ThreadNote[] = [];
+    let checkpoint = transient.historyId;
 
     try {
       const labelMap = await this.loadLabelMap(service);
-      const query = this.buildQuery(config, transient.lastPullDate);
-      const refs = await this.listMatchingRefs(service, query);
-      const messages = await this.fetchNewMessages({
+      const candidates = await listCandidates({
         service,
-        refs,
-        seenMessageIds: state.seenMessageIds,
+        config,
         labelMap,
+        startHistoryId: transient.historyId,
       });
+      if (candidates.historyId) checkpoint = candidates.historyId;
 
-      const written = await writeThreadCards({ boxRoot: this.boxRoot, messages });
-      created = written.created;
-      updated = written.updated;
-      threadNotes.push(...written.notes);
-      for (const id of written.seenMessageIds) {
-        if (!state.seenMessageIds.includes(id)) {
-          state.seenMessageIds.push(id);
+      if (candidates.baseline) {
+        // First sync of the bare-inbox default: record the current inbox as
+        // seen without importing — only mail arriving (or labeled) from now
+        // on flows into the box, instead of the user's whole inbox backlog.
+        for (const ref of candidates.refs) seenGmailIds.add(ref.id);
+        if (candidates.refs.length > 0) {
+          console.warn(
+            `Gmail: baseline sync — marked ${candidates.refs.length} existing messages as seen without importing`,
+          );
+        }
+      } else {
+        const fetched = await this.fetchNewMessages({
+          service,
+          refs: candidates.refs,
+          seenGmailIds,
+          legacySeenMessageIds,
+          labelMap,
+        });
+        const written = await writeThreadCards({
+          boxRoot: this.boxRoot,
+          messages: fetched.messages,
+        });
+        created = written.created;
+        updated = written.updated;
+        threadNotes.push(...written.notes);
+        for (const id of written.seenMessageIds) {
+          const gmailId = fetched.gmailIdByMessageId.get(id);
+          if (gmailId) seenGmailIds.add(gmailId);
         }
       }
     } catch (err) {
-      await this.saveTransient();
-      await this.saveState(state);
+      // Keep ids gathered so far, but do NOT advance the history checkpoint:
+      // the failed window replays next sync, and seen-id dedup makes the
+      // overlap cheap.
+      await this.saveState({ ...state, seenGmailIds: [...seenGmailIds] });
 
       return {
         success: false,
@@ -304,11 +307,8 @@ class GmailConnector implements Connector {
       };
     }
 
-    await this.saveTransient();
-    if (state.seenMessageIds.length > 5000) {
-      state.seenMessageIds = state.seenMessageIds.slice(-5000);
-    }
-    await this.saveState(state);
+    await this.saveCheckpoint(checkpoint);
+    await this.saveState({ ...state, seenGmailIds: [...seenGmailIds] });
 
     if (created.length > 0 || updated.length > 0) {
       await this.commitPulled({ created, updated, threadNotes });
