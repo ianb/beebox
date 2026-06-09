@@ -3,8 +3,7 @@
  */
 
 import { useState } from "react";
-import { useSSE } from "../hooks/useSSE";
-import { getEventSourceBase } from "../api";
+import { useBusSubscription } from "../hooks/useBusSubscription";
 import { trpc } from "../lib/trpc";
 import { HeaderStrip } from "../components/dashboard/HeaderStrip";
 import { AttentionCards } from "../components/dashboard/AttentionCards";
@@ -32,7 +31,7 @@ export function DashboardPage() {
     utils.scheduler.invalidate();
   };
 
-  const { connected } = useSSE(`${getEventSourceBase()}/events`, {
+  const { connected } = useBusSubscription({
     onEvent: (event) => {
       if (
         event.event === "file-change" ||

@@ -6,9 +6,8 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { watch, type FSWatcher } from "chokidar";
-import * as path from "node:path";
 import type { EventBus } from "../../core/event-bus.js";
+import { ensureBoxWatcher, closeBoxWatcher } from "../../core/box-file-watcher.js";
 
 interface RegisterSseRoutesOptions {
   server: FastifyInstance;
@@ -22,35 +21,6 @@ interface RegisterSseRoutesOptions {
  */
 export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise<void> {
   const { server, boxRoot, eventBus } = opts;
-  let watcher: FSWatcher | null = null;
-
-  // Start file watcher lazily on first SSE client connection. Watch the
-  // whole box root so agent edits to store/, config/, docs/, etc. surface
-  // as file-change events the UI can react to. Dotfiles (.git,
-  // .callback-box, …) are excluded by the `ignored` pattern below.
-  const watchPaths = [boxRoot];
-
-  function ensureWatcher(): void {
-    if (watcher) return;
-    watcher = watch(watchPaths, {
-      persistent: true,
-      ignoreInitial: true,
-      ignored: /(^|[/\\])\../,
-    });
-
-    watcher.on("all", (fsEvent, filePath) => {
-      const relativePath = path.relative(boxRoot, filePath);
-      eventBus.emitTransient("file-change", {
-        event: fsEvent,
-        path: relativePath,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    watcher.on("error", (error) => {
-      console.error("File watcher error:", error);
-    });
-  }
 
   // GET /api/events - SSE endpoint
   server.get("/api/events", (request, reply) => {
@@ -58,7 +28,8 @@ export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise
     const query = request.query as Record<string, string>;
     const lastEventId = Number(request.headers["last-event-id"]) || Number(query.lastEventId) || 0;
 
-    ensureWatcher();
+    // Start the shared box watcher so agent edits surface as file-change events.
+    ensureBoxWatcher(boxRoot, eventBus);
 
     reply.hijack();
 
@@ -113,9 +84,6 @@ export async function registerSseRoutes(opts: RegisterSseRoutesOptions): Promise
 
   // Cleanup on server close
   server.addHook("onClose", async () => {
-    if (watcher) {
-      await watcher.close();
-      watcher = null;
-    }
+    await closeBoxWatcher(boxRoot);
   });
 }

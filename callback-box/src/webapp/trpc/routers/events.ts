@@ -1,16 +1,30 @@
 /**
  * Real-time event subscriptions over the tRPC WebSocket transport.
  *
- * `ping` is the transport probe (Track 1): an incrementing counter, tracked so
- * a reconnect resumes from the last id. The durable `subscribe` over the
- * SQLite event bus lands in Track 2.
+ * `subscribe` is the durable global stream — the WebSocket replacement for the
+ * `/api/events` SSE route. It bridges the SQLite-backed event bus into an async
+ * generator: persistent events are `tracked()` by their bus id so a reconnect
+ * replays exactly what was missed (the client resends `lastEventId`, the bus
+ * replays from `afterId`); transient (negative-id) events are yielded plain and
+ * are not resumable, matching the prior SSE behavior.
+ *
+ * `ping` is the transport probe from Track 1, kept until the subscription has
+ * fully replaced the SSE consumers.
  */
 
 import { z } from "zod";
 import { tracked } from "@trpc/server";
+import type { BusEvent } from "../../../core/event-bus.js";
+import { ensureBoxWatcher } from "../../../core/box-file-watcher.js";
 import { router, publicProcedure } from "../trpc.js";
 
 const PING_INTERVAL_MS = 1000;
+
+/** Wire shape delivered to subscribers — matches the old SSEEvent `{event,data}`. */
+interface BusPayload {
+  event: string;
+  data: unknown;
+}
 
 function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
   return new Promise((resolve) => {
@@ -23,6 +37,52 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
 }
 
 export const eventsRouter = router({
+  // The durable global stream. Replays missed persistent events from the bus
+  // (via afterId/lastEventId), then streams live ones. Bridges the bus's
+  // push-listener into an async generator with a small queue + a wake promise;
+  // an abort listener (client unsubscribe / disconnect) wakes the loop so the
+  // `finally` can unsubscribe.
+  subscribe: publicProcedure
+    .input(z.object({ lastEventId: z.string().nullish() }).optional())
+    .subscription(async function* (opts) {
+      const signal = opts.signal;
+      // The bus's `file-change` events come from this watcher; start it here so
+      // the subscription is self-sufficient (the SSE route used to do this).
+      ensureBoxWatcher(opts.ctx.boxRoot, opts.ctx.eventBus);
+      const afterId = opts.input?.lastEventId ? Number(opts.input.lastEventId) : 0;
+      const queue: BusEvent[] = [];
+      let wake: (() => void) | null = null;
+      const ping = (): void => {
+        if (wake) {
+          wake();
+          wake = null;
+        }
+      };
+      const sub = opts.ctx.eventBus.subscribe({
+        afterId,
+        listener: (ev) => {
+          queue.push(ev);
+          ping();
+        },
+      });
+      signal?.addEventListener("abort", ping, { once: true });
+      try {
+        while (!signal?.aborted) {
+          const ev = queue.shift();
+          if (ev === undefined) {
+            await new Promise<void>((resolve) => {
+              wake = resolve;
+            });
+            continue;
+          }
+          const payload: BusPayload = { event: ev.event, data: ev.data };
+          // Positive id → persistent → resumable. Negative → transient.
+          yield ev.id > 0 ? tracked(String(ev.id), payload) : payload;
+        }
+      } finally {
+        sub.unsubscribe();
+      }
+    }),
   // Transport probe: verifies connect / multiplex / reconnect-resume end to
   // end without depending on the event bus. `lastEventId` is injected by the
   // client on reconnect; we resume the counter from it so a dropped frame is

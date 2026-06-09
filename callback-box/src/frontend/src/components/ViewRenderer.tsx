@@ -7,8 +7,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { getApiBase, getEventSourceBase, withBase } from "../api";
-import { useSSE, type SSEEvent } from "../hooks/useSSE";
+import { getApiBase, withBase } from "../api";
+import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";
 /** View card data from the API */
@@ -128,9 +128,9 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
   }, [loadModule, loadCards]);
 
 
-  // Subscribe to SSE for live updates
-  useSSE(`${getEventSourceBase()}/events`, {
-    onEvent: useCallback((event: SSEEvent) => {
+  // Subscribe to the box event stream for live updates
+  useBusSubscription({
+    onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event === "file-change") {
         const data = event.data as { path?: string };
         const changedPath = data.path || "";

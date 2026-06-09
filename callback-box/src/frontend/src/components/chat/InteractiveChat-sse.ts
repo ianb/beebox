@@ -9,9 +9,8 @@
 
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useSSE, type SSEEvent } from "../../hooks/useSSE";
-import { useIsActiveChatTab } from "../../hooks/useIsActiveChatTab";
-import { getApiBase, getEventSourceBase, type SessionEntry } from "../../api";
+import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { getApiBase, type SessionEntry } from "../../api";
 import { getTTSClient } from "../../lib/tts-client";
 import { alarm } from "../../lib/earcons";
 import { isTTSVoice } from "../../lib/speech-parsing";
@@ -50,7 +49,7 @@ interface SecondaryEventDeps {
  * tasks, file changes, feature toggles, session assignment). Split out of the
  * main dispatcher to keep each handler's branching legible.
  */
-function handleSecondaryEvent(event: SSEEvent, deps: SecondaryEventDeps): void {
+function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
   const { sessionId, sessionInput, send, setChatFeatures, onTaskEvent } = deps;
   if (event.event === "chat-task") {
     const data = event.data as { sessionId: string | null; task: TaskEvent };
@@ -77,38 +76,27 @@ export function useChatSse(opts: {
   sessionInput: string;
   boxSlug: string | undefined;
   currentUser: { email: string } | null | undefined;
-  /** A turn is streaming or refreshing — keep /events alive even if the tab
-   *  is hidden so the completion event isn't missed. See keepAliveWhenHidden. */
-  isStreaming: boolean;
   send: (event: ChatEvent) => void;
   fetchSchedules: () => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
   const navigate = useNavigate();
-  // The most-recently-engaged chat tab keeps /events alive even when hidden, so
-  // an idle-but-current session still gets real-time pushes (schedules, alarms,
-  // async agent output). Stale background tabs drop. See useIsActiveChatTab.
-  const isActiveTab = useIsActiveChatTab();
 
-  // Handle SSE events: schedule-fired, chat-history, chat-user-message,
-  // chat-session-assigned. Events tagged with a sessionId are filtered to
-  // this view's session only.
-  useSSE(`${getEventSourceBase()}/events`, {
-    keepAliveWhenHidden: isStreaming || isActiveTab,
+  // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
+  // chat-history, chat-complete, chat-user-message, chat-session-assigned.
+  // Events tagged with a sessionId are filtered to this view's session only.
+  useBusSubscription({
     onConnect: useCallback(() => {
-      console.debug("[chatfsm] sse-connect");
-      // Re-sync after a (re)connect: any chat-complete / chat-history events
-      // we missed while disconnected won't replay if the gap exceeded the
-      // event-bus retention. REFRESH is a global handler that's ignored in
-      // streaming, so it's safe to dispatch unconditionally.
+      console.debug("[chatfsm] ws-connect");
+      // Re-sync on every (re)connect: a full history REFRESH backs up the
+      // subscription's automatic lastEventId replay for gaps that exceed the
+      // event-bus retention window. REFRESH is ignored in streaming, so it's
+      // safe to dispatch unconditionally.
       send({ type: "REFRESH" });
     }, [send]),
-    onDisconnect: useCallback(() => {
-      console.debug("[chatfsm] sse-disconnect");
-    }, []),
-    onEvent: useCallback((event: SSEEvent) => {
+    onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event === "schedule-fired") {
         const data = event.data as { label: string; alarm: boolean; announce: string | null };
         if (data.alarm) {
