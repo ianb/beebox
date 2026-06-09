@@ -31,10 +31,19 @@ export interface RunRecord {
 export const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export interface ScriptState {
+  /** When a run was last attempted (set on success AND failure). */
   lastRun: string | null;
   lastResult: "success" | "failure" | null;
   lastError: string | null;
   lastDurationMs: number | null;
+  /** When a run last succeeded — diverges from lastRun while failing. */
+  lastSuccess: string | null;
+  /** Failures since the last success; 0 after any success. */
+  consecutiveFailures: number;
+  /** Health-alert latch: when a proactive alert was last sent for the
+   * current unhealthy episode. Cleared on success so a relapse re-alerts. */
+  alertedAt: string | null;
+  alertedFor: "failing" | "overdue" | "invalid" | null;
   runCount: number;
   recentRuns?: RunRecord[];
 }
@@ -44,8 +53,27 @@ const EMPTY_STATE: ScriptState = {
   lastResult: null,
   lastError: null,
   lastDurationMs: null,
+  lastSuccess: null,
+  consecutiveFailures: 0,
+  alertedAt: null,
+  alertedFor: null,
   runCount: 0,
 };
+
+/** Fill in health fields missing from state files written before they
+ * existed. Best-effort backfill: a state whose last run succeeded gets
+ * lastSuccess = lastRun; one whose last run failed counts as 1 failure
+ * (we can't know how many preceded it). */
+export function normalizeScriptState(raw: Partial<ScriptState>): ScriptState {
+  const state = { ...EMPTY_STATE, ...raw };
+  if (raw.lastSuccess === undefined && state.lastResult === "success") {
+    state.lastSuccess = state.lastRun;
+  }
+  if (raw.consecutiveFailures === undefined && state.lastResult === "failure") {
+    state.consecutiveFailures = 1;
+  }
+  return state;
+}
 
 function stateDir(boxRoot: string): string {
   return path.join(boxRoot, "config/schedules/.state");
@@ -61,7 +89,7 @@ function stateFile(boxRoot: string, scriptName: string): string {
 export async function loadScriptState(boxRoot: string, scriptName: string): Promise<ScriptState> {
   try {
     const content = await fs.readFile(stateFile(boxRoot, scriptName), "utf-8");
-    return JSON.parse(content) as ScriptState;
+    return normalizeScriptState(JSON.parse(content) as Partial<ScriptState>);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Could not load schedule state for "${scriptName}", using empty state:`, e);
@@ -117,6 +145,43 @@ export function recordRun(
   } else {
     delete state.recentRuns;
   }
+}
+
+export interface RecordOutcomeOptions {
+  result: "success" | "failure";
+  error: string | null;
+  durationMs: number;
+  sleepAffected: boolean;
+  windowMs: number;
+  now: Date;
+}
+
+/**
+ * Mutate script state to reflect a completed run: last-run fields,
+ * success/failure health tracking, and the windowed run history.
+ * The single outcome-recording path for every trigger (tick, wakeup,
+ * webapp) — callers persist with saveScriptState afterwards.
+ */
+export function recordOutcome(state: ScriptState, opts: RecordOutcomeOptions): void {
+  const { result, error, durationMs, sleepAffected, windowMs, now } = opts;
+  state.lastRun = now.toISOString();
+  state.lastResult = result;
+  state.lastError = error;
+  state.lastDurationMs = durationMs;
+  state.runCount++;
+  if (result === "success") {
+    state.lastSuccess = now.toISOString();
+    state.consecutiveFailures = 0;
+    state.alertedAt = null;
+    state.alertedFor = null;
+  } else {
+    state.consecutiveFailures++;
+  }
+  recordRun(state, {
+    record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
+    windowMs,
+    now,
+  });
 }
 
 // --- Lock files for running script tracking ---

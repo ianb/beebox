@@ -13,7 +13,7 @@ import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   saveScriptState,
-  recordRun,
+  recordOutcome,
   acquireScriptLock,
   releaseScriptLock,
   loadRunningProcedures,
@@ -127,32 +127,6 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
   return null;
 }
 
-interface RecordOutcomeArgs {
-  state: ScriptState;
-  result: "success" | "failure";
-  error: string | null;
-  durationMs: number;
-  sleepAffected: boolean;
-  windowMs: number;
-  now: Date;
-}
-
-/** Mutate script state to reflect a completed run and append it to the
- * windowed run history. */
-function recordOutcome(args: RecordOutcomeArgs): void {
-  const { state, result, error, durationMs, sleepAffected, windowMs, now } = args;
-  state.lastRun = now.toISOString();
-  state.lastResult = result;
-  state.lastError = error;
-  state.lastDurationMs = durationMs;
-  state.runCount++;
-  recordRun(state, {
-    record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
-    windowMs,
-    now,
-  });
-}
-
 interface PostSuccessArgs {
   boxRoot: string;
   parsed: ParsedScript;
@@ -246,7 +220,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
       env: scriptEnv,
     });
 
-    recordOutcome({ state, result: "success", error: null, durationMs, sleepAffected, windowMs, now });
+    recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
 
     await handlePostSuccess({ boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options });
@@ -254,7 +228,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
-    recordOutcome({ state, result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
+    recordOutcome(state, { result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
     if (!options.quiet) console.error(`  Failed: ${(err as Error).message}`);
     return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: (err as Error).message };
