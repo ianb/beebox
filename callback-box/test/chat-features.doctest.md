@@ -159,6 +159,24 @@ composeChatAppSnapshot({
 => <chat-app narration="off" prose="on" time="2026-05-13T10:00:00-05:00"/>
 ```
 
+The optional context attributes (computed by `session-context.ts`)
+serialize after `time`, in a fixed order, and are simply omitted when
+absent — `local-time` and `channel` ride on every real send, while
+`last-activity` and `calendar` appear only on the first message of a
+brand-new session.
+
+```
+composeChatAppSnapshot({
+  features: {},
+  time: "2026-05-13T15:00:00Z",
+  localTime: "Wednesday 2026-05-13 10:00 (morning)",
+  channel: "web-mobile",
+  lastActivity: "3 days ago",
+  calendar: "16:00-17:00 Dentist",
+})
+=> <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago" calendar="16:00-17:00 Dentist"/>
+```
+
 ## Delta parsing
 
 The agent emits `<chat-app>` tags as state mutations. The parser
@@ -193,12 +211,14 @@ r.deltas
 ]
 ```
 
-Unknown features and invalid values are dropped. `time` is always
-ignored on input — it's a read-only attribute the agent never sets.
+Unknown features and invalid values are dropped. The system-written
+context attributes (`time`, `local-time`, `channel`, `last-activity`,
+`calendar`) are always ignored on input — they're read-only; the agent
+echoing one back is not a mutation.
 
 ```
 const r = parseChatAppDeltas(
-  "<chat-app narration=\"on\" bogus=\"yes\" prose=\"maybe\" time=\"now\"/>"
+  "<chat-app narration=\"on\" bogus=\"yes\" prose=\"maybe\" time=\"now\" local-time=\"x\" channel=\"y\" last-activity=\"z\" calendar=\"w\"/>"
 );
 r.deltas
 => [

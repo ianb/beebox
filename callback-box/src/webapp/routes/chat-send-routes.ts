@@ -19,6 +19,7 @@ import type { ChatRoutesContext } from "./chat-context.js";
 import {
   type SendBody,
   type SelfNoteBody,
+  classifyChannel,
   escapeXmlAttr,
   injectUserAttr,
   validateImages,
@@ -191,10 +192,17 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       timestamp: new Date().toISOString(),
     });
 
+    // Where the user is sending from, for the snapshot's `channel` attr.
+    const channel = classifyChannel(request.headers["user-agent"]);
+
     // If busy, queue and return — the queue drains on the next "done", and the
     // completed turn surfaces via the chat-complete event → history refresh.
     if (chatSession.isBusy()) {
-      chatSession.enqueue({ text: attributed, ...(images ? { images } : {}) });
+      chatSession.enqueue({
+        text: attributed,
+        ...(images ? { images } : {}),
+        ...(channel !== undefined ? { channel } : {}),
+      });
       return reply.send({ queued: true });
     }
 
@@ -227,6 +235,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const sent = await chatSession.send({
       text: fullMessage,
       ...(images ? { images } : {}),
+      ...(channel !== undefined ? { channel } : {}),
     });
     if (!sent) {
       capture.cancel();

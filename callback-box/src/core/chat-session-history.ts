@@ -306,6 +306,28 @@ export async function getMostActive(boxRoot: string): Promise<string | null> {
 }
 
 /**
+ * Read when the most-active pointer was last written — i.e. the last
+ * time any chat session on this box saw real activity. Powers the
+ * snapshot's `last-activity` attribute. Returns null when there's no
+ * pointer yet or its savedAt doesn't parse.
+ */
+export async function getMostActiveSavedAt(boxRoot: string): Promise<Date | null> {
+  const filePath = path.join(boxRoot, MOST_ACTIVE_FILE);
+  try {
+    const data = await fs.readFile(filePath, "utf-8");
+    const parsed = JSON.parse(data) as Partial<MostActiveFile>;
+    if (typeof parsed.savedAt !== "string") return null;
+    const savedAt = new Date(parsed.savedAt);
+    return Number.isNaN(savedAt.getTime()) ? null : savedAt;
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === "ENOENT") return null;
+    log("most-active", `Failed to read most-active savedAt: ${err.message}`);
+    return null;
+  }
+}
+
+/**
  * Update the most-active session pointer. Called whenever a session is
  * meaningfully used (send, restart, reset).
  */

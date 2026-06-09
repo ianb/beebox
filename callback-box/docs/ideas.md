@@ -190,6 +190,8 @@ Currently the boxholder agent gets the date but not derived context that frequen
 
 Implementation is trivial (compute at session start, inject into context) but the quality dividend is real because these are things conversations *constantly* reference and currently the agent has to derive or fudge.
 
+**IMPLEMENTED (web chat, June 2026)** — as read-only attributes on the per-turn `<chat-app>` snapshot, computed by `src/core/session-context.ts`: `local-time` (named weekday + box-local clock + phase of day) and `channel` (`web-desktop`/`web-mobile`, classified from the request User-Agent) on every message; `last-activity` (from the most-active pointer's `savedAt`) and `calendar` (next 24h of `store/calendar/`) on the first message of a brand-new session only. Deliberately in message text rather than the system prompt: the warm-pool backend reuses a prewarmed subprocess only on an exact system-prompt match, so the prompt must stay time-invariant. Remaining: Telegram thread sessions (`chat-thread-session.ts`) don't use the snapshot and got none of this — wire it up when touching that area.
+
 ## Scheduled-task health surfacing
 
 Scheduled automation (wakeup, scheduler ticks, overnight compaction once that exists, sync jobs) can silently stop running, and the failure isn't noticed until something downstream breaks (briefings stop updating, hunches stop being extracted, calendar drift). Stuff gets lost.

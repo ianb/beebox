@@ -122,15 +122,35 @@ export function mergeSeedFeatures(input: {
 }
 
 /**
+ * Attributes the system writes into the snapshot that the agent can
+ * never set back via a delta tag. `time`/`local-time`/`channel` ride on
+ * every message; `last-activity`/`calendar` only on the first message
+ * of a new session (see `session-context.ts`).
+ */
+const READ_ONLY_ATTRS = new Set([
+  "time",
+  "local-time",
+  "channel",
+  "last-activity",
+  "calendar",
+]);
+
+/**
  * Serialize the system → agent snapshot. Carries `time` (lowercase,
- * free-form ISO string) plus all current feature states.
+ * free-form ISO string), the optional read-only context attributes,
+ * plus all current feature states.
  *
  * Example output:
- *   <chat-app narration="on" prose="off" time="2026-05-13T14:23:00-05:00"/>
+ *   <chat-app narration="on" prose="off" time="2026-05-13T14:23:00-05:00"
+ *     local-time="Wednesday 2026-05-13 14:23 (afternoon)" channel="web-desktop"/>
  */
 export function composeChatAppSnapshot(input: {
   features: FeatureMap;
   time: string;
+  localTime?: string;
+  channel?: string;
+  lastActivity?: string;
+  calendar?: string;
 }): string {
   const resolved = resolveFeatures(input.features);
   const attrs: string[] = [];
@@ -140,6 +160,15 @@ export function composeChatAppSnapshot(input: {
     attrs.push(`${f.name}="${escapeAttr(val)}"`);
   }
   attrs.push(`time="${escapeAttr(input.time)}"`);
+  const contextAttrs: Array<[string, string | undefined]> = [
+    ["local-time", input.localTime],
+    ["channel", input.channel],
+    ["last-activity", input.lastActivity],
+    ["calendar", input.calendar],
+  ];
+  for (const [name, value] of contextAttrs) {
+    if (value !== undefined) attrs.push(`${name}="${escapeAttr(value)}"`);
+  }
   return `<chat-app ${attrs.join(" ")}/>`;
 }
 
@@ -168,7 +197,7 @@ export function parseChatAppDeltas(content: string): {
   const cleaned = content.replace(re, (_match, attrsRaw: string) => {
     const attrs = parseAttrs(attrsRaw);
     for (const [name, value] of attrs) {
-      if (name === "time") continue; // read-only, ignored on input
+      if (READ_ONLY_ATTRS.has(name)) continue; // system-written, ignored on input
       if (!isKnownFeature(name)) {
         console.warn(`[chat-features] Ignoring unknown feature in agent delta: ${name}`);
         continue;
