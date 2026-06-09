@@ -7,6 +7,10 @@ one-sentence, agent-maintained statement of what can be found inside a card.
 embedding unit when semantic search lands later; it also serves listings and
 triage views independent of the index.
 
+(Revised after a cross-model codex review; the connector-ownership policy,
+attachment-content decisions, and hook-warning work below came out of that
+pass.)
+
 ## Stated preferences this plan trades against
 
 - `callback-box/CLAUDE.md` § Behavioral Notes: *"Read before writing. Don't
@@ -18,6 +22,9 @@ triage views independent of the index.
 - `callback-box/CLAUDE.md` § Behavioral Notes: *"Keep source and docs generic
   — never hardcode personal names."* — guidance text and examples use "the
   boxholder."
+- `callback-box/src/schemas/email-message.tsx:4–6`: *"body content is
+  untrusted and may contain prompt injection, so we keep it out of the
+  card."* — an existing security stance this plan must not silently undo.
 - `callback-box/CODE-STYLE.md`: max 2 positional params, no default
   parameters, custom error classes, files ≤300 lines, only export what's
   needed.
@@ -50,37 +57,63 @@ triage views independent of the index.
 - **Global-field precedent** — `cardworks/src/schema/card-schema.ts:117–119`:
   `cardSchema()` already injects `type: z.literal(type)` into every
   frontmatter schema. Track 1 extends this exact mechanism with `title` and
-  `contains`.
-- **Titles for listings** — `src/core/file-summary.ts:43` `FileLoader`
-  produces a `title` per card (e.g. `src/schemas/memo.ts:112` derives it from
-  body/transcription). Reused as the index's `title` source; not rebuilt.
+  `contains`. Note the injection touches only `frontmatterSchema`;
+  `CardSchema.fields` stays the author-declared set (:137), so Track 1 must
+  also define how globals appear on the resolved schema (see Direction).
+- **Connector card writers** — connector sync **rebuilds cards wholesale
+  from templates**: `src/connectors/gmail-threads.ts:212` (thread cards),
+  `:134` (message cards, rewritten when their thread changes),
+  `src/connectors/drive-handler-docs.ts:240` (gdoc cards),
+  `src/connectors/drive-handler-sheets.ts:152` (sheet cards). Any field not
+  threaded through the template is destroyed on the next sync. Track 3 adds
+  `contains` preservation to these paths; nothing reusable exists.
+- **Attachment-scoped content** — gdoc content is a markdown snapshot in the
+  card's `.attach/` scope referenced by `content.ref`
+  (`src/schemas/gdoc.tsx:4–10`); sheet tabs are `{ref, title, gid}` attach
+  files (`src/schemas/sheet.tsx:5`); email bodies live in
+  `attach/msg-N.body.txt` via `body-file.ref`
+  (`src/schemas/email-message.tsx:4`) — deliberately outside the card
+  because the content is untrusted.
 - **Per-edit validation hooks** — `src/core/install-validation-hooks.ts:2–16`
-  installs a PostToolUse hook (`cb validate --hook`, payload reader at
-  `src/cli/commands/validate.ts:49`) and a pre-commit hook (:36). Reused as
-  the delivery channel for `contains` staleness nudges and length warnings.
+  installs a PostToolUse hook (`cb validate --hook`) and a pre-commit hook
+  (:36). The delivery channel exists, but hook mode currently prints
+  **nothing unless `totalErrors > 0`** (`src/cli/commands/validate.ts:185`)
+  — warning-level output is new work (Track 3). PostToolUse fires only on
+  agent Edit/Write/MultiEdit, not hand edits or connector writes.
 - **Ref-updating moves** — `cb mv` (`src/cli/commands/move.ts`,
   `src/core/commands/move-phase2.ts`) rewrites refs on move. The index does
-  **not** hook `cb mv`; moves are detected at refresh time by content-hash
-  (see Track 2) so `git mv` and shell moves are covered identically.
-- **Cross-process lock** — `src/lib/file-lock.ts:215` `acquireLock`. Reused
-  around index persistence.
+  **not** hook `cb mv`; the manifest diff treats a move as
+  remove-then-reinsert (see Track 2), which covers `git mv` and shell moves
+  identically.
+- **Cross-process lock** — `src/lib/file-lock.ts:215` `acquireLock`. It
+  **throws `LockHeldError` immediately on contention** (:78) — it has no
+  wait. Track 2 wraps it in a bounded retry; the primitive is reused, the
+  retry is new.
 - **Box dirs** — `src/cli/lib/paths.ts:24` `BOX_DIRS`, `:45`
-  `trash: "store/trash"`. The walker excludes `store/trash` and
-  `.callback-box/`.
+  `trash: "store/trash"` — the path constants the new walker's exclusion
+  list points at. The walker itself is new code.
 - **Agent guidance plumbing** — `src/core/generate-docs.ts:5` writes
   `.callback-box/agent-guide.md` (always loaded) and per-type
   `docs/generated/card-<type>.md`. Reused to deliver the `contains` writing
   rule once, canonically.
-- **Derived-field lifecycle precedent** — `cb describe-images`
-  (`src/cli/commands/describe-images.ts`) maintains `image.description`
-  (`src/schemas/image.tsx:78`). `contains` follows the same write-at-
-  processing-time + batch-backfill shape.
+- **Derived-field precedent (narrow)** — `cb describe-images`
+  (`src/cli/commands/describe-images.ts`) batch-maintains
+  `image.description` (`src/schemas/image.tsx:78`). Precedent for "an agent
+  command maintains a frontmatter field" only — it has no staleness or
+  backfill machinery; Track 3 builds those.
 - **Job creation precedent** — `src/cli/commands/wakeup-steps.ts:179`
   `createIntakeJobsForUnjobbed`. The backfill job creator follows this
   pattern.
 - **Schema-wins precedent** — `src/schemas/doc.tsx:19` declares
   `title: z.string()` (required). Global `title` is optional; a schema's own
   stricter declaration takes precedence.
+- **Listing summaries** — `src/core/file-summary.ts:15` `FileSummary` has
+  `{path, tagName, title, attrs}`; only memo and image register loaders
+  (`src/core/loader-registrations.ts:20–21`), everything else falls back to
+  filename (`src/core/loader-registry.ts:68`). Surfacing `contains` in
+  listings is therefore a real (small) interface + endpoint + UI change, not
+  free reuse — and index titles come from per-kind extraction, not from
+  these loaders.
 
 ## Prior art (external)
 
@@ -130,27 +163,33 @@ is independent of Track 3 once Track 1 lands.
   silently vanish on the next parse-mutate-reserialize. And with ~30 schemas,
   per-schema opt-in means every future content type can silently forget the
   field; the boxholder explicitly wants these global.
-- **Direction**: in `cardworks/src/schema/card-schema.ts`, extend the
-  injected `frontmatterShape` with `title: z.string().optional()` and
-  `contains: z.string().optional()` **unless the schema declares its own**
-  (schema-wins, preserving `doc`'s required `title`). `searchable` is carried
-  on the resolved `CardSchema`/`ElementSchema` object. Operational schemas
-  set `searchable: false`: intake-job, chat-job, calendar-review-job,
-  question-followup-job, procedure-run, scheduled-script,
-  scheduled-script-duration, chat-thread (chat-history search is its own
-  future surface; thread cards hold refs, not prose). Everything else —
-  including telegram-message, email-outbound, commentary, sheet, gdoc —
-  stays searchable.
+- **Direction**: in `cardworks/src/schema/card-schema.ts`, a
+  `GLOBAL_CARD_FIELDS` constant (`{title, contains}` → Zod validators) is
+  merged into the injected `frontmatterShape` for any name the schema does
+  not itself declare (schema-wins, preserving `doc`'s required `title`).
+  **Resolved-surface decision**: `schema.fields` stays the author-declared
+  set; the resolved `CardSchema` gains `globalFieldNames: string[]` so
+  doc/template generators and field-enumerating code can consult both.
+  Globals are full schema surface (parse, validate, serialize, document),
+  not validation-only; per-type `*Fields` TS interfaces add the optional
+  members only where code actually reads them. `searchable` is carried on
+  the resolved `CardSchema`/`ElementSchema` object. Operational schemas set
+  `searchable: false`: intake-job, chat-job, calendar-review-job,
+  question-followup-job, procedure-run, scheduled-script, chat-thread
+  (chat-history search is its own future surface; thread cards hold refs,
+  not prose). Everything else — including telegram-message, email-outbound,
+  commentary, sheet, gdoc — stays searchable.
 - **Vocabulary lock-ins**: field names `title`, `contains`; flag name
-  `searchable`. `contains` semantics: *one sentence stating what can be found
-  inside this card; when the information is concise the sentence carries the
-  information itself ("Dentist moved to June 17; confirmation in this
-  email"), not a pointer at it ("contains scheduling information"); when it
-  isn't concise, the sentence says what's learnable here. Never a list of
-  parts.* Soft length budget: warn above 200 characters.
+  `searchable`; cardworks export `GLOBAL_CARD_FIELDS`. `contains` semantics:
+  *one sentence stating what can be found inside this card; when the
+  information is concise the sentence carries the information itself
+  ("Dentist moved to June 17; confirmation in this email"), not a pointer at
+  it ("contains scheduling information"); when it isn't concise, the
+  sentence says what's learnable here. Never a list of parts.* Soft length
+  budget: warn above 200 characters.
 - **First implementation chunk**: the cardworks change + unit tests
-  (global injection, schema-wins override, `searchable` defaulting), plus
-  marking the operational schemas in `src/schemas/`.
+  (global injection, schema-wins override, `globalFieldNames`, `searchable`
+  defaulting), plus marking the operational schemas in `src/schemas/`.
 
 ### Track 2 — the index and `cb search`
 
@@ -168,100 +207,165 @@ is independent of Track 3 once Track 1 lands.
     `src/cli/commands/search.ts` delegating to a core command, matching the
     `runCommand` pattern (`src/cli/commands/ls.ts:23`).
   - **Index schema**: `{id, path, fragment, kind, title, contains, content,
-    created, contentHash}`. One doc per card; additionally one doc per
-    top-level markdown section when a body exceeds 2,000 characters
-    (`fragment` = `/Heading/Subheading`, ske-style). Legacy XML cards (guide,
-    recipe, capture-session, landmark, procedure) index their walked text
-    content. Per-kind extraction folds obvious frontmatter into
-    `title`/`content` (email subject + participants, person name,
-    `image.description` — which also serves as the `contains` fallback for
-    images). Search-time boosts: `contains` ~3×, `title` ~2×, `content` 1×
-    (numbers tuned during dogfooding).
+    created, contentHash}`. `id = "<path>#<fragment>"` (`fragment` empty
+    for the whole-card doc); the manifest records each card's doc ids so
+    removal is exact. One doc per card; additionally one doc per top-level
+    markdown section when a body exceeds 2,000 characters (`fragment` =
+    `/Heading/Subheading`, ske-style). Legacy XML cards (guide, recipe,
+    capture-session, landmark, procedure) index their walked text content.
+    The index `title` comes from per-kind extraction (email subject +
+    participants, person name, doc/gdoc title, image description, filename
+    fallback) — not from the `FileLoader` registry, which only covers memo
+    and image. `image.description` also serves as the `contains` fallback
+    for images. Search-time boosts: `contains` ~3×, `title` ~2×, `content`
+    1× (numbers tuned during dogfooding).
+  - **Attachment content (per-kind input files)**: an extractor may declare
+    extra input files for a card beyond the `.card` file itself; the
+    manifest tracks them like cards (mtime/size/hash), so attachment edits
+    trigger re-extraction.
+    - **gdoc**: the `content.ref` markdown snapshot is indexed as `content`
+      (it's the document).
+    - **sheet**: tab *titles* only in v1; cell data is deliberately skipped
+      (the tabs are cell-grid JSON with formula/value pairs — it ranks
+      badly and bloats the index; `contains` + titles carry retrieval).
+      Recorded as a deliberate cut, revisit on demand.
+    - **email-message**: the `body-file.ref` text is **not indexed**. The
+      body is quarantined outside the card because it is untrusted
+      (`email-message.tsx:4–6`); indexing it would re-inject untrusted text
+      into agent context via excerpts. Search reaches mail via `subject`,
+      `snippet`, participants, and agent-written `contains` (written at
+      triage time, when an agent reads the body in a deliberate context).
+      Revisiting this requires a sanitization design, not a flag flip.
   - **Persistence**: `search-index.msp` (Orama binary) +
     `search-index-manifest.json` `{schemaVersion, files: {path → {mtimeMs,
-    size, contentHash}}}`. Writes go through `acquireLock`
-    (`file-lock.ts:215`) and are atomic (write temp, rename). Schema-version
-    mismatch or restore failure → silent full rebuild (ske's pattern,
-    `search-index.ts:157–171`), logged to stderr.
+    size, contentHash, docIds, inputFiles}}}`. All writes happen under one
+    `acquireLock` (`file-lock.ts:215`) wrapped in a bounded retry (~5s of
+    short sleeps — the primitive itself throws `LockHeldError` immediately);
+    a process that still can't get the lock serves results from the restored
+    index without refreshing or persisting, with a stderr note. Files are
+    written atomically (temp + rename), index first, manifest last: a crash
+    between the two leaves the manifest older, so affected files simply
+    re-diff as changed on the next refresh (remove + insert is idempotent) —
+    self-healing, no transaction needed. Schema-version mismatch or restore
+    failure → silent full rebuild (ske's pattern, `search-index.ts:157–171`),
+    logged to stderr.
   - **Refresh (the update trigger)**: on every `cb search`, stat-walk
-    `*.card` files (excluding `store/trash`, `.callback-box`), diff
-    mtime+size against the manifest, re-hash and re-extract only changed
-    files, `remove`+`insert` their docs, persist if dirty. ~10k stats is
+    `*.card` files plus manifest-declared input files (excluding
+    `store/trash`, `.callback-box`), diff mtimeMs+size against the manifest,
+    re-hash on any mtime change, re-extract changed files,
+    `remove`+`insert` their docs, persist if dirty. ~10k stats is
     milliseconds; correctness is at-query-time, which beats any hook-based
     trigger (hooks miss `git mv`, shell moves, connector writes, and
     uncommitted state).
-  - **Moves**: a vanished path plus a new path with the same `contentHash`
-    is a move — rewrite `path` on the existing docs without re-extraction.
-    If multiple candidates share a hash (duplicated content), fall back to
-    remove + re-extract; correctness over optimization.
+  - **Moves**: no special detection. A vanished path's docs are removed (by
+    recorded doc ids); a new path is extracted and inserted. Re-extraction
+    of a moved file costs one file read — not worth a hash-matching
+    optimization or any `cb mv` hook, and this covers `git mv` and shell
+    moves identically.
   - **CLI**: `cb search <query> [--kind <type>...] [--path <prefix>]
     [--limit N] [--json] [--rebuild]`. JSON envelope: `{results: [{path,
     fragment, kind, title, contains, excerpt, score}], total, truncated,
-    hint}` where `hint` teaches narrowing. Human output: `path — title` +
-    excerpt. An invalid `--kind` error enumerates the registered searchable
-    types (including box-local `config/schemas/`). `cb init` builds the
-    initial index; a missing index builds on demand with progress on stderr.
+    hint, warnings}` where `hint` teaches narrowing and `warnings` carries
+    skipped-unparseable-card notes. Human output: `path — title` + excerpt.
+    An invalid `--kind` error enumerates the registered searchable types
+    (including box-local `config/schemas/`). `cb init` builds the initial
+    index; a missing index builds on demand with progress on stderr.
 - **Vocabulary lock-ins**: command `cb search`; flags `--kind`, `--path`,
   `--limit`, `--json`, `--rebuild`; files `search-index.msp`,
-  `search-index-manifest.json`; fragment notation `/Heading/Subheading`.
+  `search-index-manifest.json`; doc id `"<path>#<fragment>"`; fragment
+  notation `/Heading/Subheading`.
 - **First implementation chunk**: `extract.ts` + pure doctests (frontmatter
-  card → docs, long-body section split, XML walk, per-kind folding). No open
-  questions inside it.
+  card → docs, long-body section split, XML walk, per-kind folding and
+  input-file declaration, email-body exclusion). No open questions inside
+  it.
 
-### Track 3 — `contains` lifecycle: guidance, staleness, backfill, listings
+### Track 3 — `contains` lifecycle: guidance, staleness, ownership, backfill, listings
 
 - **What**: the writing rule delivered to agents; staleness tracked without
-  touching card files; `cb contains list/update`; backfill jobs; `contains`
-  surfaced in listings.
+  touching card files; connector preservation so the field survives sync;
+  `cb contains list/update`; backfill jobs; `contains` surfaced in listings.
 - **Why this needs to change**: a field nobody is told to write stays empty;
-  a field with no staleness signal silently rots when bodies change. The
-  boxholder rejected an in-card hash (`contains-hash`) as diff churn — the
-  card file must stay byte-clean when only bookkeeping changes.
+  a field with no staleness signal silently rots when bodies change; and a
+  field connectors overwrite on every sync
+  (`gmail-threads.ts:212`, `drive-handler-docs.ts:240`) is worse than
+  empty — agents would keep paying to rewrite it. The boxholder rejected an
+  in-card hash (`contains-hash`) as diff churn — the card file must stay
+  byte-clean when only bookkeeping changes.
 - **Direction**:
   - **Guidance**: one canonical block (the vocabulary-locked rule from
     Track 1, verbatim) written by `generate-docs.ts` into the agent guide and
     appended to each searchable type's `docs/generated/card-<type>.md`.
     Processing guides (intake/triage) get one line: write `contains` when
     creating or substantially editing a searchable card.
+  - **Connector ownership**: connector-owned cards are rebuilt from
+    templates on sync, so each rebuild path **reads the existing card's
+    `contains` (and agent-set `title` where the template doesn't own title)
+    and threads it through the template**: gmail thread cards
+    (`gmail-threads.ts:212`), gmail message cards (`:134`), gdoc cards
+    (`drive-handler-docs.ts:240`), sheet cards
+    (`drive-handler-sheets.ts:152`) — via one shared helper
+    (`preserveAgentFields(existingCardPath, templateFields)`). The
+    gdoc/sheet schema instructions ("don't modify frontmatter",
+    `gdoc.tsx:63`, `sheet.tsx:54`) are amended to carve out `contains` as
+    agent-writable. Backfill for connector kinds is gated on this chunk
+    landing.
   - **Staleness sidecar**: `.callback-box/contains-state.json` —
     `{path → {basisHash, containsText}}`, where `basisHash` hashes the
     markdown body (bodied cards) or canonical YAML minus
     `contains`/`title` (frontmatter-only cards), via one helper
-    `computeContainsBasis(parsedCard)`. Maintained by the index refresh:
-    contains-text changed → record new basis; basis changed while
-    contains-text didn't → stale. Kept as a **separate file** from the index
-    manifest so schema-version index rebuilds don't wipe staleness memory.
-    Single-writer under the same file lock.
-  - **Nudges**: `cb validate --hook` (PostToolUse) consults the sidecar and
-    warns — *"body changed but `contains:` didn't — review it"* — and warns
-    when `contains` exceeds 200 characters. Warning-level only; never blocks.
+    `computeContainsBasis(parsedCard)`. For cards with declared input files
+    (gdoc), the basis covers the input file content too. Maintained by the
+    index refresh: contains-text changed → record new basis; basis changed
+    while contains-text didn't → stale. A path first seen with a `contains`
+    (fresh clone, moved card) records the current basis as fresh. Kept as a
+    **separate file** from the index manifest so schema-version index
+    rebuilds don't wipe staleness memory. Single-writer (the indexer) under
+    the same lock.
+  - **Acknowledging a reviewed-but-unchanged `contains`**:
+    `cb contains update <card> --text "..."` **always re-bases the sidecar,
+    including when the text is identical** — running it is the
+    acknowledgment. The stale flag therefore has exactly two exits: update
+    the text, or confirm it via the same command. No separate ack state.
+  - **Nudges**: `cb validate --hook` gains warning-level output — today it
+    is silent unless `totalErrors > 0` (`validate.ts:185`); it will emit
+    warnings (stale `contains` per the sidecar; `contains` over 200
+    characters) on exit 2 even with zero errors, matching the hook's
+    documented "warning, not blocking" framing
+    (`install-validation-hooks.ts:8–12`). Honest scope: PostToolUse covers
+    agent edits only; pre-commit covers committed hand edits; edits that
+    bypass both are caught by `cb contains list --stale`, the catch-all.
   - **CLI**: `cb contains list [--missing|--stale] [--json]` (searchable
     kinds only, bounded output with hint) and
-    `cb contains update <card> --text "..."` (parse-mutate-reserialize per
-    `docs/adding-schemas.md:157`, then refreshes the sidecar basis).
+    `cb contains update <card> --text "..."` (splitCardContent + YAML
+    mutation per `docs/adding-schemas.md:155`, then re-bases the sidecar).
   - **Backfill**: a job-card creator in the `createIntakeJobsForUnjobbed`
     mold (`wakeup-steps.ts:179`) batching ~25 missing-`contains` cards per
-    job. Completion criterion per box: `cb contains list --missing` returns
-    empty for searchable kinds.
-  - **Listings**: `FileSummary` loaders (`file-summary.ts:43`) get access to
-    `contains` via the fields they already receive; surfaced as a secondary
-    line in list contexts. Small, per-loader, not load-bearing.
+    job. Connector-owned kinds enter the backfill pool only after the
+    preservation chunk lands. Completion criterion per box:
+    `cb contains list --missing` returns empty for searchable kinds.
+  - **Listings**: `FileSummary` (`file-summary.ts:15`) gains an optional
+    `contains` field, the summarize endpoint passes it through, and the
+    file-entry UI renders it as a secondary line. Small but real interface +
+    endpoint + UI work (only memo/image have loaders; for the rest the
+    summarize path reads frontmatter it already parses).
 - **Vocabulary lock-ins**: `cb contains list|update` (verbs from the
-  `ideas.md:515` menu); sidecar filename `contains-state.json`.
+  `ideas.md:515` menu); sidecar filename `contains-state.json`; helper names
+  `computeContainsBasis`, `preserveAgentFields`.
 - **First implementation chunk**: `computeContainsBasis` + sidecar
   read/write + the refresh integration, with a makeTmpBox doctest covering
-  fresh → edit-body → stale → update-contains → fresh.
+  fresh → edit-body → stale → `cb contains update` (identical text) → fresh.
 
 ## Subplans
 
 None. The embeddings phase (vector field over `contains`, provider service,
 hybrid ranking) is explicitly out of scope below; when it starts, it gets its
-own plan — provider choice, cost model, and lazy-generation policy are a
-full decision-table of their own.
+own plan — provider choice, cost model, lazy-generation policy, and whether
+sanitized email-body indexing is worth designing are a full decision-table of
+their own.
 
 ## Failure modes
 
-> **Accepted documented risk:** *fabricated `contains`* — an agent writes a
+> **Accepted documented risk 1:** *fabricated `contains`* — an agent writes a
 > fact the card doesn't support ("moved to June 17" when the email says
 > June 16). No mechanical handling can catch semantic divergence; the
 > guidance says to quote facts from the content, and any body edit re-flags
@@ -269,22 +373,31 @@ full decision-table of their own.
 > is a retrieval aid, never a source of truth — the card body remains
 > authoritative, and search results always lead to the card itself.
 
+> **Accepted documented risk 2:** *same-mtime same-size content change
+> evades the manifest diff* — essentially only clock-frozen writes. Silent
+> by nature; `--rebuild` exists but nothing signals the user to run it.
+> Accepted as a narrow corner; if it ever bites, the fix is a periodic full
+> re-hash during wakeup, not a redesign.
+
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Index file corrupt/truncated (process killed mid-persist) | doctest: restore garbage → rebuild | atomic temp+rename write; restore failure → full rebuild | clear (stderr note) |
-| Two processes refresh+persist concurrently | doctest: lock contention | `acquireLock` around refresh+persist; loser re-reads | clear (`LockHeldError` path) |
+| Crash between index persist and manifest persist | doctest: stale manifest → re-diff | manifest written last; affected files re-extract idempotently (self-healing) | silent by design (converges) |
+| Two processes refresh+persist concurrently | doctest: lock contention | bounded retry around `acquireLock`; loser serves stale results without persisting | clear (stderr note) |
 | A card fails to parse during indexing (invalid YAML, schema error) | doctest: corpus with one bad card | skip + collect; reported as `warnings` in `--json`, stderr otherwise; search still answers | clear |
 | Orama ranking drift after persist/restore (issue #695) | doctest pins persist→restore→search at pinned version | `cb search --rebuild` remedy | clear once doctest exists |
-| Same-second body edit with identical size evades mtime+size diff | no | `contentHash` re-check on any mtime change; `--rebuild` escape hatch | silent (narrow; documented) |
-| Move detection matches multiple identical-content files | doctest: duplicate cards moved | ambiguity → remove + re-extract instead of path rewrite | clear in behavior, invisible to user (correct either way) |
-| `contains` exceeds length budget | doctest: validate warning fires | `cb validate` warning at >200 chars | clear |
-| Body edited, `contains` left stale | doctest: sidecar flags stale | PostToolUse nudge + `cb contains list --stale` | clear |
-| Fresh clone has no sidecar → staleness memory resets to "fresh" | no | none (cache semantics) | silent — documented above as inherent to per-checkout state |
+| Connector sync overwrites agent-written `contains` | doctest: sync over a card with `contains` | `preserveAgentFields` in all four connector write paths | n/a once handled (was the critical gap) |
+| gdoc attachment edited without card change | doctest: input-file mtime change → re-extract | manifest tracks declared input files | n/a (handled) |
+| `contains` exceeds length budget | doctest: validate warning fires | `cb validate` warning at >200 chars (new warning channel) | clear |
+| Body edited, `contains` left stale | doctest: sidecar flags stale | hook nudge (new warning output) + `cb contains list --stale` | clear |
+| Stale flag with nothing changed (agent reviewed, text still right) | doctest: identical-text update re-bases | `cb contains update` is the ack | clear |
+| Fresh clone / moved card has no sidecar memory → resets to "fresh" | no | none (cache semantics; first-seen-with-contains records current basis) | silent — inherent to per-checkout state, documented |
 | First search on a 10k-card box (cold build) | manual: large local box | on-demand build with stderr progress | clear |
-| Heading renamed in a long body → old fragment docs dangle | doctest: re-extract replaces per-file docs wholesale | per-file remove-all + reinsert | n/a (cannot dangle) |
+| Heading renamed in a long body → old fragment docs dangle | doctest: re-extract replaces per-file docs wholesale | per-file remove-by-recorded-docIds + reinsert | n/a (cannot dangle) |
 
-No unresolved critical gaps: every silent row above has handling or is the
-explicitly accepted risk/cache-semantics case.
+Remaining silent rows are the two accepted documented risks above plus the
+two convergent-by-design rows; everything else has handling and a planned
+test.
 
 ## Agent-flow / user-flow edge cases
 
@@ -299,19 +412,26 @@ explicitly accepted risk/cache-semantics case.
 - **Two agents touching the same card** — both edit `contains`
   concurrently. **ADDRESSED**: card edits keep existing
   parse-mutate-reserialize semantics (no new shared mutable card state);
-  the sidecar has a single writer (the indexer) under `file-lock.ts`.
+  the sidecar has a single writer (the indexer) under the bounded-retry
+  lock.
 - **Hand-edit drift** — boxholder hand-writes a 400-character `contains` or
-  a YAML list. **ADDRESSED**: schema validates type (string), validate warns
-  on length; both fire via the existing PostToolUse/pre-commit hooks.
-- **Fabricated free-form value** — see the accepted documented risk in
-  Failure modes.
+  a YAML list. **PARTIALLY ADDRESSED, honestly scoped**: schema validates
+  type (string); the length warning fires on agent edits (PostToolUse) and
+  at commit (pre-commit); hand edits that bypass both surface via
+  `cb contains list --stale`/`--missing` during maintenance. There is no
+  real-time channel for non-agent edits and the plan does not pretend
+  otherwise.
+- **Fabricated free-form value** — see accepted documented risk 1.
+- **Connector overwrite** — sync rebuilds a card and would drop agent
+  fields. **ADDRESSED**: `preserveAgentFields` in all four connector write
+  paths (Track 3); backfill of connector kinds gated on it.
 - **Validation error UX** — **ADDRESSED**: warnings are one-liners naming
   the field and the fix ("review `contains:` — body changed"); `--kind`
   errors enumerate valid types per `ideas.md:499`.
 - **Partial migration / transition state** — during backfill, most cards
   lack `contains`. **ADDRESSED by design**: the index searches `content`
   regardless; `contains` only adds weight when present; listings fall back
-  to loader titles. There is no broken intermediate state.
+  to existing titles. There is no broken intermediate state.
 
 ## NOT in scope
 
@@ -320,6 +440,11 @@ explicitly accepted risk/cache-semantics case.
   unit; no Orama plugins (issue #640) so vectors will be computed by a
   service-pattern provider. Boxes' per-box Mistral keys make Mistral the
   likely candidate; nothing here commits to it.
+- **Indexing email body text** — deliberately excluded (untrusted content
+  quarantine, `email-message.tsx:4–6`). Revisiting requires a sanitization
+  design; goes with the embeddings subplan or its own.
+- **Indexing sheet cell data** — skipped in v1; tab titles + `contains`
+  carry retrieval. Revisit if real queries miss.
 - **Web UI (Cmd-K palette, tRPC search procedure)** — separate increment
   once the CLI proves ranking quality; tRPC-first rule applies when it
   comes.
@@ -332,9 +457,11 @@ explicitly accepted risk/cache-semantics case.
   planned independently).
 - **Chat-thread search** — chat history retrieval is its own design;
   `chat-thread` is marked `searchable: false`.
-- **Eager index update inside `cb mv`** — the lazy refresh detects moves by
-  hash and covers non-CLI moves too; an eager hook would be a redundant
-  second mechanism.
+- **Eager index update inside `cb mv`** — the lazy refresh handles moves as
+  remove+reinsert and covers non-CLI moves too; an eager hook would be a
+  redundant second mechanism.
+- **Move-detection-by-hash optimization** — cut; re-extracting a moved file
+  costs one read.
 - **Sharing index/sidecar state across clones** — both are per-checkout
   caches; reconstruction from git is possible later if ever needed.
 
@@ -343,11 +470,12 @@ explicitly accepted risk/cache-semantics case.
 - **Should wakeup opportunistically refresh the index?** Lean: yes, as a
   cheap warm step late in the cycle, but only after dogfooding shows cold
   first-search latency actually annoys — adding it preemptively violates
-  bounded scope.
+  bounded scope. (A wakeup full-re-hash would also close accepted risk 2;
+  same trigger condition.)
 - **Should `contains`, when present, become the listing *title* for
   title-less cards rather than a secondary line?** Lean: secondary line
-  only; titles have their own derivation logic per loader and mixing roles
-  invites sloppy `contains` writing (the boxholder's stated concern).
+  only; titles have their own derivation logic and mixing roles invites
+  sloppy `contains` writing (the boxholder's stated concern).
 
 ## Knowledge audits
 
@@ -360,46 +488,57 @@ Three agent-facing concepts land; each gets a `knows_directly` entry in
 2. **Reaching for `cb search`** — asked "which cards mention X?", the agent
    uses `cb search` rather than grep, and knows `--kind`/`--json`.
 3. **Responding to the staleness nudge** — on the "body changed but
-   `contains:` didn't" warning, the agent reviews and either updates the
-   field or leaves it (and knows leaving it re-arms only on the next body
-   change).
+   `contains:` didn't" warning, the agent reviews and runs
+   `cb contains update` — with new text, or with the same text to confirm
+   it (the update is the acknowledgment either way).
 
 ## Implementation order
 
-1. **cardworks globals + flag** (Track 1 chunk): global `title`/`contains`
-   injection with schema-wins, `searchable` on both schema kinds, cardworks
-   unit tests. Everything depends on this.
+1. **cardworks globals + flag**: `GLOBAL_CARD_FIELDS` injection with
+   schema-wins, `globalFieldNames` on the resolved schema, `searchable` on
+   both schema kinds, cardworks unit tests. Everything depends on this.
 2. **Mark operational schemas** `searchable: false` in `src/schemas/`;
    registry exposes the searchable type set.
-3. **Extraction** (`src/core/search/extract.ts`) + pure doctests. Depends
-   on 1–2 for the flag and fields.
-4. **Index lifecycle** (`index.ts`): build, atomic persist, restore-or-
-   rebuild, manifest diff refresh, move detection, lock integration;
-   makeTmpBox doctests including the persist/restore pin for issue #695.
-5. **`cb search`** CLI + core command, excerpts, JSON envelope, enumerated
-   `--kind` errors; `cb init` builds the index.
-6. **`contains` staleness sidecar** (`computeContainsBasis`,
-   `contains-state.json`, refresh integration) + validate-hook nudge +
-   length warning.
-7. **`cb contains list/update`** commands.
-8. **Guidance + audits + backfill**: generate-docs blocks, knowledge-audit
-   entries, backfill job creator; surface `contains` in FileSummary
-   listings.
+3. **Extraction** (`src/core/search/extract.ts`): per-kind folding,
+   section split, XML walk, input-file declaration, email-body exclusion;
+   pure doctests. Depends on 1–2.
+4. **Index lifecycle** (`index.ts`): build, atomic persist (index-then-
+   manifest self-healing order), restore-or-rebuild, manifest diff refresh
+   including input files, remove-by-docIds, bounded-retry lock; makeTmpBox
+   doctests including the persist/restore pin for issue #695 and lock
+   contention.
+5. **`cb search`** CLI + core command, excerpts, JSON envelope with
+   `warnings`, enumerated `--kind` errors; `cb init` builds the index.
+6. **Hook warning channel**: `cb validate --hook` emits warning-level
+   output on exit 2 with zero errors (`validate.ts:185`); the `contains`
+   length warning rides on it. Independent of 3–5; needed before 7.
+7. **`contains` staleness sidecar** (`computeContainsBasis`,
+   `contains-state.json`, refresh integration, first-seen re-base) + the
+   stale nudge through the chunk-6 channel.
+8. **`cb contains list/update`** commands (update re-bases = ack).
+9. **Connector preservation**: `preserveAgentFields` wired into gmail
+   thread/message and drive doc/sheet writers + doctest (sync over a card
+   with `contains`); gdoc/sheet instruction amendments.
+10. **Guidance + audits + backfill + listings**: generate-docs blocks,
+    knowledge-audit entries, backfill job creator (connector kinds gated on
+    9), `FileSummary.contains` + summarize endpoint + file-entry secondary
+    line.
 
-Chunks 6–8 depend on 4; 3–5 and 6–8 form two short serial runs after 1–2.
-Each chunk is a commit-sized unit on this worktree; nothing merges to main
-until the plan completes.
+Chunks 3–5 and 6–8 are two short serial runs after 1–2; 9 is independent
+after 1; 10 depends on 6–9. Each chunk is a commit-sized unit on this
+worktree; nothing merges to main until the plan completes.
 
 ## Rollout shape
 
 - **Test posture**: overriding the default deferral partially — extraction
-  (chunk 3), index lifecycle (chunk 4), and the staleness sidecar (chunk 6)
-  get doctests *at chunk time*, because index corruption and silent
-  staleness are regression-shaped risks; CLI output formatting follows the
-  dogfood-first default with one doctest once the envelope settles.
-  Relevance and cold-build latency are validated manually against the large
-  local box copy (~10k cards) before merge.
-- **Knowledge audits**: all three entries land with the plan (chunk 8).
+  (chunk 3), index lifecycle (chunk 4), the staleness sidecar (chunk 7), and
+  connector preservation (chunk 9) get doctests *at chunk time*, because
+  index corruption, silent staleness, and field-destroying syncs are
+  regression-shaped risks; CLI output formatting follows the dogfood-first
+  default with one doctest once the envelope settles. Relevance and
+  cold-build latency are validated manually against the large local box copy
+  (~10k cards) before merge.
+- **Knowledge audits**: all three entries land with the plan (chunk 10).
 - **Migration**: no data-shape change — `contains` and `title` are optional
   fields, and the index/sidecar live in already-gitignored `.callback-box/`
   (`ideas.md:698`). The `contains` backfill is gradual but part of
