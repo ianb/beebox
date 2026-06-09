@@ -25,7 +25,7 @@ export function directoryLayoutSection(): string[] {
     "| `box/jobs/` | Pending job cards for the reactor to process |",
     "| `box/questions/` | Pending questions for the user |",
     "| `box/resources/` | Synced external state |",
-    "| `box/output/` | Outbound cards (push notifications, etc.) — flushed by `cb finalize` |",
+    "| `box/output/` | Outbound cards (telegram messages, etc.) — flushed by `cb finalize` |",
     "| `box/pool/` | Items being actively worked on |",
     "| `store/archive/` | Processed/completed items |",
     "| `store/calendar/` | Calendar events (.ics files) — two-way sync with Google Calendar |",

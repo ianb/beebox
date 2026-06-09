@@ -205,6 +205,8 @@ Notes:
 - Should also be visible somewhere as an always-available view (status page, `cb health`) so it doesn't *only* surface at session start.
 - The reason the agent should still check at session start, even with proactive alerting in place: catches bugs in the alerting itself. Belt and suspenders.
 
+**IMPLEMENTED (June 2026)** — `src/core/schedule-health.ts` evaluates each task (ok/failing/overdue/blocked/invalid/disabled) from its card + run state (`lastRun`/`lastSuccess` divergence, consecutive failures); overdue derives from the task's own cadence (grace = half-cadence clamped to 30m–24h), and deliberate skips (budget, missing connector, disabled) are never mislabeled as failures. Surfaces: `cb health` (always-available, exit 1 when unhealthy), a `health` attribute on the session-start `<chat-app>` snapshot (only when something is wrong), and proactive alerts from the scheduler daemon — one aggregated telegram-message card per unhealthy episode (latched until the next success), opt-in via `healthAlerts.telegramChat` in `config/box.json`. The daemon also writes a per-box heartbeat so a dead scheduler is itself a finding. Remaining: a dashboard panel (the tRPC health router could reuse the same evaluator).
+
 ## Correction counting → spec promotion
 
 Corrections that stay in chat disappear. The fix is to extract them (during overnight compaction or a retrospective pass), count how often the *same* correction recurs across sessions, and promote frequent ones to permanent spec-level instructions.
