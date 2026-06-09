@@ -9,7 +9,8 @@ paths:
 - Regular ` ``` ` blocks contain examples: `expression` then `=> expected`
 - Multiple examples per block OK — separate with blank lines. **Examples in a block share scope** (variables persist)
 - ` ``` continue ` blocks append to the previous block's scope — use for prose between code sections that share variables
-- ` ``` cleanup ` blocks register teardown code via `t.teardown()` — runs after the current test even on failure. Place after the code that creates the resource to clean up.
+- ` ``` cleanup ` blocks register teardown code via `t.teardown()` — runs after the current test even on failure. **It tears down the test it follows** — examples in later (non-`continue`) blocks run *after* the cleanup, so a tmp box created in one block is already deleted by the time the next block runs. Keep everything that uses the resource in the same block (or chained `continue` blocks) and put the cleanup at the section's end.
+- **Multi-line template literals don't survive the example-block transform** (the line splitter breaks them; symptoms appear downstream as corrupted string content). Define multi-line string fixtures in a ` ```ts setup ` block, or build them with `["...", "..."].join("\n")`.
 - `=> value` starts the expected result on the same line; continues on subsequent lines until a blank line or end of block. `=>` alone starts expected on the next line. Both forms work the same way — **a blank line always separates examples**
 - No `=>` means "just run" — use for setup statements within a block
 - Lines ending with `;` before a check expression are emitted as statements (e.g., `const x = foo();` then `x.length` then `=> 5`)
