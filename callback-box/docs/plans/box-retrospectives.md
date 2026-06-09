@@ -173,12 +173,15 @@ cb retro scan [--max-sessions N] [--dry-run]
 ```
 
 Session qualification (all must hold):
-1. Session id appears in a chat registry (`chat-session-history.json` ∪
-   telegram thread registries).
-2. ≥1 real user message (`isRealUserMessage`).
-3. Transcript mtime older than a 30-minute quiescence window (don't observe
+1. The session is chat: it has `<typed>`/`<speech>`-tagged user messages
+   (webapp chat wraps human input; the tags may follow the `<chat-app>`
+   snapshot prefix) **or** it appears in a chat registry
+   (`chat-session-history.json` ∪ thread registries — telegram sends raw
+   text with no tags, so registry membership is the marker there), with
+   ≥1 user message either way.
+2. Transcript mtime older than a 30-minute quiescence window (don't observe
    a conversation in progress).
-4. Not already processed (state file), capped at `--max-sessions`
+3. Not already processed (state file), capped at `--max-sessions`
    (default 20) per run — overflow is named in the report, never silent.
 
 Observation record (ledger line, `.callback-box/retro/observations.jsonl`):

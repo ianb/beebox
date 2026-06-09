@@ -40,6 +40,7 @@ export { driveCommand } from "./drive.js";
 export { chatCommand } from "./chat.js";
 export { refreshMapsCommand } from "./refresh-maps.js";
 export { feedbackCommand } from "./feedback.js";
+export { retroCommand } from "./retro.js";
 export { boxesCommand } from "./boxes.js";
 export { intakeCommand } from "./intake.js";
 export { triageCommand } from "./triage.js";
