@@ -12,8 +12,23 @@ include:
   - test/**/*.doctest.md
 exclude:
   - test/manual/**
-# Default 30s per-file is too tight for reactor-integration.doctest.md, which
-# exercises 10 full reactor cycles (~25s in isolation, longer under parallel
-# load). Bumping to 60s gives headroom without masking real hangs.
-timeout: 60
-reporter: min
+# Cap parallel test files. tap defaults to one job per core (12 here), but each
+# route doctest's makeTestServer() boots a full Fastify app + two synchronous
+# `git` spawns, and files call it dozens of times (routes-api alone ~80s). At
+# full core-count parallelism that thundering herd of git/app boots thrashes the
+# machine, inflating per-file wall time until heavy files blow the timeout and
+# get SIGALRM'd — non-deterministically, which file losing the race each run.
+# Half the cores bounds the contention while keeping the suite reasonably fast.
+jobs: 6
+# Per-file timeout. The suite has grown (a single route file is ~80s solo now),
+# so the old 60s was too tight even before parallel load slowed files further.
+# 5 minutes gives heavy files headroom under the capped contention above without
+# masking a genuine hang (a wedged test still surfaces, just later).
+timeout: 300
+# Agent-first output: the consumers of test runs here are coding agents
+# reading through a pipe, not humans at a TTY. The plain `tap` reporter with
+# color off emits zero ANSI/cursor codes and full YAML failure diagnostics
+# (diff, file, line). Interactive reporters (`min`, `terse`, `base`) write
+# cursor-control sequences even when piped, which render as garbage.
+reporter: tap
+color: false

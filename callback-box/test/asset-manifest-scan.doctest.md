@@ -107,8 +107,10 @@ keeps working — and surfaces this as `refreshed`, not an error.
 const box4 = await makeTmpBox();
 await box4.write("foo.attach/photo.jpg", "abc");
 await scanAttachScope({ absPath: box4.path("foo.attach"), relPath: "foo.attach" });
-// Touch the file (write same content, new mtime).
-await box4.write("foo.attach/photo.jpg", "abc");
+// Move the mtime without touching content. Backdating is deterministic; a
+// same-millisecond rewrite can collide with the stored mtime (ISO ms
+// resolution) and read as unchanged, flaking this test.
+await backdate(box4.path("foo.attach/photo.jpg"));
 const r = await scanAttachScope({ absPath: box4.path("foo.attach"), relPath: "foo.attach" });
 print(`refreshed: ${r.refreshed.join(",")}`);
 print(`errors: ${r.errors.length}`)

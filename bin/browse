@@ -10,8 +10,14 @@
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-if [[ ! -x "$REPO_DIR/browse/node_modules/.bin/tsx" ]]; then
-  echo "browse: tsx not found in browse/node_modules. Run 'pnpm install' in browse/." >&2
+# node-linker=hoisted (root .npmrc) puts tsx at the workspace root, not in
+# browse/node_modules. Prefer the root bin and fall back to the local one.
+if [[ -x "$REPO_DIR/node_modules/.bin/tsx" ]]; then
+  TSX="$REPO_DIR/node_modules/.bin/tsx"
+elif [[ -x "$REPO_DIR/browse/node_modules/.bin/tsx" ]]; then
+  TSX="$REPO_DIR/browse/node_modules/.bin/tsx"
+else
+  echo "browse: tsx not found. Run 'pnpm install' at the monorepo root." >&2
   exit 1
 fi
 
@@ -31,4 +37,4 @@ export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
 export AGENT_BROWSER_PROFILE="${browse_base}/profile"
 export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
 
-exec "$REPO_DIR/browse/node_modules/.bin/tsx" "$REPO_DIR/browse/src/cli.ts" "$@"
+exec "$TSX" "$REPO_DIR/browse/src/cli.ts" "$@"

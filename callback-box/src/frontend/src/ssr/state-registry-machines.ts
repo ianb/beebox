@@ -6,7 +6,6 @@
  */
 
 import { chatMachine } from "../machines/chatMachine";
-import { sseMachine } from "../machines/sseMachine";
 import { claudeAuthMachine } from "../machines/claudeAuthMachine";
 import { speechPlaybackMachine } from "../machines/speechPlaybackMachine";
 import { voiceRecorderMachine } from "../machines/voiceRecorderMachine";
@@ -54,16 +53,6 @@ const sampleStreamTools: SessionContentBlock[] = [
 // --- Machine registry ---
 
 export const machineRegistry: Record<string, MachineStateInfo> = {
-  sse: {
-    machine: sseMachine,
-    input: { url: "http://localhost:3210/test1/api/events" },
-    states: {
-      connecting: { context: { url: "http://localhost:3210/test1/api/events", lastEvent: null } },
-      connected: { context: { url: "http://localhost:3210/test1/api/events", lastEvent: null } },
-      waiting: { context: { url: "http://localhost:3210/test1/api/events", lastEvent: null } },
-      disconnected: { context: { url: "", lastEvent: null } },
-    },
-  },
   chat: {
     machine: chatMachine,
     states: {

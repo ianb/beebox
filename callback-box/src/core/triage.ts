@@ -6,7 +6,7 @@
  * runs the triage subagent against the batch, and applies its
  * decisions via the routing module.
  *
- * See `docs/triage-design.md` §Triage (stage 2).
+ * See `docs/plans/triage-design.md` §Triage (stage 2).
  */
 
 import * as fs from "node:fs/promises";
@@ -54,7 +54,7 @@ async function listStagedItems(boxRoot: string): Promise<StagedItem[]> {
     entries = await fs.readdir(stagedDir, { withFileTypes: true });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e as Error;
+    throw e;
   }
   const items: StagedItem[] = [];
   for (const entry of entries) {

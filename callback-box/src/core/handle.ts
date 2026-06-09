@@ -12,7 +12,7 @@
  * open question in the design doc; we ship the ref form first because
  * the engine already runs procedure cards as-is.
  *
- * See `docs/triage-design.md` §Handle (stage 3).
+ * See `docs/plans/triage-design.md` §Handle (stage 3).
  */
 
 import * as fs from "node:fs/promises";

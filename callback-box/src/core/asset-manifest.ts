@@ -92,7 +92,7 @@ export async function loadManifest(attachDir: string): Promise<AssetManifest> {
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return emptyManifest();
-    throw e as Error;
+    throw e;
   }
   const parsed = JSON.parse(content) as unknown;
   if (

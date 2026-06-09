@@ -11,7 +11,7 @@ import { type ReactNode } from "react";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
-import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, MarkdownContent, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
+import { UserMessage, AssistantMessage, AssistantSpeechText, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/structured-output-parsing";
 import type { SessionContentBlock } from "../../api";
 import type { ModelMarker } from "./InteractiveChat-helpers";
@@ -70,14 +70,19 @@ function PendingHqMessage({ text }: { text: string }) {
 }
 
 /**
- * Streaming content being built up during a turn.
+ * Streaming content being built up during a turn. `chunkOnParagraphs` only
+ * ever exposes text up to a paragraph break or a closed `</speech>` tag, so
+ * any speech tag inside `visible` is complete — we can run it through the same
+ * speech-aware renderer the finalized message uses, giving spoken chunks their
+ * styling and speaker name as they stream in. The now-playing highlight stays
+ * off here (`activeIndex={null}`); it only applies once the turn is finalized.
  */
 function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
   const visible = chunkOnParagraphs(text);
   if (!visible) return null;
   return (
     <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
-      <MarkdownContent text={visible} onZoomView={onZoomView} />
+      <AssistantSpeechText text={visible} indexOffset={0} activeIndex={null} onZoomView={onZoomView} />
     </div>
   );
 }

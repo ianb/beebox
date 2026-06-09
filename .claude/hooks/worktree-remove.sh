@@ -44,8 +44,14 @@ if curl -fsS -m 5 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$NAME" >/dev/null
 fi
 
 if [ -d "$BOX_DEST" ]; then
-  echo "[worktree-remove] removing box $BOX_DEST"
-  rm -rf "$BOX_DEST"
+  # Rename-then-background-delete: boxes run 100MB+; a synchronous rm here
+  # risks the hook timeout killing us mid-delete (see session-end.sh).
+  TRASH="$HOME/.cache/callback-mono/trash"
+  mkdir -p "$TRASH"
+  echo "[worktree-remove] trashing box $BOX_DEST"
+  mv "$BOX_DEST" "$TRASH/box-$NAME-$(date +%s)"
+  nohup rm -rf "$TRASH" >/dev/null 2>&1 &
+  disown 2>/dev/null || true
 else
   echo "[worktree-remove] no box at $BOX_DEST (already gone)"
 fi

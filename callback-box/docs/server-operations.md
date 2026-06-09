@@ -58,6 +58,36 @@ ssh root@$(cat deploy/server-ip) "systemctl restart callback-serve callback-sche
 
 For helper `ssh-server.sh` see `deploy/`.
 
+## Writing scripts that run on the server
+
+Ad-hoc shell as above is fine, but **scripts** (anything in this repo that
+shells out to the server programmatically) should go through the single
+chokepoint at [`feedback-review/run-on-server.ts`](../../feedback-review/run-on-server.ts).
+`runOnServer({ script, asUser, host })` SSHes in as `root` (the entry point
+key auth is set up for), then immediately `su - callback` before running the
+script, with the script piped via stdin so multi-line content and quotes work
+without escaping. `asUser` defaults to `callback`; only set `asUser: "root"`
+for operations that genuinely require root (systemctl, chown, package
+installs) and leave a comment saying why.
+
+Why this matters — historical bug: an earlier feedback-resolver script SSHed
+as root and ran `git commit` directly. That created objects under
+`/home/callback/boxes/<box>/.git/objects/<prefix>/` owned by root, and the
+next `callback`-user commit that happened to hash into one of those prefixes
+failed with `insufficient permission for adding an object to repository
+database`. Same shape for the `mv` into `config/feedback/resolved/` — that
+directory ended up root-owned too, blocking callback writes. The failures
+were intermittent (hash-prefix-dependent) and never pointed back at the
+original culprit; they just silently blocked the wakeup agent until someone
+noticed. The chokepoint enforces the "never write as root inside callback's
+home" invariant in one place so this doesn't drift back.
+
+If you're writing a new dev tool that needs to talk to the server: either
+import `runOnServer` from `feedback-review/`, or — if it's awkward to depend
+on that path from where you are — promote the helper to a shared location
+(suggested: `tools/run-on-server.ts` at the monorepo root) and update both
+callers. Don't write a fresh `ssh root@... 'command'` line.
+
 ## Code runs from source, not dist
 
 `cb serve` uses `node --import tsx` to execute TypeScript source directly. **Building to `dist/` and deploying that has no effect** — the server reads `.ts` files. `deploy/deploy.sh` rsyncs source files to `/opt/callback/callback-box/src/`.

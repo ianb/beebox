@@ -101,7 +101,7 @@ plugins/          Claude Code plugins (card-validator hook)
 - **Read before writing.** Don't guess file formats, XML structures, or API shapes. Read the schema, read the existing code, read the test patterns. This project has specific conventions that differ from defaults.
 - **Doctests are the primary test format.** They're markdown files with executable code blocks. Read `.claude/rules/doctest.md` before writing tests. Common mistakes: using JS object notation instead of JSON in expected output, forgetting `continue` blocks share scope.
 - **Two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `pnpm typecheck`.
-- **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: SSE/streaming, file upload/download, OAuth redirects, webhooks. Older raw routes are tech debt — migrate when you touch the area.
+- **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Real-time/streaming also lives in tRPC now — **subscriptions over the WebSocket** (`useWSS` on the per-box plugin; `events.subscribe` is the global event-bus stream, `events.turnStream` the resumable per-turn chat stream; client routes subscriptions through `wsLink` via the `splitLink` in `lib/trpc.ts`). Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: file upload/download, OAuth redirects, webhooks, and the `/chat/send` POST (it needs the request's user + the session registry). Older raw routes are tech debt — migrate when you touch the area.
 - **Frontend uses UI primitives and a semantic palette.** Read FRONTEND.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Commits go through plain `git commit`; the per-box `.git/hooks/pre-commit` (installed by `cb init`) runs `cb validate --staged` and blocks invalid card commits.
 - **All cross-process locks go through `src/lib/file-lock.ts`.** Don't roll your own with `proper-lockfile` or hand-built `.lock` files — the primitive handles PID liveness, sleep, and crash recovery. In-process async serialization (e.g. a `Map<id, Promise>` chain) is a different problem and stays separate.
@@ -138,8 +138,8 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Knowledge audits | `docs/knowledge-audits.md` |
 | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 | Calendar integration | `docs/calendar.md` |
-| PDF intake design | `docs/pdf-intake-design.md` |
-| Source editor plan | `docs/source-editor.md` |
+| PDF intake design | `docs/plans/pdf-intake-design.md` |
+| Source editor plan | `docs/plans/source-editor.md` |
 | Feature ideas | `docs/ideas.md` |
 | Glossary | `docs/glossary.md` |
 

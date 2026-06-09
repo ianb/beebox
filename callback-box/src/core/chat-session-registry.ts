@@ -89,6 +89,12 @@ export class ChatSessionRegistry extends EventEmitter {
    * the real id and removed from this list.
    */
   private readonly pending = new Set<ChatSession>();
+  /**
+   * Pin counts held against pre-id "new" sessions (a turn is in flight before
+   * the id lands). Folded into the entry's refCount on promotion so a fresh
+   * turn can't be LRU-evicted in the window between send and id assignment.
+   */
+  private readonly pendingPins = new Map<ChatSession, number>();
 
   constructor(boxRoot: string, options?: ChatSessionRegistryOptions) {
     super();
@@ -274,12 +280,16 @@ export class ChatSessionRegistry extends EventEmitter {
         }
         if (promoted) {
           this.pending.delete(promoted);
+          // Carry any pin held while pending into the new entry's refCount so
+          // an in-flight turn survives a concurrent send's LRU eviction.
+          const carriedPins = this.pendingPins.get(promoted) ?? 0;
+          this.pendingPins.delete(promoted);
           if (!this.entries.has(sessionId)) {
             this.entries.set(sessionId, {
               session: promoted,
               lastActivity: Date.now(),
               lastSubprocessUse: Date.now(),
-              refCount: 0,
+              refCount: carriedPins,
             });
             log("promote", `Promoted pending session into registry as ${sessionId}`);
           }
@@ -320,6 +330,36 @@ export class ChatSessionRegistry extends EventEmitter {
       if (released) return;
       released = true;
       entry.refCount = Math.max(0, entry.refCount - 1);
+    };
+  }
+
+  /**
+   * Pin a session for the life of a turn, working even for a pending "new"
+   * session whose id hasn't arrived. If the session already has an entry this
+   * is just `pin(id)`; otherwise the pin is tracked on the session and folded
+   * into the entry's refCount on promotion, then released against whichever
+   * place the session lives in when the turn ends. Returns a release function.
+   */
+  pinSession(session: ChatSession): () => void {
+    const id = session.getSessionId();
+    if (id !== null && this.entries.has(id)) {
+      return this.pin(id);
+    }
+    this.pendingPins.set(session, (this.pendingPins.get(session) ?? 0) + 1);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      const assignedId = session.getSessionId();
+      const entry = assignedId !== null ? this.entries.get(assignedId) : undefined;
+      if (entry) {
+        // Promoted before release: the pin became part of refCount.
+        entry.refCount = Math.max(0, entry.refCount - 1);
+        return;
+      }
+      const remaining = (this.pendingPins.get(session) ?? 1) - 1;
+      if (remaining <= 0) this.pendingPins.delete(session);
+      else this.pendingPins.set(session, remaining);
     };
   }
 

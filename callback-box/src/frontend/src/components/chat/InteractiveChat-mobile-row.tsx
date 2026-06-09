@@ -4,9 +4,11 @@
  * transcription handle, input setters, and send callbacks come in as props.
  */
 
+import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
-import { composerTextareaClasses, localTime } from "./InteractiveChat-helpers";
+import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
+import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
 /**
@@ -35,15 +37,21 @@ export function MobileTextareaRow({
 }) {
   const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
+  // This textarea is separate from the desktop composer's (which has its own
+  // ref + autoscroll wired in useChatActions), so it needs its own pinning.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
+
   return (
     <div className="flex gap-2 items-center">
       {isTranscribing ? (
         <div className="flex-shrink-0 self-center">
-          <RecordingIndicator />
+          <RecordingIndicator degraded={transcription.state === "reconnecting"} />
         </div>
       ) : null}
       <TextareaAutosize
-        value={isTranscribing ? transcription.transcript : input}
+        ref={textareaRef}
+        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
         onPaste={onPaste}
         onDrop={onDrop}
@@ -85,8 +93,10 @@ export function MobileTextareaRow({
           <button
             onClick={async () => {
               const finalText = await transcription.stop();
-              const text = finalText.trim();
+              // Continue from any prior composer text so it isn't dropped.
+              const text = joinTranscript(input, finalText).trim();
               if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
             }}

@@ -30,7 +30,7 @@ Both can coexist in the same directory.
 
 ## Card schema
 
-A landmark is a root `<landmark>` with one or more **role** child elements. The navigation role (`<navigation>`) carries the bookmark fields; the triage-destination role (`<triage-destination>`) carries category rules and a handler procedure. A landmark can carry one or both; everything below describes the navigation role. See `docs/triage-design.md` for the triage role.
+A landmark is a root `<landmark>` with one or more **role** child elements. The navigation role (`<navigation>`) carries the bookmark fields; the triage-destination role (`<triage-destination>`) carries category rules and a handler procedure. A landmark can carry one or both; everything below describes the navigation role. See `docs/plans/triage-design.md` for the triage role.
 
 ```xml
 <landmark>

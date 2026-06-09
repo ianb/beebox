@@ -23,6 +23,11 @@ export type ChatEvent =
   | { type: "STREAM_ERROR"; error: string }
   | { type: "STREAM_RESULT" }
   | { type: "STREAM_FAILED"; error: string }
+  // Like STREAM_FAILED but silent (no error banner): the per-turn stream went
+  // quiet — typically its connection was dropped while the tab was backgrounded
+  // — but the server reports the turn already finished, so recover by refreshing
+  // history rather than waiting on a terminal event that will never arrive.
+  | { type: "STREAM_RECOVER" }
   | { type: "REFRESH" }
   | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
   | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }

@@ -76,7 +76,7 @@ export function whereToRecordSection(): string[] {
     "",
     "### Landmark `<triage-destination>` — pipeline triage rules",
     "",
-    "Routing rules for the cross-cutting intake→triage→handle pipeline (`docs/triage-design.md`) live on landmark cards in the directory the category routes to — `<triage-destination><rules>…</rules></triage-destination>`. When the user clarifies what kind of item belongs in which spot, update the landmark, not a guide card.",
+    "Routing rules for the cross-cutting intake→triage→handle pipeline (`docs/plans/triage-design.md`) live on landmark cards in the directory the category routes to — `<triage-destination><rules>…</rules></triage-destination>`. When the user clarifies what kind of item belongs in which spot, update the landmark, not a guide card.",
     "",
     "### Personality card (`config/main.personality.card`) — voice and manner ONLY",
     "",

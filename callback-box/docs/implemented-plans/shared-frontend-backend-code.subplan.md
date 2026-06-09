@@ -15,7 +15,7 @@ sides import it.
   satisfy both module-resolution regimes (NodeNext for backend,
   bundler for frontend).
 - **Single repo-wide Markdoc vocabulary.** Asserted by
-  `docs/markdoc-tags-design.md:9-13`. The vocabulary is one shape per
+  `docs/implemented-plans/markdoc-tags-design.md:9-13`. The vocabulary is one shape per
   tag name across every schema; that constraint becomes a structural
   fact (not just a maintenance promise) when frontend and backend
   share a single config object.

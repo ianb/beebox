@@ -141,3 +141,23 @@ function mustThrow(fn) {
 mustThrow(() => { var x = 1 + 1; return x; })
 => did not throw
 ```
+
+## Multi-line template literals
+
+Template literals can span lines inside example blocks. Blank lines,
+`=>`-like lines, and `;` line-endings inside the literal are string
+content, not example/statement boundaries — and the content round-trips
+exactly, with no indentation injected by the transform.
+
+```
+const doc = `line one
+
+  two-space indented line
+=> looks like an arrow but is content
+end`;
+doc.split("\n").length
+=> 5
+
+doc.includes("\n  two-space indented line\n")
+=> true
+```

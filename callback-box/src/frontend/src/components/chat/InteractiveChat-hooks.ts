@@ -304,3 +304,45 @@ export function useProcessingStatusPoll(opts: {
   }, [processBusy, isStreaming, sessionId, send]);
 }
 
+/**
+ * Recover a stalled stream when the tab is brought back to the foreground.
+ *
+ * The per-turn POST stream can have its connection dropped while the tab is
+ * backgrounded and never deliver a terminal event, wedging the machine in
+ * `streaming` — where REFRESH (the normal chat-complete recovery) is
+ * deliberately ignored. useProcessingStatusPoll is also gated off during
+ * streaming, so nothing pulls the finished reply until a manual reload.
+ *
+ * On return to visible, if we're still in `streaming`, ask the server whether
+ * the turn actually finished; if so, dispatch STREAM_RECOVER (a silent
+ * STREAM_FAILED — sent only once the server confirms done, so no STREAM_RESULT
+ * is left to race) to fall through to a history refresh.
+ */
+export function useChatStallRecovery(opts: {
+  /** snapshot.matches("streaming") — not "refreshing", which self-resolves. */
+  isStreamingState: boolean;
+  sessionId: string | null;
+  send: (event: ChatEvent) => void;
+}) {
+  const { isStreamingState, sessionId, send } = opts;
+  // Read latest state at event time; the listener mounts once (send is stable).
+  const stateRef = useRef({ isStreamingState, sessionId });
+  useEffect(() => {
+    stateRef.current = { isStreamingState, sessionId };
+  });
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const current = stateRef.current;
+      if (!current.isStreamingState || !current.sessionId) return;
+      getChatStatus({ sessionId: current.sessionId })
+        .then((status) => {
+          if (!status.busy) send({ type: "STREAM_RECOVER" });
+        })
+        .catch(() => {});
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [send]);
+}
+

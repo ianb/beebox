@@ -74,7 +74,7 @@ tests:
       Describes the legacy reactor path: connectors sync, items land in inbox,
       intake jobs created in box/jobs/, reactor processes them. Bonus credit if
       the agent acknowledges the parallel new pipeline (intake → triage → handle,
-      docs/triage-design.md) — but wakeup currently only drives the reactor path,
+      docs/plans/triage-design.md) — but wakeup currently only drives the reactor path,
       so naming that flow is the primary expectation.
     correct_contains: ["job", "inbox"]
     tags: [intake, lifecycle, legacy-flow]
@@ -656,7 +656,7 @@ tests:
       Either a per-domain guide card (`config/*.guide.card`) for an existing
       pipeline that already handles insurance, OR a landmark `<triage-destination><rules>`
       at the archive directory the items should route to (the new
-      intake→triage→handle pipeline; see docs/triage-design.md). Both are
+      intake→triage→handle pipeline; see docs/plans/triage-design.md). Both are
       valid; the choice depends on which path actually routes insurance items
       in this box.
     correct_contains_any: ["landmark", "triage-destination", ".guide.card"]
@@ -1589,7 +1589,7 @@ tests:
   #   - `triage-confidence-levels`: agent invented a "confidence ladder"
   #     (hypothesis/low/medium/high/confirmed) from `docs/generated/card-guide.md`
   #     instead of naming the pipeline's confident/probable/guess. The
-  #     pipeline's enum lives in `docs/triage-design.md` in the callback-box
+  #     pipeline's enum lives in `docs/plans/triage-design.md` in the callback-box
   #     monorepo, which the box agent can't see.
   #   - `triage-handler-env`: agent spent 20+ tool calls looking for the
   #     TRIAGE_ITEMS env contract, found nothing, returned an empty response.
@@ -1635,7 +1635,7 @@ tests:
       Names confident (proceed silently), probable (proceed but flag for review),
       guess (block pending a question). Does NOT invent a "wrong" level — the
       design doc is explicit that wrong is not a confidence level.
-    should_read: ["docs/triage-design.md"]
+    should_read: ["docs/plans/triage-design.md"]
     correct_contains: ["confident", "probable", "guess"]
     tags: [triage-pipeline, behavioral]
     notes: >
@@ -1676,7 +1676,7 @@ tests:
       box/inbox/staged/. Reactor intake jobs are the legacy path —
       connectors drop items in box/inbox/, wakeup creates job cards in
       box/jobs/, the reactor agent processes them. The two paths coexist.
-    should_read: ["docs/triage-design.md"]
+    should_read: ["docs/plans/triage-design.md"]
     correct_contains_any: ["legacy", "coexist", "two", "parallel", "reactor"]
     tags: [triage-pipeline, lifecycle, behavioral]
     notes: >
@@ -1701,7 +1701,7 @@ tests:
       The handler reads the TRIAGE_ITEMS environment variable, which contains
       null-delimited box-relative paths of items in the bucket. Useful idiom:
       pipe through `xargs -0` for shell steps.
-    should_read: ["docs/triage-design.md"]
+    should_read: ["docs/plans/triage-design.md"]
     correct_contains: ["TRIAGE_ITEMS"]
     tags: [triage-pipeline, procedures]
 

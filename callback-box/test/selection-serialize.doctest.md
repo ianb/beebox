@@ -18,7 +18,7 @@ JSON.stringify(applySelections("Compare [selection1] with the intro", { selectio
   { id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" },
 ] }))
 =>
-"Compare <user-selection ref=\"/store/notes/Bread.doc.card\" position=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the intro"
+"Compare <user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the intro"
 ```
 
 ## No token in the body — appended (spoken message)
@@ -28,7 +28,7 @@ JSON.stringify(applySelections("look at what I selected", { selections: [
   { id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" },
 ] }))
 =>
-"look at what I selected\n<user-selection ref=\"/store/notes/Bread.doc.card\" position=\"body\">let it rise</user-selection>"
+"look at what I selected\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection>"
 ```
 
 ## Mixed: one referenced inline, one orphan appended; empty position omits the attribute
@@ -39,7 +39,7 @@ JSON.stringify(applySelections("see [selection1]", { selections: [
   { id: 2, ref: "/b.card", text: "beta", position: "" },
 ] }))
 =>
-"see <user-selection ref=\"/a.card\" position=\"body\">alpha</user-selection>\n<user-selection ref=\"/b.card\">beta</user-selection>"
+"see <user-selection ref=\"/a.card\" pos=\"body\">alpha</user-selection>\n<user-selection ref=\"/b.card\">beta</user-selection>"
 ```
 
 ## XML-escaping of ref, position, and text
@@ -49,7 +49,7 @@ JSON.stringify(applySelections("[selection1]", { selections: [
   { id: 1, ref: "/a&b.card", text: "x < y & z", position: "p\"q" },
 ] }))
 =>
-"<user-selection ref=\"/a&amp;b.card\" position=\"p&quot;q\">x &lt; y &amp; z</user-selection>"
+"<user-selection ref=\"/a&amp;b.card\" pos=\"p&quot;q\">x &lt; y &amp; z</user-selection>"
 ```
 
 ## No selections — body unchanged

@@ -25,8 +25,8 @@ import { useState, useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
-import { getApiBase, getEventSourceBase, withBase } from "../api";
-import { useSSE, type SSEEvent } from "../hooks/useSSE";
+import { getApiBase, withBase } from "../api";
+import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
@@ -106,8 +106,8 @@ function useFileData(path: string): LoadResult {
 
   // Live reload via SSE — invalidate appropriate cache on file-change events
   const utils = trpc.useUtils();
-  useSSE(`${getEventSourceBase()}/events`, {
-    onEvent: useCallback((event: SSEEvent) => {
+  useBusSubscription({
+    onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event !== "file-change") return;
       const d = event.data as { path?: string };
       if (d.path !== path) return;

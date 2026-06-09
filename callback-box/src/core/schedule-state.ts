@@ -27,6 +27,9 @@ export interface RunRecord {
   sleepAffected?: boolean;
 }
 
+/** Default window for pruning a script's run history (recordRun). */
+export const DEFAULT_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export interface ScriptState {
   lastRun: string | null;
   lastResult: "success" | "failure" | null;
@@ -144,7 +147,7 @@ export async function acquireScriptLock(
     if (err instanceof LockHeldError) {
       throw new ScriptAlreadyRunningError(opts.scriptName, err.holder.pid);
     }
-    throw err as Error;
+    throw err;
   }
 }
 

@@ -7,7 +7,7 @@
  * - `guess`: move to `inbox/triaged/_unsure/` and create one question
  *   card listing the candidate categories.
  *
- * See `docs/triage-design.md` §5 (Confidence and the question system).
+ * See `docs/plans/triage-design.md` §5 (Confidence and the question system).
  */
 
 import * as fs from "node:fs/promises";
@@ -67,7 +67,7 @@ async function moveItem(file: string, { srcDir, dstDir }: { srcDir: string; dstD
     await fs.access(dst);
     throw new TriageDestinationConflictError(file);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e as Error;
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
   }
   await fs.rename(path.join(srcDir, file), dst);
 }

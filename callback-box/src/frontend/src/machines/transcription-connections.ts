@@ -25,6 +25,15 @@ export interface ServiceCallbacks {
   onServerError: (message: string) => void;
 }
 
+/**
+ * How often to send Deepgram a KeepAlive text frame. Deepgram closes an idle
+ * socket (no audio *or* KeepAlive) after 10s with 1011/NET-0001, so 5s leaves a
+ * comfortable margin. During active recording the continuous PCM frames already
+ * reset the timer; KeepAlive is the belt-and-suspenders that covers any pause
+ * in audio (e.g. a silent gap between turns) without dropping the connection.
+ */
+const DEEPGRAM_KEEPALIVE_INTERVAL_MS = 5000;
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -100,6 +109,17 @@ export async function startDeepgramConnection(callbacks: ServiceCallbacks): Prom
   const wsUrl = `wss://api.deepgram.com/v1/listen?${params.toString()}`;
   const ws = new WebSocket(wsUrl, ["token", tempKey]);
   let accumulatedFinal = "";
+
+  // Keep the socket alive across silent gaps; self-clears once the socket is
+  // closing/closed so a discarded (reconnect) or finished socket leaves no
+  // dangling timer. Must be a text frame per Deepgram's spec.
+  const keepAliveId = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "KeepAlive" }));
+    } else if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+      clearInterval(keepAliveId);
+    }
+  }, DEEPGRAM_KEEPALIVE_INTERVAL_MS);
 
   ws.onmessage = (event) => {
     try {

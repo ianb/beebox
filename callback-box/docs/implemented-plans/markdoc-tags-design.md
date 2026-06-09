@@ -393,7 +393,7 @@ plan ships as a whole.
 
 4. **Markdoc round-trip reliability — RESOLVED, do not use `format()`
    on arbitrary input.** The full investigation lives at
-   `docs/markdoc-format-investigation.md`; the catalogue covers ~70
+   `docs/implemented-plans/markdoc-format-investigation.md`; the catalogue covers ~70
    normalizations across ~18 categories. The verdict:
 
    - **`format` is safe for tool-emitted canonical Markdoc with our
@@ -482,7 +482,7 @@ server-side emitter). Track 1 (recipe `{% ingredient %}` +
   section at `src/core/agent-guide/source.ts`; four knowledge audits
   (all pass `knows_directly` on first run).
 - **Shared-code subplan** — written, see
-  `docs/shared-frontend-backend-code.subplan.md`. One-chunk
+  `docs/implemented-plans/shared-frontend-backend-code.subplan.md`. One-chunk
   implementation: move config, set up tsconfig path alias, update
   imports. No knowledge audits needed (infrastructure).
 - **Track 2** — pending. Implements once the subplan lands.

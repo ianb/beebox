@@ -69,6 +69,15 @@ function refToViewTarget(sourceRef: string): ViewTarget {
   return { path, viewer: null, params: {}, zoom: false };
 }
 
+/** Short label from an external `href` — basename of the file:/URL path. */
+function externalLabel(href: string): string {
+  const noFrag = href.split("#")[0] ?? href;
+  const noQuery = noFrag.split("?")[0] ?? noFrag;
+  const basename = noQuery.includes("/") ? noQuery.slice(noQuery.lastIndexOf("/") + 1) : noQuery;
+  return basename === "" ? href : basename;
+}
+
+/** Box-ref citation: a clickable chip that navigates to the in-box target. */
 function CitationChip({
   sourceRef,
   as,
@@ -94,32 +103,63 @@ function CitationChip({
   );
 }
 
+/** External (href) citation: a static chip — the target lives outside the box. */
+function ExternalChip({ href, version }: { href: string; version: string | undefined }): ReactNode {
+  const title = version === undefined || version === "" ? href : `${href} @ ${version}`;
+  return (
+    <span className="not-italic text-warm-500 text-xs ml-1" title={title}>
+      [↗ {externalLabel(href)}]
+    </span>
+  );
+}
+
+interface SourceProps {
+  sourceRef?: string;
+  href?: string;
+  as?: string;
+  version?: string;
+  pos?: string;
+  placement?: string;
+  children?: ReactNode;
+}
+
 export function makeSourceComponents(linkCtx: SourceLinkContext): {
-  SourceInline: (props: { sourceRef?: string; as?: string; children?: ReactNode }) => ReactNode;
-  SourceBlock: (props: { sourceRef?: string; as?: string; children?: ReactNode }) => ReactNode;
+  SourceInline: (props: SourceProps) => ReactNode;
+  SourceBlock: (props: SourceProps) => ReactNode;
 } {
-  function SourceInline({ sourceRef, as, children }: { sourceRef?: string; as?: string; children?: ReactNode }) {
-    const refValue = sourceRef === undefined ? "" : sourceRef;
+  function Citation({ sourceRef, href, as, version }: SourceProps): ReactNode {
+    if (sourceRef !== undefined && sourceRef !== "") {
+      return <CitationChip sourceRef={sourceRef} as={as} linkCtx={linkCtx} />;
+    }
+    if (href !== undefined && href !== "") {
+      return <ExternalChip href={href} version={version} />;
+    }
+    return <CitationChip sourceRef="" as={as} linkCtx={linkCtx} />;
+  }
+
+  function SourceInline(props: SourceProps) {
+    const refValue = props.sourceRef === undefined ? "" : props.sourceRef;
     return (
-      <span data-source-ref={refValue}>
-        {children}
-        <CitationChip sourceRef={refValue} as={as} linkCtx={linkCtx} />
+      <span data-source-ref={refValue} data-source-href={props.href}>
+        {props.children}
+        <Citation {...props} />
       </span>
     );
   }
 
-  function SourceBlock({ sourceRef, as, children }: { sourceRef?: string; as?: string; children?: ReactNode }) {
-    const refValue = sourceRef === undefined ? "" : sourceRef;
+  function SourceBlock(props: SourceProps) {
+    const refValue = props.sourceRef === undefined ? "" : props.sourceRef;
     return (
       <figure
         className="my-3 border-l-2 border-warm-300 bg-warm-50/50 pl-4 pr-3 py-2 rounded-r"
         data-source-ref={refValue}
+        data-source-href={props.href}
       >
         <div className="text-warm-800 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
-          {children}
+          {props.children}
         </div>
         <figcaption className="text-xs text-warm-500 mt-1">
-          <CitationChip sourceRef={refValue} as={as} linkCtx={linkCtx} />
+          <Citation {...props} />
         </figcaption>
       </figure>
     );

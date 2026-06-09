@@ -3,7 +3,7 @@
 `detectKeyword()` recognizes voice control commands in Whisper transcripts — things like "send message", "cancel", "microphone off". When a keyword is found, it's replaced with an XML tag in the transcript.
 
 ```ts setup
-import { detectKeyword } from "../src/frontend/src/lib/speech-keywords.js";
+import { detectKeyword, appendSendKeywordTag } from "../src/frontend/src/lib/speech-keywords.js";
 ```
 
 ## Send commands
@@ -106,4 +106,23 @@ detectKeyword("hello world")
 
 detectKeyword("the weather is nice")
 => null
+```
+
+## Re-injecting a send keyword the HQ pass dropped
+
+Narration mode replaces the realtime transcript with a high-quality pass, and that pass can normalize a trailing trigger phrase away ("…send message" becomes clean prose). The realtime pass already heard the keyword — that's what fired the send — so when the HQ text comes back without one, the tag is appended rather than lost:
+
+```
+detectKeyword("Buy milk tomorrow.")
+=> null
+
+appendSendKeywordTag("Buy milk tomorrow.", "send message")
+=> Buy milk tomorrow. <send-message phrase="send message" />
+```
+
+Phrases with characters meaningful in XML are escaped, matching the tag form `detectKeyword` itself produces:
+
+```
+appendSendKeywordTag("Ping R&D.", 'send "the" message')
+=> Ping R&D. <send-message phrase="send &quot;the&quot; message" />
 ```

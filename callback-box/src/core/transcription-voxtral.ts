@@ -79,14 +79,14 @@ export async function transcribeAudioVoxtral(
     });
   } catch (error) {
     if (isTranscriptionError(error)) {
-      throw error as Error;
+      throw error;
     }
 
     // ky HTTPError — parse the response for error details
     const httpErr = error as HTTPError;
     if (httpErr.response) {
       const parsed = await parseErrorResponse(httpErr.response);
-      throw parsed as Error;
+      throw parsed;
     }
 
     throw new VoxtralNetworkError((error as Error).message);

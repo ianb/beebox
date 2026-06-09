@@ -172,9 +172,7 @@ export const chatMachine = setup({
             })),
           ],
         },
-        DISMISS_ERROR: {
-          actions: assign({ error: null }),
-        },
+        DISMISS_ERROR: { actions: assign({ error: null }) },
       },
     },
     streaming: {
@@ -211,6 +209,13 @@ export const chatMachine = setup({
         REFRESH: {
           actions: () => logFsm("refresh-ignored-streaming"),
         },
+        // Stalled-stream recovery (see STREAM_RECOVER in chat-types): honored
+        // unlike REFRESH — sent only after the server confirms the turn is done.
+        // Don't clear streamText/streamTools here (unlike STREAM_FAILED): the
+        // refreshing onDone rolls them into a synthetic entry for a still-"new"
+        // session whose history is empty, so clearing would lose the only copy
+        // of a partial reply. refreshing clears them itself once it's done.
+        STREAM_RECOVER: { target: "refreshing" },
         SEND: {
           // Queue the message — don't interrupt the current stream
           actions: [

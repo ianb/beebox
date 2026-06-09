@@ -21,8 +21,9 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
 import { useDictationDraft } from "../../hooks/useDictationDraft";
+import { useComposerDraft } from "../../hooks/useComposerDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
-import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatTabs } from "./InteractiveChat-hooks";
+import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs } from "./InteractiveChat-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
@@ -74,6 +75,9 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const backgroundTasks = useBackgroundTasks();
 
   const [input, setInput] = useState("");
+  // Persist the unsent composer text so a remount (e.g. the router re-reading
+  // search params on wake-from-sleep) or a reload doesn't silently discard it.
+  useComposerDraft({ boxSlug, sessionId, input, setInput });
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
@@ -91,6 +95,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const schedules = useChatSchedules({ messages, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });
+  useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
   const doSend = useCallback(
     (wrapped: string) => {
@@ -121,7 +126,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    clearDraftRef, doSend, zoomedViewAttr, timePassedAttr,
+    clearDraftRef, input, setInput, doSend, zoomedViewAttr, timePassedAttr,
   });
 
   // Persist the in-flight transcript so an interrupted session (screen sleep,
@@ -158,7 +163,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   ) : null;
 
   useChatSse({
-    sessionId, sessionInput, boxSlug, currentUser, send,
+    sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
   });

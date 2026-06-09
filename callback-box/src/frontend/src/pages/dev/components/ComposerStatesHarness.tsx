@@ -126,6 +126,7 @@ function StateBlock({ spec }: { spec: Spec }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const transcription: TranscriptionHandle = {
+    state: spec.isTranscribing ? "recording" : "idle",
     transcript: spec.transcript,
     start: noop,
     stop: () => Promise.resolve(spec.transcript),

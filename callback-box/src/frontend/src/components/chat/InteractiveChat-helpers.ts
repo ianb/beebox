@@ -34,6 +34,19 @@ export function buildSpeechMessage(opts: {
   return `<speech${diarizedAttr}${attrs}>${body}</speech>`;
 }
 
+/**
+ * Join the composer's prior text with a voice transcript, single-spaced. When
+ * a recording is started while the composer already holds text (a previous
+ * stopped segment, or typing), the new segment continues from that text
+ * instead of discarding it. Mirrors the existing manual-stop append so the
+ * displayed value and the committed value always agree.
+ */
+export function joinTranscript(priorInput: string, transcript: string): string {
+  if (!priorInput) return transcript;
+  if (!transcript) return priorInput;
+  return `${priorInput} ${transcript}`;
+}
+
 // Minted at SEND-dispatch time and threaded through to /chat/send so the
 // backend's processedMessageIds dedupe (chat.ts:269-284) catches the case
 // where the streamActor body runs twice for one logical send (StrictMode
@@ -72,8 +85,10 @@ export const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null 
   { label: "Default (Opus)", model: null },
   { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
   { label: "Opus 4.8", model: "claude-opus-4-8" },
+  { label: "Fable 5", model: "claude-fable-5" },
   { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
   { label: "Opus 4.8 (1M context)", model: "claude-opus-4-8[1m]" },
+  { label: "Fable 5 (1M context)", model: "claude-fable-5[1m]" },
 ];
 
 /**

@@ -9,8 +9,8 @@
 
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useSSE, type SSEEvent } from "../../hooks/useSSE";
-import { getApiBase, getEventSourceBase, type SessionEntry } from "../../api";
+import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { getApiBase, type SessionEntry } from "../../api";
 import { getTTSClient } from "../../lib/tts-client";
 import { alarm } from "../../lib/earcons";
 import { isTTSVoice } from "../../lib/speech-parsing";
@@ -39,6 +39,8 @@ function forSession(dataSessionId: string | null, sessionId: string | null): boo
 interface SecondaryEventDeps {
   sessionId: string | null;
   sessionInput: string;
+  /** True when this tab has its own turn in flight — gates broadcast adoption. */
+  isStreaming: boolean;
   send: (event: ChatEvent) => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
@@ -49,8 +51,8 @@ interface SecondaryEventDeps {
  * tasks, file changes, feature toggles, session assignment). Split out of the
  * main dispatcher to keep each handler's branching legible.
  */
-function handleSecondaryEvent(event: SSEEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, sessionInput, send, setChatFeatures, onTaskEvent } = deps;
+function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
+  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent } = deps;
   if (event.event === "chat-task") {
     const data = event.data as { sessionId: string | null; task: TaskEvent };
     if (forSession(data.sessionId, sessionId)) onTaskEvent(data.task);
@@ -60,12 +62,13 @@ function handleSecondaryEvent(event: SSEEvent, deps: SecondaryEventDeps): void {
     applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
   } else if (event.event === "chat-session-assigned") {
     const data = event.data as { sessionId: string };
-    // Lock the running machine onto the assigned id (so subsequent sends + the
-    // post-stream refresh use it). URL navigation is handled by the useEffect
-    // below, which also covers the faster in-stream `system/init` path.
-    // ChatPage stabilizes the React key across this transition so the in-flight
-    // stream survives.
-    if (sessionInput === "new" && !sessionId) {
+    // The authoritative, per-tab assignment is the in-stream `system/init`
+    // delivered over this tab's own turnStream — it always corrects the id.
+    // This bus broadcast is a backup (restart recovery), and it carries no
+    // client correlation, so only adopt it when this tab actually has a turn in
+    // flight. Otherwise a second, idle "new" tab would bind to another tab's
+    // session. URL navigation is the useEffect below.
+    if (sessionInput === "new" && !sessionId && isStreaming) {
       send({ type: "SESSION_ASSIGNED", sessionId: data.sessionId });
     }
   }
@@ -76,30 +79,29 @@ export function useChatSse(opts: {
   sessionInput: string;
   boxSlug: string | undefined;
   currentUser: { email: string } | null | undefined;
+  /** This tab has a turn streaming/refreshing — gates broadcast session adoption. */
+  isStreaming: boolean;
   send: (event: ChatEvent) => void;
   fetchSchedules: () => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
   const navigate = useNavigate();
 
-  // Handle SSE events: schedule-fired, chat-history, chat-user-message,
-  // chat-session-assigned. Events tagged with a sessionId are filtered to
-  // this view's session only.
-  useSSE(`${getEventSourceBase()}/events`, {
+  // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
+  // chat-history, chat-complete, chat-user-message, chat-session-assigned.
+  // Events tagged with a sessionId are filtered to this view's session only.
+  useBusSubscription({
     onConnect: useCallback(() => {
-      console.debug("[chatfsm] sse-connect");
-      // Re-sync after a (re)connect: any chat-complete / chat-history events
-      // we missed while disconnected won't replay if the gap exceeded the
-      // event-bus retention. REFRESH is a global handler that's ignored in
-      // streaming, so it's safe to dispatch unconditionally.
+      console.debug("[chatfsm] ws-connect");
+      // Re-sync on every (re)connect: a full history REFRESH backs up the
+      // subscription's automatic lastEventId replay for gaps that exceed the
+      // event-bus retention window. REFRESH is ignored in streaming, so it's
+      // safe to dispatch unconditionally.
       send({ type: "REFRESH" });
     }, [send]),
-    onDisconnect: useCallback(() => {
-      console.debug("[chatfsm] sse-disconnect");
-    }, []),
-    onEvent: useCallback((event: SSEEvent) => {
+    onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event === "schedule-fired") {
         const data = event.data as { label: string; alarm: boolean; announce: string | null };
         if (data.alarm) {
@@ -134,9 +136,9 @@ export function useChatSse(opts: {
           });
         }
       } else {
-        handleSecondaryEvent(event, { sessionId, sessionInput, send, setChatFeatures, onTaskEvent });
+        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent });
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, setChatFeatures, onTaskEvent]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent]),
   });
 
   // Update the URL when the machine learns the assigned session id. Fires for

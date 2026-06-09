@@ -67,7 +67,7 @@ function escapeText(value: string): string {
 }
 
 function renderSelection(selection: SelectionItem, opts: { placement: string | null }): string {
-  const positionAttr = selection.position === "" ? "" : ` position="${escapeAttr(selection.position)}"`;
+  const positionAttr = selection.position === "" ? "" : ` pos="${escapeAttr(selection.position)}"`;
   const placementAttr = opts.placement === null ? "" : ` placement="${escapeAttr(opts.placement)}"`;
   return `<user-selection ref="${escapeAttr(selection.ref)}"${positionAttr}${placementAttr}>${escapeText(selection.text)}</user-selection>`;
 }

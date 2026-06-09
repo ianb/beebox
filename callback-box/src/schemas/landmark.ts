@@ -11,7 +11,7 @@
  *   </landmark>
  *
  * At least one role must be present; any combination is allowed.
- * See docs/landmarks.md and docs/triage-design.md.
+ * See docs/landmarks.md and docs/plans/triage-design.md.
  */
 
 import { element, escapeAttr, escapeText } from "cardworks";
@@ -74,7 +74,7 @@ export const LandmarkLink = element("link", {
  *
  * Mirrors the `<chat-app>` envelope tag used in chat itself, so the
  * same vocabulary covers both the landmark seed and the agent-emitted
- * delta. See `docs/narration-mode-design.md`.
+ * delta. See `docs/implemented-plans/narration-mode-design.md`.
  *
  * ```xml
  * <chat-app narration="on" prose="off"/>

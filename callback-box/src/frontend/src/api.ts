@@ -17,7 +17,7 @@ import { getApiBase, NoResponseBodyError } from "./api-core";
 
 export {
   getApiBase,
-  getEventSourceBase,
+  getWebSocketUrl,
   joinBaseAndPath,
   withBase,
 } from "./api-core";
@@ -39,7 +39,7 @@ export {
   interruptChat,
   postAudioForHqTranscription,
   restartChatSubprocess,
-  sendChatMessage,
+  startChatTurn,
   setChatFeature,
   setChatModel,
 } from "./api-chat";

@@ -17,10 +17,10 @@ import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
-import { detectKeyword } from "../../lib/speech-keywords";
+import { detectKeyword, appendSendKeywordTag } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
 import { sendSound, tick, recordingStop } from "../../lib/earcons";
-import { localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
+import { localTime, buildSpeechMessage, joinTranscript } from "./InteractiveChat-helpers";
 import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection-serialize";
 import type { SpeechSegment } from "../../lib/speech-parsing";
@@ -55,6 +55,8 @@ interface VoiceDevices {
  */
 function runKeywordSend(opts: {
   text: string;
+  /** Trigger phrase the realtime pass matched (e.g. "send message"). */
+  matchedPhrase: string;
   audioBlob: Blob | null;
   transcription: { start: () => void };
   stopTickRef: React.MutableRefObject<(() => void) | null>;
@@ -67,12 +69,21 @@ function runKeywordSend(opts: {
   clearDraftRef: React.MutableRefObject<() => void>;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
+  /** Latest composer text at fire time, prepended so it isn't dropped. */
+  inputRef: React.MutableRefObject<string>;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const { text, audioBlob, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr } = opts;
-  if (!text.trim()) {
+  const { text, matchedPhrase, audioBlob, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput } = opts;
+  // Any text already in the composer (a prior stopped segment, or typing)
+  // continues into this utterance rather than being discarded.
+  const priorInput = inputRef.current.trim();
+  if (!priorInput && !text.trim()) {
     transcription.start();
     return;
   }
+  // The prior text is being committed with this utterance — clear it so the
+  // next segment doesn't prepend it a second time.
+  if (priorInput) setInput("");
   // Snapshot the pending selections at keyword-fire (phase 1) and clear them
   // now: they belong to *this* utterance. The deferred HQ submit reads this
   // frozen snapshot, so selections added during the HQ window go to the next
@@ -86,13 +97,16 @@ function runKeywordSend(opts: {
   const submit = (finalText: string, submitOpts?: { diarized?: boolean }) => {
     const diarized = submitOpts !== undefined && submitOpts.diarized === true;
     const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
-    doSend(buildSpeechMessage({ text: finalText, diarized, selections: selectionsSnapshot, attrs }));
+    // The HQ audio (and the realtime text) cover only the spoken segment, so
+    // fold the prior composer text back in at submit time.
+    const full = joinTranscript(priorInput, finalText);
+    doSend(buildSpeechMessage({ text: full, diarized, selections: selectionsSnapshot, attrs }));
     // The segment is committed — drop any persisted draft so the recovery
     // widget doesn't resurface the text we just sent.
     clearDraftRef.current();
   };
   if (narrationEnabledRef.current && audioBlob) {
-    composerSend({ type: "START_HQ", text });
+    composerSend({ type: "START_HQ", text: joinTranscript(priorInput, text) });
     void postAudioForHqTranscription(audioBlob, { sessionId })
       .then((hqResult) => {
         // Clear the in-flight/pending state before submit so the pending
@@ -105,8 +119,14 @@ function runKeywordSend(opts: {
         }
         // Re-run keyword detection on the HQ text so the agent sees the
         // send-message (or other) keyword as a pill, not plain words.
+        // The realtime pass heard the trigger (that's what fired this send),
+        // so when HQ normalized it away, re-inject the tag rather than let
+        // the trigger silently vanish from the persistent record.
         const keyword = detectKeyword(hqResult.text);
-        submit(keyword ? keyword.processedTranscript : hqResult.text, { diarized: hqResult.diarized });
+        const hqText = keyword
+          ? keyword.processedTranscript
+          : appendSendKeywordTag(hqResult.text, matchedPhrase);
+        submit(hqText, { diarized: hqResult.diarized });
       })
       .catch(() => { composerSend({ type: "HQ_DONE" }); });
   } else {
@@ -128,11 +148,14 @@ export function useChatVoice(opts: {
   resetSelections: () => void;
   /** Drops the persisted dictation draft once a segment commits (set by the chat). */
   clearDraftRef: React.MutableRefObject<() => void>;
+  /** Current composer text, so a voice-keyword send doesn't drop it. */
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, doSend, zoomedViewAttr, timePassedAttr } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, input, setInput, doSend, zoomedViewAttr, timePassedAttr } = opts;
 
   // Live device handles, in a ref the command subscriber reads at emit time
   // (never during render). Effects below keep its fields current.
@@ -168,12 +191,16 @@ export function useChatVoice(opts: {
   useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
   const selectionsRef = useRef(selections);
   useEffect(() => { selectionsRef.current = selections; });
+  // Same pattern for the composer text: read the latest value at keyword-fire
+  // time, since the onKeywordSend closure isn't re-read per render.
+  const inputRef = useRef(input);
+  useEffect(() => { inputRef.current = input; });
 
   const transcription = useRealtimeTranscription({
     wantAudioBlob: () => narrationEnabledRef.current,
-    onKeywordSend: (text, audioBlob) => runKeywordSend({
-      text, audioBlob, transcription, stopTickRef, composerSend, sessionId,
-      narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr,
+    onKeywordSend: ({ processedTranscript, matchedPhrase, audioBlob }) => runKeywordSend({
+      text: processedTranscript, matchedPhrase, audioBlob, transcription, stopTickRef, composerSend, sessionId,
+      narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput,
     }),
     onKeywordCancel: () => {
       transcription.cancel();
@@ -184,6 +211,17 @@ export function useChatVoice(opts: {
     },
     onKeywordErase: () => {
       // Transcript is already cleared by the hook; nothing else needed
+    },
+    onUnconsumedTranscript: (text) => {
+      // Recording ended without a send or a manual stop (transport death, mic
+      // taken away, reconnect window expired, silence/max-duration auto-stop).
+      // Fold the words into the composer so they stay visible and editable
+      // instead of vanishing when isTranscribing flips false.
+      setInput((existing) => joinTranscript(existing, text));
+      // The text now lives in the composer (persisted as the composer draft),
+      // so drop the dictation draft — otherwise it resurfaces after the next
+      // reload as a phantom "Recovered dictation" duplicate.
+      clearDraftRef.current();
     },
   });
   useEffect(() => {

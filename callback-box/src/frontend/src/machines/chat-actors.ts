@@ -12,11 +12,13 @@ import { fromCallback, fromPromise } from "xstate";
 import {
   getChatHistory,
   getChatStatus,
-  sendChatMessage,
+  startChatTurn,
   type SessionEntry,
   type SessionContentBlock,
   type ChatImageAttachment,
 } from "../api";
+import { trpcClient } from "../lib/trpc";
+import type { ChatMessage } from "../../../core/chat-session-messages.js";
 import {
   HISTORY_TAIL,
   MIN_REAL_USER_MESSAGES,
@@ -142,6 +144,101 @@ function runFakeStream(
   return () => window.clearInterval(handle);
 }
 
+/**
+ * Map one agent message frame onto the chat machine's STREAM_* events. Control
+ * outcomes (queued / deduplicated / send error) no longer arrive here — they're
+ * the JSON result of startChatTurn — so this only handles real agent messages:
+ * the session-id init, live text deltas, the final assistant blocks, and the
+ * terminal result.
+ */
+function handleTurnMessage(
+  msg: ChatMessage,
+  ctx: {
+    sessionInput: string;
+    sendBack: (event: ChatEvent) => void;
+    terminal: (event: ChatEvent) => void;
+    state: { sawTextPartial: boolean };
+  },
+): void {
+  const { sessionInput, sendBack, terminal, state } = ctx;
+
+  if (msg.type === "system") {
+    handleSystemInit(msg, { sessionInput, sendBack });
+    return;
+  }
+
+  if (msg.type === "stream_event") {
+    // Anthropic raw streaming events. Surface text_delta for live text + the
+    // speech-tag accumulator; other shapes (input_json_delta, message_start/
+    // stop, ping) are ignored — the final assistant message delivers tool_use
+    // blocks atomically.
+    const event = msg.event as { type?: string; delta?: { type?: string; text?: string } } | undefined;
+    if (
+      event !== undefined &&
+      event.type === "content_block_delta" &&
+      event.delta !== undefined &&
+      event.delta.type === "text_delta" &&
+      typeof event.delta.text === "string" &&
+      event.delta.text.length > 0
+    ) {
+      state.sawTextPartial = true;
+      sendBack({ type: "STREAM_TEXT", text: event.delta.text });
+    }
+    return;
+  }
+
+  if (msg.type === "assistant") {
+    const content = msg.message?.content;
+    if (content) {
+      for (const block of content) {
+        if (block.type === "text" && block.text) {
+          // Skip text already accumulated via stream_event deltas.
+          if (state.sawTextPartial) continue;
+          sendBack({ type: "STREAM_TEXT", text: block.text });
+        } else if (block.type === "tool_use") {
+          sendBack({
+            type: "STREAM_TOOL",
+            tool: {
+              type: "tool_use",
+              toolName: block.name,
+              toolId: block.id,
+              input: block.input,
+              inputSummary: block.name ?? "",
+            },
+          });
+        }
+      }
+    }
+    return;
+  }
+
+  if (msg.type === "result") {
+    // The SDK signals turn-level failures (e.g. resume of a session id with no
+    // log on disk) by setting is_error on an otherwise empty result. Treat
+    // those as stream errors so the UI shows a message instead of going idle.
+    if (msg.is_error === true) {
+      const subtype = msg.subtype ?? "unknown";
+      terminal({
+        type: "STREAM_ERROR",
+        error: `Agent turn failed (${subtype}). The session id in this tab's URL has no log on disk — start a new chat.`,
+      });
+    } else {
+      terminal({ type: "STREAM_RESULT" });
+    }
+  }
+}
+
+/** A frame yielded by events.turnStream, possibly still inside a tracked envelope. */
+type TurnStreamWire =
+  | { t: "msg"; msg: ChatMessage }
+  | { t: "resync" }
+  | { t: "error"; error: string }
+  | { id: string; data: { t: "msg"; msg: ChatMessage } };
+
+function unwrapTurnFrame(wire: TurnStreamWire): { t: "msg"; msg: ChatMessage } | { t: "resync" } | { t: "error"; error: string } {
+  return "t" in wire ? wire : wire.data;
+}
+
 export const streamActor = fromCallback(
   ({
     sendBack,
@@ -150,19 +247,12 @@ export const streamActor = fromCallback(
     sendBack: (event: ChatEvent) => void;
     input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string> };
   }) => {
-    // Track whether the stream ever produced a terminal event. If the SSE
-    // ends cleanly without one (proxy timeout, server closed the socket
-    // after the subprocess emitted `result` but before we parsed it, etc.),
-    // the machine would otherwise sit in `streaming` forever.
     let terminalFired = false;
     let msgCount = 0;
-    // When the backend has `includePartialMessages` on, text deltas arrive
-    // before the final `assistant` message. We accumulate them via
-    // STREAM_TEXT events; the final assistant message would re-deliver the
-    // same text, so we suppress its text blocks (tool_use blocks still
-    // come through, as those don't stream as deltas the same way).
-    let sawTextPartial = false;
-    const terminal = (event: ChatEvent) => {
+    // includePartialMessages delivers text deltas before the final assistant
+    // message; we accumulate those and suppress the assistant's duplicate text.
+    const state = { sawTextPartial: false };
+    const terminal = (event: ChatEvent): void => {
       terminalFired = true;
       logFsm("stream-terminal", { event: event.type, msgCount });
       sendBack(event);
@@ -178,136 +268,81 @@ export const streamActor = fromCallback(
       return runFakeStream(unwrapped, { sendBack, terminal });
     }
 
-    sendChatMessage({
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    startChatTurn({
       session: input.sessionInput,
       message: input.message,
       messageId: input.messageId,
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       ...(input.contextDir ? { contextDir: input.contextDir } : {}),
       ...(input.seedFeatures ? { seedFeatures: input.seedFeatures } : {}),
-      onMessage: (msg) => {
-        msgCount++;
-        const type = msg.type as string;
-
-        if (type === "system") {
-          handleSystemInit(msg, { sessionInput: input.sessionInput, sendBack });
+    })
+      .then((result) => {
+        if (cancelled) return;
+        // Queued / deduplicated finish the turn without a stream — the chat
+        // machine refreshes history from these terminal states.
+        if (result.deduplicated) {
+          terminal({ type: "STREAM_RESULT" });
           return;
         }
-
-        if (type === "busy") {
-          terminal({ type: "STREAM_BUSY" });
-          return;
-        }
-
-        if (type === "queued") {
+        if (result.queued) {
           terminal({ type: "STREAM_QUEUED" });
           return;
         }
-
-        if (type === "error") {
-          terminal({
-            type: "STREAM_ERROR",
-            error: (msg.error as string) || "Unknown error",
-          });
+        if (!result.turnId) {
+          terminal({ type: "STREAM_FAILED", error: "Send returned no turn id" });
           return;
         }
 
-        if (type === "stream_event") {
-          // Anthropic raw streaming events. We surface text_delta for live
-          // text rendering and the speech-tag accumulator. Other event
-          // shapes (input_json_delta for tool_use, message_start/stop,
-          // ping, etc.) are ignored — the final assistant message still
-          // delivers tool_use blocks atomically.
-          const event = (msg as { event?: { type?: string; delta?: { type?: string; text?: string } } }).event;
-          if (
-            event !== undefined &&
-            event.type === "content_block_delta" &&
-            event.delta !== undefined &&
-            event.delta.type === "text_delta" &&
-            typeof event.delta.text === "string" &&
-            event.delta.text.length > 0
-          ) {
-            sawTextPartial = true;
-            sendBack({ type: "STREAM_TEXT", text: event.delta.text });
-          }
-          return;
-        }
-
-        if (type === "assistant") {
-          const message = msg.message as
-            | {
-                content?: Array<{
-                  type: string;
-                  text?: string;
-                  name?: string;
-                  id?: string;
-                  input?: Record<string, unknown>;
-                }>;
+        // Subscribe to the turn's output. wsLink resumes this automatically on a
+        // dropped connection (lastEventId = last seq), so partial text survives.
+        const sub = trpcClient.events.turnStream.subscribe(
+          { turnId: result.turnId },
+          {
+            onData: (data: TurnStreamWire) => {
+              msgCount++;
+              const frame = unwrapTurnFrame(data);
+              if (frame.t === "resync") {
+                // Buffer gone / reconnect past evicted frames → silent recover
+                // to a history refresh (the durable transcript floor).
+                terminal({ type: "STREAM_RECOVER" });
+                return;
               }
-            | undefined;
-          if (message?.content) {
-            for (const block of message.content) {
-              if (block.type === "text" && block.text) {
-                // If we already accumulated this text via stream_event
-                // deltas, skip it — otherwise we'd double-append.
-                if (sawTextPartial) continue;
-                sendBack({ type: "STREAM_TEXT", text: block.text });
-              } else if (block.type === "tool_use") {
-                sendBack({
-                  type: "STREAM_TOOL",
-                  tool: {
-                    type: "tool_use",
-                    toolName: block.name,
-                    toolId: block.id,
-                    input: block.input,
-                    inputSummary: block.name ?? "",
-                  },
-                });
+              if (frame.t === "error") {
+                terminal({ type: "STREAM_FAILED", error: frame.error });
+                return;
               }
-            }
-          }
-        }
-
-        if (type === "result") {
-          // The SDK signals turn-level failures (e.g. asked to resume a
-          // session id with no log on disk) by setting is_error on an
-          // otherwise empty result. Treat those as stream errors so the
-          // UI shows a message instead of silently going idle while the
-          // optimistic bubble sits stranded.
-          const isError = (msg as { is_error?: boolean }).is_error === true;
-          if (isError) {
-            const subtype = (msg as { subtype?: string }).subtype ?? "unknown";
-            terminal({
-              type: "STREAM_ERROR",
-              error: `Agent turn failed (${subtype}). The session id in this tab's URL has no log on disk — start a new chat.`,
-            });
-          } else {
-            terminal({ type: "STREAM_RESULT" });
-          }
-        }
-      },
-    })
-      .then(() => {
-        if (!terminalFired) {
-          logFsm("stream-eof-no-terminal", { msgCount });
-          // Stream ended without any terminal event — fall back to a history
-          // refresh so the UI can recover whatever the server completed.
-          sendBack({
-            type: "STREAM_FAILED",
-            error: "Stream ended without result",
-          });
-        }
+              handleTurnMessage(frame.msg, { sessionInput: input.sessionInput, sendBack, terminal, state });
+            },
+            onError: (err: { message: string }) => {
+              logFsm("stream-throw", { msg: err.message, msgCount });
+              if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message });
+            },
+            onComplete: () => {
+              // The subscription ended without a terminal (turn closed without a
+              // result frame) — fall back to a history refresh.
+              if (!terminalFired) {
+                logFsm("stream-eof-no-terminal", { msgCount });
+                sendBack({ type: "STREAM_FAILED", error: "Stream ended without result" });
+              }
+            },
+          },
+        );
+        unsubscribe = () => sub.unsubscribe();
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
+        if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Send failed";
         logFsm("stream-throw", { msg, msgCount });
-        sendBack({
-          type: "STREAM_FAILED",
-          error: msg,
-        });
+        sendBack({ type: "STREAM_FAILED", error: msg });
       });
 
-    return () => {};
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+    };
   }
 );
 
@@ -334,17 +369,15 @@ export function rollupStreamToEntry(
 
 /**
  * Fire-and-forget: send a message to the backend knowing it will be queued.
- * We don't need to track the SSE response — the backend enqueues it and
- * the chat-complete SSE event will trigger a history refresh when the
- * queued turn finishes.
+ * We don't track the outcome — the backend enqueues it and the chat-complete
+ * event triggers a history refresh when the queued turn finishes.
  */
 export function queueMessageToBackend(opts: { session: string; message: string; messageId: string; images?: ChatImageAttachment[] }): void {
   const { session, message, messageId, images } = opts;
-  sendChatMessage({
+  startChatTurn({
     session,
     message,
     messageId,
     ...(images && images.length > 0 ? { images } : {}),
-    onMessage: () => {}, // ignore — will be "queued" then close
   }).catch(() => {}); // fire-and-forget
 }

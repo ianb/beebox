@@ -58,7 +58,7 @@ export async function loadCalendarState(boxRoot: string): Promise<CalendarState>
     persistent = JSON.parse(content);
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) {
-      throw err as Error;
+      throw err;
     }
     persistent = { syncTokens: {}, eventFiles: {} };
   }
@@ -97,7 +97,7 @@ export async function deleteEventViaApi(
       console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
       return false;
     }
-    throw err as Error;
+    throw err;
   }
 }
 
@@ -116,7 +116,7 @@ export async function insertEventViaApi(
       console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
       return null;
     }
-    throw err as Error;
+    throw err;
   }
 }
 
@@ -135,7 +135,7 @@ export async function patchEventViaApi(
       console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
       return null;
     }
-    throw err as Error;
+    throw err;
   }
 }
 

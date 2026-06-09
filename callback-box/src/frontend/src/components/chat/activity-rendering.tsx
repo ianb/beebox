@@ -155,14 +155,14 @@ function ToolDetail({ block }: { block: SessionContentBlock }) {
         <span>{description}</span>
       </summary>
       {input ? (
-        <div className="cb-scroll-always mt-1 mb-1 ml-3 max-h-40 overflow-auto rounded bg-warm-50 p-3">
+        <div className="cb-scroll-fade-bottom mt-1 mb-1 ml-3 max-h-40 overflow-auto rounded bg-warm-50 p-3">
           <JsonView value={input} />
         </div>
       ) : null}
       {result ? (
         <>
           <div className="text-[10px] uppercase tracking-wider text-warm-500 ml-3 mt-1">result</div>
-          <Pre size="xs" boxed scroll="sm" className="cb-scroll-always mt-0.5 mb-1 ml-3">
+          <Pre size="xs" boxed scroll="sm" className="cb-scroll-fade-bottom mt-0.5 mb-1 ml-3">
             {result}
           </Pre>
         </>

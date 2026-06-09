@@ -2,9 +2,8 @@
  * Questions page — view and answer pending questions.
  */
 
-import { getEventSourceBase } from "../api";
 import { trpc } from "../lib/trpc";
-import { useSSE } from "../hooks/useSSE";
+import { useBusSubscription } from "../hooks/useBusSubscription";
 import { QuestionForm } from "../components/QuestionForm";
 import { cbSource } from "../lib/source-tag";
 import { Column } from "../components/ui/Column";
@@ -18,7 +17,7 @@ export function QuestionsPage() {
 
   const questions = data?.items ?? [];
 
-  useSSE(`${getEventSourceBase()}/events`, {
+  useBusSubscription({
     onEvent: (event) => {
       if (
         event.event === "question-answered" ||

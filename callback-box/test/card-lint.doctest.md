@@ -17,6 +17,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { createLoader } from "../src/cli/lib/loader.js";
 import { lintCardsDispatch } from "../src/core/card-lint.js";
 import type { LoadCardContext } from "../src/core/card-io.js";
+import { CommentarySchema } from "../src/schemas/commentary.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -46,6 +47,7 @@ const ctx: LoadCardContext = {
   cardSchemas: new Map<string, CardSchema>([
     ["email-thread", threadSchema],
     ["doc", docSchema],
+    ["commentary", CommentarySchema],
   ]),
   elementSchemas: new Map<string, ElementSchema>([["memo", memoSchema]]),
 };
@@ -195,4 +197,75 @@ const result = await lintCardsDispatch(
 );
 result.totalErrors
 => 0
+```
+
+## A commentary card with one default target and valid anchors lints clean
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Plan.commentary.card",
+  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\n{% source href=\"file:/Users/x/doc.md\" pos=\"body; ~line 4\" version=\"sha256:9f3a1c2b\" %}{% quote %}a span{% /quote %}{% /source %}\n\nThis reads well.\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Plan.commentary.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 0
+```
+
+## A commentary card with BOTH default targets is an error (xor)
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Both.commentary.card",
+  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\ndefaultRef: \"/box/notes/a.doc.card\"\n---\nbody\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Both.commentary.card")],
+  { loader, ctx },
+);
+result.results[0]!.errors[0]!.message
+=> commentary card requires exactly one of defaultHref or defaultRef
+```
+
+## A commentary card with NEITHER default target is an error (xor)
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Neither.commentary.card",
+  "---\ntype: commentary\n---\nbody\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Neither.commentary.card")],
+  { loader, ctx },
+);
+result.results[0]!.errors[0]!.message
+=> commentary card requires exactly one of defaultHref or defaultRef
+```
+
+## An anchor-less `{% source %}` in a commentary body is an error
+
+Markdoc validation runs on commentary bodies (it does not run elsewhere), so a
+`{% source %}` with neither `ref` nor `href` is caught here.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Bad.commentary.card",
+  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\n{% source pos=\"body\" %}orphan span{% /source %}\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Bad.commentary.card")],
+  { loader, ctx },
+);
+result.results[0]!.errors[0]!.message.includes("exactly one of")
+=> true
 ```

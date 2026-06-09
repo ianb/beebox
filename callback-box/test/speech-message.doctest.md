@@ -37,5 +37,5 @@ JSON.stringify(buildSpeechMessage({
   attrs: " local-time=\"14:23\"",
 }))
 =>
-"<speech local-time=\"14:23\">look at this part\n<user-selection ref=\"/store/notes/Bread.doc.card\" position=\"body; heading: Proofing (#proofing)\">let it rise</user-selection></speech>"
+"<speech local-time=\"14:23\">look at this part\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection></speech>"
 ```

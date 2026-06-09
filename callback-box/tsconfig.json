@@ -15,8 +15,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
+    // No .d.ts emit: the backend runs via tsx and the frontend type-checks
+    // against backend *source* (the @backend/* path alias), so nothing consumes
+    // dist/*.d.ts. Declaration emit also makes tRPC subscription routers fail to
+    // type-check (TS2742 — their inferred type references tRPC's internal
+    // `unstable-core-do-not-import` and can't be portably named for a .d.ts).
+    "declaration": false,
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": "src",
