@@ -7,6 +7,8 @@ and lock files.
 import {
   pruneRecentRuns,
   recordRun,
+  recordOutcome,
+  normalizeScriptState,
   loadScriptState,
   saveScriptState,
   acquireScriptLock,
@@ -92,6 +94,67 @@ state2.recentRuns.length
 
 state2.recentRuns[0].ts
 => 2026-03-01T12:00:00Z
+```
+
+## recordOutcome
+
+The single outcome-recording path for all triggers (tick, wakeup, webapp).
+Failures track `consecutiveFailures` and leave `lastSuccess` untouched;
+a success resets the failure count, stamps `lastSuccess`, and clears the
+health-alert latch.
+
+```
+const st = normalizeScriptState({});
+recordOutcome(st, {
+  result: "failure", error: "boom", durationMs: 100, sleepAffected: false,
+  windowMs: 3_600_000, now: new Date("2026-03-01T12:00:00Z"),
+});
+recordOutcome(st, {
+  result: "failure", error: "boom again", durationMs: 100, sleepAffected: false,
+  windowMs: 3_600_000, now: new Date("2026-03-01T13:00:00Z"),
+});
+st.alertedAt = "2026-03-01T13:01:00Z";
+st.alertedFor = "failing";
+print(`consecutiveFailures: ${st.consecutiveFailures}`);
+print(`lastResult: ${st.lastResult}, lastError: ${st.lastError}`);
+print(`lastSuccess: ${st.lastSuccess}`);
+=>
+consecutiveFailures: 2
+lastResult: failure, lastError: boom again
+lastSuccess: null
+
+recordOutcome(st, {
+  result: "success", error: null, durationMs: 200, sleepAffected: false,
+  windowMs: 3_600_000, now: new Date("2026-03-01T14:00:00Z"),
+});
+print(`consecutiveFailures: ${st.consecutiveFailures}`);
+print(`lastSuccess: ${st.lastSuccess}`);
+print(`latch: ${st.alertedAt}, ${st.alertedFor}`);
+print(`runCount: ${st.runCount}, recentRuns: ${st.recentRuns.length}`);
+=>
+consecutiveFailures: 0
+lastSuccess: 2026-03-01T14:00:00.000Z
+latch: null, null
+runCount: 3, recentRuns: 2
+```
+
+(The 12:00 failure has aged out of the one-hour run window by 14:00 —
+`runCount` is lifetime, `recentRuns` is windowed.)
+
+## normalizeScriptState
+
+State files written before the health fields existed get a best-effort
+backfill: a last-succeeded state inherits `lastSuccess` from `lastRun`,
+a last-failed state counts as one failure.
+
+```
+const oldSuccess = normalizeScriptState({ lastRun: "2026-03-01T06:00:00Z", lastResult: "success" });
+print(`lastSuccess: ${oldSuccess.lastSuccess}, consecutiveFailures: ${oldSuccess.consecutiveFailures}`);
+const oldFailure = normalizeScriptState({ lastRun: "2026-03-01T06:00:00Z", lastResult: "failure" });
+print(`lastSuccess: ${oldFailure.lastSuccess}, consecutiveFailures: ${oldFailure.consecutiveFailures}`);
+=>
+lastSuccess: 2026-03-01T06:00:00Z, consecutiveFailures: 0
+lastSuccess: null, consecutiveFailures: 1
 ```
 
 ## loadScriptState / saveScriptState
