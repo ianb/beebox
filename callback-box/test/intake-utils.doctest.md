@@ -9,7 +9,7 @@ import { createOrAppendIntakeJob } from "../src/connectors/intake-utils.js";
 
 ## Creating a new job
 
-When no matching job exists, a new `.intake.job.card` file is created under `box/jobs/`:
+When no matching job exists, a new `.intake-job.card` file is created under `box/jobs/`:
 
 ```
 const box = await makeTmpBox();
@@ -19,7 +19,7 @@ const path = await createOrAppendIntakeJob({
   items: ["box/inbox/item1.memo.card"],
   description: "Triage 1 item",
 });
-path.startsWith("box/jobs/") && path.endsWith(".intake.job.card")
+path.startsWith("box/jobs/") && path.endsWith(".intake-job.card")
 => true
 ```
 
@@ -107,7 +107,7 @@ pathA !== pathB
 ```
 
 ``` continue
-(await box.list("box/jobs")).split("\n").filter(f => f.endsWith(".intake.job.card")).length
+(await box.list("box/jobs")).split("\n").filter(f => f.endsWith(".intake-job.card")).length
 => 2
 ```
 

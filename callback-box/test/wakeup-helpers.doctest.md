@@ -34,7 +34,7 @@ count
 
 // A job was created in box/jobs/
 const allFiles = await readdir(join(box.root, "box/jobs"));
-const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
+const jobFiles = allFiles.filter(f => f.endsWith(".intake-job.card"));
 jobFiles.length
 => 1
 
@@ -45,6 +45,15 @@ content.includes("ref: box/inbox/note1.memo.card")
 
 content.includes("ref: box/inbox/note2.task.card")
 => true
+```
+
+Running the scan again is a no-op: the YAML `- ref:` lines in the job
+created above are collected, so the same items aren't re-jobbed (this
+regressed once when ref collection only understood legacy XML `ref=""`):
+
+``` continue
+await createIntakeJobsForUnjobbed(box.root)
+=> 0
 ```
 
 ### Skips items already referenced by a job
@@ -61,7 +70,7 @@ await box.seed("box/inbox/already-handled.memo.card", "<memo>Old</memo>");
 
 // Create a job that already references it
 await box.seed(
-  "box/jobs/existing.intake.job.card",
+  "box/jobs/existing.intake-job.card",
   '<intake-job created="2026-01-01T00:00:00Z" source="test"><item ref="box/inbox/already-handled.memo.card" /></intake-job>',
 );
 box.commitAll("setup");
@@ -90,7 +99,7 @@ count
 => 3
 
 const allFiles = await readdir(join(box.root, "box/jobs"));
-const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card")).sort();
+const jobFiles = allFiles.filter(f => f.endsWith(".intake-job.card")).sort();
 jobFiles.length
 => 2
 
@@ -162,7 +171,7 @@ count
 => 1
 
 const allFiles = await readdir(join(box.root, "box/jobs"));
-const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
+const jobFiles = allFiles.filter(f => f.endsWith(".intake-job.card"));
 const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
 content.includes("source: gmail")
 => true

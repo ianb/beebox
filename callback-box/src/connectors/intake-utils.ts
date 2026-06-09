@@ -59,7 +59,7 @@ export async function createOrAppendIntakeJob(
     .replace(/[.:]/g, "-")
     .slice(0, 19);
   const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
-  const jobFilename = `${timestamp}-${safeSource}.intake.job.card`;
+  const jobFilename = `${timestamp}-${safeSource}.intake-job.card`;
   const jobPath = path.join(jobsDir, jobFilename);
 
   const templateOpts: Parameters<typeof createIntakeJobTemplate>[0] = {
@@ -89,7 +89,7 @@ export async function createNewIntakeJob(
     .slice(0, 19);
   const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
   const suffix = String(Math.random()).slice(2, 6);
-  const jobFilename = `${timestamp}-${safeSource}-${suffix}.intake.job.card`;
+  const jobFilename = `${timestamp}-${safeSource}-${suffix}.intake-job.card`;
   const jobPath = path.join(jobsDir, jobFilename);
 
   const templateOpts: Parameters<typeof createIntakeJobTemplate>[0] = {
@@ -122,7 +122,7 @@ async function findExistingIntakeJob(
   }
 
   for (const entry of entries) {
-    if (!entry.endsWith(".intake.job.card")) continue;
+    if (!entry.endsWith(".intake-job.card")) continue;
     const filePath = path.join(jobsDir, entry);
     const fields = await readIntakeJobFields(filePath);
     if (fields === null) continue;
