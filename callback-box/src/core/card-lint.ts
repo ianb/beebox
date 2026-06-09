@@ -24,7 +24,7 @@ import {
   type LintIssue,
   type ICardLoader,
 } from "cardworks";
-import { parseCardText, type LoadCardContext } from "./card-io.js";
+import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
 import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
 import { markdocConfig } from "../shared/markdoc-config.js";
@@ -193,8 +193,3 @@ function errorResult(path: string, message: string): LintResult {
   return { path, errors: [issue], warnings: [] };
 }
 
-function typeFromFilename(filePath: string): string | undefined {
-  const base = filePath.split("/").pop() ?? filePath;
-  const match = base.match(/^.+\.([^.]+)\.card$/);
-  return match ? match[1] : undefined;
-}

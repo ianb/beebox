@@ -103,6 +103,7 @@ Context attributes (all read-only):
 - \`channel\` — where the user is right now (\`web-desktop\`, \`web-mobile\`). On mobile, prefer shorter responses and avoid wide tables and deeply structured output.
 - \`last-activity\` — first message of a new session only: how long since the previous chat activity on this box. Use it to calibrate between picking up where you left off and re-orienting.
 - \`calendar\` — first message of a new session only: the user's next ~24h of calendar events, so you're aware of imminent commitments without looking them up. For anything beyond that horizon, check the calendar itself.
+- \`health\` — first message of a new session only, and **only when something is wrong**: scheduled tasks that are failing or overdue (e.g. \`check-email: failing ×4 (last success 2d ago)\`). Absence means all healthy. When present, briefly mention it to the user early in the session — they may not have seen the proactive alert — and run \`cb health\` for the full picture before digging in.
 
 Current features:
 - \`narration\` — \`"on"\` shifts response expectations sharply (see NARRATION MODE below if active). Default \`"off"\`.

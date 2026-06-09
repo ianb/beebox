@@ -72,6 +72,17 @@ vi /home/callback/boxes/<name>/config/box.json
 
 If `allowedEmails` is empty or missing, any authenticated user can access.
 
+Optional: opt the box into proactive scheduled-task health alerts (see
+`cb health`) by adding the Telegram chat to notify — without this the
+box still surfaces problems via `cb health` and at session start, but
+nothing pings you:
+
+```json
+{
+  "healthAlerts": { "telegramChat": "<chat-id>" }
+}
+```
+
 ### 7. Copy connector secrets
 
 **This is easy to forget.** New boxes have no API keys — features like transcription will fail silently with "API key not configured." Secrets are per-box, stored in `config/connectors/`.

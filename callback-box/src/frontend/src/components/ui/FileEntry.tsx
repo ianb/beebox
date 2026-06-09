@@ -144,16 +144,11 @@ function ExpandedControls({
   );
 }
 
-export function FileEntry({ summary, compact, onPanel, className }: FileEntryProps) {
-  compact = compact ?? false;
-  const [expanded, setExpanded] = useState(false);
+function TitleSlot({ summary, compact }: { summary: FileSummary<unknown>; compact: boolean }) {
   const ui = resolveFileTypeUI(summary);
   const Icon = ui.icon;
   const ListComponent = ui.ListComponent;
-  const { boxSlug } = useParams({ strict: false });
-  const handleNavigate = useViewNavigate();
-
-  const titleSlot = (
+  return (
     <div className="flex-1 min-w-0 flex items-center gap-2">
       <span className="flex-shrink-0 text-warm-500">
         <Icon size={18} />
@@ -167,6 +162,13 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
       </div>
     </div>
   );
+}
+
+export function FileEntry({ summary, compact, onPanel, className }: FileEntryProps) {
+  compact = compact ?? false;
+  const [expanded, setExpanded] = useState(false);
+  const { boxSlug } = useParams({ strict: false });
+  const handleNavigate = useViewNavigate();
 
   if (expanded) {
     return (
@@ -178,7 +180,14 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
         data-file-path={summary.path}
       >
         <div className="flex items-center gap-1 min-w-0 py-1.5 px-2">
-          {titleSlot}
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            aria-label={`Collapse ${summary.title}`}
+            className="flex-1 flex items-center min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
+          >
+            <TitleSlot summary={summary} compact={compact} />
+          </button>
           <ExpandedControls
             summary={summary}
             boxSlug={boxSlug}
@@ -204,7 +213,7 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
         aria-label={`Preview ${summary.title}`}
         className="flex-1 flex items-center min-w-0 py-1.5 px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >
-        {titleSlot}
+        <TitleSlot summary={summary} compact={compact} />
       </button>
       <button
         type="button"

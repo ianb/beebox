@@ -18,6 +18,10 @@ import { loadBoxTimezone } from "../webapp/box-config.js";
 import { getMostActiveSavedAt } from "./chat-session-history.js";
 import { composeChatAppSnapshot, type FeatureMap } from "./chat-features.js";
 import {
+  loadScheduleHealth,
+  summarizeScheduleHealth,
+} from "./schedule-health-box.js";
+import {
   filterByDateRange,
   loadAllEvents,
   type CalendarEvent,
@@ -153,6 +157,7 @@ interface SnapshotContext {
   localTime: string;
   lastActivity?: string;
   calendar?: string;
+  health?: string;
 }
 
 /**
@@ -182,9 +187,12 @@ export async function composeSendSnapshot(
  * Compute the snapshot context for one send. `localTime` is always
  * present. The session-start extras (`lastActivity` from the
  * most-active pointer's savedAt, `calendar` from the next 24h of
- * `store/calendar/`) are computed only when `sessionStart` is true —
- * the first message of a brand-new conversation. Failures in the extras
- * degrade to omission; they must never block a send.
+ * `store/calendar/`, `health` from scheduled-task health — present
+ * only when something is failing or overdue, so every-session green
+ * noise never trains the agent to ignore it) are computed only when
+ * `sessionStart` is true — the first message of a brand-new
+ * conversation. Failures in the extras degrade to omission; they must
+ * never block a send.
  */
 export async function buildSnapshotContext(
   boxRoot: string,
@@ -213,6 +221,13 @@ export async function buildSnapshotContext(
     if (calendar !== null) out.calendar = calendar;
   } catch (e) {
     console.warn(`[session-context] calendar summary failed: ${e instanceof Error ? e.message : e}`);
+  }
+
+  try {
+    const health = summarizeScheduleHealth(await loadScheduleHealth(boxRoot, now), now);
+    if (health !== null) out.health = health;
+  } catch (e) {
+    console.warn(`[session-context] schedule health summary failed: ${e instanceof Error ? e.message : e}`);
   }
 
   return out;

@@ -205,6 +205,8 @@ Notes:
 - Should also be visible somewhere as an always-available view (status page, `cb health`) so it doesn't *only* surface at session start.
 - The reason the agent should still check at session start, even with proactive alerting in place: catches bugs in the alerting itself. Belt and suspenders.
 
+**IMPLEMENTED (June 2026)** — `src/core/schedule-health.ts` evaluates each task (ok/failing/overdue/blocked/invalid/disabled) from its card + run state (`lastRun`/`lastSuccess` divergence, consecutive failures); overdue derives from the task's own cadence (grace = half-cadence clamped to 30m–24h), and deliberate skips (budget, missing connector, disabled) are never mislabeled as failures. Surfaces: `cb health` (always-available, exit 1 when unhealthy), a `health` attribute on the session-start `<chat-app>` snapshot (only when something is wrong), and proactive alerts from the scheduler daemon — one aggregated telegram-message card per unhealthy episode (latched until the next success), opt-in via `healthAlerts.telegramChat` in `config/box.json`. The daemon also writes a per-box heartbeat so a dead scheduler is itself a finding. Remaining: a dashboard panel (the tRPC health router could reuse the same evaluator).
+
 ## Correction counting → spec promotion
 
 Corrections that stay in chat disappear. The fix is to extract them (during overnight compaction or a retrospective pass), count how often the *same* correction recurs across sessions, and promote frequent ones to permanent spec-level instructions.
@@ -663,19 +665,11 @@ When processing image cards, prefer the date from EXIF `DateTimeOriginal` over f
 
 ## Gmail sync improvements
 
-The current Gmail connector dedups via a `seenMessageIds` list (capped at 5000) plus a `lastPullDate` `after:` filter. The cap and the date filter interact in ways worth revisiting:
-
-### Drop the `seenMessageIds` cap
-
-Each ID is ~16 chars, so 100k IDs is only ~1.6MB on disk. The 5000-cap exists to keep state small, but it means a labeled set larger than 5000 would roll IDs out and re-fetch them. Removing the cap (or raising it dramatically) lets the bare `label:inbox` query also drop the date filter safely, simplifying the code and fixing the labeling-as-routing case for the unbounded fallback too.
-
-### Detect newly-labeled messages even on the unbounded query
-
-For the bare `label:inbox` default, the date filter is currently kept (see `buildQuery`) to bound the list call. That means labeling an old message and expecting it to flow into the box doesn't work unless the user has configured `labels` or `query`. Options: widen the `after:` window (e.g. `lastPullDate - 30d`) to catch recently-labeled older messages, or use Gmail's history API (`users.history.list`) to incrementally pick up label changes. The history API is the right answer long-term but is a bigger change.
+*(Implemented 2026-06: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the history API with full-list fallback, baseline no-import first sync for the bare `label:inbox` default. See `src/connectors/gmail-pull.ts`.)* Remaining:
 
 ### Garbage-collect unlabeled messages
 
-If a message in the box loses its triggering label in Gmail (user archives it, removes the label, etc.), the box still has the inbox card and the seen ID. There's no signal back. A periodic reconciliation pass — list current matches, remove cards whose IDs no longer match — would close the loop, but needs careful design to avoid deleting cards the user has already acted on.
+If a message in the box loses its triggering label in Gmail (user archives it, removes the label, etc.), the box still has the inbox card and the seen ID. There's no signal back. A periodic reconciliation pass — list current matches, remove cards whose IDs no longer match — would close the loop, but needs careful design to avoid deleting cards the user has already acted on. (The history API plumbing now exists; `labelsRemoved` records would be the incremental signal.)
 
 ## Full-text + semantic search over a box
 
