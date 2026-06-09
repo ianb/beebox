@@ -26,6 +26,9 @@ export interface TickOptions {
   script?: string;
   /** When true, capture subprocess output instead of inheriting stdio */
   quiet?: boolean;
+  /** Run the script named by `script` even if it isn't due and its budget
+   * is spent. Liveness gates (lock-group, busy system) still apply. */
+  force?: boolean;
 }
 
 export interface ScriptResult {
@@ -135,8 +138,13 @@ export const tickCommand = new Command("tick")
   .description("Evaluate and run due scheduled scripts")
   .option("--dry-run", "Show what would run without executing")
   .option("--script <name>", "Only evaluate a specific script (by filename stem)")
+  .option("--force", "Run the --script now, bypassing schedule and budget checks")
   .option("--box <path>", "Box root path (defaults to current directory)")
   .action(async (options: TickOptions & { box?: string }) => {
+    if (options.force && !options.script) {
+      console.error("--force requires --script <name>");
+      process.exit(1);
+    }
     const boxRoot = options.box ?? await requireBoxRoot();
     await runTick(boxRoot, options);
   });

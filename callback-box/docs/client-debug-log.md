@@ -24,7 +24,8 @@ ssh root@$(cat deploy/server-ip) \
 **API endpoint** — `/api/debug-log` returns the in-memory ring buffer. In production it sits behind Google OAuth cookie auth, so `curl` without a browser cookie is rejected unless you use the diagnostic-key bypass:
 
 ```bash
-# With CB_DIAG_API_KEY set in /home/callback/.env:
+# CB_DIAG_API_KEY lives in /home/callback/.env on the server; fetch it with:
+#   CB_DIAG_API_KEY=$(deploy/ssh-server.sh "grep CB_DIAG_API_KEY /home/callback/.env | cut -d= -f2")
 curl -H "Authorization: Bearer $CB_DIAG_API_KEY" \
   https://box.example.com/<box-name>/api/debug-log | python3 -m json.tool
 

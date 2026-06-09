@@ -64,6 +64,17 @@ function asResult(action: KeywordAction, match: InputMatch): KeywordResult {
   };
 }
 
+/**
+ * Re-attach a send keyword that the high-quality transcription pass dropped.
+ * The realtime pass already heard the trigger phrase (that's what fired the
+ * send), so an HQ result without it means the normalizer smoothed the phrase
+ * away — append the tag rather than lose the trigger. A duplicate trigger is
+ * harmless; a silently vanished one isn't.
+ */
+export function appendSendKeywordTag(transcript: string, matchedPhrase: string): string {
+  return `${transcript.trim()} ${keywordTag("send", matchedPhrase)}`.trim();
+}
+
 export function detectKeyword(
   transcript: string,
   options?: DetectKeywordOptions

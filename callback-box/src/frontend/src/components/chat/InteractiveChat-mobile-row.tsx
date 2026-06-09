@@ -4,8 +4,10 @@
  * transcription handle, input setters, and send callbacks come in as props.
  */
 
+import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
+import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
@@ -15,7 +17,7 @@ import type { TranscriptionHandle } from "./InteractiveChat-composer";
 export function MobileTextareaRow({
   input, setInput, isTranscribing, transcription,
   handleSend, handleCancelTranscription, clearDraft,
-  turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
+  onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
   onPaste, onDrop,
 }: {
   input: string;
@@ -26,7 +28,7 @@ export function MobileTextareaRow({
   handleCancelTranscription: () => void;
   /** Drops the persisted dictation draft when transcript is moved to input or sent. */
   clearDraft: () => void;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onStopDictation: () => void;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
@@ -35,14 +37,20 @@ export function MobileTextareaRow({
 }) {
   const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
+  // This textarea is separate from the desktop composer's (which has its own
+  // ref + autoscroll wired in useChatActions), so it needs its own pinning.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
+
   return (
     <div className="flex gap-2 items-center">
       {isTranscribing ? (
         <div className="flex-shrink-0 self-center">
-          <RecordingIndicator />
+          <RecordingIndicator degraded={transcription.state === "reconnecting"} />
         </div>
       ) : null}
       <TextareaAutosize
+        ref={textareaRef}
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) setInput(e.target.value); }}
         onPaste={onPaste}
@@ -68,7 +76,7 @@ export function MobileTextareaRow({
           </button>
           <button
             onClick={() => {
-              turnTakingRef.current = false;
+              onStopDictation();
               const text = transcription.transcript;
               if (text) setInput((existing) => (existing ? existing + " " + text : text));
               transcription.stop();
@@ -92,7 +100,8 @@ export function MobileTextareaRow({
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
             }}
-            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
+            disabled={!joinTranscript(input, transcription.transcript).trim()}
+            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
             title="Send"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

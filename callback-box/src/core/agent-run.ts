@@ -7,14 +7,13 @@
  * and translates the outcome into the public `AgentResult` shape.
  */
 
-import { query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { fmt } from "../cli/lib/format.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import { cardValidatorHook } from "./sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "./sdk-binary-path.js";
-import { renderSdkMessage } from "./agent-render.js";
-import { startPromptLogger, stopPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
+import { startPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
+import { consumeAgentStream, type RunStreamOutcome } from "./agent-stream.js";
 import { dropUndefined } from "./agent-json.js";
 import type { AgentResult } from "./agent-types.js";
 
@@ -84,58 +83,6 @@ function buildQueryOptions(
       },
     }),
   };
-}
-
-type SDKResultMessage = Extract<SDKMessage, { type: "result" }>;
-
-interface RunStreamOutcome {
-  outputBuf: string;
-  resultMessage: SDKResultMessage | null;
-  assignedSessionId: string | null;
-  errorText: string | null;
-}
-
-/**
- * Drive the SDK query stream to completion: render each message, capture the
- * session id and final result, and surface any thrown error as text.
- */
-async function consumeAgentStream(
-  options: RunAgentOptions,
-  context: RunContext & { logger: PromptLogger | null },
-): Promise<RunStreamOutcome> {
-  const { onOutput } = options;
-  let outputBuf = "";
-  let resultMessage: SDKResultMessage | null = null;
-  let assignedSessionId: string | null = null;
-  let errorText: string | null = null;
-
-  try {
-    const q = query({
-      prompt: options.prompt,
-      options: buildQueryOptions(options, context),
-    });
-
-    for await (const msg of q) {
-      if (msg.type === "system" && msg.subtype === "init" && assignedSessionId === null) {
-        assignedSessionId = msg.session_id;
-        options.onSessionId?.(msg.session_id);
-      }
-      if (msg.type === "result") {
-        resultMessage = msg;
-      }
-      const rendered = renderSdkMessage(msg);
-      if (rendered) {
-        outputBuf += rendered;
-        onOutput?.(rendered);
-      }
-    }
-  } catch (e) {
-    errorText = e instanceof Error ? e.message : String(e);
-  } finally {
-    if (context.logger) stopPromptLogger(context.logger);
-  }
-
-  return { outputBuf, resultMessage, assignedSessionId, errorText };
 }
 
 /**
@@ -261,11 +208,17 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   const appendedSystem = isResume ? "" : systemPrompt + tzContext;
   const binaryPath = resolveClaudeCodeBinary();
 
-  const outcome = await consumeAgentStream(options, {
+  const queryOptions = buildQueryOptions(options, {
     env,
     maxTurns,
     binaryPath,
     appendedSystem,
+  });
+  const outcome = await consumeAgentStream({
+    prompt: options.prompt,
+    queryOptions,
+    onOutput: options.onOutput,
+    onSessionId: options.onSessionId,
     logger,
   });
 

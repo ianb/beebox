@@ -26,14 +26,28 @@ export type { TranscriptionState };
 
 export interface UseRealtimeTranscriptionOptions {
   /**
-   * Called when a send keyword fires. Receives the processed transcript
-   * and (if `wantAudioBlob` returned true and the segment captured any
-   * audio) a WAV blob the caller can use for narration mode's HQ pass.
+   * Called when a send keyword fires. Receives the processed transcript,
+   * the trigger phrase the realtime pass matched (so a later transcription
+   * pass that drops it can re-inject), and (if `wantAudioBlob` returned
+   * true and the segment captured any audio) a WAV blob the caller can use
+   * for narration mode's HQ pass.
    */
-  onKeywordSend?: (processedTranscript: string, audioBlob: Blob | null) => void;
+  onKeywordSend?: (send: {
+    processedTranscript: string;
+    matchedPhrase: string;
+    audioBlob: Blob | null;
+  }) => void;
   onKeywordCancel?: () => void;
   onKeywordMicOff?: () => void;
   onKeywordErase?: () => void;
+  /**
+   * Called when a segment ends with transcript text nobody took: no stop()
+   * promise was awaiting it and no send keyword fired — a mid-recording
+   * transport/mic failure, an expired reconnect window, or a silence /
+   * max-duration auto-stop. Without a handler the words silently disappear
+   * from the composer the moment `isTranscribing` flips false.
+   */
+  onUnconsumedTranscript?: (transcript: string) => void;
   /**
    * Predicate checked at keyword-fire time. When it returns false, the
    * machine is canceled immediately (fast path) and `onKeywordSend` fires
@@ -73,6 +87,72 @@ function combine(finalText: string, interimText: string): string {
   return `${finalText} ${interimText}`;
 }
 
+/**
+ * Keyword detection over the live transcripts: finals match anywhere (so
+ * phrases spanning segments are caught); interims only at the start, deduped
+ * by action+phrase so successive interim revisions containing the same match
+ * don't re-fire. Returns reset(), called at segment start/cancel so dedup
+ * state doesn't leak across segments.
+ */
+function useKeywordSpotting(opts: {
+  state: TranscriptionState;
+  finalTranscript: string;
+  interimTranscript: string;
+  fireKeyword: (keyword: KeywordResult) => void;
+}): { reset: () => void } {
+  const { state, finalTranscript, interimTranscript, fireKeyword } = opts;
+  const prevFinalRef = useRef("");
+  /**
+   * Identifier of the most recent keyword fired against an *interim*
+   * transcript ("<action>:<matchedPhrase>"). Cleared whenever the final
+   * transcript changes (so a finalized keyword can re-fire later) or when
+   * the interim has no match.
+   */
+  const lastInterimFireKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (finalTranscript === prevFinalRef.current) return;
+    prevFinalRef.current = finalTranscript;
+    // Final has advanced; allow the same keyword to fire again from interim.
+    lastInterimFireKeyRef.current = null;
+
+    if (!finalTranscript || state !== "recording") return;
+
+    const keyword = detectKeyword(finalTranscript);
+    if (!keyword) return;
+    fireKeyword(keyword);
+  }, [finalTranscript, state, fireKeyword]);
+
+  useEffect(() => {
+    if (state !== "recording" || !interimTranscript) {
+      lastInterimFireKeyRef.current = null;
+      return;
+    }
+    const keyword = detectKeyword(interimTranscript, { atStart: true });
+    if (!keyword) {
+      lastInterimFireKeyRef.current = null;
+      return;
+    }
+    const fireKey = `${keyword.action}:${keyword.matchedPhrase}`;
+    if (lastInterimFireKeyRef.current === fireKey) return;
+    lastInterimFireKeyRef.current = fireKey;
+    // The match was found against just the interim text, so its
+    // processedTranscript only covers that segment. Prepend the existing
+    // final text so commands like "send message" don't drop everything
+    // the user said before the keyword.
+    const combinedProcessed = finalTranscript
+      ? `${finalTranscript} ${keyword.processedTranscript}`.trim()
+      : keyword.processedTranscript;
+    fireKeyword({ ...keyword, processedTranscript: combinedProcessed });
+  }, [interimTranscript, finalTranscript, state, fireKeyword]);
+
+  const reset = useCallback(() => {
+    prevFinalRef.current = "";
+    lastInterimFireKeyRef.current = null;
+  }, []);
+  return { reset };
+}
+
 export function useRealtimeTranscription(
   options?: UseRealtimeTranscriptionOptions
 ): UseRealtimeTranscriptionResult {
@@ -82,22 +162,13 @@ export function useRealtimeTranscription(
     optionsRef.current = options;
   });
   const doneResolveRef = useRef<((text: string) => void) | null>(null);
-  const prevFinalRef = useRef("");
   /**
    * When a send-keyword fires, we send STOP to the machine and wait for it
    * to transition to idle so the audio blob lands in context. The pending
-   * text is parked here in the meantime; the idle-transition effect picks
-   * it up and fires onKeywordSend(text, audioBlob).
+   * text + matched phrase are parked here in the meantime; the
+   * idle-transition effect picks them up and fires onKeywordSend.
    */
-  const pendingSendTextRef = useRef<string | null>(null);
-  /**
-   * Identifier of the most recent keyword fired against an *interim*
-   * transcript ("<action>:<matchedPhrase>"). Suppresses re-firing when an
-   * interim revision still contains the same match. Cleared whenever the
-   * final transcript changes (so a finalized keyword can re-fire later) or
-   * when the interim has no match.
-   */
-  const lastInterimFireKeyRef = useRef<string | null>(null);
+  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string } | null>(null);
   /**
    * Set by `start({ earcon: true })`. The recording-start earcon plays only
    * when the machine actually reaches `recording` — so the "you're recording
@@ -107,6 +178,14 @@ export function useRealtimeTranscription(
    */
   const playStartEarconRef = useRef(false);
   const prevEarconStateRef = useRef<TranscriptionState>("idle");
+  /**
+   * Set when this segment's text was handed to a consumer (stop() promise
+   * resolution or a keyword send); checked by the unconsumed-transcript
+   * effect below, which must be declared after both so it observes their
+   * same-commit writes. Cleared on each segment end and on start().
+   */
+  const consumedRef = useRef(false);
+  const prevSegmentStateRef = useRef<TranscriptionState>("idle");
 
   // Map machine state to TranscriptionState (nested under "active" parent)
   const state: TranscriptionState = snapshot.matches({ active: "recording" })
@@ -135,14 +214,21 @@ export function useRealtimeTranscription(
         // emits the segment's audio blob. The idle-transition effect below
         // fires onKeywordSend with both text and blob once the machine
         // settles. Used by narration mode to get the HQ-quality transcript.
-        pendingSendTextRef.current = keyword.processedTranscript;
+        pendingSendRef.current = {
+          processedTranscript: keyword.processedTranscript,
+          matchedPhrase: keyword.matchedPhrase,
+        };
         send({ type: "STOP" });
       } else {
         // Fast path: drop the in-flight stream and fire immediately so
         // the message commits with the realtime text — no waiting on WS
         // finalization (which adds 1-2s of dead air).
         send({ type: "CANCEL" });
-        optionsRef.current?.onKeywordSend?.(keyword.processedTranscript, null);
+        optionsRef.current?.onKeywordSend?.({
+          processedTranscript: keyword.processedTranscript,
+          matchedPhrase: keyword.matchedPhrase,
+          audioBlob: null,
+        });
       }
     } else if (keyword.action === "micOff") {
       send({ type: "CANCEL" });
@@ -159,53 +245,14 @@ export function useRealtimeTranscription(
   // and the audio blob is in context. Triggered by the state transition back
   // to idle. No-op when the fast path was taken (ref is null).
   useEffect(() => {
-    if (state !== "idle" || pendingSendTextRef.current === null) return;
-    const text = pendingSendTextRef.current;
-    pendingSendTextRef.current = null;
-    optionsRef.current?.onKeywordSend?.(text, snapshot.context.audioBlob);
+    if (state !== "idle" || pendingSendRef.current === null) return;
+    const pending = pendingSendRef.current;
+    pendingSendRef.current = null;
+    consumedRef.current = true;
+    optionsRef.current?.onKeywordSend?.({ ...pending, audioBlob: snapshot.context.audioBlob });
   }, [state, snapshot.context.audioBlob]);
 
-  // Keyword detection on confirmed (final) text — matches anywhere, so it
-  // catches phrases that span multiple final segments.
-  useEffect(() => {
-    if (finalTranscript === prevFinalRef.current) return;
-    prevFinalRef.current = finalTranscript;
-    // Final has advanced; allow the same keyword to fire again from interim.
-    lastInterimFireKeyRef.current = null;
-
-    if (!finalTranscript || state !== "recording") return;
-
-    const keyword = detectKeyword(finalTranscript);
-    if (!keyword) return;
-    fireKeyword(keyword);
-  }, [finalTranscript, state, fireKeyword]);
-
-  // Keyword detection on the live (interim) text — only matches at the
-  // *start* of the interim, since command words mid-utterance are usually
-  // false positives. Dedup by action+phrase so successive interim revisions
-  // containing the same match don't fire repeatedly.
-  useEffect(() => {
-    if (state !== "recording" || !interimTranscript) {
-      lastInterimFireKeyRef.current = null;
-      return;
-    }
-    const keyword = detectKeyword(interimTranscript, { atStart: true });
-    if (!keyword) {
-      lastInterimFireKeyRef.current = null;
-      return;
-    }
-    const fireKey = `${keyword.action}:${keyword.matchedPhrase}`;
-    if (lastInterimFireKeyRef.current === fireKey) return;
-    lastInterimFireKeyRef.current = fireKey;
-    // The match was found against just the interim text, so its
-    // processedTranscript only covers that segment. Prepend the existing
-    // final text so commands like "send message" don't drop everything
-    // the user said before the keyword.
-    const combinedProcessed = finalTranscript
-      ? `${finalTranscript} ${keyword.processedTranscript}`.trim()
-      : keyword.processedTranscript;
-    fireKeyword({ ...keyword, processedTranscript: combinedProcessed });
-  }, [interimTranscript, finalTranscript, state, fireKeyword]);
+  const keywordSpotting = useKeywordSpotting({ state, finalTranscript, interimTranscript, fireKeyword });
 
   // Idle cue: subtle earcon every 10s while recording if there's text but
   // no new updates have arrived
@@ -222,7 +269,21 @@ export function useRealtimeTranscription(
     if (state === "idle" && doneResolveRef.current) {
       doneResolveRef.current(transcript);
       doneResolveRef.current = null;
+      consumedRef.current = true;
     }
+  }, [state, transcript]);
+
+  // Segment ended with text nobody took (see onUnconsumedTranscript docs).
+  // Declared after the keyword-send and stop()-resolve effects so their
+  // consumption marks land first within the same idle-transition commit.
+  useEffect(() => {
+    const prev = prevSegmentStateRef.current;
+    prevSegmentStateRef.current = state;
+    if (state !== "idle" || prev === "idle") return;
+    const consumed = consumedRef.current;
+    consumedRef.current = false;
+    if (consumed || !transcript) return;
+    optionsRef.current?.onUnconsumedTranscript?.(transcript);
   }, [state, transcript]);
 
   // Recording-start earcon: fire the moment capture goes live (entering
@@ -244,14 +305,17 @@ export function useRealtimeTranscription(
   }, [state]);
 
   const start = useCallback((opts?: { earcon?: boolean }) => {
-    prevFinalRef.current = "";
-    lastInterimFireKeyRef.current = null;
+    keywordSpotting.reset();
+    consumedRef.current = false;
     if (opts?.earcon === true) playStartEarconRef.current = true;
     send({ type: "START" });
-  }, [send]);
+  }, [send, keywordSpotting]);
 
   const stop = useCallback((): Promise<string> => {
-    if (state !== "recording") {
+    // A stop during a reconnect blip still ends the segment properly —
+    // resolving immediately would leave the machine reconnecting and the
+    // expired window would later re-surface the same text as unconsumed.
+    if (state !== "recording" && state !== "reconnecting") {
       return Promise.resolve(transcript);
     }
     send({ type: "STOP" });
@@ -261,10 +325,9 @@ export function useRealtimeTranscription(
   }, [state, transcript, send]);
 
   const cancel = useCallback(() => {
-    prevFinalRef.current = "";
-    lastInterimFireKeyRef.current = null;
+    keywordSpotting.reset();
     send({ type: "CANCEL" });
-  }, [send]);
+  }, [send, keywordSpotting]);
 
   const dismissError = useCallback(() => {
     send({ type: "DISMISS_ERROR" });

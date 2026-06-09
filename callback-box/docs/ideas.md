@@ -338,7 +338,21 @@ Open questions:
 
 The bigger framing question: this is the same insight as "use hooks instead of memory" at the personal-config layer, applied to the agent-loop layer. Callback-box has hooks at the git layer (pre-commit/post-commit) and at the scheduler layer (wakeup). Adding them at the agent-loop layer would be a third tier.
 
-## Hypothesis tracking for the boxholder agent
+## In-chat interactive questions from the agent
+
+Reported 2026-06-09: the chat agent can't actually ask the boxholder a question in chat — there's no working affordance for "agent asks, user answers, agent continues." The boxholder doesn't especially *like* being asked questions, but the models powering the agent ask them anyway (newer models especially), so the path has to work: a question with no answer affordance is a dead-end turn.
+
+Pieces that exist and don't cover this:
+- `box/questions/` — the async queue, for questions that can wait for a wakeup/review cycle. Not in-chat, not conversational.
+- `<callout context="...">` — renders content the user must see, but it's one-way; nothing marks "this expects a reply" or structures the reply.
+
+What's probably wanted:
+- A structured question tag in the chat output vocabulary (sibling of `<callout>`), rendered with answer affordances — tappable options for the enumerable case (the Claude Code AskUserQuestion shape: 2–4 options + free-text "other"), plain reply for the open case. The agent's next turn receives the selection as structured input rather than parsing prose.
+- A decision rule in the prompt about which channel a question belongs in: blocking-the-current-task → in-chat structured question; can-wait → `box/questions/` queue. (Connects to [[questions-aging-policy]] for the queued kind.)
+- Voice mode matters: when the user is hands-free, options should be speakable ("say one, two, or three" is awful; the agent should phrase the question so a natural spoken answer maps onto an option).
+- On mobile, tappable options are *faster* than typing — done well this reduces the friction of being asked, rather than adding to it.
+
+Open question: is this purely a display/vocabulary gap (the agent asks in prose today and it merely *feels* broken because nothing renders it as answerable), or does something actively break (question gets swallowed, turn ends oddly)? Worth reproducing the failure first to pin which.
 
 The agent forms suspicions constantly — "boxholder seems stressed about work this week," "the kitchen project may have stalled," "they're avoiding the topic of their sister." These are different from facts and currently have nowhere to live: too provisional for a person/topic card, too important to discard. Without persistence the agent re-derives them each session or, worse, forgets and asks something the suspicion would have steered it away from.
 
@@ -447,28 +461,6 @@ Several things go wrong when adding a new box to the server that are easy to for
 3. **No validation after deploy** — there's no health check or `cb validate` run after `add-box.sh` completes. A broken box (missing config, bad permissions) won't be caught until someone tries to use it.
 
 Longer term: `add-box.sh` or a `cb deploy-check` command could verify: all standard dirs exist and are writable, required secrets are present, `cb validate` passes, and the web endpoint responds.
-
-## Scheduler: `cb tick --force` and timeout durability
-
-Surfaced while debugging a Wren daily-rumination "failure" where the agent had actually completed and committed but the wrapper hung past the 10-minute mono timeout.
-
-### Add `--force` to `cb tick --script <name>`
-
-Currently `--script` only filters which schedules to evaluate; `not-before`, `budget`, and lock-group checks still apply, so there's no clean way to manually re-run a script that just ran. Add a `--force` flag that:
-
-- Bypasses `not-before` and `budget` checks.
-- On lock-group conflict, only skips if the holder is *live* (the file-lock primitive already auto-cleans dead holders, so this is mostly free — just remove the lock-group skip's reliance on a stale "running" map for force runs).
-- Does not preempt a live holder.
-
-### `cb prompt` doesn't exit promptly after the agent's final turn
-
-Symptom: a scheduled `cb prompt …` invocation continued running for ~65 minutes of wall time after the agent's final message landed (commit and journal entry succeeded), until the 10-min mono setTimeout finally fired and SIGKILLed the tree. This made a successful run look like a failure in the scheduler log.
-
-Hypothesis: the spawned `claude --print` process isn't closing stdout/exiting after returning its final response. Worth instrumenting `runAgent` in `src/core/agent.ts` — log when `child.on("close")` fires vs. when the last stdout chunk arrived. If they're far apart, the issue is in claude-code itself; if close fires promptly but our wrapper hangs after, look at the prompt-logger proxy lifecycle (`stopPromptLogger`) and any pending I/O in `cb prompt`.
-
-### Re-evaluate the per-script timeout
-
-`SCRIPT_TIMEOUT = 10m` is monotonic time, which means it pauses during macOS sleep. That's good — a script that was about to finish doesn't get killed just because the laptop closed. But `wren-weekly-research` has `--max-turns 30` (web research) and bumps right against 10 min of real CPU time. Either bump the per-script timeout (configurable in the card?) or add a `<timeout>` attribute on `<scheduled-script>`.
 
 ## Switch deploy from rsync to git push
 
@@ -817,6 +809,10 @@ Long horizon. The minimum viable version is just a `docs/patterns/` directory in
 <https://github.com/akiomik/mado> — fast Rust Markdown linter, CommonMark + GFM, ~50x faster than markdownlint. We already lint markdown, so this is mostly a speed win. Caveats: probably doesn't help with the link-checking we care about, and unclear whether either our current linter or mado understands Markdoc (which we plan to adopt).
 
 Comparison of markdown linters: <https://panache.bz/guide/comparison.html> (covers several dialects but not Markdoc).
+
+## Filed for later: sem — semantic git understanding
+
+<https://ataraxy-labs.github.io/sem/> — overlays entity-level (functions, classes, methods) understanding onto git operations. Commands: `diff`, `blame`, `impact`, `log`, `entities`, `context`. The `sem context` command generates token-budgeted context windows for LLM prompts; claims 2.3x accuracy improvement for AI agents vs raw line diffs. Worth exploring for agent workflows — e.g. as input to code review, or for the "before you build this" reuse-search problem. (Came in via `cb feedback` 2026-06-07.)
 
 ## Fancier PDF manipulation
 
