@@ -16,6 +16,7 @@ import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
 import { type FetchedMessage, makeSnippet, safeDirectoryName } from "./gmail-mime.js";
 import type { ThreadNote } from "./gmail-commit.js";
+import { preserveAgentFields } from "./preserve-agent-fields.js";
 
 const MESSAGE_CARD_RE = /^msg-\d+\.email-message\.card$/;
 
@@ -131,7 +132,7 @@ async function writeMessage(opts: {
 
   const cardContent = createEmailMessageTemplate(messageTemplateOpts(tmsg, bodyFilename));
   const cardPath = path.join(attachDir, cardFilename);
-  await fs.writeFile(cardPath, cardContent);
+  await fs.writeFile(cardPath, await preserveAgentFields(cardContent, { existingPath: cardPath }));
   created.push(path.relative(boxRoot, cardPath));
 
   await fs.mkdir(messageAttachDir, { recursive: true });
@@ -209,7 +210,12 @@ async function writeThreadCard(opts: {
   }
 
   const threadCardPath = path.join(emailDir, cardFilename);
-  await fs.writeFile(threadCardPath, createEmailThreadTemplate(threadOpts));
+  await fs.writeFile(
+    threadCardPath,
+    await preserveAgentFields(createEmailThreadTemplate(threadOpts), {
+      existingPath: threadCardPath,
+    })
+  );
   return path.relative(boxRoot, threadCardPath);
 }
 

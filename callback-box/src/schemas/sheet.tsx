@@ -56,7 +56,9 @@ Edit the JSON file directly and commit. For plain cells, just change
 the value. For formula cells, edit the \`f\` field (the \`v\` field will
 be updated on next sync). On next sync (\`cb wakeup\` or
 \`cb drive sync\`), local changes are pushed to Google Sheets. Do NOT
-modify the card frontmatter — it is managed by the connector.
+modify the card frontmatter — it is managed by the connector — with one
+exception: \`contains:\` is agent-owned and survives sync; set it freely
+(\`cb contains update\`).
 
 ## Moving spreadsheets
 Moving the card moves its attach scope (with the tab data inside)

@@ -24,6 +24,7 @@ import type {
 import { registerDriveHandler } from "./drive-types.js";
 import type { GoogleDriveService, DriveFile } from "../services/google-drive.js";
 import { createSheetTemplate } from "../schemas/sheet.js";
+import { preserveAgentFields } from "./preserve-agent-fields.js";
 
 function contentHash(content: string): string {
   return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
@@ -172,9 +173,12 @@ const sheetsHandler: DriveTypeHandler = {
       }
     }
 
-    if (cardContent !== existingCard) {
+    // Re-inject agent-owned fields (contains) before the change comparison,
+    // so a card that only differs by preserved fields counts as unchanged.
+    const preserved = await preserveAgentFields(cardContent, { existingPath: cardPath });
+    if (preserved !== existingCard) {
       await fs.mkdir(path.dirname(cardPath), { recursive: true });
-      await fs.writeFile(cardPath, cardContent);
+      await fs.writeFile(cardPath, preserved);
       written.push(path.relative(boxRoot, cardPath));
       changed = true;
     }

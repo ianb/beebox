@@ -34,6 +34,7 @@ import type {
 } from "../services/google-drive.js";
 import { createGdocTemplate } from "../schemas/gdoc.js";
 import type { GdocLossyType } from "../schemas/gdoc.js";
+import { preserveAgentFields } from "./preserve-agent-fields.js";
 
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
@@ -259,9 +260,12 @@ const docsHandler: DriveTypeHandler = {
         console.debug(`[google-drive] No existing card at ${cardPath}, treating as new:`, e);
       }
     }
-    if (cardContent !== existingCard) {
+    // Re-inject agent-owned fields (contains) before the change comparison,
+    // so a card that only differs by preserved fields counts as unchanged.
+    const preserved = await preserveAgentFields(cardContent, { existingPath: cardPath });
+    if (preserved !== existingCard) {
       await fs.mkdir(path.dirname(cardPath), { recursive: true });
-      await fs.writeFile(cardPath, cardContent);
+      await fs.writeFile(cardPath, preserved);
       written.push(path.relative(boxRoot, cardPath));
       changed = true;
     }

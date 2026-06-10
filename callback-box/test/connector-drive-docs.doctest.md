@@ -111,6 +111,25 @@ card.includes("revision: rev-1")
 => true
 ```
 
+An agent-written `contains:` survives the next sync's card rebuild
+(connector templates preserve agent-owned fields), and a sync that
+changes nothing else doesn't rewrite the card:
+
+``` continue
+await box.write(
+  "store/drive/Project_Notes.gdoc.card",
+  card.replace("drive-id: doc-1", "contains: Planning notes for the project kickoff.\ndrive-id: doc-1")
+);
+box.commitAll("agent adds contains");
+const resync = await connector.sync();
+resync.success
+=> true
+
+const resynced = await box.read("store/drive/Project_Notes.gdoc.card");
+resynced.includes("contains: Planning notes for the project kickoff.")
+=> true
+```
+
 ## Pull — lossy content surfaces in the card
 
 Comments, footnotes, and inline objects appear as `<item>` entries.

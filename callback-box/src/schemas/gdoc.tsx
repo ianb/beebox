@@ -64,7 +64,8 @@ document type with no upstream sync.
 Edit the \`.md\` file and commit. On the next sync the change pushes
 back to Google Drive (markdown is converted to Doc format on the
 server). Do not modify the card frontmatter — it is managed by the
-connector.
+connector — with one exception: \`contains:\` is agent-owned and
+survives sync; set it freely (\`cb contains update\`).
 
 ## Conflicts
 If the upstream Doc was edited in Drive between your last pull and
