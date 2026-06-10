@@ -87,7 +87,7 @@ echo "[session-end] worktree '$branch' is fully merged into main and clean — c
 
 # Tell the dev router to stop this worktree's processes immediately so
 # there's nothing left binding the cloned-box files when we delete them.
-if curl -fsS -m 5 "http://127.0.0.1:3210/__router/stop/$name" >/dev/null 2>&1; then
+if curl -fsS -X POST -m 5 "http://127.0.0.1:3210/__router/stop/$name" >/dev/null 2>&1; then
   echo "[session-end]   told router to stop $name"
 fi
 

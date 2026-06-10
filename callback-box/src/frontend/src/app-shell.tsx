@@ -17,6 +17,7 @@ import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
 import { BoxActionsTile } from "./components/BoxSelectionTiles";
 import { fetchBoxes } from "./lib/boxes";
+import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 
 import { href } from "./lib/routing";
 
@@ -32,6 +33,7 @@ enableDebugLogCapture();
  * Layout wrapper with navigation.
  */
 export function AppLayout() {
+  useDevWorktreeKeepalive();
   const [showDebugLog, setShowDebugLog] = useState(false);
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });

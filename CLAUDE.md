@@ -17,7 +17,7 @@ Five projects live in one git repository (previously independent repos, merged 2
 - `http://localhost:3210/main/<box>/...` — the main checkout
 - `http://localhost:3210/<name>/<box>/...` — any worktree (lazy-started on first request, idle-shutdown after 5 min)
 
-Each worktree gets its own Vite + Fastify pair, spawned as direct children of the router (no Overmind, no tmux — flat process tree). The router source is `bin/router.ts`. URL-prefixed serving uses Vite's `base` option; HMR connects directly to Vite's internal port (bypasses the router). Lifecycle commands:
+Each worktree gets its own Vite + Fastify pair, spawned as direct children of the router (no Overmind, no tmux — flat process tree). The router source is `bin/router.ts`. URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the tRPC WebSocket all flow through the router. Lifecycle commands:
 
 - `bin/worktrees status` — JSON of running worktrees, PIDs, ports, idle ms
 - `bin/worktrees down <name>` — stop one worktree's processes now
@@ -29,7 +29,7 @@ Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json`; route
 
 **Probing the running app — `bin/browse`.** Vercel's `agent-browser` CLI is installed as a devDep (Chrome auto-detected on macOS, no separate install). `bin/browse` is a thin wrapper that rewrites any `/`-leading argument into the current worktree's router URL, so agents don't have to construct it: `bin/browse open /dashboard` → `http://localhost:3210/<this-worktree>/test1/dashboard`. Override the box via `BROWSE_BOX=name`. Everything else (refs, flags, subcommands like `snapshot`, `click`, `screenshot`) passes through to `agent-browser` unchanged — see `.claude/skills/agent-browser/SKILL.md` or `agent-browser skills get core` for the full surface.
 
-**HMR is direct, localhost-only.** Each Vite tells the browser to open its HMR WebSocket directly to Vite's internal port (not through the router). This works on localhost. If you ever expose the dev server over LAN/tunnel (showing someone else your dev environment), the HMR socket will fail — Vite's `server.hmr.clientHost` would also need configuring. Not a concern for normal solo dev.
+**Idle shutdown + self-healing tabs.** Only HTTP requests count as worktree activity. WebSocket upgrades never cold-start a worktree (clients auto-reconnect on timers; honoring them would let abandoned background tabs resurrect worktrees forever) — the router refuses upgrades for non-running worktrees with a 503 and the client retries later. HMR rides the page origin (no `hmr.clientPort` in vite.config — the browser never learns Vite's internal port), so a stale tab heals itself: Vite's client pings the router while the tab is visible, the ping restarts the worktree, and the tab reloads. The frontend also sends a once-a-minute HEAD heartbeat while visible (`useDevWorktreeKeepalive`) so a tab you're looking at doesn't idle out under you; hidden tabs go quiet and their worktree stops after 5 min — including any in-flight chat turn, which the tab catches up on (via reload + history) when refocused.
 
 **Auto-deploy is `main`-only.** The root husky `post-commit` hook triggers `callback-box/deploy/deploy.sh` only when HEAD is on `main`. Worktrees on other branches commit safely without deploying; ship by merging to `main`.
 
