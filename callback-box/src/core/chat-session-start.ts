@@ -12,12 +12,19 @@ import * as path from "node:path";
 import { getDirectoryForSession } from "./chat-session-history.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
+import { composeSendSnapshot } from "./session-context.js";
 import {
   CHAT_SYSTEM_PROMPT,
   NARRATION_OVERLAY,
   buildLandmarkSessionNote,
 } from "./chat-session-prompts.js";
-import type { ChatBackendStartOptions } from "../services/claude-chat.js";
+import {
+  buildContentBlocks,
+  toBackendContent,
+  type ChatSendInput,
+} from "./chat-session-messages.js";
+import type { FeatureStore } from "./chat-session-features.js";
+import type { ChatBackendStartOptions, ChatContentBlock } from "../services/claude-chat.js";
 import type { ChatSessionOptions } from "./chat-session-options.js";
 
 function log(context: string, ...args: unknown[]): void {
@@ -113,4 +120,36 @@ export async function buildBackendStartOptions(
     startOpts.additionalDirectories = [ctx.boxRoot];
   }
   return { startOpts, resolvedContextDir: contextDir };
+}
+
+/**
+ * Build the backend content blocks for one user turn: prepend the chat-app
+ * snapshot (feature flags, wall-clock time, and situational context —
+ * box-local time always; last-activity and calendar only on the first
+ * message of a brand-new conversation, when `sessionStart` is true), then
+ * expand `[imageN]` tokens into image blocks. Pulled out of
+ * `ChatSession.send` for the line budget.
+ */
+export async function composeTurnContent(
+  boxRoot: string,
+  { rawInput, features, sessionStart }: {
+    rawInput: ChatSendInput;
+    features: FeatureStore;
+    sessionStart: boolean;
+  },
+): Promise<ChatContentBlock[]> {
+  await features.ensureLoaded();
+  const snapshot = await composeSendSnapshot(boxRoot, {
+    features: features.snapshot(),
+    sessionStart,
+    ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
+  });
+  const input: ChatSendInput = {
+    ...rawInput,
+    text: `${snapshot}\n${rawInput.text}`,
+  };
+  const content = buildContentBlocks(input);
+  const imgCount = (input.images ?? []).length;
+  log("send", `Sending message (${input.text.length} chars, ${imgCount} image(s), ${content.length} block(s))`);
+  return toBackendContent(content);
 }
