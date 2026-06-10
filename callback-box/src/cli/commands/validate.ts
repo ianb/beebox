@@ -16,6 +16,7 @@ import { createLoader } from "../lib/loader.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
+import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 
@@ -183,9 +184,17 @@ async function runHookMode(): Promise<never> {
   const loader = await createLoader(boxRoot);
   const ctx = await buildLoadContext(boxRoot);
   const summary = await lintCardsDispatch([fp], { loader, ctx });
-  if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
-    const output = formatLintResults(summary, { colors: false });
-    process.stderr.write(`${output}\n`);
+  const stale = await staleContainsWarning(boxRoot, {
+    relPath: path.relative(boxRoot, fp),
+    ctx,
+  });
+  if (summary.totalErrors > 0 || summary.totalWarnings > 0 || stale !== null) {
+    const parts: string[] = [];
+    if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
+      parts.push(formatLintResults(summary, { colors: false }));
+    }
+    if (stale !== null) parts.push(stale);
+    process.stderr.write(`${parts.join("\n")}\n`);
     process.exit(2);
   }
   process.exit(0);

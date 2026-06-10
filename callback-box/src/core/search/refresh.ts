@@ -40,6 +40,14 @@ import {
   searchLockPath,
   type SearchIndex,
 } from "./search-store.js";
+import {
+  loadContainsState,
+  saveContainsState,
+  computeContainsBasis,
+  observeCard,
+  dropCardState,
+  type ContainsState,
+} from "./contains-state.js";
 
 export interface OpenSearchIndexResult {
   db: SearchIndex;
@@ -107,15 +115,19 @@ async function refreshUnderLock(
     opts.onProgress?.(`building search index over ${String(total)} cards...`);
   }
 
+  const containsState = await loadContainsState(boxRoot);
+  const containsBefore = JSON.stringify(containsState.cards);
+
   // Cards that vanished (deleted or moved away).
   for (const [relPath, entry] of Object.entries(manifest.files)) {
     if (current.has(relPath)) continue;
     removeDocs(db, entry.docIds);
     delete manifest.files[relPath];
+    dropCardState(containsState, relPath);
     dirtyIndex = true;
   }
 
-  const state: RefreshState = { boxRoot, db, manifest, warnings, ctx: null };
+  const state: RefreshState = { boxRoot, db, manifest, warnings, containsState, ctx: null };
   for (const [relPath, stat] of current) {
     const kind = cardTypeFromPath(relPath);
     if (kind === undefined || !searchable.has(kind)) {
@@ -136,6 +148,9 @@ async function refreshUnderLock(
   if (dirtyIndex || dirtyManifest) {
     await saveManifest(boxRoot, manifest);
   }
+  if (JSON.stringify(containsState.cards) !== containsBefore) {
+    await saveContainsState(boxRoot, containsState);
+  }
   return { db, warnings, stale: false };
 }
 
@@ -144,6 +159,7 @@ interface RefreshState {
   db: SearchIndex;
   manifest: SearchManifest;
   warnings: string[];
+  containsState: ContainsState;
   ctx: LoadCardContext | null;
 }
 
@@ -152,6 +168,7 @@ type RefreshEffect = "none" | "manifest" | "index";
 /** Remove a card's docs + manifest entry. Returns true when anything was dropped. */
 function dropCard(state: RefreshState, relPath: string): boolean {
   const entry = state.manifest.files[relPath];
+  dropCardState(state.containsState, relPath);
   if (entry === undefined) return false;
   removeDocs(state.db, entry.docIds);
   delete state.manifest.files[relPath];
@@ -193,6 +210,13 @@ async function refreshOneCard(
     inputs = inputRead.entries;
     warnings.push(...inputRead.warnings);
     docs = extractCardDocs({ path: relPath, card, contentHash, inputContents: inputRead.contents });
+    const basis = computeContainsBasis({ card, inputContents: inputRead.contents });
+    if (basis !== null) {
+      const contains = card.kind === "frontmatter" && typeof card.fields["contains"] === "string"
+        ? card.fields["contains"]
+        : "";
+      observeCard(state.containsState, { cardPath: relPath, contains, basis });
+    }
   } catch (e) {
     // CardIOError: bad frontmatter/schema. ParseError: malformed XML body.
     // Either way the card is skipped with a warning — one broken card must
