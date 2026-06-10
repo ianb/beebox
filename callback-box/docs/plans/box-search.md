@@ -250,8 +250,10 @@ is independent of Track 3 once Track 1 lands.
     failure → silent full rebuild (ske's pattern, `search-index.ts:157–171`),
     logged to stderr.
   - **Refresh (the update trigger)**: on every `cb search`, stat-walk
-    `*.card` files plus manifest-declared input files (excluding
-    `store/trash`, `.callback-box`), diff mtimeMs+size against the manifest,
+    `*.card` files, standalone `*.md` files (outside attach scopes,
+    `docs/generated/`, and `.claude/` — indexed as kind `markdown`), plus
+    manifest-declared input files (excluding `store/trash`,
+    `.callback-box`), diff mtimeMs+size against the manifest,
     re-hash on any mtime change, re-extract changed files,
     `remove`+`insert` their docs, persist if dirty. ~10k stats is
     milliseconds; correctness is at-query-time, which beats any hook-based
@@ -437,7 +439,9 @@ test.
 
 - **Embeddings / vector / hybrid search** — phase 3, own plan. Designed-for
   only: `schemaVersion` bump triggers rebuild; `contains` is the embedding
-  unit; no Orama plugins (issue #640) so vectors will be computed by a
+  unit; Orama's native `mode: "hybrid"` (BM25 + vector fused) is the
+  intended default query mode, with text-only as the offline/no-key
+  fallback; no Orama plugins (issue #640) so vectors will be computed by a
   service-pattern provider. Boxes' per-box Mistral keys make Mistral the
   likely candidate; nothing here commits to it.
 - **Indexing email body text** — deliberately excluded (untrusted content
@@ -445,6 +449,9 @@ test.
   design; goes with the embeddings subplan or its own.
 - **Indexing sheet cell data** — skipped in v1; tab titles + `contains`
   carry retrieval. Revisit if real queries miss.
+- **Indexing `.json` and other non-markdown plain files** — deliberate:
+  cell grids and machine state rank badly and bloat the index; standalone
+  `.md` is in (kind `markdown`), everything else waits for a real miss.
 - **Web UI (Cmd-K palette, tRPC search procedure)** — separate increment
   once the CLI proves ranking quality; tRPC-first rule applies when it
   comes.

@@ -22,8 +22,9 @@ import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/s
  * Bump when the document schema or extraction shape changes; a mismatch
  * triggers a silent full rebuild.
  * v2: image OCR text: blocks fold into content.
+ * v3: standalone .md files index as kind "markdown".
  */
-export const SEARCH_SCHEMA_VERSION = 2;
+export const SEARCH_SCHEMA_VERSION = 3;
 
 export const searchOramaSchema = {
   path: "string",

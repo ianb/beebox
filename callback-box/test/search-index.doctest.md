@@ -133,6 +133,24 @@ await find(fixedAgain.db, "broken")
 => store/notes/Broken.memo.card
 ```
 
+## Standalone .md files index as kind "markdown"; attach-scope files don't
+
+``` continue
+await box.write("store/finances/Distribution_Letter.md", "# Ledger Distribution Letter\n\nEach heir receives an apportioned share.\n");
+await box.write("store/notes/Note.attach/snippet.md", "apportioned share duplicate inside attach scope");
+await box.write("docs/generated/card-memo.md", "apportioned share generated doc noise");
+const withMd = await openSearchIndex(box.root);
+await find(withMd.db, "apportioned share")
+=> store/finances/Distribution_Letter.md
+
+const mdHit = await search(withMd.db, { term: "distribution letter", properties: ["title", "content"] });
+mdHit.hits[0].document.kind
+=> markdown
+
+mdHit.hits[0].document.title
+=> Ledger Distribution Letter
+```
+
 ## Gdoc snapshots are watched input files: editing only the attachment re-indexes
 
 ``` continue

@@ -8,17 +8,22 @@
 
 import { promises as fs, type Dirent } from "node:fs";
 import path from "node:path";
+import { isInsideAttachScope } from "../../lib/attach-path.js";
 
 /** Directories never descended into. `store/trash` is handled by path. */
 const SKIP_DIRS = new Set([
   ".git",
   "node_modules",
   ".callback-box",
+  ".claude", // agent rules/settings — machine config, not box content
   ".scan-archive",
   ".scan-api",
 ]);
 
 const TRASH_PREFIX = "store/trash";
+
+/** Generated agent docs — regenerable instruction text, not box content. */
+const GENERATED_DOCS_PREFIX = "docs/generated";
 
 export interface CardStat {
   mtimeMs: number;
@@ -26,7 +31,10 @@ export interface CardStat {
 }
 
 /**
- * Stat-walk all card files. Keys are box-relative paths (forward slashes).
+ * Stat-walk all searchable files: every `*.card`, plus standalone `*.md`
+ * outside attach scopes (attach-scope content belongs to its owning card —
+ * gdoc snapshots index via the card; email bodies stay quarantined).
+ * Keys are box-relative paths (forward slashes).
  */
 export async function walkCardFiles(boxRoot: string): Promise<Map<string, CardStat>> {
   const out = new Map<string, CardStat>();
@@ -51,7 +59,13 @@ export async function walkCardFiles(boxRoot: string): Promise<Map<string, CardSt
         await walk(path.join(absDir, entry.name), rel);
         continue;
       }
-      if (!entry.isFile() || !entry.name.endsWith(".card")) continue;
+      if (!entry.isFile()) continue;
+      const isCard = entry.name.endsWith(".card");
+      const isMarkdown =
+        entry.name.endsWith(".md")
+        && !isInsideAttachScope(rel)
+        && !rel.startsWith(`${GENERATED_DOCS_PREFIX}/`);
+      if (!isCard && !isMarkdown) continue;
       try {
         const st = await fs.stat(path.join(absDir, entry.name));
         out.set(rel, { mtimeMs: st.mtimeMs, size: st.size });

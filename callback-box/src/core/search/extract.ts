@@ -39,6 +39,9 @@ export interface SearchDoc {
 /** Bodies longer than this split into per-section documents. */
 export const SECTION_SPLIT_THRESHOLD = 2000;
 
+/** The `kind` for standalone markdown files (not cards). */
+export const MARKDOWN_KIND = "markdown";
+
 const TITLE_MAX = 80;
 
 /**
@@ -132,11 +135,59 @@ export function extractCardDocs(input: ExtractInput): SearchDoc[] {
     fragment: s.fragment,
     content: normalizeContent(s.text),
   }));
-  return [cardDoc, ...sectionDocs];
+  return dedupeDocIds([cardDoc, ...sectionDocs]);
 }
 
 function docId(path: string, fragment: string): string {
   return `${path}#${fragment}`;
+}
+
+/**
+ * Repeated headings produce identical fragment paths; ids must be unique
+ * within the index, so duplicates get a ~N suffix.
+ */
+function dedupeDocIds(docs: SearchDoc[]): SearchDoc[] {
+  const seen = new Map<string, number>();
+  return docs.map((d) => {
+    const n = seen.get(d.id) ?? 0;
+    seen.set(d.id, n + 1);
+    if (n === 0) return d;
+    const fragment = `${d.fragment}~${String(n + 1)}`;
+    return { ...d, fragment, id: docId(d.path, fragment) };
+  });
+}
+
+/**
+ * Extract documents for a standalone markdown file (kind "markdown"):
+ * title from the first heading, same section-splitting rules as card
+ * bodies, no contains/created.
+ */
+export function extractMarkdownFileDocs(input: {
+  path: string;
+  content: string;
+  contentHash: string;
+}): SearchDoc[] {
+  const { path, content, contentHash } = input;
+  const heading = content.match(/^#{1,6}\s+(.+)$/m);
+  const title = truncateTitle(
+    firstNonEmpty([heading?.[1], titleFromFilename(path)]).replace(/\s+/g, " ").trim(),
+    TITLE_MAX
+  );
+  const base = { path, kind: MARKDOWN_KIND, title, contains: "", created: "", contentHash };
+
+  if (content.length <= SECTION_SPLIT_THRESHOLD) {
+    return [{ ...base, id: docId(path, ""), fragment: "", content: normalizeContent(content) }];
+  }
+  const { preamble, sections } = splitMarkdownSections(content);
+  return dedupeDocIds([
+    { ...base, id: docId(path, ""), fragment: "", content: normalizeContent(preamble) },
+    ...sections.map((s): SearchDoc => ({
+      ...base,
+      id: docId(path, s.fragment),
+      fragment: s.fragment,
+      content: normalizeContent(s.text),
+    })),
+  ]);
 }
 
 /** The markdown text a card's content documents are built from. */
