@@ -51,6 +51,15 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
     }
 
     if (isEnd) {
+      // Closers of non-allowed tags are skipped exactly like their openers
+      // (which were never pushed onto the stack — see the allowTags filter
+      // below). Without this, every PAIRED non-allowed tag — e.g. the
+      // documented `<ack kind="…">note</ack>` form — warned "Unexpected
+      // closing tag" on every render of that message.
+      if (allowTags && !allowTags.includes(tagName)) {
+        pos = matchEnd;
+        continue;
+      }
       // Peek at the top of the stack. Only close if it matches the tag name.
       // The old behavior popped through the whole stack looking for a match,
       // which meant a stray `</instructions>` would silently close out an

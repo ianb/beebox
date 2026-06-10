@@ -116,3 +116,38 @@ parseTags("").length
 parseTags("   ").length
 => 0
 ```
+
+## Paired non-allowed tags don't warn (their closers are skipped like their openers)
+
+With an `allowTags` filter active, an opener outside the allowlist is
+skipped without being pushed on the stack — so its CLOSER must be skipped
+the same way, not reported as "Unexpected closing tag". The documented
+paired ack form (`<ack kind="…">note</ack>`) hits exactly this.
+
+```
+let warned = 0;
+const origWarn = console.warn;
+console.warn = () => { warned += 1; };
+const tags = parseTags('<speech>hi</speech> <ack kind="appended" ref="x.card">a note</ack>', ["speech"]);
+console.warn = origWarn;
+
+warned
+=> 0
+
+tags.filter(t => t.type === "speech").length
+=> 1
+```
+
+An unmatched closer of an ALLOWED tag still warns — that's real
+malformation worth surfacing:
+
+```
+let warned2 = 0;
+const origWarn2 = console.warn;
+console.warn = () => { warned2 += 1; };
+parseTags('text </speech> more', ["speech"]);
+console.warn = origWarn2;
+
+warned2
+=> 1
+```
