@@ -19,6 +19,7 @@ import { generateChatVoiceDoc } from "./chat-voice-doc.js";
 import { generateNarrationModeDoc } from "./narration-mode-doc.js";
 import { generatePythonToolsDoc } from "./python-tools-doc.js";
 import { generateAgentGuide } from "./agent-guide/index.js";
+import { CONTAINS_DOC_APPENDIX } from "./agent-guide/search.js";
 import {
   installProcedures,
   installGuides,
@@ -351,7 +352,14 @@ function writeCardDocs(params: {
   const { boxRoot, debug, allSchemas } = params;
   return [
     ...allSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
-    ...cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
+    ...cardSchemas.map((s) => ({
+      name: s.type,
+      // Searchable types get the canonical contains: writing rule appended.
+      instructions:
+        s.instructions !== undefined && s.searchable
+          ? `${s.instructions}\n\n${CONTAINS_DOC_APPENDIX}`
+          : s.instructions,
+    })),
   ]
     .filter((s): s is { name: string; instructions: string } => s.instructions !== undefined)
     .map((s) => {

@@ -86,6 +86,11 @@ function DefaultMiddle({ data, compact }: { data: FileSummary<unknown>; compact:
   return (
     <div className="min-w-0">
       <div className="truncate text-warm-800 font-medium">{data.title}</div>
+      {compact || data.contains === undefined ? null : (
+        <div className="truncate text-xs text-warm-600" title={data.contains}>
+          {data.contains}
+        </div>
+      )}
       {compact ? null : (
         <div className="truncate text-xs text-warm-500" title={data.path}>
           {data.path}

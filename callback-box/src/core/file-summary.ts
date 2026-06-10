@@ -19,6 +19,8 @@ export interface FileSummary<T = unknown> {
   tagName?: string;
   /** Always-present human-readable title. Loader computes; fallback is filename */
   title: string;
+  /** The card's agent-written contains: sentence, when present. */
+  contains?: string;
   /** Typed attrs — shape depends on the loader */
   attrs?: T;
 }

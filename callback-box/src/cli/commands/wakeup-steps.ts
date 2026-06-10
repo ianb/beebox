@@ -16,6 +16,9 @@ import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { createNewIntakeJob } from "../../connectors/intake-utils.js";
+import { findJobCards } from "../../core/reactor/job-discovery.js";
+import { openSearchIndex } from "../../core/search/refresh.js";
+import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
 
 /**
  * Run preprocessors on all inbox items (transcription, etc.).
@@ -336,4 +339,63 @@ async function createBatchedIntakeJobs(
     });
     opts.jobPaths.push(jobPath);
   }
+}
+
+/** Cards per contains-backfill job; the next wakeup queues the next batch. */
+const CONTAINS_BACKFILL_BATCH = 25;
+
+const CONTAINS_BACKFILL_SOURCE = "contains-backfill";
+
+function escapeXmlAttr(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+/**
+ * Queue one generic job card asking a background agent to write `contains:`
+ * for cards missing it. One batch per wakeup; drains until
+ * `cb contains list --missing` is empty. No-op while a previous backfill
+ * job is still pending.
+ */
+export async function createContainsBackfillJob(boxRoot: string): Promise<number> {
+  const jobsDir = path.join(boxRoot, "box/jobs");
+  const pending = await findJobCards(jobsDir, { sourceFilter: CONTAINS_BACKFILL_SOURCE });
+  if (pending.length > 0) return 0;
+
+  await openSearchIndex(boxRoot);
+  const missing = listMissing(await loadContainsState(boxRoot));
+  if (missing.length === 0) return 0;
+
+  const batch = missing.slice(0, CONTAINS_BACKFILL_BATCH);
+  const created = new Date().toISOString();
+  const stamp = created.slice(0, 16).replaceAll(":", "-");
+  const jobFilename = `${stamp}-contains-backfill.job.card`;
+  const items = batch.map((p) => `<item ref="${escapeXmlAttr(p)}"/>`).join("\n");
+  const remaining = missing.length - batch.length;
+  const card = `<contains-backfill-job created="${created}" source="${CONTAINS_BACKFILL_SOURCE}" priority="low">
+<description>Write the contains: field for ${String(batch.length)} cards missing it</description>
+<instructions>For each item below: read the card, then set its contains: field with
+  cb contains update "&lt;path&gt;" --text "..."
+— one sentence stating what can be found inside the card. When the
+information is concise, the sentence carries the information itself
+("Dentist moved to June 17; confirmation in this email"), not a pointer at
+it ("contains scheduling information"); when it isn't concise, say what's
+learnable there. Never a list of parts; under 200 characters. Commit your
+work, then run cb finish on this job file.${remaining > 0 ? ` ${String(remaining)} more cards remain; the next wakeup queues another batch.` : ""}</instructions>
+${items}
+</contains-backfill-job>
+`;
+  await fs.mkdir(jobsDir, { recursive: true });
+  const jobPath = path.join(jobsDir, jobFilename);
+  await fs.writeFile(jobPath, card);
+  const relJobPath = path.relative(boxRoot, jobPath);
+  await stageFiles(boxRoot, [relJobPath]);
+  await commit(boxRoot, {
+    message: `Queue contains backfill job (${String(batch.length)} cards)`,
+    trailers: { "Created-By": "wakeup-contains-backfill" },
+  });
+  return batch.length;
 }

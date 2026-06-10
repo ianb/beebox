@@ -104,7 +104,16 @@ export function resolveLoader(input: LoaderInput): FileLoader<unknown> {
  */
 export function summarize(input: LoaderInput): FileSummary<unknown> {
   const loader = resolveLoader(input);
-  return loader(input);
+  const summary = loader(input);
+  // contains: is a global card field — surface it uniformly rather than
+  // teaching every loader about it.
+  if (summary.contains === undefined && input.fields !== undefined) {
+    const contains = input.fields["contains"];
+    if (typeof contains === "string" && contains !== "") {
+      return { ...summary, contains };
+    }
+  }
+  return summary;
 }
 
 /**

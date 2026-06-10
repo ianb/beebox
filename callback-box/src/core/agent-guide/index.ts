@@ -41,6 +41,7 @@ import {
 import { landmarksSection } from "./landmarks.js";
 import { quotesSection } from "./quotes.js";
 import { sourceSection } from "./source.js";
+import { searchSection } from "./search.js";
 import { briefingTagsSection } from "./briefing-tags.js";
 
 export interface AgentGuideOptions {
@@ -65,6 +66,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...landmarksSection(),
     ...howItemsEnterSection(),
     ...keyCommandsSection(),
+    ...searchSection(),
     ...calendarSection(),
     ...driveSection(),
     ...proceduresSection(procedures),

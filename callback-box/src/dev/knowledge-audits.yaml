@@ -2309,3 +2309,44 @@ tests:
     should_read: ["docs/generated/card-recipe.md"]
     correct_contains_any: ["plain markdown", "## Tips", "heading", "prose", "don't invent"]
     tags: [recipe, cards, behavioral]
+
+  # === Search and the contains: field ===
+
+  - id: contains-writing-rule
+    prompt: >
+      You're processing a short memo whose body says the dentist
+      appointment moved to June 17. What exactly do you write in the
+      card's `contains:` field?
+    expected_level: knows_directly
+    watch_for: >
+      Writes a fact-carrying sentence ("Dentist appointment moved to
+      June 17") — not a pointer like "contains scheduling information",
+      and not a list of parts. Knows the rule from the agent guide
+      without re-reading card docs.
+    correct_contains: ["June 17"]
+    tags: [search, cards, behavioral]
+
+  - id: search-over-grep
+    prompt: >
+      Which cards in this box mention a boiler serial number? How
+      would you find them?
+    expected_level: knows_directly
+    watch_for: >
+      Reaches for `cb search` (not grep) and knows the --kind / --json
+      filters exist. Grep as a fallback is acceptable only if cb search
+      is named first.
+    correct_contains: ["cb search"]
+    tags: [search, navigation]
+
+  - id: contains-stale-response
+    prompt: >
+      After you edit a card's body, validation warns "card content
+      changed but contains: didn't — review it". The contains sentence
+      is still accurate. What do you do?
+    expected_level: knows_directly
+    watch_for: >
+      Runs `cb contains update <card> --text "..."` with the same text
+      to confirm — knows the update command is the acknowledgment that
+      clears the staleness flag, and doesn't just ignore the warning.
+    correct_contains: ["cb contains update"]
+    tags: [search, cards, behavioral]

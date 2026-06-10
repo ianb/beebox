@@ -30,6 +30,7 @@ import {
   runPreprocessors,
   cleanupStaleJobs,
   createIntakeJobsForUnjobbed,
+  createContainsBackfillJob,
 } from "./wakeup-steps.js";
 
 // Re-exported so existing importers keep their `wakeup.js` import paths.
@@ -180,6 +181,14 @@ export const wakeupCommand = new Command("wakeup")
       console.log("  No unjobbed items");
     }
     console.log("");
+
+    // Step 4c: Queue a contains-backfill batch when searchable cards lack
+    // the field (one low-priority job per wakeup; drains gradually).
+    const backfill = await createContainsBackfillJob(boxRoot);
+    if (backfill > 0) {
+      console.log(`[Queued contains backfill job for ${backfill} card(s)]`);
+      console.log("");
+    }
 
     // Step 5: Process pending jobs.
     await processPendingJobs(boxRoot, activeConnector?.name);
