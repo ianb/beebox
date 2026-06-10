@@ -73,6 +73,9 @@ function applyAnalysisFields(fields: ImageFields, analysis: ImageAnalysis): void
   }
 
   fields.description = analysis.description;
+  if (analysis.contains !== undefined && analysis.contains.trim() !== "") {
+    fields.contains = analysis.contains;
+  }
 
   if (analysis.text_blocks.length > 0) {
     fields.text = analysis.text_blocks.map((b) => ({

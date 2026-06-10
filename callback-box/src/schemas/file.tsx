@@ -50,7 +50,8 @@ Frontmatter:
   \`original-name\` (filename as uploaded), \`mime-type\` (browser-reported
   MIME), \`size\` (bytes).
 - \`description:\` — short summary of what the file contains, filled in
-  during processing.
+  during processing. Doubles as the \`contains:\` fallback for search;
+  set an explicit \`contains:\` only when it should differ.
 
 Unlike image/audio cards, no built-in pipeline processes files yet —
 they land in the capture session and are available for agent handling

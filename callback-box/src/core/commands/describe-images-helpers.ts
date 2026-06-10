@@ -177,6 +177,7 @@ export class GeminiEmptyResponseError extends Error {
 export interface ImageAnalysis {
   index: number;
   description: string;
+  contains: string;
   title: string;
   has_text: boolean;
   text_blocks: Array<{
@@ -220,7 +221,9 @@ export async function analyzeImagesWithGemini(
 
 For each image (indexed 0 to ${imagePaths.length - 1}), provide:
 
-1. description: one sentence describing what's in the image.
+1. description: one sentence describing what's in the image — visual, suitable as alt text.
+
+1b. contains: one sentence stating what someone could learn from this image. When the information is concise, the sentence carries the information itself (e.g., "Boiler serial number K-44210" or "Dentist appointment moved to June 17") rather than pointing at it ("contains scheduling information"); when it isn't concise, say what's learnable (e.g., "Itemized 2003 ledger account figures"). Never a list of parts; under 200 characters.
 
 2. title: a short filename-friendly title (2-4 words, underscores, retain capitals, e.g., "Utility_Bill" or "Piano_Business_Card").
 
@@ -261,6 +264,7 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
           properties: {
             index: { type: "INTEGER" },
             description: { type: "STRING" },
+            contains: { type: "STRING" },
             title: { type: "STRING" },
             has_text: { type: "BOOLEAN" },
             text_blocks: {
@@ -286,7 +290,7 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
               },
             },
           },
-          required: ["index", "description", "title", "has_text", "text_blocks", "invalid", "subject_bbox", "rotation", "is_document", "document_kind", "document_from", "document_dates"],
+          required: ["index", "description", "contains", "title", "has_text", "text_blocks", "invalid", "subject_bbox", "rotation", "is_document", "document_kind", "document_from", "document_dates"],
         },
       },
     },

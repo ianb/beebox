@@ -92,8 +92,12 @@ The attached image file lives in the card's attach scope (e.g.
 Frontmatter fields:
 - \`filename:\` — \`{ref, captured, source}\` for the attached image
   file. \`captured\` is set from EXIF when available.
-- \`description:\` — one-sentence summary of what's in the image
-  (filled during analysis).
+- \`description:\` — one sentence describing what the image *looks
+  like* (filled during analysis) — the visual field, used as alt text.
+- \`contains:\` — one sentence stating what someone could *learn* from
+  this image — the retrieval field (also filled during analysis; when
+  absent, search falls back to \`description\`). Carry the fact when
+  it's concise ("Boiler serial number K-44210"), don't point at it.
 - \`creation:\` — optional free-text notes on how the image came to
   be. Only include when there's something worth recording. For
   AI-generated images (\`source: generated\`), use \`model: {modelId}\\nprompt: {prompt text}\`.
@@ -133,6 +137,7 @@ export interface ImageFields {
   rotation?: ImageRotation;
   filename: { ref: string; captured: string; source: ImageSource };
   description?: string;
+  contains?: string;
   creation?: string;
   text?: Array<{ source?: string; content: string }>;
   exif?: { date?: string; camera?: string; gps?: string; width?: string; height?: string };

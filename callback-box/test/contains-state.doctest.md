@@ -114,6 +114,30 @@ JSON.stringify(listStale(await loadContainsState(box.root)).filter((p) => p.incl
 => []
 ```
 
+## A described image satisfies contains (role separation, no duplication)
+
+`description` is the visual field; it doubles as the effective `contains`
+until an explicit one exists — so described images never enter the
+backfill worklist, and a description change re-bases rather than flagging
+stale (the retrieval field moved with the content).
+
+``` continue
+const IMG = (desc: string) =>
+  "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: " + desc + "\n---\n";
+await box.write("store/archive/boiler.image.card", IMG("The boiler's serial-number plate (K-44210)"));
+await openSearchIndex(box.root);
+JSON.stringify(listMissing(await loadContainsState(box.root)).filter((p) => p.includes("image")))
+=> []
+
+await box.write("store/archive/boiler.image.card", IMG("A different plate entirely (Z-99)"));
+await openSearchIndex(box.root);
+JSON.stringify(listStale(await loadContainsState(box.root)).filter((p) => p.includes("image")))
+=> []
+
+await staleContainsWarning(box.root, { relPath: "store/archive/boiler.image.card", ctx })
+=> null
+```
+
 ``` cleanup
 await box.cleanup();
 ```

@@ -42,6 +42,30 @@ export const SECTION_SPLIT_THRESHOLD = 2000;
 const TITLE_MAX = 80;
 
 /**
+ * Kinds whose pipeline-maintained summary field doubles as the `contains`
+ * fallback (role separation: `description` stays the visual/file summary —
+ * alt text etc. — while also satisfying retrieval until an explicit
+ * `contains` is written).
+ */
+const CONTAINS_FALLBACK_FIELD: Record<string, string> = {
+  image: "description",
+  file: "description",
+};
+
+/**
+ * The card's effective `contains`: the explicit field, or the per-kind
+ * fallback. The single source for the index column, the staleness sidecar,
+ * and the missing-contains worklist — a described image is not "missing".
+ */
+export function effectiveContains(kind: string, fields: Record<string, unknown>): string {
+  const explicit = str(fields["contains"]);
+  if (explicit !== undefined) return explicit;
+  const fallbackField = CONTAINS_FALLBACK_FIELD[kind];
+  if (fallbackField === undefined) return "";
+  return str(fields[fallbackField]) ?? "";
+}
+
+/**
  * Extra files this card's documents are built from (box-relative paths).
  * Currently only gdocs declare one: the markdown content snapshot in the
  * card's attach scope.
@@ -84,7 +108,7 @@ export function extractCardDocs(input: ExtractInput): SearchDoc[] {
       .trim(),
     TITLE_MAX
   );
-  const contains = firstNonEmpty([str(fields["contains"]), fold.contains]);
+  const contains = effectiveContains(kind, fields);
   const created = firstNonEmpty([str(fields["created"]), fold.created]);
 
   const bodyText = bodyTextFor(card, input);
@@ -131,7 +155,6 @@ function bodyTextFor(card: FrontmatterLoadedCard, input: ExtractInput): string {
 
 interface FoldResult {
   title?: string | undefined;
-  contains?: string | undefined;
   created?: string | undefined;
   /** Frontmatter text folded into the card document's content. */
   extra: string[];
@@ -171,9 +194,10 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
     case "image":
       return {
         title: str(fields["description"]),
-        contains: str(fields["description"]),
         extra: compact([str(fields["description"])]),
       };
+    case "file":
+      return { extra: compact([str(fields["description"])]) };
     case "sheet":
       return { extra: tabTitles(fields["sheets"]) };
     case "telegram-message":

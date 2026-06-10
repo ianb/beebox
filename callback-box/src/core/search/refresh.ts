@@ -19,7 +19,7 @@ import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js"
 import { loadCardFromText, CardIOError, type LoadCardContext } from "../card-io.js";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { buildLoadContext } from "../load-context.js";
-import { extractCardDocs, declareInputFiles, type SearchDoc } from "./extract.js";
+import { extractCardDocs, declareInputFiles, effectiveContains, type SearchDoc } from "./extract.js";
 import { walkCardFiles, cardTypeFromPath, type CardStat } from "./walk.js";
 import {
   loadManifest,
@@ -233,11 +233,12 @@ async function refreshOneCard(
     warnings.push(...inputRead.warnings);
     docs = extractCardDocs({ path: relPath, card, contentHash, inputContents: inputRead.contents });
     const basis = computeContainsBasis({ card, inputContents: inputRead.contents });
-    if (basis !== null) {
-      const contains = card.kind === "frontmatter" && typeof card.fields["contains"] === "string"
-        ? card.fields["contains"]
-        : "";
-      observeCard(state.containsState, { cardPath: relPath, contains, basis });
+    if (basis !== null && card.kind === "frontmatter") {
+      observeCard(state.containsState, {
+        cardPath: relPath,
+        contains: effectiveContains(card.schema.type, card.fields),
+        basis,
+      });
     }
   } catch (e) {
     // CardIOError: bad frontmatter/schema. ParseError: malformed XML body.
