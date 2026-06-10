@@ -146,9 +146,15 @@ async function refreshUnderLock(
   if (dirtyIndex) {
     // Index first, manifest last: a crash between the two leaves an older
     // manifest, and the affected files simply re-extract next refresh.
-    await persistSearchIndex(db, boxRoot);
-  }
-  if (dirtyIndex || dirtyManifest) {
+    // A persist failure is downgraded to a warning — the in-memory index
+    // still answers this query; the next refresh rebuilds and retries.
+    try {
+      await persistSearchIndex(db, boxRoot);
+      await saveManifest(boxRoot, manifest);
+    } catch (e) {
+      warnings.push(`could not persist search index (${(e as Error).message}); results served from memory`);
+    }
+  } else if (dirtyManifest) {
     await saveManifest(boxRoot, manifest);
   }
   if (JSON.stringify(containsState.cards) !== containsBefore) {

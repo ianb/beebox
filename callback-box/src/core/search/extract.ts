@@ -130,7 +130,7 @@ export function extractCardDocs(input: ExtractInput): SearchDoc[] {
     ...base,
     id: docId(path, s.fragment),
     fragment: s.fragment,
-    content: s.text,
+    content: normalizeContent(s.text),
   }));
   return [cardDoc, ...sectionDocs];
 }
@@ -192,9 +192,11 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
         extra: compact([str(fields["name"]), str(fields["description"]), str(fields["notes"])]),
       };
     case "image":
+      // text: carries the OCR'd content the analysis step keeps (amounts,
+      // account numbers, names) — the needles people search for.
       return {
         title: str(fields["description"]),
-        extra: compact([str(fields["description"])]),
+        extra: compact([str(fields["description"]), ...textBlockContents(fields["text"])]),
       };
     case "file":
       return { extra: compact([str(fields["description"])]) };
@@ -227,7 +229,7 @@ function xmlDoc(path: string, input: { card: XmlLoadedCard; contentHash: string 
     kind: card.element.tagName,
     title,
     contains: "",
-    content: collectElementText(card.element),
+    content: normalizeContent(collectElementText(card.element)),
     created: "",
     contentHash,
   };
@@ -283,6 +285,16 @@ function path2(value: unknown, key: string): unknown {
   return (value as Record<string, unknown>)[key];
 }
 
+function textBlockContents(text: unknown): string[] {
+  if (!Array.isArray(text)) return [];
+  const contents: string[] = [];
+  for (const block of text) {
+    const content = str(path2(block, "content"));
+    if (content !== undefined) contents.push(content);
+  }
+  return contents;
+}
+
 function tabTitles(sheets: unknown): string[] {
   if (!Array.isArray(sheets)) return [];
   const titles: string[] = [];
@@ -305,9 +317,20 @@ function firstNonEmpty(values: Array<string | undefined>): string {
 }
 
 function joinContent(parts: string[]): string {
-  return parts
-    .map((p) => p.trim())
-    .filter((p) => p !== "")
-    .join("\n")
-    .trim();
+  return normalizeContent(
+    parts
+      .map((p) => p.trim())
+      .filter((p) => p !== "")
+      .join("\n")
+  );
+}
+
+/**
+ * Split unbroken character runs longer than 64 chars. Nobody searches a
+ * 64+ char token (they're OCR mash like "ReturnOMB No.1545-00742025Dept..."),
+ * and Orama's radix tree nests per character — runs past ~100 chars blow
+ * msgpack's depth limit when the index persists.
+ */
+function normalizeContent(text: string): string {
+  return text.trim().replace(/\S{64}/g, "$& ");
 }

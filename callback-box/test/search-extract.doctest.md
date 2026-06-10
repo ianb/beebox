@@ -114,18 +114,21 @@ docs[0].content
 => Quarterly planning notes for the project.
 ```
 
-## An image's description doubles as its contains fallback
+## An image's description doubles as its contains fallback; OCR text indexes
 
 ```
 const docs = await docsFor(
   "store/archive/photo.image.card",
-  "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: The boiler's serial-number plate (K-44210)\n---\n"
+  "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
 );
 docs[0].contains
 => The boiler's serial-number plate (K-44210)
 
 docs[0].title
 => The boiler's serial-number plate (K-44210)
+
+docs[0].content.includes("Model HX-200 240V")
+=> true
 ```
 
 ## Long bodies split into per-section documents; the preamble stays on the card

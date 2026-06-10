@@ -1,6 +1,11 @@
 /**
  * Orama index storage: schema, file locations, restore, atomic persist.
  *
+ * Persistence format is JSON, not msgpack ("binary"): the radix tree nests
+ * one object level per branching character, and a real corpus's OCR'd
+ * numbers branch deeper than msgpack's hard depth limit of 100
+ * ("Too deep objects in depth 101"). JSON.stringify has no such limit.
+ *
  * The index and its manifest are disposable per-checkout caches in
  * `.callback-box/`. The persist order (index first, manifest last) makes a
  * crash between the two self-healing: an older manifest just re-diffs the
@@ -16,8 +21,9 @@ import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/s
 /**
  * Bump when the document schema or extraction shape changes; a mismatch
  * triggers a silent full rebuild.
+ * v2: image OCR text: blocks fold into content.
  */
-export const SEARCH_SCHEMA_VERSION = 1;
+export const SEARCH_SCHEMA_VERSION = 2;
 
 export const searchOramaSchema = {
   path: "string",
@@ -32,7 +38,7 @@ export const searchOramaSchema = {
 
 export type SearchIndex = Orama<typeof searchOramaSchema>;
 
-const INDEX_FILENAME = "search-index.msp";
+const INDEX_FILENAME = "search-index.json";
 const MANIFEST_FILENAME = "search-index-manifest.json";
 const LOCK_FILENAME = "search-index.lock";
 
@@ -64,7 +70,7 @@ export async function restoreSearchIndex(boxRoot: string): Promise<SearchIndex |
     return null;
   }
   try {
-    const db = await restoreFromFile("binary", indexPath);
+    const db = await restoreFromFile("json", indexPath);
     return db as SearchIndex;
   } catch (e) {
     console.warn(`search: could not restore index (${(e as Error).message}); rebuilding`);
@@ -77,7 +83,7 @@ export async function persistSearchIndex(db: SearchIndex, boxRoot: string): Prom
   const indexPath = searchIndexPath(boxRoot);
   await fs.mkdir(path.dirname(indexPath), { recursive: true });
   const tmp = `${indexPath}.tmp`;
-  await persistToFile(db, "binary", tmp);
+  await persistToFile(db, "json", tmp);
   await fs.rename(tmp, indexPath);
 }
 
