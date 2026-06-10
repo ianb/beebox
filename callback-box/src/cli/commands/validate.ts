@@ -170,8 +170,9 @@ interface ValidationResults {
 
 /**
  * Hook mode: read the touched card path from stdin, validate it, and exit.
- * Non-card paths exit 0 silently; errors exit 2 so the agent sees feedback.
- * This always exits the process and never returns.
+ * Non-card paths exit 0 silently; errors AND warnings exit 2 so the agent
+ * sees feedback (the hook is a nudge, not a gate — pre-commit blocks only
+ * on errors). This always exits the process and never returns.
  */
 async function runHookMode(): Promise<never> {
   const fp = await readHookFilePath();
@@ -182,7 +183,7 @@ async function runHookMode(): Promise<never> {
   const loader = await createLoader(boxRoot);
   const ctx = await buildLoadContext(boxRoot);
   const summary = await lintCardsDispatch([fp], { loader, ctx });
-  if (summary.totalErrors > 0) {
+  if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
     const output = formatLintResults(summary, { colors: false });
     process.stderr.write(`${output}\n`);
     process.exit(2);

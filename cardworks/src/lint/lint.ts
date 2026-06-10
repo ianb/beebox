@@ -7,7 +7,7 @@ import { parseCard } from "../parser/parse.js";
  * A lint issue (error or warning).
  */
 export interface LintIssue {
-  type: "parse" | "validation" | "reference" | "id" | "schema";
+  type: "parse" | "validation" | "reference" | "id" | "schema" | "contains";
   severity: "error" | "warning";
   message: string;
   location?: Location;

@@ -126,6 +126,35 @@ result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
 ```
 
+## An over-budget `contains:` field warns (never blocks)
+
+`contains` is one concise sentence stating what can be found in the card;
+past 200 characters the writer is summarizing instead. Warning-level so the
+nudge reaches agents (the PostToolUse hook surfaces warnings) without
+blocking commits.
+
+```
+const box = await makeTmpBox();
+const longContains = "x".repeat(220);
+await box.write(
+  "store/notes/Wordy.doc.card",
+  "---\ntitle: Wordy\ncontains: " + longContains + "\n---\nbody\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/notes/Wordy.doc.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 0
+
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message
+=> contains: is 220 chars (budget 200) — tighten it to one sentence stating what can be found in this card
+```
+
 ## Broken refs in Markdoc body tags surface as warnings too
 
 Refs carried by Markdoc tag attributes inside a card body (e.g.

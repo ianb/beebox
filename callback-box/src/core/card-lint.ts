@@ -132,6 +132,8 @@ async function lintFrontmatterCard(input: {
       });
     }
   }
+  const containsWarning = lintContainsLength(parsed.fields);
+  if (containsWarning !== null) warnings.push(containsWarning);
   const errors =
     type === "commentary"
       ? commentaryErrors({
@@ -140,6 +142,21 @@ async function lintFrontmatterCard(input: {
         })
       : [];
   return { path, errors, warnings };
+}
+
+/** Soft budget for the `contains` field — one concise sentence, not a summary essay. */
+const CONTAINS_MAX_CHARS = 200;
+
+function lintContainsLength(fields: Record<string, unknown>): LintIssue | null {
+  const contains = fields["contains"];
+  if (typeof contains !== "string" || contains.length <= CONTAINS_MAX_CHARS) return null;
+  return {
+    type: "contains",
+    severity: "warning",
+    message:
+      `contains: is ${String(contains.length)} chars (budget ${String(CONTAINS_MAX_CHARS)}) — ` +
+      "tighten it to one sentence stating what can be found in this card",
+  };
 }
 
 /**
