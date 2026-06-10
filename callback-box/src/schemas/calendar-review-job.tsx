@@ -17,6 +17,7 @@ const Change = z.object({
 });
 
 export const CalendarReviewJobSchema: CardSchema = cardSchema("calendar-review-job", {
+  searchable: false,
   fields: {
     status: z.string().default("pending"),
     created: z.string().datetime({ offset: true }),

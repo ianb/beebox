@@ -11,6 +11,7 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const IntakeJobSchema: CardSchema = cardSchema("intake-job", {
+  searchable: false,
   fields: {
     status: z.string().default("pending"),
     created: z.string().datetime({ offset: true }),

@@ -36,6 +36,7 @@ const SeenEntry = z.object({
 const ThreadEntry = z.discriminatedUnion("kind", [MessageEntry, SeenEntry]);
 
 export const ChatThreadSchema: CardSchema = cardSchema("chat-thread", {
+  searchable: false,
   fields: {
     "chat-id": z.string(),
     connector: z.string(),

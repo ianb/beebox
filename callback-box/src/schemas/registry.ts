@@ -247,6 +247,19 @@ export function getCardTypes(): string[] {
 }
 
 /**
+ * Get the card types that belong in content search indexes — every type
+ * whose schema doesn't set `searchable: false`. Includes box-local schemas
+ * when a boxRoot is given (they default to searchable).
+ */
+export async function getSearchableTypes(boxRoot?: string): Promise<string[]> {
+  const elementSchemas = await getAllSchemas(boxRoot);
+  return [
+    ...elementSchemas.filter(s => s.searchable !== false).map(s => s.tagName),
+    ...cardSchemas.filter(s => s.searchable).map(s => s.type),
+  ];
+}
+
+/**
  * Check if a card type is known.
  */
 export function isKnownCardType(type: string): boolean {

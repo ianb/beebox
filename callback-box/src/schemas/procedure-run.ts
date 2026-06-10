@@ -89,6 +89,7 @@ export const RunStep = element("step", {
  * Procedure run schema — the root element.
  */
 export const ProcedureRunSchema = element("procedure-run", {
+  searchable: false,
   attrs: {
     procedure: z.string(),
     status: z.enum(["pending", "running", "completed", "failed"]),
