@@ -42,6 +42,7 @@ import {
   attachmentsCommand,
   lsCommand,
   searchCommand,
+  containsCommand,
   renderCommand,
   usageCommand,
   driveCommand,
@@ -97,6 +98,7 @@ program.addCommand(uploadCommand);
 program.addCommand(attachmentsCommand);
 program.addCommand(lsCommand);
 program.addCommand(searchCommand);
+program.addCommand(containsCommand);
 program.addCommand(renderCommand);
 program.addCommand(usageCommand);
 program.addCommand(chatCommand);

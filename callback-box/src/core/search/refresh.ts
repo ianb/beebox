@@ -14,14 +14,11 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { insertMultiple, remove } from "@orama/orama";
-import { ParseError, type ElementSchema } from "cardworks";
+import { ParseError } from "cardworks";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { loadCardFromText, CardIOError, type LoadCardContext } from "../card-io.js";
-import {
-  createSchemaRegistry,
-  createCardSchemaMap,
-  getSearchableTypes,
-} from "../../schemas/registry.js";
+import { getSearchableTypes } from "../../schemas/registry.js";
+import { buildLoadContext } from "../load-context.js";
 import { extractCardDocs, declareInputFiles, type SearchDoc } from "./extract.js";
 import { walkCardFiles, cardTypeFromPath, type CardStat } from "./walk.js";
 import {
@@ -44,6 +41,7 @@ import {
   loadContainsState,
   saveContainsState,
   computeContainsBasis,
+  computeBasisForCardPath,
   observeCard,
   dropCardState,
   type ContainsState,
@@ -140,6 +138,11 @@ async function refreshUnderLock(
     else if (effect === "manifest") dirtyManifest = true;
   }
 
+  // Indexed cards the sidecar has never observed (index predates the
+  // sidecar, or the state file was deleted): observe them now so
+  // missing/stale lists are complete. No-op when the sidecar is current.
+  await healContainsState(state);
+
   if (dirtyIndex) {
     // Index first, manifest last: a crash between the two leaves an older
     // manifest, and the affected files simply re-extract next refresh.
@@ -164,6 +167,25 @@ interface RefreshState {
 }
 
 type RefreshEffect = "none" | "manifest" | "index";
+
+/** Observe manifest-indexed frontmatter cards the contains sidecar doesn't know yet. */
+async function healContainsState(state: RefreshState): Promise<void> {
+  const { boxRoot, manifest, containsState } = state;
+  for (const [relPath, entry] of Object.entries(manifest.files)) {
+    if (entry.skipped === true) continue;
+    if (containsState.cards[relPath] !== undefined) continue;
+    const kind = cardTypeFromPath(relPath);
+    if (kind === undefined) continue;
+    if (state.ctx === null) state.ctx = await buildLoadContext(boxRoot);
+    if (!state.ctx.cardSchemas.has(kind)) continue; // XML kinds can't carry contains
+    const { basis, contains } = await computeBasisForCardPath(boxRoot, {
+      relPath,
+      ctx: state.ctx,
+    });
+    if (basis === null) continue; // unreadable/unparseable: lint owns reporting that
+    observeCard(containsState, { cardPath: relPath, contains, basis });
+  }
+}
 
 /** Remove a card's docs + manifest entry. Returns true when anything was dropped. */
 function dropCard(state: RefreshState, relPath: string): boolean {
@@ -297,16 +319,6 @@ async function readInputFiles(
     }
   }
   return { contents, entries, warnings };
-}
-
-async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
-  const registry = await createSchemaRegistry(boxRoot);
-  const elementSchemas = new Map<string, ElementSchema>();
-  for (const tag of registry.tagNames()) {
-    const schema = registry.get(tag);
-    if (schema) elementSchemas.set(tag, schema as ElementSchema);
-  }
-  return { cardSchemas: createCardSchemaMap(), elementSchemas };
 }
 
 async function lockWithRetry(

@@ -7,7 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { Command } from "commander";
-import { formatLintResults, type LintSummary, type ElementSchema } from "cardworks";
+import { formatLintResults, type LintSummary } from "cardworks";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lint-rules.js";
@@ -16,8 +16,8 @@ import { createLoader } from "../lib/loader.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
+import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
-import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 
 const execFileP = promisify(execFile);
@@ -143,19 +143,6 @@ function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors:
   return errors
     .map((e) => `${red("error")}  ${e.path}  [${e.rule}] ${e.message}`)
     .join("\n");
-}
-
-async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
-  const registry = await createSchemaRegistry(boxRoot);
-  const elementSchemas = new Map<string, ElementSchema>();
-  for (const tag of registry.tagNames()) {
-    const s = registry.get(tag);
-    if (s) elementSchemas.set(tag, s as ElementSchema);
-  }
-  return {
-    cardSchemas: createCardSchemaMap(),
-    elementSchemas,
-  };
 }
 
 interface ValidationContext {

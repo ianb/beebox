@@ -11,13 +11,12 @@ import type {
   HookJSONOutput,
   PostToolUseHookInput,
 } from "@anthropic-ai/claude-agent-sdk";
-import { formatLintResults, type ElementSchema } from "cardworks";
+import { formatLintResults } from "cardworks";
 import { lint as markdownlint } from "markdownlint/promise";
 import { noViewLabelLinks, noBrokenInternalLinks } from "./markdown-lint-rules.js";
 import { createLoader } from "../cli/lib/loader.js";
 import { lintCardsDispatch } from "./card-lint.js";
-import { createCardSchemaMap, createSchemaRegistry } from "../schemas/registry.js";
-import type { LoadCardContext } from "./card-io.js";
+import { buildLoadContext } from "./load-context.js";
 
 const MARKDOWN_CONFIG = { default: false, MD009: true, MD037: true, MD038: true, MD047: true };
 const CUSTOM_RULES = [noViewLabelLinks, noBrokenInternalLinks];
@@ -103,16 +102,6 @@ async function runMarkdownLint(filePath: string): Promise<string | null> {
   } catch (e) {
     return `Markdown lint could not run for ${filePath}: ${e instanceof Error ? e.message : String(e)}`;
   }
-}
-
-async function buildLoadContext(boxRoot: string): Promise<LoadCardContext> {
-  const registry = await createSchemaRegistry(boxRoot);
-  const elementSchemas = new Map<string, ElementSchema>();
-  for (const tag of registry.tagNames()) {
-    const s = registry.get(tag);
-    if (s) elementSchemas.set(tag, s as ElementSchema);
-  }
-  return { cardSchemas: createCardSchemaMap(), elementSchemas };
 }
 
 async function runCardLint(cwd: string, filePath: string): Promise<string | null> {
