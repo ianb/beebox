@@ -22,6 +22,11 @@ export interface ManifestFileEntry {
   docIds: string[];
   /** Extra files this card's documents were built from, keyed by box-relative path. */
   inputs?: Record<string, InputFileEntry>;
+  /**
+   * The card failed to parse and contributed no documents. Remembered so an
+   * unchanged broken card warns once, not on every refresh.
+   */
+  skipped?: boolean;
 }
 
 export interface SearchManifest {

@@ -120,6 +120,10 @@ withBad.warnings[0].startsWith("store/notes/Broken.memo.card: skipped")
 await find(withBad.db, "tomatoes")
 => store/notes/Garden.memo.card
 
+// An unchanged broken card warns once, not on every search.
+(await openSearchIndex(box.root)).warnings.length
+=> 0
+
 await box.write("store/notes/Broken.memo.card", MEMO("fixed broken body"));
 const fixedAgain = await openSearchIndex(box.root);
 JSON.stringify(fixedAgain.warnings)

@@ -18,6 +18,7 @@ import "./scan-import.js";
 import "./upload.js";
 import "./attachments.js";
 import "./ls.js";
+import "./search.js";
 import "./wakeup.js";
 import "./intake.js";
 import "./triage.js";

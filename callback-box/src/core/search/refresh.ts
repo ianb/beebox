@@ -14,7 +14,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { insertMultiple, remove } from "@orama/orama";
-import type { ElementSchema } from "cardworks";
+import { ParseError, type ElementSchema } from "cardworks";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { loadCardFromText, CardIOError, type LoadCardContext } from "../card-io.js";
 import {
@@ -194,9 +194,22 @@ async function refreshOneCard(
     warnings.push(...inputRead.warnings);
     docs = extractCardDocs({ path: relPath, card, contentHash, inputContents: inputRead.contents });
   } catch (e) {
-    if (!(e instanceof CardIOError)) throw e;
-    warnings.push(`${relPath}: skipped (${e.detail})`);
-    return dropCard(state, relPath) ? "index" : "none";
+    // CardIOError: bad frontmatter/schema. ParseError: malformed XML body.
+    // Either way the card is skipped with a warning — one broken card must
+    // not take down search for the whole box. The skip is remembered in the
+    // manifest so an unchanged broken card warns once, not on every search.
+    if (!(e instanceof CardIOError) && !(e instanceof ParseError)) throw e;
+    const detail = e instanceof CardIOError ? e.detail : e.message;
+    warnings.push(`${relPath}: skipped (${detail})`);
+    const hadDocs = dropCard(state, relPath);
+    manifest.files[relPath] = {
+      mtimeMs: stat.mtimeMs,
+      size: stat.size,
+      contentHash,
+      docIds: [],
+      skipped: true,
+    };
+    return hadDocs ? "index" : "manifest";
   }
 
   if (entry !== undefined) removeDocs(db, entry.docIds);

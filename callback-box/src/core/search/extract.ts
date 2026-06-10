@@ -163,6 +163,11 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
         title: str(fields["name"]),
         extra: compact([str(fields["name"]), str(fields["role"]), str(fields["contact"])]),
       };
+    case "record":
+      return {
+        title: str(fields["name"]),
+        extra: compact([str(fields["name"]), str(fields["description"]), str(fields["notes"])]),
+      };
     case "image":
       return {
         title: str(fields["description"]),

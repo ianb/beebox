@@ -34,6 +34,7 @@ export { scanImportCommand } from "./scan-import.js";
 export { uploadCommand } from "./upload.js";
 export { attachmentsCommand } from "./attachments.js";
 export { lsCommand } from "./ls.js";
+export { searchCommand } from "./search.js";
 export { renderCommand } from "./render.js";
 export { usageCommand } from "./usage.js";
 export { driveCommand } from "./drive.js";

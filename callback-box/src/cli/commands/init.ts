@@ -14,6 +14,7 @@ import { stageAll, commit } from "../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
+import { openSearchIndex } from "../../core/search/refresh.js";
 
 export const initCommand = new Command("init")
   .description("Initialize or update a callback box")
@@ -127,6 +128,12 @@ export const initCommand = new Command("init")
       // Generate agent documentation (picks up docid-debug from marker file)
       await generateDocs(resolve(targetPath));
       console.log("Generated agent docs in .callback-box/ and docs/generated/");
+
+      // Build the search index so the first `cb search` isn't a cold build.
+      await openSearchIndex(resolve(targetPath), {
+        onProgress: (message) => console.log(message),
+      });
+      console.log("Built search index in .callback-box/");
       if (options.docidDebug) {
         console.log("  DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)");
       }

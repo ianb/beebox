@@ -41,6 +41,7 @@ import {
   uploadCommand,
   attachmentsCommand,
   lsCommand,
+  searchCommand,
   renderCommand,
   usageCommand,
   driveCommand,
@@ -95,6 +96,7 @@ program.addCommand(scanImportCommand);
 program.addCommand(uploadCommand);
 program.addCommand(attachmentsCommand);
 program.addCommand(lsCommand);
+program.addCommand(searchCommand);
 program.addCommand(renderCommand);
 program.addCommand(usageCommand);
 program.addCommand(chatCommand);
