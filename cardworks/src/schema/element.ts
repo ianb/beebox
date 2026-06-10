@@ -6,6 +6,8 @@ import { CommentsSchema, LocationSchema, MixedCommentSchema } from "./base.js";
  */
 export interface ElementSchema<T = unknown> extends ZodType<T> {
   tagName: string;
+  /** Whether cards of this type belong in content search indexes. Set by element(); defaults to true. */
+  searchable?: boolean;
   instructions?: string;
 }
 
@@ -58,6 +60,8 @@ export interface ElementConfig<
   text?: TText;
   /** Handling instructions for agents working with this card type */
   instructions?: string;
+  /** Whether cards of this type belong in content search indexes. Defaults to true. */
+  searchable?: boolean;
 }
 
 /**
@@ -134,6 +138,7 @@ export function element<
     dirty: boolean;
   }>;
   schemaWithTag.tagName = tagName;
+  schemaWithTag.searchable = config.searchable ?? true;
   if (config.instructions) {
     schemaWithTag.instructions = config.instructions;
   }

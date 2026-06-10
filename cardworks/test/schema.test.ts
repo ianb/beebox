@@ -41,6 +41,14 @@ test("element() creates a schema with correct tagName", (t) => {
   t.end();
 });
 
+test("element() searchable defaults true and is settable", (t) => {
+  const on = element("guide");
+  t.equal(on.searchable, true);
+  const off = element("procedure-run", { searchable: false });
+  t.equal(off.searchable, false);
+  t.end();
+});
+
 test("element() validates required attributes", (t) => {
   const schema = element("card", {
     attrs: {

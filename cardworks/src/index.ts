@@ -34,6 +34,7 @@ export {
   body,
   extractRefs,
   isBodyField,
+  GLOBAL_CARD_FIELDS,
   type BodyKind,
   type BodyField,
   type BodyFieldOptions,

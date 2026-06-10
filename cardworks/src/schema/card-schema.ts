@@ -71,6 +71,21 @@ export function isBodyField(value: unknown): value is BodyField {
 export type FieldDecl = ZodType | BodyField;
 
 /**
+ * Optional frontmatter fields available on every card type, injected into
+ * the frontmatter schema by cardSchema() unless the schema declares its own
+ * field of the same name (the schema's declaration wins — e.g. a card type
+ * may require `title` rather than leave it optional).
+ *
+ * - `title` — human-readable display title.
+ * - `contains` — one sentence stating what can be found inside this card;
+ *   the prime retrieval field for search and listings.
+ */
+export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
+  title: z.string().optional(),
+  contains: z.string().optional(),
+};
+
+/**
  * Configuration for cardSchema().
  */
 export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
@@ -78,6 +93,11 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
   fields: TFields;
   /** Handling instructions for agents working with this card type. */
   instructions?: string;
+  /**
+   * Whether cards of this type belong in content search indexes.
+   * Defaults to true; operational/bookkeeping card types set false.
+   */
+  searchable?: boolean;
 }
 
 /**
@@ -96,6 +116,10 @@ export interface CardSchema<
   readonly bodyField: BodyField | null;
   /** Zod schema for the frontmatter object (everything except the body field, plus `type`). */
   readonly frontmatterSchema: ZodType;
+  /** Names from GLOBAL_CARD_FIELDS injected here (i.e. not author-declared). */
+  readonly globalFieldNames: ReadonlyArray<string>;
+  /** Whether cards of this type belong in content search indexes. */
+  readonly searchable: boolean;
   /** Handling instructions for agents. */
   readonly instructions?: string;
 }
@@ -134,12 +158,20 @@ export function cardSchema<
   if (bodyField === null && Object.keys(config.fields).length === 0) {
     throw new CardSchemaDeclarationError(type, "must declare at least one field");
   }
+  const globalFieldNames: string[] = [];
+  for (const [name, validator] of Object.entries(GLOBAL_CARD_FIELDS)) {
+    if (name in config.fields) continue; // schema-wins: author declaration takes precedence
+    frontmatterShape[name] = validator;
+    globalFieldNames.push(name);
+  }
   const schema: CardSchema<TTag, TFields> = {
     type,
     fields: config.fields,
     bodyFieldName,
     bodyField,
     frontmatterSchema: z.object(frontmatterShape),
+    globalFieldNames,
+    searchable: config.searchable ?? true,
   };
   if (config.instructions !== undefined) {
     return { ...schema, instructions: config.instructions };

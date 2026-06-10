@@ -87,6 +87,61 @@ test("cardSchema rejects empty field set", (t) => {
   t.end();
 });
 
+test("cardSchema injects global fields as optional frontmatter", (t) => {
+  const schema = cardSchema("memo-like", {
+    fields: { status: z.string() },
+  });
+  t.strictSame([...schema.globalFieldNames].sort(), ["contains", "title"]);
+  const ok = schema.frontmatterSchema.safeParse({
+    type: "memo-like",
+    status: "new",
+    title: "A title",
+    contains: "Dentist moved to June 17; confirmation in this email.",
+  });
+  t.equal(ok.success, true);
+  // Globals are optional — absence is fine.
+  const bare = schema.frontmatterSchema.safeParse({ type: "memo-like", status: "new" });
+  t.equal(bare.success, true);
+  // Still typed: a non-string `contains` fails.
+  const bad = schema.frontmatterSchema.safeParse({
+    type: "memo-like",
+    status: "new",
+    contains: ["a", "list"],
+  });
+  t.equal(bad.success, false);
+  t.end();
+});
+
+test("a schema's own declaration wins over the global field", (t) => {
+  const schema = cardSchema("titled", {
+    fields: { title: z.string() }, // required, unlike the optional global
+  });
+  t.strictSame([...schema.globalFieldNames], ["contains"]);
+  const missingTitle = schema.frontmatterSchema.safeParse({ type: "titled" });
+  t.equal(missingTitle.success, false);
+  t.end();
+});
+
+test("a body field of a global name suppresses the global injection", (t) => {
+  const schema = cardSchema("body-titled", {
+    fields: { title: body(z.string()) },
+  });
+  t.strictSame([...schema.globalFieldNames], ["contains"]);
+  t.equal(schema.bodyFieldName, "title");
+  t.end();
+});
+
+test("cardSchema searchable defaults true and is settable", (t) => {
+  const on = cardSchema("content", { fields: { status: z.string() } });
+  t.equal(on.searchable, true);
+  const off = cardSchema("job-like", {
+    fields: { status: z.string() },
+    searchable: false,
+  });
+  t.equal(off.searchable, false);
+  t.end();
+});
+
 test("extractRefs picks up `ref` keys inside arrays of objects", (t) => {
   const refs = extractRefs({
     type: "email-thread",
