@@ -10,7 +10,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
-import { KeywordHint } from "./KeywordHint";
+import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 
@@ -55,7 +55,7 @@ function DesktopComposerRow({
     <div className="relative hidden sm:flex flex-1 items-center gap-2 min-w-0">
       {isTranscribing ? (
         <>
-          <KeywordHint hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
+          <MicOverlay hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
           <div className="flex-shrink-0 self-center">
             <RecordingIndicator degraded={transcription.state === "reconnecting"} />
           </div>
