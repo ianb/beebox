@@ -204,13 +204,23 @@ export function useChatVoice(opts: {
     }),
     onKeywordCancel: () => {
       transcription.cancel();
+      // "Cancel the message" discards the whole in-progress message, not
+      // just the live segment: prior utterances may already sit in the
+      // composer input, and the dictation draft holds the persisted copy.
+      setInput("");
+      clearDraftRef.current();
     },
     onKeywordMicOff: () => {
       composerSend({ type: "STOP_DICTATION" });
       recordingStop.play();
     },
     onKeywordErase: () => {
-      // Transcript is already cleared by the hook; nothing else needed
+      // The hook clears the machine's live transcript, but "erase the
+      // message" / "start over" means the whole accumulated message —
+      // composer input (prior utterances folded back or typed) and the
+      // persisted dictation draft included.
+      setInput("");
+      clearDraftRef.current();
     },
     onUnconsumedTranscript: (text) => {
       // Recording ended without a send or a manual stop (transport death, mic
