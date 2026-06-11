@@ -6,7 +6,6 @@
 
 import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
-import { RecordingIndicator } from "../VoiceRecorder";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
@@ -44,11 +43,6 @@ export function MobileTextareaRow({
 
   return (
     <div className="flex gap-2 items-center">
-      {isTranscribing ? (
-        <div className="flex-shrink-0 self-center">
-          <RecordingIndicator degraded={transcription.state === "reconnecting"} />
-        </div>
-      ) : null}
       <TextareaAutosize
         ref={textareaRef}
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}

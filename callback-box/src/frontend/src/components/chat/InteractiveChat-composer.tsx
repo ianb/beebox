@@ -7,7 +7,6 @@
  */
 
 import TextareaAutosize from "react-textarea-autosize";
-import { RecordingIndicator } from "../VoiceRecorder";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
@@ -53,11 +52,6 @@ function DesktopComposerRow({
 }) {
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
-      {isTranscribing ? (
-        <div className="flex-shrink-0 self-center">
-          <RecordingIndicator degraded={transcription.state === "reconnecting"} />
-        </div>
-      ) : null}
       <TextareaAutosize
         ref={textareaRef}
         autoFocus
@@ -183,7 +177,10 @@ export function ChatInputArea({
             here (not in the textarea rows) so it rides the record/stop
             control on both desktop and mobile. */}
         {isTranscribing ? (
-          <MicOverlay hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
+          <MicOverlay
+            hasText={joinTranscript(input, transcription.transcript).trim().length > 0}
+            degraded={transcription.state === "reconnecting"}
+          />
         ) : null}
         {/* Add menu: camera (coming soon), attach file. Capture lives here in the future. */}
         <Dropdown
