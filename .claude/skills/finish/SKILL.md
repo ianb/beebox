@@ -1,13 +1,22 @@
 ---
 name: finish
-description: Use when the human says the worktree's work is done and they want it merged back to main. Drives the full close-out flow: commit any straggling changes, pull main into the worktree, run the test suite (ALL tests must pass — no exceptions), resolve any feedback item the work addressed, then merge the worktree branch into main. After this completes, the SessionEnd hook will auto-clean the worktree on session exit. Triggers include "finish", "wrap this up", "ship it", "merge this back", "/finish".
+description: Use when the human wants the worktree's work merged back to main — either as a final close-out or as a mid-stream checkpoint with the session continuing. Drives the merge flow: commit any straggling changes, pull main into the worktree, run the test suite (ALL tests must pass — no exceptions), resolve any feedback item the work addressed, then merge the worktree branch into main. The close-out report must match the work's actual status (complete vs partial, verified vs tests-only) and only suggest exiting the session when the work is truly done. Triggers include "finish", "wrap this up", "ship it", "merge this back", "checkpoint this", "/finish".
 allowed-tools: Bash, Read, Edit, Write
 ---
 
 # /finish
 
-Close out a worktree session by landing its work in `main`. **Only invoke
-when the human says they're done with this worktree.**
+Land the worktree's work in `main`. **Only invoke when the human asks for
+it.** The human uses this in two modes, and you usually learn which from
+context rather than being told:
+
+- **Close-out** — the work is done; after the merge they'll exit the
+  session and the worktree gets auto-cleaned.
+- **Checkpoint** — they want what's done so far landed on main, then the
+  session continues working. Everything below still applies (especially
+  the test rule — a checkpoint is still a merge to main, which deploys),
+  but the session does NOT end and your final report must not talk as if
+  it does.
 
 ## Test failures are NEVER acceptable
 
@@ -186,12 +195,34 @@ Show the human:
 git -C ~/src/callback-mono log --oneline -3
 ```
 
-Then say something like:
+Then report — and **match the language to your actual understanding of
+the work's status.** Don't use close-out language for a checkpoint, and
+never imply a confidence level you don't have. The facts to be straight
+about:
+
+- **Scope**: is the originally-planned work complete, or did this land a
+  part of it? Name what's still outstanding.
+- **Verification**: distinguish "tests pass" from "verified working in
+  the running app" from "not really verified." Merging on green tests is
+  fine — claiming more than that isn't.
+- **Session disposition**: only suggest exiting when the work is complete
+  AND you're not expecting to continue. For a checkpoint, say explicitly
+  that the session stays open and what's next.
+
+Complete + verified (close-out):
 
 > Done. Merged `worktree-<name>` (N commits) into main as <hash>. Tests
-> all pass (X/X). Exit this session when ready — the worktree and box
-> will be auto-cleaned by the SessionEnd hook since the branch is now
-> fully merged.
+> all pass (X/X) and I verified the behavior in the running app. Exit
+> this session when ready — the worktree and box will be auto-cleaned by
+> the SessionEnd hook since the branch is now fully merged.
+
+Partial or lightly-verified (checkpoint):
+
+> Checkpoint merged: `worktree-<name>` (N commits) into main as <hash>.
+> Tests pass (X/X), but note: <what's only test-verified / not yet
+> exercised end-to-end>. Still outstanding: <remaining scope>. Keeping
+> this session open to continue — don't exit expecting cleanup; the
+> branch will accumulate further commits.
 
 ### 9. (Implicit) Session exit cleanup
 
