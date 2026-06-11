@@ -8,7 +8,6 @@ import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
@@ -44,14 +43,11 @@ export function MobileTextareaRow({
   useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
 
   return (
-    <div className="relative flex gap-2 items-center">
+    <div className="flex gap-2 items-center">
       {isTranscribing ? (
-        <>
-          <MicOverlay hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
-          <div className="flex-shrink-0 self-center">
-            <RecordingIndicator degraded={transcription.state === "reconnecting"} />
-          </div>
-        </>
+        <div className="flex-shrink-0 self-center">
+          <RecordingIndicator degraded={transcription.state === "reconnecting"} />
+        </div>
       ) : null}
       <TextareaAutosize
         ref={textareaRef}
