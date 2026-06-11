@@ -12,12 +12,12 @@ const EMPTY_HINTS = ['"mic off"'] as const;
 const ROTATE_MS = 10000;
 
 /**
- * Rotating one-phrase reminder of the voice keywords, floated above the
- * composer while the mic is live (pattern borrowed from memory-atlas's
- * speech control). Keeps the keyword set discoverable without a help page:
- * a single quoted phrase at a time, cycling slowly, filtered to what's
- * actually valid — send/erase/cancel only appear once there's text for them
- * to act on. The parent supplies a `relative` container.
+ * Rotating one-phrase reminder of the voice keywords, shown while the mic
+ * is live (pattern borrowed from memory-atlas's speech control). Keeps the
+ * keyword set discoverable without a help page: a single quoted phrase at a
+ * time, cycling slowly, filtered to what's actually valid — send/erase/
+ * cancel only appear once there's text for them to act on. Positioned by
+ * MicOverlay alongside the volume bars.
  */
 export function KeywordHint({ hasText }: { hasText: boolean }) {
   const [tick, setTick] = useState(0);
@@ -33,7 +33,7 @@ export function KeywordHint({ hasText }: { hasText: boolean }) {
 
   const hints = hasText ? WITH_TEXT_HINTS : EMPTY_HINTS;
   return (
-    <div className="absolute bottom-full left-0 mb-1 text-xs text-warm-700 bg-warm-50/90 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
+    <div className="text-xs text-warm-700 bg-warm-50/90 px-1.5 py-0.5 rounded whitespace-nowrap">
       {hints[tick % hints.length]}
     </div>
   );
