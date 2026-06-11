@@ -1,7 +1,7 @@
 // Content script: responds to "extractPage" messages from the service
 // worker with a Readability + Turndown extraction of the current page.
 // Does nothing on load.
-import { extractPage } from "../platform/extract-page";
+import { extractPage } from "../platform/extract-page.js";
 
 export default defineContentScript({
   matches: ["http://*/*", "https://*/*"],
