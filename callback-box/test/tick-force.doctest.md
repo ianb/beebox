@@ -1,15 +1,18 @@
 # cb tick --force
 
 `cb tick --script <name> --force` re-runs a script on demand: the schedule
-(due-ness) and budget gates are bypassed. Gates that protect against real
-breakage stay: `enabled: false`, missing connectors, and a live lock-group
-holder are still respected — force never preempts running work.
+(due-ness), budget, and active-chat gates are bypassed (a forced run often
+originates from chat, so deferring on the chat would be self-defeating; the
+housekeeping-commit hazard is re-checked at the commit site instead). Gates
+that protect against real breakage stay: `enabled: false`, missing
+connectors, a live lock-group holder, and running scripts/procedures are
+still respected — force never preempts running work.
 
 `evaluateSkip` returns a skip reason (`""` = skip silently), or `null`
 meaning "run it".
 
 ```ts setup
-import { evaluateSkip } from "../src/cli/commands/tick-helpers.js";
+import { evaluateSkip, effectiveBusyBlockers } from "../src/cli/commands/tick-helpers.js";
 
 function makeScript(overrides) {
   return {
@@ -85,4 +88,34 @@ map only ever contains live processes — stale locks are cleaned on scan):
 const held = new Map([["other-script", { pid: 1234, startedAt: "2026-06-09T11:59:00Z", triggeredBy: "schedule", lockGroup: "research" }]]);
 JSON.stringify(await evaluateSkip(makeCtx({ parsed: makeScript({ onWakeup: true, lockGroup: "research" }), running: held, options: { force: true } })))
 => "  Skipping test-script: lock-group \"research\" held by other-script"
+```
+
+## The busy gate under --force
+
+`effectiveBusyBlockers` decides which in-flight work still defers the
+whole tick. Without force, everything blocks:
+
+```
+effectiveBusyBlockers(["chat:abc-123"], { force: false })
+=> [
+  "chat:abc-123"
+]
+```
+
+With force, chat sessions stop blocking — a forced run often originates
+from the chat itself — but running scripts and procedures still do:
+
+```
+effectiveBusyBlockers(["chat:abc-123"], { force: true }).length
+=> 0
+
+effectiveBusyBlockers(["script:daily-rumination", "chat:abc-123"], { force: true })
+=> [
+  "script:daily-rumination"
+]
+
+effectiveBusyBlockers(["procedure:refresh-maps"], { force: true })
+=> [
+  "procedure:refresh-maps"
+]
 ```

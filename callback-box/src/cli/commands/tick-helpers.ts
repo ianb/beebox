@@ -52,6 +52,24 @@ export async function readScheduleFiles(
   }
 }
 
+/**
+ * Which busy blockers still defer the tick, given --force. Chat locks are
+ * an advisory contention heuristic — and a forced tick frequently
+ * ORIGINATES from chat (the boxholder asking the agent to run something
+ * now), so deferring a forced tick on a chat session is self-defeating.
+ * Genuinely running work (scripts, procedures) defers even under force:
+ * it finishes on its own, unlike a chat session that can sit active for
+ * hours. The tree-sweep hazard chat locks also guarded (the housekeeping
+ * commit) is handled at the commit site itself — see handlePostSuccess.
+ */
+export function effectiveBusyBlockers(
+  blockers: string[],
+  { force }: { force: boolean },
+): string[] {
+  if (!force) return blockers;
+  return blockers.filter((b) => !b.startsWith("chat:"));
+}
+
 /** Detect other in-flight work (scripts, procedures, chats). Tick's
  * housekeeping commit sweeps the whole tree, so the system must be at rest. */
 export async function findBusyBlockers(
@@ -166,9 +184,22 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
     }
   }
 
-  // Commit housekeeping changes (once deletion, createAfterSuccess files)
+  // Commit housekeeping changes (once deletion, createAfterSuccess files).
+  // stageAll sweeps the WHOLE tree, so re-check for active chats right
+  // before committing: a chat agent's half-written files must not get
+  // swept into a housekeeping commit. This matters under --force (which
+  // bypasses the at-rest gate for chat blockers) and also closes the race
+  // where a chat starts during a long script run. Deferred changes sit
+  // uncommitted until the next at-rest tick sweeps them.
   const postStatus = await getStatus(boxRoot);
   if (!postStatus.clean) {
+    const activeChats = await loadActiveChats(boxRoot);
+    if (activeChats.size > 0) {
+      if (!options.quiet) {
+        console.log("  Housekeeping commit deferred — chat active; changes stay uncommitted until the next at-rest tick");
+      }
+      return;
+    }
     await stageAll(boxRoot);
     const parts: string[] = [];
     if (parsed.once) parts.push(`remove one-shot ${scriptName}`);
